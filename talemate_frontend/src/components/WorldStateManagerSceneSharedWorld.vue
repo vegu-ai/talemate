@@ -178,7 +178,7 @@
 <script>
 import WorldStateManagerSceneEpisodes from './WorldStateManagerSceneEpisodes.vue';
 import WorldStateManagerSceneSharedContext from './WorldStateManagerSceneSharedContext.vue';
-import { MAX_CONTENT_WIDTH } from '@/constants';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 export default {
     name: 'WorldStateManagerSceneSharedWorld',

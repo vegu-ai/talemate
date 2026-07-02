@@ -1,6 +1,8 @@
 <!--- --8<-- [start:generate] -->
 !!! tip "Generate using AI"
     **:material-auto-fix: Generate** - press the **generate** button on top of the input field to let the AI generate the content based on the existing details.
+
+    Hold `ctrl` (or `cmd` on macOS) while clicking to add your own [instructions](/talemate/user-guide/world-editor/generation-settings/#generation-instructions). What you type is used as instruction and seed material the AI must reflect in the result.
 <!--- --8<-- [end:generate] -->
 
 <!--- --8<-- [start:autocomplete] -->
@@ -11,13 +13,15 @@
 <!--- --8<-- [start:generate_and_autocomplete] -->
 !!! tip "Generate using AI"
     **:material-auto-fix: Generate** - press the **generate** button on top of the input field to let the AI generate the content based on the existing details.
-    
+
+    Hold `ctrl` (or `cmd` on macOS) while clicking to add your own [instructions](/talemate/user-guide/world-editor/generation-settings/#generation-instructions). What you type is used as instruction and seed material the AI must reflect in the result.
+
     **:material-auto-fix: Autocomplete** - press `ctrl+Enter` (or `cmd+Enter` on macOS) while the cursor is in the input field to use AI to autocomplete the current content, you 
 <!--- --8<-- [end:generate_and_autocomplete] -->
 
 <!--- --8<-- [start:generation_templates_and_settings] -->
 !!! tip "Generation settings and managing templates"
-    Find out more about content generation, managing templates and how to apply randomization and specific writing styles in [Templates](/talemate/user-guide/world-editor/templates/) and [Generation settings](/talemate/user-guide/world-editor/generation-settings).
+    Find out more about content generation, managing templates and how to apply randomization and specific writing styles in [Templates](/talemate/user-guide/templates/) and [Generation settings](/talemate/user-guide/world-editor/generation-settings).
 <!--- --8<-- [end:generation_templates_and_settings] -->
 
 <!--- --8<-- [start:tracked_state] -->

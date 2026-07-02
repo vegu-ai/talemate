@@ -137,40 +137,40 @@ class DirectorChatMixin:
 
     @property
     def chat_missing_response_retry_max(self) -> int:
-        return int(self.actions["chat"].config["missing_response_retry_max"].value)
+        return int(self.resolve_config("chat", "missing_response_retry_max"))
 
     @property
     def chat_auto_iterations_limit(self) -> int:
-        return int(self.actions["chat"].config["auto_iterations_limit"].value)
+        return int(self.resolve_config("chat", "auto_iterations_limit"))
 
     @property
     def chat_generate_arc_iterations_limit(self) -> int:
-        return int(self.actions["chat"].config["generate_arc_iterations_limit"].value)
+        return int(self.resolve_config("chat", "generate_arc_iterations_limit"))
 
     @property
     def chat_response_length(self) -> int:
-        return int(self.actions["chat"].config["response_length"].value)
+        return int(self.resolve_config("chat", "response_length"))
 
     @property
     def chat_scene_context_ratio(self) -> float:
-        return self.actions["chat"].config["scene_context_ratio"].value
+        return self.resolve_config("chat", "scene_context_ratio")
 
     @property
     def chat_enable_analysis(self) -> bool:
-        return self.actions["chat"].config["enable_analysis"].value
+        return self.resolve_config("chat", "enable_analysis")
 
     @property
     def chat_staleness_threshold(self) -> float:
-        return self.actions["chat"].config["staleness_threshold"].value
+        return self.resolve_config("chat", "staleness_threshold")
 
     @property
     def chat_custom_instructions(self) -> str:
-        return self.actions["chat"].config["custom_instructions"].value
+        return self.resolve_config("chat", "custom_instructions")
 
     @property
     def chat_action_confirm_timeout(self) -> int:
         """Timeout in seconds. 0 means wait indefinitely."""
-        return int(self.actions["chat"].config["action_confirm_timeout"].value) * 60
+        return int(self.resolve_config("chat", "action_confirm_timeout")) * 60
 
     # === Node initialization ===
 

@@ -165,6 +165,7 @@ class OpenAICompatibleMixin:
                         "appended automatically if not present."
                     ),
                     save_on_change=True,
+                    scene_overridable=False,
                 ),
                 "api_key": AgentActionConfig(
                     type="password",
@@ -172,6 +173,7 @@ class OpenAICompatibleMixin:
                     label="API Key",
                     description="Optional API key for authentication.",
                     save_on_change=True,
+                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",
@@ -181,6 +183,7 @@ class OpenAICompatibleMixin:
                         "The model name to use for vision analysis. (May be optional depending on the API endpoint)"
                     ),
                     save_on_change=True,
+                    scene_overridable=False,
                 ),
             },
         )

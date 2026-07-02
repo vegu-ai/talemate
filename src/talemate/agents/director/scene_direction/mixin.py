@@ -141,41 +141,39 @@ class SceneDirectionMixin:
 
     @property
     def direction_missing_response_retry_max(self) -> int:
-        return int(
-            self.actions["scene_direction"].config["missing_response_retry_max"].value
-        )
+        return int(self.resolve_config("scene_direction", "missing_response_retry_max"))
 
     @property
     def direction_response_length(self) -> int:
-        return int(self.actions["scene_direction"].config["response_length"].value)
+        return int(self.resolve_config("scene_direction", "response_length"))
 
     @property
     def direction_max_actions_per_turn(self) -> int:
-        return int(self.actions["scene_direction"].config["max_actions_per_turn"].value)
+        return int(self.resolve_config("scene_direction", "max_actions_per_turn"))
 
     @property
     def direction_scene_context_ratio(self) -> float:
-        return self.actions["scene_direction"].config["scene_context_ratio"].value
+        return self.resolve_config("scene_direction", "scene_context_ratio")
 
     @property
     def direction_enable_analysis(self) -> bool:
-        return self.actions["scene_direction"].config["enable_analysis"].value
+        return self.resolve_config("scene_direction", "enable_analysis")
 
     @property
     def direction_staleness_threshold(self) -> float:
-        return self.actions["scene_direction"].config["staleness_threshold"].value
+        return self.resolve_config("scene_direction", "staleness_threshold")
 
     @property
     def direction_custom_instructions(self) -> str:
-        return self.actions["scene_direction"].config["custom_instructions"].value
+        return self.resolve_config("scene_direction", "custom_instructions")
 
     @property
     def direction_maintain_turn_balance(self) -> bool:
-        return self.actions["scene_direction"].config["maintain_turn_balance"].value
+        return self.resolve_config("scene_direction", "maintain_turn_balance")
 
     @property
     def direction_enabled(self) -> bool:
-        return self.actions["scene_direction"].enabled
+        return self.resolve_enabled("scene_direction")
 
     @property
     def direction_enabled_with_override(self) -> bool:

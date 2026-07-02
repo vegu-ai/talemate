@@ -6,6 +6,8 @@
 *.internal*
 *_internal*
 talemate_env
+embedded_python/
+embedded_node/
 chroma
 config.yaml
 secrets/

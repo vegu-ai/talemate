@@ -7,8 +7,6 @@ Extractors (template-defined):
   Generates the opening text shown when a scene starts.
   Must provide enough context for reader to dive in.
 #}
-{% set _ = generation_context.set_state('response_prefix', '<INTRO>') %}
-{{ set_anchor_extractor("response", "<INTRO>", "</INTRO>", fallback_to_full=True) }}
 {{ action_task }} introduction for the scene. This is the first text that is shown to {{ scene.get_player_character().name or "the reader" }} when they start the scene.
 
 It must contain enough context for the reader to dive right in. Assume that the reader has not looked at the character or scene descriptions.
@@ -17,5 +15,4 @@ It must setup an interesting entry point for the reader to participate in the sc
 
 Only spoken words should be within ".
 
-Output the scene introduction wrapped in <INTRO></INTRO> tags:
-<INTRO>the scene introduction text</INTRO>
+{% with output_tag="INTRO", output_label="scene introduction", output_example="the scene introduction text" %}{% include "contextual-generate/output-format.jinja2" %}{% endwith %}

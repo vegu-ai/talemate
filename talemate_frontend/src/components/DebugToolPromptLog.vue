@@ -17,7 +17,7 @@
         @click="openPromptView(prompt)"
     />
 
-    <DebugToolPromptView ref="promptView" />
+    <DebugToolPromptView ref="promptView" :app-config="appConfig" />
 </template>
 <script>
 
@@ -30,6 +30,10 @@ export default {
         prompts: {
             type: Array,
             default: () => [],
+        },
+        appConfig: {
+            type: Object,
+            default: () => ({}),
         },
     },
     components: {

@@ -11,7 +11,6 @@ import structlog
 import uuid
 import pydantic
 from pydantic import ConfigDict
-import dataclasses
 import re
 from talemate.agents.base import (
     set_processing,
@@ -24,12 +23,16 @@ from talemate.agents.base import (
 from talemate.instance import get_agent
 from talemate.emit import emit
 import talemate.emit.async_signals as async_signals
-from talemate.agents.conversation import ConversationAgentEmission
-from talemate.agents.narrator import NarratorAgentEmission
 from talemate.agents.creator.assistant import ContextualGenerateEmission
 from talemate.agents.summarize import SummarizeEmission
 from talemate.agents.summarize.layered_history import LayeredHistoryFinalizeEmission
-from talemate.scene_message import CharacterMessage
+from talemate.events import HistoryEvent
+from talemate.scene_message import (
+    CharacterMessage,
+    ContextInvestigationMessage,
+    NarratorMessage,
+    SceneMessage,
+)
 from talemate.util.dedupe import (
     SimilarityMatch,
     compile_text_to_sentences,
@@ -174,14 +177,13 @@ async_signals.register(
 )
 
 
-@dataclasses.dataclass
 class RevisionEmission(AgentTemplateEmission):
     """
     Emission for the revision agent
     """
 
-    info: RevisionInformation = dataclasses.field(default_factory=RevisionInformation)
-    issues: Issues = dataclasses.field(default_factory=Issues)
+    info: RevisionInformation = pydantic.Field(default_factory=RevisionInformation)
+    issues: Issues = pydantic.Field(default_factory=Issues)
 
 
 # Maximum ratio of fix length to original length before discarding
@@ -316,6 +318,11 @@ class RevisionMixin:
                                 "help": "Automatically revise narrator actions.",
                             },
                             {
+                                "label": "Context Investigations",
+                                "value": "context_investigation",
+                                "help": "Automatically revise context-investigation messages (look-at, query, examine, etc).",
+                            },
+                            {
                                 "label": "Contextual generation",
                                 "value": "contextual_generation",
                                 "help": "Automatically revise generated context (character attributes, details, etc).",
@@ -439,6 +446,27 @@ class RevisionMixin:
                     max=100,
                     step=1,
                 ),
+                "repetition_handling": AgentActionConfig(
+                    type="text",
+                    label="Repetition handling",
+                    description="What the AI-assisted revision should do with detected repetitions.",
+                    condition=rewrite_unslop_condition,
+                    value="remove",
+                    choices=[
+                        {"label": "Remove", "value": "remove"},
+                        {"label": "Attempt rewrite", "value": "rewrite"},
+                    ],
+                    note_on_value={
+                        "remove": AgentActionNote(
+                            color="primary",
+                            text="Flagged repetitions are deleted from the text. Safer choice for weaker models, which often struggle to substitute genuinely different content and end up rephrasing the same idea — re-introducing the very repetition the rule is meant to fix.",
+                        ),
+                        "rewrite": AgentActionNote(
+                            color="primary",
+                            text="The agent will attempt to rewrite flagged repetitions with genuinely different content. Because matches are semantic, simply rephrasing the same idea is not enough — the underlying beat must change, which weaker models tend to fail at. Best with stronger models. Falls back to removal only when no meaningful rewrite is possible.",
+                        ),
+                    },
+                ),
             },
         )
 
@@ -446,61 +474,59 @@ class RevisionMixin:
 
     @property
     def revision_enabled(self):
-        return self.actions["revision"].enabled
+        return self.resolve_enabled("revision")
 
     @property
     def revision_automatic_enabled(self) -> bool:
-        return self.actions["revision"].config["automatic_revision"].value
+        return self.resolve_config("revision", "automatic_revision")
 
     @property
     def revision_automatic_targets(self) -> list[str]:
-        return self.actions["revision"].config["automatic_revision_targets"].value
+        return self.resolve_config("revision", "automatic_revision_targets")
 
     @property
     def revision_method(self):
-        return self.actions["revision"].config["revision_method"].value
+        return self.resolve_config("revision", "revision_method")
 
     @property
     def revision_repetition_detection_method(self):
-        return self.actions["revision"].config["repetition_detection_method"].value
+        return self.resolve_config("revision", "repetition_detection_method")
 
     @property
     def revision_repetition_threshold(self):
-        return self.actions["revision"].config["repetition_threshold"].value
+        return self.resolve_config("revision", "repetition_threshold")
 
     @property
     def revision_repetition_range(self):
-        return self.actions["revision"].config["repetition_range"].value
+        return self.resolve_config("revision", "repetition_range")
 
     @property
     def revision_repetition_min_length(self):
-        return self.actions["revision"].config["repetition_min_length"].value
+        return self.resolve_config("revision", "repetition_min_length")
+
+    @property
+    def revision_repetition_handling(self):
+        return self.resolve_config("revision", "repetition_handling")
 
     @property
     def revision_split_on_comma(self):
-        return self.actions["revision"].config["split_on_comma"].value
+        return self.resolve_config("revision", "split_on_comma")
 
     @property
     def revision_min_issues(self):
-        return self.actions["revision"].config["min_issues"].value
+        return self.resolve_config("revision", "min_issues")
 
     @property
     def revision_detect_bad_prose_enabled(self):
-        return self.actions["revision"].config["detect_bad_prose"].value
+        return self.resolve_config("revision", "detect_bad_prose")
 
     @property
     def revision_detect_bad_prose_threshold(self):
-        return self.actions["revision"].config["detect_bad_prose_threshold"].value
+        return self.resolve_config("revision", "detect_bad_prose_threshold")
 
     # signal connect
 
     def connect(self, scene):
-        async_signals.get("agent.conversation.generated").connect(
-            self.revision_on_generation
-        )
-        async_signals.get("agent.narrator.generated").connect(
-            self.revision_on_generation
-        )
         async_signals.get("agent.creator.contextual_generate.after").connect(
             self.revision_on_generation
         )
@@ -510,19 +536,38 @@ class RevisionMixin:
         async_signals.get("agent.summarization.layered_history.finalize").connect(
             self.revision_on_generation
         )
+        # Character / narrator revision runs at push_history time so the
+        # SceneMessage exists and the pre-revision text is naturally
+        # preserved as the initial "original" entry of the version stack
+        # when we append the revised version.
+        async_signals.get("push_history").connect(self.revision_on_push)
         # connect to the super class AFTER so these run first.
         super().connect(scene)
 
+    def _revision_automatic_target_enabled(self, target: str) -> bool:
+        if not self.revision_enabled or not self.revision_automatic_enabled:
+            return False
+        return target in self.revision_automatic_targets
+
+    def _revision_disabled_by_context(self) -> bool:
+        try:
+            return bool(revision_disabled_context.get())
+        except LookupError:
+            return False
+
     async def revision_on_generation(
         self,
-        emission: ConversationAgentEmission
-        | NarratorAgentEmission
-        | ContextualGenerateEmission
+        emission: ContextualGenerateEmission
         | SummarizeEmission
         | LayeredHistoryFinalizeEmission,
     ):
         """
-        Called when a conversation or narrator message is generated
+        Auto-revision for non-SceneMessage emissions (contextual generation
+        and summarization). Mutates ``emission.response`` in place because
+        these flows have no SceneMessage to attach a mutation history to.
+
+        Character / narrator emissions are handled separately at
+        ``push_history`` time by ``revision_on_push``.
         """
 
         if not self.revision_enabled or not self.revision_automatic_enabled:
@@ -531,18 +576,6 @@ class RevisionMixin:
         if (
             isinstance(emission, ContextualGenerateEmission)
             and "contextual_generation" not in self.revision_automatic_targets
-        ):
-            return
-
-        if (
-            isinstance(emission, ConversationAgentEmission)
-            and "character" not in self.revision_automatic_targets
-        ):
-            return
-
-        if (
-            isinstance(emission, NarratorAgentEmission)
-            and "narrator" not in self.revision_automatic_targets
         ):
             return
 
@@ -563,15 +596,12 @@ class RevisionMixin:
         ):
             return
 
-        try:
-            if revision_disabled_context.get():
-                log.debug(
-                    "revision_on_generation: revision disabled through context",
-                    emission=emission,
-                )
-                return
-        except LookupError:
-            pass
+        if self._revision_disabled_by_context():
+            log.debug(
+                "revision_on_generation: revision disabled through context",
+                emission=emission,
+            )
+            return
 
         info = RevisionInformation(
             text=emission.response,
@@ -599,12 +629,126 @@ class RevisionMixin:
             original=info.text,
         )
 
+    async def maybe_revise_inplace(self, message: SceneMessage) -> bool:
+        """
+        Run auto-revision on a SceneMessage. If the configured revision
+        method actually rewrote the text, a new ``"revision"`` version is
+        appended to ``message.versions`` (which makes it the active
+        canonical) and the call returns ``True``. Otherwise returns
+        ``False`` and the stack is untouched.
+
+        The pre-revision text is naturally preserved as whichever stack
+        entry was active before — typically the "original" seeded at
+        construction, but it could be a prior revision/regenerate if this
+        message has already been rewritten.
+
+        Gating mirrors ``revision_on_generation``: only fires for
+        ``CharacterMessage`` / ``NarratorMessage`` / ``ContextInvestigationMessage``
+        when the corresponding ``automatic_revision_targets`` flag is set
+        and revision is enabled / automatic / not disabled by context.
+        """
+        if isinstance(message, CharacterMessage):
+            target = "character"
+        elif isinstance(message, NarratorMessage):
+            target = "narrator"
+        elif isinstance(message, ContextInvestigationMessage):
+            target = "context_investigation"
+        else:
+            return False
+
+        # Player-authored messages (character or narrator) must not be
+        # auto-revised — the player's words are theirs, not ours to rewrite.
+        if message.source == "player":
+            return False
+
+        if not self._revision_automatic_target_enabled(target):
+            return False
+
+        if self._revision_disabled_by_context():
+            log.debug(
+                "maybe_revise_inplace: revision disabled through context",
+                message_id=message.id,
+            )
+            return False
+
+        character = None
+        if isinstance(message, CharacterMessage):
+            character = self.scene.get_character(message.character_name)
+
+        original = message.message
+        info = RevisionInformation(text=original, character=character)
+        revised = await self.revision_revise(info)
+
+        if revised == original:
+            return False
+
+        log.info(
+            "maybe_revise_inplace: revision applied",
+            type=type(message).__name__,
+            revised=revised,
+            original=original,
+        )
+        message.append_version(revised, source="revision")
+        return True
+
+    async def revision_on_push(self, event: HistoryEvent):
+        """
+        Run auto-revision on the first CharacterMessage / NarratorMessage /
+        ContextInvestigationMessage being pushed to scene history. When the
+        revision rewrites the text, a new ``"revision"`` version is appended
+        to the message's stack — the original is already at index 0 from
+        construction, so the wire emit picks up both atomically when
+        push_history returns.
+
+        Only the first matching message is processed — push_history events
+        rarely batch revisable messages, and revision is a single-target
+        operation.
+
+        Cancellation: the message is already committed to ``scene.history``
+        by the time this fires, and callers emit the wire message *after*
+        ``push_history`` returns. If a cancel escapes here, the trailing
+        ``push_history.after`` listeners (e.g. the summarizer's
+        ``build_archive``) would also re-raise off the still-set
+        ``scene.cancel_requested`` flag, stripping the wire emit and
+        leaving the message stranded in history but invisible in the UX.
+        Contain the cancel here so the original message still reaches the
+        UX — equivalent to "revision aborted, keep the original".
+        """
+        for message in event.messages:
+            if not isinstance(
+                message,
+                (CharacterMessage, NarratorMessage, ContextInvestigationMessage),
+            ):
+                continue
+            # The message is already in scene history by the time the
+            # push_history signal fires, so scope the revision context to
+            # it — otherwise the repetition range collects the message
+            # itself and every sentence matches itself at 100%.
+            try:
+                with RevisionContext(message.id):
+                    await self.maybe_revise_inplace(message)
+            except GenerationCancelled:
+                log.warning(
+                    "revision_on_push: revision cancelled — keeping original",
+                    message_id=message.id,
+                )
+            # revision_revise catches GenerationCancelled internally and
+            # returns the original text, but the scene-level cancel flag
+            # stays set (client's poll_interrupt doesn't reset it). Clear
+            # it so push_history.after agent actions don't re-raise.
+            if self.scene.cancel_requested:
+                self.scene.cancel_requested = False
+            return
+
     # helpers
 
     async def revision_collect_repetition_range(self) -> list[str]:
         """
         Collect the range of text to revise against by going through the scene's
-        history and collecting narrator and character messages
+        history and collecting narrator, character, and context-investigation
+        messages. CIMs are included regardless of whether they're an
+        automatic-revision target so the corpus reflects everything the player
+        sees in the narrative flow.
         """
 
         scene: "Scene" = self.scene
@@ -612,7 +756,7 @@ class RevisionMixin:
         ctx = revision_context.get()
 
         messages = scene.collect_messages(
-            typ=["narrator", "character"],
+            typ=["narrator", "character", "context_investigation"],
             max_messages=self.revision_repetition_range,
             start_idx=scene.message_index(ctx.message_id) - 1
             if ctx.message_id
@@ -1116,6 +1260,7 @@ class RevisionMixin:
             "response_length": response_length,
             "max_tokens": self.client.max_token_length,
             "repetition": issues.repetition,
+            "repetition_handling": self.revision_repetition_handling,
             "bad_prose": issues.bad_prose,
             "dynamic_instructions": emission.dynamic_instructions,
             "context_type": info.context_type,
@@ -1142,9 +1287,9 @@ class RevisionMixin:
         await async_signals.get("agent.editor.revision-analysis.after").send(emission)
 
         revision = extracted["revision"]
-        if revision is None:
+        if not revision:
             log.debug(
-                "revision_rewrite: no <REVISION> found in response, keeping original"
+                "revision_rewrite: no <REVISION> content in response, keeping original"
             )
             return original_text
 
@@ -1208,6 +1353,8 @@ class RevisionMixin:
             template = "editor.unslop-contextual-generation"
         elif info.summarization_history is not None:
             template = "editor.unslop-summarization"
+        elif character is None:
+            template = "editor.unslop-narration"
 
         log.debug("revision_unslop: issues", issues=issues, template=template)
 
@@ -1227,6 +1374,7 @@ class RevisionMixin:
             "response_length": response_length,
             "max_tokens": self.client.max_token_length,
             "repetition": issues.repetition,
+            "repetition_handling": self.revision_repetition_handling,
             "bad_prose": issues.bad_prose,
             "dynamic_instructions": emission.dynamic_instructions,
             "context_type": info.context_type,
@@ -1246,8 +1394,10 @@ class RevisionMixin:
         )
 
         fix = extracted["fix"]
-        if fix is None:
-            log.debug("revision_unslop: no <FIX> found in response", response=response)
+        if not fix:
+            log.debug(
+                "revision_unslop: no <FIX> content in response", response=response
+            )
             return original_text
 
         # Guard: if the fix is substantially longer than the original,
@@ -1282,4 +1432,3 @@ class RevisionMixin:
         if agent_function_name == "revision_revise":
             if prompt_param.get("extra_stopping_strings") is None:
                 prompt_param["extra_stopping_strings"] = []
-            prompt_param["extra_stopping_strings"] += ["</FIX>"]

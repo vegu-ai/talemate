@@ -53,17 +53,52 @@ class SummarizeWebsocketHandler(Plugin):
         )
 
     async def handle_apply_context_history_config(self, data: dict):
-        """Apply context history config overrides to the summarizer agent and persist."""
-        payload = ApplyContextHistoryConfigPayload(**data.get("config", {}))
-        action_config = self.summarizer.actions["manage_scene_history"].config
+        """Apply context history config overrides to the summarizer agent and persist.
 
-        action_config["dialogue_ratio"].value = payload.dialogue_ratio
-        action_config["summary_detail_ratio"].value = payload.summary_detail_ratio
-        action_config["max_budget"].value = payload.max_budget
-        action_config["enforce_boundary"].value = payload.enforce_boundary
-        action_config["best_fit"].value = payload.best_fit
-        action_config["best_fit_min_dialogue"].value = payload.best_fit_min_dialogue
-        action_config["best_fit_max_dialogue"].value = payload.best_fit_max_dialogue
+        Each field routes through ``write_config`` so any active scene-level
+        override receives the new value instead of being silently shadowed by
+        a write to the global config it overrides.
+        """
+        payload = ApplyContextHistoryConfigPayload(**data.get("config", {}))
+
+        for field in (
+            "dialogue_ratio",
+            "summary_detail_ratio",
+            "max_budget",
+            "enforce_boundary",
+            "best_fit",
+            "best_fit_min_dialogue",
+            "best_fit_max_dialogue",
+        ):
+            self.summarizer.write_config(
+                "manage_scene_history", field, getattr(payload, field)
+            )
+
+        # `write_config` routes per-field: overridden fields land in the
+        # overlay, the rest in the global. There's no transaction across the
+        # two targets, so we persist both independently and surface an overlay
+        # failure to the user without suppressing the global save — otherwise
+        # any non-overridden field's edit would be silently lost on restart.
+        # Overridden-field edits still revert on next scene load if the
+        # overlay write failed.
+        overlay_error: OSError | None = None
+        overrides = self.summarizer.scene_overrides()
+        if overrides is not None:
+            try:
+                await overrides.write_to_file()
+            except OSError as exc:
+                log.warning(
+                    "scene-overrides write failed",
+                    filepath=str(overrides.filepath),
+                    error=str(exc),
+                )
+                overlay_error = exc
 
         await self.summarizer.save_config()
         await self.summarizer.emit_status()
+
+        if overlay_error is not None:
+            await self.signal_operation_failed(
+                f"Failed to write agent-settings file: "
+                f"{overlay_error.strerror or overlay_error}"
+            )

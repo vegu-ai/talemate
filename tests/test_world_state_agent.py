@@ -12,6 +12,7 @@ The function under test is always invoked via its real public entry point.
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
@@ -25,6 +26,7 @@ from _world_state_helpers import (
 import talemate.instance as instance_module
 import talemate.agents.world_state as world_state_module
 from talemate.agents.world_state import (
+    SNAPSHOT_TASK,
     TimePassageEmission,
     WorldStateAgent,
     WorldStateAgentEmission,
@@ -50,7 +52,7 @@ class TestInitActions:
         actions = WorldStateAgent.init_actions()
         cfg = actions["update_world_state"].config
         assert cfg["initial"].value is True
-        assert cfg["turns"].value == 5
+        assert cfg["turns"].value == 10
 
     def test_check_pin_conditions_action_default_turns(self):
         actions = WorldStateAgent.init_actions()
@@ -198,6 +200,16 @@ class TestAutoCheckPinConditions:
         assert agent.next_pin_check == 1
 
 
+def _enable_client_concurrency(monkeypatch, agent):
+    """Make the agent's client report concurrent-inference support so the
+    snapshot takes the background (non-blocking) dispatch path."""
+    monkeypatch.setattr(
+        type(agent.client),
+        "supports_concurrent_inference",
+        property(lambda self: True),
+    )
+
+
 class TestUpdateWorldState:
     @pytest.mark.asyncio
     async def test_disabled_agent_skips(self, scene):  # noqa: F811
@@ -214,10 +226,11 @@ class TestUpdateWorldState:
     @pytest.mark.asyncio
     async def test_force_triggers_update_request(self, scene, monkeypatch):  # noqa: F811
         """When force=True, the gating logic is bypassed and
-        scene.world_state.request_update is called."""
+        scene.world_state.request_update is dispatched as a background task."""
         from talemate.world_state import WorldState
 
         agent = instance_module.get_agent("world_state")
+        _enable_client_concurrency(monkeypatch, agent)
         called = {"flag": False}
 
         async def _fake_request_update(self, *args, **kwargs):
@@ -226,7 +239,112 @@ class TestUpdateWorldState:
         # Patch on the WorldState class (pydantic models don't allow per-instance method override)
         monkeypatch.setattr(WorldState, "request_update", _fake_request_update)
         await agent.update_world_state(force=True)
+        # The snapshot now runs in the background; await the task to observe it.
+        task = agent._tracked_task(SNAPSHOT_TASK)
+        assert task is not None
+        await task
         assert called["flag"] is True
+
+    @pytest.mark.asyncio
+    async def test_single_flight_skips_while_in_flight(self, scene, monkeypatch):  # noqa: F811
+        """A forced update is skipped while a prior snapshot is still running,
+        and resumes once the in-flight task finishes."""
+        from talemate.world_state import WorldState
+
+        agent = instance_module.get_agent("world_state")
+        _enable_client_concurrency(monkeypatch, agent)
+        called = {"n": 0}
+
+        async def _fake_request_update(self, *args, **kwargs):
+            called["n"] += 1
+
+        monkeypatch.setattr(WorldState, "request_update", _fake_request_update)
+
+        # Simulate an in-flight snapshot that hasn't completed yet.
+        release = asyncio.Event()
+
+        async def _blocker():
+            await release.wait()
+
+        in_flight = asyncio.create_task(_blocker())
+        agent._tracked_tasks = {SNAPSHOT_TASK: in_flight}
+
+        # Forced run must skip rather than start an overlapping generation.
+        await agent.update_world_state(force=True)
+        assert called["n"] == 0
+        assert agent._tracked_task(SNAPSHOT_TASK) is in_flight
+
+        # Once the in-flight task completes, a forced run dispatches again.
+        release.set()
+        await in_flight
+        await agent.update_world_state(force=True)
+        assert agent._tracked_task(SNAPSHOT_TASK) is not in_flight
+        await agent._tracked_task(SNAPSHOT_TASK)
+        assert called["n"] == 1
+
+    @pytest.mark.asyncio
+    async def test_cancel_world_state_update(self, scene, monkeypatch):  # noqa: F811
+        """cancel_world_state_update cancels the in-flight background snapshot
+        and is a no-op when nothing is running."""
+        from talemate.world_state import WorldState
+
+        agent = instance_module.get_agent("world_state")
+        _enable_client_concurrency(monkeypatch, agent)
+        release = asyncio.Event()
+
+        async def _fake_request_update(self, *args, **kwargs):
+            await release.wait()
+
+        monkeypatch.setattr(WorldState, "request_update", _fake_request_update)
+
+        # Nothing in flight yet -> no-op.
+        assert agent.cancel_world_state_update() is False
+
+        # Start a background snapshot that blocks, then cancel it.
+        await agent.update_world_state(force=True)
+        task = agent._tracked_task(SNAPSHOT_TASK)
+        assert task is not None and not task.done()
+
+        assert agent.cancel_world_state_update() is True
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert task.cancelled()
+
+        # Already finished -> no-op again.
+        assert agent.cancel_world_state_update() is False
+
+    @pytest.mark.asyncio
+    async def test_concurrency_gate_controls_background_flag(  # noqa: F811
+        self, scene, monkeypatch
+    ):
+        """The snapshot runs under the background-processing flag only when the
+        linked client supports concurrent inference; otherwise it runs in the
+        foreground. Either way the dispatch is non-blocking."""
+        from talemate.world_state import WorldState
+        from talemate.agents.base import background_processing
+
+        agent = instance_module.get_agent("world_state")
+        observed = {}
+
+        async def _fake_request_update(self, *args, **kwargs):
+            # asyncio.create_task copies the context, so this reflects whether
+            # the snapshot was dispatched in background mode.
+            observed["background"] = background_processing.get()
+
+        monkeypatch.setattr(WorldState, "request_update", _fake_request_update)
+
+        # No concurrency -> foreground (flag not set).
+        assert agent.snapshot_runs_in_background is False
+        await agent.update_world_state(force=True)
+        await agent._tracked_task(SNAPSHOT_TASK)
+        assert observed["background"] is False
+
+        # Concurrency enabled -> background (flag set).
+        _enable_client_concurrency(monkeypatch, agent)
+        assert agent.snapshot_runs_in_background is True
+        await agent.update_world_state(force=True)
+        await agent._tracked_task(SNAPSHOT_TASK)
+        assert observed["background"] is True
 
     @pytest.mark.asyncio
     async def test_increments_when_not_due(self, scene, monkeypatch):  # noqa: F811
@@ -261,8 +379,9 @@ class TestRequestWorldState:
         scene.intro = ""
         scene.history = []
         # active_characters is empty by default
-        result = await agent.request_world_state()
-        assert result is None
+        response = await agent.request_world_state()
+        assert response.world_state is None
+        assert response.anchor_message_ids == []
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,4 @@
 import re
-import traceback
 from enum import Enum
 from typing import Any, Union
 
@@ -9,22 +8,48 @@ from pydantic import BaseModel, Field
 import talemate.instance as instance
 from talemate.emit import emit
 from talemate.prompts import Prompt
-from talemate.exceptions import GenerationCancelled
 import talemate.game.focal.schema as focal_schema
 from talemate.game.schema import ConditionGroup
+from talemate.world_state.schema import (
+    CharacterState,
+    ObjectState,
+    PlaceState,
+)
+
+__all__ = [
+    "CharacterState",
+    "ObjectState",
+    "PlaceState",
+    "WorldStateResponse",
+    "WorldState",
+    "Reinforcement",
+    "ContextPin",
+    "ManualContext",
+    "Suggestion",
+    "InsertionMode",
+    "ANY_CHARACTER",
+]
 
 ANY_CHARACTER = "__any_character__"
 
 log = structlog.get_logger("talemate")
 
 
-class CharacterState(BaseModel):
-    snapshot: Union[str, None] = None
-    emotion: Union[str, None] = None
+class WorldStateResponse(BaseModel):
+    """
+    Result of WorldStateAgent.request_world_state.
 
+    `world_state` is the raw parsed JSON payload from the LLM (or None if
+    the agent short-circuited because nothing in the scene could be
+    snapshotted). `anchor_message_ids` is the list of scene history message
+    ids the snapshot was generated against — every one of them is a valid
+    inline-highlight target. The list is empty when the snapshot was
+    generated against the scene intro (intro is not a real message and has
+    no id, so highlights don't render inline in that case).
+    """
 
-class ObjectState(BaseModel):
-    snapshot: Union[str, None] = None
+    world_state: Union[dict, None] = None
+    anchor_message_ids: list[int] = Field(default_factory=list)
 
 
 class InsertionMode(str, Enum):
@@ -112,8 +137,15 @@ class WorldState(BaseModel):
     # objects in the scene by name
     items: dict[str, ObjectState] = {}
 
+    # places referenced in the scene by name (distinct from `location`)
+    places: dict[str, PlaceState] = {}
+
     # location description
     location: Union[str, None] = None
+
+    # ids of the scene history messages the snapshot was generated against;
+    # every one of these can render inline entity highlights in the UI.
+    anchor_message_ids: list[int] = Field(default_factory=list)
 
     # reinforcers
     reinforce: list[Reinforcement] = []
@@ -190,14 +222,16 @@ class WorldState(BaseModel):
 
     def reset(self):
         """
-        Resets the WorldState instance to its initial state by clearing characters, items, and location.
+        Resets the WorldState instance to its initial state by clearing characters, items, places, location, and anchor.
 
         Arguments:
         - None
         """
         self.characters = {}
         self.items = {}
+        self.places = {}
         self.location = None
+        self.anchor_message_ids = []
 
     def emit(self, status="update"):
         """
@@ -210,10 +244,16 @@ class WorldState(BaseModel):
 
     async def request_update(self, initial_only: bool = False):
         """
-        Requests an update of the world state from the WorldState agent. If initial_only is true, emits current state without requesting if characters exist.
+        Public entry point for refreshing the world-state snapshot.
+
+        Owns only the ``initial_only`` short-circuits; the generate-and-merge
+        policy lives on the world_state agent
+        (``WorldStateSnapshotMixin.apply_snapshot_update``), which this method
+        delegates to.
 
         Arguments:
-        - initial_only: A boolean flag to determine if only the initial state should be emitted without requesting a new one.
+        - initial_only: When true, emit the current state without requesting a
+          new one if characters already exist or automatic updates are off.
         """
 
         if initial_only and self.characters:
@@ -221,119 +261,11 @@ class WorldState(BaseModel):
             return
 
         # if auto is true, we need to check if agent has automatic update enabled
-        if initial_only and not self.agent.actions["update_world_state"].enabled:
+        if initial_only and not self.agent.update_world_state_enabled:
             self.emit()
             return
 
-        self.emit(status="requested")
-
-        try:
-            world_state = await self.agent.request_world_state()
-        except GenerationCancelled:
-            self.emit()
-            return
-        except Exception as e:
-            self.emit()
-            log.error(
-                "world_state.request_update", error=e, traceback=traceback.format_exc()
-            )
-            return
-
-        if world_state is None:
-            self.emit()
-            return
-
-        previous_characters = self.characters
-        scene = self.agent.scene
-        character_names = scene.character_names
-        self.characters = {}
-        self.items = {}
-
-        # if characters is not set or empty, make sure its at least a dict
-        if not world_state.get("characters"):
-            world_state["characters"] = {}
-
-        for character_name, character in world_state.get("characters", {}).items():
-            character_name = self.normalize_name(character_name)
-            # if character name is an alias, we need to convert it to the main name
-            # if it exists in the mappings
-
-            for main_name, synonyms in self.character_name_mappings.items():
-                if character_name.lower() in synonyms:
-                    log.debug(
-                        "world_state adjusting character name (via mapping)",
-                        from_name=character_name,
-                        to_name=main_name,
-                    )
-                    character_name = main_name
-                    break
-
-            # character name may not always come back exactly as we have
-            # it defined in the scene. We assign the correct name by checking occurences
-            # of both names in each other.
-
-            if character_name not in character_names:
-                for _character_name in character_names:
-                    if (
-                        _character_name.lower() in character_name.lower()
-                        or character_name.lower() in _character_name.lower()
-                    ):
-                        log.debug(
-                            "world_state adjusting character name",
-                            from_name=character_name,
-                            to_name=_character_name,
-                        )
-                        character_name = _character_name
-                        break
-
-            if not character:
-                continue
-
-            # if emotion is not set, see if a previous state exists
-            # and use that emotion
-
-            if "emotion" not in character:
-                log.debug(
-                    "emotion not set",
-                    character_name=character_name,
-                    character=character,
-                    characters=previous_characters,
-                )
-                if character_name in previous_characters:
-                    character["emotion"] = previous_characters[character_name].emotion
-            try:
-                self.characters[character_name] = CharacterState(**character)
-            except Exception as e:
-                log.error(
-                    "world_state.request_update",
-                    error=e,
-                    traceback=traceback.format_exc(),
-                    character=character,
-                )
-
-            log.debug("world_state", character=character)
-
-        # if items is not set or empty, make sure its at least a dict
-        if not world_state.get("items"):
-            world_state["items"] = {}
-
-        for item_name, item in world_state.get("items", {}).items():
-            item_name = self.normalize_name(item_name)
-            if not item:
-                continue
-            try:
-                self.items[item_name] = ObjectState(**item)
-            except Exception as e:
-                log.error(
-                    "world_state.request_update",
-                    error=e,
-                    traceback=traceback.format_exc(),
-                )
-            log.debug("world_state", item=item)
-
-        # deactivate persiting for now
-        # await self.persist()
-        self.emit()
+        await self.agent.apply_snapshot_update(self)
 
     async def persist(self):
         """

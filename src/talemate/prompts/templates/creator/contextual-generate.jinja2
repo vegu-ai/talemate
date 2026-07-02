@@ -82,6 +82,8 @@ Override example:
 {% with information=generation_context.information %}{% include "task-information.jinja2" %}{% endwith %}
 {# END INFORMATION #}
 
+{% include "autocomplete-hint.jinja2" %}
+
 {# TASK DISPATCH #}
 <|SECTION:TASK|>
 {% if context_typ == "list" %}
@@ -119,6 +121,7 @@ Override example:
 
 {% if generation_context.instructions %}
 ### Editorial Instructions
+{{ generation_context.get_state('instructions_intro') or "The following is user-provided instruction and/or seed material for this generation. It must be considered and reflected in your response:" }}
 {{ generation_context.instructions }}
 {% endif %}
 

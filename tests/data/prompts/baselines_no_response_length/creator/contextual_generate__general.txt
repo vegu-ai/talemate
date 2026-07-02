@@ -39,6 +39,7 @@ Output the content wrapped in <CONTENT></CONTENT> tags:
 <CONTENT>the content</CONTENT>
 
 ### Editorial Instructions
+The following is user-provided instruction and/or seed material for this generation. It must be considered and reflected in your response:
 Describe the world's history
 
 <|BOT|><CONTENT>

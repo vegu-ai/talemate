@@ -108,6 +108,7 @@ class OpenAIMixin:
                     type="unified_api_key",
                     value="openai.api_key",
                     label="OpenAI API Key",
+                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",
@@ -119,6 +120,7 @@ class OpenAIMixin:
                     ],
                     label="Model",
                     description="TTS model to use",
+                    scene_overridable=False,
                 ),
                 "chunk_size": AgentActionConfig(
                     type="number",
@@ -128,6 +130,7 @@ class OpenAIMixin:
                     value=512,
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
+                    scene_overridable=False,
                 ),
             },
         )

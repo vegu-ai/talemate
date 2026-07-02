@@ -108,27 +108,27 @@ class MemoryRAGMixin:
 
     @property
     def long_term_memory_enabled(self):
-        return self.actions["use_long_term_memory"].enabled
+        return self.resolve_enabled("use_long_term_memory")
 
     @property
     def long_term_memory_retrieval_method(self):
-        return self.actions["use_long_term_memory"].config["retrieval_method"].value
+        return self.resolve_config("use_long_term_memory", "retrieval_method")
 
     @property
     def long_term_memory_number_of_queries(self):
-        return self.actions["use_long_term_memory"].config["number_of_queries"].value
+        return self.resolve_config("use_long_term_memory", "number_of_queries")
 
     @property
     def long_term_memory_answer_length(self):
-        return int(self.actions["use_long_term_memory"].config["answer_length"].value)
+        return int(self.resolve_config("use_long_term_memory", "answer_length"))
 
     @property
     def long_term_memory_cache(self):
-        return self.actions["use_long_term_memory"].config["cache"].value
+        return self.resolve_config("use_long_term_memory", "cache")
 
     @property
     def long_term_memory_num_messages(self):
-        return self.actions["use_long_term_memory"].config["num_messages"].value
+        return self.resolve_config("use_long_term_memory", "num_messages")
 
     @property
     def long_term_memory_cache_key(self):

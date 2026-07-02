@@ -80,6 +80,32 @@
                         </v-alert>
                     </v-col>
                 </v-row>
+
+                <v-row>
+                    <v-col cols="12" lg="6">
+                        <v-select
+                            v-model="agentSettingsSelection"
+                            :items="agentSettingsOptions"
+                            label="Agent settings file"
+                            messages="Per-scene agent configuration overrides. Stored in the project's agent-settings/ folder. When auto-link is on, a default agent-settings.json (if present) is picked up automatically."
+                            @update:model-value="updateAgentSettings"
+                        ></v-select>
+                    </v-col>
+                    <v-col>
+                        <v-alert v-if="scene?.data?.agent_settings_opted_out" density="compact" variant="text" color="muted">
+                            <v-icon class="mr-1">mdi-link-variant-off</v-icon>
+                            This scene is opted out of agent-settings overlays.
+                        </v-alert>
+                        <v-alert v-else-if="scene?.data?.agent_settings_file" density="compact" variant="text" color="muted">
+                            <v-icon class="mr-1">mdi-link-variant</v-icon>
+                            Linked to <strong>{{ scene.data.agent_settings_file }}</strong>. Edit overrides in the agent modal under the Scene tab.
+                        </v-alert>
+                        <v-alert v-else density="compact" variant="text" color="muted">
+                            <v-icon class="mr-1">mdi-link-variant</v-icon>
+                            Auto-link active. The first override set in the agent modal will create the linked file.
+                        </v-alert>
+                    </v-col>
+                </v-row>
         
         
             </v-form>
@@ -98,7 +124,7 @@
 <script>
 
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
-import { MAX_CONTENT_WIDTH } from '@/constants';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 export default {
     name: "WorldStateManagerSceneSettings",
@@ -163,6 +189,35 @@ export default {
             templates.unshift({ value: null, title: 'None', props: { subtitle: 'No persona selected.' } });
             return templates;
         },
+        // Current dropdown value for the agent-settings file picker.
+        // Sentinel strings keep the v-select simple: "__opt_out__" for
+        // explicit opt-out, "__auto__" for "no explicit link / auto-pick
+        // the default if present", otherwise a literal filename.
+        agentSettingsSelection: {
+            get() {
+                if (!this.scene?.data) return '__auto__';
+                if (this.scene.data.agent_settings_opted_out) return '__opt_out__';
+                if (this.scene.data.agent_settings_file) return this.scene.data.agent_settings_file;
+                return '__auto__';
+            },
+            set(value) {
+                // mutation happens in updateAgentSettings; this setter exists
+                // so v-model is happy but we drive the actual update there
+                // (which knows how to send the right payload).
+                this._pendingAgentSettings = value;
+            }
+        },
+        agentSettingsOptions() {
+            const files = this.scene?.data?.agent_settings_files || [];
+            const items = [
+                { value: '__auto__', title: 'Auto-link (default)', props: { subtitle: 'Use agent-settings/agent-settings.json if present in the project folder. Replaces any current explicit link.' } },
+                { value: '__opt_out__', title: 'None (opt out)', props: { subtitle: 'No per-scene agent overrides.' } },
+            ];
+            for (const f of files) {
+                items.push({ value: f, title: f, props: { subtitle: 'Linked file in agent-settings/.' } });
+            }
+            return items;
+        },
         visualStyleTemplates() {
             if(!this.templates || !this.templates.by_type.visual_style) return [{ value: null, title: 'Use Agent Default' }];
             let templates = Object.values(this.templates.by_type.visual_style)
@@ -222,6 +277,32 @@ export default {
                 visual_style_template: this.scene.data.visual_style_template,
                 restore_from: this.scene.data.restore_from,
             }));
+        },
+        updateAgentSettings(value) {
+            // Translate picker value into a backend payload. Server reads
+            // presence-vs-absence of these keys (via pydantic
+            // model_fields_set) to distinguish "explicit None = opt out"
+            // from "absent = leave the link alone".
+            const payload = {
+                type: 'world_state_manager',
+                action: 'update_scene_settings',
+                experimental: this.scene.data.experimental,
+                immutable_save: this.scene.data.immutable_save,
+                writing_style_template: this.scene.data.writing_style_template,
+                agent_persona_templates: this.scene.data.agent_persona_templates || {},
+                visual_style_template: this.scene.data.visual_style_template,
+                restore_from: this.scene.data.restore_from,
+            };
+
+            if (value === '__opt_out__') {
+                payload.agent_settings_file = null;
+            } else if (value === '__auto__') {
+                payload.agent_settings_opted_out = false;
+            } else {
+                payload.agent_settings_file = value;
+            }
+
+            this.getWebsocket().send(JSON.stringify(payload));
         },
         handleMessage(message) {
             if (message.type !== 'world_state_manager') {

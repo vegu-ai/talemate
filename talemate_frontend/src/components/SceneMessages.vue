@@ -277,12 +277,12 @@
         </v-card>
     </v-dialog>
 
-    <div class="message-container mb-8" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;">
-        <div v-for="(message, index) in messages" :key="index" class="message-wrapper">
+    <div class="message-container mb-8" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;" @click="onMessageContainerClick">
+        <div v-for="(message, index) in messages" :key="message.id != null ? `${message.type}-${message.id}` : `idx-${index}`" class="message-wrapper">
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -324,7 +324,7 @@
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`">
-                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
@@ -334,7 +334,7 @@
             </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
                 <div class="time-message"  :id="`message-${message.id}`">
-                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" />
+                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === messages.length - 1" />
                 </div>
             </div>
             <div v-else-if="message.type === 'player_choice'" :class="`message ${message.type}`">
@@ -349,7 +349,7 @@
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="context-investigation-message"  :id="`message-${message.id}`">
-                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" />
+                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
 
@@ -357,6 +357,15 @@
                 {{ message.text }}
             </div>
         </div>
+        <EntityTooltip
+            :model-value="entityTooltip.open"
+            :activator="entityTooltip.activator"
+            :entity="entityTooltip.entity"
+            @update:model-value="onEntityTooltipUpdate"
+            @configure-highlights="onConfigureEntityHighlights"
+            @examine="triggerExamineEntity"
+            @look-at="triggerLookAtEntity"
+        />
     </div>
 </template>
 
@@ -373,8 +382,11 @@ import ContextInvestigationMessage from './ContextInvestigationMessage.vue';
 import SystemMessage from './SystemMessage.vue';
 import VisualReferenceCarousel from './VisualReferenceCarousel.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import EntityHighlightMixin from './EntityHighlightMixin.js';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
-import { isVisualAgentReady } from '../constants/visual.js';
+import RevisionStackMixin from './RevisionStackMixin.js';
+import { isVisualAgentReady, VIS_TYPE } from '@/constants/visual';
+import { isKnownSceneCharacter } from '@/utils/entityActions';
 import { primaryModifierLabel } from '@/utils/keyboardModifiers';
 import {
     getMessageColor as resolveMessageColor,
@@ -391,7 +403,7 @@ const ASSET_SELECT_TYPES = {
         dialogKey: 'avatarSelectDialog',
         requiresCharacter: true,
         getAssetIds(vm, ctx) {
-            const avatars = vm.getCharacterAssets(ctx.character, 'CHARACTER_PORTRAIT');
+            const avatars = vm.getCharacterAssets(ctx.character, VIS_TYPE.CHARACTER_PORTRAIT);
             return avatars.map(a => a.id);
         },
         buildUpdateMessage(dialog) {
@@ -419,7 +431,7 @@ const ASSET_SELECT_TYPES = {
             return Object.entries(vm.assetsMap)
                 .filter(([, asset]) => {
                     const meta = asset?.meta || {};
-                    return meta.vis_type === 'SCENE_ILLUSTRATION' || meta.vis_type === 'SCENE_BACKGROUND';
+                    return meta.vis_type === VIS_TYPE.SCENE_ILLUSTRATION || meta.vis_type === VIS_TYPE.SCENE_BACKGROUND;
                 })
                 .map(([id]) => id);
         },
@@ -446,7 +458,7 @@ const ASSET_SELECT_TYPES = {
             return Object.entries(vm.assetsMap)
                 .filter(([, asset]) => {
                     const meta = asset?.meta || {};
-                    return meta.vis_type === 'CHARACTER_CARD' || meta.vis_type === 'SCENE_CARD';
+                    return meta.vis_type === VIS_TYPE.CHARACTER_CARD || meta.vis_type === VIS_TYPE.SCENE_CARD;
                 })
                 .map(([id]) => id);
         },
@@ -472,12 +484,16 @@ const ASSET_SELECT_DIALOG_KEYS = Object.values(ASSET_SELECT_TYPES).map(t => t.di
 
 export default {
     name: 'SceneMessages',
-    mixins: [VisualAssetsMixin],
+    mixins: [VisualAssetsMixin, RevisionStackMixin, EntityHighlightMixin],
     props: {
         appearanceConfig: {
             type: Object,
         },
         uxLocked: {
+            type: Boolean,
+            default: false,
+        },
+        appBusy: {
             type: Boolean,
             default: false,
         },
@@ -505,7 +521,7 @@ export default {
         VisualReferenceCarousel,
         ConfirmActionPrompt,
     },
-    emits: ['cancel-audio-queue'],
+    emits: ['cancel-audio-queue', 'configure-entity-highlights'],
     data() {
         return {
             primaryModifierLabel,
@@ -534,6 +550,10 @@ export default {
             },
             // Track which message IDs are currently processing asset operations
             processingAssetMessageIds: new Set(),
+            // Context-investigation messages awaiting a freshly requested visual.
+            // Drives the toolbar "Visualize" spinner until the asset attaches
+            // (message_asset_update) or the visual operation finishes.
+            visualizingMessageIds: new Set(),
             // Avatar selection dialog state
             avatarSelectDialog: {
                 show: false,
@@ -565,6 +585,9 @@ export default {
             insertTimePassageAmount: 1,
             insertTimePassageUnit: 'hours',
             insertTimePassageUnits: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
+            // id of the message awaiting an editor revision (its spinner is
+            // cleared on the editor `operation_done` envelope, which has no id)
+            revisionPendingId: null,
         }
     },
     computed: {
@@ -573,6 +596,9 @@ export default {
         },
         editorRevisionsEnabled() {
             return this.agentStatus && this.agentStatus.editor && this.agentStatus.editor.actions && this.agentStatus.editor.actions["revision"] && this.agentStatus.editor.actions["revision"].enabled;
+        },
+        editorRevisionMethod() {
+            return this.agentStatus?.editor?.actions?.revision?.config?.revision_method?.value || null;
         },
         ttsAvailable() {
             return this.agentStatus.tts?.available;
@@ -619,6 +645,7 @@ export default {
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
+            requestRegenerateLastMessage: this.requestRegenerateLastMessage,
             createPin: this.createPin,
             forkSceneInitiate: this.forkSceneInitiate,
             getMessageColor: this.getMessageColor,
@@ -635,6 +662,9 @@ export default {
             markAssetProcessing: this.markAssetProcessing,
             // Provide method to open insert time passage dialog
             insertTimePassage: this.insertTimePassage,
+            // Generate a visual asset for a context-investigation message
+            visualizeMessage: this.visualizeMessage,
+            isMessageVisualizing: this.isMessageVisualizing,
         }
     },
     methods: {
@@ -675,7 +705,7 @@ export default {
                 this.clearUxInteractions();
             }
         },
-        
+
         /**
          * Centralized handler for asset-related WebSocket messages.
          * Handles scene_asset (asset data) and message_asset_update (dynamic avatar changes).
@@ -723,7 +753,15 @@ export default {
                     }
                     // Clear processing state for this message
                     this.processingAssetMessageIds.delete(data.message_id);
+                    this.visualizingMessageIds.delete(data.message_id);
                 }
+            }
+
+            // The visual operation finished — clear any toolbar "Visualize"
+            // spinners that won't be cleared by an asset attaching (e.g.
+            // prompt-only mode or a generation error).
+            if (data.type === 'visual' && data.action === 'operation_done' && this.visualizingMessageIds.size) {
+                this.visualizingMessageIds.clear();
             }
             
             // Handle determine_avatar_noop - world state agent decided no action needed
@@ -906,7 +944,37 @@ export default {
         },
 
         requestDeleteMessage(message_id) {
-            this.getWebsocket().send(JSON.stringify({ type: 'delete_message', id: message_id }));
+            this.getWebsocket().send(JSON.stringify({ type: 'scene_message', action: 'delete', id: message_id }));
+        },
+
+        // Mark the most recent revision-supporting message as
+        // `regenerating` so its pager spinner kicks in immediately. The
+        // flag is cleared on the matching `message_edited`
+        // (reason=regenerate) or `regenerate_failed` event. Returns true
+        // when a slot was flagged, false when there is nothing to
+        // regenerate so callers can skip the backend round-trip.
+        //
+        // Heuristic: walks back from the tail and picks the first
+        // revisable type. The backend's `regenerate_target_message` only
+        // skips trailing reinforcement messages; this picks the first
+        // character/narrator/context_investigation. Other message types
+        // (time, system, status, etc.) at the tail would mismatch the
+        // backend's target — in that case the catch-all
+        // `assistant.regenerate_failed` handler clears every flagged
+        // slot, self-correcting the divergence.
+        //
+        // The scene intro renders through NarratorMessage.vue but is not
+        // a real scene message (it carries no id and isn't in scene
+        // history), so it's never a regen target — skip id-less slots.
+        requestRegenerateLastMessage() {
+            for (let i = this.messages.length - 1; i >= 0; i--) {
+                const m = this.messages[i];
+                if (this.revisionSupportedType(m.type) && m.id) {
+                    m.regenerating = true;
+                    return true;
+                }
+            }
+            return false;
         },
 
         handleChoiceInput(data) {
@@ -1059,11 +1127,31 @@ export default {
         },
 
         reviseMessage(message_id) {
+            // `regenerating` is overloaded boolean|string: a string doubles
+            // as the spinner verb ('Revising' vs the default 'Regenerating').
+            // Cleared on the `message_edited` (reason=revision) echo and, for
+            // the no-op/failure/cancel paths, on the editor `operation_done`
+            // envelope — which carries no id, so track the pending slot here.
+            const idx = this.revisionFindSlotIndex(message_id);
+            if (idx >= 0) {
+                this.messages[idx].regenerating = 'Revising';
+                this.revisionPendingId = message_id;
+            }
             this.getWebsocket().send(JSON.stringify({
                 type: 'editor',
                 action: 'request_revision',
                 message_id: message_id,
             }));
+        },
+
+        // Stop the revision spinner on the slot reviseMessage() flagged.
+        clearRevisionPending() {
+            if (this.revisionPendingId == null) return;
+            const idx = this.revisionFindSlotIndex(this.revisionPendingId);
+            if (idx >= 0) {
+                this.messages[idx].regenerating = false;
+            }
+            this.revisionPendingId = null;
         },
 
         generateTTS(message_id) {
@@ -1079,6 +1167,69 @@ export default {
             this.insertTimePassageAmount = 1;
             this.insertTimePassageUnit = 'hours';
             this.insertTimePassageDialog = true;
+        },
+
+        isMessageVisualizing(messageId) {
+            return this.visualizingMessageIds.has(messageId);
+        },
+
+        // Map a context-investigation message to the visual type that best
+        // fits its subject, plus the instructions/character to seed the prompt.
+        // Returns null for messages that have no fitting visual subject.
+        buildVisualizeRequest(message) {
+            const args = message.source_arguments || {};
+            const instructions = message.text || "";
+            switch (message.sub_type) {
+                case 'examine': {
+                    const kind = args.entity_kind;
+                    const name = args.entity_name;
+                    if (kind === 'item') return { vis_type: VIS_TYPE.OBJECT_ILLUSTRATION, instructions };
+                    if (kind === 'place') return { vis_type: VIS_TYPE.SCENE_BACKGROUND, instructions };
+                    if (kind === 'character') {
+                        // Only real scene actors have the character data the
+                        // CHARACTER_CARD generation requires; background
+                        // characters fall back to a scene illustration.
+                        if (isKnownSceneCharacter(this.scene?.data, name)) {
+                            return { vis_type: VIS_TYPE.CHARACTER_CARD, character_name: name, instructions };
+                        }
+                        return { vis_type: VIS_TYPE.SCENE_ILLUSTRATION, instructions };
+                    }
+                    return null;
+                }
+                case 'visual-character':
+                    return { vis_type: VIS_TYPE.CHARACTER_CARD, character_name: args.character, instructions };
+                case 'visual-scene':
+                    return { vis_type: VIS_TYPE.SCENE_ILLUSTRATION, instructions };
+                default:
+                    return null;
+            }
+        },
+
+        visualizeMessage(message_id) {
+            const message = this.messages.find(m => m.id === message_id);
+            if (!message) return;
+            const request = this.buildVisualizeRequest(message);
+            if (!request) return;
+
+            this.visualizingMessageIds.add(message_id);
+
+            const payload = {
+                type: 'visual',
+                action: 'visualize',
+                vis_type: request.vis_type,
+                prompt_only: !this.visualAgentReady,
+                save_asset: true,
+                asset_allow_override: true,
+                asset_allow_auto_attach: true,
+                message_ids: [message_id],
+            };
+            if (request.character_name) {
+                payload.character_name = request.character_name;
+            }
+            if (request.instructions) {
+                payload.instructions = request.instructions;
+            }
+            this.getWebsocket().send(JSON.stringify(payload));
         },
 
         submitInsertTimePassage() {
@@ -1584,6 +1735,7 @@ export default {
                 this.lastEffectiveAssetIdByScope = {};
                 this.assetCache = {};
                 this.processingAssetMessageIds.clear();
+                this.visualizingMessageIds.clear();
                 // Clear UX interaction tracking
                 if (this.clearUxInteractions) {
                     this.clearUxInteractions();
@@ -1613,33 +1765,91 @@ export default {
                 return
             }
 
+            if (data.type == "regenerate_failed") {
+                // In-place regenerate failed: clear the per-slot
+                // `regenerating` flag so the pager stops spinning. The
+                // message itself was never mutated, so there is nothing
+                // else to do.
+                const idx = this.revisionFindSlotIndex(data.id);
+                if (idx >= 0) {
+                    this.messages[idx].regenerating = false;
+                }
+                return;
+            }
+
+            // Catch-all for the assistant router's `regenerate_failed`
+            // action: fires for guard-failures (e.g. inactive character)
+            // and any exception that escaped `regenerate()` before its
+            // own top-level `regenerate_failed` emit. We don't know
+            // which slot was targeted at click time, so clear the flag
+            // on every revision-supporting message.
+            if (data.type === 'assistant' && data.action === 'regenerate_failed') {
+                for (let j = 0; j < this.messages.length; j++) {
+                    if (this.messages[j].regenerating) {
+                        this.messages[j].regenerating = false;
+                    }
+                }
+                // Don't return — other components rely on the assistant
+                // event for their own input-busy bookkeeping.
+            }
+
+            // The editor router posts an `operation_done` envelope when a
+            // revision finishes via the no-op, failure, or cancel path (the
+            // happy path clears below via `message_edited` reason='revision').
+            // The envelope carries no id, so clear only the tracked pending
+            // slot — clearing all flagged slots would stop a concurrent
+            // in-place regenerate's spinner. Don't return — other components
+            // consume the envelope for their own busy bookkeeping.
+            if (data.type === 'editor' && data.action === 'operation_done') {
+                this.clearRevisionPending();
+            }
+
             if (data.type == "system" && data.id == "scene.looading") {
                 // scene started loaded, clear messages
                 this.messages = [];
                 this.lastEffectiveAssetIdByScope = {};
                 this.assetCache = {};
                 this.processingAssetMessageIds.clear();
+                this.visualizingMessageIds.clear();
                 return;
             }
 
             if (data.type == "message_edited") {
 
-                // find the message by id and update the text#
+                // find the message by id and update the text + mirror
+                // the authoritative revision stack from the wire.
                 for (i = 0; i < this.messages.length; i++) {
                     if (this.messages[i].id == data.id) {
-                        if (this.messages[i].type == "character") {
-                            const parts = data.message.split(':');
-                            parts.shift();
-                            const text = parts.join(':');
-                            this.messages[i].text = text.trim();
-                        } else {
-                            this.messages[i].text = data.message;
-                        }
+                        const msg = this.messages[i];
+                        msg.text = this.revisionStripForDisplay(
+                            msg.type,
+                            msg.character,
+                            data.message,
+                        );
+                        this.revisionApplyServerState(
+                            msg,
+                            data.versions,
+                            data.active_version,
+                        );
+                        // Any in-flight spinner (manual editor revision or
+                        // in-place regenerate) clears on the echo — the
+                        // server has now produced the new canonical.
+                        this.clearRevisionPending();
+                        msg.regenerating = false;
                         break;
                     }
                 }
 
                 return
+            }
+
+            // `world_state` fires twice per request_update cycle: once with
+            // status="requested" carrying the *previous* state (drives the
+            // sidebar spinner), then with the default status carrying the
+            // fresh snapshot. We only care about the fresh one.
+            if (data.type === 'world_state' && data.status !== 'requested' && data.data) {
+                this.rebuildWorldStateEntities(data.data);
+                return;
             }
 
             if (data.type === 'world_state_manager' && data.action === 'character_color_updated') {
@@ -1694,7 +1904,7 @@ export default {
                         disableAvatarFallback = cadenceResult.disableFallback;
                     }
 
-                    this.messages.push({
+                    const charMsg = {
                         id: data.id,
                         type: data.type,
                         character: characterName,
@@ -1708,7 +1918,9 @@ export default {
                         asset_type: finalAssetType,
                         disable_avatar_fallback: disableAvatarFallback,
                         rev: data.rev || 0
-                    });
+                    };
+                    this.revisionApplyServerState(charMsg, data.versions, data.active_version);
+                    this.messages.push(charMsg);
                 } else if (data.type === 'director') {
                     this.messages.push(
                         {
@@ -1723,7 +1935,7 @@ export default {
                         }
                     );
                 } else if (data.type === 'context_investigation') {
-                    this.messages.push({
+                    const ctxMsg = {
                         id: data.id,
                         type: data.type,
                         sub_type: data.sub_type,
@@ -1733,27 +1945,42 @@ export default {
                         text: data.message,
                         asset_id: data.asset_id,
                         asset_type: data.asset_type,
-                    });
+                    };
+                    this.revisionApplyServerState(ctxMsg, data.versions, data.active_version);
+                    this.messages.push(ctxMsg);
+                } else if (data.type === 'narrator') {
+                    const narratorMsg = {
+                        id: data.id,
+                        type: data.type,
+                        text: data.message,
+                        character: data.character,
+                        meta: data.meta,
+                        rev: data.rev || 0,
+                        asset_id: data.asset_id || null,
+                        asset_type: data.asset_type || null,
+                    };
+                    this.revisionApplyServerState(narratorMsg, data.versions, data.active_version);
+                    this.messages.push(narratorMsg);
                 } else if (data.type === 'player_choice') {
                     console.log('player_choice', data);
                     this.messages.push({ id: data.id, type: data.type, data: data.data });
                 } else if (this.messageTypeIsSceneMessage(data.type)) {
                     console.log('scene message', data);
-                    this.messages.push(
-                        {
-                            id: data.id,
-                            type: data.type,
-                            text: data.message,
-                            color: data.color,
-                            character: data.character,
-                            status: data.status,
-                            ts: data.ts,
-                            meta: data.meta,
-                            rev: data.rev || 0,
-                            asset_id: data.asset_id || null,
-                            asset_type: data.asset_type || null,
-                        }
-                    ); 
+                    const genericMsg = {
+                        id: data.id,
+                        type: data.type,
+                        text: data.message,
+                        color: data.color,
+                        character: data.character,
+                        status: data.status,
+                        ts: data.ts,
+                        meta: data.meta,
+                        rev: data.rev || 0,
+                        asset_id: data.asset_id || null,
+                        asset_type: data.asset_type || null,
+                    };
+                    this.revisionApplyServerState(genericMsg, data.versions, data.active_version);
+                    this.messages.push(genericMsg);
                 } else if (data.type === 'status' && data.data && data.data.as_scene_message === true) {
 
                     // status message can only exist once, remove the most recent one (if within the last 100 messages)
@@ -1877,6 +2104,23 @@ export default {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+}
+
+/* Inline entity highlights rendered by SceneTextParser inside v-html'd
+   message bodies. Subtle dotted underline + hover affordance signals
+   "this message has examinables; others won't have any". The text color
+   is set inline from appearance.scene.entities; the underline
+   inherits via currentColor so it always matches the resolved color. */
+.message-container :deep(.scene-entity) {
+    cursor: pointer;
+    text-decoration: underline dotted currentColor;
+    text-underline-offset: 3px;
+    transition: background-color 0.15s ease;
+    border-radius: 2px;
+}
+
+.message-container :deep(.scene-entity:hover) {
+    background-color: rgba(var(--v-theme-highlight5), 0.15);
 }
 
 </style>

@@ -7,8 +7,6 @@ Extractors (template-defined):
   Generates a new line of example dialogue for a character.
   Uses existing examples and dialogue instructions for consistency.
 #}
-{% set _ = generation_context.set_state('response_prefix', '<DIALOGUE>') %}
-{{ set_anchor_extractor("response", "<DIALOGUE>", "</DIALOGUE>", fallback_to_full=True) }}
 Generate a new line of example dialogue for {{ character_name }}.
 
 {% if character.example_dialogue %}
@@ -31,5 +29,4 @@ You can mix dialogue and actions in the same line. For example, {{ character_nam
 
 {% endif %}
 
-Output the dialogue wrapped in <DIALOGUE></DIALOGUE> tags:
-<DIALOGUE>{{ character_name }}: ... dialogue and actions ...</DIALOGUE>
+{% with output_tag="DIALOGUE", output_label="dialogue", output_example=character_name ~ ": ... dialogue and actions ..." %}{% include "contextual-generate/output-format.jinja2" %}{% endwith %}

@@ -24,7 +24,7 @@
 </template>
 
 <script>
-import { VIS_TYPE_OPTIONS, isCharacterVisType as isCharacterVisTypeHelper } from '../constants/visual.js';
+import { VIS_TYPE_OPTIONS, isCharacterVisType as isCharacterVisTypeHelper } from '@/constants/visual';
 export default {
   name: 'VisualLibraryUpload',
   inject: ['getWebsocket'],

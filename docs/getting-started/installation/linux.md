@@ -4,9 +4,10 @@
 
 --8<-- "docs/snippets/common.md:python-versions"
 
-1. node.js and npm - see instructions [here](https://nodejs.org/en/download/package-manager/)
-1. python- see instructions [here](https://www.python.org/downloads/)
+1. python - see instructions [here](https://www.python.org/downloads/)
 1. uv - see instructions [here](https://github.com/astral-sh/uv#installation)
+
+`install.sh` downloads a portable Node.js 22 runtime automatically (used to build the frontend), so you do not need to install Node.js yourself.
 
 ### Installation
 
@@ -37,8 +38,10 @@ If everything went well, you can proceed to [connect a client](../../connect-a-c
 
 ### Running the Frontend
 
+Unlike the quick install above, this manual path does not provision Node.js for you — install Node.js 22+ yourself (see [here](https://nodejs.org/en/download/package-manager/)). Corepack ships with it and provides `pnpm`.
+
 1. Navigate to the `talemate_frontend` directory.
-2. If you haven't already, install npm dependencies by running `npm install`.
-3. Start the server with `npm run serve`.
+2. If you haven't already, install frontend dependencies by running `corepack pnpm install`.
+3. Start the server with `corepack pnpm run serve`.
 
 Please note that you may need to set environment variables or modify the host and port as per your setup. You can refer to the various start scripts for more details.

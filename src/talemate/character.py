@@ -25,6 +25,7 @@ __all__ = [
     "VoiceChangedEvent",
     "deactivate_character",
     "activate_character",
+    "set_character_is_player",
     "set_voice",
 ]
 
@@ -722,6 +723,59 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
 
     await scene.add_actor(actor)
     scene.active_characters.append(character.name)
+
+
+async def _demote_player_to_actor(scene: "Scene", character: "Character"):
+    """Flip is_player off and, if active, swap the Player actor for a plain Actor.
+
+    Caller must ensure `character` is currently the player (or is being
+    unmarked); this helper does not re-check the flag.
+    """
+    character.is_player = False
+    if scene.character_is_active(character):
+        new_actor = scene.Actor(character, instance.get_agent("conversation"))
+        await scene.add_actor(new_actor, commit_to_memory=False)
+
+
+async def set_character_is_player(
+    scene: "Scene", character: Union[str, "Character"], is_player: bool
+):
+    """
+    Sets or clears a character's player status. At most one character may be
+    the player at any time, so promoting a non-player demotes the existing
+    player (if any) to an AI Actor. Active characters get their actor swapped
+    in place; inactive characters being promoted are auto-activated.
+
+    Arguments:
+        scene: The scene the character lives in.
+        character: The character to update. Can be a name or a Character object.
+        is_player: True to mark as player, False to unmark.
+    """
+    if isinstance(character, str):
+        character = scene.get_character(character)
+
+    if not character:
+        log.error("character not found")
+        return
+
+    if character.is_player == is_player:
+        return
+
+    if is_player:
+        current_player = scene.get_explicit_player_character()
+        if current_player is not None and current_player is not character:
+            await _demote_player_to_actor(scene, current_player)
+
+        if scene.character_is_active(character):
+            # add_actor sets is_player=True when the new actor is a Player
+            new_actor = scene.Player(character, None)
+            await scene.add_actor(new_actor, commit_to_memory=False)
+        else:
+            # activate_character reads is_player to pick the Player class
+            character.is_player = True
+            await activate_character(scene, character)
+    else:
+        await _demote_player_to_actor(scene, character)
 
 
 async def set_voice(character: "Character", voice: Voice | None, auto: bool = False):

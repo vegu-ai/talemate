@@ -124,23 +124,27 @@ class EditorAgent(
 
     @property
     def fix_exposition_enabled(self):
-        return self.actions["fix_exposition"].enabled
+        return self.resolve_enabled("fix_exposition")
+
+    @property
+    def add_detail_enabled(self):
+        return self.resolve_enabled("add_detail")
 
     @property
     def fix_exposition_formatting(self):
-        return self.actions["fix_exposition"].config["formatting"].value
+        return self.resolve_config("fix_exposition", "formatting")
 
     @property
     def fix_exposition_narrator(self):
-        return self.actions["fix_exposition"].config["narrator"].value
+        return self.resolve_config("fix_exposition", "narrator")
 
     @property
     def fix_exposition_user_input(self):
-        return self.actions["fix_exposition"].config["user_input"].value
+        return self.resolve_config("fix_exposition", "user_input")
 
     @property
     def allow_incomplete_sentences(self):
-        return self.actions["fix_exposition"].config["allow_incomplete_sentences"].value
+        return self.resolve_config("fix_exposition", "allow_incomplete_sentences")
 
     def connect(self, scene):
         super().connect(scene)
@@ -298,7 +302,7 @@ class EditorAgent(
         Edits a text to increase its length and add extra detail and exposition
         """
 
-        if not self.actions["add_detail"].enabled:
+        if not self.add_detail_enabled:
             return content
 
         response, extracted = await Prompt.request(

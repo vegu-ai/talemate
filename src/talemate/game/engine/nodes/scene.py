@@ -13,9 +13,14 @@ from .core import (
     PropertyField,
     Trigger,
 )
-import dataclasses
 from .registry import register, get_nodes_by_base_type, get_node
-from .event import connect_listeners, disconnect_listeners
+from .event import (
+    connect_listeners,
+    disconnect_listeners,
+    collect_auto_register_listeners,
+    connect_auto_register_listeners,
+    disconnect_auto_register_listeners,
+)
 import talemate.events as events
 from talemate.emit import emit, wait_for_input
 from talemate.exceptions import ActedAsCharacter, AbortWaitForInput, GenerationCancelled
@@ -46,10 +51,8 @@ async_signals.register(
 )
 
 
-@dataclasses.dataclass
 class SceneLoopEvent(events.Event):
-    scene: "Scene"
-    event_type: str
+    pass
 
 
 @register("scene/GetSceneState")
@@ -772,333 +775,6 @@ class UnpackInteractionState(Node):
                 "reset_requested": interaction_state.reset_requested,
             }
         )
-
-
-@register("scene/message/CharacterMessage")
-class CharacterMessage(Node):
-    """
-    Creates a character message from a character and a message
-
-    Inputs:
-
-    - character: The character object
-    - message: The message to send
-    - source: The source of the message - player or ai, so whether the message is result of user input or AI generated
-    - from_choice: For player messages this indicates that the message was generated from a choice selection, for ai sourced messages this indicates the instruction that was followed
-
-    Properties:
-
-    - source: The source of the message
-
-    Outputs:
-
-    - message: The message object (this is a scene_message.CharacterMessage instance)
-    """
-
-    class Fields:
-        source = PropertyField(
-            name="source",
-            description="The source of the message",
-            type="str",
-            default="player",
-            choices=[
-                "player",
-                "ai",
-            ],
-        )
-
-    def __init__(self, title="Character Message", **kwargs):
-        super().__init__(title=title, **kwargs)
-
-    def setup(self):
-        self.add_input("character", socket_type="character")
-        self.add_input("message", socket_type="str")
-        self.add_input("source", socket_type="str", optional=True)
-        self.add_input("from_choice", socket_type="str", optional=True)
-
-        self.set_property("source", "player")
-
-        self.add_output("message", socket_type="message_object")
-
-    async def run(self, state: GraphState):
-        character: "Character" = self.get_input_value("character")
-        message = self.get_input_value("message")
-        source = self.get_input_value("source")
-        from_choice = self.get_input_value("from_choice")
-
-        extra = {}
-
-        if isinstance(from_choice, str):
-            extra["from_choice"] = from_choice
-
-        # Capture the character's current avatar at message creation time
-        # (not default avatar - messages only use current_avatar if set)
-        if character.current_avatar:
-            extra["asset_id"] = character.current_avatar
-            extra["asset_type"] = "avatar"
-
-        # prefix name: if not already prefixed
-        if not message.startswith(f"{character.name}: "):
-            message = f"{character.name}: {message}"
-
-        message = scene_message.CharacterMessage(message, source=source, **extra)
-
-        self.set_output_values({"message": message})
-
-
-@register("scene/message/NarratorMessage")
-class NarratorMessage(Node):
-    """
-    Creates a narrator message
-
-    Inputs:
-
-    - message: The message to send
-    - source: The source of the message - player or ai, so whether the message is result of user input or AI generated
-    - meta: A dictionary of meta information to attach to the message. This will generally be arguments and function name that was called on the narrator agent to generate the message and will be used when regenerating the message.
-
-    Properties:
-
-    - source: The source of the message
-
-    Outputs:
-
-    - message: The message object (this is a scene_message.NarratorMessage instance)
-    """
-
-    class Fields:
-        source = PropertyField(
-            name="source",
-            description="The source of the message",
-            type="str",
-            default="ai",
-            choices=[
-                "player",
-                "ai",
-            ],
-        )
-
-    def __init__(self, title="Narrator Message", **kwargs):
-        super().__init__(title=title, **kwargs)
-
-    def setup(self):
-        self.add_input("message", socket_type="str")
-        self.add_input("source", socket_type="str", optional=True)
-        self.add_input("meta", socket_type="dict", optional=True)
-
-        self.set_property("source", "ai")
-
-        self.add_output("message", socket_type="message_object")
-
-    async def run(self, state: GraphState):
-        message = self.get_input_value("message")
-        source = self.get_input_value("source")
-        meta = self.get_input_value("meta")
-
-        extra = {}
-
-        if meta and isinstance(meta, dict):
-            extra["meta"] = meta
-
-        message = scene_message.NarratorMessage(message, source=source, **extra)
-
-        self.set_output_values({"message": message})
-
-
-@register("scene/message/DirectorMessage")
-class DirectorMessage(Node):
-    """
-    Creates a director message
-
-    Inputs:
-
-    - message: The message to send
-    - source: The source of the message - player or ai, so whether the message is result of user input or AI generated
-    - meta: A dictionary of meta information to attach to the message. Can hold the character name that the message is related to.
-    - character: The character object that the message is related to
-
-    Properties:
-
-    - source: The source of the message
-    - action: Describes the director action
-
-    Outputs:
-
-    - message: The message object (this is a scene_message.DirectorMessage instance)
-    """
-
-    class Fields:
-        source = PropertyField(
-            name="source",
-            description="The source of the message",
-            type="str",
-            default="ai",
-            choices=[
-                "player",
-                "ai",
-            ],
-        )
-
-        action = PropertyField(
-            name="action",
-            description="Describes the director action",
-            type="str",
-            default="actor_instruction",
-            choices=[
-                "actor_instruction",
-                "user_direction",
-            ],
-        )
-
-        subtype = PropertyField(
-            name="subtype",
-            description="The subtype of the director message, used for further categorization of the message",
-            type="str",
-            default=UNRESOLVED,
-            choices=[
-                "function_call",
-                "user_direction",
-            ],
-        )
-
-    def __init__(self, title="Director Message", **kwargs):
-        super().__init__(title=title, **kwargs)
-
-    def setup(self):
-        self.add_input("message", socket_type="str")
-        self.add_input("source", socket_type="str", optional=True)
-        self.add_input("meta", socket_type="dict", optional=True)
-        self.add_input("character", socket_type="character", optional=True)
-        self.add_input("action", socket_type="str", optional=True)
-        self.add_input("subtype", socket_type="str", optional=True)
-
-        self.set_property("source", "ai")
-        self.set_property("action", "actor_instruction")
-        self.set_property("subtype", UNRESOLVED)
-
-        self.add_output("message", socket_type="message_object")
-        self.add_output("source", socket_type="str")
-        self.add_output("meta", socket_type="dict")
-        self.add_output("character", socket_type="character")
-        self.add_output("action", socket_type="str")
-        self.add_output("subtype", socket_type="str")
-
-    async def run(self, state: GraphState):
-        message = self.normalized_input_value("message")
-        source = self.normalized_input_value("source")
-        action = self.normalized_input_value("action")
-        meta = self.normalized_input_value("meta")
-        subtype = self.normalized_input_value("subtype")
-        character: "Character" = self.normalized_input_value("character")
-
-        extra = {}
-
-        if meta and isinstance(meta, dict):
-            extra["meta"] = meta
-
-        message = scene_message.DirectorMessage(
-            message, source=source, action=action, subtype=subtype, **extra
-        )
-
-        if character is not None:
-            message.set_meta(character=character.name)
-
-        self.set_output_values(
-            {
-                "message": message,
-                "source": source,
-                "meta": meta,
-                "character": character,
-                "action": action,
-                "subtype": subtype,
-            }
-        )
-
-
-@register("scene/message/UnpackMeta")
-class UnpackMessageMeta(Node):
-    """
-    Unpacks a message meta dictionary
-    into arguments
-
-    Inputs:
-
-    - meta: The meta dictionary
-
-    Outputs:
-
-    - agent_name: The agent name
-    - function_name: The function name
-    - arguments: The arguments dictionary
-    """
-
-    def __init__(self, title="Unpack Message Meta", **kwargs):
-        super().__init__(title=title, **kwargs)
-
-    def setup(self):
-        self.add_input("meta", socket_type="dict")
-        self.add_output("agent_name", socket_type="str")
-        self.add_output("function_name", socket_type="str")
-        self.add_output("arguments", socket_type="dict")
-
-    async def run(self, state: GraphState):
-        meta = self.get_input_value("meta")
-
-        self.set_output_values(
-            {
-                "agent_name": meta["agent"],
-                "function_name": meta["function"],
-                "arguments": meta.get("arguments", {}).copy(),
-            }
-        )
-
-
-@register("scene/message/ToggleMessageContextVisibility")
-class ToggleMessageContextVisibility(Node):
-    """
-    Hide or show a message. Hidden messages are not displayed to the AI.
-
-    Inputs:
-
-    - message: The message object
-
-    Properties:
-
-    - hidden: Whether the message is hidden
-
-    Outputs:
-
-    - message: The message object
-    """
-
-    class Fields:
-        hidden = PropertyField(
-            name="hidden",
-            description="Whether the message is hidden",
-            type="bool",
-            default=False,
-        )
-
-    def __init__(self, title="Toggle Message Context Visibility", **kwargs):
-        super().__init__(title=title, **kwargs)
-
-    def setup(self):
-        self.add_input("message", socket_type="message_object")
-
-        self.set_property("hidden", False)
-
-        self.add_output("message", socket_type="message_object")
-
-    async def run(self, state: GraphState):
-        message = self.require_input("message")
-        hidden = self.get_property("hidden")
-
-        if hidden:
-            message.hide()
-        else:
-            message.unhide()
-
-        self.set_output_values({"message": message})
 
 
 @register("input/WaitForInput")
@@ -1971,12 +1647,28 @@ class SceneLoop(Loop):
 
         connect_listeners(self, state, disconnect=True)
 
+        # The creative-mode wrapper loop runs the actual scene loop as a
+        # nested module (via RunModule, which sets `nested_scene_loop`);
+        # auto-register belongs to the inner game loop, not the wrapper,
+        # or the event would fire on both and double up.
+        is_game_loop = scene.environment != "creative" or state.shared.get(
+            "nested_scene_loop", False
+        )
+
         if not state.data.get("_scene_loop_init"):
             state.data["_scene_loop_init"] = True
+            if is_game_loop:
+                # inner state.data is destroyed when Loop.execute returns
+                state.outer.data["_auto_listeners"] = collect_auto_register_listeners()
             await self.register_commands(scene, state)
             await self.init_agent_nodes(scene, state)
             await async_signals.get("scene_loop_init").send(self.scene_loop_event)
             await async_signals.get("scene_loop_init_after").send(self.scene_loop_event)
+
+        if is_game_loop:
+            connect_auto_register_listeners(
+                state.outer.data.get("_auto_listeners") or [], state, disconnect=True
+            )
 
         trigger_game_loop = self.get_property("trigger_game_loop")
 
@@ -1993,7 +1685,7 @@ class SceneLoop(Loop):
             # Re-evaluate gamestate-controlled pins before the game loop
             await scene.load_active_pins()
             game_loop = events.GameLoopEvent(
-                scene=self, event_type="game_loop", had_passive_narration=False
+                scene=scene, event_type="game_loop", had_passive_narration=False
             )
             state.shared["game_loop"] = game_loop
         if state.shared.get("signal_game_loop", True) and trigger_game_loop:
@@ -2031,6 +1723,9 @@ class SceneLoop(Loop):
             await super().execute(outer_state)
         finally:
             disconnect_listeners(self, outer_state)
+            disconnect_auto_register_listeners(
+                outer_state.data.get("_auto_listeners") or [], outer_state
+            )
 
     async def on_loop_error(self, state: GraphState, exc: Exception):
         scene: "Scene" = state.outer.data["scene"]

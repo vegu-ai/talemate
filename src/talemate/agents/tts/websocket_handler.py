@@ -553,7 +553,9 @@ class TTSWebsocketHandler(Plugin):
             await self.signal_operation_failed("No text to generate speech for.")
             return
 
-        await tts_agent.generate(text, character, message=message)
+        await tts_agent.generate(
+            text, character, message=message, message_id=payload.message_id
+        )
 
         await self.signal_operation_done()
 

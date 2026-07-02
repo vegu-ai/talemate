@@ -159,6 +159,7 @@ import VisualLibraryUpload from './VisualLibraryUpload.vue';
 import VisualAssetsTree from './VisualAssetsTree.vue';
 import { debounce } from 'lodash';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
+import { VIS_TYPE, FORMAT_TYPE } from '@/constants/visual';
 
 export default {
   name: 'VisualLibraryScene',
@@ -254,8 +255,8 @@ export default {
         if (!asset) continue;
         
         const meta = asset.meta || {};
-        const vis = meta.vis_type || 'UNSPECIFIED';
-        const groupKey = (vis && typeof vis === 'string') ? vis : 'UNSPECIFIED';
+        const vis = meta.vis_type || VIS_TYPE.UNSPECIFIED;
+        const groupKey = (vis && typeof vis === 'string') ? vis : VIS_TYPE.UNSPECIFIED;
         
         // Always open the top-level group folder
         foldersToOpen.add(groupKey);
@@ -314,8 +315,8 @@ export default {
       const initialRequest = {
         prompt: '',
         negative_prompt: '',
-        vis_type: meta.vis_type || 'UNSPECIFIED',
-        format: meta.format || 'LANDSCAPE',
+        vis_type: meta.vis_type || VIS_TYPE.UNSPECIFIED,
+        format: meta.format || FORMAT_TYPE.LANDSCAPE,
         character_name: meta.character_name || '',
         reference_assets: refIds,
       };
@@ -327,8 +328,8 @@ export default {
       const initialRequest = {
         prompt: '',
         negative_prompt: meta.negative_prompt || '',
-        vis_type: meta.vis_type || 'UNSPECIFIED',
-        format: meta.format || 'LANDSCAPE',
+        vis_type: meta.vis_type || VIS_TYPE.UNSPECIFIED,
+        format: meta.format || FORMAT_TYPE.LANDSCAPE,
         character_name: meta.character_name || '',
         reference_assets: [],
       };

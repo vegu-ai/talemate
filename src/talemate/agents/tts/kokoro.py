@@ -152,6 +152,7 @@ class KokoroMixin:
                     value=512,
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
+                    scene_overridable=False,
                 ),
             },
         )

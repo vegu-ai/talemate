@@ -390,7 +390,7 @@
 <script>
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
-import { MAX_CONTENT_WIDTH } from '@/constants';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 const BLANK_SCENE_TYPE = {
     name: '',

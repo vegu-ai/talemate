@@ -42,10 +42,10 @@ from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+import pydantic
 import structlog
 
 from . import analysis
@@ -185,8 +185,7 @@ class NodeNotFoundError(WriterError):
 # ---------------------------------------------------------------------------
 
 
-@dataclass(frozen=True)
-class NodeMetadata:
+class NodeMetadata(pydantic.BaseModel):
     """Static metadata for a registered node class, cached per process.
 
     ``inputs`` / ``outputs`` are socket names in declaration order (the
@@ -197,6 +196,8 @@ class NodeMetadata:
     computed field. ``is_dynamic`` is True when the class is a subclass
     of ``DynamicSocketNodeBase``.
     """
+
+    model_config = pydantic.ConfigDict(frozen=True)
 
     registry: str
     base_type: str

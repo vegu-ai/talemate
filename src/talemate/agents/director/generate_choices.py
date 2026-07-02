@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 import random
 import structlog
-import dataclasses
+import pydantic
 from talemate.agents.base import (
     set_processing,
     AgentAction,
@@ -32,10 +32,9 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Character
 
 
-@dataclasses.dataclass
 class GenerateChoicesEmission(AgentTemplateEmission):
     character: "Character | None" = None
-    choices: list[str] = dataclasses.field(default_factory=list)
+    choices: list[str] = pydantic.Field(default_factory=list)
 
 
 class GenerateChoicesMixin:
@@ -93,23 +92,23 @@ class GenerateChoicesMixin:
 
     @property
     def generate_choices_enabled(self):
-        return self.actions["_generate_choices"].enabled
+        return self.resolve_enabled("_generate_choices")
 
     @property
     def generate_choices_chance(self):
-        return self.actions["_generate_choices"].config["chance"].value
+        return self.resolve_config("_generate_choices", "chance")
 
     @property
     def generate_choices_num_choices(self):
-        return self.actions["_generate_choices"].config["num_choices"].value
+        return self.resolve_config("_generate_choices", "num_choices")
 
     @property
     def generate_choices_never_auto_progress(self):
-        return self.actions["_generate_choices"].config["never_auto_progress"].value
+        return self.resolve_config("_generate_choices", "never_auto_progress")
 
     @property
     def generate_choices_instructions(self):
-        return self.actions["_generate_choices"].config["instructions"].value
+        return self.resolve_config("_generate_choices", "instructions")
 
     # signal connect
 

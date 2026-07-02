@@ -180,6 +180,23 @@ PROVIDER_FIELD_GROUP = FieldGroup(
 MIN_THINKING_TOKENS = 256
 
 
+def cache_control_for_model(model_name: str) -> dict | None:
+    """
+    Return the cache_control parameter needed to enable prompt caching for
+    the given OpenRouter model, or None if no parameter is required.
+
+    OpenAI / DeepSeek / Gemini cache automatically on OpenRouter. Anthropic
+    models require explicit cache_control or the request is never cached.
+    For Anthropic, top-level ephemeral cache_control mirrors the native SDK's
+    automatic-cache mode — the breakpoint is auto-placed on the last cacheable
+    block. Note: this forces routing to direct Anthropic, excluding Bedrock
+    and Vertex endpoints.
+    """
+    if model_name.startswith("anthropic/"):
+        return {"type": "ephemeral"}
+    return None
+
+
 @register()
 class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
     """
@@ -368,6 +385,11 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
 
         if provider:
             parameters["provider"] = provider
+
+        if self.optimize_prompt_caching:
+            cache_control = cache_control_for_model(self.model_name)
+            if cache_control is not None:
+                parameters["cache_control"] = cache_control
 
         # Prepare request payload
         payload = {

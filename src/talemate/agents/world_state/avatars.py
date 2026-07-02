@@ -47,8 +47,8 @@ class AvatarMixin:
 
     @property
     def avatars_enabled(self) -> bool:
-        return self.actions["avatars"].enabled
+        return self.resolve_enabled("avatars")
 
     @property
     def avatar_selection_frequency(self) -> int:
-        return self.actions["avatars"].config["selection_frequency"].value
+        return self.resolve_config("avatars", "selection_frequency")

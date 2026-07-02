@@ -28,7 +28,7 @@ Will take the generate message and attempt to add more detail to it.
 
 ## Revision
 
-![Editor agent revision settings](/talemate/img/0.30.0/editor-revision-settings-dedupe.png)
+![Editor agent revision settings](/talemate/img/0.38.0/editor-revision-settings-dedupe.png)
 
 When :material-typewriter: revision is enabled the editor will analyze and attempt to fix character messages, narrator messages, and contextual generation (such as character attributes, details, world context, etc.).
 
@@ -59,9 +59,14 @@ When automatic revision is enabled, you can choose which types of messages to au
 
 - **Character Messages** - Automatically revise actor actions and dialogue
 - **Narration Messages** - Automatically revise narrator actions and descriptions  
+- **Context Investigations** - Automatically revise context-investigation messages (the results of **Look at**, **Investigate**, and **Query** actions). Off by default.
 - **Contextual generation** - Automatically revise generated context such as character attributes, details, world context, scene intros, etc.
+- **Summarization** - Automatically revise dialogue summaries.
 
 By default, both Character Messages and Narration Messages are enabled. You can enable or disable each type independently based on your preferences.
+
+!!! note "Context investigations always feed the repetition check"
+    Whether or not **Context Investigations** is enabled as an automatic target, context-investigation messages are always included in the text the editor compares against when looking for repetition. This means nearby character and narrator messages will avoid repeating phrases that already appeared in a recent **Look at**, **Investigate**, or **Query** result.
 
 ##### Revision Method
 
@@ -73,19 +78,19 @@ Which method to use to fix issues.
 
 **Dedupe (Fast and dumb)**
 
-![Editor agent revision settings - Dedupe](/talemate/img/0.30.0/editor-revision-settings-dedupe.png)
+![Editor agent revision settings - Dedupe](/talemate/img/0.38.0/editor-revision-settings-dedupe.png)
 
 When **Dedupe** is active it will be restricted to finding repetition and removing it without replacing it with something else, nor understanding the intent or context, so it may sometimes cause disjointed dialogue. This method is much faster as it will never prompt the AI for analysis and fixes. (If repetition detection is set to semantic similarity, it will still use the embedding function to find repetition, but it will not prompt the AI for analysis and fixes.)
 
 **Unslop (AI assisted)**
 
-![Editor agent revision settings - Unslop](/talemate/img/0.30.0/editor-revision-settings-unslop.png)
+![Editor agent revision settings - Unslop](/talemate/img/0.38.0/editor-revision-settings-unslop.png)
 
 When **Unslop** is active, it calls 1 additional prompt after a generation and will attempt to remove repetition, purple prose, unnatural dialogue, and over-description. May cause details to be lost. This is a general-purpose cleanup method that can also use unwanted prose detection when enabled.
 
 **Targeted Rewrite (AI assisted)**
 
-![Editor agent revision settings - Targeted Rewrite](/talemate/img/0.30.0/editor-revision-settings-rewrite.png)
+![Editor agent revision settings - Targeted Rewrite](/talemate/img/0.38.0/editor-revision-settings-rewrite.png)
 
 When **Targeted Rewrite** is active, unwanted prose detection becomes available and when issues are detected the AI will attempt to rewrite the message to fix the issues. This method checks for specific problems first, then only rewrites if enough issues are found.
 
@@ -120,6 +125,13 @@ The minimum length of a phrase (in characters) to be considered for repetition. 
 ### AI-Assisted Methods (Unslop & Targeted Rewrite)
 
 Once switched to either **Unslop** or **Targeted Rewrite** mode, additional settings become available.
+
+#### Repetition handling
+
+Controls what the AI-assisted revision does when it detects repetition. (Available for both **Unslop** and **Targeted Rewrite**.)
+
+- **Remove** (default) - flagged repetitions are deleted from the text. This is the safer choice for weaker models, which often struggle to substitute genuinely different content and end up rephrasing the same idea, re-introducing the very repetition the rule is meant to fix.
+- **Attempt rewrite** - the editor asks the model to replace flagged repetitions with genuinely different content rather than deleting them. Because matches are based on meaning (not just wording), simply rephrasing the same idea is not enough - the underlying beat has to change. When the model cannot produce a meaningful rewrite, it falls back to removing the repetition. This works best with stronger models.
 
 #### Preferences for Rewriting (Targeted Rewrite only)
 

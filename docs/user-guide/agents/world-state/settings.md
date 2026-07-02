@@ -1,16 +1,54 @@
 # Settings
 
-## General
+## Update World State
 
-![World state agent settings](/talemate/img/0.29.0/world-state-general-settings.png)
+![World state agent update world state settings](/talemate/img/0.38.0/world-state-update-world-state-settings.png)
 
 ##### Update world state
 
-Will attempt to update the [world state snapshot](/talemate/user-guide/world-state/) based on the current scene. Runs automatically every N turns.
+Will attempt to update the [world state snapshot](/talemate/user-guide/world-state/) based on the current scene. Runs automatically every N character turns.
+
+###### When a new scene is started
+
+Whether to generate an initial snapshot as soon as a scene is loaded. On by default.
 
 ###### Turns
 
-How many turns to wait before the world state is updated.
+How many character turns to wait before the snapshot is refreshed. Each player or AI turn counts (not full rounds), so on a scene with several characters the snapshot refreshes more often than the number alone might suggest. Defaults to 10.
+
+###### Lines in the moment
+
+How many of the most recent messages count as the "current moment". These are the lines the snapshot anchors to, and they are the messages that can show inline entity highlights. Keeping this small keeps the highlights tied to the active beat while the rest of the scene is still used as background context.
+
+###### Include Look at / Add Detail
+
+When on, **Look at** and **Add Detail** results also count as part of the current moment and can receive inline highlights. Off by default.
+
+###### Custom instructions
+
+Free-form instructions that steer what the snapshot focuses on. Use this to nudge the agent toward (or away from) certain kinds of detail. Empty by default.
+
+###### Add Detail length
+
+How long an **Add Detail** result can be. Shorter lengths keep the generated description tighter; longer lengths allow more elaboration.
+
+###### Pin to context
+
+When on, the snapshot is pinned into the conversation, narrator, and scene-analysis prompts as live scene notes, so the tracked entities can inform dialogue, narration, and planning. Off by default. See [Pinning the snapshot to the scene](/talemate/user-guide/world-state/#pinning-the-snapshot-to-the-scene).
+
+###### Durable snapshot
+
+When on (the default), each refresh updates only what has changed and carries the rest of the snapshot forward, instead of rebuilding it from scratch every time. This lets the snapshot accumulate detail over the course of a scene. When off, every refresh starts fresh. See [How the snapshot carries forward](/talemate/user-guide/world-state/#how-the-snapshot-carries-forward).
+
+The two settings below only apply when **Durable snapshot** is on.
+
+###### Max items tracked
+
+The maximum number of items the snapshot can hold at once. When a refresh would exceed this, the stalest items are dropped first. Set to `0` for no limit.
+
+###### Auto-evict stale entries
+
+Automatically drops a snapshot entry that the agent leaves unchanged for this many refreshes in a row. This guards against stale entries lingering when the agent fails to remove them on its own. Set to `0` to disable.
 
 ##### Update state reinforcements
 
@@ -87,3 +125,9 @@ For example, if a character is described as wearing formal attire at a party but
     - A Visual Agent with an image generation backend configured
 
 When a new portrait is generated, it is automatically added to the character's portrait collection and tagged based on the scene context.
+
+## Long Term Memory
+
+When generating the [world state snapshot](/talemate/user-guide/world-state/), the agent pulls in relevant long-term memory so the snapshot can build on established lore and earlier scene history. Semantic recall is always used and is on by default.
+
+--8<-- "docs/snippets/tips.md:agent_long_term_memory_settings"

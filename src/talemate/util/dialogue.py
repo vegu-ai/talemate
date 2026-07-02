@@ -16,6 +16,7 @@ __all__ = [
     "ensure_dialog_line_format",
     "clean_uneven_markers",
     "split_anchor_text",
+    "extract_autocomplete_hint",
     "separate_dialogue_from_exposition",
     "parse_tts_markup",
     "separate_sentences",
@@ -24,6 +25,8 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.util.dialogue")
+
+AUTOCOMPLETE_HINT_RE = re.compile(r"\s*\{([^{}]+)\}\s*$")
 
 
 class DialogueChunk(pydantic.BaseModel):
@@ -471,6 +474,27 @@ def split_anchor_text(text: str, anchor_length: int = 10) -> tuple[str, str]:
         anchor = " ".join(words[mid_point:])
 
     return non_anchor, anchor
+
+
+def extract_autocomplete_hint(text: str) -> tuple[str, str | None]:
+    """
+    Strip a trailing ``{...}`` hint block from autocomplete input.
+
+    Returns ``(cleaned_text, hint)`` where ``hint`` is the raw inner content of
+    the brace block (whitespace-stripped) or ``None`` if no trailing block
+    exists. The hint is meant to be passed to the LLM as free-form directional
+    guidance — not parsed.
+    """
+    if not text:
+        return text, None
+    match = AUTOCOMPLETE_HINT_RE.search(text)
+    if not match:
+        return text, None
+    hint = match.group(1).strip()
+    if not hint:
+        return text, None
+    cleaned = text[: match.start()]
+    return cleaned, hint
 
 
 def separate_sentences(text: str) -> str:

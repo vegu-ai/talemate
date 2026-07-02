@@ -437,6 +437,7 @@ import VisualReferenceCarousel from './VisualReferenceCarousel.vue';
 import AssetView from './AssetView.vue';
 import EditableList from './EditableList.vue';
 import { computeCharacterReferenceOptions } from '../utils/characterReferenceOptions.js';
+import { VIS_TYPE, FORMAT_TYPE, GEN_TYPE } from '@/constants/visual';
 
 export default {
     name: 'WorldStateManagerCharacterVisualsAvatar',
@@ -491,11 +492,11 @@ export default {
         assets() {
             // Filter assets by CHARACTER_PORTRAIT vis_type and character name
             if (!this.character?.name) return [];
-            return this.getCharacterAssets(this.character.name, 'CHARACTER_PORTRAIT');
+            return this.getCharacterAssets(this.character.name, VIS_TYPE.CHARACTER_PORTRAIT);
         },
         uploadConfig() {
             return {
-                vis_type: 'CHARACTER_PORTRAIT',
+                vis_type: VIS_TYPE.CHARACTER_PORTRAIT,
                 namePrefix: 'avatar',
                 character: this.character,
             };
@@ -542,7 +543,7 @@ export default {
                 this.defaultAvatarId = newVal?.avatar || null;
                 this.currentAvatarId = newVal?.current_avatar || null;
                 this.previousAssetsLength = 0;
-                this.loadAssetsForComponent('CHARACTER_PORTRAIT');
+                this.loadAssetsForComponent(VIS_TYPE.CHARACTER_PORTRAIT);
                 this.checkReferenceAssets();
                 this.hasAttemptedAutoSetDefaultAvatar = false;
             },
@@ -669,7 +670,7 @@ export default {
         checkReferenceAssets() {
             if (!this.character?.name) return;
             
-            const targetVisType = 'CHARACTER_PORTRAIT';
+            const targetVisType = VIS_TYPE.CHARACTER_PORTRAIT;
             const coverImageId = this.character?.cover_image;
             
             // Use the shared helper to compute ordered options
@@ -774,7 +775,7 @@ export default {
             // Store the request for saving later
             this.pendingGenerateNewRequest = {
                 prompt: this.generateNewPromptInput.trim(),
-                vis_type: 'CHARACTER_PORTRAIT',
+                vis_type: VIS_TYPE.CHARACTER_PORTRAIT,
                 character_name: this.character.name,
             };
             
@@ -782,7 +783,7 @@ export default {
             const payload = {
                 type: 'visual',
                 action: 'visualize',
-                vis_type: 'CHARACTER_PORTRAIT',
+                vis_type: VIS_TYPE.CHARACTER_PORTRAIT,
                 character_name: this.character.name,
                 instructions: this.generateNewPromptInput.trim(),
                 // wsh-visualize uses these fields to construct an AssetAttachmentContext via MakeAssetAttachmentContext
@@ -823,9 +824,9 @@ export default {
             this.pendingGenerationRequest = {
                 prompt: this.promptInput.trim(),
                 negative_prompt: null,
-                vis_type: 'CHARACTER_PORTRAIT',
-                gen_type: 'IMAGE_EDIT',
-                format: 'SQUARE',
+                vis_type: VIS_TYPE.CHARACTER_PORTRAIT,
+                gen_type: GEN_TYPE.IMAGE_EDIT,
+                format: FORMAT_TYPE.SQUARE,
                 character_name: this.character.name,
                 reference_assets: [this.selectedReferenceAssetId],
                 inline_reference: null,
@@ -860,9 +861,9 @@ export default {
             const requests = prompts.map((prompt, idx) => ({
                 prompt: prompt,
                 negative_prompt: null,
-                vis_type: 'CHARACTER_PORTRAIT',
-                gen_type: 'IMAGE_EDIT',
-                format: 'SQUARE',
+                vis_type: VIS_TYPE.CHARACTER_PORTRAIT,
+                gen_type: GEN_TYPE.IMAGE_EDIT,
+                format: FORMAT_TYPE.SQUARE,
                 character_name: this.character.name,
                 reference_assets: [this.selectedReferenceAssetId],
                 inline_reference: null,
@@ -895,7 +896,7 @@ export default {
             // Handle asset search results
             if (data.type === 'asset_search_results') {
                 if (data.character_name === this.character?.name &&
-                    data.vis_type === 'CHARACTER_PORTRAIT') {
+                    data.vis_type === VIS_TYPE.CHARACTER_PORTRAIT) {
                     const assetIds = data.asset_ids || [];
 
                     // Apply results directly. Calling checkReferenceAssets() here would
@@ -937,7 +938,7 @@ export default {
                     const matchesCharacter = !request || 
                         (!request.character_name || request.character_name === this.character?.name);
                     const matchesVisType = !request || 
-                        (!request.vis_type || request.vis_type === 'CHARACTER_PORTRAIT');
+                        (!request.vis_type || request.vis_type === VIS_TYPE.CHARACTER_PORTRAIT);
                     
                     if (matchesCharacter && matchesVisType) {
                         // Backend auto-saves when the visualize flow provides an AssetAttachmentContext
@@ -953,7 +954,7 @@ export default {
                 // Check if this is from Generate Variation (IMAGE_EDIT)
                 if (request && base64 &&
                     request.character_name === this.character?.name &&
-                    request.vis_type === 'CHARACTER_PORTRAIT' &&
+                    request.vis_type === VIS_TYPE.CHARACTER_PORTRAIT &&
                     this.isGenerating && this.pendingGenerationRequest) {
                     // Backend auto-saves via GenerationRequest.asset_attachment_context.
                     this.isGenerating = false;
@@ -994,7 +995,7 @@ export default {
     },
     mounted() {
         this.registerMessageHandler(this.handleMessage);
-        this.loadAssetsForComponent('CHARACTER_PORTRAIT');
+        this.loadAssetsForComponent(VIS_TYPE.CHARACTER_PORTRAIT);
         this.checkReferenceAssets();
     },
     unmounted() {

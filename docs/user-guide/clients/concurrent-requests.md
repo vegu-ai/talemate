@@ -17,7 +17,9 @@ Concurrent requests are available for the following hosted API clients:
 - [Google Gemini](/talemate/user-guide/clients/types/google/)
 - [OpenRouter](/talemate/user-guide/clients/types/openrouter/)
 
-Local clients (KoboldCpp, llama.cpp, etc.) do not support this feature as they typically cannot handle concurrent inference requests.
+It is also available for the local [llama.cpp](/talemate/user-guide/clients/types/llamacpp/) client. For llama.cpp, your `llama-server` must be started with enough parallel slots to handle more than one request at a time; otherwise the extra requests are simply queued and you will not see a speed-up.
+
+Other local clients (KoboldCpp, etc.) do not support this feature.
 
 ## How to Enable
 

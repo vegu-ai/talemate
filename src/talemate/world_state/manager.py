@@ -5,7 +5,16 @@ import structlog
 
 import talemate.world_state.templates as world_state_templates
 from talemate.agents.tts.util import get_voice
-from talemate.character import activate_character, deactivate_character, set_voice
+from talemate.scene_agent_settings import (
+    UNCHANGED as AGENT_SETTINGS_UNCHANGED,
+    apply_scene_settings_link,
+)
+from talemate.character import (
+    activate_character,
+    deactivate_character,
+    set_character_is_player,
+    set_voice,
+)
 from talemate.instance import get_agent
 from talemate.emit import emit
 from talemate.world_state import (
@@ -18,6 +27,7 @@ from talemate.game.schema import ConditionGroup, condition_groups_match
 from talemate.game.engine.context_id.base import ContextIDItem
 from talemate.agents.tts.schema import Voice
 from talemate.game.engine.context_id import ContextID
+from talemate.scene.schema import ScenePerspectives
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -991,6 +1001,15 @@ class WorldStateManager:
         """
         await deactivate_character(self.scene, character_name)
 
+    async def set_character_is_player(self, character_name: str, is_player: bool):
+        """
+        Sets or clears a character's player status.
+
+        See :func:`talemate.character.set_character_is_player` for the full
+        contract.
+        """
+        await set_character_is_player(self.scene, character_name, is_player)
+
     async def create_character(
         self,
         generate: bool = True,
@@ -1096,14 +1115,18 @@ class WorldStateManager:
         description: str | None = None,
         intro: str | None = None,
         context: str | None = None,
-        perspective: str | None = None,
+        perspectives: ScenePerspectives | None = None,
     ) -> "Scene":
         scene = self.scene
         scene.title = title
         scene.description = description
         scene.intro = intro
         scene.context = context
-        scene.perspective = perspective or ""
+        # `perspectives=None` preserves the existing nested object; clearing the
+        # four perspective fields is rarely what a partial outline update wants,
+        # and the frontend always sends a complete `ScenePerspectives` payload.
+        if perspectives is not None:
+            scene.perspectives = perspectives
 
         return scene
 
@@ -1115,6 +1138,7 @@ class WorldStateManager:
         agent_persona_templates: dict[str, str] | None = None,
         visual_style_template: str | None = None,
         restore_from: str | None = None,
+        **agent_settings_kwargs,
     ) -> "Scene":
         scene = self.scene
         scene.immutable_save = immutable_save
@@ -1130,6 +1154,20 @@ class WorldStateManager:
             )
 
         scene.restore_from = restore_from
+
+        # Caller strips agent_settings_* keys from kwargs when the inbound
+        # payload didn't set them (see handle_update_scene_settings). Their
+        # presence here is what distinguishes "explicitly None" from "left
+        # alone" — the UNCHANGED sentinel substitutes for the latter.
+        link_filename = agent_settings_kwargs.get(
+            "agent_settings_file", AGENT_SETTINGS_UNCHANGED
+        )
+        opted_out_clear = agent_settings_kwargs.get("agent_settings_opted_out") is False
+        await apply_scene_settings_link(
+            scene,
+            filename=link_filename,
+            opted_out_clear=opted_out_clear,
+        )
 
         return scene
 

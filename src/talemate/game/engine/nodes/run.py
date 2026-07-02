@@ -2,7 +2,6 @@ import structlog
 import pydantic
 import asyncio
 import re
-import dataclasses
 from typing import ClassVar, Callable
 from talemate.game.engine.nodes.core import (
     Node,
@@ -46,11 +45,10 @@ def title_to_function_name(title: str) -> str:
     return re.sub(r"[^a-zA-Z0-9]", "_", title)
 
 
-@dataclasses.dataclass
-class BreakpointEvent:
+class BreakpointEvent(pydantic.BaseModel):
     node: Node
     state: GraphState
-    module_path: str = None
+    module_path: str | None = None
 
 
 class FunctionWrapper:

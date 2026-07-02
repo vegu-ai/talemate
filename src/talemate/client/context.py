@@ -47,6 +47,8 @@ class ContextModel(BaseModel):
     inference_preset: str = None
     data_format: str | None = None
     requires_active_scene: bool = True
+    # Honored unless the client reports reason_locked.
+    disable_reasoning: bool = False
 
 
 # Define the context variable as an empty dictionary

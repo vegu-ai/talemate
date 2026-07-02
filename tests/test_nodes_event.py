@@ -32,10 +32,14 @@ from talemate.game.engine.nodes.event import (
     EmitSystemMessage,
     EmitWorldEditorSync,
     State as EventState,
+    collect_auto_register_listeners,
     collect_listeners,
+    connect_auto_register_listeners,
     connect_listeners,
+    disconnect_auto_register_listeners,
     disconnect_listeners,
 )
+from talemate.game.engine.nodes.registry import NODES, register
 from talemate.tale_mate import Scene
 
 
@@ -101,6 +105,23 @@ class TestListenerCollection:
 
         result = collect_listeners(g)
         assert result == {}
+
+    def test_skips_listen_with_auto_register_true(self):
+        # Listen nodes with auto_register=True are owned by the
+        # collect_auto_register_listeners path — collect_listeners must
+        # ignore them even when they are embedded in the graph.
+        g = Graph()
+        embedded = Listen()
+        embedded.set_property("event_name", "evt.auto")
+        embedded.set_property("auto_register", True)
+        regular = Listen()
+        regular.set_property("event_name", "evt.regular")
+        g.add_node(embedded)
+        g.add_node(regular)
+
+        result = collect_listeners(g)
+        assert "evt.auto" not in result
+        assert result == {"evt.regular": [regular]}
 
     def test_recurses_into_nested_graphs(self):
         # Listen nodes inside a nested Graph are also discovered.
@@ -170,6 +191,206 @@ class TestConnectAndDisconnectListeners:
         connect_listeners(g, GraphState(), disconnect=True)
         # Listener still present after the disconnect/connect cycle
         assert listener.execute_from_event in sig.receivers
+
+
+# ---------------------------------------------------------------------------
+# Auto-register listeners (self-registering Listen subclasses)
+# ---------------------------------------------------------------------------
+
+
+class TestAutoRegisterListeners:
+    """Auto-register listeners discover Listen subclasses that have
+    auto_register=True baked into their persisted properties — these come
+    from user-authored scene-module graphs (loaded via
+    ``import_node_definition``) rather than being placed in the scene
+    loop graph manually.
+
+    For tests we register a minimal Listen subclass into ``NODES`` with a
+    matching ``_base_type``, since ``get_nodes_by_base_type`` checks the
+    underscored attribute (which scene modules set explicitly via
+    ``dynamic_node_import``). This is the realistic shape.
+    """
+
+    @pytest.fixture
+    def auto_signal(self):
+        name = "test_auto_register_signal_xyz"
+        if name in async_signals.handlers:
+            async_signals.handlers.pop(name)
+        async_signals.register(name)
+        yield name
+        async_signals.handlers.pop(name, None)
+
+    @pytest.fixture
+    def registered_auto_listen(self, auto_signal):
+        # Build a Listen subclass that, when instantiated, has the
+        # persisted auto_register=True and event_name set — mirroring the
+        # shape produced by dynamic_node_import for scene modules.
+        signal_name = auto_signal
+        registry_name = "test/AutoListenForTest"
+
+        @register(registry_name)
+        class _TestAutoListen(Listen):
+            _base_type = "core/Event"
+
+            def setup(self):
+                super().setup()
+                self.set_property("event_name", signal_name)
+                self.set_property("auto_register", True)
+
+        yield _TestAutoListen, signal_name, registry_name
+        NODES.pop(registry_name, None)
+
+    @pytest.fixture
+    def registered_auto_listen_no_event(self):
+        registry_name = "test/AutoListenNoEvent"
+
+        @register(registry_name)
+        class _TestAutoListenNoEvent(Listen):
+            _base_type = "core/Event"
+
+            def setup(self):
+                super().setup()
+                self.set_property("event_name", "")
+                self.set_property("auto_register", True)
+
+        yield registry_name
+        NODES.pop(registry_name, None)
+
+    @pytest.fixture
+    def registered_non_auto_listen(self):
+        registry_name = "test/NonAutoListen"
+
+        @register(registry_name)
+        class _TestNonAutoListen(Listen):
+            _base_type = "core/Event"
+
+            def setup(self):
+                super().setup()
+                self.set_property("event_name", "test.non_auto")
+                self.set_property("auto_register", False)
+
+        yield registry_name
+        NODES.pop(registry_name, None)
+
+    def test_collects_auto_register_listen_subclass(self, registered_auto_listen):
+        _cls, signal_name, _registry = registered_auto_listen
+        instances = collect_auto_register_listeners()
+        # Find our instance among any other registered core/Event nodes
+        ours = [i for i in instances if i.get_property("event_name") == signal_name]
+        assert len(ours) == 1
+        assert ours[0].get_property("auto_register") is True
+
+    def test_skips_listen_subclass_without_auto_register(
+        self, registered_non_auto_listen
+    ):
+        instances = collect_auto_register_listeners()
+        event_names = [i.get_property("event_name") for i in instances]
+        assert "test.non_auto" not in event_names
+
+    def test_skips_auto_register_with_empty_event_name(
+        self, registered_auto_listen_no_event
+    ):
+        # collect_auto_register_listeners warns and skips when event_name
+        # is empty — it should not crash and should not return that one.
+        instances = collect_auto_register_listeners()
+        # Empty event_name means no instance can be returned for it
+        for inst in instances:
+            assert inst.get_property("event_name") != ""
+
+    def test_connect_subscribes_auto_register_listener(self, registered_auto_listen):
+        _cls, signal_name, _registry = registered_auto_listen
+        instances = collect_auto_register_listeners()
+        ours = [i for i in instances if i.get_property("event_name") == signal_name]
+        assert len(ours) == 1
+        instance = ours[0]
+
+        sig = async_signals.get(signal_name)
+        connect_auto_register_listeners([instance], GraphState())
+        assert instance.execute_from_event in sig.receivers
+
+    def test_disconnect_removes_auto_register_listener(self, registered_auto_listen):
+        _cls, signal_name, _registry = registered_auto_listen
+        instances = collect_auto_register_listeners()
+        ours = [i for i in instances if i.get_property("event_name") == signal_name]
+        instance = ours[0]
+        sig = async_signals.get(signal_name)
+
+        connect_auto_register_listeners([instance], GraphState())
+        assert instance.execute_from_event in sig.receivers
+        disconnect_auto_register_listeners([instance], GraphState())
+        assert instance.execute_from_event not in sig.receivers
+
+    def test_connect_with_disconnect_flag_is_idempotent(self, registered_auto_listen):
+        # Reconnecting with disconnect=True should NOT double up the
+        # listener in the receiver list (same instance, same bound method).
+        _cls, signal_name, _registry = registered_auto_listen
+        instances = collect_auto_register_listeners()
+        ours = [i for i in instances if i.get_property("event_name") == signal_name]
+        instance = ours[0]
+        sig = async_signals.get(signal_name)
+
+        connect_auto_register_listeners([instance], GraphState())
+        connect_auto_register_listeners([instance], GraphState(), disconnect=True)
+        # Listener present exactly once
+        matching = [r for r in sig.receivers if r == instance.execute_from_event]
+        assert len(matching) == 1
+
+    def test_connect_to_unknown_signal_logs_and_skips(self):
+        # An auto-register Listen pointing at an unknown signal must not
+        # raise — the function logs a warning and moves on.
+        registry_name = "test/AutoListenUnknownSignal"
+
+        @register(registry_name)
+        class _TestAutoListenUnknown(Listen):
+            _base_type = "core/Event"
+
+            def setup(self):
+                super().setup()
+                self.set_property("event_name", "completely_unregistered_signal_xx")
+                self.set_property("auto_register", True)
+
+        try:
+            instances = collect_auto_register_listeners()
+            ours = [
+                i
+                for i in instances
+                if i.get_property("event_name") == "completely_unregistered_signal_xx"
+            ]
+            assert len(ours) == 1
+            # Must not raise
+            connect_auto_register_listeners(ours, GraphState())
+        finally:
+            NODES.pop(registry_name, None)
+
+    def test_embedded_and_auto_registered_fires_once(self, registered_auto_listen):
+        # If a Listen subclass with auto_register=True is also dropped as
+        # an instance into the scene loop graph, the receiver list must
+        # contain exactly ONE bound method after both wiring paths run.
+        # collect_listeners must skip the embedded copy and only the
+        # auto-register path subscribes.
+        _cls, signal_name, _registry = registered_auto_listen
+
+        # Embedded copy of the same Listen class in a graph
+        embedded_graph = Graph()
+        embedded = _cls()
+        embedded_graph.add_node(embedded)
+
+        # Auto-register path collects the registry instance
+        registry_instances = collect_auto_register_listeners()
+        from_registry = [
+            i for i in registry_instances if i.get_property("event_name") == signal_name
+        ]
+        assert len(from_registry) == 1
+
+        # Run both wiring paths
+        sig = async_signals.get(signal_name)
+        connect_listeners(embedded_graph, GraphState(), disconnect=True)
+        connect_auto_register_listeners(from_registry, GraphState(), disconnect=True)
+
+        # The embedded instance must NOT be in the receiver list
+        assert embedded.execute_from_event not in sig.receivers
+        # The registry instance IS in the receiver list, exactly once
+        assert sig.receivers.count(from_registry[0].execute_from_event) == 1
 
 
 # ---------------------------------------------------------------------------

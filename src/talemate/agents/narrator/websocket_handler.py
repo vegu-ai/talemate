@@ -78,8 +78,8 @@ class NarratorWebsocketHandler(Plugin):
         )
         message.set_source("narrator", "narrate_query", **payload.model_dump())
 
-        emit("context_investigation", message=message)
         await self.scene.push_history(message)
+        emit("context_investigation", message=message)
 
     @set_loading("Looking at the scene", cancellable=True, as_async=True)
     async def handle_look_at_scene(self, data: dict):
@@ -99,8 +99,8 @@ class NarratorWebsocketHandler(Plugin):
         )
         message.set_source("narrator", "narrate_scene", **payload.model_dump())
 
-        emit("context_investigation", message=message)
         await self.scene.push_history(message)
+        emit("context_investigation", message=message)
 
     @set_loading("Looking at a character", cancellable=True, as_async=True)
     async def handle_look_at_character(self, data: dict):
@@ -121,5 +121,5 @@ class NarratorWebsocketHandler(Plugin):
         )
         message.set_source("narrator", "narrate_character", **payload.model_dump())
 
-        emit("context_investigation", message=message)
         await self.scene.push_history(message)
+        emit("context_investigation", message=message)

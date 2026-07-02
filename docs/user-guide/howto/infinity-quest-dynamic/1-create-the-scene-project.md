@@ -10,13 +10,13 @@ Click it and wait a moment for the blank scene to load.
 
 Click the **:material-earth-box: World Editor** tab.
 
-Fill in `Title`, `Description` and `Content Context`
+Fill in `Title`, `Description` and `Content Classification`
 
 ---
 
 **Title**: `Infinity Quest Dynamic`
 
-**Content Context**: `an epic sci-fi adventure`
+**Content Classification**: `an epic sci-fi adventure`
 
 **Description**: 
 ```

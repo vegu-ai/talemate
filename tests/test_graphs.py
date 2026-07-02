@@ -186,3 +186,9 @@ async def test_graph_context_ids(mock_scene):
 async def test_graph_assets(mock_scene_with_assets):
     fn = make_graph_test("test-harness-assets", False)
     await fn(mock_scene_with_assets)
+
+
+@pytest.mark.asyncio
+async def test_graph_add_message_version(mock_scene):
+    fn = make_graph_test("test-harness-add-message-version", False)
+    await fn(mock_scene)

@@ -62,6 +62,13 @@
                                         hint="Custom Jinja2 templates"
                                     ></v-checkbox>
                                 </v-col>
+                                <v-col cols="6" md="3">
+                                    <v-checkbox
+                                        v-model="includeAgentSettings"
+                                        label="Agent Settings"
+                                        hint="Per-scene agent override files"
+                                    ></v-checkbox>
+                                </v-col>
                             </v-row>
                         </v-card>
                     </v-col>
@@ -77,7 +84,7 @@
 
 </template>
 <script>
-import { MAX_CONTENT_WIDTH } from '@/constants';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 export default {
     name: 'WorldStateManagerSceneExport',
@@ -106,6 +113,7 @@ export default {
             includeNodes: true,
             includeInfo: true,
             includeTemplates: true,
+            includeAgentSettings: true,
             rules: {
                 required: value => !!value || 'Required.'
             }
@@ -134,6 +142,7 @@ export default {
                 exportOptions.include_nodes = this.includeNodes;
                 exportOptions.include_info = this.includeInfo;
                 exportOptions.include_templates = this.includeTemplates;
+                exportOptions.include_agent_settings = this.includeAgentSettings;
             }
 
             this.getWebsocket().send(JSON.stringify(exportOptions));

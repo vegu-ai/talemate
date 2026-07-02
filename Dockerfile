@@ -1,19 +1,23 @@
 # Stage 1: Frontend build
-FROM node:21-slim AS frontend-build
+FROM node:22-slim AS frontend-build
 
 WORKDIR /app
 
-# Copy frontend package files
-COPY talemate_frontend/package*.json ./
+# Enable pnpm via corepack (version pinned by package.json "packageManager").
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN npm install -g corepack@latest && corepack enable
+
+# Copy frontend manifest, lockfile and pnpm settings
+COPY talemate_frontend/package.json talemate_frontend/pnpm-lock.yaml talemate_frontend/pnpm-workspace.yaml ./
 
 # Install dependencies
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
 # Copy frontend source
 COPY talemate_frontend/ ./
 
 # Build frontend
-RUN npm run build
+RUN pnpm build
 
 # Stage 2: Backend build
 FROM python:3.11-slim AS backend-build

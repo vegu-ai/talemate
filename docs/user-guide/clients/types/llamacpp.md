@@ -8,7 +8,7 @@ The llama.cpp client connects to the `llama-server` executable from the llama.cp
 
 If you want to add a llama.cpp client, change the `Client Type` to `llama.cpp`.
 
-![Client llama.cpp](/talemate/img/0.35.0/client-llamacpp.png)
+![Client llama.cpp](/talemate/img/0.38.0/client-llamacpp.png)
 
 !!! note "Should work out of the box with a local llama.cpp server"
     The default values should work with a local llama.cpp server if you are running `llama-server` on the default port (8080).
@@ -40,6 +40,12 @@ If your llama.cpp server is configured to require authentication, you can set th
 ##### Context Length
 
 The number of tokens to use as context when generating text. Defaults to `8192`.
+
+##### Concurrent Inference
+
+Found under the **Concurrency** tab in the client settings. When enabled, batch operations that need several queries (currently visual prompt generation for image generation) can send multiple requests to your `llama-server` in parallel instead of one at a time, which can speed those operations up.
+
+This is **off by default**. Your `llama-server` must be started with enough parallel slots to actually serve requests at the same time; otherwise the requests are queued and you will not see a speed-up. See the [Concurrent Requests](/talemate/user-guide/clients/concurrent-requests/) page for more detail.
 
 ### Common issues
 

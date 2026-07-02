@@ -6,6 +6,23 @@ On top of the world editor interface you can configure some settings for this ty
 
 ![world editor generation settings 1](/talemate/img/0.26.0/world-editor-generation-settings-1.png)
 
+## Generation instructions
+
+Most generated fields offer a **:material-auto-fix: Generate** button above the input. Clicking it simply lets the AI fill in the field based on the surrounding context.
+
+If you want to steer the result, hold `ctrl` (or `cmd` on macOS) while clicking the **:material-auto-fix: Generate** button. This opens a dialog with an **Instructions** field where you can describe what the generated content should contain.
+
+Whatever you type here is passed to the AI as your own instruction and seed material that **must** be reflected in the result. In other words, the generated content is built around what you ask for rather than treating it as an optional suggestion, so your instructions are followed reliably.
+
+A few things to keep in mind:
+
+- Instructions can be a direction (for example, *"focus on her childhood in the city"*) or a seed you want expanded (for example, *"she lost her sister in the war"*).
+- For **history entries**, your instruction is treated as the seed for the entry. The AI writes the entry about the event or state you describe, expanding it with consistent detail, instead of generating something unrelated.
+- Instructions apply to a single generation. They are not saved with the field.
+
+!!! tip "Rewriting existing content"
+    Holding `alt` while clicking **:material-auto-fix: Generate** opens the dialog with the field's current content shown as the original, so the AI rewrites what is already there rather than starting from scratch. You can combine `ctrl` and `alt` to rewrite with instructions.
+
 ## Generation length
 
 When using the **:material-auto-fix: Generate** button with additional instructions (hold `ctrl` when clicking), a dialog opens that includes a **Generation Length** dropdown. This allows you to control how long the generated content should be, measured in tokens.
@@ -53,7 +70,7 @@ The remembered lengths include:
 
 Allows you to apply a writing style to AI generated content.
 
-Writing styles are managed through [:material-script-text: writing style templates](/talemate/user-guide/world-editor/templates/writing-style). 
+Writing styles are managed through [:material-script-text: writing style templates](/talemate/user-guide/templates/writing-style). 
 
 Once there is a writing style template available, you can select it from the dropdown list.
 
@@ -63,7 +80,7 @@ Once there is a writing style template available, you can select it from the dro
 
 Spice is a way to add some controlled randomness to AI generated content.
 
-Spices are managed through [:material-chili-mild: spice collection templates](/talemate/user-guide/world-editor/templates/spice).
+Spices are managed through [:material-chili-mild: spice collection templates](/talemate/user-guide/templates/spice).
 
 Once there is a spice template available, you can select it from the dropdown list.
 

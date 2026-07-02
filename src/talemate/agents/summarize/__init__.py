@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import dataclasses
 
 import structlog
 from typing import TYPE_CHECKING, Literal
@@ -57,15 +56,13 @@ talemate.emit.async_signals.register(
 )
 
 
-@dataclasses.dataclass
 class BuildArchiveEmission(AgentEmission):
     generation_options: GenerationOptions | None = None
 
 
-@dataclasses.dataclass
 class SummarizeEmission(AgentTemplateEmission):
     text: str = ""
-    extra_context: str | None = None
+    extra_context: list[str] | str | None = None
     extra_instructions: str | None = None
     generation_options: GenerationOptions | None = None
     summarization_history: list[str] | None = None
@@ -159,8 +156,12 @@ class SummarizeAgent(
         self.actions = SummarizeAgent.init_actions()
 
     @property
+    def archive_enabled(self):
+        return self.resolve_enabled("archive")
+
+    @property
     def threshold(self):
-        return self.actions["archive"].config["threshold"].value
+        return self.resolve_config("archive", "threshold")
 
     @property
     def estimated_entry_count(self):
@@ -169,19 +170,19 @@ class SummarizeAgent(
 
     @property
     def archive_threshold(self):
-        return self.actions["archive"].config["threshold"].value
+        return self.resolve_config("archive", "threshold")
 
     @property
     def archive_method(self):
-        return self.actions["archive"].config["method"].value
+        return self.resolve_config("archive", "method")
 
     @property
     def archive_include_previous(self):
-        return self.actions["archive"].config["include_previous"].value
+        return self.resolve_config("archive", "include_previous")
 
     @property
     def archive_instructions(self):
-        return self.actions["archive"].config["instructions"].value
+        return self.resolve_config("archive", "instructions")
 
     def connect(self, scene):
         super().connect(scene)
@@ -263,7 +264,7 @@ class SummarizeAgent(
         self, scene, generation_options: GenerationOptions | None = None
     ):
         end = None
-        enabled = self.actions["archive"].enabled
+        enabled = self.archive_enabled
 
         log.debug("build_archive", enabled=enabled)
 
@@ -294,7 +295,7 @@ class SummarizeAgent(
         # if there is a recent entry we also collect the 3 most recentries
         # as extra context
 
-        num_previous = self.actions["archive"].config["include_previous"].value
+        num_previous = self.archive_include_previous
         if recent_entry and num_previous > 0:
             if self.layered_history_available:
                 extra_context = self.compile_layered_history(include_base_layer=True)[
@@ -313,7 +314,7 @@ class SummarizeAgent(
         ts = "PT0S"
         time_passage_termination = False
 
-        token_threshold = self.actions["archive"].config["threshold"].value
+        token_threshold = self.archive_threshold
 
         log.debug("build_archive", start=start, recent_entry=recent_entry)
 
@@ -552,11 +553,7 @@ class SummarizeAgent(
             "dialogue": text,
             "scene": self.scene,
             "max_tokens": self.client.max_token_length,
-            "summarization_method": (
-                self.actions["archive"].config["method"].value
-                if method is None
-                else method
-            ),
+            "summarization_method": (self.archive_method if method is None else method),
             "extra_context": extra_context or "",
             "num_extra_context": len(extra_context) if extra_context else 0,
             "extra_instructions": extra_instructions or "",

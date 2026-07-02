@@ -8,7 +8,7 @@ After a moment of loading you will be taken to the new scene and `creative` mode
 
 ## Create the outline for the scene
 
---8<-- "docs/talemate/user-guide/world-editor/scene/outline.md:outline"
+--8<-- "docs/user-guide/world-editor/scene/outline.md:outline"
 
 ## Save the scene
 

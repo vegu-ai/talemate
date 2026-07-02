@@ -77,6 +77,15 @@ class StyleMixin:
                     label="Scene Illustration",
                     description="The style to use for scene illustration visual prompt generation",
                     choices=[],
+                ),
+                "object_illustration_style": AgentActionConfig(
+                    type="wstemplate",
+                    value="visual_styles__object_illustration",
+                    wstemplate_type="visual_style",
+                    wstemplate_filter={"visual_type": "OBJECT_ILLUSTRATION"},
+                    label="Object Illustration",
+                    description="The style to use for object illustration visual prompt generation",
+                    choices=[],
                     note=AgentActionNote(
                         title="Manage styles",
                         text="Additional styles can be created in the Templates manager.",
@@ -91,11 +100,8 @@ class StyleMixin:
 
     def style_template_id(self, vis_type: VIS_TYPE) -> str:
         if vis_type == VIS_TYPE.UNSPECIFIED:
-            return self.actions["_styles"].config["art_style"].value
-        else:
-            return (
-                self.actions["_styles"].config[f"{vis_type.value.lower()}_style"].value
-            )
+            return self.resolve_config("_styles", "art_style")
+        return self.resolve_config("_styles", f"{vis_type.value.lower()}_style")
 
     def style_template(self, vis_type: VIS_TYPE) -> VisualStyle | None:
         scene = getattr(self, "scene", None)

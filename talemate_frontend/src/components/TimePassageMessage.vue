@@ -11,7 +11,7 @@
       <span v-if="!editing">{{ text }}</span>
       <v-chip v-if="hovered && !editing" size="x-small" color="grey-lighten-1" variant="text" class="ml-2">
         <v-icon>mdi-pencil</v-icon>
-        Double-click to edit.
+        {{ uxLocked || appBusy ? 'Editing locked' : 'Double-click to edit.' }}
       </v-chip>
       <div v-if="editing" class="d-flex align-center">
         <v-number-input v-model="editAmount" :min="1" label="Amount"
@@ -19,7 +19,7 @@
         <v-select v-model="editUnit" :items="units" label="Unit"
             style="max-width: 140px" hide-details="auto" density="compact" class="ml-2" />
         <v-btn class="ml-2" color="success" variant="text" size="small"
-            prepend-icon="mdi-content-save" @click="saveEdit" :disabled="uxLocked">Save</v-btn>
+            prepend-icon="mdi-content-save" @click="saveEdit" :disabled="uxLocked || appBusy">Save</v-btn>
         <v-btn class="ml-1" color="cancel" variant="text" size="small"
             prepend-icon="mdi-cancel" @click="cancelEdit">Cancel</v-btn>
       </div>
@@ -45,7 +45,7 @@ export default {
       units: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
     }
   },
-  props: ['text', 'message_id', 'ts', 'uxLocked', 'isLastMessage'],
+  props: ['text', 'message_id', 'ts', 'uxLocked', 'appBusy', 'isLastMessage'],
   inject: ['getWebsocket', 'getMessageStyle', 'getMessageColor'],
   methods: {
     toggle() {
@@ -59,6 +59,7 @@ export default {
       }));
     },
     startEdit() {
+      if (this.uxLocked || this.appBusy) return;
       const parsed = parseIsoDuration(this.ts);
       this.editAmount = parsed.amount;
       this.editUnit = parsed.unit;

@@ -5,7 +5,7 @@
 
 Pocket TTS is a local CPU-based text-to-speech model from [Kyutai](https://kyutai.org/) that supports voice cloning from audio files. Unlike other local TTS options that require a GPU, Pocket TTS runs efficiently on your CPU, making it accessible on a wider range of hardware.
 
-![Pocket TTS API settings](/talemate/img/0.37.0/pocket-tts-api-settings.png)
+![Pocket TTS API settings](/talemate/img/0.38.0/pocket-tts-api-settings.png)
 
 ## Key Features
 
@@ -23,11 +23,19 @@ The first time you generate audio with Pocket TTS, it will automatically downloa
     Voice cloning requires accepting the model terms on Hugging Face. If voice cloning downloads are blocked:
 
     1. Visit the [Pocket TTS model page](https://huggingface.co/kyutai/pocket-tts) and accept the terms
-    2. Create a [Hugging Face access token](https://huggingface.co/settings/tokens)
-    3. Set the token in your environment as `HF_TOKEN`
-    4. Restart Talemate
+    2. Create a [Hugging Face access token](https://huggingface.co/settings/tokens) (a read token is sufficient)
+    3. Add the token to Talemate (see [HuggingFace Token](#huggingface-token) below)
+    4. Try generating again
 
 ## Configuration
+
+##### HuggingFace Token
+
+!!! info "Added in 0.38.0"
+
+Optional. Only needed if the voice-cloning model download is gated by Hugging Face. Paste a [Hugging Face access token](https://huggingface.co/settings/tokens) here and Talemate will use it when downloading the model weights.
+
+This is the same setting as the token on the [HuggingFace application settings page](../../app-settings/application.md#huggingface-token) — set it in either place. A read token is sufficient, and you still need to accept the model terms on Hugging Face with the same account (see [First-Time Setup](#first-time-setup)).
 
 ##### Language / Model
 
@@ -150,7 +158,7 @@ If the model fails to download:
 
 - Check your internet connection
 - Verify you have accepted the terms on [Hugging Face](https://huggingface.co/kyutai/pocket-tts)
-- Make sure your `HF_TOKEN` environment variable is set correctly
+- Make sure your [HuggingFace Token](#huggingface-token) is set correctly
 - Try restarting Talemate
 
 ### Voice Cloning Not Working

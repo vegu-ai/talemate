@@ -173,7 +173,7 @@
 </template>
 
 <script>
-import { VIS_TYPE_OPTIONS, FORMAT_OPTIONS } from '../constants/visual.js';
+import { VIS_TYPE, VIS_TYPE_OPTIONS, FORMAT_OPTIONS, FORMAT_TYPE, GEN_TYPE } from '@/constants/visual';
 import VisualReferenceImages from './VisualReferenceImages.vue';
 export default {
   name: 'VisualLibraryGenerate',
@@ -237,8 +237,8 @@ export default {
       prompt: '',
       negativePrompt: '',
       instructions: '',
-      visType: 'UNSPECIFIED',
-      format: 'LANDSCAPE',
+      visType: VIS_TYPE.UNSPECIFIED,
+      format: FORMAT_TYPE.LANDSCAPE,
       characterName: '',
       referenceAssets: [],
     };
@@ -344,7 +344,7 @@ export default {
       } else {
         // Prompt mode: use generate endpoint
         // if references are set gen_type should be IMAGE_EDIT
-        const genType = (this.inlineReference != null || this.referenceAssets.length > 0) ? 'IMAGE_EDIT' : 'TEXT_TO_IMAGE';
+        const genType = (this.inlineReference != null || this.referenceAssets.length > 0) ? GEN_TYPE.IMAGE_EDIT : GEN_TYPE.TEXT_TO_IMAGE;
 
         const payload = {
           type: 'visual',
@@ -388,8 +388,8 @@ export default {
           }
           this.prompt = r.prompt || '';
           this.negativePrompt = r.negative_prompt || '';
-          this.visType = r.vis_type || 'UNSPECIFIED';
-          this.format = r.format || 'LANDSCAPE';
+          this.visType = r.vis_type || VIS_TYPE.UNSPECIFIED;
+          this.format = r.format || FORMAT_TYPE.LANDSCAPE;
           this.characterName = r.character_name || '';
           this.referenceAssets = (r.reference_assets && Array.isArray(r.reference_assets)) ? r.reference_assets.slice() : [];
         } else {
@@ -397,8 +397,8 @@ export default {
           this.prompt = '';
           this.negativePrompt = '';
           this.instructions = '';
-          this.visType = 'UNSPECIFIED';
-          this.format = 'LANDSCAPE';
+          this.visType = VIS_TYPE.UNSPECIFIED;
+          this.format = FORMAT_TYPE.LANDSCAPE;
           this.characterName = '';
           this.referenceAssets = [];
         }

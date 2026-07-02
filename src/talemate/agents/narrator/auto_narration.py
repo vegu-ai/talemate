@@ -73,28 +73,24 @@ class AutoNarrationMixin:
 
     @property
     def auto_narration_enabled(self) -> bool:
-        return self.actions["auto_narration"].enabled
+        return self.resolve_enabled("auto_narration")
 
     @property
     def auto_narration_chance(self) -> float:
         """Master chance (0.0–1.0) that auto narration fires on a tick."""
-        return self.actions["auto_narration"].config["chance"].value
+        return self.resolve_config("auto_narration", "chance")
 
     @property
     def auto_narration_weights(self) -> dict[str, float]:
         """Relative weights of each candidate action. Sums to ~1.0."""
-        return dict(self.actions["auto_narration"].config["weights"].value)
+        return dict(self.resolve_config("auto_narration", "weights"))
 
     def auto_narration_weight(self, action_name: str) -> float:
         return self.auto_narration_weights.get(action_name, 0.0)
 
     @property
     def auto_narration_disable_during_scene_direction(self) -> bool:
-        return (
-            self.actions["auto_narration"]
-            .config["disable_during_scene_direction"]
-            .value
-        )
+        return self.resolve_config("auto_narration", "disable_during_scene_direction")
 
     @property
     def auto_narration_enabled_actions(self) -> list[str]:

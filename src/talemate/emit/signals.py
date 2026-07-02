@@ -30,6 +30,7 @@ PromptSent = signal("prompt_sent")
 MemoryRequest = signal("memory_request")
 
 RemoveMessage = signal("remove_message")
+RegenerateFailed = signal("regenerate_failed")
 
 SceneStatus = signal("scene_status")
 SceneIntent = signal("scene_intent")
@@ -85,6 +86,7 @@ handlers = {
     "request_agent_status": RequestAgentStatus,
     "clear_screen": ClearScreen,
     "remove_message": RemoveMessage,
+    "regenerate_failed": RegenerateFailed,
     "agent_message": AgentMessage,
     "scene_status": SceneStatus,
     "scene_intent": SceneIntent,

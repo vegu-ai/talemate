@@ -8,7 +8,7 @@ Override example:
 -#}
 {# EXTRA CONTEXT CONTENT #}
 {% set rendered_context_content -%}
-{% with include_scenario_premise=True %}
+{% with include_scenario_premise=True, speaker_role="narrator" %}
 {% include "extra-context-static.jinja2" %}
 {% endwith %}
 {% endset %}
@@ -53,6 +53,7 @@ Override example:
 {{ scene_context_text }}
 
 {% if volatile_placement == "after_history" %}{{ volatile_context_text }}{% endif %}
+{% include "autocomplete-hint.jinja2" %}
 <|SECTION:TASK|>
 You are assisting a script editor in writing the next part of the narrative in the current scene.
 

@@ -69,7 +69,7 @@ IF "%NEED_CLEAN%"=="1" (
 
 REM ---------[ Version configuration ]---------
 SET "PYTHON_VERSION=3.11.9"
-SET "NODE_VERSION=22.16.0"
+SET "NODE_VERSION=22.22.3"
 
 REM ---------[ Detect architecture & choose download URL ]---------
 REM Prefer PROCESSOR_ARCHITEW6432 when the script is run from a 32-bit shell on 64-bit Windows
@@ -212,21 +212,22 @@ ECHO Node.js version:
 node -v
 
 REM ---------[ Frontend ]---------
+REM pnpm is provisioned on demand via corepack (bundled with Node.js); the
+REM version is pinned by the "packageManager" field in package.json.
+SET "COREPACK_ENABLE_DOWNLOAD_PROMPT=0"
 ECHO Installing frontend dependencies...
 CD talemate_frontend
-CALL npm install || CALL :die "npm install failed."
+CALL corepack pnpm install --frozen-lockfile || CALL :die "pnpm install failed."
 
 ECHO Building frontend...
-CALL npm run build
+CALL corepack pnpm build
 IF ERRORLEVEL 1 (
     ECHO.
-    ECHO Frontend build failed - retrying with clean node_modules...
-    ECHO This can happen due to a known npm bug with optional dependencies.
+    ECHO Frontend build failed - retrying with a clean node_modules...
     ECHO.
     rmdir /s /q node_modules 2>nul
-    del package-lock.json 2>nul
-    CALL npm install || CALL :die "npm install failed on retry."
-    CALL npm run build || CALL :die "Frontend build failed on retry."
+    CALL corepack pnpm install --frozen-lockfile || CALL :die "pnpm install failed on retry."
+    CALL corepack pnpm build || CALL :die "Frontend build failed on retry."
 )
 
 REM Return to repo root

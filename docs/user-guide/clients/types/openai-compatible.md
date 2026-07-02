@@ -58,6 +58,18 @@ mistralai/Mixtral-8x22B-Instruct-v0.1
 
 The number of tokens to use as context when generating text. Defaults to `8192`.
 
+### Parameters
+
+The **Parameters** tab in the client settings lets you control which sampler parameters are sent with each request. Some OpenAI-compatible services reject requests that include parameters they don't support for the selected model, returning an error instead of a generation. If you run into this, you can turn the offending parameter off so it is left out of the request entirely.
+
+Each parameter has its own toggle:
+
+- **Send temperature**
+- **Send top_p**
+- **Send presence_penalty**
+
+All three are enabled by default. Turning a toggle off omits that parameter from the request completely (it is not sent as a zero value). Leave them enabled unless the service you are connecting to errors when it receives one of them.
+
 ### Ready to use
 
 Click `Save` to add the client.

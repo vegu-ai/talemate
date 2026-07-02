@@ -1,11 +1,13 @@
+import { VIS_TYPE } from '@/constants/visual';
+
 /**
  * Shared utility for computing ordered reference asset options for character visuals.
- * 
+ *
  * Orders assets with explicit references first, then other character assets.
  * Prioritizes same-vis-type assets before falling back to any character assets.
  * Returns the initial selection, ordered list, and reason for selection.
- * 
- * @param {string} targetVisType - The target vis_type (e.g., 'CHARACTER_PORTRAIT', 'CHARACTER_CARD')
+ *
+ * @param {string} targetVisType - The target vis_type (a VIS_TYPE value)
  * @param {Array} characterAssets - Array of asset objects with {id, meta, ...} structure (all character assets)
  * @param {string|null} preferredId - Preferred asset ID (e.g., current avatar/cover id)
  * @param {Array|null} sameVisTypeAssets - Optional array of assets with the same vis_type (prioritized first)
@@ -98,7 +100,7 @@ export function computeCharacterReferenceOptions(targetVisType, characterAssets,
             const meta = fallbackAsset?.meta || {};
             if (meta.character_name) {
                 const orderedIds = buildOrderedList([], [], characterAssets, fallbackId, targetVisType);
-                const fallbackType = targetVisType === 'CHARACTER_PORTRAIT' ? 'cover image' : 'avatar';
+                const fallbackType = targetVisType === VIS_TYPE.CHARACTER_PORTRAIT ? 'cover image' : 'avatar';
                 return {
                     selectedId: fallbackId,
                     orderedIds,

@@ -1,0 +1,30 @@
+# pnpm settings. pnpm reads this file for configuration even though
+# talemate_frontend is a single package, not a workspace.
+
+# Supply-chain hardening: refuse to resolve any dependency version (including
+# transitive ones) until it has been public for at least this many minutes.
+# Fast-moving npm supply-chain worms are typically detected and yanked within
+# hours, so this keeps us out of the blast radius during that window.
+# 10080 minutes = 7 days. Raise/lower to trade freshness for safety;
+# set to 0 to disable. Use `minimumReleaseAgeExclude` to exempt packages.
+minimumReleaseAge: 10080
+
+# Dependency lifecycle scripts (postinstall etc.) are blocked by default in
+# pnpm 11 — another supply-chain safeguard, since these worms typically run
+# their payload from an install script. `allowBuilds` is the explicit decision
+# for every dependency that ships a build script: true = may run it,
+# false = must not (and is acknowledged, so installs don't error).
+#   - esbuild: needs its script to set up its platform binary
+#   - core-js: denied; its install script only prints a funding message
+# If pnpm reports a new ignored build, add it here as true or false.
+allowBuilds:
+  esbuild: true
+  core-js: false
+
+# Pin transitive packages to patched versions for security advisories.
+#   - esbuild: vite 7.3.5 pins esbuild ^0.27.0, but GHSA-g7r4-m6w7-qqqr
+#     (dev-server arbitrary file read) is only fixed in >=0.28.1. esbuild's
+#     API is stable across 0.27->0.28 (vite 8 itself moved to 0.28), so the
+#     override is safe.
+overrides:
+  esbuild: ">=0.28.1"

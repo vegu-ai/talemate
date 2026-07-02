@@ -144,7 +144,7 @@ class CreatePlan(Node):
         # Set scene perspective from plan meta if available
         perspective = meta.get("perspective")
         if perspective:
-            scene.perspective = perspective
+            scene.perspectives.default = perspective
             log.info("plan.set_perspective", perspective=perspective)
 
         # Link plan to the active director chat via context
@@ -297,9 +297,7 @@ class GetActivePlan(Node):
         # Fall back to scene perspective or a sensible default
         if not perspective:
             scene = active_scene.get()
-            perspective = (
-                getattr(scene, "perspective", "") or "Third person, past tense."
-            )
+            perspective = scene.perspectives.default or "Third person, past tense."
 
         self.set_output_values(
             {

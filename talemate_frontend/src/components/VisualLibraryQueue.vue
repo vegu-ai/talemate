@@ -122,6 +122,7 @@ import VisualLibraryGenerate from './VisualLibraryGenerate.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import VisualImageView from './VisualImageView.vue';
 import RequestInput from './RequestInput.vue';
+import { VIS_TYPE, FORMAT_TYPE, GEN_TYPE } from '@/constants/visual';
 
 
 export default {
@@ -218,7 +219,7 @@ export default {
     regenerateAvailable() {
       const genType = this.selectedItem && this.selectedItem.request && this.selectedItem.request.gen_type;
       if (!this.canGenerate) return false;
-      if (genType === 'IMAGE_EDIT') return this.editAvailable;
+      if (genType === GEN_TYPE.IMAGE_EDIT) return this.editAvailable;
       return this.generationAvailable;
     },
     hasInstructions() {
@@ -246,8 +247,8 @@ export default {
       return 'data:image/png;base64,' + base64;
     },
     imagePreviewClass(item) {
-      const fmt = item?.request?.format || 'LANDSCAPE';
-      return fmt === 'PORTRAIT' ? 'img-preview-portrait' : (fmt === 'SQUARE' ? 'img-preview-square' : 'img-preview-wide');
+      const fmt = item?.request?.format || FORMAT_TYPE.LANDSCAPE;
+      return fmt === FORMAT_TYPE.PORTRAIT ? 'img-preview-portrait' : (fmt === FORMAT_TYPE.SQUARE ? 'img-preview-square' : 'img-preview-wide');
     },
     discardSelected() {
       if (this.selectedItem == null) return;
@@ -298,7 +299,7 @@ export default {
       const payload = {
         type: 'visual',
         action: 'visualize',
-        vis_type: request.vis_type || 'UNSPECIFIED',
+        vis_type: request.vis_type || VIS_TYPE.UNSPECIFIED,
         prompt_only: !this.generationAvailable,
       };
       if (request.character_name) {

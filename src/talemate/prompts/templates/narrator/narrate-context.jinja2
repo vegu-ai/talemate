@@ -25,6 +25,7 @@
 {% set memory_goal = "answer the following question: \""+agent_context_state["narrator__query"]+"\"" if agent_context_state.get("narrator__query_narration") else "" %}
 {% set volatile_context_text %}
 {% with sub_instruction=memory_goal %}{% include "memory-context.jinja2" %}{% endwith %}
+{% include "world-state-snapshot.jinja2" %}
 {% include "extra-context-dynamic.jinja2" %}
 {% endset %}
 {# END VOLATILE CONTEXT #}

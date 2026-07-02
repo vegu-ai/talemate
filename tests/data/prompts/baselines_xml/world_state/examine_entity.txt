@@ -1,0 +1,38 @@
+<CLASSIFICATION>
+Content Classification: Fantasy adventure story
+
+Narrative Perspective: Third person limited, past tense.
+</CLASSIFICATION>
+
+Scenario Premise:
+A peaceful clearing in the heart of an ancient forest.
+
+<STORY_SO_FAR>
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+</STORY_SO_FAR>
+
+<SEED_MATERIAL>
+Snapshot:
+A modest silver dagger with worn leather wrapping the hilt; unremarkable until you notice the faintly etched sigil on the pommel.
+</SEED_MATERIAL>
+
+<TASK>
+Describe the item "The Silver Dagger" as it is *at this moment in the scene* — a closer look that reveals something new about the thing itself. This is an in-fiction examination result, not canonical lore — what surfaces here is true at this point in time, anchored to the current beat.
+
+The result should:
+- Be grounded, in-world prose (not a bulleted list).
+- Keep the item itself as the subject — its appearance, texture, function, history, significance, or sensory detail. Describe the thing, not anyone looking at it.
+- Faithfully incorporate every concrete detail from the SEED MATERIAL. The snapshot is the source of truth for what is now noticed about this item.
+- Stay consistent with anything established in the STORY SO FAR. Never contradict it.
+- The point of a closer look is discovery: reveal new, concrete, interesting detail about the item that the snapshot and STORY SO FAR haven't already stated — texture, construction, history, function, a hidden feature, or significance. Invent grounded specifics rather than restating what's already known.
+- Read as an omniscient, all-seeing narrator. Never write it as an action: no one takes a closer look, reaches for, picks up, holds, examines, or reacts to the item. No character acts, moves, or speaks, and the scene does not advance — avoid "I" or "you" performing anything.
+- Match the prose register and tone of the scene, but stay purely descriptive.
+- Avoid meta-commentary, headings, or fourth-wall references. Just the in-world description of the item.
+
+Wrap your response in <EXAMINE> tags like this: <EXAMINE>your examination text here</EXAMINE>
+</TASK>
+
+The length of your response must fit within 4 paragraphs.
+<|BOT|><EXAMINE>

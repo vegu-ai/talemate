@@ -36,6 +36,7 @@ from talemate.scene.episodes import EpisodesManager
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
+    VersionSource,
     ReinforcementMessage,
     SceneMessage,
     TimePassageMessage,
@@ -50,16 +51,15 @@ from talemate.game.engine.nodes.core import GraphState
 from talemate.game.engine.nodes.layout import load_graph
 from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
+from talemate.scene.schema import ScenePerspectives
 from talemate.history import emit_archive_add, ArchiveEntry
 from talemate.character import Character
-from talemate.game.engine.context_id.character import (
-    CharacterContext,
-    CharacterContextItem,
-)
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
+from talemate.regenerate import regeneration_status
 from talemate.changelog import InMemoryChangelog
 from talemate.shared_context import SharedContext
+from talemate.scene_agent_settings import SceneAgentSettings
 
 __all__ = [
     "Character",
@@ -141,6 +141,10 @@ class Scene(Emitter):
         # allowing websocket-triggered environment switches to restart the scene loop.
         self.restart_scene_loop_requested = False
         self.shared_context: SharedContext | None = None
+        # Per-scene agent overrides — see talemate.scene_agent_settings.
+        self.agent_settings_file: str | None = None
+        self._agent_settings_opted_out: bool = False
+        self.agent_overrides: SceneAgentSettings | None = None
         self.assets = SceneAssets(scene=self)
         self.voice_library: VoiceLibrary = VoiceLibrary()
         self.description = ""
@@ -176,7 +180,7 @@ class Scene(Emitter):
         self.immutable_save = False
 
         self.context = ""
-        self.perspective = ""
+        self.perspectives = ScenePerspectives()
         self.commands = commands.Manager(self)
         self.environment = "scene"
         self.world_state = WorldState()
@@ -388,6 +392,47 @@ class Scene(Emitter):
     @property
     def shared_context_dir(self):
         return os.path.join(self.save_dir, "shared-context")
+
+    @property
+    def agent_settings_link(self) -> str | None:
+        """Effective linked agent-settings filename, honoring opt-out."""
+        if self._agent_settings_opted_out:
+            return None
+        return self.agent_overrides.filename if self.agent_overrides else None
+
+    @property
+    def agent_settings_files(self) -> list[str]:
+        """Available agent-settings JSON files in this scene's
+        ``agent-settings/`` subdir.
+
+        Cached by directory mtime — ``scene_status`` (which reads this) fires
+        often, and ``list_settings_files`` enumerates every .json in the
+        subdir. Re-reading on every emit is wasteful.
+        """
+        from talemate.scene_agent_settings import (
+            agent_settings_dir,
+            list_settings_files,
+        )
+
+        if not self.filename or not self._project_name:
+            return []
+        save_dir = os.path.join(self.scenes_dir(), self.project_name)
+        settings_dir = agent_settings_dir(save_dir)
+        try:
+            mtime = os.stat(settings_dir).st_mtime_ns
+        except OSError:
+            # Subdir doesn't exist yet — nothing to list, and nothing to cache
+            # under (mtime would be undefined). Return empty without poisoning
+            # the cache so a later first-write is picked up immediately.
+            return []
+
+        cache = getattr(self, "_agent_settings_files_cache", None)
+        if cache is not None and cache[0] == mtime:
+            return cache[1]
+
+        files = list_settings_files(save_dir)
+        self._agent_settings_files_cache = (mtime, files)
+        return files
 
     @property
     def auto_save(self) -> bool:
@@ -639,6 +684,11 @@ class Scene(Emitter):
 
         await self.signals["push_history.after"].send(event)
 
+        # History changed — refresh scene status so UI affordances that
+        # depend on the tail (e.g. the regenerate buttons) stay in sync.
+        # emit_status is debounced, so bursts of pushes coalesce.
+        self.emit_status()
+
     def pop_message(self, message: SceneMessage | int) -> bool:
         """
         Removes the last message from the history that matches the given message
@@ -648,11 +698,13 @@ class Scene(Emitter):
                 self.history.remove(message)
             except ValueError:
                 return False
+            self.emit_status()
             return True
         elif isinstance(message, int):
             message = self.find_message(message)
             if message:
                 self.history.remove(message)
+                self.emit_status()
                 return True
             return False
         else:
@@ -714,6 +766,11 @@ class Scene(Emitter):
         for message in to_remove:
             self.history.remove(message)
 
+        # History changed — keep tail-dependent UI affordances (e.g. the
+        # regenerate buttons) in sync. emit_status is debounced.
+        if to_remove:
+            self.emit_status()
+
     def find_message(self, typ: str, max_iterations: int = 100, **filters):
         """
         Finds the last message in the history that matches the given typ and source
@@ -744,13 +801,15 @@ class Scene(Emitter):
                 return idx
         return -1
 
-    def get_message(self, message_id: int) -> SceneMessage:
+    def get_message(self, message_id: int) -> SceneMessage | None:
         """
-        Returns the message in the history with the given id
+        Returns the message in the history with the given id, or ``None``
+        if no message in history matches.
         """
         for idx in range(len(self.history) - 1, -1, -1):
             if self.history[idx].id == message_id:
                 return self.history[idx]
+        return None
 
     def last_player_message(self) -> str:
         """
@@ -974,17 +1033,60 @@ class Scene(Emitter):
             },
         )
 
-    def edit_message(self, message_id: int, message: str):
+    def edit_message(self, message_id: int, message: str) -> None:
         """
-        Finds the message in `history` by its id and will update its contents
-        """
+        Replace a message's canonical text in place. Used for plain user
+        edits and any other in-place rewrite that should NOT grow a new
+        revision-stack entry. The active version's text is updated to
+        match.
 
-        for i, _message in enumerate(self.history):
-            if _message.id == message_id:
-                self.history[i].message = message
-                emit("message_edited", self.history[i], id=message_id)
-                self.log.info("Message edited", message=message, id=message_id)
-                return
+        For appending a new version (continue, manual revision,
+        regenerate, custom mutators), use ``append_message_version``.
+        For moving the active pointer, use ``set_message_active_version``.
+        """
+        target = self.get_message(message_id)
+        if target is None:
+            return
+        target.message = message
+        emit("message_edited", target, id=message_id, data=None)
+        self.log.info("Message edited", message=message, id=message_id)
+
+    def append_message_version(
+        self,
+        message_id: int,
+        text: str,
+        source: VersionSource,
+        reason: str | None = None,
+    ) -> None:
+        """
+        Append a new version to a message's revision stack, make it
+        active, and emit ``message_edited`` so the frontend mirrors the
+        new state.
+        """
+        target = self.get_message(message_id)
+        if target is None:
+            return
+        target.append_version(text, source=source, reason=reason)
+        emit("message_edited", target, id=message_id, data=None)
+        self.log.info(
+            "Message version appended",
+            text=text,
+            source=source,
+            reason=reason,
+            id=message_id,
+        )
+
+    def set_message_active_version(self, message_id: int, index: int) -> None:
+        """
+        Move the active-version pointer on a message; the canonical text
+        follows. Used by the frontend's revision-navigator arrows.
+        """
+        target = self.get_message(message_id)
+        if target is None:
+            return
+        target.set_active_version(index)
+        emit("message_edited", target, id=message_id, data=None)
+        self.log.info("Message active version swapped", index=index, id=message_id)
 
     async def add_actor(self, actor: Actor, commit_to_memory: bool = True):
         """
@@ -1165,6 +1267,26 @@ class Scene(Emitter):
         """
         self.description = description
 
+    def perspective_for_role(self, role: str | None = None) -> str:
+        """
+        Resolve the narrative perspective for a speaker role and substitute
+        the `{player_name}` placeholder against the current scene state.
+
+        Returns "" when no perspective is configured for the role (after
+        falling back to the default) OR when the resolved value references
+        `{player_name}` but the scene has no explicit player character — a
+        perspective that depends on a missing anchor would render as broken
+        prose, so we suppress it instead. Used by content-classification and
+        dialogue templates.
+        """
+        value = self.perspectives.for_role(role)
+        if not value or "{player_name}" not in value:
+            return value
+        character = self.get_explicit_player_character()
+        if character is None:
+            return ""
+        return value.replace("{player_name}", character.name)
+
     def get_intro(self, intro: str = None) -> str:
         """
         Returns the intro text of the scene
@@ -1250,6 +1372,7 @@ class Scene(Emitter):
             return
 
         player_character = self.get_player_character()
+        can_regenerate, can_regenerate_reason = regeneration_status(self)
         emit(
             "scene_status",
             self.name,
@@ -1271,7 +1394,7 @@ class Scene(Emitter):
                 "explicit_player_character": self.player_character_exists,
                 "inactive_characters": list(self.inactive_characters.keys()),
                 "context": self.context,
-                "perspective": self.perspective,
+                "perspectives": self.perspectives.model_dump(),
                 "assets": self.assets.dict(),
                 "characters": [actor.character.model_dump() for actor in self.actors],
                 "character_colors": {
@@ -1287,6 +1410,8 @@ class Scene(Emitter):
                 "auto_save": self.auto_save,
                 "auto_progress": self.auto_progress,
                 "can_auto_save": self.can_auto_save(),
+                "can_regenerate": can_regenerate,
+                "can_regenerate_reason": can_regenerate_reason,
                 "game_state": self.game_state.model_dump(),
                 "agent_state": self.agent_state,
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
@@ -1311,6 +1436,9 @@ class Scene(Emitter):
                 "shared_context": self.shared_context.filename
                 if self.shared_context
                 else None,
+                "agent_settings_file": self.agent_settings_link,
+                "agent_settings_opted_out": self._agent_settings_opted_out,
+                "agent_settings_files": self.agent_settings_files,
                 "game_state_watch_paths": self.game_state_watch_paths,
             },
         )
@@ -2026,6 +2154,8 @@ class Scene(Emitter):
             "shared_context": scene.shared_context.filename
             if scene.shared_context
             else None,
+            "agent_settings_file": scene.agent_settings_link,
+            "agent_settings_opted_out": scene._agent_settings_opted_out,
             "game_state_watch_paths": scene.game_state_watch_paths,
         }
 
@@ -2040,8 +2170,3 @@ class Scene(Emitter):
         if self.cancel_requested:
             self.cancel_requested = False
             raise GenerationCancelled("action cancelled")
-
-
-Character.model_rebuild()
-CharacterContextItem.model_rebuild()
-CharacterContext.model_rebuild()

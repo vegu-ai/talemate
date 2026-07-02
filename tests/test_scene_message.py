@@ -1,4 +1,4 @@
-"""Unit tests for talemate.scene_message message dataclasses and helpers."""
+"""Unit tests for talemate.scene_message message models and helpers."""
 
 import pytest
 
@@ -78,7 +78,8 @@ class TestMessagesRegistry:
 
     def test_typ_attr_matches_registry_key(self):
         for key, cls in MESSAGES.items():
-            assert cls.typ == key, f"{cls.__name__}.typ != registry key {key!r}"
+            default_typ = cls.model_fields["typ"].default
+            assert default_typ == key, f"{cls.__name__}.typ != registry key {key!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +158,7 @@ class TestSceneMessageBase:
 
     def test_dict_returns_serialisable_payload(self):
         m = SceneMessage(message="hi", source="ai", flags=Flags.HIDDEN)
-        d = m.__dict__()
+        d = m.to_dict()
         assert d["message"] == "hi"
         assert d["typ"] == "scene"
         assert d["source"] == "ai"
@@ -168,7 +169,7 @@ class TestSceneMessageBase:
 
     def test_dict_includes_meta_when_set(self):
         m = SceneMessage(message="hi", meta={"agent": "narrator"})
-        d = m.__dict__()
+        d = m.to_dict()
         assert d["meta"] == {"agent": "narrator"}
 
     def test_raw_returns_message_as_string(self):
@@ -288,14 +289,14 @@ class TestCharacterMessage:
             asset_id="asset-123",
             asset_type="avatar",
         )
-        d = m.__dict__()
+        d = m.to_dict()
         assert d["from_choice"] == "choice-1"
         assert d["asset_id"] == "asset-123"
         assert d["asset_type"] == "avatar"
 
     def test_dict_omits_unset_optional_fields(self):
         m = CharacterMessage(message="Alice: hi")
-        d = m.__dict__()
+        d = m.to_dict()
         assert "from_choice" not in d
         assert "asset_id" not in d
         assert "asset_type" not in d
@@ -392,7 +393,7 @@ class TestNarratorMessage:
         m = NarratorMessage(
             message="text", asset_id="img-1", asset_type="scene_illustration"
         )
-        d = m.__dict__()
+        d = m.to_dict()
         assert d["asset_id"] == "img-1"
         assert d["asset_type"] == "scene_illustration"
 
@@ -525,7 +526,7 @@ class TestDirectorMessage:
         m = DirectorMessage(
             message="x", action="user_direction", subtype="user_direction"
         )
-        d = m.__dict__()
+        d = m.to_dict()
         assert d["action"] == "user_direction"
         assert d["subtype"] == "user_direction"
 
@@ -544,7 +545,7 @@ class TestTimePassageMessage:
 
     def test_dict_includes_ts(self):
         m = TimePassageMessage(message="A day later", ts="P1D")
-        d = m.__dict__()
+        d = m.to_dict()
         assert d["ts"] == "P1D"
         assert d["typ"] == "time"
 
@@ -670,7 +671,7 @@ class TestContextInvestigationMessage:
 
     def test_dict_includes_sub_type_always(self):
         m = ContextInvestigationMessage(message="x", sub_type="visual-scene")
-        d = m.__dict__()
+        d = m.to_dict()
         assert d["sub_type"] == "visual-scene"
 
     def test_dict_includes_assets_when_set(self):
@@ -680,6 +681,6 @@ class TestContextInvestigationMessage:
             asset_id="img-1",
             asset_type="scene_illustration",
         )
-        d = m.__dict__()
+        d = m.to_dict()
         assert d["asset_id"] == "img-1"
         assert d["asset_type"] == "scene_illustration"

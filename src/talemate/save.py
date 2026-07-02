@@ -28,7 +28,7 @@ def combine_paths(absolute, relative):
 class SceneEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, SceneMessage):
-            return obj.__dict__()
+            return obj.to_dict()
         if obj is UNRESOLVED:
             return None
         return super().default(obj)

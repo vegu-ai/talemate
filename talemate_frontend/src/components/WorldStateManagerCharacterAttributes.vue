@@ -72,21 +72,28 @@
                         @generate="content => setAndUpdate(selected, content)"
                     />
 
-                    <v-textarea ref="attribute" rows="5" auto-grow
-                        :label="selected"
-                        :color="dirty ? 'dirty' : ''"
+                    <div class="position-relative">
+                        <v-textarea ref="attribute" rows="5" auto-grow
+                            :label="selected"
+                            :color="dirty ? 'dirty' : ''"
 
-                        :disabled="busy"
-                        :loading="busy"
-                        
-                        :hint="autocompleteInfoMessage(busy)"
-                        @keyup.ctrl.enter.stop="sendAutocompleteRequest"
+                            :disabled="busy"
+                            :loading="busy"
 
-                        @update:modelValue="dirty = true"
-                        @blur="update(selected, true)"
+                            :hint="autocompleteInfoMessage(busy)"
+                            @keyup.ctrl.enter.stop="sendAutocompleteRequest"
 
-                        v-model="character.base_attributes[selected]">
-                    </v-textarea>
+                            @update:modelValue="dirty = true"
+                            @blur="onBlurSave"
+
+                            v-model="character.base_attributes[selected]">
+                        </v-textarea>
+                        <AutocompleteRedoChip
+                            :applied="attributeAutocompleteField?.state.applied || false"
+                            :disabled="busy"
+                            @redo="attributeAutocompleteField.redo()"
+                            @undo="attributeAutocompleteField.undo()" />
+                    </div>
                 </v-card-text>
                 <v-card-actions>
                     <ConfirmActionInline
@@ -115,6 +122,8 @@
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
+import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import { createAutocompleteField } from '@/utils/autocompleteField';
 import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 
 export default {
@@ -124,6 +133,7 @@ export default {
         WorldStateManagerTemplateApplicator,
         SpiceAppliedNotification,
         ConfirmActionInline,
+        AutocompleteRedoChip,
     },
     props: {
         immutableCharacter: Object,
@@ -144,7 +154,33 @@ export default {
             groupsOpen: [],
             source: "wsm.character_attributes",
             templateApplicatorCallback: null,
+            attributeAutocompleteField: null,
         }
+    },
+    created() {
+        // Dynamic-context field: `selected` changes as the user clicks
+        // different attributes, and the same field instance reads/writes
+        // through the current selection.
+        this.attributeAutocompleteField = createAutocompleteField({
+            autocompleteRequest: this.autocompleteRequest,
+            getValue: () => (this.selected && this.character?.base_attributes)
+                ? this.character.base_attributes[this.selected] || ''
+                : '',
+            setValue: (v) => {
+                if (this.selected && this.character?.base_attributes) {
+                    this.character.base_attributes[this.selected] = v;
+                }
+            },
+            buildParams: () => ({
+                partial: (this.selected && this.character?.base_attributes)
+                    ? this.character.base_attributes[this.selected] || ''
+                    : '',
+                context: `character attribute:${this.selected}`,
+                character: this.character.name,
+            }),
+            onStart: () => { this.busy = true; },
+            onEnd: () => { this.busy = false; },
+        });
     },
     inject: [
         'getWebsocket',
@@ -172,9 +208,22 @@ export default {
                     this.character = { ...value };
                 }
             }
-        }
+        },
+        // Both the value and the selection trigger chip clearing — switching
+        // attributes mid-flight invalidates any pending Redo/Undo state.
+        currentAttributeValue() {
+            this.attributeAutocompleteField?.onValueChange();
+        },
+        selected() {
+            this.attributeAutocompleteField?.onValueChange();
+        },
     },
     computed: {
+        currentAttributeValue() {
+            return this.selected && this.character?.base_attributes
+                ? this.character.base_attributes[this.selected]
+                : null;
+        },
         selectedIsShared() {
             return this.character.shared_attributes.includes(this.selected);
         },
@@ -272,6 +321,12 @@ export default {
             }));
         },
 
+        onBlurSave() {
+            // Guard: blur during autocomplete would save the un-stripped {hint}.
+            if (this.busy) return;
+            this.update(this.selected, true);
+        },
+
         setShared(name, shared) {
             const payload = {
                 type: 'world_state_manager',
@@ -310,15 +365,7 @@ export default {
         },
 
         sendAutocompleteRequest() {
-            this.busy = true;
-            this.autocompleteRequest({
-                partial: this.character.base_attributes[this.selected],
-                context: `character attribute:${this.selected}`,
-                character: this.character.name
-            }, (completion) => {
-                this.character.base_attributes[this.selected] += completion;
-                this.busy = false;
-            }, this.$refs.attribute);
+            this.attributeAutocompleteField.request(this.$refs.attribute);
 
         },
         

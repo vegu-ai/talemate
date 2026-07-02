@@ -1,0 +1,19 @@
+{
+    "test_001_001": "good bye world",
+    "test_001_002": 1,
+    "test_001_003": 2,
+    "test_002_001": "NPC: good bye world",
+    "test_002_002": 1,
+    "test_003_001": null,
+    "test_001_004": "hello world",
+    "test_001_005": "original",
+    "test_001_006": null,
+    "test_001_007": "good bye world",
+    "test_001_008": "custom",
+    "test_001_009": "rewritten by test",
+    "test_002_003": "NPC: hello world",
+    "test_002_004": "original",
+    "test_002_005": "NPC: good bye world",
+    "test_002_006": "custom",
+    "test_003_002": null
+}

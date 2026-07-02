@@ -8,7 +8,14 @@ against stored baseline files. Run with --update-baselines to create/update.
 import pytest
 from unittest.mock import AsyncMock
 
-from talemate.world_state import Reinforcement, ContextPin
+from talemate.scene_message import CharacterMessage, NarratorMessage
+from talemate.world_state import (
+    CharacterState,
+    ContextPin,
+    ObjectState,
+    PlaceState,
+    Reinforcement,
+)
 from ..conftest import mock_llm_client  # noqa: F401
 from ..test_world_state_templates import (  # noqa: F401
     mock_scene,
@@ -16,6 +23,7 @@ from ..test_world_state_templates import (  # noqa: F401
     mock_creator_agent,
     mock_summarizer_agent,
     mock_director_agent,
+    mock_editor_agent,
     world_state_agent,
     setup_agents,
     active_context,
@@ -171,13 +179,113 @@ class TestWorldStateRequestBaselines:
     """Baseline tests for world_state request methods."""
 
     @pytest.mark.asyncio
-    async def test_request_world_state(self, active_context, baseline_checker):
+    async def test_request_world_state(
+        self, active_context, mock_scene, baseline_checker
+    ):
         agent = active_context
+
+        # The agent short-circuits when there are no narrative messages to
+        # anchor highlights to, so seed a few. The most-recent message
+        # determines the anchor and what "line N" refers to in the prompt.
+        mock_scene.history = [
+            NarratorMessage(message="The clearing opens onto a moss-covered shrine."),
+            CharacterMessage(
+                message="Elena: Have you seen markings like these before?",
+                source="Elena",
+            ),
+            CharacterMessage(
+                message="Hero: Not since the road to Aldermere.",
+                source="Hero",
+            ),
+        ]
+
+        # The prompt seeds the response with `set_data_response`, which prepends
+        # `\`\`\`json\n{ "characters": {` to whatever the model returns. To
+        # exercise the actual world_state template (not the JSON-fix retry that
+        # fires when the response can't be parsed), the mock must return a
+        # completion that closes the seeded prefix into valid JSON.
         agent.client.send_prompt = AsyncMock(
-            return_value='{"characters": {"Hero": {"emotion": "determined"}}, "items": {}}'
+            return_value=(
+                '"Hero": {"emotion": "determined", "snapshot": "Standing ready",'
+                ' "mentions": []}}, "items": {}, "places": {}, "location": "test"}'
+            )
         )
         await agent.request_world_state()
         baseline_checker(capture_prompt(agent), AGENT, "request_world_state")
+
+    @pytest.mark.asyncio
+    async def test_request_world_state_with_current_state(
+        self, active_context, mock_scene, baseline_checker
+    ):
+        """Exercises the populated CURRENT STATE path — when prior entities
+        exist, the template renders them so the LLM can patch on top."""
+        agent = active_context
+
+        mock_scene.history = [
+            NarratorMessage(message="The clearing opens onto a moss-covered shrine."),
+            CharacterMessage(
+                message="Elena: Have you seen markings like these before?",
+                source="Elena",
+            ),
+            CharacterMessage(
+                message="Hero: Not since the road to Aldermere.",
+                source="Hero",
+            ),
+        ]
+
+        # Seed an existing snapshot the LLM should be shown for patching.
+        mock_scene.world_state.characters = {
+            "Elena": CharacterState(
+                emotion="curious",
+                snapshot="A healer who recognizes shrine markings.",
+                mentions=["Elena"],
+            )
+        }
+        mock_scene.world_state.items = {
+            "Moss-Covered Shrine": ObjectState(
+                snapshot="A stone shrine half-reclaimed by moss; its carvings hint at an older language.",
+                mentions=["a moss-covered shrine"],
+            )
+        }
+        mock_scene.world_state.places = {
+            "Aldermere Road": PlaceState(
+                snapshot="A trade road south of the forest, known for similar markings on its waystones.",
+                mentions=["the road to Aldermere"],
+            )
+        }
+        mock_scene.world_state.location = "Forest clearing with the shrine"
+
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"Hero": {"emotion": "determined", "snapshot": "Standing ready",'
+                ' "mentions": []}}, "items": {}, "places": {}, "location": "test"}'
+            )
+        )
+        await agent.request_world_state()
+        baseline_checker(
+            capture_prompt(agent), AGENT, "request_world_state_with_current_state"
+        )
+
+
+class TestWorldStateExamineBaselines:
+    """Baseline tests for world_state examine_entity."""
+
+    @pytest.mark.asyncio
+    async def test_examine_entity(self, active_context, baseline_checker):
+        agent = active_context
+        agent.client.send_prompt = AsyncMock(
+            return_value="A simple silver dagger, plain in appearance."
+        )
+        await agent.examine_entity(
+            entity_name="The Silver Dagger",
+            entity_kind="item",
+            snapshot_text=(
+                "A modest silver dagger with worn leather wrapping the hilt;"
+                " unremarkable until you notice the faintly etched sigil"
+                " on the pommel."
+            ),
+        )
+        baseline_checker(capture_prompt(agent), AGENT, "examine_entity")
 
 
 class TestWorldStateReinforcementBaselines:

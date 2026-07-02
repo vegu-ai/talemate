@@ -431,20 +431,19 @@ class DirectorChatWebsocketMixin:
     async def handle_chat_create_generate_arc(self, data: dict):
         payload = ChatCreateGenerateArcPayload(**data)
 
+        # Per-generation overrides; intentionally not persisted.
         if payload.dialogue_ratio is not None:
-            self.director.actions["plan"].config[
-                "dialogue_ratio"
-            ].value = payload.dialogue_ratio
+            self.director.write_config("plan", "dialogue_ratio", payload.dialogue_ratio)
 
         if payload.outline_critique is not None:
-            self.director.actions["plan"].config[
-                "outline_critique"
-            ].value = payload.outline_critique
+            self.director.write_config(
+                "plan", "outline_critique", payload.outline_critique
+            )
 
         if payload.expand_critique is not None:
-            self.director.actions["plan"].config[
-                "expand_critique"
-            ].value = payload.expand_critique
+            self.director.write_config(
+                "plan", "expand_critique", payload.expand_critique
+            )
 
         modes = ChatModeSettings(
             generate_arc=GenerateArcSettings(close_arc=payload.close_arc),

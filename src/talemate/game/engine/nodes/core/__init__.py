@@ -2361,6 +2361,13 @@ class Listen(Graph):
             default="",
         )
 
+        auto_register = PropertyField(
+            name="auto_register",
+            description="Self-register from the node registry instead of requiring placement in the scene loop graph",
+            type="bool",
+            default=False,
+        )
+
     @pydantic.computed_field(description="Node style")
     @property
     def style(self) -> NodeStyle:
@@ -2380,6 +2387,7 @@ class Listen(Graph):
 
     def setup(self):
         self.set_property("event_name", UNRESOLVED)
+        self.set_property("auto_register", False)
 
     async def run(self, state: GraphState):
         log.warning("Listen node run directly", node=self)

@@ -8,6 +8,7 @@ contract of the base class.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Optional
 
@@ -24,6 +25,7 @@ from talemate.agents.base import (
     DYNAMIC_CHILDREN_FIELD,
     DynamicInstruction,
     args_and_kwargs_to_dict,
+    background_processing,
     optimize_prompt_caching_action,
     set_processing,
     store_context_state,
@@ -768,6 +770,35 @@ class TestSetProcessingDecorator:
         assert seen["fn_name"] == "my_action"
 
     @pytest.mark.asyncio
+    async def test_background_flag_suppresses_foreground_processing(self):
+        """Under the background flag, a @set_processing action must not bump the
+        foreground `processing` counter (so status stays out of "busy"), while
+        still running normally."""
+        a = _MinimalAgent()
+        a.processing = 0
+        seen = {}
+
+        @set_processing
+        async def my_action(self_):
+            seen["processing"] = self_.processing
+            return "ok"
+
+        # Normal: foreground processing is incremented during execution.
+        assert await my_action(a) == "ok"
+        assert seen["processing"] == 1
+        assert a.processing == 0  # reset on exit
+
+        # Background: foreground processing is left untouched.
+        seen.clear()
+        token = background_processing.set(True)
+        try:
+            assert await my_action(a) == "ok"
+        finally:
+            background_processing.reset(token)
+        assert seen["processing"] == 0
+        assert a.processing == 0
+
+    @pytest.mark.asyncio
     async def test_store_context_state_writes_args(self):
         a = _MinimalAgent()
         a.processing = 0
@@ -943,3 +974,156 @@ class TestDelegate:
 
         result = await a.delegate(task, 3, 4)
         assert result == 7
+
+
+# ---------------------------------------------------------------------------
+# run_tracked_task (single-flight background/foreground task helper)
+# ---------------------------------------------------------------------------
+
+
+class TestRunTrackedTask:
+    @pytest.mark.asyncio
+    async def test_background_sets_flag(self):
+        a = _MinimalAgent()
+        a.processing = 0
+        observed = {}
+
+        async def work():
+            observed["bg"] = background_processing.get()
+
+        task = await a.run_tracked_task("k", lambda: work(), background=True)
+        assert task is not None
+        await task
+        assert observed["bg"] is True
+
+    @pytest.mark.asyncio
+    async def test_foreground_does_not_set_flag(self):
+        a = _MinimalAgent()
+        a.processing = 0
+        observed = {}
+
+        async def work():
+            observed["bg"] = background_processing.get()
+
+        task = await a.run_tracked_task("k", lambda: work(), background=False)
+        await task
+        assert observed["bg"] is False
+
+    @pytest.mark.asyncio
+    async def test_single_flight_skips_and_does_not_invoke_factory(self):
+        a = _MinimalAgent()
+        a.processing = 0
+        release = asyncio.Event()
+        calls = {"n": 0}
+
+        async def work():
+            calls["n"] += 1
+            await release.wait()
+
+        task = await a.run_tracked_task("k", lambda: work())
+        assert task is not None
+        await asyncio.sleep(0)  # let the first task start
+        assert calls["n"] == 1
+        # Second call while in flight is skipped; factory is never invoked.
+        assert await a.run_tracked_task("k", lambda: work()) is None
+        assert calls["n"] == 1
+
+        release.set()
+        await task
+
+    @pytest.mark.asyncio
+    async def test_cancel_in_flight_replaces_task(self):
+        a = _MinimalAgent()
+        a.processing = 0
+        release = asyncio.Event()
+
+        async def work():
+            await release.wait()
+
+        first = await a.run_tracked_task("k", lambda: work())
+        second = await a.run_tracked_task("k", lambda: work(), cancel_in_flight=True)
+        assert second is not None and second is not first
+        with pytest.raises(asyncio.CancelledError):
+            await first
+
+        release.set()
+        await second
+
+    @pytest.mark.asyncio
+    async def test_cancel_tracked_task(self):
+        a = _MinimalAgent()
+        a.processing = 0
+        release = asyncio.Event()
+
+        async def work():
+            await release.wait()
+
+        task = await a.run_tracked_task("k", lambda: work())
+        assert a.tracked_task_running("k") is True
+
+        assert a.cancel_tracked_task("k") is True
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+        # Nothing in flight now.
+        assert a.cancel_tracked_task("k") is False
+
+    @pytest.mark.asyncio
+    async def test_distinct_keys_are_independent(self):
+        a = _MinimalAgent()
+        a.processing = 0
+        release = asyncio.Event()
+
+        async def work():
+            await release.wait()
+
+        task_a = await a.run_tracked_task("a", lambda: work())
+        task_b = await a.run_tracked_task("b", lambda: work())
+        assert a.tracked_task_running("a") is True
+        assert a.tracked_task_running("b") is True
+
+        release.set()
+        await task_a
+        await task_b
+
+    @pytest.mark.asyncio
+    async def test_completed_task_is_untracked(self):
+        """A finished task is removed from the table so keys don't accumulate."""
+        a = _MinimalAgent()
+        a.processing = 0
+
+        async def work():
+            return
+
+        task = await a.run_tracked_task("k", lambda: work())
+        await task
+        # The done-callback that drops the entry runs on a later loop turn.
+        for _ in range(5):
+            if a._tracked_task("k") is None:
+                break
+            await asyncio.sleep(0)
+        assert a._tracked_task("k") is None
+        assert a.tracked_task_running("k") is False
+
+    @pytest.mark.asyncio
+    async def test_foreground_error_handler_called(self):
+        a = _MinimalAgent()
+        a.processing = 0
+        seen = {}
+
+        async def work():
+            raise ValueError("boom")
+
+        async def handler(exc):
+            seen["error"] = exc
+
+        await a.run_tracked_task(
+            "k", lambda: work(), background=False, error_handler=handler
+        )
+        # The task fails, its done-callback schedules the handler — give both a
+        # few loop turns to run.
+        for _ in range(10):
+            if "error" in seen:
+                break
+            await asyncio.sleep(0)
+        assert isinstance(seen.get("error"), ValueError)

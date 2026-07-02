@@ -2,7 +2,6 @@ import json
 import re
 import random
 from typing import TYPE_CHECKING, Tuple
-import dataclasses
 import traceback
 import uuid
 import pydantic
@@ -25,7 +24,12 @@ from talemate.world_state.templates import (
 from talemate.changelog import write_reconstructed_scene
 from talemate.save import SceneEncoder
 import os
-from talemate.agents.base import AgentAction, AgentActionConfig, AgentTemplateEmission
+from talemate.agents.base import (
+    AgentAction,
+    AgentActionConfig,
+    AgentActionNote,
+    AgentTemplateEmission,
+)
 from talemate.agents.creator.response_specs import COMPLETION_SPEC
 import talemate.emit.async_signals as async_signals
 
@@ -46,7 +50,6 @@ async_signals.register(
 )
 
 
-@dataclasses.dataclass
 class ContextualGenerateEmission(AgentTemplateEmission):
     """
     A context for generating content.
@@ -54,6 +57,7 @@ class ContextualGenerateEmission(AgentTemplateEmission):
 
     content_generation_context: "ContentGenerationContext | None" = None
     character: "Character | None" = None
+    autocomplete_hint: str | None = None
 
     @property
     def context_type(self) -> str:
@@ -64,7 +68,6 @@ class ContextualGenerateEmission(AgentTemplateEmission):
         return self.content_generation_context.computed_context[1]
 
 
-@dataclasses.dataclass
 class AutocompleteEmission(AgentTemplateEmission):
     """
     A context for generating content.
@@ -73,6 +76,7 @@ class AutocompleteEmission(AgentTemplateEmission):
     input: str = ""
     type: str = ""
     character: "Character | None" = None
+    autocomplete_hint: str | None = None
 
 
 class ContentGenerationContext(pydantic.BaseModel):
@@ -205,6 +209,60 @@ class AssistantMixin:
                     max=256,
                     step=16,
                 ),
+                "character_attribute_suggestion_length": AgentActionConfig(
+                    type="number",
+                    label="Character Attribute Suggestion Length",
+                    description="Length of the generated suggestion when using autocomplete on a character attribute field.",
+                    value=32,
+                    min=32,
+                    max=256,
+                    step=16,
+                ),
+                "character_detail_suggestion_length": AgentActionConfig(
+                    type="number",
+                    label="Character Detail Suggestion Length",
+                    description="Length of the generated suggestion when using autocomplete on a character detail or description field.",
+                    value=64,
+                    min=32,
+                    max=256,
+                    step=16,
+                ),
+                "scene_intro_suggestion_length": AgentActionConfig(
+                    type="number",
+                    label="Scene Intro Suggestion Length",
+                    description="Length of the generated suggestion when using autocomplete on the scene intro field.",
+                    value=96,
+                    min=32,
+                    max=256,
+                    step=16,
+                ),
+                "context_investigation_suggestion_length": AgentActionConfig(
+                    type="number",
+                    label="Context Investigation Suggestion Length",
+                    description="Length of the generated suggestion when using autocomplete on a context-investigation message.",
+                    value=64,
+                    min=32,
+                    max=256,
+                    step=16,
+                ),
+                "hints_enabled": AgentActionConfig(
+                    type="bool",
+                    label="Enable Hints",
+                    description="Allow guiding autocomplete with a trailing `{...}` hint block. When off, any trailing `{...}` is treated as part of the input.",
+                    value=True,
+                    note_on_value={
+                        True: AgentActionNote(
+                            icon="mdi-information-outline",
+                            color="primary",
+                            text=(
+                                "End your input with `{...}` to nudge the completion. "
+                                'Example: `"Kaira!?" he yelled {dark corridor, no '
+                                "response}` cues the model on tone and beats without "
+                                "leaving the braces in the scene."
+                            ),
+                        ),
+                    },
+                ),
             },
         )
 
@@ -212,11 +270,49 @@ class AssistantMixin:
 
     @property
     def autocomplete_dialogue_suggestion_length(self):
-        return self.actions["autocomplete"].config["dialogue_suggestion_length"].value
+        return self.resolve_config("autocomplete", "dialogue_suggestion_length")
 
     @property
     def autocomplete_narrative_suggestion_length(self):
-        return self.actions["autocomplete"].config["narrative_suggestion_length"].value
+        return self.resolve_config("autocomplete", "narrative_suggestion_length")
+
+    @property
+    def autocomplete_character_attribute_suggestion_length(self):
+        return self.resolve_config(
+            "autocomplete", "character_attribute_suggestion_length"
+        )
+
+    @property
+    def autocomplete_character_detail_suggestion_length(self):
+        return self.resolve_config("autocomplete", "character_detail_suggestion_length")
+
+    @property
+    def autocomplete_scene_intro_suggestion_length(self):
+        return self.resolve_config("autocomplete", "scene_intro_suggestion_length")
+
+    @property
+    def autocomplete_context_investigation_suggestion_length(self):
+        return self.resolve_config(
+            "autocomplete", "context_investigation_suggestion_length"
+        )
+
+    def autocomplete_contextual_length_for(self, context_type: str) -> int:
+        """Resolve the configured suggestion length for a contextual autocomplete
+        type. Properties follow `autocomplete_<context>_suggestion_length`
+        (spaces → underscores). Unmapped types fall back to character-detail."""
+        attr = f"autocomplete_{context_type.replace(' ', '_')}_suggestion_length"
+        length = getattr(self, attr, None)
+        if length is None:
+            log.debug(
+                "autocomplete length fallback (unmapped context_type)",
+                context_type=context_type,
+            )
+            return self.autocomplete_character_detail_suggestion_length
+        return length
+
+    @property
+    def autocomplete_hints_enabled(self):
+        return self.resolve_config("autocomplete", "hints_enabled")
 
     # actions
 
@@ -285,9 +381,16 @@ class AssistantMixin:
 
         kind = f"create_{generation_context.length}"
 
+        hint = None
+        if self.autocomplete_hints_enabled and generation_context.partial:
+            cleaned, hint = util.extract_autocomplete_hint(generation_context.partial)
+            if hint is not None:
+                generation_context.partial = cleaned
+
         log.debug(
             f"Contextual generate: {context_typ} - {context_name}",
             generation_context=generation_context,
+            hint=hint,
         )
 
         character = (
@@ -308,6 +411,7 @@ class AssistantMixin:
             "history_aware": generation_context.history_aware,
             "character": character,
             "template": generation_context.template,
+            "hint": hint,
         }
 
         emission = ContextualGenerateEmission(
@@ -315,6 +419,7 @@ class AssistantMixin:
             content_generation_context=generation_context,
             character=character,
             template_vars=template_vars,
+            autocomplete_hint=hint,
         )
 
         await async_signals.get("agent.creator.contextual_generate.before").send(
@@ -342,7 +447,11 @@ class AssistantMixin:
             except Exception as e:
                 log.warning("Failed to extract list", error=e)
                 content = "[]"
-        elif context_typ == "character dialogue":
+        elif context_typ == "character dialogue" and not generation_context.partial:
+            # Full-line generation: format as a complete "Name: ..." example.
+            # A partial continuation skips this and falls through to the generic
+            # path below, which returns only the continuation (no name prepend,
+            # no sentence trimming) so it joins cleanly onto the user's draft.
             if not content.startswith(generation_context.character + ":"):
                 content = generation_context.character + ": " + content
             content = util.strip_partial_sentences(content)
@@ -366,7 +475,12 @@ class AssistantMixin:
         if content.lower().startswith(context_name + ": "):
             content = content[len(context_name) + 2 :]
 
-        emission.response = content.strip().strip("*").strip()
+        if generation_context.partial:
+            # Preserve leading whitespace so a continuation joins cleanly onto the
+            # partial (e.g. "the dusty" + " road") instead of fusing words.
+            emission.response = content.rstrip().rstrip("*").rstrip()
+        else:
+            emission.response = content.strip().strip("*").strip()
 
         await async_signals.get("agent.creator.contextual_generate.after").send(
             emission
@@ -500,11 +614,21 @@ class AssistantMixin:
         if not response_length:
             response_length = self.autocomplete_dialogue_suggestion_length
 
+        input, hint = (
+            util.extract_autocomplete_hint(input)
+            if self.autocomplete_hints_enabled
+            else (input, None)
+        )
+
         # continuing recent character message
         non_anchor, anchor = util.split_anchor_text(input, 10)
 
         self.scene.log.debug(
-            "autocomplete_anchor", anchor=anchor, non_anchor=non_anchor, input=input
+            "autocomplete_anchor",
+            anchor=anchor,
+            non_anchor=non_anchor,
+            input=input,
+            hint=hint,
         )
 
         continuing_message = False
@@ -531,6 +655,7 @@ class AssistantMixin:
             "message": message,
             "anchor": anchor,
             "non_anchor": non_anchor,
+            "hint": hint,
         }
 
         emission = AutocompleteEmission(
@@ -539,6 +664,7 @@ class AssistantMixin:
             type="dialogue",
             character=character,
             template_vars=template_vars,
+            autocomplete_hint=hint,
         )
 
         await async_signals.get("agent.creator.autocomplete.before").send(emission)
@@ -606,6 +732,12 @@ class AssistantMixin:
         if not response_length:
             response_length = self.autocomplete_narrative_suggestion_length
 
+        input, hint = (
+            util.extract_autocomplete_hint(input)
+            if self.autocomplete_hints_enabled
+            else (input, None)
+        )
+
         # Split the input text into non-anchor and anchor parts
         non_anchor, anchor = util.split_anchor_text(input, 10)
 
@@ -614,6 +746,7 @@ class AssistantMixin:
             anchor=anchor,
             non_anchor=non_anchor,
             input=input,
+            hint=hint,
         )
 
         template_vars = {
@@ -624,6 +757,7 @@ class AssistantMixin:
             "response_length": response_length,
             "anchor": anchor,
             "non_anchor": non_anchor,
+            "hint": hint,
         }
 
         emission = AutocompleteEmission(
@@ -631,6 +765,7 @@ class AssistantMixin:
             input=input,
             type="narrative",
             template_vars=template_vars,
+            autocomplete_hint=hint,
         )
 
         await async_signals.get("agent.creator.autocomplete.before").send(emission)

@@ -1,6 +1,28 @@
+from pathlib import Path
 from typing import Any
 
-__all__ = ["split_state_path", "get_path_parent", "get_path_value"]
+__all__ = [
+    "split_state_path",
+    "get_path_parent",
+    "get_path_value",
+    "is_safe_relative_filename",
+]
+
+
+def is_safe_relative_filename(name: str | None, *, suffix: str | None = None) -> bool:
+    """True if ``name`` is safe to use as a single filename component.
+
+    Rejects empty / non-str values, path separators (``/`` and ``\\``), NUL
+    bytes, leading-dot traversal, and (via ``Path(name).name == name``)
+    absolute paths. When ``suffix`` is given, the filename must end with it.
+    """
+    if not name or not isinstance(name, str):
+        return False
+    if suffix is not None and not name.endswith(suffix):
+        return False
+    if "/" in name or "\\" in name or "\x00" in name:
+        return False
+    return Path(name).name == name and not name.startswith("..")
 
 
 def split_state_path(name: str) -> list[str]:

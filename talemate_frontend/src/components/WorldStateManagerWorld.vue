@@ -42,7 +42,7 @@
 
 import WorldStateManagerWorldStates from './WorldStateManagerWorldStates.vue';
 import WorldStateManagerWorldEntries from './WorldStateManagerWorldEntries.vue';
-import { MAX_CONTENT_WIDTH } from '@/constants';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 export default {
     name: 'WorldStateManagerWorld',

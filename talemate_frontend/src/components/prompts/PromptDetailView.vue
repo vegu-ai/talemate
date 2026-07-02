@@ -7,6 +7,25 @@
             <v-chip size="small" label class="mr-1" color="primary" variant="tonal">
                 <strong class="mr-1">action</strong>{{ prompt.agent_action }}
             </v-chip>
+            <v-tooltip
+                v-if="overrideKey"
+                location="top"
+                :text="reasoningOverrideActive
+                    ? `Reasoning is forced off for ${overrideLabel}. Click to remove the override.`
+                    : `Force reasoning off whenever ${overrideLabel} runs (clients that always reason will ignore it).`"
+            >
+                <template v-slot:activator="{ props }">
+                    <v-btn
+                        v-bind="props"
+                        size="x-small"
+                        variant="text"
+                        class="mr-1"
+                        icon="mdi-brain"
+                        :color="reasoningOverrideActive ? 'delete' : 'grey-darken-1'"
+                        @click="toggleReasoningOverride"
+                    />
+                </template>
+            </v-tooltip>
             <v-chip class="mr-1" size="small" color="grey" label variant="tonal">
                 <strong class="mr-1">task</strong> {{ prompt.kind }}
             </v-chip>
@@ -185,6 +204,9 @@
                 >Test Changes</v-btn>
             </template>
         </v-tooltip>
+        <span v-if="reasoningOverrideActive" class="text-caption text-muted ml-2">
+            Test Changes runs with the client's default reasoning setting — the per-action override does not apply.
+        </span>
     </v-container>
 </template>
 
@@ -208,6 +230,10 @@ export default {
         modelValue: {
             type: Boolean,
             default: false,
+        },
+        appConfig: {
+            type: Object,
+            default: () => ({}),
         },
     },
     emits: ['navigate-to-template', 'test-changes', 'update:modelValue'],
@@ -248,6 +274,20 @@ export default {
         },
         toggleDetailsLabel() {
             return this.details ? 'Hide Details' : 'Show Details';
+        },
+        overrideKey() {
+            const type = this.prompt?.agent_type;
+            const action = this.prompt?.agent_action;
+            return type && action ? `${type}.${action}` : null;
+        },
+        overrideLabel() {
+            // Verbose form for tooltip display; overrideKey stays the canonical config key.
+            const label = this.prompt?.agent_name || this.prompt?.agent_type;
+            return `${label}.${this.prompt?.agent_action}`;
+        },
+        reasoningOverrideActive() {
+            if (!this.overrideKey) return false;
+            return !!this.appConfig?.agent_actions?.overrides?.[this.overrideKey]?.disable_reasoning;
         },
     },
     watch: {
@@ -308,6 +348,25 @@ export default {
         navigateToTemplate() {
             if (this.localPrompt?.template_uid) {
                 this.$emit('navigate-to-template', this.localPrompt.template_uid);
+            }
+        },
+
+        toggleReasoningOverride() {
+            if (!this.overrideKey) return;
+            const ws = this.getWebsocket();
+            if (!ws) return;
+            if (this.reasoningOverrideActive) {
+                ws.send(JSON.stringify({
+                    type: 'config',
+                    action: 'clear_agent_action_override',
+                    data: { key: this.overrideKey }
+                }));
+            } else {
+                ws.send(JSON.stringify({
+                    type: 'config',
+                    action: 'set_agent_action_override',
+                    data: { key: this.overrideKey, disable_reasoning: true }
+                }));
             }
         },
 

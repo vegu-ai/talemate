@@ -23,9 +23,7 @@ from talemate.game.engine.nodes.core import (
 )
 from talemate.game.engine.nodes.scene import (
     ActivateCharacter,
-    CharacterMessage as CharacterMessageNode,
     DeactivateCharacter,
-    DirectorMessage as DirectorMessageNode,
     GetCharacter,
     GetCharacterAttribute,
     GetCharacterDescription,
@@ -41,7 +39,6 @@ from talemate.game.engine.nodes.scene import (
     IsPlayerCharacter,
     ListCharacters,
     MakeCharacter,
-    NarratorMessage as NarratorMessageNode,
     RemoveAllCharacters,
     RemoveCharacter,
     RestoreScene,
@@ -53,13 +50,18 @@ from talemate.game.engine.nodes.scene import (
     SetDescription,
     SetIntroduction,
     SetTitle,
-    ToggleMessageContextVisibility,
     TriggerGameLoopActorIter,
     UnpackCharacter,
     UnpackInteractionState,
-    UnpackMessageMeta,
     UpdateCharacterData,
     WaitForInput,
+)
+from talemate.game.engine.nodes.scene_messages import (
+    CharacterMessage as CharacterMessageNode,
+    DirectorMessage as DirectorMessageNode,
+    NarratorMessage as NarratorMessageNode,
+    ToggleMessageContextVisibility,
+    UnpackMessageMeta,
 )
 import talemate.events as events
 import talemate.scene_message as scene_message

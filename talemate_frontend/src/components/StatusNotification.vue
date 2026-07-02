@@ -76,7 +76,13 @@ export default {
                 if(data.data && data.data.as_scene_message)
                     return;
 
-                if(data.status === 'idle' && this.statusMessageType === 'busy') {
+                // `idle` + empty message is the wire-level "clear" signal
+                // (set_loading post-call + LoadingStatus.done()). Always
+                // clear on it, never on local state — a handler may emit
+                // a terminal status (info/warning/etc.) just before
+                // set_loading's trailing idle empty fires, and keying on
+                // local state would let that trailing emit blank-stomp it.
+                if(data.status === 'idle' && !data.message) {
                     this.statusMessage = false;
                     this.statusMessageText = '';
                     this.statusMessageType = '';

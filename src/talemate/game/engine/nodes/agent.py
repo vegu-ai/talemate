@@ -136,13 +136,15 @@ class AgentSettingsNode(Node):
         outputs = {"agent_enabled": agent.enabled}
 
         for action_name, action in agent.actions.items():
-            outputs[f"{action_name}_enabled"] = action.enabled
+            outputs[f"{action_name}_enabled"] = agent.resolve_enabled(action_name)
 
             if not action.config:
                 continue
 
-            for config_name, config in action.config.items():
-                outputs[f"{action_name}_{config_name}"] = config.value
+            for config_name in action.config:
+                outputs[f"{action_name}_{config_name}"] = agent.resolve_config(
+                    action_name, config_name
+                )
 
         self.set_output_values(outputs)
 
@@ -225,7 +227,7 @@ class ToggleAgentAction(Node):
                 f"Could not find action {action_name} in agent {agent}",
             )
 
-        action.enabled = enabled
+        agent.write_enabled(action_name, enabled)
 
         self.set_output_values(
             {"agent": agent, "action_name": action_name, "enabled": enabled}

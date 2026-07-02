@@ -11,7 +11,12 @@ from unittest.mock import Mock, AsyncMock
 
 import talemate.instance as instance
 from talemate.agents.summarize import SummarizeAgent
-from .helpers import create_mock_character, create_scene_with_characters
+from .helpers import (
+    create_mock_character,
+    create_scene_with_characters,
+    register_world_state_toggle,
+    seed_world_state_snapshot,
+)
 
 
 @pytest.fixture
@@ -522,6 +527,64 @@ class TestSummarizerAnalyzeSceneForNextAction:
 
         # Verify the client was called
         summarizer.client.send_prompt.assert_called_once()
+
+
+class TestSummarizerSceneAnalysisWorldStateSnapshot:
+    """The world-state snapshot is pinned into the scene-analysis prompts when enabled."""
+
+    @pytest.mark.asyncio
+    async def test_snapshot_injected_for_conversation_analysis(
+        self, active_context, mock_scene
+    ):
+        summarizer = active_context
+        register_world_state_toggle(True)
+        seed_world_state_snapshot(mock_scene)
+        summarizer.client.send_prompt = AsyncMock(return_value="Analysis.")
+
+        await summarizer.analyze_scene_for_next_action(
+            typ="conversation",
+            character=create_mock_character(name="TestChar"),
+            length=512,
+        )
+
+        prompt_text = str(summarizer.client.send_prompt.call_args[0][0])
+        assert "scene notes" in prompt_text.lower()
+        assert "Location: A dim server room, fans humming." in prompt_text
+        assert "the silver dagger — older than the hilt suggests" in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_snapshot_injected_for_narration_analysis(
+        self, active_context, mock_scene
+    ):
+        summarizer = active_context
+        register_world_state_toggle(True)
+        seed_world_state_snapshot(mock_scene)
+        summarizer.client.send_prompt = AsyncMock(return_value="Analysis.")
+
+        await summarizer.analyze_scene_for_next_action(
+            typ="narration", character=None, length=1024
+        )
+
+        prompt_text = str(summarizer.client.send_prompt.call_args[0][0])
+        assert "scene notes" in prompt_text.lower()
+        assert (
+            "the north stairwell — lit only by a flickering exit sign." in prompt_text
+        )
+
+    @pytest.mark.asyncio
+    async def test_snapshot_omitted_when_disabled(self, active_context, mock_scene):
+        summarizer = active_context
+        register_world_state_toggle(False)
+        seed_world_state_snapshot(mock_scene)
+        summarizer.client.send_prompt = AsyncMock(return_value="Analysis.")
+
+        await summarizer.analyze_scene_for_next_action(
+            typ="narration", character=None, length=1024
+        )
+
+        prompt_text = str(summarizer.client.send_prompt.call_args[0][0])
+        assert "scene notes" not in prompt_text.lower()
+        assert "A dim server room, fans humming." not in prompt_text
 
 
 class TestSummarizerMarkupContextForTTS:

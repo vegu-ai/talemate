@@ -4,7 +4,7 @@
 <!--- --8<-- [end:python-versions] -->
 
 <!--- --8<-- [start:world-editor-create-group] -->
-Fist, if you have not done so, [create a template group](/talemate/user-guide/world-editor/templates/groups) to store the template in.
+Fist, if you have not done so, [create a template group](/talemate/user-guide/templates/groups) to store the template in.
 
 Then select the group you want to add the template to and click the **:material-plus: Create Template** button.
 
@@ -15,7 +15,7 @@ Then select the group you want to add the template to and click the **:material-
 !!! note "Unwanted Prose Requirement"
     Unwanted phrases are defined in the writing style that is currently selected in the [Scene Settings](/talemate/user-guide/world-editor/scene/settings).
 
-    See [Writing Style Templates](/talemate/user-guide/world-editor/templates/writing-style) for more information on how to create a writing style and add unwanted phrases.
+    See [Writing Style Templates](/talemate/user-guide/templates/writing-style) for more information on how to create a writing style and add unwanted phrases.
 <!--- --8<-- [end:editor-revision-unwanted-prose-requirement] -->
 
 <!--- --8<-- [start:documentation-is-a-work-in-progress] -->

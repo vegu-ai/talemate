@@ -1,8 +1,9 @@
+import enum
 import uuid
 import structlog
 import talemate.emit.async_signals as signals
 from .core import Listen, Node, Graph, GraphState, NodeVerbosity, PropertyField
-from .registry import register
+from .registry import register, get_nodes_by_base_type
 from talemate.agents.registry import get_agent_types
 from talemate.agents.base import Agent
 from talemate.emit import emit
@@ -14,14 +15,26 @@ __all__ = [
     "collect_listeners",
     "connect_listeners",
     "disconnect_listeners",
+    "collect_auto_register_listeners",
+    "connect_auto_register_listeners",
+    "disconnect_auto_register_listeners",
 ]
 
 log = structlog.get_logger("talemate.game.engine.nodes.event")
 
 
+class ListenerAction(enum.Enum):
+    CONNECT = "connect"
+    DISCONNECT = "disconnect"
+    RECONNECT = "reconnect"  # disconnect first, then connect (idempotent)
+
+
 def collect_listeners(graph: Graph) -> dict[str, list["Listen"]]:
     """
-    Does a deep search of the graph to find all Listen nodes
+    Does a deep search of the graph to find all Listen nodes.
+
+    Listen nodes with ``auto_register=True`` are skipped here — they are
+    handled by ``collect_auto_register_listeners`` from the node registry.
 
     Args:
         graph: Graph to search
@@ -33,6 +46,9 @@ def collect_listeners(graph: Graph) -> dict[str, list["Listen"]]:
     event_listeners = {}
     for node in graph.nodes.values():
         if isinstance(node, Listen):
+            if node.get_property("auto_register"):
+                continue
+
             event_name = node.get_property("event_name")
 
             if not event_name:
@@ -46,6 +62,35 @@ def collect_listeners(graph: Graph) -> dict[str, list["Listen"]]:
     return event_listeners
 
 
+def _apply_listener_signal(
+    listener: "Listen",
+    event_name: str,
+    state: GraphState,
+    action: ListenerAction,
+):
+    """Look up the signal for ``event_name`` and apply ``action`` to ``listener``.
+
+    Returns silently with a warning if the signal isn't registered.
+    """
+    signal = signals.get(event_name)
+    if not signal:
+        log.warning("Event not found", event_name=event_name)
+        return
+
+    if state.verbosity == NodeVerbosity.NORMAL:
+        log.debug(
+            "apply listener signal",
+            action=action.value,
+            listener=listener,
+            event_name=event_name,
+        )
+
+    if action in (ListenerAction.DISCONNECT, ListenerAction.RECONNECT):
+        signal.disconnect(listener.execute_from_event)
+    if action in (ListenerAction.CONNECT, ListenerAction.RECONNECT):
+        signal.connect(listener.execute_from_event)
+
+
 def connect_listeners(graph: Graph, state: GraphState, disconnect: bool = False):
     """
     Connects all Listen nodes in the graph to the event bus
@@ -55,23 +100,11 @@ def connect_listeners(graph: Graph, state: GraphState, disconnect: bool = False)
     """
 
     event_listeners = collect_listeners(graph)
+    action = ListenerAction.RECONNECT if disconnect else ListenerAction.CONNECT
 
     for event_name, listeners in event_listeners.items():
         for listener in listeners:
-            signal = signals.get(event_name)
-            if not signal:
-                log.warning("Event not found", event_name=event_name)
-                continue
-
-            if state.verbosity == NodeVerbosity.NORMAL:
-                log.debug(
-                    "Connecting listener", listener=listener, event_name=event_name
-                )
-
-            if disconnect:
-                signal.disconnect(listener.execute_from_event)
-
-            signal.connect(listener.execute_from_event)
+            _apply_listener_signal(listener, event_name, state, action)
 
 
 def disconnect_listeners(graph: Graph, state: GraphState):
@@ -85,17 +118,73 @@ def disconnect_listeners(graph: Graph, state: GraphState):
     event_listeners = collect_listeners(graph)
     for event_name, listeners in event_listeners.items():
         for listener in listeners:
-            signal = signals.get(event_name)
-            if not signal:
-                log.warning("Event not found", event_name=event_name)
-                continue
+            _apply_listener_signal(
+                listener, event_name, state, ListenerAction.DISCONNECT
+            )
 
-            if state.verbosity == NodeVerbosity.NORMAL:
-                log.debug(
-                    "Disconnecting listener", listener=listener, event_name=event_name
-                )
 
-            signal.disconnect(listener.execute_from_event)
+def collect_auto_register_listeners() -> list["Listen"]:
+    """
+    Walks the ``core/Event`` base-type registry, instantiates each Listen
+    subclass, and returns the ones whose persisted ``auto_register`` is
+    True and have a non-empty ``event_name``.
+    """
+
+    instances: list["Listen"] = []
+    for node_cls in get_nodes_by_base_type("core/Event"):
+        try:
+            instance = node_cls()
+        except Exception as exc:
+            log.warning(
+                "auto_register listener instantiation failed",
+                node_cls=node_cls._registry,
+                err=str(exc),
+            )
+            continue
+
+        if not isinstance(instance, Listen):
+            continue
+
+        if not instance.get_property("auto_register"):
+            continue
+
+        event_name = instance.get_property("event_name")
+        if not event_name:
+            log.warning(
+                "auto_register Listen has no event_name",
+                node_cls=node_cls._registry,
+            )
+            continue
+
+        instances.append(instance)
+
+    return instances
+
+
+def connect_auto_register_listeners(
+    instances: list["Listen"], state: GraphState, disconnect: bool = False
+):
+    """
+    Connects auto-registered Listen instances to the event bus.
+
+    Args:
+        instances: Listen instances returned by collect_auto_register_listeners
+        state: Current graph state (used for verbosity)
+        disconnect: If True, disconnect first to keep the receiver list clean
+    """
+    action = ListenerAction.RECONNECT if disconnect else ListenerAction.CONNECT
+    for listener in instances:
+        event_name = listener.get_property("event_name")
+        _apply_listener_signal(listener, event_name, state, action)
+
+
+def disconnect_auto_register_listeners(instances: list["Listen"], state: GraphState):
+    """
+    Disconnects auto-registered Listen instances from the event bus.
+    """
+    for listener in instances:
+        event_name = listener.get_property("event_name")
+        _apply_listener_signal(listener, event_name, state, ListenerAction.DISCONNECT)
 
 
 @register("event/Event")

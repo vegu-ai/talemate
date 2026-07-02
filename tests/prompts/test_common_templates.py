@@ -15,7 +15,7 @@ Direct rendering tests are NOT included as they don't test real code paths.
 
 Common Template Usage Summary:
 -----------------------------
-All 28 common templates are include-only templates used by various agent templates:
+All 29 common templates are include-only templates used by various agent templates:
 
 1. base.jinja2 - Base template that assembles context (includes many other common templates)
 2. building-blocks.jinja2 - Scene building blocks documentation (1 use)
@@ -46,7 +46,8 @@ All 28 common templates are include-only templates used by various agent templat
 25. task-information.jinja2 - Task-specific information section (4 uses)
 26. useful-context-ids.jinja2 - Context ID documentation (2 uses)
 27. user-controlled-character.jinja2 - Player character indication (1 use)
-28. writing-style-instructions.jinja2 - Writing style section (6 uses)
+28. world-state-snapshot.jinja2 - Durable world-state snapshot as scene memory (2 uses)
+29. writing-style-instructions.jinja2 - Writing style section (6 uses)
 
 Testing Strategy:
 ----------------
@@ -152,6 +153,7 @@ class TestCommonTemplatesDocumentation:
             "task-information.jinja2",
             "useful-context-ids.jinja2",
             "user-controlled-character.jinja2",
+            "world-state-snapshot.jinja2",
             "writing-style-instructions.jinja2",
         ]
 

@@ -68,13 +68,24 @@
                 />
 
 
-                <v-textarea 
-                v-model="dialogueExample" 
-                rows="3" 
-                auto-grow 
-                label="Add Dialogue Example" 
-                hint="Shift+Enter for new line."
-                @keyup.enter="handleDialogeExampleEnter"></v-textarea>
+                <div class="position-relative">
+                    <v-textarea
+                    ref="dialogueExample"
+                    v-model="dialogueExample"
+                    rows="3"
+                    auto-grow
+                    label="Add Dialogue Example"
+                    :disabled="dialogueExampleBusy"
+                    :loading="dialogueExampleBusy"
+                    :hint="'Shift+Enter for new line. '+autocompleteInfoMessage(dialogueExampleBusy)"
+                    @keyup.enter="handleDialogeExampleEnter"
+                    @keyup.ctrl.enter.stop="sendDialogueExampleAutocomplete"></v-textarea>
+                    <AutocompleteRedoChip
+                        :applied="dialogueExampleAutocompleteField?.state.applied || false"
+                        :disabled="dialogueExampleBusy"
+                        @redo="dialogueExampleAutocompleteField.redo()"
+                        @undo="dialogueExampleAutocompleteField.undo()" />
+                </div>
                 <div class="mt-4">
                     <v-card 
                         v-for="(example, index) in dialogueExamplesWithNameStripped" 
@@ -133,6 +144,8 @@
 import ContextualGenerate from './ContextualGenerate.vue';
 import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 import VoiceSelect from './VoiceSelect.vue';
+import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import { createAutocompleteField } from '@/utils/autocompleteField';
 import { parseSceneText } from '../utils/sceneMessageRenderer.js';
 
 export default {
@@ -141,12 +154,15 @@ export default {
         ContextualGenerate,
         SpiceAppliedNotification,
         VoiceSelect,
+        AutocompleteRedoChip,
     },
     data() {
         return {
             tab: "instructions",
             dialogueExamples: [],
             dialogueExample: "",
+            dialogueExampleBusy: false,
+            dialogueExampleAutocompleteField: null,
             dialogueInstructions: null,
             dialogueInstructionsDirty: false,
             voiceId: null,
@@ -178,6 +194,9 @@ export default {
             deep: true,
             immediate: true,
         },
+        dialogueExample() {
+            this.dialogueExampleAutocompleteField?.onValueChange();
+        },
     },
     props: {
         character: Object,
@@ -187,7 +206,7 @@ export default {
     emits: [
         'require-scene-save'
     ],
-    inject: ['getWebsocket', 'registerMessageHandler'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'autocompleteInfoMessage', 'autocompleteRequest'],
     methods: {
         
         updateCharacterActor(only_if_dirty = false) {
@@ -206,11 +225,16 @@ export default {
         },
 
         handleDialogeExampleEnter(event) {
-            if(!event.shiftKey) {
+            // Ctrl+Enter triggers autocomplete, not example submission.
+            if(!event.shiftKey && !event.ctrlKey) {
                 this.dialogueExamples.push(this.dialogueExample);
                 this.dialogueExample = '';
                 this.updateCharacterActor();
             }
+        },
+
+        sendDialogueExampleAutocomplete() {
+            this.dialogueExampleAutocompleteField.request(this.$refs.dialogueExample);
         },
 
         setCharacterDialogueInstructions(instructions) {
@@ -291,6 +315,18 @@ export default {
     },
     created() {
         this.registerMessageHandler(this.handleMessage);
+        this.dialogueExampleAutocompleteField = createAutocompleteField({
+            autocompleteRequest: this.autocompleteRequest,
+            getValue: () => this.dialogueExample || '',
+            setValue: (v) => { this.dialogueExample = v; },
+            buildParams: () => ({
+                partial: this.dialogueExample,
+                context: 'character dialogue:',
+                character: this.character.name,
+            }),
+            onStart: () => { this.dialogueExampleBusy = true; },
+            onEnd: () => { this.dialogueExampleBusy = false; },
+        });
     },
     mounted() {
         this.dialogueInstructions = this.character.actor.dialogue_instructions;

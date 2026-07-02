@@ -1,0 +1,214 @@
+## Examples
+
+Each example shows a flagged draft, the plan that addresses **every** flagged item, and the final revision. Unflagged passages pass through unchanged. Note that repetition flags are semantic — a flagged line may not share any exact words with the earlier passage it echoes.
+
+---
+
+<DRAFT>
+Sarah walked into the kitchen, the morning light slanting through the blinds. She set her bag on the counter and opened the fridge. The leftovers from last night were still on the top shelf — pasta, half a loaf of bread, the last of the wine. She grabbed the pasta.
+
+"Coffee?" Jake called from the living room.
+
+"Yes," she said. Sarah walked into the kitchen and opened the fridge again, looking for the cream. The leftovers from last night were still on the top shelf. She found the cream behind the pasta and poured some into a mug.
+
+Jake came in, rubbing his eyes. "You're up early."
+
+"Yeah." She poured him a cup too. The morning light slanted through the blinds, catching the steam rising from the mugs.
+</DRAFT>
+
+<REPETITION ISSUES>
+- REPEATED 1: `Sarah walked into the kitchen`
+- REPEATED 2: `opened the fridge`
+- REPEATED 3: `The leftovers from last night were still on the top shelf`
+- REPEATED 4: `the morning light`
+</REPETITION ISSUES>
+
+<PLAN>
+- REPEATED 1 — she's already in the kitchen from paragraph 1; the second arrival is nonsensical. DROP the clause.
+- REPEATED 2 — recast the second fridge action as a continued motion (nudging the pasta aside) rather than a fresh open. REWRITE.
+- REPEATED 3 — already described in paragraph 1; the second mention adds no new information. DROP.
+- REPEATED 4 — one atmospheric note is enough; the closing reuse is decorative. DROP the "morning light" half and keep only the steam beat.
+Coverage: 1, 2, 3, 4.
+</PLAN>
+
+<REVISION>
+Sarah walked into the kitchen, the morning light slanting through the blinds. She set her bag on the counter and opened the fridge. The leftovers from last night were still on the top shelf — pasta, half a loaf of bread, the last of the wine. She grabbed the pasta.
+
+"Coffee?" Jake called from the living room.
+
+"Yes," she said, nudging the pasta aside to find the cream. She poured some into a mug.
+
+Jake came in, rubbing his eyes. "You're up early."
+
+"Yeah." She poured him a cup too, steam rising from the mugs.
+</REVISION>
+
+---
+
+<DRAFT>
+"I love you," Mara said. She reached for his hand.
+"I love you too," he said.
+She looked into his eyes. "I mean it. I really love you."
+He pulled her closer. "I love you more than anything."
+</DRAFT>
+
+<REPETITION ISSUES>
+- REPEATED 1: `I love you`
+</REPETITION ISSUES>
+
+<UNWANTED PROSE>
+- PHRASE 1: `"I love you"`
+  - INSTRUCTIONS: Explicit declarations of love in dialogue land flat after the first. Show the feeling through gesture, pause, or specific language instead of restating it.
+</UNWANTED PROSE>
+
+<PLAN>
+- REPEATED 1 and PHRASE 1 overlap — the phrase "I love you" repeats four times and each instance was also flagged as an unwanted explicit declaration. Keep the first as the anchor beat, convert the other three into gesture and specific language.
+Coverage: repetition 1, phrase 1.
+</PLAN>
+
+<REVISION>
+"I love you," Mara said. She reached for his hand.
+He turned his palm to meet hers.
+She looked into his eyes. "I mean it."
+He pulled her closer, his forehead resting against hers.
+</REVISION>
+
+---
+
+The two examples below show the rewrite path: the flagged beat needs to stay, so the fix substitutes genuinely different content rather than dropping. Note that simple rephrasing of the same idea would NOT be enough — the underlying meaning has to change.
+
+<DRAFT>
+Anna stared at the painting for a long moment, taking in the brushwork. The colors were impossibly vivid — emerald greens, cobalt blues, a yellow that almost hummed.
+
+"What do you see?" Marcus asked.
+
+She didn't answer right away. Anna stared at the painting, taking in the brushwork. "I see someone who was angry at the world."
+</DRAFT>
+
+<REPETITION ISSUES>
+- REPEATED 1: `Anna stared at the painting, taking in the brushwork.`
+</REPETITION ISSUES>
+
+<PLAN>
+- REPEATED 1 — the second beat needs to stay because Marcus's question and Anna's deferred answer require her continued attention to the canvas. But the literal action is identical to paragraph 1. REWRITE so the continued attention is shown through a different observable detail (her eyes catching a specific element) instead of restating the staring.
+Coverage: 1.
+</PLAN>
+
+<REVISION>
+Anna stared at the painting for a long moment, taking in the brushwork. The colors were impossibly vivid — emerald greens, cobalt blues, a yellow that almost hummed.
+
+"What do you see?" Marcus asked.
+
+She didn't answer right away. Her eyes traced the angry slash of red at the corner of the canvas. "I see someone who was angry at the world."
+</REVISION>
+
+---
+
+<DRAFT>
+The room was freezing. Frost rimmed the window, and Sarah's breath fogged in front of her face.
+
+She wrapped her arms around herself, shivering. "How long has the heater been out?"
+
+"Since last night."
+
+She could feel the cold biting through her sweater.
+</DRAFT>
+
+<REPETITION ISSUES>
+- REPEATED 1: `She could feel the cold biting through her sweater.`
+</REPETITION ISSUES>
+
+<PLAN>
+- REPEATED 1 — flagged because "feeling the cold biting through her sweater" semantically echoes the earlier "freezing," "shivering," and "wrapped her arms around herself." None of those words appear in the flagged sentence, but the meaning is the same. The beat closes the dialogue exchange and dropping it would leave the scene hanging on the unanswered "Since last night." REWRITE so the closer adds something new — Sarah's reaction to the answer, not another note about being cold.
+Coverage: 1.
+</PLAN>
+
+<REVISION>
+The room was freezing. Frost rimmed the window, and Sarah's breath fogged in front of her face.
+
+She wrapped her arms around herself, shivering. "How long has the heater been out?"
+
+"Since last night."
+
+She glanced at the dead radiator, jaw tight.
+</REVISION>
+
+---
+
+## Characters
+
+### Hero
+name: Hero
+gender: male
+age: early 30s
+occupation: Adventurer
+
+A wandering healer with knowledge of ancient herbs.
+
+### Elena
+name: Elena
+gender: female
+age: early 30s
+occupation: Healer
+
+A wandering healer with knowledge of ancient herbs.
+
+## Additional information
+
+## Classification
+Content Classification: Fantasy adventure story
+
+Narrative Perspective: Third person limited, past tense.
+
+## Intention of this story
+The overarching intention of this story. Use it to guide your decisions in the scene.
+
+A fantasy adventure story.
+
+## Intention of the current scene
+Freeform dialogue between one or more characters with occasional narration.
+
+The hero explores the forest.
+
+## Scene
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
+## Draft text
+The forest was dark and mysterious.
+
+## Issue 1: repeated text
+Each item below has been flagged because it repeats information already present earlier in the scene. Matches are **semantic**, not verbatim — a flagged line may share no exact words with the earlier passage; what matters is that the meaning, action, or beat is already on the page. Focus on the underlying concept that triggered the flag, not on the exact string. Every flagged item must be addressed — either dropped entirely, or substantially rewritten so the repeated meaning is gone.
+
+Prefer rewriting: replace the flagged beat with genuinely different content (a different observation, action, or detail) that advances the scene without re-conveying what was already on the page. Because the match is SEMANTIC, simply rephrasing the same idea in different words is NOT enough — the underlying meaning must change. Drop a flagged sentence outright only as a fallback when no meaningful rewrite is possible.
+
+- REPEATED 1: `The forest was dark and mysterious.`
+
+## Task
+Every flagged item above must be addressed in your revision. "Addressed" means substantially rewritten or deleted — not lightly tweaked and not ignored.
+
+**Scope:**
+- Do not alter text that wasn't flagged. Unflagged sentences must appear in the revision unchanged.
+- Keep the overall length close to the original. Prefer dropping redundant sentences over padding with new ones.
+- Make a single pass: plan every fix first, then emit one complete revision.
+
+**For each flagged item, pick one:**
+
+- **Rewrite** — for repetition, replace the flagged beat with genuinely different content (a different observation, action, or detail) that advances the scene without re-conveying what was already on the page. Because the match is SEMANTIC, simply rephrasing the same idea is NOT enough — the underlying meaning must change. For unwanted prose, rewrite per the director's INSTRUCTIONS so you don't replace the flagged phrasing with something equally bad. This is the right call for both issue types under this mode.
+- **Drop** — fallback when no meaningful rewrite is possible. If the information was already conveyed elsewhere and there's no substantive different content to substitute, delete the sentence and let the surrounding prose bridge the gap.
+
+**Output format (follow exactly, as shown in the examples):**
+1. A `<PLAN>` block. One bullet per flagged item, referenced by its label (`REPEATED 1`, `PHRASE 2`, etc.) with a one-line fix strategy. End with a single `Coverage:` line listing every label you addressed — it must cover all of them.
+2. A `<REVISION>` block containing the complete rewritten draft text. No commentary, no partial excerpts, no text outside the tags.
+
+Do not emit a revision that leaves any flagged item untouched.
+
+The length of your response must fit within 6 paragraphs.
+
+
+Start your response with: <PLAN>
+- 

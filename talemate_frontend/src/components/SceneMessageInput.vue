@@ -1,38 +1,55 @@
 <template>
-  <v-textarea
-    v-model="inputValue"
-    :label="inputHint"
-    rows="1"
-    auto-grow
-    outlined
-    ref="textarea"
-    @keydown.enter.prevent="onEnter"
-    @keydown.ctrl.up.prevent="onHistoryUp"
-    @keydown.meta.up.prevent="onHistoryUp"
-    @keydown.ctrl.down.prevent="onHistoryDown"
-    @keydown.meta.down.prevent="onHistoryDown"
-    @keydown.tab.prevent="cycleActAs"
-    :hint="inputLongHint"
-    :disabled="disabled"
-    :loading="autocompleting"
-    :prepend-inner-icon="inputIcon"
-    :color="inputColor">
-    <template v-slot:prepend v-if="sceneActive && sceneEnvironment !== 'creative'">
-      <v-btn @click="triggerAutocomplete" color="primary" icon variant="tonal" :disabled="!inputValue || disabled">
-        <v-icon>mdi-auto-fix</v-icon>
-      </v-btn>
-    </template>
-    <template v-slot:append>
-      <v-btn @click="onEnter" color="primary" icon variant="tonal" :disabled="disabled">
-        <v-icon v-if="inputValue">mdi-send</v-icon>
-        <v-icon v-else>mdi-skip-next</v-icon>
-      </v-btn>
-    </template>
-  </v-textarea>
+  <div class="position-relative scene-message-input-root">
+    <v-textarea
+      v-model="inputValue"
+      :label="inputHint"
+      rows="1"
+      auto-grow
+      outlined
+      ref="textarea"
+      @keydown.enter.prevent="onEnter"
+      @keydown.ctrl.up.prevent="onHistoryUp"
+      @keydown.meta.up.prevent="onHistoryUp"
+      @keydown.ctrl.down.prevent="onHistoryDown"
+      @keydown.meta.down.prevent="onHistoryDown"
+      @keydown.tab.prevent="cycleActAs"
+      :hint="inputLongHint"
+      :disabled="disabled"
+      :loading="autocompleteField?.state.autocompleting || false"
+      :prepend-inner-icon="inputIcon"
+      :color="inputColor">
+      <template v-slot:prepend v-if="sceneActive && sceneEnvironment !== 'creative'">
+        <v-btn @click="triggerAutocomplete" color="primary" icon variant="tonal" :disabled="!inputValue || disabled">
+          <v-icon>mdi-auto-fix</v-icon>
+        </v-btn>
+      </template>
+      <template v-slot:append>
+        <v-btn @click="onEnter" color="primary" icon variant="tonal" :disabled="disabled">
+          <v-icon v-if="inputValue">mdi-send</v-icon>
+          <v-icon v-else>mdi-skip-next</v-icon>
+        </v-btn>
+      </template>
+    </v-textarea>
+    <AutocompleteRedoChip
+      :applied="autocompleteField?.state.applied || false"
+      :disabled="disabled"
+      @redo="autocompleteField.redo()"
+      @undo="autocompleteField.undo()" />
+  </div>
 </template>
+
+<style scoped>
+/* Override the chip's default right offset to clear the v-textarea's append
+   slot (send button); the chip itself owns top / position / z-index. */
+.scene-message-input-root {
+  --autocomplete-redo-chip-right: 64px;
+}
+</style>
 
 <script>
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
+import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import { createAutocompleteField } from '@/utils/autocompleteField';
 
 const INPUT_HISTORY_MAX = 10;
 
@@ -80,6 +97,7 @@ const PREFIXES = [
 
 export default {
   name: 'SceneMessageInput',
+  components: { AutocompleteRedoChip },
   inject: ['autocompleteRequest'],
   props: {
     // The textarea's text, bound via v-model on the parent.
@@ -105,8 +123,6 @@ export default {
     // === 'talk' means dialogue prompt (player/character/narrator line);
     // anything else means a generic prompt and `.message` is shown as label.
     inputRequestInfo: { type: Object, default: null },
-    // Autocomplete is in-flight — drives the textarea's :loading state.
-    autocompleting: { type: Boolean, default: false },
     // A scene is loaded. Gates the autocomplete prepend button visibility.
     sceneActive: { type: Boolean, default: false },
     // 'scene' vs 'creative' — autocomplete prepend is hidden in creative mode.
@@ -135,7 +151,29 @@ export default {
       inputHistory: [],
       historyIndex: 0,
       draftBeforeHistoryBrowse: '',
+      autocompleteField: null,
     };
+  },
+  created() {
+    this.autocompleteField = createAutocompleteField({
+      autocompleteRequest: this.autocompleteRequest,
+      getValue: () => this.inputValue,
+      setValue: (v) => { this.inputValue = v; },
+      buildParams: () => {
+        let context = 'dialogue:player';
+        if (this.actAs) {
+          context = this.actAs === '$narrator' ? 'narrative:' : `dialogue:${this.actAs}`;
+        }
+        return { partial: this.inputValue, context, character: this.actAs };
+      },
+      onStart: () => this.$emit('autocomplete-start'),
+      onEnd: () => this.$emit('autocomplete-end'),
+    });
+  },
+  watch: {
+    modelValue() {
+      this.autocompleteField?.onValueChange();
+    },
   },
   computed: {
     // v-model indirection: read from the prop, write through the emit so the
@@ -259,29 +297,10 @@ export default {
     },
     triggerAutocomplete() {
       if (!this.isWaitingForDialogInput) return;
-
-      this.$emit('autocomplete-start');
-
-      let context = 'dialogue:player';
-      if (this.actAs) {
-        context = this.actAs === '$narrator' ? 'narrative:' : `dialogue:${this.actAs}`;
-      }
-
-      // `this` is passed as the focus target — the parent's autocompleteRequest
+      // `this` is passed as the focus target — the session-layer autocompleteRequest
       // calls .focus() on it after the suggestion arrives, which hits our
       // exposed focus() method and delegates to the inner textarea.
-      this.autocompleteRequest(
-        {
-          partial: this.inputValue,
-          context,
-          character: this.actAs,
-        },
-        (completion) => {
-          this.$emit('autocomplete-end', completion);
-        },
-        this,
-        100,
-      );
+      this.autocompleteField.request(this, 100);
     },
     onEnter(event) {
       if (event && isPrimaryModifier(event) && event.key === 'Enter') {

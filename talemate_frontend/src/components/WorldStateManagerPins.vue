@@ -167,7 +167,7 @@
 </template>
 
 <script>
-import { MAX_CONTENT_WIDTH } from '@/constants';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import WorldStateManagerPinConditionGroups from './WorldStateManagerPinConditionGroups.vue';
 

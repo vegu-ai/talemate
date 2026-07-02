@@ -13,6 +13,7 @@ __all__ = [
     "set_max_tokens",
     "set_preset",
     "preset_for_kind",
+    "preset_name_for_kind",
     "make_kind",
     "max_tokens_for_kind",
 ]
@@ -84,6 +85,11 @@ PRESET_SUBSTRING_MAPPINGS = {
     "visualize": "creative_instruction",
     "visual": "creative_instruction",
     "world_state": "analytical",
+    # Must stay after "create"/"creative": preset_for_kind takes the LAST
+    # matching substring, so this lets a parametric kind like
+    # "creative_instruction_256" resolve to the creative_instruction preset
+    # instead of being captured by the broader "create"/"creative" entries.
+    "creative_instruction": "creative_instruction",
 }
 
 PRESET_MAPPING = {
@@ -105,17 +111,26 @@ PRESET_MAPPING = {
 }
 
 
-def preset_for_kind(kind: str, client: "ClientBase") -> dict:
-    # Check the substrings first(based on order of the original elifs)
+def preset_name_for_kind(kind: str) -> str | None:
+    """
+    Resolve a kind string to an inference preset name.
 
-    preset_name = None
-
+    Exact matches in PRESET_MAPPING win first; otherwise the LAST matching
+    substring in PRESET_SUBSTRING_MAPPINGS is used (so more specific entries
+    placed later override broader ones). Returns None when nothing matches.
+    """
     preset_name = PRESET_MAPPING.get(kind)
 
     if not preset_name:
         for substring, value in PRESET_SUBSTRING_MAPPINGS.items():
             if substring in kind:
                 preset_name = value
+
+    return preset_name
+
+
+def preset_for_kind(kind: str, client: "ClientBase") -> dict:
+    preset_name = preset_name_for_kind(kind)
 
     if not preset_name:
         log.warning(

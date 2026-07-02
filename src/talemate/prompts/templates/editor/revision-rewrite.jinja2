@@ -119,6 +119,7 @@ He pulled her closer, his forehead resting against hers.
 
 ---
 
+{% if repetition_handling != "rewrite" %}
 <DRAFT>
 The fire had been burning for hours. The warehouse was fully engulfed, flames licking the roof beams and black smoke pouring from every window.
 
@@ -180,6 +181,69 @@ Marcus paced the length of the office, restless, unable to sit still. He glanced
 </REVISION>
 
 ---
+{% endif %}
+
+{% if repetition_handling == "rewrite" %}
+The two examples below show the rewrite path: the flagged beat needs to stay, so the fix substitutes genuinely different content rather than dropping. Note that simple rephrasing of the same idea would NOT be enough — the underlying meaning has to change.
+
+<DRAFT>
+Anna stared at the painting for a long moment, taking in the brushwork. The colors were impossibly vivid — emerald greens, cobalt blues, a yellow that almost hummed.
+
+"What do you see?" Marcus asked.
+
+She didn't answer right away. Anna stared at the painting, taking in the brushwork. "I see someone who was angry at the world."
+</DRAFT>
+
+<REPETITION ISSUES>
+- REPEATED 1: `Anna stared at the painting, taking in the brushwork.`
+</REPETITION ISSUES>
+
+<PLAN>
+- REPEATED 1 — the second beat needs to stay because Marcus's question and Anna's deferred answer require her continued attention to the canvas. But the literal action is identical to paragraph 1. REWRITE so the continued attention is shown through a different observable detail (her eyes catching a specific element) instead of restating the staring.
+Coverage: 1.
+</PLAN>
+
+<REVISION>
+Anna stared at the painting for a long moment, taking in the brushwork. The colors were impossibly vivid — emerald greens, cobalt blues, a yellow that almost hummed.
+
+"What do you see?" Marcus asked.
+
+She didn't answer right away. Her eyes traced the angry slash of red at the corner of the canvas. "I see someone who was angry at the world."
+</REVISION>
+
+---
+
+<DRAFT>
+The room was freezing. Frost rimmed the window, and Sarah's breath fogged in front of her face.
+
+She wrapped her arms around herself, shivering. "How long has the heater been out?"
+
+"Since last night."
+
+She could feel the cold biting through her sweater.
+</DRAFT>
+
+<REPETITION ISSUES>
+- REPEATED 1: `She could feel the cold biting through her sweater.`
+</REPETITION ISSUES>
+
+<PLAN>
+- REPEATED 1 — flagged because "feeling the cold biting through her sweater" semantically echoes the earlier "freezing," "shivering," and "wrapped her arms around herself." None of those words appear in the flagged sentence, but the meaning is the same. The beat closes the dialogue exchange and dropping it would leave the scene hanging on the unanswered "Since last night." REWRITE so the closer adds something new — Sarah's reaction to the answer, not another note about being cold.
+Coverage: 1.
+</PLAN>
+
+<REVISION>
+The room was freezing. Frost rimmed the window, and Sarah's breath fogged in front of her face.
+
+She wrapped her arms around herself, shivering. "How long has the heater been out?"
+
+"Since last night."
+
+She glanced at the dead radiator, jaw tight.
+</REVISION>
+
+---
+{% endif %}
 
 {# RENDER PROMPT #}
 {{ rendered_context }}
@@ -202,7 +266,12 @@ Marcus paced the length of the office, restless, unable to sit still. He glanced
 {# repetition #}{% if repetition %}
 {% set issues = issues + 1 %}
 <|SECTION:ISSUE {{ issues }}: REPEATED TEXT|>
-Each item below has been flagged because it repeats information already present earlier in the scene. Matches are **semantic**, not verbatim — a flagged line may share no exact words with the earlier passage; what matters is that the meaning, action, or beat is already on the page. Focus on the underlying concept that triggered the flag, not on the exact string. Every flagged item must be addressed — either dropped entirely, or substantially rewritten so the repeated meaning is gone. Prefer dropping: if the information was already conveyed, delete the sentence and let the surrounding prose bridge the gap. Only rewrite when the beat genuinely needs to stay.
+Each item below has been flagged because it repeats information already present earlier in the scene. Matches are **semantic**, not verbatim — a flagged line may share no exact words with the earlier passage; what matters is that the meaning, action, or beat is already on the page. Focus on the underlying concept that triggered the flag, not on the exact string. Every flagged item must be addressed — either dropped entirely, or substantially rewritten so the repeated meaning is gone.
+{% if repetition_handling == "rewrite" %}
+Prefer rewriting: replace the flagged beat with genuinely different content (a different observation, action, or detail) that advances the scene without re-conveying what was already on the page. Because the match is SEMANTIC, simply rephrasing the same idea in different words is NOT enough — the underlying meaning must change. Drop a flagged sentence outright only as a fallback when no meaningful rewrite is possible.
+{% else %}
+Prefer dropping: if the information was already conveyed, delete the sentence and let the surrounding prose bridge the gap. Only rewrite when the beat genuinely needs to stay.
+{% endif %}
 
 {% for repeat in repetition %}- REPEATED {{ loop.index }}: `{{ repeat["text_a"].strip() }}`
 {% endfor %}
@@ -229,8 +298,13 @@ Every flagged item above must be addressed in your revision. "Addressed" means s
 - Make a single pass: plan every fix first, then emit one complete revision.
 
 **For each flagged item, pick one:**
+{% if repetition_handling == "rewrite" %}
+- **Rewrite** — for repetition, replace the flagged beat with genuinely different content (a different observation, action, or detail) that advances the scene without re-conveying what was already on the page. Because the match is SEMANTIC, simply rephrasing the same idea is NOT enough — the underlying meaning must change. For unwanted prose, rewrite per the director's INSTRUCTIONS so you don't replace the flagged phrasing with something equally bad. This is the right call for both issue types under this mode.
+- **Drop** — fallback when no meaningful rewrite is possible. If the information was already conveyed elsewhere and there's no substantive different content to substitute, delete the sentence and let the surrounding prose bridge the gap.
+{% else %}
 - **Drop** — if the information was already conveyed elsewhere, delete the sentence and let the surrounding prose bridge the gap. This is usually the right call for repetition.
 - **Rewrite** — if the beat genuinely needs to stay, rewrite it so the meaning lands without reusing the flagged phrasing or falling into the pattern the director flagged.
+{% endif %}
 
 **Output format (follow exactly, as shown in the examples):**
 1. A `<PLAN>` block. One bullet per flagged item, referenced by its label (`REPEATED 1`, `PHRASE 2`, etc.) with a one-line fix strategy. End with a single `Coverage:` line listing every label you addressed — it must cover all of them.

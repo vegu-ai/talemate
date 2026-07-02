@@ -14,7 +14,10 @@ from talemate.client.base import (
     locked_model_template,
 )
 from talemate.config import Config as AppConfigData
-from talemate.config.schema import GamePlayerCharacter
+from talemate.config.schema import (
+    AgentActionOverride,
+    GamePlayerCharacter,
+)
 from talemate.config import get_config, Config, update_config
 from talemate.emit import emit
 from talemate.instance import emit_clients_status, get_client
@@ -93,6 +96,15 @@ class TorchCudaInfo(pydantic.BaseModel):
 
 class SystemCapabilitiesPayload(pydantic.BaseModel):
     torch_cuda: TorchCudaInfo = TorchCudaInfo()
+
+
+class SetAgentActionOverridePayload(pydantic.BaseModel):
+    key: str
+    disable_reasoning: bool = False
+
+
+class ClearAgentActionOverridePayload(pydantic.BaseModel):
+    key: str
 
 
 class ConfigPlugin(Plugin):
@@ -258,6 +270,15 @@ class ConfigPlugin(Plugin):
                     "template_file": prompt_template_file,
                     "reason_response_pattern_default": (
                         spec.reasoning_pattern or DEFAULT_REASONING_PATTERN
+                    ),
+                    "reason_response_pattern_from_template": bool(
+                        spec.reasoning_pattern
+                    ),
+                    "reason_validation_pattern_default": (
+                        spec.reasoning_validation_pattern
+                    ),
+                    "reason_validation_pattern_from_template": bool(
+                        spec.reasoning_validation_pattern
                     ),
                 },
             }
@@ -485,6 +506,25 @@ class ConfigPlugin(Plugin):
         self.websocket_handler.queue_put(
             {"type": "app_config", "data": config.model_dump(), "version": VERSION}
         )
+
+    async def handle_set_agent_action_override(self, data):
+        payload = SetAgentActionOverridePayload(**data["data"])
+
+        config: Config = get_config()
+        config.agent_actions.overrides[payload.key] = AgentActionOverride(
+            disable_reasoning=payload.disable_reasoning
+        )
+
+        await config.set_dirty()
+
+    async def handle_clear_agent_action_override(self, data):
+        payload = ClearAgentActionOverridePayload(**data["data"])
+
+        config: Config = get_config()
+        if config.agent_actions.overrides.pop(payload.key, None) is None:
+            return
+
+        await config.set_dirty()
 
     async def handle_save_unified_api_key(self, data):
         """Save a unified API key to app config."""

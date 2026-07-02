@@ -7,10 +7,29 @@ import pydantic
 from typing import Any
 
 import huggingface_hub
+import requests
 import structlog
 from jinja2 import Environment, FileSystemLoader
 
 __all__ = ["model_prompt", "PromptSpec"]
+
+# (connect, read) timeout in seconds applied to every huggingface_hub request.
+# Some HF calls (notably HfApi.list_models) issue requests without any timeout,
+# so a network issue reaching huggingface.co would otherwise hang indefinitely.
+HF_REQUEST_TIMEOUT = (10, 30)
+
+
+class _TimeoutHTTPSession(requests.Session):
+    """requests.Session that applies a default timeout to every request."""
+
+    def request(self, *args, **kwargs):
+        kwargs.setdefault("timeout", HF_REQUEST_TIMEOUT)
+        return super().request(*args, **kwargs)
+
+
+# Ensure all huggingface_hub HTTP requests fail fast on connection issues
+# instead of hanging forever. Calls that pass their own timeout are unaffected.
+huggingface_hub.configure_http_backend(backend_factory=_TimeoutHTTPSession)
 
 BASE_TEMPLATE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -53,6 +72,7 @@ def _raise_exception(msg):
 class PromptSpec(pydantic.BaseModel):
     template: str | None = None
     reasoning_pattern: str | None = None
+    reasoning_validation_pattern: str | None = None
 
     def set_spec(self, key: str, value: Any):
         setattr(self, key, value)
@@ -298,7 +318,42 @@ class ModelPrompt:
             return True
         return False
 
-    def query_hf_for_prompt_template_suggestion(self, model_name: str):
+    def _download_hf_file(
+        self, repo_id: str, filename: str, revision: str
+    ) -> str | None:
+        """
+        Download a single file from a HF repo into a temporary directory and
+        return its contents. Returns None if the file is missing or cannot be
+        retrieved (e.g. 404 or a connection issue).
+        """
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = huggingface_hub.hf_hub_download(
+                    repo_id=repo_id,
+                    filename=filename,
+                    cache_dir=tmpdir,
+                    revision=revision,
+                )
+                with open(path) as f:
+                    return f.read()
+        except Exception as e:
+            if not str(e).startswith("404"):
+                log.error(
+                    "query_hf_for_prompt_template_suggestion",
+                    error=str(e),
+                    filename=filename,
+                )
+            return None
+
+    def _match_template_identifier(self, content: str) -> str | None:
+        """Return the template file name whose identifier matches content."""
+        for identifier_cls in TEMPLATE_IDENTIFIERS:
+            identifier = identifier_cls()
+            if identifier(content):
+                return f"{identifier.template_str}.jinja2"
+        return None
+
+    def query_hf_for_prompt_template_suggestion(self, model_name: str) -> str | None:
         api = huggingface_hub.HfApi()
 
         log.debug("query_hf_for_prompt_template_suggestion", model_name=model_name)
@@ -314,81 +369,46 @@ class ModelPrompt:
 
         branch_name = "main"
 
-        models = list(api.list_models(model_name=model_name))
+        try:
+            models = list(api.list_models(model_name=model_name))
+            if not models and model_name_alt:
+                models = list(api.list_models(model_name=model_name_alt))
+        except Exception as e:
+            log.warning(
+                "query_hf_for_prompt_template_suggestion: "
+                "could not reach HuggingFace to determine prompt template",
+                model_name=model_name,
+                error=str(e),
+            )
+            return None
 
         if not models:
-            if model_name_alt:
-                models = list(api.list_models(model_name=model_name_alt))
-            if not models:
-                return None
+            return None
 
         model = models[0]
 
         repo_id = f"{model.id}"
 
-        # check chat_template.jinja2
-        try:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                chat_template_path = huggingface_hub.hf_hub_download(
-                    repo_id=repo_id,
-                    filename="chat_template.jinja2",
-                    cache_dir=tmpdir,
-                    revision=branch_name,
-                )
-                if not chat_template_path:
-                    return None
-                with open(chat_template_path) as f:
-                    chat_template = f.read()
-                    for identifer_cls in TEMPLATE_IDENTIFIERS:
-                        identifier = identifer_cls()
-                        if identifier(chat_template):
-                            return f"{identifier.template_str}.jinja2"
-        except Exception as e:
-            if not str(e).startswith("404"):
-                log.error("query_hf_for_prompt_template_suggestion", error=str(e))
+        # Files are checked in priority order; the first matching identifier wins.
+        for filename in ("chat_template.jinja2", "README.md"):
+            content = self._download_hf_file(repo_id, filename, branch_name)
+            if content:
+                match = self._match_template_identifier(content)
+                if match:
+                    return match
 
-        # Check README.md
-        try:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                readme_path = huggingface_hub.hf_hub_download(
-                    repo_id=repo_id,
-                    filename="README.md",
-                    cache_dir=tmpdir,
-                    revision=branch_name,
-                )
-                if not readme_path:
-                    return None
-                with open(readme_path) as f:
-                    readme = f.read()
-                    for identifer_cls in TEMPLATE_IDENTIFIERS:
-                        identifier = identifer_cls()
-                        if identifier(readme):
-                            return f"{identifier.template_str}.jinja2"
-        except Exception as e:
-            if not str(e).startswith("404"):
-                log.error("query_hf_for_prompt_template_suggestion", error=str(e))
-
-        try:
-            # Check tokenizer_config.json
-            # "chat_template" key
-            with tempfile.TemporaryDirectory() as tmpdir:
-                config_path = huggingface_hub.hf_hub_download(
-                    repo_id=repo_id,
-                    filename="tokenizer_config.json",
-                    cache_dir=tmpdir,
-                    revision=branch_name,
-                )
-                if not config_path:
-                    return None
-                with open(config_path) as f:
-                    config = json.load(f)
-                    for identifer_cls in TEMPLATE_IDENTIFIERS:
-                        identifier = identifer_cls()
-                        if identifier(config.get("chat_template", "")):
-                            return f"{identifier.template_str}.jinja2"
-        except Exception as e:
-            if not str(e).startswith("404"):
-                log.error("query_hf_for_prompt_template_suggestion", error=str(e))
+        # tokenizer_config.json stores the chat template under a "chat_template" key
+        config_content = self._download_hf_file(
+            repo_id, "tokenizer_config.json", branch_name
+        )
+        if config_content:
+            try:
+                config = json.loads(config_content)
+            except json.JSONDecodeError:
+                config = {}
+            match = self._match_template_identifier(config.get("chat_template", ""))
+            if match:
+                return match
 
 
 model_prompt = ModelPrompt()

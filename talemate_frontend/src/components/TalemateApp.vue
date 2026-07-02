@@ -189,8 +189,7 @@
         <v-list>
           <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" :immutable-config="appConfig" :app-config="appConfig"></AIClient>
           <v-divider></v-divider>
-          <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
-          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents" :agentState="agentState" :templates="worldStateTemplates" :app-config="appConfig"></AIAgent>
+          <AIAgent ref="aiAgent" @agents-updated="saveAgents" :agentState="agentState" :templates="worldStateTemplates" :app-config="appConfig" :scene="scene"></AIAgent>
           <!-- More sections can be added here -->
         </v-list>
       </v-navigation-drawer>
@@ -204,7 +203,7 @@
       <v-navigation-drawer v-model="debugDrawer" app location="right" width="400" disable-resize-watcher>
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
-          <DebugTools ref="debugTools" :scene="scene" :prompts="promptsViewPrompts" @clear-prompts="clearPrompts"></DebugTools>
+          <DebugTools ref="debugTools" :scene="scene" :prompts="promptsViewPrompts" :app-config="appConfig" @clear-prompts="clearPrompts"></DebugTools>
         </v-list>
       </v-navigation-drawer>
 
@@ -259,10 +258,12 @@
                         ref="sceneMessages"
                         :appearance-config="effectiveAppearanceConfig"
                         :ux-locked="uxLocked"
+                        :app-busy="busy"
                         :agent-status="agentStatus"
                         :audio-played-for-message-id="audioPlayedForMessageId"
                         :scene="scene"
                         @cancel-audio-queue="onCancelAudioQueue"
+                        @configure-entity-highlights="onConfigureEntityHighlights"
                       />
                     </div>
 
@@ -284,7 +285,6 @@
                         :activeCharacters="activeCharacters"
                         :visual-agent-ready="visualAgentReady"
                         :audioPlayedForMessageId="audioPlayedForMessageId" />
-                      <CharacterSheet ref="characterSheet" />
                       <SceneMessageInput
                         ref="sceneMessageInput"
                         v-model="messageInput"
@@ -295,7 +295,6 @@
                         :input-disabled="isInputDisabled()"
                         :waiting-for-input="waitingForInput"
                         :input-request-info="inputRequestInfo"
-                        :autocompleting="autocompleting"
                         :scene-active="sceneActive"
                         :scene-environment="scene.environment"
                         :character-colors="scene.data?.character_colors"
@@ -349,7 +348,7 @@
           </v-tabs-window-item>
           <!-- PROMPTS -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
-            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" ref="promptsView" v-model:main-tab="promptsMainTab" @clear-prompts="onClearPrompts" />
+            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" :app-config="appConfig" ref="promptsView" v-model:main-tab="promptsMainTab" @clear-prompts="onClearPrompts" />
           </v-tabs-window-item>
 
         </v-tabs-window>
@@ -358,6 +357,7 @@
     </v-main>
 
     <AppConfig ref="appConfig" :agentStatus="agentStatus" :sceneActive="sceneActive" :clientStatus="clientStatus" @appearance-preview="onAppearancePreview" @appearance-preview-clear="onAppearancePreviewClear" />
+    <AgentActionOverrides ref="agentActionOverrides" :app-config="appConfig" :agent-status="agentStatus" />
     <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
@@ -376,16 +376,15 @@
   
 <script>
 import AIClient from './AIClient.vue';
-import { primaryModifierLabel } from '@/utils/keyboardModifiers';
 import AIAgent from './AIAgent.vue';
 import AgentActivityBar from './AgentActivityBar.vue';
+import AgentActionOverrides from './AgentActionOverrides.vue';
 import LoadScene from './LoadScene.vue';
 import SceneTools from './SceneTools.vue';
 import SceneMessages from './SceneMessages.vue';
 import SceneMessageInput from './SceneMessageInput.vue';
 import WorldState from './WorldState.vue';
 import CoverImage from './CoverImage.vue';
-import CharacterSheet from './CharacterSheet.vue';
 import AppConfig from './AppConfig.vue';
 import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
@@ -393,7 +392,7 @@ import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
 import GenerationErrorDialog from './GenerationErrorDialog.vue';
 import VersionMismatchAlert from './VersionMismatchAlert.vue';
-import { versionsMatch } from '../constants/version.js';
+import { versionsMatch } from '@/constants/version';
 import VisualLibrary from './VisualLibrary.vue';
 import VoiceLibrary from './VoiceLibrary.vue';
 import WorldStateManager from './WorldStateManager.vue';
@@ -411,21 +410,22 @@ import PromptsView from './prompts/PromptsView.vue';
 import PromptsMenu from './prompts/PromptsMenu.vue';
 // import debounce
 import { debounce } from 'lodash';
-import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '../constants/visual.js';
+import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '@/constants/visual';
 import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
+import AutocompleteMixin from './AutocompleteMixin.js';
 
 export default {
   components: {
     AIClient,
     AIAgent,
     AgentActivityBar,
+    AgentActionOverrides,
     LoadScene,
     SceneTools,
     SceneMessages,
     SceneMessageInput,
     WorldState,
     CoverImage,
-    CharacterSheet,
     AppConfig,
     DebugTools,
     AudioQueue,
@@ -450,6 +450,7 @@ export default {
     PromptsMenu,
   },
   name: 'TalemateApp',
+  mixins: [AutocompleteMixin],
   data() {
     return {
       appearancePreview: null, // Preview config while editing settings (null = use saved config)
@@ -552,10 +553,6 @@ export default {
       scene: {},
       actAs: null,
       appConfig: {},
-      autocompleting: false,
-      autocompletePartialInput: "",
-      autocompleteCallback: null,
-      autocompleteFocusElement: null,
       worldStateTemplates: {},
       // busy status of agents
       agentStatus: {},
@@ -814,20 +811,20 @@ export default {
       openAgentSettings: this.openAgentSettings,
       requestSceneAssets: (asset_ids) => this.requestSceneAssets(asset_ids),
       requestAssets: (assets) => this.requestAssets(assets),
-      openCharacterSheet: (characterName) => this.openCharacterSheet(characterName),
-      characterSheet: () => this.$refs.characterSheet,
       creativeEditor: () => this.$refs.creativeEditor,
       setEnvCreative: () => this.setEnvCreative(),
       setEnvScene: () => this.setEnvScene(),
       requestAppConfig: () => this.requestAppConfig(),
       appConfig: () => this.appConfig,
       openAppConfig: this.openAppConfig,
+      openAgentActionOverrides: () => this.$refs.agentActionOverrides?.open(),
       configurationRequired: () => this.configurationRequired(),
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
       getTrackedCharacterStates: (name) => this.$refs.worldState.trackedCharacterStates(name),
       getTrackedWorldState: (question) => this.$refs.worldState.trackedWorldState(question),
       getTrackedWorldStates: () => this.$refs.worldState.trackedWorldStates(),
       getPlayerCharacterName: () => this.getPlayerCharacterName(),
+      requestRegenerateLastMessage: () => this.$refs.sceneMessages?.requestRegenerateLastMessage(),
       getActAsCharacterName: () => this.actAs || this.getPlayerCharacterName(),
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
       openVisualLibraryWithAsset: (assetId, initialTab = 'info') => {
@@ -1115,24 +1112,7 @@ export default {
         return;
       }
 
-      if (data.type === 'autocomplete_suggestion') {
-
-        if(!this.autocompleteCallback)
-          return;
-
-        const completion = data.message;
-        this.autocompleteCallback(completion);
-
-        if (this.autocompleteFocusElement) {
-          let focus_element = this.autocompleteFocusElement;
-          setTimeout(() => {
-            focus_element.focus();
-          }, 1000);
-          this.autocompleteFocusElement = null;
-        }
-
-        this.autocompleteCallback = null;
-        this.autocompletePartialInput = "";
+      if (this.handleAutocompleteMessage(data)) {
         return;
       }
 
@@ -1283,17 +1263,6 @@ export default {
       this.waitingForInput = false;
     },
 
-    onAutocompleteStart() {
-      this.autocompleting = true;
-      this.inputDisabled = true;
-    },
-
-    onAutocompleteEnd(completion) {
-      this.inputDisabled = false;
-      this.autocompleting = false;
-      this.messageInput += completion;
-    },
-
     scrollInputIntoView() {
       const scroll = () => this.$refs.sceneMessageInput?.scrollIntoView(false);
       this.$nextTick(scroll);
@@ -1330,23 +1299,6 @@ export default {
       }));
     },
 
-    autocompleteRequest(param, callback, focus_element, delay=500) {
-
-      this.autocompleteCallback = (completion) => {
-        setTimeout(() => {
-          callback(completion);
-        }, delay);
-      };
-      this.autocompleteFocusElement = focus_element;
-      this.autocompletePartialInput = param.partial;
-
-      const param_copy = JSON.parse(JSON.stringify(param));
-      param_copy.type = "assistant";
-      param_copy.action = "autocomplete";
-
-      this.websocket.send(JSON.stringify(param_copy));
-    },
-
     syncActAs() {
       // sets the appropriate actAs
 
@@ -1367,10 +1319,6 @@ export default {
 
       // at this point we need a change of actAs so cycle to next option
       this.$refs.sceneMessageInput?.cycleActAs();
-    },
-
-    autocompleteInfoMessage(active) {
-      return active ? 'Generating ...' : `${primaryModifierLabel}+Enter to autocomplete`;
     },
 
     requestAppConfig() {
@@ -1507,9 +1455,6 @@ export default {
       }
       return this.$refs.aiAgent.configurationRequired();
     },
-    openCharacterSheet(characterName) {
-      this.$refs.characterSheet.openForCharacterName(characterName);
-    },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
       // If trying to open templates, redirect to templates tab instead
       if (tab === 'templates') {
@@ -1581,6 +1526,11 @@ export default {
       // Clear preview when settings dialog closes/cancels/saves
       this.appearancePreview = null;
     },
+    onConfigureEntityHighlights() {
+      // Triggered from the "Configure highlights" affordance in the entity
+      // tooltip — opens the app config dialog at the scene appearance page.
+      this.openAppConfig('appearance', 'scene');
+    },
     openAppConfig(tab, page, item=null) {
       this.$refs.appConfig.show(tab, page, item);
     },
@@ -1606,10 +1556,13 @@ export default {
 
     isInputDisabled() {
 
-      // if any client is active and busy, disable input
-      if (this.$refs.aiClient && this.$refs.aiClient.getActive()) {
+      // Lock interaction while a foreground agent is busy. We deliberately
+      // check agent status (this.busy already excludes busy_bg) rather than
+      // client status: a background agent operation — e.g. the world state
+      // snapshot — keeps the shared client busy but must not lock the input.
+      if (this.busy) {
         return true;
-      } 
+      }
 
       return this.inputDisabled || this.notificatioonBusy;
     },
@@ -1689,16 +1642,15 @@ export default {
 
     // Handle prompt_sent messages (capture prompts for PromptsMenu)
     handlePromptSent(data) {
-      // Get active agent (last in agent_stack if not empty)
+      // agent_name here is the verbose display name (from agent_stack); the
+      // canonical type+action come straight from the server now.
       let agent = null;
       let agentName = null;
-      let agentAction = null;
+      let agentAction = data.agent_action || null;
 
       if (data.agent_stack && data.agent_stack.length > 0) {
         agent = data.agent_stack[data.agent_stack.length - 1];
-        const agentParts = agent.split('.');
-        agentName = agentParts[0];
-        agentAction = agentParts[1];
+        agentName = agent.split('.')[0];
       }
 
       // Compute prefix cache ratio against previous prompt with same template_uid + client_name
@@ -1721,6 +1673,7 @@ export default {
         agent_stack: data.agent_stack,
         agent: agent,
         agent_name: agentName,
+        agent_type: data.agent_type || null,
         agent_action: agentAction,
         client_name: data.client_name,
         client_type: data.client_type,

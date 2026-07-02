@@ -656,6 +656,52 @@ class TestStripReasoning:
         assert out == "<think>x</think>answer"
         assert reason is None
 
+    def test_validation_pattern_present_strips_normally(self, cfg_isolation):
+        _register_client_config(
+            "sr_val_ok", reason_enabled=True, reason_validation_pattern="<think>"
+        )
+        client = _StubClient(name="sr_val_ok")
+        out, reason = client.strip_reasoning("<think>thinking</think>answer")
+        assert out == "answer"
+        assert reason == "<think>thinking</think>"
+
+    def test_validation_pattern_absent_returns_response_as_is(self, cfg_isolation):
+        # Even with reason_failure_behavior="fail", a configured validation
+        # pattern that is absent means the model never reasoned -> return as-is.
+        _register_client_config(
+            "sr_val_absent",
+            reason_enabled=True,
+            reason_failure_behavior="fail",
+            reason_validation_pattern="<think>",
+        )
+        client = _StubClient(name="sr_val_absent")
+        out, reason = client.strip_reasoning("just a plain answer")
+        assert out == "just a plain answer"
+        assert reason is None
+
+    def test_validation_skipped_when_prefilled(self, cfg_isolation):
+        # When the reasoning start is prefilled it won't appear in the response,
+        # so validation is skipped and the normal failure behavior applies.
+        _register_client_config(
+            "sr_val_prefill",
+            reason_enabled=True,
+            reason_failure_behavior="fail",
+            reason_validation_pattern="<think>",
+            reason_prefill="<think>",
+        )
+        client = _StubClient(name="sr_val_prefill")
+        with pytest.raises(ReasoningResponseError):
+            client.strip_reasoning("no closing token here")
+
+    def test_reason_validation_pattern_property_proxies_config(self, cfg_isolation):
+        _register_client_config("sr_val_prop", reason_validation_pattern="<seed:think>")
+        assert (
+            _StubClient(name="sr_val_prop").reason_validation_pattern == "<seed:think>"
+        )
+        # Defaults to None (opt-in) when unset.
+        _register_client_config("sr_val_none")
+        assert _StubClient(name="sr_val_none").reason_validation_pattern is None
+
 
 class TestProcessResponseForIndirectCoercion:
     def test_strips_coercion_when_response_starts_with_it(self, stub_client):

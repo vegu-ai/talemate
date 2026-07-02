@@ -12,7 +12,7 @@
     </div>
 </template>
 <script>
-import { MAX_CONTENT_WIDTH } from '@/constants';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 import WorldStateManagerSuggestionsCharacter from './WorldStateManagerSuggestionsCharacter.vue';
 
 export default {

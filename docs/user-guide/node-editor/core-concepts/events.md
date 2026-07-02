@@ -15,9 +15,33 @@ There currently are no typed event emission nodes, so you will need to use the `
 
 You can find the various event payloads in the [reference](../reference/events.md).
 
-Once your event module is saved, you enable it by adding its node to the scene loop of your scene.
+## Activating an event module
+
+There are two ways to make an event module start listening for its event.
+
+### Add it to the scene loop
+
+Once your event module is saved, add its node to the scene loop of your scene.
 
 Once added to the scene loop you must also specify the `event_name`.
+
+This places the module on the scene loop graph, where you can see it, wire additional inputs to it, and disable it again by removing it.
+
+### Auto-register
+
+Instead of placing the module on the scene loop graph, you can have it subscribe to its event automatically as soon as it is registered with the scene.
+
+To do this, open the module's **Properties** panel and:
+
+- Set `event_name` to the event you want to listen for.
+- Enable `auto_register`.
+
+Both values are saved on the module definition itself, so they must be set inside the module (not on a placed instance). When the scene loads, every registered event module with `auto_register` enabled and a non-empty `event_name` is connected to the event bus automatically — you do **not** need to add it to the scene loop.
+
+!!! note "Auto-register requires a saved `event_name`"
+    Because auto-registration reads the persisted properties of the module, an auto-registered module that has no `event_name` set is skipped. Make sure both `auto_register` and `event_name` are set and the module is saved.
+
+This works the same way [command modules](command_module.md) are loaded automatically when a scene loads, and is the recommended approach for event modules that should always be active and that do not need any inputs wired in from the scene loop graph.
 
 
 ## Practical Example

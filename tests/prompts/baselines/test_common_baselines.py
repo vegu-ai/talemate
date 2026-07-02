@@ -9,9 +9,13 @@ and snapshot the output. Run with --update-baselines to create/update.
 
 from unittest.mock import Mock
 
+import talemate.instance as instance
 from talemate.context import active_scene
 from talemate.prompts.base import Prompt
 from talemate.util.path import get_path_value
+from talemate.world_state import CharacterState, ObjectState, PlaceState
+
+from ..helpers import create_scene_with_characters, register_world_state_toggle
 
 
 AGENT = "common"
@@ -261,3 +265,76 @@ class TestGetPathValue:
     def test_empty_path_returns_default(self):
         assert get_path_value(self.GS, "") is None
         assert get_path_value(self.GS, "/") is None
+
+
+# ---------------------------------------------------------------------------
+# Snapshots: common/world-state-snapshot.jinja2 (durable snapshot → scene memory)
+# ---------------------------------------------------------------------------
+
+
+def _render_world_state_snapshot(seed, *, toggle: bool = True) -> str:
+    """Render the world-state-snapshot partial against a seeded scene.
+
+    A minimal world_state agent is registered so the in-template
+    ``agent_config("world_state.update_world_state.inject_as_scene_memory")``
+    gate resolves to ``toggle``. The scene and its actors are real; only the
+    registry agent is a stand-in for the config lookup.
+    """
+    original_agents = instance.AGENTS.copy()
+    register_world_state_toggle(toggle)
+
+    scene = create_scene_with_characters()
+    seed(scene.world_state)
+    token = active_scene.set(scene)
+    try:
+        return Prompt.get("common.world-state-snapshot", vars={"scene": scene}).render()
+    finally:
+        active_scene.reset(token)
+        instance.AGENTS.clear()
+        instance.AGENTS.update(original_agents)
+
+
+class TestWorldStateSnapshotBaselines:
+    """Snapshot the rendered SCENE NOTES block fed into consumer prompts."""
+
+    def test_full_snapshot(self, baseline_checker):
+        def seed(ws):
+            ws.location = "A dim server room, fans humming."
+            ws.characters = {
+                "Elena": CharacterState(
+                    snapshot="favors her left hand; a fresh burn on the wrist.",
+                    emotion="anxious",
+                ),
+                "Marcus": CharacterState(
+                    snapshot="rolled sleeves, ink stains on the right cuff.",
+                    emotion=None,
+                ),
+            }
+            ws.items = {
+                "the silver dagger": ObjectState(
+                    snapshot="older than the hilt suggests; faint etching near the guard.",
+                ),
+            }
+            ws.places = {
+                "the north stairwell": PlaceState(
+                    snapshot="lit only by a flickering exit sign.",
+                ),
+            }
+
+        out = _render_world_state_snapshot(seed)
+        baseline_checker(out, AGENT, "world_state_snapshot_full")
+
+    def test_location_only(self, baseline_checker):
+        def seed(ws):
+            ws.location = "A rain-slick alley behind the market."
+
+        out = _render_world_state_snapshot(seed)
+        baseline_checker(out, AGENT, "world_state_snapshot_location_only")
+
+    def test_disabled_renders_empty(self, baseline_checker):
+        def seed(ws):
+            ws.location = "A dim server room, fans humming."
+            ws.characters = {"Elena": CharacterState(snapshot="favors her left hand.")}
+
+        out = _render_world_state_snapshot(seed, toggle=False)
+        baseline_checker(out, AGENT, "world_state_snapshot_disabled")

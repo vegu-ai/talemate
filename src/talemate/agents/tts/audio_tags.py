@@ -37,6 +37,7 @@ class AudioTagsMixin:
             value=False,
             label="Audio tags",
             description="Use AI to inject audio tags (e.g. [laughing], [whispering]) into dialogue for supported TTS providers. Requires the Summarizer agent.",
+            scene_overridable=False,
         )
         return actions
 

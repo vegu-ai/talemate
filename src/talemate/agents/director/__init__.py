@@ -126,11 +126,11 @@ class DirectorAgent(
 
     @property
     def actor_direction_mode(self):
-        return self.actions["direct"].config["actor_direction_mode"].value
+        return self.resolve_config("direct", "actor_direction_mode")
 
     @property
     def direction_stickiness(self):
-        return int(self.actions["direct"].config["direction_stickiness"].value)
+        return int(self.resolve_config("direct", "direction_stickiness"))
 
     async def log_function_call(self, call: Call):
         log.debug("director.log_function_call", call=call)

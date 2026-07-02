@@ -169,6 +169,7 @@ class ChatterboxMixin:
                         {"value": "cuda", "label": "CUDA"},
                     ],
                     description="Device to use for TTS",
+                    scene_overridable=False,
                 ),
                 "chunk_size": AgentActionConfig(
                     type="number",
@@ -178,6 +179,7 @@ class ChatterboxMixin:
                     value=256,
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
+                    scene_overridable=False,
                 ),
             },
         )

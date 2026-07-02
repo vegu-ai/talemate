@@ -156,6 +156,7 @@
                             >
                                 <PromptDetailView
                                     :prompt="prompt"
+                                    :app-config="appConfig"
                                     @navigate-to-template="handleNavigateToTemplate"
                                 />
                             </v-window-item>
@@ -263,6 +264,10 @@ export default {
         mainTab: {
             type: String,
             default: 'prompts'
+        },
+        appConfig: {
+            type: Object,
+            default: () => ({})
         }
     },
     emits: ['clear-prompts', 'update:mainTab'],

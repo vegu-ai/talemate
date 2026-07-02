@@ -108,6 +108,8 @@ The canvas is the main area where you can add, connect and edit nodes.
 
 Certain nodes can log messages to the log watcher. It is located in the upper right corner of the editor.
 
+Each entry shows a right-aligned `HH:MM:SS.mmm` timestamp, making it easier to correlate log entries with scene activity.
+
 ![Node Editor Log Watcher](../img/user-interface-0008.png)
 
 ### Toolbar 

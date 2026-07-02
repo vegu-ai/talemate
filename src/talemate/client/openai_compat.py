@@ -4,13 +4,44 @@ import pydantic
 import structlog
 from openai import AsyncOpenAI
 
-from talemate.client.base import ClientBase, ExtraField
+from talemate.client.base import ClientBase, ExtraField, FieldGroup
 from talemate.client.registry import register
 from talemate.config.schema import Client as BaseClientConfig
 
 log = structlog.get_logger("talemate.client.openai_compat")
 
 EXPERIMENTAL_DESCRIPTION = """Use this client if you want to connect to a service implementing an OpenAI-compatible API. Success is going to depend on the level of compatibility. Use the actual OpenAI client if you want to connect to OpenAI's API."""
+
+# Sampler parameters whose inclusion in the request payload is user-toggleable.
+# Some OpenAI-compatible APIs hard-error when these are sent for certain models,
+# so they need to be omitted entirely (not just zeroed out).
+TOGGLEABLE_PARAMETERS = ("temperature", "top_p", "presence_penalty")
+
+
+PARAMETERS_FIELD_GROUP = FieldGroup(
+    name="parameters",
+    label="Parameters",
+    description=(
+        "Toggle individual sampler parameters. When a parameter is disabled it is "
+        "omitted from the request payload entirely. Useful for APIs that hard-error "
+        "when receiving parameters they don't support for the selected model."
+    ),
+    icon="mdi-tune-vertical",
+)
+
+
+def _send_parameter_field(param: str) -> ExtraField:
+    return ExtraField(
+        name=f"send_{param}",
+        type="bool",
+        label=f"Send {param}",
+        required=False,
+        description=(
+            f"When enabled, `{param}` is included in the request. Disable for "
+            f"models/APIs that reject it."
+        ),
+        group=PARAMETERS_FIELD_GROUP,
+    )
 
 
 class Defaults(pydantic.BaseModel):
@@ -21,10 +52,16 @@ class Defaults(pydantic.BaseModel):
     api_handles_prompt_template: bool = False
     double_coercion: str = None
     rate_limit: int | None = None
+    send_temperature: bool = True
+    send_top_p: bool = True
+    send_presence_penalty: bool = True
 
 
 class ClientConfig(BaseClientConfig):
     api_handles_prompt_template: bool = False
+    send_temperature: bool = True
+    send_top_p: bool = True
+    send_presence_penalty: bool = True
 
 
 @register()
@@ -48,12 +85,25 @@ class OpenAICompatibleClient(ClientBase):
                 label="API handles prompt template (chat/completions)",
                 required=False,
                 description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored. This is not recommended and should only be used if the API does not support the `completions` andpoint or you don't know which prompt template to use.",
-            )
+            ),
+            **{f"send_{p}": _send_parameter_field(p) for p in TOGGLEABLE_PARAMETERS},
         }
 
     @property
     def api_handles_prompt_template(self) -> bool:
         return self.client_config.api_handles_prompt_template
+
+    @property
+    def send_temperature(self) -> bool:
+        return self.client_config.send_temperature
+
+    @property
+    def send_top_p(self) -> bool:
+        return self.client_config.send_top_p
+
+    @property
+    def send_presence_penalty(self) -> bool:
+        return self.client_config.send_presence_penalty
 
     @property
     def experimental(self):
@@ -69,12 +119,11 @@ class OpenAICompatibleClient(ClientBase):
 
     @property
     def supported_parameters(self):
-        return [
-            "temperature",
-            "top_p",
-            "presence_penalty",
-            "max_tokens",
-        ]
+        params = ["max_tokens"]
+        for param in TOGGLEABLE_PARAMETERS:
+            if getattr(self.client_config, f"send_{param}"):
+                params.append(param)
+        return params
 
     def prompt_template(self, system_message: str, prompt: str):
         if not self.api_handles_prompt_template:

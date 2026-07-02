@@ -6,6 +6,8 @@ You can create and remove characters, manage their details, and track their stat
 
 Characters can also be temporarily disabled, which will prevent them from being included in the scene' dialogue generation. (e.g., they are out of the scene for a moment.)
 
+You can also change which character is [controlled by the player](/talemate/user-guide/world-editor/characters/player) at any time.
+
 The character list can optionally be organized into collapsible [folders](/talemate/user-guide/world-editor/characters/folders).
 
 ## Character Components
@@ -28,7 +30,7 @@ When a **:material-image-auto-adjust: state reinforcment** is updated the value 
 
 ### :material-image-auto-adjust: [Tracked states](/talemate/user-guide/world-editor/characters/states)
 
---8<-- "docs/talemate/user-guide/tracking-a-state.md:what-is-a-tracked-state"
+--8<-- "docs/user-guide/tracking-a-state.md:what-is-a-tracked-state"
 
 ### :material-bullhorn: [Actor management](/talemate/user-guide/world-editor/characters/actor)
 

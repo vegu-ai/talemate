@@ -82,6 +82,42 @@ You can turn this off by disabling the auto progress setting, either in the game
 A set of tools to help you interact with the scenario. Find out more about the various actions in the [Scene Tools](/talemate/user-guide/scenario-tools) section of the user guide.
 
 
+## Message revision history
+
+!!! info "New in 0.38.0"
+
+Character and narrator messages (and context investigation results) keep a history of their previous versions. When a message has more than one version, a small paginator appears just above the message body so you can browse through them.
+
+![Message revision paginator](/talemate/img/0.38.0/message-revision-paginator.png)
+
+The paginator shows:
+
+- **Left / right arrows** to step between versions.
+- A **counter** (for example `2/3`) telling you which version you are viewing and how many exist in total.
+- A **tag** describing where the version you are currently looking at came from:
+    - **Original** -- the message as it was first generated.
+    - **Regenerated** -- a version produced by regenerating the message.
+    - **Revised** -- a version that the [Editor agent](/talemate/user-guide/agents/editor) automatically rewrote.
+    - **Continued** -- a version created by continuing the message (see below).
+
+The paginator only appears on the **most recent** message, and only once that message has more than one version.
+
+!!! note "The version you view is the one that sticks"
+    Whichever version you have selected in the paginator becomes the message's active text. That is the version saved with the scene, and the version the AI builds on when it continues the scene. Browsing to an earlier version and leaving it selected effectively rolls the message back to that version.
+
+### How new versions are created
+
+You don't add versions manually -- they accumulate as you work with a message:
+
+- **Regenerating** the most recent AI message (see [Regenerate AI response](/talemate/user-guide/scenario-tools#material-refresh-regenerate-ai-response)) keeps the message in place and adds the new result as a version instead of replacing the old text. The previous version is still there to navigate back to. If the Editor agent automatically revises the regenerated text, both the raw **Regenerated** version and the **Revised** version are kept so you can pick either one.
+- **Continuing** a message adds a **Continued** version that contains the original text plus the newly generated continuation. The version you continued from stays available, so you can step back if you don't like how the continuation turned out.
+
+### Continuing a message
+
+The most recent character or narrator message offers a **:material-fast-forward: Continue** action on its hover toolbar.
+
+Clicking **Continue** generates more text and appends it to the message, recording the result as a new **Continued** version in the revision history. Narrator messages support the Continue action as well as character messages.
+
 ## Cancel Generation
 
 Sometimes Talemate will be generating a response (or go through a chain of generations) and you want to cancel it. You can do this by hitting the **:material-stop-circle-outline:** button that will appear in the scene tools bar.

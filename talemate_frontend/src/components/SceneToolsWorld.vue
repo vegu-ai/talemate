@@ -10,9 +10,9 @@
             <v-list-subheader>Automatic state updates</v-list-subheader>
 
             <!-- update world state -->
-            <v-list-item density="compact" prepend-icon="mdi-refresh" @click="updateWorlState()">
+            <v-list-item density="compact" prepend-icon="mdi-refresh" @click="updateWorlState($event)">
                 <v-list-item-title>Update world snapshot</v-list-item-title>
-                <v-list-item-subtitle>Refresh the current world state snapshot</v-list-item-subtitle>
+                <v-list-item-subtitle>{{ primaryModifierLabel }}+click to wipe and start fresh</v-list-item-subtitle>
             </v-list-item>
 
             <!-- add tracked world state -->
@@ -143,6 +143,7 @@
 <script>
 import ContextualGenerateFromTopic from './ContextualGenerateFromTopic.vue';
 import QuickCreateStateReinforcement from './QuickCreateStateReinforcement.vue';
+import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 
 export default {
     name: 'SceneToolsWorld',
@@ -162,6 +163,7 @@ export default {
                 { "title": "Sequential", "value": "sequential", "props": { "subtitle": "Insert into current scene progression" } },
                 { "title": "Conversation Context", "value": "conversation-context", "props": { "subtitle": "Insert into conversation context for this character" } },
             ],
+            primaryModifierLabel,
         }
     },
     inject: [
@@ -363,8 +365,13 @@ export default {
             }
         },
 
-        updateWorlState() {
-            this.getWebsocket().send(JSON.stringify({ type: 'world_state_agent', action: 'request_update' }));
+        updateWorlState(event) {
+            const reset = !!event && isPrimaryModifier(event);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_agent',
+                action: 'request_update',
+                reset,
+            }));
         },
 
         saveGeneratedWorldEntry(topic, content) {

@@ -14,6 +14,7 @@ from typing import Union
 import pydantic
 import structlog
 
+from talemate.scene_agent_settings import AGENT_SETTINGS_DIRNAME
 from talemate.tale_mate import Scene
 
 log = structlog.get_logger("talemate.export")
@@ -44,6 +45,7 @@ class ExportOptions(pydantic.BaseModel):
     include_nodes: bool = True
     include_info: bool = True
     include_templates: bool = True
+    include_agent_settings: bool = True
 
 
 async def export(scene: Scene, options: ExportOptions) -> Union[str, bytes]:
@@ -168,6 +170,28 @@ async def export_talemate_complete(scene: Scene, options: ExportOptions) -> byte
                     )
             except Exception as e:
                 log.warning("Failed to copy templates directory", error=str(e))
+
+        # Copy agent-settings directory if it exists and option is enabled.
+        # Without this the importing user loses every per-scene agent
+        # override referenced by `agent_settings_file` in the scene JSON.
+        if options.include_agent_settings:
+            try:
+                agent_settings_source = Path(scene.save_dir) / AGENT_SETTINGS_DIRNAME
+                if agent_settings_source.exists():
+                    agent_settings_dest = temp_path / AGENT_SETTINGS_DIRNAME
+                    shutil.copytree(agent_settings_source, agent_settings_dest)
+                    log.debug(
+                        "Copied agent-settings directory",
+                        source=agent_settings_source,
+                        dest=agent_settings_dest,
+                    )
+                else:
+                    log.debug(
+                        "Agent-settings directory does not exist",
+                        path=agent_settings_source,
+                    )
+            except Exception as e:
+                log.warning("Failed to copy agent-settings directory", error=str(e))
 
         # Copy restore file if it exists and is set
         if scene.restore_from:

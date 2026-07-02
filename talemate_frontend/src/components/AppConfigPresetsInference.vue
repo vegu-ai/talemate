@@ -15,7 +15,7 @@
                 <v-col cols="4">
                     <v-select v-model="group" :items="groupItems" label="Group" variant="underlined">
                         <template v-slot:append-inner>
-                            <v-icon color="delete" v-if="group !== ''" @click="deleteGroup()">mdi-close-circle-outline</v-icon>
+                            <v-icon color="delete" v-if="group !== ''" @click="$refs.confirmDeleteGroup.initiateAction({group: group})">mdi-close-circle-outline</v-icon>
                         </template>
                     </v-select>
                 </v-col>
@@ -74,19 +74,20 @@
                     <v-card>
                         <v-card-title>
                             <v-row no-gutters>
-                                <v-col cols="8">
+                                <v-col cols="6">
                                     {{ toLabel(selected[0]) }}
                                 </v-col>
-                                <v-col cols="4" class="text-right">
-                                    <v-btn variant="text" size="small" color="warning" prepend-icon="mdi-refresh" @click="reset">Reset</v-btn>
+                                <v-col cols="6" class="text-right">
+                                    <v-btn variant="text" size="small" color="primary" prepend-icon="mdi-content-copy" @click="$refs.confirmApplyToAll.initiateAction({preset: toLabel(selected[0])})">Apply to all</v-btn>
+                                    <v-btn variant="text" size="small" color="warning" prepend-icon="mdi-refresh" @click="$refs.confirmReset.initiateAction({preset: toLabel(selected[0])})">Reset</v-btn>
                                 </v-col>
                             </v-row>
                         </v-card-title>
 
                         <v-card-text overflow-y-visible>
-                            <v-slider thumb-label="always" density="compact" v-model="selectedPreset.temperature" min="0.1" max="2.0" step="0.05" label="Temperature" @update:model-value="setPresetChanged()"></v-slider>
+                            <v-slider thumb-label="always" density="compact" v-model="selectedPreset.temperature" min="0.1" max="2.0" step="0.01" label="Temperature" @update:model-value="setPresetChanged()"></v-slider>
 
-                            <v-slider thumb-label="always" density="compact" v-model="selectedPreset.top_p" min="0.1" max="1.0" step="0.05" label="Top P" @update:model-value="setPresetChanged()"></v-slider>
+                            <v-slider thumb-label="always" density="compact" v-model="selectedPreset.top_p" min="0.1" max="1.0" step="0.01" label="Top P" @update:model-value="setPresetChanged()"></v-slider>
 
                             <v-slider thumb-label="always" density="compact" v-model="selectedPreset.top_k" min="0" max="1024" step="1" label="Top K" @update:model-value="setPresetChanged()"></v-slider>
 
@@ -103,7 +104,7 @@
                                     <v-slider thumb-label="always" density="compact" v-model="selectedPreset.repetition_penalty" min="1.0" max="1.20" step="0.01" label="Repetition Penalty" @update:model-value="setPresetChanged()"></v-slider>
                                 </v-col>
                                 <v-col cols="6">
-                                    <v-slider thumb-label="always" density="compact" v-model="selectedPreset.repetition_penalty_range" min="0" max="4096" step="256" label="Range" @update:model-value="setPresetChanged()"></v-slider>
+                                    <v-slider thumb-label="always" density="compact" v-model="selectedPreset.repetition_penalty_range" min="0" max="8192" step="256" label="Range" @update:model-value="setPresetChanged()"></v-slider>
                                 </v-col>
                             </v-row>
 
@@ -186,12 +187,21 @@
         </v-col>
     </v-row>
 
+    <ConfirmActionPrompt ref="confirmApplyToAll" @confirm="applyToAll" actionLabel="Apply to all presets" icon="mdi-content-copy" color="primary" confirmText="Apply" cancelText="Cancel" :maxWidth="400" description="Apply the parameter values of {preset} to all other presets in this group? This will overwrite their current values." />
+
+    <ConfirmActionPrompt ref="confirmReset" @confirm="reset" actionLabel="Reset preset" icon="mdi-refresh" color="warning" confirmText="Reset" cancelText="Cancel" :maxWidth="400" description="Reset {preset} to its default values?" />
+
+    <ConfirmActionPrompt ref="confirmDeleteGroup" @confirm="deleteGroup" actionLabel="Delete group" icon="mdi-close-circle-outline" confirmText="Delete" cancelText="Cancel" :maxWidth="400" description="Are you sure you want to delete the {group} group?" />
+
 </template>
 <script>
+
+import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 
 export default {
     name: 'AppConfigPresets',
     components: {
+        ConfirmActionPrompt,
     },
     props: {
         immutableConfig: Object,
@@ -211,10 +221,7 @@ export default {
             return items;
         },
         selectedPreset() {
-            if(this.group && this.group !== "") {
-                return this.config.inference_groups[this.group].presets[this.selected[0]];
-            }
-            return this.config.inference[this.selected[0]];
+            return this.presetsScope()[this.selected[0]];
         },
     },
     watch: {
@@ -258,21 +265,30 @@ export default {
             return JSON.parse(JSON.stringify(obj));
         },
 
-        deleteGroup(confirmed) {
-            if(!confirmed) {
-                if(!confirm("Are you sure you want to delete this group?")) {
-                    return;
-                }
-            }
+        deleteGroup() {
             delete this.config.inference_groups[this.group];
-            this.group = '';0
+            this.group = '';
+        },
+
+        presetsScope() {
+            if(this.group && this.group !== "") {
+                return this.config.inference_groups[this.group].presets;
+            }
+            return this.config.inference;
         },
 
         reset() {
-            if(this.group !== "") {
-                this.config.inference_groups[this.group].presets[this.selected[0]] = {...this.immutableConfig.presets.inference_defaults[this.selected[0]]}
-            } else {
-                this.config.inference[this.selected[0]] = {...this.immutableConfig.presets.inference_defaults[this.selected[0]]}
+            this.presetsScope()[this.selected[0]] = {...this.immutableConfig.presets.inference_defaults[this.selected[0]]}
+        },
+
+        applyToAll() {
+            const presets = this.presetsScope();
+            const source = this.deepCopy(presets[this.selected[0]]);
+            for(const key in presets) {
+                if(key === this.selected[0]) {
+                    continue;
+                }
+                presets[key] = {...source, changed: true};
             }
         },
 
@@ -284,7 +300,7 @@ export default {
                 return;
             }
 
-            const toCopy = (this.group !== "") ? this.config.inference_groups[this.group].presets : this.config.inference;
+            const toCopy = this.presetsScope();
 
             this.config.inference_groups[this.newGroupName] = {
                 name: this.newGroupName,

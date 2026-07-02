@@ -66,6 +66,47 @@ When the configured reasoning pattern is not found in a response, you can contro
 - **Fail** (default) - Raises an error, causing the request to fail. Use this when you expect the model to always include reasoning tokens and want to be alerted if it doesn't.
 - **Ignore** - Returns the response as-is without stripping anything. Use this when the model may sometimes respond without reasoning tokens (e.g., for simple queries).
 
+## Forcing Reasoning Off for Specific Actions
+
+The **Enable Reasoning** checkbox is a global setting for a client — when it's on, every prompt that client handles uses reasoning. Sometimes that isn't what you want. A reasoning model might do an excellent job writing dialogue but waste time (and tokens) "thinking" before simple, mechanical tasks like summarization or world-state updates.
+
+Per-action reasoning overrides let you turn reasoning **off for individual agent actions** without touching the client's global setting. The client keeps reasoning on everywhere else; only the actions you single out skip it.
+
+### Adding an Override
+
+Overrides are created from a prompt's detail view, which you can reach two ways:
+
+- **Prompt Manager** (recommended): Open the **Prompts** tab from the main navigation (the :material-file-code-outline: icon). In the sidebar, click a recent prompt under the **Prompts** list to open it.
+- **Debug Tools**: Open the **Debug Tools** panel (the :material-bug: icon in the top toolbar) and go to the **Prompts** tab, then click a prompt.
+
+Both routes open the same prompt detail view. Once it's open:
+
+1. Find the prompt's header, which shows which agent and action produced it (for example **summarizer** with an **action** chip).
+2. Click the :material-brain: brain icon next to the action. It turns red to show reasoning is now forced off for that action.
+
+From now on, every time that same agent action runs, Talemate tells the client to skip reasoning for that single call.
+
+To remove an override, click the red brain icon again.
+
+### Managing All Overrides
+
+Once you have at least one override active, a counter button appears next to the **Agents** heading in the right-hand agent list. Click it to open the **Agent action overrides** dialog, where you can:
+
+- See every action that currently has an override, grouped by agent.
+- Toggle **Disable reasoning** on or off for each one.
+- Remove an override entirely with the :material-close: button.
+
+![Agent action overrides dialog](/talemate/img/0.38.0/agent-action-overrides-dialog.png)
+
+### How It Relates to the Global Setting
+
+- Overrides only ever **turn reasoning off**. They cannot turn reasoning on for a client that has it disabled.
+- They are saved with your application configuration and persist across restarts. They apply to whichever client happens to run that action.
+- If a model **always** reasons and cannot be told to stop (for example certain Gemini and OpenAI reasoning models), the override is ignored for that client — those models reason no matter what.
+
+!!! note "Test Changes ignores overrides"
+    The **Test Changes** button in the prompt detail view always runs with the client's default reasoning setting, so you can compare a one-off result against your normal configuration. The per-action override is not applied during a test run.
+
 ## Model Compatibility
 
 Not all models support reasoning. This feature works best with:

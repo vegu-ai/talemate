@@ -26,6 +26,7 @@
 </template>
 
 <script>
+import { VIS_TYPE } from '@/constants/visual';
 
 export default {
     name: 'CoverImage',
@@ -110,7 +111,7 @@ export default {
                 type: 'upload_scene_asset', 
                 scene_cover_image: this.isScene,
                 character_cover_image: this.isScene ? null : this.target.name,
-                vis_type: this.isScene ? 'SCENE_COVER' : 'CHARACTER_CARD',
+                vis_type: this.isScene ? VIS_TYPE.SCENE_CARD : VIS_TYPE.CHARACTER_CARD,
                 character_name: this.isScene ? null : this.target.name,
                 content: image_file_base64,
             }));

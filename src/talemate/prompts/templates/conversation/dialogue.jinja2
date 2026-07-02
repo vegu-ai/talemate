@@ -6,6 +6,12 @@ Override example:
   {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
   {{ set_as_is_extractor("response") }}
 -#}
+{%- if talking_character.is_player -%}
+  {%- set speaker_role = "player" -%}
+{%- else -%}
+  {%- set speaker_role = "other" -%}
+{%- endif -%}
+{%- set resolved_perspective = scene.perspective_for_role(speaker_role) -%}
 {# EXTRA CONTEXT CONTENT #}
 {% set rendered_context_text -%}
 <|SECTION:CHARACTERS|>
@@ -24,7 +30,8 @@ Override example:
 <|SECTION:ADDITIONAL INFORMATION|>
 {% with
   reinforcement_character=talking_character.name,
-  reinforcement_character_inserts=["conversation-context"]
+  reinforcement_character_inserts=["conversation-context"],
+  speaker_role=speaker_role
 %}
   {% include "extra-context-static.jinja2" %}
 {% endwith %}
@@ -39,6 +46,7 @@ Override example:
 {# VOLATILE CONTEXT (for budget calculation) #}
 {% set volatile_context_text %}
 {% include "memory-context.jinja2" %}
+{% include "world-state-snapshot.jinja2" %}
 {% include "extra-context-dynamic.jinja2" %}
 {% endset -%}
 {# END VOLATILE CONTEXT #}
@@ -71,9 +79,10 @@ Override example:
 
 {# FINAL ACTING INSTRUCTIONS #}
 {% set acting_instructions -%}
+<|SECTION:ACTING INSTRUCTIONS|>
 **TENSE**: Examine the existing conversation history and maintain the EXACT same tense (past/present) used in previous messages. **NEVER switch tenses mid-conversation**.
-{% if scene.perspective -%}
-**PERSPECTIVE**: The narrative perspective for this scene is — {{ scene.perspective }}. Apply it consistently to {{ talking_character.name }}'s actions and thoughts.
+{% if resolved_perspective -%}
+**PERSPECTIVE**: The narrative perspective for this scene is — {{ resolved_perspective }}. Apply it consistently to {{ talking_character.name }}'s actions and thoughts.
 {%- else -%}
 **PERSPECTIVE**: Match the narrative perspective of the existing story. If the story uses third person ("he walked", "she said"), write {{ talking_character.name }}'s actions and thoughts in third person. If the existing story has already established {{ talking_character.name }} as a first-person narrator ("I walked"), keep that voice for them. Do not switch a character to first person just because it is their turn — only characters the scene has already established as first-person narrators may use that voice.
 {%- endif %}
@@ -91,6 +100,7 @@ Override example:
 {% if direct_instruction -%}
 (Instructions for {{ talking_character.name }}'s next part in the scene: {{ direct_instruction }})
 {% endif -%}
+<|CLOSE_SECTION|>
 {% endset %}
 {# END FINAL ACTING INSTRUCTIONS #}
 

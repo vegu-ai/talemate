@@ -142,7 +142,7 @@ import WorldStateManagerHistory from './WorldStateManagerHistory.vue';
 import WorldStateManagerSuggestions from './WorldStateManagerSuggestions.vue';
 import GenerationOptions from './GenerationOptions.vue';
 import RequestInput from './RequestInput.vue';
-import { MAX_CONTENT_WIDTH } from '@/constants';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 
 export default {
@@ -345,8 +345,6 @@ export default {
         'registerMessageHandler',
         'unregisterMessageHandler',
         'setWaitingForInput',
-        'openCharacterSheet',
-        'characterSheet',
         'isInputDisabled',
         'autocompleteRequest',
         'autocompleteInfoMessage',

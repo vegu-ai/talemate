@@ -1,6 +1,6 @@
 <template>
     <v-row>
-        <v-col cols="12" xl="8" xxl="5">
+        <v-col cols="12">
             <v-card v-if="state != null">
                 <v-form v-model="formValid" ref="form">
                     <v-row>
@@ -104,7 +104,7 @@
                 </v-alert>
             </v-card>
         </v-col>
-        <v-col cols="12" xl="4" xxl="7"></v-col>
+        <v-col cols="12"></v-col>
     </v-row>
 </template>
 

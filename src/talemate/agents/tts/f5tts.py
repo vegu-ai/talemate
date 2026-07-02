@@ -209,6 +209,7 @@ class F5TTSMixin:
                         {"value": "cuda", "label": "CUDA"},
                     ],
                     description="Device to use for TTS",
+                    scene_overridable=False,
                 ),
                 "model_name": AgentActionConfig(
                     type="text",
@@ -220,6 +221,7 @@ class F5TTSMixin:
                         {"value": "F5TTS_Base", "label": "F5TTS_Base"},
                         {"value": "F5TTS_v1_Base", "label": "F5TTS_v1_Base"},
                     ],
+                    scene_overridable=False,
                 ),
                 "nfe_step": AgentActionConfig(
                     type="number",
@@ -229,6 +231,7 @@ class F5TTSMixin:
                     step=16,
                     max=64,
                     description="Number of diffusion steps.",
+                    scene_overridable=False,
                 ),
                 "chunk_size": AgentActionConfig(
                     type="number",
@@ -238,12 +241,14 @@ class F5TTSMixin:
                     value=64,
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
+                    scene_overridable=False,
                 ),
                 "replace_exclamation_marks": AgentActionConfig(
                     type="bool",
                     value=True,
                     label="Replace exclamation marks",
                     description="Some models tend to over-emphasise exclamation marks, so this is a workaround to make the speech more natural.",
+                    scene_overridable=False,
                 ),
             },
         )

@@ -21,7 +21,7 @@
                                 @keydown.enter.meta="proceed"
                                 :placeholder="placeholder"
                                 :label="title"
-                                :rules="[rules.required]"
+                                :rules="combinedRules"
                                 :messages="`Press ${primaryModifierLabel}+Enter to submit`"
                             ></v-textarea>
                         </v-col>
@@ -35,7 +35,7 @@
                                 @keydown.enter.meta="proceed"
                                 :label="title"
                                 :placeholder="placeholder"
-                                :rules="[rules.required]"
+                                :rules="combinedRules"
                                 :messages="`Press ${primaryModifierLabel}+Enter to submit`"
                             ></v-text-field>
                         </v-col>
@@ -47,7 +47,7 @@
                     Cancel
                 </v-btn>
                 <v-spacer></v-spacer>
-                <v-btn @click="proceed" color="primary" prepend-icon="mdi-check-circle-outline">
+                <v-btn @click="proceed" color="primary" prepend-icon="mdi-check-circle-outline" :disabled="!valid">
                     Continue
                 </v-btn>
             </v-card-actions>
@@ -80,6 +80,19 @@ export default {
             type: String,
             default: 'text',
         },
+        // Extra Vuetify-style validation rules to apply on top of the
+        // built-in `required` check. Each rule is `(value) => true | string`,
+        // returning a message when invalid. The Continue button is disabled
+        // until every rule passes.
+        rules: {
+            type: Array,
+            default: () => [],
+        },
+    },
+    computed: {
+        combinedRules() {
+            return [this.builtInRules.required, ...this.rules];
+        },
     },
     data() {
         return {
@@ -88,7 +101,7 @@ export default {
             valid: false,
             extra_params: {},
             input: '',
-            rules: {
+            builtInRules: {
                 required: value => !!value || 'Required.',
             }
         }

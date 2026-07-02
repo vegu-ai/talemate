@@ -52,7 +52,7 @@ Elena: Hello there, traveler.
 
 5. What specific problems do the characters have to solve in the immediate future. The immediate future means within the next 30 minutes. This isn't about grand unspecified problems like "They need to survive" but instead should be specific tangible problems.
 
-6. Is TestChar aware of the current moment? This is IMPORTANT - It cannot affect their next action if they are not aware. You must be very explicit about this and either say Yes or No.
+6. Is TestChar aware of the current moment? This is IMPORTANT - It cannot affect their next action if they are not aware. You must be very explicit about this and either say yes or no and explain the reasoning for your answer.
 
 7. What narrative perspective and tense is the story written in? (e.g., "third person past tense", "first person present tense from Character X's perspective", etc.)
 

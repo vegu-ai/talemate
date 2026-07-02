@@ -158,6 +158,7 @@ class GoogleMixin:
                     type="unified_api_key",
                     value="google.api_key",
                     label="Google API Key",
+                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",
@@ -174,6 +175,7 @@ class GoogleMixin:
                     ],
                     label="Model",
                     description="Google TTS model to use",
+                    scene_overridable=False,
                 ),
                 "chunk_size": AgentActionConfig(
                     type="number",
@@ -183,6 +185,7 @@ class GoogleMixin:
                     value=0,
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
+                    scene_overridable=False,
                 ),
             },
         )

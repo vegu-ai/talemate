@@ -107,11 +107,11 @@
                 </v-tooltip>
 
                 <v-tooltip :disabled="appBusy || !appReady" location="top"
-                    :text="`Redo most recent AI message.\n[${primaryModifierLabel}: Provide instructions, +Alt: Rewrite]`"
+                    :text="regenTooltip(`Redo most recent AI message.\n[${primaryModifierLabel}: Provide instructions, +Alt: Rewrite]`)"
                     class="pre-wrap"
                     max-width="300px">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey" v-bind="props" :disabled="appBusy || !appReady"
+                        <v-btn class="hotkey" v-bind="props" :disabled="appBusy || !appReady || !canRegenerate"
                             @click="regenerate" color="primary" icon>
                             <v-icon>mdi-refresh</v-icon>
                         </v-btn>
@@ -119,11 +119,11 @@
                 </v-tooltip>
 
                 <v-tooltip :disabled="appBusy || !appReady" location="top"
-                    :text="`Redo most recent AI message (Nuke Option - use this to attempt to break out of repetition) \n[${primaryModifierLabel}: Provide instructions, +Alt: Rewrite]`"
+                    :text="regenTooltip(`Redo most recent AI message (Nuke Option - use this to attempt to break out of repetition) \n[${primaryModifierLabel}: Provide instructions, +Alt: Rewrite]`)"
                     class="pre-wrap"
                     max-width="300px">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey" v-bind="props" :disabled="appBusy || !appReady"
+                        <v-btn class="hotkey" v-bind="props" :disabled="appBusy || !appReady || !canRegenerate"
                             @click="regenerateNuke" color="primary" icon>
                             <v-icon>mdi-nuke</v-icon>
                         </v-btn>
@@ -257,6 +257,12 @@ export default {
         audioPlayedForMessageId: [Number, String],
     },
     computed: {
+        // Mirrors the button :disabled binding — the hotkey path bypasses the
+        // DOM disabled state, so the regenerate handlers must gate on this too.
+        canStartRegen() {
+            return this.appReady && this.canRegenerate;
+        },
+
         deactivatableCharacters() {
             // this.activeCharacters without playerCharacterName
             let characters = [];
@@ -294,6 +300,10 @@ export default {
             sceneHelp: "",
             sceneExperimental: false,
             canAutoSave: false,
+            // Backend-authoritative: whether the tail of scene history can
+            // be regenerated right now. Drives the regenerate buttons.
+            canRegenerate: false,
+            canRegenerateReason: null,
             npc_characters: [],
             scene_characters: [],
             agentMessages: {},
@@ -316,8 +326,11 @@ export default {
         'getTrackedWorldState',
         'getPlayerCharacterName',
         'formatWorldStateTemplateString',
-        'characterSheet',
         'openAppConfig',
+        // Provided by SceneMessages; flags the last regen-eligible
+        // message as `regenerating` so its pager spinner shows up
+        // before the in-place edit lands.
+        'requestRegenerateLastMessage',
     ],
     emits: [
         'open-world-state-manager',
@@ -359,6 +372,12 @@ export default {
             const { nuke_repetition, method } = this.pendingDirectedRegen;
             this.pendingDirectedRegen = null;
 
+            if (!this.canStartRegen) return;
+
+            // Nothing regenerable on the frontend either — also flags the
+            // target slot as `regenerating` for its pager spinner.
+            if (!this.requestRegenerateLastMessage()) return;
+
             this.setInputDisabled(true);
             this.getWebsocket().send(JSON.stringify({
                 type: 'assistant',
@@ -369,11 +388,19 @@ export default {
             }));
         },
 
+        // Tooltip text for the regenerate buttons.
+        regenTooltip(baseText) {
+            if (this.canRegenerate) return baseText;
+            return this.canRegenerateReason || 'Nothing to regenerate.';
+        },
+
         regenerate(event) {
             // primary modifier (Ctrl/Cmd) opens the directed regenerate dialog
             let withDirection = isPrimaryModifier(event);
             let method = event.altKey ? "edit" : "replace";
             const nuke_repetition = 0.0;
+
+            if (!this.canStartRegen) return;
 
             if (withDirection) {
                 this.pendingDirectedRegen = { nuke_repetition, method };
@@ -382,6 +409,8 @@ export default {
             }
 
             if (this.appBusy) return;
+
+            if (!this.requestRegenerateLastMessage()) return;
 
             this.setInputDisabled(true);
             this.getWebsocket().send(JSON.stringify({
@@ -397,6 +426,8 @@ export default {
             let method = event.altKey ? "edit" : "replace";
             const nuke_repetition = 0.5;
 
+            if (!this.canStartRegen) return;
+
             if (withDirection) {
                 this.pendingDirectedRegen = { nuke_repetition, method };
                 this.$refs.requestDirectedRegenerate?.openDialog({});
@@ -404,6 +435,8 @@ export default {
             }
 
             if (this.appBusy) return;
+
+            if (!this.requestRegenerateLastMessage()) return;
 
             this.setInputDisabled(true);
             this.getWebsocket().send(JSON.stringify({
@@ -442,6 +475,8 @@ export default {
                 }
             } else if (data.type === "scene_status") {
                 this.canAutoSave = data.data.can_auto_save;
+                this.canRegenerate = data.data.can_regenerate;
+                this.canRegenerateReason = data.data.can_regenerate_reason;
                 this.autoSave = data.data.auto_save;
                 this.autoProgress = data.data.auto_progress;
                 this.sceneHelp = data.data.help;

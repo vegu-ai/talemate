@@ -1,4 +1,5 @@
 {%- set _ = spec.set_spec("reasoning_pattern", ".*?final<\\|message\\|>") -%}
+{%- set _ = spec.set_spec("reasoning_validation_pattern", "<\\|channel\\|>analysis") -%}
 <|start|>system<|message|>{{ system_message }}
 
 Reasoning: {% if reasoning_tokens <= 1024 %}low{% elif reasoning_tokens <= 4096 %}medium{% else %}high{% endif %}

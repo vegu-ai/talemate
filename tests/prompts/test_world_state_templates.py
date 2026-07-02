@@ -11,6 +11,12 @@ from unittest.mock import AsyncMock, Mock
 
 import talemate.instance as instance
 from talemate.agents.world_state import WorldStateAgent
+from talemate.scene_message import (
+    CharacterMessage,
+    ContextInvestigationMessage,
+    NarratorMessage,
+    TimePassageMessage,
+)
 from talemate.world_state import ContextPin, Reinforcement
 from .helpers import create_scene_with_characters
 
@@ -30,6 +36,10 @@ def mock_scene():
     scene.pop_history = Mock()
     scene.load_active_pins = AsyncMock()
     scene.emit_status = Mock()
+
+    # Normally initialized by MemoryRAGMixin.connect(); the fixture sets the
+    # agent's scene directly without connecting, so seed it here.
+    scene.rag_cache = {}
 
     return scene
 
@@ -72,10 +82,27 @@ def mock_director_agent():
 
 
 @pytest.fixture
+def mock_editor_agent():
+    """Editor stub — disables fix_exposition so scene methods that touch the editor are no-ops."""
+    editor = Mock()
+    editor.fix_exposition_enabled = False
+    editor.fix_exposition_narrator = False
+    editor.fix_exposition_in_text = Mock(side_effect=lambda text: text)
+    return editor
+
+
+@pytest.fixture
 def world_state_agent(mock_llm_client, mock_scene):
-    """Create a WorldStateAgent instance with mocked dependencies."""
+    """Create a WorldStateAgent instance with mocked dependencies.
+
+    Long-term-memory recall is disabled by default so the snapshot template
+    tests/baselines capture structure without RAG noise (mirrors how the
+    conversation/narrator template tests stub ``rag_build`` to ``[]``). Tests
+    that exercise the recall path re-enable it explicitly.
+    """
     agent = WorldStateAgent(client=mock_llm_client)
     agent.scene = mock_scene
+    agent.actions["use_long_term_memory"].enabled = False
     return agent
 
 
@@ -86,6 +113,7 @@ def setup_agents(
     mock_creator_agent,
     mock_summarizer_agent,
     mock_director_agent,
+    mock_editor_agent,
 ):
     """Set up the agent registry with mocked agents."""
     # Save original AGENTS dict
@@ -96,6 +124,7 @@ def setup_agents(
     instance.AGENTS["creator"] = mock_creator_agent
     instance.AGENTS["summarizer"] = mock_summarizer_agent
     instance.AGENTS["director"] = mock_director_agent
+    instance.AGENTS["editor"] = mock_editor_agent
     # World state agent needs to be in registry for instruct_text template function
     instance.AGENTS["world_state"] = world_state_agent
 
@@ -404,28 +433,319 @@ class TestWorldStateAgentRequestMethods:
     """Tests for world_state agent request methods."""
 
     @pytest.mark.asyncio
-    async def test_request_world_state_calls_client(self, active_context):
+    async def test_request_world_state_calls_client(self, active_context, mock_scene):
         """Test that request_world_state calls the LLM client and parses JSON response."""
         agent = active_context
 
-        # Configure mock to return valid JSON world state
+        # Seed a narrative message so the focus collector has something to anchor to;
+        # without it the agent short-circuits and returns an empty response.
+        anchor = CharacterMessage(message="Hero: I stand ready.", source="Hero")
+        mock_scene.history = [anchor]
+
+        # Mock completes the response seeded by set_data_response
+        # (`\`\`\`json\n{ "characters": {`) so the strict parser succeeds on
+        # the first attempt and no JSON-fix retry fires.
         agent.client.send_prompt = AsyncMock(
-            return_value='{"characters": {"Hero": {"emotion": "determined", "snapshot": "Standing ready"}}, "items": {}}'
+            return_value=(
+                '"Hero": {"emotion": "determined", "snapshot": "Standing ready",'
+                ' "mentions": []}}, "items": {}, "places": {}, "location": "test"}'
+            )
         )
 
         response = await agent.request_world_state()
 
         # Verify response was parsed correctly (data_response=True parses JSON)
-        assert response is not None
-        assert isinstance(response, dict)
-        assert "characters" in response
-        assert "Hero" in response["characters"]
-        assert response["characters"]["Hero"]["emotion"] == "determined"
-        assert response["characters"]["Hero"]["snapshot"] == "Standing ready"
-        assert "items" in response
+        assert response.world_state is not None
+        assert isinstance(response.world_state, dict)
+        assert "characters" in response.world_state
+        assert "Hero" in response.world_state["characters"]
+        assert response.world_state["characters"]["Hero"]["emotion"] == "determined"
+        assert (
+            response.world_state["characters"]["Hero"]["snapshot"] == "Standing ready"
+        )
+        assert "items" in response.world_state
+        # Every focus message is a valid anchor; here that's the single
+        # seeded narrative message.
+        assert response.anchor_message_ids == [anchor.id]
 
         # Verify the client was called at least once (may be called more for JSON fixing)
         assert agent.client.send_prompt.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_request_world_state_no_focus_messages_short_circuits(
+        self, active_context, mock_scene
+    ):
+        """No anchor-worthy messages and no intro → return empty response without calling the LLM."""
+        agent = active_context
+        agent.client.send_prompt = AsyncMock()
+
+        # Empty history AND no intro: nothing to anchor highlights to and nothing
+        # to fall back on, so the LLM is never called.
+        mock_scene.history = []
+        mock_scene.intro = ""
+        response = await agent.request_world_state()
+        assert response.world_state is None
+        assert response.anchor_message_ids == []
+        agent.client.send_prompt.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_request_world_state_stops_at_time_passage(
+        self, active_context, mock_scene
+    ):
+        """TimePassageMessage at the tail is a hard scene-cut → silent short-circuit.
+
+        Intro must NOT be used as a fallback here — the scene has progressed
+        past it, so injecting the intro as the 'current moment' would describe
+        the wrong point in the story.
+        """
+        agent = active_context
+        agent.client.send_prompt = AsyncMock()
+
+        # Narrative followed by a time passage means the 'current moment' is on
+        # the far side of the cut, so the focus collector finds nothing. Intro
+        # is set explicitly here to verify the fallback does NOT fire when
+        # history exists — independent of whatever the fixture happens to default.
+        mock_scene.history = [
+            NarratorMessage(message="The hero rested by the fire."),
+            TimePassageMessage(message="Three days later", ts="P3D"),
+        ]
+        mock_scene.intro = "You step into the forest clearing."
+        response = await agent.request_world_state()
+        assert response.world_state is None
+        assert response.anchor_message_ids == []
+        agent.client.send_prompt.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_request_world_state_falls_back_to_intro(
+        self, active_context, mock_scene
+    ):
+        """Empty history but scene has an intro → use intro as the focus line."""
+        agent = active_context
+        # Mock returns a valid completion so the parser succeeds.
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"Hero": {"emotion": "curious", "snapshot": "Newly arrived",'
+                ' "mentions": ["the clearing"]}}, "items": {}, "places": {},'
+                ' "location": "forest clearing"}'
+            )
+        )
+
+        # No history yet — fresh scene. The intro is the only narrative surface
+        # and should be passed to the prompt instead of triggering a short-circuit.
+        mock_scene.history = []
+        mock_scene.intro = "You find yourself in a quiet forest clearing."
+
+        response = await agent.request_world_state()
+
+        assert response.world_state is not None
+        # Intro has no message id, so no anchors for inline highlights.
+        assert response.anchor_message_ids == []
+        # LLM was called and saw the intro text.
+        agent.client.send_prompt.assert_called_once()
+        prompt_text = str(agent.client.send_prompt.call_args[0][0])
+        assert "quiet forest clearing" in prompt_text
+
+
+class TestWorldStateSnapshotMemoryRecall:
+    """Snapshot generation pulls long-term-memory recall into the prompt when enabled."""
+
+    @pytest.mark.asyncio
+    async def test_memory_recall_injected_when_enabled(
+        self, active_context, mock_scene, mock_memory_agent
+    ):
+        agent = active_context
+        agent.actions["use_long_term_memory"].enabled = True
+        recalled = "The silver dagger was forged in the northern foundry."
+        mock_memory_agent.multi_query = AsyncMock(return_value=[recalled])
+
+        mock_scene.history = [
+            CharacterMessage(message="Hero: I draw the dagger.", source="Hero")
+        ]
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"Hero": {"emotion": "tense", "snapshot": "Blade drawn",'
+                ' "mentions": []}}, "items": {}, "places": {}, "location": "x"}'
+            )
+        )
+
+        await agent.request_world_state()
+
+        prompt_text = str(agent.client.send_prompt.call_args[0][0])
+        assert recalled in prompt_text
+        mock_memory_agent.multi_query.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_memory_recall_omitted_when_disabled(
+        self, active_context, mock_scene, mock_memory_agent
+    ):
+        agent = active_context  # LTM disabled by the fixture default
+        mock_memory_agent.multi_query = AsyncMock(return_value=["Should not appear."])
+
+        mock_scene.history = [
+            CharacterMessage(message="Hero: I draw the dagger.", source="Hero")
+        ]
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"Hero": {"emotion": "tense", "snapshot": "Blade drawn",'
+                ' "mentions": []}}, "items": {}, "places": {}, "location": "x"}'
+            )
+        )
+
+        await agent.request_world_state()
+
+        prompt_text = str(agent.client.send_prompt.call_args[0][0])
+        assert "Should not appear." not in prompt_text
+        mock_memory_agent.multi_query.assert_not_called()
+
+
+class TestWorldStateAgentFocusKnobs:
+    """Tests for the update_world_state focus_lines and
+    include_context_investigation knobs."""
+
+    @pytest.mark.asyncio
+    async def test_focus_lines_caps_walk_depth(self, active_context, mock_scene):
+        """Seeding more narrative messages than the knob allows should yield
+        exactly `focus_lines` anchor ids, taken from the tail."""
+        agent = active_context
+        agent.actions["update_world_state"].config["focus_lines"].value = 2
+
+        a = NarratorMessage(message="A: first beat")
+        b = NarratorMessage(message="B: second beat")
+        c = NarratorMessage(message="C: third beat")
+        mock_scene.history = [a, b, c]
+
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"X": {"emotion": "calm", "snapshot": "x", "mentions": []}},'
+                ' "items": {}, "places": {}, "location": "test"}'
+            )
+        )
+
+        response = await agent.request_world_state()
+        # Knob set to 2 → only the last two messages anchor highlights.
+        assert response.anchor_message_ids == [b.id, c.id]
+
+    @pytest.mark.asyncio
+    async def test_focus_lines_allows_single_line(self, active_context, mock_scene):
+        """focus_lines=1 should anchor on the tail message only, matching the
+        original singular-anchor behavior."""
+        agent = active_context
+        agent.actions["update_world_state"].config["focus_lines"].value = 1
+
+        a = NarratorMessage(message="A: first beat")
+        b = NarratorMessage(message="B: tail beat")
+        mock_scene.history = [a, b]
+
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"X": {"emotion": "calm", "snapshot": "x", "mentions": []}},'
+                ' "items": {}, "places": {}, "location": "test"}'
+            )
+        )
+
+        response = await agent.request_world_state()
+        assert response.anchor_message_ids == [b.id]
+
+    @pytest.mark.asyncio
+    async def test_context_investigation_excluded_by_default(
+        self, active_context, mock_scene
+    ):
+        """Default knob value (False) keeps context_investigation in the
+        ignore set, so a CI message at the tail is walked past."""
+        agent = active_context
+        # Default: include_context_investigation = False
+        agent.actions["update_world_state"].config["focus_lines"].value = 3
+
+        narrative = NarratorMessage(message="A: scene beat")
+        ci = ContextInvestigationMessage(
+            "examine result for The Map", sub_type="examine"
+        )
+        mock_scene.history = [narrative, ci]
+
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"X": {"emotion": "calm", "snapshot": "x", "mentions": []}},'
+                ' "items": {}, "places": {}, "location": "test"}'
+            )
+        )
+
+        response = await agent.request_world_state()
+        # CI message excluded; only the real narrative anchors.
+        assert response.anchor_message_ids == [narrative.id]
+
+    @pytest.mark.asyncio
+    async def test_context_investigation_included_when_knob_on(
+        self, active_context, mock_scene
+    ):
+        """Toggling include_context_investigation=True lets a CI message
+        become a focus candidate that can also anchor highlights."""
+        agent = active_context
+        agent.actions["update_world_state"].config["focus_lines"].value = 3
+        agent.actions["update_world_state"].config[
+            "include_context_investigation"
+        ].value = True
+
+        narrative = NarratorMessage(message="A: scene beat")
+        ci = ContextInvestigationMessage(
+            "examine result for The Map", sub_type="examine"
+        )
+        mock_scene.history = [narrative, ci]
+
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"X": {"emotion": "calm", "snapshot": "x", "mentions": []}},'
+                ' "items": {}, "places": {}, "location": "test"}'
+            )
+        )
+
+        response = await agent.request_world_state()
+        assert response.anchor_message_ids == [narrative.id, ci.id]
+
+
+class TestWorldStateAgentExamineMethods:
+    """Tests for world_state agent examine_entity."""
+
+    @pytest.mark.asyncio
+    async def test_examine_entity_calls_client_and_extracts(self, active_context):
+        agent = active_context
+        # AnchorExtractor on <EXAMINE>...</EXAMINE> + set_prepared_response("<EXAMINE>"):
+        # the mock completes the seeded prefix and closes with </EXAMINE>.
+        agent.client.send_prompt = AsyncMock(
+            return_value="A simple silver dagger, etched with the Ashen sigil.</EXAMINE>"
+        )
+
+        result = await agent.examine_entity(
+            entity_name="The Silver Dagger",
+            entity_kind="item",
+            snapshot_text="A worn silver dagger with an etched pommel sigil.",
+        )
+
+        assert "Ashen sigil" in result
+        prompt_text = str(agent.client.send_prompt.call_args[0][0])
+        assert "The Silver Dagger" in prompt_text
+        assert "snapshot" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_examine_entity_rejects_empty_snapshot(self, active_context):
+        agent = active_context
+        with pytest.raises(ValueError):
+            await agent.examine_entity(
+                entity_name="X", entity_kind="item", snapshot_text="   "
+            )
+
+    @pytest.mark.asyncio
+    async def test_examine_entity_uses_configured_length_in_kind(self, active_context):
+        agent = active_context
+        agent.actions["update_world_state"].config["examine_length"].value = 128
+        agent.client.send_prompt = AsyncMock(return_value="A short look.</EXAMINE>")
+
+        await agent.examine_entity(
+            entity_name="The Silver Dagger",
+            entity_kind="item",
+            snapshot_text="A worn silver dagger with an etched pommel sigil.",
+        )
+
+        assert agent.client.send_prompt.call_args.kwargs["kind"] == "create_128"
 
 
 class TestWorldStateAgentReinforcementMethods:

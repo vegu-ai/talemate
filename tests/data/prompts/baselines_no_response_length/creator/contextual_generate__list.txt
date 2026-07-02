@@ -35,6 +35,7 @@ Marcus: What brings you to these woods?
 Generate the list of 20 items. The list MUST BE plain text numbered list with one item per line.
 
 ### Editorial Instructions
+The following is user-provided instruction and/or seed material for this generation. It must be considered and reflected in your response:
 Generate inventory items
 
 <|BOT|>items:

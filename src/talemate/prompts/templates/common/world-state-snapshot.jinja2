@@ -1,0 +1,31 @@
+{# WORLD STATE SNAPSHOT -#}
+{% if agent_config("world_state.update_world_state.inject_as_scene_memory") -%}
+{% set ws = scene.world_state -%}
+{% set snapshot_body -%}
+{%- if ws.location %}Location: {{ ws.location|condensed }}
+{% endif -%}
+{%- if ws.characters.values()|selectattr("snapshot")|list %}
+### Characters
+{% for name, char in ws.characters.items() if char.snapshot %}- {{ name }}{% if char.emotion %} ({{ char.emotion }}){% endif %} — {{ char.snapshot|condensed }}
+{% endfor -%}
+{% endif -%}
+{%- if ws.items.values()|selectattr("snapshot")|list %}
+### Items
+{% for name, item in ws.items.items() if item.snapshot %}- {{ name }} — {{ item.snapshot|condensed }}
+{% endfor -%}
+{% endif -%}
+{%- if ws.places.values()|selectattr("snapshot")|list %}
+### Places
+{% for name, place in ws.places.items() if place.snapshot %}- {{ name }} — {{ place.snapshot|condensed }}
+{% endfor -%}
+{% endif -%}
+{%- endset -%}
+{%- if snapshot_body|trim %}
+<|SECTION:SCENE NOTES|>
+Supplementary, evolving notes on notable characters, objects, and places in the current scene and what is currently true of each. Use them as background reference to stay consistent and to draw on for relevant detail — they enrich the context but are not directives: do not recite them, and let the established narrative and the most recent messages take precedence where anything conflicts.
+
+{{ snapshot_body|trim }}
+<|CLOSE_SECTION|>
+{% endif -%}
+{% endif -%}
+{# END WORLD STATE SNAPSHOT -#}

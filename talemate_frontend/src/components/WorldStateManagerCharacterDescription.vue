@@ -12,18 +12,25 @@
         @generate="content => setAndUpdate(content)"
     />
 
-    <v-textarea ref="description" rows="5" auto-grow v-model="character.description"
-        :color="dirty ? 'dirty' : ''"
+    <div class="position-relative">
+        <v-textarea ref="description" rows="5" auto-grow v-model="character.description"
+            :color="dirty ? 'dirty' : ''"
 
-        :disabled="busy"
-        :loading="busy"
-        @keyup.ctrl.enter.stop="sendAutocompleteRequest"
+            :disabled="busy"
+            :loading="busy"
+            @keyup.ctrl.enter.stop="sendAutocompleteRequest"
 
-        @update:model-value="dirty = true"
-        @blur="update(true)"
-        label="Description"
-        :hint="'A short description of the character. '+autocompleteInfoMessage(busy)">
-    </v-textarea>
+            @update:model-value="dirty = true"
+            @blur="onBlurSave"
+            label="Description"
+            :hint="'A short description of the character. '+autocompleteInfoMessage(busy)">
+        </v-textarea>
+        <AutocompleteRedoChip
+            :applied="descriptionAutocompleteField?.state.applied || false"
+            :disabled="busy"
+            @redo="descriptionAutocompleteField.redo()"
+            @undo="descriptionAutocompleteField.undo()" />
+    </div>
 
     <SpiceAppliedNotification :uids="['wsm.character_description']"></SpiceAppliedNotification>
 
@@ -32,12 +39,15 @@
 
 import ContextualGenerate from './ContextualGenerate.vue';
 import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
+import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import { createAutocompleteField } from '@/utils/autocompleteField';
 
 export default {
     name: 'WorldStateManagerCharacterDescription',
     components: {
         ContextualGenerate,
         SpiceAppliedNotification,
+        AutocompleteRedoChip,
     },
     props: {
         immutableCharacter: Object,
@@ -61,8 +71,23 @@ export default {
             busy: false,
             updateTimeout: null,
             spiceApplied: false,
-            spiceAppliedDetail: null, 
+            spiceAppliedDetail: null,
+            descriptionAutocompleteField: null,
         }
+    },
+    created() {
+        this.descriptionAutocompleteField = createAutocompleteField({
+            autocompleteRequest: this.autocompleteRequest,
+            getValue: () => this.character?.description || '',
+            setValue: (v) => { if (this.character) this.character.description = v; },
+            buildParams: () => ({
+                partial: this.character.description,
+                context: `character detail:description`,
+                character: this.character.name,
+            }),
+            onStart: () => { this.busy = true; },
+            onEnd: () => { this.busy = false; },
+        });
     },
     watch: {
         immutableCharacter: {
@@ -74,7 +99,10 @@ export default {
                     this.character = { ...value };
                 }
             }
-        }
+        },
+        'character.description'() {
+            this.descriptionAutocompleteField?.onValueChange();
+        },
     },
     methods: {
         update(only_if_dirty = false) {
@@ -97,16 +125,14 @@ export default {
             this.update();
         },
 
+        onBlurSave() {
+            // Guard: blur during autocomplete would save the un-stripped {hint}.
+            if (this.busy) return;
+            this.update(true);
+        },
+
         sendAutocompleteRequest() {
-            this.busy = true;
-            this.autocompleteRequest({
-                partial: this.character.description,
-                context: `character detail:description`,
-                character: this.character.name
-            }, (completion) => {
-                this.character.description += completion;
-                this.busy = false;
-            }, this.$refs.description);
+            this.descriptionAutocompleteField.request(this.$refs.description);
         },
 
         handleMessage(message) {

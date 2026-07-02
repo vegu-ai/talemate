@@ -455,6 +455,7 @@ class OpenRouterMixin:
                 type="unified_api_key",
                 value="openrouter.api_key",
                 label="OpenRouter API Key",
+                scene_overridable=False,
             ),
             "model": AgentActionConfig(
                 type="autocomplete",
@@ -463,6 +464,7 @@ class OpenRouterMixin:
                 label="Model",
                 description="OpenRouter model (select appropriate model for the task)",
                 save_on_change=True,
+                scene_overridable=False,
             ),
             "provider_only": AgentActionConfig(
                 type="flags",
@@ -471,6 +473,7 @@ class OpenRouterMixin:
                 label="Only use these providers",
                 description="Manually limit the providers to use for the selected model. This will override the default provider selection for this model.",
                 save_on_change=True,
+                scene_overridable=False,
             ),
             "provider_ignore": AgentActionConfig(
                 type="flags",
@@ -479,6 +482,7 @@ class OpenRouterMixin:
                 label="Ignore these providers",
                 description="Ignore these providers for the selected model. This will override the default provider selection for this model.",
                 save_on_change=True,
+                scene_overridable=False,
             ),
         }
 
@@ -508,6 +512,7 @@ class OpenRouterMixin:
             label="Max References",
             description="Maximum number of reference images for editing (1-3)",
             save_on_change=True,
+            scene_overridable=False,
         )
 
         return config

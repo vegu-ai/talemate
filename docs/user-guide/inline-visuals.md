@@ -54,6 +54,36 @@ For more information on using the Director chat, see the [Director Chat document
 
 When using the autonomous scene direction feature, the Director can automatically generate images at appropriate moments during scene progression. These images appear in the scene feed just like manually generated ones.
 
+### Context Investigation Messages
+
+Context investigation messages are the short, descriptive results that appear in your scene feed when you take a closer look at something. They are produced by actions such as:
+
+- **Look at Scene** — a visually focused description of the current moment (from the scene tools narrator menu)
+- **Look at (Character)** — a description of a character's appearance and current action (from the scene tools narrator menu or the [World State](world-state.md) sidebar)
+- **Add Detail** — an expanded "closer look" at an entity (character, place, or item) you have selected in the scene
+
+When you hover over one of these messages, a **Visualize** action appears in the message toolbar. Clicking it generates an image directly into that message, matched to whatever the investigation was about.
+
+#### How the image is matched to the subject
+
+Talemate looks at what the investigation was about and chooses the most fitting image type automatically. You don't need to pick one yourself:
+
+| Investigation | Image generated |
+|---------------|-----------------|
+| Look at Scene | Scene illustration of the current moment |
+| Look at (Character) | Character card portrait of that character |
+| Add Detail on a character in the scene | Character card portrait of that character |
+| Add Detail on a character not in the scene | Scene illustration |
+| Add Detail on a place | Scene background |
+| Add Detail on an item | Object illustration |
+
+The text of the investigation message is used to guide the generated image, so the result reflects the specific details described in that message.
+
+!!! note "Query results are not visualizable"
+    A plain **Query** (asking the narrator a free-form question) does not show a Visualize action, because there is no single visual subject to match it to.
+
+Once an image has been generated, the **Visualize** action disappears for that message. From that point on you can regenerate, replace, or remove the image using the [inline visual actions](#viewing-and-managing) described below, just like any other attached image.
+
 ## Interacting with Inline Visuals
 
 Once an image appears in your scene feed, you can interact with it in several ways.

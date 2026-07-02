@@ -1,5 +1,5 @@
 <template>
-    <v-card elevation="7" style="max-width: 1600px;" class="mb-2" density="compact">
+    <v-card elevation="7" :style="{ maxWidth: MAX_CONTENT_WIDTH }" class="mb-2" density="compact">
         <v-card-title class="text-body-2 text-grey-lighten-3"><v-icon class="mr-2" size="small" icon="mdi-clock"></v-icon>{{ entry.time }}
             <span v-if="entry.id && hovered" class="text-caption text-grey-darken-1 ml-2">
                 {{ entry.id }}
@@ -107,6 +107,7 @@ class HistoryEntry(pydantic.BaseModel):
 
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 import ContextualGenerate from './ContextualGenerate.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
 
@@ -132,6 +133,7 @@ export default {
             insertAmount: 1,
             insertUnit: 'hours',
             insertUnits: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
+            MAX_CONTENT_WIDTH,
         }
     },
     inject:[

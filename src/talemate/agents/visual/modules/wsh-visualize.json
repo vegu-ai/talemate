@@ -356,7 +356,8 @@
           "CHARACTER_PORTRAIT",
           "SCENE_CARD",
           "SCENE_BACKGROUND",
-          "SCENE_ILLUSTRATION"
+          "SCENE_ILLUSTRATION",
+          "OBJECT_ILLUSTRATION"
         ]
       },
       "x": 687,
@@ -566,6 +567,50 @@
       "registry": "core/functions/Argument",
       "base_type": "core/Node"
     },
+    "b7e1a3c2-1f44-4d90-9a2e-7c6d5e0f1234": {
+      "title": "GET obj.message_ids",
+      "id": "b7e1a3c2-1f44-4d90-9a2e-7c6d5e0f1234",
+      "properties": {
+        "attribute": "message_ids"
+      },
+      "x": 397,
+      "y": 1700,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "c8f2b4d3-2a55-4e01-8b3f-1d2e6f7a2345": {
+      "title": "Empty List",
+      "id": "c8f2b4d3-2a55-4e01-8b3f-1d2e6f7a2345",
+      "properties": {
+        "item_type": "any",
+        "items": []
+      },
+      "x": 397,
+      "y": 1820,
+      "width": 210,
+      "height": 102,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/MakeList",
+      "base_type": "core/Node"
+    },
+    "d9a3c5e4-3b66-4f12-9c40-2e3f7a8b3456": {
+      "title": "Coallesce message_ids",
+      "id": "d9a3c5e4-3b66-4f12-9c40-2e3f7a8b3456",
+      "properties": {},
+      "x": 699,
+      "y": 1730,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
     "5527d9cb-6ffd-461e-bb08-0f915e06da18": {
       "title": "Make Asset Attachment Context",
       "id": "5527d9cb-6ffd-461e-bb08-0f915e06da18",
@@ -720,10 +765,20 @@
       "99b70359-6680-4941-94ec-bcde0ed99b9e.object",
       "23d60621-2b0a-444b-bba7-96ffddceffed.object",
       "d9cc2c5b-51e2-4296-83b6-b8c0027a1b5a.object",
-      "7dd0877a-67ca-4989-bab0-88b17764979d.object"
+      "7dd0877a-67ca-4989-bab0-88b17764979d.object",
+      "b7e1a3c2-1f44-4d90-9a2e-7c6d5e0f1234.object"
     ],
     "5527d9cb-6ffd-461e-bb08-0f915e06da18.context": [
       "d2bde569-e394-46b3-9d44-78791d423ce2.asset_ctx"
+    ],
+    "b7e1a3c2-1f44-4d90-9a2e-7c6d5e0f1234.value": [
+      "d9a3c5e4-3b66-4f12-9c40-2e3f7a8b3456.a"
+    ],
+    "c8f2b4d3-2a55-4e01-8b3f-1d2e6f7a2345.list": [
+      "d9a3c5e4-3b66-4f12-9c40-2e3f7a8b3456.b"
+    ],
+    "d9a3c5e4-3b66-4f12-9c40-2e3f7a8b3456.value": [
+      "5527d9cb-6ffd-461e-bb08-0f915e06da18.message_ids"
     ]
   },
   "groups": [

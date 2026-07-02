@@ -80,19 +80,19 @@ class PlanMixin:
 
     @property
     def plan_dialogue_ratio(self) -> float:
-        return float(self.actions["plan"].config["dialogue_ratio"].value)
+        return float(self.resolve_config("plan", "dialogue_ratio"))
 
     @property
     def plan_expand_chunk_size(self) -> int:
-        return int(self.actions["plan"].config["expand_chunk_size"].value)
+        return int(self.resolve_config("plan", "expand_chunk_size"))
 
     @property
     def plan_outline_critique(self) -> bool:
-        return bool(self.actions["plan"].config["outline_critique"].value)
+        return bool(self.resolve_config("plan", "outline_critique"))
 
     @property
     def plan_expand_critique(self) -> bool:
-        return bool(self.actions["plan"].config["expand_critique"].value)
+        return bool(self.resolve_config("plan", "expand_critique"))
 
     # === Expand pipeline methods ===
 

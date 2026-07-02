@@ -37,6 +37,9 @@ This will regenerate the most recent message, if it is an AI generated message.
     If you hold `ctrl+alt` when clicking this button you will be prompted to supply some instructions for the
     regeneration while keeping the original message as context. This is useful for rewrites.
 
+!!! info "Previous versions are kept"
+    Regenerating doesn't throw away the old message -- each result is added to the message's revision history, which you can browse with the paginator above the message. See [Message revision history](/talemate/user-guide/interacting#message-revision-history).
+
 #### :material-nuke: Regenerate AI Response (nuke option)
 
 This will regenerate the most recent message, if it is an AI generated message, but with a higher temperature and repetition penalties applied, which can lead to more creative responses. Use this to break out of repetitive loops.
@@ -194,7 +197,7 @@ Allows you to quickly set up tracked character and world states.
 
 !!! info "What is a tracked state?"
 
-    --8<-- "docs/talemate/user-guide/tracking-a-state.md:what-is-a-tracked-state"
+    --8<-- "docs/user-guide/tracking-a-state.md:what-is-a-tracked-state"
 
 Please refer to the [World State](/talemate/user-guide/world-state) section for more information on how set up custom states to track.
 <!--- --8<-- [start:quick-apply-favorite-state] -->
@@ -283,7 +286,7 @@ Write direction on how you want the character to enter the scene.
 
 ##### Templates
 
-Control attribute generation using your existing [World State Templates](/talemate/user-guide/world-editor/templates).
+Control attribute generation using your existing [World State Templates](/talemate/user-guide/templates).
 
 ![Select templates](/talemate/img/0.30.0/scene-tool-intro-char-templates.png)
 

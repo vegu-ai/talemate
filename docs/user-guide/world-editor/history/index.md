@@ -30,6 +30,8 @@ Static entries can be added by clicking the **:material-plus: Add Entry** button
 
 The text of the entry. Should be at most 1 - 2 paragraphs. Less is more. Anything that needs great detail should be a world entry instead.
 
+You can let the AI write the entry for you with the **:material-auto-fix: Generate** button. Hold `ctrl` (or `cmd` on macOS) while clicking to provide [instructions](/talemate/user-guide/world-editor/generation-settings/#generation-instructions). For history entries your instruction is treated as the *seed* for the entry: the AI writes the entry about the event or state you describe and expands it with consistent detail, rather than ignoring it.
+
 ##### Unit
 
 Defines the duration unit of the entry. So minutes, hours, days, weeks, months or years.
@@ -40,7 +42,7 @@ Defines the duration unit amount of the entry.
 
 So if you want to define something that happened 10 months ago (from the current moment in the scene), you would set the unit to months and the amount to 10.
 
-![Add Static Entry](/talemate/img/0.31.0/history-add-entry.png)
+![Add Static Entry](/talemate/img/0.38.0/history-add-entry.png)
 
 ## Time Passage Entries
 

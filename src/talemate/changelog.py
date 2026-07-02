@@ -73,12 +73,12 @@ File Layout:
 from typing import TYPE_CHECKING
 import json
 import os
+import re
 import structlog
 import deepdiff
 from datetime import datetime, timezone
 import shutil
 import glob
-# import re
 
 from talemate.save import SceneEncoder
 from talemate.path import SCENES_DIR
@@ -439,6 +439,58 @@ def _ensure_latest_initialized(scene: "Scene") -> None:
         _write_json(latest, base_data)
 
 
+_DELTA_PATH_TOKEN_RE = re.compile(r"\['([^']*)'\]|\[(-?\d+)\]")
+
+
+def _parse_delta_path(path: str) -> list[str | int]:
+    """Parse a deepdiff path like ``root['a'][3]['b']`` into ``['a', 3, 'b']``.
+
+    Returns an empty list for unrecognized formats so callers can short-circuit.
+    """
+    if not isinstance(path, str) or not path.startswith("root"):
+        return []
+    parts: list[str | int] = []
+    for m in _DELTA_PATH_TOKEN_RE.finditer(path[len("root") :]):
+        if m.group(1) is not None:
+            parts.append(m.group(1))
+        else:
+            parts.append(int(m.group(2)))
+    return parts
+
+
+def _path_parent_exists(data: dict, path: str) -> bool:
+    """Return True if the parent of ``path`` exists in ``data``."""
+    parts = _parse_delta_path(path)
+    if len(parts) <= 1:
+        return True
+    obj = data
+    for key in parts[:-1]:
+        if isinstance(obj, list):
+            if not isinstance(key, int) or key < 0 or key >= len(obj):
+                return False
+            obj = obj[key]
+        elif isinstance(obj, dict):
+            if key not in obj:
+                return False
+            obj = obj[key]
+        else:
+            return False
+    return True
+
+
+def _warn_on_orphan_delta_ops(prev: dict, delta_dict: dict) -> None:
+    """Log a warning when a delta op targets a path whose parent doesn't exist in ``prev``."""
+    for op_name in ("dictionary_item_added", "values_changed"):
+        ops = delta_dict.get(op_name) or {}
+        for path in ops:
+            if not _path_parent_exists(prev, path):
+                log.warning(
+                    "delta_op_targets_missing_parent",
+                    op=op_name,
+                    path=path,
+                )
+
+
 def _apply_delta(data: dict, delta_obj: dict) -> dict:
     """
     Apply a delta (set of changes) to scene data.
@@ -498,7 +550,9 @@ def _compute_delta(prev: dict, curr: dict) -> dict:
     if not diff:
         return {}
 
-    return diff._to_delta_dict()
+    delta_dict = diff._to_delta_dict()
+    _warn_on_orphan_delta_ops(prev, delta_dict)
+    return delta_dict
 
 
 def _serialize_scene_plain(scene: "Scene") -> dict:
@@ -617,6 +671,37 @@ def _get_overall_latest_revision(scene: "Scene") -> int:
     return latest_rev
 
 
+def _repair_history(data: dict) -> int:
+    """Backfill required SceneMessage fields on bare-fragment history entries.
+
+    Returns the number of entries repaired. Indices are not shifted.
+    """
+    history = data.get("history")
+    if not isinstance(history, list):
+        return 0
+
+    repaired_indices: list[int] = []
+    for i, entry in enumerate(history):
+        if not isinstance(entry, dict):
+            continue
+        if "message" in entry and "typ" in entry:
+            continue
+        entry.setdefault("message", "")
+        entry.setdefault("typ", "narrator")
+        entry.setdefault("source", "ai")
+        entry.setdefault("flags", 0)
+        repaired_indices.append(i)
+
+    if repaired_indices:
+        log.warning(
+            "repaired_bare_history_entries",
+            count=len(repaired_indices),
+            indices=repaired_indices,
+        )
+
+    return len(repaired_indices)
+
+
 async def reconstruct_cleanup(data: dict) -> dict:
     """
     Cleanup the reconstructed scene data.
@@ -629,6 +714,8 @@ async def reconstruct_cleanup(data: dict) -> dict:
             shared_context=data.get("shared_context"),
         )
         data["shared_context"] = ""
+
+    _repair_history(data)
     return data
 
 

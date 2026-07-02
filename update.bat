@@ -54,25 +54,26 @@ embedded_python\python.exe -m uv sync || CALL :die "uv dependency sync failed."
 
 echo Virtual environment updated!
 
-REM updating npm packages
-echo Updating npm packages...
+REM updating frontend packages
+REM pnpm is provisioned on demand via corepack (bundled with Node.js); the
+REM version is pinned by the "packageManager" field in package.json.
+SET "COREPACK_ENABLE_DOWNLOAD_PROMPT=0"
+echo Updating frontend packages...
 cd talemate_frontend
-call npm install || CALL :die "npm install failed."
+call corepack pnpm install --frozen-lockfile || CALL :die "pnpm install failed."
 
-echo NPM packages updated
+echo Frontend packages updated
 
 REM build the frontend
 echo Building frontend...
-call npm run build
+call corepack pnpm build
 IF ERRORLEVEL 1 (
     echo.
-    echo Frontend build failed - retrying with clean node_modules...
-    echo This can happen due to a known npm bug with optional dependencies.
+    echo Frontend build failed - retrying with a clean node_modules...
     echo.
     rmdir /s /q node_modules 2>nul
-    del package-lock.json 2>nul
-    call npm install || CALL :die "npm install failed on retry."
-    call npm run build || CALL :die "Frontend build failed on retry."
+    call corepack pnpm install --frozen-lockfile || CALL :die "pnpm install failed on retry."
+    call corepack pnpm build || CALL :die "Frontend build failed on retry."
 )
 
 cd ..

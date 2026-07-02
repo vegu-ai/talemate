@@ -1,5 +1,5 @@
 <template>
-  <v-dialog :model-value="dialog" persistent max-width="960" @update:model-value="onDialogUpdate">
+  <v-dialog :model-value="dialog" persistent scrollable max-width="960" @update:model-value="onDialogUpdate">
     <v-card class="pa-4 wizard-card">
       <v-btn
         class="wizard-close"
@@ -13,7 +13,7 @@
         Welcome to Talemate
       </v-card-title>
       
-      <v-window v-model="step">
+      <v-window v-model="step" class="wizard-window">
         <!-- Step 1: Choose Client Type -->
         <v-window-item :value="1">
           <v-card-text>
@@ -854,12 +854,22 @@ export default {
 <style scoped>
 .wizard-card {
   position: relative;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.wizard-window {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .wizard-close {
   position: absolute;
   top: 8px;
   right: 8px;
+  z-index: 3;
 }
 
 .wizard-option :deep(.v-card-title) {

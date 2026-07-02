@@ -301,7 +301,7 @@ class TestCreatePlan:
                 "meta": {"perspective": "Third person omniscient"},
             },
         )
-        assert scene.perspective == "Third person omniscient"
+        assert scene.perspectives.default == "Third person omniscient"
 
     @pytest.mark.asyncio
     async def test_links_plan_to_chat_context(self, scene):
@@ -457,7 +457,7 @@ class TestGetActivePlan:
         plan = Plan(instructions="x", tasks=[], meta={})
         save_plan(scene, plan)
         ctx = DirectorChatContext(chat_id="c1", plan_id=plan.id)
-        scene.perspective = "Custom scene perspective"
+        scene.perspectives.default = "Custom scene perspective"
 
         node = GetActivePlan()
         out = await _run_node(node, scene, inputs={"state": {}}, chat_ctx=ctx)
@@ -469,9 +469,7 @@ class TestGetActivePlan:
         save_plan(scene, plan)
         ctx = DirectorChatContext(chat_id="c1", plan_id=plan.id)
 
-        # ensure scene has no perspective
-        if hasattr(scene, "perspective"):
-            scene.perspective = ""
+        scene.perspectives.default = ""
 
         node = GetActivePlan()
         out = await _run_node(node, scene, inputs={"state": {}}, chat_ctx=ctx)

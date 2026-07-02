@@ -5,6 +5,7 @@
                 <PromptDetailView
                     ref="promptDetailView"
                     :prompt="prompt"
+                    :app-config="appConfig"
                     @navigate-to-template="handleNavigateToTemplate"
                 />
             </v-card-text>
@@ -24,6 +25,12 @@ export default {
     name: 'DebugToolPromptView',
     components: {
         PromptDetailView,
+    },
+    props: {
+        appConfig: {
+            type: Object,
+            default: () => ({}),
+        },
     },
     data() {
         return {

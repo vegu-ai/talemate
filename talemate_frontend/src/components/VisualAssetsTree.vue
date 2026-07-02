@@ -19,6 +19,8 @@
 </template>
 
 <script>
+import { VIS_TYPE } from '@/constants/visual';
+
 export default {
   name: 'VisualAssetsTree',
   props: {
@@ -35,8 +37,8 @@ export default {
       const groups = {};
       for (const [id, asset] of Object.entries(assets)) {
         const meta = (asset && asset.meta) || {};
-        const vis = meta.vis_type || 'UNSPECIFIED';
-        const groupKey = (vis && typeof vis === 'string') ? vis : 'UNSPECIFIED';
+        const vis = meta.vis_type || VIS_TYPE.UNSPECIFIED;
+        const groupKey = (vis && typeof vis === 'string') ? vis : VIS_TYPE.UNSPECIFIED;
         if (!groups[groupKey]) groups[groupKey] = {};
         if (groupKey.startsWith('CHARACTER_')) {
           const charName = meta.character_name || 'Unknown';

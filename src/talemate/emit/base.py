@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import dataclasses
 from typing import TYPE_CHECKING, Callable
 
+import pydantic
 import structlog
 
 from talemate.context import interaction
@@ -30,20 +30,21 @@ log = structlog.get_logger("talemate.emit.base")
 async_signals.register("user_interaction")
 
 
-@dataclasses.dataclass
-class Emission:
+class Emission(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
     typ: str
-    message: str = None
-    message_object: SceneMessage = None
-    character: Character = None
-    scene: Scene = None
-    status: str = None
-    id: str = None
-    details: str = None
-    data: dict = None
+    message: str | list | dict | None = None
+    message_object: SceneMessage | None = None
+    character: "Character | None" = None
+    scene: "Scene | None" = None
+    status: str | None = None
+    id: str | int | None = None
+    details: str | dict | None = None
+    data: dict | None = None
     websocket_passthrough: bool = False
-    meta: dict = dataclasses.field(default_factory=dict)
-    kwargs: dict = dataclasses.field(default_factory=dict)
+    meta: dict = pydantic.Field(default_factory=dict)
+    kwargs: dict = pydantic.Field(default_factory=dict)
 
 
 def emit(

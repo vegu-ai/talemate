@@ -11,6 +11,7 @@ from talemate.game.schema import ConditionGroup
 from talemate.export import ExportOptions, export
 from talemate.instance import get_agent
 from talemate.world_state.manager import WorldStateManager, Suggestion
+from talemate.scene.schema import ScenePerspectives
 from talemate.status import background_task, set_loading
 import talemate.game.focal as focal
 from talemate.config import save_config
@@ -173,7 +174,7 @@ class SceneOutlinePayload(pydantic.BaseModel):
     description: str | None = None
     intro: str | None = None
     context: str | None = None
-    perspective: str | None = None
+    perspectives: ScenePerspectives | None = None
 
 
 class SceneSettingsPayload(pydantic.BaseModel):
@@ -183,6 +184,11 @@ class SceneSettingsPayload(pydantic.BaseModel):
     agent_persona_templates: dict[str, str | None] | None = None
     visual_style_template: str | None = None
     restore_from: str | None = None
+    # Presence-aware via `model_fields_set` — see handler. None = opt out;
+    # string = link to that file; unset (caller omits the key) = leave the
+    # link alone.
+    agent_settings_file: str | None = None
+    agent_settings_opted_out: bool | None = None
 
 
 class SaveScenePayload(pydantic.BaseModel):
@@ -1102,7 +1108,13 @@ class WorldStateManagerPlugin(
     async def handle_update_scene_outline(self, data):
         payload = SceneOutlinePayload(**data)
 
-        await self.world_state_manager.update_scene_outline(**payload.model_dump())
+        await self.world_state_manager.update_scene_outline(
+            title=payload.title,
+            description=payload.description,
+            intro=payload.intro,
+            context=payload.context,
+            perspectives=payload.perspectives,
+        )
 
         self.websocket_handler.queue_put(
             {
@@ -1119,7 +1131,21 @@ class WorldStateManagerPlugin(
     async def handle_update_scene_settings(self, data):
         payload = SceneSettingsPayload(**data)
 
-        await self.world_state_manager.update_scene_settings(**payload.model_dump())
+        # `model_fields_set` distinguishes "caller omitted this field" from
+        # "caller explicitly sent None" — needed by the agent-settings link
+        # logic where None means opt-out and absent means "leave it alone".
+        kwargs = payload.model_dump()
+        if "agent_settings_file" not in payload.model_fields_set:
+            kwargs.pop("agent_settings_file", None)
+        if "agent_settings_opted_out" not in payload.model_fields_set:
+            kwargs.pop("agent_settings_opted_out", None)
+
+        try:
+            await self.world_state_manager.update_scene_settings(**kwargs)
+        except ValueError as exc:
+            log.warning("update_scene_settings rejected", error=str(exc))
+            await self.signal_operation_failed(str(exc))
+            return
 
         self.websocket_handler.queue_put(
             {

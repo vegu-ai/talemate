@@ -41,3 +41,7 @@ Handles TTS generation. Currently supports ElevenLabs and OpenAI backends.
 ### World State
 
 Keeps track of the current world state and reinforces specific character states.
+
+## Per-scene overrides
+
+Most agent settings are global and apply to every scene. You can also override selected settings for a single scene without changing your global configuration — see [Per-Scene Agent Overrides](/talemate/user-guide/agents/scene-overrides).

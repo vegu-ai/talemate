@@ -1,10 +1,47 @@
+from typing import Literal
+
 import pydantic
 
 from talemate.world_state import WorldState
 from talemate.game.state import GameState
 
 
-__all__ = ["SceneType", "ScenePhase", "SceneIntent", "SceneState"]
+__all__ = [
+    "SceneType",
+    "ScenePhase",
+    "SceneIntent",
+    "SceneState",
+    "ScenePerspectives",
+    "PerspectiveRole",
+]
+
+
+PerspectiveRole = Literal["default", "player", "other", "narrator"]
+
+
+class ScenePerspectives(pydantic.BaseModel):
+    """
+    Narrative perspective / tense configuration for a scene.
+
+    `default` is the scene-wide perspective shown in ambient prompt context.
+    The other three are speaker-specific overrides: when a prompt is generated
+    on behalf of the player character, an NPC, or the narrator, the matching
+    field is preferred over `default`. Empty overrides fall back to `default`.
+    """
+
+    default: str = ""
+    player: str = ""
+    other: str = ""
+    narrator: str = ""
+
+    def for_role(self, role: PerspectiveRole | str | None) -> str:
+        default = (self.default or "").strip()
+        if not role or role == "default":
+            return default
+        value = getattr(self, role, None)
+        if value and value.strip():
+            return value.strip()
+        return default
 
 
 def make_default_types() -> list["SceneType"]:

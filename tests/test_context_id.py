@@ -1050,7 +1050,7 @@ def mock_scene_story_config():
     scene.intro = "This is the story introduction."
     scene.intent_state.intent = "Overall story intention"
     scene.intent_state.instructions = "Director instructions for managing the scene"
-    scene.perspective = "Third person limited, past tense"
+    scene.perspectives.default = "Third person limited, past tense"
     return scene
 
 
@@ -1268,11 +1268,11 @@ async def test_scene_perspective_context_item_set(mock_scene_story_config):
 
     new_value = "First person, present tense"
     await item.set(mock_scene_story_config, new_value)
-    assert mock_scene_story_config.perspective == new_value
+    assert mock_scene_story_config.perspectives.default == new_value
 
     # Setting to None should result in empty string
     await item.set(mock_scene_story_config, None)
-    assert mock_scene_story_config.perspective == ""
+    assert mock_scene_story_config.perspectives.default == ""
 
 
 @pytest.mark.asyncio
@@ -1331,13 +1331,13 @@ async def test_scene_perspective_integration_flow(mock_scene_story_config):
 
     updated_value = await context_item.get(mock_scene_story_config)
     assert updated_value == new_value
-    assert mock_scene_story_config.perspective == new_value
+    assert mock_scene_story_config.perspectives.default == new_value
 
 
 @pytest.mark.asyncio
 async def test_scene_perspective_with_empty_value(mock_scene_story_config):
     """Test perspective context ID when perspective is empty."""
-    mock_scene_story_config.perspective = ""
+    mock_scene_story_config.perspectives.default = ""
 
     context_id_str = "story_configuration:perspective"
     context_item = await context_id_item_from_string(

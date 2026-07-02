@@ -70,7 +70,12 @@
                                             <v-col cols="12">
                                                 <v-checkbox color="primary" v-model="app_config.game.general.show_agent_activity_bar" label="Show agent activity bar" messages="Display active agent actions in a horizontal bar above scene controls"></v-checkbox>
                                             </v-col>
-                                        </v-row>        
+                                        </v-row>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-checkbox color="primary" v-model="app_config.game.general.release_gpu_cache_on_scene_load" label="Release GPU cache on scene load" messages="Hand idle GPU memory reserved by local CUDA embeddings/TTS back to the driver when switching scenes, so it doesn't pile up and eventually leave too little VRAM to load another scene. Disable only if you have VRAM to spare and would rather keep it reserved."></v-checkbox>
+                                            </v-col>
+                                        </v-row>
                                     </div>
                                     <div v-else-if="gamePageSelected === 'character'">
                                         <v-alert color="white" variant="text" icon="mdi-human-edit" density="compact">
@@ -328,6 +333,24 @@
                                         </v-row>
                                     </div>
 
+                                    <!-- HUGGINGFACE API -->
+                                    <div v-if="applicationPageSelected === 'huggingface_api'">
+                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
+                                            <v-alert-title>HuggingFace</v-alert-title>
+                                            <div class="text-grey">
+                                                <p class="mb-1">Access token used to download gated model weights (e.g. for Pocket TTS voice cloning).</p>
+                                                Create a token at <a href="https://huggingface.co/settings/tokens" target="_blank">https://huggingface.co/settings/tokens</a>. A read token is sufficient.
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-text-field type="password" v-model="app_config.huggingface.api_key"
+                                                    label="HuggingFace Token"></v-text-field>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
+
 
                                 </v-col>
                             </v-row>
@@ -367,11 +390,10 @@
                                 </v-col>
                                 <v-col cols="8">
                                     <div v-if="creatorPageSelected === 'content_context'">
-                                        <!-- Content for Content context will go here -->
                                         <v-alert color="white" variant="text" icon="mdi-cube-scan" density="compact">
-                                            <v-alert-title>Content context</v-alert-title>
+                                            <v-alert-title>Content Classification</v-alert-title>
                                             <div class="text-grey">
-                                                Available content-context choices when generating characters or scenarios. This can strongly influence the content that is generated.
+                                                Available content classification choices when generating characters or scenarios. This can strongly influence the content that is generated.
                                             </div>
                                         </v-alert>
                                         <v-divider class="mb-2"></v-divider>
@@ -383,12 +405,31 @@
                                                     </v-list-item>
                                                 </v-list>
                                                 <v-divider></v-divider>
-                                                <v-text-field v-model="content_context_input" label="Add content context (Press enter to add)"
+                                                <v-text-field v-model="content_context_input" label="Add content classification (Press enter to add)"
                                                     @keyup.enter="app_config.creator.content_context.push(content_context_input); content_context_input = ''"></v-text-field>
                                             </v-col>
                                         </v-row>
-
-                                        
+                                    </div>
+                                    <div v-if="creatorPageSelected === 'perspective_presets'">
+                                        <v-alert color="white" variant="text" icon="mdi-eye-outline" density="compact">
+                                            <v-alert-title>Perspective Presets</v-alert-title>
+                                            <div class="text-grey">
+                                                Reusable narrative perspective / tense strings offered in the scene outline. Use <code>{player_name}</code> as a placeholder for the player character — it will be substituted at prompt render time.
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-list density="compact">
+                                                    <v-list-item v-for="(value, index) in app_config.creator.perspective_presets" :key="index">
+                                                        <v-list-item-title><v-icon color="red-darken-1" class="mr-2" @click="perspectivePresetRemove(index)">mdi-close-box-outline</v-icon>{{ value }}</v-list-item-title>
+                                                    </v-list-item>
+                                                </v-list>
+                                                <v-divider></v-divider>
+                                                <v-text-field v-model="perspective_preset_input" label="Add perspective preset (Press enter to add)"
+                                                    @keyup.enter="perspectivePresetAdd()"></v-text-field>
+                                            </v-col>
+                                        </v-row>
                                     </div>
                                 </v-col>
                             </v-row>
@@ -438,6 +479,7 @@ export default {
             dialog: false,
             app_config: null,
             content_context_input: '',
+            perspective_preset_input: '',
             navigation: {
                 game: [
                     {title: 'General', icon: 'mdi-cog', value: 'general'},
@@ -453,12 +495,14 @@ export default {
                     {title: 'ElevenLabs', icon: 'mdi-api', value: 'elevenlabs_api'},
                     {title: 'Google', icon: 'mdi-api', value: 'google_api'},
                     {title: 'groq', icon: 'mdi-api', value: 'groq_api'},
+                    {title: 'HuggingFace', icon: 'mdi-api', value: 'huggingface_api'},
                     {title: 'mistral.ai', icon: 'mdi-api', value: 'mistralai_api'},
                     {title: 'OpenAI', icon: 'mdi-api', value: 'openai_api'},
                     {title: 'OpenRouter', icon: 'mdi-api', value: 'openrouter_api'},
                 ],
                 creator: [
-                    {title: 'Content Context', icon: 'mdi-cube-scan', value: 'content_context'},
+                    {title: 'Content Classification', icon: 'mdi-cube-scan', value: 'content_context'},
+                    {title: 'Perspective Presets', icon: 'mdi-eye-outline', value: 'perspective_presets'},
                 ]
             },
             gamePageSelected: 'general',
@@ -550,6 +594,20 @@ export default {
 
         contentContextRemove(index) {
             this.app_config.creator.content_context.splice(index, 1);
+        },
+
+        perspectivePresetRemove(index) {
+            this.app_config.creator.perspective_presets.splice(index, 1);
+        },
+
+        perspectivePresetAdd() {
+            const value = (this.perspective_preset_input || '').trim();
+            if (!value) return;
+            if (!Array.isArray(this.app_config.creator.perspective_presets)) {
+                this.app_config.creator.perspective_presets = [];
+            }
+            this.app_config.creator.perspective_presets.push(value);
+            this.perspective_preset_input = '';
         },
 
         handleMessage(message) {

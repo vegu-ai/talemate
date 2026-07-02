@@ -3,9 +3,9 @@
 1. Download the latest Talemate release ZIP from the [Releases page](https://github.com/vegu-ai/talemate/releases) and extract it anywhere on your system (for example, `C:\Talemate`).
 2. Double-click **`start.bat`**.
    - On the very first run Talemate will automatically:
-     1. Download a portable build of Python 3 and Node.js (no global installs required).
+     1. Download a portable build of Python 3 and Node.js 22 (no global installs required).
      2. Create and configure a Python virtual environment.
-     3. Install all back-end and front-end dependencies with the included *uv* and *npm*.
+     3. Install all back-end and front-end dependencies with the included *uv* and *pnpm*.
      4. Build the web client.
 3. When the console window prints **"Talemate is now running"** and the logo appears, open your browser at **http://localhost:8082**.
 
@@ -21,4 +21,4 @@
 | **`install-cuda.bat`** | Installs the CUDA-enabled Torch build (run after the regular install). |
 | **`update.bat`** | Pulls the latest changes from GitHub, updates dependencies, rebuilds the web client. |
 
-No system-wide Python or Node.js is required – Talemate uses the embedded runtimes it downloads automatically.
+No system-wide Python or Node.js is required – Talemate uses the embedded runtimes it downloads automatically. The bundled Node.js is version 22, which is required by the frontend's package manager (pnpm).

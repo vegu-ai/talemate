@@ -15,14 +15,23 @@ uv pip install -e ".[dev]"
 
 echo "Virtual environment updated!"
 
-# Update npm packages
-echo "Updating npm packages..."
+# Update frontend packages
+echo "Updating frontend packages..."
+
+# use the portable Node.js provisioned by install.sh (falls back to system Node)
+source install-utils/node-env.sh
+activate_embedded_node
+
 cd talemate_frontend
-npm install
+
+# pnpm is provisioned on demand via corepack (bundled with Node.js); the
+# version is pinned by the "packageManager" field in package.json.
+export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+corepack pnpm install --frozen-lockfile
 
 # Build frontend
 echo "Building frontend..."
-npm run build
+corepack pnpm build
 
 cd ..
 

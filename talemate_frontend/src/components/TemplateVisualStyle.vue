@@ -107,6 +107,8 @@
 </template>
 
 <script>
+import { VIS_TYPE } from '@/constants/visual';
+
 export default {
     name: 'TemplateVisualStyle',
     props: {
@@ -132,11 +134,11 @@ export default {
             dirty: false,
             visualTypeOptions: [
                 { title: 'Style', value: 'STYLE' },
-                { title: 'Character Card', value: 'CHARACTER_CARD' },
-                { title: 'Character Portrait', value: 'CHARACTER_PORTRAIT' },
-                { title: 'Scene Card', value: 'SCENE_CARD' },
-                { title: 'Scene Background', value: 'SCENE_BACKGROUND' },
-                { title: 'Scene Illustration', value: 'SCENE_ILLUSTRATION' },
+                { title: 'Character Card', value: VIS_TYPE.CHARACTER_CARD },
+                { title: 'Character Portrait', value: VIS_TYPE.CHARACTER_PORTRAIT },
+                { title: 'Scene Card', value: VIS_TYPE.SCENE_CARD },
+                { title: 'Scene Background', value: VIS_TYPE.SCENE_BACKGROUND },
+                { title: 'Scene Illustration', value: VIS_TYPE.SCENE_ILLUSTRATION },
             ],
         }
     },

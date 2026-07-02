@@ -13,8 +13,10 @@
             
             <div v-if="expanded === true">
                 <v-list-item v-for="entry in log" :key="entry.entryId" @click="inspectNode = entry; inspect = true;">
-                    <v-list-item-title :class="'text-' + entry.color">
-                        {{ entry.title }} <span class="text-caption text-muted">{{ entry.nodeId.slice(0,4) }}</span></v-list-item-title>
+                    <v-list-item-title :class="'d-flex justify-space-between align-center text-' + entry.color">
+                        <span>{{ entry.title }} <span class="text-caption text-muted">{{ entry.nodeId.slice(0,4) }}</span></span>
+                        <span class="text-caption text-muted">{{ formatTime(entry.startTime) }}</span>
+                    </v-list-item-title>
                     <v-list-item-subtitle>{{ entry.value }}</v-list-item-subtitle>
                 </v-list-item>
             </div>
@@ -62,14 +64,23 @@ export default {
     width: function() {
       return this.$refs.container.$el.offsetWidth;
     },
+    formatTime(unixSeconds) {
+        if (unixSeconds == null || Number.isNaN(unixSeconds)) return '';
+        const date = new Date(unixSeconds * 1000);
+        const hh = String(date.getHours()).padStart(2, '0');
+        const mm = String(date.getMinutes()).padStart(2, '0');
+        const ss = String(date.getSeconds()).padStart(2, '0');
+        const ms = String(date.getMilliseconds()).padStart(3, '0');
+        return `${hh}:${mm}:${ss}.${ms}`;
+    },
     addMockEntries(num = 50) {
         for (let i = 0; i < num; i++) {
             this.log.unshift({
                 entryId: this.entryIdCounter++,
-                title: "Node " + i, 
-                nodeId: "node" + i, 
-                value: Math.random(), 
-                timestamp: new Date(), 
+                title: "Node " + i,
+                nodeId: "node" + i,
+                value: Math.random(),
+                startTime: Date.now() / 1000,
                 nodeType: "mock"
             });
         }
@@ -106,8 +117,8 @@ export default {
         this.log.unshift({
             entryId: this.entryIdCounter++,
             title: node.title,
-            nodeId: node.talemateId, 
-            value: value, 
+            nodeId: node.talemateId,
+            value: value,
             startTime: state.start_time,
             endTime: state.end_time,
             runTime: (state.end_time ? state.end_time - state.start_time : null),

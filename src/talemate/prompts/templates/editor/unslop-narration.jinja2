@@ -1,0 +1,258 @@
+{#-
+Extractors:
+  - fix: AnchorExtractor("<FIX>", "</FIX>")
+
+Override example:
+  {{ set_anchor_extractor("fix", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("fix") }}
+-#}
+{# Detect whether the REVIEW already contains dialogue. The narration unslop
+   pass must NEVER introduce dialogue into a passage that didn't have any —
+   that is a recurring failure mode of the generic unslop template. When
+   dialogue IS already present we still want to teach the model to clean
+   the surrounding prose while leaving the dialogue intact, so we surface
+   one extra example only in that case. #}
+{% set has_dialogue = ('"' in text) or ('“' in text) or ('”' in text) %}
+## Examples
+
+<REVIEW>
+The ancient forest brooded with the weight of a thousand forgotten centuries, its emerald canopy weaving an impenetrable tapestry against the cerulean firmament above. Gnarled roots clawed at the loamy earth like the fingers of some primordial beast, while shafts of golden sunlight pierced the verdant gloom in ethereal cathedral-light columns. A symphony of unseen creatures harmonized in the distance, their melodic voices echoing through the labyrinthine arboreal expanse.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This is atmospheric narration drowning in metaphor. Every concrete detail is wrapped in a flowery comparison. The forest, the canopy, the roots, the light, the animals — each gets multiple ornamental phrases when one clear observation would carry it. Strip the poetry, keep the scene. There is no dialogue in the REVIEW, so the FIX must not invent any.
+- Purple prose: SEVERE - "brooded with the weight," "impenetrable tapestry," "primordial beast," "cathedral-light columns," "labyrinthine arboreal expanse"
+- Over-description: YES - every element gets multiple metaphors
+- Empty metaphor: YES - "fingers of some primordial beast" adds no visual information
+- Dialogue: NONE present - do not introduce any
+- Tense: PAST
+- Mature content: N/A
+- Length: TOO LONG
+</ANALYSIS>
+
+<FIX>
+The forest was old. Roots twisted through the loamy earth, and shafts of sunlight cut down through the canopy in narrow columns. Somewhere in the distance, unseen animals called to each other.
+</FIX>
+
+---
+
+<REVIEW>
+Sarah's leather boots, scuffed from years of wear and measuring precisely eight inches in height, made contact with the rain-slicked cobblestones of the alleyway. She moved at a pace of approximately 3.2 miles per hour, her breath visible in the cold November air at a temperature of exactly 41 degrees Fahrenheit. Her left hand, gloved in black wool, rose to brush a strand of auburn hair from her hazel eyes — eyes that had seen too much for someone of her relatively young age of twenty-eight.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This reads like a forensic report. The boot height, the walking speed, the exact temperature, the glove material — none of these matter to the scene. The interesting beat ("eyes that had seen too much for twenty-eight") is buried under measurements. Keep the atmosphere and the character note; cut the spec sheet.
+- Purple prose: MINOR
+- Over-description: SEVERE - measurements, pace, exact temperature, clothing material
+- Empty metaphor: NO
+- Dialogue: NONE present - do not introduce any
+- Tense: PAST
+- Mature content: N/A
+- Length: TOO LONG
+</ANALYSIS>
+
+<FIX>
+Sarah's boots scuffed the rain-slicked cobblestones as she moved down the alley. Her breath fogged in the cold November air. She brushed a strand of hair from her eyes — eyes that had seen too much for twenty-eight.
+</FIX>
+
+{% if has_dialogue -%}
+---
+
+<REVIEW>
+The fire crackled with the somnolent rhythm of a thousand whispered secrets as Marcus stared into its hypnotic depths, his weathered features bathed in the amber luminescence of dancing flames. The cabin around them creaked and settled with the comfortable weight of decades, every shadow a memory.
+"We should leave at first light," he said quietly, his voice like gravel on velvet.
+Sarah nodded but did not respond, her gaze fixed upon the same ethereal blaze.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: The narration around the dialogue is overwrought — "somnolent rhythm," "hypnotic depths," "gravel on velvet" — but the dialogue itself is fine. Clean the prose surrounding the line, leave the spoken words exactly as they are. Do not rewrite, expand, or trim the dialogue. Do not add new dialogue.
+- Purple prose: SEVERE - "somnolent rhythm of a thousand whispered secrets," "hypnotic depths," "amber luminescence of dancing flames," "ethereal blaze"
+- Over-description: YES - dialogue tag "his voice like gravel on velvet" is decoration
+- Dialogue: PRESENT - preserve "We should leave at first light" verbatim; only clean surrounding narration
+- Tense: PAST
+- Mature content: N/A
+- Length: TOO LONG
+</ANALYSIS>
+
+<FIX>
+The fire crackled as Marcus stared into it, his face lit by the flames. The cabin creaked and settled around them.
+"We should leave at first light," he said quietly.
+Sarah nodded but did not respond, her gaze fixed on the fire.
+</FIX>
+
+{% endif -%}
+---
+
+<REVIEW>
+Rain tapped against the kitchen window. Marcus poured coffee into a chipped mug, the steam curling up into the cool morning air. Outside, a dog barked somewhere down the street.
+</REVIEW>
+
+<ANALYSIS>
+- Thought process: This is clean, grounded narration. Concrete details, no purple prose, no empty metaphors. The dog bark adds atmosphere without overreaching. Nothing to fix.
+- Purple prose: NONE
+- Over-description: NO
+- Empty metaphor: NO
+- Dialogue: NONE present - do not introduce any
+- Tense: PAST
+- Length: OK
+
+I have identified no issues, i will mark with: <NO_FIX_REQUIRED/>
+</ANALYSIS>
+
+<NO_FIX_REQUIRED/>
+
+{% if repetition %}---
+
+{% if repetition_handling == "rewrite" %}
+<REVIEW>
+Snow drifted across the courtyard, soft and steady, settling on the cracked flagstones and the iron benches. The lamps along the cloister glowed dim through the white.
+A figure crossed the far side, hood drawn, footprints filling almost as fast as they formed. The snow kept coming down, soft and steady, blanketing everything in the same pale hush.
+</REVIEW>
+
+<REPETITION ISSUES>
+- MATCH: `The snow kept coming down, soft and steady, blanketing everything in the same pale hush.`
+</REPETITION ISSUES>
+
+<ANALYSIS>
+- Thought process: The flagged closer repeats the opening idea — "snow drifted across the courtyard, soft and steady" was already the first beat, and the closer restates it with synonyms. The scene needs a different observable detail at that moment, not another note about how soft and steady the snow is. Replace with something the figure or the courtyard does at that point that hasn't been on the page yet.
+- Purple prose: NO
+- Over-description: NO
+- Empty metaphor: NO
+- Dialogue: NONE present - do not introduce any
+- Tense: PAST
+- Repetition: YES - flagged tail semantically echoes the opening; replaced with a new observable detail
+</ANALYSIS>
+
+<FIX>
+Snow drifted across the courtyard, soft and steady, settling on the cracked flagstones and the iron benches. The lamps along the cloister glowed dim through the white.
+A figure crossed the far side, hood drawn, footprints filling almost as fast as they formed. A bell tolled once from the chapel tower, muffled and far off.
+</FIX>
+{% else %}
+<REVIEW>
+Snow drifted across the courtyard, soft and steady, settling on the cracked flagstones and the iron benches. The lamps along the cloister glowed dim through the white.
+A figure crossed the far side, hood drawn, footprints filling almost as fast as they formed. The snow kept coming down, soft and steady, blanketing everything in the same pale hush.
+</REVIEW>
+
+<REPETITION ISSUES>
+- MATCH: `The snow kept coming down, soft and steady, blanketing everything in the same pale hush.`
+</REPETITION ISSUES>
+
+<ANALYSIS>
+- Thought process: The flagged closer semantically restates the opening. Removing it lets the figure's crossing land as the final beat without trampling on it. No substitute needed — the surrounding text already carries the scene.
+- Purple prose: NO
+- Over-description: NO
+- Empty metaphor: NO
+- Dialogue: NONE present - do not introduce any
+- Tense: PAST
+- Repetition: YES - flagged sentence deleted, not rewritten
+</ANALYSIS>
+
+<FIX>
+Snow drifted across the courtyard, soft and steady, settling on the cracked flagstones and the iron benches. The lamps along the cloister glowed dim through the white.
+A figure crossed the far side, hood drawn, footprints filling almost as fast as they formed.
+</FIX>
+{% endif %}
+
+{% endif -%}
+---
+
+{# SCENE CONTEXT #}
+{% set scene_context_text %}
+{% set history = scene.context_history(
+    budget=1024,
+    min_dialogue=20,
+    sections=False)
+%}
+<|SECTION:SCENE|>
+{% for scene_context in history -%}
+{{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endset %}
+{# END SCENE CONTEXT #}
+
+{# SCENE ANALYSIS #}
+{% set scene_analysis_text %}
+{% if scene_analysis %}
+<|SECTION:SCENE ANALYSIS|>
+{{ scene_analysis }}
+<|CLOSE_SECTION|>
+{% endif %}
+{% endset %}
+{# END SCENE ANALYSIS #}
+
+{{ scene_context_text }}
+
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
+
+{{ scene_analysis_text }}
+
+{% with exclude_phase_intent=True %}{% include "scene-intent.jinja2" %}{% endwith %}
+
+{% include "content-classification.jinja2" %}
+
+{% include "writing-style-instructions.jinja2" %}
+
+{% include "dynamic-instructions.jinja2" %}
+<|SECTION:TASK|>
+Fix bad AI narration by making it simpler, clearer, and more grounded. The REVIEW is a passage of narration — exposition, environment, observed action, atmosphere. It may or may not contain a small amount of dialogue.
+
+**Rules:**
+{{ li() }}. REDUCE purple prose - Replace flowery language and ornamental metaphors with simple, concrete words
+{{ li() }}. PRESERVE KEY DETAILS - Keep ALL concrete facts that matter to the scene:
+   - Plot-relevant information (who, what, when, where, why)
+   - Sensory details that build the visual picture (light, sound, smell, texture)
+   - Unique objects, settings, weather, or staging that anchor the scene
+   - Any detail that would change the meaning or atmosphere if removed
+   Only cut pure embellishment that adds no information
+{{ li() }}. CUT excessive description - Remove unnecessary measurements, exact figures, redundant adjectives, and over-explanation
+{{ li() }}. BE CONCISE - Remove only redundant or purple prose. Length reduction is a side effect, not the goal
+{{ li() }}. MATCH THE ORIGINAL TENSE - If the REVIEW passage is in present tense, keep the FIX in present tense. If it's in past tense, keep it in past tense. Only change tense when the original is inconsistent and you're clearly standardising it.
+{{ li() }}. PRESERVE mature content - Keep violence, swear words, dark themes, and raw language exactly as written
+{{ li() }}. AVOID EMPTY METAPHORS - Comparisons must add specific visual information. Do not describe something as "like" or "as if" unless the comparison communicates something concrete that plain language cannot. "Roots like the fingers of some primordial beast" is decoration; "twisted roots breaking through the loamy earth" is observation.
+{{ li() }}. DO NOT INTRODUCE DIALOGUE - This is the most important rule for narration unslop. If the REVIEW contains no dialogue, the FIX MUST contain no dialogue. Do not invent spoken lines, do not turn narration into "she said" beats, do not add quoted thoughts. If the REVIEW does contain dialogue, preserve the spoken lines verbatim and only clean the prose around them — never rewrite, expand, or add to the dialogue itself.
+{{ li() }}. SHOW don't tell - Prefer observable detail over stated emotion. "He was anxious" → describe what anxious looks like in this moment (a glance, a fidget, a held breath). Do not over-narrate internal states.
+{%- if repetition %}
+{{ li() }}. {% if repetition_handling == "rewrite" %}REWRITE REPETITION - Sentences listed in <REPETITION> have been flagged as repeating earlier content. Repetition here is detected by similarity threshold - it may be verbatim, but it also includes semantic repetition (the same beat, observation, or atmospheric note expressed in different words). Trust the flag: if a sentence appears in <REPETITION>, treat it as repetition regardless of how different the wording looks. Rewrite each flagged sentence with genuinely different content - substitute a different observable detail that advances the scene without re-conveying what was already on the page. Because the match is SEMANTIC, simply rephrasing the same idea in different words is NOT enough; the underlying meaning must change. Drop a flagged sentence outright only as a fallback when no meaningful rewrite is possible.{% else %}REMOVE REPETITION - Sentences listed in <REPETITION> have been flagged as repeating earlier content. Repetition here is detected by similarity threshold - it may be verbatim, but it also includes semantic repetition (the same beat, observation, or atmospheric note expressed in different words). Trust the flag: if a sentence appears in <REPETITION>, treat it as repetition regardless of how different the wording looks. Delete the flagged sentences entirely from the FIX. Do NOT rewrite, paraphrase, or substitute new content in their place - just remove them and let the surrounding text flow on without them.{% endif %}
+{%- endif %}
+{% if bad_prose %}
+{{ li() }}. REMOVE UNWANTED PROSE - Address the unwanted prose issues. These phrases have been identified by the director as bad, and MUST be changed accordingly.
+{% endif %}
+
+**Common narration fixes:**
+- "Brooded with the weight of a thousand forgotten centuries" → "was old"
+- "Cerulean firmament" → "sky"
+- "Bathed in amber luminescence" → "lit by the fire" / "lit by the lamp"
+- "Symphony of unseen creatures" → "unseen animals calling"
+- "Eyes that had seen too much for someone of her relatively young age of twenty-eight" → "eyes that had seen too much for twenty-eight"
+- "At a temperature of exactly 41 degrees Fahrenheit" → [cut entirely, or "in the cold air"]
+- "Like the fingers of some primordial beast" → [cut the comparison, describe the roots plainly]
+
+**What to keep vs cut:**
+KEEP: Concrete sensory details (specific light, weather, sound, texture), staging that orients the reader, unique objects or features, atmospheric notes that genuinely build the picture
+CUT: Ornamental metaphors, exact measurements, repeated adjectives ("ancient," "primordial," "ethereal"), forensic detail, abstract mood-as-noun phrases ("the weight of," "the soul of")
+
+Use the examples for a deeper understanding of the task and provide your analysis and fix, with the fix being the final output.
+
+Any changes you propose MUST respect the vision and intention of the story.
+
+If there are no changes needed use a <NO_FIX_REQUIRED/> tag.
+
+If there are changes needed, provide the fix in the <FIX>...</FIX> block.
+
+<REVIEW>{{ text }}</REVIEW>
+{% if repetition %}
+<REPETITION>
+{% for repeat in repetition %}`{{ repeat["text_a"].strip() }}`
+{% endfor -%}
+</REPETITION>
+{% endif %}
+{% if bad_prose %}<UNWANTED_PROSE>
+{% for phrase in bad_prose %}- MATCH: `{{ phrase.phrase }}`
+  - INSTRUCTIONS: {{ phrase.instructions }}
+{% endfor -%}
+</UNWANTED_PROSE>
+{% endif %}
+
+<|CLOSE_SECTION|>
+{{ set_prepared_response("<ANALYSIS>\n- Thought process") }}

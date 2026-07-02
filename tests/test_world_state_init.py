@@ -563,3 +563,52 @@ class TestContextPinModel:
         pin = ContextPin(entry_id="x", decay=5, active=True, decay_due=5)
         assert pin.decay == 5
         assert pin.decay_due == 5
+
+
+class TestRequestUpdatePreservesSnapshotOnPartialPatch:
+    """Repro: durable on, characters exist, names match, the next pass returns
+    only `emotion` + `mentions` (snapshot key omitted). The prior snapshot must
+    be carried forward, not wiped."""
+
+    @pytest.mark.asyncio
+    async def test_omitted_snapshot_is_preserved(self, world_state):
+        import talemate.instance as instance
+        from talemate.world_state import WorldStateResponse
+
+        agent = instance.get_agent("world_state")
+        assert agent.update_world_state_durable_snapshot is True
+
+        world_state.characters = {
+            "Elena": CharacterState(
+                snapshot="kneeling by the dying fire",
+                emotion="calm",
+                mentions=["Elena"],
+            ),
+            "Hero": CharacterState(
+                snapshot="sword still drawn", emotion="tense", mentions=["Hero"]
+            ),
+        }
+
+        async def fake_request_world_state():
+            return WorldStateResponse(
+                world_state={
+                    "characters": {
+                        "Elena": {"emotion": "anxious", "mentions": ["Elena"]},
+                        "Hero": {"emotion": "resolute", "mentions": ["Hero"]},
+                    },
+                    "items": {},
+                    "places": {},
+                    "location": None,
+                },
+                anchor_message_ids=[],
+            )
+
+        agent.request_world_state = fake_request_world_state
+        await world_state.request_update()
+
+        # Emotion updated...
+        assert world_state.characters["Elena"].emotion == "anxious"
+        assert world_state.characters["Hero"].emotion == "resolute"
+        # ...snapshot carried forward, NOT wiped.
+        assert world_state.characters["Elena"].snapshot == "kneeling by the dying fire"
+        assert world_state.characters["Hero"].snapshot == "sword still drawn"

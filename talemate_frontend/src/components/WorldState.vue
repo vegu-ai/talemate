@@ -2,10 +2,17 @@
 <v-list density="compact">
     <v-list-subheader class="text-uppercase">
         <v-icon class="mr-1">mdi-earth</v-icon>World
-        <v-progress-circular class="ml-1 mr-3" size="14" v-if="requesting" indeterminate="disable-shrink" color="primary"></v-progress-circular>   
-        <v-tooltip v-else  text="Update Worldstate">
+        <template v-if="requesting">
+            <v-progress-circular class="ml-1" size="14" indeterminate="disable-shrink" color="primary"></v-progress-circular>
+            <v-tooltip text="Cancel world state update">
+                <template v-slot:activator="{ props }">
+                    <v-btn size="x-small" icon="mdi-close" class="ml-1 mr-1" v-bind="props" variant="text" density="comfortable" rounded="sm" @click.stop="cancelRequest()"></v-btn>
+                </template>
+            </v-tooltip>
+        </template>
+        <v-tooltip v-else :text="refreshTooltip">
             <template v-slot:activator="{ props }">
-                <v-btn :disabled="busy"  size="x-small" icon="mdi-refresh" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh()"></v-btn>
+                <v-btn :disabled="busy"  size="x-small" icon="mdi-refresh" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh($event)"></v-btn>
             </template>
         </v-tooltip>
     </v-list-subheader>
@@ -45,7 +52,7 @@
                     <v-expansion-panel-text class="text-body-2">
                         {{ character.snapshot }}
 
-                        <!-- ACTIONS: LOOK AT, CHARACTER SHEET, PERSIST -->
+                        <!-- ACTIONS: LOOK AT, PERSIST, MANAGE -->
 
                         <div class="text-center mt-1">
                             <v-tooltip :text="'Look at '+name">
@@ -54,19 +61,19 @@
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-if="characterSheet().characterExists(name)" text="Character sheet">
+                            <v-tooltip v-if="character.snapshot && !characterIsKnown(name)" :text="'Add detail to '+name">
                                 <template v-slot:activator="{ props }">
-                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openCharacterSheet(name)" icon="mdi-account-details"></v-btn>
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="examineCharacter(name, character.snapshot)" icon="mdi-plus"></v-btn>
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-else text="Make this character real, adding it to the scene as an actor.">
+                            <v-tooltip v-if="!characterExists(name)" text="Make this character real, adding it to the scene as an actor.">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(name)" icon="mdi-human-greeting"></v-btn>
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-if="characterSheet().characterExists(name)" text="Manage character">
+                            <v-tooltip v-if="characterExists(name)" text="Manage character">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openWorldStateManager('characters', name, 'description')" icon="mdi-book-open-page-variant"></v-btn>
 
@@ -128,6 +135,12 @@
                             <v-tooltip text="Look at">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="lookAtItem(name)" icon="mdi-eye"></v-btn>
+
+                                </template>
+                            </v-tooltip>
+                            <v-tooltip v-if="obj.snapshot" :text="'Add detail to '+name">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="examineItem(name, obj.snapshot)" icon="mdi-plus"></v-btn>
 
                                 </template>
                             </v-tooltip>
@@ -214,6 +227,12 @@
 <script>
 
 import VisualAssetsMixin from './VisualAssetsMixin.js';
+import {
+    dispatchExamineEntity,
+    dispatchLookAtEntity,
+    isKnownSceneCharacter,
+} from '@/utils/entityActions';
+import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 
 export default {
     name: 'WorldState',
@@ -238,11 +257,9 @@ export default {
     },
 
     inject: [
-        'getWebsocket', 
-        'registerMessageHandler', 
+        'getWebsocket',
+        'registerMessageHandler',
         'setWaitingForInput',
-        'openCharacterSheet',
-        'characterSheet',
         'isInputDisabled',
         'formatWorldStateTemplateString',
         'scene',
@@ -260,6 +277,9 @@ export default {
         },
         assetsMap() {
             return (this.sceneData?.data?.assets?.assets) || {};
+        },
+        refreshTooltip() {
+            return `Update world snapshot (${primaryModifierLabel}+click to wipe and start fresh)`;
         },
     },
 
@@ -295,19 +315,18 @@ export default {
         passiveCharacters() {
             let characters = [];
             for(let character in this.characters) {
-                if(!this.characterSheet().characterExists(character)) {
+                if(!this.characterExists(character)) {
                     characters.push(character);
                 }
             }
             this.$emit('passive-characters', characters);
         },
         lookAtCharacter(name) {
-            this.getWebsocket().send(JSON.stringify({
-                type: 'narrator',
-                action: 'look_at_character',
-                character: name,
-                narrative_direction: "",
-            }));
+            dispatchLookAtEntity(this.getWebsocket(), {
+                name,
+                kind: 'character',
+                isKnownCharacter: this.characterIsKnown(name),
+            });
         },
         persistCharacter(name) {
             this.getWebsocket().send(JSON.stringify(
@@ -319,16 +338,40 @@ export default {
             ));
         },
         lookAtItem(name) {
-            this.getWebsocket().send(JSON.stringify({
-                type: 'narrator',
-                action: 'query',
-                query: `describe the appearance of ${name}.`,
-            }));
+            // kind !== 'character' falls through to the describe query
+            // regardless of isKnownCharacter.
+            dispatchLookAtEntity(this.getWebsocket(), {
+                name,
+                kind: 'item',
+                isKnownCharacter: false,
+            });
         },
-        refresh() {
+        examineCharacter(name, snapshot) {
+            dispatchExamineEntity(this.getWebsocket(), {
+                name,
+                kind: 'character',
+                snapshot,
+            });
+        },
+        examineItem(name, snapshot) {
+            dispatchExamineEntity(this.getWebsocket(), {
+                name,
+                kind: 'item',
+                snapshot,
+            });
+        },
+        refresh(event) {
+            const reset = !!event && isPrimaryModifier(event);
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_agent',
                 action: 'request_update',
+                reset,
+            }));
+        },
+        cancelRequest() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_agent',
+                action: 'cancel_request_update',
             }));
         },
         trackedCharacterState(name, question) {
@@ -392,6 +435,24 @@ export default {
             }
             return false;
         },
+        characterExists(name) {
+            if (!this.sceneData || !this.sceneData.data || !this.sceneData.data.characters) {
+                return false;
+            }
+            for (let character of this.sceneData.data.characters) {
+                if (name.toLowerCase().indexOf(character.name.toLowerCase()) !== -1 || character.name.toLowerCase().indexOf(name.toLowerCase()) !== -1) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        // Exact-match roster check (active + inactive) for the Add Detail gate.
+        // Distinct from characterExists (fuzzy/active-only), which the
+        // persist/manage buttons rely on; the Add Detail gate needs the precise
+        // "is this the same character that already has a sheet" answer.
+        characterIsKnown(name) {
+            return isKnownSceneCharacter(this.sceneData?.data, name);
+        },
         getCharacterData(name) {
             if (!this.sceneData || !this.sceneData.data || !this.sceneData.data.characters) {
                 return null;
@@ -409,7 +470,7 @@ export default {
         },
         getCharacterAvatar(name) {
             // Only show avatar if character exists in scene
-            if (!this.characterSheet().characterExists(name)) {
+            if (!this.characterExists(name)) {
                 return null;
             }
             const characterData = this.getCharacterData(name);

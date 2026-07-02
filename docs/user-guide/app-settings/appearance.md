@@ -4,7 +4,7 @@ The Appearance settings let you customize how messages and visuals are displayed
 
 ## :material-script: Messages
 
-![App settings - Appearance - Messages](/talemate/img/0.35.0/app-settings-appearance-messages.png)
+![App settings - Appearance - Messages](/talemate/img/0.38.0/app-settings-appearance-messages.png)
 
 The Messages tab gives you control over how text appears in the scene feed. You can customize the styling for different message types and special text formatting.
 
@@ -39,6 +39,7 @@ You can configure these markup styles:
 | **Parentheses** | `( )` | (whispering softly) |
 | **Brackets** | `[ ]` | [Author's note] |
 | **Emphasis** | `* *` | *dramatic pause* |
+| **Entity Highlights** | — | clickable [entity highlights](/talemate/user-guide/world-state/#entity-highlights-in-scene-messages) in the latest message |
 
 For each markup type, you can set:
 

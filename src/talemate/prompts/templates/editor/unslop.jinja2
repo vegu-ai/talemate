@@ -225,6 +225,34 @@ He leaned over her shoulder. "That started after the firmware update. Want me to
 
 {% if repetition %}---
 
+{% if repetition_handling == "rewrite" %}
+<REVIEW>
+The plaza was a sea of bodies, no space between strangers, every breath someone else's. People shouted over each other, and the heat off so many bodies turned the air heavy.
+A vendor pushed past with a tray of skewers. The crowd surged forward as the speaker took the stage, jammed elbow to elbow with no room to move.
+</REVIEW>
+
+<REPETITION ISSUES>
+- MATCH: `jammed elbow to elbow with no room to move`
+</REPETITION ISSUES>
+
+<ANALYSIS>
+- Thought process: The flagged tail shares no words with paragraph 1, but it semantically repeats "no space between strangers, every breath someone else's" — the press-of-bodies idea is already on the page. Trust the flag. The closer needs to stay (the surge needs a beat after it), so REWRITE with a different observable detail at that moment, not another note about how packed in everyone is. Simply rephrasing "the press of bodies" or "shoulder against shoulder" would still be the same beat — paraphrase isn't enough.
+- Purple prose: NO
+- Unnatural dialogue: N/A
+- Over-description: NO
+- Length: OK
+- Tense: PAST
+- Mature content: N/A
+- Name overuse: N/A
+- Talking vs Showing: OK
+- Repetition: YES - flagged tail semantically echoes the earlier "no space between strangers"; replaced with a different observable detail at the moment of the surge
+</ANALYSIS>
+
+<FIX>
+The plaza was a sea of bodies, no space between strangers, every breath someone else's. People shouted over each other, and the heat off so many bodies turned the air heavy.
+A vendor pushed past with a tray of skewers. The crowd surged forward as the speaker took the stage, the roar rolling up off the rooftops.
+</FIX>
+{% else %}
 <REVIEW>
 Marcus entered the room, his boots clicking against the marble floor. The chandelier cast dancing shadows across the walls as he surveyed the scene.
 "What happened here?" he demanded, his voice echoing in the vast space.
@@ -255,6 +283,7 @@ Marcus entered the room, his boots clicking against the marble floor. The chande
 Sarah looked up from where she knelt beside the broken vase. "I don't know. I just got here myself."
 He needed answers, and he needed them now.
 </FIX>
+{% endif %}
 
 {% endif %}---
 
@@ -375,9 +404,9 @@ Fix bad AI writing by making it simpler, shorter, and more natural.
    - For colleagues/acquaintances/unclear relationships: Just remove the name, don't add anything
    ONLY use actual names when talking ABOUT someone who isn't there.
 {{ li() }}. SHOW don't tell - Use actions and natural dialogue instead of having characters announce their feelings or narrate their actions
-{% if repetition %}
-{{ li() }}. REMOVE REPETITION - Sentences listed in <REPETITION> have been flagged as repeating earlier content. Repetition here is detected by similarity threshold - it may be verbatim, but it also includes semantic repetition (the same idea, action, or beat expressed in different words). Trust the flag: if a sentence appears in <REPETITION>, treat it as repetition regardless of how different the wording looks. Delete the flagged sentences entirely from the FIX. Do NOT rewrite, paraphrase, or substitute new content in their place - just remove them and let the surrounding text flow on without them.
-{% endif %}
+{%- if repetition %}
+{{ li() }}. {% if repetition_handling == "rewrite" %}REWRITE REPETITION - Sentences listed in <REPETITION> have been flagged as repeating earlier content. Repetition here is detected by similarity threshold - it may be verbatim, but it also includes semantic repetition (the same idea, action, or beat expressed in different words). Trust the flag: if a sentence appears in <REPETITION>, treat it as repetition regardless of how different the wording looks. Rewrite each flagged sentence with genuinely different content - substitute a different observation, action, or detail that advances the scene without re-conveying what was already on the page. Because the match is SEMANTIC, simply rephrasing the same idea in different words is NOT enough; the underlying meaning must change. Drop a flagged sentence outright only as a fallback when no meaningful rewrite is possible.{% else %}REMOVE REPETITION - Sentences listed in <REPETITION> have been flagged as repeating earlier content. Repetition here is detected by similarity threshold - it may be verbatim, but it also includes semantic repetition (the same idea, action, or beat expressed in different words). Trust the flag: if a sentence appears in <REPETITION>, treat it as repetition regardless of how different the wording looks. Delete the flagged sentences entirely from the FIX. Do NOT rewrite, paraphrase, or substitute new content in their place - just remove them and let the surrounding text flow on without them.{% endif %}
+{%- endif %}
 {% if bad_prose %}
 {{ li() }}. REMOVE UNWANTED PROSE - Address the unwanted prose issues. These phrases have been identified by the director as bad, and MUST be changed accordingly.
 {% endif %}

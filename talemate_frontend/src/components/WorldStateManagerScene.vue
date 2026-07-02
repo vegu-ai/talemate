@@ -111,7 +111,7 @@ import WorldStateManagerSceneExport from './WorldStateManagerSceneExport.vue';
 import WorldStateManagerSceneDirection from './WorldStateManagerSceneDirection.vue';
 import GameState from './GameState.vue';
 import WorldStateManagerSceneSharedWorld from './WorldStateManagerSceneSharedWorld.vue';
-import { MAX_CONTENT_WIDTH } from '@/constants';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 export default {
     name: "WorldStateManagerScene",

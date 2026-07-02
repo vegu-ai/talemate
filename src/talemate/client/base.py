@@ -14,7 +14,6 @@ import uuid
 from typing import Callable, Union, Literal, TYPE_CHECKING
 
 import pydantic
-import dataclasses
 import structlog
 import urllib3
 
@@ -83,6 +82,8 @@ class PromptData(pydantic.BaseModel):
     client_type: str
     time: Union[float, int]
     agent_stack: list[str] = pydantic.Field(default_factory=list)
+    agent_type: str | None = None
+    agent_action: str | None = None
     generation_parameters: dict = pydantic.Field(default_factory=dict)
     inference_preset: str = None
     preset_group: str | None = None
@@ -141,6 +142,7 @@ class CommonDefaults(pydantic.BaseModel):
     reason_enabled: bool = False
     reason_tokens: int = 1024
     reason_response_pattern: str | None = None
+    reason_validation_pattern: str | None = None
     reason_prefill: str | None = None
     dedupe_enabled: bool = False
 
@@ -249,15 +251,17 @@ class RequestInformation(pydantic.BaseModel):
         return time.time() - self.end_time
 
 
-@dataclasses.dataclass
-class ClientEmbeddingsStatus:
+class ClientEmbeddingsStatus(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
     client: "ClientBase | None" = None
     embedding_name: str | None = None
     seen: bool = False
 
 
-@dataclasses.dataclass
-class ClientStatus:
+class ClientStatus(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
     client: "ClientBase | None" = None
     enabled: bool = False
 
@@ -390,8 +394,17 @@ class ClientBase:
         return self.client_config.preset_group
 
     @property
-    def reason_enabled(self) -> bool:
+    def reason_enabled_configured(self) -> bool:
+        """Stable configured value. Subclasses override for client-specific
+        forcing (Gemini 2.5+, OpenAI o-series). `reason_enabled` is the
+        runtime value after per-action context overrides."""
         return self.client_config.reason_enabled
+
+    @property
+    def reason_enabled(self) -> bool:
+        if client_context_attribute("disable_reasoning") and not self.reason_locked:
+            return False
+        return self.reason_enabled_configured
 
     @property
     def reason_tokens(self) -> int:
@@ -400,6 +413,12 @@ class ClientBase:
     @property
     def reason_response_pattern(self) -> str:
         return self.client_config.reason_response_pattern or DEFAULT_REASONING_PATTERN
+
+    @property
+    def reason_validation_pattern(self) -> str | None:
+        # No default - validation is opt-in. When unset, reasoning is never
+        # treated as "did not happen" based on a start pattern.
+        return self.client_config.reason_validation_pattern
 
     @property
     def reason_prefill(self) -> str:
@@ -422,13 +441,42 @@ class ClientBase:
         return self.client_config.dedupe_enabled
 
     @property
-    def enforce_response_length(self) -> str:
+    def enforce_response_length(
+        self,
+    ) -> Literal[
+        "uncapped",
+        "cap_tokens_and_instructions",
+        "cap_tokens",
+        "instructions",
+        "adaptive",
+    ]:
         return self.client_config.enforce_response_length
+
+    @property
+    def enforce_response_length_resolved(
+        self,
+    ) -> Literal[
+        "uncapped",
+        "cap_tokens_and_instructions",
+        "cap_tokens",
+        "instructions",
+    ]:
+        """The effective mode, resolving "adaptive" based on runtime reasoning state.
+
+        "adaptive" sends instructions only when reasoning is enabled, otherwise
+        caps tokens and sends instructions.
+        """
+        mode = self.enforce_response_length
+        if mode == "adaptive":
+            return (
+                "instructions" if self.reason_enabled else "cap_tokens_and_instructions"
+            )
+        return mode
 
     @property
     def enforce_response_length_cap_tokens(self) -> bool:
         """Whether the current mode should cap tokens (send max_tokens to the API)."""
-        return self.enforce_response_length in (
+        return self.enforce_response_length_resolved in (
             "cap_tokens_and_instructions",
             "cap_tokens",
         )
@@ -436,7 +484,7 @@ class ClientBase:
     @property
     def enforce_response_length_instructions(self) -> bool:
         """Whether the current mode should append human-readable length instructions."""
-        return self.enforce_response_length in (
+        return self.enforce_response_length_resolved in (
             "cap_tokens_and_instructions",
             "instructions",
         )
@@ -566,9 +614,10 @@ class ClientBase:
         """Returns reasoning display config based on what's actually used at runtime.
 
         Override in subclasses for custom behavior (e.g., adaptive thinking).
-        Returns None if reasoning is not enabled.
+        Returns None if reasoning is not enabled. Uses the configured value so
+        per-action overrides don't flicker the persistent UI indicator.
         """
-        if not self.reason_enabled:
+        if not self.reason_enabled_configured:
             return None
         return ReasoningDisplay(
             indicator_value=str(self.validated_reason_tokens),
@@ -711,14 +760,31 @@ class ClientBase:
             spec=spec,
         )[0]
 
-        if (
-            spec.reasoning_pattern
-            and spec.reasoning_pattern != self.client_config.reason_response_pattern
-        ):
-            log.info("reasoning pattern determined from prompt template", spec=spec)
-            self.client_config.reason_response_pattern = spec.reasoning_pattern
+        self._apply_spec_pattern(
+            spec.reasoning_pattern, "reason_response_pattern", spec
+        )
+        self._apply_spec_pattern(
+            spec.reasoning_validation_pattern, "reason_validation_pattern", spec
+        )
 
         return prompt
+
+    def _apply_spec_pattern(
+        self, spec_value: str | None, config_attr: str, spec: PromptSpec
+    ):
+        """
+        Applies a reasoning pattern determined by the prompt template to the
+        client config, overriding the configured value when the template
+        provides a different one.
+        """
+        if spec_value and spec_value != getattr(self.client_config, config_attr):
+            log.info(
+                "reasoning pattern determined from prompt template",
+                attr=config_attr,
+                value=spec_value,
+                spec=spec,
+            )
+            setattr(self.client_config, config_attr, spec_value)
 
     def prompt_template_example(self) -> tuple[str | None, str | None, PromptSpec]:
         if not getattr(self, "model_name", None):
@@ -926,6 +992,15 @@ class ClientBase:
             "reason_response_pattern_default": (
                 prompt_template_spec.reasoning_pattern or DEFAULT_REASONING_PATTERN
             ),
+            "reason_response_pattern_from_template": bool(
+                prompt_template_spec.reasoning_pattern
+            ),
+            "reason_validation_pattern_default": (
+                prompt_template_spec.reasoning_validation_pattern
+            ),
+            "reason_validation_pattern_from_template": bool(
+                prompt_template_spec.reasoning_validation_pattern
+            ),
             "meta": self.Meta().model_dump(),
             "error_action": None,
             "double_coercion": self.double_coercion,
@@ -974,10 +1049,11 @@ class ClientBase:
             "embeddings_model_name": self.embeddings_model_name,
             "can_support_concurrent_inference": self.can_support_concurrent_inference,
             "supports_concurrent_inference": self.supports_concurrent_inference,
-            "reason_enabled": self.reason_enabled,
+            "reason_enabled": self.reason_enabled_configured,
             "reason_tokens": self.reason_tokens,
             "min_reason_tokens": self.min_reason_tokens,
             "reason_response_pattern": self.client_config.reason_response_pattern,
+            "reason_validation_pattern": self.client_config.reason_validation_pattern,
             "reason_prefill": self.reason_prefill,
             "reason_failure_behavior": self.reason_failure_behavior,
             "requires_reasoning_pattern": self.requires_reasoning_pattern,
@@ -1349,6 +1425,23 @@ class ClientBase:
             # reasoning handled automatically during streaming
             return response, None
 
+        # If a reasoning-start validation pattern is set but absent from the
+        # response, the model never reasoned, so return it as-is instead of
+        # failing on the strip pattern (see reason_validation_pattern in the
+        # config schema). Skipped when prefilled, as the start then lives in the
+        # prompt rather than the response.
+        validation_pattern = self.reason_validation_pattern
+        if (
+            validation_pattern
+            and not self.reason_prefill
+            and not re.search(validation_pattern, response, re.DOTALL)
+        ):
+            log.debug(
+                "reasoning validation pattern not found - model did not reason",
+                pattern=validation_pattern,
+            )
+            return response, None
+
         pattern = self.reason_response_pattern
         if not pattern:
             pattern = DEFAULT_REASONING_PATTERN
@@ -1638,6 +1731,8 @@ class ClientBase:
                 response_tokens=self._returned_response_tokens
                 or self.count_tokens(response),
                 agent_stack=agent_context.agent_stack if agent_context else [],
+                agent_type=agent_context.agent.agent_type if agent_context else None,
+                agent_action=agent_context.action if agent_context else None,
                 client_name=self.name,
                 client_type=self.client_type,
                 time=time_end - time_start,

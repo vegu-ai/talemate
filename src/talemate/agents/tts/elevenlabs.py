@@ -85,6 +85,7 @@ class ElevenLabsMixin:
                     type="unified_api_key",
                     value="elevenlabs.api_key",
                     label="ElevenLabs API Key",
+                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",
@@ -100,6 +101,7 @@ class ElevenLabsMixin:
                         {"value": "eleven_turbo_v2_5", "label": "Eleven Turbo V2.5"},
                         {"value": "eleven_v3", "label": "Eleven V3"},
                     ],
+                    scene_overridable=False,
                 ),
                 "chunk_size": AgentActionConfig(
                     type="number",
@@ -109,12 +111,14 @@ class ElevenLabsMixin:
                     value=0,
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
+                    scene_overridable=False,
                 ),
                 "audio_tag_format": AgentActionConfig(
                     type="text",
                     value="[{{ tag }}]",
                     label="Audio tag format",
                     description="Jinja2 template for formatting audio tags. The variable {{ tag }} will be replaced with the tag name (e.g., 'laughing' becomes '[laughing]').",
+                    scene_overridable=False,
                 ),
             },
         )

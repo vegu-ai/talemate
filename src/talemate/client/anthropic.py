@@ -201,7 +201,7 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
     @property
     def reasoning_display(self) -> ReasoningDisplay | None:
         """Returns reasoning display config based on what's actually used at runtime."""
-        if not self.reason_enabled:
+        if not self.reason_enabled_configured:
             return None
 
         # Only show effort display if adaptive will ACTUALLY be used.
@@ -333,6 +333,14 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
         # capping is disabled. Use the model's API limit as the default.
         if "max_tokens" not in parameters:
             parameters["max_tokens"] = self.api_max_output_tokens
+
+        # Prompt caching is opt-in on the Anthropic API — without cache_control
+        # the request is never cached. Top-level cache_control auto-places the
+        # breakpoint on the last cacheable block, which pairs with the
+        # after_history volatile-context placement that optimize_prompt_caching
+        # already enables in the prompt builder.
+        if self.optimize_prompt_caching:
+            parameters["cache_control"] = {"type": "ephemeral"}
 
         self.log.debug(
             "generate",

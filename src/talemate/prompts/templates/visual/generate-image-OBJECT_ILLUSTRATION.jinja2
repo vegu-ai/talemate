@@ -1,0 +1,37 @@
+<|SECTION:VISUAL CONTEXT|>
+{% if not instructions %}
+{% capture_context %}
+{{ query_scene("Describe the single most notable object, item or thing in the current moment. Include details about its appearance, material, shape, condition and any distinguishing features.", scene_context, True) }}
+{% end_capture_context %}
+{% else %}
+{% capture_context %}
+{{ query_scene("Describe the appearance, material, shape, condition and distinguishing features of the object referenced by the following instructions: "+instructions, False) }}
+{% end_capture_context %}
+{% endif %}
+<|CLOSE_SECTION|>
+
+<|SECTION:REQUIREMENTS|>
+A focused image of a single object or item, isolated as the sole subject of the image. The key requirements are:
+
+1. **Primary Focus**: The image centers entirely on one object/item - it is the subject, rendered in clear detail
+2. **Framing**: Portrait orientation, close-up - like a museum display, inventory icon, or product shot of the item
+3. **Composition**: The object is presented clearly and prominently against a simple or contextually fitting backdrop that does not compete with it for attention
+4. **Character Exclusion**: NO characters, people, or creatures should be present - this is strictly an object study
+5. **Presentation**: Think of this like an item card, a close inspection, or a detailed study illustration - the kind of image that lets the viewer take a closer look at the thing itself
+
+**What to avoid:**
+- Any characters, people, animals, or creatures
+- Wide environmental or landscape shots where the object is lost in the scene
+- Multiple competing subjects - keep it to the single examined object
+- Graphical overlays, borders, frames, labels, or UI elements
+- Landscape orientation
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Your task is to generate an image generation prompt that will be used to generate a focused close-up image of a single object or item. Think of it like taking a closer look at one specific thing - an item study or inventory illustration.
+
+{% if instructions %}Specific instructions for the requested image: {{ instructions }}{% endif %}
+
+Make sure your prompt emphasizes the portrait/close-up framing and keeps the single object as the clear, sole subject without any characters present.
+
+<|CLOSE_SECTION|>

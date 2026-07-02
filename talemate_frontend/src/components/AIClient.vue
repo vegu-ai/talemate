@@ -231,7 +231,7 @@
               </v-tooltip>
 
               <!-- concurrent inference toggle -->
-              <v-tooltip v-if="client.data && client.data.can_support_concurrent_inference" :text="(client.data && client.data.concurrent_inference_enabled) ? 'Disable concurrent requests' : 'Enable concurrent requests - EXPERIMENTAL - Currently only used for visual prompt generation (image generation prompts)'" max-width="300">
+              <v-tooltip v-if="client.data && client.data.can_support_concurrent_inference" :text="(client.data && client.data.concurrent_inference_enabled) ? 'Disable concurrent requests' : 'Enable concurrent requests'" max-width="300">
                 <template v-slot:activator="{ props }">
                   <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleConcurrentInference(index)" icon="mdi-approximately-equal" :color="(client.data && client.data.concurrent_inference_enabled) ? 'blue-lighten-3' : ''"></v-btn>
                 </template>
@@ -313,7 +313,7 @@ export default {
           rate_limit: null,
           data_format: null,
           section_format: null,
-          enforce_response_length: 'cap_tokens_and_instructions',
+          enforce_response_length: 'adaptive',
           data: {
             has_prompt_template: false,
           }
@@ -403,7 +403,7 @@ export default {
         api_url: 'http://localhost:8080',
         model_name: '',
         max_token_length: 8192,
-        enforce_response_length: 'cap_tokens_and_instructions',
+        enforce_response_length: 'adaptive',
         data: {
           has_prompt_template: false,
         },
@@ -554,6 +554,7 @@ export default {
           client.reason_tokens = data.data.reason_tokens;
           client.min_reason_tokens = data.data.min_reason_tokens;
           client.reason_response_pattern = data.data.reason_response_pattern;
+          client.reason_validation_pattern = data.data.reason_validation_pattern;
           client.reason_prefill = data.data.reason_prefill;
           client.reason_failure_behavior = data.data.reason_failure_behavior;
           client.reason_enabled = data.data.reason_enabled;
@@ -615,6 +616,7 @@ export default {
             reason_tokens: data.data.reason_tokens,
             min_reason_tokens: data.data.min_reason_tokens,
             reason_response_pattern: data.data.reason_response_pattern,
+            reason_validation_pattern: data.data.reason_validation_pattern,
             reason_prefill: data.data.reason_prefill,
             reason_failure_behavior: data.data.reason_failure_behavior,
             reason_enabled: data.data.reason_enabled,

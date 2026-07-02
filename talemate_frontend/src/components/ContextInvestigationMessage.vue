@@ -1,5 +1,5 @@
 <template>
-  <v-alert  v-if="show" @mouseover="hovered=true" @mouseleave="hovered=false" @click="toggle()" class="clickable" variant="text" density="compact" :color="getMessageColor('context_investigation')">
+  <v-alert  v-if="show" @mouseover="hovered=true" @mouseleave="hovered=false" @click="toggle()" class="clickable" variant="text" density="compact" :style="{ opacity: revisionBusy ? 0.65 : 1, transition: 'opacity 0.2s ease' }" :color="getMessageColor('context_investigation')">
     <template v-slot:close>
       <v-btn size="small" icon variant="text" class="close-button" @click="deleteMessage" :disabled="uxLocked">
         <v-icon>mdi-close</v-icon>
@@ -29,39 +29,48 @@
         :message_content="message.text"
         :message_id="message.id"
       />
-      <v-textarea 
-        ref="textarea" 
-        v-if="editing" 
-        v-model="editing_text"
-        color="indigo-lighten-4"
-        bg-color="black"
-        auto-grow
-        :hint="autocompleteInfoMessage(autocompleting) + ', Shift+Enter for newline'"
-        :loading="autocompleting"
-        :disabled="autocompleting"
-        @keydown.enter.prevent="handleEnter" 
-        @blur="autocompleting ? null : cancelEdit()"
-        @keydown.escape.prevent="cancelEdit()">
-      </v-textarea>
-      <div v-else @dblclick="startEdit()" v-html="renderedText">
+      <RevisionNav v-if="isLastMessage" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" @navigate="(dir) => $emit('navigate-revision', dir)" />
+      <div v-if="editing" class="position-relative context-investigation-editor">
+        <v-textarea
+          ref="textarea"
+          v-model="editing_text"
+          color="indigo-lighten-4"
+          bg-color="black"
+          auto-grow
+          :hint="autocompleteInfoMessage(autocompleting) + ', Shift+Enter for newline'"
+          :loading="autocompleting"
+          :disabled="autocompleting"
+          @keydown.enter.prevent="handleEnter"
+          @blur="autocompleting ? null : cancelEdit()"
+          @keydown.escape.prevent="cancelEdit()">
+        </v-textarea>
+        <AutocompleteRedoChip
+          :applied="autocompleteField?.state.applied || false"
+          :disabled="autocompleting"
+          @redo="autocompleteField.redo()"
+          @undo="autocompleteField.undo()" />
+      </div>
+      <div v-if="!editing" @dblclick="startEdit()" v-html="renderedText">
       </div>
     </div>
 
     <v-sheet v-if="hovered" rounded="sm" color="transparent">
-      <v-chip size="x-small" color="indigo-lighten-4" v-if="editing">
-        <v-icon class="mr-1">mdi-pencil</v-icon>
-        Editing - Press `enter` to submit. Click anywhere to cancel.</v-chip>
-      <v-chip size="x-small" color="grey-lighten-1" v-else-if="!editing && hovered" variant="text" class="mr-1">
-        <v-icon>mdi-pencil</v-icon>
-        Double-click to edit.</v-chip>
-        
-        <!-- generate tts -->
-        <v-chip size="x-small" class="ml-2" label color="secondary" v-if="!editing && hovered && ttsAvailable" variant="outlined" @click="generateTTS(message.id)" :disabled="uxLocked || ttsBusy">
-          <v-icon class="mr-1">mdi-account-voice</v-icon>
-          TTS
-          <v-progress-circular v-if="ttsBusy" class="ml-2" size="14" indeterminate="disable-shrink"
-        color="secondary"></v-progress-circular>
-        </v-chip>
+      <MessageToolbar
+        :message-id="message.id"
+        :editing="editing"
+        :ux-locked="uxLocked"
+        :app-busy="appBusy"
+        :is-last-message="isLastMessage"
+        :editor-revisions-enabled="editorRevisionsEnabled"
+        :editor-revision-method="editorRevisionMethod"
+        :tts-available="ttsAvailable"
+        :tts-busy="ttsBusy"
+        :show-pin="false"
+        :show-fork="false"
+        :show-time-passage="false"
+        :show-visualize="showVisualize"
+        :visualize-busy="visualizeBusy"
+      />
     </v-sheet>
     <div v-else style="height:24px">
 
@@ -73,13 +82,20 @@
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
 import { insertNewlineAtCursor } from '@/utils/textAreaUtils';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
+import { createAutocompleteField } from '@/utils/autocompleteField';
 import MessageAssetImage from './MessageAssetImage.vue';
 import MessageAssetMixin from './MessageAssetMixin.js';
+import RevisionNav from './RevisionNav.vue';
+import MessageToolbar from './MessageToolbar.vue';
+import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
 
 export default {
   name: 'ContextInvestigationMessage',
   components: {
     MessageAssetImage,
+    RevisionNav,
+    MessageToolbar,
+    AutocompleteRedoChip,
   },
   mixins: [MessageAssetMixin],
   data() {
@@ -87,10 +103,26 @@ export default {
       show: true,
       editing: false,
       editing_text: "",
-      autocompleting: false,
       hovered: false,
-      minimized: false
+      minimized: false,
+      autocompleteField: null,
     }
+  },
+  created() {
+    this.autocompleteField = createAutocompleteField({
+      autocompleteRequest: this.autocompleteRequest,
+      getValue: () => this.editing_text,
+      setValue: (v) => { this.editing_text = v; },
+      buildParams: () => ({
+        partial: this.editing_text,
+        context: "context_investigation:continue",
+      }),
+    });
+  },
+  watch: {
+    editing_text() {
+      this.autocompleteField?.onValueChange();
+    },
   },
   computed: {
     title() {
@@ -101,6 +133,8 @@ export default {
           return "Observing the moment.";
         case "query":
           return this.message.source_arguments.query;
+        case "examine":
+          return `Added detail to ${this.message.source_arguments.entity_name}`;
       }
       return "";
     },
@@ -112,6 +146,8 @@ export default {
           return "mdi-image-frame";
         case "query":
           return "mdi-text-search";
+        case "examine":
+          return "mdi-magnify";
       }
       return "mdi-text-search";
     },
@@ -125,12 +161,15 @@ export default {
         emphasis: sceneConfig.emphasis || contextStyles,
         parentheses: sceneConfig.parentheses || contextStyles,
         brackets: sceneConfig.brackets || contextStyles,
+        entities: sceneConfig.entities,
         default: contextStyles,
         messageType: 'context_investigation',
       });
     },
     renderedText() {
-      return this.parser.parse(this.message.text);
+      return this.parser.parse(this.message.text, {
+        mentions: this.entityMentions,
+      });
     },
     // Asset mixin expects these
     assetId() {
@@ -142,11 +181,37 @@ export default {
     messageAsset() {
       return (this.asset_id && this.asset_type) ? this.asset_id : null;
     },
+    // Visualizable context investigations can generate an image into the
+    // message. `query` is excluded (no fitting visual subject); the button
+    // hides once an asset is already attached (regeneration is then handled
+    // by the asset image itself).
+    showVisualize() {
+      const visualizable = ['examine', 'visual-scene', 'visual-character'];
+      return visualizable.includes(this.message.sub_type) && !this.messageAsset;
+    },
+    visualizeBusy() {
+      return this.isMessageVisualizing ? this.isMessageVisualizing(this.message.id) : false;
+    },
+    autocompleting() {
+      return this.autocompleteField?.state.autocompleting || false;
+    },
   },
   props: {
     message: Object,
     uxLocked: Boolean,
+    appBusy: {
+      type: Boolean,
+      default: false,
+    },
     isLastMessage: Boolean,
+    editorRevisionsEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    editorRevisionMethod: {
+      type: String,
+      default: null,
+    },
     ttsAvailable: {
       type: Boolean,
       default: false,
@@ -167,8 +232,33 @@ export default {
       type: String,
       default: null,
     },
+    revisionsCount: {
+      type: Number,
+      default: 0,
+    },
+    revisionIndex: {
+      type: Number,
+      default: 0,
+    },
+    revisionSource: {
+      type: String,
+      default: null,
+    },
+    revisionReason: {
+      type: String,
+      default: null,
+    },
+    revisionBusy: {
+      type: [Boolean, String],
+      default: false,
+    },
+    entityMentions: {
+      type: Array,
+      default: () => [],
+    },
   },
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor', 'generateTTS'],
+  emits: ['navigate-revision'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor', 'isMessageVisualizing'],
   methods: {
     toggle() {
       if (!this.editing) {
@@ -191,25 +281,14 @@ export default {
       }
     },
     autocompleteEdit() {
-      this.autocompleting = true;
-      this.autocompleteRequest(
-        {
-          partial: this.editing_text,
-          context: "context_investigation:continue",
-        },
-        (completion) => {
-          this.editing_text += completion;
-          this.autocompleting = false;
-        },
-        this.$refs.textarea
-      )
+      this.autocompleteField.request(this.$refs.textarea);
     },
     cancelEdit() {
       this.editing = false;
     },
     startEdit() {
-      if (this.uxLocked) return;
-      
+      if (this.uxLocked || this.appBusy) return;
+
       this.editing_text = this.message.text;
       this.editing = true;
       this.$nextTick(() => {
@@ -217,10 +296,11 @@ export default {
       });
     },
     submitEdit() {
-      this.getWebsocket().send(JSON.stringify({ 
-        type: 'edit_message', 
-        id: this.message.id, 
-        text: this.editing_text 
+      this.getWebsocket().send(JSON.stringify({
+        type: 'scene_message',
+        action: 'edit',
+        id: this.message.id,
+        text: this.editing_text
       }));
       this.editing = false;
     }
@@ -235,6 +315,12 @@ export default {
 
 .context-message {
   display: block;
+}
+
+/* Override the chip's `top` to sit inside the textarea — the v-alert wrapper
+   clips overhanging content. */
+.context-investigation-editor {
+  --autocomplete-redo-chip-top: 4px;
 }
 
 :deep(.scene-paragraph) {

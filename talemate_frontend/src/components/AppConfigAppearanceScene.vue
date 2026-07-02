@@ -13,7 +13,7 @@
             </thead>
             <tbody>
                 <template v-for="(styleConfig, typ) in config" :key="typ">
-                    <tr v-if="typ.endsWith('_messages') || ['quotes', 'parentheses', 'brackets', 'emphasis'].includes(typ)" :style="colorPickerTarget === typ ? 'background-color: rgba(128, 128, 128, 0.1);' : ''">
+                    <tr v-if="typ.endsWith('_messages') || ['quotes', 'parentheses', 'brackets', 'emphasis', 'entities'].includes(typ)" :style="colorPickerTarget === typ ? 'background-color: rgba(128, 128, 128, 0.1);' : ''">
                         <td style="padding: 4px 12px;">
                             <div class="d-flex align-center">
                                 <div class="text-caption font-weight-medium">{{ typLabelMap[typ] || typ }}</div>
@@ -21,6 +21,7 @@
                                 <v-chip v-if="typ === 'parentheses'" size="x-small" variant="text" class="ml-1">( )</v-chip>
                                 <v-chip v-if="typ === 'brackets'" size="x-small" variant="text" class="ml-1">[ ]</v-chip>
                                 <v-chip v-if="typ === 'emphasis'" size="x-small" variant="text" class="ml-1">* *</v-chip>
+                                <v-chip v-if="typ === 'entities'" size="x-small" variant="text" class="ml-1">entity</v-chip>
                             </div>
                         </td>
                         <td style="padding: 4px 12px;">
@@ -33,7 +34,7 @@
                             <v-checkbox color="primary" v-if="canSetShowOn[typ]" density="compact" hide-details v-model="styleConfig.show" class="ma-0"></v-checkbox>
                         </td>
                         <td style="padding: 4px 12px;">
-                            <v-checkbox color="primary" v-if="['quotes', 'parentheses', 'brackets', 'emphasis'].includes(typ)" density="compact" hide-details v-model="styleConfig.override_color" class="ma-0"></v-checkbox>
+                            <v-checkbox color="primary" v-if="['quotes', 'parentheses', 'brackets', 'emphasis', 'entities'].includes(typ)" density="compact" hide-details v-model="styleConfig.override_color" class="ma-0"></v-checkbox>
                         </td>
                         <td class="text-right" style="padding: 4px 12px;" v-if="canSetColorOn[typ]">
                             <div class="d-flex align-center justify-end">
@@ -100,6 +101,11 @@
                                 A heads-up or system notice for the player.
                             </span>
                         </div>
+                        <div class="mt-3 d-flex align-center">
+                            <v-icon class="mr-2" :color="getColor('entities', config.entities?.color)">mdi-cursor-default-click-outline</v-icon>
+                            <span :style="buildCssStyles('narrator_messages', config.narrator_messages)" v-html="renderedEntityHighlightsPreview">
+                            </span>
+                        </div>
                     </div>
                 </v-card-text>
             </v-card>
@@ -146,36 +152,11 @@ export default {
                     delete sceneConfig.character_messages;
                 }
                 // Ensure new styling fields exist with defaults if missing
-                if (!sceneConfig.quotes) {
-                    sceneConfig.quotes = { color: DEFAULT_APPEARANCE_COLORS.quotes, italic: false, bold: false, override_color: true };
-                } else if (sceneConfig.quotes.override_color === undefined) {
-                    sceneConfig.quotes.override_color = true;
-                }
-                if (!sceneConfig.parentheses) {
-                    sceneConfig.parentheses = { color: DEFAULT_APPEARANCE_COLORS.parentheses, italic: true, bold: false, override_color: true, show: true };
-                } else {
-                    if (sceneConfig.parentheses.override_color === undefined) {
-                        sceneConfig.parentheses.override_color = true;
-                    }
-                    if (sceneConfig.parentheses.show === undefined) {
-                        sceneConfig.parentheses.show = true;
-                    }
-                }
-                if (!sceneConfig.brackets) {
-                    sceneConfig.brackets = { color: DEFAULT_APPEARANCE_COLORS.brackets, italic: true, bold: false, override_color: true, show: true };
-                } else {
-                    if (sceneConfig.brackets.override_color === undefined) {
-                        sceneConfig.brackets.override_color = true;
-                    }
-                    if (sceneConfig.brackets.show === undefined) {
-                        sceneConfig.brackets.show = true;
-                    }
-                }
-                if (!sceneConfig.emphasis) {
-                    sceneConfig.emphasis = { color: DEFAULT_APPEARANCE_COLORS.emphasis, italic: true, bold: false, override_color: true };
-                } else if (sceneConfig.emphasis.override_color === undefined) {
-                    sceneConfig.emphasis.override_color = true;
-                }
+                this.hydrateMarkupStyle(sceneConfig, 'quotes');
+                this.hydrateMarkupStyle(sceneConfig, 'parentheses', { italic: true, withShow: true });
+                this.hydrateMarkupStyle(sceneConfig, 'brackets', { italic: true, withShow: true });
+                this.hydrateMarkupStyle(sceneConfig, 'emphasis', { italic: true });
+                this.hydrateMarkupStyle(sceneConfig, 'entities', { withShow: true });
                 this.config = sceneConfig;
                 
                 // Re-enable changed events after hydration completes
@@ -250,6 +231,30 @@ export default {
             
             return parser.parse('The fox has reddish-brown fur with white underbelly. According to the field guide, "foxes typically weigh between 6-15 pounds".');
         },
+        renderedEntityHighlightsPreview() {
+            const sceneConfig = this.config || {};
+            const narratorStyles = sceneConfig.narrator_messages || {};
+
+            const parser = new SceneTextParser({
+                quotes: sceneConfig.quotes,
+                emphasis: sceneConfig.emphasis || narratorStyles,
+                parentheses: sceneConfig.parentheses || narratorStyles,
+                brackets: sceneConfig.brackets || narratorStyles,
+                entities: sceneConfig.entities,
+                default: narratorStyles,
+            });
+
+            return parser.parse(
+                'Elmer approaches the blast door, eyes scanning toward the conduit chamber beyond.',
+                {
+                    mentions: [
+                        { name: 'Elmer', kind: 'character', phrases: ['Elmer'] },
+                        { name: 'Blast door', kind: 'item', phrases: ['the blast door'] },
+                        { name: 'Conduit chamber', kind: 'place', phrases: ['the conduit chamber'] },
+                    ],
+                },
+            );
+        },
     },
     data() {
         return {
@@ -267,6 +272,7 @@ export default {
                 "parentheses": "Parentheses",
                 "brackets": "Brackets",
                 "emphasis": "Emphasis",
+                "entities": "Entity Highlights",
             },
             config: {
                 scene: {}
@@ -282,6 +288,7 @@ export default {
                 "parentheses": true,
                 "brackets": true,
                 "emphasis": true,
+                "entities": true,
                 //"time_messages": true,
             },
             canSetColorOn: {
@@ -295,16 +302,41 @@ export default {
                 "parentheses": true,
                 "brackets": true,
                 "emphasis": true,
+                "entities": true,
             },
             canSetShowOn: {
                 "director_messages": true,
                 "context_investigation_messages": true,
                 "parentheses": true,
                 "brackets": true,
+                "entities": true,
             },
         }
     },
     methods: {
+        // Backfill defaults for a markup-style entry on the scene appearance
+        // config. Used by the immutableConfig watcher to migrate older configs
+        // that pre-date newer fields (override_color, show) and to seed a
+        // fresh entry when the markup type isn't present at all.
+        hydrateMarkupStyle(sceneConfig, key, { italic = false, bold = false, withShow = false } = {}) {
+            if (!sceneConfig[key]) {
+                const fresh = {
+                    color: DEFAULT_APPEARANCE_COLORS[key],
+                    italic,
+                    bold,
+                    override_color: true,
+                };
+                if (withShow) fresh.show = true;
+                sceneConfig[key] = fresh;
+                return;
+            }
+            if (sceneConfig[key].override_color === undefined) {
+                sceneConfig[key].override_color = true;
+            }
+            if (withShow && sceneConfig[key].show === undefined) {
+                sceneConfig[key].show = true;
+            }
+        },
         reset(typ, config) {
             config.color = null;
             this.color = this.getColor(typ, config.color);
@@ -349,3 +381,13 @@ export default {
 }
 
 </script>
+
+<style scoped>
+/* Mirror SceneMessages .scene-entity styling — underline tracks inline color via currentColor. */
+.v-card-text :deep(.scene-entity) {
+    cursor: pointer;
+    text-decoration: underline dotted currentColor;
+    text-underline-offset: 3px;
+    border-radius: 2px;
+}
+</style>

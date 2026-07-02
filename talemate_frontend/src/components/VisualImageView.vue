@@ -234,7 +234,7 @@
 </template>
 
 <script>
-import { VIS_TYPE_OPTIONS } from '../constants/visual.js';
+import { VIS_TYPE_OPTIONS, FORMAT_TYPE } from '@/constants/visual';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
 import VisualReferenceImages from './VisualReferenceImages.vue';
 import CoverBBoxEditor from './CoverBBoxEditor.vue';
@@ -339,8 +339,8 @@ export default {
       return `data:${this.mediaType};base64,${base64}`;
     },
     imagePreviewClass(format) {
-      const fmt = format || 'LANDSCAPE';
-      return fmt === 'PORTRAIT' ? 'img-preview-portrait' : (fmt === 'SQUARE' ? 'img-preview-square' : 'img-preview-wide');
+      const fmt = format || FORMAT_TYPE.LANDSCAPE;
+      return fmt === FORMAT_TYPE.PORTRAIT ? 'img-preview-portrait' : (fmt === FORMAT_TYPE.SQUARE ? 'img-preview-square' : 'img-preview-wide');
     },
     saveMeta() {
       if (!this.canSave) return;

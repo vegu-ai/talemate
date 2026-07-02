@@ -49,7 +49,7 @@ Stores [node editor](/talemate/user-guide/node-editor/) graphs for the scene, su
 
 ### `templates/`
 
-Scene-specific [templates](/talemate/user-guide/world-editor/templates/writing-style/) that override or extend the default templates. These are organized into `scene/`, `common/`, and agent-specific subdirectories.
+Scene-specific [templates](/talemate/user-guide/templates/writing-style/) that override or extend the default templates. These are organized into `scene/`, `common/`, and agent-specific subdirectories.
 
 ### `shared-context/`
 

@@ -49,6 +49,7 @@ Output the attribute value wrapped in <ATTRIBUTE></ATTRIBUTE> tags:
 <ATTRIBUTE>the attribute value</ATTRIBUTE>
 
 ### Editorial Instructions
+The following is user-provided instruction and/or seed material for this generation. It must be considered and reflected in your response:
 Make sure the occupation fits the fantasy setting
 </TASK>
 

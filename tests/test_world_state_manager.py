@@ -662,25 +662,36 @@ class TestGetPins:
 class TestSceneSettings:
     @pytest.mark.asyncio
     async def test_update_scene_outline_sets_fields(self, scene, manager):
+        from talemate.scene.schema import ScenePerspectives
+
         await manager.update_scene_outline(
             title="My Story",
             description="An epic tale.",
             intro="Once upon a time",
             context="Fantasy world",
-            perspective="third",
+            perspectives=ScenePerspectives(
+                default="third",
+                player="first person, present tense",
+            ),
         )
         assert scene.title == "My Story"
         assert scene.description == "An epic tale."
         assert scene.intro == "Once upon a time"
         assert scene.context == "Fantasy world"
-        assert scene.perspective == "third"
+        assert scene.perspectives.default == "third"
+        assert scene.perspectives.player == "first person, present tense"
+        assert scene.perspectives.other == ""
+        assert scene.perspectives.narrator == ""
 
     @pytest.mark.asyncio
-    async def test_update_scene_outline_perspective_defaults_to_empty(
+    async def test_update_scene_outline_perspectives_default_empty(
         self, scene, manager
     ):
         await manager.update_scene_outline(title="x")
-        assert scene.perspective == ""
+        assert scene.perspectives.default == ""
+        assert scene.perspectives.player == ""
+        assert scene.perspectives.other == ""
+        assert scene.perspectives.narrator == ""
 
     @pytest.mark.asyncio
     async def test_update_scene_settings_basic(self, scene, manager):

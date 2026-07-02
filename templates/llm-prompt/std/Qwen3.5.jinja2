@@ -1,3 +1,4 @@
+{%- if reasoning_tokens %}{% set _ = spec.set_spec("reasoning_validation_pattern", "<think>") %}{% endif -%}
 <|im_start|>system
 {{ system_message }}<|im_end|>
 <|im_start|>user

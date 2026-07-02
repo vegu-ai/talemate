@@ -12,9 +12,11 @@ infrastructure (network, filesystem) which template tests must not touch.
 from typing import Iterable
 from unittest.mock import Mock
 
+import talemate.instance as instance
 from talemate.character import Character
 from talemate.prompts.base import Prompt
 from talemate.tale_mate import Actor, Player, Scene
+from talemate.world_state import CharacterState, ObjectState, PlaceState
 
 
 # Default rendered-history lines returned by ``Scene.context_history``. The real
@@ -85,10 +87,10 @@ def create_mock_scene(
     scene.title = title
     scene.ts = "PT2H30M"
     scene.environment = "scene"
-    # Default narrative perspective so templates gated on ``scene.perspective``
-    # (e.g. common/content-classification.jinja2) render their branches. Tests
-    # that want the section suppressed can set ``scene.perspective = ""``.
-    scene.perspective = "Third person limited, past tense."
+    # Default narrative perspective so templates gated on
+    # ``scene.perspectives.default`` render their branches. Tests that want the
+    # section suppressed can set ``scene.perspectives.default = ""``.
+    scene.perspectives.default = "Third person limited, past tense."
     if history:
         scene.history = list(history)
 
@@ -232,3 +234,43 @@ def assert_has_data_response(uid: str, vars: dict | None = None, client=None):
     prompt.render()
 
     assert prompt.data_response, f"Template {uid} does not use set_data_response"
+
+
+def register_world_state_toggle(value: bool):
+    """Register a minimal world_state agent whose snapshot toggle resolves to ``value``.
+
+    ``agent_config("world_state.update_world_state.inject_as_scene_memory")`` calls
+    ``instance.get_agent("world_state").resolve_config(...)``; this stands in for a
+    real agent so the gate inside ``common/world-state-snapshot.jinja2`` can be
+    exercised. Only assigns the registry entry — teardown (e.g. the ``setup_agents``
+    fixture, or an explicit save/restore) is the caller's responsibility.
+    """
+    ws = Mock()
+    ws.resolve_config = Mock(return_value=value)
+    instance.AGENTS["world_state"] = ws
+    return ws
+
+
+def seed_world_state_snapshot(scene):
+    """Populate the scene's durable world-state snapshot with one of each entity kind.
+
+    Includes a character with an emotion, an item, a place, and a location so the
+    rendered SCENE NOTES block exercises every branch of the snapshot partial.
+    """
+    scene.world_state.location = "A dim server room, fans humming."
+    scene.world_state.characters = {
+        "Elena": CharacterState(
+            snapshot="favors her left hand; a fresh burn on the wrist.",
+            emotion="anxious",
+        ),
+    }
+    scene.world_state.items = {
+        "the silver dagger": ObjectState(
+            snapshot="older than the hilt suggests; faint etching near the guard.",
+        ),
+    }
+    scene.world_state.places = {
+        "the north stairwell": PlaceState(
+            snapshot="lit only by a flickering exit sign.",
+        ),
+    }

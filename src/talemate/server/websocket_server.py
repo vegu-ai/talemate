@@ -17,6 +17,7 @@ import talemate.emit.async_signals as async_signals
 from talemate.files import list_scenes_directory
 from talemate.load import load_scene, SceneInitialization
 from talemate.scene_assets import Asset, get_media_type_from_file_path, VIS_TYPE
+from talemate.scene_message import versions_payload_for
 from talemate.server import (
     agent_config,
     assistant,
@@ -24,6 +25,7 @@ from talemate.server import (
     config,
     devtools,
     quick_settings,
+    scene_message as scene_message_plugin,
     time_passage,
     ux,
     world_state_manager,
@@ -78,6 +80,9 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             ),
             ux.UxPlugin.router: ux.UxPlugin(self),
             time_passage.TimePassagePlugin.router: time_passage.TimePassagePlugin(self),
+            scene_message_plugin.SceneMessagePlugin.router: scene_message_plugin.SceneMessagePlugin(
+                self
+            ),
         }
 
         # unconveniently named function, this `connect` method is called
@@ -299,6 +304,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),
                 "rev": (emission.message_object.rev if emission.message_object else 0),
+                **versions_payload_for(message_obj),
             }
         )
 
@@ -377,6 +383,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),
                 "rev": (emission.message_object.rev if emission.message_object else 0),
+                **versions_payload_for(message_obj),
             }
         )
 
@@ -415,6 +422,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 "asset_id": asset_id,
                 "asset_type": asset_type,
                 "flags": (int(message_obj.flags) if message_obj else 0),
+                **versions_payload_for(message_obj),
             }
         )
 
@@ -434,12 +442,14 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         )
 
     def handle_remove_message(self, emission: Emission):
-        self.queue_put(
-            {
-                "type": "remove_message",
-                "id": emission.id,
-            }
-        )
+        reason = (emission.data or {}).get("reason")
+        payload = {
+            "type": "remove_message",
+            "id": emission.id,
+        }
+        if reason:
+            payload["reason"] = reason
+        self.queue_put(payload)
 
     def handle_scene_status(self, emission: Emission):
         self.queue_put(
@@ -527,14 +537,19 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         )
 
     def handle_message_edited(self, emission: Emission):
-        self.queue_put(
-            {
-                "type": "message_edited",
-                "message": emission.message,
-                "id": emission.id,
-                "character": emission.character.name if emission.character else "",
-            }
-        )
+        # All edit paths (plain edit, version append, active-version swap)
+        # carry the message's current state — the frontend just mirrors
+        # `versions` + `active_version` onto its local revision stack
+        # rather than reconstructing append/replace semantics from a
+        # per-edit reason.
+        payload = {
+            "type": "message_edited",
+            "message": emission.message,
+            "id": emission.id,
+            "character": emission.character.name if emission.character else "",
+            **versions_payload_for(emission.message_object),
+        }
+        self.queue_put(payload)
 
     def handle_autocomplete_suggestion(self, emission: Emission):
         self.queue_put(
@@ -771,32 +786,6 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                     "character": character.name,
                 }
             )
-
-    def delete_message(self, message_id):
-        self.scene.delete_message(message_id)
-
-    def edit_message(self, message_id, new_text):
-        message = self.scene.get_message(message_id)
-
-        editor = instance.get_agent("editor")
-
-        if (
-            editor.enabled
-            and message.typ == "character"
-            and editor.fix_exposition_enabled
-            and editor.fix_exposition_user_input
-        ):
-            character = self.scene.get_character(message.character_name)
-            loop = asyncio.get_event_loop()
-            new_text = loop.run_until_complete(
-                editor.cleanup_character_message(
-                    new_text,
-                    character,
-                    strip_partial=not editor.allow_incomplete_sentences,
-                )
-            )
-
-        self.scene.edit_message(message_id, new_text)
 
     def handle_character_card_upload(self, image_data_url: str, filename: str) -> str:
         image_data = base64.b64decode(image_data_url.split(",")[1])

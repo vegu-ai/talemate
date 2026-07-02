@@ -6,9 +6,9 @@
 
         <v-list style="overflow-y: auto;" density="compact">
             <v-list-item v-for="prop, name in editableProperties" :key="name">
-                <v-checkbox v-if="prop.type === 'bool'" v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" density="compact"></v-checkbox>
-                <v-textarea v-else-if="prop.type === 'text'" v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" rows="3" auto-grow></v-textarea>
-                <v-text-field v-else v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" dense></v-text-field>
+                <v-checkbox v-if="prop.type === 'bool'" v-model="properties[name]" :label="prop.description" @update:model-value="updateProperty(name, properties[name])" color="primary" density="compact"></v-checkbox>
+                <v-textarea v-else-if="prop.type === 'text'" v-model="properties[name]" :label="prop.description" @blur="updateProperty(name, properties[name])" color="primary" rows="3" auto-grow></v-textarea>
+                <v-text-field v-else v-model="properties[name]" :label="prop.description" @blur="updateProperty(name, properties[name])" color="primary" dense></v-text-field>
             </v-list-item>
         </v-list>
     </div>

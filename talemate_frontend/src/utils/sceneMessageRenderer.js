@@ -22,6 +22,11 @@ const DEFAULTS = {
         italic: false,
         bold: false,
     },
+    entities: {
+        color: DEFAULT_APPEARANCE_COLORS.entities,
+        italic: false,
+        bold: false,
+    },
     default: {
         color: DEFAULT_APPEARANCE_COLORS.emphasis,
         italic: true,
@@ -32,6 +37,80 @@ const DEFAULTS = {
         italic: false,
         bold: true,
     },
+}
+
+// Escape a string for use inside a regex literal.
+function escapeRegex(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Escape a string for safe embedding inside an HTML attribute value.
+function escapeHtmlAttr(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+// Escape a string for safe embedding as HTML text content.
+function escapeHtmlText(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+// Compile an entity-mentions list into the lookup structures used by the
+// scene-entity tokenizer extension. Returns null when the list is empty.
+//
+// mentions: [{ name, kind, phrases: [string, ...] }, ...]
+//
+// Returned object:
+//   - startRegex: matches the first phrase occurrence anywhere in `src`
+//   - matchRegex: matches a phrase only at the start of `src`
+//   - phraseToEntity: lowercase-phrase → { name, kind }
+function compileEntityMentions(mentions) {
+    if (!mentions || mentions.length === 0) return null;
+
+    const flat = [];
+    const seen = new Set();
+    for (const entity of mentions) {
+        if (!entity || !Array.isArray(entity.phrases)) continue;
+        for (const rawPhrase of entity.phrases) {
+            if (typeof rawPhrase !== 'string') continue;
+            const phrase = rawPhrase.trim();
+            if (!phrase) continue;
+            const key = phrase.toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            flat.push({ phrase, key, entity });
+        }
+    }
+    if (flat.length === 0) return null;
+
+    // Longer phrases first so "blast door" wins over "door".
+    flat.sort((a, b) => b.phrase.length - a.phrase.length);
+
+    const alternatives = flat
+        .map(({ phrase }) => {
+            const escaped = escapeRegex(phrase);
+            const leading = /^\w/.test(phrase) ? '\\b' : '';
+            const trailing = /\w$/.test(phrase) ? '\\b' : '';
+            return `${leading}${escaped}${trailing}`;
+        })
+        .join('|');
+
+    const phraseToEntity = {};
+    for (const { key, entity } of flat) {
+        phraseToEntity[key] = { name: entity.name, kind: entity.kind };
+    }
+
+    return {
+        startRegex: new RegExp(`(?:${alternatives})`, 'i'),
+        matchRegex: new RegExp(`^(?:${alternatives})`, 'i'),
+        phraseToEntity,
+    };
 }
 
 export class SceneTextParser {
@@ -75,6 +154,7 @@ export class SceneTextParser {
             emphasis: merge('emphasis', { className: 'scene-emphasis' }, { color: DEFAULTS.emphasis.color, bold: DEFAULTS.emphasis.bold, italic: DEFAULTS.emphasis.italic }, true),
             parentheses: merge('parentheses', { className: 'scene-parentheses' }, { color: DEFAULTS.parentheses.color, bold: DEFAULTS.parentheses.bold, italic: DEFAULTS.parentheses.italic }, true),
             brackets: merge('brackets', { className: 'scene-brackets' }, { color: DEFAULTS.brackets.color, bold: DEFAULTS.brackets.bold, italic: DEFAULTS.brackets.italic }, true),
+            entities: merge('entities', { className: 'scene-entity' }, { color: DEFAULTS.entities.color, bold: DEFAULTS.entities.bold, italic: DEFAULTS.entities.italic }, true),
             prefix:   merge('prefix',   { className: 'scene-prefix' },   { color: DEFAULTS.prefix.color,  bold: true, italic: false }),
             default: merge('default', { className: 'scene-default' }, { color: defaultColor, bold: false, italic: false }),
         };
@@ -154,6 +234,59 @@ export class SceneTextParser {
                     const content = this.parser.parseInline(token.tokens);
                     const styles = self.config.brackets;
                     return self.buildSpan('brackets', `[${content}]`, styles);
+                },
+            },
+
+            // Extension for entity-mention phrases — verbatim noun phrases the
+            // world-state snapshot extracted. Wraps each match in a clickable
+            // span so the UI can show an "examine" tooltip. Active only when
+            // `parse()` is called with a non-empty mentions list.
+            {
+                name: 'sceneEntity',
+                level: 'inline',
+                start(src) {
+                    const compiled = self._entityMentions;
+                    if (!compiled) return undefined;
+                    return src.match(compiled.startRegex)?.index;
+                },
+                tokenizer(src) {
+                    const compiled = self._entityMentions;
+                    if (!compiled) return;
+                    const match = src.match(compiled.matchRegex);
+                    if (!match) return;
+                    const phrase = match[0];
+                    const entity = compiled.phraseToEntity[phrase.toLowerCase()];
+                    if (!entity) return;
+                    return {
+                        type: 'sceneEntity',
+                        raw: phrase,
+                        text: phrase,
+                        entityName: entity.name,
+                        entityKind: entity.kind,
+                    };
+                },
+                renderer(token) {
+                    const styles = self.config.entities;
+                    const text = escapeHtmlText(token.text);
+                    // Appearance toggle disables highlights — emit plain text.
+                    if (styles && styles.show === false) {
+                        return text;
+                    }
+                    // Only highlight the first occurrence of each entity per
+                    // parse — repeats add visual noise without adding info.
+                    // The dedupe lives here (not in tokenizer) because the
+                    // custom paragraph renderer re-tokenizes via parseInline,
+                    // so the tokenizer fires twice per phrase but the renderer
+                    // fires exactly once per visible occurrence.
+                    const seenKey = `${token.entityKind}:${token.entityName}`;
+                    if (self._entitiesSeenInParse.has(seenKey)) {
+                        return text;
+                    }
+                    self._entitiesSeenInParse.add(seenKey);
+                    const name = escapeHtmlAttr(token.entityName);
+                    const kind = escapeHtmlAttr(token.entityKind);
+                    const styleStr = self.buildStyleString(styles);
+                    return `<span class="scene-entity" data-entity-name="${name}" data-entity-kind="${kind}" style="${styleStr}">${text}</span>`;
                 },
             }
         ];
@@ -244,8 +377,8 @@ export class SceneTextParser {
 
         // Helper to remove content with one marker type, collapsing whitespace
         const stripMarker = (str, openChar, closeChar) => {
-            const open = openChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const close = closeChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const open = escapeRegex(openChar);
+            const close = escapeRegex(closeChar);
             // Match: optional leading space + marker content + optional trailing space
             // Capture groups to decide which space to remove
             const regex = new RegExp(`( ?)${open}[\\s\\S]+?${close}( ?)`, 'g');
@@ -275,15 +408,15 @@ export class SceneTextParser {
 
     // Protect newlines inside delimited content before marked processes it
     protectNewlines(text, openChar, closeChar) {
-        const open = openChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const close = closeChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const open = escapeRegex(openChar);
+        const close = escapeRegex(closeChar);
         const regex = new RegExp(`${open}([\\s\\S]+?)${close}`, 'g');
         return text.replace(regex, (_, content) => {
             return openChar + content.replace(/\n/g, '\x00BR\x00') + closeChar;
         });
     }
 
-    parse(text) {
+    parse(text, options = {}) {
         let md = text;
 
         // Strip hidden markers before any other processing
@@ -303,11 +436,22 @@ export class SceneTextParser {
             md = styled + ' ' + rest;
         }
 
-        let result = this.marked.parse(md);
-        // Restore protected newlines as <br> tags
-        // eslint-disable-next-line no-control-regex
-        result = result.replace(/\x00BR\x00/g, '<br>');
-        return result;
+        // Stash the compiled mention regex so the entity tokenizer extension
+        // can see it during this parse. Cleared on the way out so subsequent
+        // parses on this instance don't accidentally inherit it. The seen-set
+        // dedupes entities so each one highlights only on its first match.
+        this._entityMentions = compileEntityMentions(options.mentions);
+        this._entitiesSeenInParse = new Set();
+        try {
+            let result = this.marked.parse(md);
+            // Restore protected newlines as <br> tags
+            // eslint-disable-next-line no-control-regex
+            result = result.replace(/\x00BR\x00/g, '<br>');
+            return result;
+        } finally {
+            this._entityMentions = null;
+            this._entitiesSeenInParse = null;
+        }
     }
     
     parseInline(text) {

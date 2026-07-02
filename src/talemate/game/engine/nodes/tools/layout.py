@@ -43,7 +43,6 @@ from __future__ import annotations
 
 import enum
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
 from itertools import groupby
 from typing import Iterable
 
@@ -116,8 +115,7 @@ class WCCKind(enum.Enum):
     BOTTOM = "bottom"  # has core/Output, no core/Input, no core/Stage
 
 
-@dataclass
-class WCCInfo:
+class WCCInfo(pydantic.BaseModel):
     """One weakly-connected component and its classification."""
 
     nodes: list[str]
@@ -435,11 +433,10 @@ def _rects_overlap(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -
     return not (ax + aw <= bx or bx + bw <= ax or ay + ah <= by or by + bh <= ay)
 
 
-@dataclass
-class _BandPlacement:
+class _BandPlacement(pydantic.BaseModel):
     """Internal result of placing a single band."""
 
-    rects: list[tuple[int, int, int, int]] = field(default_factory=list)
+    rects: list[tuple[int, int, int, int]] = pydantic.Field(default_factory=list)
     max_y: int = 0  # highest y + h across all placed nodes; 0 for empty
 
 

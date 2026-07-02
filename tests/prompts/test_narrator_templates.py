@@ -13,7 +13,11 @@ import talemate.instance as instance
 from talemate.agents.narrator import NarratorAgent
 from talemate.agents.editor import EditorAgent
 from talemate.prompts.base import Prompt
-from .helpers import create_scene_with_characters
+from .helpers import (
+    create_scene_with_characters,
+    register_world_state_toggle,
+    seed_world_state_snapshot,
+)
 
 
 @pytest.fixture
@@ -698,3 +702,47 @@ class TestNarratorProperties:
         ].value = 512
 
         assert narrator_agent.action_response_length("progress_story") == 512
+
+
+class TestNarratorWorldStateSnapshot:
+    """The durable world-state snapshot is fed into the narrator prompt as scene memory."""
+
+    @pytest.mark.asyncio
+    async def test_snapshot_injected_when_enabled(self, active_context, mock_scene):
+        narrator = active_context
+        register_world_state_toggle(True)
+        seed_world_state_snapshot(mock_scene)
+
+        await narrator.narrate_scene(narrative_direction="Describe the room")
+
+        prompt_text = str(narrator.client.send_prompt.call_args[0][0])
+        assert "scene notes" in prompt_text.lower()
+        assert "Location: A dim server room, fans humming." in prompt_text
+        assert "Elena (anxious) — favors her left hand" in prompt_text
+        assert "the silver dagger — older than the hilt suggests" in prompt_text
+        assert (
+            "the north stairwell — lit only by a flickering exit sign." in prompt_text
+        )
+
+    @pytest.mark.asyncio
+    async def test_snapshot_omitted_when_disabled(self, active_context, mock_scene):
+        narrator = active_context
+        register_world_state_toggle(False)
+        seed_world_state_snapshot(mock_scene)
+
+        await narrator.narrate_scene(narrative_direction="Describe the room")
+
+        prompt_text = str(narrator.client.send_prompt.call_args[0][0])
+        assert "scene notes" not in prompt_text.lower()
+        assert "A dim server room, fans humming." not in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_empty_snapshot_renders_nothing(self, active_context, mock_scene):
+        narrator = active_context
+        register_world_state_toggle(True)
+        # world_state left empty
+
+        await narrator.narrate_scene(narrative_direction="Describe the room")
+
+        prompt_text = str(narrator.client.send_prompt.call_args[0][0])
+        assert "scene notes" not in prompt_text.lower()

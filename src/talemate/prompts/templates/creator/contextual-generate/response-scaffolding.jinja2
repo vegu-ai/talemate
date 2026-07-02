@@ -17,12 +17,13 @@
 {{ set_prepared_response('items:\n1.') }}
   {%- endif -%}
 
-{# Task template defined prefix (for anchor extraction) #}
+{# Task template defined prefix (for anchor extraction). Trim trailing whitespace so
+   the coerced prefill ends exactly at the partial — a stray newline here lands right
+   after the partial and makes the model start a new line instead of continuing it. #}
 {% elif generation_context.get_state('response_prefix') and can_coerce %}
-{{ set_prepared_response(generation_context.get_state('response_prefix') + (generation_context.partial or '')) }}
-
+{{ set_prepared_response(generation_context.get_state('response_prefix') + (generation_context.partial or '')) -}}
 {# Coerced response with prefix #}
-{% elif can_coerce %}
+{%- elif can_coerce %}
 {{ bot_token }}
   {%- if context_typ == 'character dialogue' -%}
 {{ character_name }}:{{ generation_context.partial }}
@@ -32,13 +33,24 @@ Scene introduction:{{ generation_context.partial }}
 {{ context_name }}:{{ generation_context.partial }}
   {%- endif -%}
 
-{# Partial text continuation (no coerce) #}
+{# Partial text continuation (no coerce): present the existing text as a DRAFT and
+   require the continuation in a SEPARATE COMPLETION block. This keeps the input and
+   the output in different containers, so the extracted response holds ONLY the new
+   text and can never include an echo of the draft. On this path output-format.jinja2
+   registers no per-type extractor, so COMPLETION is the only one in play. #}
 {% elif generation_context.partial %}
-Continue the partially generated text for "{{ context_name }}".
+{{ set_anchor_extractor("response", "<COMPLETION>", "</COMPLETION>", trim=False, fallback_to_full=True) }}
+You are continuing a partially written "{{ context_name }}".
 
-Your response MUST only be the new parts of the text, not the entire text.
+The existing text is given inside <DRAFT></DRAFT>. Write ONLY what comes next — never repeat any part of the draft.
 
-Continue this text: {{ generation_context.partial }}
+Put your continuation inside a <COMPLETION></COMPLETION> block. It is appended directly to the draft as-is, so begin with a leading space if one is needed.
+
+Example:
+<DRAFT>She reached for the door handle, her hand</DRAFT>
+<COMPLETION> trembling as the floorboards creaked behind her.</COMPLETION>
+
+<DRAFT>{{ generation_context.partial }}</DRAFT>
 
 {# Task template defined prefix (fallback without coerce) #}
 {% elif generation_context.get_state('response_prefix') %}

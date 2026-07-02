@@ -304,35 +304,31 @@ class ContextHistoryMixin:
 
     @property
     def scene_history_enforce_boundary(self) -> bool:
-        return self.actions["manage_scene_history"].config["enforce_boundary"].value
+        return self.resolve_config("manage_scene_history", "enforce_boundary")
 
     @property
     def scene_history_dialogue_ratio(self) -> int:
-        return self.actions["manage_scene_history"].config["dialogue_ratio"].value
+        return self.resolve_config("manage_scene_history", "dialogue_ratio")
 
     @property
     def scene_history_summary_detail_ratio(self) -> int:
-        return self.actions["manage_scene_history"].config["summary_detail_ratio"].value
+        return self.resolve_config("manage_scene_history", "summary_detail_ratio")
 
     @property
     def scene_history_max_budget(self) -> int:
-        return self.actions["manage_scene_history"].config["max_budget"].value
+        return self.resolve_config("manage_scene_history", "max_budget")
 
     @property
     def scene_history_best_fit(self) -> bool:
-        return self.actions["manage_scene_history"].config["best_fit"].value
+        return self.resolve_config("manage_scene_history", "best_fit")
 
     @property
     def scene_history_best_fit_min_dialogue(self) -> int:
-        return (
-            self.actions["manage_scene_history"].config["best_fit_min_dialogue"].value
-        )
+        return self.resolve_config("manage_scene_history", "best_fit_min_dialogue")
 
     @property
     def scene_history_best_fit_max_dialogue(self) -> int:
-        return (
-            self.actions["manage_scene_history"].config["best_fit_max_dialogue"].value
-        )
+        return self.resolve_config("manage_scene_history", "best_fit_max_dialogue")
 
     def _has_layered_history(self, scene: Scene) -> bool:
         """Check if layered history is available for the given scene."""

@@ -43,8 +43,10 @@ Elena: The forest provides all we need.
 
 The length of your response must fit within 4 paragraphs.
 
+<ACTING_INSTRUCTIONS>
 **TENSE**: Examine the existing conversation history and maintain the EXACT same tense (past/present) used in previous messages. **NEVER switch tenses mid-conversation**.
 **PERSPECTIVE**: The narrative perspective for this scene is — Third person limited, past tense.. Apply it consistently to Elena's actions and thoughts.
+</ACTING_INSTRUCTIONS>
 
 <SCENE>
 (Broad character guidance for Elena: Speaks calmly and with wisdom. )

@@ -331,6 +331,57 @@ def test_split_anchor_text(input, anchor_length, expected_non_anchor, expected_a
 
 
 @pytest.mark.parametrize(
+    "input, expected_cleaned, expected_hint",
+    [
+        # No brace block — passthrough
+        ("", "", None),
+        ("plain text", "plain text", None),
+        # Trailing brace block — stripped, hint captured
+        (
+            '"Kaira!?" He yelled {dark corridor, no response, spaceship shakes}',
+            '"Kaira!?" He yelled',
+            "dark corridor, no response, spaceship shakes",
+        ),
+        # Free-form instruction, single hint
+        ("She looked up {make it ominous}", "She looked up", "make it ominous"),
+        # Trailing whitespace after brace block — tolerated
+        ("Hello world {tone: tense}   ", "Hello world", "tone: tense"),
+        # Whitespace inside braces is stripped on the hint
+        ("Hello {  spice it up  }", "Hello", "spice it up"),
+        # Mid-string braces — untouched
+        ("This {is} a sentence", "This {is} a sentence", None),
+        # Empty braces — not a hint
+        ("Hello {}", "Hello {}", None),
+        # Whitespace-only braces — not a hint (after strip it's empty)
+        ("Hello {   }", "Hello {   }", None),
+        # Nested braces — regex's [^{}] rules them out, so left as-is
+        ("Hello {a {b} c}", "Hello {a {b} c}", None),
+        # Newlines inside braces — allowed (locks current contract)
+        ("Hello {line1\nline2}", "Hello", "line1\nline2"),
+    ],
+)
+def test_extract_autocomplete_hint(input, expected_cleaned, expected_hint):
+    from talemate.util.dialogue import extract_autocomplete_hint
+
+    cleaned, hint = extract_autocomplete_hint(input)
+    assert cleaned == expected_cleaned
+    assert hint == expected_hint
+
+
+def test_extract_autocomplete_hint_full_chain_hint_only():
+    """Lock the hint-only-input path: extract → split_anchor_text → empty anchors."""
+    from talemate.util.dialogue import extract_autocomplete_hint, split_anchor_text
+
+    cleaned, hint = extract_autocomplete_hint("{just a hint}")
+    assert cleaned == ""
+    assert hint == "just a hint"
+
+    non_anchor, anchor = split_anchor_text(cleaned, 10)
+    assert non_anchor == ""
+    assert anchor == ""
+
+
+@pytest.mark.parametrize(
     "input, expected",
     [
         # Empty text

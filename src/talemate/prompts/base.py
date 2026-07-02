@@ -6,7 +6,6 @@ changeable and extensible.
 """
 
 import asyncio
-import dataclasses
 import fnmatch
 import json
 import traceback
@@ -22,6 +21,7 @@ from enum import Enum
 
 import jinja2
 import nest_asyncio
+import pydantic
 import structlog
 
 import talemate.instance as instance
@@ -220,11 +220,12 @@ class JoinableList(list):
         return separator.join(self)
 
 
-@dataclasses.dataclass
-class Prompt:
+class Prompt(pydantic.BaseModel):
     """
     Base prompt class.
     """
+
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     # unique prompt id {agent_type}-{prompt_name}
     uid: str
@@ -236,13 +237,13 @@ class Prompt:
     name: str
 
     # prompt text
-    prompt: str = None
+    prompt: str | None = None
 
     # template text
     template: str | None = None
 
     # prompt variables
-    vars: dict = dataclasses.field(default_factory=dict)
+    vars: dict = pydantic.Field(default_factory=dict)
 
     # pad prepared response and ai response with a white-space
     pad_prepended_response: bool = True
@@ -258,7 +259,7 @@ class Prompt:
 
     client: Any = None
 
-    sectioning_handler: str = dataclasses.field(
+    sectioning_handler: str = pydantic.Field(
         default_factory=lambda: DEFAULT_SECTIONING_HANDLER
     )
 
@@ -267,19 +268,19 @@ class Prompt:
     # Clientless renders treat None as "off" (the default).
     dedupe_enabled: bool | None = None
     strip_mode: StripMode = StripMode.BOTH
-    captured_context: str = dataclasses.field(default="", init=False)
-
-    # Extractors set by templates (can override Python-side extractors)
-    _template_extractors: dict = dataclasses.field(default_factory=dict, init=False)
-
-    # Track which source group the template was loaded from
-    _source_group: str | None = dataclasses.field(default=None, repr=False)
+    captured_context: str = pydantic.Field(default="", init=False)
 
     # Set by the response-length template to indicate instructions were rendered
-    response_length_instructions: bool = dataclasses.field(default=False, init=False)
+    response_length_instructions: bool = pydantic.Field(default=False, init=False)
 
     # Accumulated response length modifier (set by templates via mod_response_length)
-    response_length_mod: int = dataclasses.field(default=0, init=False)
+    response_length_mod: int = pydantic.Field(default=0, init=False)
+
+    # Extractors set by templates (can override Python-side extractors)
+    _template_extractors: dict = pydantic.PrivateAttr(default_factory=dict)
+
+    # Track which source group the template was loaded from
+    _source_group: str | None = pydantic.PrivateAttr(default=None)
 
     @classmethod
     def get(cls, uid: str, vars: dict = None):
@@ -365,6 +366,11 @@ class Prompt:
             scene_agent_dir = os.path.join(scene_template_dir, self.agent_type)
             if os.path.exists(scene_agent_dir):
                 template_dirs.append(scene_agent_dir)
+            # Scene-group templates (created via prompt manager with the
+            # "scene" agent prefix; stored under {template_dir}/scene/)
+            scene_group_dir = os.path.join(scene_template_dir, "scene")
+            if os.path.exists(scene_group_dir):
+                template_dirs.append(scene_group_dir)
             # Flat scene templates (backward compatibility)
             template_dirs.append(scene_template_dir)
 
@@ -1015,7 +1021,7 @@ class Prompt:
         try:
             agent_name, action_name, config_name = config_path.split(".")
             agent = instance.get_agent(agent_name)
-            return agent.actions[action_name].config.get(config_name).value
+            return agent.resolve_config(action_name, config_name)
         except Exception as e:
             log.error("agent_config", config_path=config_path, error=e)
             return ""

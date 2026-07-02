@@ -3,6 +3,7 @@ import talemate.game.engine.nodes.command  # noqa: F401
 import talemate.game.engine.nodes.logic  # noqa: F401
 import talemate.game.engine.nodes.state  # noqa: F401
 import talemate.game.engine.nodes.scene  # noqa: F401
+import talemate.game.engine.nodes.scene_messages  # noqa: F401
 import talemate.game.engine.nodes.scene_intent  # noqa: F401
 import talemate.game.engine.nodes.world_state  # noqa: F401
 import talemate.game.engine.nodes.run  # noqa: F401

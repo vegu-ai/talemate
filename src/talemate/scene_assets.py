@@ -59,6 +59,7 @@ VIS_TYPE_TO_ASSET_TYPE = {
     VIS_TYPE.SCENE_CARD: "card",
     VIS_TYPE.SCENE_BACKGROUND: "scene_illustration",
     VIS_TYPE.SCENE_ILLUSTRATION: "scene_illustration",
+    VIS_TYPE.OBJECT_ILLUSTRATION: "card",
     VIS_TYPE.UNSPECIFIED: None,
 }
 

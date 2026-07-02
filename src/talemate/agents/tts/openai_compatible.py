@@ -103,6 +103,7 @@ class OpenAICompatibleMixin:
                     description=(
                         "Internal — managed by the Add Backend UI on this tab."
                     ),
+                    scene_overridable=False,
                 ),
             },
         )
@@ -141,6 +142,7 @@ class OpenAICompatibleMixin:
                     # Persist on blur so the user can immediately click
                     # Refresh voices without closing the agent settings.
                     save_on_change=True,
+                    scene_overridable=False,
                 ),
                 "api_key": AgentActionConfig(
                     type="password",
@@ -148,12 +150,14 @@ class OpenAICompatibleMixin:
                     label="API Key",
                     description="API key for the server (leave empty if not required)",
                     save_on_change=True,
+                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",
                     value="tts-1",
                     label="Model",
                     description="Model identifier to send in requests",
+                    scene_overridable=False,
                 ),
                 "voices_endpoint": AgentActionConfig(
                     type="text",
@@ -164,6 +168,7 @@ class OpenAICompatibleMixin:
                         "endpoint. Leave empty to probe common defaults."
                     ),
                     save_on_change=True,
+                    scene_overridable=False,
                 ),
                 "chunk_size": AgentActionConfig(
                     type="number",
@@ -173,6 +178,7 @@ class OpenAICompatibleMixin:
                     value=512,
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
+                    scene_overridable=False,
                 ),
             },
         )

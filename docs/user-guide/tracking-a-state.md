@@ -37,9 +37,9 @@ Then follow the instructions at [Tracking a world state](/talemate/user-guide/wo
 
 ## Quickly apply often tracked states via templates
 
---8<-- "docs/talemate/user-guide/scenario-tools.md:tools-ux"
+--8<-- "docs/user-guide/scenario-tools.md:tools-ux"
 
---8<-- "docs/talemate/user-guide/scenario-tools.md:quick-apply-favorite-state"
+--8<-- "docs/user-guide/scenario-tools.md:quick-apply-favorite-state"
 
 ## Context Attachment Method
 <!-- --8<-- [start:context-attachment-method] -->

@@ -319,6 +319,7 @@ class SDNextMixin:
                 label="API URL",
                 description="The URL of the SD.Next API",
                 save_on_change=True,
+                scene_overridable=False,
             ),
             "auth_method": AgentActionConfig(
                 type="text",
@@ -331,6 +332,7 @@ class SDNextMixin:
                     {"label": "Bearer (API Key)", "value": "bearer"},
                 ],
                 save_on_change=True,
+                scene_overridable=False,
             ),
             "username": AgentActionConfig(
                 type="text",
@@ -342,6 +344,7 @@ class SDNextMixin:
                 condition=AgentActionConditional(
                     attribute=f"{action_name}.config.auth_method", value="basic"
                 ),
+                scene_overridable=False,
             ),
             "password": AgentActionConfig(
                 type="password",
@@ -352,6 +355,7 @@ class SDNextMixin:
                 condition=AgentActionConditional(
                     attribute=f"{action_name}.config.auth_method", value="basic"
                 ),
+                scene_overridable=False,
             ),
             "api_key": AgentActionConfig(
                 type="password",
@@ -362,6 +366,7 @@ class SDNextMixin:
                 condition=AgentActionConditional(
                     attribute=f"{action_name}.config.auth_method", value="bearer"
                 ),
+                scene_overridable=False,
             ),
             "steps": AgentActionConfig(
                 title="Sampler Settings",
@@ -372,6 +377,7 @@ class SDNextMixin:
                 max=150,
                 step=1,
                 description="Number of render steps",
+                scene_overridable=False,
             ),
             "sampling_method": AgentActionConfig(
                 type="text",
@@ -379,6 +385,7 @@ class SDNextMixin:
                 value="DPM++ 2M",
                 label="Sampling Method",
                 description="The sampling method to use",
+                scene_overridable=False,
             ),
             # schedule_type removed – not in SD.Next OpenAPI
             "cfg": AgentActionConfig(
@@ -389,6 +396,7 @@ class SDNextMixin:
                 min=1,
                 max=30,
                 step=0.5,
+                scene_overridable=False,
             ),
             "prompt_type": AgentActionConfig(
                 type="text",
@@ -397,6 +405,7 @@ class SDNextMixin:
                 label="Prompting Type",
                 choices=PROMPT_TYPE.choices(),
                 description="Semantic style of the generated prompt.",
+                scene_overridable=False,
             ),
             "model": AgentActionConfig(
                 type="autocomplete",
@@ -404,6 +413,7 @@ class SDNextMixin:
                 label="Model",
                 choices=[],
                 description="The main image generation model to use.",
+                scene_overridable=False,
             ),
             "resolution_square": AgentActionConfig(
                 type="vector2",
@@ -412,6 +422,7 @@ class SDNextMixin:
                 label="Square",
                 description="The resolution to use for square images.",
                 choices=get_resolution_choices("square"),
+                scene_overridable=False,
             ),
             "resolution_portrait": AgentActionConfig(
                 type="vector2",
@@ -419,6 +430,7 @@ class SDNextMixin:
                 label="Portrait",
                 description="The resolution to use for portrait images.",
                 choices=get_resolution_choices("portrait"),
+                scene_overridable=False,
             ),
             "resolution_landscape": AgentActionConfig(
                 type="vector2",
@@ -426,6 +438,7 @@ class SDNextMixin:
                 label="Landscape",
                 description="The resolution to use for landscape images.",
                 choices=get_resolution_choices("landscape"),
+                scene_overridable=False,
             ),
         }
 

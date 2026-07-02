@@ -107,7 +107,12 @@ register_context_id_meta(
             ),
             ContextIDMeta(
                 context_id="story_configuration:perspective",
-                description="The narrative perspective and tense for the story (e.g., 'Third person limited, past tense').",
+                description="The narrative perspective and tense for the story (e.g., 'Third person limited, past tense'). Alias for `story_configuration:perspective.default`.",
+                permanent=True,
+            ),
+            ContextIDMeta(
+                context_id="story_configuration:perspective.<role>",
+                description="Role-specific narrative perspective override. Replace <role> with one of: 'default' (scene-wide), 'player' (player character's POV), 'other' (NPCs), 'narrator' (narration). Empty role-specific overrides fall back to 'default'.",
                 permanent=True,
             ),
             ContextIDMeta(
@@ -145,6 +150,9 @@ register_context_id_meta(
         ],
     )
 )
+
+
+PERSPECTIVE_ROLES: tuple[str, ...] = ("default", "player", "other", "narrator")
 
 
 @register_context_id_type
@@ -197,6 +205,19 @@ class DirectorInstructionsContextID(StoryConfigurationContextID):
 class ScenePerspectiveContextID(StoryConfigurationContextID):
     key: ClassVar[str] = "perspective"
 
+    @classmethod
+    def make(cls, role: str | None = None, **kwargs) -> "ScenePerspectiveContextID":
+        path = ["perspective"]
+        if role and role != "default":
+            path.append(role)
+        return cls(path=path)
+
+    @property
+    def role(self) -> str:
+        if len(self.path) >= 2 and self.path[1]:
+            return self.path[1]
+        return "default"
+
 
 class CharacterListContextID(StoryConfigurationContextID):
     key: ClassVar[str] = "character_list"
@@ -219,6 +240,7 @@ class StoryConfigurationContextItem(ContextIDItem):
         "character_list",
     ]
     name: str
+    role: str | None = None
 
     @property
     def context_id(
@@ -252,7 +274,7 @@ class StoryConfigurationContextItem(ContextIDItem):
         if self.context_type == "scene_type":
             return SceneTypeContextID.make()
         if self.context_type == "perspective":
-            return ScenePerspectiveContextID.make()
+            return ScenePerspectiveContextID.make(role=self.role)
         if self.context_type == "character_list":
             return CharacterListContextID.make()
 
@@ -270,7 +292,10 @@ class StoryConfigurationContextItem(ContextIDItem):
             "perspective": "Narrative Perspective",
             "character_list": "List of All Characters (active and inactive)",
         }
-        return mapping.get(self.context_type, self.name)
+        label = mapping.get(self.context_type, self.name)
+        if self.context_type == "perspective" and self.role and self.role != "default":
+            return f"{label} ({self.role.title()})"
+        return label
 
     async def get(self, scene: "Scene") -> str | None:
         if self.context_type == "title":
@@ -295,7 +320,7 @@ class StoryConfigurationContextItem(ContextIDItem):
             except Exception:
                 return None
         if self.context_type == "perspective":
-            return scene.perspective
+            return scene.perspectives.for_role(self.role or "default")
         if self.context_type == "character_list":
             characters = await list_characters(scene)
             return json.dumps([item.model_dump() for item in characters])
@@ -338,7 +363,10 @@ class StoryConfigurationContextItem(ContextIDItem):
                 scene.intent_state.phase.scene_type = scene_type_id
             intent_changed = True
         elif self.context_type == "perspective":
-            scene.perspective = value or ""
+            role = self.role or "default"
+            if role not in PERSPECTIVE_ROLES:
+                raise ContextIDHandlerError(f"Invalid perspective role: {role}")
+            setattr(scene.perspectives, role, value or "")
         elif self.context_type == "character_list":
             raise ContextIDItemReadOnly(self.context_id.path_to_str)
 
@@ -576,10 +604,14 @@ class StoryConfigurationContext(ContextIDHandler):
                 ),
             )
         if key == "perspective":
+            role = path[1] if len(path) > 1 and path[1] else "default"
+            if role not in PERSPECTIVE_ROLES:
+                return None
             return StoryConfigurationContextItem(
                 context_type="perspective",
                 name="perspective",
-                value=scene.perspective,
+                role=role,
+                value=scene.perspectives.for_role(role),
             )
         if key == "character_list":
             return StoryConfigurationContextItem(

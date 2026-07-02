@@ -38,3 +38,9 @@ Here it can be especially helpful to run the generation with instructions. To do
 A small window will pop up where you can provide the instructions for the AI to follow.
 
 ![World editor characters generate dialogue example](/talemate/img/0.26.0/world-editor-characters-actor-generate-dialogue-example.png)
+
+#### Autocomplete an example
+
+The **Add Dialogue Example** field also supports autocomplete. Start typing an example, then press `ctrl+Enter` (or `cmd+Enter` on macOS) to have the AI continue it for you. This field supports the same `{...}` hints and Redo/Undo actions as other generated fields.
+
+See [Autocomplete](/talemate/user-guide/agents/creator/autocomplete) for more information.

@@ -94,6 +94,7 @@ class VisualAgent(
                         label="Backend (text to image)",
                         description="The backend to use for basic text to image generation",
                         save_on_change=True,
+                        scene_overridable=False,
                     ),
                     "backend_image_edit": AgentActionConfig(
                         type="text",
@@ -107,6 +108,7 @@ class VisualAgent(
                         label="Backend (image editing)",
                         description="The backend to use for contextual image editing",
                         save_on_change=True,
+                        scene_overridable=False,
                     ),
                     "backend_image_analyzation": AgentActionConfig(
                         type="text",
@@ -120,6 +122,7 @@ class VisualAgent(
                         label="Backend (image analysis)",
                         description="The backend to use for image analysis",
                         save_on_change=True,
+                        scene_overridable=False,
                     ),
                     "timeout": AgentActionConfig(
                         type="number",
@@ -129,12 +132,14 @@ class VisualAgent(
                         max=900,
                         step=10,
                         description="Timeout in seconds. If the backend does not generate an image within this time, it will be considered failed.",
+                        scene_overridable=False,
                     ),
                     "automatic_setup": AgentActionConfig(
                         type="bool",
                         value=True,
                         label="Automatic Setup",
                         description="Automatically setup the visual agent if the selected client has an implementation of the selected backend. (Like the KoboldCpp Automatic1111 api)",
+                        scene_overridable=False,
                     ),
                     "automatic_generation": AgentActionConfig(
                         type="bool",
@@ -359,7 +364,7 @@ class VisualAgent(
 
     @property
     def allow_automatic_generation(self) -> bool:
-        return self.actions["_config"].config["automatic_generation"].value
+        return self.resolve_config("_config", "automatic_generation")
 
     @property
     def automatic_setup(self) -> bool:
@@ -367,20 +372,20 @@ class VisualAgent(
 
     @property
     def fallback_prompt_type(self) -> PROMPT_TYPE:
-        value = self.actions["prompt_generation"].config["fallback_prompt_type"].value
+        value = self.resolve_config("prompt_generation", "fallback_prompt_type")
         return PROMPT_TYPE(value) if value else PROMPT_TYPE.KEYWORDS
 
     @property
     def prompt_generation_length(self) -> int:
-        return self.actions["prompt_generation"].config["max_length"].value
+        return self.resolve_config("prompt_generation", "max_length")
 
     @property
     def automatic_analysis(self) -> bool:
-        return self.actions["prompt_generation"].config["automatic_analysis"].value
+        return self.resolve_config("prompt_generation", "automatic_analysis")
 
     @property
     def revise_edit_prompts(self) -> bool:
-        return self.actions["prompt_generation"].config["revise_edit_prompts"].value
+        return self.resolve_config("prompt_generation", "revise_edit_prompts")
 
     @property
     def backend_name(self) -> str:

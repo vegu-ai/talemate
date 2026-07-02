@@ -94,7 +94,7 @@ Next rebuild the frontend.
 
 ```bash
 cd talemate_frontend
-npm run build
+corepack pnpm build
 ```
 
 ### Start the backend and frontend

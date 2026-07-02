@@ -41,15 +41,23 @@ SUPPORTED_MODELS = [
     "gemini-3-pro-preview",
     "gemini-3.1-pro-preview",
     "gemini-3-flash-preview",
+    "gemini-3.5-flash",
 ]
 
 ALWAYS_REASONING_MODELS = [
     "gemini-3",
     "gemini-3.1",
     "gemini-2.5",
+    "gemini-3.5",
 ]
 
-DEFAULT_MODEL = "gemini-3-flash-preview"
+DEFAULT_MODEL = "gemini-3.5-flash"
+
+# Older versions communicated an incomplete setup by overwriting the client's
+# model name with this sentinel. That value could leak back into the persisted
+# `model` field, causing valid requests to be sent to Google with an invalid
+# model. It is kept here so existing broken configs can be detected and healed.
+SETUP_INCOMPLETE_MODEL = "Setup incomplete"
 
 
 class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
@@ -107,16 +115,23 @@ class GoogleClient(
         super().__init__(**kwargs)
 
     @property
+    def model(self) -> str | None:
+        model = self.client_config.model
+        # Heal a leaked SETUP_INCOMPLETE_MODEL sentinel by reporting no model selected.
+        if model == SETUP_INCOMPLETE_MODEL:
+            return None
+        return model
+
+    @property
     def disable_safety_settings(self):
         return self.client_config.disable_safety_settings
 
     @property
-    def reason_enabled(self) -> bool:
+    def reason_enabled_configured(self) -> bool:
         if self.reason_locked:
             # Always enable reasoning for Gemini 3 and Gemini 2.5
             return True
-
-        return self.client_config.reason_enabled
+        return super().reason_enabled_configured
 
     @property
     def min_reason_tokens(self) -> int:
@@ -258,15 +273,15 @@ class GoogleClient(
 
     def emit_status(self, processing: bool = None):
         error_action = None
+        error_message: str | None = None
         if processing is not None:
             self.processing = processing
 
         if self.ready:
             status = "busy" if self.processing else "idle"
-            model_name = self.model_name
         else:
             status = "error"
-            model_name = "Setup incomplete"
+            error_message = "Setup incomplete"
             error_action = ErrorAction(
                 title="Setup Google API credentials",
                 action_name="openAppConfig",
@@ -279,7 +294,7 @@ class GoogleClient(
 
         if not self.model_name:
             status = "error"
-            model_name = "No model loaded"
+            error_message = "No model loaded"
 
         self.current_status = status
         data = {
@@ -287,14 +302,15 @@ class GoogleClient(
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
+            "error_message": error_message,
         }
         data.update(self._common_status_data())
         self.populate_extra_fields(data)
 
-        if self.using == "VertexAI":
-            details = f"{model_name} (VertexAI)"
+        if self.model_name and self.using == "VertexAI":
+            details = f"{self.model_name} (VertexAI)"
         else:
-            details = model_name
+            details = self.model_name
 
         emit(
             "client_status",
@@ -354,6 +370,9 @@ class GoogleClient(
 
         if not self.ready:
             raise Exception("Google setup incomplete")
+
+        if not self.model_name:
+            raise Exception("Google client has no model selected")
 
         client = self.make_client()
 

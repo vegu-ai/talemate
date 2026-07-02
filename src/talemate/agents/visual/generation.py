@@ -1,6 +1,5 @@
 import asyncio
 import structlog
-import dataclasses
 from typing import Callable
 
 # import talemate.agents.visual.automatic1111  # noqa: F401
@@ -32,7 +31,6 @@ async_signals.register(
 )
 
 
-@dataclasses.dataclass
 class GenerationEmission(AgentEmission):
     request: GenerationRequest
     response: GenerationResponse

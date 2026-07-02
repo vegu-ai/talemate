@@ -1,0 +1,23 @@
+{#
+  Shared output-format declaration for contextual-generate task templates.
+
+  Caller provides (via {% with %}):
+    - output_tag:     response tag name, e.g. "ATTRIBUTE"
+    - output_label:   noun for the value, e.g. "attribute value"
+    - output_example: placeholder shown inside the example tag
+                      (optional; defaults to "the " ~ output_label)
+
+  Full generation (and coerced partial continuation, which prefills <TAG>):
+  registers the per-type anchor extractor + response_prefix and instructs the model
+  to wrap its output in <TAG></TAG>.
+
+  Non-coerced partial continuation (autocomplete with no prefill): emits and
+  registers nothing here — response-scaffolding.jinja2 owns the DRAFT/COMPLETION
+  format and its extractor for that path.
+#}
+{%- if can_coerce or not generation_context.partial -%}
+{%- set _ = generation_context.set_state('response_prefix', '<' ~ output_tag ~ '>') -%}
+{{- set_anchor_extractor("response", "<" ~ output_tag ~ ">", "</" ~ output_tag ~ ">", fallback_to_full=True) -}}
+Output the {{ output_label }} wrapped in <{{ output_tag }}></{{ output_tag }}> tags:
+<{{ output_tag }}>{{ output_example or ("the " ~ output_label) }}</{{ output_tag }}>
+{%- endif -%}

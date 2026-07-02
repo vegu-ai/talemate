@@ -80,7 +80,7 @@ Never acknowledge that characters are fictional or written by an AI. Characters 
 Talemate then sends the full built-in Conversation system prompt followed by your extra instruction.
 
 !!! note "What belongs in a system prompt"
-    System prompts shape the AI's role and general approach — things that should apply across every scene. Writing style, tense, and scene-specific tone live in the scene's [perspective field](../world-editor/scene/outline.md#perspective-and-tense) and writing-style settings, not here.
+    System prompts shape the AI's role and general approach — things that should apply across every scene. Writing style, tense, and scene-specific tone live in the scene's [perspective fields](../world-editor/scene/outline.md#perspective-and-tense) and writing-style settings, not here.
 
 Points to know:
 

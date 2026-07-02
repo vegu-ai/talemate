@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import io
+import os
 import re
 from pathlib import Path
 
@@ -85,8 +86,8 @@ Talemate includes a few example prompt WAV files in `tts/voice/pocket_tts/` (cop
 If the **voice cloning** model download is blocked by Hugging Face, you need to:
 1. Log in to Hugging Face and accept the model terms on the Pocket TTS model page.
 2. Create a Hugging Face token.
-3. Set it in your environment as `HF_TOKEN`.
-4. Restart Talemate and try again.
+3. Paste it into the **HuggingFace Token** field below (or set it in your environment as `HF_TOKEN`).
+4. Try again.
 
 Commands / links:
 - Accept terms: https://huggingface.co/kyutai/pocket-tts
@@ -191,6 +192,13 @@ class PocketTTSMixin:
             label="Pocket TTS",
             description="Pocket TTS is a local CPU text-to-speech model (voice cloning via audio prompt).",
             config={
+                "api_key": AgentActionConfig(
+                    type="unified_api_key",
+                    value="huggingface.api_key",
+                    label="HuggingFace Token",
+                    description="Optional. Only needed if downloading the voice cloning model is gated by Hugging Face. Used as the HF_TOKEN for model downloads.",
+                    scene_overridable=False,
+                ),
                 "variant": AgentActionConfig(
                     type="text",
                     value="english",
@@ -214,6 +222,7 @@ class PocketTTSMixin:
                     ],
                     description="Pocket TTS language/model. Distilled 6-layer for English; 24-layer variants give better quality on other languages.",
                     value_migration=_migrate_variant_to_language,
+                    scene_overridable=False,
                 ),
                 "temp": AgentActionConfig(
                     type="number",
@@ -223,6 +232,7 @@ class PocketTTSMixin:
                     step=0.05,
                     label="Temperature",
                     description="Sampling temperature. Higher values can sound more varied but less stable.",
+                    scene_overridable=False,
                 ),
                 "lsd_decode_steps": AgentActionConfig(
                     type="number",
@@ -232,6 +242,7 @@ class PocketTTSMixin:
                     step=1,
                     label="LSD decode steps",
                     description="Number of decoding steps. Higher can improve quality but is slower.",
+                    scene_overridable=False,
                 ),
                 "noise_clamp": AgentActionConfig(
                     type="number",
@@ -241,6 +252,7 @@ class PocketTTSMixin:
                     step=0.1,
                     label="Noise clamp",
                     description="0 = disabled. If >0, clamps noise sampling to this maximum.",
+                    scene_overridable=False,
                 ),
                 "eos_threshold": AgentActionConfig(
                     type="number",
@@ -250,6 +262,7 @@ class PocketTTSMixin:
                     step=0.1,
                     label="EOS threshold",
                     description="End-of-sequence detection threshold.",
+                    scene_overridable=False,
                 ),
                 "frames_after_eos": AgentActionConfig(
                     type="number",
@@ -259,12 +272,14 @@ class PocketTTSMixin:
                     step=1,
                     label="Frames after EOS",
                     description="0 = auto. If >0, generates additional frames after EOS detection.",
+                    scene_overridable=False,
                 ),
                 "quantize": AgentActionConfig(
                     type="bool",
                     value=False,
                     label="Quantize (int8)",
                     description="Apply dynamic int8 quantization. ~30% faster on most CPUs with minor quality impact.",
+                    scene_overridable=False,
                 ),
                 "chunk_size": AgentActionConfig(
                     type="number",
@@ -274,6 +289,7 @@ class PocketTTSMixin:
                     value=256,
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
+                    scene_overridable=False,
                 ),
             },
         )
@@ -317,6 +333,16 @@ class PocketTTSMixin:
     def pocket_tts_frames_after_eos(self) -> int | None:
         value = int(self.actions["pocket_tts"].config["frames_after_eos"].value)
         return None if value <= 0 else value
+
+    @property
+    def pocket_tts_hf_token(self) -> str | None:
+        return self.config.huggingface.api_key
+
+    def _pocket_tts_apply_hf_token(self):
+        """Export the configured HF token as HF_TOKEN so huggingface_hub can fetch gated weights; falls back to any existing env var."""
+        token = self.pocket_tts_hf_token
+        if token:
+            os.environ["HF_TOKEN"] = token
 
     @property
     def pocket_tts_configured(self) -> bool:
@@ -381,6 +407,7 @@ class PocketTTSMixin:
 
     def _pocket_tts_generate_wav_bytes(self, chunk: Chunk) -> bytes:
         _import_heavy_deps()
+        self._pocket_tts_apply_hf_token()
 
         if not chunk.voice:
             raise ValueError("Pocket TTS requires a voice prompt (voice.provider_id).")

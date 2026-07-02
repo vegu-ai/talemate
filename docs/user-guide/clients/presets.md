@@ -10,7 +10,7 @@ If you wish to alter the inference parameters sent with the generation requests 
 
 Navigate to the :material-tune: **Presets** tab then select the :material-matrix: **Inference** tab.
 
-![selected preset](/talemate/img/0.30.0/inference-presets-1.png)
+![selected preset](/talemate/img/0.38.0/inference-presets-1.png)
 
 !!! warning
     Not all clients support all parameters, and generally it is assumed that the client implementation handles the parameters in a sane way, especially if values are passed for all of them. All presets are used and will be selected depending on the action the agent is performing. If you don't know what these mean, it is recommended to leave them as they are.
@@ -70,7 +70,7 @@ The inference preset editor provides access to the following generation paramete
 | Presence Penalty | 0 - 1.0 | Penalizes tokens that have already appeared in the generated text, encouraging discussion of new topics. |
 | Frequency Penalty | 0 - 1.0 | Penalizes tokens based on how frequently they appear, reducing word repetition. |
 | Repetition Penalty | 1.0 - 1.2 | Applies a multiplicative penalty to repeated tokens. |
-| Repetition Penalty Range | 0 - 4096 | Number of tokens to look back when calculating repetition penalty. |
+| Repetition Penalty Range | 0 - 8192 | Number of tokens to look back when calculating repetition penalty. |
 
 ### Advanced Parameters
 
@@ -122,6 +122,24 @@ Different clients support different subsets of these parameters:
 - **KoboldCpp (OpenAI mode)**: Limited to temperature, top_p, presence_penalty, and max_tokens.
 - **Remote APIs** (OpenAI, Anthropic, etc.): Typically support temperature, top_p, and penalty parameters. Advanced parameters like XTC, DRY, and Adaptive-P are generally not available.
 - **Other local APIs**: Parameter support varies by implementation.
+
+## Editing a preset
+
+Select a preset from the list on the left to load its parameters into the editor on the right. Adjust the sliders, tabs and checkbox to change the values for that preset.
+
+In the upper right of the editor there are two actions that apply to the preset you currently have selected:
+
+### Apply to all
+
+The **Apply to all** action copies the values of the currently selected preset to *every other preset in the same group*. This is useful when you have tuned one preset (for example `Conversation`) and want all the other presets to start from the same values.
+
+Because this overwrites the values of all the other presets in the group, you will be asked to confirm before it happens.
+
+### Reset
+
+The **Reset** action restores the currently selected preset back to its default values. As of version 0.38.0 this action also asks for confirmation before resetting, so an accidental click no longer discards your changes.
+
+Both actions only change the values in the editor. Remember to save the settings with the **Save** button at the bottom of the dialog for them to take effect.
 
 ## Preset Groups
 

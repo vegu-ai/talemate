@@ -46,7 +46,7 @@ This allows to differentiate between, for example `roleplay` or `combat` scenes,
 !!! warning "Very early WIP"
     This is a very unfinished feature, so don't expect that you can plugin in some D&D style turn based combat rules into a scene type and have it work. Right now it will mostly affect the type of text that is generated and the pacing of the scene.
 
-Re-usable scene types can be created in the [Template Editor](/talemate/user-guide/world-editor/templates)
+Re-usable scene types can be created in the [Template Editor](/talemate/user-guide/templates)
 
 #### Current Scene Intention
 

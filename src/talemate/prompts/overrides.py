@@ -1,13 +1,13 @@
 import os
 from datetime import datetime
-from dataclasses import dataclass
 from typing import List, Optional
+
+import pydantic
 
 from talemate.prompts.base import prepended_template_dirs
 
 
-@dataclass
-class TemplateOverride:
+class TemplateOverride(pydantic.BaseModel):
     template_name: str
     override_path: str
     default_path: str

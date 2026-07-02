@@ -51,6 +51,7 @@ YOU MUST ONLY WRITE NEW DIALOGUE FOR ELENA.
 
 <|RESPONSE_LENGTH_INSTRUCTIONS|>
 
+## Acting instructions
 **TENSE**: Examine the existing conversation history and maintain the EXACT same tense (past/present) used in previous messages. **NEVER switch tenses mid-conversation**.
 **PERSPECTIVE**: The narrative perspective for this scene is — Third person limited, past tense.. Apply it consistently to Elena's actions and thoughts.
 

@@ -147,6 +147,7 @@ class TTSAgent(
                         label="Enabled APIs",
                         description="APIs to use for TTS",
                         choices=[],
+                        scene_overridable=False,
                     ),
                     "narrator_voice_id": AgentActionConfig(
                         type="autocomplete",
@@ -219,6 +220,7 @@ class TTSAgent(
                             "client that exposes a TTS endpoint (e.g. KoboldCpp "
                             "with a TTS model loaded)."
                         ),
+                        scene_overridable=False,
                     ),
                 },
             ),
@@ -507,25 +509,23 @@ class TTSAgent(
 
     @property
     def narrator_voice_id(self) -> str:
-        return self.actions["_config"].config["narrator_voice_id"].value
+        return self.resolve_config("_config", "narrator_voice_id")
 
     @property
     def generate_for_player(self) -> bool:
-        return self.actions["_config"].config["generate_for_player"].value
+        return self.resolve_config("_config", "generate_for_player")
 
     @property
     def generate_for_npc(self) -> bool:
-        return self.actions["_config"].config["generate_for_npc"].value
+        return self.resolve_config("_config", "generate_for_npc")
 
     @property
     def generate_for_narration(self) -> bool:
-        return self.actions["_config"].config["generate_for_narration"].value
+        return self.resolve_config("_config", "generate_for_narration")
 
     @property
     def generate_for_context_investigation(self) -> bool:
-        return (
-            self.actions["_config"].config["generate_for_context_investigation"].value
-        )
+        return self.resolve_config("_config", "generate_for_context_investigation")
 
     @property
     def has_auto_generation(self) -> bool:
@@ -540,7 +540,7 @@ class TTSAgent(
 
     @property
     def speaker_separation(self) -> str:
-        return self.actions["_config"].config["speaker_separation"].value
+        return self.resolve_config("_config", "speaker_separation")
 
     @property
     def apis(self) -> list[str]:

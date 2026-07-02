@@ -1,4 +1,5 @@
 {%- set _ = spec.set_spec("reasoning_pattern", ".*?</seed:think>") -%}
+{%- set _ = spec.set_spec("reasoning_validation_pattern", "<seed:think>") -%}
 <seed:bos>system
 {{ system_message }}<seed:eos>
 {%- if reasoning_tokens is defined -%}

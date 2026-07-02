@@ -181,6 +181,7 @@ import VisualLibraryQueue from './VisualLibraryQueue.vue';
 import VisualLibraryPendingQueue from './VisualLibraryPendingQueue.vue';
 import VisualLibraryScene from './VisualLibraryScene.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import { BACKEND_STATUS } from '@/constants/backendStatus';
 
 export default {
   name: 'VisualLibrary',
@@ -257,23 +258,23 @@ export default {
     },
     t2iColor() {
       const status = this.visualMeta?.image_create?.status;
-      if (status === 'BackendStatusType.OK') return 'success';
-      if (status === 'BackendStatusType.WARNING') return 'warning';
-      if (status === 'BackendStatusType.ERROR') return 'error';
+      if (status === BACKEND_STATUS.OK) return 'success';
+      if (status === BACKEND_STATUS.WARNING) return 'warning';
+      if (status === BACKEND_STATUS.ERROR) return 'error';
       return 'grey';
     },
     editColor() {
       const status = this.visualMeta?.image_edit?.status;
-      if (status === 'BackendStatusType.OK') return 'success';
-      if (status === 'BackendStatusType.WARNING') return 'warning';
-      if (status === 'BackendStatusType.ERROR') return 'error';
+      if (status === BACKEND_STATUS.OK) return 'success';
+      if (status === BACKEND_STATUS.WARNING) return 'warning';
+      if (status === BACKEND_STATUS.ERROR) return 'error';
       return 'grey';
     },
     analysisColor() {
       const status = this.visualMeta?.image_analyzation?.status;
-      if (status === 'BackendStatusType.OK') return 'success';
-      if (status === 'BackendStatusType.WARNING') return 'warning';
-      if (status === 'BackendStatusType.ERROR') return 'error';
+      if (status === BACKEND_STATUS.OK) return 'success';
+      if (status === BACKEND_STATUS.WARNING) return 'warning';
+      if (status === BACKEND_STATUS.ERROR) return 'error';
       return 'grey';
     },
     t2iTooltip() {
@@ -378,16 +379,16 @@ export default {
   },
   methods: {
     getStatusIcon(status) {
-      if (status === 'BackendStatusType.OK') return 'mdi-check-circle';
-      if (status === 'BackendStatusType.WARNING') return 'mdi-alert';
-      if (status === 'BackendStatusType.ERROR') return 'mdi-alert';
-      if (status === 'BackendStatusType.DISCONNECTED') return 'mdi-clock-outline';
+      if (status === BACKEND_STATUS.OK) return 'mdi-check-circle';
+      if (status === BACKEND_STATUS.WARNING) return 'mdi-alert';
+      if (status === BACKEND_STATUS.ERROR) return 'mdi-alert';
+      if (status === BACKEND_STATUS.DISCONNECTED) return 'mdi-clock-outline';
       return 'mdi-minus-circle';
     },
     getStatusIconColor(status) {
-      if (status === 'BackendStatusType.OK') return 'success';
-      if (status === 'BackendStatusType.WARNING') return 'warning';
-      if (status === 'BackendStatusType.ERROR') return 'error';
+      if (status === BACKEND_STATUS.OK) return 'success';
+      if (status === BACKEND_STATUS.WARNING) return 'warning';
+      if (status === BACKEND_STATUS.ERROR) return 'error';
       return 'muted';
     },
     open() {
@@ -429,7 +430,7 @@ export default {
       }
     },
     isOkStatus(status) {
-      return status === 'BackendStatusType.OK';
+      return status === BACKEND_STATUS.OK;
     },
     onDiscard(index) {
       if (index == null || index < 0 || index >= this.items.length) return;

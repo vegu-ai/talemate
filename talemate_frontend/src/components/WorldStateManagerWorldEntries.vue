@@ -1,6 +1,6 @@
 <template>
     <v-row>
-        <v-col cols="12" xl="8" xxl="5">
+        <v-col cols="12">
             <v-card v-if="entry != null">
                 <v-form v-model="formValid" ref="form" @submit.prevent>
                     <v-text-field 
@@ -20,17 +20,27 @@
                         :length="512"
                         @generate="content => { entry.text=content; queueSave(500); dirty = true; }"
                     />
-                    <v-textarea 
-                        ref="textInput"
-                        v-model="entry.text"
-                        label="World information"
-                        hint="Describe the world information here. This could be a description of a location, a historical event, or anything else that is relevant to the world." 
-                        :color="dirty ? 'dirty' : ''"
-                        @update:model-value="dirty = true"
-                        @blur="handleBlur"
-                        auto-grow
-                        rows="5">
-                    </v-textarea>
+                    <div class="position-relative">
+                        <v-textarea
+                            ref="textInput"
+                            v-model="entry.text"
+                            label="World information"
+                            :hint="'Describe the world information here. This could be a description of a location, a historical event, or anything else that is relevant to the world. '+autocompleteInfoMessage(worldInfoBusy)"
+                            :color="dirty ? 'dirty' : ''"
+                            :disabled="worldInfoBusy"
+                            :loading="worldInfoBusy"
+                            @update:model-value="dirty = true"
+                            @keyup.ctrl.enter.stop="sendWorldInfoAutocomplete"
+                            @blur="handleBlur"
+                            auto-grow
+                            rows="5">
+                        </v-textarea>
+                        <AutocompleteRedoChip
+                            :applied="worldInfoAutocompleteField?.state.applied || false"
+                            :disabled="worldInfoBusy"
+                            @redo="worldInfoAutocompleteField.redo()"
+                            @undo="worldInfoAutocompleteField.undo()" />
+                    </div>
 
                     <v-row>
                         <v-col cols="12" md="6">
@@ -76,7 +86,7 @@
             </v-card>
 
         </v-col>
-        <v-col cols="12" xl="4" xxl="7"></v-col>
+        <v-col cols="12"></v-col>
     </v-row>
 
 </template>
@@ -85,12 +95,15 @@
 
 import ContextualGenerate from './ContextualGenerate.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import { createAutocompleteField } from '@/utils/autocompleteField';
 
 export default {
     name: 'WorldStateManagerWorldEntries',
     components: {
         ContextualGenerate,
         ConfirmActionInline,
+        AutocompleteRedoChip,
     },
     props: {
         pins: Object,
@@ -113,6 +126,8 @@ export default {
             timeout: null,
             entry: null,
             dirty: false,
+            worldInfoBusy: false,
+            worldInfoAutocompleteField: null,
             formValid: false,
             rules: [
                 v => !!v || 'Entry ID is required',
@@ -138,6 +153,8 @@ export default {
         'loadContextDBEntry',
         'registerMessageHandler',
         'unregisterMessageHandler',
+        'autocompleteInfoMessage',
+        'autocompleteRequest',
     ],
     watch: {
         immutableEntries: {
@@ -153,6 +170,27 @@ export default {
                 });
             }
         },
+        'entry.text'() {
+            this.worldInfoAutocompleteField?.onValueChange();
+        },
+    },
+    created() {
+        this.worldInfoAutocompleteField = createAutocompleteField({
+            autocompleteRequest: this.autocompleteRequest,
+            getValue: () => this.entry?.text || '',
+            setValue: (v) => {
+                if (!this.entry) return;
+                this.entry.text = v;
+                // Programmatic writes bypass @update:model-value; flag dirty so the completion persists.
+                this.dirty = true;
+            },
+            buildParams: () => ({
+                partial: this.entry.text,
+                context: `world context:${this.entry.id}`,
+            }),
+            onStart: () => { this.worldInfoBusy = true; },
+            onEnd: () => { this.worldInfoBusy = false; },
+        });
     },
     methods: {
         queueSave(delay = 1500) {
@@ -245,10 +283,18 @@ export default {
             });
         },
         handleBlur() {
+            // Guard: blur during autocomplete would save the un-stripped {hint}.
+            if (this.worldInfoBusy) {
+                return;
+            }
             // Only auto-save on blur for existing entries, not new ones
             if (!this.isNewEntry) {
                 this.save(true);
             }
+        },
+
+        sendWorldInfoAutocomplete() {
+            this.worldInfoAutocompleteField.request(this.$refs.textInput);
         },
 
         handleMessage(message) {

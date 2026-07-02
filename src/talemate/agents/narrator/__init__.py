@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import dataclasses
 from functools import wraps
 from typing import TYPE_CHECKING
 
+import pydantic
 import structlog
 
 import talemate.client as client
@@ -45,11 +45,10 @@ if TYPE_CHECKING:
 log = structlog.get_logger("talemate.agents.narrator")
 
 
-@dataclasses.dataclass
 class NarratorAgentEmission(AgentEmission):
-    generation: list[str] = dataclasses.field(default_factory=list)
-    response: str = dataclasses.field(default="")
-    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(
+    generation: list[str] = pydantic.Field(default_factory=list)
+    response: str = ""
+    dynamic_instructions: list[DynamicInstruction] = pydantic.Field(
         default_factory=list
     )
 
@@ -71,24 +70,37 @@ def set_processing(fn):
     @wraps(fn)
     async def narration_wrapper(self, *args, **kwargs):
         agent_context = active_agent.get()
-        emission: NarratorAgentEmission = NarratorAgentEmission(agent=self)
+        # ActiveAgent.__enter__ shares state by reference with the parent context,
+        # so we save/restore the prior value rather than mutating in place.
+        _UNSET = object()
+        previous_speaker_role = agent_context.state.get("speaker_role", _UNSET)
+        agent_context.state["speaker_role"] = "narrator"
+        try:
+            emission: NarratorAgentEmission = NarratorAgentEmission(agent=self)
 
-        if self.content_use_writing_style:
-            self.set_context_states(writing_style=self.scene.writing_style)
+            if self.content_use_writing_style:
+                self.set_context_states(writing_style=self.scene.writing_style)
 
-        await talemate.emit.async_signals.get("agent.narrator.before_generate").send(
-            emission
-        )
-        await talemate.emit.async_signals.get(
-            "agent.narrator.inject_instructions"
-        ).send(emission)
+            await talemate.emit.async_signals.get(
+                "agent.narrator.before_generate"
+            ).send(emission)
+            await talemate.emit.async_signals.get(
+                "agent.narrator.inject_instructions"
+            ).send(emission)
 
-        agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
+            agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
 
-        response = await fn(self, *args, **kwargs)
-        emission.response = response
-        await talemate.emit.async_signals.get("agent.narrator.generated").send(emission)
-        return emission.response
+            response = await fn(self, *args, **kwargs)
+            emission.response = response
+            await talemate.emit.async_signals.get("agent.narrator.generated").send(
+                emission
+            )
+            return emission.response
+        finally:
+            if previous_speaker_role is _UNSET:
+                agent_context.state.pop("speaker_role", None)
+            else:
+                agent_context.state["speaker_role"] = previous_speaker_role
 
     return narration_wrapper
 
@@ -261,37 +273,41 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
         self.actions = NarratorAgent.init_actions()
 
     @property
+    def generation_override_enabled(self) -> bool:
+        return self.resolve_enabled("generation_override")
+
+    @property
     def extra_instructions(self) -> str:
-        if self.actions["generation_override"].enabled:
-            return self.actions["generation_override"].config["instructions"].value
+        if self.generation_override_enabled:
+            return self.resolve_config("generation_override", "instructions")
         return ""
 
     @property
     def jiggle(self) -> float:
-        if self.actions["generation_override"].enabled:
-            return self.actions["generation_override"].config["jiggle"].value
+        if self.generation_override_enabled:
+            return self.resolve_config("generation_override", "jiggle")
         return 0.0
 
     def action_response_length(self, action_name: str) -> int:
         """Get the configured response length for a specific narrator action."""
         config_key = f"length_{action_name}"
-        if self.actions["generation_override"].enabled:
+        if self.generation_override_enabled:
             config = self.actions["generation_override"].config.get(config_key)
             if config is not None:
-                return config.value
+                return self.resolve_config("generation_override", config_key)
         return 128
 
     @property
     def narrate_time_passage_enabled(self) -> bool:
-        return self.actions["narrate_time_passage"].enabled
+        return self.resolve_enabled("narrate_time_passage")
 
     @property
     def content_use_scene_intent(self) -> bool:
-        return self.actions["content"].config["use_scene_intent"].value
+        return self.resolve_config("content", "use_scene_intent")
 
     @property
     def content_use_writing_style(self) -> bool:
-        return self.actions["content"].config["use_writing_style"].value
+        return self.resolve_config("content", "use_writing_style")
 
     def calc_response_length(self, value: int | None, action_name: str) -> int:
         """Calculate response length: use explicit value if provided, otherwise use per-action config."""
@@ -366,7 +382,7 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
         Handles time passage narration, if enabled
         """
 
-        if not self.actions["narrate_time_passage"].enabled:
+        if not self.narrate_time_passage_enabled:
             return
 
         response = await self.narrate_time_passage(
@@ -384,8 +400,8 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
                 },
             },
         )
-        emit("narrator", narrator_message)
         await self.scene.push_history(narrator_message)
+        emit("narrator", narrator_message)
 
     @set_processing
     @store_context_state(
@@ -823,7 +839,7 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
         return True
 
     def set_generation_overrides(self, prompt_param: dict):
-        if not self.actions["generation_override"].enabled:
+        if not self.generation_override_enabled:
             return
 
         if self.jiggle > 0.0:

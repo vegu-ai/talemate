@@ -95,8 +95,150 @@ export default {
     data() {
         return {
             dialog: false,
-            selected: "0.37.1",
+            selected: "0.38.0",
             whatsNew: [
+                {
+                    "version": "0.38.0",
+                    "items": [
+                        {
+                            "title": "Per-Scene Agent Overrides",
+                            "description": "Agent configuration can now be overridden per scene without changing your global config. The Agent Modal gains a Global / Scene mode switch for toggling and editing overrides, and you can choose, swap, or opt out of the override file under World Editor → Scene → Settings."
+                        },
+                        {
+                            "title": "Message Revision History",
+                            "description": "Regenerated AI messages now show a paginator above the message body so you can browse earlier regenerations. The version you're viewing becomes the one the AI continues from. Continuing a character or narrator message also creates a navigable revision entry, and narrator messages gain a Continue action on the hover toolbar."
+                        },
+                        {
+                            "title": "Scene Perspective Overrides",
+                            "description": "The scene outline perspective now supports per-speaker overrides for the player, NPCs, and the narrator, each falling back to the default when left empty. Reusable presets are managed under Settings → Creator → Perspective Presets."
+                        },
+                        {
+                            "title": "Entity Highlights",
+                            "description": "Notable characters, items, and places in the most recent scene message are now highlighted as clickable entities — click any of them for a short description. The highlight prompt reads the full scene context, so the entities it surfaces stay anchored to what's happening right now."
+                        },
+                        {
+                            "title": "Durable World State Snapshot",
+                            "description": "The world state snapshot now carries entities forward across refreshes instead of regenerating from scratch, updating what changed and dropping entities that are no longer relevant. Stale entries are auto-evicted after several untouched updates, and you can Ctrl/Cmd-click the refresh button to wipe on demand.\n\nThe snapshot can also be pinned into the conversation, narrator, and scene-analysis prompts so its tracked entities inform dialogue, narration, and planning, pull in relevant long-term memory, and run in the background when the client supports concurrent inference. A Custom instructions field lets you steer what it focuses on."
+                        },
+                        {
+                            "title": "Notable Improvements",
+                            "groups": [
+                                {
+                                    "title": "World State Snapshot",
+                                    "items": [
+                                        "Added a Custom instructions field to steer what the snapshot focuses on. Empty by default.",
+                                        "Semantic memory recall now feeds the snapshot so it can build on established lore and earlier scene history. On by default.",
+                                        "Context pinning surfaces the snapshot in conversation, narrator, and scene-analysis prompts. Off by default.",
+                                        "Background generation no longer locks scene input when the client supports concurrent inference; manual refreshes can be cancelled mid-generation.",
+                                        "The snapshot now refreshes per character turn rather than per full round; the default interval was raised from 5 to 10 to keep the cadence comparable."
+                                    ]
+                                },
+                                {
+                                    "title": "Editor & Revision",
+                                    "items": [
+                                        "Triggering a revision now shows a Revising spinner that clears whether the text changes, fails, or is cancelled.",
+                                        "Added a Repetition handling setting (Remove or Attempt rewrite) for AI-assisted revision.",
+                                        "Context-investigation messages (Look at, Investigate, Query) can now be revised automatically (opt-in, off by default) or manually via the Revise chip.",
+                                        "The revision chip on the message hover toolbar now shows the configured revision method (Dedupe, Unslop, or Targeted Rewrite) instead of a generic label."
+                                    ]
+                                },
+                                {
+                                    "title": "Autocomplete & Generation",
+                                    "items": [
+                                        "Autocomplete accepts a free-form {...} hint block at the end of the input to steer the continuation; the block is stripped when accepted.",
+                                        "A chip beside the field now offers Redo and Undo after an autocomplete suggestion is applied.",
+                                        "The Add Dialogue Example and World information fields now support autocomplete (Ctrl+Enter), with the same hint and Redo/Undo affordances.",
+                                        "Instructions you provide when generating field content are now followed more reliably, with static history entries treating your instruction as the seed to expand on."
+                                    ]
+                                },
+                                {
+                                    "title": "Clients & Generation",
+                                    "items": [
+                                        "OpenAI Compatible client gains a Parameters tab with individual toggles for temperature, top_p, and presence_penalty, so unsupported parameters can be omitted entirely.",
+                                        "llama.cpp client adds a Concurrent Inference toggle so batch operations can run requests in parallel against a single server. Off by default.",
+                                        "Added a HuggingFace access token to application settings for downloading gated model weights such as the Pocket TTS voice-cloning model.",
+                                        "Response length gains an Adaptive option (now the default) that drops the token cap when reasoning is enabled, so responses aren't cut off mid-thought.",
+                                        "Clients can now define a reasoning-start pattern so models that skip reasoning are accepted as-is instead of erroring; built-in Qwen, Gemma, GPT-OSS, and Seed templates set it automatically.",
+                                        "The client's Reasoning tab now shows a Template default chip when the prompt template supplies a strip or validation pattern, clarifying where the value comes from."
+                                    ]
+                                },
+                                {
+                                    "title": "Installation & Tooling",
+                                    "items": [
+                                        "The frontend now installs dependencies with pnpm for supply-chain hardening, provisioned automatically through Corepack; the install, update, and Docker scripts provision Node.js 22."
+                                    ]
+                                },
+                                {
+                                    "title": "Inference Presets",
+                                    "items": [
+                                        "Added an Apply to all action that copies the current preset's values to every other preset in the group; Reset now asks for confirmation.",
+                                        "Widened the adjustable range and refined the step increments on several parameter sliders for more precise tuning."
+                                    ]
+                                },
+                                {
+                                    "title": "Scene & UI",
+                                    "items": [
+                                        "Long scenes render more smoothly; removing or rearranging messages now re-renders only the affected slot instead of everything after it.",
+                                        "Removed the read-only Character Sheet dialog — the Manage character button already covers viewing and editing.",
+                                        "Renamed the Creator sub-tab from Content Context to Content Classification to match the scene outline editor.",
+                                        "Added a Make Player Character / Unmark as Player action to the character editor that swaps which character the player controls.",
+                                        "Context-investigation messages gain a Visualize action that generates a matched image into the message.",
+                                        "Added a Per-Action Reasoning override so reasoning can be forced off for specific agent actions, via the brain icon in the prompt log."
+                                    ]
+                                },
+                                {
+                                    "title": "Node Editor",
+                                    "items": [
+                                        "Event Modules gain an auto_register toggle so a module subscribes to its event as soon as it's registered, without being placed in the scene loop graph.",
+                                        "Log entries now show a right-aligned HH:MM:SS.mmm timestamp for easier correlation with scene activity."
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "title": "Bug Fixes",
+                            "groups": [
+                                {
+                                    "title": "Backends",
+                                    "items": [
+                                        "Google: an incomplete setup no longer overwrites the client's model name, which left the client looking configured while every request failed; existing bad values are repaired automatically.",
+                                        "Anthropic: the Optimize for Prompt Caching toggle now actually enables caching by sending the required parameter when on.",
+                                        "OpenRouter applies the same caching for anthropic/* models; note that enabling it forces routing to direct Anthropic.",
+                                        "Conversation agent no longer injects # into the stop-sequence list on every turn."
+                                    ]
+                                },
+                                {
+                                    "title": "Messages & Toolbar",
+                                    "items": [
+                                        "Message toolbar actions and double-click editing now disable while a background operation runs, with the hint reading Editing locked.",
+                                        "The Create Pin action on narrator messages now respects the UI lock during generation.",
+                                        "World entries created via Create Pin are marked Include only when pinned, so they surface through the pin rather than as ambient memory.",
+                                        "Toolbar deletes, edits, and revision swaps now write through immediately with autosave on, so forking or rollback reflects them without a manual save.",
+                                        "Intro message TTS now activates the scene tools audio control when triggered manually."
+                                    ]
+                                },
+                                {
+                                    "title": "Scene & Memory",
+                                    "items": [
+                                        "Forks and rollbacks created from the changelog UI no longer fail to load with a missing-field error; affected history entries are repaired on reconstruction.",
+                                        "Switching scenes now releases GPU memory reserved by local CUDA work (embeddings, TTS); can be turned off under Settings → Game → General.",
+                                        "Scene-group templates created in the prompt manager are now resolvable from Jinja include calls regardless of the active agent type.",
+                                        "Contextual autocomplete no longer repeats text you've already typed instead of continuing from where you left off."
+                                    ]
+                                },
+                                {
+                                    "title": "UI & Startup",
+                                    "items": [
+                                        "Fixed an empty grey toast flashing after operations with no visible change; swallowed cancellation toasts now display.",
+                                        "Node Editor boolean property checkboxes now repaint immediately on click instead of waiting for focus to move.",
+                                        "The onboarding long-term memory step now scrolls on shorter viewports, keeping the Apply & finish button in view.",
+                                        "Automatic prompt-template detection now times out and continues startup when HuggingFace can't be reached, instead of hanging indefinitely."
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
                 {
                     version: '0.37.1',
                     items: [

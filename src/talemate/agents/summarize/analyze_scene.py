@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 import structlog
-import dataclasses
+import pydantic
 from talemate.agents.base import (
     set_processing,
     AgentAction,
@@ -59,21 +59,19 @@ SCENE_ANALYSIS_SPEC = ResponseSpec(
 )
 
 
-@dataclasses.dataclass
 class SceneAnalysisEmission(AgentTemplateEmission):
     analysis_type: str | None = None
 
 
-@dataclasses.dataclass
 class SceneAnalysisDeepAnalysisEmission(AgentEmission):
     analysis: str = ""
     analysis_type: str | None = None
     analysis_sub_type: str | None = None
     max_content_investigations: int = 0  # backwards compat, will be dropped
-    character: "Character" = None
+    character: "Character | None" = None
     investigate: str = ""
     deep_analysis_context: str = ""
-    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(
+    dynamic_instructions: list[DynamicInstruction] = pydantic.Field(
         default_factory=list
     )
 
@@ -138,27 +136,27 @@ class SceneAnalyzationMixin:
 
     @property
     def analyze_scene(self) -> bool:
-        return self.actions["analyze_scene"].enabled
+        return self.resolve_enabled("analyze_scene")
 
     @property
     def analysis_length(self) -> int:
-        return int(self.actions["analyze_scene"].config["analysis_length"].value)
+        return int(self.resolve_config("analyze_scene", "analysis_length"))
 
     @property
     def cache_analysis(self) -> bool:
-        return self.actions["analyze_scene"].config["cache_analysis"].value
+        return self.resolve_config("analyze_scene", "cache_analysis")
 
     @property
     def deep_analysis(self) -> bool:
-        return self.actions["analyze_scene"].config["deep_analysis"].value
+        return self.resolve_config("analyze_scene", "deep_analysis")
 
     @property
     def analyze_scene_for_conversation(self) -> bool:
-        return self.actions["analyze_scene"].config["for_conversation"].value
+        return self.resolve_config("analyze_scene", "for_conversation")
 
     @property
     def analyze_scene_for_narration(self) -> bool:
-        return self.actions["analyze_scene"].config["for_narration"].value
+        return self.resolve_config("analyze_scene", "for_narration")
 
     # signal connect
 

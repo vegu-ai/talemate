@@ -34,15 +34,22 @@
 
                             <v-text-field :disabled="busy" v-model="character.name" label="Name"></v-text-field>
         
-                            <v-textarea 
-                                v-model="character.description" 
-                                label="Description"
-                                ref="description"
-                                :disabled="busy || descriptionBusy"
-                                :loading="descriptionBusy"
-                                :hint="autocompleteInfoMessage(busy)"
-                                @keyup.ctrl.enter.stop="sendAutocompleteRequest"
-                                ></v-textarea>
+                            <div class="position-relative">
+                                <v-textarea
+                                    v-model="character.description"
+                                    label="Description"
+                                    ref="description"
+                                    :disabled="busy || descriptionBusy"
+                                    :loading="descriptionBusy"
+                                    :hint="autocompleteInfoMessage(busy)"
+                                    @keyup.ctrl.enter.stop="sendAutocompleteRequest"
+                                    ></v-textarea>
+                                <AutocompleteRedoChip
+                                    :applied="descriptionAutocompleteField?.state.applied || false"
+                                    :disabled="busy || descriptionBusy"
+                                    @redo="descriptionAutocompleteField.redo()"
+                                    @undo="descriptionAutocompleteField.undo()" />
+                            </div>
 
                             <div v-if="character.generation_context.enabled">
                                 <v-checkbox  density="compact" :disabled="busy" v-model="character.generation_context.generateAttributes" label="Generate attributes" messages="Generate a few attributes based on the instructions and the description."></v-checkbox>
@@ -83,12 +90,15 @@
 
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
+import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import { createAutocompleteField } from '@/utils/autocompleteField';
 
 export default {
     name: "WorldStateManagerCharacterCreator",
     components: {
         ConfirmActionInline,
         WorldStateManagerTemplateApplicator,
+        AutocompleteRedoChip,
     },
     props: {
         scene: Object,
@@ -114,7 +124,28 @@ export default {
                 templates: [],
                 is_player: false,
             },
+            descriptionAutocompleteField: null,
         }
+    },
+    created() {
+        this.descriptionAutocompleteField = createAutocompleteField({
+            autocompleteRequest: this.autocompleteRequest,
+            getValue: () => this.character.description,
+            setValue: (v) => { this.character.description = v; },
+            buildParams: () => ({
+                partial: this.character.description,
+                context: `character detail:description`,
+                instructions: this.character.generation_context.instructions,
+                character: this.character.name,
+            }),
+            onStart: () => { this.descriptionBusy = true; },
+            onEnd: () => { this.descriptionBusy = false; },
+        });
+    },
+    watch: {
+        'character.description'() {
+            this.descriptionAutocompleteField?.onValueChange();
+        },
     },
     inject: [
         'autocompleteInfoMessage',
@@ -165,17 +196,7 @@ export default {
         },
 
         sendAutocompleteRequest() {
-            this.descriptionBusy = true;
-            this.autocompleteRequest({
-                partial: this.character.description,
-                context: `character detail:description`,
-                instructions: this.character.generation_context.instructions,
-                character: this.character.name
-            }, (completion) => {
-                this.character.description += completion;
-                this.descriptionBusy = false;
-            }, this.$refs.description);
-
+            this.descriptionAutocompleteField.request(this.$refs.description);
         },
         setCharacter(character) {
             this.character = character;

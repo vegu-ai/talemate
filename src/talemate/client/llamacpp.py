@@ -12,6 +12,11 @@ from talemate.client.base import (
     ParameterReroute,
 )
 from talemate.client.registry import register
+from talemate.client.remote import (
+    ConcurrentInference,
+    ConcurrentInferenceMixin,
+    concurrent_inference_extra_fields,
+)
 from talemate.client.vision import VisionConfig, vision_extra_fields, OpenAIVisionMixin
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.exceptions import GenerationProcessingError
@@ -25,12 +30,12 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 8192
 
 
-class ClientConfig(VisionConfig, BaseClientConfig):
+class ClientConfig(ConcurrentInference, VisionConfig, BaseClientConfig):
     pass
 
 
 @register()
-class LlamaCppClient(OpenAIVisionMixin, ClientBase):
+class LlamaCppClient(ConcurrentInferenceMixin, OpenAIVisionMixin, ClientBase):
     """
     Client for ggml-org/llama.cpp `llama-server`.
 
@@ -53,7 +58,10 @@ class LlamaCppClient(OpenAIVisionMixin, ClientBase):
         defaults: Defaults = Defaults()
         self_hosted: bool = True
         extra_fields: dict = pydantic.Field(
-            default_factory=lambda: vision_extra_fields()
+            default_factory=lambda: {
+                **vision_extra_fields(),
+                **concurrent_inference_extra_fields(),
+            }
         )
 
     @property

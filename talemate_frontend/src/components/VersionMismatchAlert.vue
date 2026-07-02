@@ -40,7 +40,7 @@
 </template>
 
 <script>
-import { FRONTEND_VERSION } from '../constants/version.js';
+import { FRONTEND_VERSION } from '@/constants/version';
 
 export default {
     name: 'VersionMismatchAlert',

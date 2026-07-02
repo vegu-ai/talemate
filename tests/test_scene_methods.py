@@ -866,7 +866,9 @@ class TestSnapshot:
 
 
 class TestPopMessage:
-    def test_pop_by_message_object(self, real_scene):
+    @pytest.mark.asyncio
+    async def test_pop_by_message_object(self, real_scene):
+        # A successful pop calls emit_status, which requires a running loop.
         a = _char_msg("a")
         b = _char_msg("b")
         real_scene.history = [a, b]
@@ -893,7 +895,11 @@ class TestPopMessage:
 
 
 class TestPopHistory:
-    def test_pop_last_matching_by_default(self, real_scene):
+    # pop_history calls emit_status when it removes anything, and that
+    # requires a running event loop — so every test that actually pops is
+    # async (mirrors TestDeleteMessage.test_delete_time_passage_resyncs_time).
+    @pytest.mark.asyncio
+    async def test_pop_last_matching_by_default(self, real_scene):
         n1 = NarratorMessage(message="n1", source="ai")
         n2 = NarratorMessage(message="n2", source="ai")
         real_scene.history = [n1, _char_msg("c"), n2]
@@ -902,7 +908,8 @@ class TestPopHistory:
         assert n2 not in real_scene.history
         assert n1 in real_scene.history
 
-    def test_pop_all_matching(self, real_scene):
+    @pytest.mark.asyncio
+    async def test_pop_all_matching(self, real_scene):
         n1 = NarratorMessage(message="n1", source="ai")
         n2 = NarratorMessage(message="n2", source="ai")
         c = _char_msg("c")
@@ -912,7 +919,8 @@ class TestPopHistory:
         assert n2 not in real_scene.history
         assert c in real_scene.history
 
-    def test_pop_filtered_by_source(self, real_scene):
+    @pytest.mark.asyncio
+    async def test_pop_filtered_by_source(self, real_scene):
         n_ai = NarratorMessage(message="ai", source="ai")
         n_manual = NarratorMessage(message="man", source="manual")
         real_scene.history = [n_ai, n_manual]
@@ -920,7 +928,8 @@ class TestPopHistory:
         assert n_ai in real_scene.history
         assert n_manual not in real_scene.history
 
-    def test_pop_filtered_by_meta_hash(self, real_scene):
+    @pytest.mark.asyncio
+    async def test_pop_filtered_by_meta_hash(self, real_scene):
         n_a = NarratorMessage(message="a", source="ai", meta={"k": 1})
         n_b = NarratorMessage(message="b", source="ai", meta={"k": 2})
         real_scene.history = [n_a, n_b]
@@ -929,7 +938,8 @@ class TestPopHistory:
         assert n_a in real_scene.history
         assert n_b not in real_scene.history
 
-    def test_pop_filtered_by_arbitrary_attribute(self, real_scene):
+    @pytest.mark.asyncio
+    async def test_pop_filtered_by_arbitrary_attribute(self, real_scene):
         a_player = _char_msg("a", character="Hero", source="player")
         a_ai = _char_msg("b", character="Alice", source="ai")
         real_scene.history = [a_player, a_ai]
@@ -939,7 +949,8 @@ class TestPopHistory:
         assert a_player not in real_scene.history
         assert a_ai in real_scene.history
 
-    def test_pop_reverse_pops_oldest_match_first(self, real_scene):
+    @pytest.mark.asyncio
+    async def test_pop_reverse_pops_oldest_match_first(self, real_scene):
         n_old = NarratorMessage(message="old", source="ai")
         n_new = NarratorMessage(message="new", source="ai")
         real_scene.history = [n_old, _char_msg("c"), n_new]

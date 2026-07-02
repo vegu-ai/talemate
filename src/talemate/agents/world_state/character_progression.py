@@ -71,23 +71,23 @@ class CharacterProgressionMixin:
 
     @property
     def character_progression_enabled(self) -> bool:
-        return self.actions["character_progression"].enabled
+        return self.resolve_enabled("character_progression")
 
     @property
     def character_progression_frequency(self) -> int:
-        return self.actions["character_progression"].config["frequency"].value
+        return self.resolve_config("character_progression", "frequency")
 
     @property
     def character_progression_player_character(self) -> bool:
-        return self.actions["character_progression"].config["player_character"].value
+        return self.resolve_config("character_progression", "player_character")
 
     @property
     def character_progression_max_changes(self) -> int:
-        return self.actions["character_progression"].config["max_changes"].value
+        return self.resolve_config("character_progression", "max_changes")
 
     @property
     def character_progression_as_suggestions(self) -> bool:
-        return self.actions["character_progression"].config["as_suggestions"].value
+        return self.resolve_config("character_progression", "as_suggestions")
 
     # signal connect
 

@@ -184,6 +184,7 @@ class TalemateClientMixin:
                         "settings (Vision tab) for a client with a vision-capable model."
                     ),
                     save_on_change=True,
+                    scene_overridable=False,
                 ),
             },
         )

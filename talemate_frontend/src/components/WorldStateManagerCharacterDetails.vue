@@ -74,22 +74,29 @@
                     />
 
 
-                    <v-textarea rows="5" max-rows="18" auto-grow
-                        ref="detail"
-                        :label="selected"
-                        :color="dirty ? 'dirty' : ''"
+                    <div class="position-relative">
+                        <v-textarea rows="5" max-rows="18" auto-grow
+                            ref="detail"
+                            :label="selected"
+                            :color="dirty ? 'dirty' : ''"
 
-                        :disabled="busy"
-                        :loading="busy"
-                        :hint="autocompleteInfoMessage(busy)"
+                            :disabled="busy"
+                            :loading="busy"
+                            :hint="autocompleteInfoMessage(busy)"
 
-                        @keyup.ctrl.enter.stop="sendAutocompleteRequest"
+                            @keyup.ctrl.enter.stop="sendAutocompleteRequest"
 
-                        @update:modelValue="dirty = true"
-                        @blur="update(selected, true)"
+                            @update:modelValue="dirty = true"
+                            @blur="onBlurSave"
 
-                        v-model="character.details[selected]">
-                    </v-textarea>
+                            v-model="character.details[selected]">
+                        </v-textarea>
+                        <AutocompleteRedoChip
+                            :applied="detailAutocompleteField?.state.applied || false"
+                            :disabled="busy"
+                            @redo="detailAutocompleteField.redo()"
+                            @undo="detailAutocompleteField.undo()" />
+                    </div>
 
                 </v-card-text>
 
@@ -126,6 +133,8 @@
 import ContextualGenerate from './ContextualGenerate.vue';
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
 import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
+import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
+import { createAutocompleteField } from '@/utils/autocompleteField';
 import ConfirmActionInline from './ConfirmActionInline.vue';
 
 export default {
@@ -135,6 +144,7 @@ export default {
         WorldStateManagerTemplateApplicator,
         SpiceAppliedNotification,
         ConfirmActionInline,
+        AutocompleteRedoChip,
     },
     props: {
         immutableCharacter: Object,
@@ -156,7 +166,31 @@ export default {
             groupsOpen: [],
             templateApplicatorCallback: null,
             source: "wsm.character_details",
+            detailAutocompleteField: null,
         }
+    },
+    created() {
+        // Dynamic-context field — same pattern as character attributes.
+        this.detailAutocompleteField = createAutocompleteField({
+            autocompleteRequest: this.autocompleteRequest,
+            getValue: () => (this.selected && this.character?.details)
+                ? this.character.details[this.selected] || ''
+                : '',
+            setValue: (v) => {
+                if (this.selected && this.character?.details) {
+                    this.character.details[this.selected] = v;
+                }
+            },
+            buildParams: () => ({
+                partial: (this.selected && this.character?.details)
+                    ? this.character.details[this.selected] || ''
+                    : '',
+                context: `character detail:${this.selected}`,
+                character: this.character.name,
+            }),
+            onStart: () => { this.busy = true; },
+            onEnd: () => { this.busy = false; },
+        });
     },
     inject: [
         'getWebsocket',
@@ -187,9 +221,20 @@ export default {
                     this.character = { ...value };
                 }
             }
-        }
+        },
+        currentDetailValue() {
+            this.detailAutocompleteField?.onValueChange();
+        },
+        selected() {
+            this.detailAutocompleteField?.onValueChange();
+        },
     },
     computed: {
+        currentDetailValue() {
+            return this.selected && this.character?.details
+                ? this.character.details[this.selected]
+                : null;
+        },
         selectedIsShared() {
             return this.character.shared_details.includes(this.selected);
         },
@@ -298,6 +343,12 @@ export default {
             }));
         },
 
+        onBlurSave() {
+            // Guard: blur during autocomplete would save the un-stripped {hint}.
+            if (this.busy) return;
+            this.update(this.selected, true);
+        },
+
         setShared(name, shared) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
@@ -335,16 +386,7 @@ export default {
         },
 
         sendAutocompleteRequest() {
-            this.busy = true;
-            this.autocompleteRequest({
-                partial: this.character.details[this.selected],
-                context: `character detail:${this.selected}`,
-                character: this.character.name
-            }, (completion) => {
-                this.character.details[this.selected] += completion;
-                this.busy = false;
-            }, this.$refs.detail);
-
+            this.detailAutocompleteField.request(this.$refs.detail);
         },
         
         viewCharacterStateReinforcer(name) {

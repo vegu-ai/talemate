@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import dataclasses
+import contextlib
+import contextvars
 import functools
 import json
 from inspect import signature
@@ -9,7 +10,7 @@ import re
 import traceback
 from abc import ABC
 from functools import wraps
-from typing import Callable, Literal
+from typing import Awaitable, Callable, Literal
 import uuid
 import pydantic
 from pydantic import ConfigDict
@@ -29,6 +30,7 @@ import talemate.config.schema as config_schema
 from talemate.client.context import (
     ClientContext,
 )
+from talemate.scene_agent_settings import UNSET
 from talemate.game.engine.nodes.core import GraphState
 from talemate.game.engine.nodes.registry import get_nodes_by_base_type, get_node
 from talemate.game.engine.nodes.run import FunctionWrapper
@@ -98,6 +100,7 @@ class AgentActionConfig(pydantic.BaseModel):
         default_factory=dict
     )
     save_on_change: bool = False
+    scene_overridable: bool = True
 
     wstemplate_type: (
         Literal[
@@ -161,6 +164,21 @@ class AgentAction(pydantic.BaseModel):
     # Only meaningful on actions that are themselves dynamic registries.
     dynamic_registry_component: str | None = None
 
+    enabled_scene_overridable: bool = False
+
+    @pydantic.model_validator(mode="after")
+    def _enabled_scene_overridable_requires_can_be_disabled(self):
+        # An enable-flag override only makes sense when the global enable
+        # flag is itself togglable. Without can_be_disabled the global UI
+        # never exposes an Enable checkbox, so a scene-level override has
+        # nothing to override.
+        if self.enabled_scene_overridable and not self.can_be_disabled:
+            raise ValueError(
+                f"AgentAction {self.label!r}: enabled_scene_overridable=True "
+                "requires can_be_disabled=True"
+            )
+        return self
+
 
 # ---------------------------------------------------------------------------
 # Dynamic action registries
@@ -195,6 +213,7 @@ def optimize_prompt_caching_action() -> AgentAction:
                     {"label": "On", "value": "on"},
                     {"label": "Off", "value": "off"},
                 ],
+                scene_overridable=False,
             ),
         },
     )
@@ -272,6 +291,29 @@ class store_context_state:
         return fn
 
 
+def _agent_action_override_kwargs(agent_type: str, action_name: str) -> dict:
+    """ClientContext kwargs for any per-action override on ``{agent_type}.{action_name}``; empty when none applies."""
+    config = get_config()
+    override = config.agent_actions.overrides.get(f"{agent_type}.{action_name}")
+    if override is None:
+        return {}
+
+    kwargs: dict = {}
+    if override.disable_reasoning:
+        kwargs["disable_reasoning"] = True
+    return kwargs
+
+
+# When True (set by a background dispatcher around asyncio.create_task), a
+# @set_processing action skips its foreground "busy" status emit. The action
+# still establishes its normal client/agent context, but status is left to
+# set_background_processing() so the work reports as "busy_bg" rather than
+# blocking-looking "busy". Default False keeps every other call unchanged.
+background_processing: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "agent_background_processing", default=False
+)
+
+
 def set_processing(fn):
     """
     decorator that emits the agent status as processing while the function
@@ -283,6 +325,9 @@ def set_processing(fn):
 
     @wraps(fn)
     async def wrapper(self, *args, **kwargs):
+        # In background mode the foreground "busy" emit is suppressed; status is
+        # owned by set_background_processing() so the action reports "busy_bg".
+        is_background = background_processing.get()
         with ClientContext():
             scene = active_scene.get()
 
@@ -296,7 +341,8 @@ def set_processing(fn):
                         action_name = args[0].__name__
 
                     self._current_action = action_name
-                    await self.emit_status(processing=True)
+                    if not is_background:
+                        await self.emit_status(processing=True)
 
                     # Now pass the complete args list
                     if getattr(fn, "store_context_state", None) is not None:
@@ -317,11 +363,21 @@ def set_processing(fn):
 
                         self.set_context_states(**all_args)
 
-                    return await fn(self, *args, **kwargs)
+                    override_kwargs = _agent_action_override_kwargs(
+                        self.agent_type, action_name
+                    )
+                    override_ctx = (
+                        ClientContext(**override_kwargs)
+                        if override_kwargs
+                        else contextlib.nullcontext()
+                    )
+                    with override_ctx:
+                        return await fn(self, *args, **kwargs)
                 finally:
                     try:
                         self._current_action = None
-                        await self.emit_status(processing=False)
+                        if not is_background:
+                            await self.emit_status(processing=False)
                     except RuntimeError as exc:
                         # not sure why this happens
                         # some concurrency error?
@@ -367,6 +423,7 @@ class Agent(ABC):
             "has_toggle": agent.has_toggle if agent else False,
             "experimental": agent.experimental if agent else False,
             "requires_llm_client": cls.requires_llm_client,
+            "scene_overrides": cls._scene_overrides_payload(agent),
         }
         actions = getattr(agent, "actions", None)
 
@@ -376,6 +433,24 @@ class Agent(ABC):
             config_options["actions"] = {}
 
         return config_options
+
+    @classmethod
+    def _scene_overrides_payload(cls, agent) -> dict:
+        """Sparse override dict for THIS agent from the active scene, if any.
+
+        Empty dict means: no scene loaded, or no overrides set for this
+        agent. The frontend uses this to populate the Scene tab in the
+        AgentModal.
+        """
+        if not agent:
+            return {}
+        overrides = agent.scene_overrides()
+        if overrides is None:
+            return {}
+        agent_override = overrides.agents.get(agent.agent_type)
+        if not agent_override:
+            return {}
+        return agent_override.model_dump(exclude_none=True)
 
     @classmethod
     async def init_nodes(cls, scene: "Scene", state: GraphState):
@@ -806,7 +881,82 @@ class Agent(ABC):
             return default
         return functools.partial(fn, slug)
 
+    # ------------------------------------------------------------------
+    # Per-scene config overrides
+    # ------------------------------------------------------------------
+
+    def scene_overrides(self):
+        """Return the scene's agent-overrides overlay, or None if not linked.
+
+        ``scene`` is only present after ``connect()`` runs at scene-load time;
+        callers may invoke this before that (e.g. property getters during agent
+        init), so we tolerate a missing ``scene`` attribute.
+        """
+        scene = getattr(self, "scene", None)
+        return getattr(scene, "agent_overrides", None) if scene else None
+
+    def _resolve(self, getter, fallback):
+        """Consult the scene overlay via ``getter``; fall back if UNSET."""
+        overrides = self.scene_overrides()
+        if overrides is not None:
+            value = getter(overrides)
+            if value is not UNSET:
+                return value
+        return fallback()
+
+    def resolve_config(self, action_key: str, config_key: str):
+        """Return the effective value for an action config field — scene override if any, else global."""
+        return self._resolve(
+            lambda o: o.get_value(self.agent_type, action_key, config_key),
+            lambda: self.actions[action_key].config[config_key].value,
+        )
+
+    def resolve_enabled(self, action_key: str) -> bool:
+        """Return the effective enabled flag for a container action."""
+        return bool(
+            self._resolve(
+                lambda o: o.get_enabled(self.agent_type, action_key),
+                lambda: self.actions[action_key].enabled,
+            )
+        )
+
+    def _route_write(self, has_override, write_override, write_global) -> None:
+        """Route a write to the scene overlay when it's overriding this field, else to the global config."""
+        overrides = self.scene_overrides()
+        if overrides is not None and has_override(overrides):
+            write_override(overrides)
+        else:
+            write_global()
+
+    def write_config(self, action_key: str, config_key: str, value) -> None:
+        """Update an action config field — scene override if one is active for this field, else global.
+
+        Note: this updates an *existing* override; it does not create a new one.
+        New overrides are installed via the AgentModal save flow
+        (see ``server.agent_config.replace_agent_overrides``).
+        """
+        self._route_write(
+            lambda o: o.get_value(self.agent_type, action_key, config_key) is not UNSET,
+            lambda o: o.set_value(self.agent_type, action_key, config_key, value),
+            lambda: setattr(
+                self.actions[action_key].config[config_key], "value", value
+            ),
+        )
+
+    def write_enabled(self, action_key: str, enabled: bool) -> None:
+        """Update an action's enabled flag — scene override if one is active, else global.
+
+        Note: this updates an *existing* override; it does not create a new one.
+        """
+        self._route_write(
+            lambda o: o.get_enabled(self.agent_type, action_key) is not UNSET,
+            lambda o: o.set_enabled(self.agent_type, action_key, enabled),
+            lambda: setattr(self.actions[action_key], "enabled", enabled),
+        )
+
     async def apply_config(self, *args, **kwargs):
+        # Writes global state directly on purpose; runtime edits must go
+        # through `write_config` / `write_enabled` to respect any overlay.
         if self.has_toggle and "enabled" in kwargs:
             self.is_enabled = kwargs.get("enabled", False)
 
@@ -1021,6 +1171,109 @@ class Agent(ABC):
             )
         )
 
+    # ------------------------------------------------------------------
+    # Tracked single-flight tasks
+    #
+    # A small reuse layer over set_background_processing for "run this agent
+    # operation as a single-flight task, optionally in the background". Each
+    # logical operation is identified by a `key` so an agent can run several
+    # independent ones; per-key only one is ever in flight at a time.
+    #
+    # background=True routes status through set_background_processing ("busy_bg",
+    # non-blocking UI) and sets the background_processing contextvar so the
+    # operation's @set_processing work reports busy_bg too. background=False runs
+    # the same machinery but reports the normal foreground "busy".
+    # ------------------------------------------------------------------
+
+    def _tracked_task(self, key: str) -> "asyncio.Task | None":
+        return getattr(self, "_tracked_tasks", {}).get(key)
+
+    def tracked_task_running(self, key: str) -> bool:
+        """Whether a tracked task under `key` is currently in flight."""
+        task = self._tracked_task(key)
+        return task is not None and not task.done()
+
+    async def run_tracked_task(
+        self,
+        key: str,
+        coro_factory: Callable[[], Awaitable],
+        *,
+        background: bool = True,
+        cancel_in_flight: bool = False,
+        error_handler: Callable | None = None,
+    ) -> "asyncio.Task | None":
+        """
+        Run `coro_factory()` as a single-flight task tracked under `key`.
+
+        Returns the started task, or None if one was already in flight and left
+        to run (single-flight skip — `coro_factory` is not invoked, so a skip
+        never creates an un-awaited coroutine).
+
+        The entry is removed from the table when the task finishes, so the table
+        only ever holds in-flight tasks and never accumulates stale keys (which
+        matters for callers that use dynamic per-item keys).
+
+        `cancel_in_flight=True` cancels a running task under `key` and starts a
+        fresh one. `error_handler` is an async callable invoked with the
+        exception if the task fails.
+        """
+        if not hasattr(self, "_tracked_tasks"):
+            self._tracked_tasks: dict[str, asyncio.Task] = {}
+
+        existing = self._tracked_tasks.get(key)
+        if existing is not None and not existing.done():
+            if not cancel_in_flight:
+                return None
+            existing.cancel()
+
+        # The contextvar is copied into the task by create_task; the set/reset
+        # is synchronous (no await between), so it never leaks to other tasks.
+        token = background_processing.set(True) if background else None
+        try:
+            task = asyncio.create_task(coro_factory())
+        finally:
+            if token is not None:
+                background_processing.reset(token)
+
+        self._tracked_tasks[key] = task
+        task.add_done_callback(lambda fut: self._untrack_task(key, fut))
+
+        if background:
+            await self.set_background_processing(task, error_handler)
+        else:
+            task.add_done_callback(
+                lambda fut: self._on_tracked_task_done(fut, error_handler)
+            )
+        return task
+
+    def _untrack_task(self, key: str, task: asyncio.Task) -> None:
+        # Only drop the entry if it's still this task — a cancel_in_flight
+        # replacement may have already swapped a newer task under the same key.
+        if self._tracked_tasks.get(key) is task:
+            del self._tracked_tasks[key]
+
+    def _on_tracked_task_done(self, task: asyncio.Task, error_handler=None) -> None:
+        # Foreground tasks report "busy" via @set_processing; this callback only
+        # surfaces errors and consumes the result so failures don't go unnoticed.
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is None:
+            return
+        tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+        log.error("tracked task error", agent=self.agent_type, exc=exc, traceback=tb)
+        if error_handler is not None:
+            asyncio.create_task(error_handler(exc))
+
+    def cancel_tracked_task(self, key: str) -> bool:
+        """Cancel the in-flight tracked task under `key`. Returns True if one
+        was running and got cancelled."""
+        task = self._tracked_task(key)
+        if task is not None and not task.done():
+            task.cancel()
+            return True
+        return False
+
     def connect(self, scene):
         self.scene = scene
         talemate.emit.async_signals.get("game_loop_start").connect(
@@ -1124,20 +1377,19 @@ class Agent(ABC):
         )
 
 
-@dataclasses.dataclass
-class AgentEmission:
+class AgentEmission(pydantic.BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     agent: Agent
 
 
-@dataclasses.dataclass
 class AgentTemplateEmission(AgentEmission):
-    template_vars: dict = dataclasses.field(default_factory=dict)
-    response: str = None
-    dynamic_instructions: list[DynamicInstruction] = dataclasses.field(
+    template_vars: dict = pydantic.Field(default_factory=dict)
+    response: str | None = None
+    dynamic_instructions: list[DynamicInstruction] = pydantic.Field(
         default_factory=list
     )
 
 
-@dataclasses.dataclass
 class RagBuildSubInstructionEmission(AgentEmission):
     sub_instruction: str | None = None

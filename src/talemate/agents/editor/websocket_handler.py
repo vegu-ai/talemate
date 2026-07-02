@@ -56,14 +56,34 @@ class EditorWebsocketHandler(Plugin):
         if not message:
             raise Exception("Message not found")
 
+        original = message.message
+
         with RevisionContext(message.id):
             info = RevisionInformation(
-                text=message.message,
+                text=original,
                 character=character,
             )
             revised = await editor.revision_revise(info)
             if isinstance(message, CharacterMessage):
-                if not revised.startswith(character.name + ":"):
-                    revised = f"{character.name}: {revised}"
+                revised = CharacterMessage.with_name_prefix(character.name, revised)
 
-        scene.edit_message(message.id, revised)
+        # Append the revised text as a new version so the frontend's
+        # navigator can step between the prior canonical and the revision.
+        # No-op revisions don't touch the message and surface a status so
+        # the user knows the action completed without effect.
+        #
+        # Either way, post an `operation_done` envelope so the frontend can
+        # clear the per-message "regenerating" spinner — the happy path also
+        # clears on the `message_edited` echo, but the no-op path has no
+        # other completion signal.
+        if revised != original:
+            scene.append_message_version(message.id, revised, source="revision")
+            await self.signal_operation_done(signal_only=True)
+        else:
+            await self.signal_operation_done(
+                signal_only=True,
+                emit_status_message={
+                    "message": "Editor revision produced no changes",
+                    "status": "info",
+                },
+            )

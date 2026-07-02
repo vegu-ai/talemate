@@ -114,7 +114,7 @@
 import CharacterImporter from './CharacterImporter.vue';
 import WorldStateManagerCharacterListItem from './WorldStateManagerCharacterListItem.vue';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
-import { FOLDER_NAME_MAX_LENGTH } from '@/constants';
+import { FOLDER_NAME_MAX_LENGTH } from '@/constants/character';
 
 export default {
     name: "WorldStateManagerMenuCharacterTools",

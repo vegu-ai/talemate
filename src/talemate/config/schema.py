@@ -62,7 +62,14 @@ class Client(pydantic.BaseModel):
     reason_tokens: int = 0
 
     # regex to strip from the response if the model is reasoning
-    reason_response_pattern: Union[str, None] = None
+    reason_response_pattern: str | None = None
+
+    # regex matching the START of the reasoning tokens, used to validate that
+    # the model actually reasoned. Some models (e.g. abliterated variants) do
+    # not always reason. If set and NOT found in the response (and reasoning was
+    # not prefilled), the model never reasoned and the response is treated the
+    # same as when reason_failure_behavior is "ignore".
+    reason_validation_pattern: str | None = None
 
     # reason prefill - will be prepended to the prompt if the model is reasoning
     # this is mostly for base models that don't hhave reas
@@ -99,15 +106,18 @@ class Client(pydantic.BaseModel):
     # Controls whether token caps and/or response length instructions are
     # sent with prompts. Options:
     #   "uncapped" - no token cap, no instructions
-    #   "cap_tokens_and_instructions" - cap tokens + append instructions (default)
+    #   "cap_tokens_and_instructions" - cap tokens + append instructions
     #   "cap_tokens" - cap tokens only, no instructions
     #   "instructions" - append instructions only, no token cap
+    #   "adaptive" - "instructions" when reasoning is enabled, otherwise
+    #                "cap_tokens_and_instructions" (default)
     enforce_response_length: Literal[
         "uncapped",
         "cap_tokens_and_instructions",
         "cap_tokens",
         "instructions",
-    ] = "cap_tokens_and_instructions"
+        "adaptive",
+    ] = "adaptive"
 
     @pydantic.field_validator("lock_template", mode="before")
     @classmethod
@@ -139,6 +149,11 @@ class Client(pydantic.BaseModel):
                 "label": "Send instructions",
                 "value": "instructions",
                 "help": "Appends length instructions without limiting tokens",
+            },
+            {
+                "label": "Adaptive",
+                "value": "adaptive",
+                "help": "Sends instructions only when reasoning is enabled, otherwise limits tokens and sends instructions",
             },
         ],
     }
@@ -188,6 +203,7 @@ class General(pydantic.BaseModel):
     max_backscroll: int = 100
     add_default_character: bool = True
     show_agent_activity_bar: bool = True
+    release_gpu_cache_on_scene_load: bool = True
 
 
 class StateReinforcementTemplate(pydantic.BaseModel):
@@ -230,6 +246,18 @@ class CreatorConfig(pydantic.BaseModel):
     content_context: list[str] = [
         "a fun and engaging slice of life story aimed at an adult audience."
     ]
+    perspective_presets: list[str] = [
+        "Third person limited, past tense.",
+        "Third person limited, past tense, focused on {player_name}'s POV.",
+        "Third person limited, present tense.",
+        "Third person limited, present tense, focused on {player_name}'s POV.",
+        "Third person omniscient, past tense.",
+        "Third person omniscient, present tense.",
+        "First person, past tense, from {player_name}'s POV.",
+        "First person, present tense, from {player_name}'s POV.",
+        "Second person, present tense.",
+        "Second person, present tense. Talking to {player_name}.",
+    ]
 
 
 class OpenAIConfig(pydantic.BaseModel):
@@ -266,6 +294,10 @@ class ElevenLabsConfig(pydantic.BaseModel):
 
 
 class CoquiConfig(pydantic.BaseModel):
+    api_key: Union[str, None] = None
+
+
+class HuggingFaceConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
@@ -577,6 +609,7 @@ class SceneAppearance(pydantic.BaseModel):
     parentheses: MarkupMessageStyle = MarkupMessageStyle()
     brackets: MarkupMessageStyle = MarkupMessageStyle()
     emphasis: MarkupMessageStyle = MarkupMessageStyle()
+    entities: MarkupMessageStyle = MarkupMessageStyle()
     message_assets: Dict[str, MessageAssetCadenceConfig] = pydantic.Field(
         default_factory=lambda: {
             "avatar": MessageAssetCadenceConfig(),
@@ -605,6 +638,14 @@ class PromptsConfig(pydantic.BaseModel):
     # Value: group name
     # Note: "scene" overrides are NOT stored here - scene always wins
     template_sources: Dict[str, str] = pydantic.Field(default_factory=dict)
+
+
+class AgentActionOverride(pydantic.BaseModel):
+    disable_reasoning: bool = False
+
+
+class AgentActionsConfig(pydantic.BaseModel):
+    overrides: Dict[str, AgentActionOverride] = pydantic.Field(default_factory=dict)
 
 
 class Config(pydantic.BaseModel):
@@ -636,6 +677,8 @@ class Config(pydantic.BaseModel):
 
     coqui: CoquiConfig = CoquiConfig()
 
+    huggingface: HuggingFaceConfig = HuggingFaceConfig()
+
     recent_scenes: RecentScenes = RecentScenes()
 
     presets: Presets = Presets()
@@ -645,6 +688,8 @@ class Config(pydantic.BaseModel):
     system_prompts: SystemPrompts = SystemPrompts()
 
     prompts: PromptsConfig = PromptsConfig()
+
+    agent_actions: AgentActionsConfig = AgentActionsConfig()
 
     dirty: bool = pydantic.Field(default=False, exclude=True)
 

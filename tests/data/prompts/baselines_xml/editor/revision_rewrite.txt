@@ -186,7 +186,9 @@ The forest was dark and mysterious.
 </DRAFT_TEXT>
 
 <ISSUE_1:_REPEATED_TEXT>
-Each item below has been flagged because it repeats information already present earlier in the scene. Matches are **semantic**, not verbatim — a flagged line may share no exact words with the earlier passage; what matters is that the meaning, action, or beat is already on the page. Focus on the underlying concept that triggered the flag, not on the exact string. Every flagged item must be addressed — either dropped entirely, or substantially rewritten so the repeated meaning is gone. Prefer dropping: if the information was already conveyed, delete the sentence and let the surrounding prose bridge the gap. Only rewrite when the beat genuinely needs to stay.
+Each item below has been flagged because it repeats information already present earlier in the scene. Matches are **semantic**, not verbatim — a flagged line may share no exact words with the earlier passage; what matters is that the meaning, action, or beat is already on the page. Focus on the underlying concept that triggered the flag, not on the exact string. Every flagged item must be addressed — either dropped entirely, or substantially rewritten so the repeated meaning is gone.
+
+Prefer dropping: if the information was already conveyed, delete the sentence and let the surrounding prose bridge the gap. Only rewrite when the beat genuinely needs to stay.
 
 - REPEATED 1: `The forest was dark and mysterious.`
 </ISSUE_1:_REPEATED_TEXT>
@@ -200,6 +202,7 @@ Every flagged item above must be addressed in your revision. "Addressed" means s
 - Make a single pass: plan every fix first, then emit one complete revision.
 
 **For each flagged item, pick one:**
+
 - **Drop** — if the information was already conveyed elsewhere, delete the sentence and let the surrounding prose bridge the gap. This is usually the right call for repetition.
 - **Rewrite** — if the beat genuinely needs to stay, rewrite it so the meaning lands without reusing the flagged phrasing or falling into the pattern the director flagged.
 

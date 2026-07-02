@@ -32,11 +32,11 @@
                 <v-alert type="warning" density="compact" variant="text" class="mb-3 text-caption">Visual agent is not ready for image generation, will output prompt instead.</v-alert>
             </div>
             <!-- environment -->
-            <v-list-item @click="(event) => handleVisualize(null, event, 'SCENE_CARD')" prepend-icon="mdi-image-filter-hdr">
+            <v-list-item @click="(event) => handleVisualize(null, event, VIS_TYPE.SCENE_CARD)" prepend-icon="mdi-image-filter-hdr">
                 <v-list-item-title>Visualize Scene (Card)</v-list-item-title>
                 <v-list-item-subtitle>Generate a cover image of the scene</v-list-item-subtitle>
             </v-list-item>
-            <v-list-item @click="(event) => handleVisualize(null, event, 'SCENE_BACKGROUND')" prepend-icon="mdi-image-filter-hdr">
+            <v-list-item @click="(event) => handleVisualize(null, event, VIS_TYPE.SCENE_BACKGROUND)" prepend-icon="mdi-image-filter-hdr">
                 <v-list-item-title>Visualize Scene (Background)</v-list-item-title>
                 <v-list-item-subtitle>Generate a purely environmental image of the scene</v-list-item-subtitle>
             </v-list-item>
@@ -48,18 +48,18 @@
                     </v-list-item>
                 </template>
                 <v-list>
-                    <v-list-item @click="(event) => handleVisualize(character_name, event, 'CHARACTER_CARD')" prepend-icon="mdi-brush">
+                    <v-list-item @click="(event) => handleVisualize(character_name, event, VIS_TYPE.CHARACTER_CARD)" prepend-icon="mdi-brush">
                         <v-list-item-title>Card</v-list-item-title>
                         <v-list-item-subtitle>Generate a cover image portrait</v-list-item-subtitle>
                     </v-list-item>
-                    <v-list-item @click="(event) => handleVisualize(character_name, event, 'CHARACTER_PORTRAIT')" prepend-icon="mdi-brush">
+                    <v-list-item @click="(event) => handleVisualize(character_name, event, VIS_TYPE.CHARACTER_PORTRAIT)" prepend-icon="mdi-brush">
                         <v-list-item-title>Portrait</v-list-item-title>
                         <v-list-item-subtitle>Generate an image of {{ character_name }}'s face</v-list-item-subtitle>
                     </v-list-item>
                 </v-list>
             </v-menu>
             <!-- scene illustration -->
-            <v-list-item @click="(event) => handleVisualize(null, event, 'SCENE_ILLUSTRATION')" prepend-icon="mdi-image-filter-hdr">
+            <v-list-item @click="(event) => handleVisualize(null, event, VIS_TYPE.SCENE_ILLUSTRATION)" prepend-icon="mdi-image-filter-hdr">
                 <v-list-item-title>Visualize Moment (Illustration)</v-list-item-title>
                 <v-list-item-subtitle>Generate an image of the current moment</v-list-item-subtitle>
             </v-list-item>
@@ -90,7 +90,7 @@
     </v-dialog>
 </template>
 <script>
-import { VIS_TYPE_OPTIONS } from '../constants/visual';
+import { VIS_TYPE, VIS_TYPE_OPTIONS } from '@/constants/visual';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
 export default {
     name: 'SceneToolsVisual',
@@ -140,9 +140,10 @@ export default {
             dialogTitle: '',
             dialogPromptOnly: false,
             dialogCharacterName: null,
-            dialogVisType: 'CHARACTER_CARD',
+            dialogVisType: VIS_TYPE.CHARACTER_CARD,
             instructions: '',
             autoAttachAssets: true,
+            VIS_TYPE,
         }
     },
 
@@ -177,13 +178,13 @@ export default {
                 return null;
             }
             
-            if (vis_type === 'CHARACTER_CARD' || vis_type === 'CHARACTER_PORTRAIT') {
+            if (vis_type === VIS_TYPE.CHARACTER_CARD || vis_type === VIS_TYPE.CHARACTER_PORTRAIT) {
                 return `A visual of ${character_name} in the current moment`;
             }
             
             return null;
         },
-        handleVisualize(character_name, event, vis_type = 'CHARACTER_CARD') {
+        handleVisualize(character_name, event, vis_type = VIS_TYPE.CHARACTER_CARD) {
             const ctrlPressed = isPrimaryModifier(event);
             const altPressed = event.altKey;
             
@@ -202,7 +203,7 @@ export default {
             this.generateImage(this.dialogCharacterName, this.dialogPromptOnly, this.instructions, this.dialogVisType);
             this.dialogOpen = false;
         },
-        generateImage(character_name, prompt_only = false, instructions = null, vis_type = 'CHARACTER_CARD') {
+        generateImage(character_name, prompt_only = false, instructions = null, vis_type = VIS_TYPE.CHARACTER_CARD) {
             const payload = {
                 type: 'visual',
                 action: 'visualize',

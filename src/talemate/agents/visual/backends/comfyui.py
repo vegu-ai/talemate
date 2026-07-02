@@ -708,6 +708,7 @@ class ComfyUIMixin:
                 label="API URL",
                 description="The URL of the backend API",
                 save_on_change=True,
+                scene_overridable=False,
             ),
             "workflow": AgentActionConfig(
                 type="text",
@@ -716,6 +717,7 @@ class ComfyUIMixin:
                 description="The workflow to use for comfyui (workflow file name inside ./templates/comfyui-workflows)",
                 choices=[],
                 save_on_change=True,
+                scene_overridable=False,
             ),
             "model": AgentActionConfig(
                 type="autocomplete",
@@ -723,6 +725,7 @@ class ComfyUIMixin:
                 label="Model",
                 choices=[],
                 description="The main image generation model to use.",
+                scene_overridable=False,
             ),
             "prompt_type": AgentActionConfig(
                 type="text",
@@ -731,6 +734,7 @@ class ComfyUIMixin:
                 label="Prompting Type",
                 choices=PROMPT_TYPE.choices(),
                 description="The semantic style of the generated prompt. USe keywords for SDXL, SD51 and descriptive for flux and qwen.",
+                scene_overridable=False,
             ),
             "resolution_square": AgentActionConfig(
                 type="vector2",
@@ -739,6 +743,7 @@ class ComfyUIMixin:
                 label="Square",
                 description="The resolution to use for the image generation.",
                 choices=get_resolution_choices("square"),
+                scene_overridable=False,
             ),
             "resolution_portrait": AgentActionConfig(
                 type="vector2",
@@ -746,6 +751,7 @@ class ComfyUIMixin:
                 label="Portrait",
                 description="The resolution to use for the image generation.",
                 choices=get_resolution_choices("portrait"),
+                scene_overridable=False,
             ),
             "resolution_landscape": AgentActionConfig(
                 type="vector2",
@@ -753,6 +759,7 @@ class ComfyUIMixin:
                 label="Landscape",
                 description="The resolution to use for the image generation.",
                 choices=get_resolution_choices("landscape"),
+                scene_overridable=False,
             ),
         }
 

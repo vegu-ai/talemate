@@ -131,6 +131,27 @@
 
                                 <v-divider></v-divider>
 
+                                <!-- TOGGLE PLAYER CHARACTER -->
+                                <div>
+                                    <v-list-item v-if="!character.is_player">
+                                        <v-tooltip max-width="300" :text="`Mark ${character.name} as the player character. The current player character (if any) will be demoted to an AI actor.`">
+                                            <template v-slot:activator="{ props }">
+                                                <v-btn @click.stop="setIsPlayer(true)" v-bind="props" variant="tonal" block color="info" prepend-icon="mdi-account-star">Make Player Character</v-btn>
+                                            </template>
+                                        </v-tooltip>
+                                    </v-list-item>
+
+                                    <v-list-item v-else>
+                                        <v-tooltip max-width="300" :text="`Unmark ${character.name} as the player character. They will become an AI actor and remain in the scene.`">
+                                            <template v-slot:activator="{ props }">
+                                                <v-btn @click.stop="setIsPlayer(false)" v-bind="props" variant="tonal" block color="info" prepend-icon="mdi-account-off-outline">Unmark as Player</v-btn>
+                                            </template>
+                                        </v-tooltip>
+                                    </v-list-item>
+                                </div>
+
+                                <v-divider></v-divider>
+
                                 <!-- DEACTIVATE CHARACTER -->
                                 <div>
                                     <v-list-item v-if="character.active">
@@ -349,7 +370,9 @@ import WorldStateManagerCharacterReinforcements from './WorldStateManagerCharact
 import WorldStateManagerCharacterActor from './WorldStateManagerCharacterActor.vue';
 import WorldStateManagerCharacterCreator from './WorldStateManagerCharacterCreator.vue';
 import WorldStateManagerCharacterVisuals from './WorldStateManagerCharacterVisuals.vue';
-import { MAX_CONTENT_WIDTH, FOLDER_NAME_MAX_LENGTH } from '@/constants';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
+import { FOLDER_NAME_MAX_LENGTH } from '@/constants/character';
+import { VIS_TYPE } from '@/constants/visual';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 
 export default {
@@ -561,12 +584,20 @@ export default {
                 name: this.character.name,
             }));
         },
+        setIsPlayer(isPlayer) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_character_is_player',
+                name: this.character.name,
+                is_player: isPlayer,
+            }));
+        },
         visualizeCharacter() {
             this.coverImageBusy = true;
             this.getWebsocket().send(JSON.stringify({
                 type: 'visual',
                 action: 'visualize',
-                vis_type: 'CHARACTER_CARD',
+                vis_type: VIS_TYPE.CHARACTER_CARD,
                 character_name: this.character.name,
                 set_cover_image: true,
                 override_character_cover: true,

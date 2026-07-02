@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 import shutil
@@ -30,11 +31,14 @@ from talemate.status import LoadingStatus, set_loading
 from talemate.world_state import WorldState
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
+from talemate.scene.schema import ScenePerspectives
 from talemate.history import validate_history
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
+from talemate.util.gpu import release_cuda_cache
 from talemate.changelog import _get_overall_latest_revision
 from talemate.shared_context import SharedContext
+from talemate.scene_agent_settings import AGENT_SETTINGS_DIRNAME, resolve_link_on_load
 from talemate.load.character_card import CharacterCardImportOptions
 from talemate.scene_assets import AssetTransfer
 
@@ -65,6 +69,19 @@ log = structlog.get_logger("talemate.load")
 def to_project_name(name: str) -> str:
     """Convert a scene name to a project directory name."""
     return name.replace(" ", "-").replace("'", "").lower()
+
+
+def load_scene_perspectives(scene_data: dict) -> ScenePerspectives:
+    """
+    Resolve the scene's narrative perspectives from saved scene data.
+
+    Prefers the nested `perspectives` object when present; otherwise migrates
+    the legacy flat `perspective` string into `perspectives.default`.
+    """
+    perspectives_data = scene_data.get("perspectives")
+    if perspectives_data:
+        return ScenePerspectives(**perspectives_data)
+    return ScenePerspectives(default=scene_data.get("perspective", "") or "")
 
 
 class SceneInitialization(pydantic.BaseModel):
@@ -167,6 +184,18 @@ async def load_scene(
     """
 
     exc = None
+
+    # Release the previous scene's reserved GPU memory before loading the next.
+    # Local CUDA work (embedding re-commits, TTS) leaves PyTorch's caching
+    # allocator sitting on the high-water-mark of its largest batch, which only
+    # frees on process exit; returning it here gives the upcoming scene's
+    # re-embed maximum headroom — on native Linux, where CUDA has no sysmem
+    # fallback, that headroom is the difference between loading and an OOM. Done
+    # once per scene load (not per commit) so we don't thrash the allocator
+    # cache during gameplay. No-op off CUDA, or when disabled in config.
+    if get_config().game.general.release_gpu_cache_on_scene_load:
+        await asyncio.to_thread(release_cuda_cache)
+
     try:
         with SceneIsLoading(scene):
             if file_path == "$NEW_SCENE$":
@@ -294,7 +323,7 @@ async def load_scene_from_data(
     }
     scene.active_characters = scene_data.get("active_characters", [])
     scene.context = scene_data.get("context", "")
-    scene.perspective = scene_data.get("perspective", "")
+    scene.perspectives = load_scene_perspectives(scene_data)
     scene.project_name = scene_data.get("project_name")
     scene.intent_state = SceneIntent(**scene_data.get("intent_state", {}))
     scene.history = _load_history(scene_data["history"])
@@ -319,6 +348,8 @@ async def load_scene_from_data(
             await scene.shared_context.update_to_scene(scene)
     else:
         scene.shared_context = None
+
+    await resolve_link_on_load(scene, scene_data)
 
     import_scene_node_definitions(scene)
 
@@ -510,6 +541,19 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
                 "Loaded templates directory",
                 source=templates_source,
                 dest=templates_dest,
+            )
+
+        # Restore agent-settings if they exist in ZIP. Mirrors the export
+        # side — without this the importing user's scene loses the per-scene
+        # agent overlay referenced by `agent_settings_file`.
+        agent_settings_source = temp_path / AGENT_SETTINGS_DIRNAME
+        if agent_settings_source.exists():
+            agent_settings_dest = Path(scene.save_dir) / AGENT_SETTINGS_DIRNAME
+            shutil.copytree(agent_settings_source, agent_settings_dest)
+            log.debug(
+                "Loaded agent-settings directory",
+                source=agent_settings_source,
+                dest=agent_settings_dest,
             )
 
         # Restore restore file if it exists in ZIP and is referenced in scene_data
@@ -827,6 +871,14 @@ def _prepare_history(entry):
         entry.pop("source")
 
     cls = MESSAGES.get(typ, SceneMessage)
+
+    # Tolerate corrupt history entries (e.g. produced by changelog delta
+    # reconstruction) that have lost their `message` field. Construction
+    # would otherwise raise a pydantic ValidationError and abort the whole
+    # scene load.
+    if "message" not in entry:
+        log.warning("history entry missing message; substituting empty", entry=entry)
+        entry["message"] = ""
 
     msg = cls(**entry)
 

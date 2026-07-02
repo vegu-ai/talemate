@@ -156,6 +156,28 @@ templates:
     template_type: visual_style
     uid: ink_illustration
     visual_type: STYLE
+  object_illustration:
+    description: null
+    favorite: false
+    group: visual_styles
+    instructions: null
+    name: Object Illustration
+    negative_descriptive: ''
+    negative_keywords:
+    - character
+    - portrait
+    - people
+    - crowd
+    positive_descriptive: ''
+    positive_keywords:
+    - single object
+    - still life
+    - close-up
+    - item study
+    priority: 1
+    template_type: visual_style
+    uid: object_illustration
+    visual_type: OBJECT_ILLUSTRATION
   photo:
     description: null
     favorite: false

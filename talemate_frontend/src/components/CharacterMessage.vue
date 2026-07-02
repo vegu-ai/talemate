@@ -1,12 +1,13 @@
 <template>
-  <v-alert variant="text" :color="color" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
+  <v-alert variant="text" :color="color" elevation="0" density="compact" :style="{ opacity: revisionBusy ? 0.65 : 1, transition: 'opacity 0.2s ease' }" @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
       <v-btn size="small" icon variant="text" class="close-button" @click="deleteMessage" :disabled="uxLocked">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
+    <RevisionNav v-if="isLastMessage && (revisionsCount > 1 || revisionBusy)" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" @navigate="(dir) => $emit('navigate-revision', dir)" />
     <!-- Scene illustration (big) renders above message -->
-    <MessageAssetImage 
+    <MessageAssetImage
       v-if="messageAsset && isSceneIllustrationAbove"
       :asset_id="messageAsset"
       :asset_type="asset_type || 'avatar'"
@@ -17,7 +18,7 @@
     />
     <div class="character-message">
       <!-- Avatar/card/scene_illustration (small/medium) renders inline -->
-      <MessageAssetImage 
+      <MessageAssetImage
         v-if="messageAsset && !isSceneIllustrationAbove"
         :asset_id="messageAsset"
         :asset_type="asset_type || 'avatar'"
@@ -29,9 +30,9 @@
       <span class="character-name-chip" :style="{ color: color }">
         {{ character }}
       </span>
-      <div class="character-content">
-        <v-textarea 
-          ref="textarea" 
+      <div class="character-content" :class="{ 'position-relative': editing, 'character-content--editing': editing }">
+        <v-textarea
+          ref="textarea"
           v-if="editing"
           v-model="editing_text"
           variant="outlined"
@@ -44,66 +45,47 @@
           :loading="autocompleting"
           :disabled="autocompleting"
 
-          @keydown.enter.prevent="handleEnter" 
+          @keydown.enter.prevent="handleEnter"
           @blur="autocompleting ? null : cancelEdit()"
           @keydown.escape.prevent="cancelEdit()"
           >
         </v-textarea>
-        <div v-else class="character-text-wrapper" @dblclick="startEdit()">
+        <AutocompleteRedoChip
+          v-if="editing"
+          :applied="autocompleteField?.state.applied || false"
+          :disabled="autocompleting"
+          @redo="autocompleteField.redo()"
+          @undo="autocompleteField.undo()" />
+        <div v-if="!editing" class="character-text-wrapper" @dblclick="startEdit()">
           <div class="character-text" v-html="renderedText"></div>
         </div>
       </div>
     </div>
     <v-sheet v-if="hovered" rounded="sm" color="transparent">
-      <v-chip size="x-small" color="indigo-lighten-4" v-if="editing">
-        <v-icon class="mr-1">mdi-pencil</v-icon>
-        Editing - Press `enter` to submit. Click anywhere to cancel.</v-chip>
-      <v-chip size="x-small" color="grey-lighten-1" v-else-if="!editing && hovered" variant="text" class="mr-1">
-        <v-icon>mdi-pencil</v-icon>
-        Double-click to edit.</v-chip>
-        
-        <!-- create pin -->
-        <v-chip size="x-small" label color="success" v-if="!editing && hovered" variant="outlined" @click="createPin(message_id)" :disabled="uxLocked">
-          <v-icon class="mr-1">mdi-pin</v-icon>
-          Create Pin
-        </v-chip>
-
-        <!-- revision -->
-        <v-chip size="x-small" class="ml-2" label color="dirty" v-if="!editing && hovered && editorRevisionsEnabled && isLastMessage" variant="outlined" @click="reviseMessage(message_id)" :disabled="uxLocked">
-          <v-icon class="mr-1">mdi-typewriter</v-icon>
-          Editor Revision
-        </v-chip>
-
-        <!-- fork scene -->
-        <v-chip size="x-small" class="ml-2" label :color="rev > 0 ? 'highlight1' : 'muted'" v-if="!editing && hovered && forkable" variant="outlined" @click="forkSceneInitiate(message_id)" :disabled="uxLocked">
-          <v-icon class="mr-1">mdi-source-fork</v-icon>
-          Fork
-        </v-chip>
-
-        <!-- generate continuation -->
-        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered && !continuing && isLastMessage" variant="outlined" @click="continueConversation" :disabled="uxLocked">
-          <v-icon class="mr-1">mdi-fast-forward</v-icon>
-          Continue
-        </v-chip>
-        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered && continuing && isLastMessage" variant="outlined" disabled>
-          <v-progress-circular class="mr-1" size="14" indeterminate="disable-shrink" color="primary"></v-progress-circular>
-          Continuing...
-        </v-chip>
-
-        <!-- generate tts -->
-        <v-chip size="x-small" class="ml-2" label color="secondary" v-if="!editing && hovered && ttsAvailable" variant="outlined" @click="generateTTS(message_id)" :disabled="uxLocked || ttsBusy">
-          <v-icon class="mr-1">mdi-account-voice</v-icon>
-          TTS
-          <v-progress-circular v-if="ttsBusy" class="ml-2" size="14" indeterminate="disable-shrink"
-        color="secondary"></v-progress-circular>
-        </v-chip>
-
-        <!-- insert time passage -->
-        <v-chip size="x-small" class="ml-2" label color="time" v-if="!editing && hovered" variant="outlined" @click="insertTimePassage(message_id)" :disabled="uxLocked">
-          <v-icon class="mr-1">mdi-clock-plus-outline</v-icon>
-          Time Passage
-        </v-chip>
-
+      <MessageToolbar
+        :message-id="message_id"
+        :editing="editing"
+        :ux-locked="uxLocked"
+        :app-busy="appBusy"
+        :is-last-message="isLastMessage"
+        :editor-revisions-enabled="editorRevisionsEnabled"
+        :editor-revision-method="editorRevisionMethod"
+        :tts-available="ttsAvailable"
+        :tts-busy="ttsBusy"
+        :rev="rev"
+        :scene-rev="sceneRev"
+      >
+        <template #extra-actions>
+          <v-chip size="x-small" class="ml-2" label color="primary" v-if="!continuing && isLastMessage" variant="tonal" @click="continueConversation" :disabled="uxLocked || appBusy">
+            <v-icon class="mr-1">mdi-fast-forward</v-icon>
+            Continue
+          </v-chip>
+          <v-chip size="x-small" class="ml-2" label color="primary" v-if="continuing && isLastMessage" variant="tonal" disabled>
+            <v-progress-circular class="mr-1" size="14" indeterminate="disable-shrink" color="primary"></v-progress-circular>
+            Continuing...
+          </v-chip>
+        </template>
+      </MessageToolbar>
     </v-sheet>
     <div v-else style="height:24px">
 
@@ -115,14 +97,21 @@
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
 import { insertNewlineAtCursor } from '@/utils/textAreaUtils';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
+import { spliceContinuation } from '@/utils/messageContinuation';
+import { createAutocompleteField } from '@/utils/autocompleteField';
 import MessageAssetImage from './MessageAssetImage.vue';
 import MessageAssetMixin from './MessageAssetMixin.js';
+import RevisionNav from './RevisionNav.vue';
+import MessageToolbar from './MessageToolbar.vue';
+import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
 export default {
   components: {
     MessageAssetImage,
+    RevisionNav,
+    MessageToolbar,
+    AutocompleteRedoChip,
   },
   mixins: [MessageAssetMixin],
-  //props: ['character', 'text', 'color', 'message_id', 'uxLocked', 'isLastMessage'],
   props: {
     character: {
       type: String,
@@ -144,6 +133,10 @@ export default {
       type: Boolean,
       required: true,
     },
+    appBusy: {
+      type: Boolean,
+      default: false,
+    },
     isLastMessage: {
       type: Boolean,
       required: true,
@@ -151,6 +144,10 @@ export default {
     editorRevisionsEnabled: {
       type: Boolean,
       default: false,
+    },
+    editorRevisionMethod: {
+      type: String,
+      default: null,
     },
     ttsAvailable: {
       type: Boolean,
@@ -188,18 +185,38 @@ export default {
       type: Boolean,
       default: false,
     },
+    revisionsCount: {
+      type: Number,
+      default: 0,
+    },
+    revisionIndex: {
+      type: Number,
+      default: 0,
+    },
+    revisionSource: {
+      type: String,
+      default: null,
+    },
+    revisionReason: {
+      type: String,
+      default: null,
+    },
+    revisionBusy: {
+      type: [Boolean, String],
+      default: false,
+    },
+    entityMentions: {
+      type: Array,
+      default: () => [],
+    },
   },
+  emits: ['navigate-revision'],
   inject: [
     'requestDeleteMessage',
-    'getWebsocket', 
-    'createPin', 
-    'forkSceneInitiate', 
-    'autocompleteRequest', 
-    'autocompleteInfoMessage', 
-    'getMessageStyle', 
-    'reviseMessage',
-    'generateTTS',
-    'insertTimePassage',
+    'getWebsocket',
+    'autocompleteRequest',
+    'autocompleteInfoMessage',
+    'getMessageStyle',
   ],
   computed: {
     parser() {
@@ -218,14 +235,12 @@ export default {
         emphasis: sceneConfig.emphasis,
         parentheses: sceneConfig.parentheses,
         brackets: sceneConfig.brackets,
+        entities: sceneConfig.entities,
         default: defaultStyles,
       });
     },
     renderedText() {
-      return this.parser.parse(this.text);
-    },
-    forkable() {
-      return this.rev <= this.sceneRev;
+      return this.parser.parse(this.text, { mentions: this.entityMentions });
     },
     characterData() {
       if (!this.scene || !this.scene.data || !this.scene.data.characters) {
@@ -254,28 +269,48 @@ export default {
       if (this.disable_avatar_fallback) {
         return (this.asset_type && this.asset_id) ? this.asset_id : null;
       }
-      
+
       // Normal behavior: use message asset_id if present
       if (this.asset_id && this.asset_type) {
         return this.asset_id;
       }
-      
+
       // Fall back to character's default avatar if message doesn't have an asset and type is avatar
       if (this.asset_type === "avatar" || !this.asset_type) {
         return this.characterData?.avatar || null;
       }
-      
+
       return null;
+    },
+    autocompleting() {
+      return this.autocompleteField?.state.autocompleting || false;
     },
   },
   data() {
     return {
       editing: false,
-      autocompleting: false,
       continuing: false,
       editing_text: "",
       hovered: false,
+      autocompleteField: null,
     }
+  },
+  created() {
+    this.autocompleteField = createAutocompleteField({
+      autocompleteRequest: this.autocompleteRequest,
+      getValue: () => this.editing_text,
+      setValue: (v) => { this.editing_text = v; },
+      buildParams: () => ({
+        partial: this.editing_text,
+        context: "dialogue:npc",
+        character: this.character,
+      }),
+    });
+  },
+  watch: {
+    editing_text() {
+      this.autocompleteField?.onValueChange();
+    },
   },
   methods: {
     handleEnter(event) {
@@ -308,47 +343,33 @@ export default {
             return;
           }
 
-          // if text ends with a quote and completion starts with a quote, remove the quotes
-          // and insert a period at the end of the current text
-          if (this.text.endsWith('"') && completion.startsWith('"')) {
-            completion = completion.slice(1);
-            let text = this.text.slice(0, -1);
+          const continuedBody = spliceContinuation(this.text, completion);
 
-            // if text does not end with a period, add one
-            if (!text.endsWith('.')) {
-              text += '.';
-            }
-
-            this.editing_text = text + " " + completion;
-          } else {
-            this.editing_text = this.text + completion;
-          }
-
-          this.submitEdit();
+          // Continue grows the revision stack — send append_version so
+          // the server pushes a new entry rather than rewriting the
+          // active one in place. The body is prefixed with the
+          // character name to match the canonical "Name: body" format.
+          this.getWebsocket().send(JSON.stringify({
+            type: 'scene_message',
+            action: 'append_version',
+            id: this.message_id,
+            text: this.character + ": " + continuedBody,
+            source: 'continue',
+          }));
+          this.editing = false;
         },
         this.$refs.textarea
       )
     },
 
     autocompleteEdit() {
-      this.autocompleting = true;
-      this.autocompleteRequest(
-        {
-          partial: this.editing_text,
-          context: "dialogue:npc",
-          character: this.character,
-        },
-        (completion) => {
-          this.editing_text += completion;
-          this.autocompleting = false;
-        },
-        this.$refs.textarea
-      )
+      this.autocompleteField.request(this.$refs.textarea);
     },
     cancelEdit() {
       this.editing = false;
     },
     startEdit() {
+      if (this.uxLocked || this.appBusy) return;
       this.editing_text = this.text;
       this.editing = true;
       this.$nextTick(() => {
@@ -356,7 +377,12 @@ export default {
       });
     },
     submitEdit() {
-      this.getWebsocket().send(JSON.stringify({ type: 'edit_message', id: this.message_id, text: this.character+": "+this.editing_text }));
+      this.getWebsocket().send(JSON.stringify({
+        type: 'scene_message',
+        action: 'edit',
+        id: this.message_id,
+        text: this.character + ": " + this.editing_text,
+      }));
       this.editing = false;
     },
     deleteMessage() {
@@ -392,7 +418,6 @@ export default {
   font-weight: bold;
 }
 
-
 .character-text-wrapper {
   display: block;
 }
@@ -403,6 +428,13 @@ export default {
 
 .character-text :deep(.scene-paragraph) {
   margin-bottom: 1em;
+}
+
+/* Override the chip's `top` to sit inside the textarea — the v-alert wrapper
+   clips overhanging content. Applied only while editing (alongside the
+   position-relative utility) so the non-editing layout stays unchanged. */
+.character-content--editing {
+  --autocomplete-redo-chip-top: 4px;
 }
 
 .character-text :deep(.scene-paragraph:last-child) {

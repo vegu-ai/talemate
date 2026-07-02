@@ -11,7 +11,7 @@ from talemate.emit import emit
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
 from talemate.load.character_card import analyze_character_card
-from talemate.regenerate import ensure_regenerate_allowed, regenerate
+from talemate.regenerate import regenerate, regeneration_status
 from talemate.server.websocket_plugin import Plugin
 from talemate.status import set_loading
 
@@ -123,7 +123,7 @@ class AssistantPlugin(Plugin):
         data = ContentGenerationContext(**data)
         try:
             creator = get_agent("creator")
-            context_type, context_name = data.computed_context
+            context_type, _ = data.computed_context
 
             if context_type == "dialogue":
                 if not data.character:
@@ -145,18 +145,17 @@ class AssistantPlugin(Plugin):
                 await creator.autocomplete_narrative(data.partial, emit_signal=True)
                 return
 
-            # force length to 35
-            data.length = 35
+            data.length = creator.autocomplete_contextual_length_for(context_type)
             log.info("Running autocomplete for contextual generation", args=data)
             completion = await creator.contextual_generate(data)
             log.info(
                 "Autocomplete for contextual generation complete", completion=completion
             )
-            completion = (
-                completion.replace(f"{context_name}: {data.partial}", "")
-                .lstrip(".")
-                .strip()
-            )
+
+            # On the coerced path the completion is prefilled with the partial; strip
+            # it so only the continuation is appended in the UI.
+            if data.partial and completion.startswith(data.partial):
+                completion = completion[len(data.partial) :]
 
             emit("autocomplete_suggestion", completion)
         except GenerationCancelled:
@@ -175,7 +174,7 @@ class AssistantPlugin(Plugin):
         Intended for UX-triggered regeneration (e.g., hotbuttons).
         """
         payload = RegeneratePayload(**data)
-        allowed, err = ensure_regenerate_allowed(self.scene, idx=-1)
+        allowed, err = regeneration_status(self.scene)
         if not allowed:
             emit("status", message=err, status="error")
             self.websocket_handler.queue_put(
@@ -184,7 +183,7 @@ class AssistantPlugin(Plugin):
             return
         try:
             with ClientContext(nuke_repetition=payload.nuke_repetition):
-                task = asyncio.create_task(regenerate(self.scene, -1))
+                task = asyncio.create_task(regenerate(self.scene))
                 task.add_done_callback(
                     self.create_task_done_callback(
                         "regenerate_done",
@@ -208,7 +207,7 @@ class AssistantPlugin(Plugin):
         `!regenerate_directed` (and without prompting via wait_for_input).
         """
         payload = RegenerateDirectedPayload(**data)
-        allowed, err = ensure_regenerate_allowed(self.scene, idx=-1)
+        allowed, err = regeneration_status(self.scene)
         if not allowed:
             emit("status", message=err, status="error")
             self.websocket_handler.queue_put(
@@ -226,7 +225,7 @@ class AssistantPlugin(Plugin):
                 with ClientContext(
                     direction=direction, nuke_repetition=payload.nuke_repetition
                 ):
-                    task = asyncio.create_task(regenerate(self.scene, -1))
+                    task = asyncio.create_task(regenerate(self.scene))
                     task.add_done_callback(
                         self.create_task_done_callback(
                             "regenerate_done",

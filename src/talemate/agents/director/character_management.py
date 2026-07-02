@@ -1,6 +1,5 @@
 from typing import TYPE_CHECKING
 import traceback
-import dataclasses
 import structlog
 import talemate.instance as instance
 import talemate.agents.tts.voice_library as voice_library
@@ -35,7 +34,6 @@ if TYPE_CHECKING:
     from talemate.agents.tts import TTSAgent
 
 
-@dataclasses.dataclass
 class PersistCharacterEmission(AgentEmission):
     character: "Character"
 
@@ -91,17 +89,15 @@ class CharacterManagementMixin:
 
     @property
     def cm_assign_voice(self) -> bool:
-        return self.actions["character_management"].config["assign_voice"].value
+        return self.resolve_config("character_management", "assign_voice")
 
     @property
     def cm_generate_visuals(self) -> bool:
-        return self.actions["character_management"].config["generate_visuals"].value
+        return self.resolve_config("character_management", "generate_visuals")
 
     @property
     def cm_max_attributes(self) -> int:
-        return int(
-            self.actions["character_management"].config["max_attributes"].value or 0
-        )
+        return int(self.resolve_config("character_management", "max_attributes") or 0)
 
     @property
     def cm_should_assign_voice(self) -> bool:

@@ -63,6 +63,13 @@ class RenameCharacterFolderPayload(pydantic.BaseModel):
     new_name: str
 
 
+class SetCharacterIsPlayerPayload(pydantic.BaseModel):
+    """Payload for setting a character's player status."""
+
+    name: str
+    is_player: bool
+
+
 class CharacterMixin:
     """Mixin adding websocket handlers for character voice assignment."""
 
@@ -250,6 +257,39 @@ class CharacterMixin:
 
         folder = _normalize_folder_name(payload.folder)
         await self.world_state_manager.update_character_folder(payload.name, folder)
+
+        await self.handle_get_character_list({})
+        await self.handle_get_character_details({"name": payload.name})
+        await self.signal_operation_done()
+        self.scene.emit_status()
+
+    async def handle_set_character_is_player(self, data: dict):
+        """Toggle a character's player status.
+
+        Expected payload
+        -----------------
+        {
+            "type": "world_state_manager",
+            "action": "set_character_is_player",
+            "name": "<character name>",
+            "is_player": true | false
+        }
+        """
+        try:
+            payload = SetCharacterIsPlayerPayload(**data)
+        except pydantic.ValidationError as e:
+            log.error("Invalid payload for set_character_is_player", error=e)
+            await self.signal_operation_failed(str(e))
+            return
+
+        character = self.scene.get_character(payload.name)
+        if not character:
+            await self.signal_operation_failed("Character not found")
+            return
+
+        await self.world_state_manager.set_character_is_player(
+            payload.name, payload.is_player
+        )
 
         await self.handle_get_character_list({})
         await self.handle_get_character_details({"name": payload.name})

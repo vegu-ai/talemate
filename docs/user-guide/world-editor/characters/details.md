@@ -63,7 +63,7 @@ If a pin already exists for the selected detail, the button will display :materi
 
 ## Generating details using templates
 
-You can use [templates](/talemate/user-guide/world-editor/templates/detail) to quickly generate details for your characters. 
+You can use [templates](/talemate/user-guide/templates/detail) to quickly generate details for your characters. 
 
 In the **Details** tab, click the **:material-cube-scan: Templates** button above the detail list to expand the templates list. 
 

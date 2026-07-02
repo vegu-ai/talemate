@@ -595,6 +595,208 @@ class TestCreatorContextualGenerateMethod:
         creator.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_contextual_generate_extracts_hint_from_partial(self, active_context):
+        """Trailing `{...}` is stripped from partial and rendered as EDITOR HINTS."""
+        creator = active_context
+        creator.client.send_prompt.return_value = "<CONTENT>extended text</CONTENT>"
+
+        generation_context = ContentGenerationContext(
+            context="character detail:background",
+            character="Elena",
+            partial="She grew up in the forest {haunted, lost sister}",
+            length=100,
+        )
+
+        await creator.contextual_generate(generation_context)
+
+        prompt_text = str(creator.client.send_prompt.call_args[0][0])
+        # Partial mutated in place: clean version visible to renderer
+        assert generation_context.partial == "She grew up in the forest"
+        # Hint surfaced in the EDITOR HINTS section
+        assert "editor hints" in prompt_text.lower()
+        assert "haunted, lost sister" in prompt_text
+        # Brace block does not leak into the DRAFT context
+        assert "{haunted, lost sister}" not in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_contextual_generate_hint_disabled_leaves_partial_intact(
+        self, active_context
+    ):
+        """When hints_enabled toggle is off, trailing `{...}` stays in partial."""
+        creator = active_context
+        creator.actions["autocomplete"].config["hints_enabled"].value = False
+        creator.client.send_prompt.return_value = "<CONTENT>extended text</CONTENT>"
+
+        original_partial = "She grew up in the forest {haunted, lost sister}"
+        generation_context = ContentGenerationContext(
+            context="character detail:background",
+            character="Elena",
+            partial=original_partial,
+            length=100,
+        )
+
+        await creator.contextual_generate(generation_context)
+
+        prompt_text = str(creator.client.send_prompt.call_args[0][0])
+        # Partial untouched
+        assert generation_context.partial == original_partial
+        # No hints section rendered
+        assert "EDITOR HINTS" not in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_contextual_generate_partial_noncoerce_uses_draft_completion(
+        self, active_context
+    ):
+        """No-prefill partial continuation renders DRAFT/COMPLETION and returns
+        only the continuation (no echo of the partial)."""
+        creator = active_context
+        creator.client.can_be_coerced = False
+        creator.client.send_prompt.return_value = (
+            "<COMPLETION> road, his cane tapping.</COMPLETION>"
+        )
+
+        generation_context = ContentGenerationContext(
+            context="character attribute:occupation",
+            character="Elena",
+            partial="the dusty",
+            length=192,
+        )
+
+        resp = await creator.contextual_generate(generation_context)
+
+        prompt_text = str(creator.client.send_prompt.call_args[0][0])
+        # Existing text presented as a DRAFT, output requested in a COMPLETION block
+        assert "<DRAFT>the dusty</DRAFT>" in prompt_text
+        assert "<COMPLETION>" in prompt_text
+        # The per-type "wrapped in <ATTRIBUTE>" footer is suppressed on this path
+        assert "wrapped in <ATTRIBUTE>" not in prompt_text
+        # Only the continuation is returned, leading whitespace preserved, no echo
+        assert resp == " road, his cane tapping."
+        assert "the dusty" not in resp
+
+    @pytest.mark.asyncio
+    async def test_contextual_generate_partial_coerce_includes_partial(
+        self, active_context
+    ):
+        """Coerced partial continuation prefills <TAG>+partial, so the extracted
+        value includes the partial (stripping is the autocomplete server's job)."""
+        creator = active_context
+        creator.client.can_be_coerced = True
+        creator.client.send_prompt.return_value = " healer</ATTRIBUTE>"
+
+        generation_context = ContentGenerationContext(
+            context="character attribute:occupation",
+            character="Elena",
+            partial="skilled",
+            length=192,
+        )
+
+        resp = await creator.contextual_generate(generation_context)
+
+        prompt_text = str(creator.client.send_prompt.call_args[0][0])
+        # Coerced path keeps the per-type tag and does NOT use DRAFT/COMPLETION
+        assert "wrapped in <ATTRIBUTE>" in prompt_text
+        assert "<DRAFT>" not in prompt_text
+        # Extracted value carries the prefilled partial plus the continuation
+        assert resp == "skilled healer"
+
+    @pytest.mark.asyncio
+    async def test_contextual_generate_dialogue_partial_returns_continuation_only(
+        self, active_context
+    ):
+        """Dialogue-example autocomplete returns only the continuation — no speaker
+        prepend, leading whitespace preserved — so it joins onto the user's draft
+        instead of fusing/inserting the name (e.g. 'She' + 'Elena: taps')."""
+        creator = active_context
+        creator.client.can_be_coerced = False
+        creator.client.send_prompt.return_value = (
+            "<COMPLETION> taps the console, frowning.</COMPLETION>"
+        )
+
+        generation_context = ContentGenerationContext(
+            context="character dialogue:",
+            character="Elena",
+            partial='"That\'s unfortunate." She',
+            length=192,
+        )
+
+        resp = await creator.contextual_generate(generation_context)
+
+        assert resp == " taps the console, frowning."
+        assert not resp.startswith("Elena")
+
+    @pytest.mark.asyncio
+    async def test_contextual_generate_dialogue_full_prepends_speaker(
+        self, active_context
+    ):
+        """Full dialogue-example generation (no partial) still formats as a
+        complete 'Name: ...' line."""
+        creator = active_context
+        creator.client.send_prompt.return_value = (
+            '<DIALOGUE>Elena: "Hello there."</DIALOGUE>'
+        )
+
+        generation_context = ContentGenerationContext(
+            context="character dialogue:",
+            character="Elena",
+            length=192,
+        )
+
+        resp = await creator.contextual_generate(generation_context)
+
+        assert resp == 'Elena: "Hello there."'
+
+    @pytest.mark.asyncio
+    async def test_contextual_generate_static_history_frames_instructions_as_seed(
+        self, active_context
+    ):
+        """Static history with instructions frames them as the entry's seed, not
+        as the generic 'describe some event from the timeline' fallback."""
+        creator = active_context
+        creator.client.send_prompt.return_value = "<ENTRY>The temple was found.</ENTRY>"
+
+        generation_context = ContentGenerationContext(
+            context="static history:entry",
+            instructions="The party discovered a hidden temple beneath the lake",
+            length=192,
+        )
+
+        await creator.contextual_generate(generation_context)
+
+        prompt = str(creator.client.send_prompt.call_args[0][0])
+        # Task body anchors the entry to the instruction
+        assert "based on the editorial instruction below" in prompt
+        # Footer reframes the instruction as the seed (per-type instructions_intro)
+        assert "seed for the entry" in prompt
+        # Generic "discrete event from the timeline" framing is dropped when seeded
+        assert (
+            "discrete event or state that occurred in the scene timeline" not in prompt
+        )
+
+    @pytest.mark.asyncio
+    async def test_contextual_generate_static_history_without_instructions_is_generic(
+        self, active_context
+    ):
+        """Without instructions, static history keeps the generic framing and the
+        default footer lead-in is not added (no instructions section)."""
+        creator = active_context
+        creator.client.send_prompt.return_value = (
+            "<ENTRY>A storm passed through.</ENTRY>"
+        )
+
+        generation_context = ContentGenerationContext(
+            context="static history:entry",
+            length=192,
+        )
+
+        await creator.contextual_generate(generation_context)
+
+        prompt = str(creator.client.send_prompt.call_args[0][0])
+        assert "discrete event or state that occurred in the scene timeline" in prompt
+        assert "seed for the entry" not in prompt
+        assert "user-provided instruction and/or seed material" not in prompt
+
+    @pytest.mark.asyncio
     async def test_generate_character_attribute_wrapper(
         self, active_context, mock_scene
     ):
@@ -805,3 +1007,36 @@ class TestCreatorAgentProperties:
         length = creator_agent.autocomplete_narrative_suggestion_length
         assert isinstance(length, int)
         assert length > 0
+
+    @pytest.mark.parametrize(
+        "context_type, expected_property",
+        [
+            (
+                "character attribute",
+                "autocomplete_character_attribute_suggestion_length",
+            ),
+            ("character detail", "autocomplete_character_detail_suggestion_length"),
+            ("scene intro", "autocomplete_scene_intro_suggestion_length"),
+            (
+                "context_investigation",
+                "autocomplete_context_investigation_suggestion_length",
+            ),
+        ],
+    )
+    def test_autocomplete_contextual_length_for_known_types(
+        self, creator_agent, context_type, expected_property
+    ):
+        """Each known context_type dispatches to its dedicated length config."""
+        expected = getattr(creator_agent, expected_property)
+        assert (
+            creator_agent.autocomplete_contextual_length_for(context_type) == expected
+        )
+
+    def test_autocomplete_contextual_length_for_unknown_falls_back_to_detail(
+        self, creator_agent
+    ):
+        """Unmapped context_types fall back to character_detail's length."""
+        fallback = creator_agent.autocomplete_character_detail_suggestion_length
+        assert (
+            creator_agent.autocomplete_contextual_length_for("scene title") == fallback
+        )

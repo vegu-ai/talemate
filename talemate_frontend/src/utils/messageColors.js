@@ -18,7 +18,7 @@ export const SPECIAL_MESSAGE_COLORS = [
 // user has not configured a color) and as the reset target in the appearance
 // config UI. Keyed by bare type name — both message types (narrator, actor,
 // director, time, context_investigation, information) and markup types
-// (quotes, parentheses, brackets, emphasis).
+// (quotes, parentheses, brackets, emphasis, entities).
 export const DEFAULT_APPEARANCE_COLORS = {
   narrator: "#A180AE",
   actor: "#B39DDB",
@@ -30,6 +30,7 @@ export const DEFAULT_APPEARANCE_COLORS = {
   parentheses: "#DB9DC2",
   brackets: "#DC5D5D",
   emphasis: "#B39DDB",
+  entities: "#FFE082",
 };
 
 export function isSpecialMessageColor(name) {

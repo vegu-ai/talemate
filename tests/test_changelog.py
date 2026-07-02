@@ -1236,6 +1236,120 @@ async def test_reconstruct_cleanup_preserves_data_without_shared_context():
 
 
 @pytest.mark.asyncio
+async def test_reconstruct_cleanup_repairs_bare_history_entries():
+    """Reconstruct repair pass backfills missing fields on bare-fragment history entries."""
+    data = {
+        "history": [
+            {"message": "ok", "typ": "narrator", "source": "ai", "flags": 0},
+            {
+                "asset_id": "abc123",
+                "asset_type": "scene_illustration",
+            },
+            {"message": "ok2", "typ": "character", "source": "ai", "flags": 0},
+        ]
+    }
+
+    result = await reconstruct_cleanup(data)
+
+    history = result["history"]
+    assert len(history) == 3
+
+    repaired = history[1]
+    assert repaired["message"] == ""
+    assert repaired["typ"] == "narrator"
+    assert repaired["source"] == "ai"
+    assert repaired["flags"] == 0
+    assert repaired["asset_id"] == "abc123"
+    assert repaired["asset_type"] == "scene_illustration"
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_scene_data_repairs_force_true_corruption(mock_scene):
+    """End-to-end: orphan dict-add on a non-existent history index reconstructs to a loadable entry."""
+    base_data = {
+        "history": [
+            {"message": "hello", "typ": "narrator", "source": "ai", "flags": 0},
+        ],
+    }
+    base_path = _base_path(mock_scene)
+    os.makedirs(os.path.dirname(base_path), exist_ok=True)
+    with open(base_path, "w") as f:
+        json.dump(base_data, f)
+
+    log_data = {
+        "version": 1,
+        "base": f"{mock_scene.filename}.base.json",
+        "start_rev": 0,
+        "deltas": [
+            {
+                "rev": 1,
+                "ts": 1672531200,
+                "delta": {
+                    "dictionary_item_added": {
+                        "root['history'][1]['asset_id']": "abc123",
+                        "root['history'][1]['asset_type']": "scene_illustration",
+                    }
+                },
+                "meta": {},
+            }
+        ],
+        "latest_rev": 1,
+    }
+    log_path = _changelog_log_path(mock_scene, 0)
+    with open(log_path, "w") as f:
+        json.dump(log_data, f)
+
+    result = await reconstruct_scene_data(mock_scene, to_rev=1)
+
+    history = result["history"]
+    # force=True inflates history to length 2; repair keeps that length so
+    # subsequent revs that reference fixed positions stay aligned.
+    assert len(history) == 2
+    for i, entry in enumerate(history):
+        assert "message" in entry, f"history[{i}] missing message after repair"
+        assert "typ" in entry, f"history[{i}] missing typ after repair"
+    assert history[1]["asset_id"] == "abc123"
+    assert history[1]["asset_type"] == "scene_illustration"
+
+
+@pytest.mark.asyncio
+async def test_warn_on_orphan_delta_ops(monkeypatch):
+    """Warner fires for ops whose parent is absent, stays silent when the parent is present."""
+    from talemate import changelog as changelog_mod
+    from talemate.changelog import _warn_on_orphan_delta_ops
+
+    delta = {
+        "dictionary_item_added": {
+            "root['history'][0]['asset_id']": "abc",
+            "root['history'][0]['asset_type']": "scene_illustration",
+        }
+    }
+
+    captured: list[tuple[str, dict]] = []
+
+    def fake_warning(event, **kwargs):
+        captured.append((event, kwargs))
+
+    monkeypatch.setattr(changelog_mod.log, "warning", fake_warning)
+
+    _warn_on_orphan_delta_ops({"history": []}, delta)
+
+    orphan_warnings = [
+        kw for ev, kw in captured if ev == "delta_op_targets_missing_parent"
+    ]
+    assert len(orphan_warnings) == 2
+    paths = {kw["path"] for kw in orphan_warnings}
+    assert paths == {
+        "root['history'][0]['asset_id']",
+        "root['history'][0]['asset_type']",
+    }
+
+    captured.clear()
+    _warn_on_orphan_delta_ops({"history": [{"message": "a", "typ": "narrator"}]}, delta)
+    assert not [ev for ev, _ in captured if ev == "delta_op_targets_missing_parent"]
+
+
+@pytest.mark.asyncio
 async def test_in_memory_changelog_with_save_changelog_bug(mock_scene):
     """
     Test that reproduces the bug where save_changelog() is called while

@@ -7,12 +7,14 @@ Extractors (template-defined):
   Generates a narrative note about a past event.
   Should be concise, self-contained, no dialogue.
 #}
-{% set _ = generation_context.set_state('response_prefix', '<ENTRY>') %}
-{{ set_anchor_extractor("response", "<ENTRY>", "</ENTRY>", fallback_to_full=True) }}
 {% set context_name = "Static History Entry" %}
+{% if generation_context.instructions %}
+{% set _ = generation_context.set_state('instructions_intro', 'This is the seed for the entry — write the entry about this event or state, expanding it with consistent detail drawn from the scene where helpful:') %}
+{{ action_task }} static history entry for the scene based on the editorial instruction below. This should be a concise, self-contained narrative note describing the seeded event or state. Keep it brief and specific (1-3 sentences). Avoid meta commentary.
+{% else %}
 {{ action_task }} static history entry for the scene. This should be a concise, self-contained narrative note describing a discrete event or state that occurred in the scene timeline. Keep it brief and specific (1-3 sentences). Avoid meta commentary.
+{% endif %}
 
 NO SPOKEN DIALOGUE. THIS IS A NARRATIVE NOTE ABOUT AN EVENT THAT OCCURRED IN THE HISTORICAL CONTEXT OF THE SCENE.
 
-Output the history entry wrapped in <ENTRY></ENTRY> tags:
-<ENTRY>the history entry text</ENTRY>
+{% with output_tag="ENTRY", output_label="history entry", output_example="the history entry text" %}{% include "contextual-generate/output-format.jinja2" %}{% endwith %}

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import pydantic
@@ -39,79 +38,65 @@ class UserInteractionEvent(pydantic.BaseModel):
     message: str
 
 
-# TODO: Convert these to pydantic models
+class Event(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
-
-@dataclass
-class Event:
-    scene: Scene
+    scene: "Scene"
     event_type: str
 
 
-@dataclass
 class HistoryEvent(Event):
-    messages: list[str]
+    messages: list["SceneMessage"]
 
 
-@dataclass
 class ArchiveEvent(Event):
     text: str
     memory_id: str
-    ts: str = None
+    ts: str | None = None
 
 
-@dataclass
 class CharacterStateEvent(Event):
     state: str
     character_name: str
 
 
-@dataclass
 class SceneStateEvent(Event):
     pass
 
 
-@dataclass
 class GameLoopBase(Event):
     pass
 
 
-@dataclass
 class GameLoopEvent(GameLoopBase):
     had_passive_narration: bool = False
 
 
-@dataclass
 class GameLoopStartEvent(GameLoopBase):
     pass
 
 
-@dataclass
 class GameLoopActorIterEvent(GameLoopBase):
-    actor: Actor
+    actor: "Actor"
     game_loop: GameLoopEvent
 
 
-@dataclass
 class GameLoopCharacterIterEvent(GameLoopBase):
-    character: Character
+    character: "Character"
     game_loop: GameLoopEvent
 
 
-@dataclass
 class GameLoopNewMessageEvent(GameLoopBase):
-    message: SceneMessage
+    message: "SceneMessage"
 
 
-@dataclass
 class PlayerTurnStartEvent(Event):
     pass
 
 
-@dataclass
 class RegenerateGeneration(Event):
     message: "SceneMessage"
-    character: "Character" = None
+    character: "Character | None" = None
 
 
 async_signals.register(

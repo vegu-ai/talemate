@@ -338,6 +338,7 @@ class GoogleImageMixin:
                 type="unified_api_key",
                 value="google.api_key",
                 label="Google API Key",
+                scene_overridable=False,
             ),
             "model": AgentActionConfig(
                 type="text",
@@ -355,6 +356,7 @@ class GoogleImageMixin:
                 label="Model",
                 description="Google image model",
                 save_on_change=True,
+                scene_overridable=False,
             ),
         }
 
@@ -385,6 +387,7 @@ class GoogleImageMixin:
             label="Max References",
             description="Maximum number of reference images for editing (1-3)",
             save_on_change=True,
+            scene_overridable=False,
         )
         actions["google_image_edit"] = AgentAction(
             enabled=True,

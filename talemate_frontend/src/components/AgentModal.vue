@@ -145,6 +145,7 @@
 
 <script>
 import {getProperty} from 'dot-prop';
+import { conditionMet } from '@/utils/uxConditions';
 import AgentGlobalSettings from './AgentGlobalSettings.vue';
 import AgentSceneSettings from './AgentSceneSettings.vue';
 import DynamicAgentRegistry from './DynamicAgentRegistry.vue';
@@ -411,11 +412,8 @@ export default {
     testActionConditional(action) {
       if (action.condition == null) return true;
       if (typeof(this.agent.client) !== 'object') return true;
-      let value = getProperty(this.agent.actions, action.condition.attribute + ".value");
-      if (Array.isArray(action.condition.value)) {
-        return action.condition.value.some(v => v == value);
-      }
-      return value == action.condition.value;
+      const value = getProperty(this.agent.actions, action.condition.attribute + ".value");
+      return conditionMet(action.condition, value);
     },
 
     close() {

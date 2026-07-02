@@ -24,7 +24,8 @@ from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
-from talemate.ux.schema import Action, Column, Note
+from talemate.ux.schema import Action, Condition, Note
+from talemate.ux.schema import Field as UxField
 from talemate.config import get_config, Config
 import talemate.config.schema as config_schema
 from talemate.client.context import (
@@ -53,53 +54,21 @@ __all__ = [
 log = structlog.get_logger("talemate.agents.base")
 
 
-class AgentActionConditional(pydantic.BaseModel):
-    attribute: str
-    value: int | float | str | bool | list[int | float | str | bool] | None = None
+# Backwards-compat aliases — the shared UX schema now owns these shapes.
+AgentActionConditional = Condition
+AgentActionNote = Note
 
 
-class AgentActionNote(Note):
-    pass
+class AgentActionConfig(UxField):
+    """
+    Agent setting field — extends the uniform UX field definition
+    (talemate.ux.schema.Field) with agent-specific behavior.
+    """
 
-
-class AgentActionConfig(pydantic.BaseModel):
-    type: Literal[
-        "autocomplete",
-        "blob",
-        "bool",
-        "flags",
-        "number",
-        "text",
-        "vector2",
-        "weights",
-        "wstemplate",
-        "password",
-        "unified_api_key",
-    ]
-    label: str
-    description: str = ""
-    value: int | float | str | bool | list | dict | None = None
-    default_value: int | float | str | bool | None = None
-    max: int | float | None = None
-    min: int | float | None = None
-    step: int | float | None = None
-    graduations: list[dict[str, int | float]] | None = None
-    scope: str = "global"
-    choices: (
-        list[dict[str, str | int | float | bool | list[int | float | bool]]] | None
-    ) = None
-    note: AgentActionNote | None = None
-    expensive: bool = False
+    scope: Literal["global", "scene"] = "global"
     quick_toggle: bool = False
-    condition: AgentActionConditional | None = None
     title: str | None = None
     value_migration: Callable | None = pydantic.Field(default=None, exclude=True)
-    columns: list[Column] | None = None
-
-    note_on_value: dict[str | int | float | bool, AgentActionNote] = pydantic.Field(
-        default_factory=dict
-    )
-    save_on_change: bool = False
     scene_overridable: bool = True
 
     wstemplate_type: (
@@ -116,25 +85,6 @@ class AgentActionConfig(pydantic.BaseModel):
         | None
     ) = None
     wstemplate_filter: dict[str, str] | None = None
-
-    @pydantic.field_validator("note", mode="before")
-    @classmethod
-    def validate_note(cls, v):
-        if isinstance(v, str):
-            return AgentActionNote(text=v)
-        return v
-
-    @pydantic.model_validator(mode="after")
-    def ensure_note_is_object(self):
-        if isinstance(self.note, str):
-            self.note = AgentActionNote(text=self.note)
-        return self
-
-    @pydantic.field_serializer("note")
-    def serialize_note(self, v):
-        if isinstance(v, str):
-            return AgentActionNote(text=v)
-        return v
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

@@ -17,7 +17,7 @@
 <script>
 // Tiny icon-button used by [[AgentSceneSettings.vue]] to toggle whether a
 // given field overrides the global value. Lives in the `prepend` slot of
-// the shared [[AgentSettingField.vue]] so the field renders identically to
+// the shared [[UxField.vue]] so the field renders identically to
 // the global view.
 export default {
   props: {

@@ -1,5 +1,6 @@
 0.39.0.dev:
   improvements:
+  - "Uniform Settings Framework: Agent settings and client settings now share one field-definition schema on the backend and one field renderer on the frontend. Client-specific settings gain the full widget set previously exclusive to agents (sliders, autocompletes, selects with rich choices, per-value notes) plus conditional visibility, and choice lists are delivered to the frontend in a single normalized shape."
   - "MistralAI Client: Added a Concurrent Inference toggle so batch operations can dispatch multiple requests in parallel. Off by default."
 
 0.38.0.dev:

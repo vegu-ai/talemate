@@ -154,22 +154,18 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
     lock_template: bool = False
 
 
-class FieldGroup(pydantic.BaseModel):
-    name: str
-    label: str
-    description: str
-    icon: str = "mdi-cog"
+# Backwards-compat alias — the shared UX schema now owns this shape.
+FieldGroup = ux_schema.FieldGroup
 
 
-class ExtraField(pydantic.BaseModel):
-    name: str
-    type: str
-    label: str
-    required: bool
-    description: str
-    group: FieldGroup | None = None
-    note: ux_schema.Note | None = None
-    choices: list[str | int | float | bool] | None = None
+class ExtraField(ux_schema.Field):
+    """
+    Client setting field — the uniform UX field definition
+    (talemate.ux.schema.Field), rendered by the frontend through the same
+    shared component as agent settings.
+    """
+
+    pass
 
 
 class ReasoningDisplay(pydantic.BaseModel):

@@ -46,8 +46,8 @@
               <v-divider class="mb-2"></v-divider>
             </div>
 
-            <AgentSettingField
-              :action-config="action_config"
+            <UxField
+              :field="action_config"
               :model-value="action.config[config_key].value"
               :templates="templates"
               :app-config="appConfig"
@@ -63,14 +63,15 @@
 
 <script>
 import { getProperty } from 'dot-prop';
-import AgentSettingField from './AgentSettingField.vue';
+import { conditionMet } from '@/utils/uxConditions';
+import UxField from './UxField.vue';
 
 // Renders one AgentAction in Global mode. Scene mode lives in
 // [[AgentSceneSettings.vue]]. The per-field widget rendering is owned by
-// [[AgentSettingField.vue]] and shared with the scene-mode renderer.
+// [[UxField.vue]] and shared with the scene-mode renderer.
 export default {
   components: {
-    AgentSettingField,
+    UxField,
   },
   props: {
     // Live mutable agent (deep-cloned in AgentModal). We mutate action via
@@ -106,18 +107,13 @@ export default {
       // action is rendered.
       if (typeof this.agent.client !== 'object') return true;
       const value = getProperty(this.agent.actions, action.condition.attribute + ".value");
-      if (Array.isArray(action.condition.value)) {
-        return action.condition.value.some(v => v == value);
-      }
-      return value == action.condition.value;
+      return conditionMet(action.condition, value);
     },
     testConfigConditional(config) {
-      if (config.condition == null) return true;
-      const value = getProperty(this.agent.actions, config.condition.attribute + ".value");
-      if (Array.isArray(config.condition.value)) {
-        return config.condition.value.some(v => v == value);
-      }
-      return value == config.condition.value;
+      const value = config.condition
+        ? getProperty(this.agent.actions, config.condition.attribute + ".value")
+        : null;
+      return conditionMet(config.condition, value);
     },
   },
 };

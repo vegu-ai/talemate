@@ -116,7 +116,7 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
         extra_fields: dict[str, ExtraField] = {
             "thinking_mode": ExtraField(
                 name="thinking_mode",
-                type="select",
+                type="text",
                 label="Thinking Mode",
                 choices=["budget", "adaptive"],
                 description="'budget' uses fixed token budget (legacy), 'adaptive' lets the model decide when to think. Adaptive is recommended for Opus 4.6+ and required for Opus 4.7+ (budget mode is ignored on those models).",
@@ -130,7 +130,7 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
             ),
             "effort_level": ExtraField(
                 name="effort_level",
-                type="select",
+                type="text",
                 label="Effort Level",
                 choices=["low", "medium", "high", "xhigh", "max"],
                 description="Controls thinking depth and cost trade-off. Higher effort = better quality but more cost/latency. Only applies with adaptive thinking mode. The 'xhigh' option (between high and max) is supported on Opus 4.7+.",

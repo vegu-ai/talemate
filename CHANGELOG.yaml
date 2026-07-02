@@ -1,3 +1,7 @@
+0.39.0.dev:
+  improvements:
+  - "MistralAI Client: Added a Concurrent Inference toggle so batch operations can dispatch multiple requests in parallel. Off by default."
+
 0.38.0.dev:
   features:
   - "Event Module Auto-Register: Event Modules gained an `auto_register` toggle so a module subscribes to its event as soon as it's registered with the scene, without having to be placed in the scene loop graph."

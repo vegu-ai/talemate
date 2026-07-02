@@ -14,6 +14,9 @@ from talemate.client.remote import (
     EndpointOverride,
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
+    ConcurrentInferenceMixin,
+    ConcurrentInference,
+    concurrent_inference_extra_fields,
 )
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
@@ -41,12 +44,12 @@ class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     model: str = "open-mixtral-8x22b"
 
 
-class ClientConfig(EndpointOverride, BaseClientConfig):
+class ClientConfig(ConcurrentInference, EndpointOverride, BaseClientConfig):
     pass
 
 
 @register()
-class MistralAIClient(EndpointOverrideMixin, ClientBase):
+class MistralAIClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBase):
     """
     OpenAI client for generating text.
     """
@@ -65,6 +68,7 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
         extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
+        extra_fields.update(concurrent_inference_extra_fields())
         unified_api_key_config_path: str = "mistralai.api_key"
 
     @property

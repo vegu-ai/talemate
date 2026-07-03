@@ -107,7 +107,7 @@
                     <td style="padding: 4px 12px;">
                         <v-select
                             v-model="config.scene_illustration.size"
-                            :items="sizeOptions"
+                            :items="sceneIllustrationSizeOptions"
                             density="compact"
                             variant="outlined"
                             hide-details
@@ -117,14 +117,39 @@
                 </tr>
             </tbody>
         </v-table>
-        
+
+        <v-row v-if="config.scene_illustration.size === 'background'" class="mt-3">
+            <v-col cols="12" md="6">
+                <v-slider
+                    v-model="config.scene_illustration.background_panel_opacity"
+                    label="Message panel opacity"
+                    color="primary"
+                    :min="0"
+                    :max="1"
+                    :step="0.05"
+                    thumb-label
+                    density="compact"
+                    hide-details
+                ></v-slider>
+            </v-col>
+            <v-col cols="12" md="6">
+                <v-checkbox
+                    v-model="config.scene_illustration.background_text_shadow"
+                    label="Message text shadow"
+                    color="primary"
+                    density="compact"
+                    hide-details
+                ></v-checkbox>
+            </v-col>
+        </v-row>
+
         <v-card color="muted" variant="text" class="mt-3">
             <v-card-text class="text-muted">
                 <div class="text-caption">
                     <strong>Always:</strong> Show visual on every message<br>
                     <strong>Never:</strong> Never show visual inline with messages<br>
                     <strong>On change:</strong> Only show when visual changes (portraits: tracked per character)<br><br>
-                    <strong>Scene Illustration sizes:</strong> Big = full width above message, Small/Medium = inline with text
+                    <strong>Scene Illustration sizes:</strong> Big = full width above message, Small/Medium = inline with text, Background = fills behind the scene text
                 </div>
             </v-card-text>
         </v-card>
@@ -154,6 +179,8 @@ export default {
                 scene_illustration: {
                     cadence: 'always',
                     size: 'medium',
+                    background_panel_opacity: 0.8,
+                    background_text_shadow: true,
                 },
             },
             cadenceOptions: [
@@ -172,6 +199,12 @@ export default {
             ],
             isHydrating: false, // Flag to suppress changed events during initialization
         }
+    },
+    computed: {
+        // "background" only makes sense for scene illustrations
+        sceneIllustrationSizeOptions() {
+            return [...this.sizeOptions, { title: 'Background', value: 'background' }];
+        },
     },
     watch: {
         immutableConfig: {
@@ -192,6 +225,8 @@ export default {
                         scene_illustration: {
                             cadence: 'always',
                             size: 'medium',
+                            background_panel_opacity: 0.8,
+                            background_text_shadow: true,
                         },
                     };
                     this.isHydrating = false;
@@ -217,6 +252,9 @@ export default {
                     scene_illustration: {
                         cadence: messageAssets.scene_illustration?.cadence || 'always',
                         size: messageAssets.scene_illustration?.size || 'medium',
+                        // ?? not || — 0 and false are valid values
+                        background_panel_opacity: messageAssets.scene_illustration?.background_panel_opacity ?? 0.8,
+                        background_text_shadow: messageAssets.scene_illustration?.background_text_shadow ?? true,
                     },
                 };
                 

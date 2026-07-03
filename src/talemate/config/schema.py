@@ -593,7 +593,14 @@ class MarkupMessageStyle(HistoryMessageStyle):
 
 class MessageAssetCadenceConfig(pydantic.BaseModel):
     cadence: Literal["always", "never", "on_change"] = "always"
-    size: Literal["small", "medium", "big"] = "medium"
+    # "background" is only meaningful for scene_illustration assets
+    size: Literal["small", "medium", "big", "background"] = "medium"
+    # opacity of the text panels rendered over the backdrop (scene_illustration
+    # "background" size mode only)
+    background_panel_opacity: float = pydantic.Field(default=0.8, ge=0.0, le=1.0)
+    # drop shadow on message text over the backdrop (scene_illustration
+    # "background" size mode only)
+    background_text_shadow: bool = True
 
 
 class SceneAppearance(pydantic.BaseModel):

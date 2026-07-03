@@ -115,6 +115,16 @@
                     Choose from existing scene illustrations
                 </v-list-item-subtitle>
             </v-list-item>
+            <v-list-item
+                v-if="assetMenu.context.asset_type === 'scene_illustration' && !sceneIllustrationBackgroundMode"
+                prepend-icon="mdi-image-area"
+                @click="handleSetBackgroundDisplayMode"
+            >
+                <v-list-item-title>Display as background</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">
+                    Switch scene illustrations to the Background display mode
+                </v-list-item-subtitle>
+            </v-list-item>
             <v-divider v-if="assetMenu.context.asset_type === 'card'"></v-divider>
             <v-list-item
                 v-if="assetMenu.context.asset_type === 'card'"
@@ -277,7 +287,10 @@
         </v-card>
     </v-dialog>
 
-    <div class="message-container mb-8" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;" @click="onMessageContainerClick">
+    <!-- Fallback image viewer for the shared asset menu (see handleViewImage) -->
+    <AssetView v-model="assetViewShow" :image-src="assetViewSrc" />
+
+    <div class="message-container mb-8" ref="messageContainer" :class="{ 'no-text-shadow': !sceneBackdropTextShadow }" :style="{ '--scene-backdrop-panel-opacity': sceneBackdropPanelOpacity }" style="flex-grow: 1; overflow-y: auto;" @click="onMessageContainerClick">
         <div v-for="(message, index) in messages" :key="message.id != null ? `${message.type}-${message.id}` : `idx-${index}`" class="message-wrapper">
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
@@ -382,6 +395,7 @@ import ContextInvestigationMessage from './ContextInvestigationMessage.vue';
 import SystemMessage from './SystemMessage.vue';
 import VisualReferenceCarousel from './VisualReferenceCarousel.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import AssetView from './AssetView.vue';
 import EntityHighlightMixin from './EntityHighlightMixin.js';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import RevisionStackMixin from './RevisionStackMixin.js';
@@ -520,8 +534,9 @@ export default {
         SystemMessage,
         VisualReferenceCarousel,
         ConfirmActionPrompt,
+        AssetView,
     },
-    emits: ['cancel-audio-queue', 'configure-entity-highlights'],
+    emits: ['cancel-audio-queue', 'configure-entity-highlights', 'scene-backdrop'],
     data() {
         return {
             primaryModifierLabel,
@@ -545,7 +560,6 @@ export default {
                     character: null,
                     message_content: null,
                     message_id: null,
-                    imageSrc: null,
                 },
             },
             // Track which message IDs are currently processing asset operations
@@ -588,11 +602,45 @@ export default {
             // id of the message awaiting an editor revision (its spinner is
             // cleared on the editor `operation_done` envelope, which has no id)
             revisionPendingId: null,
+            // fallback image viewer for asset-menu "View Image" when the menu
+            // wasn't opened from a MessageAssetImage (background display mode);
+            // tracks the asset id so the src resolves reactively from the
+            // cache (the asset may still be in flight when the dialog opens)
+            assetViewShow: false,
+            assetViewAssetId: null,
         }
     },
     computed: {
         messageAssetsConfig() {
             return this.appearanceConfig?.scene?.message_assets || null;
+        },
+        sceneIllustrationBackgroundMode() {
+            return this.messageAssetsConfig?.scene_illustration?.size === 'background';
+        },
+        sceneBackdropPanelOpacity() {
+            return this.messageAssetsConfig?.scene_illustration?.background_panel_opacity ?? 0.8;
+        },
+        sceneBackdropTextShadow() {
+            return this.messageAssetsConfig?.scene_illustration?.background_text_shadow ?? true;
+        },
+        assetViewSrc() {
+            return this.assetDataUrl(this.assetViewAssetId);
+        },
+        sceneBackdropAssetId() {
+            // Most recent scene illustration becomes the backdrop
+            if (!this.sceneIllustrationBackgroundMode) {
+                return null;
+            }
+            for (let i = this.messages.length - 1; i >= 0; i--) {
+                const msg = this.messages[i];
+                if (msg.asset_type === 'scene_illustration' && msg.asset_id) {
+                    return msg.asset_id;
+                }
+            }
+            return null;
+        },
+        sceneBackdropSrc() {
+            return this.assetDataUrl(this.sceneBackdropAssetId);
         },
         editorRevisionsEnabled() {
             return this.agentStatus && this.agentStatus.editor && this.agentStatus.editor.actions && this.agentStatus.editor.actions["revision"] && this.agentStatus.editor.actions["revision"].enabled;
@@ -641,7 +689,7 @@ export default {
             return instructions;
         },
     },
-    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset', 'setSceneIllustrationDisplaySize'],
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
@@ -1247,6 +1295,11 @@ export default {
          * Show the asset menu for a given image context.
          * Called by child MessageAssetImage components.
          */
+        assetDataUrl(assetId) {
+            const cached = assetId ? this.assetCache[assetId] : null;
+            return cached ? `data:${cached.mediaType};base64,${cached.base64}` : null;
+        },
+
         showAssetMenu(event, context) {
             // Store the context (asset_id, asset_type, character, etc.)
             this.assetMenu.context = { ...context };
@@ -1280,13 +1333,27 @@ export default {
         handleViewImage() {
             // Close the menu
             this.assetMenu.show = false;
-            
-            // The context should have the imageSrc and we need to trigger
-            // the AssetView in the MessageAssetImage component
-            // For now, we'll emit this back through a callback if provided
+
+            // Menu opened from an inline MessageAssetImage: its callback
+            // opens the component's own AssetView. Otherwise (e.g. the
+            // toolbar chip in "background" display mode) use the shared
+            // fallback viewer; assetViewSrc resolves from the cache so it
+            // fills in once the asset arrives
             if (this.assetMenu.context.onViewImage) {
                 this.assetMenu.context.onViewImage();
+            } else if (this.assetMenu.context.asset_id) {
+                this.assetViewAssetId = this.assetMenu.context.asset_id;
+                this.assetViewShow = true;
             }
+        },
+
+        /**
+         * Handle "Display as background" menu option — flips the
+         * scene-illustration display mode to "background"
+         */
+        handleSetBackgroundDisplayMode() {
+            this.assetMenu.show = false;
+            this.setSceneIllustrationDisplaySize('background');
         },
 
         /**
@@ -2030,7 +2097,20 @@ export default {
                 }, 50);
             },
             deep: true,
-        }
+        },
+        sceneBackdropAssetId(assetId) {
+            if (assetId && this.requestSceneAssets && !this.assetCache[assetId]) {
+                this.requestSceneAssets([assetId]);
+            }
+        },
+        // The backdrop is painted by TalemateApp behind the whole scene
+        // column, so hand the resolved image up
+        sceneBackdropSrc: {
+            immediate: true,
+            handler(src) {
+                this.$emit('scene-backdrop', src);
+            },
+        },
     },
     created() {
         this.registerMessageHandler(this.handleMessage);
@@ -2049,6 +2129,39 @@ export default {
 <style scoped>
 .message-container {
     overflow-y: auto;
+}
+
+/* Scene illustration "background" display mode: the backdrop itself is
+   painted by TalemateApp on the scene column (.scene-backdrop-active);
+   here each message gets a translucent panel so the text stays legible
+   against an unknown image. */
+.scene-backdrop-active .message {
+    background-color: rgba(var(--v-theme-surface), var(--scene-backdrop-panel-opacity, 0.8));
+    backdrop-filter: blur(4px);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    /* tight, dense shadow so message text of every type stays legible
+       over the backdrop */
+    text-shadow: 1px 1px 2px #000000, 0 0 6px rgba(0, 0, 0, 0.85);
+}
+
+/* character messages carry their own always-on shadow — align it with
+   the backdrop shadow so all types match */
+.scene-backdrop-active .message :deep(.character-message) {
+    text-shadow: inherit;
+}
+
+/* backdrop text shadow disabled via appearance config */
+.scene-backdrop-active .no-text-shadow .message {
+    text-shadow: none;
+}
+
+/* chips (toolbar, continue, revision nav, ...) don't need the shadow and
+   get a solid base like the scene-tools chips (their tonal tint renders
+   as an overlay on top) */
+.scene-backdrop-active .message :deep(.v-chip) {
+    text-shadow: none;
+    background-color: rgb(var(--v-theme-surface));
 }
 
 .message-wrapper {

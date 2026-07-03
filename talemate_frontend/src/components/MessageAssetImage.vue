@@ -191,7 +191,6 @@ export default {
           character: this.character,
           message_content: this.message_content,
           message_id: this.message_id,
-          imageSrc: this.imageSrc,
           onViewImage: this.openAssetView,
         });
       }

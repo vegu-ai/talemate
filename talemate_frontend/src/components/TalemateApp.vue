@@ -238,8 +238,8 @@
                   >
                   </NodeEditor>  
               </v-col>
-              <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': true, 'd-none': creativeMode && !showSceneView }">
-                <div style="display: flex; flex-direction: column; height: 100%">
+              <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': true, 'd-none': creativeMode && !showSceneView, 'scene-backdrop-active': !!sceneBackdropSrc }" :style="sceneBackdropStyle">
+                <div class="scene-column" style="display: flex; flex-direction: column; height: 100%">
 
                   <div class="scene-container">
 
@@ -253,7 +253,7 @@
                       </v-alert>
                     </div>
 
-                    <div v-show="showSceneView">
+                    <div v-show="showSceneView" class="scene-view">
                       <SceneMessages
                         ref="sceneMessages"
                         :appearance-config="effectiveAppearanceConfig"
@@ -264,10 +264,11 @@
                         :scene="scene"
                         @cancel-audio-queue="onCancelAudioQueue"
                         @configure-entity-highlights="onConfigureEntityHighlights"
+                        @scene-backdrop="sceneBackdropSrc = $event"
                       />
                     </div>
 
-                    <div ref="sceneToolsContainer" :class="{ 'scene-controls--locked': uxInteractionActive }">
+                    <div ref="sceneToolsContainer" class="scene-controls" :class="{ 'scene-controls--locked': uxInteractionActive }">
                       <AgentActivityBar v-if="appConfig?.game?.general?.show_agent_activity_bar !== false" :agent-status="agentStatus" />
                       <SceneTools 
                         @open-world-state-manager="onOpenWorldStateManager"
@@ -454,6 +455,9 @@ export default {
   data() {
     return {
       appearancePreview: null, // Preview config while editing settings (null = use saved config)
+      // data-url of the scene illustration acting as the scene backdrop
+      // ("background" display mode), reported up by SceneMessages
+      sceneBackdropSrc: null,
       tab: 'home',
       tabs: [
         {
@@ -692,6 +696,12 @@ export default {
     },
   },
   computed: {
+    sceneBackdropStyle() {
+      if (!this.sceneBackdropSrc) {
+        return {};
+      }
+      return { '--scene-backdrop-image': `url(${this.sceneBackdropSrc})` };
+    },
     creativeMode() {
       return this.tab === 'main' && this.sceneActive && this.scene.environment === 'creative';
     },
@@ -818,6 +828,7 @@ export default {
       appConfig: () => this.appConfig,
       openAppConfig: this.openAppConfig,
       openAgentActionOverrides: () => this.$refs.agentActionOverrides?.open(),
+      setSceneIllustrationDisplaySize: this.setSceneIllustrationDisplaySize,
       configurationRequired: () => this.configurationRequired(),
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
       getTrackedCharacterStates: (name) => this.$refs.worldState.trackedCharacterStates(name),
@@ -1338,6 +1349,21 @@ export default {
       }
       this.websocket.send(JSON.stringify({ type: 'configure_clients', clients: saveData }));
     },
+    setSceneIllustrationDisplaySize(size) {
+      // Shortcut used by the scene-illustration asset menu to flip the
+      // display mode without opening the appearance settings.
+      // IMPORTANT: the save handler validates the payload as the FULL config
+      // model — a partial payload gets its missing sections replaced with
+      // defaults. Always send the complete config (same as AppConfig.vue).
+      if (!this.appConfig) {
+        return;
+      }
+      // appConfig is a full backend model dump — the nested structure
+      // always exists
+      const config = JSON.parse(JSON.stringify(this.appConfig));
+      config.appearance.scene.message_assets.scene_illustration.size = size;
+      this.websocket.send(JSON.stringify({ type: 'config', action: 'save', config }));
+    },
     saveAgents(agents) {
       const saveData = {}
 
@@ -1736,6 +1762,48 @@ export default {
   margin: 0 auto;
   width: 100%;
   overflow-x: auto;
+}
+
+/* Scene illustration "background" display mode: the most recent scene
+   illustration fills the whole scene column (messages, tools and input);
+   SceneMessages gives each message a translucent panel for legibility. */
+.scene-backdrop-active {
+  background-image: var(--scene-backdrop-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* the message input, control chips (auto save, auto progress, agent
+   activity, ...) and the input's send/autocomplete buttons get solid
+   backgrounds so they don't fight the backdrop (they are otherwise
+   transparent/tonal) */
+.scene-backdrop-active .scene-controls :deep(.v-field),
+.scene-backdrop-active .scene-controls :deep(.v-chip),
+.scene-backdrop-active .scene-controls :deep(.scene-message-input-root .v-btn) {
+  background-color: rgb(var(--v-theme-surface));
+}
+
+/* with a backdrop, stretch the scene column to at least the visible
+   main-area height so a short scene doesn't crop the image; the message
+   list grows and the tools/input hug the bottom of the screen.
+   --v-layout-top is set by vuetify on v-main (app bar offset); the 32px
+   accounts for the v-container's vertical padding. */
+.scene-backdrop-active .scene-column {
+  min-height: calc(100dvh - var(--v-layout-top, 64px) - 32px);
+}
+
+.scene-backdrop-active .scene-container {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.scene-backdrop-active .scene-view {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .scene-controls--locked {

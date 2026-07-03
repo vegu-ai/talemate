@@ -130,6 +130,8 @@ class GenerationMixin:
 
     @set_processing
     async def generate(self, request: GenerationRequest) -> GenerationResponse:
+        await self.finalize_prompt_request(request)
+
         response = GenerationResponse(
             request=request,
             id=request.id,

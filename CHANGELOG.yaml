@@ -1,9 +1,11 @@
 0.39.0.dev:
-  fixes:
-  - "OpenRouter Client: A failed model/provider list fetch at startup no longer sticks until the server is restarted — later config saves and client status refreshes now retry it. Setting the API key for the first time during initial setup also correctly triggers the provider fetch."
+  features:
+  - "Visual Prompt Finalization: The Visualizer agent gained a Prompt Finalization settings tab defining post-processing actions (exact, fuzzy or regex match and replace, or an AI instruction) that rewrite image prompts right before they are sent to the image generation backend. Actions can target positive and/or negative prompts, be restricted to specific visual types, and be overridden per scene. Characters can define their own actions under World Editor → Characters → Visuals → Prompt Finalization, which run after the agent's. Reusable action sets are managed as a new 'Visual prompt finalizer' template type, including a shipped Ideogram JSON preset that converts the positive prompt into an Ideogram 4.0 structured JSON prompt. Prompt-only generation output is finalized as well, and a new FinalizePrompt node exposes the step to custom node graphs."
   improvements:
   - "Uniform Settings Framework: Agent settings and client settings now share one field-definition schema on the backend and one field renderer on the frontend. Client-specific settings gain the full widget set previously exclusive to agents (sliders, autocompletes, selects with rich choices, per-value notes) plus conditional visibility, and choice lists are delivered to the frontend in a single normalized shape."
   - "MistralAI Client: Added a Concurrent Inference toggle so batch operations can dispatch multiple requests in parallel. Off by default."
+  fixes:
+  - "OpenRouter Client: A failed model/provider list fetch at startup no longer sticks until the server is restarted — later config saves and client status refreshes now retry it. Setting the API key for the first time during initial setup also correctly triggers the provider fetch."
 
 0.38.0.dev:
   features:

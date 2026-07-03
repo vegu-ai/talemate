@@ -26,6 +26,7 @@ from talemate.world_state import (
 from talemate.game.schema import ConditionGroup, condition_groups_match
 from talemate.game.engine.context_id.base import ContextIDItem
 from talemate.agents.tts.schema import Voice
+from talemate.agents.visual.schema import PromptFinalizer
 from talemate.game.engine.context_id import ContextID
 from talemate.scene.schema import ScenePerspectives
 
@@ -74,6 +75,7 @@ class CharacterDetails(pydantic.BaseModel):
     avatar: Union[str, None] = None  # default avatar
     current_avatar: Union[str, None] = None  # current avatar
     visual_rules: Union[str, None] = None
+    visual_finalizers: list[PromptFinalizer] = pydantic.Field(default_factory=list)
     color: Union[str, None] = None
     voice: Union[Voice, None] = None
     shared: bool = False
@@ -205,6 +207,7 @@ class WorldStateManager:
             avatar=character.avatar,
             current_avatar=character.current_avatar,
             visual_rules=character.visual_rules,
+            visual_finalizers=character.visual_finalizers,
             color=character.color,
             voice=character.voice,
             shared=character.shared,
@@ -452,6 +455,25 @@ class WorldStateManager:
 
         character.visual_rules = visual_rules or None
         character.memory_dirty = True
+
+    async def update_character_visual_finalizers(
+        self, character_name: str, visual_finalizers: list[dict]
+    ):
+        """
+        Updates the visual prompt finalizers for a character.
+
+        Arguments:
+            character_name: The name of the character to be updated.
+            visual_finalizers: The new list of finalizer rows for the character.
+        """
+        character = self.scene.get_character(character_name)
+        if not character:
+            log.error("character not found", character_name=character_name)
+            return
+
+        character.visual_finalizers = [
+            PromptFinalizer(**row) for row in visual_finalizers or []
+        ]
 
     async def update_character_actor(
         self,

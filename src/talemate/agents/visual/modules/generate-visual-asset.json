@@ -86,35 +86,19 @@
       "registry": "core/Output",
       "base_type": "core/Node"
     },
-    "995eac0a-6e61-4979-944c-90ec78ab7a69": {
-      "title": "OUT vis_type",
-      "id": "995eac0a-6e61-4979-944c-90ec78ab7a69",
-      "properties": {
-        "output_type": "character",
-        "output_name": "vis_type",
-        "num": 2
-      },
-      "x": 993,
-      "y": -2512,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
-      "base_type": "core/Node"
-    },
     "fe0f0758-cd54-4e81-bff4-d264bb9c2cd6": {
       "title": "Prompt From Template",
       "id": "fe0f0758-cd54-4e81-bff4-d264bb9c2cd6",
       "properties": {
         "scope": "visual",
         "template_file": "generate-image",
-        "template_text": ""
+        "template_text": "",
+        "dedupe": true
       },
       "x": 1500,
       "y": -478,
       "width": 272,
-      "height": 147,
+      "height": 170,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/PromptFromTemplate",
@@ -1452,7 +1436,7 @@
       "x": 1351,
       "y": -180,
       "width": 405,
-      "height": 2186,
+      "height": 2406,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/visual/Settings",
@@ -1465,7 +1449,7 @@
       "x": 1006,
       "y": 1834,
       "width": 405,
-      "height": 2186,
+      "height": 2406,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/visual/Settings",
@@ -1491,7 +1475,7 @@
       "x": 11,
       "y": 1435,
       "width": 405,
-      "height": 2186,
+      "height": 2406,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/visual/Settings",
@@ -1575,7 +1559,7 @@
       "x": 11,
       "y": 1813,
       "width": 405,
-      "height": 2186,
+      "height": 2406,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/visual/Settings",
@@ -2255,6 +2239,23 @@
       "inherited": false,
       "registry": "data/Get",
       "base_type": "core/Node"
+    },
+    "995eac0a-6e61-4979-944c-90ec78ab7a69": {
+      "title": "OUT vis_type",
+      "id": "995eac0a-6e61-4979-944c-90ec78ab7a69",
+      "properties": {
+        "output_type": "str",
+        "output_name": "vis_type",
+        "num": 2
+      },
+      "x": 993,
+      "y": -2512,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -2638,8 +2639,8 @@
       "7e20a46e-aa81-4270-bb89-dd75d2f8b9de.value"
     ],
     "38690310-cba0-477d-b8a2-3ee04bcce7c0.extracted": [
-      "eb3e8386-17f5-409b-b3be-eda1c0a08ae3.object",
-      "1b332607-0114-454d-a93a-336b672fade5.object"
+      "1b332607-0114-454d-a93a-336b672fade5.object",
+      "eb3e8386-17f5-409b-b3be-eda1c0a08ae3.object"
     ],
     "1b332607-0114-454d-a93a-336b672fade5.value": [
       "5f475f9b-3cf4-4ff6-974a-305b3529ad7e.value"
@@ -2666,8 +2667,8 @@
       "967e857f-b1f2-4bac-a71c-ff0530997eb9.state"
     ],
     "c06c1a51-79d7-4600-896d-3134735409ce.value": [
-      "86c4e2af-ec07-4c59-a60a-133a1155e079.object",
-      "967e857f-b1f2-4bac-a71c-ff0530997eb9.value"
+      "967e857f-b1f2-4bac-a71c-ff0530997eb9.value",
+      "86c4e2af-ec07-4c59-a60a-133a1155e079.object"
     ]
   },
   "groups": [

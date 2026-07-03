@@ -1,12 +1,13 @@
 from typing import TYPE_CHECKING
 
 import pydantic
+from talemate.agents.visual.schema import PromptFinalizer
 from talemate.world_state.templates.base import Template, register
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
-__all__ = ["VisualStyle"]
+__all__ = ["VisualStyle", "VisualFinalizer"]
 
 
 @register("visual_style")
@@ -50,3 +51,18 @@ class VisualStyle(Template):
             ),
             "visual_type": self.visual_type,
         }
+
+
+@register("visual_finalizer")
+class VisualFinalizer(Template):
+    """
+    A reusable set of visual prompt post-processing actions, applied to
+    image generation prompts by the visualizer agent's prompt
+    finalization step.
+    """
+
+    description: str | None = None
+
+    finalizers: list[PromptFinalizer] = pydantic.Field(default_factory=list)
+
+    template_type: str = "visual_finalizer"

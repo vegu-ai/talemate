@@ -2,7 +2,7 @@
 
 ![This image displays a dark user interface header labeled "Visualizer," accented with a chromatic aberration effect and a green status dot. Below the title, there are two badges: one labeled "Google" with a monitor icon, and a warning badge featuring a triangle alert symbol that reads "No backend configured."](/talemate/img/0.34.0/visual-agent-general-1.png)
 
-The Visualizer agent settings are organized into three main sections: **General**, **Prompt Generation**, and **Styles**. Additionally, each backend may have its own configuration options, including [resolution presets](#resolution-presets) for local image generation backends.
+The Visualizer agent settings are organized into four main sections: **General**, **Prompt Generation**, **Styles**, and **Prompt Finalization**. Additionally, each backend may have its own configuration options, including [resolution presets](#resolution-presets) for local image generation backends.
 
 ![A dark-mode settings interface for a 'Visualizer' tool displaying the 'General' configuration tab. It features dropdown menus showing 'Google' selected as the client with no backends currently configured, alongside a slider for image generation timeout and checkboxes for automatic setup options.](/talemate/img/0.34.0/visual-agent-general-2.png)
 
@@ -132,6 +132,67 @@ Each style template can include:
 - Instructions (specific generation instructions)
 
 These styles are applied automatically when generating images based on the visual type you select.
+
+## Prompt Finalization
+
+The Prompt Finalization tab defines a chain of post-processing actions applied to the final prompt strings right before they are sent to the image generation backend. Use it to clean up recurring unwanted keywords, enforce specific phrasing, or transform the whole prompt with an AI instruction. The same finalization is applied to `prompt only` generation output, and custom node graphs can invoke it through the `Finalize Prompt` node.
+
+All settings in this section can be overridden per scene through the Agent Modal's scene mode.
+
+### Presets
+
+The **Preset** picker below the actions table inserts the actions of a **Visual prompt finalizer** template into the table as editable copies. You can insert as many presets as you like; inserted rows behave like any other action — reorder, edit, or remove them freely. Because rows are copied, later changes to the template do not affect actions that were already inserted.
+
+Presets are reusable sets of post-processing actions managed in the Templates manager — Talemate ships an **Ideogram JSON** preset that converts the positive prompt into an Ideogram 4.0 structured JSON prompt.
+
+### Post-processing Actions
+
+A table of actions, executed from top to bottom. Each row has:
+
+- **Enabled**: Toggle the action without deleting it.
+- **Mode**: How the action transforms the prompt:
+    - **Exact match**: Substring search and replace. Case insensitive unless the *Case sensitive* flag is set.
+    - **Fuzzy match**: Compares each comma-separated prompt segment against the match string using fuzzy similarity (always case insensitive) and replaces the whole segment when it scores at or above the [fuzzy match threshold](#fuzzy-match-threshold).
+    - **Regex**: Regular expression search and replace with group passthrough (`\1`, `\g<name>`). Case insensitive unless the *Case sensitive* flag is set; the *Dot all* and *Multiline* flags map to the corresponding regex flags.
+    - **AI**: Sends the prompt to the AI together with the instruction from the *Instruct* field and replaces the prompt with the result.
+- **Match**: The search string (exact, fuzzy) or pattern (regex). Hidden for AI, which only uses the instruction.
+- **Replace / Instruct**: The replacement text, or — in AI mode, where the field is labeled *Instruct* — the instruction for AI processing. Leaving the replacement empty removes the match (fuzzy mode removes the whole matching segment).
+- **Flags**: Case sensitivity and regex behavior flags.
+- **Target**: Whether the action applies to the positive prompt (default), the negative prompt, or both.
+- **Types**: Restrict the action to specific visual types (character portrait, scene background, ...). Empty applies to all.
+
+!!! warning "AI actions add queries"
+    Each enabled AI action adds one extra AI query per targeted prompt — an action targeting *Both* adds two queries when a negative prompt is set.
+
+!!! info "Character-level actions"
+    Characters can define their own post-processing actions under World Editor → Characters → Visuals → Prompt Finalization. These run after the agent's actions whenever the generated image involves that character.
+
+#### Regex group references
+
+In regex mode, parentheses in the match pattern capture text you can reuse in the replacement:
+
+- `\1`, `\2`, ... — numbered groups, in order of opening parenthesis
+- `\g<name>` — a named group, defined in the pattern as `(?P<name>...)`
+- `\g<0>` — the entire matched text
+
+| Match | Replace | Effect |
+|---|---|---|
+| `(\d+)mm lens` | `85mm lens (was \1mm)` | Reuses the captured number |
+| `(red\|blue\|green) hair` | `dark \1 hair` | Keeps the matched color, prefixes it |
+| `(?P<adj>\w+) lighting` | `dramatic \g<adj> lighting` | Named group reference |
+| `\b(\w+), \1\b` | `\1` | Deduplicates an immediately repeated segment |
+
+Every non-overlapping occurrence of the pattern is replaced, not just the first. A capture group preserves the casing that was actually in the prompt, so with the default case-insensitive matching there is no need to spell out casing variants.
+
+Some notes:
+
+- Use `\g<1>` instead of `\1` when the reference is immediately followed by a digit (`\g<1>0` — `\10` would be read as group 10).
+- Backslash escapes in the replacement are interpreted, so a literal backslash needs doubling (`\\`).
+- An invalid pattern or group reference never breaks generation — the action is skipped and the prompt passes through unchanged.
+
+### Fuzzy Match Threshold
+
+The similarity score (0-100) a prompt segment must reach to be considered a fuzzy match. The default is 85; lower values match more loosely.
 
 ## Resolution Presets
 

@@ -1,0 +1,73 @@
+author: Talemate
+description: ''
+name: Visual Finalizers
+templates:
+  ideogram_json:
+    description: Converts the positive prompt into an Ideogram 4.0 structured JSON
+      prompt.
+    favorite: false
+    finalizers:
+    - enabled: true
+      flags: []
+      match: ''
+      mode: AI
+      replace: "Convert the prompt into an Ideogram 4.0 structured JSON prompt.\n\
+        \nThe result must be a single valid JSON object using snake_case keys, in\
+        \ exactly this key order:\n\n{\n  \"high_level_description\": \"one or two\
+        \ sentence summary of the whole image\",\n  \"style_description\": {\n  \
+        \  \"aesthetics\": \"style keywords (mood, genre, adjectives)\",\n    \"\
+        lighting\": \"light source, direction and quality\",\n    \"photo\": \"camera/lens\
+        \ details - include ONLY for photographs\",\n    \"art_style\": \"art style\
+        \ - include ONLY for non-photographs (illustration, painting, 3d render,\
+        \ etc.)\",\n    \"medium\": \"photograph | illustration | 3d_render | painting\
+        \ | ...\",\n    \"color_palette\": [\"#RRGGBB\", \"#RRGGBB\"]\n  },\n  \"\
+        compositional_deconstruction\": {\n    \"background\": \"description of the\
+        \ environment / setting\",\n    \"elements\": [\n      {\"type\": \"obj\"\
+        , \"bbox\": [y_min, x_min, y_max, x_max], \"desc\": \"an object in the scene\"\
+        , \"color_palette\": [\"#RRGGBB\"]},\n      {\"type\": \"text\", \"bbox\"\
+        : [y_min, x_min, y_max, x_max], \"text\": \"literal text to render\", \"\
+        desc\": \"how the text looks\", \"color_palette\": [\"#RRGGBB\"]}\n    ]\n\
+        \  }\n}\n\nRules:\n- high_level_description: one sentence, starting with\
+        \ the subject (no \"an image of\" / \"this shows\"). Name the subject, medium\
+        \ and overall composition; keep granular detail out of it - that belongs\
+        \ in the elements and background.\n- style_description: include exactly one\
+        \ of \"photo\" or \"art_style\" (never both). Keys must appear in the order\
+        \ shown above; ordering affects generation quality.\n- Each coherent subject\
+        \ (a person, animal, vehicle, building, ...) is ONE \"obj\" element - its\
+        \ parts and attributes go in that element's \"desc\", never split across\
+        \ separate elements. Use one element per distinct subject when several are\
+        \ present. Write each \"desc\" so it stands on its own: identity first, then\
+        \ the notable attributes.\n- background is the scene shell only: walls, floor/ground,\
+        \ ceiling, sky, atmosphere and ambient light. The floor/ground and sky always\
+        \ live here, never as an \"obj\". Anything placed in the scene (people, objects,\
+        \ furniture) is an element, not background. Never describe the same thing\
+        \ in both background and an element.\n- Commit to one concrete value everywhere\
+        \ - no hedging (\"various\", \"such as\", \"or similar\") and no alternatives\
+        \ (\"oak or walnut\", \"bold or regular\"). Pick one.\n- Colors: uppercase\
+        \ 6-digit hex only (e.g. \"#1B1B2F\"), never shorthand. color_palette is\
+        \ optional: up to 16 colors at the image level, up to 5 per element.\n- bbox\
+        \ is optional and should usually be OMITTED. A bbox forces the element to\
+        \ fill that exact region, so a lone subject given a frame-spanning box comes\
+        \ out stretched and distorted. Do NOT give a bbox to a single subject that\
+        \ fills or dominates the frame (portraits, character cards, hero shots) -\
+        \ let it compose naturally. Also omit bbox for dense/uncountable groups (crowds,\
+        \ fields, starfields). Only add a bbox to position several distinct elements\
+        \ relative to each other or to place text/small props precisely; when you\
+        \ do, its value is [y_min, x_min, y_max, x_max] normalized 0-1000 on BOTH\
+        \ axes, so match its span ratio to the image shape (a square region is only\
+        \ square on a square frame).\n- Text: put the exact characters in \"text\"\
+        \ verbatim (keep punctuation and diacritics); in \"desc\" describe only how\
+        \ it looks and where it sits, never re-spell it. Use \"\\n\" for line breaks\
+        \ within one text element and a separate element per distinct text block;\
+        \ break long stylized titles at word boundaries to avoid dropped letters.\n\
+        - List the background/primary elements first, then foreground.\n- Output\
+        \ the raw JSON object only - no markdown code fences or commentary."
+      target: POSITIVE
+      vis_types: []
+    group: visual_finalizers
+    instructions: null
+    name: Ideogram JSON
+    priority: 1
+    template_type: visual_finalizer
+    uid: ideogram_json
+uid: visual_finalizers

@@ -18,12 +18,20 @@ export function iconForTemplate(template) {
         return 'mdi-script-text';
     } else if (templateType == 'visual_style') {
         return 'mdi-palette';
+    } else if (templateType == 'visual_finalizer') {
+        return 'mdi-auto-fix';
     } else if (templateType == 'agent_persona') {
         return 'mdi-drama-masks';
     } else if (templateType == 'scene_type') {
         return 'mdi-movie-open';
     }
     return 'mdi-cube-scan';
+}
+
+// template attribute holding the template's row list, per template type —
+// used by the table widget's insert-preset control
+export function rowsFieldForTemplateType(templateType) {
+    return { visual_finalizer: 'finalizers' }[templateType];
 }
 
 export function colorForTemplate(template) {
@@ -40,6 +48,8 @@ export function colorForTemplate(template) {
     } else if (templateType == 'writing_style') {
         return 'highlight5';
     } else if (templateType == 'visual_style') {
+        return 'highlight5';
+    } else if (templateType == 'visual_finalizer') {
         return 'highlight5';
     } else if (templateType == 'agent_persona') {
         return 'persona';

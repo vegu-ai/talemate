@@ -357,6 +357,77 @@ class ApplyStyles(AgentNode):
         )
 
 
+@register("agents/visual/FinalizePrompt")
+class FinalizePrompt(AgentNode):
+    """
+    Applies the visualizer's prompt finalization (post-processing actions)
+    to a positive / negative prompt string pair.
+
+    Inputs:
+    - state: graph state (required — wire through any gating switch so the
+      node is skipped when its output would be discarded)
+    - positive_prompt: positive prompt string (required)
+    - negative_prompt: negative prompt string (optional)
+    - vis_type: type of visual the prompts are for (optional)
+    - character_name: character the prompts involve, enables character
+      level finalizers (optional)
+
+    Outputs:
+    - state: graph state (passed through)
+    - positive_prompt: finalized positive prompt
+    - negative_prompt: finalized negative prompt
+    """
+
+    _agent_name: ClassVar[str] = "visual"
+
+    class Fields:
+        vis_type = PropertyField(
+            name="vis_type",
+            type="str",
+            description="The type of visual the prompts are for",
+            default="UNSPECIFIED",
+            choices=VIS_TYPE.choice_values(),
+        )
+
+    def __init__(self, title="Finalize Prompt", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        # state is required so an upstream gate (e.g. a prompt_only switch)
+        # can deactivate this node — finalization may issue AI queries, so
+        # it must not run eagerly on paths whose result is discarded
+        self.add_input("state")
+        self.add_input("positive_prompt", socket_type="str")
+        self.add_input("negative_prompt", socket_type="str", optional=True)
+        self.add_input("vis_type", socket_type="str", optional=True)
+        self.add_input("character_name", socket_type="str", optional=True)
+        self.set_property("vis_type", "UNSPECIFIED")
+        self.add_output("state")
+        self.add_output("positive_prompt", socket_type="str")
+        self.add_output("negative_prompt", socket_type="str")
+
+    async def run(self, state: GraphState):
+        positive = self.normalized_input_value("positive_prompt")
+        negative = self.normalized_input_value("negative_prompt")
+        vis_type = self.normalized_input_value("vis_type") or "UNSPECIFIED"
+        character_name = self.normalized_input_value("character_name")
+
+        positive, negative = await self.agent.finalize_prompts(
+            positive,
+            negative,
+            VIS_TYPE(vis_type),
+            character_name or None,
+        )
+
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "positive_prompt": positive,
+                "negative_prompt": negative,
+            }
+        )
+
+
 @register("agents/visual/ApplyStyle")
 class ApplyStyle(AgentNode):
     """

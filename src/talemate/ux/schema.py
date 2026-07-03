@@ -6,6 +6,7 @@ __all__ = [
     "Action",
     "Note",
     "Condition",
+    "DynamicLabel",
     "FieldGroup",
     "FieldType",
     "Field",
@@ -99,6 +100,12 @@ class Field(pydantic.BaseModel):
     step: int | float | None = None
     graduations: list[dict[str, int | float]] | None = None
 
+    # blob widgets — initial textarea height and whether it grows with
+    # content (up to max_rows when set)
+    rows: int | None = None
+    max_rows: int | None = None
+    auto_grow: bool = False
+
     # choice widgets — always a list of {"label": ..., "value": ...} dicts;
     # scalar shorthand entries are normalized by the validator below.
     choices: (
@@ -160,8 +167,27 @@ class Field(pydantic.BaseModel):
         return v
 
 
+class DynamicLabel(pydantic.BaseModel):
+    """
+    Per-row label override for a table column: when the row's value for
+    `attribute` (a sibling column) matches a key in `labels`, that label is
+    shown instead of the column's static label.
+    """
+
+    attribute: str
+    labels: dict[str, str]
+
+
 class Column(Field):
-    pass
+    # grid width (out of 12) in the table widget's stacked row layout;
+    # the frontend falls back to a per-type default when unset
+    span: int | None = None
+
+    # render in the row's control rail (with the move/delete buttons)
+    # instead of the fields grid — bool columns only
+    rail: bool = False
+
+    dynamic_label: DynamicLabel | None = None
 
 
 # resolve the "Column" forward reference in Field.columns

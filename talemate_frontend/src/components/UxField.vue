@@ -262,6 +262,8 @@
       :default_values="modelValue"
       :label="field.label"
       :description="field.description"
+      :allow_reorder="true"
+      :presets="tablePresets"
       @save="onValueAndChange"
     />
   </div>
@@ -322,6 +324,7 @@ import ConfigWidgetTable from './ConfigWidgetTable.vue';
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
 import ConfigWidgetWeights from './ConfigWidgetWeights.vue';
 import GraduatedSlider from './GraduatedSlider.vue';
+import { rowsFieldForTemplateType } from '@/utils/templateMappings';
 
 // Renders a single uniform UX field definition (talemate.ux.schema.Field)
 // across all supported widget types. Shared by the agent settings renderers
@@ -350,6 +353,19 @@ export default {
       return [
         v => !(v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)) || `${this.field.label} is required`,
       ];
+    },
+    // A table field with a wstemplate_type gets an insert-preset control:
+    // selecting a template appends editable copies of its rows.
+    tablePresets() {
+      if (this.field?.type !== 'table' || !this.field?.wstemplate_type) return null;
+      const bucket = this.templates?.by_type?.[this.field.wstemplate_type];
+      if (!bucket) return null;
+      const rowsField = rowsFieldForTemplateType(this.field.wstemplate_type);
+      if (!rowsField) return null;
+      return Object.entries(bucket).map(([uid, template]) => ({
+        label: template?.name || uid,
+        rows: Array.isArray(template?.[rowsField]) ? template[rowsField] : [],
+      }));
     },
     wstemplateChoices() {
       const bucket = this.templates?.by_type?.[this.field?.wstemplate_type];

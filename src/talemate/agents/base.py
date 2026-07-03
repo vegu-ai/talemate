@@ -79,6 +79,7 @@ class AgentActionConfig(UxField):
             "spices",
             "writing_style",
             "visual_style",
+            "visual_finalizer",
             "agent_persona",
             "scene_type",
         ]

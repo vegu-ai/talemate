@@ -11,6 +11,7 @@ import talemate.instance as instance
 import talemate.scene_message as scene_message
 import talemate.agents.base as agent_base
 from talemate.agents.tts.schema import Voice
+from talemate.agents.visual.schema import PromptFinalizer as VisualPromptFinalizer
 import talemate.emit.async_signals as async_signals
 from talemate.game.engine.context_id.character import (
     CharacterContext,
@@ -46,6 +47,9 @@ class Character(pydantic.BaseModel):
     avatar: str | None = None  # default avatar (used as fallback for messages)
     current_avatar: str | None = None  # current avatar (used to set message.asset_id)
     visual_rules: str | None = None
+    visual_finalizers: list[VisualPromptFinalizer] = pydantic.Field(
+        default_factory=list
+    )
     voice: Voice | None = None
 
     # shared context

@@ -22,6 +22,7 @@ from .schema import ReadyCheckResult, BackendStatusType, PROMPT_TYPE
 import talemate.agents.visual.nodes  # noqa: F401
 
 from .style import StyleMixin
+from .finalize import PromptFinalizationMixin
 from .generation import GenerationMixin
 from .analyze import AnalysisMixin
 from .backends.comfyui import ComfyUIMixin
@@ -53,6 +54,7 @@ log = structlog.get_logger("talemate.agents.visual")
 @register()
 class VisualAgent(
     StyleMixin,
+    PromptFinalizationMixin,
     GenerationMixin,
     AnalysisMixin,
     ComfyUIMixin,
@@ -202,6 +204,9 @@ class VisualAgent(
             ),
         }
 
+        # added first so the Prompt Finalization tab lands right after
+        # Prompt Generation (tabs render in action insertion order)
+        PromptFinalizationMixin.add_actions(actions)
         ComfyUIMixin.add_actions(actions)
         Automatic1111Mixin.add_actions(actions)
         SDNextMixin.add_actions(actions)
@@ -303,6 +308,10 @@ class VisualAgent(
         if art_style_name:
             meta["current_art_style"] = art_style_name
             meta["current_art_style_source"] = self._get_current_art_style_source()
+
+        # resolved (scene overrides included) — lets the frontend warn when
+        # character-level finalizers are edited while the feature is off
+        meta["prompt_finalization_enabled"] = self.prompt_finalization_enabled
 
         return meta
 

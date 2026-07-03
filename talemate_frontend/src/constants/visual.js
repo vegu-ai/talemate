@@ -42,6 +42,112 @@ export const GEN_TYPE = Object.freeze({
   UPLOAD: 'UPLOAD',
 });
 
+// Must match FINALIZER_MODE in src/talemate/agents/visual/schema.py
+export const FINALIZER_MODE = Object.freeze({
+  EXACT: 'EXACT',
+  FUZZY: 'FUZZY',
+  REGEX: 'REGEX',
+  AI: 'AI',
+});
+
+// Must match FINALIZER_TARGET in src/talemate/agents/visual/schema.py
+export const FINALIZER_TARGET = Object.freeze({
+  POSITIVE: 'POSITIVE',
+  NEGATIVE: 'NEGATIVE',
+  BOTH: 'BOTH',
+});
+
+function titleCase(value) {
+  return value.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Must match finalizer_table_columns() in src/talemate/agents/visual/finalize.py
+export function finalizerTableColumns() {
+  return [
+    {
+      name: 'enabled',
+      type: 'bool',
+      label: '',
+      default_value: true,
+      rail: true,
+    },
+    {
+      name: 'mode',
+      type: 'text',
+      label: 'Mode',
+      default_value: FINALIZER_MODE.EXACT,
+      span: 4,
+      choices: [
+        { label: 'Exact match', value: FINALIZER_MODE.EXACT },
+        { label: 'Fuzzy match', value: FINALIZER_MODE.FUZZY },
+        { label: 'Regex', value: FINALIZER_MODE.REGEX },
+        { label: 'AI', value: FINALIZER_MODE.AI },
+      ],
+    },
+    {
+      name: 'target',
+      type: 'text',
+      label: 'Target',
+      default_value: FINALIZER_TARGET.POSITIVE,
+      span: 4,
+      choices: [
+        { label: 'Positive', value: FINALIZER_TARGET.POSITIVE },
+        { label: 'Negative', value: FINALIZER_TARGET.NEGATIVE },
+        { label: 'Both', value: FINALIZER_TARGET.BOTH },
+      ],
+    },
+    {
+      name: 'flags',
+      type: 'flags',
+      label: 'Flags',
+      span: 6,
+      choices: [
+        { label: 'Case sensitive', value: 'case_sensitive' },
+        { label: 'Dot all (regex)', value: 'dot_all' },
+        { label: 'Multiline (regex)', value: 'multiline' },
+      ],
+    },
+    {
+      name: 'vis_types',
+      type: 'flags',
+      label: 'Types',
+      description: 'Visual types this action applies to. Empty applies to all.',
+      span: 6,
+      choices: VIS_TYPE_OPTIONS.map(visType => ({
+        label: titleCase(visType),
+        value: visType,
+      })),
+    },
+    {
+      name: 'match',
+      type: 'blob',
+      label: 'Match',
+      description: 'Search string (exact, fuzzy) or pattern (regex).',
+      span: 12,
+      rows: 1,
+      auto_grow: true,
+      condition: {
+        attribute: 'mode',
+        value: [FINALIZER_MODE.EXACT, FINALIZER_MODE.FUZZY, FINALIZER_MODE.REGEX],
+      },
+    },
+    {
+      name: 'replace',
+      type: 'blob',
+      label: 'Replace',
+      dynamic_label: {
+        attribute: 'mode',
+        labels: { [FINALIZER_MODE.AI]: 'Instruct' },
+      },
+      description: 'Replacement text, or the instruction for AI processing. An empty replacement removes the match.',
+      span: 12,
+      rows: 1,
+      max_rows: 15,
+      auto_grow: true,
+    },
+  ];
+}
+
 export function isCharacterVisType(visType) {
   return (visType || '').startsWith('CHARACTER_');
 }

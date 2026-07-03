@@ -1011,6 +1011,7 @@ export default {
           this.newSceneNavigationPending = true; // Allow one-time new-scene navigation on next scene_status
           this.clearUxInteractions(); // Clear any active UX interactions when loading a new scene
           this.clearPrompts(); // Clear prompts when loading a new scene
+          this.$refs.generationErrorDialog.closeAll(); // Backend cancelled the outgoing scene's pending generations
           this.requestAppConfig();
           this.requestWorldStateTemplates();
           this.requestPromptOutdatedCheck();
@@ -1024,6 +1025,7 @@ export default {
           this.actAs = null;
           this.scene = {};
           this.clearUxInteractions(); // Clear any active UX interactions on load failure
+          this.$refs.generationErrorDialog.closeAll(); // Backend cancelled the outgoing scene's pending generations
         } else if (data.id === 'load_scene_request') {
           // Load the requested scene (e.g., after forking)
           this.resetViews();

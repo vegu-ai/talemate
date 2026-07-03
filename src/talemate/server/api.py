@@ -8,7 +8,10 @@ import websockets
 
 import talemate.instance as instance
 from talemate import VERSION
-from talemate.client.base import resolve_generation_error
+from talemate.client.base import (
+    resolve_all_generation_errors,
+    resolve_generation_error,
+)
 from talemate.config import get_config, Config, commit_config, update_config
 from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.server.websocket_server import WebsocketHandler
@@ -73,6 +76,9 @@ async def websocket_endpoint(websocket):
         send_messages_task.cancel()
         send_status_task.cancel()
         test_connection_task.cancel()
+        # no user response can arrive anymore - terminate any coroutine still
+        # waiting on a generation error dialog
+        resolve_all_generation_errors("cancel")
         handler.disconnect()
         if handler.scene:
             handler.scene.active = False
@@ -129,6 +135,10 @@ async def websocket_endpoint(websocket):
                         log.info("Unloading current scene")
                         handler.scene.continue_scene = False
                         scene_task.cancel()
+
+                    # pending error dialogs belong to the outgoing scene's
+                    # generations - cancel them so their coroutines don't hang
+                    resolve_all_generation_errors("cancel")
 
                     file_path = data.get("file_path")
                     scene_data = data.get("scene_data")

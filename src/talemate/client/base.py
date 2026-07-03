@@ -126,12 +126,25 @@ def get_error_message(status_code: int | None) -> str:
 # Maps request_id -> asyncio.Future that resolves to the user's choice.
 _generation_error_futures: dict[str, asyncio.Future] = {}
 
+GenerationErrorAction = Literal["retry", "cancel", "ignore"]
 
-def resolve_generation_error(request_id: str, action: str):
+
+def resolve_generation_error(request_id: str, action: GenerationErrorAction):
     """Called from the websocket handler when the user responds to a generation error dialog."""
     future = _generation_error_futures.get(request_id)
     if future and not future.done():
         future.set_result(action)
+
+
+def resolve_all_generation_errors(action: GenerationErrorAction):
+    """Resolve every pending generation error with the given action.
+
+    Used when no user response can arrive anymore (frontend disconnect,
+    scene unload) so that coroutines waiting on an error dialog don't hang
+    forever.
+    """
+    for request_id in list(_generation_error_futures):
+        resolve_generation_error(request_id, action)
 
 
 class CommonDefaults(pydantic.BaseModel):
@@ -1278,11 +1291,9 @@ class ClientBase:
 
     async def _prompt_generation_error(
         self, error_message: str, status_code: int | None = None
-    ) -> str:
+    ) -> GenerationErrorAction:
         """
         Emit a generation error to the frontend and wait for the user's choice.
-
-        Returns one of: "retry", "cancel", "ignore"
         """
         request_id = str(uuid.uuid4())
         loop = asyncio.get_event_loop()

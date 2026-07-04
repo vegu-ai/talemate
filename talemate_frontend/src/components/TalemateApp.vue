@@ -1239,6 +1239,7 @@ export default {
         details: data.client,
         meta: data.meta,
         actions: data.data.actions,
+        scene_overrides: data.data.scene_overrides,
       }
 
       if(recentlyActive && !busy) {

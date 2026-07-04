@@ -416,7 +416,6 @@ export default {
         AssetView,
         EditableList,
     },
-    inject: ['openVisualLibraryWithAsset', 'addToVisualLibraryPendingQueue'],
     data() {
         return {
             selectedAssetId: null,
@@ -572,28 +571,6 @@ export default {
                 action: 'set_scene_cover_image',
                 asset_id: assetId,
             }));
-        },
-        
-        openInVisualLibrary(assetId) {
-            if (!assetId) return;
-            
-            // Use injected method from TalemateApp
-            if (this.openVisualLibraryWithAsset && typeof this.openVisualLibraryWithAsset === 'function') {
-                this.openVisualLibraryWithAsset(assetId);
-            } else {
-                console.warn('openVisualLibraryWithAsset not available');
-            }
-        },
-        
-        confirmDelete(assetId) {
-            if (!assetId) return;
-            this.$refs.deleteConfirm.initiateAction({ id: assetId });
-        },
-        
-        onDeleteConfirmed(params) {
-            const assetId = params && params.id ? params.id : null;
-            if (!assetId) return;
-            this.deleteAsset(assetId);
         },
         
         checkReferenceAssets() {

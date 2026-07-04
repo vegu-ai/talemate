@@ -157,7 +157,6 @@ export default {
     ],
     data() {
         return {
-            confirmDelete: null,
             deleteBusy: false,
             characterList: {
                 characters: [],

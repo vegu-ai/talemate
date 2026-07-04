@@ -49,6 +49,7 @@ class SetSceneCoverImagePayload(pydantic.BaseModel):
 class SetSceneBackdropPayload(pydantic.BaseModel):
     asset_id: str | None = None
     enabled: bool | None = None
+    clear: bool = False
 
 
 class SetCharacterCoverImagePayload(pydantic.BaseModel):
@@ -235,7 +236,9 @@ class SceneAssetsPlugin(Plugin):
                 return
 
             await self.scene.assets.set_scene_backdrop(
-                asset_id=payload.asset_id, enabled=payload.enabled
+                asset_id=payload.asset_id,
+                enabled=payload.enabled,
+                clear=payload.clear,
             )
 
             # Request the asset for frontend

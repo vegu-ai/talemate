@@ -170,6 +170,7 @@ import {
   SCENE_AGENT_SETTINGS_FILENAME_RULES,
   actionHasOverridable,
   countSceneOverrides,
+  setActionOverrideSlice,
 } from '@/constants/sceneAgentSettings';
 
 // Mapping from `AgentAction.dynamic_registry_component` (declared by the
@@ -495,19 +496,9 @@ export default {
     // ----------------------------------------------------------------
 
     updateActionOverrides(actionKey, perActionOverride) {
-      // Replace this action's slice. Drop it entirely if empty so the
-      // overlay stays sparse.
-      const next = { actions: { ...this.sceneOverrides.actions } };
-      const isEmpty =
-        !perActionOverride ||
-        ((perActionOverride.enabled === undefined || perActionOverride.enabled === null) &&
-          (!perActionOverride.config || Object.keys(perActionOverride.config).length === 0));
-      if (isEmpty) {
-        delete next.actions[actionKey];
-      } else {
-        next.actions[actionKey] = perActionOverride;
-      }
-      this.sceneOverrides = next;
+      this.sceneOverrides = {
+        actions: setActionOverrideSlice(this.sceneOverrides.actions, actionKey, perActionOverride),
+      };
     },
 
     saveSceneOverrides() {

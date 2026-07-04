@@ -41,6 +41,25 @@ export function countSceneOverrides(overlay) {
 }
 
 /**
+ * Replace one action's slice in an overlay's `actions` map, keeping the
+ * overlay sparse: an empty per-action override (no enabled flag, no config
+ * keys) removes the entry instead of storing it. Returns a new map.
+ */
+export function setActionOverrideSlice(actions, actionKey, perActionOverride) {
+  const next = { ...actions };
+  const isEmpty =
+    !perActionOverride ||
+    ((perActionOverride.enabled === undefined || perActionOverride.enabled === null) &&
+      (!perActionOverride.config || Object.keys(perActionOverride.config).length === 0));
+  if (isEmpty) {
+    delete next[actionKey];
+  } else {
+    next[actionKey] = perActionOverride;
+  }
+  return next;
+}
+
+/**
  * True if an action schema has at least one scene-overridable surface —
  * either its container-level `enabled` flag or any config field. Used by
  * AgentModal (with the extra container guard) and AgentSceneSettings to

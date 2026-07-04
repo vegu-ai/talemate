@@ -107,7 +107,7 @@ export default {
     aspect: {
       type: String,
       default: 'square',
-      validator: (v) => ['square', 'portrait'].includes(v),
+      validator: (v) => ['square', 'portrait', 'landscape'].includes(v),
     },
     disabled: {
       type: Boolean,
@@ -136,7 +136,9 @@ export default {
       return this.selectedAsset.meta?.name || this.modelValue?.slice(0, 10) || '';
     },
     aspectClass() {
-      return this.aspect === 'portrait' ? 'aspect-portrait' : 'aspect-square';
+      if (this.aspect === 'portrait') return 'aspect-portrait';
+      if (this.aspect === 'landscape') return 'aspect-landscape';
+      return 'aspect-square';
     },
     thumbnailSize() {
       return 72;
@@ -216,6 +218,10 @@ export default {
 
 .aspect-square {
   aspect-ratio: 1 / 1;
+}
+
+.aspect-landscape {
+  aspect-ratio: 16 / 9;
 }
 
 .aspect-portrait {

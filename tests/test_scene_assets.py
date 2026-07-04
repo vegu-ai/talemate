@@ -841,6 +841,21 @@ class TestSceneBackdrop:
         assert scene.assets.backdrop == b.id
         assert scene.assets.backdrop_enabled is False
 
+    async def test_clear_removes_asset(self, scene):
+        a = await scene.assets.add_asset(b"x", "png", "image/png")
+        await scene.assets.set_scene_backdrop(asset_id=a.id)
+        result = await scene.assets.set_scene_backdrop(clear=True)
+        assert result is None
+        assert scene.assets.backdrop is None
+        assert scene.assets.backdrop_enabled is True
+
+    async def test_clear_ignores_asset_id(self, scene):
+        a = await scene.assets.add_asset(b"a", "png", "image/png")
+        b = await scene.assets.add_asset(b"b", "png", "image/png")
+        await scene.assets.set_scene_backdrop(asset_id=a.id)
+        await scene.assets.set_scene_backdrop(asset_id=b.id, clear=True)
+        assert scene.assets.backdrop is None
+
     async def test_backdrop_in_dict_and_scene_info(self, scene):
         a = await scene.assets.add_asset(b"x", "png", "image/png")
         await scene.assets.set_scene_backdrop(asset_id=a.id, enabled=True)

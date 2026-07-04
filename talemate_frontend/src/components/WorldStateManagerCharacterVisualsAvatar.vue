@@ -105,7 +105,7 @@
                         <v-list-item-title>View Image</v-list-item-title>
                     </v-list-item>
                     <v-list-item
-                        @click="openInVisualLibrary(asset.id)"
+                        @click="openInVisualLibrary(asset.id, 'reference')"
                     >
                         <template v-slot:prepend>
                             <v-icon>mdi-image-multiple-outline</v-icon>
@@ -448,7 +448,7 @@ export default {
         AssetView,
         EditableList,
     },
-    inject: ['openVisualLibraryWithAsset', 'openAgentSettings', 'addToVisualLibraryPendingQueue'],
+    inject: ['openAgentSettings'],
     data() {
         return {
             generateDialogOpen: false,
@@ -641,30 +641,6 @@ export default {
                 character_name: this.character.name,
                 avatar_type: 'current',
             }));
-        },
-        
-        openInVisualLibrary(assetId) {
-            if (!assetId) return;
-            
-            // Use injected method from TalemateApp, open with reference tab focused for tag editing
-            if (this.openVisualLibraryWithAsset && typeof this.openVisualLibraryWithAsset === 'function') {
-                this.openVisualLibraryWithAsset(assetId, 'reference');
-            } else {
-                console.warn('openVisualLibraryWithAsset not available');
-            }
-        },
-        
-        confirmDelete(assetId) {
-            if (!assetId) return;
-            this.$refs.deleteConfirm.initiateAction({ id: assetId });
-        },
-        
-        onDeleteConfirmed(params) {
-            const assetId = params && params.id ? params.id : null;
-            if (!assetId) return;
-            this.deleteAsset(assetId);
-            // Backend cleanup will emit scene_asset_character_avatar message if this was a default avatar,
-            // which will trigger character list refresh in WorldStateManagerMenuCharacterTools
         },
         
         checkReferenceAssets() {

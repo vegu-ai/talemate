@@ -1667,7 +1667,10 @@ class SceneAssets:
         return asset_id
 
     async def set_scene_backdrop(
-        self, asset_id: str | None = None, enabled: bool | None = None
+        self,
+        asset_id: str | None = None,
+        enabled: bool | None = None,
+        clear: bool = False,
     ) -> str | None:
         """
         Updates the scene backdrop.
@@ -1675,9 +1678,13 @@ class SceneAssets:
         Either argument may be omitted to leave that aspect untouched:
         asset_id selects which asset renders behind the scene text,
         enabled toggles whether it renders at all.
+
+        clear removes the backdrop asset entirely (asset_id is ignored).
         """
-        log.debug("set_scene_backdrop", asset_id=asset_id, enabled=enabled)
-        if asset_id is not None:
+        log.debug("set_scene_backdrop", asset_id=asset_id, enabled=enabled, clear=clear)
+        if clear:
+            self.backdrop = None
+        elif asset_id is not None:
             if not self.validate_asset_id(asset_id):
                 log.error("Invalid asset id", asset_id=asset_id)
                 return None

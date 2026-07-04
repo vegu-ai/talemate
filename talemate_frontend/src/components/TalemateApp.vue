@@ -84,6 +84,12 @@
       <VisualLibrary ref="visualLibrary" :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
 
 
+      <v-tooltip text="Help" location="top">
+        <template v-slot:activator="{ props }">
+          <v-app-bar-nav-icon @click="toggleNavigation('help')" v-bind="props"><v-icon>mdi-help-circle-outline</v-icon></v-app-bar-nav-icon>
+        </template>
+      </v-tooltip>
+
       <v-tooltip text="Debug Tools" location="top">
         <template v-slot:activator="{ props }">
           <v-app-bar-nav-icon @click="toggleNavigation('debug')" v-bind="props"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
@@ -197,6 +203,11 @@
       <!-- director console navigation drawer -->
       <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
         <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :app-ready="ready" :open="directorConsoleDrawer" />
+      </v-navigation-drawer>
+
+      <!-- help chat navigation drawer -->
+      <v-navigation-drawer v-model="helpDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
+        <HelpChat v-if="helpDrawer && connected" :scene-active="sceneActive" :agent-status="agentStatus" :ux-snapshot="buildUxSnapshot" />
       </v-navigation-drawer>
 
       <!-- debug tools navigation drawer -->
@@ -361,6 +372,22 @@
 
     <AppConfig ref="appConfig" :agentStatus="agentStatus" :sceneActive="sceneActive" :clientStatus="clientStatus" @appearance-preview="onAppearancePreview" @appearance-preview-clear="onAppearancePreviewClear" />
     <AgentActionOverrides ref="agentActionOverrides" :app-config="appConfig" :agent-status="agentStatus" />
+
+    <v-dialog v-model="worldEditorUnavailable" max-width="420">
+      <v-card>
+        <v-card-title>
+          <v-icon start color="warning">mdi-earth-box-off</v-icon>
+          World editor unavailable
+        </v-card-title>
+        <v-card-text>
+          The world editor requires a loaded scene. Load or create a scene first.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" variant="text" @click="worldEditorUnavailable = false">OK</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
@@ -404,6 +431,7 @@ import IntroView from './IntroView.vue';
 import NodeEditor from './NodeEditor.vue';
 import DirectorConsole from './DirectorConsole.vue';
 import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
+import HelpChat from './HelpChat.vue';
 import PackageManager from './PackageManager.vue';
 import PackageManagerMenu from './PackageManagerMenu.vue';
 import Templates from './Templates.vue';
@@ -443,6 +471,7 @@ export default {
     GenerationErrorDialog,
     VersionMismatchAlert,
     DirectorConsoleWidget,
+    HelpChat,
     PackageManager,
     PackageManagerMenu,
     VoiceLibrary,
@@ -542,6 +571,8 @@ export default {
       sceneDrawer: true,
       debugDrawer: false,
       directorConsoleDrawer: false,
+      helpDrawer: false,
+      worldEditorUnavailable: false,
       websocket: null,
       inputDisabled: false,
       waitingForInput: false,
@@ -871,6 +902,8 @@ export default {
       },
       callAgentTool: (actionName, args) => this.callAgentTool(actionName, args),
       openDirectorConsole: () => this.toggleNavigation('directorConsole', true),
+      helpChatOpen: () => this.helpDrawer,
+      openHelpChat: () => this.toggleNavigation('help', true),
       navigateToLLMTemplates: () => {
         this.tab = 'prompts';
         this.$nextTick(() => {
@@ -1409,6 +1442,26 @@ export default {
         this.debugDrawer = open || !this.debugDrawer;
       else if (navigation == "directorConsole")
         this.directorConsoleDrawer = open || !this.directorConsoleDrawer;
+      else if (navigation == "help")
+        this.helpDrawer = open || !this.helpDrawer;
+    },
+    buildUxSnapshot() {
+      // sent with help chat messages so the help agent knows what the user is looking at
+      return {
+        active_tab: this.tab,
+        open_drawers: [
+          ...(this.sceneDrawer ? ['scene'] : []),
+          ...(this.drawer ? ['clients_and_agents'] : []),
+          ...(this.debugDrawer ? ['debug_tools'] : []),
+          ...(this.directorConsoleDrawer ? ['director_console'] : []),
+        ],
+        scene_active: this.sceneActive,
+        scene_environment: this.sceneActive ? this.scene?.environment : null,
+        client_settings_modal: this.$refs.aiClient?.uxSnapshot() || null,
+        agent_settings_modal: this.$refs.aiAgent?.uxSnapshot() || null,
+        app_ready: this.ready,
+        waiting_for_input: this.waitingForInput,
+      };
     },
     openDirectorWithChat() {
       this.toggleNavigation('directorConsole', true);
@@ -1475,8 +1528,13 @@ export default {
     },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
       // If trying to open templates, redirect to templates tab instead
+      // (available without a scene)
       if (tab === 'templates') {
         this.onNavigateTemplate(sub1);
+        return;
+      }
+      if (!this.sceneActive) {
+        this.worldEditorUnavailable = true;
         return;
       }
       this.tab = 'world';
@@ -1803,5 +1861,14 @@ export default {
 .scene-controls--locked {
   pointer-events: none;
   opacity: 0.6;
+}
+</style>
+
+<style>
+/* dialogs opt into this while the help chat drawer is open - shifts them
+   left so the drawer stays visible and usable next to them */
+.v-overlay__content.yield-to-help-drawer {
+  margin-right: auto;
+  margin-left: 24px;
 }
 </style>

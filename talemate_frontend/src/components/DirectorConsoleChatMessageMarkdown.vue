@@ -1,6 +1,6 @@
 <template>
-    <div class="markdown-body" v-html="safeHtml"></div>
-    
+    <div class="markdown-body" v-html="safeHtml" @click="onLinkClick"></div>
+
 </template>
 
 <script>
@@ -15,6 +15,11 @@ export default {
             default: '',
         },
     },
+    inject: {
+        openAgentSettings: { default: null },
+        openWorldStateManager: { default: null },
+        openDirectorConsole: { default: null },
+    },
     computed: {
         safeHtml() {
             try {
@@ -23,6 +28,9 @@ export default {
                 html = this.processDiffCodeBlocks(html);
                 // Process scene code blocks
                 html = this.processSceneCodeBlocks(html);
+                // Open links in a new tab so they don't navigate the app away
+                // (talemate:// links are handled in-app by onLinkClick instead)
+                html = html.replace(/<a href="(?!talemate:\/\/)/g, '<a target="_blank" rel="noopener" href="');
                 return html;
             } catch (e) {
                 return this.text || '';
@@ -30,6 +38,29 @@ export default {
         }
     },
     methods: {
+        onLinkClick(event) {
+            const anchor = event.target.closest('a');
+            if (!anchor) return;
+            const href = anchor.getAttribute('href') || '';
+            if (!href.startsWith('talemate://')) return;
+            event.preventDefault();
+            const [kind, ...parts] = href
+                .slice('talemate://'.length)
+                .split('/')
+                .filter(Boolean)
+                .map(decodeURIComponent);
+            try {
+                if (kind === 'agent-settings' && this.openAgentSettings) {
+                    this.openAgentSettings(parts[0], parts[1]);
+                } else if (kind === 'world-editor' && this.openWorldStateManager) {
+                    this.openWorldStateManager(...parts);
+                } else if (kind === 'director-console' && this.openDirectorConsole) {
+                    this.openDirectorConsole();
+                }
+            } catch (err) {
+                console.warn('talemate:// link navigation failed', href, err);
+            }
+        },
         processDiffCodeBlocks(html) {
             // Find code blocks with language="diff"
             return html.replace(
@@ -111,6 +142,29 @@ export default {
     background-color: rgba(0,0,0, 1);
     color: rgba(var(--v-theme-mutedheader), 1);
     border-left: 4px solid rgba(var(--v-theme-director), 0.6);
+}
+
+/* Table styling */
+.markdown-body :deep(table) {
+    border-collapse: collapse;
+    margin: 10px 0;
+    width: 100%;
+}
+
+.markdown-body :deep(th),
+.markdown-body :deep(td) {
+    border: 1px solid rgba(var(--v-border-color), 0.4);
+    padding: 4px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.markdown-body :deep(th) {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.markdown-body :deep(tbody tr:nth-child(even)) {
+    background-color: rgba(0, 0, 0, 0.12);
 }
 
 /* Diff markers styling */

@@ -3,6 +3,11 @@
     :model-value="localDialog"
     @update:model-value="onDialogModelUpdate"
     max-width="1200px"
+    :scrim="!helpChatIsOpen"
+    :retain-focus="!helpChatIsOpen"
+    :persistent="helpChatIsOpen"
+    :no-click-animation="helpChatIsOpen"
+    :content-class="helpChatIsOpen ? 'yield-to-help-drawer' : ''"
   >
     <v-card>
       <v-card-title>
@@ -35,9 +40,17 @@
               </v-btn>
             </v-btn-toggle>
           </v-col>
-          <v-col cols="4" class="text-right checkbox-right">
+          <v-col cols="4" class="text-right checkbox-right align-center">
+            <v-btn icon variant="text" size="small" color="muted" @click="openHelpChat()">
+              <v-icon>mdi-help-circle-outline</v-icon>
+              <v-tooltip activator="parent" location="top">Ask the help agent about these settings</v-tooltip>
+            </v-btn>
             <v-checkbox :label="enabledLabel()" hide-details density="compact" color="green" v-model="agent.enabled"
               v-if="agent.data.has_toggle && mode === 'global'" @update:modelValue="save(false)"></v-checkbox>
+            <v-btn icon variant="text" size="small" class="ml-1" @click="onDialogModelUpdate(false)">
+              <v-icon>mdi-close</v-icon>
+              <v-tooltip activator="parent" location="top">Close</v-tooltip>
+            </v-btn>
           </v-col>
         </v-row>
       </v-card-title>
@@ -185,7 +198,7 @@ export default {
     RequestInput,
     TTSOpenAICompatibleBackends,
   },
-  inject: ['state', 'getWebsocket', 'callAgentTool'],
+  inject: ['state', 'getWebsocket', 'callAgentTool', 'helpChatOpen', 'openHelpChat'],
   emits: ['save', 'update:dialog'],
   data() {
     return {
@@ -208,6 +221,9 @@ export default {
     };
   },
   computed: {
+    helpChatIsOpen() {
+      return this.helpChatOpen();
+    },
     tabs() {
       // Always start with the General (_config) tab in Global mode. In Scene
       // mode, only show it when at least one non-container action (the

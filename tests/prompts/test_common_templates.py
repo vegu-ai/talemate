@@ -129,6 +129,7 @@ class TestCommonTemplatesDocumentation:
             "building-blocks.jinja2",
             "character-context.jinja2",
             "character-guidance.jinja2",
+            "chat-title.jinja2",
             "content-classification.jinja2",
             "context_id_items.jinja2",
             "dynamic-instructions.jinja2",

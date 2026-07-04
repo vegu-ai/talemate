@@ -206,6 +206,17 @@ export default {
         };
     },
     methods: {
+        uxSnapshot() {
+            // what the open agent modal shows, for the help agent's UX snapshot
+            if(!this.state.dialog) return null;
+            const tab = this.$refs.modal?.tab || null;
+            return {
+                agent: this.state.currentAgent?.name || null,
+                agent_label: this.state.currentAgent?.label || null,
+                tab: tab === '_config' ? 'general' : tab,
+            };
+        },
+
         sceneOverrideCount(agent) {
             return countSceneOverrides(agent?.data?.scene_overrides);
         },

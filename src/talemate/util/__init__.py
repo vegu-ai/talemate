@@ -40,6 +40,36 @@ def count_tokens(source):
     return t
 
 
+def reverse_trim_history(
+    history: list, budget_tokens: int, count_fn: Callable | None = None
+) -> list:
+    """
+    Reverse-trim history to fit within a token budget: walk from the end,
+    include items until the budget is exceeded, return them in chronological
+    order. The most recent item is always kept, even when it alone exceeds
+    the budget.
+
+    `count_fn` computes the token count per item; defaults to
+    `count_tokens(str(item))`.
+    """
+    if not history:
+        return []
+    if budget_tokens <= 0:
+        return history[-1:]
+    if count_fn is None:
+        count_fn = lambda item: count_tokens(str(item))  # noqa: E731
+
+    selected: list = []
+    total = 0
+    for item in reversed(history):
+        tokens = count_fn(item)
+        if total + tokens > budget_tokens and selected:
+            break
+        selected.insert(0, item)
+        total += tokens
+    return selected
+
+
 def limit_tokens(text: str, limit: int) -> str:
     """
     separate by linebreaks and pop off chunks until the total number of tokens is less than or equal to the limit.

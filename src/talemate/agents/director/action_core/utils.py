@@ -319,43 +319,25 @@ def reverse_trim_history(
     budget_tokens: int,
 ) -> list[Any]:
     """
-    Reverse-trim history to fit within a token budget.
-    Walk from the end, include items until token count exceeds budget.
-    Returns items in chronological order.
+    Reverse-trim history to fit within a token budget, counting director
+    message types (action results, user interactions) by their real payload.
     """
+
+    def _count_item_tokens(message: Any) -> int:
+        if message.type == "action_result":
+            name_text = message.name or ""
+            instr_text = message.instructions or ""
+            try:
+                result_text = json.dumps(message.result, default=str)
+            except Exception:
+                result_text = str(message.result)
+            return util.count_tokens("\n".join([name_text, instr_text, result_text]))
+        elif message.type == "user_interaction":
+            return util.count_tokens(message.user_input or "")
+        return util.count_tokens(message.message or "")
+
     try:
-        if not history or budget_tokens <= 0:
-            return []
-
-        def _count_item_tokens(message: Any) -> int:
-            if message.type == "action_result":
-                name_text = message.name or ""
-                instr_text = message.instructions or ""
-                try:
-                    result_text = json.dumps(message.result, default=str)
-                except Exception:
-                    result_text = str(message.result)
-                return util.count_tokens(
-                    "\n".join([name_text, instr_text, result_text])
-                )
-            elif message.type == "user_interaction":
-                return util.count_tokens(message.user_input or "")
-            return util.count_tokens(message.message or "")
-
-        selected_indices: list[int] = []
-        total_tokens = 0
-
-        for i in range(len(history) - 1, -1, -1):
-            t = _count_item_tokens(history[i])
-            if total_tokens + t <= budget_tokens:
-                selected_indices.append(i)
-                total_tokens += t
-            else:
-                break
-
-        if not selected_indices:
-            return []
-        return [history[i] for i in reversed(selected_indices)]
+        return util.reverse_trim_history(history, budget_tokens, _count_item_tokens)
     except Exception as e:
         log.error("action_core.reverse_trim_history.error", error=e)
         return [history[-1]] if history else []

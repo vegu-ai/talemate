@@ -8,6 +8,7 @@
 talemate_env
 embedded_python/
 embedded_node/
+chats/
 chroma
 config.yaml
 secrets/

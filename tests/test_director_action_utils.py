@@ -258,10 +258,12 @@ class TestReverseTrimHistory:
     def test_empty_history_returns_empty(self):
         assert reverse_trim_history([], 1000) == []
 
-    def test_zero_or_negative_budget_returns_empty(self):
+    def test_zero_or_negative_budget_keeps_most_recent(self):
+        # the most recent message is always kept so the prompt never loses
+        # the message it is responding to
         history = [_text("a"), _text("b")]
-        assert reverse_trim_history(history, 0) == []
-        assert reverse_trim_history(history, -10) == []
+        assert reverse_trim_history(history, 0) == [history[-1]]
+        assert reverse_trim_history(history, -10) == [history[-1]]
 
     def test_keeps_last_messages_within_budget(self):
         # token counts vary by tokenizer; use a generous budget so all 3 fit

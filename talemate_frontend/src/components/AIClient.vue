@@ -257,14 +257,15 @@
       </v-list>
     </div>
 
-    <ClientModal 
-      :dialog="state.dialog" 
-      :formTitle="state.formTitle" 
+    <ClientModal
+      ref="modal"
+      :dialog="state.dialog"
+      :formTitle="state.formTitle"
       :immutable-config="immutableConfig"
       :available-presets="availablePresets"
       :app-config="appConfig"
-      @save="saveClient" 
-      @error="propagateError" 
+      @save="saveClient"
+      @error="propagateError"
       @update:dialog="updateDialog">
     </ClientModal>
     <v-alert type="warning" variant="tonal" v-if="state.clients.length === 0">You have no LLM clients configured. Add one.</v-alert>
@@ -372,6 +373,17 @@ export default {
     'error',
   ],
   methods: {
+
+    uxSnapshot() {
+      // what the open client modal shows, for the help agent's UX snapshot
+      if(!this.state.dialog) return null;
+      const modal = this.$refs.modal;
+      return {
+        client_name: modal?.client?.name || this.state.currentClient?.name || null,
+        client_type: modal?.client?.type || this.state.currentClient?.type || null,
+        tab: modal?.tab || null,
+      };
+    },
 
     callErrorAction(client, action) {
       if(action.action_name === 'openAppConfig') {

@@ -71,6 +71,11 @@ export default createVuetify({
           dchat_msg_loading: colors.deepOrange.lighten1,
           dchat_msg_compaction: colors.grey.darken2,
           dchat_msg_code: colors.deepOrange.lighten4,
+
+          // help chat
+          hchat_msg_help: colors.blueGrey.lighten2,
+          hchat_msg_user: colors.deepPurple.lighten3,
+          hchat_msg_doc_result: colors.blue.lighten2,
           
           // html colors
           cornflowerblue: "#6495ED",

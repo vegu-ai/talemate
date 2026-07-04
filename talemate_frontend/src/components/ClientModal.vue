@@ -1,10 +1,22 @@
 <template>
-  <v-dialog v-model="localDialog" max-width="1080px">
+  <v-dialog
+    v-model="localDialog"
+    max-width="1080px"
+    :scrim="!helpChatIsOpen"
+    :retain-focus="!helpChatIsOpen"
+    :persistent="helpChatIsOpen"
+    :no-click-animation="helpChatIsOpen"
+    :content-class="helpChatIsOpen ? 'yield-to-help-drawer' : ''"
+  >
     <v-card>
       <v-card-title class="d-flex align-center">
         <v-icon class="mr-2">mdi-network-outline</v-icon>
         <span class="headline">{{ title() }}</span>
         <v-spacer></v-spacer>
+        <v-btn icon variant="text" size="small" color="muted" class="mr-2" @click="openHelpChat()">
+          <v-icon>mdi-help-circle-outline</v-icon>
+          <v-tooltip activator="parent" location="top">Ask the help agent about these settings</v-tooltip>
+        </v-btn>
         <v-switch
           v-model="simpleView"
           label="Simple View"
@@ -383,6 +395,8 @@ export default {
     'getWebsocket',
     'registerMessageHandler',
     'navigateToLLMTemplates',
+    'helpChatOpen',
+    'openHelpChat',
   ],
   data() {
     return {
@@ -453,6 +467,9 @@ export default {
     };
   },
   computed: {
+    helpChatIsOpen() {
+      return this.helpChatOpen();
+    },
     availableTabs() {
       const tabs = Object.values(this.tabs).filter(tab => !tab.condition || tab.condition());
       const extraFields = this.extraFieldGroups.map(group => {

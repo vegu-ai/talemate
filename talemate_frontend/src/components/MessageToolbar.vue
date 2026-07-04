@@ -155,8 +155,8 @@ export default {
       type: Boolean,
       default: false,
     },
-    // offer the illustration asset menu (used in "background" display mode,
-    // where no inline image is rendered to click on)
+    // offer the illustration asset menu (used when the message's image is
+    // the active scene backdrop, where no inline image is rendered to click on)
     showIllustrationMenu: {
       type: Boolean,
       default: false,

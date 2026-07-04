@@ -28,6 +28,7 @@
                     <th class="text-left" style="padding: 8px 12px;">Visual Type</th>
                     <th class="text-left" style="padding: 8px 12px;">Render Cadence</th>
                     <th class="text-left" style="padding: 8px 12px;">Display Size</th>
+                    <th class="text-left" style="padding: 8px 12px;">Auto Backdrop</th>
                 </tr>
             </thead>
             <tbody>
@@ -58,6 +59,7 @@
                             style="max-width: 200px;"
                         ></v-select>
                     </td>
+                    <td></td>
                 </tr>
                 <tr>
                     <td style="padding: 4px 12px;">
@@ -86,6 +88,7 @@
                             style="max-width: 200px;"
                         ></v-select>
                     </td>
+                    <td></td>
                 </tr>
                 <tr>
                     <td style="padding: 4px 12px;">
@@ -107,12 +110,20 @@
                     <td style="padding: 4px 12px;">
                         <v-select
                             v-model="config.scene_illustration.size"
-                            :items="sceneIllustrationSizeOptions"
+                            :items="sizeOptions"
                             density="compact"
                             variant="outlined"
                             hide-details
                             style="max-width: 200px;"
                         ></v-select>
+                    </td>
+                    <td style="padding: 4px 12px;">
+                        <v-checkbox
+                            v-model="config.scene_illustration.auto_backdrop"
+                            color="primary"
+                            density="compact"
+                            hide-details
+                        ></v-checkbox>
                     </td>
                 </tr>
                 <tr>
@@ -135,22 +146,30 @@
                     <td style="padding: 4px 12px;">
                         <v-select
                             v-model="config.scene_background.size"
-                            :items="sceneIllustrationSizeOptions"
+                            :items="sizeOptions"
                             density="compact"
                             variant="outlined"
                             hide-details
                             style="max-width: 200px;"
                         ></v-select>
                     </td>
+                    <td style="padding: 4px 12px;">
+                        <v-checkbox
+                            v-model="config.scene_background.auto_backdrop"
+                            color="primary"
+                            density="compact"
+                            hide-details
+                        ></v-checkbox>
+                    </td>
                 </tr>
             </tbody>
         </v-table>
 
-        <v-row v-for="kind in backgroundConfiguredKinds" :key="kind" class="mt-3">
+        <v-row class="mt-3">
             <v-col cols="12" md="6">
                 <v-slider
-                    v-model="config[kind].background_panel_opacity"
-                    :label="`Message panel opacity (${kindLabels[kind]})`"
+                    v-model="backdropPanelOpacity"
+                    label="Backdrop message panel opacity"
                     color="primary"
                     :min="0"
                     :max="1"
@@ -162,8 +181,8 @@
             </v-col>
             <v-col cols="12" md="6">
                 <v-checkbox
-                    v-model="config[kind].background_text_shadow"
-                    :label="`Message text shadow (${kindLabels[kind]})`"
+                    v-model="backdropTextShadow"
+                    label="Backdrop message text shadow"
                     color="primary"
                     density="compact"
                     hide-details
@@ -178,7 +197,8 @@
                     <strong>Never:</strong> Never show visual inline with messages<br>
                     <strong>On change:</strong> Only show when visual changes (portraits: tracked per character)<br><br>
                     <strong>Scene Illustration</strong> covers images of the current moment ("Visualize Moment"), <strong>Scene Background</strong> covers purely environmental images ("Visualize Scene (Background)").<br>
-                    <strong>Sizes:</strong> Big = full width above message, Small/Medium = inline with text, Background = fills behind the scene text. When both types use Background, the most recent image is the active backdrop.
+                    <strong>Sizes:</strong> Big = full width above message, Small/Medium = inline with text.<br>
+                    <strong>Auto Backdrop:</strong> Newly generated images of this type automatically become the scene backdrop (rendered behind the scene text). Any illustration can also be set as the backdrop manually via its image menu, and the scene-tools Immersive chip toggles the backdrop on and off.
                 </div>
             </v-card-text>
         </v-card>
@@ -186,8 +206,6 @@
 </template>
 
 <script>
-import { BACKDROP_ASSET_KINDS } from '@/constants/visual';
-
 function defaultAssetConfig() {
     return {
         avatar: {
@@ -201,14 +219,12 @@ function defaultAssetConfig() {
         scene_illustration: {
             cadence: 'always',
             size: 'medium',
-            background_panel_opacity: 0.8,
-            background_text_shadow: true,
+            auto_backdrop: false,
         },
         scene_background: {
             cadence: 'always',
-            size: 'medium',
-            background_panel_opacity: 0.8,
-            background_text_shadow: true,
+            size: 'big',
+            auto_backdrop: false,
         },
     };
 }
@@ -223,11 +239,9 @@ export default {
     data() {
         return {
             autoAttachAssets: true,
+            backdropPanelOpacity: 0.8,
+            backdropTextShadow: true,
             config: defaultAssetConfig(),
-            kindLabels: {
-                scene_illustration: 'Scene Illustration',
-                scene_background: 'Scene Background',
-            },
             cadenceOptions: [
                 { title: 'Always', value: 'always' },
                 { title: 'Never', value: 'never' },
@@ -244,19 +258,6 @@ export default {
             ],
             isHydrating: false, // Flag to suppress changed events during initialization
         }
-    },
-    computed: {
-        // "background" only makes sense for scene illustrations/backgrounds
-        sceneIllustrationSizeOptions() {
-            return [...this.sizeOptions, { title: 'Background', value: 'background' }];
-        },
-        // kinds currently set to the Background display size — each gets its
-        // own panel-opacity / text-shadow controls
-        backgroundConfiguredKinds() {
-            return BACKDROP_ASSET_KINDS.filter(
-                kind => this.config[kind].size === 'background'
-            );
-        },
     },
     watch: {
         immutableConfig: {
@@ -275,6 +276,10 @@ export default {
                 
                 // Load auto_attach_assets setting
                 this.autoAttachAssets = sceneConfig.auto_attach_assets !== undefined ? sceneConfig.auto_attach_assets : true;
+
+                // Backdrop legibility settings
+                this.backdropPanelOpacity = sceneConfig.backdrop_panel_opacity ?? 0.8;
+                this.backdropTextShadow = sceneConfig.backdrop_text_shadow ?? true;
                 
                 // Overlay stored values onto the defaults (?? so 0 / false
                 // survive)
@@ -312,6 +317,20 @@ export default {
                 }
             },
         },
+        backdropPanelOpacity: {
+            handler: function(newVal, oldVal) {
+                if (oldVal !== undefined && !this.isHydrating) {
+                    this.$emit('changed');
+                }
+            },
+        },
+        backdropTextShadow: {
+            handler: function(newVal, oldVal) {
+                if (oldVal !== undefined && !this.isHydrating) {
+                    this.$emit('changed');
+                }
+            },
+        },
     },
     methods: {
         // Expose config for parent component
@@ -321,6 +340,13 @@ export default {
         // Expose auto_attach_assets for parent component
         get_auto_attach_assets() {
             return this.autoAttachAssets;
+        },
+        // Expose shared backdrop legibility settings for parent component
+        get_backdrop_settings() {
+            return {
+                backdrop_panel_opacity: this.backdropPanelOpacity,
+                backdrop_text_shadow: this.backdropTextShadow,
+            };
         },
     },
 }

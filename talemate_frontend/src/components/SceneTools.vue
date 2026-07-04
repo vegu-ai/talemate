@@ -228,7 +228,6 @@ import SceneToolsSave from './SceneToolsSave.vue';
 import SceneToolsTime from './SceneToolsTime.vue';
 import RequestInput from './RequestInput.vue';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
-import { BACKDROP_ASSET_KINDS } from '@/constants/visual';
 
 export default {
 
@@ -260,12 +259,9 @@ export default {
         agentStatus: Object,
         scene: Object,
         visualAgentReady: Boolean,
-        // scene has a message-attached background-type asset the
-        // "Immersive" chip could promote to a backdrop
-        sceneBackdropCandidate: Boolean,
-        // a backdrop is currently rendering (any kind) — keeps the chip
-        // reachable so the mode can be toggled off
-        sceneBackdropActive: Boolean,
+        // most recent message-attached background asset the "Immersive"
+        // chip promotes when the scene has no backdrop set yet
+        sceneBackdropCandidate: String,
         audioPlayedForMessageId: [Number, String],
     },
     computed: {
@@ -301,9 +297,12 @@ export default {
             return ttsAgent && ttsAgent.available;
         },
 
+        sceneBackdropAssetId() {
+            return this.scene?.data?.assets?.backdrop || null;
+        },
+
         immersiveActive() {
-            const messageAssets = this.appConfig()?.appearance?.scene?.message_assets;
-            return BACKDROP_ASSET_KINDS.some(kind => messageAssets?.[kind]?.size === 'background');
+            return !!(this.sceneBackdropAssetId && this.scene?.data?.assets?.backdrop_enabled);
         },
 
         visibleQuickSettings() {
@@ -333,12 +332,8 @@ export default {
             quickSettings: [
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
-                {"value": "toggleImmersive", "title": "Immersive", "icon": "mdi-image-area", "description": "Render the most recent scene background image as a backdrop behind the scene", "condition": () => { return this.sceneBackdropCandidate || this.sceneBackdropActive }, "status": () => { return this.immersiveActive }},
+                {"value": "toggleImmersive", "title": "Immersive", "icon": "mdi-image-area", "description": "Render the scene backdrop image behind the scene", "condition": () => { return !!(this.sceneBackdropAssetId || this.sceneBackdropCandidate) }, "status": () => { return this.immersiveActive }},
             ],
-            // per-kind inline sizes to restore when Immersive is toggled off
-            immersiveInlineSizes: {},
-            // kinds to flip back to background when toggled on again
-            immersiveKinds: ['scene_background'],
         }
     },
     inject: [
@@ -348,7 +343,6 @@ export default {
         'isWaitingForInput',
         'creativeEditor',
         'appConfig',
-        'setMessageAssetDisplaySizes',
         'getTrackedCharacterState',
         'getTrackedWorldState',
         'getPlayerCharacterName',
@@ -386,27 +380,18 @@ export default {
         },
 
         toggleImmersive() {
-            const messageAssets = this.appConfig()?.appearance?.scene?.message_assets || {};
-            const sizes = {};
-            if (this.immersiveActive) {
-                // restore every kind currently in background mode to its
-                // remembered inline size
-                for (const kind of BACKDROP_ASSET_KINDS) {
-                    if (messageAssets[kind]?.size === 'background') {
-                        sizes[kind] = this.immersiveInlineSizes[kind] || 'medium';
-                    }
-                }
-                this.immersiveKinds = Object.keys(sizes);
+            // the scene owns the backdrop: toggle rendering when one is set,
+            // otherwise promote the most recent scene background image
+            const message = { type: 'scene_assets', action: 'set_scene_backdrop' };
+            if (this.sceneBackdropAssetId) {
+                message.enabled = !this.immersiveActive;
+            } else if (this.sceneBackdropCandidate) {
+                message.asset_id = this.sceneBackdropCandidate;
+                message.enabled = true;
             } else {
-                for (const kind of this.immersiveKinds) {
-                    const currentSize = messageAssets[kind]?.size;
-                    if (currentSize && currentSize !== 'background') {
-                        this.immersiveInlineSizes[kind] = currentSize;
-                    }
-                    sizes[kind] = 'background';
-                }
+                return;
             }
-            this.setMessageAssetDisplaySizes(sizes);
+            this.getWebsocket().send(JSON.stringify(message));
         },
 
         openWorldStateManager(tab, sub1, sub2, sub3) {

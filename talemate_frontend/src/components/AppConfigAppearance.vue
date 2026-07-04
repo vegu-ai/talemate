@@ -67,6 +67,13 @@ export default {
                 }
                 config.scene.auto_attach_assets = this.$refs.assets.get_auto_attach_assets();
             }
+            // Include shared backdrop legibility settings from Assets component
+            if(this.$refs.assets && this.$refs.assets.get_backdrop_settings) {
+                if(!config.scene) {
+                    config.scene = {};
+                }
+                Object.assign(config.scene, this.$refs.assets.get_backdrop_settings());
+            }
             return config;
         },
         onChildChanged() {

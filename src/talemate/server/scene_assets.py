@@ -46,6 +46,11 @@ class SetSceneCoverImagePayload(pydantic.BaseModel):
     asset_id: str
 
 
+class SetSceneBackdropPayload(pydantic.BaseModel):
+    asset_id: str | None = None
+    enabled: bool | None = None
+
+
 class SetCharacterCoverImagePayload(pydantic.BaseModel):
     asset_id: str
     character_name: str
@@ -218,6 +223,30 @@ class SceneAssetsPlugin(Plugin):
         except Exception as e:
             log.error("set_scene_cover_image_failed", error=e)
             await self.signal_operation_failed(f"Failed to set scene cover image: {e}")
+
+    async def handle_set_scene_backdrop(self, data: dict):
+        payload = SetSceneBackdropPayload(**data)
+
+        try:
+            if payload.asset_id is not None and not self.scene.assets.validate_asset_id(
+                payload.asset_id
+            ):
+                await self.signal_operation_failed("Invalid asset_id")
+                return
+
+            await self.scene.assets.set_scene_backdrop(
+                asset_id=payload.asset_id, enabled=payload.enabled
+            )
+
+            # Request the asset for frontend
+            if payload.asset_id:
+                self.websocket_handler.request_scene_assets([payload.asset_id])
+
+            await self.scene.attempt_auto_save()
+            await self.signal_operation_done()
+        except Exception as e:
+            log.error("set_scene_backdrop_failed", error=e)
+            await self.signal_operation_failed(f"Failed to set scene backdrop: {e}")
 
     async def handle_set_character_cover_image(self, data: dict):
         payload = SetCharacterCoverImagePayload(**data)

@@ -22,11 +22,6 @@ export const VIS_TYPE_OPTIONS = [
   VIS_TYPE.UNSPECIFIED,
 ];
 
-// message_assets appearance-config kinds whose "background" display size
-// renders the asset as the scene backdrop (keys in
-// config.appearance.scene.message_assets, see config/schema.py)
-export const BACKDROP_ASSET_KINDS = ['scene_illustration', 'scene_background'];
-
 // Must match FORMAT_TYPE in src/talemate/agents/visual/schema.py
 export const FORMAT_TYPE = Object.freeze({
   LANDSCAPE: 'LANDSCAPE',

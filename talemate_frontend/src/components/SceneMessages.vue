@@ -115,6 +115,16 @@
                     Choose from existing scene illustrations
                 </v-list-item-subtitle>
             </v-list-item>
+            <v-list-item
+                v-if="assetMenu.context.asset_type === 'scene_illustration'"
+                prepend-icon="mdi-image-area"
+                @click="handleSetSceneBackdrop"
+            >
+                <v-list-item-title>Set as scene backdrop</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">
+                    Render this image behind the scene text
+                </v-list-item-subtitle>
+            </v-list-item>
             <v-divider v-if="assetMenu.context.asset_type === 'card'"></v-divider>
             <v-list-item
                 v-if="assetMenu.context.asset_type === 'card'"
@@ -599,7 +609,7 @@ export default {
             // cleared on the editor `operation_done` envelope, which has no id)
             revisionPendingId: null,
             // fallback image viewer for asset-menu "View Image" when the menu
-            // wasn't opened from a MessageAssetImage (background display mode);
+            // wasn't opened from a MessageAssetImage (backdrop indicator);
             // tracks the asset id so the src resolves reactively from the
             // cache (the asset may still be in flight when the dialog opens)
             assetViewShow: false,
@@ -611,31 +621,30 @@ export default {
             return this.appearanceConfig?.scene?.message_assets || null;
         },
         sceneBackdropPanelOpacity() {
-            const kind = this.sceneBackdrop?.kind || 'scene_illustration';
-            return this.messageAssetsConfig?.[kind]?.background_panel_opacity ?? 0.8;
+            return this.appearanceConfig?.scene?.backdrop_panel_opacity ?? 0.8;
         },
         sceneBackdropTextShadow() {
-            const kind = this.sceneBackdrop?.kind || 'scene_illustration';
-            return this.messageAssetsConfig?.[kind]?.background_text_shadow ?? true;
+            return this.appearanceConfig?.scene?.backdrop_text_shadow ?? true;
         },
         assetViewSrc() {
             return this.assetDataUrl(this.assetViewAssetId);
         },
         sceneBackdrop() {
-            // Most recent illustration whose config entry (scene_background
-            // or scene_illustration, resolved by vis_type) is in "background"
-            // display mode becomes the backdrop
-            for (let i = this.messages.length - 1; i >= 0; i--) {
-                const msg = this.messages[i];
-                if (msg.asset_type !== 'scene_illustration' || !msg.asset_id) {
-                    continue;
-                }
-                const kind = this.messageAssetConfigKey(msg.asset_id, msg.asset_type);
-                if (this.messageAssetsConfig?.[kind]?.size === 'background') {
-                    return { assetId: msg.asset_id, messageId: msg.id, kind };
-                }
+            // The scene object is the source of truth: assets.backdrop names
+            // the asset, assets.backdrop_enabled gates rendering. messageId
+            // (when the asset is message-attached) drives the indicator icon
+            const assets = this.scene?.data?.assets;
+            if (!assets?.backdrop || !assets.backdrop_enabled) {
+                return null;
             }
-            return null;
+            const assetId = assets.backdrop;
+            const message = this.messages.find(
+                (msg) => msg.asset_id === assetId && msg.asset_type === 'scene_illustration'
+            );
+            return {
+                assetId,
+                messageId: message?.id ?? null,
+            };
         },
         sceneBackdropAssetId() {
             return this.sceneBackdrop?.assetId || null;
@@ -643,14 +652,17 @@ export default {
         sceneBackdropSrc() {
             return this.assetDataUrl(this.sceneBackdropAssetId);
         },
-        // Whether the scene has any message-attached asset the scene-tools
-        // "Immersive" chip could promote to a backdrop (independent of the
-        // current display mode)
-        sceneBackdropCandidateAvailable() {
-            return this.messages.some(
-                (msg) => msg.asset_id && msg.asset_type === 'scene_illustration' &&
-                    this.messageAssetConfigKey(msg.asset_id, msg.asset_type) === 'scene_background'
-            );
+        // Most recent message-attached scene background the scene-tools
+        // "Immersive" chip could promote to a backdrop when none is set yet
+        sceneBackdropCandidateAssetId() {
+            for (let i = this.messages.length - 1; i >= 0; i--) {
+                const msg = this.messages[i];
+                if (msg.asset_id && msg.asset_type === 'scene_illustration' &&
+                    this.messageAssetConfigKey(msg.asset_id, msg.asset_type) === 'scene_background') {
+                    return msg.asset_id;
+                }
+            }
+            return null;
         },
         editorRevisionsEnabled() {
             return this.agentStatus && this.agentStatus.editor && this.agentStatus.editor.actions && this.agentStatus.editor.actions["revision"] && this.agentStatus.editor.actions["revision"].enabled;
@@ -724,6 +736,9 @@ export default {
             visualizeMessage: this.visualizeMessage,
             isMessageVisualizing: this.isMessageVisualizing,
             resolveMessageAssetConfigKey: this.messageAssetConfigKey,
+            // Active backdrop asset id — message components hide the inline
+            // image for the asset currently rendered as the backdrop
+            getSceneBackdropAssetId: () => this.sceneBackdropAssetId,
         }
     },
     methods: {
@@ -1347,9 +1362,9 @@ export default {
 
             // Menu opened from an inline MessageAssetImage: its callback
             // opens the component's own AssetView. Otherwise (e.g. the
-            // toolbar chip in "background" display mode) use the shared
-            // fallback viewer; assetViewSrc resolves from the cache so it
-            // fills in once the asset arrives
+            // toolbar chip when the image is the active backdrop) use the
+            // shared fallback viewer; assetViewSrc resolves from the cache
+            // so it fills in once the asset arrives
             if (this.assetMenu.context.onViewImage) {
                 this.assetMenu.context.onViewImage();
             } else if (this.assetMenu.context.asset_id) {
@@ -1375,8 +1390,26 @@ export default {
         },
 
         /**
+         * Handle "Set as scene backdrop" menu option — makes this asset the
+         * scene's backdrop (scene-persisted) and enables rendering
+         */
+        handleSetSceneBackdrop() {
+            this.assetMenu.show = false;
+            const assetId = this.assetMenu.context.asset_id;
+            if (!assetId) {
+                return;
+            }
+            this.getWebsocket().send(JSON.stringify({
+                type: 'scene_assets',
+                action: 'set_scene_backdrop',
+                asset_id: assetId,
+                enabled: true,
+            }));
+        },
+
+        /**
          * Open the shared asset menu from the backdrop indicator icon —
-         * in background mode there is no inline image to click on
+         * the active backdrop has no inline image to click on
          */
         openBackdropIndicatorMenu(event, message) {
             this.showAssetMenu(event, {
@@ -2143,11 +2176,12 @@ export default {
                 this.$emit('scene-backdrop', src);
             },
         },
-        // Drives visibility of the scene-tools "Immersive" toggle chip
-        sceneBackdropCandidateAvailable: {
+        // Gives the scene-tools "Immersive" toggle chip an asset to promote
+        // when the scene has no backdrop set yet
+        sceneBackdropCandidateAssetId: {
             immediate: true,
-            handler(available) {
-                this.$emit('scene-backdrop-candidate', available);
+            handler(assetId) {
+                this.$emit('scene-backdrop-candidate', assetId);
             },
         },
     },
@@ -2170,10 +2204,9 @@ export default {
     overflow-y: auto;
 }
 
-/* Scene illustration "background" display mode: the backdrop itself is
-   painted by TalemateApp on the scene column (.scene-backdrop-active);
-   here each message gets a translucent panel so the text stays legible
-   against an unknown image. */
+/* Scene backdrop: the backdrop itself is painted by TalemateApp on the
+   scene column (.scene-backdrop-active); here each message gets a
+   translucent panel so the text stays legible against an unknown image. */
 .scene-backdrop-active .message {
     background-color: rgba(var(--v-theme-surface), var(--scene-backdrop-panel-opacity, 0.8));
     backdrop-filter: blur(4px);

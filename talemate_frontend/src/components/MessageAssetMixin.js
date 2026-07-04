@@ -19,6 +19,8 @@ export default {
     // Provided by SceneMessages — splits scene_illustration assets into the
     // scene_background / scene_illustration config entries by vis_type
     resolveMessageAssetConfigKey: { default: null },
+    // Provided by SceneMessages — asset id of the active scene backdrop
+    getSceneBackdropAssetId: { default: null },
   },
   computed: {
     messageAssetDisplaySize() {
@@ -35,15 +37,17 @@ export default {
     isSceneIllustrationAbove() {
       return this.assetType === 'scene_illustration' && this.messageAssetDisplaySize === 'big';
     },
-    // "background" mode: the illustration is rendered as a backdrop behind the
-    // scene text (handled by SceneMessages), not inline with the message
+    // The illustration is the active scene backdrop, rendered behind the
+    // scene text (painted by TalemateApp), not inline with the message
     isSceneIllustrationBackground() {
-      return this.assetType === 'scene_illustration' && this.messageAssetDisplaySize === 'background';
+      return this.assetType === 'scene_illustration' &&
+        !!this.assetId &&
+        this.getSceneBackdropAssetId?.() === this.assetId;
     },
-    // In background mode there is no inline image to click, so the message
-    // toolbar offers a chip to reach the asset menu instead
+    // The backdrop has no inline image to click, so the message toolbar
+    // offers a chip to reach the asset menu instead
     illustrationMenuAvailable() {
-      return this.isSceneIllustrationBackground && !!this.assetId;
+      return this.isSceneIllustrationBackground;
     },
   },
   methods: {

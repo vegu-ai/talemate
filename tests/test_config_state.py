@@ -488,6 +488,9 @@ class TestSceneAppearanceMessageAssets:
     def test_defaults_include_all_entries(self):
         appearance = SceneAppearance()
         assert set(appearance.message_assets.keys()) == self.DEFAULT_KEYS
+        # scene backgrounds default to full-width display
+        assert appearance.message_assets["scene_background"].size == "big"
+        assert appearance.message_assets["scene_illustration"].size == "medium"
 
     def test_missing_entries_are_filled(self):
         # configs saved before scene_background existed omit it — the
@@ -496,11 +499,11 @@ class TestSceneAppearanceMessageAssets:
             message_assets={
                 "avatar": {"cadence": "never", "size": "small"},
                 "card": {},
-                "scene_illustration": {"size": "background"},
+                "scene_illustration": {"size": "big"},
             }
         )
         assert set(appearance.message_assets.keys()) == self.DEFAULT_KEYS
         assert appearance.message_assets["avatar"].cadence == "never"
         assert appearance.message_assets["avatar"].size == "small"
-        assert appearance.message_assets["scene_illustration"].size == "background"
-        assert appearance.message_assets["scene_background"].size == "medium"
+        assert appearance.message_assets["scene_illustration"].size == "big"
+        assert appearance.message_assets["scene_background"].size == "big"

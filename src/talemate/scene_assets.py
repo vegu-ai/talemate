@@ -63,6 +63,13 @@ VIS_TYPE_TO_ASSET_TYPE = {
     VIS_TYPE.UNSPECIFIED: None,
 }
 
+# vis_types eligible for the scene backdrop, mapped to their
+# appearance.scene.message_assets config entry
+VIS_TYPE_TO_MESSAGE_ASSET_KIND = {
+    VIS_TYPE.SCENE_BACKGROUND: "scene_background",
+    VIS_TYPE.SCENE_ILLUSTRATION: "scene_illustration",
+}
+
 
 def validate_image_data_url(image_data: str) -> None:
     """
@@ -373,6 +380,16 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
                 message_ids=asset_attachment_context.message_ids,
             )
 
+    # scene backdrop auto-promotion — a newly generated scene illustration /
+    # background becomes the backdrop when its kind's appearance config opts
+    # in; backdrop_enabled is left untouched so an explicit "Immersive" off
+    # isn't overridden
+
+    if payload.new_asset:
+        kind = VIS_TYPE_TO_MESSAGE_ASSET_KIND.get(asset.meta.vis_type)
+        if kind and config.appearance.scene.message_assets[kind].auto_backdrop:
+            await scene.assets.set_scene_backdrop(asset_id=asset.id)
+
     # cover image (scene and character)
 
     if asset_attachment_context.scene_cover:
@@ -434,6 +451,10 @@ class SceneAssets:
         self.scene = scene
         self._assets_cache = None
         self.cover_image = None
+        # scene backdrop: which asset renders behind the scene text, and
+        # whether it currently renders at all
+        self.backdrop: str | None = None
+        self.backdrop_enabled: bool = True
 
     def _signal_asset_saved(
         self,
@@ -586,12 +607,16 @@ class SceneAssets:
     def dict(self, *args, **kwargs):
         return {
             "cover_image": self.cover_image,
+            "backdrop": self.backdrop,
+            "backdrop_enabled": self.backdrop_enabled,
             "assets": {asset.id: asset.model_dump() for asset in self.assets.values()},
         }
 
     def scene_info(self) -> dict:
         return {
             "cover_image": self.cover_image,
+            "backdrop": self.backdrop,
+            "backdrop_enabled": self.backdrop_enabled,
         }
 
     def load_assets(self, assets_dict: dict):
@@ -942,12 +967,21 @@ class SceneAssets:
 
     def cleanup_cover_images(self) -> bool:
         """
-        Checks character cover images and the scene cover image and if they
-        no longer exist as assets, unsets them.
+        Checks character cover images, the scene cover image and the scene
+        backdrop and if they no longer exist as assets, unsets them.
 
-        Returns True if any cover images were cleaned up, False otherwise.
+        Returns True if anything was cleaned up, False otherwise.
         """
         cleaned = False
+
+        # Check scene backdrop
+        if self.backdrop and not self.validate_asset_id(self.backdrop):
+            log.debug(
+                "Cleaning up scene backdrop",
+                asset_id=self.backdrop,
+            )
+            self.backdrop = None
+            cleaned = True
 
         # Check scene cover image
         if self.cover_image and not self.validate_asset_id(self.cover_image):
@@ -1631,6 +1665,31 @@ class SceneAssets:
         )
 
         return asset_id
+
+    async def set_scene_backdrop(
+        self, asset_id: str | None = None, enabled: bool | None = None
+    ) -> str | None:
+        """
+        Updates the scene backdrop.
+
+        Either argument may be omitted to leave that aspect untouched:
+        asset_id selects which asset renders behind the scene text,
+        enabled toggles whether it renders at all.
+        """
+        log.debug("set_scene_backdrop", asset_id=asset_id, enabled=enabled)
+        if asset_id is not None:
+            if not self.validate_asset_id(asset_id):
+                log.error("Invalid asset id", asset_id=asset_id)
+                return None
+            self.backdrop = asset_id
+        if enabled is not None:
+            self.backdrop_enabled = enabled
+
+        # scene status carries the backdrop state to the frontend
+        if self.scene.active:
+            self.scene.emit_status()
+
+        return self.backdrop
 
     async def set_character_cover_image_from_bytes(
         self, character: "Character", bytes: bytes, override: bool = False

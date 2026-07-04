@@ -441,10 +441,14 @@ class TestSceneAssetsDictAndSceneInfo:
         assert result["cover_image"] == "cover-id"
         assert "a1" in result["assets"]
 
-    def test_scene_info_only_returns_cover_image(self, scene):
+    def test_scene_info_returns_cover_image_and_backdrop(self, scene):
         scene.assets.cover_image = "cv"
         info = scene.assets.scene_info()
-        assert info == {"cover_image": "cv"}
+        assert info == {
+            "cover_image": "cv",
+            "backdrop": None,
+            "backdrop_enabled": True,
+        }
 
     def test_load_assets_is_a_noop(self, scene):
         # Legacy method -- must not raise and must not modify state.
@@ -806,6 +810,45 @@ class TestSceneCoverImage:
         assert scene.assets.cover_image == b.id
 
 
+class TestSceneBackdrop:
+    async def test_set_backdrop_with_valid_id(self, scene):
+        a = await scene.assets.add_asset(b"x", "png", "image/png")
+        result = await scene.assets.set_scene_backdrop(asset_id=a.id)
+        assert result == a.id
+        assert scene.assets.backdrop == a.id
+        # enabled defaults to True and is untouched by asset-only updates
+        assert scene.assets.backdrop_enabled is True
+
+    async def test_set_backdrop_invalid_returns_none(self, scene):
+        result = await scene.assets.set_scene_backdrop(asset_id="nope")
+        assert result is None
+        assert scene.assets.backdrop is None
+
+    async def test_toggle_enabled_keeps_asset(self, scene):
+        a = await scene.assets.add_asset(b"x", "png", "image/png")
+        await scene.assets.set_scene_backdrop(asset_id=a.id)
+        result = await scene.assets.set_scene_backdrop(enabled=False)
+        assert result == a.id
+        assert scene.assets.backdrop == a.id
+        assert scene.assets.backdrop_enabled is False
+
+    async def test_set_asset_does_not_reenable(self, scene):
+        # a new backdrop image must not override an explicit "off"
+        a = await scene.assets.add_asset(b"a", "png", "image/png")
+        b = await scene.assets.add_asset(b"b", "png", "image/png")
+        await scene.assets.set_scene_backdrop(asset_id=a.id, enabled=False)
+        await scene.assets.set_scene_backdrop(asset_id=b.id)
+        assert scene.assets.backdrop == b.id
+        assert scene.assets.backdrop_enabled is False
+
+    async def test_backdrop_in_dict_and_scene_info(self, scene):
+        a = await scene.assets.add_asset(b"x", "png", "image/png")
+        await scene.assets.set_scene_backdrop(asset_id=a.id, enabled=True)
+        for data in (scene.assets.dict(), scene.assets.scene_info()):
+            assert data["backdrop"] == a.id
+            assert data["backdrop_enabled"] is True
+
+
 class TestSceneCoverImageFromSources:
     async def test_from_bytes(self, scene):
         rid = await scene.assets.set_scene_cover_image_from_bytes(_png_bytes())
@@ -994,6 +1037,19 @@ class TestCleanupCoverImages:
         cleaned = scene.assets.cleanup_cover_images()
         assert cleaned is True
         assert char.cover_image is None
+
+    def test_cleans_dangling_backdrop(self, scene):
+        scene.assets.backdrop = "ghost"
+        cleaned = scene.assets.cleanup_cover_images()
+        assert cleaned is True
+        assert scene.assets.backdrop is None
+
+    async def test_keeps_valid_backdrop(self, scene):
+        a = await scene.assets.add_asset(b"x", "png", "image/png")
+        scene.assets.backdrop = a.id
+        cleaned = scene.assets.cleanup_cover_images()
+        assert cleaned is False
+        assert scene.assets.backdrop == a.id
 
 
 class TestCleanupCharacterAvatars:

@@ -265,6 +265,7 @@
                         @cancel-audio-queue="onCancelAudioQueue"
                         @configure-entity-highlights="onConfigureEntityHighlights"
                         @scene-backdrop="sceneBackdropSrc = $event"
+                        @scene-backdrop-candidate="sceneBackdropCandidate = $event"
                       />
                     </div>
 
@@ -285,6 +286,8 @@
                         :scene="scene"
                         :activeCharacters="activeCharacters"
                         :visual-agent-ready="visualAgentReady"
+                        :scene-backdrop-candidate="sceneBackdropCandidate"
+                        :scene-backdrop-active="!!sceneBackdropSrc"
                         :audioPlayedForMessageId="audioPlayedForMessageId" />
                       <SceneMessageInput
                         ref="sceneMessageInput"
@@ -458,6 +461,9 @@ export default {
       // data-url of the scene illustration acting as the scene backdrop
       // ("background" display mode), reported up by SceneMessages
       sceneBackdropSrc: null,
+      // scene has a message-attached asset eligible for backdrop promotion
+      // (drives the scene-tools "Immersive" toggle chip)
+      sceneBackdropCandidate: false,
       tab: 'home',
       tabs: [
         {
@@ -828,7 +834,7 @@ export default {
       appConfig: () => this.appConfig,
       openAppConfig: this.openAppConfig,
       openAgentActionOverrides: () => this.$refs.agentActionOverrides?.open(),
-      setSceneIllustrationDisplaySize: this.setSceneIllustrationDisplaySize,
+      setMessageAssetDisplaySizes: this.setMessageAssetDisplaySizes,
       configurationRequired: () => this.configurationRequired(),
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
       getTrackedCharacterStates: (name) => this.$refs.worldState.trackedCharacterStates(name),
@@ -1349,9 +1355,10 @@ export default {
       }
       this.websocket.send(JSON.stringify({ type: 'configure_clients', clients: saveData }));
     },
-    setSceneIllustrationDisplaySize(size) {
-      // Shortcut used by the scene-illustration asset menu to flip the
-      // display mode without opening the appearance settings.
+    setMessageAssetDisplaySizes(sizes) {
+      // Shortcut used by the scene-tools "Immersive" chip to flip
+      // message-asset display modes ({kind: size}, applied in one save)
+      // without opening the appearance settings.
       // IMPORTANT: the save handler validates the payload as the FULL config
       // model — a partial payload gets its missing sections replaced with
       // defaults. Always send the complete config (same as AppConfig.vue).
@@ -1361,7 +1368,9 @@ export default {
       // appConfig is a full backend model dump — the nested structure
       // always exists
       const config = JSON.parse(JSON.stringify(this.appConfig));
-      config.appearance.scene.message_assets.scene_illustration.size = size;
+      for (const [assetKind, size] of Object.entries(sizes)) {
+        config.appearance.scene.message_assets[assetKind].size = size;
+      }
       this.websocket.send(JSON.stringify({ type: 'config', action: 'save', config }));
     },
     saveAgents(agents) {

@@ -3,19 +3,23 @@
     <v-sheet color="transparent" class="mb-2">
         <v-spacer></v-spacer>
         <!-- quick settings as v-chips -->
-        <v-chip size="x-small" v-for="(option, index) in quickSettings" :key="index" @click="toggleQuickSetting(option.value)"
-            :color="option.status() === true ? 'success' : 'grey'"
-            :disabled="appBusy || !appReady" class="ma-1">
-            <v-icon class="mr-1">{{ option.icon }}</v-icon>
-            {{ option.title }}
-            <v-icon class="ml-1" v-if="option.status() === true">mdi-check-circle-outline</v-icon>
-            <v-icon class="ml-1" v-else-if="option.status() === false">mdi-circle-outline</v-icon>
-            <v-tooltip v-else :text="option.status()">
-                <template v-slot:activator="{ props }">
-                    <v-icon class="ml-1" v-bind="props" color="orange">mdi-alert-outline</v-icon>
-                </template>
-            </v-tooltip>
-        </v-chip>
+        <v-tooltip v-for="(option, index) in visibleQuickSettings" :key="index" :text="option.description" location="top">
+            <template v-slot:activator="{ props: tooltipProps }">
+                <v-chip size="x-small" v-bind="tooltipProps" @click="toggleQuickSetting(option.value)"
+                    :color="option.status() === true ? 'success' : 'grey'"
+                    :disabled="appBusy || !appReady" class="ma-1">
+                    <v-icon class="mr-1">{{ option.icon }}</v-icon>
+                    {{ option.title }}
+                    <v-icon class="ml-1" v-if="option.status() === true">mdi-check-circle-outline</v-icon>
+                    <v-icon class="ml-1" v-else-if="option.status() === false">mdi-circle-outline</v-icon>
+                    <v-tooltip v-else :text="option.status()">
+                        <template v-slot:activator="{ props }">
+                            <v-icon class="ml-1" v-bind="props" color="orange">mdi-alert-outline</v-icon>
+                        </template>
+                    </v-tooltip>
+                </v-chip>
+            </template>
+        </v-tooltip>
 
         <SceneToolsSettings :app-busy="appBusy" :app-ready="appReady" />
 
@@ -224,6 +228,8 @@ import SceneToolsSave from './SceneToolsSave.vue';
 import SceneToolsTime from './SceneToolsTime.vue';
 import RequestInput from './RequestInput.vue';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
+import { BACKDROP_ASSET_KINDS } from '@/constants/visual';
+
 export default {
 
     name: 'SceneTools',
@@ -254,6 +260,12 @@ export default {
         agentStatus: Object,
         scene: Object,
         visualAgentReady: Boolean,
+        // scene has a message-attached background-type asset the
+        // "Immersive" chip could promote to a backdrop
+        sceneBackdropCandidate: Boolean,
+        // a backdrop is currently rendering (any kind) — keeps the chip
+        // reachable so the mode can be toggled off
+        sceneBackdropActive: Boolean,
         audioPlayedForMessageId: [Number, String],
     },
     computed: {
@@ -287,7 +299,16 @@ export default {
         ttsAgentEnabled() {
             const ttsAgent = this.agentStatus?.tts;
             return ttsAgent && ttsAgent.available;
-        }
+        },
+
+        immersiveActive() {
+            const messageAssets = this.appConfig()?.appearance?.scene?.message_assets;
+            return BACKDROP_ASSET_KINDS.some(kind => messageAssets?.[kind]?.size === 'background');
+        },
+
+        visibleQuickSettings() {
+            return this.quickSettings.filter(option => !option.condition || option.condition());
+        },
     },
     data() {
         return {
@@ -312,7 +333,12 @@ export default {
             quickSettings: [
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
+                {"value": "toggleImmersive", "title": "Immersive", "icon": "mdi-image-area", "description": "Render the most recent scene background image as a backdrop behind the scene", "condition": () => { return this.sceneBackdropCandidate || this.sceneBackdropActive }, "status": () => { return this.immersiveActive }},
             ],
+            // per-kind inline sizes to restore when Immersive is toggled off
+            immersiveInlineSizes: {},
+            // kinds to flip back to background when toggled on again
+            immersiveKinds: ['scene_background'],
         }
     },
     inject: [
@@ -322,6 +348,7 @@ export default {
         'isWaitingForInput',
         'creativeEditor',
         'appConfig',
+        'setMessageAssetDisplaySizes',
         'getTrackedCharacterState',
         'getTrackedWorldState',
         'getPlayerCharacterName',
@@ -353,7 +380,33 @@ export default {
             } else if (setting == "toggleAutoProgress") {
                 this.autoProgress = !this.autoProgress;
                 this.getWebsocket().send(JSON.stringify({ type: 'quick_settings', action: 'set', setting: 'auto_progress', value: this.autoProgress }));
+            } else if (setting == "toggleImmersive") {
+                this.toggleImmersive();
             }
+        },
+
+        toggleImmersive() {
+            const messageAssets = this.appConfig()?.appearance?.scene?.message_assets || {};
+            const sizes = {};
+            if (this.immersiveActive) {
+                // restore every kind currently in background mode to its
+                // remembered inline size
+                for (const kind of BACKDROP_ASSET_KINDS) {
+                    if (messageAssets[kind]?.size === 'background') {
+                        sizes[kind] = this.immersiveInlineSizes[kind] || 'medium';
+                    }
+                }
+                this.immersiveKinds = Object.keys(sizes);
+            } else {
+                for (const kind of this.immersiveKinds) {
+                    const currentSize = messageAssets[kind]?.size;
+                    if (currentSize && currentSize !== 'background') {
+                        this.immersiveInlineSizes[kind] = currentSize;
+                    }
+                    sizes[kind] = 'background';
+                }
+            }
+            this.setMessageAssetDisplaySizes(sizes);
         },
 
         openWorldStateManager(tab, sub1, sub2, sub3) {

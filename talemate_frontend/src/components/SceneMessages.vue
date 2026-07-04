@@ -115,16 +115,6 @@
                     Choose from existing scene illustrations
                 </v-list-item-subtitle>
             </v-list-item>
-            <v-list-item
-                v-if="assetMenu.context.asset_type === 'scene_illustration' && !sceneIllustrationBackgroundMode"
-                prepend-icon="mdi-image-area"
-                @click="handleSetBackgroundDisplayMode"
-            >
-                <v-list-item-title>Display as background</v-list-item-title>
-                <v-list-item-subtitle class="text-wrap">
-                    Switch scene illustrations to the Background display mode
-                </v-list-item-subtitle>
-            </v-list-item>
             <v-divider v-if="assetMenu.context.asset_type === 'card'"></v-divider>
             <v-list-item
                 v-if="assetMenu.context.asset_type === 'card'"
@@ -292,6 +282,12 @@
 
     <div class="message-container mb-8" ref="messageContainer" :class="{ 'no-text-shadow': !sceneBackdropTextShadow }" :style="{ '--scene-backdrop-panel-opacity': sceneBackdropPanelOpacity }" style="flex-grow: 1; overflow-y: auto;" @click="onMessageContainerClick">
         <div v-for="(message, index) in messages" :key="message.id != null ? `${message.type}-${message.id}` : `idx-${index}`" class="message-wrapper">
+            <!-- marks the message whose illustration is the active backdrop -->
+            <v-tooltip v-if="sceneBackdrop && message.id != null && message.id === sceneBackdrop.messageId" text="This image is the current scene background" location="left">
+                <template v-slot:activator="{ props }">
+                    <v-icon v-bind="props" class="backdrop-indicator" size="small" color="primary" @click.stop="openBackdropIndicatorMenu($event, message)">mdi-image-area</v-icon>
+                </template>
+            </v-tooltip>
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
@@ -536,7 +532,7 @@ export default {
         ConfirmActionPrompt,
         AssetView,
     },
-    emits: ['cancel-audio-queue', 'configure-entity-highlights', 'scene-backdrop'],
+    emits: ['cancel-audio-queue', 'configure-entity-highlights', 'scene-backdrop', 'scene-backdrop-candidate'],
     data() {
         return {
             primaryModifierLabel,
@@ -614,33 +610,47 @@ export default {
         messageAssetsConfig() {
             return this.appearanceConfig?.scene?.message_assets || null;
         },
-        sceneIllustrationBackgroundMode() {
-            return this.messageAssetsConfig?.scene_illustration?.size === 'background';
-        },
         sceneBackdropPanelOpacity() {
-            return this.messageAssetsConfig?.scene_illustration?.background_panel_opacity ?? 0.8;
+            const kind = this.sceneBackdrop?.kind || 'scene_illustration';
+            return this.messageAssetsConfig?.[kind]?.background_panel_opacity ?? 0.8;
         },
         sceneBackdropTextShadow() {
-            return this.messageAssetsConfig?.scene_illustration?.background_text_shadow ?? true;
+            const kind = this.sceneBackdrop?.kind || 'scene_illustration';
+            return this.messageAssetsConfig?.[kind]?.background_text_shadow ?? true;
         },
         assetViewSrc() {
             return this.assetDataUrl(this.assetViewAssetId);
         },
-        sceneBackdropAssetId() {
-            // Most recent scene illustration becomes the backdrop
-            if (!this.sceneIllustrationBackgroundMode) {
-                return null;
-            }
+        sceneBackdrop() {
+            // Most recent illustration whose config entry (scene_background
+            // or scene_illustration, resolved by vis_type) is in "background"
+            // display mode becomes the backdrop
             for (let i = this.messages.length - 1; i >= 0; i--) {
                 const msg = this.messages[i];
-                if (msg.asset_type === 'scene_illustration' && msg.asset_id) {
-                    return msg.asset_id;
+                if (msg.asset_type !== 'scene_illustration' || !msg.asset_id) {
+                    continue;
+                }
+                const kind = this.messageAssetConfigKey(msg.asset_id, msg.asset_type);
+                if (this.messageAssetsConfig?.[kind]?.size === 'background') {
+                    return { assetId: msg.asset_id, messageId: msg.id, kind };
                 }
             }
             return null;
         },
+        sceneBackdropAssetId() {
+            return this.sceneBackdrop?.assetId || null;
+        },
         sceneBackdropSrc() {
             return this.assetDataUrl(this.sceneBackdropAssetId);
+        },
+        // Whether the scene has any message-attached asset the scene-tools
+        // "Immersive" chip could promote to a backdrop (independent of the
+        // current display mode)
+        sceneBackdropCandidateAvailable() {
+            return this.messages.some(
+                (msg) => msg.asset_id && msg.asset_type === 'scene_illustration' &&
+                    this.messageAssetConfigKey(msg.asset_id, msg.asset_type) === 'scene_background'
+            );
         },
         editorRevisionsEnabled() {
             return this.agentStatus && this.agentStatus.editor && this.agentStatus.editor.actions && this.agentStatus.editor.actions["revision"] && this.agentStatus.editor.actions["revision"].enabled;
@@ -689,7 +699,7 @@ export default {
             return instructions;
         },
     },
-    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset', 'setSceneIllustrationDisplaySize'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset'],
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
@@ -713,6 +723,7 @@ export default {
             // Generate a visual asset for a context-investigation message
             visualizeMessage: this.visualizeMessage,
             isMessageVisualizing: this.isMessageVisualizing,
+            resolveMessageAssetConfigKey: this.messageAssetConfigKey,
         }
     },
     methods: {
@@ -1348,12 +1359,33 @@ export default {
         },
 
         /**
-         * Handle "Display as background" menu option — flips the
-         * scene-illustration display mode to "background"
+         * Resolve which message_assets config entry governs an asset's
+         * display. Message-attached scene illustrations collapse both
+         * SCENE_BACKGROUND and SCENE_ILLUSTRATION vis_types into the single
+         * asset_type "scene_illustration"; the finer vis_type survives on
+         * the asset meta and splits them into individually configurable
+         * entries here.
          */
-        handleSetBackgroundDisplayMode() {
-            this.assetMenu.show = false;
-            this.setSceneIllustrationDisplaySize('background');
+        messageAssetConfigKey(assetId, assetType) {
+            if (assetType !== 'scene_illustration') {
+                return assetType;
+            }
+            const visType = this.assetsMap[assetId]?.meta?.vis_type;
+            return visType === VIS_TYPE.SCENE_BACKGROUND ? 'scene_background' : 'scene_illustration';
+        },
+
+        /**
+         * Open the shared asset menu from the backdrop indicator icon —
+         * in background mode there is no inline image to click on
+         */
+        openBackdropIndicatorMenu(event, message) {
+            this.showAssetMenu(event, {
+                asset_id: message.asset_id,
+                asset_type: message.asset_type,
+                character: message.character || null,
+                message_content: message.text || null,
+                message_id: message.id,
+            });
         },
 
         /**
@@ -2111,6 +2143,13 @@ export default {
                 this.$emit('scene-backdrop', src);
             },
         },
+        // Drives visibility of the scene-tools "Immersive" toggle chip
+        sceneBackdropCandidateAvailable: {
+            immediate: true,
+            handler(available) {
+                this.$emit('scene-backdrop-candidate', available);
+            },
+        },
     },
     created() {
         this.registerMessageHandler(this.handleMessage);
@@ -2140,6 +2179,9 @@ export default {
     backdrop-filter: blur(4px);
     border-radius: 6px;
     margin-bottom: 8px;
+    /* slim right gutter so the backdrop indicator sits beside the panel,
+       not over the message content */
+    margin-right: 28px;
     /* tight, dense shadow so message text of every type stays legible
        over the backdrop */
     text-shadow: 1px 1px 2px #000000, 0 0 6px rgba(0, 0, 0, 0.85);
@@ -2166,6 +2208,23 @@ export default {
 
 .message-wrapper {
     position: relative;
+}
+
+/* small always-on marker for the message that set the active backdrop;
+   sits in the right gutter beside the message panel (over the backdrop
+   image, hence the shadow) */
+.backdrop-indicator {
+    position: absolute;
+    top: 6px;
+    right: 0;
+    z-index: 2;
+    cursor: pointer;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.9));
+}
+
+.backdrop-indicator:hover {
+    opacity: 1;
 }
 
 .message {

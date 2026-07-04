@@ -16,13 +16,19 @@ export default {
     showAssetMenu: { default: null },
     getAssetFromCache: { default: null },
     requestSceneAssets: { default: null },
+    // Provided by SceneMessages — splits scene_illustration assets into the
+    // scene_background / scene_illustration config entries by vis_type
+    resolveMessageAssetConfigKey: { default: null },
   },
   computed: {
     messageAssetDisplaySize() {
       const assetType = this.assetType || 'avatar';
+      const configKey = this.resolveMessageAssetConfigKey
+        ? this.resolveMessageAssetConfigKey(this.assetId, assetType)
+        : assetType;
       const messageAssets = this.appearanceConfig?.scene?.message_assets;
-      if (messageAssets?.[assetType]?.size) {
-        return messageAssets[assetType].size;
+      if (messageAssets?.[configKey]?.size) {
+        return messageAssets[configKey].size;
       }
       return 'medium';
     },

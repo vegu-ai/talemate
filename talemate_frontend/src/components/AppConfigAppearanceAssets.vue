@@ -115,14 +115,42 @@
                         ></v-select>
                     </td>
                 </tr>
+                <tr>
+                    <td style="padding: 4px 12px;">
+                        <div class="d-flex align-center">
+                            <v-icon class="mr-2">mdi-image-filter-hdr</v-icon>
+                            <div class="text-caption font-weight-medium">Scene Background</div>
+                        </div>
+                    </td>
+                    <td style="padding: 4px 12px;">
+                        <v-select
+                            v-model="config.scene_background.cadence"
+                            :items="cadenceOptionsNoChange"
+                            density="compact"
+                            variant="outlined"
+                            hide-details
+                            style="max-width: 200px;"
+                        ></v-select>
+                    </td>
+                    <td style="padding: 4px 12px;">
+                        <v-select
+                            v-model="config.scene_background.size"
+                            :items="sceneIllustrationSizeOptions"
+                            density="compact"
+                            variant="outlined"
+                            hide-details
+                            style="max-width: 200px;"
+                        ></v-select>
+                    </td>
+                </tr>
             </tbody>
         </v-table>
 
-        <v-row v-if="config.scene_illustration.size === 'background'" class="mt-3">
+        <v-row v-for="kind in backgroundConfiguredKinds" :key="kind" class="mt-3">
             <v-col cols="12" md="6">
                 <v-slider
-                    v-model="config.scene_illustration.background_panel_opacity"
-                    label="Message panel opacity"
+                    v-model="config[kind].background_panel_opacity"
+                    :label="`Message panel opacity (${kindLabels[kind]})`"
                     color="primary"
                     :min="0"
                     :max="1"
@@ -134,8 +162,8 @@
             </v-col>
             <v-col cols="12" md="6">
                 <v-checkbox
-                    v-model="config.scene_illustration.background_text_shadow"
-                    label="Message text shadow"
+                    v-model="config[kind].background_text_shadow"
+                    :label="`Message text shadow (${kindLabels[kind]})`"
                     color="primary"
                     density="compact"
                     hide-details
@@ -149,7 +177,8 @@
                     <strong>Always:</strong> Show visual on every message<br>
                     <strong>Never:</strong> Never show visual inline with messages<br>
                     <strong>On change:</strong> Only show when visual changes (portraits: tracked per character)<br><br>
-                    <strong>Scene Illustration sizes:</strong> Big = full width above message, Small/Medium = inline with text, Background = fills behind the scene text
+                    <strong>Scene Illustration</strong> covers images of the current moment ("Visualize Moment"), <strong>Scene Background</strong> covers purely environmental images ("Visualize Scene (Background)").<br>
+                    <strong>Sizes:</strong> Big = full width above message, Small/Medium = inline with text, Background = fills behind the scene text. When both types use Background, the most recent image is the active backdrop.
                 </div>
             </v-card-text>
         </v-card>
@@ -157,6 +186,33 @@
 </template>
 
 <script>
+import { BACKDROP_ASSET_KINDS } from '@/constants/visual';
+
+function defaultAssetConfig() {
+    return {
+        avatar: {
+            cadence: 'always',
+            size: 'medium',
+        },
+        card: {
+            cadence: 'always',
+            size: 'medium',
+        },
+        scene_illustration: {
+            cadence: 'always',
+            size: 'medium',
+            background_panel_opacity: 0.8,
+            background_text_shadow: true,
+        },
+        scene_background: {
+            cadence: 'always',
+            size: 'medium',
+            background_panel_opacity: 0.8,
+            background_text_shadow: true,
+        },
+    };
+}
+
 export default {
     name: 'AppConfigAppearanceAssets',
     props: {
@@ -167,21 +223,10 @@ export default {
     data() {
         return {
             autoAttachAssets: true,
-            config: {
-                avatar: {
-                    cadence: 'always',
-                    size: 'medium',
-                },
-                card: {
-                    cadence: 'always',
-                    size: 'medium',
-                },
-                scene_illustration: {
-                    cadence: 'always',
-                    size: 'medium',
-                    background_panel_opacity: 0.8,
-                    background_text_shadow: true,
-                },
+            config: defaultAssetConfig(),
+            kindLabels: {
+                scene_illustration: 'Scene Illustration',
+                scene_background: 'Scene Background',
             },
             cadenceOptions: [
                 { title: 'Always', value: 'always' },
@@ -201,9 +246,16 @@ export default {
         }
     },
     computed: {
-        // "background" only makes sense for scene illustrations
+        // "background" only makes sense for scene illustrations/backgrounds
         sceneIllustrationSizeOptions() {
             return [...this.sizeOptions, { title: 'Background', value: 'background' }];
+        },
+        // kinds currently set to the Background display size — each gets its
+        // own panel-opacity / text-shadow controls
+        backgroundConfiguredKinds() {
+            return BACKDROP_ASSET_KINDS.filter(
+                kind => this.config[kind].size === 'background'
+            );
         },
     },
     watch: {
@@ -213,22 +265,7 @@ export default {
                 this.isHydrating = true;
                 
                 if (!newVal) {
-                    this.config = {
-                        avatar: {
-                            cadence: 'always',
-                            size: 'medium',
-                        },
-                        card: {
-                            cadence: 'always',
-                            size: 'medium',
-                        },
-                        scene_illustration: {
-                            cadence: 'always',
-                            size: 'medium',
-                            background_panel_opacity: 0.8,
-                            background_text_shadow: true,
-                        },
-                    };
+                    this.config = defaultAssetConfig();
                     this.isHydrating = false;
                     return;
                 }
@@ -239,24 +276,15 @@ export default {
                 // Load auto_attach_assets setting
                 this.autoAttachAssets = sceneConfig.auto_attach_assets !== undefined ? sceneConfig.auto_attach_assets : true;
                 
-                // Build config for all asset types with defaults
-                this.config = {
-                    avatar: {
-                        cadence: messageAssets.avatar?.cadence || 'always',
-                        size: messageAssets.avatar?.size || 'medium',
-                    },
-                    card: {
-                        cadence: messageAssets.card?.cadence || 'always',
-                        size: messageAssets.card?.size || 'medium',
-                    },
-                    scene_illustration: {
-                        cadence: messageAssets.scene_illustration?.cadence || 'always',
-                        size: messageAssets.scene_illustration?.size || 'medium',
-                        // ?? not || — 0 and false are valid values
-                        background_panel_opacity: messageAssets.scene_illustration?.background_panel_opacity ?? 0.8,
-                        background_text_shadow: messageAssets.scene_illustration?.background_text_shadow ?? true,
-                    },
-                };
+                // Overlay stored values onto the defaults (?? so 0 / false
+                // survive)
+                const config = defaultAssetConfig();
+                for (const [kind, entry] of Object.entries(config)) {
+                    for (const field of Object.keys(entry)) {
+                        entry[field] = messageAssets[kind]?.[field] ?? entry[field];
+                    }
+                }
+                this.config = config;
                 
                 // Re-enable changed events after hydration completes
                 this.$nextTick(() => {

@@ -24,6 +24,8 @@ async_signals.register(
     "config.changed.follow",
 )
 
+MESSAGE_ASSET_KINDS = ("avatar", "card", "scene_illustration", "scene_background")
+
 
 class Client(pydantic.BaseModel):
     """
@@ -593,13 +595,14 @@ class MarkupMessageStyle(HistoryMessageStyle):
 
 class MessageAssetCadenceConfig(pydantic.BaseModel):
     cadence: Literal["always", "never", "on_change"] = "always"
-    # "background" is only meaningful for scene_illustration assets
+    # "background" is only meaningful for scene_illustration and
+    # scene_background assets
     size: Literal["small", "medium", "big", "background"] = "medium"
-    # opacity of the text panels rendered over the backdrop (scene_illustration
-    # "background" size mode only)
+    # opacity of the text panels rendered over the backdrop ("background"
+    # size mode only)
     background_panel_opacity: float = pydantic.Field(default=0.8, ge=0.0, le=1.0)
-    # drop shadow on message text over the backdrop (scene_illustration
-    # "background" size mode only)
+    # drop shadow on message text over the backdrop ("background" size mode
+    # only)
     background_text_shadow: bool = True
 
 
@@ -617,15 +620,26 @@ class SceneAppearance(pydantic.BaseModel):
     brackets: MarkupMessageStyle = MarkupMessageStyle()
     emphasis: MarkupMessageStyle = MarkupMessageStyle()
     entities: MarkupMessageStyle = MarkupMessageStyle()
+    # scene_background and scene_illustration assets share the message-level
+    # asset_type "scene_illustration"; separate entries keep their display
+    # individually configurable
     message_assets: Dict[str, MessageAssetCadenceConfig] = pydantic.Field(
         default_factory=lambda: {
-            "avatar": MessageAssetCadenceConfig(),
-            "card": MessageAssetCadenceConfig(),
-            "scene_illustration": MessageAssetCadenceConfig(),
+            kind: MessageAssetCadenceConfig() for kind in MESSAGE_ASSET_KINDS
         }
     )
 
     auto_attach_assets: bool = True
+
+    @pydantic.field_validator("message_assets", mode="after")
+    @classmethod
+    def ensure_default_message_asset_entries(cls, value):
+        # configs saved before an entry existed (e.g. scene_background) come
+        # in without it — fill the gaps so consumers can rely on all keys
+        for key in MESSAGE_ASSET_KINDS:
+            if key not in value:
+                value[key] = MessageAssetCadenceConfig()
+        return value
 
 
 class Appearance(pydantic.BaseModel):

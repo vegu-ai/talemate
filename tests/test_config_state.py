@@ -32,6 +32,7 @@ from talemate.config.schema import (
     InferencePresetGroup,
     InferencePresets,
     RecentScene,
+    SceneAppearance,
 )
 
 
@@ -474,3 +475,32 @@ class TestCommitConfig:
         await config_state.commit_config()
         assert (tmp_path / "config.yaml").exists()
         assert isolated_config.dirty is False
+
+
+# ---------------------------------------------------------------------------
+# SceneAppearance.message_assets defaults
+# ---------------------------------------------------------------------------
+
+
+class TestSceneAppearanceMessageAssets:
+    DEFAULT_KEYS = {"avatar", "card", "scene_illustration", "scene_background"}
+
+    def test_defaults_include_all_entries(self):
+        appearance = SceneAppearance()
+        assert set(appearance.message_assets.keys()) == self.DEFAULT_KEYS
+
+    def test_missing_entries_are_filled(self):
+        # configs saved before scene_background existed omit it — the
+        # validator must fill the gap without touching stored values
+        appearance = SceneAppearance(
+            message_assets={
+                "avatar": {"cadence": "never", "size": "small"},
+                "card": {},
+                "scene_illustration": {"size": "background"},
+            }
+        )
+        assert set(appearance.message_assets.keys()) == self.DEFAULT_KEYS
+        assert appearance.message_assets["avatar"].cadence == "never"
+        assert appearance.message_assets["avatar"].size == "small"
+        assert appearance.message_assets["scene_illustration"].size == "background"
+        assert appearance.message_assets["scene_background"].size == "medium"

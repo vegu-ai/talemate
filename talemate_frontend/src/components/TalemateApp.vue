@@ -1781,6 +1781,10 @@ export default {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  /* fixed attachment sizes/positions the image against the viewport, not
+     the scene column - otherwise a long message list stretches the column
+     and `cover` scales the image to the full scrollback height */
+  background-attachment: fixed;
 }
 
 /* the message input, control chips (auto save, auto progress, agent

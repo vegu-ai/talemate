@@ -7,16 +7,12 @@
                     {{ description }}
                 </v-alert>
 
-                <v-alert v-if="character" density="compact" icon="mdi-account" variant="text" color="grey" class="mb-2">
-                    {{ character }}
-                </v-alert>
-
                 <v-select
-                    v-if="characters.length > 0 && !character"
-                    v-model="selectedCharacter"
-                    :items="characters"
-                    label="Character"
-                    prepend-inner-icon="mdi-account"
+                    v-if="showTargetSelector"
+                    v-model="selectedTarget"
+                    :items="targetItems"
+                    label="Track state for"
+                    prepend-inner-icon="mdi-target"
                 ></v-select>
 
                 <v-text-field
@@ -64,13 +60,15 @@
             </v-card-text>
             <v-card-actions>
                 <v-spacer></v-spacer>
-                <v-btn color="primary" variant="text" prepend-icon="mdi-text-box-plus" @click="create" :disabled="!question || (characters.length > 0 && !effectiveCharacter)">Create</v-btn>
+                <v-btn color="primary" variant="text" prepend-icon="mdi-text-box-plus" @click="create" :disabled="!question || !hasTargetSelection">Create</v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>
 </template>
 
 <script>
+const WORLD_TARGET = '__world__';
+
 export default {
     name: 'QuickCreateStateReinforcement',
     props: {
@@ -82,10 +80,6 @@ export default {
             type: String,
             default: '',
         },
-        character: {
-            type: String,
-            default: '',
-        },
         characters: {
             type: Array,
             default: () => [],
@@ -94,7 +88,17 @@ export default {
             type: Array,
             required: true,
         },
-        defaultInsert: {
+        // When true the target selector offers "World" alongside the characters,
+        // so a single modal can create either a world or a character state.
+        allowWorld: {
+            type: Boolean,
+            default: false,
+        },
+        characterDefaultInsert: {
+            type: String,
+            default: 'never',
+        },
+        worldDefaultInsert: {
             type: String,
             default: 'never',
         },
@@ -108,33 +112,75 @@ export default {
             dialog: false,
             question: '',
             interval: this.defaultInterval,
-            insert: this.defaultInsert,
+            insert: this.allowWorld ? this.worldDefaultInsert : this.characterDefaultInsert,
             instructions: '',
             requireActive: true,
-            selectedCharacter: '',
+            selectedTarget: this.allowWorld ? WORLD_TARGET : '',
         }
     },
     emits: ['create'],
     computed: {
+        showTargetSelector() {
+            return this.allowWorld || this.characters.length > 0;
+        },
+        targetItems() {
+            let items = this.characters.map(name => ({
+                title: name,
+                value: name,
+                props: { prependIcon: 'mdi-account' },
+            }));
+            if (this.allowWorld) {
+                items.unshift({
+                    title: 'World',
+                    value: WORLD_TARGET,
+                    props: { prependIcon: 'mdi-earth' },
+                });
+            }
+            return items;
+        },
+        // The world is the target when it is explicitly selected, or when there
+        // are no characters to choose from at all.
+        isWorldTarget() {
+            return this.selectedTarget === WORLD_TARGET || this.characters.length === 0;
+        },
         effectiveCharacter() {
-            return this.character || this.selectedCharacter;
+            return this.selectedTarget === WORLD_TARGET ? '' : this.selectedTarget;
+        },
+        hasTargetSelection() {
+            if (!this.showTargetSelector) {
+                return true;
+            }
+            return !!this.selectedTarget;
         },
         availableInsertionModes() {
-            if (this.effectiveCharacter) {
-                return this.insertionModes;
+            // conversation-context only makes sense inside a character's own context.
+            if (this.isWorldTarget) {
+                return this.insertionModes.filter(mode => mode.value !== 'conversation-context');
             }
-            return this.insertionModes.filter(mode => mode.value !== 'conversation-context');
+            return this.insertionModes;
+        },
+    },
+    watch: {
+        // Keep the insertion mode aligned with the selected target so switching
+        // between World and a character resets to that target's sensible default
+        // (and never leaves an invalid mode like conversation-context on world).
+        isWorldTarget() {
+            this.insert = this.insertDefaultForTarget();
         },
     },
     methods: {
+        insertDefaultForTarget() {
+            return this.isWorldTarget ? this.worldDefaultInsert : this.characterDefaultInsert;
+        },
+
         open() {
             this.dialog = true;
             this.question = '';
             this.interval = this.defaultInterval;
-            this.insert = this.defaultInsert;
             this.instructions = '';
             this.requireActive = true;
-            this.selectedCharacter = '';
+            this.selectedTarget = this.allowWorld ? WORLD_TARGET : '';
+            this.insert = this.insertDefaultForTarget();
             this.$nextTick(() => {
                 if (this.$refs.questionInput && this.$refs.questionInput.focus) {
                     this.$refs.questionInput.focus();

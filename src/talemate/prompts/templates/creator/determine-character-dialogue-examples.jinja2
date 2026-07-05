@@ -34,6 +34,11 @@ Each dialogue example should be formatted as:
 
 You are limited to {{ focal.max_calls }} {% if focal.max_calls == 1 %}dialogue example{% else %}dialogue examples{% endif %}, indicate that you understand this limitation by clearly stating how many examples you are allowed to add.
 
+{% if instructions %}
+**User-provided guidance for the dialogue examples:**
+{{ instructions }}
+{% endif -%}
+
 {% if existing_examples %}
 **Existing dialogue examples (for reference only):**
 {% for example in existing_examples -%}

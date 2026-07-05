@@ -11,15 +11,18 @@ Covers:
 - persist_characters_from_worldstate: skip logic (excluded names + names
   already in scene). The actual persist_character call is replaced with a
   fake on the agent instance to keep the test focused on iteration.
-
-The full LLM/persist_character pipeline is not exercised because it depends
-on a wide spectrum of agent collaborators — that's an integration test, not
-a unit test.
+- persist_character: the example dialogue step (opt-in flag, guidance and
+  count forwarding, skipped by default) with the creator's LLM-backed
+  methods patched, plus the PersistCharacterPayload/signature parity guard
+  and the early-error path when the name already exists. The remaining
+  LLM-backed steps (name/attributes/description generation) are bypassed
+  via flags rather than exercised.
 """
 
 from __future__ import annotations
 
-from unittest.mock import patch
+import inspect
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -27,6 +30,11 @@ from conftest import MockScene, bootstrap_scene
 
 import talemate.agents.tts.voice_library as voice_library_mod
 import talemate.instance as instance
+from talemate.agents.director.character_management import (
+    PERSIST_CHARACTER_EXAMPLE_DIALOGUE_COUNT,
+    CharacterManagementMixin,
+)
+from talemate.agents.director.websocket_handler import PersistCharacterPayload
 from talemate.agents.tts.schema import Voice  # noqa: F401
 from talemate.character import Character
 from talemate.world_state import CharacterState
@@ -390,6 +398,85 @@ class TestPersistCharactersFromWorldstate:
             result = await director.persist_characters_from_worldstate()
         assert len(result) == 1
         assert result[0].name == "X"
+
+
+# ---------------------------------------------------------------------------
+# persist_character — example dialogue generation
+# ---------------------------------------------------------------------------
+
+
+class TestPersistCharacterExampleDialogue:
+    """Cover the example dialogue step of persist_character.
+
+    Creator collaborators are patched with AsyncMocks; the flags passed to
+    persist_character (determine_name=False, generate_attributes=False,
+    description set, narrate_entry=False) skip every other LLM-backed step.
+    """
+
+    @pytest.fixture
+    def patched_creator(self, scene):
+        creator = instance.get_agent("creator")
+        with (
+            patch.object(
+                creator,
+                "determine_character_dialogue_instructions",
+                AsyncMock(return_value="speaks softly"),
+            ),
+            patch.object(
+                creator,
+                "determine_character_dialogue_examples",
+                AsyncMock(return_value=['Nyx: "Well, that went great." rolls eyes']),
+            ) as mock_examples,
+        ):
+            yield mock_examples
+
+    @pytest.mark.asyncio
+    async def test_generates_examples_with_guidance(
+        self, scene, director, patched_creator
+    ):
+        character = await director.persist_character(
+            name="Nyx",
+            content="A mysterious stranger",
+            determine_name=False,
+            generate_attributes=False,
+            description="Already described.",
+            narrate_entry=False,
+            generate_example_dialogue=True,
+            example_dialogue_instructions="Dry humor, short sentences.",
+        )
+
+        assert character is not None
+        patched_creator.assert_awaited_once()
+        kwargs = patched_creator.await_args.kwargs
+        assert kwargs["text"] == "A mysterious stranger"
+        assert kwargs["instructions"] == "Dry humor, short sentences."
+        assert kwargs["max_examples"] == PERSIST_CHARACTER_EXAMPLE_DIALOGUE_COUNT
+        assert character.example_dialogue == [
+            'Nyx: "Well, that went great." rolls eyes'
+        ]
+
+    @pytest.mark.asyncio
+    async def test_skipped_by_default(self, scene, director, patched_creator):
+        character = await director.persist_character(
+            name="Vex",
+            content="A quiet merchant",
+            determine_name=False,
+            generate_attributes=False,
+            description="Already described.",
+            narrate_entry=False,
+        )
+
+        assert character is not None
+        patched_creator.assert_not_awaited()
+        assert not character.example_dialogue
+
+    def test_payload_fields_match_persist_character_signature(self):
+        """Every field the websocket payload exposes must be a persist_character
+        kwarg — guards backend/frontend parity when either side changes."""
+        params = set(
+            inspect.signature(CharacterManagementMixin.persist_character).parameters
+        ) - {"self"}
+        assert set(PersistCharacterPayload.model_fields).issubset(params)
 
 
 # ---------------------------------------------------------------------------

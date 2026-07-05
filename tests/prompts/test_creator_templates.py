@@ -497,6 +497,67 @@ class TestCreatorDialogueExamplesMethod:
                 "creator.determine-character-dialogue-examples"
             )
 
+    @pytest.mark.asyncio
+    async def test_determine_character_dialogue_examples_passes_instructions(
+        self, active_context, mock_scene
+    ):
+        """User-provided guidance is handed to the Focal handler as template context."""
+        creator = active_context
+        character = mock_scene.get_character("Elena")
+
+        with patch("talemate.agents.creator.character.focal.Focal") as MockFocal:
+            mock_focal_instance = Mock()
+            mock_focal_instance.request = AsyncMock()
+            mock_focal_instance.context = {}
+            MockFocal.return_value = mock_focal_instance
+
+            await creator.determine_character_dialogue_examples(
+                character=character,
+                text="Elena speaks softly.",
+                instructions="Give her a dry sense of humor.",
+                max_examples=3,
+            )
+
+            kwargs = MockFocal.call_args.kwargs
+            assert kwargs["instructions"] == "Give her a dry sense of humor."
+            assert kwargs["max_calls"] == 3
+
+    @pytest.mark.asyncio
+    async def test_determine_character_dialogue_examples_renders_instructions(
+        self, active_context, mock_scene
+    ):
+        """Guidance lands in the rendered prompt (real Focal + real template)."""
+        creator = active_context
+        character = mock_scene.get_character("Elena")
+        creator.client.send_prompt.return_value = '{"calls": []}'
+
+        await creator.determine_character_dialogue_examples(
+            character=character,
+            text="Elena speaks softly.",
+            instructions="Give her a dry sense of humor.",
+        )
+
+        prompt_text = str(creator.client.send_prompt.call_args_list[0][0][0])
+        assert "User-provided guidance for the dialogue examples" in prompt_text
+        assert "Give her a dry sense of humor." in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_determine_character_dialogue_examples_no_instructions_section(
+        self, active_context, mock_scene
+    ):
+        """Without guidance the section is omitted from the rendered prompt."""
+        creator = active_context
+        character = mock_scene.get_character("Elena")
+        creator.client.send_prompt.return_value = '{"calls": []}'
+
+        await creator.determine_character_dialogue_examples(
+            character=character,
+            text="Elena speaks softly.",
+        )
+
+        prompt_text = str(creator.client.send_prompt.call_args_list[0][0][0])
+        assert "User-provided guidance for the dialogue examples" not in prompt_text
+
 
 class TestCreatorScenarioMethods:
     """Tests for scenario creation methods."""

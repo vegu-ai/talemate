@@ -271,7 +271,7 @@ If the current narration and scene progress has not yet indicated the character 
 
 Allows you to quickly generate a new, interactive character to add to the scene.
 
-![Introduce new character 1](/talemate/img/0.30.0/scene-tool-intro-char-1.png)
+![Introduce new character 1](/talemate/img/0.39.0/scene-tool-intro-char-1.png)
 
 ##### Determine Name
 
@@ -297,6 +297,16 @@ Write direction on how you want the character to enter the scene.
 
 !!! note "A character already interacting in the scene will not have their entrance narrated"
     If the narrator has already established the character interacting with your characters this "entry narration" will be skipped. The check for this 100% based on an AI prompt so may not always work correctly.
+
+##### Generate example dialogue
+
+If selected, the AI will generate a few example dialogue lines for the character, showcasing how they speak and act.
+
+When checked, an **Example dialogue guidance** field appears where you can optionally steer how the examples are written — tone, speech patterns, quirks (e.g. "Speaks in short sentences, dry humor"). Leave it blank to let the AI infer the voice from the character's description and attributes.
+
+![Introduce new character example dialogue](/talemate/img/0.39.0/scene-tool-intro-char-example-dialogue.png)
+
+The generated examples can be reviewed and edited later under the character's [Actor management](/talemate/user-guide/world-editor/characters/actor) tab in the world editor.
 
 ##### Templates
 

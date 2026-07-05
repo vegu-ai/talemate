@@ -12,7 +12,7 @@ Find the :material-account-plus: **Create Character** button and click on it.
 
 A `New character` entry will appear in the list.
 
-![world-editor-create-player-character-1](/talemate/img/0.26.0/world-editor-create-player-character-1.png)
+![world-editor-create-player-character-1](/talemate/img/0.39.0/world-editor-create-player-character-1.png)
 
 ## Generate the player character
 
@@ -28,7 +28,7 @@ You can leave the `Description` field empty, as the AI will generate a descripti
 
 Toggle on the **Controlled by Player** switch.
 
-![world-editor-create-player-character-2](/talemate/img/0.26.0/world-editor-create-player-character-2.png)
+![world-editor-create-player-character-2](/talemate/img/0.39.0/world-editor-create-player-character-2.png)
 
 Finally click the **Create Character** button.
 

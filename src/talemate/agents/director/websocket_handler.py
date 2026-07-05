@@ -55,6 +55,9 @@ class PersistCharacterPayload(pydantic.BaseModel):
 
     is_player: bool = False
 
+    generate_example_dialogue: bool = False
+    example_dialogue_instructions: str = ""
+
 
 class AssignVoiceToCharacterPayload(pydantic.BaseModel):
     character_name: str

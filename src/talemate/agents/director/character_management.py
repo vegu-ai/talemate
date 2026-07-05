@@ -29,6 +29,8 @@ __all__ = [
 
 log = structlog.get_logger()
 
+PERSIST_CHARACTER_EXAMPLE_DIALOGUE_COUNT = 3
+
 if TYPE_CHECKING:
     from talemate import Character, Scene
     from talemate.agents.tts import TTSAgent
@@ -152,6 +154,8 @@ class CharacterManagementMixin:
         description: str = "",
         assign_voice: bool = True,
         is_player: bool = False,
+        generate_example_dialogue: bool = False,
+        example_dialogue_instructions: str = "",
     ) -> "Character":
         world_state = instance.get_agent("world_state")
         creator = instance.get_agent("creator")
@@ -297,6 +301,18 @@ class CharacterManagementMixin:
             )
             character.dialogue_instructions = dialogue_instructions
             log.debug("persist_character", dialogue_instructions=dialogue_instructions)
+
+            # Generate example dialogue for the character if the option is selected
+            if generate_example_dialogue:
+                loading_status("Generating example dialogue")
+                example_dialogue = await creator.determine_character_dialogue_examples(
+                    character,
+                    text=content or "",
+                    instructions=example_dialogue_instructions,
+                    max_examples=PERSIST_CHARACTER_EXAMPLE_DIALOGUE_COUNT,
+                )
+                character.example_dialogue = example_dialogue
+                log.debug("persist_character", example_dialogue=example_dialogue)
 
             # Narrate the character's entry if the option is selected
             if active and narrate_entry:

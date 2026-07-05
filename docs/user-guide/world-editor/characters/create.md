@@ -6,7 +6,7 @@ Then click on the :material-account-plus: **Create Character** button on the lef
 
 A `New character` entry will appear in the list.
 
-![world-editor-create-player-character-1](/talemate/img/0.26.0/world-editor-create-player-character-1.png)
+![world-editor-create-player-character-1](/talemate/img/0.39.0/world-editor-create-player-character-1.png)
 
 ### Enable AI Generation
 
@@ -32,6 +32,16 @@ The short to medium length description of the character. This will be generated 
 ### Generate Attributes
 
 If this is toggled on, the AI will generate some attributes for the character based on the instructions you provide.
+
+### Generate Example Dialogue
+
+If this is toggled on, the AI will generate a few example dialogue lines for the character, showcasing how they speak and act.
+
+When enabled, an **Example dialogue guidance** field appears where you can optionally steer how the examples are written — tone, speech patterns, quirks (e.g. "Speaks in short sentences, dry humor"). Leave it blank to let the AI infer the voice from the character's description and attributes.
+
+![world-editor-create-character-example-dialogue](/talemate/img/0.39.0/world-editor-create-character-example-dialogue.png)
+
+The generated examples can be reviewed and edited after creation under the character's [Actor management](/talemate/user-guide/world-editor/characters/actor) tab.
 
 ### Controlled by Player
 

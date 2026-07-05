@@ -166,6 +166,7 @@ class CharacterCreatorMixin:
         self,
         character: Character,
         text: str = "",
+        instructions: str = "",
         dynamic_instructions: list = None,
         max_examples: int = 5,
     ) -> list[str]:
@@ -174,6 +175,7 @@ class CharacterCreatorMixin:
         Args:
             character: The character to extract dialogue examples for
             text: Text containing dialogue examples and relevant character information
+            instructions: Optional user-provided guidance for the dialogue examples
             dynamic_instructions: Optional dynamic instructions for context
             max_examples: Maximum number of dialogue examples to generate (default: 5)
 
@@ -211,6 +213,7 @@ class CharacterCreatorMixin:
             character=character,
             scene=self.scene,
             text=text,
+            instructions=instructions,
             max_examples=max_examples,
             existing_examples=character.example_dialogue[:3]
             if character.example_dialogue

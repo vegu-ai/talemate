@@ -53,6 +53,17 @@
 
                             <div v-if="character.generation_context.enabled">
                                 <v-checkbox  density="compact" :disabled="busy" v-model="character.generation_context.generateAttributes" label="Generate attributes" messages="Generate a few attributes based on the instructions and the description."></v-checkbox>
+                                <v-checkbox density="compact" :disabled="busy" v-model="character.generation_context.generateExampleDialogue" label="Generate example dialogue" messages="Generate a few examples of how the character speaks."></v-checkbox>
+                                <v-textarea
+                                    v-if="character.generation_context.generateExampleDialogue"
+                                    :disabled="busy"
+                                    v-model="character.generation_context.exampleDialogueInstructions"
+                                    label="Example dialogue guidance"
+                                    class="mt-2"
+                                    auto-grow rows="2"
+                                    placeholder="Speaks in short sentences, dry humor ..."
+                                    hint="Optional guidance for how the example dialogue should be generated.">
+                                </v-textarea>
                             </div>
 
                             <v-checkbox density="compact" :disabled="!canBePlayer || busy" v-model="character.is_player" label="Controlled by the player" hide-details></v-checkbox>
@@ -118,6 +129,8 @@ export default {
                     enabled: true,
                     instructions: "",
                     generateAttributes: true,
+                    generateExampleDialogue: false,
+                    exampleDialogueInstructions: "",
                 },
                 description: "",
                 name: "",
@@ -187,6 +200,8 @@ export default {
                     enabled: true,
                     instructions: "",
                     generateAttributes: true,
+                    generateExampleDialogue: false,
+                    exampleDialogueInstructions: "",
                 },
                 description: "",
                 name: "",
@@ -227,6 +242,8 @@ export default {
                     determine_name: this.character.generation_context.enabled && !this.character.name,
                     narrate_entry: false,
                     generate_attributes: this.character.generation_context.generateAttributes,
+                    generate_example_dialogue: this.character.generation_context.generateExampleDialogue,
+                    example_dialogue_instructions: this.character.generation_context.exampleDialogueInstructions,
                     augment_attributes: "Add some additional, interesting attributes that are not already present in the character sheet.",
                     is_player: this.character.is_player,
                     description: this.character.description,

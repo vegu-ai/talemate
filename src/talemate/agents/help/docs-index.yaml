@@ -725,8 +725,8 @@
 - path: user-guide/scenario-tools.md
   title: Scene Tools
   summary: The scene tools toolbar and agent activity bar. Covers actor actions, director actions, narrator actions, advancing
-    time, world state actions, creative tools (e.g. taking characters in/out of the scene), the visualizer menu, and saving,
-    with Ctrl/Cmd modifier click behavior.
+    time, world state actions, creative tools (e.g. taking characters in/out of the scene, introducing new characters with
+    optional example dialogue generation and guidance), the visualizer menu, and saving, with Ctrl/Cmd modifier click behavior.
 - path: user-guide/scene-directory.md
   title: Scene Directory Structure
   summary: Layout of a scene's project directory under scenes/, save .json files, and the assets/, changelog/, nodes/, templates/,
@@ -805,7 +805,8 @@
 - path: user-guide/world-editor/characters/create.md
   title: Character creation
   summary: Creating a new character with the Create Character button, the AI generation toggle and instructions field, name,
-    description, generate-attributes option, and the Controlled by Player switch.
+    description, generate-attributes option, the generate-example-dialogue option with its optional guidance field, and the
+    Controlled by Player switch.
 - path: user-guide/world-editor/characters/deactivate.md
   title: Activate and Deactivate Characters
   summary: Temporarily removing a character from dialogue generation with the Deactivate button and bringing them back with

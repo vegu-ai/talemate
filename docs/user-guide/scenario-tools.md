@@ -191,37 +191,51 @@ By default the [:material-script-text: Narrator Agent](/talemate/user-guide/agen
 
 ### :material-earth: World State Actions
 
-##### Automatic State Updates
+The :material-earth: world state menu lets you set up and manage tracked states, apply favorited state templates, and generate or edit world context — all without leaving the scene.
 
-Allows you to quickly set up tracked character and world states. 
+![World State Actions](/talemate/img/0.39.0/scene-tool-world-state-actions.png)
 
 !!! info "What is a tracked state?"
 
     --8<-- "docs/user-guide/tracking-a-state.md:what-is-a-tracked-state"
 
-Please refer to the [World State](/talemate/user-guide/world-state) section for more information on how set up custom states to track.
+    Please refer to the [World State](/talemate/user-guide/world-state) section for more information on how to set up custom states to track.
+
+#### :material-cube-scan: Track state
+
+Opens a dialog to quickly set up a new tracked state — a shortcut for doing the same thing in the world editor. Choose whether to track the **World** or a specific **character**, describe what to track, then set how often it updates and how it attaches to context.
+
+![Track State dialog](/talemate/img/0.39.0/scene-tool-track-state-modal.png)
+
+When a character is the target, an extra **Require character active** option appears so the state only progresses while that character is in the scene. The default context attachment also adapts to the target — `Passive` for the world, `Sequential` for a character.
+
+![Track State dialog for a character](/talemate/img/0.39.0/scene-tool-track-state-modal-character.png)
+
+See [Context Attachment Method](/talemate/user-guide/tracking-a-state/#context-attachment-method) for what each attachment option does. Once created, the state can be viewed and managed in the World State Manager.
+
+#### Quick-apply favorite states
 <!--- --8<-- [start:quick-apply-favorite-state] -->
-Any favorited state will be shown in the :material-earth: world state context menu. *Your list may be different than the one shown here, depending on what you have favorited.*
+Any state template you have favorited appears under its target in the world state menu — the player character, each NPC, and **World** each get a submenu of the favorites relevant to them. *Your list may be different than the one shown here, depending on what you have favorited.*
 
-![World State Actions](/talemate/img/0.26.0/scene-tool-world-state-actions.png)
+![Favorite states submenu](/talemate/img/0.39.0/scene-tool-world-state-submenu.png)
 
-Clicking on any item in `Autoamtic State Updates` will generate the current state and keep it tracked until it is removed.
-
-A tracked state will have a checkmark next to it.
-
-![World State Tracked](/talemate/img/0.26.0/scene-tool-world-state-applied.png)
+Clicking a favorite generates the current state and keeps it tracked until it is removed. A state that is already tracked is marked with a checkmark; clicking it opens the state in the World State Manager instead of creating a duplicate.
 <!--- --8<-- [end:quick-apply-favorite-state] -->
 
-#### :material-book-open-page-variant: Open the world state manager
+#### :material-auto-fix: Generate world context
 
-Will open the world state template editor, where you can view and edit your available world states templates.
+Generates a new world entry from the current scene context — useful for locations, lore, backstory, and other world details.
 
-#### :material-refresh: Update the world state
+#### :material-book-open-page-variant: World context editor / Character context editor
 
-Will cause a regeneration of the world state.
+Open the World State Manager to view and edit world entries and character context, including any tracked states you have set up.
+
+#### :material-refresh: Update world snapshot
+
+Regenerates the world state snapshot shown in the left :material-earth: `World` panel. Hold ++ctrl++ (or ++cmd++) while clicking to wipe the snapshot and start fresh.
 
 !!! info "Does not run state re-inforcement"
-    Currently, this will not re-inforce the state of the world or characters, it will only update the world state context that is displayed in the left panel under the :material-earth: `World` section.
+    This only refreshes the world state snapshot displayed in the left panel under the :material-earth: `World` section; it does not re-inforce the tracked states of the world or characters.
 
 ### :material-puzzle-edit: Creative Tools
 

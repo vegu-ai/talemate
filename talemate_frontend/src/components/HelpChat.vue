@@ -30,11 +30,6 @@
             </template>
         </v-tooltip>
 
-        <v-btn icon variant="text" size="small" :disabled="!activeChatId || isProcessing || !lastMessageIsHelpText" @click="regenerateLast">
-            <v-icon>mdi-refresh</v-icon>
-            <v-tooltip activator="parent" location="top">Regenerate last answer</v-tooltip>
-        </v-btn>
-
         <v-btn icon variant="text" size="small" :disabled="!activeChatId || isProcessing" @click="clearChat">
             <v-icon>mdi-broom</v-icon>
             <v-tooltip activator="parent" location="top">Clear chat</v-tooltip>
@@ -112,6 +107,20 @@
                         <DirectorConsoleChatMessageLoading v-else-if="m.loading" :label="m.loading_label" />
                         <DirectorConsoleChatMessageMarkdown v-else :text="m.message" />
                     </v-card>
+                    <div v-if="isLastHelpText(idx)" class="message-actions">
+                        <v-btn
+                            size="x-small"
+                            icon
+                            variant="text"
+                            density="comfortable"
+                            color="primary"
+                            :disabled="isProcessing || !helpAvailable || !idx"
+                            @click.stop="regenerateLast()"
+                        >
+                            <v-tooltip activator="parent" location="top">Regenerate</v-tooltip>
+                            <v-icon>mdi-refresh</v-icon>
+                        </v-btn>
+                    </div>
                 </div>
                 <div v-if="chatMessages.length === 0" class="text-caption text-muted pa-2">
                     {{ activeChatId ? 'No messages yet' : 'Click + to begin' }}
@@ -225,6 +234,9 @@ export default {
             if(m && m.source === 'user') return 'hchat_msg_user';
             if(m && m.type === 'doc_result') return 'hchat_msg_doc_result';
             return 'hchat_msg_help';
+        },
+        isLastHelpText(idx) {
+            return idx === this.chatMessages.length - 1 && this.lastMessageIsHelpText;
         },
         hasTrailingLoading() {
             if(this.chatMessages.length === 0) return false;
@@ -460,6 +472,13 @@ export default {
 }
 .message-row.from-help {
     justify-content: flex-start;
+}
+.message-row .message-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+    margin-left: 6px;
 }
 .message-card {
     width: 100%;

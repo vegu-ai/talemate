@@ -16,6 +16,8 @@ Open the help chat via the :material-help-circle-outline: icon in the app bar. I
 
 Help conversations are multi-turn and you can keep several of them - use the chat selector at the top of the help drawer to switch, create, or delete chats. Chats persist across restarts (they are stored in `chats/help.json` in your Talemate directory, independent of any scene).
 
+The most recent answer can be regenerated via the refresh button next to the message.
+
 ## Scene awareness
 
 Each chat has a **Scene Aware** toggle. When enabled and a scene is loaded, the help agent can see the scene title, its characters, and recent scene progress, so you can ask scene-specific questions. When disabled the conversation is completely unaware of your scene.

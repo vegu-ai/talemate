@@ -473,9 +473,10 @@
     and TTS/Voice agent auto-setup when Kobold loads image or TTS models, and connection troubleshooting.'
 - path: user-guide/clients/types/llamacpp.md
   title: llama.cpp Client
-  summary: 'Connecting to a llama-server instance: API URL (default port 8080), optional API key, context length, and the
-    Concurrent Inference toggle (requires parallel slots on the server). Includes could-not-connect troubleshooting and a
-    sample llama-server launch command.'
+  summary: 'Connecting to a llama-server instance: API URL (default port 8080), optional API key, the ''API handles prompt
+    template'' option (renders prompts via the server''s /apply-template endpoint using the model''s built-in chat template;
+    response pre-filling keeps working), context length, and the Concurrent Inference toggle (requires parallel slots on
+    the server). Includes could-not-connect troubleshooting and a sample llama-server launch command.'
 - path: user-guide/clients/types/lmstudio.md
   title: LMStudio Client
   summary: 'Connecting to an LMStudio instance: API URL (default port 1234), API key, and context length settings, plus the
@@ -509,8 +510,10 @@
     handles prompt template'' option (recommended off), and could-not-connect troubleshooting.'
 - path: user-guide/clients/types/text-generation-webui.md
   title: Text-Generation-WebUI Client
-  summary: 'Connecting to a Text-Generation-WebUI (ooba) instance: API URL (default port 5000), API key, and context length,
-    plus troubleshooting for bad generations (wrong prompt template), ''No model loaded'', and connection failures.'
+  summary: 'Connecting to a Text-Generation-WebUI (ooba) instance: API URL (default port 5000), API key, the ''API handles
+    prompt template'' option (routes requests to chat/completions so the backend applies the prompt template; response
+    pre-filling keeps working via continue_), and context length, plus troubleshooting for bad generations (wrong prompt
+    template), ''No model loaded'', and connection failures.'
 - path: user-guide/debug-tools.md
   title: Debug Tools
   summary: The Debug Tools panel (bug icon in the toolbar) with its Prompts tab (inspect all AI prompts sent, force reasoning

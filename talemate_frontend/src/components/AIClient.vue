@@ -173,7 +173,7 @@
             <v-list-item-subtitle class="text-center mt-2">
   
               <!-- LLM prompt template warning -->
-              <v-tooltip text="Could not determine LLM prompt template for this model. Using default. You can pick a template manually in the client options and new templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template && !client.data.dedicated_default_template" max-width="300" >
+              <v-tooltip text="Could not determine LLM prompt template for this model. Using default. You can pick a template manually in the client options and new templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && !client.data.api_handles_prompt_template && client.data.meta.requires_prompt_template && !client.data.dedicated_default_template" max-width="300" >
                 <template v-slot:activator="{ props }">
                   <v-icon x-size="14" class="mr-1" v-bind="props" color="orange">mdi-alert</v-icon>
                 </template>
@@ -187,7 +187,7 @@
               </v-tooltip>
 
               <!-- dedicated default template note -->
-              <v-tooltip :text="'Could not determine LLM prompt template for this model.\n\nHowever, the client provides a dedicated default template, which should just work.\n\nIf you want to use the appropriate prompt template for the loaded model you can still pick a template manually in the client options and new templates can be added in ./templates/llm-prompt'" v-else-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template && client.data.dedicated_default_template" max-width="300" class="pre-wrap">
+              <v-tooltip :text="'Could not determine LLM prompt template for this model.\n\nHowever, the client provides a dedicated default template, which should just work.\n\nIf you want to use the appropriate prompt template for the loaded model you can still pick a template manually in the client options and new templates can be added in ./templates/llm-prompt'" v-else-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && !client.data.api_handles_prompt_template && client.data.meta.requires_prompt_template && client.data.dedicated_default_template" max-width="300" class="pre-wrap">
                 <template v-slot:activator="{ props }">
                   <v-icon x-size="14" class="mr-1" v-bind="props" color="highlight1">mdi-alert</v-icon>
                 </template>

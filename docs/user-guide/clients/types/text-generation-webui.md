@@ -33,6 +33,14 @@ The URL of your Text-Generation-WebUI instance, without any path. For example, `
 
 If the Text-Generation-WebUI instance requires an API key, you can set it here.
 
+##### API handles prompt template (chat/completions)
+
+This will cause requests to go to the `chat/completions` API instead and Text-Generation-WebUI will be in control of the prompt template. Coercion (pre-filling the beginning of the response) keeps working through the API's `continue_` mechanism.
+
+This is a trade-off: keep it disabled for full control of the prompt template in Talemate, or enable it to trust that the template configured on the remote end is correct — useful when you don't know which prompt template to pick.
+
+With reasoning models, Text-Generation-WebUI separates the thinking from the response on its end, so no reasoning pattern is needed in this mode — the reasoning is captured automatically. Note that the model spends tokens on thinking either way, so make sure response budgets account for it.
+
 ##### Context Length
 
 The number of tokens to use as context when generating text. Defaults to `8192`.

@@ -37,6 +37,14 @@ The llama.cpp server (`llama-server`) defaults to port 8080, so unless you chang
 
 If your llama.cpp server is configured to require authentication, you can set the API key here. Most local setups do not require this.
 
+##### API handles prompt template
+
+When enabled, Talemate uses the server's `/apply-template` endpoint to render prompts through the model's built-in chat template instead of applying a prompt template itself. Coercion (pre-filling the beginning of the response) keeps working, since the server leaves the assistant turn open for continuation.
+
+This is a trade-off: keep it disabled for full control of the prompt template in Talemate, or enable it to trust the model's built-in chat template on the server — useful when you don't know which prompt template to pick.
+
+Reasoning models work as usual — enable Reasoning on the client and the think block is separated out by the configured reasoning pattern. When Reasoning is disabled, Talemate asks thinking-capable templates (Qwen, GLM, ...) not to open a think block via `enable_thinking`.
+
 ##### Context Length
 
 The number of tokens to use as context when generating text. Defaults to `8192`.

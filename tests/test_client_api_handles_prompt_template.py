@@ -1,7 +1,9 @@
-"""Unit tests for the `api_handles_prompt_template` option on the
-Text-Generation-WebUI and llama.cpp clients (issue #65).
+"""Unit tests for the `api_handles_prompt_template` option on the clients
+that expose it (issues #65 and #67): TabbyAPI, OpenAI Compatible, Ollama,
+Text-Generation-WebUI and llama.cpp.
 
-Covers the pure-Python logic: the `prompt_template()` bypass, chat message
+Covers the pure-Python logic: the shared `ApiHandlesPromptTemplateMixin`
+`prompt_template()` bypass, the shared `chat_messages_for_coercion()` message
 assembly including coercion splitting, the transport payloads (mocked HTTP),
 and the coercion pre-fill echo stripping. Live generation against real
 backends is exercised separately.
@@ -16,8 +18,14 @@ import pytest
 
 import talemate.config.state as config_state
 from talemate.client import llamacpp as llamacpp_module
+from talemate.client import ollama as ollama_module
+from talemate.client import openai_compat as openai_compat_module
+from talemate.client import tabbyapi as tabbyapi_module
 from talemate.client import textgenwebui as textgenwebui_module
 from talemate.client.llamacpp import LlamaCppClient
+from talemate.client.ollama import OllamaClient
+from talemate.client.openai_compat import OpenAICompatibleClient
+from talemate.client.tabbyapi import TabbyAPIClient
 from talemate.client.textgenwebui import TextGeneratorWebuiClient
 from talemate.context import ActiveScene
 from talemate.exceptions import GenerationProcessingError
@@ -43,6 +51,30 @@ def _register_llamacpp(name: str, **kwargs):
 def _register_textgenwebui(name: str, **kwargs):
     cfg = textgenwebui_module.ClientConfig(
         type="textgenwebui", name=name, api_url="http://fake:5000", **kwargs
+    )
+    config_state.CONFIG.clients[name] = cfg
+    return cfg
+
+
+def _register_tabbyapi(name: str, **kwargs):
+    cfg = tabbyapi_module.ClientConfig(
+        type="tabbyapi", name=name, api_url="http://fake:5000/v1", **kwargs
+    )
+    config_state.CONFIG.clients[name] = cfg
+    return cfg
+
+
+def _register_openai_compat(name: str, **kwargs):
+    cfg = openai_compat_module.ClientConfig(
+        type="openai_compat", name=name, api_url="http://fake:5000", **kwargs
+    )
+    config_state.CONFIG.clients[name] = cfg
+    return cfg
+
+
+def _register_ollama(name: str, **kwargs):
+    cfg = ollama_module.ClientConfig(
+        type="ollama", name=name, api_url="http://fake:11434", **kwargs
     )
     config_state.CONFIG.clients[name] = cfg
     return cfg
@@ -80,11 +112,100 @@ class TestPromptTemplateBypass:
             "PROMPT<|BOT|>Certainly:"
         )
 
+    def test_tabbyapi_flag_off_applies_local_template(self, cfg_isolation):
+        _register_tabbyapi("tabby_off")
+        client = TabbyAPIClient(name="tabby_off")
+        assert client.prompt_template("SYS", "PROMPT") == "SYS\nPROMPT"
+
+    def test_tabbyapi_flag_on_returns_raw_prompt(self, cfg_isolation):
+        _register_tabbyapi("tabby_on", api_handles_prompt_template=True)
+        client = TabbyAPIClient(name="tabby_on")
+        assert client.prompt_template("SYS", "PROMPT<|BOT|>Certainly:") == (
+            "PROMPT<|BOT|>Certainly:"
+        )
+
+    def test_openai_compat_flag_off_applies_local_template(self, cfg_isolation):
+        _register_openai_compat("oaic_off")
+        client = OpenAICompatibleClient(name="oaic_off")
+        assert client.prompt_template("SYS", "PROMPT") == "SYS\nPROMPT"
+
+    def test_openai_compat_flag_on_returns_raw_prompt(self, cfg_isolation):
+        _register_openai_compat("oaic_on", api_handles_prompt_template=True)
+        client = OpenAICompatibleClient(name="oaic_on")
+        assert client.prompt_template("SYS", "PROMPT<|BOT|>Certainly:") == (
+            "PROMPT<|BOT|>Certainly:"
+        )
+
+    def test_ollama_flag_off_applies_local_template(self, cfg_isolation):
+        _register_ollama("oll_off")
+        client = OllamaClient(name="oll_off")
+        assert client.prompt_template("SYS", "PROMPT") == "SYS\nPROMPT"
+
+    def test_ollama_flag_on_returns_raw_prompt(self, cfg_isolation):
+        _register_ollama("oll_on", api_handles_prompt_template=True)
+        client = OllamaClient(name="oll_on")
+        assert client.prompt_template("SYS", "PROMPT<|BOT|>Certainly:") == (
+            "PROMPT<|BOT|>Certainly:"
+        )
+
     def test_coercion_stays_enabled_with_flag_on(self, cfg_isolation):
         _register_llamacpp("lcpp_coerce", api_handles_prompt_template=True)
         _register_textgenwebui("tgw_coerce", api_handles_prompt_template=True)
         assert LlamaCppClient(name="lcpp_coerce").can_be_coerced
         assert TextGeneratorWebuiClient(name="tgw_coerce").can_be_coerced
+
+    def test_ollama_coercion_disabled_with_flag_on(self, cfg_isolation):
+        # ollama sends a raw prompt (no chat pre-fill), so coercion is only
+        # possible when talemate renders the prompt template itself
+        _register_ollama("oll_coerce", api_handles_prompt_template=True)
+        assert not OllamaClient(name="oll_coerce").can_be_coerced
+
+
+# ---------------------------------------------------------------------------
+# ClientBase.chat_messages_for_coercion
+# ---------------------------------------------------------------------------
+
+
+class TestChatMessagesForCoercion:
+    def test_coercion_appends_assistant_prefill(self, cfg_isolation):
+        _register_tabbyapi("tabby_msgs", api_handles_prompt_template=True)
+        client = TabbyAPIClient(name="tabby_msgs")
+
+        messages, coercion = client.chat_messages_for_coercion(
+            "Describe the room.<|BOT|>The room is ", "narrate"
+        )
+
+        assert [m["role"] for m in messages] == ["system", "user", "assistant"]
+        assert messages[1]["content"] == "Describe the room."
+        assert messages[2]["content"] == "The room is"
+        assert coercion == "The room is"
+
+    def test_no_coercion_returns_system_and_user_only(self, cfg_isolation):
+        _register_openai_compat("oaic_msgs", api_handles_prompt_template=True)
+        client = OpenAICompatibleClient(name="oaic_msgs")
+
+        messages, coercion = client.chat_messages_for_coercion(
+            "Describe the room.", "narrate"
+        )
+
+        assert [m["role"] for m in messages] == ["system", "user"]
+        assert messages[1]["content"] == "Describe the room."
+        assert coercion is None
+
+    def test_double_coercion_prepended_to_prefill(self, cfg_isolation):
+        _register_tabbyapi(
+            "tabby_dc",
+            api_handles_prompt_template=True,
+            double_coercion="Sure thing!",
+        )
+        client = TabbyAPIClient(name="tabby_dc")
+
+        messages, coercion = client.chat_messages_for_coercion(
+            "Describe the room.<|BOT|>The room is", "narrate"
+        )
+
+        assert coercion == "Sure thing!\n\nThe room is"
+        assert messages[2]["content"] == coercion
 
 
 # ---------------------------------------------------------------------------
@@ -254,9 +375,12 @@ class TestTextGenWebuiChatGenerate:
             "[DONE]",
         ]
 
-        response = client._generate_chat(
-            "Describe the room.<|BOT|>The room is", {"temperature": 0.7}, "SYS"
-        )
+        messages = [
+            {"role": "system", "content": "SYS"},
+            {"role": "user", "content": "Describe the room."},
+            {"role": "assistant", "content": "The room is"},
+        ]
+        response = client._generate_chat(messages, "The room is", {"temperature": 0.7})
 
         assert response == " dark and quiet."
 
@@ -287,9 +411,11 @@ class TestTextGenWebuiChatGenerate:
             "[DONE]",
         ]
 
-        response = client._generate_chat(
-            "Describe the room.", {"temperature": 0.7}, "SYS"
-        )
+        messages = [
+            {"role": "system", "content": "SYS"},
+            {"role": "user", "content": "Describe the room."},
+        ]
+        response = client._generate_chat(messages, None, {"temperature": 0.7})
 
         assert response == "The room is dark."
         assert client._reasoning_response == "Thinking about the room."
@@ -311,9 +437,11 @@ class TestTextGenWebuiChatGenerate:
             "[DONE]",
         ]
 
-        response = client._generate_chat(
-            "Describe the room.", {"temperature": 0.7}, "SYS"
-        )
+        messages = [
+            {"role": "system", "content": "SYS"},
+            {"role": "user", "content": "Describe the room."},
+        ]
+        response = client._generate_chat(messages, None, {"temperature": 0.7})
 
         assert response == "The room is dark."
 

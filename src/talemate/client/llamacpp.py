@@ -1,15 +1,18 @@
 import json
 
 import pydantic
-import structlog
 import httpx
 from openai import AsyncOpenAI
 
+from talemate.client.api_handles import (
+    ApiHandlesPromptTemplateConfig,
+    ApiHandlesPromptTemplateMixin,
+    api_handles_prompt_template_extra_fields,
+)
 from talemate.client.base import (
     STOPPING_STRINGS,
     ClientBase,
     CommonDefaults,
-    ExtraField,
     ParameterReroute,
 )
 from talemate.client.registry import register
@@ -22,24 +25,28 @@ from talemate.client.vision import VisionConfig, vision_extra_fields, OpenAIVisi
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.exceptions import GenerationProcessingError
 
-log = structlog.get_logger("talemate.client.llamacpp")
-
 APPLY_TEMPLATE_TIMEOUT = 30
 
 
-class Defaults(CommonDefaults, pydantic.BaseModel):
+class Defaults(CommonDefaults, ApiHandlesPromptTemplateConfig):
     # llama.cpp `llama-server` defaults to port 8080 (see ggml-org/llama.cpp README)
     api_url: str = "http://localhost:8080"
     max_token_length: int = 8192
-    api_handles_prompt_template: bool = False
 
 
-class ClientConfig(ConcurrentInference, VisionConfig, BaseClientConfig):
-    api_handles_prompt_template: bool = False
+class ClientConfig(
+    ConcurrentInference, ApiHandlesPromptTemplateConfig, VisionConfig, BaseClientConfig
+):
+    pass
 
 
 @register()
-class LlamaCppClient(ConcurrentInferenceMixin, OpenAIVisionMixin, ClientBase):
+class LlamaCppClient(
+    ApiHandlesPromptTemplateMixin,
+    ConcurrentInferenceMixin,
+    OpenAIVisionMixin,
+    ClientBase,
+):
     """
     Client for ggml-org/llama.cpp `llama-server`.
 
@@ -63,21 +70,14 @@ class LlamaCppClient(ConcurrentInferenceMixin, OpenAIVisionMixin, ClientBase):
         self_hosted: bool = True
         extra_fields: dict = pydantic.Field(
             default_factory=lambda: {
-                "api_handles_prompt_template": ExtraField(
-                    name="api_handles_prompt_template",
-                    type="bool",
+                **api_handles_prompt_template_extra_fields(
                     label="API handles prompt template",
-                    required=False,
                     description="The prompt template is rendered by llama.cpp using the model's built-in chat template, and the prompt template selection below is ignored. Response pre-filling keeps working. Keep this disabled for full control of the prompt template in Talemate; enable it to trust that the template on the remote end is correct.",
                 ),
                 **vision_extra_fields(),
                 **concurrent_inference_extra_fields(),
             }
         )
-
-    @property
-    def api_handles_prompt_template(self) -> bool:
-        return self.client_config.api_handles_prompt_template
 
     @property
     def supported_parameters(self):
@@ -111,11 +111,6 @@ class LlamaCppClient(ConcurrentInferenceMixin, OpenAIVisionMixin, ClientBase):
                 talemate_parameter="max_tokens", client_parameter="n_predict"
             ),
         ]
-
-    def prompt_template(self, system_message: str, prompt: str):
-        if not self.api_handles_prompt_template:
-            return super().prompt_template(system_message, prompt)
-        return prompt
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
@@ -179,16 +174,7 @@ class LlamaCppClient(ConcurrentInferenceMixin, OpenAIVisionMixin, ClientBase):
         message is included.
         """
 
-        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
-
-        messages = [
-            {"role": "system", "content": self.get_system_message(kind)},
-            {"role": "user", "content": prompt.strip()},
-        ]
-
-        if coercion_prompt:
-            self.log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
-            messages.append({"role": "assistant", "content": coercion_prompt.strip()})
+        messages, _ = self.chat_messages_for_coercion(prompt, kind)
 
         payload = {"messages": messages}
         if not self.reason_enabled:

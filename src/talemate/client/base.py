@@ -830,6 +830,34 @@ class ClientBase:
             return prompt, coercion
         return prompt, None
 
+    def chat_messages_for_coercion(
+        self, prompt: str, kind: str
+    ) -> tuple[list[dict], str | None]:
+        """
+        Assembles chat messages for clients that let the API handle the
+        prompt template: [system, user] plus an assistant pre-fill message
+        when the prompt carries a coercion marker.
+
+        Returns the messages and the stripped coercion prompt (None when
+        the prompt has no coercion). Transport-specific handling of the
+        pre-fill (e.g. TabbyAPI's `"prefix": True`, text-generation-webui's
+        `continue_`) stays at the call site.
+        """
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        if coercion_prompt:
+            coercion_prompt = coercion_prompt.strip()
+
+        messages = [
+            {"role": "system", "content": self.get_system_message(kind)},
+            {"role": "user", "content": prompt.strip()},
+        ]
+
+        if coercion_prompt:
+            self.log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
+            messages.append({"role": "assistant", "content": coercion_prompt})
+
+        return messages, coercion_prompt
+
     def rate_limit_update(self):
         """
         Updates the rate limit counter for the client.

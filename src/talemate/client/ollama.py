@@ -3,6 +3,11 @@ import httpx
 import ollama
 import time
 
+from talemate.client.api_handles import (
+    ApiHandlesPromptTemplateConfig,
+    ApiHandlesPromptTemplateMixin,
+    api_handles_prompt_template_extra_fields,
+)
 from talemate.client.base import (
     STOPPING_STRINGS,
     ClientBase,
@@ -19,18 +24,17 @@ log = structlog.get_logger("talemate.client.ollama")
 FETCH_MODELS_INTERVAL = 15
 
 
-class OllamaClientDefaults(CommonDefaults):
+class OllamaClientDefaults(CommonDefaults, ApiHandlesPromptTemplateConfig):
     api_url: str = "http://localhost:11434"  # Default Ollama URL
     model: str = ""  # Allow empty default, will fetch from Ollama
-    api_handles_prompt_template: bool = False
 
 
-class ClientConfig(BaseClientConfig):
-    api_handles_prompt_template: bool = False
+class ClientConfig(ApiHandlesPromptTemplateConfig, BaseClientConfig):
+    pass
 
 
 @register()
-class OllamaClient(ClientBase):
+class OllamaClient(ApiHandlesPromptTemplateMixin, ClientBase):
     """
     Ollama client for generating text using locally hosted models.
     """
@@ -48,15 +52,10 @@ class OllamaClient(ClientBase):
         manual_model_choices: list[str] = []  # Will be overridden by finalize_status
         defaults: OllamaClientDefaults = OllamaClientDefaults()
         self_hosted: bool = True
-        extra_fields: dict[str, ExtraField] = {
-            "api_handles_prompt_template": ExtraField(
-                name="api_handles_prompt_template",
-                type="bool",
-                label="API handles prompt template",
-                required=False,
-                description="Let Ollama handle the prompt template. Only do this if you don't know which prompt template to use. Letting talemate handle the prompt template will generally lead to improved responses.",
-            ),
-        }
+        extra_fields: dict[str, ExtraField] = api_handles_prompt_template_extra_fields(
+            label="API handles prompt template",
+            description="Let Ollama handle the prompt template. Only do this if you don't know which prompt template to use. Letting talemate handle the prompt template will generally lead to improved responses.",
+        )
 
     @property
     def supported_parameters(self):
@@ -96,10 +95,6 @@ class OllamaClient(ClientBase):
         to predefine partial LLM output in the prompt)
         """
         return not self.api_handles_prompt_template and not self.reason_enabled
-
-    @property
-    def api_handles_prompt_template(self) -> bool:
-        return self.client_config.api_handles_prompt_template
 
     async def status(self):
         """
@@ -160,11 +155,6 @@ class OllamaClient(ClientBase):
 
     async def get_model_name(self):
         return self.model
-
-    def prompt_template(self, system_message: str, prompt: str):
-        if not self.api_handles_prompt_template:
-            return super().prompt_template(system_message, prompt)
-        return prompt
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         """

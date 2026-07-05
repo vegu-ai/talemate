@@ -9,7 +9,12 @@ import pydantic
 import structlog
 from openai import AsyncOpenAI
 
-from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults, ExtraField
+from talemate.client.api_handles import (
+    ApiHandlesPromptTemplateConfig,
+    ApiHandlesPromptTemplateMixin,
+    api_handles_prompt_template_extra_fields,
+)
+from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults
 from talemate.client.registry import register
 from talemate.client.vision import VisionConfig, vision_extra_fields, OpenAIVisionMixin
 from talemate.config.schema import Client as BaseClientConfig
@@ -17,17 +22,18 @@ from talemate.config.schema import Client as BaseClientConfig
 log = structlog.get_logger("talemate.client.textgenwebui")
 
 
-class TextGeneratorWebuiClientDefaults(Defaults):
+class TextGeneratorWebuiClientDefaults(Defaults, ApiHandlesPromptTemplateConfig):
     api_key: str = ""
-    api_handles_prompt_template: bool = False
 
 
-class ClientConfig(VisionConfig, BaseClientConfig):
-    api_handles_prompt_template: bool = False
+class ClientConfig(ApiHandlesPromptTemplateConfig, VisionConfig, BaseClientConfig):
+    pass
 
 
 @register()
-class TextGeneratorWebuiClient(OpenAIVisionMixin, ClientBase):
+class TextGeneratorWebuiClient(
+    ApiHandlesPromptTemplateMixin, OpenAIVisionMixin, ClientBase
+):
     auto_determine_prompt_template: bool = True
     remote_model_locked: bool = True
     finalizers: list[str] = [
@@ -46,11 +52,7 @@ class TextGeneratorWebuiClient(OpenAIVisionMixin, ClientBase):
         self_hosted: bool = True
         extra_fields: dict = pydantic.Field(
             default_factory=lambda: {
-                "api_handles_prompt_template": ExtraField(
-                    name="api_handles_prompt_template",
-                    type="bool",
-                    label="API handles prompt template (chat/completions)",
-                    required=False,
+                **api_handles_prompt_template_extra_fields(
                     description="Requests go to the chat/completions API and text-generation-webui applies the model's prompt template, and the prompt template selection below is ignored. Response pre-filling keeps working. Keep this disabled for full control of the prompt template in Talemate; enable it to trust that the template on the remote end is correct.",
                 ),
                 **vision_extra_fields(),
@@ -58,19 +60,10 @@ class TextGeneratorWebuiClient(OpenAIVisionMixin, ClientBase):
         )
 
     @property
-    def api_handles_prompt_template(self) -> bool:
-        return self.client_config.api_handles_prompt_template
-
-    @property
     def requires_reasoning_pattern(self) -> bool:
         # in chat mode the API separates reasoning into reasoning_content
         # deltas, which are captured during streaming
         return not self.api_handles_prompt_template
-
-    def prompt_template(self, system_message: str, prompt: str):
-        if not self.api_handles_prompt_template:
-            return super().prompt_template(system_message, prompt)
-        return prompt
 
     def make_client(self) -> AsyncOpenAI:
         api_key = self.api_key or "sk-1234"
@@ -207,34 +200,26 @@ class TextGeneratorWebuiClient(OpenAIVisionMixin, ClientBase):
     async def generate(self, prompt: str, parameters: dict, kind: str):
         loop = asyncio.get_event_loop()
         if self.api_handles_prompt_template:
-            # resolve on the event loop - the executor thread cannot see the
+            # assemble on the event loop - the executor thread cannot see the
             # active_scene contextvar, which would drop persona instructions
-            system_message = self.get_system_message(kind)
+            messages, coercion_prompt = self.chat_messages_for_coercion(prompt, kind)
             return await loop.run_in_executor(
-                None, self._generate_chat, prompt, parameters, system_message
+                None, self._generate_chat, messages, coercion_prompt, parameters
             )
         return await loop.run_in_executor(
             None, self._generate, prompt, parameters, kind
         )
 
-    def _generate_chat(self, prompt: str, parameters: dict, system_message: str):
+    def _generate_chat(
+        self, messages: list[dict], coercion_prompt: str | None, parameters: dict
+    ):
         """
         Generates text via the chat/completions endpoint, letting
         text-generation-webui apply the model's prompt template. Coercion is
         passed as a partial assistant message that the API continues via its
         `continue_` parameter.
         """
-        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
-
-        messages = [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": prompt.strip()},
-        ]
-
         if coercion_prompt:
-            coercion_prompt = coercion_prompt.strip()
-            log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
-            messages.append({"role": "assistant", "content": coercion_prompt})
             parameters["continue_"] = True
 
         parameters["mode"] = "instruct"

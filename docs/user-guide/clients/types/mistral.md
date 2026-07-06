@@ -36,4 +36,10 @@ Which model to use. Currently defaults to `mixtral-8x22`.
 
 !!! note "Talemate lags behind Mistral.ai"
     When Mistral.ai adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.
+
+##### Concurrent Inference
+
+Found under the **Concurrency** tab in the client settings. When enabled, batch operations that need several queries (currently visual prompt generation for image generation) can send multiple requests to the Mistral.ai API in parallel instead of one at a time, which can speed those operations up.
+
+This is **off by default**. Whether concurrent requests actually complete in parallel depends on your Mistral.ai account's rate limits. See the [Concurrent Requests](/talemate/user-guide/clients/concurrent-requests/) page for more detail.
 --8<-- "docs/snippets/common.md:client-response-length"

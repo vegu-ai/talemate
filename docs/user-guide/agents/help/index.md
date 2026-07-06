@@ -6,6 +6,8 @@ It grounds its answers in the documentation that ships with Talemate: it receive
 
 Open the help chat via the :material-help-circle-outline: icon in the app bar. It is available at any time - no scene needs to be loaded.
 
+![Help chat answering a question about dialogue styling](/talemate/img/0.39.0/help-agent-chat.png)
+
 ## What it can and cannot do
 
 - It answers questions and points you to the relevant documentation pages.

@@ -20,6 +20,17 @@ This feature provides visibility into what's happening behind the scenes without
 
 The agent activity bar can be toggled on or off in [Settings > Game > General](/talemate/user-guide/app-settings/game#show-agent-activity-bar). It is enabled by default.
 
+## Quick Settings
+
+![Quick settings chips](/talemate/img/0.39.0/scene-tools-quick-settings.png)
+
+Above the scene tools sits a row of small toggle chips. Click a chip to toggle it — a green check marks an active toggle.
+
+- **:material-content-save: Auto Save** — Automatically save after each game loop. Requires the scene to have been saved manually once; until then the chip shows a warning explaining why it is unavailable.
+- **:material-robot: Auto Progress** — The AI automatically progresses the scene after your turn.
+- **:material-image-area: Immersive** — Render the [scene backdrop](/talemate/user-guide/inline-visuals/#scene-backdrop) behind the scene text. This chip only appears when the scene has a backdrop image set (or a generated background is available to become one); toggling it off remembers the chosen image, so you can switch back at any time.
+- **:material-cog: Settings** — Not a toggle: opens a shortcut menu to commonly used [application settings](/talemate/user-guide/app-settings/) (Game, Appearance) and the settings of individual agents (Conversation, Narrator, Creator, Director, Visualizer, Text to Speech).
+
 ## Tool Bar
 
 <!--- --8<-- [start:tools-ux] -->

@@ -27,3 +27,12 @@ State reinforcement templates are used to quickly (or even automatically) setup 
 
 ### :material-movie-open: Scene Type
 Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene.
+
+### :material-palette: Visual Style
+Visual style templates define how image generation prompts are constructed — positive and negative prompt prefixes and suffixes, and the prompting type (keywords vs. descriptive). Select a style in the [visualizer agent's Styles settings](/talemate/user-guide/agents/visualizer/settings/#styles).
+
+### :material-auto-fix: Visual Prompt Finalizer
+Visual prompt finalizer templates define a reusable set of post-processing actions (exact, fuzzy or regex match and replace, or an AI instruction) applied to image generation prompts. See [Visual Prompt Finalizer](/talemate/user-guide/templates/visual-finalizer).
+
+### :material-account-voice: Agent Persona
+Agent persona templates define how an agent should present and behave in prompts — tone, perspective, style. Assign a persona per agent in the [Scene Settings](/talemate/user-guide/world-editor/scene/settings). (Currently used by the director.)

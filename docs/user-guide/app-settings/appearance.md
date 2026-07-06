@@ -73,38 +73,39 @@ To change a color:
 
 ## :material-image-outline: Visuals
 
-![App settings - Appearance - Visuals](/talemate/img/0.35.0/app-settings-appearance-visuals.png)
+![App settings - Appearance - Visuals](/talemate/img/0.39.0/app-settings-appearance-visuals.png)
 
-The Visuals tab controls how images appear alongside messages in your scene feed. This includes character portraits, scene illustrations, and character cards.
+The Visuals tab controls how images appear alongside messages in your scene feed. This includes character portraits, cards, scene illustrations, and scene backgrounds.
 
-### Asset Types
+### Visual Types
 
-Configure display settings for each type of visual asset:
+Configure display settings for each type of visual:
 
-| Asset Type | Description |
+| Visual Type | Description |
 |-----------|-------------|
-| **Avatar** | Character portraits that appear next to character messages |
+| **Portrait** | Character portraits that appear next to character messages |
 | **Card** | Character or scene cards that can be attached to messages |
-| **Scene Illustration** | Scene illustrations and backgrounds attached to messages |
+| **Scene Illustration** | Images of the current moment ("Visualize Moment") attached to messages |
+| **Scene Background** | Purely environmental images ("Visualize Scene (Background)") |
 
 ### Display Settings
 
-For each asset type, you can configure:
+For each visual type, you can configure:
 
-#### Cadence
+#### Render Cadence
 
-Controls when the asset is displayed:
+Controls when the visual is displayed:
 
-- **Always** - Show the asset on every message that has one (default)
-- **On Change** - Only show when the asset differs from the previous message of the same type
-- **Never** - Hide this type of asset entirely
+- **Always** - Show the visual on every message that has one (default)
+- **On Change** - Only show when the visual differs from the previous message of the same type (portraits only)
+- **Never** - Hide this type of visual entirely
 
-!!! tip "Using On Change for Avatars"
-    Setting avatar cadence to **On Change** can reduce visual clutter in long conversations. The character's portrait will only appear when it changes, such as when the character's expression or appearance shifts during the scene.
+!!! tip "Using On Change for Portraits"
+    Setting portrait cadence to **On Change** can reduce visual clutter in long conversations. The character's portrait will only appear when it changes, such as when the character's expression or appearance shifts during the scene.
 
-#### Size
+#### Display Size
 
-Controls how large the asset appears:
+Controls how large the visual appears:
 
 - **Small** - Compact display, good for keeping focus on the text
 - **Medium** - Balanced size (default)
@@ -113,6 +114,19 @@ Controls how large the asset appears:
 !!! note "Scene Illustration Positioning"
     When set to **Big**, scene illustrations display above the message text rather than inline. This gives them more prominence and works well for important scene moments.
 
-### Auto-attach Assets
+#### Auto Backdrop
+
+Available for **Scene Illustration** and **Scene Background**. When enabled, newly generated images of that type automatically become the [scene backdrop](/talemate/user-guide/inline-visuals/#scene-backdrop) — rendered behind the scene text instead of only appearing inline. Off by default for both types.
+
+Any illustration can also be set as the backdrop manually via its image menu, and the scene tools **Immersive** chip toggles the backdrop on and off.
+
+### Backdrop Legibility
+
+When a backdrop is active, message text sits on translucent panels so it stays readable over the image. Two settings control this:
+
+- **Backdrop message panel opacity** - How opaque the panels behind the message text are. Defaults to `0.8`; lower values let more of the backdrop show through.
+- **Backdrop message text shadow** - Renders a subtle drop shadow behind the message text for extra contrast. On by default.
+
+### Auto-attach Visuals
 
 When enabled (the default), newly generated visuals are automatically attached to the relevant messages in your scene. Disable this if you prefer to manually manage which images appear with which messages.

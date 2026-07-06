@@ -135,6 +135,8 @@ These styles are applied automatically when generating images based on the visua
 
 ## Prompt Finalization
 
+![Visualizer prompt finalization settings](/talemate/img/0.39.0/visualizer-prompt-finalization.png)
+
 The Prompt Finalization tab defines a chain of post-processing actions applied to the final prompt strings right before they are sent to the image generation backend. Use it to clean up recurring unwanted keywords, enforce specific phrasing, or transform the whole prompt with an AI instruction. The same finalization is applied to `prompt only` generation output, and custom node graphs can invoke it through the `Finalize Prompt` node.
 
 All settings in this section can be overridden per scene through the Agent Modal's scene mode.

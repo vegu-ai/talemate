@@ -16,6 +16,7 @@ import talemate.agents as agents
 import talemate.agents.memory
 import talemate.agents.tts.voice_library as voice_library
 import talemate.config.state as config_state
+import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
 from talemate.client import ClientBase
 from talemate.config.schema import Config
@@ -66,6 +67,46 @@ class MockClientContext:
     async def __aexit__(self, exc_type, exc_value, traceback):
         if hasattr(self, "token"):
             client_responses.reset(self.token)
+
+
+# ---------------------------------------------------------------------------
+# Async signal helpers
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def isolate_signals():
+    """Factory that clears a signal's receivers for the duration of the test
+    (so handlers don't leak between tests) and restores them on teardown.
+    Returns the isolated AsyncSignal objects for connecting test handlers."""
+    restores = []
+
+    def _isolate(*names):
+        signals = []
+        for name in names:
+            sig = async_signals.get(name)
+            restores.append((sig, list(sig.receivers)))
+            sig.receivers.clear()
+            signals.append(sig)
+        return signals[0] if len(signals) == 1 else signals
+
+    yield _isolate
+
+    for sig, receivers in restores:
+        sig.receivers.clear()
+        sig.receivers.extend(receivers)
+
+
+def connect_recorder(signal) -> list:
+    """Connect a recording handler to a signal and return the list that
+    received payloads are appended to."""
+    received = []
+
+    async def handler(payload):
+        received.append(payload)
+
+    signal.connect(handler)
+    return received
 
 
 # ---------------------------------------------------------------------------

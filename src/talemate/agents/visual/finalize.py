@@ -11,12 +11,19 @@ from .schema import (
     PromptFinalizer,
 )
 
-from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionNote
+import talemate.emit.async_signals as async_signals
+from talemate.agents.base import (
+    AgentAction,
+    AgentActionConfig,
+    AgentActionNote,
+    AgentEmission,
+)
 from talemate.prompts import Prompt
 from talemate.ux.schema import Column, Condition, DynamicLabel
 
 __all__ = [
     "PromptFinalizationMixin",
+    "PromptFinalizeEmission",
     "apply_exact",
     "apply_fuzzy",
     "apply_regex",
@@ -31,6 +38,19 @@ DEFAULT_FUZZY_THRESHOLD = 85
 AI_RESPONSE_TAG = re.compile(
     r"<FINALIZED_PROMPT>(.*?)</FINALIZED_PROMPT>", re.DOTALL | re.IGNORECASE
 )
+
+async_signals.register(
+    "agent.visual.prompt_finalize.before",
+    "agent.visual.prompt_finalize.after",
+)
+
+
+class PromptFinalizeEmission(AgentEmission):
+    positive_prompt: str | None = None
+    negative_prompt: str | None = None
+    vis_type: VIS_TYPE = VIS_TYPE.UNSPECIFIED
+    character_name: str | None = None
+    finalizers: list[PromptFinalizer] = pydantic.Field(default_factory=list)
 
 
 def cleanup_prompt(text: str) -> str:
@@ -365,15 +385,32 @@ class PromptFinalizationMixin:
         """
         Apply all configured prompt finalizers to a positive / negative
         prompt string pair and return the finalized pair.
+
+        The `agent.visual.prompt_finalize.before` / `.after` signals fire
+        even when prompt finalization is disabled, so listeners can act as
+        their own finalization mechanism. Handlers may mutate the prompt
+        strings and (on `.before`) the finalizer list.
         """
-        if not self.prompt_finalization_enabled:
-            return positive, negative
+        finalizers = (
+            self.gather_prompt_finalizers(character_name)
+            if self.prompt_finalization_enabled
+            else []
+        )
 
-        finalizers = self.gather_prompt_finalizers(character_name)
-        if not finalizers:
-            return positive, negative
+        emission = PromptFinalizeEmission(
+            agent=self,
+            positive_prompt=positive,
+            negative_prompt=negative,
+            vis_type=vis_type,
+            character_name=character_name,
+            finalizers=finalizers,
+        )
+        await async_signals.get("agent.visual.prompt_finalize.before").send(emission)
 
-        for finalizer in finalizers:
+        positive = emission.positive_prompt
+        negative = emission.negative_prompt
+
+        for finalizer in emission.finalizers:
             if positive and finalizer.applies_to(vis_type, True):
                 positive = await self.apply_prompt_finalizer(
                     finalizer, positive, vis_type, character_name
@@ -383,15 +420,20 @@ class PromptFinalizationMixin:
                     finalizer, negative, vis_type, character_name
                 )
 
-        log.debug(
-            "prompt_finalization",
-            vis_type=vis_type,
-            character_name=character_name,
-            finalizers=len(finalizers),
-            prompt=positive,
-            negative_prompt=negative,
-        )
-        return positive, negative
+        emission.positive_prompt = positive
+        emission.negative_prompt = negative
+        await async_signals.get("agent.visual.prompt_finalize.after").send(emission)
+
+        if emission.finalizers:
+            log.debug(
+                "prompt_finalization",
+                vis_type=vis_type,
+                character_name=character_name,
+                finalizers=len(emission.finalizers),
+                prompt=emission.positive_prompt,
+                negative_prompt=emission.negative_prompt,
+            )
+        return emission.positive_prompt, emission.negative_prompt
 
     async def finalize_prompt_request(self, request: GenerationRequest):
         """

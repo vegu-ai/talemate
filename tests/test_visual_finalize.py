@@ -4,6 +4,7 @@ import yaml
 import talemate.agents.visual.finalize as finalize
 from talemate.agents.visual.agent import VisualAgent
 from talemate.agents.visual.finalize import (
+    PromptFinalizeEmission,
     apply_exact,
     apply_fuzzy,
     apply_regex,
@@ -315,3 +316,113 @@ class TestFinalizePromptRequest:
         request = GenerationRequest(prompt="a woman")
         await agent.finalize_prompt_request(request)
         assert request.prompt == "a woman"
+
+
+@pytest.fixture
+def finalize_signals(isolate_signals):
+    return isolate_signals(
+        "agent.visual.prompt_finalize.before",
+        "agent.visual.prompt_finalize.after",
+    )
+
+
+class TestPromptFinalizeSignals:
+    async def test_before_and_after_fire_with_payload(self, agent, finalize_signals):
+        before, after = finalize_signals
+        received = {}
+
+        async def on_before(emission: PromptFinalizeEmission):
+            received["before"] = emission.model_dump(exclude={"agent"})
+
+        async def on_after(emission: PromptFinalizeEmission):
+            received["after"] = emission.model_dump(exclude={"agent"})
+
+        before.connect(on_before)
+        after.connect(on_after)
+
+        set_finalizers(
+            agent, [{"mode": "EXACT", "match": "red hair", "replace": "crimson hair"}]
+        )
+        await agent.finalize_prompts(
+            "a woman, red hair", "blurry", VIS_TYPE.CHARACTER_PORTRAIT, "Elena"
+        )
+
+        assert received["before"]["positive_prompt"] == "a woman, red hair"
+        assert received["before"]["negative_prompt"] == "blurry"
+        assert received["before"]["vis_type"] == VIS_TYPE.CHARACTER_PORTRAIT
+        assert received["before"]["character_name"] == "Elena"
+        assert len(received["before"]["finalizers"]) == 1
+
+        assert received["after"]["positive_prompt"] == "a woman, crimson hair"
+        assert received["after"]["negative_prompt"] == "blurry"
+
+    async def test_signals_fire_when_finalization_disabled(
+        self, agent, finalize_signals
+    ):
+        before, after = finalize_signals
+        fired = []
+
+        async def on_signal(emission: PromptFinalizeEmission):
+            fired.append(emission)
+
+        before.connect(on_signal)
+        after.connect(on_signal)
+
+        agent.actions["_prompt_finalization"].enabled = False
+        set_finalizers(agent, [{"mode": "EXACT", "match": "a", "replace": "b"}])
+        positive, negative = await agent.finalize_prompts(
+            "a woman", None, VIS_TYPE.UNSPECIFIED
+        )
+
+        assert positive == "a woman"
+        assert negative is None
+        assert len(fired) == 2
+        assert fired[0].finalizers == []
+
+    async def test_before_handler_mutations_feed_finalizers(
+        self, agent, finalize_signals
+    ):
+        before, _ = finalize_signals
+
+        async def on_before(emission: PromptFinalizeEmission):
+            emission.positive_prompt = "a woman, red hair"
+
+        before.connect(on_before)
+
+        set_finalizers(
+            agent, [{"mode": "EXACT", "match": "red hair", "replace": "crimson hair"}]
+        )
+        positive, _ = await agent.finalize_prompts(
+            "a woman", None, VIS_TYPE.UNSPECIFIED
+        )
+        assert positive == "a woman, crimson hair"
+
+    async def test_before_handler_can_inject_finalizers(self, agent, finalize_signals):
+        before, _ = finalize_signals
+
+        async def on_before(emission: PromptFinalizeEmission):
+            emission.finalizers.append(
+                PromptFinalizer(
+                    mode=FINALIZER_MODE.EXACT, match="red hair", replace="crimson hair"
+                )
+            )
+
+        before.connect(on_before)
+
+        positive, _ = await agent.finalize_prompts(
+            "a woman, red hair", None, VIS_TYPE.UNSPECIFIED
+        )
+        assert positive == "a woman, crimson hair"
+
+    async def test_after_handler_mutations_are_returned(self, agent, finalize_signals):
+        _, after = finalize_signals
+
+        async def on_after(emission: PromptFinalizeEmission):
+            emission.positive_prompt = f"{emission.positive_prompt}, masterpiece"
+
+        after.connect(on_after)
+
+        positive, _ = await agent.finalize_prompts(
+            "a woman", None, VIS_TYPE.UNSPECIFIED
+        )
+        assert positive == "a woman, masterpiece"

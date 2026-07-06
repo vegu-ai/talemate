@@ -396,3 +396,29 @@ def test_agent_registered():
     assert HelpAgent.websocket_handler.router == "help"
     # keep instance registry clean for other tests
     instance.AGENTS.pop("help", None)
+
+
+@pytest.mark.asyncio
+async def test_chat_send_fires_signals(help_agent, isolate_signals):
+    """agent.help.chat.before / .after fire around the generation loop."""
+    bootstrap_engine()
+    chat = help_agent.chat_create()
+
+    before, after = isolate_signals("agent.help.chat.before", "agent.help.chat.after")
+    received = []
+
+    async def on_before(emission):
+        received.append(("before", emission.chat_id, len(emission.chat.messages)))
+
+    async def on_after(emission):
+        received.append(("after", emission.chat_id, len(emission.chat.messages)))
+
+    before.connect(on_before)
+    after.connect(on_after)
+
+    async with MockClientContext():
+        client_responses.get().append("Just an answer.")
+        await help_agent.chat_send(chat.id, "Hi?")
+
+    # initial + user message at .before; help answer appended by .after
+    assert received == [("before", chat.id, 2), ("after", chat.id, 3)]

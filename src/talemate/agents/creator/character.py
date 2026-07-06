@@ -1,21 +1,34 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
+import pydantic
 import structlog
 
-from talemate.agents.base import set_processing
+import talemate.emit.async_signals as async_signals
+from talemate.agents.base import AgentEmission, DynamicInstruction, set_processing
+from talemate.character import Character
 from talemate.game import focal
 from talemate.prompts import Prompt
 
 from .response_specs import NAME_SPEC
 
-if TYPE_CHECKING:
-    from talemate.tale_mate import Character
-
 log = structlog.get_logger("talemate.agents.creator.character")
 
 DEFAULT_CONTENT_CONTEXT = "a fun and engaging adventure aimed at an adult audience."
+
+async_signals.register(
+    "agent.creator.dialogue_examples.before",
+    "agent.creator.dialogue_examples.after",
+)
+
+
+class DialogueExamplesEmission(AgentEmission):
+    character: Character
+    text: str = ""
+    instructions: str = ""
+    dynamic_instructions: list[DynamicInstruction] = pydantic.Field(
+        default_factory=list
+    )
+    dialogue_examples: list[str] = pydantic.Field(default_factory=list)
 
 
 class CharacterCreatorMixin:
@@ -184,6 +197,16 @@ class CharacterCreatorMixin:
         """
         dialogue_examples = []
 
+        emission = DialogueExamplesEmission(
+            agent=self,
+            character=character,
+            text=text,
+            instructions=instructions,
+            dynamic_instructions=list(dynamic_instructions or []),
+        )
+        await async_signals.get("agent.creator.dialogue_examples.before").send(emission)
+        dynamic_instructions = emission.dynamic_instructions
+
         async def add_dialogue_example(example: str) -> str:
             """Add a dialogue example for the character."""
             # Ensure example starts with character name if not already present
@@ -228,11 +251,14 @@ class CharacterCreatorMixin:
             "creator.determine-character-dialogue-examples",
         )
 
+        emission.dialogue_examples = dialogue_examples
+        await async_signals.get("agent.creator.dialogue_examples.after").send(emission)
+
         log.debug(
             "determine_character_dialogue_examples",
             character=character.name,
-            count=len(dialogue_examples),
-            examples=dialogue_examples,
+            count=len(emission.dialogue_examples),
+            examples=emission.dialogue_examples,
         )
 
-        return dialogue_examples
+        return emission.dialogue_examples

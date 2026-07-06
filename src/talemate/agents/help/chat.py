@@ -2,10 +2,16 @@ from typing import Awaitable, Callable
 
 import structlog
 
+import talemate.emit.async_signals as async_signals
 import talemate.game.focal as focal
 import talemate.instance as instance
 import talemate.util as util
-from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
+from talemate.agents.base import (
+    AgentAction,
+    AgentActionConfig,
+    AgentEmission,
+    set_processing,
+)
 from talemate.agents.chat_title import generate_chat_title
 from talemate.client.context import ClientContext
 from talemate.game.focal.util import strip_call_blocks
@@ -20,7 +26,7 @@ from .schema import (
 )
 from .storage import load_store, save_store
 
-__all__ = ["HelpChatMixin"]
+__all__ = ["HelpChatMixin", "HelpChatEmission"]
 
 log = structlog.get_logger("talemate.agents.help.chat")
 
@@ -34,6 +40,16 @@ OnUpdate = Callable[
 ]
 OnDone = Callable[[str], Awaitable[None]]
 OnTitleGenerated = Callable[[str, str], Awaitable[None]]
+
+async_signals.register(
+    "agent.help.chat.before",
+    "agent.help.chat.after",
+)
+
+
+class HelpChatEmission(AgentEmission):
+    chat_id: str
+    chat: HelpChat | None = None
 
 
 class HelpChatMixin:
@@ -284,6 +300,10 @@ class HelpChatMixin:
         if not chat:
             return None
 
+        await async_signals.get("agent.help.chat.before").send(
+            HelpChatEmission(agent=self, chat_id=chat_id, chat=chat)
+        )
+
         rounds = 0
 
         # help chats must work without a loaded scene, so lift the
@@ -356,6 +376,10 @@ class HelpChatMixin:
                         await on_title_generated(chat_id, title)
                 except Exception:
                     pass  # title generation is best-effort
+
+        await async_signals.get("agent.help.chat.after").send(
+            HelpChatEmission(agent=self, chat_id=chat_id, chat=self.chat_get(chat_id))
+        )
 
         # only on success - on failure the tracked task's error handler emits
         # the chat_done carrying the error, and a success-shaped chat_done

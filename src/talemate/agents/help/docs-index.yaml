@@ -668,7 +668,8 @@
 - path: user-guide/node-editor/reference/events.md
   title: Events
   summary: 'Reference list of all supported events with payload tables: game loop and scene loop lifecycle events, regenerate
-    events, and per-agent events (conversation, creator, editor, narrator, director, world state, summarization, TTS, visual)
+    events, per-agent events (conversation, creator, editor, help, narrator, director, world state, summarization, TTS, visual
+    generation and prompt finalization), and scene asset events (asset saved/deleted, backdrop and cover image changes),
     including which payload fields are mutable for injecting instructions or rewriting responses.'
 - path: user-guide/node-editor/reference/template_functions.md
   title: Template Functions

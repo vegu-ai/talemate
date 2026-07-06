@@ -11,6 +11,7 @@ LLM/vision/websocket-event paths are intentionally NOT exercised here.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import hashlib
 import io
@@ -20,6 +21,8 @@ from pathlib import Path
 
 import pytest
 from PIL import Image
+
+from conftest import connect_recorder
 
 import talemate.scene_assets as scene_assets
 from talemate.scene_assets import (
@@ -1433,3 +1436,100 @@ class TestMigrateSceneAssetsToLibrary:
         self._write_scene(proj, "scene", {"id": self._asset_dict("id", "x")})
         migrate_scene_assets_to_library(root=None)
         assert (proj / "assets" / "library.json").exists()
+
+
+# ---------------------------------------------------------------------------
+# Async signals (asset_deleted, backdrop / cover image changes)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def capture_signal(isolate_signals):
+    """Isolate a signal's receivers and connect a recorder. Returns the list
+    that received payloads are appended to."""
+
+    def _capture(name: str) -> list:
+        return connect_recorder(isolate_signals(name))
+
+    return _capture
+
+
+class TestAssetSignals:
+    async def test_asset_deleted_fires(self, scene, capture_signal):
+        received = capture_signal("asset_deleted")
+        a = await scene.assets.add_asset(b"x", "png", "image/png")
+        scene.assets.remove_asset(a.id)
+        await asyncio.sleep(0)
+        assert len(received) == 1
+        assert received[0].asset.id == a.id
+
+    async def test_backdrop_changed_fires_on_set_toggle_clear(
+        self, scene, capture_signal
+    ):
+        received = capture_signal("scene.backdrop_changed")
+        a = await scene.assets.add_asset(b"x", "png", "image/png")
+
+        await scene.assets.set_scene_backdrop(asset_id=a.id)
+        await scene.assets.set_scene_backdrop(enabled=False)
+        await scene.assets.set_scene_backdrop(clear=True)
+
+        assert [(p.backdrop, p.enabled) for p in received] == [
+            (a.id, True),
+            (a.id, False),
+            (None, False),
+        ]
+
+    async def test_backdrop_changed_not_fired_for_invalid_asset(
+        self, scene, capture_signal
+    ):
+        received = capture_signal("scene.backdrop_changed")
+        await scene.assets.set_scene_backdrop(asset_id="nope")
+        assert received == []
+
+    async def test_backdrop_changed_not_fired_on_noop_update(
+        self, scene, capture_signal
+    ):
+        a = await scene.assets.add_asset(b"x", "png", "image/png")
+        await scene.assets.set_scene_backdrop(asset_id=a.id)
+
+        received = capture_signal("scene.backdrop_changed")
+        await scene.assets.set_scene_backdrop(asset_id=a.id)
+        await scene.assets.set_scene_backdrop(enabled=True)
+        assert received == []
+
+    async def test_backdrop_changed_fires_when_backdrop_asset_deleted(
+        self, scene, capture_signal
+    ):
+        a = await scene.assets.add_asset(b"x", "png", "image/png")
+        await scene.assets.set_scene_backdrop(asset_id=a.id)
+
+        received = capture_signal("scene.backdrop_changed")
+        scene.assets.remove_asset(a.id)
+        await asyncio.sleep(0)
+
+        assert scene.assets.backdrop is None
+        assert [(p.backdrop, p.enabled) for p in received] == [(None, True)]
+
+    async def test_scene_cover_image_changed_fires(self, scene, capture_signal):
+        received = capture_signal("scene.cover_image_changed")
+        a = await scene.assets.add_asset(b"a", "png", "image/png")
+        b = await scene.assets.add_asset(b"b", "png", "image/png")
+
+        await scene.assets.set_scene_cover_image(a.id)
+        # non-override keeps the existing cover and must not fire
+        await scene.assets.set_scene_cover_image(b.id, override=False)
+
+        assert len(received) == 1
+        assert received[0].asset.id == a.id
+        assert received[0].character_name is None
+
+    async def test_character_cover_image_changed_fires(self, scene, capture_signal):
+        received = capture_signal("character.cover_image_changed")
+        a = await scene.assets.add_asset(b"a", "png", "image/png")
+        character = Character(name="Alice")
+
+        await scene.assets.set_character_cover_image(character, a.id)
+
+        assert len(received) == 1
+        assert received[0].asset.id == a.id
+        assert received[0].character_name == "Alice"

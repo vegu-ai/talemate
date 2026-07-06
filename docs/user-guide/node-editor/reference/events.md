@@ -36,10 +36,14 @@ List of currently supported events.
 | [`agent.creator.contextual_generate.after`](#agentcreatorcontextual_generateafter) | Creator Agent |
 | [`agent.creator.autocomplete.before`](#agentcreatorautocompletebefore) | Creator Agent |
 | [`agent.creator.autocomplete.after`](#agentcreatorautocompleteafter) | Creator Agent |
+| [`agent.creator.dialogue_examples.before`](#agentcreatordialogue_examplesbefore) | Creator Agent |
+| [`agent.creator.dialogue_examples.after`](#agentcreatordialogue_examplesafter) | Creator Agent |
 | [`agent.editor.revision-analysis.before`](#agenteditorrevision-analysisbefore) | Editor Agent |
 | [`agent.editor.revision-analysis.after`](#agenteditorrevision-analysisafter) | Editor Agent |
 | [`agent.editor.revision-revise.before`](#agenteditorrevision-revisebefore) | Editor Agent |
 | [`agent.editor.revision-revise.after`](#agenteditorrevision-reviseafter) | Editor Agent |
+| [`agent.help.chat.before`](#agenthelpchatbefore) | Help Agent |
+| [`agent.help.chat.after`](#agenthelpchatafter) | Help Agent |
 | [`agent.narrator.before_generate`](#agentnarratorbefore_generate) | Narrator Agent |
 | [`agent.narrator.inject_instructions`](#agentnarratorinject_instructions) | Narrator Agent |
 | [`agent.narrator.generated`](#agentnarratorgenerated) | Narrator Agent |
@@ -69,6 +73,13 @@ List of currently supported events.
 | [`agent.tts.generate.after`](#agentttsgenerateafter) | TTS Agent |
 | [`agent.visual.generation.before_generate`](#agentvisualgenerationbefore_generate) | Visual Agent |
 | [`agent.visual.generation.after_generate`](#agentvisualgenerationafter_generate) | Visual Agent |
+| [`agent.visual.prompt_finalize.before`](#agentvisualprompt_finalizebefore) | Visual Agent |
+| [`agent.visual.prompt_finalize.after`](#agentvisualprompt_finalizeafter) | Visual Agent |
+| [`asset_saved`](#asset_saved) | Scene Assets |
+| [`asset_deleted`](#asset_deleted) | Scene Assets |
+| [`scene.backdrop_changed`](#scenebackdrop_changed) | Scene Assets |
+| [`scene.cover_image_changed`](#scenecover_image_changed) | Scene Assets |
+| [`character.cover_image_changed`](#charactercover_image_changed) | Scene Assets |
 
 ## Game Loop
 
@@ -395,6 +406,35 @@ Handlers can edit `response` in-place to clean up or transform the text (the Edi
     | `template_vars` | `dict` | Variables that were fed into the prompt – **mutable** |
     | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable.** Push additional `DynamicInstruction` objects to influence generation |
 
+### agent.creator.dialogue_examples.before
+
+Emitted **before** the Creator agent generates example dialogue for a character (AI-assisted character creation, character card import).
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `CreatorAgent` | The agent instance |
+    | `character` | `Character` | The character the dialogue examples are for |
+    | `text` | `str` | Source text containing dialogue examples / character information |
+    | `instructions` | `str` | User-provided guidance for the dialogue examples |
+    | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable.** Push additional `DynamicInstruction` objects to influence generation |
+
+### agent.creator.dialogue_examples.after
+
+Emitted **after** the dialogue examples have been generated but **before** they are returned to the caller (and applied to the character).
+Handlers can mutate `dialogue_examples` to add, remove or rewrite examples.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `CreatorAgent` | The agent instance |
+    | `character` | `Character` | The character the dialogue examples are for |
+    | `text` | `str` | Source text containing dialogue examples / character information |
+    | `instructions` | `str` | User-provided guidance for the dialogue examples |
+    | `dialogue_examples` | `list[str]` | **Mutable.** The generated examples, formatted as `Character Name: ...` |
+
 ## Editor Agent Events
 
 ### agent.editor.revision-revise.before
@@ -470,6 +510,37 @@ notification hook for observers of the rewrite flow.
     |-------|------|-------|
     | `agent` | `EditorAgent` | The agent instance |
     | `template_vars` | `dict` | Same vars used for the prompt |
+
+## Help Agent Events
+
+!!! note
+    The help chat runs in the background and also works without a loaded scene. When no scene loop is running there are no connected listeners, so scene node graphs will only observe help chats that happen while their scene is loaded.
+
+### agent.help.chat.before
+
+Emitted when the Help agent starts generating a response to a help chat, before any documentation lookups run.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `HelpAgent` | The agent instance |
+    | `chat_id` | `str` | The help chat's id |
+    | `chat` | `HelpChat` | The chat, including all messages so far |
+
+---
+
+### agent.help.chat.after
+
+Emitted after the Help agent has finished generating a response (all documentation lookup rounds completed and the answer appended to the chat).
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `HelpAgent` | The agent instance |
+    | `chat_id` | `str` | The help chat's id |
+    | `chat` | `HelpChat` | The chat, now including the generated answer |
 
 ## Narrator Agent Events
 
@@ -887,3 +958,104 @@ Fires after a generation request has completed and the resulting image has been 
     | `agent` | `VisualAgent` | The agent instance |
     | `request` | `GenerationRequest` | The original request |
     | `response` | `GenerationResponse` | The completed response, including base64 image data |
+
+---
+
+### agent.visual.prompt_finalize.before
+
+Emitted when prompt finalization runs — right before an image generation prompt is sent to the backend, and when the `agents/visual/FinalizePrompt` node is executed. Fires **before** the configured finalizer actions are applied, and fires even when the Prompt Finalization agent setting is disabled, so listeners can act as their own finalization mechanism.
+
+Handlers can mutate the prompt strings and the finalizer list.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `VisualAgent` | The agent instance |
+    | `positive_prompt` | `str \| None` | **Mutable.** The positive prompt before finalization |
+    | `negative_prompt` | `str \| None` | **Mutable.** The negative prompt before finalization |
+    | `vis_type` | `VIS_TYPE` | The visual type being generated (e.g. `CHARACTER_PORTRAIT`) |
+    | `character_name` | `str \| None` | The targeted character, if any |
+    | `finalizers` | `list[PromptFinalizer]` | **Mutable.** The finalizer actions about to be applied (agent's first, then character's); empty when finalization is disabled |
+
+---
+
+### agent.visual.prompt_finalize.after
+
+Fires after all finalizer actions have been applied, right before the finalized prompts are returned (and sent to the image generation backend). The same emission instance from `.before` is reused. Handlers can mutate the prompt strings for a final rewrite.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `VisualAgent` | The agent instance |
+    | `positive_prompt` | `str \| None` | **Mutable.** The finalized positive prompt |
+    | `negative_prompt` | `str \| None` | **Mutable.** The finalized negative prompt |
+    | `vis_type` | `VIS_TYPE` | The visual type being generated |
+    | `character_name` | `str \| None` | The targeted character, if any |
+    | `finalizers` | `list[PromptFinalizer]` | The finalizer actions that were applied |
+
+## Scene Asset Events
+
+### asset_saved
+
+Emitted when an asset is added to the scene's asset library (uploaded, imported, or auto-saved after image generation).
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `asset` | `Asset` | The saved asset |
+    | `new_asset` | `bool` | `True` when the asset was newly created, `False` when it already existed |
+    | `asset_attachment_context` | `AssetAttachmentContext` | How the asset wants to be attached (message attachment, cover image, avatar, ...) |
+
+---
+
+### asset_deleted
+
+Emitted when an asset is removed from the scene's asset library.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `asset` | `Asset` | The deleted asset |
+
+---
+
+### scene.backdrop_changed
+
+Emitted when the scene backdrop state actually changes — a backdrop asset is set, the backdrop is toggled on or off, or the backdrop is cleared (including when the current backdrop asset is deleted). Updates that leave the state unchanged do not fire.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `backdrop` | `str \| None` | The backdrop asset id after the update (`None` when cleared) |
+    | `enabled` | `bool` | Whether the backdrop currently renders |
+
+---
+
+### scene.cover_image_changed
+
+Emitted when the scene cover image is set.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `asset` | `Asset` | The new cover image asset |
+    | `character_name` | `None` | Always `None` for the scene cover |
+
+---
+
+### character.cover_image_changed
+
+Emitted when a character's cover image is set.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `asset` | `Asset` | The new cover image asset |
+    | `character_name` | `str` | The character the cover image belongs to |

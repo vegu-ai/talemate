@@ -377,13 +377,10 @@ export default {
             }
         },
 
-        loadJsonSceneFromPath(path, reset = false, backupPath = null, rev = null) {
+        loadJsonSceneFromPath(path, reset = false, rev = null) {
             this.loading = true;
             this.$emit("loading", true)
             const message = { type: 'load_scene', file_path: path, reset: reset };
-            if (backupPath) {
-                message.backup_path = backupPath;
-            }
             if (rev !== null && rev !== undefined) {
                 message.rev = rev;
             }

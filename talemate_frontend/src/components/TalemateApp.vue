@@ -226,8 +226,7 @@
             <IntroView
             ref="introView"
             @request-scene-load="(path) => {  resetViews(); $refs.loadScene.loadJsonSceneFromPath(path); }"
-            @request-backup-restore="(restoreInfo) => { resetViews(); $refs.loadScene.loadJsonSceneFromPath(restoreInfo.scenePath, false, restoreInfo.backupPath, restoreInfo.rev); }"
-            :version="version" 
+            :version="version"
             :scene-loading-available="ready && connected"
             :scene-is-loading="loading"
             :config="appConfig" />
@@ -395,6 +394,12 @@
   <StatusNotification />
   <RateLimitAlert ref="rateLimitAlert" />
   <GenerationErrorDialog ref="generationErrorDialog" />
+  <SceneTimeline
+    ref="sceneTimeline"
+    :scene="scene"
+    :appearance-config="effectiveAppearanceConfig"
+    @load-at-revision="(target) => { resetViews(); $refs.loadScene.loadJsonSceneFromPath(target.path, false, target.rev); }"
+  />
   <VersionMismatchAlert ref="versionMismatchAlert" />
   <OnboardingWizard
     v-if="connected && appConfig && appConfig.clients"
@@ -421,6 +426,7 @@ import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
 import GenerationErrorDialog from './GenerationErrorDialog.vue';
+import SceneTimeline from './SceneTimeline.vue';
 import VersionMismatchAlert from './VersionMismatchAlert.vue';
 import { versionsMatch } from '@/constants/version';
 import VisualLibrary from './VisualLibrary.vue';
@@ -469,6 +475,7 @@ export default {
     DirectorConsole,
     RateLimitAlert,
     GenerationErrorDialog,
+    SceneTimeline,
     VersionMismatchAlert,
     DirectorConsoleWidget,
     HelpChat,
@@ -865,6 +872,7 @@ export default {
       appConfig: () => this.appConfig,
       openAppConfig: this.openAppConfig,
       openAgentActionOverrides: () => this.$refs.agentActionOverrides?.open(),
+      openSceneTimeline: (options) => this.$refs.sceneTimeline.open(options),
       configurationRequired: () => this.configurationRequired(),
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
       getTrackedCharacterStates: (name) => this.$refs.worldState.trackedCharacterStates(name),

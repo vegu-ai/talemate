@@ -407,6 +407,7 @@ import VisualAssetsMixin from './VisualAssetsMixin.js';
 import RevisionStackMixin from './RevisionStackMixin.js';
 import { isVisualAgentReady, VIS_TYPE } from '@/constants/visual';
 import { isKnownSceneCharacter } from '@/utils/entityActions';
+import { parseCharacterMessage } from '@/utils/characterMessage.js';
 import { primaryModifierLabel } from '@/utils/keyboardModifiers';
 import {
     getMessageColor as resolveMessageColor,
@@ -691,17 +692,9 @@ export default {
             return assetType === 'card' || assetType === 'scene_illustration';
         },
         forkInstructions() {
-            if (!this.selectedForkMessageId) {
-                return "A new copy of the scene will be forked from the message you've selected.";
-            }
-
-            const message = this.messages.find(m => m.id === this.selectedForkMessageId);
-            const rev = message ? (message.rev || 0) : 0;
-            const isReconstructive = rev > 0;
-
-            let instructions = isReconstructive
-                ? "Creating a reconstructive fork: The scene will be reconstructed to the exact revision of the selected message, preserving all world state and character details as they were at that point."
-                : "Creating a shallow fork: All progress after the selected message will be removed. This may require manual cleanup of world state and character details in complex scenes.";
+            // only legacy messages (rev 0, predating the changelog) reach this
+            // dialog — changelog-backed messages fork through the timeline
+            let instructions = "Creating a shallow fork: All progress after the selected message will be removed. This may require manual cleanup of world state and character details in complex scenes.";
 
             // Add shared context disconnection warning if scene has shared context
             if (this.scene?.data?.shared_context) {
@@ -711,7 +704,7 @@ export default {
             return instructions;
         },
     },
-    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset', 'openSceneTimeline'],
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
@@ -1185,6 +1178,16 @@ export default {
         },
 
         forkSceneInitiate(message_id) {
+            const message = this.messages.find(m => m.id === message_id);
+
+            // changelog-backed messages fork through the timeline, positioned
+            // at the message's revision; legacy messages (rev 0, predating the
+            // changelog) fall back to the shallow fork flow
+            if (message && message.rev > 0) {
+                this.openSceneTimeline({ initialRev: message.rev });
+                return;
+            }
+
             this.selectedForkMessageId = message_id;
             this.$refs.requestForkName.openDialog(
                 { message_id: message_id }
@@ -2010,10 +2013,7 @@ export default {
                 }
 
                 if (data.type === 'character') {
-                    const parts = data.message.split(':');
-                    const character = parts.shift();
-                    const text = parts.join(':');
-                    const characterName = character.trim();
+                    const { name: characterName, text } = parseCharacterMessage(data.message);
 
                     // Determine if this message has a non-avatar asset type attached
                     const hasNonAvatarAsset = data.asset_type && data.asset_type !== 'avatar';

@@ -1,5 +1,5 @@
 <template>
-  <IntroRecentScenes :config="config" :scene-is-loading="sceneIsLoading" :scene-loading-available="sceneLoadingAvailable"  @request-scene-load="requestSceneLoad" @request-backup-restore="requestBackupRestore"/>
+  <IntroRecentScenes :config="config" :scene-is-loading="sceneIsLoading" :scene-loading-available="sceneLoadingAvailable"  @request-scene-load="requestSceneLoad"/>
   <WhatsNew />
   <v-btn variant="text" class="ml-2" href="https://vegu-ai.github.io/talemate/" target="_blank" rel="noopener">
     <v-icon size="x-small" class="mr-1" color="primary">mdi-help-box-multiple-outline</v-icon>
@@ -24,7 +24,7 @@ export default {
     sceneIsLoading: Boolean,
     config: Object,
   },
-  emits: ['request-scene-load', 'request-backup-restore'],
+  emits: ['request-scene-load'],
   data() {
     return {
       changelog: [
@@ -39,9 +39,6 @@ export default {
     requestSceneLoad(scene) {
       this.$emit('request-scene-load', scene);
     },
-    requestBackupRestore(restoreInfo) {
-      this.$emit('request-backup-restore', restoreInfo);
-    }
   }
 }
 

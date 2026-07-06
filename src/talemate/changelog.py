@@ -79,6 +79,7 @@ import deepdiff
 from datetime import datetime, timezone
 import shutil
 import glob
+import uuid
 
 from talemate.save import SceneEncoder
 from talemate.path import SCENES_DIR
@@ -125,7 +126,20 @@ class _SceneRef:
         self.filename = filename
         self.save_dir = save_dir
         self.changelog_dir = os.path.join(save_dir, "changelog")
+        self.backups_dir = os.path.join(save_dir, "backups")
         self.serialize = data
+
+
+def scene_ref_from_path(scene_path: str) -> _SceneRef:
+    """
+    Build a minimal scene reference for changelog operations on a scene that
+    is not currently loaded, from the path to its scene file.
+    """
+    return _SceneRef(
+        filename=os.path.basename(scene_path),
+        save_dir=os.path.dirname(scene_path),
+        data={},
+    )
 
 
 async def save_changelog(scene: "Scene"):
@@ -926,6 +940,55 @@ def delete_changelog_files(scene: "Scene") -> dict:
         return {"deleted": deleted, "dir_removed": None}
 
 
+def create_pre_rollback_backup(scene: "Scene") -> str | None:
+    """
+    Copy the scene's current file to a timestamped backup in its backups
+    directory before a rollback overwrites or replaces its state.
+
+    Returns:
+        str | None: Path to the backup file, or None if the scene file does
+        not exist or the copy failed.
+    """
+    current_path = os.path.join(scene.save_dir, scene.filename)
+    if not os.path.exists(current_path):
+        return None
+
+    os.makedirs(scene.backups_dir, exist_ok=True)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    base_name = os.path.splitext(scene.filename)[0]
+    backup_name = f"{base_name}_pre_rollback_{ts}.json"
+    backup_path = os.path.join(scene.backups_dir, backup_name)
+    try:
+        shutil.copy2(current_path, backup_path)
+        log.debug("rollback_backup_created", backup_path=backup_path)
+    except Exception as e:
+        log.error("rollback_backup_failed", error=e, path=current_path)
+        return None
+    return backup_path
+
+
+async def fork_scene_at_revision(scene: "Scene", to_rev: int, save_name: str) -> str:
+    """
+    Create a new scene file forked from the given revision.
+
+    Writes the reconstructed scene state to ``<save_name>.json`` in the
+    scene's save directory, cleared for independent use (mutable, fresh
+    memory id).
+
+    Returns:
+        str: Path to the written fork file
+    """
+    return await write_reconstructed_scene(
+        scene,
+        to_rev,
+        f"{save_name}.json",
+        overrides={
+            "immutable_save": False,
+            "memory_id": str(uuid.uuid4())[:10],
+        },
+    )
+
+
 async def rollback_scene_to_revision(
     scene: "Scene", to_rev: int, create_backup: bool = True
 ) -> str:
@@ -957,17 +1020,8 @@ async def rollback_scene_to_revision(
     current_path = os.path.join(scene.save_dir, scene.filename)
 
     backup_path = None
-    if create_backup and os.path.exists(current_path):
-        os.makedirs(scene.backups_dir, exist_ok=True)
-        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        base_name = os.path.splitext(scene.filename)[0]
-        backup_name = f"{base_name}_pre_rollback_{ts}.json"
-        backup_path = os.path.join(scene.backups_dir, backup_name)
-        try:
-            shutil.copy2(current_path, backup_path)
-            log.debug("rollback_backup_created", backup_path=backup_path)
-        except Exception as e:
-            log.error("rollback_backup_failed", error=e, path=current_path)
+    if create_backup:
+        backup_path = create_pre_rollback_backup(scene)
 
     reconstructed = await reconstruct_scene_data(scene, to_rev=to_rev)
     with open(current_path, "w") as f:
@@ -1002,8 +1056,15 @@ class InMemoryChangelog:
 
     async def __aenter__(self):
         """Initialize the in-memory changelog context."""
-        # Store the current state as our baseline
-        self.last_state = _serialize_scene_plain(self.scene)
+        # Baseline on the last committed snapshot when one exists, so deltas
+        # always transform committed state -> new state and the delta chain
+        # stays consistent with reconstructions. Baselining on the live scene
+        # state instead would silently drop any mutations made since the last
+        # commit (e.g. load-time message meta stamps) from the chain, which
+        # breaks delta value verification during reconstruction.
+        self.last_state = _load_latest_scene_data(self.scene)
+        if self.last_state is None:
+            self.last_state = _serialize_scene_plain(self.scene)
         self.initial_state = (
             self.last_state.copy()
         )  # Keep initial state for base snapshots

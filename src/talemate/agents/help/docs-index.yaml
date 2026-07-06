@@ -714,15 +714,16 @@
     after scene history so provider prompt caches stay valid, cutting latency and cost on Anthropic/OpenAI/Google; includes
     per-agent Auto/On/Off overrides and guidance on when not to enable it (local or weaker models).
 - path: user-guide/restoring-scenes.md
-  title: Restoring Scenes from Backups
-  summary: Two ways to return a scene to a previous state, restore from the automatic changelog version history (via the scene
-    card's three-dot menu, with earliest/latest/date-filter options) and restore from a designated restore point save file.
-    Both create a new unsaved scene.
+  title: Restoring Scenes
+  summary: Two ways to return a scene to a previous state, the timeline (drag a slider across the automatic changelog version
+    history to preview any revision, then roll the active scene back in place with an automatic backup, fork it to a new save,
+    or open it as a new unsaved scene from the Quick Load card menu) and restore from a designated restore point save file.
+    Opened from the scene tools Save menu, a message's Fork button, or the scene card's three-dot menu.
 - path: user-guide/saving.md
   title: Saving
   summary: How scene saving works, .json save files in the project directory, automatic changelog version history, restore
     points, saving from the scene or world editor, auto save (and why the toggle can be locked), Save As, and forking a copy
-    of a scene.
+    of a scene from a message via the timeline.
 - path: user-guide/scenario-tools.md
   title: Scene Tools
   summary: The scene tools toolbar and agent activity bar. Covers actor actions, director actions, narrator actions, advancing
@@ -730,8 +731,8 @@
     optional example dialogue generation and guidance), the visualizer menu, and saving, with Ctrl/Cmd modifier click behavior.
 - path: user-guide/scene-directory.md
   title: Scene Directory Structure
-  summary: Layout of a scene's project directory under scenes/, save .json files, and the assets/, changelog/, nodes/, templates/,
-    shared-context/, and info/ subdirectories, and why the structure matters for backups and restores.
+  summary: Layout of a scene's project directory under scenes/, save .json files, and the assets/, changelog/, backups/, nodes/,
+    templates/, shared-context/, and info/ subdirectories, and why the structure matters for backups and restores.
 - path: user-guide/scene-state-reset.md
   title: Reset Scene State
   summary: The Reset Scene State dialog for selectively clearing scene-internal state, context DB (memory/RAG reimport), history,

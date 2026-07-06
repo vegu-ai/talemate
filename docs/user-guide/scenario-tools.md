@@ -396,4 +396,4 @@ Generated images can be viewed and managed in the [Visual Library](/talemate/use
 
 ### :material-content-save: Saving
 
-Context menu that will provide you with `Save` and `Save As` options.
+Context menu that will provide you with `Save` and `Save As` options, restoration actions — `Restore` to the configured [restore point](/talemate/user-guide/world-editor/scene/settings#restoration-settings) and the [`Timeline`](/talemate/user-guide/restoring-scenes) for rolling back or forking from any revision — and `Reset Scene State`.

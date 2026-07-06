@@ -1,11 +1,9 @@
 import pydantic
 import structlog
 import os
-from datetime import datetime
-from pathlib import Path
 
 from talemate import VERSION
-from talemate.changelog import list_revision_entries, delete_changelog_files
+from talemate.changelog import delete_changelog_files, scene_ref_from_path
 from talemate.client.model_prompts import model_prompt, PromptSpec
 from talemate.client.registry import CLIENT_CLASSES
 from talemate.client.base import (
@@ -65,11 +63,6 @@ class ToggleClientPayload(pydantic.BaseModel):
 
 class DeleteScenePayload(pydantic.BaseModel):
     path: str
-
-
-class GetBackupFilesPayload(pydantic.BaseModel):
-    scene_path: str
-    filter_date: str | None = None
 
 
 class SaveUnifiedAPIKeyPayload(pydantic.BaseModel):
@@ -465,19 +458,7 @@ class ConfigPlugin(Plugin):
 
         # remove associated changelog files (base, latest, and segmented changelog files)
         try:
-            # Construct a proper scene reference from the deleted file path
-            scene_dir = os.path.dirname(payload.path)
-            scene_filename = os.path.basename(payload.path)
-            scene_ref = type(
-                "Scene",
-                (),
-                {
-                    "save_dir": scene_dir,
-                    "filename": scene_filename,
-                    "changelog_dir": os.path.join(scene_dir, "changelog"),
-                },
-            )()
-
+            scene_ref = scene_ref_from_path(payload.path)
             result = delete_changelog_files(scene_ref)
             log.info(
                 "Deleted scene changelog artifacts",
@@ -557,108 +538,3 @@ class ConfigPlugin(Plugin):
         self.websocket_handler.queue_put(
             {"type": "app_config", "data": config.model_dump(), "version": VERSION}
         )
-
-    async def handle_get_backup_files(self, data):
-        """Get the most appropriate revision for the scene."""
-        payload = GetBackupFilesPayload(**data)
-        try:
-            # we dont actually have the scene loaded at this point so we need
-            # to scaffold a temporary scene object that has the necessary paths
-            scene_dir = os.path.dirname(payload.scene_path)
-            scene_filename = os.path.basename(payload.scene_path)
-            scene = type(
-                "Scene",
-                (),
-                {
-                    "save_dir": scene_dir,
-                    "filename": scene_filename,
-                    "name": "temp",
-                    "changelog_dir": os.path.join(scene_dir, "changelog"),
-                },
-            )()
-
-            # Get base and latest snapshot file info
-            changelog_dir = Path(scene.changelog_dir)
-            base_path = changelog_dir / f"{scene.filename}.base.json"
-            latest_path = changelog_dir / f"{scene.filename}.latest.json"
-
-            base_mtime = base_path.stat().st_mtime if base_path.exists() else None
-            latest_mtime = latest_path.stat().st_mtime if latest_path.exists() else None
-
-            files = []
-            if payload.filter_date:
-                # Find the revision closest to the filter date (before or after)
-                # Only show specific revision when filtering by date
-
-                filter_ts = int(
-                    datetime.fromisoformat(
-                        payload.filter_date.replace("Z", "+00:00")
-                    ).timestamp()
-                )
-
-                entries = list_revision_entries(scene)
-                candidate = None
-                best_distance = None
-                for entry in entries:
-                    distance = abs(entry["ts"] - filter_ts)
-                    if (
-                        best_distance is None
-                        or distance < best_distance
-                        or (distance == best_distance and candidate)
-                    ):
-                        candidate = entry
-                        best_distance = distance
-
-                if candidate:
-                    files.append(
-                        {
-                            "name": f"rev_{candidate['rev']}",
-                            "path": payload.scene_path,
-                            "timestamp": candidate["ts"],
-                            "size": 0,
-                            "rev": candidate["rev"],
-                        }
-                    )
-
-            # Always include base and latest snapshots as restore options
-            entries = list_revision_entries(scene)
-            if base_mtime:
-                files.append(
-                    {
-                        "name": "base",
-                        "path": payload.scene_path,
-                        "timestamp": int(base_mtime),
-                        "size": 0,
-                        "rev": 0,
-                        "is_base": True,
-                    }
-                )
-
-            if latest_mtime:
-                latest_rev = entries[0]["rev"] if entries else 0
-                files.append(
-                    {
-                        "name": "latest",
-                        "path": payload.scene_path,
-                        "timestamp": int(latest_mtime),
-                        "size": 0,
-                        "rev": latest_rev,
-                        "is_latest": True,
-                    }
-                )
-
-            self.websocket_handler.queue_put(
-                {"type": "backup", "action": "backup_files", "files": files}
-            )
-        except Exception as e:
-            log.error(
-                "Failed to list revisions", scene_path=payload.scene_path, error=e
-            )
-            self.websocket_handler.queue_put(
-                {
-                    "type": "backup",
-                    "action": "backup_files",
-                    "files": [],
-                    "error": str(e),
-                }
-            )

@@ -21,7 +21,7 @@ from talemate.world_state.templates import (
     Spices,
     WritingStyle,
 )
-from talemate.changelog import write_reconstructed_scene
+from talemate.changelog import fork_scene_at_revision
 from talemate.save import SceneEncoder
 import os
 from talemate.agents.base import (
@@ -848,14 +848,8 @@ class AssistantMixin:
                 emit("status", "Creating reconstructive fork...", status="busy")
 
                 # Create fork file with reconstructed scene data (shared_context will be disconnected)
-                fork_file_path = await write_reconstructed_scene(
-                    self.scene,
-                    message.rev,
-                    f"{save_name}.json",
-                    overrides={
-                        "immutable_save": False,
-                        "memory_id": str(uuid.uuid4())[:10],
-                    },
+                fork_file_path = await fork_scene_at_revision(
+                    self.scene, message.rev, save_name
                 )
 
                 log.info(

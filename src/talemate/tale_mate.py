@@ -2055,19 +2055,21 @@ class Scene(Emitter):
             )
 
             restore_from = self.restore_from
+            use_changelog = (
+                from_rev is not None or from_date is not None or to_date is not None
+            )
 
-            if not self.restore_from:
-                self.log.error("No save file specified to restore from.")
+            if not self.restore_from and not use_changelog:
+                self.log.warning("restore: no save file specified to restore from")
                 return
-
-            self.reset()
-            self.active_characters = []
-            await self.remove_all_actors()
 
             from talemate.load import load_scene
 
-            # If a changelog rev/date-range is provided, reconstruct first
-            if from_rev is not None or from_date is not None or to_date is not None:
+            # If a changelog rev/date-range is provided, reconstruct first.
+            # Reconstruction must happen before reset() since reset() clears
+            # `filename`, which the changelog paths are resolved from.
+            temp_path = None
+            if use_changelog:
                 from talemate.changelog import reconstruct_scene_data
 
                 target_rev = from_rev
@@ -2077,16 +2079,20 @@ class Scene(Emitter):
                 temp_path = os.path.join(self.save_dir, temp_name)
                 with open(temp_path, "w") as f:
                     json.dump(reconstructed, f, indent=2, cls=save.SceneEncoder)
-                await load_scene(
-                    self,
-                    temp_path,
-                    get_agent("conversation").client,
-                )
+
+            self.reset()
+            self.active_characters = []
+            await self.remove_all_actors()
+
+            if use_changelog:
+                try:
+                    await load_scene(self, temp_path, add_to_recent=False)
+                finally:
+                    os.remove(temp_path)
             else:
                 await load_scene(
                     self,
                     os.path.join(self.save_dir, self.restore_from),
-                    get_agent("conversation").client,
                 )
                 if not self.restore_from:
                     self.restore_from = restore_from
@@ -2108,6 +2114,7 @@ class Scene(Emitter):
 
         except Exception as e:
             self.log.error("restore", error=e, traceback=traceback.format_exc())
+            raise
 
     def sync_restore(self, *args, **kwargs):
         loop = asyncio.get_event_loop()

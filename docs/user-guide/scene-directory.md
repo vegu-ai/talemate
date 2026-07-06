@@ -33,7 +33,7 @@ Stores media assets associated with the scene, such as generated images and TTS 
 
 ### `changelog/`
 
-Contains the automatic version history that powers the [Restore from Backup](/talemate/user-guide/restoring-scenes) feature. Every time you save, Talemate records the changes as a delta, allowing you to restore the scene to any previous revision.
+Contains the automatic version history that powers the [Timeline](/talemate/user-guide/restoring-scenes) feature. Every time you save, Talemate records the changes as a delta, allowing you to restore the scene to any previous revision.
 
 This directory includes:
 
@@ -42,6 +42,10 @@ This directory includes:
 - **Delta logs** — incremental change records between revisions
 
 You generally don't need to interact with these files directly.
+
+### `backups/`
+
+Holds automatic safety copies of the scene file, such as the pre-rollback backups created when you [roll a scene back](/talemate/user-guide/restoring-scenes) from the timeline. Each backup is a timestamped copy of the scene file as it was before the operation.
 
 ### `nodes/`
 

@@ -1107,6 +1107,37 @@ async def test_in_memory_changelog_integration_with_existing_revisions(mock_scen
 
 
 @pytest.mark.asyncio
+async def test_in_memory_changelog_baselines_on_committed_snapshot(mock_scene):
+    """Mutations made between a commit and entering a new InMemoryChangelog
+    context must still land in the delta chain — the baseline is the last
+    committed snapshot, not the live scene state. Otherwise stored delta
+    values diverge from reconstructions and item removals get silently
+    skipped when applied (deepdiff verifies removed values)."""
+    await save_changelog(mock_scene)
+
+    items = [{"id": idx} for idx in range(1, 4)]
+    mock_scene.serialize = {"history": list(items)}
+    await append_scene_delta(mock_scene)
+    mock_scene.rev = 1
+
+    # mutate the scene BEFORE the in-memory changelog is entered
+    # (mirrors load-time mutations like message meta stamps)
+    items[1] = {"id": 2, "meta": {"agent": "narrator"}}
+    mock_scene.serialize = {"history": list(items)}
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        # remove the last two items (mirrors a rollback truncating history)
+        mock_scene.serialize = {"history": [items[0]]}
+        await changelog.append_delta()
+        await changelog.commit()
+
+    reconstructed = await reconstruct_scene_data(mock_scene, to_rev=2)
+    # _repair_history backfills message fields on bare entries; ids are
+    # what matters — both removals must have actually applied
+    assert [entry["id"] for entry in reconstructed["history"]] == [1]
+
+
+@pytest.mark.asyncio
 async def test_reconstruct_scene_data_disconnects_shared_context(mock_scene):
     """Test that shared_context is automatically disconnected during reconstruction."""
     # Setup base scene with shared_context

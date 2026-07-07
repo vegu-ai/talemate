@@ -119,6 +119,18 @@ EXCLUDE_FROM_DELTAS_REGEX = [
     # re.compile(r"root\['some_array'\]\[\d+\]\['volatile_field'\]"),
 ]
 
+# Scene-data fields that must always be lists. Delta application with
+# force=True can leave an int-keyed dict in their place when an iterable op
+# targets a path whose parent is missing (baseline divergence) — deepdiff
+# creates ``{index: item}`` instead of a list.
+_LIST_FIELDS = (
+    "history",
+    "archived_history",
+    "layered_history",
+    "active_characters",
+    "game_state_watch_paths",
+)
+
 
 # Helper minimal scene reference compatible with this module's helpers
 class _SceneRef:
@@ -685,6 +697,61 @@ def _get_overall_latest_revision(scene: "Scene") -> int:
     return latest_rev
 
 
+def _coerce_forced_list(value) -> tuple[list | None, bool]:
+    """Convert a force-mode artifact — an int-keyed dict where a list is
+    expected — back into a list ordered by index.
+
+    Returns ``(converted_list, True)`` when the value was such an artifact,
+    ``(None, False)`` otherwise. Dicts with any non-index key are left alone.
+    """
+    if not isinstance(value, dict):
+        return None, False
+
+    indexed: list[tuple[int, object]] = []
+    for key, item in value.items():
+        if isinstance(key, bool):
+            return None, False
+        if isinstance(key, int):
+            indexed.append((key, item))
+        elif isinstance(key, str) and re.fullmatch(r"-?\d+", key):
+            # int keys become strings when the data round-trips through JSON
+            indexed.append((int(key), item))
+        else:
+            return None, False
+
+    indexed.sort(key=lambda pair: pair[0])
+    return [item for _, item in indexed], True
+
+
+def _repair_forced_list_fields(data: dict) -> int:
+    """Restore list fields that force-mode delta application turned into
+    int-keyed dicts (see ``_LIST_FIELDS``), including the nested layers of
+    ``layered_history``.
+
+    Returns the number of fields repaired.
+    """
+    repaired: list[str] = []
+
+    for field in _LIST_FIELDS:
+        converted, was_forced = _coerce_forced_list(data.get(field))
+        if was_forced:
+            data[field] = converted
+            repaired.append(field)
+
+    layered = data.get("layered_history")
+    if isinstance(layered, list):
+        for i, layer in enumerate(layered):
+            converted, was_forced = _coerce_forced_list(layer)
+            if was_forced:
+                layered[i] = converted
+                repaired.append(f"layered_history[{i}]")
+
+    if repaired:
+        log.warning("repaired_forced_list_fields", fields=repaired)
+
+    return len(repaired)
+
+
 def _repair_history(data: dict) -> int:
     """Backfill required SceneMessage fields on bare-fragment history entries.
 
@@ -729,6 +796,7 @@ async def reconstruct_cleanup(data: dict) -> dict:
         )
         data["shared_context"] = ""
 
+    _repair_forced_list_fields(data)
     _repair_history(data)
     return data
 

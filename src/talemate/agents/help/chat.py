@@ -17,6 +17,7 @@ from talemate.client.context import ClientContext
 from talemate.game.focal.util import strip_call_blocks
 
 from . import docs
+from . import settings
 from .schema import (
     HelpChat,
     HelpChatDocResultMessage,
@@ -32,7 +33,8 @@ log = structlog.get_logger("talemate.agents.help.chat")
 
 INITIAL_MESSAGE = (
     "Hi! I can help you with anything Talemate - settings, agents, clients, "
-    "the world editor and more. What would you like to know?"
+    "the world editor and more. I can also look up your current settings and "
+    "change them for you if you ask. What would you like to know?"
 )
 
 OnUpdate = Callable[
@@ -79,8 +81,8 @@ class HelpChatMixin:
                 ),
                 "doc_lookup_iterations": AgentActionConfig(
                     type="number",
-                    label="Documentation lookup rounds",
-                    description="How many rounds of documentation lookups the help agent may perform before it must answer.",
+                    label="Tool call rounds",
+                    description="How many rounds of tool calls (documentation lookups, settings reads and updates) the help agent may perform before it must answer.",
                     value=3,
                     step=1,
                     min=1,
@@ -88,8 +90,8 @@ class HelpChatMixin:
                 ),
                 "max_doc_lookups": AgentActionConfig(
                     type="number",
-                    label="Lookups per round",
-                    description="Maximum documentation tool calls per lookup round. Lookups in a round run concurrently when the client supports concurrent inference.",
+                    label="Tool calls per round",
+                    description="Maximum tool calls per round. Read-only calls in a round run concurrently when the client supports concurrent inference.",
                     value=5,
                     step=1,
                     min=1,
@@ -281,6 +283,101 @@ class HelpChatMixin:
             ),
         ]
 
+    def _chat_settings_callbacks(
+        self, ux_snapshot: dict | None = None
+    ) -> list[focal.Callback]:
+        # writes targeting the agent whose settings dialog is open would be
+        # invisible in (and overwritable by) that dialog - refuse them.
+        # best-effort: the snapshot is from message-send time, so a dialog
+        # opened mid-generation is not seen
+        open_agent_modal = ((ux_snapshot or {}).get("agent_settings_modal") or {}).get(
+            "agent"
+        )
+        open_app_settings = bool((ux_snapshot or {}).get("app_settings_modal"))
+
+        async def read_agent_settings(agent: str):
+            return settings.read_agent_settings(agent)
+
+        async def update_agent_setting(
+            agent: str, action: str, setting: str, value, scope: str = "global"
+        ):
+            return await settings.update_agent_setting(
+                agent, action, setting, value, scope, open_agent_modal=open_agent_modal
+            )
+
+        async def clear_agent_setting_scene_override(
+            agent: str, action: str, setting: str
+        ):
+            return await settings.clear_agent_setting_scene_override(
+                agent, action, setting, open_agent_modal=open_agent_modal
+            )
+
+        async def read_app_config(section: str):
+            return settings.read_app_config(section)
+
+        async def update_app_config(path: str, value):
+            return await settings.update_app_config(
+                path, value, open_app_settings=open_app_settings
+            )
+
+        async def read_clients():
+            return settings.read_clients()
+
+        # reads may run concurrently; writes stay sequential so config
+        # mutations never race each other
+        return [
+            focal.Callback(
+                name="read_agent_settings",
+                arguments=[focal.Argument(name="agent", type="str")],
+                fn=read_agent_settings,
+                concurrent=True,
+            ),
+            focal.Callback(
+                name="update_agent_setting",
+                arguments=[
+                    focal.Argument(name="agent", type="str"),
+                    focal.Argument(name="action", type="str"),
+                    focal.Argument(name="setting", type="str"),
+                    focal.Argument(
+                        name="value", type="str | int | float | bool | list"
+                    ),
+                    focal.Argument(name="scope", type="str"),
+                ],
+                fn=update_agent_setting,
+            ),
+            focal.Callback(
+                name="clear_agent_setting_scene_override",
+                arguments=[
+                    focal.Argument(name="agent", type="str"),
+                    focal.Argument(name="action", type="str"),
+                    focal.Argument(name="setting", type="str"),
+                ],
+                fn=clear_agent_setting_scene_override,
+            ),
+            focal.Callback(
+                name="read_app_config",
+                arguments=[focal.Argument(name="section", type="str")],
+                fn=read_app_config,
+                concurrent=True,
+            ),
+            focal.Callback(
+                name="update_app_config",
+                arguments=[
+                    focal.Argument(name="path", type="str"),
+                    focal.Argument(
+                        name="value", type="str | int | float | bool | list"
+                    ),
+                ],
+                fn=update_app_config,
+            ),
+            focal.Callback(
+                name="read_clients",
+                arguments=[],
+                fn=read_clients,
+                concurrent=True,
+            ),
+        ]
+
     # === Generation ===
 
     async def chat_generate_next(
@@ -314,7 +411,8 @@ class HelpChatMixin:
 
                 focal_handler = focal.Focal(
                     self.client,
-                    callbacks=self._chat_doc_callbacks(),
+                    callbacks=self._chat_doc_callbacks()
+                    + self._chat_settings_callbacks(ux_snapshot),
                     max_calls=self.chat_max_doc_lookups,
                     max_concurrent=self.chat_max_doc_lookups,
                     retries=0,

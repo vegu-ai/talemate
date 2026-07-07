@@ -216,6 +216,11 @@ export default {
       // Gates the scene-overrides websocket save on dialog close; only sent
       // when something actually changed in Scene mode.
       dirtyScene: false,
+      // Serialized save payload taken when the agent is loaded; gates the
+      // global save on dialog close so an untouched dialog doesn't push its
+      // (possibly stale) copy back and overwrite changes made elsewhere
+      // while it was open (e.g. by the help agent).
+      globalBaseline: null,
       // Default filename for the agent-settings JSON file when the scene
       // has none linked yet. Editable inline in Scene mode.
       pendingFilename: DEFAULT_SCENE_AGENT_SETTINGS_FILENAME,
@@ -389,6 +394,7 @@ export default {
           actions: seed.actions ? JSON.parse(JSON.stringify(seed.actions)) : {},
         };
         this.dirtyScene = false;
+        this.globalBaseline = this.globalSavePayload();
         this.pendingFilename = this.sceneSettingsFile || DEFAULT_SCENE_AGENT_SETTINGS_FILENAME;
         // If we're in scene mode but the new agent has nothing to override,
         // bounce back to global so the user isn't staring at an empty pane.
@@ -453,9 +459,23 @@ export default {
       }
     },
 
+    // The subset of the modal's agent state that saveAgents actually sends.
+    // Deliberately excludes `data` — backend-owned schema (choices, dynamic
+    // children) that live status updates may refresh while the dialog is open.
+    globalSavePayload() {
+      return JSON.stringify({
+        enabled: this.agent?.enabled,
+        client: this.agent?.client,
+        actions: this.agent?.actions,
+      });
+    },
+
     finalizeSave() {
       this.save();
-      this.$emit('save', this.agent);
+      if (this.globalSavePayload() !== this.globalBaseline) {
+        this.$emit('save', this.agent);
+        this.globalBaseline = this.globalSavePayload();
+      }
       if (this.dirtyScene && this.sceneSettingsFile) {
         // File already linked; push the overrides into the existing file.
         // The unlinked-and-dirty case is handled before the modal closes

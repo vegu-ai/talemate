@@ -1468,6 +1468,7 @@ export default {
         scene_environment: this.sceneActive ? this.scene?.environment : null,
         client_settings_modal: this.$refs.aiClient?.uxSnapshot() || null,
         agent_settings_modal: this.$refs.aiAgent?.uxSnapshot() || null,
+        app_settings_modal: this.$refs.appConfig?.uxSnapshot() || null,
         app_ready: this.ready,
         waiting_for_input: this.waitingForInput,
       };

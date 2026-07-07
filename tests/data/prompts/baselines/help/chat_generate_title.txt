@@ -1,5 +1,5 @@
 ## Conversation
-help: Hi! I can help you with anything Talemate - settings, agents, clients, the world editor and more. What would you like to know?
+help: Hi! I can help you with anything Talemate - settings, agents, clients, the world editor and more. I can also look up your current settings and change them for you if you ask. What would you like to know?
 user: What do the editor revision methods do?
 
 ## Task

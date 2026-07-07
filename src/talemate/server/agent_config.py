@@ -57,10 +57,12 @@ class AgentConfigPlugin(Plugin):
 
     async def _persist_and_broadcast(self, agent) -> None:
         # NOTE: this path runs alongside the bulk ``configure_agents`` save
-        # path. Both write to the same ``Config.agents[agent_type]`` slot.
-        # We rely on the websocket dispatcher serializing inbound messages so
-        # there's no concurrent register-vs-configure overlap on the same
-        # agent. If that assumption changes, add a lock.
+        # path AND the help agent's settings tools (background tasks, NOT
+        # serialized by the websocket dispatcher). Every writer replaces the
+        # ``Config.agents[agent_type]`` slot in one synchronous event-loop
+        # step, so interleaving can't tear the entry — the exposure is
+        # whole-entry last-writer-wins, which the AgentModal's unchanged-save
+        # skip keeps rare. If entry building ever gains awaits, add a lock.
         await agent.save_config()
         await commit_config()
         await agent.emit_status()

@@ -20,7 +20,7 @@ Will try to correct markup and optionally revise text to fix repetition and unwa
 
 ### Help
 
-Interactive help chat that answers questions about Talemate itself, grounded in the bundled documentation. Available from the app bar at any time, with or without a scene.
+Interactive help chat that answers questions about Talemate itself, grounded in the bundled documentation and your actual configuration - it can also change settings for you on request. Available from the app bar at any time, with or without a scene.
 
 ### Long-term Memory
 

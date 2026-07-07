@@ -556,6 +556,11 @@ export default {
     },
 
     methods: {
+        uxSnapshot() {
+            // what the open app-settings dialog shows, for the help agent's UX snapshot
+            if(!this.dialog) return null;
+            return { tab: this.tab };
+        },
         show(tab, page, item) {
             this.requestAppConfig();
             this.dialog = true;

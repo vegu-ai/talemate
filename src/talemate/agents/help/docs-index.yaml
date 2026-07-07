@@ -139,11 +139,12 @@
 - path: user-guide/agents/help/index.md
   title: Overview
   summary: 'Help agent overview: the interactive help chat opened from the app bar help icon, grounded in the bundled documentation;
-    multi-turn persistent chats, the per-chat Scene Aware toggle, UX snapshot context, and why it cannot change scenes (defer
-    to director chat).'
+    multi-turn persistent chats, the per-chat Scene Aware toggle, UX snapshot context, reading and changing settings from
+    the chat (agent settings globally or per scene, app config; API keys and clients are off limits), and why it cannot change
+    scene content (defer to director chat).'
 - path: user-guide/agents/help/settings.md
   title: Settings
-  summary: 'Help agent settings: response token budget, documentation lookup rounds, lookups per round, and custom instructions.'
+  summary: 'Help agent settings: response token budget, tool call rounds, tool calls per round, and custom instructions.'
 - path: user-guide/agents/index.md
   title: Overview
   summary: Top-level overview of all Talemate agents (Conversation, Creator, Director, Editor, Long-term Memory, Narrator,
@@ -475,8 +476,8 @@
   title: llama.cpp Client
   summary: 'Connecting to a llama-server instance: API URL (default port 8080), optional API key, the ''API handles prompt
     template'' option (renders prompts via the server''s /apply-template endpoint using the model''s built-in chat template;
-    response pre-filling keeps working), context length, and the Concurrent Inference toggle (requires parallel slots on
-    the server). Includes could-not-connect troubleshooting and a sample llama-server launch command.'
+    response pre-filling keeps working), context length, and the Concurrent Inference toggle (requires parallel slots on the
+    server). Includes could-not-connect troubleshooting and a sample llama-server launch command.'
 - path: user-guide/clients/types/lmstudio.md
   title: LMStudio Client
   summary: 'Connecting to an LMStudio instance: API URL (default port 1234), API key, and context length settings, plus the
@@ -511,9 +512,9 @@
 - path: user-guide/clients/types/text-generation-webui.md
   title: Text-Generation-WebUI Client
   summary: 'Connecting to a Text-Generation-WebUI (ooba) instance: API URL (default port 5000), API key, the ''API handles
-    prompt template'' option (routes requests to chat/completions so the backend applies the prompt template; response
-    pre-filling keeps working via continue_), and context length, plus troubleshooting for bad generations (wrong prompt
-    template), ''No model loaded'', and connection failures.'
+    prompt template'' option (routes requests to chat/completions so the backend applies the prompt template; response pre-filling
+    keeps working via continue_), and context length, plus troubleshooting for bad generations (wrong prompt template), ''No
+    model loaded'', and connection failures.'
 - path: user-guide/debug-tools.md
   title: Debug Tools
   summary: The Debug Tools panel (bug icon in the toolbar) with its Prompts tab (inspect all AI prompts sent, force reasoning
@@ -669,8 +670,8 @@
   title: Events
   summary: 'Reference list of all supported events with payload tables: game loop and scene loop lifecycle events, regenerate
     events, per-agent events (conversation, creator, editor, help, narrator, director, world state, summarization, TTS, visual
-    generation and prompt finalization), and scene asset events (asset saved/deleted, backdrop and cover image changes),
-    including which payload fields are mutable for injecting instructions or rewriting responses.'
+    generation and prompt finalization), and scene asset events (asset saved/deleted, backdrop and cover image changes), including
+    which payload fields are mutable for injecting instructions or rewriting responses.'
 - path: user-guide/node-editor/reference/template_functions.md
   title: Template Functions
   summary: 'Reference for functions available inside prompt templates: response scaffolding (set_prepared_response, set_data_response,
@@ -771,6 +772,11 @@
   summary: 'Create State Reinforcement templates to track character or world states: question/attribute name, state type (all
     characters, player, NPCs, world), context attachment method, re-evaluation interval in turns, additional instructions,
     and auto-create for new characters; generated from the Character Editor''s States tab.'
+- path: user-guide/templates/visual-finalizer.md
+  title: Visual Prompt Finalizer
+  summary: 'Visual prompt finalizer templates: reusable sets of image-prompt post-processing actions (exact/fuzzy/regex replace
+    or AI instruction) insertable into the visualizer agent''s Prompt Finalization table via the Preset picker; includes the
+    shipped Ideogram JSON preset and create/edit/delete steps.'
 - path: user-guide/templates/writing-style.md
   title: Writing Styles
   summary: Create Writing Style templates that apply tone/style instructions to generated content, and configure phrase detection
@@ -901,6 +907,11 @@
   summary: The Shared World panel, create shared context .json files to share characters, world entries, and history across
     scenes in a project, link scenes, bulk-share elements, and manage episodes (alternative storylines) including creating
     new scenes from an episode.
+- path: user-guide/world-editor/scene/visuals.md
+  title: Scene Visuals
+  summary: 'World Editor Scene Visuals tab: manage background illustrations and scene illustrations (upload, Generate New,
+    Generate Variation with batch prompts), set the scene cover image, set/unset the scene backdrop with the Render backdrop
+    switch, and edit the visualizer agent''s per-scene Prompt Finalization overrides.'
 - path: user-guide/world-editor/suggestions.md
   title: Suggestions
   summary: The Suggestions view where agent-proposed world changes (currently character changes only) accumulate for review,

@@ -8,7 +8,12 @@ import json
 import pytest
 
 import talemate.agents.help.storage as help_storage
+import talemate.config.state as config_state
+import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
+from talemate.agents.help import settings as help_settings
+from talemate.config import get_config
+from talemate.config.schema import Client, Config
 from talemate.agents.help import HelpAgent, docs
 from talemate.agents.help.chat import INITIAL_MESSAGE
 from talemate.agents.help.schema import HelpChatStore
@@ -422,3 +427,558 @@ async def test_chat_send_fires_signals(help_agent, isolate_signals):
 
     # initial + user message at .before; help answer appended by .after
     assert received == [("before", chat.id, 2), ("after", chat.id, 3)]
+
+
+# ---------------------------------------------------------------------------
+# Settings tools
+# ---------------------------------------------------------------------------
+
+
+class _SceneStub:
+    """Minimal scene stand-in with the attributes scene-override writes need."""
+
+    def __init__(self, save_dir):
+        self.name = "Test Scene"
+        self.filename = "scene.json"
+        self.project_name = "test-scene"
+        self.save_dir = save_dir
+        self.agent_overrides = None
+        self.agent_settings_file = None
+        self._agent_settings_opted_out = False
+
+
+@pytest.fixture
+def settings_env(monkeypatch):
+    """Bootstrapped agents + isolated config; config never touches disk."""
+    bootstrap_engine()
+
+    original = config_state.CONFIG
+    config_state.CONFIG = Config.model_validate(
+        original.model_dump() if original else {}
+    )
+
+    async def _no_commit():
+        pass
+
+    monkeypatch.setattr(help_settings, "commit_config", _no_commit)
+
+    # config.changed receivers (e.g. the memory agent's key watcher) expect
+    # a fully wired runtime - detach them for the test
+    isolated = {}
+    for signal_name in ("config.changed", "config.changed.follow"):
+        sig = async_signals.get(signal_name)
+        isolated[signal_name] = (sig, list(sig.receivers))
+        sig.receivers.clear()
+
+    yield config_state.CONFIG
+
+    for sig, receivers in isolated.values():
+        sig.receivers.clear()
+        sig.receivers.extend(receivers)
+
+    config_state.CONFIG = original
+
+
+def test_read_agent_settings(settings_env):
+    payload = help_settings.read_agent_settings("conversation")
+    assert payload["agent"] == "conversation"
+    assert payload["enabled"] is True
+
+    action = payload["actions"]["generation_override"]
+    assert action["label"] == "Generation"
+
+    length = action["settings"]["length"]
+    assert length["type"] == "number"
+    assert length["value"] == 192
+    assert length["min"] == 32
+    assert length["max"] == 4096
+
+    fmt = action["settings"]["format"]
+    assert {"label": "Narrative", "value": "narrative"} in fmt["choices"]
+
+    # other agents read fine too
+    payload_editor = help_settings.read_agent_settings("editor")
+    assert payload_editor["actions"]["fix_exposition"]["can_be_disabled"] is True
+
+
+def test_read_agent_settings_unknown_agent(settings_env):
+    result = help_settings.read_agent_settings("nope")
+    assert isinstance(result, str)
+    assert "conversation" in result
+
+
+def test_read_agent_settings_redacts_secret_fields(settings_env):
+    agent = instance.get_agent("conversation")
+    field = agent.actions["generation_override"].config["instructions"]
+    field.type = "password"
+    field.value = "super-secret"
+
+    payload = help_settings.read_agent_settings("conversation")
+    rendered = json.dumps(payload)
+    assert "super-secret" not in rendered
+    instructions = payload["actions"]["generation_override"]["settings"]["instructions"]
+    assert instructions["value"] == help_settings.REDACTED
+    assert "read_only" in instructions
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_global(settings_env):
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "length", "256", "global"
+    )
+    assert result["applied"] is True
+    assert result["previous_value"] == 192
+    assert result["new_value"] == 256
+
+    agent = instance.get_agent("conversation")
+    assert agent.actions["generation_override"].config["length"].value == 256
+
+    # persisted into the app config
+    saved = get_config().agents["conversation"]
+    assert saved.actions["generation_override"].config["length"].value == 256
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_validation(settings_env):
+    # unknown agent / action / setting
+    assert "Valid agents" in await help_settings.update_agent_setting(
+        "nope", "x", "y", 1
+    )
+    assert "Valid actions" in await help_settings.update_agent_setting(
+        "conversation", "nope", "y", 1
+    )
+    assert "Valid settings" in await help_settings.update_agent_setting(
+        "conversation", "generation_override", "nope", 1
+    )
+
+    # number range
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "length", 8
+    )
+    assert "below the minimum" in result
+
+    # invalid choice
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "format", "banana"
+    )
+    assert "Invalid choice" in result
+
+    # choice by label (case-insensitive) resolves to the value
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "format", "narrative"
+    )
+    assert result["new_value"] == "narrative"
+
+    # invalid scope
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "length", 64, "nope"
+    )
+    assert "Invalid scope" in result
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_refuses_secret_fields(settings_env):
+    agent = instance.get_agent("conversation")
+    agent.actions["generation_override"].config["instructions"].type = "password"
+
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "instructions", "x"
+    )
+    assert "settings dialog" in result
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_enabled_toggle(settings_env):
+    # editor.fix_exposition can be disabled
+    result = await help_settings.update_agent_setting(
+        "editor", "fix_exposition", "enabled", "false"
+    )
+    assert result["applied"] is True
+    assert result["new_value"] is False
+    assert instance.get_agent("editor").actions["fix_exposition"].enabled is False
+
+    # help.chat cannot
+    result = await help_settings.update_agent_setting("help", "chat", "enabled", False)
+    assert "always enabled" in result
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_scene_override(settings_env, tmp_path):
+    agent = instance.get_agent("conversation")
+    agent.scene = _SceneStub(tmp_path)
+
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "length", 384, "scene"
+    )
+    assert result["applied"] is True
+    assert result["scope"] == "scene"
+    assert result["new_value"] == 384
+
+    # overlay file created with the default name and override active
+    assert (tmp_path / "agent-settings" / "agent-settings.json").exists()
+    assert agent.resolve_config("generation_override", "length") == 384
+    # the global value is untouched
+    assert agent.actions["generation_override"].config["length"].value == 192
+
+    # a global write on an overridden field warns about the mask
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "length", 224, "global"
+    )
+    assert "scene override" in result["warning"]
+
+    # reading reports the override
+    payload = help_settings.read_agent_settings("conversation")
+    length = payload["actions"]["generation_override"]["settings"]["length"]
+    assert length["scene_override"] == 384
+
+    # clearing restores fall-through to the global value
+    result = await help_settings.clear_agent_setting_scene_override(
+        "conversation", "generation_override", "length"
+    )
+    assert result["cleared"] is True
+    assert result["removed_override_value"] == 384
+    assert agent.resolve_config("generation_override", "length") == 224
+
+    result = await help_settings.clear_agent_setting_scene_override(
+        "conversation", "generation_override", "length"
+    )
+    assert "No scene override" in result
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_scene_override_guards(settings_env, tmp_path):
+    agent = instance.get_agent("conversation")
+    agent.scene = None
+
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "length", 384, "scene"
+    )
+    assert "No scene is currently loaded" in result
+
+    # unsaved scene
+    scene = _SceneStub(tmp_path)
+    scene.filename = None
+    agent.scene = scene
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "length", 384, "scene"
+    )
+    assert "not been saved" in result
+
+    # opted out
+    scene = _SceneStub(tmp_path)
+    scene._agent_settings_opted_out = True
+    agent.scene = scene
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "length", 384, "scene"
+    )
+    assert "opted out" in result
+
+    # field not scene-overridable
+    scene = _SceneStub(tmp_path)
+    agent.scene = scene
+    result = await help_settings.update_agent_setting(
+        "conversation", "prompt_caching", "optimize_prompt_caching", "on", "scene"
+    )
+    assert "cannot be overridden per scene" in result
+
+    # enabled flag not scene-overridable on this action
+    result = await help_settings.update_agent_setting(
+        "conversation", "generation_override", "enabled", False, "scene"
+    )
+    assert "cannot be overridden per scene" in result
+
+
+def test_read_app_config(settings_env):
+    payload = help_settings.read_app_config("game")
+    assert payload["writable"] is True
+    assert payload["values"]["general"]["auto_save"] is True
+
+    presets = help_settings.read_app_config("presets")
+    assert presets["writable"] is False
+    assert "inference_defaults" not in presets["values"]
+    assert "embeddings_defaults" not in presets["values"]
+
+    result = help_settings.read_app_config("clients")
+    assert isinstance(result, str)
+    assert "read_clients" in result
+
+
+@pytest.mark.asyncio
+async def test_update_app_config(settings_env):
+    result = await help_settings.update_app_config("game.general.auto_save", "false")
+    assert result["applied"] is True
+    assert result["previous_value"] is True
+    assert result["new_value"] is False
+    assert get_config().game.general.auto_save is False
+
+    # list replacement
+    result = await help_settings.update_app_config(
+        "creator.content_context", ["a story", "another story"]
+    )
+    assert result["applied"] is True
+    assert get_config().creator.content_context == ["a story", "another story"]
+
+
+@pytest.mark.asyncio
+async def test_update_app_config_validation(settings_env):
+    # pydantic validation rejects out-of-range values
+    result = await help_settings.update_app_config(
+        "appearance.scene.backdrop_panel_opacity", 5
+    )
+    assert isinstance(result, str)
+    assert "Invalid value" in result
+    assert get_config().appearance.scene.backdrop_panel_opacity == 0.8
+
+    # section not writable
+    result = await help_settings.update_app_config(
+        "presets.inference.creative.temperature", 0.5
+    )
+    assert "not writable" in result
+
+    # bad paths
+    assert "does not exist" in await help_settings.update_app_config(
+        "game.general.nope", 1
+    )
+    assert "does not exist" in await help_settings.update_app_config(
+        "game.nope.deeper", 1
+    )
+    assert "at least a section and a setting" in await help_settings.update_app_config(
+        "game", 1
+    )
+
+    # nested sections are not settings
+    result = await help_settings.update_app_config("game.general", 1)
+    assert "nested section" in result
+
+    # api keys are refused outright
+    result = await help_settings.update_app_config("game.api_key", "x")
+    assert "cannot be read or changed" in result
+
+    # type coercion errors
+    result = await help_settings.update_app_config("game.general.auto_save", "maybe")
+    assert "expects a boolean" in result
+    result = await help_settings.update_app_config(
+        "game.general.max_backscroll", "lots"
+    )
+    assert "expects a number" in result
+    result = await help_settings.update_app_config(
+        "creator.content_context", "not a list"
+    )
+    assert "full list" in result
+
+
+def test_read_clients_redacts_api_keys(settings_env):
+    config = get_config()
+    config.clients.clear()
+    config.clients["testc"] = Client(
+        type="openai", name="testc", model="gpt-x", api_key="super-secret-key"
+    )
+
+    payload = help_settings.read_clients()
+    assert len(payload) == 1
+    entry = payload[0]
+    assert entry["name"] == "testc"
+    assert entry["api_key"] == "set"
+    assert "super-secret-key" not in json.dumps(payload)
+
+
+def test_read_clients_empty(settings_env):
+    get_config().clients.clear()
+    assert "No clients" in help_settings.read_clients()
+
+
+@pytest.mark.asyncio
+async def test_chat_send_with_setting_update(help_agent, settings_env):
+    """A settings write requested through the chat loop is applied and
+    recorded as a tool-result message."""
+    chat = help_agent.chat_create()
+
+    call_block = json.dumps(
+        {
+            "function": "update_agent_setting",
+            "arguments": {
+                "agent": "conversation",
+                "action": "generation_override",
+                "setting": "length",
+                "value": 256,
+                "scope": "global",
+            },
+        }
+    )
+
+    async with MockClientContext():
+        responses = client_responses.get()
+        responses.append(f"```json\n{call_block}\n```")
+        responses.append("Done - conversation generation length is now 256 tokens.")
+
+        await help_agent.chat_send(
+            chat.id, "Set the conversation generation length to 256"
+        )
+
+    messages = help_agent.chat_get(chat.id).messages
+    tool_results = [m for m in messages if m.type == "doc_result"]
+    assert len(tool_results) == 1
+    assert tool_results[0].name == "update_agent_setting"
+    assert tool_results[0].result["applied"] is True
+
+    agent = instance.get_agent("conversation")
+    assert agent.actions["generation_override"].config["length"].value == 256
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_refused_while_modal_open(settings_env, tmp_path):
+    # write targeting the agent whose settings dialog is open is refused
+    result = await help_settings.update_agent_setting(
+        "conversation",
+        "generation_override",
+        "length",
+        256,
+        "global",
+        open_agent_modal="conversation",
+    )
+    assert isinstance(result, str)
+    assert "settings dialog" in result
+
+    agent = instance.get_agent("conversation")
+    assert agent.actions["generation_override"].config["length"].value == 192
+
+    # a different agent's open dialog does not block the write
+    result = await help_settings.update_agent_setting(
+        "conversation",
+        "generation_override",
+        "length",
+        256,
+        "global",
+        open_agent_modal="summarizer",
+    )
+    assert result["applied"] is True
+
+    # clearing a scene override is refused the same way
+    agent.scene = _SceneStub(tmp_path)
+    await help_settings.update_agent_setting(
+        "conversation", "generation_override", "length", 384, "scene"
+    )
+    result = await help_settings.clear_agent_setting_scene_override(
+        "conversation",
+        "generation_override",
+        "length",
+        open_agent_modal="conversation",
+    )
+    assert isinstance(result, str)
+    assert "settings dialog" in result
+    assert agent.resolve_config("generation_override", "length") == 384
+
+
+@pytest.mark.asyncio
+async def test_chat_send_setting_update_refused_while_modal_open(
+    help_agent, settings_env
+):
+    """The ux snapshot's open agent modal reaches the settings tools."""
+    chat = help_agent.chat_create()
+
+    call_block = json.dumps(
+        {
+            "function": "update_agent_setting",
+            "arguments": {
+                "agent": "conversation",
+                "action": "generation_override",
+                "setting": "length",
+                "value": 256,
+                "scope": "global",
+            },
+        }
+    )
+
+    async with MockClientContext():
+        responses = client_responses.get()
+        responses.append(f"```json\n{call_block}\n```")
+        responses.append("The conversation settings dialog is open - close it first.")
+
+        await help_agent.chat_send(
+            chat.id,
+            "Set the conversation generation length to 256",
+            ux_snapshot={
+                "agent_settings_modal": {"agent": "conversation", "tab": "general"}
+            },
+        )
+
+    messages = help_agent.chat_get(chat.id).messages
+    tool_results = [m for m in messages if m.type == "doc_result"]
+    assert len(tool_results) == 1
+    assert "settings dialog" in tool_results[0].result
+
+    agent = instance.get_agent("conversation")
+    assert agent.actions["generation_override"].config["length"].value == 192
+
+
+@pytest.mark.asyncio
+async def test_update_agent_setting_flags(settings_env):
+    # flags fields hold a list of choice values - full-list replacement
+    result = await help_settings.update_agent_setting(
+        "editor", "revision", "automatic_revision_targets", ["narrator"]
+    )
+    assert result["applied"] is True
+    assert result["previous_value"] == ["character", "narrator"]
+    assert result["new_value"] == ["narrator"]
+
+    agent = instance.get_agent("editor")
+    field = agent.actions["revision"].config["automatic_revision_targets"]
+    assert field.value == ["narrator"]
+
+    # elements resolve by label too, and invalid elements are rejected
+    result = await help_settings.update_agent_setting(
+        "editor", "revision", "automatic_revision_targets", ["banana"]
+    )
+    assert "Invalid choice" in result
+    assert field.value == ["narrator"]
+
+    # scalars are rejected outright - a scalar write would corrupt the list
+    result = await help_settings.update_agent_setting(
+        "editor", "revision", "automatic_revision_targets", "narrator"
+    )
+    assert "list of values" in result
+    assert field.value == ["narrator"]
+
+    # empty list clears all flags
+    result = await help_settings.update_agent_setting(
+        "editor", "revision", "automatic_revision_targets", []
+    )
+    assert result["applied"] is True
+    assert field.value == []
+
+
+@pytest.mark.asyncio
+async def test_update_app_config_refused_while_app_settings_open(settings_env):
+    result = await help_settings.update_app_config(
+        "game.general.auto_save", False, open_app_settings=True
+    )
+    assert isinstance(result, str)
+    assert "application settings dialog" in result
+    assert get_config().game.general.auto_save is True
+
+
+def test_read_clients_unified_api_key(settings_env):
+    """Clients resolving their key from an app-level unified path must not
+    report 'not set' when that key is configured."""
+    config = get_config()
+    config.clients.clear()
+    config.clients["openrouter"] = Client(
+        type="openrouter", name="openrouter", model="some-model"
+    )
+
+    config.openrouter.api_key = None
+    payload = help_settings.read_clients()
+    assert payload[0]["api_key"] == "not set"
+
+    # a key cleared in Application Settings persists as "" and clients treat it
+    # as unset - it must not report "set"
+    config.openrouter.api_key = ""
+    payload = help_settings.read_clients()
+    assert payload[0]["api_key"] == "not set"
+
+    config.openrouter.api_key = "sk-or-unified-secret"
+    payload = help_settings.read_clients()
+    assert payload[0]["api_key"] == (
+        "set (unified API key from application settings: openrouter.api_key)"
+    )
+    assert "sk-or-unified-secret" not in json.dumps(payload)

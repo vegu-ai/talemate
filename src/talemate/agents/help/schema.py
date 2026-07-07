@@ -29,7 +29,9 @@ class HelpChatMessage(pydantic.BaseModel):
 
 class HelpChatDocResultMessage(pydantic.BaseModel):
     """
-    The result of a documentation tool call made by the help agent.
+    The result of a tool call made by the help agent (documentation lookups,
+    settings reads and updates). The type stays "doc_result" for backward
+    compatibility with persisted chats.
     """
 
     name: str

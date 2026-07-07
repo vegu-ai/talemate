@@ -6,13 +6,13 @@
 
 Maximum response length for help responses.
 
-##### Documentation lookup rounds
+##### Tool call rounds
 
-How many rounds of documentation lookups the help agent may perform before it must answer. Each round lets the agent consult the documentation and then continue with the results in context.
+How many rounds of tool calls (documentation lookups, settings reads and updates) the help agent may perform before it must answer. Each round lets the agent use its tools and then continue with the results in context.
 
-##### Lookups per round
+##### Tool calls per round
 
-Maximum documentation tool calls (search, read page, read section) per lookup round. When the connected client supports concurrent inference, the lookups in a round execute concurrently.
+Maximum tool calls per round. When the connected client supports concurrent inference, the read-only calls in a round execute concurrently; settings changes always run one at a time.
 
 ##### Custom instructions
 

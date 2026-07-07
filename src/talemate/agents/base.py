@@ -976,7 +976,7 @@ class Agent(ABC):
                         config_key: config_schema.AgentActionConfig(
                             value=config_obj.value
                         )
-                        for config_key, config_obj in action.config.items()
+                        for config_key, config_obj in (action.config or {}).items()
                         if config_obj.type != "unified_api_key"
                     },
                 )

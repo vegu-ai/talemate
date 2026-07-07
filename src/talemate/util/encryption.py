@@ -29,8 +29,9 @@ log = structlog.get_logger("talemate.util.encryption")
 # Prefix that marks encrypted values in YAML
 ENC_PREFIX = "ENC:"
 
-# Field names to encrypt/decrypt when walking config dicts
-_SENSITIVE_FIELD_NAMES = frozenset({"api_key", "override_api_key"})
+# Field names holding secrets - encrypted on disk and redacted anywhere
+# config data is exposed (e.g. the help agent's settings tools)
+SENSITIVE_FIELD_NAMES = frozenset({"api_key", "override_api_key"})
 
 # Keyring identifiers for OS credential storage
 _KEYRING_SERVICE = "talemate"
@@ -326,12 +327,12 @@ def decrypt_value(stored: str) -> str | None:
 def _walk_and_transform(node, transform_fn):
     """
     Recursively walk a nested dict/list structure. For any dict key in
-    _SENSITIVE_FIELD_NAMES whose value is a str, apply transform_fn
+    SENSITIVE_FIELD_NAMES whose value is a str, apply transform_fn
     and replace the value in-place.
     """
     if isinstance(node, dict):
         for key, value in node.items():
-            if key in _SENSITIVE_FIELD_NAMES:
+            if key in SENSITIVE_FIELD_NAMES:
                 if isinstance(value, str):
                     node[key] = transform_fn(value)
                 elif (

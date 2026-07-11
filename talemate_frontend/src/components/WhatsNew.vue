@@ -95,8 +95,96 @@ export default {
     data() {
         return {
             dialog: false,
-            selected: "0.38.0",
+            selected: "0.39.0",
             whatsNew: [
+                {
+                    "version": "0.39.0",
+                    "items": [
+                        {
+                            "title": "Help Agent",
+                            "description": "A new Help agent answers questions about Talemate itself — settings, agents, clients, the world editor and more — grounded in the bundled documentation, which it can search and read before answering. Opened via the help icon in the app bar, it works with or without a loaded scene, keeps multiple persistent chats, and runs in the background so it never blocks the main Talemate loop.\n\nChats can be made scene-aware, and each question carries a small snapshot of what you are looking at in the interface. When asked, the help agent can also read your configuration and change agent and application settings, recording exactly what changed — it never exposes API keys and cannot change scene content."
+                        },
+                        {
+                            "title": "Timeline Rollback",
+                            "description": "A new timeline dialog gives scene restoration a single home, replacing the old Restore from Backup dialog. Drag a slider across the scene's automatic version history to preview the message history at any revision, then either roll the active scene back in place or fork the revision into a new save. A backup is written before a rollback, and the rollback itself is recorded as a new revision — the timeline is never destroyed, so you can always scrub forward again."
+                        },
+                        {
+                            "title": "Scene Backdrop",
+                            "description": "Any scene illustration can now be set as the scene backdrop — an image that fills the whole scene view behind the messages instead of rendering inline. The backdrop belongs to the scene and is saved with it, so it survives reloads and history edits. Message text sits on translucent panels with a drop shadow for legibility — panel opacity and the text shadow are configurable.\n\nAn optional Auto Backdrop setting promotes newly generated scene backgrounds and illustrations automatically, and an Immersive quick-toggle chip in the scene tools turns the backdrop on and off without forgetting the chosen image."
+                        },
+                        {
+                            "title": "Scene Visual Manager",
+                            "description": "World Editor → Scene gains a Visuals tab mirroring the character visual manager: browse, upload, generate (single or batch, new or as variations of a reference image), and delete the scene's background and scene illustrations, set the scene cover image, and set or fully unset the scene backdrop. A Prompt Finalization sub-tab edits the Visualizer agent's per-scene prompt finalization overrides."
+                        },
+                        {
+                            "title": "Visual Prompt Finalization",
+                            "description": "The Visualizer agent gains a Prompt Finalization settings tab defining post-processing actions — exact, fuzzy, or regex match and replace, or a free-form AI instruction — that rewrite image prompts right before they are sent to the image generation backend. Actions can target positive and/or negative prompts, be restricted to specific visual types, and be overridden per scene; characters can define their own actions that run after the agent's.\n\nReusable action sets are managed as a new Visual prompt finalizer template type, including a shipped Ideogram JSON preset, and a new FinalizePrompt node exposes the step to custom node graphs."
+                        },
+                        {
+                            "title": "Notable Improvements",
+                            "groups": [
+                                {
+                                    "title": "Clients & Generation",
+                                    "items": [
+                                        "Client settings now offer the same widget set as agent settings — sliders, autocompletes, rich selects with notes, and conditional visibility.",
+                                        "MistralAI: added a Concurrent Inference toggle so batch operations can dispatch multiple requests in parallel. Off by default.",
+                                        "Text-Generation-WebUI: a new API handles prompt template toggle lets the server apply the model's own chat template; response pre-filling and reasoning capture keep working. Off by default.",
+                                        "llama.cpp: the same API handles prompt template toggle renders prompts through the model's built-in chat template, with reasoning respecting the client's setting. Off by default."
+                                    ]
+                                },
+                                {
+                                    "title": "Scene & UI",
+                                    "items": [
+                                        "AI-assisted character creation gains a Generate example dialogue option, with a guidance field to steer tone, speech patterns, and quirks. Off by default.",
+                                        "The two Add tracked state actions in the scene tools are now a single Track state action — pick the world or a character in the modal."
+                                    ]
+                                },
+                                {
+                                    "title": "Node Editor",
+                                    "items": [
+                                        "New `agent.visual.prompt_finalize.before` / `.after` events fire around visual prompt finalization — prompts are editable, and `.before` can modify the finalizer list — even when the agent setting is off.",
+                                        "New `agent.creator.dialogue_examples.before` / `.after` events wrap example-dialogue generation — inject instructions or rewrite the generated examples.",
+                                        "New `agent.help.chat.before` / `.after` events fire around help chat responses.",
+                                        "Scene assets gain `asset_deleted`, `scene.backdrop_changed`, `scene.cover_image_changed`, and `character.cover_image_changed` events alongside the existing `asset_saved`.",
+                                        "All new events are documented in the node editor's Events reference."
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "title": "Bug Fixes",
+                            "groups": [
+                                {
+                                    "title": "Agents & Settings",
+                                    "items": [
+                                        "Closing an agent's settings dialog without changing anything no longer re-saves its settings, which could silently revert changes made elsewhere while the dialog was open.",
+                                        "The help agent refuses to change settings for an agent whose dialog is open, asking to close it first."
+                                    ]
+                                },
+                                {
+                                    "title": "Backends",
+                                    "items": [
+                                        "OpenRouter: a failed model and provider list fetch at startup no longer sticks until restart — later config saves and status refreshes retry it.",
+                                        "OpenRouter: setting the API key for the first time during initial setup now triggers the provider fetch."
+                                    ]
+                                },
+                                {
+                                    "title": "Generation Errors",
+                                    "items": [
+                                        "Simultaneous generation failures are now queued and answered one after another, so earlier generations resume and their results are no longer lost.",
+                                        "Pending error dialogs are cancelled cleanly when the scene is unloaded or the frontend disconnects."
+                                    ]
+                                },
+                                {
+                                    "title": "Timeline",
+                                    "items": [
+                                        "Previewing a revision no longer fails on scenes whose stored version history diverged from its starting snapshot — affected entries are repaired during reconstruction."
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
                 {
                     "version": "0.38.0",
                     "items": [

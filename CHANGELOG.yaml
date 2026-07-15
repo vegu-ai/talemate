@@ -18,6 +18,7 @@
   - "OpenRouter Client: A failed model/provider list fetch at startup no longer sticks until the server is restarted — later config saves and client status refreshes now retry it. Setting the API key for the first time during initial setup also correctly triggers the provider fetch."
   - "Generation Error Dialog: When several generations failed at the same time (e.g. an API throttle hitting both a summarization and a background task), only the most recent error could be answered — the earlier generation was never resumed and its result (such as a scene summary) was silently lost. Error dialogs are now queued and answered one after another, and pending dialogs are cancelled cleanly when the scene is unloaded or the frontend disconnects."
   - "Timeline Rollback: Previewing a revision could fail with an 'unhashable type' error when the scene's changelog contained deltas that diverged from the base snapshot — reconstruction now repairs the affected message history (and other list data) instead of crashing the timeline."
+  - "Scene Export: Exporting a scene with 'Reset Progress' checked wiped the loaded scene's message history and world state and could break subsequent saves — the reset now applies only to the exported file, leaving the current session untouched."
 
 0.38.0:
   features:

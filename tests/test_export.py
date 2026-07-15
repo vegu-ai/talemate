@@ -3,13 +3,17 @@
 Tests exercise both export formats (talemate JSON and talemate_complete ZIP)
 against a minimal but real Scene-like fixture rooted in tmp_path. We use a
 duck-typed scene object instead of constructing a full talemate.Scene because
-export only reads scene.json, scene.reset, scene.assets.asset_directory,
+export only reads scene.serialize, scene.assets.asset_directory,
 scene.save_dir, scene.restore_from, and scene.name — all easy to provide.
+The reset_progress behavior (the reset must apply to the exported payload
+only, never the live scene) is additionally covered against a real Scene
+instance.
 """
 
 from __future__ import annotations
 
 import base64
+import copy
 import io
 import json
 import os
@@ -18,13 +22,18 @@ from pathlib import Path
 
 import pytest
 
+import talemate.save as save
 from talemate.export import (
     ExportFormat,
     ExportOptions,
     export,
     export_talemate,
     export_talemate_complete,
+    scene_export_json,
 )
+from talemate.scene_message import NarratorMessage
+from talemate.tale_mate import Scene
+from talemate.world_state.schema import CharacterState
 
 
 # ---------------------------------------------------------------------------
@@ -41,6 +50,42 @@ class _StubAssets:
         return os.path.join(self.scene.save_dir, "assets")
 
 
+def _progress_payload(name: str) -> dict:
+    """Scene payload carrying progress: messages, archived/layered history
+    and a populated world state snapshot."""
+    return {
+        "name": name,
+        "history": [{"typ": "character", "text": "hello"}],
+        "archived_history": [
+            {"text": "pre-established", "end": None},
+            {"text": "summarized progress", "start": 0, "end": 5},
+        ],
+        "layered_history": [[{"text": "layer 0 summary"}]],
+        "world_state": {
+            "characters": {"Ana": {"emotion": "happy"}},
+            "items": {"lantern": {}},
+            "places": {"tavern": {}},
+            "location": "tavern",
+            "anchor_message_ids": [1, 2],
+            "reinforce": [{"question": "What is Ana's mood?"}],
+        },
+    }
+
+
+def _assert_progress_reset(exported: dict, original: dict):
+    assert exported["history"] == []
+    assert exported["archived_history"] == [{"text": "pre-established", "end": None}]
+    assert exported["layered_history"] == []
+    world_state = exported["world_state"]
+    assert world_state["characters"] == {}
+    assert world_state["items"] == {}
+    assert world_state["places"] == {}
+    assert world_state["location"] is None
+    assert world_state["anchor_message_ids"] == []
+    # reinforcements are not progress — they survive the reset
+    assert world_state["reinforce"] == original["world_state"]["reinforce"]
+
+
 class _StubScene:
     """Mimics the surface of talemate.tale_mate.Scene that export uses."""
 
@@ -50,21 +95,17 @@ class _StubScene:
         self.filename = "scene.json"
         self.restore_from = None
         self.assets = _StubAssets(self)
-        self._payload: dict = {"name": name, "history": []}
-        self.reset_called_count = 0
-
-    def reset(self):
-        self.reset_called_count += 1
-        # Mirror real Scene.reset's effect: clear history.
-        self._payload["history"] = []
+        self._payload: dict = _progress_payload(name)
 
     @property
     def serialize(self) -> dict:
-        return dict(self._payload)
-
-    @property
-    def json(self) -> str:
-        return json.dumps(self.serialize)
+        # Match the real Scene.serialize's sharing semantics: nested lists
+        # (history, archived_history, layered_history) are returned by live
+        # reference; only pydantic-backed fields like world_state are fresh
+        # model_dump copies.
+        data = dict(self._payload)
+        data["world_state"] = copy.deepcopy(self._payload["world_state"])
+        return data
 
 
 @pytest.fixture
@@ -148,25 +189,33 @@ class TestExportTalemate:
     @pytest.mark.asyncio
     async def test_returns_base64_encoded_json(self, scene):
         # Skip the reset path so the payload is faithfully round-tripped.
-        scene._payload = {"name": "test", "value": 42}
         result = await export_talemate(
             scene, ExportOptions(name="x", reset_progress=False)
         )
 
         decoded = base64.b64decode(result).decode()
-        assert json.loads(decoded) == {"name": "test", "value": 42}
+        assert json.loads(decoded) == scene._payload
 
     @pytest.mark.asyncio
-    async def test_resets_progress_when_option_enabled(self, scene):
-        opts = ExportOptions(name="x", reset_progress=True)
-        await export_talemate(scene, opts)
-        assert scene.reset_called_count == 1
+    async def test_reset_applies_to_exported_payload_only(self, scene):
+        before = copy.deepcopy(scene._payload)
+
+        result = await export_talemate(
+            scene, ExportOptions(name="x", reset_progress=True)
+        )
+
+        exported = json.loads(base64.b64decode(result).decode())
+        _assert_progress_reset(exported, before)
+        # the live scene is untouched
+        assert scene._payload == before
 
     @pytest.mark.asyncio
     async def test_skips_reset_when_option_disabled(self, scene):
-        opts = ExportOptions(name="x", reset_progress=False)
-        await export_talemate(scene, opts)
-        assert scene.reset_called_count == 0
+        result = await export_talemate(
+            scene, ExportOptions(name="x", reset_progress=False)
+        )
+        exported = json.loads(base64.b64decode(result).decode())
+        assert exported == scene._payload
 
 
 # ---------------------------------------------------------------------------
@@ -177,7 +226,7 @@ class TestExportTalemate:
 class TestExportTalemateComplete:
     @pytest.mark.asyncio
     async def test_zip_always_contains_scene_json(self, scene):
-        opts = ExportOptions(name="x")
+        opts = ExportOptions(name="x", reset_progress=False)
         zip_bytes = await export_talemate_complete(scene, opts)
 
         with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
@@ -281,18 +330,27 @@ class TestExportTalemateComplete:
             assert not any(n.startswith("templates/") for n in zf.namelist())
 
     @pytest.mark.asyncio
-    async def test_resets_when_option_enabled(self, scene):
-        await export_talemate_complete(
+    async def test_reset_applies_to_exported_payload_only(self, scene):
+        before = copy.deepcopy(scene._payload)
+
+        zip_bytes = await export_talemate_complete(
             scene, ExportOptions(name="x", reset_progress=True)
         )
-        assert scene.reset_called_count == 1
+
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+            exported = json.loads(zf.read("scene.json").decode())
+        _assert_progress_reset(exported, before)
+        # the live scene is untouched
+        assert scene._payload == before
 
     @pytest.mark.asyncio
     async def test_skips_reset_when_option_disabled(self, scene):
-        await export_talemate_complete(
+        zip_bytes = await export_talemate_complete(
             scene, ExportOptions(name="x", reset_progress=False)
         )
-        assert scene.reset_called_count == 0
+        with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+            exported = json.loads(zf.read("scene.json").decode())
+        assert exported == scene._payload
 
     @pytest.mark.asyncio
     async def test_includes_restore_file_when_set(self, scene, scene_dir):
@@ -351,6 +409,79 @@ class TestExportTalemateComplete:
             assert "info/b.md" in names
             assert "templates/c.j2" in names
             assert "previous.json" in names
+
+
+# ---------------------------------------------------------------------------
+# scene_export_json against a real Scene
+# ---------------------------------------------------------------------------
+
+
+class TestSceneExportJsonRealScene:
+    """The progress reset must apply to the exported payload only — the live
+    Scene instance must never be mutated by an export."""
+
+    def _make_scene(self) -> Scene:
+        scene = Scene()
+        scene.name = "real-scene"
+        scene.filename = "real-scene.json"
+        scene.history = [NarratorMessage("Something happened.")]
+        scene.archived_history = [
+            {"text": "pre-established"},
+            {"text": "progress summary", "start": 0, "end": 3},
+        ]
+        scene.layered_history = [[{"text": "layer 0 summary"}]]
+        scene.world_state.characters["Ana"] = CharacterState(emotion="happy")
+        scene.world_state.location = "tavern"
+        scene.world_state.anchor_message_ids = [1]
+        return scene
+
+    def test_reset_progress_does_not_mutate_live_scene(self):
+        scene = self._make_scene()
+
+        exported = json.loads(
+            scene_export_json(scene, ExportOptions(name="x", reset_progress=True))
+        )
+
+        assert exported["history"] == []
+        assert exported["archived_history"] == [{"text": "pre-established"}]
+        assert exported["layered_history"] == []
+        assert exported["world_state"]["characters"] == {}
+        assert exported["world_state"]["location"] is None
+        assert exported["world_state"]["anchor_message_ids"] == []
+
+        # the live scene is untouched
+        assert len(scene.history) == 1
+        assert len(scene.archived_history) == 2
+        assert scene.layered_history == [[{"text": "layer 0 summary"}]]
+        assert "Ana" in scene.world_state.characters
+        assert scene.world_state.location == "tavern"
+        assert scene.world_state.anchor_message_ids == [1]
+        assert scene.name == "real-scene"
+        assert scene.filename == "real-scene.json"
+
+    def test_scene_reset_clears_layered_history(self):
+        scene = self._make_scene()
+        scene.reset()
+        assert scene.layered_history == []
+
+    def test_reset_export_matches_scene_reset_semantics(self):
+        # guard against scene_export_json and Scene.reset() drifting apart:
+        # compare the full payloads except keys that differ per Scene instance
+        volatile = {"id", "memory_id", "memory_session_id", "saved_memory_session_id"}
+
+        exported = json.loads(
+            scene_export_json(
+                self._make_scene(), ExportOptions(name="x", reset_progress=True)
+            )
+        )
+
+        scene = self._make_scene()
+        scene.reset()
+        reset_serialized = json.loads(save.scene_data_dumps(scene.serialize))
+
+        assert set(exported) == set(reset_serialized)
+        for key in set(exported) - volatile:
+            assert exported[key] == reset_serialized[key], key
 
 
 # ---------------------------------------------------------------------------

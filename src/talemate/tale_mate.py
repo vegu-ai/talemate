@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 import re
 import traceback
@@ -1929,7 +1928,7 @@ class Scene(Emitter):
             emit("status", status="success", message="Saved scene")
 
         with open(filepath, "w") as f:
-            json.dump(scene_data, f, indent=2, cls=save.SceneEncoder)
+            f.write(save.scene_data_dumps(scene_data))
 
         self.saved = True
 
@@ -1963,7 +1962,7 @@ class Scene(Emitter):
         serialized["memory_id"] = str(uuid.uuid4())[:10]
         filepath = os.path.join(self.save_dir, filename)
         with open(filepath, "w") as f:
-            json.dump(serialized, f, indent=2, cls=save.SceneEncoder)
+            f.write(save.scene_data_dumps(serialized))
 
     async def add_to_recent_scenes(self):
         log.debug("add_to_recent_scenes", filename=self.filename)
@@ -2019,6 +2018,8 @@ class Scene(Emitter):
         self.archived_history = [
             ah for ah in self.archived_history if ah.get("end") is None
         ]
+
+        self.layered_history = []
 
         self.world_state.reset()
 
@@ -2078,7 +2079,7 @@ class Scene(Emitter):
                 temp_name = f"{os.path.splitext(self.filename or 'scene.json')[0]}-restored.json"
                 temp_path = os.path.join(self.save_dir, temp_name)
                 with open(temp_path, "w") as f:
-                    json.dump(reconstructed, f, indent=2, cls=save.SceneEncoder)
+                    f.write(save.scene_data_dumps(reconstructed))
 
             self.reset()
             self.active_characters = []
@@ -2168,7 +2169,7 @@ class Scene(Emitter):
 
     @property
     def json(self):
-        return json.dumps(self.serialize, indent=2, cls=save.SceneEncoder)
+        return save.scene_data_dumps(self.serialize)
 
     def interrupt(self):
         self.cancel_requested = True

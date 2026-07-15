@@ -19,6 +19,10 @@ log = structlog.get_logger("talemate")
 AGENTS = {}
 CLIENTS = {}
 
+# in-flight client.status() tasks keyed by client name - lets overlapping
+# status sweeps share one remote round-trip per client instead of stacking them
+CLIENT_STATUS_TASKS = {}
+
 
 def get_agent(typ: str):
     agent = AGENTS.get(typ)
@@ -34,6 +38,7 @@ async def destroy_client(name: str):
     if client:
         await client.destroy()
         del CLIENTS[name]
+    CLIENT_STATUS_TASKS.pop(name, None)
 
 
 def get_client(name: str):
@@ -86,10 +91,14 @@ async def emit_clients_status(wait_for_status: bool = False):
     """
     # log.debug("emit", type="client status")
     tasks = []
-    for client in list(CLIENTS.values()):
-        if client:
+    for name, client in list(CLIENTS.items()):
+        if not client:
+            continue
+        task = CLIENT_STATUS_TASKS.get(name)
+        if not task or task.done():
             task = asyncio.create_task(client.status())
-            tasks.append(task)
+            CLIENT_STATUS_TASKS[name] = task
+        tasks.append(task)
 
     if wait_for_status:
         await asyncio.gather(*tasks)
@@ -197,6 +206,7 @@ async def instantiate_agents():
 
 async def instantiate_clients():
     config: Config = get_config()
+    created = False
     for name, client_config in config.clients.items():
         if name in CLIENTS:
             continue
@@ -205,8 +215,10 @@ async def instantiate_clients():
             **client_config.model_dump()
         )
         CLIENTS[name] = client
+        created = True
 
-    await emit_clients_status()
+    if created:
+        await emit_clients_status()
 
 
 async def configure_agents():

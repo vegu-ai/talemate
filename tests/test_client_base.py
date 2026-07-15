@@ -1112,6 +1112,69 @@ class TestEmitStatus:
         assert client.current_status == "busy"
 
 
+class TestStatusFailureDebounce:
+    """A single failed status check on an established connection must not
+    flap the client to error (issue #93); only consecutive failures
+    reaching status_failure_threshold disconnect it."""
+
+    def _failing_client(self, name: str) -> _StubClient:
+        _register_client_config(name, model="some-model")
+        client = _StubClient(name=name)
+        client.connected = True
+        client.remote_model_name = "some-model"
+
+        async def _fail():
+            raise Exception("ConnectTimeout")
+
+        client.get_model_name = _fail
+        return client
+
+    @pytest.mark.asyncio
+    async def test_single_failure_tolerated_when_connected(self, cfg_isolation):
+        client = self._failing_client("deb1")
+        await client.status()
+        assert client.connected is True
+        assert client.current_status == "idle"
+        assert client.remote_model_name == "some-model"
+
+    @pytest.mark.asyncio
+    async def test_consecutive_failures_disconnect(self, cfg_isolation):
+        client = self._failing_client("deb2")
+        await client.status()
+        await client.status()
+        assert client.connected is False
+        assert client.current_status == "error"
+        assert client.remote_model_name is None
+
+    @pytest.mark.asyncio
+    async def test_success_resets_failure_counter(self, cfg_isolation):
+        client = self._failing_client("deb3")
+        await client.status()
+        assert client.connected is True
+
+        async def _ok():
+            return "some-model"
+
+        client.get_model_name = _ok
+        await client.status()
+        assert client._status_failures == 0
+
+        async def _fail():
+            raise Exception("ConnectTimeout")
+
+        client.get_model_name = _fail
+        await client.status()
+        assert client.connected is True
+
+    @pytest.mark.asyncio
+    async def test_no_grace_when_not_connected(self, cfg_isolation):
+        client = self._failing_client("deb4")
+        client.connected = False
+        await client.status()
+        assert client.connected is False
+        assert client.current_status == "error"
+
+
 class TestSetEmbeddings:
     @pytest.mark.asyncio
     async def test_no_op_when_supports_embeddings_false(self, cfg_isolation):

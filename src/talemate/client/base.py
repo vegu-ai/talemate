@@ -304,6 +304,7 @@ class ClientBase:
     client_type = "base"
     request_information: RequestInformation | None = None
     status_request_timeout: int = 2
+    status_failure_threshold: int = 2
     rate_limit_counter: CounterRateLimiter = None
 
     class Meta(pydantic.BaseModel):
@@ -331,6 +332,7 @@ class ClientBase:
         self.name = name or self.client_type
         self.remote_model_name = None
         self.auto_determine_prompt_template_attempt = None
+        self._status_failures = 0
         self.log = structlog.get_logger(f"client.{self.client_type}")
 
     def __str__(self):
@@ -1142,6 +1144,13 @@ class ClientBase:
         except IndexError:
             return None
 
+    def _tolerate_status_failure(self) -> bool:
+        """Track a failed status check; True while the failure should be
+        tolerated (established connection, threshold not yet reached) so a
+        single dropped status check doesn't flap the client to error."""
+        self._status_failures += 1
+        return self.connected and self._status_failures < self.status_failure_threshold
+
     async def status(self):
         """
         Send a request to the API to retrieve the loaded AI model name.
@@ -1163,12 +1172,22 @@ class ClientBase:
             self.log.debug(
                 "client status error", e=traceback.format_exc(), client=self.name
             )
+            if self._tolerate_status_failure():
+                self.log.warning(
+                    "client status error (tolerated)",
+                    e=e,
+                    client=self.name,
+                    failures=self._status_failures,
+                )
+                self.emit_status()
+                return
             self.log.warning("client status error", e=e, client=self.name)
             self.remote_model_name = None
             self.connected = False
             self.emit_status()
             return
 
+        self._status_failures = 0
         self.connected = True
 
         self.emit_status()

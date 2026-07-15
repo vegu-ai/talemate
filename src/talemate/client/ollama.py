@@ -123,6 +123,14 @@ class OllamaClient(ApiHandlesPromptTemplateMixin, ClientBase):
             # if the server is running, fetch the available models
             await self.fetch_available_models()
         except Exception as e:
+            if self._tolerate_status_failure():
+                log.warning(
+                    "Failed to fetch models from Ollama (tolerated)",
+                    error=str(e),
+                    failures=self._status_failures,
+                )
+                self.emit_status()
+                return
             log.error("Failed to fetch models from Ollama", error=str(e))
             self.connected = False
             self.emit_status()

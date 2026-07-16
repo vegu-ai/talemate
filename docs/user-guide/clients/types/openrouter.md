@@ -46,4 +46,20 @@ Maximum context length (in tokens) that OpenRouter should consider. If you are n
 
 !!! note "Available models are fetched automatically"
     Talemate fetches the list of available OpenRouter models when you save the configuration (if a valid API key is present). If you add or remove models to your account later, simply click **Save** in the application settings again to refresh the list. 
+
+### Parameters
+
+The **Parameters** tab in the client settings lets you control which sampler parameters are sent with each request. Some model providers on OpenRouter reject requests that include parameters they don't support for the selected model, returning an error instead of a generation. If you run into this, you can turn the offending parameter off so it is left out of the request entirely.
+
+Each parameter has its own toggle:
+
+- **Send temperature**
+- **Send top_p**
+- **Send top_k**
+- **Send min_p**
+- **Send frequency_penalty**
+- **Send presence_penalty**
+- **Send repetition_penalty**
+
+All of them are enabled by default. Turning a toggle off omits that parameter from the request completely (it is not sent as a zero value). Leave them enabled unless the provider serving your model errors when it receives one of them — for example, some providers only accept a `frequency_penalty` or `presence_penalty` of exactly `0` for certain models.
 --8<-- "docs/snippets/common.md:client-response-length"

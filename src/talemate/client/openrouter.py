@@ -21,6 +21,11 @@ from talemate.config.schema import Client as BaseClientConfig
 from talemate.config import get_config
 
 from talemate.client.registry import register
+from talemate.client.toggleable_parameters import (
+    ToggleableParametersMixin,
+    toggleable_parameters_config,
+    toggleable_parameters_extra_fields,
+)
 from talemate.emit import emit
 from talemate.emit.signals import handlers
 import talemate.emit.async_signals as async_signals
@@ -48,6 +53,23 @@ AVAILABLE_MODELS = []
 AVAILABLE_PROVIDERS = []
 
 DEFAULT_MODEL = "google/gemini-3-flash-preview"
+
+# Sampler parameters whose inclusion in the request payload is user-toggleable.
+# Some OpenRouter providers hard-error when these are sent for certain models
+# (e.g. Moonshot rejects non-zero penalties for kimi models), so they need to
+# be omitted entirely (not just zeroed out).
+TOGGLEABLE_PARAMETERS = (
+    "temperature",
+    "top_p",
+    "top_k",
+    "min_p",
+    "frequency_penalty",
+    "presence_penalty",
+    "repetition_penalty",
+)
+
+ToggleableParametersConfig = toggleable_parameters_config(TOGGLEABLE_PARAMETERS)
+
 MODELS_FETCHED = False
 PROVIDERS_FETCHED = False
 
@@ -185,14 +207,14 @@ handlers["talemate_started"].connect(on_talemate_started)
 async_signals.get("config.saved").connect(on_config_saved)
 
 
-class Defaults(CommonDefaults, pydantic.BaseModel):
+class Defaults(ToggleableParametersConfig, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = DEFAULT_MODEL
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 
 
-class ClientConfig(ConcurrentInference, BaseClientConfig):
+class ClientConfig(ToggleableParametersConfig, ConcurrentInference, BaseClientConfig):
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 
@@ -225,7 +247,7 @@ def cache_control_for_model(model_name: str) -> dict | None:
 
 
 @register()
-class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
+class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, ClientBase):
     """
     OpenRouter client for generating text using various models.
     """
@@ -235,6 +257,7 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
     # TODO: make this configurable?
     decensor_enabled = False
     config_cls = ClientConfig
+    toggleable_parameters = TOGGLEABLE_PARAMETERS
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "OpenRouter"
@@ -270,6 +293,7 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
                     required=False,
                 ),
             }
+            fields.update(toggleable_parameters_extra_fields(TOGGLEABLE_PARAMETERS))
             fields.update(concurrent_inference_extra_fields())
             return fields
 
@@ -300,19 +324,6 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
     @property
     def min_reason_tokens(self) -> int:
         return MIN_THINKING_TOKENS
-
-    @property
-    def supported_parameters(self):
-        return [
-            "temperature",
-            "top_p",
-            "top_k",
-            "min_p",
-            "frequency_penalty",
-            "presence_penalty",
-            "repetition_penalty",
-            "max_tokens",
-        ]
 
     def emit_status(self, processing: bool = None):
         error_action = None

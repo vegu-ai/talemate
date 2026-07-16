@@ -7,8 +7,13 @@ from talemate.client.api_handles import (
     ApiHandlesPromptTemplateMixin,
     api_handles_prompt_template_extra_fields,
 )
-from talemate.client.base import ClientBase, ExtraField, FieldGroup
+from talemate.client.base import ClientBase, ExtraField
 from talemate.client.registry import register
+from talemate.client.toggleable_parameters import (
+    ToggleableParametersMixin,
+    toggleable_parameters_config,
+    toggleable_parameters_extra_fields,
+)
 from talemate.config.schema import Client as BaseClientConfig
 
 EXPERIMENTAL_DESCRIPTION = """Use this client if you want to connect to a service implementing an OpenAI-compatible API. Success is going to depend on the level of compatibility. Use the actual OpenAI client if you want to connect to OpenAI's API."""
@@ -18,56 +23,32 @@ EXPERIMENTAL_DESCRIPTION = """Use this client if you want to connect to a servic
 # so they need to be omitted entirely (not just zeroed out).
 TOGGLEABLE_PARAMETERS = ("temperature", "top_p", "presence_penalty")
 
-
-PARAMETERS_FIELD_GROUP = FieldGroup(
-    name="parameters",
-    label="Parameters",
-    description=(
-        "Toggle individual sampler parameters. When a parameter is disabled it is "
-        "omitted from the request payload entirely. Useful for APIs that hard-error "
-        "when receiving parameters they don't support for the selected model."
-    ),
-    icon="mdi-tune-vertical",
-)
+ToggleableParametersConfig = toggleable_parameters_config(TOGGLEABLE_PARAMETERS)
 
 
-def _send_parameter_field(param: str) -> ExtraField:
-    return ExtraField(
-        name=f"send_{param}",
-        type="bool",
-        label=f"Send {param}",
-        required=False,
-        description=(
-            f"When enabled, `{param}` is included in the request. Disable for "
-            f"models/APIs that reject it."
-        ),
-        group=PARAMETERS_FIELD_GROUP,
-    )
-
-
-class Defaults(ApiHandlesPromptTemplateConfig):
+class Defaults(ToggleableParametersConfig, ApiHandlesPromptTemplateConfig):
     api_url: str = "http://localhost:5000"
     api_key: str = ""
     max_token_length: int = 8192
     model: str = ""
     double_coercion: str = None
     rate_limit: int | None = None
-    send_temperature: bool = True
-    send_top_p: bool = True
-    send_presence_penalty: bool = True
 
 
-class ClientConfig(ApiHandlesPromptTemplateConfig, BaseClientConfig):
-    send_temperature: bool = True
-    send_top_p: bool = True
-    send_presence_penalty: bool = True
+class ClientConfig(
+    ToggleableParametersConfig, ApiHandlesPromptTemplateConfig, BaseClientConfig
+):
+    pass
 
 
 @register()
-class OpenAICompatibleClient(ApiHandlesPromptTemplateMixin, ClientBase):
+class OpenAICompatibleClient(
+    ApiHandlesPromptTemplateMixin, ToggleableParametersMixin, ClientBase
+):
     client_type = "openai_compat"
     conversation_retries = 0
     config_cls = ClientConfig
+    toggleable_parameters = TOGGLEABLE_PARAMETERS
 
     class Meta(ClientBase.Meta):
         title: str = "OpenAI Compatible API"
@@ -81,20 +62,8 @@ class OpenAICompatibleClient(ApiHandlesPromptTemplateMixin, ClientBase):
             **api_handles_prompt_template_extra_fields(
                 description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored. This is not recommended and should only be used if the API does not support the `completions` andpoint or you don't know which prompt template to use.",
             ),
-            **{f"send_{p}": _send_parameter_field(p) for p in TOGGLEABLE_PARAMETERS},
+            **toggleable_parameters_extra_fields(TOGGLEABLE_PARAMETERS),
         }
-
-    @property
-    def send_temperature(self) -> bool:
-        return self.client_config.send_temperature
-
-    @property
-    def send_top_p(self) -> bool:
-        return self.client_config.send_top_p
-
-    @property
-    def send_presence_penalty(self) -> bool:
-        return self.client_config.send_presence_penalty
 
     @property
     def experimental(self):
@@ -107,14 +76,6 @@ class OpenAICompatibleClient(ApiHandlesPromptTemplateMixin, ClientBase):
         to predefine partial LLM output in the prompt)
         """
         return not self.reason_enabled
-
-    @property
-    def supported_parameters(self):
-        params = ["max_tokens"]
-        for param in TOGGLEABLE_PARAMETERS:
-            if getattr(self.client_config, f"send_{param}"):
-                params.append(param)
-        return params
 
     async def get_model_name(self):
         return self.model

@@ -504,7 +504,8 @@
 - path: user-guide/clients/types/openrouter.md
   title: OpenRouter Client
   summary: 'Adding an OpenRouter client: entering the API key, picking a model from the list dynamically fetched from your
-    account (refresh by re-saving), and the Max token length (context) setting.'
+    account (refresh by re-saving), the Max token length (context) setting, and the Parameters tab with per-parameter send
+    toggles for providers that reject unsupported sampler parameters.'
 - path: user-guide/clients/types/tabbyapi.md
   title: TabbyAPI Client
   summary: 'Connecting to a TabbyAPI instance: API URL (e.g. http://localhost:5000/v1), API key, context length, the ''API

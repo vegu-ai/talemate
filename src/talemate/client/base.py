@@ -1386,7 +1386,12 @@ class ClientBase:
             except Exception as e:
                 self.log.error("generation error", e=traceback.format_exc())
                 status_code = self._extract_status_code(e)
-                error_message = get_error_message(status_code)
+                # exceptions may carry a user-presentable message that is more
+                # accurate than the generic per-status text (e.g. clients whose
+                # transport reports errors without HTTP status codes)
+                error_message = getattr(e, "user_message", None) or get_error_message(
+                    status_code
+                )
                 action = await self._prompt_generation_error(
                     error_message, status_code=status_code
                 )

@@ -16,6 +16,7 @@ Concurrent requests are available for the following hosted API clients:
 - [OpenAI](/talemate/user-guide/clients/types/openai/)
 - [Google Gemini](/talemate/user-guide/clients/types/google/)
 - [OpenRouter](/talemate/user-guide/clients/types/openrouter/)
+- [Pi Bridge](/talemate/user-guide/clients/types/pi-bridge/) — each concurrent request runs its own pi instance
 
 It is also available for the local [llama.cpp](/talemate/user-guide/clients/types/llamacpp/) client. For llama.cpp, your `llama-server` must be started with enough parallel slots to handle more than one request at a time; otherwise the extra requests are simply queued and you will not see a speed-up.
 

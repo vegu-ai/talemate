@@ -43,6 +43,7 @@ Select the API you want to use and click through to follow the instructions to c
 - [Groq](/talemate/user-guide/clients/types/groq/)
 - [Google Gemini](/talemate/user-guide/clients/types/google/)
 - [OpenRouter](/talemate/user-guide/clients/types/openrouter/)
+- [Pi Bridge](/talemate/user-guide/clients/types/pi-bridge/) — any provider reachable through a local [pi coding agent](https://github.com/earendil-works/pi) install
 
 ##### Local APIs
 

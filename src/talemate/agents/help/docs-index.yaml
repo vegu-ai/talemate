@@ -506,6 +506,12 @@
   summary: 'Adding an OpenRouter client: entering the API key, picking a model from the list dynamically fetched from your
     account (refresh by re-saving), the Max token length (context) setting, and the Parameters tab with per-parameter send
     toggles for providers that reject unsupported sampler parameters.'
+- path: user-guide/clients/types/pi-bridge.md
+  title: Pi Bridge Client
+  summary: 'Driving generations through the pi coding agent''s headless RPC mode: pi binary requirement, pi-managed authentication
+    (env keys, auth.json incl. subscription auth, custom models.json providers), free-form provider/model fields with catalog
+    suggestions, thinking level mapping, per-request pi instances for concurrency, and why sampler parameters/presets do not
+    apply.'
 - path: user-guide/clients/types/tabbyapi.md
   title: TabbyAPI Client
   summary: 'Connecting to a TabbyAPI instance: API URL (e.g. http://localhost:5000/v1), API key, context length, the ''API

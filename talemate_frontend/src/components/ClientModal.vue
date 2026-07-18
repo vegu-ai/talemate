@@ -94,8 +94,8 @@
                   </v-row>
                   <v-row>
                     <v-col cols="4">
-                      <v-number-input v-model="client.max_token_length" v-if="requiresAPIUrl(client)"
-                        label="Context Length" :rules="[rules.required]" :step="64"></v-number-input>
+                      <v-number-input v-model="client.max_token_length"
+                        label="Context Length" :rules="rulesMaxTokenLength" :step="64"></v-number-input>
                     </v-col>
                     <v-col cols="8"
                       v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null && client.model_name && clientMeta().requires_prompt_template && !client.data.api_handles_prompt_template">

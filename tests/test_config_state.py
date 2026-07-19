@@ -507,3 +507,19 @@ class TestSceneAppearanceMessageAssets:
         assert appearance.message_assets["avatar"].size == "small"
         assert appearance.message_assets["scene_illustration"].size == "big"
         assert appearance.message_assets["scene_background"].size == "big"
+
+
+class TestEnvVariableNameValidation:
+    def test_invalid_names_dropped(self):
+        # a hand-edited config can hold names the UI would reject; '=' in a
+        # name would fail subprocess spawns far from the cause
+        config = Config(
+            env={
+                "GOOD_NAME": "v1",
+                "_ALSO_GOOD": "v2",
+                "BAD=NAME": "v3",
+                "9STARTS_WITH_DIGIT": "v4",
+                "has space": "v5",
+            }
+        )
+        assert config.env == {"GOOD_NAME": "v1", "_ALSO_GOOD": "v2"}

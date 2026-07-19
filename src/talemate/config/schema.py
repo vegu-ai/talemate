@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union, Literal
 
 import pydantic
@@ -25,6 +26,9 @@ async_signals.register(
 )
 
 MESSAGE_ASSET_KINDS = ("avatar", "card", "scene_illustration", "scene_background")
+
+# mirrors the frontend rule for the environment variable store
+ENV_VARIABLE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 class Client(pydantic.BaseModel):
@@ -723,6 +727,22 @@ class Config(pydantic.BaseModel):
     coqui: CoquiConfig = CoquiConfig()
 
     huggingface: HuggingFaceConfig = HuggingFaceConfig()
+
+    # named environment variables passed to subprocess-based integrations
+    # (currently the pi bridge client); every value is encrypted at rest
+    env: Dict[str, str] = pydantic.Field(default_factory=dict)
+
+    @pydantic.field_validator("env")
+    @classmethod
+    def drop_invalid_env_variable_names(cls, value: Dict[str, str]) -> Dict[str, str]:
+        # an invalid name (e.g. containing '=' from a hand-edited config)
+        # would make subprocess spawns fail far from the cause; drop instead
+        # of raising so a bad entry cannot brick config loading
+        invalid = [name for name in value if not ENV_VARIABLE_NAME_PATTERN.match(name)]
+        for name in invalid:
+            log.warning("dropping invalid env variable name", name=name)
+            del value[name]
+        return value
 
     recent_scenes: RecentScenes = RecentScenes()
 

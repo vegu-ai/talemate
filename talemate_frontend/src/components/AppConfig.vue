@@ -136,7 +136,7 @@
                             <v-row>
                                 <v-col cols="4">
                                     <v-list>
-                                        <v-list-subheader>Third Party APIs</v-list-subheader>
+                                        <v-list-subheader>Application</v-list-subheader>
 
                                         <v-tabs v-model="applicationPageSelected" color="primary" direction="vertical" density="compact">
                                             <v-tab v-for="(item, index) in navigation.application" :key="index" :value="item.value">
@@ -333,6 +333,44 @@
                                         </v-row>
                                     </div>
 
+                                    <!-- ENVIRONMENT VARIABLES -->
+                                    <div v-if="applicationPageSelected === 'env_variables'">
+                                        <v-alert color="white" variant="text" icon="mdi-variable" density="compact">
+                                            <v-alert-title>Environment Variables</v-alert-title>
+                                            <div class="text-grey">
+                                                <p class="mb-1">Named values passed as environment variables to processes Talemate spawns — currently the <span class="text-primary">Pi Bridge</span> client, where pi's <code>models.json</code> can reference them as <code>$NAME</code>.</p>
+                                                Values are encrypted at rest in Talemate's configuration file.
+                                            </div>
+                                        </v-alert>
+                                        <v-divider class="mb-2"></v-divider>
+                                        <v-row v-for="name in envVariableNames" :key="name">
+                                            <v-col cols="5">
+                                                <v-text-field :model-value="name" label="Name" readonly density="compact"></v-text-field>
+                                            </v-col>
+                                            <v-col cols="6">
+                                                <v-text-field type="password" v-model="app_config.env[name]" label="Value" density="compact"></v-text-field>
+                                            </v-col>
+                                            <v-col cols="1" class="d-flex align-center">
+                                                <v-btn icon="mdi-close-circle-outline" variant="text" color="delete" size="small" @click="envVariableRemove(name)"></v-btn>
+                                            </v-col>
+                                        </v-row>
+                                        <v-row>
+                                            <v-col cols="5">
+                                                <v-text-field v-model="env_variable_name_input" label="Name" density="compact"
+                                                    :rules="[validateEnvVariableName]" placeholder="MY_API_KEY"
+                                                    @keyup.enter="envVariableAdd"></v-text-field>
+                                            </v-col>
+                                            <v-col cols="6">
+                                                <v-text-field type="password" v-model="env_variable_value_input" label="Value" density="compact"
+                                                    @keyup.enter="envVariableAdd"></v-text-field>
+                                            </v-col>
+                                            <v-col cols="1" class="d-flex align-center">
+                                                <v-btn icon="mdi-plus-circle-outline" variant="text" color="primary" size="small"
+                                                    :disabled="!envVariableAddValid" @click="envVariableAdd"></v-btn>
+                                            </v-col>
+                                        </v-row>
+                                    </div>
+
                                     <!-- HUGGINGFACE API -->
                                     <div v-if="applicationPageSelected === 'huggingface_api'">
                                         <v-alert color="white" variant="text" icon="mdi-api" density="compact">
@@ -480,6 +518,8 @@ export default {
             app_config: null,
             content_context_input: '',
             perspective_preset_input: '',
+            env_variable_name_input: '',
+            env_variable_value_input: '',
             navigation: {
                 game: [
                     {title: 'General', icon: 'mdi-cog', value: 'general'},
@@ -493,6 +533,7 @@ export default {
                     {title: 'Cohere', icon: 'mdi-api', value: 'cohere_api'},
                     {title: 'DeepSeek', icon: 'mdi-api', value: 'deepseek_api'},
                     {title: 'ElevenLabs', icon: 'mdi-api', value: 'elevenlabs_api'},
+                    {title: 'Environment Variables', icon: 'mdi-variable', value: 'env_variables'},
                     {title: 'Google', icon: 'mdi-api', value: 'google_api'},
                     {title: 'groq', icon: 'mdi-api', value: 'groq_api'},
                     {title: 'HuggingFace', icon: 'mdi-api', value: 'huggingface_api'},
@@ -545,6 +586,17 @@ export default {
         }
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'requestSceneAssets', 'requestAppConfig'],
+
+    computed: {
+        envVariableNames() {
+            return Object.keys(this.app_config?.env || {}).sort();
+        },
+        envVariableAddValid() {
+            return this.validateEnvVariableName(this.env_variable_name_input) === true
+                && this.env_variable_name_input.trim() !== ''
+                && this.env_variable_value_input !== '';
+        },
+    },
 
     watch: {
         dialog(newVal, oldVal) {
@@ -603,6 +655,33 @@ export default {
 
         perspectivePresetRemove(index) {
             this.app_config.creator.perspective_presets.splice(index, 1);
+        },
+
+        validateEnvVariableName(value) {
+            const name = (value || '').trim();
+            if (!name) return true;
+            if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+                return 'Letters, digits and underscores only; must not start with a digit';
+            }
+            if (this.app_config?.env && name in this.app_config.env) {
+                return 'Already exists — edit its row above';
+            }
+            return true;
+        },
+
+        envVariableAdd() {
+            if (!this.envVariableAddValid) return;
+            const name = this.env_variable_name_input.trim();
+            if (!this.app_config.env) {
+                this.app_config.env = {};
+            }
+            this.app_config.env[name] = this.env_variable_value_input;
+            this.env_variable_name_input = '';
+            this.env_variable_value_input = '';
+        },
+
+        envVariableRemove(name) {
+            delete this.app_config.env[name];
         },
 
         perspectivePresetAdd() {

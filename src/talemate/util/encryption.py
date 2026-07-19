@@ -33,6 +33,11 @@ ENC_PREFIX = "ENC:"
 # config data is exposed (e.g. the help agent's settings tools)
 SENSITIVE_FIELD_NAMES = frozenset({"api_key", "override_api_key"})
 
+# Top-level config sections that are name -> value maps where every value
+# is sensitive regardless of the key name (e.g. the environment variable
+# store passed to pi subprocesses)
+SENSITIVE_MAP_SECTIONS = ("env",)
+
 # Keyring identifiers for OS credential storage
 _KEYRING_SERVICE = "talemate"
 _KEYRING_USERNAME = "encryption_key"
@@ -352,13 +357,39 @@ def _walk_and_transform(node, transform_fn):
                 _walk_and_transform(item, transform_fn)
 
 
+def _transform_map_sections(data: dict, transform_fn):
+    """
+    Transform every string value of the top-level name -> value map sections
+    listed in SENSITIVE_MAP_SECTIONS. Entries whose transform returns None
+    (unrecoverable decrypt after key loss) are dropped.
+    """
+    for section in SENSITIVE_MAP_SECTIONS:
+        mapping = data.get(section)
+        if not isinstance(mapping, dict):
+            continue
+        for name in list(mapping.keys()):
+            value = mapping[name]
+            if not isinstance(value, str):
+                continue
+            transformed = transform_fn(value)
+            if transformed is None:
+                del mapping[name]
+            else:
+                mapping[name] = transformed
+
+
 def decrypt_sensitive_values(data: dict) -> dict:
     """
     Recursively walk a config dict and decrypt any values for keys named
-    'api_key' or 'override_api_key' that are strings.
+    'api_key' or 'override_api_key' that are strings, plus every value of
+    the sensitive map sections (e.g. the 'env' variable store).
 
     Modifies and returns the dict in-place.
     """
+    # map sections first: once decrypted, the recursive walk passes their
+    # values through untouched even when a name collides with a sensitive
+    # field name
+    _transform_map_sections(data, decrypt_value)
     _walk_and_transform(data, decrypt_value)
     return data
 
@@ -366,9 +397,11 @@ def decrypt_sensitive_values(data: dict) -> dict:
 def encrypt_sensitive_values(data: dict) -> dict:
     """
     Recursively walk a config dict and encrypt any values for keys named
-    'api_key' or 'override_api_key' that are non-empty strings.
+    'api_key' or 'override_api_key' that are non-empty strings, plus every
+    value of the sensitive map sections (e.g. the 'env' variable store).
 
     Modifies and returns the dict in-place.
     """
+    _transform_map_sections(data, encrypt_value)
     _walk_and_transform(data, encrypt_value)
     return data

@@ -13,3 +13,6 @@
 
 !!! note
     When connecting local APIs running on the hostmachine (e.g. text-generation-webui), you need to use `host.docker.internal` as the hostname.
+
+!!! info "Pi Bridge"
+    The image ships with the [pi coding agent](../../user-guide/clients/types/pi-bridge.md) preinstalled for the Pi Bridge client. pi's configuration (`models.json`, `auth.json`) lives in the `./pi` directory next to the compose file.

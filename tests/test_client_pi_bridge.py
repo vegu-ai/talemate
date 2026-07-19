@@ -500,3 +500,81 @@ async def test_config_save_refreshes_catalog(monkeypatch, catalog_state):
 
     await pi_bridge.on_config_saved(None)
     assert pi_bridge.models_for_provider("added-provider") == ["new-model"]
+
+
+# ---------------------------------------------------------------------------
+# Subprocess environment (env variable store injection)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def env_config():
+    """Save/restore the config env store and openrouter key around a test."""
+    saved_env = dict(config_state.CONFIG.env)
+    saved_openrouter_key = config_state.CONFIG.openrouter.api_key
+    yield config_state.CONFIG
+    config_state.CONFIG.env = saved_env
+    config_state.CONFIG.openrouter.api_key = saved_openrouter_key
+
+
+@pytest.mark.asyncio
+async def test_generate_env_injects_store_and_openrouter_key(
+    client, spawner, env_config
+):
+    env_config.env = {"KIMI_API_KEY": "sk-kimi-secret"}
+    env_config.openrouter.api_key = "sk-or-talemate"
+
+    message = _assistant_message([{"type": "text", "text": "ok"}])
+    spawner.queue(FakeProcess(_generation_events(message)))
+
+    await client.generate("hi", {}, "conversation")
+
+    env = spawner.calls[0]["kwargs"]["env"]
+    assert env["KIMI_API_KEY"] == "sk-kimi-secret"
+    assert env["OPENROUTER_API_KEY"] == "sk-or-talemate"
+
+
+def test_env_store_wins_over_process_env_and_convenience(monkeypatch, env_config):
+    monkeypatch.setenv("KIMI_API_KEY", "sk-from-shell")
+    env_config.env = {
+        "KIMI_API_KEY": "sk-from-store",
+        "OPENROUTER_API_KEY": "sk-or-from-store",
+    }
+    env_config.openrouter.api_key = "sk-or-talemate"
+
+    env = pi_bridge.pi_subprocess_env()
+
+    assert env["KIMI_API_KEY"] == "sk-from-store"
+    assert env["OPENROUTER_API_KEY"] == "sk-or-from-store"
+
+
+def test_empty_store_inherits_process_env(monkeypatch, env_config):
+    monkeypatch.setenv("SOME_SHELL_VAR", "shell-value")
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    env_config.env = {}
+    env_config.openrouter.api_key = None
+
+    env = pi_bridge.pi_subprocess_env()
+
+    assert env["SOME_SHELL_VAR"] == "shell-value"
+    assert "OPENROUTER_API_KEY" not in env
+
+
+@pytest.mark.asyncio
+async def test_list_models_env_injects_store(monkeypatch, catalog_state, env_config):
+    """Catalog fetches see the env store, so models.json providers gated on
+    $VAR references become visible once the variable is configured."""
+    env_config.env = {"KIMI_API_KEY": "sk-kimi-secret"}
+    monkeypatch.setattr(pi_bridge.shutil, "which", lambda _: "/usr/bin/pi")
+
+    seen = {}
+
+    async def spawn(*args, **kwargs):
+        seen.update(kwargs)
+        return FakeListModelsProcess(PI_LIST_MODELS_OUTPUT.encode())
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+
+    await pi_bridge.fetch_available_models()
+
+    assert seen["env"]["KIMI_API_KEY"] == "sk-kimi-secret"

@@ -11,6 +11,7 @@ services:
     volumes:
       - ./config.yaml:/app/config.yaml
       - ./secrets:/app/secrets
+      - ./pi:/app/pi
       - ./scenes:/app/scenes
       - ./templates:/app/templates
       - ./chroma:/app/chroma

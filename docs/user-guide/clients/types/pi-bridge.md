@@ -14,6 +14,9 @@ npm install -g @earendil-works/pi-coding-agent
 
 If the client shows a `pi binary not found` error, install pi and re-save the client.
 
+!!! note "Docker"
+    Talemate's Docker image ships with pi preinstalled — see [Docker](#docker) below.
+
 ## Authentication
 
 pi resolves credentials on its own — Talemate does not manage API keys for this client. Depending on the provider, pi uses:
@@ -22,7 +25,26 @@ pi resolves credentials on its own — Talemate does not manage API keys for thi
 - Keys and OAuth tokens stored in pi's `~/.pi/agent/auth.json` (set up via `/login` in interactive pi, including subscription auth such as Claude Pro/Max or ChatGPT)
 - Custom providers defined in `~/.pi/agent/models.json`
 
-As a convenience, when the provider is `openrouter` and an OpenRouter API key is configured in Talemate's application settings, that key is passed to pi automatically.
+As a convenience, an OpenRouter API key configured in Talemate's application settings is passed to pi as `OPENROUTER_API_KEY` automatically (an entry of the same name in the environment variable store takes precedence).
+
+### Environment variable store
+
+Instead of keeping API keys for `models.json` providers in plaintext environment files, store them in Talemate: `Settings → Application → Environment Variables`. Values are encrypted at rest in Talemate's configuration and passed as environment variables to every pi process the client spawns, so `models.json` can reference them:
+
+```json
+{
+  "providers": {
+    "kimi": {
+      "baseUrl": "https://api.moonshot.ai/v1",
+      "api": "openai-completions",
+      "apiKey": "$KIMI_API_KEY",
+      "models": [{ "id": "kimi-k2.5" }]
+    }
+  }
+}
+```
+
+Here `$KIMI_API_KEY` resolves from a variable named `KIMI_API_KEY` in the store. pi hides providers whose variables do not resolve — after adding a variable, save the settings once and the provider appears in the client's catalog.
 
 ## Settings
 
@@ -58,3 +80,12 @@ When enabled, batch operations may dispatch multiple generations in parallel —
 
 !!! note "Sampling parameters are owned by pi"
     Unlike API clients, the Pi Bridge does not send sampler parameters (temperature, penalties, token caps) with requests — pi and the provider decide those. Talemate's inference presets do not apply to this client, and response length is controlled via instructions rather than a hard token cap.
+
+## Docker
+
+Talemate's Docker image ships with pi preinstalled, so the client works without any extra setup. pi's configuration directory is mounted from `./pi` next to the compose file:
+
+- `./pi/models.json` — custom providers and models, editable on the host; combine with the [environment variable store](#environment-variable-store) to keep provider keys encrypted instead of in an env file
+- `./pi/auth.json` — pi's stored credentials
+
+The directory persists across container recreations. Inside the container it is exposed via the `PI_CODING_AGENT_DIR` environment variable (`/app/pi`); when building the image manually, the pi version can be overridden with the `PI_VERSION` build argument.

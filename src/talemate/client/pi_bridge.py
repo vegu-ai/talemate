@@ -61,6 +61,22 @@ FETCH_RETRY_COOLDOWN = 30.0
 _models_last_attempt: float | None = None
 
 
+def pi_subprocess_env() -> dict:
+    """Environment for pi subprocesses: talemate-managed values layered over
+    the process environment. The configured openrouter API key doubles as
+    OPENROUTER_API_KEY (so a key set up in talemate works without container
+    env setup), and the config env variable store is applied last so explicit
+    entries always win. Used for generations and catalog fetches alike, so
+    models.json providers gated on $VAR references resolve consistently.
+    """
+    config = get_config()
+    env = os.environ.copy()
+    if config.openrouter.api_key:
+        env["OPENROUTER_API_KEY"] = config.openrouter.api_key
+    env.update(config.env)
+    return env
+
+
 def models_for_provider(provider: str) -> list[str]:
     return AVAILABLE_MODELS.get(provider, [])
 
@@ -103,6 +119,7 @@ async def fetch_available_models():
                 "--offline",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                env=pi_subprocess_env(),
             )
             stdout, stderr = await proc.communicate()
             if proc.returncode != 0:
@@ -242,7 +259,9 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
                         "The pi provider to route generations through. pi handles "
                         "authentication (environment API keys, pi's auth.json, "
                         "subscription auth) and model resolution, including custom "
-                        "providers defined in pi's models.json."
+                        "providers defined in pi's models.json. Variables from "
+                        "Settings → Application → Environment Variables are passed "
+                        "to pi, so models.json can reference them as $NAME."
                     ),
                     required=False,
                 ),
@@ -371,16 +390,6 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
             self.get_system_message(kind),
         ]
 
-    def _subprocess_env(self) -> dict | None:
-        """Inject talemate's openrouter API key for pi's openrouter provider
-        so a key configured in talemate works without container env setup."""
-        api_key = get_config().openrouter.api_key
-        if self.provider == DEFAULT_PROVIDER and api_key:
-            env = os.environ.copy()
-            env["OPENROUTER_API_KEY"] = api_key
-            return env
-        return None
-
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text by spawning a pi RPC subprocess for this request.
@@ -401,7 +410,7 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env=self._subprocess_env(),
+            env=pi_subprocess_env(),
             limit=PI_STDOUT_LIMIT,
         )
 

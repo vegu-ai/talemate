@@ -12,6 +12,7 @@ chats/
 chroma
 config.yaml
 secrets/
+pi/
 logs/
 .cursor
 .claude

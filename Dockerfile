@@ -53,10 +53,29 @@ RUN apt-get update && apt-get install -y \
     tar \
     xz-utils \
     gettext-base \
+    libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv in the final stage
 RUN pip install uv
+
+# Node.js runtime for the pi coding agent (Pi Bridge client), reused from the
+# frontend build stage so the final image needs no extra apt source
+COPY --from=frontend-build /usr/local/bin/node /usr/local/bin/node
+COPY --from=frontend-build /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
+    ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+
+# Install pi for the Pi Bridge client (override the version via build arg)
+ARG PI_VERSION=0.80.10
+RUN npm install -g @earendil-works/pi-coding-agent@${PI_VERSION} && \
+    npm cache clean --force && \
+    pi --version
+
+# pi config dir (models.json, auth.json) - mounted as a volume in docker-compose
+# so it is host-editable and survives container recreation
+ENV PI_CODING_AGENT_DIR=/app/pi
+RUN mkdir -p /app/pi
 
 # Copy virtual environment from backend-build stage
 COPY --from=backend-build /app/.venv /app/.venv

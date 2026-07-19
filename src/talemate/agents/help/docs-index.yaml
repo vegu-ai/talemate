@@ -516,9 +516,10 @@
 - path: user-guide/clients/types/pi-bridge.md
   title: Pi Bridge Client
   summary: 'Driving generations through the pi coding agent''s headless RPC mode: pi binary requirement, pi-managed authentication
-    (env keys, auth.json incl. subscription auth, custom models.json providers), free-form provider/model fields with catalog
-    suggestions, thinking level mapping, per-request pi instances for concurrency, and why sampler parameters/presets do not
-    apply.'
+    (env keys, auth.json incl. subscription auth, custom models.json providers), the encrypted environment variable store
+    for models.json secrets ($NAME references), free-form provider/model fields with catalog suggestions, thinking level mapping,
+    per-request pi instances for concurrency, why sampler parameters/presets do not apply, and Docker usage (pi preinstalled,
+    ./pi config directory).'
 - path: user-guide/clients/types/tabbyapi.md
   title: TabbyAPI Client
   summary: 'Connecting to a TabbyAPI instance: API URL (e.g. http://localhost:5000/v1), API key, context length, the ''API

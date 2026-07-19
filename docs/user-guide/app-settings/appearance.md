@@ -1,12 +1,14 @@
 # :material-palette-outline: Appearance
 
-The Appearance settings let you customize how messages and visuals are displayed in your scene. These settings are divided into two tabs: **Messages** and **Visuals**.
+The Appearance settings let you customize how messages and visuals are displayed in your scene. The **Appearance** group in the settings sidebar holds two pages: **Messages** and **Visuals**.
+
+While you edit appearance settings, the scene view previews your changes live; they only become permanent when you save.
 
 ## :material-script: Messages
 
-![App settings - Appearance - Messages](/talemate/img/0.38.0/app-settings-appearance-messages.png)
+![App settings - Appearance - Messages](/talemate/img/0.39.0/app-settings-appearance-messages.png)
 
-The Messages tab gives you control over how text appears in the scene feed. You can customize the styling for different message types and special text formatting.
+The Messages page gives you control over how text appears in the scene feed. You can customize the styling for different message types and special text formatting.
 
 ### Message Types
 
@@ -75,7 +77,7 @@ To change a color:
 
 ![App settings - Appearance - Visuals](/talemate/img/0.39.0/app-settings-appearance-visuals.png)
 
-The Visuals tab controls how images appear alongside messages in your scene feed. This includes character portraits, cards, scene illustrations, and scene backgrounds.
+The Visuals page controls how images appear alongside messages in your scene feed. This includes character portraits, cards, scene illustrations, and scene backgrounds.
 
 ### Visual Types
 

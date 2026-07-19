@@ -169,6 +169,9 @@
               @clear-prompts="onClearPrompts"
             />
           </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="settings">
+            <AppSettingsMenu :page="appSettingsPage" @navigate="onAppSettingsNavigate" />
+          </v-tabs-window-item>
         </v-tabs-window>
 
       </v-navigation-drawer>
@@ -359,13 +362,24 @@
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
             <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" :app-config="appConfig" ref="promptsView" v-model:main-tab="promptsMainTab" @clear-prompts="onClearPrompts" />
           </v-tabs-window-item>
+          <!-- SETTINGS -->
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="settings">
+            <AppSettings
+            ref="appSettings"
+            :agent-status="agentStatus"
+            :scene-active="sceneActive"
+            :client-status="clientStatus"
+            :visible="tab === 'settings'"
+            @appearance-preview="onAppearancePreview"
+            @appearance-preview-clear="onAppearancePreviewClear"
+            @page-changed="(page) => appSettingsPage = page" />
+          </v-tabs-window-item>
 
         </v-tabs-window>
 
       </v-container>
     </v-main>
 
-    <AppConfig ref="appConfig" :agentStatus="agentStatus" :sceneActive="sceneActive" :clientStatus="clientStatus" @appearance-preview="onAppearancePreview" @appearance-preview-clear="onAppearancePreviewClear" />
     <AgentActionOverrides ref="agentActionOverrides" :app-config="appConfig" :agent-status="agentStatus" />
 
     <v-dialog v-model="worldEditorUnavailable" max-width="420">
@@ -417,7 +431,8 @@ import SceneMessages from './SceneMessages.vue';
 import SceneMessageInput from './SceneMessageInput.vue';
 import WorldState from './WorldState.vue';
 import CoverImage from './CoverImage.vue';
-import AppConfig from './AppConfig.vue';
+import AppSettings from './AppSettings.vue';
+import AppSettingsMenu from './AppSettingsMenu.vue';
 import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
@@ -460,7 +475,8 @@ export default {
     SceneMessageInput,
     WorldState,
     CoverImage,
-    AppConfig,
+    AppSettings,
+    AppSettingsMenu,
     DebugTools,
     AudioQueue,
     StatusNotification,
@@ -555,6 +571,15 @@ export default {
           value: 'prompts'
         },
         {
+          title: () => { return 'Settings' },
+          condition: () => { return true },
+          icon: () => { return 'mdi-cog' },
+          click: () => {
+            // Settings tab clicked
+          },
+          value: 'settings'
+        },
+        {
           title: () => { return 'Home' },
           condition: () => { return true },
           icon: () => { return 'mdi-home' },
@@ -627,6 +652,8 @@ export default {
       recentTemplates: [],
       // Synced tab state between PromptsMenu and PromptsView
       promptsMainTab: 'prompts',
+      // Synced page state between AppSettingsMenu and AppSettings
+      appSettingsPage: 'gameplay',
       // Count of outdated prompt template overrides
       promptsOutdatedCount: 0,
       // Flag to ensure new-scene navigation only happens once per scene load
@@ -1477,7 +1504,7 @@ export default {
         scene_environment: this.sceneActive ? this.scene?.environment : null,
         client_settings_modal: this.$refs.aiClient?.uxSnapshot() || null,
         agent_settings_modal: this.$refs.aiAgent?.uxSnapshot() || null,
-        app_settings_modal: this.$refs.appConfig?.uxSnapshot() || null,
+        app_settings_modal: this.$refs.appSettings?.uxSnapshot() || null,
         app_ready: this.ready,
         waiting_for_input: this.waitingForInput,
       };
@@ -1627,7 +1654,17 @@ export default {
       this.openAppConfig('appearance', 'scene');
     },
     openAppConfig(tab, page, item=null) {
-      this.$refs.appConfig.show(tab, page, item);
+      this.tab = 'settings';
+      this.$nextTick(() => {
+        if (tab && this.$refs.appSettings) {
+          this.$refs.appSettings.openLegacy(tab, page, item);
+        }
+      });
+    },
+    onAppSettingsNavigate({ page, anchor }) {
+      if (this.$refs.appSettings) {
+        this.$refs.appSettings.navigate(page, anchor);
+      }
     },
     uxErrorHandler(error) {
       this.errorNotification = true;

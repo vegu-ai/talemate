@@ -12,7 +12,7 @@ The client should appear in the clients list. If you haven't set up DeepSeek bef
 
 ![Client deepseek no api key](/talemate/img/0.35.0/client-deepseek-no-api-key.png)
 
-Click the `SET API KEY` button. This will open the API settings window where you can add your DeepSeek API key.
+Click the `SET API KEY` button. This will open the application settings on the API Keys page where you can add your DeepSeek API key.
 
 You can obtain an API key from the [DeepSeek Platform](https://platform.deepseek.com/).
 

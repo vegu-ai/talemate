@@ -29,7 +29,7 @@ As a convenience, an OpenRouter API key configured in Talemate's application set
 
 ### Environment variable store
 
-Instead of keeping API keys for `models.json` providers in plaintext environment files, store them in Talemate: `Settings → Application → Environment Variables`. Values are encrypted at rest in Talemate's configuration and passed as environment variables to every pi process the client spawns, so `models.json` can reference them:
+Instead of keeping API keys for `models.json` providers in plaintext environment files, store them in Talemate: `Settings → Connections → Environment Variables`. Values are encrypted at rest in Talemate's configuration and passed as environment variables to every pi process the client spawns, so `models.json` can reference them:
 
 ```json
 {

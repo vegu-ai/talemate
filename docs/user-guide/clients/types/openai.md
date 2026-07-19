@@ -12,11 +12,11 @@ The client should appear in the clients list. If you haven't setup OpenAI before
 
 ![Client openai no api key](/talemate/img/0.26.0/client-openai-no-api-key.png)
 
-Click the `SET API KEY` button. This will open the api settings window where you can add your OpenAI API key.
+Click the `SET API KEY` button. This will open the application settings on the API Keys page where you can add your OpenAI API key.
 
 For additional instructions on obtaining and setting your OpenAI API key, see [OpenAI API instructions](/talemate/user-guide/apis/openai/).
 
-![OpenAI settings](/talemate/img/0.26.0/openai-settings.png)
+![OpenAI settings](/talemate/img/0.39.0/api-keys-openai.png)
 
 Click `Save` and after a moment the client should have a green dot next to it, indicating that it is ready to go.
 

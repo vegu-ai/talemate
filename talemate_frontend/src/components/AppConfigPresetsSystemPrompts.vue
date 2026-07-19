@@ -33,7 +33,7 @@
                         rows="10"
                         auto-grow
                         clearable
-                        @update:model-value="dropIfEmpty(selectedKey);"
+                        @update:model-value="dropIfEmpty(selectedKey); $emit('update', {system_prompts: config})"
                         @blur="$emit('update', {system_prompts: config})"
                         :label="labelFromValue(selected[0], tab === 'decensor')"
                     ></v-textarea>
@@ -67,7 +67,7 @@
                     These system prompts will only be used by this client.
                 </p>
                 <p class="text-caption text-grey">
-                    You can specify global overrides in the <span class="text-primary"><v-icon>mdi-cog</v-icon> Settings</span> window.
+                    You can specify global overrides in the <span class="text-primary"><v-icon>mdi-cog</v-icon> Settings</span> tab under <span class="text-primary">Presets → System Prompts</span>.
                 </p>
             </v-alert>
         </v-col>

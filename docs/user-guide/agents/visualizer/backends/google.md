@@ -15,7 +15,7 @@ Before configuring the Google backend, you need to obtain a Google API key:
 
 Then configure it in Talemate:
 
-1. Open Talemate Settings → Application → Google
+1. Open Talemate Settings → Connections → API Keys → Google
 2. Paste your Google API key in the "Google API Key" field
 3. Save your changes
 

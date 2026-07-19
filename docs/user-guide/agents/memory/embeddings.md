@@ -2,9 +2,7 @@
 
 You can manage your available embeddings through the application settings.
 
-![Open settings](/talemate/img/0.26.0/open-settings.png)
-
-In the settings dialogue go to **:material-tune: Presets** and then **:material-cube-unfolded: Embeddings**.
+Open the **:material-cog: Settings** tab in the top navigation and select **:material-cube-unfolded: Embeddings** under the **Presets** group.
 
 !!! warning "INSTRUCTOR Embeddings Removed (0.35.0)"
     INSTRUCTOR embeddings are no longer supported. If you were using INSTRUCTOR embeddings, your configuration has been automatically reset to use the default embedding model (all-MiniLM-L6-v2).

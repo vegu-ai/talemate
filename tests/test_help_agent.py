@@ -948,13 +948,20 @@ async def test_update_agent_setting_flags(settings_env):
 
 
 @pytest.mark.asyncio
-async def test_update_app_config_refused_while_app_settings_open(settings_env):
+async def test_update_app_config_refused_while_app_settings_dirty(settings_env):
     result = await help_settings.update_app_config(
-        "game.general.auto_save", False, open_app_settings=True
+        "game.general.auto_save", False, app_settings_dirty=True
     )
     assert isinstance(result, str)
-    assert "application settings dialog" in result
+    assert "unsaved edits" in result
     assert get_config().game.general.auto_save is True
+
+    # a merely open (clean) settings view does not block the write
+    result = await help_settings.update_app_config(
+        "game.general.auto_save", False, app_settings_dirty=False
+    )
+    assert result["applied"] is True
+    assert get_config().game.general.auto_save is False
 
 
 def test_read_clients_unified_api_key(settings_env):

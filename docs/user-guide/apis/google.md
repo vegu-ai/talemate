@@ -6,9 +6,9 @@ Please follow their [instructions for setup](https://cloud.google.com/vertex-ai/
 
 Once you have downloaded the credentials, copy the JSON file into the talemate directory. You can rename it to something that's easier to remember, like `creds.json`.
 
-![Open settings](/talemate/img/0.26.0/open-settings.png)
+In the Talemate settings (the **Settings** tab in the top navigation), go to **Connections → API Keys** and scroll to (or search for) **Google** to fill in the credentials path and location.
 
-![Set Google creds](/talemate/img/0.26.0/google-settings.png)
+![Set Google creds](/talemate/img/0.39.0/api-keys-google.png)
 
 Then click `Save` to save your changes.
 

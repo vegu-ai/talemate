@@ -15,7 +15,7 @@ Before configuring the OpenAI backend, you need to obtain an OpenAI API key:
 
 Then configure it in Talemate:
 
-1. Open Talemate Settings → Application → OpenAI API
+1. Open Talemate Settings → Connections → API Keys → OpenAI
 2. Paste your OpenAI API key in the "OpenAI API Key" field
 3. Save your changes
 

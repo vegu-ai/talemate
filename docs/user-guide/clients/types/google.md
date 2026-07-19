@@ -12,11 +12,11 @@ The client should appear in the clients list. If you haven't setup Google before
 
 ![Client google no api key](/talemate/img/0.26.0/client-google-creds-missing.png)
 
-Click the `SETUP GOOGLE API CREDENTIALS` button. This will open the api settings window where you can add your Google API credentials.
+Click the `SETUP GOOGLE API CREDENTIALS` button. This will open the application settings on the API Keys page where you can add your Google API credentials.
 
 For additional instructions on obtaining and setting your Google API credentials, see [Google API instructions](/talemate/user-guide/apis/google/).
 
-![Google settings](/talemate/img/0.26.0/google-settings.png)
+![Google settings](/talemate/img/0.39.0/api-keys-google.png)
 
 Click `Save` and after a moment the client should have a green dot next to it, indicating that it is ready to go.
 

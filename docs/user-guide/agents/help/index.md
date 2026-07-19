@@ -32,12 +32,14 @@ So things like "switch the conversation format to Narrative", "lower the editor 
 
 Some things are intentionally out of reach:
 
-- API keys and passwords are never shown to the help agent and it cannot change them - key management stays in the settings dialog.
+- API keys and passwords are never shown to the help agent and it cannot change them - key management stays in the application settings (Connections → API Keys).
 - Clients are read-only - client changes (model, context length, etc.) must be made in the client settings.
-- Complex settings (tables, weight maps, template pickers) are read-only in chat and must be edited in their settings dialog.
+- Complex settings (tables, weight maps, template pickers) are read-only in chat and must be edited in the settings interface directly.
 
 !!! note "Open settings dialogs"
     If the settings dialog of the agent you want to change is currently open, the help agent will ask you to close it first. The dialog holds its own copy of the settings - it would not show the change, and closing it could overwrite it.
+
+    Application settings work differently: having the Settings tab open is fine, and applied changes show up in it live. Only when the settings view has **unsaved edits** will the help agent ask you to save or discard them before it changes an application setting.
 
 ## Chats
 
@@ -49,7 +51,7 @@ The most recent answer can be regenerated via the refresh button next to the mes
 
 Each chat has a **Scene Aware** toggle. When enabled and a scene is loaded, the help agent can see the scene title, its characters, and recent scene progress, so you can ask scene-specific questions. When disabled the conversation is completely unaware of your scene.
 
-The help agent also receives a small snapshot of what you are currently looking at in the interface (active tab, open panels, and any open client or agent settings dialog including its selected tab), so questions like "what does this setting do?" can be answered in context.
+The help agent also receives a small snapshot of what you are currently looking at in the interface (active tab, open panels, the settings view's current page, and any open client or agent settings dialog including its selected tab), so questions like "what does this setting do?" can be answered in context.
 
 ## Non-blocking
 

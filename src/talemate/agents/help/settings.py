@@ -575,22 +575,22 @@ def _coerce_config_leaf(current: Any, value: Any, path: str) -> Any:
 
 
 async def update_app_config(
-    path: str, value: Any, open_app_settings: bool = False
+    path: str, value: Any, app_settings_dirty: bool = False
 ) -> dict | str:
     """Update one application config setting by dotted path.
 
     The whole section is re-validated through its pydantic model, so invalid
-    values are rejected with the validation error. ``open_app_settings``
-    flags that the application settings dialog is open in the frontend -
-    writes are refused then, since the config push they trigger re-hydrates
-    the dialog and discards the user's unsaved edits.
+    values are rejected with the validation error. ``app_settings_dirty``
+    flags that the settings view in the frontend has unsaved edits - writes
+    are refused then, since the user's pending changes and the agent's write
+    would conflict (whichever saves last would overwrite the other). A merely
+    open settings view is fine: the frontend handles the config push cleanly.
     """
-    if open_app_settings:
+    if app_settings_dirty:
         return (
-            "The application settings dialog is currently open in the interface - "
-            "applying this change now would discard any unsaved edits the user has "
-            "in it. Ask the user to close the dialog first, then apply the change "
-            "again."
+            "The application settings view has unsaved edits - applying this "
+            "change now would conflict with them. Ask the user to save or "
+            "discard their settings changes first, then apply the change again."
         )
 
     keys = [key for key in (path or "").strip().split(".") if key]

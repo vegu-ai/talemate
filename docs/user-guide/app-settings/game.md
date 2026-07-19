@@ -1,7 +1,16 @@
-# Game
+# :material-gamepad-square: Game
+
+Application settings open in the main view via the **:material-cog: Settings** tab in the top navigation (or the cogwheel icon on the right side of the top bar). Navigation lives in the left sidebar, grouped by topic, with a **search field** at the top that finds any setting by name and jumps straight to it.
+
+Changes are collected as you edit — an **Unsaved changes** indicator with **Save** and **Discard** actions appears in the toolbar whenever your edits differ from the stored configuration. Nothing is applied until you save.
+
+![App settings - search](/talemate/img/0.39.0/app-settings-search.png)
+
+The **Game** group holds general game behavior and the default player character.
+
 ## :material-cog: General
 
-![App settings - Game - General](/talemate/img/0.29.0/app-settings-game-general.png)
+![App settings - Game - General](/talemate/img/0.39.0/app-settings-gameplay.png)
 
 ##### Auto save
 
@@ -23,10 +32,18 @@ When enabled, a horizontal bar appears above the scene tools showing which agent
 
 This setting is enabled by default.
 
-## :material-human-edit: Default character
+##### Release GPU cache on scene load
 
-![App settings - Game - Default Character](/talemate/img/0.29.0/app-settings-game-default-character.png)
+When enabled, idle GPU memory reserved by local CUDA embeddings or TTS is handed back to the driver when switching scenes, so it doesn't pile up and eventually leave too little VRAM to load another scene. Disable only if you have VRAM to spare and would rather keep it reserved.
+
+## :material-human-edit: Player Character
+
+![App settings - Player Character](/talemate/img/0.39.0/app-settings-player-character.png)
 
 Lets you manage a basic default character.
 
-This is only relevant when loading scenes that do not come with a default character. (e.g., mostly from other application exports, like ST character cards.)
+This character is used when a scene is loaded that does not define a player character. Mostly relevant when you load character-cards that aren't in the talemate scene format (e.g., ST character cards).
+
+##### Add default character to blank talemate scenes
+
+When creating a new scene, add the default player character to the scene.

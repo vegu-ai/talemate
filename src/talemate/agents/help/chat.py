@@ -293,7 +293,12 @@ class HelpChatMixin:
         open_agent_modal = ((ux_snapshot or {}).get("agent_settings_modal") or {}).get(
             "agent"
         )
-        open_app_settings = bool((ux_snapshot or {}).get("app_settings_modal"))
+        # the settings view lives in the main viewport now — merely having it
+        # open is fine (incoming config pushes are handled cleanly); only
+        # unsaved edits there conflict with a config write
+        app_settings_dirty = bool(
+            ((ux_snapshot or {}).get("app_settings_modal") or {}).get("dirty")
+        )
 
         async def read_agent_settings(agent: str):
             return settings.read_agent_settings(agent)
@@ -317,7 +322,7 @@ class HelpChatMixin:
 
         async def update_app_config(path: str, value):
             return await settings.update_app_config(
-                path, value, open_app_settings=open_app_settings
+                path, value, app_settings_dirty=app_settings_dirty
             )
 
         async def read_clients():

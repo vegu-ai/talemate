@@ -316,59 +316,62 @@
     of plaintext keys, and recovery from lost/corrupted keys and Docker deployment considerations.'
 - path: user-guide/apis/anthropic.md
   title: Anthropic API Setup
-  summary: Set the Anthropic API key for text generation in Settings under the APPLICATION tab, ANTHROPIC category; includes
-    where to create keys on console.anthropic.com.
+  summary: Set the Anthropic API key for text generation in Settings under Connections, API Keys (scroll or search for Anthropic);
+    includes where to create keys on console.anthropic.com.
 - path: user-guide/apis/cohere.md
   title: Cohere API Setup
-  summary: Set the Cohere API key for text generation in Settings under the APPLICATION tab, COHERE category; includes where
-    to create keys on dashboard.cohere.com.
+  summary: Set the Cohere API key for text generation in Settings under Connections, API Keys (scroll or search for Cohere);
+    includes where to create keys on dashboard.cohere.com.
 - path: user-guide/apis/elevenlabs.md
   title: ElevenLabs
-  summary: Set the ElevenLabs API key for text-to-speech in Settings under the APPLICATION tab, ELEVENLABS category, then
-    configure the Voice agent to use it.
+  summary: Set the ElevenLabs API key for text-to-speech in Settings under Connections, API Keys (scroll or search for ElevenLabs),
+    then configure the Voice agent to use it.
 - path: user-guide/apis/google.md
   title: Google Cloud Setup
   summary: 'Set up Google Cloud for Gemini via Vertex AI: create a project and service account, download the credentials JSON
-    into the talemate directory, and configure the credentials path and Google Cloud location in the APPLICATION settings.'
+    into the talemate directory, and configure the credentials path and Google Cloud location in Settings under Connections, API Keys (Google entry).'
 - path: user-guide/apis/groq.md
   title: Groq API Setup
-  summary: Set the Groq API key for text generation in Settings under the APPLICATION tab, GROQ category; includes where to
-    create keys on console.groq.com.
+  summary: Set the Groq API key for text generation in Settings under Connections, API Keys (scroll or search for groq); includes
+    where to create keys on console.groq.com.
 - path: user-guide/apis/mistral.md
   title: Mistral.ai API Setup
-  summary: Set the Mistral.ai API key for text generation in Settings under the APPLICATION tab, MISTRAL.AI category; includes
-    where to create keys on console.mistral.ai.
+  summary: Set the Mistral.ai API key for text generation in Settings under Connections, API Keys (scroll or search for mistral.ai);
+    includes where to create keys on console.mistral.ai.
 - path: user-guide/apis/openai.md
   title: OpenAI API Setup
-  summary: Set the OpenAI API key for text, image, and audio generation in Settings under the APPLICATION tab, OPENAI category;
-    includes where to create keys on platform.openai.com.
+  summary: Set the OpenAI API key for text, image, and audio generation in Settings under Connections, API Keys (scroll or search
+    for OpenAI); includes where to create keys on platform.openai.com.
 - path: user-guide/apis/openrouter.md
   title: OpenRouter API Setup
-  summary: Set the OpenRouter API key (from openrouter.ai/keys) in Settings under the APPLICATION tab, OPENROUTER API category,
-    to use any model available through OpenRouter.
+  summary: Set the OpenRouter API key (from openrouter.ai/keys) in Settings under Connections, API Keys (scroll or search for
+    OpenRouter), to use any model available through OpenRouter.
 - path: user-guide/app-settings/appearance.md
   title: Appearance
   summary: 'Appearance settings for the scene feed: per-message-type styling (narrator, actor, director, time, context investigations)
     with italic/bold/color/visibility, text markup styling for quotes, parentheses, brackets, emphasis, and entity highlights,
-    live preview, and Visuals-tab controls for avatar/card/scene-illustration cadence (Always/On Change/Never), size, and
+    live preview, and Visuals-page controls for avatar/card/scene-illustration cadence (Always/On Change/Never), size, and
     auto-attach.'
 - path: user-guide/app-settings/application.md
-  title: Application
-  summary: The Application settings tab where API keys for external services (OpenAI, Anthropic, etc.) are stored, including
-    the HuggingFace token (added 0.38.0) needed to download gated model weights such as the Pocket TTS voice-cloning model.
+  title: Connections
+  summary: The Connections group of the application settings, holding the single API Keys page where keys for external services
+    (OpenAI, Anthropic, etc.) are stored - including the HuggingFace token (added 0.38.0) needed to download gated model weights
+    such as the Pocket TTS voice-cloning model - and the Environment Variables store (added 0.39.0) for encrypted named values
+    passed to spawned processes like the Pi Bridge client.
 - path: user-guide/app-settings/creator.md
-  title: Creator
-  summary: 'Creator settings tab holding global picker lists: Content Classification strings for scene setup and Perspective
+  title: Storytelling
+  summary: 'Storytelling settings group (formerly Creator) holding global picker lists: Content Classification strings for scene setup and Perspective
     Presets (added 0.38.0) for the scene outline''s perspective/tense comboboxes, including the {player_name} placeholder
     substitution and how to add or remove presets.'
 - path: user-guide/app-settings/game.md
   title: Game
-  summary: 'Game settings: auto save on game-loop completion, auto progress to the next character, max backscroll message
-    count, the agent activity bar toggle, and managing a default player character for imported scenes (e.g. ST character cards)
-    that lack one.'
+  summary: 'Overview of the redesigned settings view (0.39.0: main-view Settings tab with grouped sidebar navigation, settings
+    search, and explicit Save/Discard with unsaved-change tracking) plus the Game group: auto save on game-loop completion,
+    auto progress to the next character, max backscroll message count, the agent activity bar toggle, releasing GPU cache on
+    scene load, and managing a default player character for imported scenes (e.g. ST character cards) that lack one.'
 - path: user-guide/app-settings/presets.md
   title: Presets
-  summary: Presets settings tab covering inference parameter presets (Analytical, Conversation, and other per-action presets
+  summary: Presets settings group covering inference parameter presets (Analytical, Conversation, and other per-action presets
     used by agents), embedding model management for the memory agent via chromadb, and the global system prompt override panel.
 - path: user-guide/app-settings/system-prompts.md
   title: System Prompt Overrides
@@ -601,8 +604,8 @@
     size, and auto-attach.
 - path: user-guide/integrations/runpod.md
   title: RunPod
-  summary: 'Run text-generation-webui on rented RunPod GPUs: add the RunPod API key in APPLICATION settings (backend restart
-    required), deploy a pod with the ''RunPod TheBloke LLMs'' template named to include ''thebloke llms'' or ''textgen'' so
+  summary: 'Run text-generation-webui on rented RunPod GPUs: add the RunPod API key (the settings category for it no longer exists in current versions; backend restart
+    was required), deploy a pod with the ''RunPod TheBloke LLMs'' template named to include ''thebloke llms'' or ''textgen'' so
     Talemate auto-discovers it, and load models via the pod''s web UI. Notes the instructions are somewhat outdated.'
 - path: user-guide/interacting.md
   title: Interacting with the scene

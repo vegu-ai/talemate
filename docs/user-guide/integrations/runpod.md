@@ -1,6 +1,8 @@
 !!! note
     These instructions have not been updated in a while and RunPod has changed somewhat. I will update this as soon as I can. The general idea should still be the same.
 
+    The RunPod settings category described below no longer exists in the current settings interface.
+
 RunPod allows you to quickly set up and run text-generation-webui instances on powerful GPUs, remotely. If you want to run the significantly larger models (like 70B parameters) with reasonable speeds, this is probably the best way to do it.
 
 ### Get a RunPod API key and add it to the talemate config
@@ -9,11 +11,7 @@ You can manage your RunPod api keys at [https://www.runpod.io/console/user/setti
 
 Once you have your key you can open the settings in talemate.
 
-![Open settings](/talemate/img/0.26.0/open-settings.png)
-
-Then click the `APPLICATION` tab and then the `RUNPOD` category. Here you can add your RunPod API key.
-
-![Runpod settings](/talemate/img/0.26.0/runpod-api-key-setting.png)
+Older versions provided a `RUNPOD` category in the application settings to add your RunPod API key.
 
 Setting the runpod api key requires a restart of the backend, so make sure to save your changes and restart the backend.
 

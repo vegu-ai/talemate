@@ -15,7 +15,7 @@ Before configuring the OpenRouter backend, you need to obtain an OpenRouter API 
 
 Then configure it in Talemate:
 
-1. Open Talemate Settings → Application → OpenRouter API
+1. Open Talemate Settings → Connections → API Keys → OpenRouter
 2. Paste your OpenRouter API key in the "OpenRouter API Key" field
 3. Save your changes
 

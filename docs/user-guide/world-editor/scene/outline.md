@@ -23,7 +23,7 @@ The `Content Classification` is used to set the tone and expectation of the gene
 You can type in a value or pick something from the list. 
 
 !!! note
-    What is available in the list is controlled in the :material-cog: application settings under the `Creator` tab.
+    What is available in the list is controlled in the :material-cog: application settings under the **Storytelling** group.
 
 ##### Example
 
@@ -69,7 +69,7 @@ Each of the four fields is a combobox. You can:
 - **Pick a preset** from the dropdown.
 - **Type a custom value** — the field accepts any free-form text and your custom entry is saved with the scene whether or not it matches a preset.
 
-The dropdown list is shared by all four fields and is managed in **Settings → Creator → Perspective Presets**. See [Creator settings](../../app-settings/creator.md#perspective-presets) for how to add, remove, or rename presets.
+The dropdown list is shared by all four fields and is managed in **Settings → Storytelling → Perspective Presets**. See [Storytelling settings](../../app-settings/creator.md#perspective-presets) for how to add, remove, or rename presets.
 
 #### The `{player_name}` placeholder
 
@@ -107,7 +107,7 @@ This table lists the presets that ship with Talemate, what each one means in pla
 | `Second person, present tense.` | The narrator addresses an unnamed "you" — classic interactive-fiction voice. Present tense. | *"You walk up to the porch. The door looks older than the rest of the house."* |
 | `Second person, present tense. Talking to {player_name}.` | Same as above, but the narrator explicitly knows the player character's name and may use it. | *"You walk up to the porch, Annabelle. The door looks older than the rest of the house."* |
 
-You are not limited to these — type anything into the field and it will be passed to the AI verbatim. The presets are just shortcuts for the most common configurations. See [Creator settings → Perspective Presets](../../app-settings/creator.md#perspective-presets) for how to add your own.
+You are not limited to these — type anything into the field and it will be passed to the AI verbatim. The presets are just shortcuts for the most common configurations. See [Storytelling settings → Perspective Presets](../../app-settings/creator.md#perspective-presets) for how to add your own.
 
 #### Common patterns
 

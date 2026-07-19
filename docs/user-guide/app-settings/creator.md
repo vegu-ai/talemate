@@ -1,13 +1,19 @@
-# :material-cube-scan: Creator
+# :material-feather: Storytelling
 
-The **Creator** tab in the application settings holds shared building blocks that are offered as picker options elsewhere in the UI. Open it from **Settings** (the cogwheel in the top navigation) and switch to the **Creator** tab.
+The **Storytelling** group in the application settings holds shared building blocks that are offered as picker options elsewhere in the UI. Open the **:material-cog: Settings** tab in the top navigation and find the **Storytelling** group in the sidebar.
 
-Two sub-tabs live here:
+Two pages live here:
 
 - **Content Classification** — the list of content classification strings offered when you set up a scene.
 - **Perspective Presets** — the list of narrative perspective / tense strings offered in the scene outline.
 
 Both lists are global to your Talemate installation. Editing them does not change any existing scene — your scenes keep whatever value they were saved with. The lists only affect what appears as suggestions in the pickers next time you edit a field.
+
+## Content Classification
+
+![Storytelling settings with the Content Classification page selected](/talemate/img/0.39.0/app-settings-creator-content-classification.png)
+
+Available content classification choices when generating characters or scenarios. Add and remove entries the same way as perspective presets below.
 
 ## Perspective Presets
 
@@ -15,7 +21,7 @@ Both lists are global to your Talemate installation. Editing them does not chang
 
 The presets you add here show up in every **Perspective and tense** combobox in the scene outline (default plus the three per-speaker overrides). They are convenience suggestions, not constraints — you can always type a custom value into any of the four fields if no preset fits.
 
-![Creator settings with the Perspective Presets sub-tab selected](/talemate/img/0.38.0/app-settings-creator-perspective-presets.png)
+![Storytelling settings with the Perspective Presets page selected](/talemate/img/0.39.0/app-settings-creator-perspective-presets.png)
 
 ### Adding a preset
 

@@ -14,6 +14,12 @@ Chats can be made scene-aware, and each question carries a small snapshot of wha
 
 A new timeline dialog gives scene restoration a single home, replacing the old Restore from Backup dialog. Drag a slider across the scene's automatic version history to preview the message history at any revision, then either roll the active scene back in place or fork the revision into a new save. A backup is written before a rollback, and the rollback itself is recorded as a new revision — the timeline is never destroyed, so you can always scrub forward again.
 
+### Pi Bridge Client
+
+A new Pi Bridge client type drives generations through the pi coding agent's headless RPC mode instead of a direct LLM API. pi owns provider authentication and model resolution — including custom providers and models defined in pi's own configuration — so any model pi can reach becomes usable in Talemate.
+
+Provider and model are free-form fields with suggestions pulled from pi's model catalog, reasoning maps to pi's thinking levels with the thinking output captured for the reasoning display, and concurrent inference runs an isolated pi instance per request. Sampling parameters stay on the pi side by design.
+
 ### Scene Backdrop
 
 Any scene illustration can now be set as the scene backdrop — an image that fills the whole scene view behind the messages instead of rendering inline. The backdrop belongs to the scene and is saved with it, so it survives reloads and history edits. Message text sits on translucent panels with a drop shadow for legibility — panel opacity and the text shadow are configurable.
@@ -38,11 +44,14 @@ Reusable action sets are managed as a new Visual prompt finalizer template type,
 - MistralAI: added a Concurrent Inference toggle so batch operations can dispatch multiple requests in parallel. Off by default.
 - Text-Generation-WebUI: a new API handles prompt template toggle lets the server apply the model's own chat template; response pre-filling and reasoning capture keep working. Off by default.
 - llama.cpp: the same API handles prompt template toggle renders prompts through the model's built-in chat template, with reasoning respecting the client's setting. Off by default.
+- Clients can automatically retry empty responses, rate limiting, and skipped reasoning — separate 0–5 retry sliders per issue, with a progress notification and abort. Off by default.
+- OpenRouter: a new Parameters tab toggles individual sampler parameters — disabled ones are omitted from the request entirely, for providers that reject parameters they don't support.
 
 **Scene & UI**
 
 - AI-assisted character creation gains a Generate example dialogue option, with a guidance field to steer tone, speech patterns, and quirks. Off by default.
 - The two Add tracked state actions in the scene tools are now a single Track state action — pick the world or a character in the modal.
+- Character card import gains per-step AI generation toggles with Full and Minimal presets — disabled steps use the card's original data, so a minimal import needs no text generation.
 
 **Node Editor**
 
@@ -64,10 +73,21 @@ Reusable action sets are managed as a new Visual prompt finalizer template type,
 - OpenRouter: a failed model and provider list fetch at startup no longer sticks until restart — later config saves and status refreshes retry it.
 - OpenRouter: setting the API key for the first time during initial setup now triggers the provider fetch.
 
+**Clients**
+
+- A single failed status check no longer briefly flaps a connected client to 'Could not connect' — disconnection now requires consecutive failures.
+- The Context Length input now appears in the edit dialog for every client type, including OpenRouter and the remote API clients.
+- The context and reasoning sliders in the client list no longer jitter back to previous values after dragging.
+- Quickly editing two clients back to back no longer drops the first client's pending change.
+
 **Generation Errors**
 
 - Simultaneous generation failures are now queued and answered one after another, so earlier generations resume and their results are no longer lost.
 - Pending error dialogs are cancelled cleanly when the scene is unloaded or the frontend disconnects.
+
+**Scenes**
+
+- Exporting a scene with Reset Progress checked no longer wipes the loaded scene's message history and world state — the reset applies only to the exported file.
 
 **Timeline**
 

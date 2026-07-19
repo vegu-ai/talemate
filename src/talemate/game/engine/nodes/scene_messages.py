@@ -19,6 +19,10 @@ class CharacterMessage(Node):
     """
     Creates a character message from a character and a message
 
+    The message text is automatically prefixed with the character's name
+    ("Name: ...") if it isn't already. The character's current avatar (if
+    set) is captured on the message at creation time.
+
     Inputs:
 
     - character: The character object
@@ -156,15 +160,23 @@ class DirectorMessage(Node):
     - source: The source of the message - player or ai, so whether the message is result of user input or AI generated
     - meta: A dictionary of meta information to attach to the message. Can hold the character name that the message is related to.
     - character: The character object that the message is related to
+    - action: Describes the director action
+    - subtype: The subtype of the director message, used for further categorization
 
     Properties:
 
     - source: The source of the message
     - action: Describes the director action
+    - subtype: The subtype of the director message, used for further categorization
 
     Outputs:
 
     - message: The message object (this is a scene_message.DirectorMessage instance)
+    - source: The source input, passed through
+    - meta: The meta input, passed through
+    - character: The character input, passed through
+    - action: The action input, passed through
+    - subtype: The subtype input, passed through
     """
 
     class Fields:
@@ -319,6 +331,7 @@ class AddMessageVersion(Node):
 
     Inputs:
 
+    - state: The graph state
     - message: The SceneMessage to append a version to (required)
     - new_text: The new canonical text (required)
     - source: Version source label (optional, overrides property)
@@ -331,6 +344,7 @@ class AddMessageVersion(Node):
 
     Outputs:
 
+    - state: The state input, passed through
     - message: The same SceneMessage instance (post-append)
     - new_text: Passthrough of new_text
     - source: Passthrough of source actually used

@@ -42,13 +42,18 @@ class GetSceneIntent(Node):
     """
     Returns the intent state.
 
+    The phase, scene_type and start outputs are only set when a scene phase
+    is currently active.
+
     Outputs:
 
     - intent (str) - the overall intent
     - phase (scene_intent/scene_phase) - the current phase
-    - instructions (str) - the current instructions
     - scene_type (scene_intent/scene_type) - the current scene type
     - start (int) - the message id where this intent started
+    - direction_always_on (bool) - whether scene direction is always on
+    - direction_run_immediately (bool) - whether scene direction runs immediately
+    - direction_instructions (str) - the current direction instructions
     """
 
     def __init__(self, title="Get Scene Intent", **kwargs):
@@ -90,7 +95,7 @@ class GetSceneIntent(Node):
 @register("scene/intention/SetSceneIntent")
 class SetSceneIntent(Node):
     """
-    Updates the overall intent.
+    Updates the overall intent and emits the updated intent state to the UI.
 
     Inputs:
 
@@ -99,7 +104,7 @@ class SetSceneIntent(Node):
 
     Outputs:
 
-    - state - graph state
+    - state - the scene's intent state object
     - intent (str) - the overall intent
     """
 
@@ -152,9 +157,10 @@ class SetScenePhase(Node):
 
     Outputs:
 
-    - state - graph state
+    - state - the scene's intent state object
     - phase (scene_intent/scene_phase) - the new phase
     - scene_type (scene_intent/scene_type) - the scene type of the new phase (object)
+    - intent (str) - the phase intent, passed through
     """
 
     class Fields:
@@ -209,18 +215,20 @@ class SetScenePhase(Node):
 @register("scene/intention/UnpackScenePhase")
 class UnpackScenePhase(Node):
     """
+    Unpack a scene phase into its intent and scene type fields.
+
     Inputs:
 
-    - phhase (scene_intent/scene_phase)
+    - phase (scene_intent/scene_phase) - the phase to unpack
 
-    Outputs
+    Outputs:
 
-    - intent
-    - scene_type
-    - scene_type_instructions
-    - scene_type_description
-    - scene_type_name
-    - scene_type_id
+    - intent (str) - the phase intent
+    - scene_type (str) - the scene type id of the phase
+    - scene_type_instructions (str) - the scene type instructions
+    - scene_type_description (str) - the scene type description
+    - scene_type_name (str) - the scene type name
+    - scene_type_id (str) - the scene type id
     """
 
     def __init__(self, title="Unpack Scene Phase", **kwargs):
@@ -259,12 +267,20 @@ class MakeSceneType(Node):
     """
     Create a new scene type object.
 
+    If auto_append is enabled (the default), the new scene type is also added
+    to the scene's available scene types and the intent state is emitted to
+    the UI.
+
     Inputs:
 
-    - id (str) - scene type ID
+    - scene_type_id (str) - scene type ID
     - name (str) - scene type name
     - description (text) - scene type description
     - instructions (text) - scene type instructions
+
+    Properties:
+
+    - auto_append (bool) - automatically add the scene type to the scene's scene types
 
     Outputs:
 
@@ -370,9 +386,11 @@ class GetSceneType(Node):
     """
     Get a scene type object.
 
+    Raises an error if the scene type is not found.
+
     Inputs:
 
-    - id (str) - scene type ID
+    - scene_type_id (str) - scene type ID
 
     Outputs:
 
@@ -410,7 +428,7 @@ class UnpackSceneType(Node):
 
     Outputs:
 
-    - id (str) - scene type ID
+    - scene_type_id (str) - scene type ID
     - name (str) - scene type name
     - description (text) - scene type description
     - instructions (text) - scene type instructions
@@ -445,14 +463,17 @@ class RemoveSceneType(Node):
     """
     Remove a scene type object.
 
+    Unknown scene type IDs are silently ignored. Emits the updated intent
+    state to the UI.
+
     Inputs:
 
     - state - graph state
-    - id (str) - scene type ID
+    - scene_type_id (str) - scene type ID
 
     Outputs:
 
-    - state - graph state
+    - state - the scene's intent state object
     """
 
     def __init__(self, title="Remove Scene Type", **kwargs):

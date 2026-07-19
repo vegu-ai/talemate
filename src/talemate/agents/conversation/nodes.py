@@ -27,7 +27,30 @@ class ConversationSettings(AgentSettingsNode):
 @register("agents/conversation/Generate")
 class GenerateConversation(AgentNode):
     """
-    Generate a conversation between two characters
+    Generates dialogue for a character via the conversation agent.
+
+    Calls the conversation agent's converse action for the given character
+    and returns the first generated message. The message is not added to
+    the scene history by this node.
+
+    Inputs:
+
+    - state: The graph state
+    - character: The character to generate dialogue for
+    - instruction: Optional instruction to guide the generation
+
+    Properties:
+
+    - trigger_conversation_generated: Whether to emit the conversation
+      generation signals (allowing e.g. editor cleanup hooks to run)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - generated: The generated dialogue text
+    - message: The generated CharacterMessage object
+    - character: The character input, passed through
+    - instruction: The instruction input, passed through
     """
 
     _agent_name: ClassVar[str] = "conversation"

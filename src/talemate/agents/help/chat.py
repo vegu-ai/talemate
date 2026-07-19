@@ -250,6 +250,9 @@ class HelpChatMixin:
             return None
 
     def _chat_doc_callbacks(self) -> list[focal.Callback]:
+        async def find_docs(query: str):
+            return docs.find_docs(query)
+
         async def search_docs(query: str):
             return docs.search_docs(query)
 
@@ -260,6 +263,12 @@ class HelpChatMixin:
             return docs.read_doc_section(path, section)
 
         return [
+            focal.Callback(
+                name="find_docs",
+                arguments=[focal.Argument(name="query", type="str")],
+                fn=find_docs,
+                concurrent=True,
+            ),
             focal.Callback(
                 name="search_docs",
                 arguments=[focal.Argument(name="query", type="str")],
@@ -425,7 +434,7 @@ class HelpChatMixin:
                     scene=self.scene,
                     history=chat.messages,
                     history_trim=util.reverse_trim_history,
-                    docs_index=docs.load_docs_index(),
+                    docs_sections=docs.docs_section_overview(),
                     docs_available=docs.docs_available(),
                     docs_site_url=docs.DOCS_SITE_URL,
                     agent_types=sorted(instance.AGENTS.keys()),

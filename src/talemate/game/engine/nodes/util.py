@@ -103,6 +103,18 @@ class Counter(Node):
 class Diff(Node):
     """
     Diff node that returns the diff between two strings.
+
+    Inputs:
+
+    - a: The original string
+    - b: The changed string
+
+    Outputs:
+
+    - diff_plain: The diff as plain text
+    - diff_html: The diff as inline HTML markup
+    - a: The a input, passed through
+    - b: The b input, passed through
     """
 
     def __init__(self, title="Diff", **kwargs):
@@ -130,6 +142,19 @@ class Diff(Node):
 class ExtractList(Node):
     """
     Extracts a list from a string.
+
+    Parses a numbered ("1.") or bulleted ("*" / "-") list out of text, such
+    as an LLM response, returning the items as a list of strings.
+
+    Inputs:
+
+    - string: The text to extract the list from
+
+    Outputs:
+
+    - string: The string input, passed through
+    - list: The extracted list items
+    - is_empty: True if no list items were found
     """
 
     def __init__(self, title="Extract List", **kwargs):
@@ -151,7 +176,26 @@ class ExtractList(Node):
 @register("util/IsoDateDuration")
 class IsoDateDuration(Node):
     """
-    IsoDateDuration node that allows constructing ISO 8601 interval strings.
+    IsoDateDuration node that allows constructing ISO 8601 duration strings.
+
+    Combines an amount and a unit into an ISO 8601 duration
+    (e.g., 3 + "day" -> "P3D").
+
+    Inputs:
+
+    - unit: The unit of the duration (year, month, week, day, hour, minute, second)
+    - amount: The amount of the duration
+
+    Properties:
+
+    - unit: The unit of the duration
+    - amount: The amount of the duration
+
+    Outputs:
+
+    - unit: The unit input, passed through
+    - amount: The amount input, passed through
+    - duration: The ISO 8601 duration string
     """
 
     class Fields:

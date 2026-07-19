@@ -82,11 +82,16 @@ class AsNumber(NumberNode):
     """Converts a value to a number
 
     Converts a value to a number, handling both string and numeric inputs.
+    A value that cannot be converted raises an error.
 
     Inputs:
 
     - value: The value to convert to a number
     - default: Fallback value used when ``value`` is unresolved or None
+
+    Properties:
+
+    - number_type: Whether to convert to an "int" or a "float" (defaults to int)
 
     Outputs:
 
@@ -135,10 +140,12 @@ class BasicArithmetic(NumberNode):
     Properties:
 
     - operation: Arithmetic operation to perform (add, subtract, multiply, divide, power, modulo)
+    - a: Default first operand when not connected
+    - b: Default second operand when not connected
 
     Outputs:
 
-    - result: Result of the arithmetic operation
+    - result: Result of the arithmetic operation (division or modulo by zero raises an error)
     """
 
     class Fields:
@@ -151,10 +158,10 @@ class BasicArithmetic(NumberNode):
         )
 
         a = PropertyField(
-            name="a", description="First value to compare", type="number", default=0
+            name="a", description="First operand", type="number", default=0
         )
         b = PropertyField(
-            name="b", description="Second value to compare", type="number", default=0
+            name="b", description="Second operand", type="number", default=0
         )
 
     def setup(self):
@@ -215,6 +222,8 @@ class Compare(NumberNode):
 
     - operation: Comparison operation to perform (equals, not_equals, greater_than, less_than, greater_equal, less_equal)
     - tolerance: Tolerance for floating point equality comparison
+    - a: Default first value when not connected
+    - b: Default second value when not connected
 
     Outputs:
 
@@ -389,7 +398,7 @@ class Average(NumberNode):
 
     Outputs:
 
-    - result: The calculated average value
+    - result: The calculated average value (mode yields None when there is no unique mode)
     """
 
     class Fields:

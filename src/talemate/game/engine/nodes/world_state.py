@@ -117,7 +117,22 @@ class SaveWorldEntry(WorldStateManagerNode):
 @register("scene/worldstate/GetWorldEntry")
 class GetWorldEntry(WorldStateManagerNode):
     """
-    Gets a world entry
+    Gets a world entry by its id
+
+    Inputs:
+
+    - entry_id: The id of the world entry
+
+    Properties:
+
+    - entry_id: The id of the world entry
+
+    Outputs:
+
+    - world_entry: The world entry object
+    - entry_id: The id of the world entry, passed through
+    - text: The text of the world entry
+    - shared: Whether the entry is shared
     """
 
     class Fields:
@@ -156,7 +171,24 @@ class GetWorldEntry(WorldStateManagerNode):
 @register("scene/worldstate/GetWorldEntries")
 class GetWorldEntries(WorldStateManagerNode):
     """
-    Gets all world entries
+    Gets world entries, optionally filtered by a list of ids
+
+    Ids are matched case-insensitively. If no ids are given, all world
+    entries are returned. If raise_on_missing is enabled, an error is
+    raised when any requested id is not found.
+
+    Inputs:
+
+    - ids: The ids of the world entries to get
+
+    Properties:
+
+    - ids: The ids of the world entries to get
+    - raise_on_missing: Whether to raise an error if a world entry is missing
+
+    Outputs:
+
+    - world_entries: Dictionary of world entries keyed by entry id
     """
 
     class Fields:
@@ -213,7 +245,17 @@ class GetWorldEntries(WorldStateManagerNode):
 @register("scene/worldstate/UnpackWorldEntry")
 class UnpackWorldEntry(Node):
     """
-    Unpacks a world entry
+    Unpacks a world entry into its individual fields
+
+    Inputs:
+
+    - world_entry: The world entry object
+
+    Outputs:
+
+    - entry_id: The id of the world entry
+    - text: The text of the world entry
+    - meta: The meta of the world entry
     """
 
     def __init__(self, title="Unpack World Entry", **kwargs):
@@ -272,7 +314,7 @@ class Spices(Node):
 
     Outputs:
 
-    - spices: list of strings
+    - spices: The Spices object built from the spice values
     """
 
     class Fields:

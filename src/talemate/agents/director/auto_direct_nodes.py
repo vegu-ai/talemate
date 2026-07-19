@@ -33,7 +33,19 @@ class AutoDirectCandidates(AgentNode):
 @register("agents/director/auto-direct/DetermineSceneIntent")
 class DetermineSceneIntent(AgentNode):
     """
-    Determines the scene intent based on the current scene state.
+    Has the director determine the current scene intent and set it on the
+    scene's intent state (the director may also decide to leave the
+    current intent unchanged).
+
+    Inputs:
+
+    - state: The graph state
+
+    Outputs:
+
+    - state: The state input, passed through
+    - scene_phase: The scene's phase after the determination (None if the
+      director decided not to set one)
     """
 
     _agent_name: ClassVar[str] = "director"
@@ -55,7 +67,20 @@ class DetermineSceneIntent(AgentNode):
 @register("agents/director/auto-direct/GenerateSceneTypes")
 class GenerateSceneTypes(AgentNode):
     """
-    Generates scene types based on the current scene state.
+    Has the director generate scene types (or pick them from the scene
+    type templates) and register them on the scene's intent state. The
+    generated types are stored on the scene; this node only outputs the
+    passed-through state.
+
+    Inputs:
+
+    - state: The graph state
+    - instructions: Instructions guiding the scene type generation (optional)
+    - max_scene_types: The maximum number of scene types to generate (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
     """
 
     _agent_name: ClassVar[str] = "director"

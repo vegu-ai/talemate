@@ -203,10 +203,13 @@ class FunctionArgument(Node):
     """
     Represents an argument to a function.
 
+    During function execution the value passed for this argument is cast
+    to the declared type and emitted from the `value` output.
+
     Properties:
 
-    - type (str): The type of the argument
-    - name (str): The name of the argument
+    - typ: The type of the argument
+    - name: The name of the argument
 
     Outputs:
 
@@ -305,6 +308,10 @@ class FunctionReturn(Node):
     """
     Represents the return value of a function.
 
+    When this node runs with a resolved input value, it sets the
+    function's return value and stops execution of the function graph.
+    If the input value is unresolved, execution continues normally.
+
     Inputs:
 
     - value: The value to return
@@ -339,13 +346,21 @@ class FunctionReturn(Node):
 @register("core/functions/DefineFunction")
 class DefineFunction(Node):
     """
-    Does not define any outputs and is considered an isolated node.
+    Defines a function from the connected nodes, which can be retrieved
+    elsewhere in the graph via the GetFunction node.
 
-    The correspinding GetFunction node will be used to retrieve the function object.
+    This is an isolated node that never runs during normal graph
+    execution. The node connected to `nodes` becomes the endpoint of the
+    function - when the function is called, the nodes leading into the
+    endpoint are executed.
 
     Inputs:
 
     - nodes: The nodes to convert into a function
+    - name: The name of the function
+
+    Properties:
+
     - name: The name of the function
     """
 
@@ -415,6 +430,7 @@ class GetFunction(Node):
     Outputs:
 
     - fn: The function wrapper
+    - name: The name of the function
     """
 
     class Fields:
@@ -728,10 +744,15 @@ class RunModule(Node):
     """
     Provides a way to run a node module from memory
 
+    The module runs in an isolated state; running a module from within
+    itself raises an error.
+
     Inputs:
-    - module (optional)
+
+    - module: The module (Graph instance) to run
 
     Outputs:
+
     - done: True if module was executed successfully
     - failed: Error message if module execution failed
     - cancelled: True if module execution was cancelled
@@ -814,7 +835,24 @@ class RunModule(Node):
 @register("core/functions/Breakpoint")
 class Breakpoint(Node):
     """
-    A node that will pause execution of the graph and allow for inspection
+    Pauses graph execution at this point and notifies the node editor,
+    allowing the current state to be inspected. Execution resumes when
+    the breakpoint is released from the editor.
+
+    Breakpoints only trigger in the creative (node editor) environment -
+    during normal gameplay the node simply passes the state through.
+
+    Inputs:
+
+    - state: The state to pass through
+
+    Properties:
+
+    - active: Whether the breakpoint is active
+
+    Outputs:
+
+    - state: The state input, passed through
     """
 
     class Fields:
@@ -887,6 +925,11 @@ class ErrorHandler(Node):
     A node that will catch unhandled errors in the graph and allow for
     custom error handling
 
+    This is an isolated node. When an unhandled error occurs, the
+    supplied function is called with a single `exc` argument holding an
+    exception wrapper (see UnpackException). If the function returns a
+    truthy value the error is considered handled.
+
     Inputs:
 
     - fn: The function to call when an error occurs
@@ -940,7 +983,17 @@ class ErrorHandler(Node):
 @register("core/functions/UnpackException")
 class UnpackException(Node):
     """
-    Unpacks an ExceptionWrapper instance into an description and message
+    Unpacks an exception wrapper (as received by an ErrorHandler
+    function) into its name and message.
+
+    Inputs:
+
+    - exc: The exception wrapper to unpack
+
+    Outputs:
+
+    - name: The exception class name
+    - message: The exception message
     """
 
     def __init__(self, title="Unpack Exception", **kwargs):

@@ -94,6 +94,44 @@ class DirectorChatAction(Function):
 
 @register("agents/director/chat/DirectorChatSubAction")
 class DirectorChatSubAction(Node):
+    """
+    Declares a sub-action inside a DirectorChatAction graph. Its properties
+    describe one concrete operation the director can perform and are extracted
+    statically (without running the graph) to advertise the sub-action in chat
+    and scene direction prompts and in the enable/disable UI. At runtime the
+    node acts as a gate: it evaluates the optional condition function and the
+    gating rules (availability vs. current mode, force_enabled, per-scene
+    disabled list) and only passes state through when the sub-action is
+    enabled - otherwise the state output stays unresolved and the downstream
+    branch is skipped.
+
+    Inputs:
+
+    - state: State to pass through when the sub-action is enabled
+    - condition: Optional function; if it returns falsy the sub-action is
+      neither advertised nor executed
+
+    Outputs:
+
+    - state: The state input, passed through when the sub-action is enabled;
+      stays unresolved when the sub-action is gated off
+
+    Properties:
+
+    - group: Group label used to organize sub-actions in prompts and the UI
+    - action_title: Human readable title of the sub-action
+    - action_id: Unique id of the sub-action (required); used for gating and
+      the per-scene disabled list
+    - instruction_examples: Example instructions shown to the director to
+      illustrate how to invoke the sub-action
+    - description_chat: Description shown to the director in chat mode
+    - description_scene_direction: Description shown to the director in scene
+      direction mode (each description falls back to the other when unset)
+    - availability: Which modes the sub-action is available in (both, chat or
+      scene_direction)
+    - force_enabled: If true, users cannot disable this sub-action
+    """
+
     class Fields:
         group = PropertyField(
             name="group",
@@ -253,7 +291,20 @@ class DirectorChatSubAction(Node):
 @register("agents/director/chat/ActionArgument")
 class DirectorChatActionArgument(FocalArgument):
     """
-    A argument is a node that can be used as an argument to a director chat action
+    Declares an argument for a director chat action. Place it inside a
+    DirectorChatAction graph to define one named, typed argument the
+    director can pass when invoking the action; the instructions describe
+    the argument to the director in the action prompt.
+
+    Properties:
+
+    - name: The name of the argument
+    - typ: The type of the argument (str, int, float, bool, list, any)
+    - instructions: Description of the argument shown to the director
+
+    Outputs:
+
+    - value: The argument's value (available while the action executes)
     """
 
     @pydantic.computed_field(description="Node style")
@@ -273,9 +324,35 @@ class DirectorChatActionArgument(FocalArgument):
 @register("agents/director/chat/ActionConfirm")
 class DirectorChatActionConfirm(Node):
     """
-    If the is a chat context active that requires confirmation for write
-    actions, this node will block the further execution of the node graph
-    and send a signal to the frontend to collect the confirmation from the user (or reject the action)
+    Asks the user to confirm a director action before it proceeds. Only
+    active when the current director chat context requires confirmation
+    for write actions - otherwise the state passes straight through as
+    accepted. When active, the node emits a confirmation request to the
+    frontend and blocks until the user responds, the scene ends, or the
+    configured timeout is reached (timeouts and scene shutdown count as
+    rejections).
+
+    On acceptance the state is passed to the `accepted` output; on
+    rejection it is passed to the `rejected` output instead - unless
+    raise_on_reject is set (the default), in which case an ActionRejected
+    error is raised and aborts the action.
+
+    Inputs:
+
+    - state: The state to gate on user confirmation
+    - name: The name of the action to confirm (optional)
+    - description: The description of the action to confirm (optional)
+
+    Properties:
+
+    - raise_on_reject: Whether to raise an error if the action is rejected
+
+    Outputs:
+
+    - accepted: The state input, set when the action was confirmed
+    - rejected: The state input, set when the action was rejected
+    - rejected_message: A message describing the rejection (only set on
+      rejection)
     """
 
     class Fields:

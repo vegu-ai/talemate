@@ -457,9 +457,20 @@ async def initialize_package(
 @register("util/packaging/Package", as_base_type=True)
 class Package(Graph):
     """
-    Configure node that helps managing node module packaging setup for easy scene installation.
+    Graph that defines an installable package of node modules for easy scene
+    installation.
 
-    This graph expects node module packaging instructions via various packaging nodes.
+    Place InstallNodeModule nodes inside it to mark node modules for
+    installation, and PromoteConfig nodes to expose module properties as
+    package configuration.
+
+    Properties:
+
+    - package_name: The name of the package
+    - author: The author of the package
+    - description: The description of the package
+    - installable: Whether the package is installable to a scene
+    - restart_scene_loop: Whether the scene loop should be restarted after the package is installed
     """
 
     _export_definition: ClassVar[bool] = False
@@ -513,6 +524,17 @@ class Package(Graph):
 
 @register("util/packaging/InstallNodeModule")
 class InstallNodeModule(Node):
+    """
+    Marks a node module for installation when placed inside a Package graph.
+
+    When the package is installed to a scene, each InstallNodeModule node causes
+    the referenced node module to be instantiated and added to the scene loop.
+
+    Properties:
+
+    - node_registry: The registry path of the node module to install
+    """
+
     class Fields:
         node_registry = PropertyField(
             name="node_registry",
@@ -541,6 +563,17 @@ class InstallNodeModule(Node):
 class PromoteConfig(Node):
     """
     Promotes a single module property to be configurable through the scene once the package is installed.
+
+    Place inside a Package graph alongside the InstallNodeModule node whose
+    module property should be exposed.
+
+    Properties:
+
+    - node_registry: The registry path of the node module the property belongs to
+    - property_name: The name of the module property to promote
+    - exposed_property_name: The name the property is exposed as on the package
+    - label: Human readable label shown in the package configuration UI
+    - required: Whether the property must be set before the package is considered configured
     """
 
     class Fields:

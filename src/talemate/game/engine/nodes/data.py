@@ -25,12 +25,16 @@ class Sort(Node):
     """
     Sorts a list of items
 
+    If sort_keys is provided, items are sorted by the named attributes
+    (read via getattr) in order. A sort_keys string input is parsed as JSON.
+    Without sort_keys, items are sorted by their natural order. The input
+    list is not modified; a sorted copy is returned.
+
     Inputs:
 
     - state: The graph state
     - items: List of items to sort
-    - sort_keys: List of keys to sort by
-    - reverse: Reverse sort
+    - sort_keys: Attribute name(s) to sort by - list, or JSON string (optional)
 
     Properties:
 
@@ -204,8 +208,8 @@ class DictGet(Node):
 
     Outputs:
 
-    - value: Value
-
+    - value: The value for the key, or None if the key is not present
+    - key: The key input, passed through
     """
 
     class Fields:
@@ -368,9 +372,9 @@ class DictPop(Node):
 
     Outputs:
 
-    - dict: Dictionary
-    - value: Value
-    - key: Key
+    - dict: The dictionary with the key removed
+    - value: The popped value, or None if the key was not present
+    - key: The key input, passed through
     """
 
     class Fields:
@@ -467,6 +471,28 @@ class DictSet(Node):
 class DictUpdate(Node):
     """
     Updates a dictionary from a list of other dictionaries
+
+    Each dictionary in the list is applied in order. By default this is a
+    shallow dict.update(); enable merge to deep-merge nested dictionaries
+    instead of replacing them. By default the target dictionary is modified
+    in place; enable create_copy to leave the input untouched.
+
+    Inputs:
+
+    - state: The graph state
+    - dict: The target dictionary to update
+    - dicts: List of dictionaries to apply to the target
+
+    Properties:
+
+    - create_copy: Update a copy of the target instead of modifying it in place
+    - merge: Perform a deep merge instead of a shallow update
+
+    Outputs:
+
+    - state: The state input, passed through
+    - dict: The updated dictionary
+    - dicts: The dicts input, passed through
     """
 
     class Fields:
@@ -539,7 +565,10 @@ class DictUpdate(Node):
 @register("data/MakeDict")
 class MakeDict(Node):
     """
-    Creates a new empty dictionary
+    Creates a new dictionary, optionally initialized from the data property
+
+    The data property is deep-copied on every execution, so downstream
+    mutation of the dictionary does not alter the property.
 
     Inputs:
 
@@ -547,12 +576,12 @@ class MakeDict(Node):
 
     Properties:
 
-    - data: Data to initialize the dictionary with
+    - data: Data to initialize the dictionary with (empty dict by default)
 
     Outputs:
 
     - state: The state input, passed through
-    - dict: Dictionary
+    - dict: The new dictionary
     """
 
     class Fields:
@@ -592,22 +621,25 @@ class Get(Node):
     """
     Get a value from an object using getattr
 
-    Can be used on dictionaries as well.
+    Dictionaries are read by key (missing keys yield None). Lists, tuples
+    and sets are read by index - the attribute must be an integer, and an
+    out-of-range index yields UNRESOLVED. Any other object is read via
+    getattr, yielding None if the attribute does not exist.
 
     Inputs:
 
-    - object: Object
-    - attribute: Attribute
+    - object: Object to read from
+    - attribute: Attribute name, dict key, or index
 
     Properties:
 
-    - attribute: Attribute
+    - attribute: Attribute name, dict key, or index
 
     Outputs:
 
-    - value: Value
-    - attribute: Attribute
-    - object: Object
+    - value: The retrieved value
+    - attribute: The attribute input, passed through
+    - object: The object input, passed through
     """
 
     @pydantic.computed_field(description="Node style")
@@ -670,23 +702,25 @@ class Set(Node):
     """
     Set a value on an object using setattr
 
-    Can be used on dictionaries as well.
+    Dictionaries are written by key. Lists are written by index - the
+    attribute must be an integer. Any other object is written via setattr.
+    The object is modified in place.
 
     Inputs:
 
-    - object: Object
-    - attribute: Attribute
-    - value: Value
+    - object: Object to modify
+    - attribute: Attribute name, dict key, or list index
+    - value: Value to set
 
     Properties:
 
-    - attribute: Attribute
+    - attribute: Attribute name, dict key, or list index
 
     Outputs:
 
-    - object: Object
-    - attribute: Attribute
-    - value: Value
+    - object: The modified object
+    - attribute: The attribute input, passed through
+    - value: The value input, passed through
     """
 
     @pydantic.computed_field(description="Node style")
@@ -746,9 +780,29 @@ class Set(Node):
 @register("data/SetConditional")
 class SetConditional(Set):
     """
-    Set a value on an object using setattr
+    Same as Set, but with a state passthrough so it can be placed in a
+    conditional execution chain
 
-    Can be used on dictionaries as well.
+    Dictionaries are written by key, lists by integer index, any other
+    object via setattr. The object is modified in place.
+
+    Inputs:
+
+    - state: The graph state
+    - object: Object to modify
+    - attribute: Attribute name, dict key, or list index
+    - value: Value to set
+
+    Properties:
+
+    - attribute: Attribute name, dict key, or list index
+
+    Outputs:
+
+    - state: The state input, passed through
+    - object: The modified object
+    - attribute: The attribute input, passed through
+    - value: The value input, passed through
     """
 
     def __init__(self, title="Set Conditional", **kwargs):
@@ -767,16 +821,25 @@ class SetConditional(Set):
 @register("data/MakeList")
 class MakeList(Node):
     """
-    Creates a new empty list
+    Creates a new list, optionally initialized from the items property
+
+    The items property is deep-copied on every execution, so downstream
+    mutation of the list does not alter the property.
 
     Inputs:
 
     - state: Graph state
+    - item_type: Declared type of the items in the list (optional)
+
+    Properties:
+
+    - item_type: Declared type of the items in the list
+    - items: Initial items in the list (empty by default)
 
     Outputs:
 
     - state: The state input, passed through
-    - list: List
+    - list: The new list
     """
 
     class Fields:
@@ -835,13 +898,13 @@ class ListAppend(Node):
 
     Inputs:
 
-    - list: List
-    - item: Item
+    - list: List to append to (optional - a new list is created if not provided)
+    - item: Item to append
 
     Outputs:
 
-    - list: List
-    - item: Item
+    - list: The list with the item appended
+    - item: The item input, passed through
     """
 
     def __init__(self, title="List Append", **kwargs):
@@ -968,8 +1031,9 @@ class CapLength(Node):
 
     Inputs:
 
+    - state: The graph state
     - iterable: Iterable (string or list) to cap
-    - max_length: Maximum length to cap the iterable to
+    - max_length: Maximum length to cap the iterable to (optional)
 
     Properties:
 
@@ -978,6 +1042,7 @@ class CapLength(Node):
 
     Outputs:
 
+    - state: The state input, passed through
     - capped: Capped iterable (same type as input)
     """
 
@@ -1052,18 +1117,22 @@ class SelectItem(Node):
     """
     Node that takes in a list of items and selects one based on the selection function
 
-    - random
-    - cycle
-    - sorted_cycle
+    - random: picks a random item
+    - cycle: picks the next item on each execution, wrapping around
+    - sorted_cycle: like cycle, but iterates the items in sorted order
+    - direct: picks the item at the index property
+
+    The cycle position is stored in the graph state per node, so it persists
+    across executions within a run.
 
     Inputs:
 
     - items: List of items
-    - except: Item to exclude from selection
+    - except: Item (or list of items) to exclude from selection
 
     Properties:
 
-    - index: Index of item to select
+    - index: Index of item to select (used by the direct selection function)
     - selection_function: Selection function
     - cycle_index: Cycle index (ephemeral, read-only)
 
@@ -1172,7 +1241,23 @@ class SelectItem(Node):
 class DictCollector(DynamicSocketNodeBase):
     """
     Collects key-value pairs into a dictionary with dynamic inputs.
-    Connect tuple outputs like (key, value) to the dynamic input slots.
+    New item sockets appear as connections are made.
+
+    For each connected item the key is inferred: if the value is a
+    (key, value) tuple (e.g., from Make Key-Value Pair) that key is used;
+    otherwise the key is derived from the source socket - for sockets named
+    `value`, the source node's `name`, `key` or `attribute` input is used,
+    falling back to the source socket name.
+
+    Inputs:
+
+    - dict: Base dictionary to collect into (optional - a new dictionary
+      is created if not provided)
+    - item{i}: Dynamic inputs holding the values to collect
+
+    Outputs:
+
+    - dict: The collected dictionary
     """
 
     dynamic_input_label: str = "item{i}"
@@ -1222,7 +1307,18 @@ class DictCollector(DynamicSocketNodeBase):
 class ListCollector(DynamicSocketNodeBase):
     """
     Collects items into a list with dynamic inputs.
-    Connect tuple outputs like (key, value) to the dynamic input slots.
+    New item sockets appear as connections are made, and each connected
+    value is appended to the list in socket order.
+
+    Inputs:
+
+    - list: Base list to append to (optional - a new list is created if
+      not provided)
+    - item{i}: Dynamic inputs holding the values to collect
+
+    Outputs:
+
+    - list: The collected list
     """
 
     dynamic_input_label: str = "item{i}"
@@ -1263,7 +1359,25 @@ class ListCollector(DynamicSocketNodeBase):
 @register("data/CombineLists")
 class CombineList(DynamicSocketNodeBase):
     """
-    Combines a list of lists into a single list
+    Combines multiple lists into a single list
+
+    Each connected dynamic input must be a list; their items are appended
+    to the result in socket order.
+
+    Inputs:
+
+    - list: Base list to extend (optional - a new list is created if not
+      provided)
+    - list{i}: Dynamic inputs holding the lists to combine
+
+    Properties:
+
+    - create_copy: Extend a copy of the base list instead of modifying it
+      in place
+
+    Outputs:
+
+    - list: The combined list
     """
 
     dynamic_input_label: str = "list{i}"
@@ -1310,6 +1424,15 @@ class CombineList(DynamicSocketNodeBase):
 class DictKeyValuePairs(Node):
     """
     Creates a list of key-value pairs from a dictionary
+
+    Inputs:
+
+    - dict: Dictionary to convert
+
+    Outputs:
+
+    - dict: The dict input, passed through
+    - kvs: List of (key, value) tuples
     """
 
     def __init__(self, title="Dict To Key-Value Pairs", **kwargs):
@@ -1332,6 +1455,22 @@ class MakeKeyValuePair(Node):
     """
     Creates a key-value pair tuple from separate key and value inputs.
     Outputs a tuple (key, value) that can be connected to DictCollector.
+
+    Inputs:
+
+    - key: The key (optional)
+    - value: The value (optional)
+
+    Properties:
+
+    - key: The key
+    - value: The value
+
+    Outputs:
+
+    - kv: The (key, value) tuple
+    - key: The key input, passed through
+    - value: The value input, passed through
     """
 
     class Fields:
@@ -1434,7 +1573,25 @@ class UUID(Node):
 @register("data/UpdateObject")
 class UpdateObject(DynamicSocketNodeBase):
     """
-    Updates an object with dynamic inputs.
+    Updates an object (dict or attribute-based) with values collected from
+    dynamic inputs. New item sockets appear as connections are made.
+
+    For each connected item the key to update is inferred: if the value is a
+    (key, value) tuple that key is used; otherwise the key is derived from the
+    source socket - for sockets named `value`, the source node's `name`, `key`
+    or `attribute` input is used, falling back to the source socket name. Dicts
+    are updated by key, other objects via setattr.
+
+    Inputs:
+
+    - state: The graph state
+    - object: The object to update
+    - item{i}: Dynamic inputs holding the values to set on the object
+
+    Outputs:
+
+    - state: The state input, passed through
+    - object: The updated object
     """
 
     dynamic_input_label: str = "item{i}"

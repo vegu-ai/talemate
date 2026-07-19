@@ -28,7 +28,18 @@ class CreatorSettings(AgentSettingsNode):
 @register("agents/creator/DetermineContentContext")
 class DetermineContentContext(AgentNode):
     """
-    Determines the context for the content creation.
+    Determines a fitting content context label (genre / style descriptor)
+    for the given description, via the creator agent.
+
+    Inputs:
+
+    - state: The current state of the graph
+    - description: The description to determine the content context for
+      (required at runtime despite the optional socket)
+
+    Outputs:
+
+    - content_context: The determined content context
     """
 
     _agent_name: ClassVar[str] = "creator"
@@ -68,7 +79,7 @@ class DetermineCharacterDescription(AgentNode):
 
     - state: The current state of the graph
     - character: The character to determine the description for
-    - extra_context: Extra context to use in determining the
+    - extra_context: Extra context to use in determining the description
 
     Outputs:
 
@@ -204,7 +215,24 @@ class DetermineCharacterName(AgentNode):
 @register("agents/creator/DetermineCharacterDialogueInstructions")
 class DetermineCharacterDialogueInstructions(AgentNode):
     """
-    Determines the dialogue instructions for a character.
+    Determines dialogue (acting) instructions for a character, via the
+    creator agent. The result is returned but not stored on the character
+    by this node.
+
+    Inputs:
+
+    - state: The current state of the graph
+    - character: The character to determine dialogue instructions for
+    - instructions: Additional instructions to guide the generation (optional)
+    - update_existing: Whether to base the result on the character's
+      existing dialogue instructions (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - character: The character, passed through
+    - dialogue_instructions: The determined dialogue instructions
+    - original: The character's dialogue instructions before generation
     """
 
     _agent_name: ClassVar[str] = "creator"
@@ -293,6 +321,11 @@ class ContextualGenerate(AgentNode):
 
     - state: The updated state of the graph
     - text: The generated text
+    - character: The character object resolved from the character input
+    - context_type: The context type, passed through
+    - context_name: The context name, passed through
+    - instructions: The instructions, passed through
+    - original: The original text, passed through
     """
 
     _agent_name: ClassVar[str] = "creator"

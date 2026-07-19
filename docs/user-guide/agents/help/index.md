@@ -2,7 +2,7 @@
 
 The help agent provides an interactive help chat that answers questions about Talemate itself - settings, agents, clients, the world editor, the node editor and everything else the application offers.
 
-It grounds its answers in the documentation that ships with Talemate: it receives an index of all documentation pages and can search the documentation, read whole pages, or read individual sections before answering.
+It grounds its answers in the documentation that ships with Talemate: it knows the documentation's sections and can look up relevant pages by topic, search the documentation, read whole pages, or read individual sections before answering.
 
 Open the help chat via the :material-help-circle-outline: icon in the app bar. It is available at any time - no scene needs to be loaded.
 

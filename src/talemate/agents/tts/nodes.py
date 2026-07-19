@@ -34,7 +34,16 @@ class TTSAgentSettings(AgentSettingsNode):
 @register("agents/tts/GetVoice")
 class GetVoice(AgentNode):
     """
-    Gets a voice from the TTS agent.
+    Looks up a voice in the TTS agent's voice library by voice ID.
+
+    Inputs:
+
+    - voice_id: The ID of the voice to get (required at runtime despite
+      the optional socket)
+
+    Outputs:
+
+    - voice: The voice object (None if no voice with that ID exists)
     """
 
     _agent_name: ClassVar[str] = "tts"
@@ -91,7 +100,22 @@ class GetNarratorVoice(AgentNode):
 @register("agents/tts/UnpackVoice")
 class UnpackVoice(AgentNode):
     """
-    Unpacks a voice from the TTS agent.
+    Unpacks a voice object into its individual fields.
+
+    Inputs:
+
+    - voice: The voice to unpack
+
+    Outputs:
+
+    - voice: The voice, passed through
+    - label: The voice's display label
+    - provider: The TTS provider (API) the voice belongs to
+    - provider_id: The voice's ID at the provider
+    - provider_model: The provider model the voice uses
+    - tags: The voice's tags
+    - parameters: The voice's generation parameters
+    - is_scene_asset: Whether the voice is stored as a scene asset
     """
 
     _agent_name: ClassVar[str] = "tts"
@@ -124,7 +148,22 @@ class UnpackVoice(AgentNode):
 @register("agents/tts/Generate")
 class Generate(AgentNode):
     """
-    Generates a voice from the TTS agent.
+    Generates speech audio for the given text via the TTS agent and queues
+    it for playback in the frontend. Either a voice or a character must be
+    provided; when a character is given its assigned voice is used, while
+    an explicit voice input overrides it. Does nothing when the TTS agent
+    is disabled or not ready.
+
+    Inputs:
+
+    - state: The graph state
+    - text: The text to speak (required at runtime despite the optional socket)
+    - voice: The voice to use (optional)
+    - character: The character to speak as (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
     """
 
     _agent_name: ClassVar[str] = "tts"

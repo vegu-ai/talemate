@@ -24,11 +24,13 @@ You can give the user markdown links that, when clicked, navigate them inside th
 
 These links are for navigation only - documentation references must still link to the online manual as instructed above.
 
-## Documentation index
-Every documentation page available to you, as `path | title | summary`:
+## Documentation sections
+The bundled documentation, grouped by section as `path prefix | pages | contents`:
 
-getting-started/index.md | Getting started | Installation and first steps.
-user-guide/agents/editor/settings.md | Settings | Editor agent settings: revision methods and cleanup options.
+getting-started | 1 pages | Installation (Windows/Linux/Docker), first launch, connecting a client, loading the first scene
+user-guide/agents | 1 pages | Every agent's settings and behavior: conversation, creator, director, editor, help, memory, narrator, summarizer, visualizer, voice, world state
+
+Individual pages are NOT listed here - locate them with the find_docs function before reading them.
 
 ## User's current view
 A snapshot of what the user is currently looking at in the Talemate interface. Use it to resolve ambiguous questions like "what does this setting do?":
@@ -62,9 +64,46 @@ You must use json code blocks ```json...```
 
 ## Functions
 
+### Find Docs (find_docs)
+
+Look up documentation pages by topic - returns the best-matching pages with path, title, summary and manual URL. This is the primary way to find the right page; call it before read_doc unless you already know the exact path.
+
+You may call this function multiple times. 
+
+#### find_docs arguments
+
+```json
+{
+  "function": "find_docs",
+  "arguments": {
+    "query": "str - What you are looking for - a feature, setting, node title or task."
+  }
+}
+```
+
+#### find_docs examples
+
+```json
+{
+  "function": "find_docs",
+  "arguments": {
+    "query": "Jinja2 Format node"
+  }
+}
+```
+
+```json
+{
+  "function": "find_docs",
+  "arguments": {
+    "query": "assign a voice to a character"
+  }
+}
+```
+
 ### Search Docs (search_docs)
 
-Search all documentation pages for a term or regular expression. Returns matching lines with their path and line number.
+Full-text search across all documentation pages for a term or regular expression. Returns matching lines with their path and line number. Use when find_docs does not surface the right page or you need to find an exact string.
 
 You may call this function multiple times. 
 
@@ -92,7 +131,7 @@ You may call this function multiple times.
 
 ### Read Doc (read_doc)
 
-Read a full documentation page. Use a path from the documentation index or from search results.
+Read a full documentation page. Use a path from find_docs or search results.
 
 You may call this function multiple times. 
 
@@ -368,11 +407,13 @@ You can give the user markdown links that, when clicked, navigate them inside th
 
 These links are for navigation only - documentation references must still link to the online manual as instructed above.
 
-## Documentation index
-Every documentation page available to you, as `path | title | summary`:
+## Documentation sections
+The bundled documentation, grouped by section as `path prefix | pages | contents`:
 
-getting-started/index.md | Getting started | Installation and first steps.
-user-guide/agents/editor/settings.md | Settings | Editor agent settings: revision methods and cleanup options.
+getting-started | 1 pages | Installation (Windows/Linux/Docker), first launch, connecting a client, loading the first scene
+user-guide/agents | 1 pages | Every agent's settings and behavior: conversation, creator, director, editor, help, memory, narrator, summarizer, visualizer, voice, world state
+
+Individual pages are NOT listed here - locate them with the find_docs function before reading them.
 
 ## User's current view
 A snapshot of what the user is currently looking at in the Talemate interface. Use it to resolve ambiguous questions like "what does this setting do?":

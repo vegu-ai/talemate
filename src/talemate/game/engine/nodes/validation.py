@@ -72,9 +72,24 @@ class ValidateNode(Node):
 @register("validation/ValidateValueIsSet")
 class ValidateValueIsSet(ValidateNode):
     """
-    Validate the truthyness of a value
+    Validate that a value is set, raising an error if it isn't.
 
-    '', null are considered false
+    A value counts as unset when it is null, unresolved or - when
+    `blank_string_is_unset` is true - a blank string. Other falsy values
+    (0, false) count as set. On success the value is passed through.
+
+    Inputs:
+
+    - value: The value to validate
+    - error_message: Custom error message, `{value}` is replaced with the value (optional)
+
+    Properties:
+
+    - blank_string_is_unset: If true, a blank string is considered unset
+
+    Outputs:
+
+    - value: The validated value, passed through
     """
 
     class Fields(ValidateNode.Fields):
@@ -107,7 +122,18 @@ class ValidateValueIsSet(ValidateNode):
 @register("validation/ValidateValueIsNotSet")
 class ValidateValueIsNotSet(ValidateNode):
     """
-    Validate the value is not set
+    Validate that a value is NOT set, raising an error if it is.
+
+    A value counts as unset when it is null, unresolved or a blank string.
+
+    Inputs:
+
+    - value: The value to validate
+    - error_message: Custom error message, `{value}` is replaced with the value (optional)
+
+    Outputs:
+
+    - value: The (unset) value, passed through
     """
 
     def __init__(self, title="Validate Value Is Not Set", **kwargs):
@@ -128,7 +154,20 @@ class ValidateValueIsNotSet(ValidateNode):
 @register("validation/ValidateValueContained")
 class ValidateValueContained(ValidateNode):
     """
-    Validate the value is contained in a list or dictionary
+    Validate that a value is contained in a list or dictionary, raising an
+    error if it isn't.
+
+    For dictionaries, containment is checked against the keys.
+
+    Inputs:
+
+    - value: The value to validate
+    - error_message: Custom error message, `{value}` is replaced with the value (optional)
+    - list: The list or dictionary to check containment against
+
+    Outputs:
+
+    - value: The validated value, passed through
     """
 
     def __init__(self, title="Validate Value Contained", **kwargs):
@@ -150,7 +189,20 @@ class ValidateValueContained(ValidateNode):
 @register("validation/ValidateContextIDString")
 class ValidateContextIDString(ValidateNode):
     """
-    Validate the value is a context ID string
+    Validate that a value is a valid context ID string, raising an error if it
+    isn't.
+
+    Surrounding backticks and whitespace are stripped before validation, and
+    the cleaned string is passed through on success.
+
+    Inputs:
+
+    - value: The context ID string to validate
+    - error_message: Custom error message, `{value}` is replaced with the value (optional)
+
+    Outputs:
+
+    - value: The cleaned, validated context ID string
     """
 
     def __init__(self, title="Validate Context ID String", **kwargs):
@@ -178,7 +230,25 @@ class ValidateContextIDString(ValidateNode):
 @register("validation/ValidateContextIDItem")
 class ValidateContextIDItem(ValidateNode):
     """
-    Validate the value is a context ID item
+    Validate that a value is a context ID string that resolves to an existing
+    context ID item, raising an error if it doesn't.
+
+    Surrounding backticks and whitespace are stripped before validation. On
+    success the resolved item and its details are provided as outputs.
+
+    Inputs:
+
+    - value: The context ID string to validate and resolve
+    - error_message: Custom error message, `{value}` is replaced with the value (optional)
+
+    Outputs:
+
+    - value: The cleaned, validated context ID string
+    - context_id: The context ID of the resolved item
+    - context_id_item: The resolved context ID item
+    - context_type: The context type of the resolved item
+    - context_value: The current value stored at the context ID
+    - name: The name of the resolved item
     """
 
     def __init__(self, title="Validate Context ID Item", **kwargs):
@@ -231,7 +301,26 @@ class ValidateContextIDItem(ValidateNode):
 @register("validation/ValidateCharacter")
 class ValidateCharacter(ValidateNode):
     """
-    Validate the value is a character
+    Validate that a value is the name of a character in the scene, raising an
+    error if it isn't.
+
+    Optionally restrict to active or inactive characters, or create a
+    placeholder character when the name doesn't exist.
+
+    Inputs:
+
+    - value: The character name to validate
+    - error_message: Custom error message, `{value}` is replaced with the value (optional)
+
+    Properties:
+
+    - character_status: Which characters are allowed (active, inactive, or all)
+    - create_placeholder: Whether to create a placeholder character if the character does not exist
+
+    Outputs:
+
+    - value: The validated character name, passed through
+    - character: The character object (or placeholder)
     """
 
     class Fields(ValidateNode.Fields):
@@ -300,7 +389,18 @@ class ValidateCharacter(ValidateNode):
 @register("validation/ValidateAssetID")
 class ValidateAssetID(ValidateNode):
     """
-    Validate the value is a asset ID
+    Validate that a value is the ID of an existing scene asset, raising an
+    error if it isn't.
+
+    Inputs:
+
+    - value: The asset ID to validate
+    - error_message: Custom error message, `{value}` is replaced with the value (optional)
+
+    Outputs:
+
+    - value: The validated asset ID, passed through
+    - asset: The asset object
     """
 
     def __init__(self, title="Validate Asset ID", **kwargs):

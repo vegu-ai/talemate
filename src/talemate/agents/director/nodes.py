@@ -95,7 +95,23 @@ class PersistCharacter(AgentNode):
 @register("agents/director/AssignVoice")
 class AssignVoice(AgentNode):
     """
-    Assigns a voice to a character.
+    Has the director automatically pick and assign a fitting TTS voice to
+    a character, choosing from the voices available through the ready TTS
+    APIs (global and scene voice libraries). Does nothing when automatic
+    voice assignment is disabled in the director settings or when no
+    voices are available.
+
+    Inputs:
+
+    - state: The graph state
+    - character: The character to assign a voice to
+
+    Outputs:
+
+    - state: The state input, passed through
+    - character: The character, passed through
+    - voice: The character's voice after assignment (may be unset if
+      assignment was skipped)
     """
 
     _agent_name: ClassVar[str] = "director"
@@ -124,7 +140,21 @@ class AssignVoice(AgentNode):
 @register("agents/director/LogAction")
 class LogAction(AgentNode):
     """
-    Logs an action to the console.
+    Logs a director action by pushing a DirectorMessage to the scene
+    history and emitting it to the UI. When console_only is true the
+    message is flagged as hidden so it is not shown in the scene, but
+    still appears in the debug console.
+
+    Inputs:
+
+    - state: The graph state
+    - action: The name of the action to log
+    - action_description: The description of the action
+    - console_only: Whether to hide the message from the scene (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
     """
 
     _agent_name: ClassVar[str] = "director"

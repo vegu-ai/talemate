@@ -22,11 +22,18 @@ class ScopedAPIFunction(Node):
     """
     Executes python code inside the quarantined scoped environment.
 
+    The code has access to the `arguments` dict, a `result` dict to
+    populate, and the `TM` scoped API object.
+
     Inputs:
 
     - state: The graph state
     - agent: The agent whose client the scoped context runs against
     - arguments: Arguments made available to the executed code
+
+    Properties:
+
+    - code: The python code to execute
 
     Outputs:
 

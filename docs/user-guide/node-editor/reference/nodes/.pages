@@ -1,0 +1,5 @@
+title: Node Reference
+order_by: title
+nav:
+  - index.md
+  - ...

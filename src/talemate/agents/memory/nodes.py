@@ -25,18 +25,29 @@ TYPE_CHOICES.extend(
 @register("agents/memory/QueryContextDB")
 class QueryContextDB(AgentNode):
     """
-    Node that queries the context database
+    Queries the memory agent's context database with one or more queries
+    and collects the matching documents, up to a total token budget.
 
-    async def multi_query(
-        self,
-        queries: list[str],
-        iterate: int = 1,
-        max_tokens: int = 1000,
-        filter: Callable = lambda x: True,
-        formatter: Callable = lambda x: x,
-        limit: int = 10,
-        **where,
-    ):
+    Inputs:
+
+    - state: The graph state
+    - queries: The queries to run (list, or a single query string)
+    - meta_filters: Metadata filters to constrain the results (optional)
+    - max_tokens: The maximum total tokens of results to return (optional)
+    - fn_filter: Function that receives a result and returns whether to
+      keep it (optional)
+    - fn_formatter: Function that receives a result and returns its
+      formatted replacement (optional)
+
+    Properties:
+
+    - iterate: The number of results to accept per query
+    - limit: The number of N best results to consider per query
+
+    Outputs:
+
+    - state: The state input, passed through
+    - results: The list of matching documents
     """
 
     _agent_name: ClassVar[str] = "memory"
@@ -153,7 +164,21 @@ class QueryContextDB(AgentNode):
 @register("agents/memory/UnpackMemoryDocument")
 class UnpackMemoryDocument(Node):
     """
-    Unpacks a memory document
+    Unpacks a memory document into its individual fields.
+
+    Inputs:
+
+    - document: The memory document to unpack
+
+    Outputs:
+
+    - document: The memory document, passed through
+    - meta: The document's metadata dict
+    - id: The document's ID in the memory database
+    - raw: The document's raw content
+    - as_text: The document rendered as text
+    - as_dict: The document as a dict
+    - context_id: The document's context ID
     """
 
     def __init__(self, title="Unpack Memory Document", **kwargs):

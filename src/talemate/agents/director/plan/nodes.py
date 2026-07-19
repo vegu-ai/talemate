@@ -262,7 +262,25 @@ class GetActiveChatPlanId(Node):
 class GetActivePlan(Node):
     """
     Returns the plan linked to the currently active director chat.
-    Outputs the full plan object, plan ID, perspective, and beat list.
+
+    When no chat is active or no plan is linked, has_plan is False and the
+    plan output is empty. The perspective falls back to the scene's default
+    perspective (or "Third person, past tense.") when the plan doesn't
+    specify one.
+
+    Inputs:
+
+    - state: The graph state
+
+    Outputs:
+
+    - state: The state input, passed through
+    - plan_id: The plan's ID (empty string if no plan)
+    - plan: The full plan object (or None)
+    - beats: The plan's Beat tasks only (excludes generic tasks)
+    - perspective: The plan's perspective, with fallback as described above
+    - close_arc: The plan's close_arc meta flag
+    - has_plan: Whether a plan was found
     """
 
     def __init__(self, title="Get Active Plan", **kwargs):

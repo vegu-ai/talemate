@@ -399,9 +399,9 @@
 - path: user-guide/clients/concurrent-requests.md
   title: Concurrent Requests (Experimental)
   summary: Experimental feature that lets certain clients (Anthropic, OpenAI, Google, MistralAI, OpenRouter, Pi Bridge, llama.cpp)
-    run multiple LLM requests in parallel — used by visual/image prompt generation, function-calling batches (director chat query
-    actions, help agent doc lookups), multi-query world state updates, and background world state snapshots. Covers how to
-    enable it via the client-list toggle or Concurrency tab and rate-limit caveats.
+    run multiple LLM requests in parallel — used by visual/image prompt generation, function-calling batches (director chat
+    query actions, help agent doc lookups), multi-query world state updates, and background world state snapshots. Covers
+    how to enable it via the client-list toggle or Concurrency tab and rate-limit caveats.
 - path: user-guide/clients/endpoint-override.md
   title: Endpoint Override
   summary: 'How to point a remote client at a custom API endpoint such as a LiteLLM proxy gateway: the Endpoint Override tab,
@@ -691,6 +691,258 @@
     events, per-agent events (conversation, creator, editor, help, narrator, director, world state, summarization, TTS, visual
     generation and prompt finalization), and scene asset events (asset saved/deleted, backdrop and cover image changes), including
     which payload fields are mutable for injecting instructions or rewriting responses.'
+- path: user-guide/node-editor/reference/nodes/agents-conversation.md
+  title: Conversation Agent Nodes
+  summary: 'Node reference. Generate character dialogue through the conversation agent. Nodes: Generate Conversation, Conversation
+    Settings.'
+- path: user-guide/node-editor/reference/nodes/agents-creator.md
+  title: Creator Agent Nodes
+  summary: 'Node reference. Content creation through the creator agent: contextual generation, character creation and per-character
+    derivations (name, description, dialogue instructions) plus thematic lists. Nodes: Contextual Generate, Create Character,
+    Determine Character Description, Determine Character Dialogue Instructions, Determine Character Name, Determine Content
+    Context, and more.'
+- path: user-guide/node-editor/reference/nodes/agents-director-auto.md
+  title: Director Auto-Direction Nodes
+  summary: 'Node reference. The director''s automatic direction loop: pick candidates, determine scene intent, decide when
+    an instruction is due and generate the auto-direction itself. Nodes: Auto Direction, Auto Direct Candidates [DEPRECATED],
+    Determine Scene Intent, Generate Auto Direction, Generate Scene Types, Is Due For Instruction [DEPRECATED].'
+- path: user-guide/node-editor/reference/nodes/agents-director-chat-actions.md
+  title: Director Chat Actions
+  summary: 'Node reference. The actions the director chat AI can take. Each module defines one callable action — its name,
+    description and instructions (shown in the properties below) are what the director AI sees when deciding what to do. Nodes:
+    Director Action Create Image, Director Action Direct Scene, Director Action Direct Story Arc, Director Action Gameplay,
+    Director Action Prompt User, and more.'
+- path: user-guide/node-editor/reference/nodes/agents-director-chat-instructors.md
+  title: Director Chat Instructors
+  summary: 'Node reference. Instructor modules the director chat uses to apply changes: instruct characters and the narrator,
+    and update world, history, gamestate, story and character configuration. Nodes: Instruct Character, Instruct Character
+    Changes, Instruct Character Config Updates, Instruct Character Creation, Instruct Character Updates, Instruct History
+    Updates, Instruct Narrator, and more.'
+- path: user-guide/node-editor/reference/nodes/agents-director-chat.md
+  title: Director Chat Nodes
+  summary: 'Node reference. Plumbing for the director chat: build the chat context, define action arguments, confirm actions
+    and run sub-actions, plus the context/query modules the chat uses to look things up. Nodes: Director Action Argument,
+    Director Action Confirm, Agent Report Issue, Character Context, Character Names Context, Direct Context Update, Director
+    Agent Retrieve Context, and more.'
+- path: user-guide/node-editor/reference/nodes/agents-director-plan.md
+  title: Director Planning Nodes
+  summary: 'Node reference. Director plans: create plans and tasks, advance and complete them, and read plan state from graphs.
+    Nodes: Complete Task, Create Outline, Create Plan, Critique Outline, Delete Plan, Edit Task, Estimate Words, Expand Story
+    Arc, Get Active Chat Plan ID, Get Active Plan, Insert Task, Manage Plan, Remove Task.'
+- path: user-guide/node-editor/reference/nodes/agents-director.md
+  title: Director Agent Nodes
+  summary: 'Node reference. Director operations: scene direction, character persistence, voice assignment, chat message insertion,
+    dice rolls, actor/narrator direction functions and the director''s websocket handler modules. Nodes: Assign Voice, On
+    Persist Character Generate Visual, Direct Actor, Direct Narrator, Yield To Actor, Yield To User, Roll Dice, Insert Chat
+    Message, and more.'
+- path: user-guide/node-editor/reference/nodes/agents-editor.md
+  title: Editor Agent Nodes
+  summary: 'Node reference. Clean up user input, narration and character messages through the editor agent''s revision passes.
+    Nodes: Clean Up Character Message, Clean Up Narration, Clean Up User Input, Editor Settings.'
+- path: user-guide/node-editor/reference/nodes/agents-memory.md
+  title: Memory Agent Nodes
+  summary: 'Node reference. Query the long-term memory database (RAG) and unpack the returned memory documents. Nodes: Query
+    Context DB, Unpack Memory Document.'
+- path: user-guide/node-editor/reference/nodes/agents-narrator.md
+  title: Narrator Agent Nodes
+  summary: 'Node reference. Generate narration through the narrator agent: scene progress, environment, queries, character
+    entries/exits and time passage. Nodes: Auto Narration, Generate After Dialog Narration, Generate Character Entry Narration,
+    Generate Character Exit Narration, Generate Character Narration, Generate Environment Narration, Generate Progress Narration,
+    Generate Query Narration, and more.'
+- path: user-guide/node-editor/reference/nodes/agents-summarizer.md
+  title: Summarizer Agent Nodes
+  summary: 'Node reference. Summarization through the summarizer agent: scene progression summaries and tag generation. Nodes:
+    Generate Tags, On Message Set Avatar, Summarizer Settings, Summarize Scene Progression, Wsh Summarize Scene Progress.'
+- path: user-guide/node-editor/reference/nodes/agents-tts.md
+  title: Voice Agent Nodes
+  summary: 'Node reference. Text-to-speech through the voice agent: resolve voices (including the narrator''s), unpack voice
+    data and generate speech. Nodes: Generate TTS, Get Narrator Voice, Get Voice, TTS Agent Settings, Unpack Voice.'
+- path: user-guide/node-editor/reference/nodes/agents-visual-generation.md
+  title: Visualizer Agent Generation Nodes
+  summary: 'Node reference. Run visual generation: build generation requests, select the backend, generate images and analyze
+    them. Prompts come from the prompt nodes. Nodes: Analyze Images, Backend Status, Generate Image, Visual Generation Request,
+    Select Backend, Unpack Visual Generation Request, Unpack Visual Generation Response.'
+- path: user-guide/node-editor/reference/nodes/agents-visual-modules.md
+  title: Visualizer Agent Modules
+  summary: 'Node reference. Ready-made visual generation flows built on the visualizer prompt and generation nodes: generate
+    visual assets, avatars, portraits, image edits and regenerations, plus the visualizer''s websocket handlers. Nodes: Determine
+    Visual References, Generate Avatar, Generate Character Portrait Legacy, Generate Image Edit, Generate Visual Asset, Regenerate
+    Visual Asset, and more.'
+- path: user-guide/node-editor/reference/nodes/agents-visual.md
+  title: Visualizer Agent Prompt Nodes
+  summary: 'Node reference. Build visual prompts: assemble prompt parts, apply styles, finalize prompts and unpack them into
+    compiled positive/negative prompt strings. Generation itself happens through the generation nodes, and ready-made flows
+    live in Visualizer Agent Modules. Nodes: Apply Style, Apply Styles, Visual Enum Values, Finalize Prompt, Visual Prompt,
+    Visual Prompt Part, Visual Settings, Unpack Visual Prompt, and more.'
+- path: user-guide/node-editor/reference/nodes/agents-world-state.md
+  title: World State Agent Nodes
+  summary: 'Node reference. World state operations through the world state agent: advance time, run character progression,
+    evaluate queries, extract character sheets and emit the world state to the frontend. Nodes: Advance Time, Character Progression,
+    Deactivate Character, Determine Character Avatar, Determine Character Presence, Emit World State, Evaluate Query, Extract
+    Character Sheet, and more.'
+- path: user-guide/node-editor/reference/nodes/agents.md
+  title: Agent Nodes
+  summary: 'Node reference. Generic agent interaction available for every agent: fetch an agent instance, call agent functions
+    (optionally conditionally), and read or count agent state variables. Nodes: Call Agent Function, Call Agent Function (Conditional),
+    Counter Agent State, Dynamic Instruction, Get Agent, Get Agent State, Set Agent State, Toggle Agent Action, Unset Agent
+    State.'
+- path: user-guide/node-editor/reference/nodes/assets-meta.md
+  title: Asset Meta And Selection Nodes
+  summary: 'Node reference. Asset metadata and selection: search assets, build selection contexts, and construct attachment
+    contexts for passing assets into generation requests. Nodes: Make Asset Attachment Context, Make Asset Meta, Search Assets,
+    Select Assets, Unpack Asset Meta, Unpack Asset Selection Context.'
+- path: user-guide/node-editor/reference/nodes/assets.md
+  title: Asset Nodes
+  summary: 'Node reference. Manage scene assets (images and other files): add, fetch, list, remove and update them, and set
+    cover and avatar images. Nodes: Add Asset, Asset Exists, Get Asset, Get Assets, List Assets, Remove Asset, Set Avatar
+    Image, Set Cover Image, Update Message Assets.'
+- path: user-guide/node-editor/reference/nodes/context-id.md
+  title: Context ID Nodes
+  summary: 'Node reference. Context IDs address pieces of scene context (character attributes, world entries, etc.) with a
+    uniform string format so they can be read, written, pinned and rendered generically. Nodes: Character Context IDs, Compress
+    Context ID Part, Context ID Get Value, Context ID Meta Entries, Context ID Set Value, Is Pin Active, Path to Context ID,
+    Remove Pin, Render Context IDs, and more.'
+- path: user-guide/node-editor/reference/nodes/core-functions.md
+  title: Function Nodes
+  summary: 'Node reference. Define and call reusable functions inside node graphs. A `core/functions/Function` module defines
+    the body, **Define Function** / **Get Function** / **Call Function** wire it up, and **Call For Each** maps a function
+    over a list. **Error Handler** and **Unpack Exception** deal with failures raised inside a call. See Functions for the
+    full concept walkthrough. Nodes: Error Handler, Argument, Breakpoint, Call For Each, Call Function, Define Function, Get
+    Function, Return, Scoped API Function, and more.'
+- path: user-guide/node-editor/reference/nodes/core-logic.md
+  title: Logic Nodes
+  summary: 'Node reference. Branching and comparison: switches route execution based on a value, routers pick one of several
+    paths, and the boolean nodes combine conditions. See Switches for how conditional flow works in graphs. Nodes: AND Router,
+    Apply Default, As Bool, Case, Case Router, Coallesce, Invert, Make Bool, OR Router, RSwitch, RSwitch Advanced, Switch.'
+- path: user-guide/node-editor/reference/nodes/core.md
+  title: Core Nodes
+  summary: 'Node reference. Structural plumbing every module graph is built from. **Input**, **Output** and **Module Property**
+    define a module''s interface — the sockets and properties it exposes when used as a node inside another graph (see Modularity).
+    **Stage** controls execution order between disconnected branches (see Staging), **Route** and **Watch** pass values through
+    (Watch also surfaces them in the debug tools), and **Null** is an explicit no-op. Nodes: Input Socket, Module Property,
+    Null, Output Socket, Route, Stage, Watch, and more.'
+- path: user-guide/node-editor/reference/nodes/data-collections.md
+  title: Dict And List Nodes
+  summary: 'Node reference. Build and manipulate dictionaries and lists. The **Dict Collector** and **List Collector** aggregate
+    any number of inputs through dynamic sockets — see Collector Nodes for how key inference works with **Make Key-Value Pair**.
+    Nodes: Combine Lists, Dict Collector, Dict Get, Dict Get (Path), Dict To Key-Value Pairs, Dict Pop, Dict Set, Dict Update,
+    List Append, and more.'
+- path: user-guide/node-editor/reference/nodes/data-number.md
+  title: Number Nodes
+  summary: 'Node reference. Numeric values: conversion, arithmetic, comparison, clamping, averaging and random numbers. Nodes:
+    As Number, Average, Basic Arithmetic, Clamp, Compare, Make Number, Min Max, Random, Sum.'
+- path: user-guide/node-editor/reference/nodes/data-string.md
+  title: String Nodes
+  summary: 'Node reference. String manipulation: formatting, case, join/split, replace, trim, substrings and excerpts. The
+    **Advanced Format** (`{name}` placeholders) and **Jinja2 Format** (`{{ name }}` templates) nodes build strings from dynamic
+    inputs — connect other nodes into their input slots and each connected value becomes a template variable (see Collector
+    Nodes for the key inference rules). Nodes: Advanced Format, As String, Case, Condensed, Excerpt, Extract, Format, Join,
+    Make String, Make Text, Replace, Split, String Check, and more.'
+- path: user-guide/node-editor/reference/nodes/data.md
+  title: Data Nodes
+  summary: 'Node reference. General-purpose value handling: get/set on arbitrary objects, conditionals, sorting and selection,
+    UUID generation, JSON parsing/serialization and length capping. Nodes: Cap Length, Contains, Get, JSON, Length, Select
+    Item, Set, Set Conditional, Sort, Update Object, UUID.'
+- path: user-guide/node-editor/reference/nodes/event.md
+  title: Event Nodes
+  summary: 'Node reference. Emit messages and status updates from graphs, and react to scene events with the **Event** listener
+    node. See Events for the event system and the Events reference for every event a graph can listen to. Nodes: Emit Agent
+    Message, Emit Scene Status, Emit Status, Emit Status (Conditional), Emit System Message, Emit World Editor Sync, Event.'
+- path: user-guide/node-editor/reference/nodes/focal.md
+  title: AI Function Nodes (Focal)
+  summary: 'Node reference. Talemate''s AI function-calling layer ("focal"). Define callable functions with typed arguments,
+    hand them to an agent prompt, then unpack the calls the AI made and collect their results. Used by flows like the director
+    chat actions. Nodes: AI Function Argument, AI Function Callback, Collect AI Function Call Results, AI Function Calling,
+    AI Function Callback Metadata, and more.'
+- path: user-guide/node-editor/reference/nodes/index.md
+  title: Node Reference
+  summary: Index of the node editor's complete node reference - every node category page with node counts. Start here to find
+    which page documents a specific node.
+- path: user-guide/node-editor/reference/nodes/input.md
+  title: Input Nodes
+  summary: 'Node reference. Receive and process player input inside the scene loop. Nodes: Process Input, Get Input.'
+- path: user-guide/node-editor/reference/nodes/prompt.md
+  title: Prompt Nodes
+  summary: 'Node reference. Build prompts and run generation from graphs: load and render prompt templates, assemble prompts
+    dynamically (see Prompt Building), and generate a response with a client. Nodes: Build Prompt, Clean Response, Generate
+    Response, Load Template, Prompt From Template, Render Prompt, Template Variables.'
+- path: user-guide/node-editor/reference/nodes/raise.md
+  title: Flow Exception Nodes
+  summary: 'Node reference. Stop or redirect graph execution by raising exceptions: **Stop** ends the current run, **Input
+    Value Error** reports invalid socket input, and **Acted As Character** signals that a character turn happened. See Error
+    Handling. Nodes: Acted As Character, Input Value Error, Stop.'
+- path: user-guide/node-editor/reference/nodes/response.md
+  title: Response Parsing Nodes
+  summary: 'Node reference. Extract structured data from LLM responses. A **Response Spec** describes the expected format;
+    extractors pull out anchored sections, code blocks, lists or regex matches from the raw response text. Nodes: After Anchor
+    Extractor, Anchor Extractor, AsIs Extractor, Code Block Extractor, Complex Anchor Extractor, Complex Code Block Extractor,
+    Regex Extractor, Response Spec, and more.'
+- path: user-guide/node-editor/reference/nodes/scene-characters.md
+  title: Scene Character Nodes
+  summary: 'Node reference. Everything about characters in the scene: fetch them (by name or player status), create and persist
+    new ones, activate/deactivate them for the current scene, and read or write their attributes, details and descriptions.
+    Nodes: Activate Character, Deactivate Character, Get Character, Get Character Attribute, Get Character Description, Get
+    Character Detail, and more.'
+- path: user-guide/node-editor/reference/nodes/scene-history.md
+  title: Scene History Nodes
+  summary: 'Node reference. Work with the scene''s message history and its summarized archive: query messages by type or id,
+    push/pop messages, and manage static archive entries (pre-authored history that survives summarization). Nodes: Character
+    Activity, Context History, Create Static Archive Entry, Get Message By ID, Scene Has History, Last Message of Type, Pop
+    History, Push History, and more.'
+- path: user-guide/node-editor/reference/nodes/scene-intent.md
+  title: Scene Intent Nodes
+  summary: 'Node reference. Read and change the scene''s intention state: the overall scene intent, the active scene phase
+    and the scene types that define how different phases play. Nodes: Get Scene Intent, Get Scene Type, Get Scene Types, Is
+    Scene Phase Active, Make Scene Type, Remove Scene Type, Set Scene Intent, Set Scene Phase, Unpack Scene Phase, Unpack
+    Scene Type.'
+- path: user-guide/node-editor/reference/nodes/scene-messages.md
+  title: Scene Message Nodes
+  summary: 'Node reference. Create and manipulate messages in the scene log: character, narrator and director messages, message
+    versions, context visibility and message metadata. Nodes: Add Message Version, Character Message, Director Message, Narrator
+    Message, Toggle Message Context Visibility, Unpack Message Meta.'
+- path: user-guide/node-editor/reference/nodes/scene-world-state.md
+  title: World Entry Nodes
+  summary: 'Node reference. Read and write the scene''s world entries (the world information shown in the world state panel)
+    and build generation options — writing styles and spices — that steer content generation. Nodes: Get World Entries, Get
+    World Entry, Remove World Entry, Save World Entry, Generation Options, Spices, Writing Style, Unpack World Entry.'
+- path: user-guide/node-editor/reference/nodes/scene.md
+  title: Scene Nodes
+  summary: 'Node reference. Scene lifecycle and metadata. The **Scene Loop** module is the heart of a playable scene — it
+    processes turns, input and events (see the Command Module and Events concepts). The Get/Set pairs manage the scene''s
+    title, description, introduction and content classification, and the storyline modules drive dynamic storylines. Nodes:
+    Creative Loop, Dynamic Storyline, Game Loop Actor Iteration, Generate Storyline, Get Content Classification, Get Story
+    Description, and more.'
+- path: user-guide/node-editor/reference/nodes/state.md
+  title: State Nodes
+  summary: 'Node reference. Read and write named variables in the graph state. Every variable lives in a **scope**: `local`
+    (this module run), `parent`, `shared` (all modules in the graph), `scene loop` (reset each loop iteration) or `game` (persisted
+    with the scene save). See States for scope semantics. The `...Path` variants address nested values with dotted paths,
+    and the counter nodes increment numeric state in place. Nodes: Counter State (Conditional), Set State (Conditional), Unset
+    State (Conditional), State Counter, State Counter (Path), Game State, Get State, and more.'
+- path: user-guide/node-editor/reference/nodes/util-packaging.md
+  title: Packaging Nodes
+  summary: 'Node reference. Package node modules for reuse and installation into scenes — see Package for the packaging workflow.
+    Nodes: Dynamic Storyline Package, Install Node Module, Package, Promote Config.'
+- path: user-guide/node-editor/reference/nodes/util.md
+  title: Utility Nodes
+  summary: 'Node reference. Miscellaneous helpers: counters, string diffs, list extraction from text, ISO date durations and
+    the **Module Style** node that sets a module''s canvas appearance. Nodes: Counter, Diff, Extract List, ISO Date Duration,
+    Module Style.'
+- path: user-guide/node-editor/reference/nodes/ux.md
+  title: UX Nodes
+  summary: 'Node reference. Build interactive user-facing elements from graphs: choice menus, notices and text inputs, emitted
+    to the interface and styled with **Style Element**. Nodes: Build Choice Element, Build Notice Element, Build Text Input
+    Element, Emit UX Element, Style UX Element.'
+- path: user-guide/node-editor/reference/nodes/validation.md
+  title: Validation Nodes
+  summary: 'Node reference. Validate values inside graphs — set/unset checks, containment, characters, asset IDs and context
+    ID strings/items — producing pass/fail results you can branch on. Nodes: Validate Asset ID, Validate Character, Validate
+    Context ID Item, Validate Context ID String, Validate Value Contained, Validate Value Is Not Set, Validate Value Is Set.'
+- path: user-guide/node-editor/reference/nodes/websocket.md
+  title: Websocket Nodes
+  summary: 'Node reference. Plumbing for module-defined websocket handlers: route requests, queue responses and signal operation
+    success or failure to the frontend. Nodes: Get Websocket Router, Websocket Operation Done, Websocket Operation Failed,
+    Websocket Response.'
 - path: user-guide/node-editor/reference/template_functions.md
   title: Template Functions
   summary: 'Reference for functions available inside prompt templates: response scaffolding (set_prepared_response, set_data_response,

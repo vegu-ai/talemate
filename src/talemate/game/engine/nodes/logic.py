@@ -143,6 +143,7 @@ class ORRouter(LogicalRouter):
     - b: flag B
     - c: flag C
     - d: flag D
+    - value: value to route to the activated output (optional)
 
     Outputs:
 
@@ -172,6 +173,7 @@ class ANDRouter(LogicalRouter):
     - b: flag B
     - c: flag C
     - d: flag D
+    - value: value to route to the activated output (optional)
 
     Outputs:
 
@@ -282,9 +284,11 @@ class Switch(Node):
 @register("core/RSwitch")
 class RSwitch(Node):
     """
-    Checks if the a value is truthy
+    Checks if the check value is truthy
 
-    If the value is truthy, the yes input is routed to the output, otherwise the no input is routed to the output
+    If the check value is truthy, the yes input is routed to the output, otherwise the no input is routed to the output
+
+    A value is considered truthy unless it is None, False, or UNRESOLVED (0 and empty strings count as truthy)
 
     Inputs:
 
@@ -328,9 +332,11 @@ class RSwitch(Node):
 @register("core/RSwitchAdvanced")
 class RSwitchAdvanced(Node):
     """
-    Checks if the a value is truthy
+    Checks if the check value is truthy
 
-    If the value is truthy, the yes input is routed to yes output and the no output is deactivated, otherwise the no input is routed to the no output and the yes output is deactivated
+    If the check value is truthy, the yes input is routed to the yes output, otherwise the no input is routed to the no output (the other output stays UNRESOLVED)
+
+    A value is considered truthy unless it is None, False, or UNRESOLVED (0 and empty strings count as truthy)
 
     Inputs:
 
@@ -384,6 +390,9 @@ class Case(Node):
     Route a value based on attribute value check (exact match)
     like a switch / case statement.
 
+    When no attribute_name is set, the value is cast to a string before
+    comparison, so case values should be given as strings.
+
     Inputs:
 
     - value: value to check
@@ -402,6 +411,7 @@ class Case(Node):
     - b: if the value matches case B
     - c: if the value matches case C
     - d: if the value matches case D
+    - none: if the value matches no case
     """
 
     class Fields:
@@ -494,8 +504,13 @@ class Case(Node):
 @register("core/CaseRouter")
 class CaseRouter(Node):
     """
-    Route specific input values based on a check value match.
-    Only the matching input is routed to its corresponding output, others are deactivated.
+    Route one of several input values based on a check value match,
+    like a switch / case statement with a single output.
+
+    The check value (or its attribute) is cast to a string before comparison,
+    so case values should be given as strings. The input of the first matching
+    case is routed to the value output; if no case matches, the default input
+    is routed instead.
 
     Inputs:
 
@@ -627,7 +642,11 @@ class CaseRouter(Node):
 @register("core/Coallesce")
 class Coallesce(Node):
     """
-    Takes a list of values and returns the first non-UNRESOLVED value
+    Takes a list of values and returns the first truthy value
+
+    A value is considered truthy unless it is None, False, or UNRESOLVED
+    (0 and empty strings count as truthy). If no input qualifies, the
+    output is UNRESOLVED.
 
     Inputs:
 
@@ -638,7 +657,7 @@ class Coallesce(Node):
 
     Outputs:
 
-    - value: the first non-UNRESOLVED value
+    - value: the first truthy value
     """
 
     def __init__(self, title="Coallesce", **kwargs):

@@ -91,7 +91,22 @@ class GenerateNarrationBase(AgentNode):
 @register("agents/narrator/GenerateProgress")
 class GenerateProgressNarration(GenerateNarrationBase):
     """
-    Generate a progress narration message
+    Generates narration that moves the story forward, via the narrator
+    agent's progress_story action. If no narrative direction is given the
+    narrator will attempt to subtly move the story forward on its own.
+
+    The generated message is not added to the scene history by this node.
+
+    Inputs:
+
+    - state: The graph state
+    - narrative_direction: Optional direction the narrative should take
+    - response_length: Optional response length in tokens (0 for default)
+
+    Outputs:
+
+    - generated: The generated narration text
+    - message: The generated NarratorMessage object
     """
 
     _action_name: ClassVar[str] = "progress_story"
@@ -101,7 +116,21 @@ class GenerateProgressNarration(GenerateNarrationBase):
 @register("agents/narrator/GenerateSceneNarration")
 class GenerateSceneNarration(GenerateNarrationBase):
     """
-    Generate a scene narration message
+    Generates narration describing the current scene, via the narrator
+    agent's narrate_scene action.
+
+    The generated message is not added to the scene history by this node.
+
+    Inputs:
+
+    - state: The graph state
+    - narrative_direction: Optional direction the narrative should take
+    - response_length: Optional response length in tokens (0 for default)
+
+    Outputs:
+
+    - generated: The generated narration text
+    - message: The generated NarratorMessage object
     """
 
     _action_name: ClassVar[str] = "narrate_scene"
@@ -111,7 +140,23 @@ class GenerateSceneNarration(GenerateNarrationBase):
 @register("agents/narrator/GenerateAfterDialogNarration")
 class GenerateAfterDialogNarration(GenerateNarrationBase):
     """
-    Generate an after dialog narration message
+    Generates narration reacting to the most recent line of dialogue, from
+    the perspective of the given character, via the narrator agent's
+    narrate_after_dialogue action.
+
+    The generated message is not added to the scene history by this node.
+
+    Inputs:
+
+    - state: The graph state
+    - narrative_direction: Optional direction the narrative should take
+    - response_length: Optional response length in tokens (0 for default)
+    - character: The character whose dialogue the narration follows
+
+    Outputs:
+
+    - generated: The generated narration text
+    - message: The generated NarratorMessage object
     """
 
     _action_name: ClassVar[str] = "narrate_after_dialogue"
@@ -125,7 +170,22 @@ class GenerateAfterDialogNarration(GenerateNarrationBase):
 @register("agents/narrator/GenerateEnvironmentNarration")
 class GenerateEnvironmentNarration(GenerateNarrationBase):
     """
-    Generate an environment narration message
+    Generates narration describing the current environment, via the
+    narrator agent's narrate_environment action (which narrates from the
+    player character's perspective).
+
+    The generated message is not added to the scene history by this node.
+
+    Inputs:
+
+    - state: The graph state
+    - narrative_direction: Optional direction the narrative should take
+    - response_length: Optional response length in tokens (0 for default)
+
+    Outputs:
+
+    - generated: The generated narration text
+    - message: The generated NarratorMessage object
     """
 
     _action_name: ClassVar[str] = "narrate_environment"
@@ -135,7 +195,22 @@ class GenerateEnvironmentNarration(GenerateNarrationBase):
 @register("agents/narrator/GenerateQueryNarration")
 class GenerateQueryNarration(GenerateNarrationBase):
     """
-    Generate a query narration message
+    Generates narration answering a specific question about the scene, via
+    the narrator agent's narrate_query action.
+
+    The generated message is not added to the scene history by this node.
+
+    Inputs:
+
+    - state: The graph state
+    - response_length: Optional response length in tokens (0 for default)
+    - query: The question to answer through narration
+    - extra_context: Optional additional context to inform the answer
+
+    Outputs:
+
+    - generated: The generated narration text
+    - message: The generated NarratorMessage object
     """
 
     _action_name: ClassVar[str] = "narrate_query"
@@ -151,7 +226,22 @@ class GenerateQueryNarration(GenerateNarrationBase):
 @register("agents/narrator/GenerateCharacterNarration")
 class GenerateCharacterNarration(GenerateNarrationBase):
     """
-    Generate a character narration message
+    Generates narration describing a specific character, via the narrator
+    agent's narrate_character action.
+
+    The generated message is not added to the scene history by this node.
+
+    Inputs:
+
+    - state: The graph state
+    - narrative_direction: Optional direction the narrative should take
+    - response_length: Optional response length in tokens (0 for default)
+    - character: The character to narrate
+
+    Outputs:
+
+    - generated: The generated narration text
+    - message: The generated NarratorMessage object
     """
 
     _action_name: ClassVar[str] = "narrate_character"
@@ -165,7 +255,24 @@ class GenerateCharacterNarration(GenerateNarrationBase):
 @register("agents/narrator/GenerateTimeNarration")
 class GenerateTimeNarration(GenerateNarrationBase):
     """
-    Generate a time narration message
+    Generates narration for a passage of time, via the narrator agent's
+    narrate_time_passage action. The ISO 8601 duration is converted to a
+    human readable string before being handed to the narrator.
+
+    The generated message is not added to the scene history by this node,
+    nor does the node advance the scene time.
+
+    Inputs:
+
+    - state: The graph state
+    - narrative_direction: Optional direction the narrative should take
+    - response_length: Optional response length in tokens (0 for default)
+    - duration: The time passed as an ISO 8601 duration (e.g. "PT30M")
+
+    Outputs:
+
+    - generated: The generated narration text
+    - message: The generated NarratorMessage object
     """
 
     _action_name: ClassVar[str] = "narrate_time_passage"
@@ -187,7 +294,21 @@ class GenerateTimeNarration(GenerateNarrationBase):
 @register("agents/narrator/GenerateCharacterEntryNarration")
 class GenerateCharacterEntryNarration(GenerateNarrationBase):
     """
-    Generate a character entry narration message
+    Generates narration for a character entering the scene, via the
+    narrator agent's narrate_character_entry action. The node does not
+    activate the character or add the message to the scene history.
+
+    Inputs:
+
+    - state: The graph state
+    - narrative_direction: Optional direction the narrative should take
+    - response_length: Optional response length in tokens (0 for default)
+    - character: The character entering the scene
+
+    Outputs:
+
+    - generated: The generated narration text
+    - message: The generated NarratorMessage object
     """
 
     _action_name: ClassVar[str] = "narrate_character_entry"
@@ -201,7 +322,21 @@ class GenerateCharacterEntryNarration(GenerateNarrationBase):
 @register("agents/narrator/GenerateCharacterExitNarration")
 class GenerateCharacterExitNarration(GenerateNarrationBase):
     """
-    Generate a character exit narration message
+    Generates narration for a character exiting the scene, via the
+    narrator agent's narrate_character_exit action. The node does not
+    deactivate the character or add the message to the scene history.
+
+    Inputs:
+
+    - state: The graph state
+    - narrative_direction: Optional direction the narrative should take
+    - response_length: Optional response length in tokens (0 for default)
+    - character: The character exiting the scene
+
+    Outputs:
+
+    - generated: The generated narration text
+    - message: The generated NarratorMessage object
     """
 
     _action_name: ClassVar[str] = "narrate_character_exit"
@@ -215,9 +350,18 @@ class GenerateCharacterExitNarration(GenerateNarrationBase):
 @register("agents/narrator/UnpackSource")
 class UnpackSource(AgentNode):
     """
-    Unpacks a narration message source string
-    into action name and arguments
-    DEPRECATED
+    DEPRECATED - narration messages no longer encode their action in a
+    source string. This node always outputs an empty action name and an
+    empty arguments dict.
+
+    Inputs:
+
+    - source: The narration message source string
+
+    Outputs:
+
+    - action_name: Always an empty string
+    - arguments: Always an empty dict
     """
 
     _agent_name: ClassVar[str] = "narrator"

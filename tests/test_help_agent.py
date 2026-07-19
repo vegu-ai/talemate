@@ -119,6 +119,138 @@ def test_read_doc_section_unknown_lists_available():
 
 
 # ---------------------------------------------------------------------------
+# find_docs / docs_section_overview
+# ---------------------------------------------------------------------------
+
+FIND_DOCS_INDEX = [
+    {
+        "path": "user-guide/node-editor/reference/nodes/context-id.md",
+        "title": "Context ID Nodes",
+        "summary": "Node reference. Nodes: Set Pin, Remove Pin, Is Pin Active.",
+    },
+    {
+        "path": "user-guide/agents/world-state/settings.md",
+        "title": "Settings",
+        "summary": "World state agent settings: state reinforcement options.",
+    },
+    {
+        "path": "user-guide/clients/types/koboldcpp.md",
+        "title": "KoboldCpp Client",
+        "summary": "KoboldCpp client setup and options.",
+    },
+    {
+        "path": "user-guide/node-editor/reference/nodes/core.md",
+        "title": "Core Nodes",
+        "summary": "Graph plumbing: Route, Watch, Null and Stage.",
+    },
+    {
+        "path": "user-guide/apis/openrouter.md",
+        "title": "OpenRouter",
+        "summary": "OpenRouter API key setup.",
+    },
+    {
+        "path": "user-guide/tracking-a-state.md",
+        "title": "Tracking a State",
+        "summary": "Tracking world and character states.",
+    },
+    {
+        "path": "user-guide/node-editor/reference/nodes/scene-characters.md",
+        "title": "Scene Character Nodes",
+        "summary": "Nodes: Get Character, Make Character.",
+    },
+]
+
+
+@pytest.fixture
+def stub_docs_index(monkeypatch):
+    monkeypatch.setattr(docs, "load_docs_index", lambda: FIND_DOCS_INDEX)
+
+
+def test_find_docs_result_shape_and_url(stub_docs_index):
+    results = docs.find_docs("koboldcpp")
+    assert isinstance(results, list)
+    first = results[0]
+    assert first.keys() == {"path", "title", "summary", "url"}
+    assert first["path"] == "user-guide/clients/types/koboldcpp.md"
+    assert first["url"] == docs.doc_url(first["path"])
+
+
+def test_find_docs_word_boundaries_not_substrings(stub_docs_index):
+    # "set" must not match "settings": the Set Pin node page has to beat
+    # the settings page
+    results = docs.find_docs("Set Pin")
+    assert results[0]["path"] == "user-guide/node-editor/reference/nodes/context-id.md"
+
+    # "route" must not match "openrouter"
+    results = docs.find_docs("Route")
+    paths = [entry["path"] for entry in results]
+    assert "user-guide/node-editor/reference/nodes/core.md" in paths
+    assert "user-guide/apis/openrouter.md" not in paths
+
+
+def test_find_docs_camelcase_and_compound_tokens(stub_docs_index):
+    # registry-path style queries split on camelCase
+    results = docs.find_docs("scene/GetCharacter")
+    assert (
+        results[0]["path"]
+        == "user-guide/node-editor/reference/nodes/scene-characters.md"
+    )
+    # compound names also match unsplit ("koboldcpp" vs "KoboldCpp")
+    results = docs.find_docs("koboldcpp setup")
+    assert results[0]["path"] == "user-guide/clients/types/koboldcpp.md"
+
+
+def test_find_docs_morphology_folds(stub_docs_index):
+    # singular query matches plural titles
+    results = docs.find_docs("core node")
+    assert results[0]["path"] == "user-guide/node-editor/reference/nodes/core.md"
+    # "track" matches "Tracking"
+    results = docs.find_docs("track a state")
+    assert results[0]["path"] == "user-guide/tracking-a-state.md"
+
+
+def test_find_docs_limit(stub_docs_index):
+    results = docs.find_docs("nodes", limit=2)
+    assert isinstance(results, list)
+    assert len(results) == 2
+
+
+def test_find_docs_empty_and_no_match(stub_docs_index):
+    assert isinstance(docs.find_docs(""), str)
+    result = docs.find_docs("zzz-no-such-topic-zzz")
+    assert isinstance(result, str)
+    assert "No documentation pages match" in result
+
+
+def test_find_docs_real_index_smoke():
+    # against the shipped index: a node question must surface its
+    # reference page
+    results = docs.find_docs("Dict Collector node")
+    assert isinstance(results, list)
+    assert any(
+        "node-editor" in entry["path"] and "collect" in entry["path"].lower()
+        for entry in results
+    )
+
+
+def test_docs_section_overview(stub_docs_index):
+    overview = docs.docs_section_overview()
+    by_prefix = {entry["prefix"]: entry for entry in overview}
+    assert by_prefix["user-guide/node-editor"]["count"] == 3
+    assert by_prefix["user-guide"]["count"] == 1
+    assert by_prefix["user-guide/clients"]["count"] == 1
+    # known prefixes carry curated descriptions
+    assert (
+        by_prefix["user-guide/clients"]["description"]
+        == docs.SECTION_DESCRIPTIONS["user-guide/clients"]
+    )
+    # sorted by prefix
+    assert [entry["prefix"] for entry in overview] == sorted(
+        entry["prefix"] for entry in overview
+    )
+
+
+# ---------------------------------------------------------------------------
 # Call block stripping
 # ---------------------------------------------------------------------------
 

@@ -154,19 +154,21 @@ class ToggleAgentAction(Node):
     """
     Allows disabling or enabling an agent action
 
+    Raises an error if the agent or the action cannot be found.
+
     Inputs:
 
     - state: The graph state
-    - agent: str,agent
-    - action_name: str
-    - enabled: bool
+    - agent: The agent (instance or name) to toggle the action on
+    - action_name: The name of the action to toggle
+    - enabled: Whether to enable or disable the action
 
     Outputs:
 
     - state: The state input, passed through
-    - agent: agent
-    - action_name: str
-    - enabled: bool
+    - agent: The resolved agent instance
+    - action_name: The action name, passed through
+    - enabled: The enabled state that was set
     """
 
     class Fields:
@@ -245,7 +247,21 @@ class ToggleAgentAction(Node):
 @register("agents/CallAgentFunction")
 class CallAgentFunction(Node):
     """
-    Call an agent function
+    Call a function on an agent and return its result.
+
+    The agent can be given as an agent instance or by name. The function is
+    looked up on the agent by name and called with the given arguments as
+    keyword arguments (coroutine functions are awaited).
+
+    Inputs:
+
+    - agent: The agent (instance or name) to call the function on
+    - function_name: The name of the function to call on the agent
+    - arguments: Dict of keyword arguments to pass to the function
+
+    Outputs:
+
+    - result: The return value of the function call
     """
 
     class Fields:
@@ -327,7 +343,21 @@ class CallAgentFunction(Node):
 @register("agents/CallAgentFunctionConditional")
 class CallAgentFunctionConditional(CallAgentFunction):
     """
-    Call an agent function with state
+    Call a function on an agent and return its result.
+
+    Provides a required `state` input causing the node to only run when a state is provided
+
+    Inputs:
+
+    - state: The graph state
+    - agent: The agent (instance or name) to call the function on
+    - function_name: The name of the function to call on the agent
+    - arguments: Dict of keyword arguments to pass to the function
+
+    Outputs:
+
+    - state: The state input, passed through
+    - result: The return value of the function call
     """
 
     def __init__(self, title="Call Agent Function (Conditional)", **kwargs):
@@ -346,7 +376,18 @@ class CallAgentFunctionConditional(CallAgentFunction):
 @register("agents/GetAgent")
 class GetAgent(Node):
     """
-    Get an agent instance
+    Get an agent instance by name.
+
+    Does nothing if no agent name is set; raises an error if the agent cannot
+    be found.
+
+    Properties:
+
+    - agent_name: The name of the agent to get
+
+    Outputs:
+
+    - agent: The agent instance
     """
 
     class Fields:
@@ -354,7 +395,7 @@ class GetAgent(Node):
             name="agent_name",
             type="str",
             default="",
-            description="The name of the agent to get the client for",
+            description="The name of the agent to get",
             choices=[],
             generate_choices=lambda: get_agent_types(),
         )
@@ -448,9 +489,30 @@ class AgentStateManipulation(StateManipulation):
 @register("agents/SetAgentState")
 class SetAgentState(AgentStateManipulation, ConditionalSetState):
     """
-    Set an agent state variable
+    Set a variable in an agent's state.
+
+    The `scene` scope writes agent state stored with the scene, the `context`
+    scope writes to the agent's context state.
 
     Provides a required `state` input causing the node to only run when a state is provided
+
+    Inputs:
+
+    - state: The graph state
+    - name: the name of the variable to set
+    - value: the value to set
+    - agent: the agent (instance or name) to set the state on
+
+    Properties:
+
+    - scope: which scope to write the variable to (scene or context)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - name: the name that was set
+    - value: the value that was set
+    - scope: the scope that was used
     """
 
     @pydantic.computed_field(description="Node style")
@@ -469,7 +531,26 @@ class SetAgentState(AgentStateManipulation, ConditionalSetState):
 @register("agents/GetAgentState")
 class GetAgentState(AgentStateManipulation, GetState):
     """
-    Get an agent state variable
+    Get a variable from an agent's state.
+
+    The `scene` scope reads agent state stored with the scene, the `context`
+    scope reads the agent's context state.
+
+    Inputs:
+
+    - name: the name of the variable to get
+    - default: value to return if the variable is not set (optional)
+    - agent: the agent (instance or name) to read the state from
+
+    Properties:
+
+    - scope: which scope to read the variable from (scene or context)
+
+    Outputs:
+
+    - name: the name that was retrieved
+    - value: the value that was retrieved
+    - scope: the scope that was retrieved
     """
 
     @pydantic.computed_field(description="Node style")
@@ -488,9 +569,29 @@ class GetAgentState(AgentStateManipulation, GetState):
 @register("agents/UnsetAgentState")
 class UnsetAgentState(AgentStateManipulation, ConditionalUnsetState):
     """
-    Unset an agent state variable
+    Unset a variable in an agent's state.
+
+    The `scene` scope removes agent state stored with the scene, the `context`
+    scope removes from the agent's context state.
 
     Provides a required `state` input causing the node to only run when a state is provided
+
+    Inputs:
+
+    - state: The graph state
+    - name: the name of the variable to unset
+    - agent: the agent (instance or name) to unset the state on
+
+    Properties:
+
+    - scope: which scope to remove the variable from (scene or context)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - name: the name that was unset
+    - value: the value that was unset
+    - scope: the scope that was used
     """
 
     @pydantic.computed_field(description="Node style")
@@ -520,7 +621,32 @@ class HasAgentState(AgentStateManipulation, HasState):
 @register("agents/CounterAgentState")
 class CounterAgentState(AgentStateManipulation, ConditionalCounterState):
     """
-    Increment or decrement an agent state variable
+    Increment a numeric variable in an agent's state and return the new value.
+
+    Provides a required `state` input causing the node to only run when a state is provided
+
+    Inputs:
+
+    - state: The graph state
+    - name: The name of the counter variable
+    - reset: If true, the value will be reset to 0 (optional)
+    - reset_cap: If set, the counter resets to 0 once it reaches this value (optional)
+    - agent: The agent (instance or name) whose state holds the counter
+
+    Properties:
+
+    - increment: The amount to increment the value by
+    - scope: Which scope holds the counter (scene or context)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - name: The name that was used
+    - value: The new value
+    - scope: The scope that was used
+    - reset: Whether the counter was reset
+    - reset_cap: The reset cap that was used
+    - new_cycle: True if the counter was at 0 before this run
     """
 
     @pydantic.computed_field(description="Node style")
@@ -539,8 +665,20 @@ class CounterAgentState(AgentStateManipulation, ConditionalCounterState):
 @register("agents/DynamicInstruction")
 class DynamicInstruction(Node):
     """
-    Dynamic instruction object to use for instruction injection
-    in event handlers
+    Create a dynamic instruction object to use for instruction injection
+    in event handlers.
+
+    A header is required at runtime (raises an error if missing). List content
+    is joined with newlines.
+
+    Inputs:
+
+    - header: The header (title) of the dynamic instruction
+    - content: The content of the dynamic instruction (string or list of strings)
+
+    Outputs:
+
+    - dynamic_instruction: The dynamic instruction object
     """
 
     class Fields:

@@ -30,11 +30,12 @@ You can give the user markdown links that, when clicked, navigate them inside th
 These links are for navigation only - documentation references must still link to the online manual as instructed above.
 <|CLOSE_SECTION|>
 {% if docs_available %}
-<|SECTION:Documentation Index|>
-Every documentation page available to you, as `path | title | summary`:
+<|SECTION:Documentation Sections|>
+The bundled documentation, grouped by section as `path prefix | pages | contents`:
 
-{% for entry in docs_index %}{{ entry.path }} | {{ entry.title }} | {{ entry.summary }}
+{% for s in docs_sections %}{{ s.prefix }} | {{ s.count }} pages | {{ s.description }}
 {% endfor %}
+Individual pages are NOT listed here - locate them with the find_docs function before reading them.
 <|CLOSE_SECTION|>
 {% endif %}
 {% if ux_snapshot %}
@@ -68,8 +69,17 @@ Recent scene progress:
 {{ focal.render_instructions() }}
 {% if docs_available %}
 
+{{ focal.callbacks.find_docs.render(
+    "Look up documentation pages by topic - returns the best-matching pages with path, title, summary and manual URL. This is the primary way to find the right page; call it before read_doc unless you already know the exact path.",
+    query="What you are looking for - a feature, setting, node title or task.",
+    examples=[
+        {"query": "Jinja2 Format node"},
+        {"query": "assign a voice to a character"},
+    ]
+) }}
+
 {{ focal.callbacks.search_docs.render(
-    "Search all documentation pages for a term or regular expression. Returns matching lines with their path and line number.",
+    "Full-text search across all documentation pages for a term or regular expression. Returns matching lines with their path and line number. Use when find_docs does not surface the right page or you need to find an exact string.",
     query="Term or regular expression to search for.",
     examples=[
         {"query": "revision method"},
@@ -77,7 +87,7 @@ Recent scene progress:
 ) }}
 
 {{ focal.callbacks.read_doc.render(
-    "Read a full documentation page. Use a path from the documentation index or from search results.",
+    "Read a full documentation page. Use a path from find_docs or search results.",
     path="Path of the documentation page, relative to the documentation root.",
     examples=[
         {"path": "user-guide/agents/editor/settings.md"},

@@ -23,10 +23,16 @@ class SceneDirection(AgentNode):
     The director analyzes the scene and takes multiple sequential actions
     until satisfied or hitting the max actions limit, without user interaction.
 
+    Skips execution (leaving all outputs unresolved) when scene direction
+    is disabled and always_on is not set, or on the first turn of the
+    scene unless run_immediately is set.
+
     Inputs:
     - state: Required state to trigger execution
-    - max_actions: Optional override for max actions per turn
+    - max_actions: Optional override for max actions per turn (0 = agent default)
+    - is_first_turn: Optional flag marking this as the scene's first turn
     - always_on: Optional override to always execute (ignores agent enabled config)
+    - run_immediately: Optional flag to run even on the first turn
 
     Outputs:
     - state: The input state passed through

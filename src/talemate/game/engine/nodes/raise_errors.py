@@ -65,7 +65,7 @@ class ActedAsCharacter(Node):
 @register("raise/Stop")
 class Stop(Node):
     """
-    Raises the sepcified node / scene loop exception
+    Raises the specified node / scene loop exception
     to stop execution of the current graph
 
     Inputs:
@@ -154,6 +154,10 @@ class InputValueErrorNode(Node):
     - state: The current state
     - field: The field that caused the error
     - message: The message to raise the exception with
+
+    Outputs:
+
+    - state: The state input, passed through
     """
 
     @pydantic.computed_field(description="Node style")

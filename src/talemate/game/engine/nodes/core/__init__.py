@@ -967,6 +967,26 @@ class Router(Node):
 
 @register("core/Input")
 class Input(Node):
+    """
+    Defines an input socket for the containing node module (graph).
+
+    When the module is used as a node inside another graph, each Input node
+    becomes an input socket on the module node, and the value passed into that
+    socket is emitted from this node's `value` output inside the module.
+
+    Properties:
+
+    - input_type: The socket type of the module input socket
+    - input_name: The name of the module input socket
+    - input_optional: Whether the module input socket is optional
+    - input_group: Socket group name - of sockets sharing a group, only one needs to be connected (optional)
+    - num: Sort order of the socket on the module node
+
+    Outputs:
+
+    - value: The value received through the module's input socket
+    """
+
     class Fields:
         input_type = PropertyField(
             name="input_type",
@@ -1023,6 +1043,24 @@ class Input(Node):
 
 @register("core/Output")
 class Output(Node):
+    """
+    Defines an output socket for the containing node module (graph).
+
+    When the module is used as a node inside another graph, each Output node
+    becomes an output socket on the module node, and the value connected to this
+    node's `value` input is exposed through that socket.
+
+    Inputs:
+
+    - value: The value to expose through the module's output socket
+
+    Properties:
+
+    - output_type: The socket type of the module output socket
+    - output_name: The name of the module output socket
+    - num: Sort order of the socket on the module node
+    """
+
     class Fields:
         output_type = PropertyField(
             name="output_type",
@@ -1069,15 +1107,17 @@ class ModuleProperty(Node):
     """
     A node that can be placed to define a property of a Graph
 
+    When the graph is used as a node module inside another graph, each
+    ModuleProperty node becomes a property on the module node.
+
     Properties:
 
     - property_name: The name of the property
-    - proeprty_type: The type of the property
+    - property_type: The type of the property
     - default: The default value of the property
     - choices: The choices of the property
-    - readonly: Whether the property is readonly
-    - ephemeral: Whether the property is ephemeral
-    - required: Whether the property is required
+    - description: The description of the property
+    - num: Sort order of the property on the module node
 
     Outputs:
 
@@ -1202,7 +1242,16 @@ class Route(Node):
 @register("core/Watch")
 class Watch(Node):
     """
-    Outputs the value of the input socket
+    Passes the input value through unchanged and logs it for inspection
+    when the graph is running in the node editor (creative mode).
+
+    Inputs:
+
+    - value: The value to watch
+
+    Outputs:
+
+    - value: The value, passed through
     """
 
     @pydantic.computed_field(description="Node style")
@@ -1377,7 +1426,16 @@ class Comment(pydantic.BaseModel):
 @register("util/ModuleStyle")
 class ModuleStyle(Node):
     """
-    An isolated node that will define the Graph's style
+    An isolated node that defines the visual style of the graph it is
+    placed in, when that graph is used as a node module inside another
+    graph.
+
+    Properties:
+
+    - title_color: The title bar color of the module node
+    - node_color: The body color of the module node
+    - auto_title: Title template for the module node (can reference property values, e.g. {property_name})
+    - icon: The icon of the module node (Material Design icon codepoint)
     """
 
     _isolated: ClassVar[bool] = True

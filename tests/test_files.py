@@ -3,6 +3,7 @@
 import os
 import pytest
 
+import talemate.files
 from talemate.files import list_scenes_directory, _list_files_and_directories
 
 
@@ -127,9 +128,9 @@ class TestListFilesAndDirectories:
 
 
 class TestListScenesDirectory:
-    def test_walks_scenes_subdir_of_cwd(self, scene_tree, monkeypatch):
-        # list_scenes_directory uses os.getcwd() / "scenes" as the root
-        monkeypatch.chdir(scene_tree["tmp"])
+    def test_walks_scenes_dir(self, scene_tree, monkeypatch):
+        # list_scenes_directory anchors on talemate.path.SCENES_DIR
+        monkeypatch.setattr(talemate.files, "SCENES_DIR", scene_tree["root"])
         result = list_scenes_directory(list_images=True)
 
         # The fake scenes tree has 4 matching files (2 JSONs + 2 images)
@@ -139,11 +140,11 @@ class TestListScenesDirectory:
         assert scene_tree["paths"]["alice_in_wonderland/alice.json"] in result_set
 
     def test_passes_list_images_flag_through(self, scene_tree, monkeypatch):
-        monkeypatch.chdir(scene_tree["tmp"])
+        monkeypatch.setattr(talemate.files, "SCENES_DIR", scene_tree["root"])
         json_only = list_scenes_directory(list_images=False)
         assert all(path.endswith(".json") for path in json_only)
 
     def test_returns_empty_when_no_scenes_dir(self, tmp_path, monkeypatch):
-        monkeypatch.chdir(str(tmp_path))
+        monkeypatch.setattr(talemate.files, "SCENES_DIR", tmp_path / "missing")
         # No scenes/ directory exists -> empty list (os.walk on missing path)
         assert list_scenes_directory(list_images=True) == []

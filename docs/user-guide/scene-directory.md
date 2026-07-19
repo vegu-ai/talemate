@@ -71,3 +71,5 @@ Understanding the directory structure is helpful for:
 - **Manual backups** — you can copy the entire project directory to back up a scene and all its associated data
 - **Sharing scenes** — the project directory contains everything needed to share a scene with others
 - **Understanding saves** — all saves for a scene are grouped together in one directory, making it clear which files belong together
+
+Scene projects and their save files can be browsed — and deleted — from the [Scene Library](/talemate/user-guide/scene-browser) on the home screen.

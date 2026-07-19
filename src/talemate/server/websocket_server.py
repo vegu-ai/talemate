@@ -14,7 +14,7 @@ from talemate.config import get_config, Config
 from talemate.context import ActiveScene
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 import talemate.emit.async_signals as async_signals
-from talemate.files import list_scenes_directory
+from talemate.files import list_scenes_directory, list_scenes_tree
 from talemate.load import load_scene, SceneInitialization
 from talemate.scene_assets import Asset, get_media_type_from_file_path, VIS_TYPE
 from talemate.scene_message import versions_payload_for
@@ -646,6 +646,14 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                     for scene in filtered_list
                     if not os.path.isdir(scene)
                 ],
+            }
+        )
+
+    def request_scenes_tree(self):
+        self.queue_put(
+            {
+                "type": "scenes_tree",
+                "data": list_scenes_tree(),
             }
         )
 

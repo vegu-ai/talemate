@@ -32,6 +32,7 @@ from talemate.agents.visual.schema import (
     Resolution,
     AssetAttachmentContext,
 )
+from talemate.files import MEDIA_TYPES
 from talemate.path import SCENES_DIR
 
 async_signals.register(
@@ -122,21 +123,11 @@ def get_media_type_from_extension(file_extension: str) -> str:
     Raises:
         ValueError: If the file extension is not supported
     """
-    # Normalize extension to lowercase and ensure it starts with a dot
-    ext = file_extension.lower()
-    if not ext.startswith("."):
-        ext = f".{ext}"
-
-    if ext == ".png":
-        return "image/png"
-    elif ext in [".jpg", ".jpeg"]:
-        return "image/jpeg"
-    elif ext == ".webp":
-        return "image/webp"
-    elif ext == ".json":
-        return "application/json"
-    else:
-        raise ValueError(f"Unsupported file extension: {ext}")
+    ext = file_extension.lower().lstrip(".")
+    media_type = MEDIA_TYPES.get(ext)
+    if media_type is None:
+        raise ValueError(f"Unsupported file extension: .{ext}")
+    return media_type
 
 
 def get_media_type_from_file_path(file_path: str) -> str:

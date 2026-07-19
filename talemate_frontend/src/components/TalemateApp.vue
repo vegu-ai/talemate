@@ -52,7 +52,7 @@
 
     <!-- app bar -->
     <v-app-bar app density="compact">
-      <v-app-bar-nav-icon size="small" @click="toggleNavigation('game')">
+      <v-app-bar-nav-icon v-if="tab !== 'home'" size="small" @click="toggleNavigation('game')">
         <v-tooltip activator="parent" location="top">Toggle sidebar</v-tooltip>
         <v-icon v-if="sceneDrawer">mdi-arrow-collapse-left</v-icon>
         <v-icon v-else>mdi-arrow-collapse-right</v-icon>
@@ -116,7 +116,7 @@
     <v-main style="height: 100%; display: flex; flex-direction: column;">
 
       <!-- left side navigation drawer -->
-      <v-navigation-drawer v-model="sceneDrawer" app :width="leftDrawerWidth">
+      <v-navigation-drawer :model-value="sceneDrawer && tab !== 'home'" @update:model-value="sceneDrawer = $event" app :width="leftDrawerWidth">
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
           <p class="text-body-2" color="white">
@@ -125,14 +125,6 @@
         </v-alert>
         <v-alert type="warning" variant="tonal" v-if="!ready && connected">There are some outstanding configuration issues, please ensure that all enabled agents are configured correctly.</v-alert>
         <v-tabs-window v-model="tab">
-          <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
-            <LoadScene
-            ref="loadScene"
-            :scene-loading-available="ready && connected"
-            :world-state-templates="worldStateTemplates"
-            @loading="sceneStartedLoading"
-            @open-director="openDirectorWithChat" />
-          </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
             <CoverImage v-if="sceneActive" ref="coverImage" type="scene" :target="scene" />
             <WorldState v-if="sceneActive" ref="worldState" :busy="busy" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
@@ -223,12 +215,16 @@
         <v-tabs-window v-model="tab" style="height: 100%;">
           <!-- HOME -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
-            <IntroView
-            ref="introView"
-            @request-scene-load="(path) => {  resetViews(); $refs.loadScene.loadJsonSceneFromPath(path); }"
-            :version="version"
+            <SceneLanding
+            ref="sceneLanding"
+            @request-scene-load="(path) => {  resetViews(); $refs.sceneLanding.loadJsonSceneFromPath(path); }"
+            @loading="sceneStartedLoading"
+            @open-director="openDirectorWithChat"
+            :connected="connected"
             :scene-loading-available="ready && connected"
             :scene-is-loading="loading"
+            :visible="tab === 'home'"
+            :world-state-templates="worldStateTemplates"
             :config="appConfig" />
           </v-tabs-window-item>
           <!-- SCENE -->
@@ -399,7 +395,7 @@
     ref="sceneTimeline"
     :scene="scene"
     :appearance-config="effectiveAppearanceConfig"
-    @load-at-revision="(target) => { resetViews(); $refs.loadScene.loadJsonSceneFromPath(target.path, false, target.rev); }"
+    @load-at-revision="(target) => { resetViews(); $refs.sceneLanding.loadJsonSceneFromPath(target.path, false, target.rev); }"
   />
   <VersionMismatchAlert ref="versionMismatchAlert" />
   <OnboardingWizard
@@ -415,7 +411,7 @@ import AIClient from './AIClient.vue';
 import AIAgent from './AIAgent.vue';
 import AgentActivityBar from './AgentActivityBar.vue';
 import AgentActionOverrides from './AgentActionOverrides.vue';
-import LoadScene from './LoadScene.vue';
+import SceneLanding from './SceneLanding.vue';
 import SceneTools from './SceneTools.vue';
 import SceneMessages from './SceneMessages.vue';
 import SceneMessageInput from './SceneMessageInput.vue';
@@ -435,7 +431,6 @@ import VisualLibrary from './VisualLibrary.vue';
 import VoiceLibrary from './VoiceLibrary.vue';
 import WorldStateManager from './WorldStateManager.vue';
 import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
-import IntroView from './IntroView.vue';
 import NodeEditor from './NodeEditor.vue';
 import DirectorConsole from './DirectorConsole.vue';
 import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
@@ -459,7 +454,7 @@ export default {
     AIAgent,
     AgentActivityBar,
     AgentActionOverrides,
-    LoadScene,
+    SceneLanding,
     SceneTools,
     SceneMessages,
     SceneMessageInput,
@@ -469,7 +464,6 @@ export default {
     DebugTools,
     AudioQueue,
     StatusNotification,
-    IntroView,
     VisualLibrary,
     WorldStateManager,
     WorldStateManagerMenu,
@@ -1089,7 +1083,7 @@ export default {
         } else if (data.id === 'load_scene_request') {
           // Load the requested scene (e.g., after forking)
           this.resetViews();
-          this.$refs.loadScene.loadJsonSceneFromPath(data.data.path);
+          this.$refs.sceneLanding.loadJsonSceneFromPath(data.data.path);
         }
         if(data.status == 'error') {
           this.errorNotification = true;
@@ -1474,7 +1468,7 @@ export default {
       return {
         active_tab: this.tab,
         open_drawers: [
-          ...(this.sceneDrawer ? ['scene'] : []),
+          ...(this.sceneDrawer && this.tab !== 'home' ? ['scene'] : []),
           ...(this.drawer ? ['clients_and_agents'] : []),
           ...(this.debugDrawer ? ['debug_tools'] : []),
           ...(this.directorConsoleDrawer ? ['director_console'] : []),

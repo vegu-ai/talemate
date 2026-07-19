@@ -22,12 +22,14 @@ Character cards can be provided as:
 
 ## Starting an Import
 
-Character card import is initiated from the **Load Scene** panel in the left sidebar on the home screen:
+Character card import is initiated from the **Import** dropzone on the [home screen](/talemate/user-guide/scene-browser):
 
-![Drag and Drop Upload Area](/talemate/img/0.34.0/character-card-4.png)
+![Drag and Drop Upload Area](/talemate/img/0.39.0/character-card-4.png)
 
-1. Drag and drop a character card file (image or JSON), or click to browse
+1. Drag and drop a character card file (image or JSON) onto the dropzone, or click it to browse
 2. If the file is detected as a character card, the **Character Card Import Options** dialog will automatically open
+
+Cards already stored in your `scenes/characters/` directory can also be imported by clicking them in the **Character Cards** section of the [Scene Library](/talemate/user-guide/scene-browser#character-cards).
 
 ![Character Card Import Dialog](/talemate/img/0.34.0/character-card-1.png)
 

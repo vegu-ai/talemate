@@ -17,11 +17,10 @@ Passing every test does not guarantee good creative output, but any failure is a
 
 The harness is a normal Talemate scene and loads the same way as any other — see [Load a scenario](/talemate/getting-started/load-a-scene/) for the general flow.
 
-1. From the **Home** screen, start typing `Model Testing Harness` into the **Search scenes** field.
-2. Select the matching entry from the autocomplete.
-3. Click **Load**.
+1. From the **Home** screen, type `model` into the **Filter scenes** field of the [Scene Library](/talemate/user-guide/scene-browser).
+2. Click the `model-testing-harness.json` save file in the **model-testing-harness** project.
 
-![Searching for the Model Testing Harness from the Home screen](/talemate/img/0.37.0/model-testing-harness-load.png)
+![Searching for the Model Testing Harness from the Home screen](/talemate/img/0.39.0/model-testing-harness-load.png)
 
 The tests start automatically as soon as the scene finishes loading — there is no separate "run" button to press.
 

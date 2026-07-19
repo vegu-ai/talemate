@@ -198,6 +198,8 @@ async def websocket_endpoint(websocket):
                     query = data.get("query", "")
                     list_images = data.get("list_images", True)
                     handler.request_scenes_list(query, list_images)
+                elif action_type == "request_scenes_tree":
+                    handler.request_scenes_tree()
                 elif action_type == "configure_clients":
                     await update_config({"clients": data.get("clients")})
                     await instance.instantiate_clients()

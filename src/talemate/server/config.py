@@ -1,6 +1,7 @@
 import pydantic
 import structlog
 import os
+import shutil
 
 from talemate import VERSION
 from talemate.changelog import delete_changelog_files, scene_ref_from_path
@@ -18,6 +19,7 @@ from talemate.config.schema import (
 )
 from talemate.config import get_config, Config, update_config
 from talemate.emit import emit
+from talemate.files import scenes_directory, RESERVED_SCENES_DIRS
 from talemate.instance import emit_clients_status, get_client
 
 from .websocket_plugin import Plugin
@@ -62,6 +64,10 @@ class ToggleClientPayload(pydantic.BaseModel):
 
 
 class DeleteScenePayload(pydantic.BaseModel):
+    path: str
+
+
+class DeleteSceneProjectPayload(pydantic.BaseModel):
     path: str
 
 
@@ -446,6 +452,11 @@ class ConfigPlugin(Plugin):
     async def handle_delete_scene(self, data):
         payload = DeleteScenePayload(**data)
 
+        file_path = os.path.realpath(payload.path)
+        scenes_root = os.path.realpath(scenes_directory())
+        if not file_path.startswith(scenes_root + os.sep):
+            raise ValueError(f"Not a scene file: {payload.path}")
+
         await self.handle_remove_scene_from_recents(data)
 
         log.info("Deleting scene", path=payload.path)
@@ -483,6 +494,64 @@ class ConfigPlugin(Plugin):
         )
 
         config: Config = get_config()
+
+        self.websocket_handler.queue_put(
+            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
+        )
+
+    async def handle_delete_scene_project(self, data):
+        payload = DeleteSceneProjectPayload(**data)
+
+        project_path = os.path.realpath(payload.path)
+        scenes_root = os.path.realpath(scenes_directory())
+        project_name = os.path.basename(project_path)
+
+        # only direct children of the scenes directory are scene projects
+        if (
+            os.path.dirname(project_path) != scenes_root
+            or project_name in RESERVED_SCENES_DIRS
+        ):
+            raise ValueError(f"Not a scene project directory: {payload.path}")
+
+        if not os.path.isdir(project_path):
+            raise ValueError(f"Scene project not found: {payload.path}")
+
+        prefix = project_path + os.sep
+
+        # the next save of a loaded scene would silently recreate a skeleton
+        # project with broken asset references, so refuse instead
+        active_scene = self.scene
+        if (
+            active_scene
+            and active_scene.full_path
+            and os.path.realpath(active_scene.full_path).startswith(prefix)
+        ):
+            raise ValueError(
+                f"Cannot delete the project of the currently loaded scene: {project_name}"
+            )
+
+        log.info("Deleting scene project", path=project_path)
+
+        config: Config = get_config()
+
+        for recent_scene in list(config.recent_scenes.scenes):
+            if os.path.realpath(recent_scene.path).startswith(prefix):
+                config.recent_scenes.scenes.remove(recent_scene)
+
+        await config.set_dirty()
+
+        shutil.rmtree(project_path)
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "config",
+                "action": "delete_scene_project_complete",
+                "data": {
+                    "path": payload.path,
+                    "name": project_name,
+                },
+            }
+        )
 
         self.websocket_handler.queue_put(
             {"type": "app_config", "data": config.model_dump(), "version": VERSION}

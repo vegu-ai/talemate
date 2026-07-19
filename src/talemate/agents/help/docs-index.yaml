@@ -377,9 +377,10 @@
     indicator, and using {{ system_prompt }} to append to the default prompt.
 - path: user-guide/character-card-import.md
   title: Character Card Import
-  summary: How to import TavernAI-style character cards (Chara Card V0-V3, PNG/JPG/WebP images or JSON) from the Load Scene
-    panel to create a new scene. Covers the import dialog, character detection/manual selection, options for character book
-    entries, alternate greetings, shared context setup, writing style template, player character setup, and troubleshooting
+  summary: How to import TavernAI-style character cards (Chara Card V0-V3, PNG/JPG/WebP images or JSON) from the home screen's
+    Import dropzone or the Scene Library's Character Cards section to create a new scene. Covers the import dialog, character
+    detection/manual selection, options for character book entries, alternate greetings, shared context setup, writing style
+    template, player character setup, and troubleshooting
     failed analysis.
 - path: user-guide/clients/auto-retry.md
   title: Auto Retry
@@ -745,6 +746,12 @@
   summary: The scene tools toolbar and agent activity bar. Covers actor actions, director actions, narrator actions, advancing
     time, world state actions, creative tools (e.g. taking characters in/out of the scene, introducing new characters with
     optional example dialogue generation and guidance), the visualizer menu, and saving, with Ctrl/Cmd modifier click behavior.
+- path: user-guide/scene-browser.md
+  title: Home Screen & Scene Library
+  summary: 'The home screen landing page: Quick load recent-scene cards, the Scene Library file tree (projects with cover
+    thumbnails, save files, asset/node-module counts, filtering, Show all saves), deleting save files, character cards, and
+    entire scene projects (type-name confirmation), the Import dropzone for scenes and character cards, and creating a new
+    blank scene.'
 - path: user-guide/scene-directory.md
   title: Scene Directory Structure
   summary: Layout of a scene's project directory under scenes/, save .json files, and the assets/, changelog/, backups/, nodes/,

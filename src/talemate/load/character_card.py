@@ -13,6 +13,7 @@ import talemate.instance as instance
 from talemate import Character, Player
 from talemate.character import activate_character
 from talemate.exceptions import UnknownDataSpec
+from talemate.files import identify_character_card_spec
 from talemate.status import LoadingStatus
 from talemate.config import get_config
 from talemate.util import extract_metadata, select_best_texts_by_keyword, count_tokens
@@ -223,24 +224,9 @@ def identify_import_spec(data: dict) -> ImportSpec:
             f"The file may not contain valid character card metadata."
         )
 
-    if data.get("spec") == "chara_card_v3":
-        return ImportSpec.chara_card_v3
-
-    if data.get("spec") == "chara_card_v2":
-        return ImportSpec.chara_card_v2
-
-    if data.get("spec") == "chara_card_v1":
-        return ImportSpec.chara_card_v1
-
-    if "first_mes" in data:
-        # original chara card didnt specify a spec,
-        # if the first_mes key exists, we can assume it's a v0 chara card
-        return ImportSpec.chara_card_v0
-
-    if "first_mes" in data.get("data", {}):
-        # this can also serve as a fallback for future chara card versions
-        # as they are supposed to be backwards compatible
-        return ImportSpec.chara_card_v3
+    spec = identify_character_card_spec(data)
+    if spec is not None:
+        return ImportSpec(spec)
 
     # TODO: probably should actually check for valid talemate scene data
     return ImportSpec.talemate

@@ -289,6 +289,9 @@ const SAVE_ECHO_FIELDS = [
   'vision_enabled',
   'concurrent_inference_enabled',
   'rate_limit',
+  'retry_empty_response',
+  'retry_rate_limit',
+  'retry_missing_reasoning',
   'data_format',
   'section_format',
   'double_coercion',
@@ -652,6 +655,9 @@ export default {
           client.double_coercion = data.data.double_coercion;
           client.manual_model_choices = data.data.manual_model_choices;
           client.rate_limit = data.data.rate_limit;
+          client.retry_empty_response = data.data.retry_empty_response;
+          client.retry_rate_limit = data.data.retry_rate_limit;
+          client.retry_missing_reasoning = data.data.retry_missing_reasoning;
           client.data_format = data.data.data_format;
           client.section_format = data.data.section_format;
           client.data = data.data;
@@ -689,6 +695,9 @@ export default {
             double_coercion: data.data.double_coercion,
             manual_model_choices: data.data.manual_model_choices,
             rate_limit: data.data.rate_limit,
+            retry_empty_response: data.data.retry_empty_response,
+            retry_rate_limit: data.data.retry_rate_limit,
+            retry_missing_reasoning: data.data.retry_missing_reasoning,
             data_format: data.data.data_format,
             section_format: data.data.section_format,
             data: data.data,

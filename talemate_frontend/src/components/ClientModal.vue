@@ -243,7 +243,7 @@
                     </v-col>
                   </v-row>
                   <v-row v-if="client.reason_enabled && client.requires_reasoning_pattern">
-                    <v-col cols="12">
+                    <v-col :cols="client.reason_failure_behavior === 'fail' ? 6 : 12">
                       <v-select
                         v-model="client.reason_failure_behavior"
                         label="Pattern Not Found Behavior"
@@ -254,6 +254,9 @@
                         hint="What to do when the reasoning pattern is not found in the response."
                         persistent-hint
                       ></v-select>
+                    </v-col>
+                    <v-col cols="6" v-if="client.reason_failure_behavior === 'fail'">
+                      <v-slider v-model="client.retry_missing_reasoning" label="Auto Retry" :min="0" :max="5" :step="1" :persistent-hint="true" hint="Automatic retries when the reasoning pattern is missing, before you are notified. (0 = notify immediately)" thumb-label="always"></v-slider>
                     </v-col>
                   </v-row>
                   <v-row v-if="client.reason_enabled && client.requires_reasoning_pattern">
@@ -329,6 +332,18 @@
                   <v-row>
                     <v-col cols="12">
                       <v-slider v-model="client.rate_limit" label="Rate Limit" :min="0" :max="100" :step="1" :persistent-hint="true" hint="Requests per minute. (0 = no limit)" thumb-label="always"></v-slider>
+                    </v-col>
+                  </v-row>
+                  <!-- AUTO RETRY -->
+                  <v-alert icon="mdi-refresh" density="compact" color="grey-darken-1" variant="text">
+                    Automatic retries on response issues before you are notified. (0 = notify immediately)
+                  </v-alert>
+                  <v-row>
+                    <v-col cols="6">
+                      <v-slider v-model="client.retry_empty_response" label="Empty Response" :min="0" :max="5" :step="1" :persistent-hint="true" hint="Automatic retries when the model returns an empty response." thumb-label="always"></v-slider>
+                    </v-col>
+                    <v-col cols="6">
+                      <v-slider v-model="client.retry_rate_limit" label="Rate Limited" :min="0" :max="5" :step="1" :persistent-hint="true" hint="Automatic retries when the API reports it is rate limited (HTTP 429), waiting progressively longer between attempts." thumb-label="always"></v-slider>
                     </v-col>
                   </v-row>
                 </v-window-item>
@@ -635,6 +650,9 @@ export default {
         this.client.max_token_length = defaults.max_token_length || 8192;
         this.client.double_coercion = defaults.double_coercion || null;
         this.client.rate_limit = defaults.rate_limit || null;
+        this.client.retry_empty_response = defaults.retry_empty_response || 0;
+        this.client.retry_rate_limit = defaults.retry_rate_limit || 0;
+        this.client.retry_missing_reasoning = defaults.retry_missing_reasoning || 0;
         this.client.data_format = defaults.data_format || null;
         this.client.section_format = defaults.section_format || null;
         this.client.preset_group = defaults.preset_group || '';

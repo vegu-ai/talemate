@@ -2,6 +2,8 @@
 
 You can rate limit a client to N requests per minute. The slider is on the **Advanced** tab of the [client configuration](client-configuration.md) dialog.
 
+This is Talemate's own client-side cap. If instead the *API* is rate limiting you (HTTP 429 responses), see the **Rate Limited** slider under [Auto Retry](auto-retry.md).
+
 ![Rate limit](/talemate/img/0.30.0/client-ratelimit.png)
 
 Once the limit is hit you will get a popup notification.

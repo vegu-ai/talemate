@@ -4,9 +4,16 @@ Concurrent requests is an experimental feature that allows certain LLM clients t
 
 ## What It Does
 
-When enabled, operations that require multiple LLM queries (such as generating image prompts) will execute those queries in parallel instead of sequentially. This can significantly reduce the total time needed for these batch operations.
+When enabled, operations that require multiple LLM queries will execute those queries in parallel instead of sequentially. This can significantly reduce the total time needed for these batch operations.
 
-**Currently, this feature is only used for visual prompt generation** (creating prompts for image generation). It is not applied to regular conversation or narration tasks.
+Operations that take advantage of this include:
+
+- Visual/image prompt generation
+- Function-calling batches, where an AI response requests several tool calls at once (for example director chat query actions or help agent documentation lookups)
+- Multi-query world state updates
+- World state snapshots, which only run as true background tasks when the client can handle a concurrent request
+
+Regular conversation and narration tasks are single generations and are unaffected.
 
 ## Supported Clients
 
@@ -15,6 +22,7 @@ Concurrent requests are available for the following hosted API clients:
 - [Anthropic](/talemate/user-guide/clients/types/anthropic/)
 - [OpenAI](/talemate/user-guide/clients/types/openai/)
 - [Google Gemini](/talemate/user-guide/clients/types/google/)
+- [MistralAI](/talemate/user-guide/clients/types/mistral/)
 - [OpenRouter](/talemate/user-guide/clients/types/openrouter/)
 - [Pi Bridge](/talemate/user-guide/clients/types/pi-bridge/) — each concurrent request runs its own pi instance
 
@@ -41,8 +49,8 @@ You can also enable this feature through the client's settings dialog under the 
 
 Consider enabling concurrent requests if:
 
-- You frequently use the visual/image generation features
-- You want to reduce wait times during image prompt generation
+- You frequently use the visual/image generation features, the director or help chats, or tracked world states
+- You want to reduce wait times during batch operations
 - You are not experiencing rate limit issues with the API
 
 You can safely leave this disabled if:

@@ -381,16 +381,23 @@
     panel to create a new scene. Covers the import dialog, character detection/manual selection, options for character book
     entries, alternate greetings, shared context setup, writing style template, player character setup, and troubleshooting
     failed analysis.
+- path: user-guide/clients/auto-retry.md
+  title: Auto Retry
+  summary: 'Per-client sliders (0-5, default 0 = notify immediately) for automatically retrying response issues before the
+    generation error dialog appears: empty responses, API rate limiting (HTTP 429, with growing backoff between attempts),
+    and reasoning models that skip their reasoning tokens. Covers the retry notification with its abort option and where each
+    slider lives (Advanced tab; Reasoning tab for missing reasoning).'
 - path: user-guide/clients/client-configuration.md
   title: Client Configuration
   summary: 'Tour of the per-client settings dialog and its tabs (General, Coercion, Advanced, Reasoning, System Prompts):
     where to find Inference Presets, Structured Data Format, Section Format, Response Length Enforcement, Prompt Caching,
-    and Rate Limit, plus the Simple View toggle for quick setup.'
+    Rate Limit, and Auto Retry, plus the Simple View toggle for quick setup.'
 - path: user-guide/clients/concurrent-requests.md
   title: Concurrent Requests (Experimental)
-  summary: Experimental feature that lets certain clients (Anthropic, OpenAI, Google, OpenRouter, llama.cpp) run multiple
-    LLM requests in parallel — currently used only for visual/image prompt generation. Covers how to enable it via the client-list
-    toggle or Concurrency tab and rate-limit caveats.
+  summary: Experimental feature that lets certain clients (Anthropic, OpenAI, Google, MistralAI, OpenRouter, Pi Bridge, llama.cpp)
+    run multiple LLM requests in parallel — used by visual/image prompt generation, function-calling batches (director chat query
+    actions, help agent doc lookups), multi-query world state updates, and background world state snapshots. Covers how to
+    enable it via the client-list toggle or Concurrency tab and rate-limit caveats.
 - path: user-guide/clients/endpoint-override.md
   title: Endpoint Override
   summary: 'How to point a remote client at a custom API endpoint such as a LiteLLM proxy gateway: the Endpoint Override tab,

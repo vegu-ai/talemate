@@ -19,7 +19,7 @@ The tabs that appear depend on the client type. The core set is:
 |---|---|
 | **General** | Client type, name, API URL / key, model, context length, prompt template (for local clients). |
 | **Coercion** | Prefill text used to enforce compliance. Only shown for clients that can be coerced. |
-| **Advanced** | Inference Presets, Structured Data Format, [Section Format](section-format.md), [Response Length Enforcement](response-length.md), Prompt Caching, and [Rate Limit](rate-limiting.md). |
+| **Advanced** | Inference Presets, Structured Data Format, [Section Format](section-format.md), [Response Length Enforcement](response-length.md), Prompt Caching, [Rate Limit](rate-limiting.md), and [Auto Retry](auto-retry.md). |
 | **Reasoning** | [Reasoning model support](reasoning.md) settings. |
 | **System Prompts** | Per-client [system prompt overrides](../app-settings/system-prompts.md). |
 
@@ -37,6 +37,7 @@ The Advanced tab contains settings that you usually only need to touch once per 
 - **Response Length Enforcement** — how the response length is communicated to the model. See [Response Length Enforcement](response-length.md).
 - **Optimize for Prompt Caching** — moves volatile context after the scene history to improve cache hit rates. See [Volatile Context Placement](../prompts/volatile-context-placement.md).
 - **Rate Limit** — caps requests per minute. See [Rate Limiting](rate-limiting.md).
+- **Auto Retry** — automatic retries on empty or rate-limited responses before you are notified. See [Auto Retry](auto-retry.md).
 
 From the General tab you can also jump straight to Advanced with the :material-cog-outline: **Advanced Options** button underneath the basic fields.
 

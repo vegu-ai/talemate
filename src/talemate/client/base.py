@@ -110,6 +110,9 @@ HTTP_ERROR_MESSAGES = {
 
 EMPTY_RESPONSE_MESSAGE = "The model returned an empty response. This can happen due to content filtering, server issues, or a reasoning budget that is too low."
 
+# cap (seconds) for the exponential backoff between automatic rate-limit retries
+AUTO_RETRY_MAX_BACKOFF = 30
+
 
 def get_error_message(status_code: int | None) -> str:
     """Get a human-friendly error message for an HTTP status code."""
@@ -127,6 +130,14 @@ def get_error_message(status_code: int | None) -> str:
 _generation_error_futures: dict[str, asyncio.Future] = {}
 
 GenerationErrorAction = Literal["retry", "cancel", "ignore"]
+
+AutoRetryIssue = Literal["empty_response", "rate_limit", "missing_reasoning"]
+
+AUTO_RETRY_ISSUE_LABELS: dict[AutoRetryIssue, str] = {
+    "empty_response": "Empty response",
+    "rate_limit": "Rate limited",
+    "missing_reasoning": "Missing reasoning tokens",
+}
 
 
 def resolve_generation_error(request_id: str, action: GenerationErrorAction):
@@ -149,6 +160,9 @@ def resolve_all_generation_errors(action: GenerationErrorAction):
 
 class CommonDefaults(pydantic.BaseModel):
     rate_limit: int | None = None
+    retry_empty_response: int = 0
+    retry_rate_limit: int = 0
+    retry_missing_reasoning: int = 0
     data_format: Literal["yaml", "json"] | None = None
     section_format: Literal["markdown", "xml"] | None = None
     preset_group: str | None = None
@@ -333,6 +347,8 @@ class ClientBase:
         self.remote_model_name = None
         self.auto_determine_prompt_template_attempt = None
         self._status_failures = 0
+        self._auto_retry_aborts: set[str] = set()
+        self._auto_retry_live_ids: set[str] = set()
         self.log = structlog.get_logger(f"client.{self.client_type}")
 
     def __str__(self):
@@ -383,6 +399,18 @@ class ClientBase:
     @property
     def rate_limit(self) -> int | None:
         return self.client_config.rate_limit
+
+    @property
+    def retry_empty_response(self) -> int:
+        return self.client_config.retry_empty_response
+
+    @property
+    def retry_rate_limit(self) -> int:
+        return self.client_config.retry_rate_limit
+
+    @property
+    def retry_missing_reasoning(self) -> int:
+        return self.client_config.retry_missing_reasoning
 
     @property
     def data_format(self) -> Literal["yaml", "json"]:
@@ -1080,6 +1108,9 @@ class ClientBase:
             "can_be_coerced": self.can_be_coerced,
             "preset_group": self.preset_group or "",
             "rate_limit": self.rate_limit,
+            "retry_empty_response": self.retry_empty_response,
+            "retry_rate_limit": self.retry_rate_limit,
+            "retry_missing_reasoning": self.retry_missing_reasoning,
             "data_format": self.data_format,
             "section_format": self.section_format,
             "manual_model_choices": getattr(self.Meta(), "manual_model_choices", []),
@@ -1337,7 +1368,10 @@ class ClientBase:
         pass
 
     async def _prompt_generation_error(
-        self, error_message: str, status_code: int | None = None
+        self,
+        error_message: str,
+        status_code: int | None = None,
+        generation_id: str | None = None,
     ) -> GenerationErrorAction:
         """
         Emit a generation error to the frontend and wait for the user's choice.
@@ -1358,67 +1392,273 @@ class ClientBase:
                     "model": self.model_name,
                     "status_code": status_code,
                     "error_message": error_message,
+                    "generation_id": generation_id,
                 },
             )
 
-            return await future
+            action = await future
+            # an explicit dialog choice supersedes an abort clicked before
+            # the dialog appeared - discard the stale latch so it can't
+            # override a dialog-retry later in this sequence
+            if generation_id:
+                self._auto_retry_aborts.discard(generation_id)
+            return action
         finally:
             _generation_error_futures.pop(request_id, None)
 
+    def _emit_auto_retry(
+        self,
+        issue: AutoRetryIssue,
+        attempt: int,
+        total: int,
+        generation_id: str,
+        wait: float = 0,
+    ):
+        """
+        Notify the frontend that an automatic retry is in progress.
+        """
+        message = AUTO_RETRY_ISSUE_LABELS[issue]
+        emit(
+            "auto_retry",
+            message=message,
+            websocket_passthrough=True,
+            data={
+                "client": self.name,
+                "issue": issue,
+                "message": message,
+                "attempt": attempt,
+                "total": total,
+                "wait": wait,
+                "generation_id": generation_id,
+            },
+        )
+
+    def _emit_auto_retry_done(self, generation_id: str):
+        emit(
+            "auto_retry_done",
+            message="",
+            websocket_passthrough=True,
+            data={"client": self.name, "generation_id": generation_id},
+        )
+
+    def request_auto_retry_abort(self, generation_id: str):
+        """
+        Latches an abort click from the auto-retry notification, keyed by the
+        retry sequence it was aimed at - concurrent generations on one client
+        (FOCAL concurrent callbacks, background chats) must not consume each
+        other's aborts. Kept on the client because scene.cancel_requested is
+        unconditionally reset by any plugin-routed websocket action
+        (Plugin.handle), which would silently drop an abort that lands
+        mid-attempt or mid-backoff.
+        """
+        if generation_id not in self._auto_retry_live_ids:
+            # the sequence already ended - a late abort must not latch an
+            # id nothing will ever observe or clean up
+            return
+        self._auto_retry_aborts.add(generation_id)
+
+    def _auto_retry_cancelled(self, generation_id: str) -> bool:
+        """
+        Scene-free generations (help chat, background flows) run with
+        requires_active_scene unset, so _poll_interrupt never observes an
+        abort click - the auto-retry machinery checks between attempts
+        instead. Consumes the abort latch like Scene.continue_actions() so a
+        latched abort doesn't cancel a later generation's retries.
+        """
+        cancelled = False
+        if generation_id in self._auto_retry_aborts:
+            self._auto_retry_aborts.discard(generation_id)
+            cancelled = True
+        scene = active_scene.get()
+        if scene and scene.cancel_requested:
+            # an active scene's flag is observed non-consumingly by every
+            # concurrent generation's _poll_interrupt and reset by the
+            # GenerationCancelled handlers - consuming it here would steal
+            # the stop from them. Only the inactive placeholder scene
+            # (scene-free flows) has no other reset path.
+            if not scene.active:
+                scene.cancel_requested = False
+            cancelled = True
+        return cancelled
+
+    async def _auto_retry_backoff_wait(self, delay: float, generation_id: str) -> bool:
+        """
+        Sleep for `delay` seconds before an automatic rate-limit retry,
+        aborting early when the generation is cancelled.
+
+        Scene-free generations (e.g. the help chat) run with an inactive
+        placeholder scene in context, so an inactive scene only counts as a
+        cancellation when the scene was active at the start of the wait.
+
+        Returns False if aborted.
+        """
+        scene = active_scene.get()
+        scene_was_active = bool(scene and scene.active)
+        remaining = delay
+        while remaining > 0:
+            if self._auto_retry_cancelled(generation_id):
+                return False
+            if scene and scene_was_active and not scene.active:
+                return False
+            await asyncio.sleep(min(1, remaining))
+            remaining -= 1
+        return True
+
+    async def _auto_retry_or_prompt(
+        self,
+        issue: AutoRetryIssue,
+        error_message: str,
+        auto_retries: dict[str, int],
+        limit: int,
+        generation_id: str,
+        status_code: int | None = None,
+    ) -> GenerationErrorAction:
+        """
+        Decide how to proceed after a retryable response issue: auto-retry
+        while the configured budget allows (rate-limit retries back off
+        exponentially), then fall through to the user's retry/cancel/ignore
+        dialog.
+
+        Returns "retry" or "ignore". Raises GenerationCancelled when the
+        generation was aborted or the user cancelled.
+        """
+        if auto_retries[issue] < limit:
+            if self._auto_retry_cancelled(generation_id):
+                raise GenerationCancelled("Generation cancelled")
+            auto_retries[issue] += 1
+            wait = (
+                min(2 ** auto_retries[issue], AUTO_RETRY_MAX_BACKOFF)
+                if issue == "rate_limit"
+                else 0
+            )
+            self._emit_auto_retry(
+                issue, auto_retries[issue], limit, generation_id, wait=wait
+            )
+            if wait and not await self._auto_retry_backoff_wait(wait, generation_id):
+                raise GenerationCancelled("Generation cancelled")
+            return "retry"
+
+        action = await self._prompt_generation_error(
+            error_message, status_code=status_code, generation_id=generation_id
+        )
+        if action == "cancel":
+            raise GenerationCancelled("Generation cancelled by user")
+        return action
+
     async def _generate_with_error_handling(
-        self, finalized_prompt: str, prompt_param: dict, kind: str
+        self, finalized_prompt: str, prompt_param: dict, kind: str, generation_id: str
     ) -> str:
         """
         Wraps _cancelable_generate in a retry loop. On API errors or empty
         responses, prompts the user with retry/cancel/ignore options.
 
+        Rate limit (429) errors and empty responses are automatically retried
+        up to the client's configured counts before the user is prompted.
+
         Returns the generation response string.
         """
-        while True:
-            self.new_request()
+        auto_retries = {"rate_limit": 0, "empty_response": 0}
+        try:
+            while True:
+                self.new_request()
 
-            try:
-                response = await self._cancelable_generate(
-                    finalized_prompt, prompt_param, kind
-                )
-            except GenerationCancelled:
-                raise
-            except Exception as e:
-                self.log.error("generation error", e=traceback.format_exc())
-                status_code = self._extract_status_code(e)
-                # exceptions may carry a user-presentable message that is more
-                # accurate than the generic per-status text (e.g. clients whose
-                # transport reports errors without HTTP status codes)
-                error_message = getattr(e, "user_message", None) or get_error_message(
-                    status_code
-                )
-                action = await self._prompt_generation_error(
-                    error_message, status_code=status_code
-                )
-                if action == "retry":
-                    continue
-                elif action == "cancel":
-                    raise GenerationCancelled("Generation cancelled by user")
-                else:
+                try:
+                    response = await self._cancelable_generate(
+                        finalized_prompt, prompt_param, kind
+                    )
+                except GenerationCancelled:
+                    raise
+                except Exception as e:
+                    self.log.error("generation error", e=traceback.format_exc())
+                    status_code = self._extract_status_code(e)
+                    # exceptions may carry a user-presentable message that is more
+                    # accurate than the generic per-status text (e.g. clients whose
+                    # transport reports errors without HTTP status codes)
+                    error_message = getattr(
+                        e, "user_message", None
+                    ) or get_error_message(status_code)
+                    action = await self._auto_retry_or_prompt(
+                        "rate_limit",
+                        error_message,
+                        auto_retries,
+                        self.retry_rate_limit if status_code == 429 else 0,
+                        generation_id,
+                        status_code=status_code,
+                    )
+                    if action == "retry":
+                        continue
                     # ignore - proceed with empty response
                     return ""
 
-            if isinstance(response, GenerationCancelled):
-                raise response
+                if isinstance(response, GenerationCancelled):
+                    raise response
 
-            # Check for empty response
-            if not response or not response.strip():
-                self.log.warning("empty response from generation")
-                action = await self._prompt_generation_error(
-                    EMPTY_RESPONSE_MESSAGE, status_code=None
+                if not response or not response.strip():
+                    self.log.warning("empty response from generation")
+                    action = await self._auto_retry_or_prompt(
+                        "empty_response",
+                        EMPTY_RESPONSE_MESSAGE,
+                        auto_retries,
+                        self.retry_empty_response,
+                        generation_id,
+                    )
+                    if action == "retry":
+                        continue
+                    # ignore - proceed with empty response
+
+                return response
+        finally:
+            if any(auto_retries.values()):
+                self._emit_auto_retry_done(generation_id)
+
+    async def _generate_with_reasoning_handling(
+        self, finalized_prompt: str, prompt_param: dict, kind: str
+    ) -> str:
+        """
+        Wraps _generate_with_error_handling in a retry loop for responses
+        missing the expected reasoning pattern. Automatically retries up to
+        the client's configured count before prompting the user with
+        retry/cancel/ignore options.
+
+        Stores the stripped reasoning on self._reasoning_response and returns
+        the generation response string.
+        """
+        # identifies this retry sequence in auto_retry emissions and abort
+        # requests - concurrent generations on one client each get their own
+        generation_id = str(uuid.uuid4())
+        self._auto_retry_live_ids.add(generation_id)
+        auto_retries = {"missing_reasoning": 0}
+        try:
+            while True:
+                response = await self._generate_with_error_handling(
+                    finalized_prompt, prompt_param, kind, generation_id
                 )
-                if action == "retry":
-                    continue
-                elif action == "cancel":
-                    raise GenerationCancelled("Generation cancelled by user")
-                # else: ignore - proceed with empty response
 
-            return response
+                try:
+                    response, reasoning_response = self.strip_reasoning(response)
+                except ReasoningResponseError as e:
+                    action = await self._auto_retry_or_prompt(
+                        "missing_reasoning",
+                        str(e),
+                        auto_retries,
+                        self.retry_missing_reasoning,
+                        generation_id,
+                    )
+                    if action == "retry":
+                        continue
+                    # ignore - proceed with raw response
+                    reasoning_response = None
+
+                if reasoning_response:
+                    self._reasoning_response = reasoning_response
+                return response
+        finally:
+            # an abort latched but never observed (e.g. the aborted attempt
+            # succeeded) must not linger once its sequence is over
+            self._auto_retry_live_ids.discard(generation_id)
+            self._auto_retry_aborts.discard(generation_id)
+            if auto_retries["missing_reasoning"]:
+                self._emit_auto_retry_done(generation_id)
 
     def _extract_status_code(self, exception: Exception) -> int | None:
         """
@@ -1732,28 +1972,9 @@ class ClientBase:
                     "\n<|RESPONSE_LENGTH_INSTRUCTIONS|>", ""
                 )
 
-            while True:
-                response = await self._generate_with_error_handling(
-                    finalized_prompt, prompt_param, kind
-                )
-
-                try:
-                    response, reasoning_response = self.strip_reasoning(response)
-                except ReasoningResponseError as e:
-                    action = await self._prompt_generation_error(
-                        str(e), status_code=None
-                    )
-                    if action == "retry":
-                        continue
-                    elif action == "cancel":
-                        raise GenerationCancelled("Generation cancelled by user")
-                    else:
-                        # ignore - proceed with raw response
-                        reasoning_response = None
-
-                if reasoning_response:
-                    self._reasoning_response = reasoning_response
-                break
+            response = await self._generate_with_reasoning_handling(
+                finalized_prompt, prompt_param, kind
+            )
 
             if coercion_prompt:
                 response = self.process_response_for_indirect_coercion(

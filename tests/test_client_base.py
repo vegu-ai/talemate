@@ -1365,7 +1365,9 @@ class TestGenerateWithErrorHandling:
 
         with ClientContext(requires_active_scene=False):
             set_client_context_attribute("requires_active_scene", False)
-            out = await client._generate_with_error_handling("p", {}, "conversation")
+            out = await client._generate_with_error_handling(
+                "p", {}, "conversation", "gid"
+            )
         assert out == "great"
 
     @pytest.mark.asyncio
@@ -1386,14 +1388,18 @@ class TestGenerateWithErrorHandling:
         # Patch the user-prompt helper to return "retry" then "ignore" if needed.
         responses = iter(["retry"])
 
-        async def fake_prompt(self, error_message, status_code=None):
+        async def fake_prompt(
+            self, error_message, status_code=None, generation_id=None
+        ):
             return next(responses)
 
         monkeypatch.setattr(ClientBase, "_prompt_generation_error", fake_prompt)
 
         with ClientContext(requires_active_scene=False):
             set_client_context_attribute("requires_active_scene", False)
-            out = await client._generate_with_error_handling("p", {}, "conversation")
+            out = await client._generate_with_error_handling(
+                "p", {}, "conversation", "gid"
+            )
         assert out == "second-time"
         assert attempts["n"] == 2
 
@@ -1409,14 +1415,18 @@ class TestGenerateWithErrorHandling:
 
         client = _AlwaysFails(name="gc3")
 
-        async def fake_prompt(self, error_message, status_code=None):
+        async def fake_prompt(
+            self, error_message, status_code=None, generation_id=None
+        ):
             return "ignore"
 
         monkeypatch.setattr(ClientBase, "_prompt_generation_error", fake_prompt)
 
         with ClientContext(requires_active_scene=False):
             set_client_context_attribute("requires_active_scene", False)
-            out = await client._generate_with_error_handling("p", {}, "conversation")
+            out = await client._generate_with_error_handling(
+                "p", {}, "conversation", "gid"
+            )
         assert out == ""
 
     @pytest.mark.asyncio
@@ -1433,7 +1443,9 @@ class TestGenerateWithErrorHandling:
 
         client = _EmptyThenGood(name="gc4")
 
-        async def fake_prompt(self, error_message, status_code=None):
+        async def fake_prompt(
+            self, error_message, status_code=None, generation_id=None
+        ):
             assert error_message == EMPTY_RESPONSE_MESSAGE
             return "retry"
 
@@ -1441,7 +1453,9 @@ class TestGenerateWithErrorHandling:
 
         with ClientContext(requires_active_scene=False):
             set_client_context_attribute("requires_active_scene", False)
-            out = await client._generate_with_error_handling("p", {}, "conversation")
+            out = await client._generate_with_error_handling(
+                "p", {}, "conversation", "gid"
+            )
         assert out == "good"
         assert attempts["n"] == 2
 
@@ -1457,7 +1471,9 @@ class TestGenerateWithErrorHandling:
 
         client = _Fails(name="gc5")
 
-        async def fake_prompt(self, error_message, status_code=None):
+        async def fake_prompt(
+            self, error_message, status_code=None, generation_id=None
+        ):
             return "cancel"
 
         monkeypatch.setattr(ClientBase, "_prompt_generation_error", fake_prompt)
@@ -1465,7 +1481,9 @@ class TestGenerateWithErrorHandling:
         with ClientContext(requires_active_scene=False):
             set_client_context_attribute("requires_active_scene", False)
             with pytest.raises(GenerationCancelled):
-                await client._generate_with_error_handling("p", {}, "conversation")
+                await client._generate_with_error_handling(
+                    "p", {}, "conversation", "gid"
+                )
 
 
 # ---------------------------------------------------------------------------

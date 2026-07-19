@@ -240,6 +240,21 @@ async def websocket_endpoint(websocket):
                     if handler.scene.loading:
                         scene_task.cancel()
                         scene_task = None
+                elif action_type == "auto_retry_abort":
+                    client_name = data.get("client")
+                    generation_id = data.get("generation_id")
+                    log.info(
+                        "auto_retry_abort",
+                        client=client_name,
+                        generation_id=generation_id,
+                    )
+                    if generation_id:
+                        try:
+                            instance.get_client(client_name).request_auto_retry_abort(
+                                generation_id
+                            )
+                        except KeyError:
+                            pass
                 elif action_type == "request_app_config":
                     log.info("request_app_config")
 

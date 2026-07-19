@@ -213,7 +213,7 @@ async def test_generation_error_dialog_shows_pi_message(client, spawner, monkeyp
 
     captured = {}
 
-    async def fake_dialog(message, status_code=None):
+    async def fake_dialog(message, status_code=None, generation_id=None):
         captured["message"] = message
         captured["status_code"] = status_code
         return "cancel"
@@ -223,7 +223,7 @@ async def test_generation_error_dialog_shows_pi_message(client, spawner, monkeyp
     with ClientContext(requires_active_scene=False):
         set_client_context_attribute("requires_active_scene", False)
         with pytest.raises(GenerationCancelled):
-            await client._generate_with_error_handling("hi", {}, "conversation")
+            await client._generate_with_error_handling("hi", {}, "conversation", "gid")
 
     assert "No API key found for openrouter" in captured["message"]
     assert captured["status_code"] is None

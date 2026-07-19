@@ -47,6 +47,12 @@ class Client(pydantic.BaseModel):
     # max requests per minute
     rate_limit: Union[int, None] = None
 
+    # automatic retries before the user is notified of a response issue
+    # (0 = notify immediately)
+    retry_empty_response: int = 0
+    retry_rate_limit: int = 0
+    retry_missing_reasoning: int = 0
+
     # expected data structure format in responses
     data_format: Literal["json", "yaml"] | None = None
 
@@ -127,6 +133,16 @@ class Client(pydantic.BaseModel):
         if v is None:
             return False
         return v
+
+    # clamp rather than reject so an out-of-range hand-edited config.yaml
+    # doesn't fail to load - an unbounded value here means an unbounded
+    # automatic retry loop against a (usually paid) API
+    @pydantic.field_validator(
+        "retry_empty_response", "retry_rate_limit", "retry_missing_reasoning"
+    )
+    @classmethod
+    def clamp_retry_counts(cls, v: int) -> int:
+        return max(0, min(5, v))
 
     # Generic choice metadata for fields that should render as <v-select> in the
     # frontend.  Keyed by field name; values use {"label": ..., "value": ...} format.

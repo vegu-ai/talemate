@@ -393,6 +393,7 @@
   </v-app>
   <StatusNotification />
   <RateLimitAlert ref="rateLimitAlert" />
+  <AutoRetryAlert ref="autoRetryAlert" />
   <GenerationErrorDialog ref="generationErrorDialog" />
   <SceneTimeline
     ref="sceneTimeline"
@@ -425,6 +426,7 @@ import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
+import AutoRetryAlert from './AutoRetryAlert.vue';
 import GenerationErrorDialog from './GenerationErrorDialog.vue';
 import SceneTimeline from './SceneTimeline.vue';
 import VersionMismatchAlert from './VersionMismatchAlert.vue';
@@ -474,6 +476,7 @@ export default {
     NodeEditor,
     DirectorConsole,
     RateLimitAlert,
+    AutoRetryAlert,
     GenerationErrorDialog,
     SceneTimeline,
     VersionMismatchAlert,
@@ -1116,7 +1119,19 @@ export default {
         return;
       }
 
+      if(data.type === 'auto_retry') {
+        this.$refs.autoRetryAlert.open(data.data);
+        return;
+      }
+
+      if(data.type === 'auto_retry_done') {
+        this.$refs.autoRetryAlert.close(data.data.generation_id);
+        return;
+      }
+
       if(data.type === 'generation_error') {
+        // retries exhausted - the dialog supersedes the auto-retry snackbar
+        this.$refs.autoRetryAlert.close(data.data.generation_id, true);
         this.$refs.generationErrorDialog.open(data.data);
         return;
       }

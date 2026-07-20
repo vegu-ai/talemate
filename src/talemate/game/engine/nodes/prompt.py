@@ -469,7 +469,9 @@ class BuildPrompt(Node):
         include_scene_context: bool = self.get_property("include_scene_context")
         include_character_context: bool = self.get_property("include_character_context")
         include_gamestate_context: bool = self.get_property("include_gamestate_context")
-        memory_prompt: str = self.get_property("memory_prompt")
+        memory_prompt: str = self.normalized_input_value(
+            "memory_prompt"
+        ) or self.get_property("memory_prompt")
         prefill_prompt: str = self.get_property("prefill_prompt")
         return_prefill_prompt: bool = self.get_property("return_prefill_prompt")
         dedupe_enabled: bool = self.get_property("dedupe_enabled")
@@ -702,7 +704,9 @@ class GenerateResponse(Node):
         scene: "Scene" = active_scene.get()
         agent: Agent = self.require_input("agent")
         prompt: Prompt = self.require_input("prompt")
-        action_type = self.get_property("action_type")
+        action_type = self.normalized_input_value("action_type") or self.get_property(
+            "action_type"
+        )
         response_length = self.require_number_input("response_length", types=(int,))
         data_output = self.get_property("data_output")
         data_multiple = self.get_property("data_multiple")

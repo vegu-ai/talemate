@@ -1,0 +1,465 @@
+{
+  "title": "Test Harness Prompt Sockets",
+  "id": "74941f69-baf2-451e-97a0-e185ff8fa4b9",
+  "registry": "test-harness/testHarnessPromptSockets",
+  "base_type": "core/Graph",
+  "extends": null,
+  "properties": {},
+  "nodes": {
+    "15f49ec0-ca50-46b2-8797-dfcb9902feb8": {
+      "title": "true",
+      "id": "15f49ec0-ca50-46b2-8797-dfcb9902feb8",
+      "properties": {
+        "value": true
+      },
+      "x": 0,
+      "y": 1246,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node",
+      "height": 64
+    },
+    "62c410c9-fb5d-4c29-a2ae-d4f6ae18eebf": {
+      "title": "director",
+      "id": "62c410c9-fb5d-4c29-a2ae-d4f6ae18eebf",
+      "properties": {
+        "agent_name": "director"
+      },
+      "x": 0,
+      "y": 1360,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node",
+      "height": 64
+    },
+    "e96d8059-9a38-4e4a-bc84-7bd8b83954e3": {
+      "title": "wired memory prompt",
+      "id": "e96d8059-9a38-4e4a-bc84-7bd8b83954e3",
+      "properties": {
+        "value": "wired memory prompt"
+      },
+      "x": 0,
+      "y": 1474,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node",
+      "height": 64
+    },
+    "afb285ef-df01-4b3a-bee5-d104a3ee4634": {
+      "title": "Build Prompt (wired)",
+      "id": "afb285ef-df01-4b3a-bee5-d104a3ee4634",
+      "properties": {
+        "memory_prompt": "static memory prompt",
+        "include_scene_intent": false,
+        "include_extra_context": false,
+        "include_memory_context": false,
+        "include_scene_context": false,
+        "include_character_context": false,
+        "include_gamestate_context": false,
+        "limit_max_tokens": 4096
+      },
+      "x": 360,
+      "y": 1433,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node",
+      "height": 526
+    },
+    "70d4ae0e-afa3-4245-b184-334f148fbafd": {
+      "title": "GET prompt.vars",
+      "id": "70d4ae0e-afa3-4245-b184-334f148fbafd",
+      "properties": {
+        "attribute": "vars"
+      },
+      "x": 720,
+      "y": 1433,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node",
+      "height": 108
+    },
+    "988dcd6d-e30e-4e17-a574-b4f8a4d13b20": {
+      "title": "GET vars.memory_prompt",
+      "id": "988dcd6d-e30e-4e17-a574-b4f8a4d13b20",
+      "properties": {
+        "attribute": "memory_prompt"
+      },
+      "x": 1080,
+      "y": 1433,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node",
+      "height": 108
+    },
+    "f57ac16e-74b3-420e-b687-c1deb3b03bf5": {
+      "title": "SET shared.memory_prompt_wired",
+      "id": "f57ac16e-74b3-420e-b687-c1deb3b03bf5",
+      "properties": {
+        "name": "memory_prompt_wired",
+        "scope": "shared"
+      },
+      "x": 1440,
+      "y": 1433,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 130
+    },
+    "acb856b2-e55f-46d0-9053-ca128cdb1aac": {
+      "title": "true",
+      "id": "acb856b2-e55f-46d0-9053-ca128cdb1aac",
+      "properties": {
+        "value": true
+      },
+      "x": 0,
+      "y": 0,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node",
+      "height": 64
+    },
+    "ee937f06-a09a-488c-865b-9092c4705a2e": {
+      "title": "director",
+      "id": "ee937f06-a09a-488c-865b-9092c4705a2e",
+      "properties": {
+        "agent_name": "director"
+      },
+      "x": 0,
+      "y": 114,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node",
+      "height": 64
+    },
+    "12cc9506-d207-472e-831f-ded52c419b91": {
+      "title": "Build Prompt (property only)",
+      "id": "12cc9506-d207-472e-831f-ded52c419b91",
+      "properties": {
+        "memory_prompt": "property memory prompt",
+        "include_scene_intent": false,
+        "include_extra_context": false,
+        "include_memory_context": false,
+        "include_scene_context": false,
+        "include_character_context": false,
+        "include_gamestate_context": false,
+        "limit_max_tokens": 4096
+      },
+      "x": 360,
+      "y": 57,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node",
+      "height": 526
+    },
+    "53e344bd-9041-4e82-878a-5a36d82420b1": {
+      "title": "GET prompt.vars",
+      "id": "53e344bd-9041-4e82-878a-5a36d82420b1",
+      "properties": {
+        "attribute": "vars"
+      },
+      "x": 720,
+      "y": 57,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node",
+      "height": 108
+    },
+    "ab217121-1d1b-4a37-a654-d34f1c6785b3": {
+      "title": "GET vars.memory_prompt",
+      "id": "ab217121-1d1b-4a37-a654-d34f1c6785b3",
+      "properties": {
+        "attribute": "memory_prompt"
+      },
+      "x": 1080,
+      "y": 57,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node",
+      "height": 108
+    },
+    "31e09ed7-bb8e-4b2a-b2e1-2c217d90c020": {
+      "title": "SET shared.memory_prompt_property",
+      "id": "31e09ed7-bb8e-4b2a-b2e1-2c217d90c020",
+      "properties": {
+        "name": "memory_prompt_property",
+        "scope": "shared"
+      },
+      "x": 1440,
+      "y": 57,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 130
+    },
+    "a4972cc5-e954-4b73-b9da-e65d80cf257d": {
+      "title": "true",
+      "id": "a4972cc5-e954-4b73-b9da-e65d80cf257d",
+      "properties": {
+        "value": true
+      },
+      "x": 0,
+      "y": 1132,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node",
+      "height": 64
+    },
+    "8b3fe24c-039c-40f4-874b-c57f9996be99": {
+      "title": "director",
+      "id": "8b3fe24c-039c-40f4-874b-c57f9996be99",
+      "properties": {
+        "agent_name": "director"
+      },
+      "x": 0,
+      "y": 1018,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node",
+      "height": 64
+    },
+    "04978a16-e058-4956-b380-4b1a9fb81fdf": {
+      "title": "Prompt From Template",
+      "id": "04978a16-e058-4956-b380-4b1a9fb81fdf",
+      "properties": {
+        "scope": "scene",
+        "template_file": "",
+        "template_text": "Say hello."
+      },
+      "x": 0,
+      "y": 680,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/PromptFromTemplate",
+      "base_type": "core/Node",
+      "height": 174
+    },
+    "6cc77c5a-f884-4c05-8154-5b2e196f00c8": {
+      "title": "narrate",
+      "id": "6cc77c5a-f884-4c05-8154-5b2e196f00c8",
+      "properties": {
+        "value": "narrate"
+      },
+      "x": 0,
+      "y": 904,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node",
+      "height": 64
+    },
+    "56ad65c7-ab76-4c7f-97df-411c6d7e9a58": {
+      "title": "Generate Response (wired action_type)",
+      "id": "56ad65c7-ab76-4c7f-97df-411c6d7e9a58",
+      "properties": {
+        "data_output": false,
+        "response_length": 20,
+        "action_type": "scene_direction",
+        "attempts": 1
+      },
+      "x": 360,
+      "y": 1033,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node",
+      "height": 350
+    },
+    "b00e6e01-6925-4f0f-809b-794ffaa8b145": {
+      "title": "SET shared.action_type_wired_response",
+      "id": "b00e6e01-6925-4f0f-809b-794ffaa8b145",
+      "properties": {
+        "name": "action_type_wired_response",
+        "scope": "shared"
+      },
+      "x": 720,
+      "y": 1033,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 130
+    },
+    "d38c7404-7e6c-4cdf-9e0d-0536e5483fab": {
+      "title": "true",
+      "id": "d38c7404-7e6c-4cdf-9e0d-0536e5483fab",
+      "properties": {
+        "value": true
+      },
+      "x": 0,
+      "y": 566,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node",
+      "height": 64
+    },
+    "4b5a053e-db40-468b-920d-0e9288899f01": {
+      "title": "director",
+      "id": "4b5a053e-db40-468b-920d-0e9288899f01",
+      "properties": {
+        "agent_name": "director"
+      },
+      "x": 0,
+      "y": 452,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node",
+      "height": 64
+    },
+    "06ae039e-3822-48be-aa94-9cf30fbfc05d": {
+      "title": "Prompt From Template",
+      "id": "06ae039e-3822-48be-aa94-9cf30fbfc05d",
+      "properties": {
+        "scope": "scene",
+        "template_file": "",
+        "template_text": "Say hello."
+      },
+      "x": 0,
+      "y": 228,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/PromptFromTemplate",
+      "base_type": "core/Node",
+      "height": 174
+    },
+    "9b4c68e6-f4ef-41b4-a801-7143b92bd4ed": {
+      "title": "Generate Response (property action_type)",
+      "id": "9b4c68e6-f4ef-41b4-a801-7143b92bd4ed",
+      "properties": {
+        "data_output": false,
+        "response_length": 30,
+        "action_type": "scene_direction",
+        "attempts": 1
+      },
+      "x": 360,
+      "y": 633,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node",
+      "height": 350
+    },
+    "47ccdfea-164a-4eb6-94b5-12c0b381f185": {
+      "title": "SET shared.action_type_property_response",
+      "id": "47ccdfea-164a-4eb6-94b5-12c0b381f185",
+      "properties": {
+        "name": "action_type_property_response",
+        "scope": "shared"
+      },
+      "x": 720,
+      "y": 633,
+      "width": 210,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node",
+      "height": 130
+    }
+  },
+  "edges": {
+    "15f49ec0-ca50-46b2-8797-dfcb9902feb8.value": [
+      "afb285ef-df01-4b3a-bee5-d104a3ee4634.state"
+    ],
+    "62c410c9-fb5d-4c29-a2ae-d4f6ae18eebf.agent": [
+      "afb285ef-df01-4b3a-bee5-d104a3ee4634.agent"
+    ],
+    "e96d8059-9a38-4e4a-bc84-7bd8b83954e3.value": [
+      "afb285ef-df01-4b3a-bee5-d104a3ee4634.memory_prompt"
+    ],
+    "afb285ef-df01-4b3a-bee5-d104a3ee4634.prompt": [
+      "70d4ae0e-afa3-4245-b184-334f148fbafd.object"
+    ],
+    "70d4ae0e-afa3-4245-b184-334f148fbafd.value": [
+      "988dcd6d-e30e-4e17-a574-b4f8a4d13b20.object"
+    ],
+    "988dcd6d-e30e-4e17-a574-b4f8a4d13b20.value": [
+      "f57ac16e-74b3-420e-b687-c1deb3b03bf5.value"
+    ],
+    "acb856b2-e55f-46d0-9053-ca128cdb1aac.value": [
+      "12cc9506-d207-472e-831f-ded52c419b91.state"
+    ],
+    "ee937f06-a09a-488c-865b-9092c4705a2e.agent": [
+      "12cc9506-d207-472e-831f-ded52c419b91.agent"
+    ],
+    "12cc9506-d207-472e-831f-ded52c419b91.prompt": [
+      "53e344bd-9041-4e82-878a-5a36d82420b1.object"
+    ],
+    "53e344bd-9041-4e82-878a-5a36d82420b1.value": [
+      "ab217121-1d1b-4a37-a654-d34f1c6785b3.object"
+    ],
+    "ab217121-1d1b-4a37-a654-d34f1c6785b3.value": [
+      "31e09ed7-bb8e-4b2a-b2e1-2c217d90c020.value"
+    ],
+    "a4972cc5-e954-4b73-b9da-e65d80cf257d.value": [
+      "56ad65c7-ab76-4c7f-97df-411c6d7e9a58.state"
+    ],
+    "8b3fe24c-039c-40f4-874b-c57f9996be99.agent": [
+      "56ad65c7-ab76-4c7f-97df-411c6d7e9a58.agent"
+    ],
+    "04978a16-e058-4956-b380-4b1a9fb81fdf.prompt": [
+      "56ad65c7-ab76-4c7f-97df-411c6d7e9a58.prompt"
+    ],
+    "6cc77c5a-f884-4c05-8154-5b2e196f00c8.value": [
+      "56ad65c7-ab76-4c7f-97df-411c6d7e9a58.action_type"
+    ],
+    "56ad65c7-ab76-4c7f-97df-411c6d7e9a58.response": [
+      "b00e6e01-6925-4f0f-809b-794ffaa8b145.value"
+    ],
+    "d38c7404-7e6c-4cdf-9e0d-0536e5483fab.value": [
+      "9b4c68e6-f4ef-41b4-a801-7143b92bd4ed.state"
+    ],
+    "4b5a053e-db40-468b-920d-0e9288899f01.agent": [
+      "9b4c68e6-f4ef-41b4-a801-7143b92bd4ed.agent"
+    ],
+    "06ae039e-3822-48be-aa94-9cf30fbfc05d.prompt": [
+      "9b4c68e6-f4ef-41b4-a801-7143b92bd4ed.prompt"
+    ],
+    "9b4c68e6-f4ef-41b4-a801-7143b92bd4ed.response": [
+      "47ccdfea-164a-4eb6-94b5-12c0b381f185.value"
+    ]
+  },
+  "groups": [],
+  "comments": [],
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {}
+}

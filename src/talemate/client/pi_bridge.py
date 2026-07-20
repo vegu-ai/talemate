@@ -3,6 +3,7 @@ import json
 import os
 import re
 import shutil
+import tempfile
 import time
 from typing import Literal
 
@@ -61,6 +62,17 @@ FETCH_RETRY_COOLDOWN = 30.0
 _models_last_attempt: float | None = None
 
 
+def resolve_pi_binary() -> str | None:
+    """Absolute path to the pi executable, or None when pi is not installed.
+
+    Spawns must use the resolved path: on Windows shutil.which finds npm's
+    pi.cmd shim via PATHEXT, but CreateProcess only looks for pi.exe when
+    given the bare name — spawning "pi" fails with WinError 2 even though
+    the availability check passed.
+    """
+    return shutil.which(PI_BINARY)
+
+
 def pi_subprocess_env() -> dict:
     """Environment for pi subprocesses: talemate-managed values layered over
     the process environment. The configured openrouter API key doubles as
@@ -108,13 +120,16 @@ async def fetch_available_models():
             return AVAILABLE_MODELS
         _models_last_attempt = now
 
-        if not shutil.which(PI_BINARY):
-            log.warning("pi binary not found, cannot fetch models")
+        pi_path = resolve_pi_binary()
+        if not pi_path:
+            # pi is optional — stay quiet until the user actually sets up a
+            # pi_bridge client, whose status reports the missing binary
+            log.debug("pi binary not found, skipping model fetch")
             return AVAILABLE_MODELS
 
         try:
             proc = await asyncio.create_subprocess_exec(
-                PI_BINARY,
+                pi_path,
                 "--list-models",
                 "--offline",
                 stdout=asyncio.subprocess.PIPE,
@@ -137,8 +152,15 @@ async def fetch_available_models():
                 providers=len(AVAILABLE_MODELS),
                 models=sum(len(models) for models in AVAILABLE_MODELS.values()),
             )
+        except FileNotFoundError as e:
+            # WinError 2 / ENOENT don't say which file — name the executable
+            log.error(
+                "error fetching models from pi - could not execute the pi binary",
+                path=pi_path,
+                error=str(e),
+            )
         except Exception as e:
-            log.error("error fetching models from pi", error=str(e))
+            log.error("error fetching models from pi", path=pi_path, error=str(e))
 
         return AVAILABLE_MODELS
 
@@ -313,7 +335,7 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
 
     @property
     def pi_available(self) -> bool:
-        return shutil.which(PI_BINARY) is not None
+        return resolve_pi_binary() is not None
 
     @property
     def reasoning_display(self) -> ReasoningDisplay | None:
@@ -367,11 +389,20 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
             await fetch_available_models()
         self.emit_status()
 
-    def _build_command(self, kind: str) -> list[str]:
-        """Assemble the pi RPC invocation for a single generation."""
+    def _build_command(
+        self, kind: str, pi_path: str, system_prompt_path: str
+    ) -> list[str]:
+        """Assemble the pi RPC invocation for a single generation.
+
+        The system prompt travels as a file (pi reads --system-prompt from a
+        path when one exists) rather than inline: on Windows the resolved pi
+        is npm's pi.cmd, which CreateProcess runs through cmd.exe, and cmd
+        re-parses the argv — an embedded newline would end the command and
+        the rest of the prompt would be interpreted as one.
+        """
         thinking = self.effort_level if self.reason_enabled else "off"
         return [
-            PI_BINARY,
+            pi_path,
             "--mode",
             "rpc",
             "--no-session",
@@ -387,7 +418,7 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
             "--no-context-files",
             "--no-prompt-templates",
             "--system-prompt",
-            self.get_system_message(kind),
+            system_prompt_path,
         ]
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
@@ -395,7 +426,8 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
         Generates text by spawning a pi RPC subprocess for this request.
         """
 
-        if not self.pi_available:
+        pi_path = resolve_pi_binary()
+        if not pi_path:
             raise PiBridgeError("pi binary not found")
 
         self.log.debug(
@@ -405,49 +437,60 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
             provider=self.provider,
         )
 
-        proc = await asyncio.create_subprocess_exec(
-            *self._build_command(kind),
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env=pi_subprocess_env(),
-            limit=PI_STDOUT_LIMIT,
-        )
+        with tempfile.TemporaryDirectory(prefix="talemate-pi-") as prompt_dir:
+            system_prompt_path = os.path.join(prompt_dir, "system-prompt.txt")
+            with open(system_prompt_path, "w", encoding="utf-8") as f:
+                f.write(self.get_system_message(kind))
 
-        # drain stderr continuously so a chatty pi process can never fill the
-        # OS pipe buffer and deadlock against our stdout readline loop; the
-        # collected output feeds the unexpected-exit error message.
-        stderr_task = asyncio.create_task(proc.stderr.read())
+            argv = self._build_command(kind, pi_path, system_prompt_path)
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    *argv,
+                    stdin=asyncio.subprocess.PIPE,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                    env=pi_subprocess_env(),
+                    limit=PI_STDOUT_LIMIT,
+                )
+            except FileNotFoundError as e:
+                raise PiBridgeError(
+                    f"could not execute the pi binary: {pi_path}"
+                ) from e
 
-        try:
-            command = {"id": "generate", "type": "prompt", "message": prompt}
-            proc.stdin.write((json.dumps(command) + "\n").encode("utf-8"))
-            await proc.stdin.drain()
+            # drain stderr continuously so a chatty pi process can never fill
+            # the OS pipe buffer and deadlock against our stdout readline loop;
+            # the collected output feeds the unexpected-exit error message.
+            stderr_task = asyncio.create_task(proc.stderr.read())
 
-            response_text, reasoning_text = await self._consume_events(
-                proc, stderr_task
-            )
+            try:
+                rpc_command = {"id": "generate", "type": "prompt", "message": prompt}
+                proc.stdin.write((json.dumps(rpc_command) + "\n").encode("utf-8"))
+                await proc.stdin.drain()
 
-            self._reasoning_response = reasoning_text or None
+                response_text, reasoning_text = await self._consume_events(
+                    proc, stderr_task
+                )
 
-            self.log.debug(
-                "generated response",
-                response=response_text[:128] + " ..."
-                if len(response_text) > 128
-                else response_text,
-                reasoning_length=len(reasoning_text),
-            )
+                self._reasoning_response = reasoning_text or None
 
-            return response_text
-        finally:
-            if proc.returncode is None:
-                try:
-                    proc.kill()
-                except ProcessLookupError:
-                    pass
-            await proc.wait()
-            # the kill/exit above closes the pipe, so the drain finishes
-            await stderr_task
+                self.log.debug(
+                    "generated response",
+                    response=response_text[:128] + " ..."
+                    if len(response_text) > 128
+                    else response_text,
+                    reasoning_length=len(reasoning_text),
+                )
+
+                return response_text
+            finally:
+                if proc.returncode is None:
+                    try:
+                        proc.kill()
+                    except ProcessLookupError:
+                        pass
+                await proc.wait()
+                # the kill/exit above closes the pipe, so the drain finishes
+                await stderr_task
 
     async def _consume_events(self, proc, stderr_task) -> tuple[str, str]:
         """Read the pi RPC event stream until the agent settles.

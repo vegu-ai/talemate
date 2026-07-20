@@ -10,8 +10,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 
 import pytest
+
+from structlog.testing import capture_logs
 
 import talemate.config.state as config_state
 from talemate.client import pi_bridge
@@ -168,6 +171,9 @@ async def test_generate_sends_prompt_command_and_cleans_up(client, spawner):
 
     command = json.loads(proc.stdin.written.decode())
     assert command == {"id": "generate", "type": "prompt", "message": "tell a story"}
+    # the resolved binary path is spawned, not the bare name (Windows
+    # CreateProcess cannot find npm's pi.cmd shim by bare name)
+    assert spawner.calls[0]["args"][0] == "/usr/bin/pi"
     # the subprocess is terminated after the response
     assert proc.killed
     # the raised stream limit is requested from the subprocess reader
@@ -265,6 +271,19 @@ async def test_generate_error_on_provider_error(client, spawner):
 
 
 @pytest.mark.asyncio
+async def test_generate_error_on_spawn_failure_names_binary(
+    client, spawner, monkeypatch
+):
+    async def spawn(*args, **kwargs):
+        raise FileNotFoundError(2, "The system cannot find the file specified")
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+
+    with pytest.raises(pi_bridge.PiBridgeError, match="/usr/bin/pi"):
+        await client.generate("hi", {}, "conversation")
+
+
+@pytest.mark.asyncio
 async def test_generate_error_on_unexpected_exit(client, spawner):
     spawner.queue(FakeProcess([], stderr=b'Error: Unknown provider "nope".'))
 
@@ -338,8 +357,9 @@ async def test_concurrent_generates_use_isolated_processes(client, spawner):
 
 
 def test_build_command_pure_bridge_flags(client):
-    command = client._build_command("conversation")
+    command = client._build_command("conversation", "/usr/bin/pi", "/tmp/system.txt")
 
+    assert command[0] == "/usr/bin/pi"
     for flag in (
         "--no-tools",
         "--no-extensions",
@@ -352,6 +372,7 @@ def test_build_command_pure_bridge_flags(client):
 
     assert command[command.index("--provider") + 1] == "openrouter"
     assert command[command.index("--model") + 1] == "deepseek/deepseek-v4-flash"
+    assert command[command.index("--system-prompt") + 1] == "/tmp/system.txt"
     # reasoning disabled by default
     assert command[command.index("--thinking") + 1] == "off"
 
@@ -360,9 +381,35 @@ def test_build_command_thinking_level(client):
     client.client_config.reason_enabled = True
     client.client_config.effort_level = "high"
 
-    command = client._build_command("conversation")
+    command = client._build_command("conversation", "/usr/bin/pi", "/tmp/system.txt")
 
     assert command[command.index("--thinking") + 1] == "high"
+
+
+@pytest.mark.asyncio
+async def test_generate_passes_system_prompt_as_file(client, spawner, monkeypatch):
+    """The system prompt goes to pi as a file path, never inline on the argv:
+    on Windows the resolved pi is npm's pi.cmd and cmd.exe re-parses the
+    command line, where the prompt's newlines would truncate it."""
+    message = _assistant_message([{"type": "text", "text": "ok"}])
+    spawner.queue(FakeProcess(_generation_events(message)))
+
+    system_message = client.get_system_message("conversation")
+    seen = {}
+
+    async def spawn(*args, **kwargs):
+        path = args[args.index("--system-prompt") + 1]
+        seen["path"] = path
+        seen["contents"] = open(path, encoding="utf-8").read()
+        return spawner.processes.pop(0)
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+    await client.generate("hi", {}, "conversation")
+
+    assert seen["contents"] == system_message
+    assert system_message not in seen["path"]
+    # the temporary file is cleaned up once the generation finishes
+    assert not os.path.exists(seen["path"])
 
 
 # ---------------------------------------------------------------------------
@@ -429,6 +476,7 @@ async def test_fetch_available_models_success(monkeypatch, catalog_state):
     monkeypatch.setattr(pi_bridge.shutil, "which", lambda _: "/usr/bin/pi")
 
     async def spawn(*args, **kwargs):
+        assert args[0] == "/usr/bin/pi"
         assert "--list-models" in args
         return FakeListModelsProcess(PI_LIST_MODELS_OUTPUT.encode())
 
@@ -466,12 +514,38 @@ async def test_fetch_available_models_failure_stays_unlatched(
 
 @pytest.mark.asyncio
 async def test_fetch_available_models_missing_binary(monkeypatch, catalog_state):
+    """pi not being installed is not an error - the startup fetch stays
+    silent (debug only); the error belongs to configured pi_bridge clients."""
     monkeypatch.setattr(pi_bridge.shutil, "which", lambda _: None)
 
-    models = await pi_bridge.fetch_available_models()
+    with capture_logs() as logs:
+        models = await pi_bridge.fetch_available_models()
 
     assert models == {}
     assert not pi_bridge.MODELS_FETCHED
+    assert all(entry["log_level"] == "debug" for entry in logs)
+
+
+@pytest.mark.asyncio
+async def test_fetch_available_models_spawn_failure_names_binary(
+    monkeypatch, catalog_state
+):
+    """A spawn-time FileNotFoundError (e.g. WinError 2) is logged with the
+    resolved executable path - the raw OS error doesn't name the file."""
+    monkeypatch.setattr(pi_bridge.shutil, "which", lambda _: "/usr/bin/pi")
+
+    async def spawn(*args, **kwargs):
+        raise FileNotFoundError(2, "The system cannot find the file specified")
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", spawn)
+
+    with capture_logs() as logs:
+        models = await pi_bridge.fetch_available_models()
+
+    assert models == {}
+    assert not pi_bridge.MODELS_FETCHED
+    errors = [entry for entry in logs if entry["log_level"] == "error"]
+    assert errors and errors[0]["path"] == "/usr/bin/pi"
 
 
 @pytest.mark.asyncio

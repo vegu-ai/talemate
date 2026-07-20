@@ -19,7 +19,7 @@ Each card has a three-dot menu (⋮) with additional actions:
 
 - :material-history: **Timeline** — browse and restore the scene's version history, see [Restoring Scenes](/talemate/user-guide/restoring-scenes)
 - **Remove from Quick Load** — remove the card without deleting any files
-- **Delete** — delete the scene file itself
+- **Delete** — delete the scene file itself (refused for the currently loaded scene — load a different scene first)
 
 ## Scene Library
 
@@ -51,6 +51,9 @@ Each row in the library has a delete action:
 
 - :material-file-remove-outline: on a **save file** or **character card** deletes that single file after a confirmation prompt.
 - :material-folder-remove-outline: on a **project** deletes the entire scene project — all of its save files, assets, node modules, and version history.
+
+!!! note
+    The save file or project of the **currently loaded** scene cannot be deleted — the next save would silently recreate it. Load a different scene first.
 
 Deleting a project is irreversible, so the confirmation dialog requires typing the project name before the delete button becomes available:
 

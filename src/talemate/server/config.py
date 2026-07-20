@@ -449,6 +449,12 @@ class ConfigPlugin(Plugin):
             {"type": "app_config", "data": config.model_dump(), "version": VERSION}
         )
 
+    def _active_scene_realpath(self) -> str | None:
+        scene = self.scene
+        if scene and scene.full_path:
+            return os.path.realpath(scene.full_path)
+        return None
+
     async def handle_delete_scene(self, data):
         payload = DeleteScenePayload(**data)
 
@@ -456,6 +462,13 @@ class ConfigPlugin(Plugin):
         scenes_root = os.path.realpath(scenes_directory())
         if not file_path.startswith(scenes_root + os.sep):
             raise ValueError(f"Not a scene file: {payload.path}")
+
+        # the next save of the loaded scene would silently recreate the file
+        # (with its changelog history gone), so refuse instead
+        if self._active_scene_realpath() == file_path:
+            raise ValueError(
+                "Cannot delete the save file of the currently loaded scene - load a different scene first"
+            )
 
         await self.handle_remove_scene_from_recents(data)
 
@@ -520,12 +533,8 @@ class ConfigPlugin(Plugin):
 
         # the next save of a loaded scene would silently recreate a skeleton
         # project with broken asset references, so refuse instead
-        active_scene = self.scene
-        if (
-            active_scene
-            and active_scene.full_path
-            and os.path.realpath(active_scene.full_path).startswith(prefix)
-        ):
+        active_scene_path = self._active_scene_realpath()
+        if active_scene_path and active_scene_path.startswith(prefix):
             raise ValueError(
                 f"Cannot delete the project of the currently loaded scene: {project_name}"
             )

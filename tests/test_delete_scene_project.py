@@ -1,9 +1,12 @@
 """
-Tests for the ``delete_scene_project`` config websocket action.
+Tests for the ``delete_scene_project`` and ``delete_scene`` config websocket
+actions.
 
-The action removes an entire scene project directory (saves, assets, nodes,
-changelog) and cleans up recent-scene entries pointing into it. It must
-refuse anything that is not a direct child of the scenes directory.
+``delete_scene_project`` removes an entire scene project directory (saves,
+assets, nodes, changelog) and cleans up recent-scene entries pointing into
+it. It must refuse anything that is not a direct child of the scenes
+directory. ``delete_scene`` removes a single save file and its changelog
+artifacts. Both must refuse targets belonging to the currently loaded scene.
 """
 
 import json
@@ -218,3 +221,61 @@ async def test_delete_scene_file_contained(tmp_path, scenes_root, app_config, pl
     with pytest.raises(ValueError, match="Not a scene file"):
         await plugin.handle_delete_scene({"path": str(outside)})
     assert outside.exists()
+
+
+@pytest.mark.asyncio
+async def test_delete_scene_rejects_active_scene_save(scenes_root, app_config, plugin):
+    project = _make_project(scenes_root)
+    save_path = project / "save.json"
+
+    app_config.recent_scenes.scenes = [
+        RecentScene(
+            name="Adventure",
+            path=str(save_path),
+            filename="save.json",
+            date="2026-07-20T00:00:00",
+        ),
+    ]
+
+    class _SceneStub:
+        full_path = str(save_path)
+
+    plugin.websocket_handler.scene = _SceneStub()
+
+    with pytest.raises(ValueError, match="currently loaded scene"):
+        await plugin.handle_delete_scene({"path": str(save_path)})
+
+    # file, recents entry and changelog artifacts all untouched
+    assert save_path.exists()
+    assert [scene.name for scene in app_config.recent_scenes.scenes] == ["Adventure"]
+    assert (project / "changelog" / "save.json.base.json").exists()
+    assert plugin.websocket_handler.by_action("delete_scene_complete") == []
+
+    # a symlink resolving to the active save is refused as well
+    link = project / "linked-save.json"
+    os.symlink(str(save_path), str(link))
+    with pytest.raises(ValueError, match="currently loaded scene"):
+        await plugin.handle_delete_scene({"path": str(link)})
+    assert save_path.exists()
+    link.unlink()
+
+    # a different save file of the same loaded project still deletes
+    sibling = project / "other-save.json"
+    sibling.write_text("{}")
+    await plugin.handle_delete_scene({"path": str(sibling)})
+    assert not sibling.exists()
+    assert save_path.exists()
+
+    # a loaded scene without a full_path (immutable/demo save after an
+    # autosave attempt cleared its filename) does not block the delete -
+    # nothing can resurrect the file once filename is unset
+    unsaved = project / "unsaved-save.json"
+    unsaved.write_text("{}")
+    plugin.websocket_handler.scene = type("_UnsavedScene", (), {"full_path": None})()
+    await plugin.handle_delete_scene({"path": str(unsaved)})
+    assert not unsaved.exists()
+
+    # with the scene unloaded the save file deletes normally
+    plugin.websocket_handler.scene = None
+    await plugin.handle_delete_scene({"path": str(save_path)})
+    assert not save_path.exists()

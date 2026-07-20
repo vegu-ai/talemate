@@ -112,7 +112,7 @@ Either a template or a prompt must be provided.
 | Input | Type | Description |
 | --- | --- | --- |
 | `state` | `any` | The current graph state |
-| `template` | `any` | (optional) The prompt template name; This template will be used to generate the prompt that facilitates the AI function call(s) |
+| `template` | `str` | (optional) The prompt template name; This template will be used to generate the prompt that facilitates the AI function call(s) |
 | `prompt` | `prompt` | (optional) A Prompt instance to use instead of a template |
 | `callbacks` | `list` | A list of focal.Callback instances that define the functions to call |
 | `agent` | `agent` | The agent to use for the AI function call |

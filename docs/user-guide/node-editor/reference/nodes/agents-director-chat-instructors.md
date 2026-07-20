@@ -14,11 +14,11 @@ _10 nodes._
 | [Instruct Character Config Updates](#instruct-character-config-updates) | `agents/director/chat/instructCharacterConfigUpdates` |
 | [Instruct Character Creation](#instruct-character-creation) | `agents/director/chat/instructCharacterCreation` |
 | [Instruct Character Updates](#instruct-character-updates) | `agents/director/chat/instructCharacterUpdates` |
+| [Instruct Gamestate Updates](#instruct-gamestate-updates) | `agents/director/chat/instructGamestateUpdates` |
 | [Instruct History Updates](#instruct-history-updates) | `agents/director/chat/instructHistoryUpdates` |
 | [Instruct Narrator](#instruct-narrator) | `agents/director/chat/instructNarrator` |
 | [Instruct Story Config Updates](#instruct-story-config-updates) | `agents/director/chat/instructStoryConfigUpdates` |
 | [Instruct World Updates](#instruct-world-updates) | `agents/director/chat/instructWorldUpdates` |
-| [Instruct Gamestate Updates](#instruct-gamestate-updates) | `agernts/director/chat/instructGamestateUpdates` |
 
 ## Instruct Character
 
@@ -139,6 +139,27 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/director/mo
 | `instructions` | `str` |  |
 | `summary` | `str` |  |
 
+## Instruct Gamestate Updates
+
+`agents/director/chat/instructGamestateUpdates`
+
+Node module (base type `core/Graph`) defined in `src/talemate/agents/director/modules/instruct-gamestate-updates.json`.
+
+**Inputs**
+
+| Input | Type | Description |
+| --- | --- | --- |
+| `state` | `any` |  |
+| `instructions` | `str` |  |
+
+**Outputs**
+
+| Output | Type | Description |
+| --- | --- | --- |
+| `state` | `any` |  |
+| `instructions` | `str` |  |
+| `updates` | `dict` |  |
+
 ## Instruct History Updates
 
 `agents/director/chat/instructHistoryUpdates`
@@ -225,24 +246,3 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/director/mo
 | `state` | `any` |  |
 | `instructions` | `str` |  |
 | `summary` | `str` |  |
-
-## Instruct Gamestate Updates
-
-`agernts/director/chat/instructGamestateUpdates`
-
-Node module (base type `core/Graph`) defined in `src/talemate/agents/director/modules/instruct-gamestate-updates.json`.
-
-**Inputs**
-
-| Input | Type | Description |
-| --- | --- | --- |
-| `state` | `any` |  |
-| `instructions` | `str` |  |
-
-**Outputs**
-
-| Output | Type | Description |
-| --- | --- | --- |
-| `state` | `any` |  |
-| `instructions` | `str` |  |
-| `updates` | `dict` |  |

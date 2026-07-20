@@ -127,7 +127,7 @@ class CleanUpNarration(AgentNode):
         editor: "EditorAgent" = self.agent
         narration = self.get_input_value("narration")
         force = self.get_property("force")
-        cleaned_narration = await editor.cleanup_narration(narration, force=force)
+        cleaned_narration = await editor.clean_up_narration(narration, force=force)
         self.set_output_values(
             {
                 "cleaned_narration": cleaned_narration,
@@ -135,7 +135,7 @@ class CleanUpNarration(AgentNode):
         )
 
 
-@register("agents/editor/CleanUoCharacterMessage")
+@register("agents/editor/CleanUpCharacterMessage")
 class CleanUpCharacterMessage(AgentNode):
     """
     Cleans up a character's dialogue text via the editor agent: fixes

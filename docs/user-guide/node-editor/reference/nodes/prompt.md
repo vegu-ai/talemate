@@ -130,7 +130,6 @@ that is used as the extracted value.
 | `data_obj` | `dict,list` | The data structure of the response (when data_output is enabled) |
 | `captured_context` | `str` | Context captured by the template during rendering |
 | `rendered_prompt` | `str` | The rendered prompt |
-| `agent` | `agent` | The agent that generated the response |
 | `response_spec` | `response/spec` | Pass-through of the input response spec |
 | `extracted` | `dict` | Dictionary of extracted values (when response_spec provided) |
 

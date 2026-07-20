@@ -109,7 +109,6 @@ Provides a required `state` input causing the node to only run when a state is p
 | `name` | `str` | The name that was used |
 | `value` | `any` | The new value |
 | `scope` | `str` | The scope that was used |
-| `value` | `any` | The new value |
 | `reset_cap` | `number` | The reset cap that was used |
 | `reset` | `bool` | Whether the counter was reset |
 | `new_cycle` | `bool` | True if the counter was at 0 before this run |

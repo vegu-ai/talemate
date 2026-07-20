@@ -314,7 +314,6 @@ class GetWebsocketRouter(Node):
         websocket_handler = active_websocket_handler()
         self.set_output_values(
             {
-                "state": state,
                 "websocket_router": websocket_router,
                 "websocket_handler": websocket_handler,
                 "router": router,

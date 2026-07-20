@@ -185,7 +185,7 @@ class SetScenePhase(Node):
         self.add_input("scene_type", socket_type="str", optional=True)
         self.add_input("intent", socket_type="str", optional=True)
 
-        self.set_property("scene_type", "")
+        self.set_property("scene_type", "roleplay")
         self.set_property("intent", "")
 
         self.add_output("state")

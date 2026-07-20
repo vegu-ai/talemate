@@ -101,9 +101,7 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/director/mo
 `agents/director/auto-direct/GenerateSceneTypes`
 
 Has the director generate scene types (or pick them from the scene
-type templates) and register them on the scene's intent state. The
-generated types are stored on the scene; this node only outputs the
-passed-through state.
+type templates) and register them on the scene's intent state.
 
 **Inputs**
 
@@ -118,6 +116,7 @@ passed-through state.
 | Output | Type | Description |
 | --- | --- | --- |
 | `state` | `any` | The state input, passed through |
+| `scene_types` | `list` | The generated scene types |
 
 **Properties**
 

@@ -9,6 +9,7 @@ from talemate.game.engine.nodes.core import (
     PropertyField,
     InputValueError,
     NodeStyle,
+    StageExit,
     StopGraphExecution,
     StopModule,
     LoopBreak,
@@ -140,6 +141,8 @@ class Stop(Node):
             raise exceptions.RestartSceneLoop()
         elif exception == "ResetScene":
             raise exceptions.ResetScene()
+        elif exception == "StageExit":
+            raise StageExit()
         else:
             raise InputValueError(self, "exception", f"Unknown exception: {exception}")
 

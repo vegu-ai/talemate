@@ -277,9 +277,3 @@ Messages that aren't found are skipped rather than raising an error.
 | `messages` | `list` | List of updated message objects |
 | `message_ids` | `list` | List of message IDs (passthrough) |
 | `asset_id` | `str` | The asset ID (passthrough) |
-
-**Properties**
-
-| Property | Type | Default | Description |
-| --- | --- | --- | --- |
-| `asset_type` | `str` | `"avatar"` | The type of asset. Choices: `avatar`, `card`, `scene_illustration`, `__keep__`. |

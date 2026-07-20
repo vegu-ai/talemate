@@ -597,14 +597,14 @@ class ContextHistory(Node):
             name="keep_investigation_messages",
             description="Whether to keep investigation messages",
             type="bool",
-            default=True,
+            default=False,
         )
 
         keep_reinforcement_messages = PropertyField(
             name="keep_reinforcement_messages",
             description="Whether to keep reinforcement messages",
             type="bool",
-            default=True,
+            default=False,
         )
 
         show_hidden = PropertyField(

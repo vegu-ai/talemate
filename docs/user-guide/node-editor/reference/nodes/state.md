@@ -49,7 +49,6 @@ Provides a required `state` input causing the node to only run when a state is p
 | `name` | `str` |  |
 | `value` | `any` |  |
 | `scope` | `str` |  |
-| `value` | `any` |  |
 | `reset_cap` | `number` |  |
 | `reset` | `bool` |  |
 | `new_cycle` | `bool` |  |
@@ -150,7 +149,6 @@ Counter node that increments a numeric value in the state and returns the new va
 | `name` | `str` | The key that was used |
 | `value` | `any` | The new value |
 | `scope` | `str` | The scope that was used |
-| `value` | `any` | The new value |
 | `reset_cap` | `number` | The reset cap that was used |
 | `reset` | `bool` | Whether the counter was reset |
 | `new_cycle` | `bool` | True if the counter was at 0 before this run |
@@ -191,7 +189,6 @@ Mutating operation - conditional by default with required state input.
 | `name` | `str` | The key that was used |
 | `value` | `any` | The new value |
 | `scope` | `str` | The scope that was used |
-| `value` | `any` | The new value |
 | `reset_cap` | `number` | The reset cap value |
 | `reset` | `bool` | Whether reset occurred |
 | `new_cycle` | `bool` | Whether this is a new cycle (value was 0) |

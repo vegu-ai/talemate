@@ -62,7 +62,7 @@ context IDs (truncated SHA256).
 
 | Output | Type | Description |
 | --- | --- | --- |
-| `uncompressed` | `str` | Intended to carry the original part; currently emits the compressed value as well |
+| `uncompressed` | `str` | The original part, passed through |
 | `compressed` | `str` | The compressed part |
 
 ## Context ID Get Value

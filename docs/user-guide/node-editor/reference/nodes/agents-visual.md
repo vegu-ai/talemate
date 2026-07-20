@@ -38,6 +38,7 @@ prompt in place.
 
 | Output | Type | Description |
 | --- | --- | --- |
+| `state` | `any` | The graph state, passed through |
 | `prompt` | `visual/prompt` | The prompt with the style applied |
 | `template_id` | `str` | The template id, passed through |
 | `prompt_part` | `visual/prompt_part` | The prompt part created from the style template (None if the template was not found) |
@@ -63,6 +64,7 @@ the prompt in place.
 
 | Output | Type | Description |
 | --- | --- | --- |
+| `state` | `any` | The graph state, passed through |
 | `prompt` | `visual/prompt` | The prompt with the styles applied |
 | `vis_type` | `str` | The vis_type, passed through |
 

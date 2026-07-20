@@ -19,6 +19,7 @@ __all__ = [
     "register",
     "get_node",
     "NODES",
+    "NODE_ALIASES",
     "export_node_definitions",
     "import_node_definitions",
     "import_node_definition",
@@ -33,6 +34,14 @@ __all__ = [
 log = structlog.get_logger("talemate.game.engine.nodes.registry")
 
 NODES = {}
+
+# Maps legacy registry names to their current equivalents so saved graphs
+# referencing a renamed node keep loading. Old names resolve via get_node()
+# but are not exported or searchable.
+NODE_ALIASES = {
+    "agents/editor/CleanUoCharacterMessage": "agents/editor/CleanUpCharacterMessage",
+    "agernts/director/chat/instructGamestateUpdates": "agents/director/chat/instructGamestateUpdates",
+}
 
 INITIAL_IMPORT_DONE = False
 
@@ -74,6 +83,13 @@ def get_node(name):
     scene: "Scene" = active_scene.get()
 
     SCENE_NODES = getattr(scene, "_NODE_DEFINITIONS", {})
+
+    # scene-local definitions may still be registered under a legacy name -
+    # they must keep priority over the shipped node the alias points to
+    if name in SCENE_NODES:
+        return SCENE_NODES[name]
+
+    name = NODE_ALIASES.get(name, name)
 
     if name in SCENE_NODES:
         return SCENE_NODES[name]

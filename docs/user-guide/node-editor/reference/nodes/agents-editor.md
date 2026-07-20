@@ -9,14 +9,14 @@ _4 nodes._
 
 | Node | Registry path |
 | --- | --- |
-| [Clean Up Character Message](#clean-up-character-message) | `agents/editor/CleanUoCharacterMessage` |
+| [Clean Up Character Message](#clean-up-character-message) | `agents/editor/CleanUpCharacterMessage` |
 | [Clean Up Narration](#clean-up-narration) | `agents/editor/CleanUpNarration` |
 | [Clean Up User Input](#clean-up-user-input) | `agents/editor/CleanUpUserInput` |
 | [Editor Settings](#editor-settings) | `agents/editor/Settings` |
 
 ## Clean Up Character Message
 
-`agents/editor/CleanUoCharacterMessage`
+`agents/editor/CleanUpCharacterMessage`
 
 Cleans up a character's dialogue text via the editor agent: fixes
 exposition formatting (per the editor's formatting settings), cleans

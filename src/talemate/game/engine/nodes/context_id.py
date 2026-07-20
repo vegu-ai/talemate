@@ -231,7 +231,7 @@ class CompressContextIDPart(Node):
 
     Outputs:
 
-    - uncompressed: Intended to carry the original part; currently emits the compressed value as well
+    - uncompressed: The original part, passed through
     - compressed: The compressed part
     """
 
@@ -245,8 +245,8 @@ class CompressContextIDPart(Node):
 
     async def run(self, state: GraphState):
         part = self.require_input("part")
-        part = compress_name(part)
-        self.set_output_values({"uncompressed": part, "compressed": part})
+        compressed = compress_name(part)
+        self.set_output_values({"uncompressed": part, "compressed": compressed})
 
 
 @register("context_id/PathToContextID")

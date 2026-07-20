@@ -68,9 +68,7 @@ class DetermineSceneIntent(AgentNode):
 class GenerateSceneTypes(AgentNode):
     """
     Has the director generate scene types (or pick them from the scene
-    type templates) and register them on the scene's intent state. The
-    generated types are stored on the scene; this node only outputs the
-    passed-through state.
+    type templates) and register them on the scene's intent state.
 
     Inputs:
 
@@ -81,6 +79,7 @@ class GenerateSceneTypes(AgentNode):
     Outputs:
 
     - state: The state input, passed through
+    - scene_types: The generated scene types
     """
 
     _agent_name: ClassVar[str] = "director"
@@ -110,6 +109,7 @@ class GenerateSceneTypes(AgentNode):
         self.set_property("instructions", "")
         self.set_property("max_scene_types", 1)
         self.add_output("state")
+        self.add_output("scene_types", socket_type="list")
 
     async def run(self, state: GraphState):
         instructions = self.normalized_input_value("instructions")

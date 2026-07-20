@@ -105,7 +105,7 @@
       "height": 66,
       "collapsed": false,
       "inherited": false,
-      "registry": "agernts/director/chat/instructGamestateUpdates",
+      "registry": "agents/director/chat/instructGamestateUpdates",
       "base_type": "core/Graph"
     },
     "64136cbd-4b3b-4586-9122-4fae36374af8": {

@@ -103,7 +103,7 @@ class AsNumber(NumberNode):
             name="number_type",
             description="Type of number to create",
             type="str",
-            default="float",
+            default="int",
             choices=["int", "float"],
         )
 
@@ -364,6 +364,14 @@ class Sum(NumberNode):
 
     - result: The sum of all numbers in the list
     """
+
+    class Fields:
+        numbers = PropertyField(
+            name="numbers",
+            description="List of numbers to sum",
+            type="list",
+            default=[],
+        )
 
     def setup(self):
         self.add_input("numbers", socket_type="list")

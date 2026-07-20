@@ -317,28 +317,32 @@ class AutoDirectMixin:
         self,
         instructions: str,
         max_scene_types: int = 1,
-    ):
+    ) -> list[SceneType]:
         world_state_manager: WorldStateManager = self.scene.world_state_manager
 
         scene_type_templates: TypedCollection = await world_state_manager.get_templates(
             types=["scene_type"]
         )
 
-        async def add_from_template(id: str) -> SceneType:
+        generated: list[SceneType] = []
+
+        async def add_from_template(id: str) -> SceneType | None:
             template: TemplateSceneType | None = scene_type_templates.find_by_name(id)
             if not template:
                 log.warning(
                     "auto_direct_generate_scene_types: Template not found.", name=id
                 )
                 return None
-            return template.apply_to_scene(self.scene)
+            scene_type = template.apply_to_scene(self.scene)
+            generated.append(scene_type)
+            return scene_type
 
         async def generate_scene_type(
             id: str = None,
             name: str = None,
             description: str = None,
             instructions: str = None,
-        ) -> SceneType:
+        ) -> SceneType | None:
             if not id or not name:
                 return None
 
@@ -350,6 +354,8 @@ class AutoDirectMixin:
             )
 
             self.scene.intent_state.scene_types[id] = scene_type
+
+            generated.append(scene_type)
 
             return scene_type
 
@@ -386,3 +392,5 @@ class AutoDirectMixin:
         await focal_handler.request(
             "director.generate-scene-types",
         )
+
+        return generated

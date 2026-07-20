@@ -111,7 +111,7 @@ class StateReinforcement(AgentNode):
 
     - state: graph state
     - message: state reinforcement message
-    - reinforcement: currently never set (reserved)
+    - reinforcement: the reinforcement that was added or updated
     """
 
     _agent_name: ClassVar[str] = "world_state"
@@ -183,7 +183,7 @@ class StateReinforcement(AgentNode):
         instructions = self.normalized_input_value("instructions")
         insert_method = self.get_property("insert_method")
 
-        await scene.world_state.add_reinforcement(
+        reinforcement = await scene.world_state.add_reinforcement(
             question=query_or_detail,
             character=character.name if character else None,
             instructions=instructions,
@@ -195,7 +195,9 @@ class StateReinforcement(AgentNode):
             question=query_or_detail, character=character, reset=reset
         )
 
-        self.set_output_values({"state": state, "message": message})
+        self.set_output_values(
+            {"state": state, "message": message, "reinforcement": reinforcement}
+        )
 
 
 @register("agents/world_state/DeactivateCharacter")

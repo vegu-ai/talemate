@@ -333,7 +333,7 @@ class Spices(Node):
 
         self.set_property("spice_values", [])
 
-        self.add_output("spices", socket_type="list")
+        self.add_output("spices", socket_type="spices")
 
     async def run(self, state: GraphState):
         spice_values = self.get_input_value("spice_values")
@@ -390,7 +390,7 @@ class GenerationOptions(Node):
 
     Inputs:
 
-    - spices: The spices to apply to the generation options
+    - spices: The spices to apply to the generation options (input-only)
     - spice_level: The spice level to apply to the generation options
     - writing_style: The writing style to apply to the generation options
 
@@ -405,13 +405,6 @@ class GenerationOptions(Node):
     """
 
     class Fields:
-        spices = PropertyField(
-            name="spices",
-            description="The spices to apply to the generation options",
-            type="spices",
-            default=UNRESOLVED,
-        )
-
         spice_level = PropertyField(
             name="spice_level",
             description="The spice level to apply to the generation options",
@@ -433,7 +426,7 @@ class GenerationOptions(Node):
         super().__init__(title=title, **kwargs)
 
     def setup(self):
-        self.add_input("spices", socket_type="generation_options", optional=True)
+        self.add_input("spices", socket_type="spices", optional=True)
         self.add_input("spice_level", socket_type="number", optional=True)
         self.add_input("writing_style", socket_type="writing_style", optional=True)
 

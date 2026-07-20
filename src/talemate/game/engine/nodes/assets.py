@@ -1517,10 +1517,6 @@ class UpdateMessageAsset(Node):
     - message_ids: List of message IDs to update
     - asset_id: The new asset ID
 
-    Properties:
-
-    - asset_type: The type of asset (predefined choices; currently not applied by this node)
-
     Outputs:
 
     - state: graph state
@@ -1538,15 +1534,6 @@ class UpdateMessageAsset(Node):
             icon="F0287",
         )
 
-    class Fields:
-        asset_type = PropertyField(
-            name="asset_type",
-            description="The type of asset",
-            type="str",
-            default="avatar",
-            choices=["avatar", "card", "scene_illustration", "__keep__"],
-        )
-
     def __init__(self, title="Update Message Assets", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -1554,8 +1541,6 @@ class UpdateMessageAsset(Node):
         self.add_input("state")
         self.add_input("message_ids", socket_type="list", optional=True)
         self.add_input("asset_id", socket_type="str")
-
-        self.set_property("asset_type", "avatar")
 
         self.add_output("state")
         self.add_output("messages", socket_type="list")

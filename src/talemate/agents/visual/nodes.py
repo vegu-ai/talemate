@@ -406,6 +406,7 @@ class ApplyStyles(AgentNode):
 
     Outputs:
 
+    - state: The graph state, passed through
     - prompt: The prompt with the styles applied
     - vis_type: The vis_type, passed through
     """
@@ -429,6 +430,7 @@ class ApplyStyles(AgentNode):
         self.add_input("prompt", socket_type="visual/prompt")
         self.add_input("vis_type", socket_type="str", optional=True)
         self.set_property("vis_type", "UNSPECIFIED")
+        self.add_output("state")
         self.add_output("prompt", socket_type="visual/prompt")
         self.add_output("vis_type", socket_type="str")
 
@@ -531,6 +533,7 @@ class ApplyStyle(AgentNode):
 
     Outputs:
 
+    - state: The graph state, passed through
     - prompt: The prompt with the style applied
     - template_id: The template id, passed through
     - prompt_part: The prompt part created from the style template (None
@@ -546,6 +549,7 @@ class ApplyStyle(AgentNode):
         self.add_input("state")
         self.add_input("prompt", socket_type="visual/prompt")
         self.add_input("template_id", socket_type="str")
+        self.add_output("state")
         self.add_output("prompt", socket_type="visual/prompt")
         self.add_output("template_id", socket_type="str")
         self.add_output("prompt_part", socket_type="visual/prompt_part")

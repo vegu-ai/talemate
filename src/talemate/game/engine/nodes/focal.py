@@ -157,7 +157,7 @@ class Focal(Node):
 
     def setup(self):
         self.add_input("state")
-        self.add_input("template", socket_typoe="str", optional=True)
+        self.add_input("template", socket_type="str", optional=True)
         self.add_input("prompt", socket_type="prompt", optional=True)
         self.add_input("callbacks", socket_type="list")
         self.add_input("agent", socket_type="agent")

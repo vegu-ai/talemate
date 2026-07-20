@@ -288,7 +288,7 @@ message.
 | --- | --- | --- |
 | `state` | `any` | graph state |
 | `message` | `message` | state reinforcement message |
-| `reinforcement` | `world_state/reinforcement` | currently never set (reserved) |
+| `reinforcement` | `world_state/reinforcement` | the reinforcement that was added or updated |
 
 **Properties**
 

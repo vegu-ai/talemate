@@ -2135,6 +2135,8 @@ class Graph(NodeBase):
                                 node_state, node, state, error=traceback.format_exc()
                             )
                     except StageExit:
+                        if emit_state:
+                            await self.node_state_pop(node_state, node, state)
                         break
                     except Exception as exc:
                         if emit_state:

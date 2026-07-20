@@ -257,7 +257,7 @@ Set a new scene phase.
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| `scene_type` | `str` | `""` | Type of scene |
+| `scene_type` | `str` | `"roleplay"` | Type of scene |
 | `intent` | `str` | `""` | Phase intent |
 
 ## Unpack Scene Phase

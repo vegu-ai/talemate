@@ -775,7 +775,9 @@ class AsBool(Node):
             try:
                 value = bool(value)
             except Exception as e:
-                raise InputValueError(f"Failed to convert value to bool: {e}")
+                raise InputValueError(
+                    self, "value", f"Failed to convert value to bool: {e}"
+                )
 
         self.set_output_values({"value": value})
 

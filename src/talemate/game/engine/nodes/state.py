@@ -350,7 +350,6 @@ class CounterState(StateManipulation):
         self.set_property("reset", False)
         self.set_property("reset_cap", 0)
 
-        self.add_output("value")
         self.add_output("reset_cap", socket_type="number")
         self.add_output("reset", socket_type="bool")
         self.add_output("new_cycle", socket_type="bool")

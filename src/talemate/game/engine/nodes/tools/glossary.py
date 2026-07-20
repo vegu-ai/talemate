@@ -102,8 +102,6 @@ PREFIX_MAP: dict[str, str] = {
     "agents/tts": "agents-tts",
     "agents/visual": "agents-visual",
     "agents/world_state": "agents-world-state",
-    # sic - this typo'd registry path ships in instruct-gamestate-updates.json
-    "agernts/director/chat": "agents-director-chat",
 }
 
 # For flat registry prefixes shared by several source modules (the flat
@@ -589,7 +587,7 @@ def _page_slug(doc: NodeDoc) -> str:
 
     # director chat is the largest module family - split its action and
     # instructor modules off the chat plumbing page
-    if parts[0] in ("agents", "agernts") and dirname.endswith("director/chat"):
+    if parts[0] == "agents" and dirname.endswith("director/chat"):
         if name.startswith("directorAction"):
             return "agents-director-chat-actions"
         if name.startswith("instruct"):

@@ -275,4 +275,4 @@ Calculates the sum of all values in a list of numbers.
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| `numbers` | `list` | `[]` | numbers |
+| `numbers` | `list` | `[]` | List of numbers to sum |

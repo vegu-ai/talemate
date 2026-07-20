@@ -696,7 +696,6 @@ class GenerateResponse(Node):
         self.add_output("data_obj", socket_type="dict,list")
         self.add_output("captured_context", socket_type="str")
         self.add_output("rendered_prompt", socket_type="str")
-        self.add_output("agent", socket_type="agent")
         self.add_output("response_spec", socket_type="response/spec")
         self.add_output("extracted", socket_type="dict")
 

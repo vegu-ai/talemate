@@ -135,7 +135,7 @@ Node that returns a GenerationOptions object
 
 | Input | Type | Description |
 | --- | --- | --- |
-| `spices` | `generation_options` | (optional) The spices to apply to the generation options |
+| `spices` | `spices` | (optional) The spices to apply to the generation options (input-only) |
 | `spice_level` | `number` | (optional) The spice level to apply to the generation options |
 | `writing_style` | `writing_style` | (optional) The writing style to apply to the generation options |
 
@@ -151,7 +151,6 @@ Node that returns a GenerationOptions object
 | --- | --- | --- | --- |
 | `spice_level` | `number` | `0.0` | The spice level to apply to the generation options. Range: 0.0 – 1.0. |
 | `writing_style` | `writing_style` | `""` | The writing style to apply to the generation options |
-| `spices` | `spices` | `unset` | The spices to apply to the generation options |
 
 ## Spices
 
@@ -169,7 +168,7 @@ Node that returns a Spices object
 
 | Output | Type | Description |
 | --- | --- | --- |
-| `spices` | `list` | The Spices object built from the spice values |
+| `spices` | `spices` | The Spices object built from the spice values |
 
 **Properties**
 

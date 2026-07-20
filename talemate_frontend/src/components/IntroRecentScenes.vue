@@ -227,7 +227,6 @@ export default {
     position: relative;
     width: 100%;
     aspect-ratio: 3 / 4;
-    min-height: clamp(200px, 25vw, 275px);
     background-color: transparent;
     background-image: url('/src/assets/logo-13.1-backdrop.png');
     background-repeat: no-repeat;
@@ -251,18 +250,21 @@ export default {
     background-position: top center !important;
 }
 
-/* flud flex tiles with fixed width */
+/* fluid grid tiles - card width scales with viewport; 145px min fits a full
+   10-entry recents list in a single row at the landing container's max width */
 .tiles {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: left;
-    overflow: hidden;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+    gap: 12px;
 }
 
-.tile {
-    flex: 0 0 275px;
-    margin: 10px;
-    max-width: 275px;
+.tile :deep(.v-card-title) {
+    font-size: 0.9rem;
+    padding-right: 40px;
+}
+
+.tile :deep(.v-card-subtitle) {
+    font-size: 0.75rem;
 }
 
 .v-card:disabled {

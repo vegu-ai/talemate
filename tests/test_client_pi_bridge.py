@@ -34,6 +34,8 @@ def _event_line(event: dict) -> bytes:
 class FakeStdin:
     def __init__(self):
         self.written = b""
+        self.closed = False
+        self.closed_event = asyncio.Event()
 
     def write(self, data: bytes):
         self.written += data
@@ -41,20 +43,35 @@ class FakeStdin:
     async def drain(self):
         pass
 
+    def close(self):
+        self.closed = True
+        self.closed_event.set()
+
 
 class FakeProcess:
     """Stands in for the pi RPC subprocess. The stdout reader uses the same
-    line limit the client requests from create_subprocess_exec."""
+    line limit the client requests from create_subprocess_exec. Models a pi
+    that exits as soon as it is waited on (i.e. honors the stdin-EOF
+    shutdown request)."""
 
-    def __init__(self, events: list[dict], stderr: bytes = b""):
+    def __init__(
+        self,
+        events: list[dict],
+        stderr: bytes = b"",
+        stderr_eof=True,
+        stdout_eof=True,
+    ):
+        self.pid = 4242
         self.stdin = FakeStdin()
         self.stdout = asyncio.StreamReader(limit=pi_bridge.PI_STDOUT_LIMIT)
         for event in events:
             self.stdout.feed_data(_event_line(event))
-        self.stdout.feed_eof()
+        if stdout_eof:
+            self.stdout.feed_eof()
         self.stderr = asyncio.StreamReader()
         self.stderr.feed_data(stderr)
-        self.stderr.feed_eof()
+        if stderr_eof:
+            self.stderr.feed_eof()
         self.returncode = None
         self.killed = False
 
@@ -65,6 +82,24 @@ class FakeProcess:
     async def wait(self):
         if self.returncode is None:
             self.returncode = 0
+        return self.returncode
+
+
+class HangingProcess(FakeProcess):
+    """A pi that ignores the stdin-EOF shutdown request and only exits when
+    killed (models the orphaned-node hang behind the pi.cmd shim)."""
+
+    def __init__(self, events: list[dict], **kwargs):
+        super().__init__(events, **kwargs)
+        self._exited = asyncio.Event()
+
+    def kill(self):
+        super().kill()
+        self._exited.set()
+
+    async def wait(self):
+        if self.returncode is None:
+            await self._exited.wait()
         return self.returncode
 
 
@@ -174,10 +209,126 @@ async def test_generate_sends_prompt_command_and_cleans_up(client, spawner):
     # the resolved binary path is spawned, not the bare name (Windows
     # CreateProcess cannot find npm's pi.cmd shim by bare name)
     assert spawner.calls[0]["args"][0] == "/usr/bin/pi"
-    # the subprocess is terminated after the response
-    assert proc.killed
+    # shutdown is requested via stdin EOF (killing the shim process would
+    # orphan node on Windows) and the process exits on its own
+    assert proc.stdin.closed
+    assert proc.returncode == 0
+    assert not proc.killed
     # the raised stream limit is requested from the subprocess reader
     assert spawner.calls[0]["kwargs"]["limit"] == pi_bridge.PI_STDOUT_LIMIT
+
+
+@pytest.mark.asyncio
+async def test_shutdown_falls_back_to_kill_when_pi_ignores_stdin_eof(
+    client, spawner, monkeypatch
+):
+    """A pi that does not exit on stdin EOF is force-killed after the grace
+    period instead of hanging generate() forever (issue #126)."""
+    monkeypatch.setattr(pi_bridge, "PI_SHUTDOWN_GRACE", 0.01)
+    message = _assistant_message([{"type": "text", "text": "ok"}])
+    proc = HangingProcess(_generation_events(message))
+    spawner.queue(proc)
+
+    assert await client.generate("hi", {}, "conversation") == "ok"
+    assert proc.stdin.closed
+    assert proc.killed
+
+
+@pytest.mark.asyncio
+async def test_shutdown_kills_process_tree_on_windows(client, spawner, monkeypatch):
+    """On Windows the fallback kill must take down the whole tree via
+    taskkill - killing only the pi.cmd shim orphans the node process, which
+    holds the stdio pipes open and hangs the generation (issue #126)."""
+    monkeypatch.setattr(pi_bridge, "PI_SHUTDOWN_GRACE", 0.01)
+    monkeypatch.setattr(pi_bridge.sys, "platform", "win32")
+    message = _assistant_message([{"type": "text", "text": "ok"}])
+    proc = HangingProcess(_generation_events(message))
+    spawner.queue(proc)
+    spawner.queue(FakeProcess([]))  # stands in for the taskkill process
+
+    assert await client.generate("hi", {}, "conversation") == "ok"
+    assert proc.killed
+    assert spawner.calls[1]["args"] == ("taskkill", "/F", "/T", "/PID", "4242")
+
+
+@pytest.mark.asyncio
+async def test_cancelled_generation_shuts_down_pi(client, spawner, monkeypatch):
+    """Cancelling mid-stream must still shut pi down (stdin EOF, then the
+    kill fallback) - on Windows a leaked node process keeps the provider
+    request running (issue #126)."""
+    monkeypatch.setattr(pi_bridge, "PI_SHUTDOWN_GRACE", 0.01)
+    # stream never settles: only the prompt ack arrives, stdout stays open
+    proc = HangingProcess(
+        [{"id": "generate", "type": "response", "command": "prompt", "success": True}],
+        stdout_eof=False,
+    )
+    spawner.queue(proc)
+
+    task = asyncio.ensure_future(client.generate("hi", {}, "conversation"))
+    await asyncio.sleep(0.05)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert proc.stdin.closed
+    assert proc.killed
+
+
+@pytest.mark.asyncio
+async def test_repeated_cancel_during_grace_wait_still_kills(
+    client, spawner, monkeypatch
+):
+    """A second cancellation delivered while cleanup is parked in the
+    shutdown grace wait must not skip the kill fallback."""
+    monkeypatch.setattr(pi_bridge, "PI_SHUTDOWN_GRACE", 30.0)
+    proc = HangingProcess(
+        [{"id": "generate", "type": "response", "command": "prompt", "success": True}],
+        stdout_eof=False,
+    )
+    spawner.queue(proc)
+
+    task = asyncio.ensure_future(client.generate("hi", {}, "conversation"))
+    await asyncio.sleep(0.05)
+    task.cancel()  # lands in _consume_events, unwinds into cleanup
+    # deterministic handshake: stdin closing means cleanup reached
+    # terminate_pi_process; one extra tick parks it in the grace wait
+    await asyncio.wait_for(proc.stdin.closed_event.wait(), timeout=1)
+    await asyncio.sleep(0)
+    task.cancel()  # impatient repeat cancel
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert proc.killed
+
+
+@pytest.mark.asyncio
+async def test_unexpected_exit_reports_partial_stderr_on_drain_timeout(
+    client, spawner, monkeypatch
+):
+    """When stdout EOFs but stderr never closes, the bounded drain must
+    surface whatever pi wrote before dying (as a PiBridgeError, not a
+    CancelledError from re-awaiting the timed-out drain task)."""
+    monkeypatch.setattr(pi_bridge, "PI_STDERR_DRAIN_TIMEOUT", 0.05)
+    proc = FakeProcess([], stderr=b"Error: partial diagnosis", stderr_eof=False)
+    spawner.queue(proc)
+
+    with pytest.raises(pi_bridge.PiBridgeError, match="partial diagnosis"):
+        await client.generate("hi", {}, "conversation")
+
+
+@pytest.mark.asyncio
+async def test_generate_returns_even_if_stderr_never_closes(
+    client, spawner, monkeypatch
+):
+    """Cleanup must not block response delivery on the stderr drain - an
+    orphaned grandchild holding the pipe open was exactly the Windows hang:
+    the response was fully received but never returned (issue #126)."""
+    monkeypatch.setattr(pi_bridge, "PI_STDERR_DRAIN_TIMEOUT", 0.05)
+    message = _assistant_message([{"type": "text", "text": "ok"}])
+    proc = FakeProcess(_generation_events(message), stderr_eof=False)
+    spawner.queue(proc)
+
+    assert await client.generate("hi", {}, "conversation") == "ok"
 
 
 @pytest.mark.asyncio

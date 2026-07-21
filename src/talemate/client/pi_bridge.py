@@ -3,6 +3,7 @@ import json
 import os
 import re
 import shutil
+import sys
 import tempfile
 import time
 from typing import Literal
@@ -37,6 +38,11 @@ log = structlog.get_logger("talemate.client.pi_bridge")
 
 PI_BINARY = "pi"
 
+# Set TALEMATE_PI_BRIDGE_TRACE=1 to log the pi event stream as it is consumed
+# (per-event sizes/types plus a silence heartbeat). Diagnostic aid for stream
+# stalls that only reproduce inside talemate (issue #126).
+PI_BRIDGE_TRACE = os.environ.get("TALEMATE_PI_BRIDGE_TRACE", "") == "1"
+
 # pi event lines carry entire messages (message_end includes the full
 # accumulated thinking block, agent_end the whole conversation), which
 # easily exceeds asyncio's 64KB default StreamReader line limit and would
@@ -44,6 +50,14 @@ PI_BINARY = "pi"
 PI_STDOUT_LIMIT = 2**26
 
 DEFAULT_PROVIDER = "openrouter"
+
+# how long pi gets to exit on its own after stdin closes before the process
+# tree is force-killed
+PI_SHUTDOWN_GRACE = 3.0
+
+# cap on waiting for the stderr drain during cleanup, in case something
+# still holds the pipe open
+PI_STDERR_DRAIN_TIMEOUT = 5.0
 
 THINKING_LEVELS = ["minimal", "low", "medium", "high", "xhigh", "max"]
 
@@ -60,6 +74,69 @@ _MODELS_LOCK = asyncio.Lock()
 # while it keeps failing.
 FETCH_RETRY_COOLDOWN = 30.0
 _models_last_attempt: float | None = None
+
+
+async def kill_pi_process_tree(proc: asyncio.subprocess.Process) -> None:
+    """Force-kill pi and any children it spawned.
+
+    On Windows the spawned process is npm's pi.cmd shim (cmd.exe); killing it
+    directly orphans the node process underneath, which keeps the stdio pipes
+    open forever (issue #126). taskkill /T takes down the whole tree.
+    """
+    try:
+        if sys.platform == "win32":
+            try:
+                killer = await asyncio.create_subprocess_exec(
+                    "taskkill",
+                    "/F",
+                    "/T",
+                    "/PID",
+                    str(proc.pid),
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.DEVNULL,
+                )
+                await killer.wait()
+            except OSError as e:
+                # degrade loudly - the proc.kill() below only kills the
+                # shim, so a failed taskkill means the node tree survives
+                log.warning("taskkill failed", pid=proc.pid, error=str(e))
+    finally:
+        # runs even if cancellation lands on the taskkill awaits above
+        try:
+            proc.kill()
+        except ProcessLookupError:
+            pass
+        except OSError as e:
+            log.warning("failed to kill pi process", pid=proc.pid, error=str(e))
+
+
+async def terminate_pi_process(proc: asyncio.subprocess.Process) -> None:
+    """End the pi subprocess without orphaning grandchildren.
+
+    Closing stdin asks pi's RPC mode to shut down (it exits on stdin EOF),
+    which ends the actual node process even when spawned through the pi.cmd
+    shim on Windows; the tree kill is the fallback for a process that will
+    not exit on its own.
+    """
+    if proc.returncode is None:
+        proc.stdin.close()
+        # the kill fallbacks in the except branches below are shielded so a
+        # further cancellation cannot interrupt them mid-way - the detached
+        # kill still runs to completion (at the cost of the trailing reap
+        # warning never firing on that path)
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=PI_SHUTDOWN_GRACE)
+        except asyncio.TimeoutError:
+            await asyncio.shield(kill_pi_process_tree(proc))
+        except asyncio.CancelledError:
+            # a repeat cancellation while parked in the grace wait must not
+            # skip the kill, or the pi/node tree leaks with a live request
+            await asyncio.shield(kill_pi_process_tree(proc))
+            raise
+    try:
+        await asyncio.wait_for(proc.wait(), timeout=PI_SHUTDOWN_GRACE)
+    except asyncio.TimeoutError:
+        log.warning("pi process did not exit after kill", pid=proc.pid)
 
 
 def resolve_pi_binary() -> str | None:
@@ -200,6 +277,63 @@ async def on_config_saved(config):
 
 handlers["talemate_started"].connect(on_talemate_started)
 async_signals.get("config.saved").connect(on_config_saved)
+
+
+class PiBridgeTrace:
+    """Per-generation stream statistics logger for TALEMATE_PI_BRIDGE_TRACE."""
+
+    HEARTBEAT_INTERVAL = 5.0
+    # log every Nth delta event; every one would flood the log at
+    # generation speed while the interesting ones are the non-deltas
+    DELTA_LOG_EVERY = 25
+
+    def __init__(self, logger):
+        self.log = logger
+        self.started = time.monotonic()
+        self.lines = 0
+        self.bytes = 0
+        self.deltas = 0
+        self.last_type = "(none)"
+        self.last_line_at = self.started
+
+    def elapsed(self) -> float:
+        return round(time.monotonic() - self.started, 2)
+
+    def line(self, raw_line: bytes, event_type: str):
+        self.lines += 1
+        self.bytes += len(raw_line)
+        self.last_line_at = time.monotonic()
+        is_delta = event_type.startswith("message_update")
+        if is_delta:
+            self.deltas += 1
+        if not is_delta or self.deltas % self.DELTA_LOG_EVERY == 1:
+            self.log.info(
+                "pi_bridge trace: event",
+                elapsed=self.elapsed(),
+                line=self.lines,
+                size=len(raw_line),
+                type=event_type,
+                total_bytes=self.bytes,
+                deltas=self.deltas,
+            )
+        self.last_type = event_type
+
+    async def heartbeat(self, proc):
+        while True:
+            await asyncio.sleep(self.HEARTBEAT_INTERVAL)
+            quiet = time.monotonic() - self.last_line_at
+            if quiet < self.HEARTBEAT_INTERVAL:
+                continue
+            self.log.warning(
+                "pi_bridge trace: no output",
+                elapsed=self.elapsed(),
+                quiet_seconds=round(quiet, 1),
+                lines=self.lines,
+                total_bytes=self.bytes,
+                deltas=self.deltas,
+                last_event=self.last_type,
+                pi_alive=proc.returncode is None,
+            )
 
 
 REASONING_FIELD_GROUP = FieldGroup(
@@ -460,15 +594,43 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
             # drain stderr continuously so a chatty pi process can never fill
             # the OS pipe buffer and deadlock against our stdout readline loop;
             # the collected output feeds the unexpected-exit error message.
-            stderr_task = asyncio.create_task(proc.stderr.read())
+            # drained incrementally into a buffer so whatever pi wrote is
+            # available even when the drain has to be abandoned mid-read.
+            stderr_buf = bytearray()
+
+            async def drain_stderr():
+                while True:
+                    chunk = await proc.stderr.read(4096)
+                    if not chunk:
+                        return
+                    stderr_buf.extend(chunk)
+
+            stderr_task = asyncio.create_task(drain_stderr())
+
+            trace = None
+            heartbeat_task = None
+            if PI_BRIDGE_TRACE:
+                trace = PiBridgeTrace(self.log)
+                heartbeat_task = asyncio.create_task(trace.heartbeat(proc))
+                self.log.info(
+                    "pi_bridge trace: spawned",
+                    argv=argv,
+                    prompt_bytes=len(prompt),
+                    pid=proc.pid,
+                )
 
             try:
                 rpc_command = {"id": "generate", "type": "prompt", "message": prompt}
                 proc.stdin.write((json.dumps(rpc_command) + "\n").encode("utf-8"))
                 await proc.stdin.drain()
+                if trace:
+                    self.log.info(
+                        "pi_bridge trace: prompt command sent",
+                        elapsed=trace.elapsed(),
+                    )
 
                 response_text, reasoning_text = await self._consume_events(
-                    proc, stderr_task
+                    proc, stderr_task, stderr_buf, trace=trace
                 )
 
                 self._reasoning_response = reasoning_text or None
@@ -483,16 +645,35 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
 
                 return response_text
             finally:
-                if proc.returncode is None:
-                    try:
-                        proc.kill()
-                    except ProcessLookupError:
-                        pass
-                await proc.wait()
-                # the kill/exit above closes the pipe, so the drain finishes
-                await stderr_task
+                if heartbeat_task:
+                    heartbeat_task.cancel()
+                try:
+                    await terminate_pi_process(proc)
+                    # the exit above closes the pipe, so the drain finishes;
+                    # bounded in case something still holds stderr open.
+                    # skipped when the unexpected-exit path already consumed
+                    # it - if that drain timed out the task is CANCELLED, and
+                    # re-awaiting it would raise CancelledError over the
+                    # in-flight PiBridgeError
+                    if not stderr_task.done():
+                        await asyncio.wait_for(
+                            stderr_task, timeout=PI_STDERR_DRAIN_TIMEOUT
+                        )
+                except asyncio.TimeoutError:
+                    pass
+                finally:
+                    # cancellation out of terminate_pi_process must not
+                    # abandon a pending drain (task-destroyed warnings)
+                    if not stderr_task.done():
+                        stderr_task.cancel()
 
-    async def _consume_events(self, proc, stderr_task) -> tuple[str, str]:
+    async def _consume_events(
+        self,
+        proc: asyncio.subprocess.Process,
+        stderr_task: asyncio.Task,
+        stderr_buf: bytearray,
+        trace: PiBridgeTrace | None = None,
+    ) -> tuple[str, str]:
         """Read the pi RPC event stream until the agent settles.
 
         Returns the accumulated assistant text and thinking content.
@@ -501,14 +682,20 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
         reasoning_text = ""
 
         while True:
-            line = await proc.stdout.readline()
-            if not line:
-                stderr = (await stderr_task).decode(errors="replace")
+            raw_line = await proc.stdout.readline()
+            if not raw_line:
+                # bounded: an orphaned grandchild can hold stderr open; the
+                # buffer still carries whatever pi wrote before dying
+                try:
+                    await asyncio.wait_for(stderr_task, timeout=PI_STDERR_DRAIN_TIMEOUT)
+                except asyncio.TimeoutError:
+                    pass
+                stderr = bytes(stderr_buf).decode(errors="replace")
                 raise PiBridgeError(
                     f"pi process exited unexpectedly: {stderr[:500].strip() or 'no error output'}"
                 )
 
-            line = line.decode("utf-8").strip()
+            line = raw_line.decode("utf-8").strip()
             if not line:
                 continue
 
@@ -519,6 +706,13 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
                 continue
 
             event_type = event.get("type")
+
+            if trace:
+                sub = event.get("assistantMessageEvent", {}).get("type", "")
+                trace.line(
+                    raw_line,
+                    f"{event_type}/{sub}" if sub else str(event_type),
+                )
 
             if event_type == "response":
                 if not event.get("success", True):

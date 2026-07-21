@@ -89,3 +89,7 @@ Talemate's Docker image ships with pi preinstalled, so the client works without 
 - `./pi/auth.json` — pi's stored credentials
 
 The directory persists across container recreations. Inside the container it is exposed via the `PI_CODING_AGENT_DIR` environment variable (`/app/pi`); when building the image manually, the pi version can be overridden with the `PI_VERSION` build argument.
+
+## Troubleshooting
+
+If generations misbehave at the stream level (tokens arrive but the response never finishes, or nothing arrives at all), set `TALEMATE_PI_BRIDGE_TRACE=1` before starting the backend to log the pi event stream as it is consumed — see [Environment variables](../../../getting-started/advanced/environment-variables.md#logging-debugging).

@@ -532,8 +532,15 @@ class InsertChatMessage(AgentNode):
             if not scene.assets.validate_asset_id(asset_id):
                 raise ValueError(f"Asset not found: {asset_id}")
 
-        # Get or create chat
-        chat = self.agent.chat_create()
+        # Resolve the target chat: prefer the chat that initiated the
+        # current action (director chat context), fall back to the active
+        # chat and only create a new one as a last resort.
+        chat = None
+        context = director_chat_context.get()
+        if context and context.chat_id:
+            chat = self.agent.chat_get(context.chat_id)
+        if not chat:
+            chat = self.agent.chat_get_or_create_active()
 
         message = DirectorChatMessage(
             message=message_content,

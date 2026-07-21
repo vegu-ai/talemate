@@ -2,15 +2,15 @@
     <v-card variant="text" v-if="app_config !== null">
         <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1 app-settings-toolbar">
             <v-icon class="mr-2" color="primary">{{ currentPage?.icon || 'mdi-cog' }}</v-icon>
-            <span class="text-subtitle-2">{{ currentPage?.group }} <span class="text-muted">/</span> {{ currentPage?.title }}</span>
-            <v-spacer></v-spacer>
+            <span class="text-subtitle-2 mr-4">{{ currentPage?.group }} <span class="text-muted">/</span> {{ currentPage?.title }}</span>
+            <v-btn color="primary" variant="text" prepend-icon="mdi-check-circle-outline" :disabled="!dirty || embeddingsBusy" @click="saveConfig">Save</v-btn>
+            <v-btn v-if="dirty" color="muted" variant="text" prepend-icon="mdi-undo" @click="discard">Discard</v-btn>
+            <span v-if="dirty" class="text-muted text-caption mr-2">Unsaved changes.</span>
             <v-chip v-if="externalChange" size="small" label color="warning" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
                 Changed outside this view — saving overwrites
                 <v-tooltip activator="parent" location="bottom" max-width="400">The configuration was changed elsewhere (another window or the help agent) while you have unsaved edits here. Discard to load the latest, or save to overwrite.</v-tooltip>
             </v-chip>
-            <span v-if="dirty" class="text-muted text-caption mr-2">Unsaved changes.</span>
-            <v-btn v-if="dirty" color="muted" variant="text" prepend-icon="mdi-undo" @click="discard">Discard</v-btn>
-            <v-btn color="primary" variant="text" prepend-icon="mdi-check-circle-outline" :disabled="!dirty || embeddingsBusy" @click="saveConfig">Save</v-btn>
+            <v-spacer></v-spacer>
         </v-toolbar>
 
         <!-- surface-colored canvas: the reused editors were designed against the
@@ -134,6 +134,7 @@ export default {
         'appearance-preview',
         'appearance-preview-clear',
         'page-changed',
+        'dirty-changed',
     ],
     data() {
         return {
@@ -166,6 +167,9 @@ export default {
     watch: {
         page(newPage) {
             this.$emit('page-changed', newPage);
+        },
+        dirty(isDirty) {
+            this.$emit('dirty-changed', isDirty);
         },
         visible(isVisible) {
             if (!isVisible) {
@@ -373,12 +377,7 @@ export default {
 </script>
 
 <style scoped>
-.app-settings-toolbar {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-}
-
+.app-settings-toolbar,
 .app-settings-content {
     max-width: 1200px;
 }

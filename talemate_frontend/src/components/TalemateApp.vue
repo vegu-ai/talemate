@@ -71,7 +71,10 @@
         <v-tab v-for="tab in availableTabs" :key="tab" :value="tab.value" @click.stop="tab.click">
           <v-icon class="mr-1">{{ tab.icon() }}</v-icon>
           {{ tab.title() }}
-          <v-icon v-if="tab.alert && tab.alert()" size="x-small" color="warning" class="ml-1">mdi-alert</v-icon>
+          <span v-if="tab.alert && tab.alert()" class="ml-1 d-inline-flex">
+            <v-tooltip v-if="tab.alertTooltip" activator="parent" location="top">{{ tab.alertTooltip() }}</v-tooltip>
+            <v-icon size="x-small" color="warning">mdi-alert</v-icon>
+          </span>
         </v-tab>
       </v-tabs>
   
@@ -372,7 +375,8 @@
             :visible="tab === 'settings'"
             @appearance-preview="onAppearancePreview"
             @appearance-preview-clear="onAppearancePreviewClear"
-            @page-changed="(page) => appSettingsPage = page" />
+            @page-changed="(page) => appSettingsPage = page"
+            @dirty-changed="(dirty) => appSettingsDirty = dirty" />
           </v-tabs-window-item>
 
         </v-tabs-window>
@@ -574,6 +578,8 @@ export default {
           title: () => { return 'Settings' },
           condition: () => { return true },
           icon: () => { return 'mdi-cog' },
+          alert: () => { return this.appSettingsDirty },
+          alertTooltip: () => { return 'You have unsaved changes in Settings' },
           click: () => {
             // Settings tab clicked
           },
@@ -654,6 +660,7 @@ export default {
       promptsMainTab: 'prompts',
       // Synced page state between AppSettingsMenu and AppSettings
       appSettingsPage: 'gameplay',
+      appSettingsDirty: false,
       // Count of outdated prompt template overrides
       promptsOutdatedCount: 0,
       // Flag to ensure new-scene navigation only happens once per scene load

@@ -2,7 +2,9 @@
 
 Application settings open in the main view via the **:material-cog: Settings** tab in the top navigation (or the cogwheel icon on the right side of the top bar). Navigation lives in the left sidebar, grouped by topic, with a **search field** at the top that finds any setting by name and jumps straight to it.
 
-Changes are collected as you edit — an **Unsaved changes** indicator with **Save** and **Discard** actions appears in the toolbar whenever your edits differ from the stored configuration. Nothing is applied until you save.
+Changes are collected as you edit — an **Unsaved changes** indicator with **Save** and **Discard** actions appears in the toolbar whenever your edits differ from the stored configuration. Nothing is applied until you save. While you have unsaved changes, the **Settings** tab in the top navigation also shows a warning badge, so the state stays visible even after you switch to another tab.
+
+![Settings tab showing the unsaved-changes badge](/talemate/img/0.39.0/app-settings-unsaved-badge.png)
 
 ![App settings - search](/talemate/img/0.39.0/app-settings-search.png)
 

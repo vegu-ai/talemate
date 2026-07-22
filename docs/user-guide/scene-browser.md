@@ -15,7 +15,7 @@ It is made up of four areas:
 
 The **Quick load** row shows your most recently saved scenes as cards. Click a card to load that scene.
 
-Each card has a three-dot menu (⋮) with additional actions:
+Each card has a three-dot menu (⋯) beneath it with additional actions:
 
 - :material-history: **Timeline** — browse and restore the scene's version history, see [Restoring Scenes](/talemate/user-guide/restoring-scenes)
 - **Remove from Quick Load** — remove the card without deleting any files
@@ -32,7 +32,7 @@ Expanding a project reveals:
 - An information row summarizing the project's contents — how many media assets and [node modules](/talemate/user-guide/node-editor/) it holds
 - The project's save files, each with its scene name, last-modified date, and file size
 
-Click a save file to load it.
+Click a save file to load it. Each save file row also has a three-dot menu (⋮) with the same actions as the quick-load cards — **Timeline**, **Remove from Quick Load** (only shown when the save is in Quick Load), and **Delete**.
 
 !!! tip "Filtering"
     The **Filter scenes** field narrows the tree to matching projects, save files, and character cards. Matching projects expand automatically so you can see the hits.
@@ -49,7 +49,8 @@ Clicking a card starts a [character card import](/talemate/user-guide/character-
 
 Each row in the library has a delete action:
 
-- :material-file-remove-outline: on a **save file** or **character card** deletes that single file after a confirmation prompt.
+- **Delete** in a **save file**'s three-dot menu (⋮) deletes that single file after a confirmation prompt.
+- :material-file-remove-outline: on a **character card** deletes that single file after a confirmation prompt.
 - :material-folder-remove-outline: on a **project** deletes the entire scene project — all of its save files, assets, node modules, and version history.
 
 !!! note

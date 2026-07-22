@@ -8,6 +8,7 @@
         </v-alert>
 
         <IntroRecentScenes
+            :connected="connected"
             :config="config"
             :scene-is-loading="sceneIsLoading || loading"
             :scene-loading-available="sceneLoadingAvailable"
@@ -20,6 +21,7 @@
                     :connected="connected"
                     :scene-loading-available="sceneLoadingAvailable && !loading"
                     :visible="visible"
+                    :config="config"
                     @load-save="requestSceneLoad"
                     @load-card="loadFromPath"
                 />

@@ -13,11 +13,12 @@ Every time you save, Talemate records the changes as a delta in the scene's [cha
 
 ### Opening the timeline
 
-The timeline can be opened from three places:
+The timeline can be opened from four places:
 
 - **While playing a scene** — click the :material-content-save: **Save** button in the [Scene tools](/talemate/user-guide/scenario-tools) toolbar and select :material-history: **Timeline**
 - **From a message** — click the :material-source-fork: **Fork** button underneath any message; the timeline opens positioned at that message's revision
-- **From the main screen** — click the three-dot menu (⋮) on a scene card in the **Quick load** section and select :material-history: **Timeline**
+- **From the main screen** — click the three-dot menu (⋯) beneath a scene card in the **Quick load** section and select :material-history: **Timeline**
+- **From the Scene Library** — click the three-dot menu (⋮) on any save file row and select :material-history: **Timeline**
 
 ### Applying a revision
 

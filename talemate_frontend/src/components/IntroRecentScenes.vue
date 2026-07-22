@@ -1,7 +1,7 @@
 <template>
     <v-card variant="text" v-if="hasRecentScenes()">
-        <v-card-title class="ml-2">
-            <v-icon size="x-small" class="mr-1" color="primary">mdi-folder</v-icon>
+        <v-card-title class="d-flex align-center">
+            <v-icon size="x-small" class="mr-2" color="primary">mdi-folder</v-icon>
             Quick load
         </v-card-title>
         <!-- 
@@ -21,33 +21,6 @@
                     <v-card :disabled="!sceneLoadingAvailable || sceneIsLoading" density="compact" elevation="7"  @click="loadScene(scene)" color="grey-darken-3" variant="outlined">
                         <v-card-title class="text-primary">
                             {{ filenameToTitle(scene.filename) }}
-
-                            <v-menu>
-                                <template v-slot:activator="{ props }">
-                                    <v-btn 
-                                    class="btn-menu"
-                                    v-bind="props"
-                                    color="primary" 
-                                    icon 
-                                    variant="text"
-                                    size="small"><v-icon>mdi-dots-vertical</v-icon></v-btn>
-                                </template>
-                                <v-list density="compact">
-                                    <v-list-item prepend-icon="mdi-history" @click="openTimeline(scene)">
-                                        <v-list-item-title>Timeline</v-list-item-title>
-                                    </v-list-item>
-                                    <v-divider></v-divider>
-                                    <v-list-subheader>Remove</v-list-subheader>
-                                    <v-list-item prepend-icon="mdi-table-large-remove" @click="removeFromRecentScenes(scene)">
-                                        <v-list-item-title>Remove from Quick Load</v-list-item-title>
-                                    </v-list-item>
-                                    <v-list-item prepend-icon="mdi-file-remove-outline" @click="deleteScene(scene)">
-                                        <v-list-item-title>Delete</v-list-item-title>
-                                    </v-list-item>
-                                </v-list>
-                            </v-menu>
-
-
                         </v-card-title>
                         <v-card-subtitle class="text-grey-lighten-1">
                             {{ scene.name }}
@@ -59,6 +32,15 @@
                             <p class="text-caption text-center text-grey-lighten-1 bg-grey-darken-4">{{ prettyDate(scene.date) }}</p>
                         </v-card-text>
                     </v-card>
+                    <div class="text-center">
+                        <SceneSaveContextMenu
+                            :scene-path="scene.path"
+                            :scene-name="scene.name"
+                            :disabled="sceneIsLoading || !connected"
+                            icon="mdi-dots-horizontal"
+                            @delete="deleteScene(scene)"
+                        />
+                    </div>
                 </div>
             </div>
         </v-card-text>
@@ -75,18 +57,21 @@
 <script>
 
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import SceneSaveContextMenu from './SceneSaveContextMenu.vue';
 
 export default {
     name: 'IntroRecentScenes',
     components: {
         ConfirmActionPrompt,
+        SceneSaveContextMenu,
     },
     props: {
+        connected: Boolean,
         sceneIsLoading: Boolean,
         sceneLoadingAvailable: Boolean,
         config: Object,
     },
-    inject: ['requestAssets', 'getWebsocket', 'registerMessageHandler', 'openSceneTimeline'],
+    inject: ['requestAssets', 'getWebsocket', 'registerMessageHandler'],
     data() {
         return {
             coverImages: {},
@@ -180,21 +165,6 @@ export default {
             }
         },
 
-        removeFromRecentScenes(scene) {
-            this.getWebsocket().send(JSON.stringify({
-                type: 'config',
-                action: 'remove_scene_from_recents',
-                path: scene.path,
-            }));
-        },
-
-        openTimeline(scene) {
-            this.openSceneTimeline({
-                scenePath: scene.path,
-                sceneName: scene.name,
-            });
-        },
-
         handleMessage(data) {
             if(data.type === 'assets') {
                 for(let id in data.assets) {
@@ -260,11 +230,13 @@ export default {
 
 .tile :deep(.v-card-title) {
     font-size: 0.9rem;
-    padding-right: 40px;
+    line-height: 1.3;
+    padding: 6px 8px 0 8px;
 }
 
 .tile :deep(.v-card-subtitle) {
     font-size: 0.75rem;
+    padding: 0 8px 2px 8px;
 }
 
 .tile :deep(.v-card-text) {
@@ -276,12 +248,6 @@ export default {
 
 .v-card:disabled {
     opacity: 0.5;
-}
-
-.btn-menu {
-    position: absolute;
-    top: 0px;
-    right: 0px;
 }
 
 </style>

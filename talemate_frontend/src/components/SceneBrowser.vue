@@ -73,7 +73,16 @@
                 <template #append="{ item }">
                     <span v-if="item.modified" class="text-caption text-grey-darken-1 mr-2 d-none d-sm-inline">{{ prettyDate(item.modified) }}</span>
                     <span v-if="item.size !== undefined" class="text-caption text-grey-darken-1 mr-2 d-none d-md-inline">{{ prettySize(item.size) }}</span>
-                    <v-tooltip v-if="item.type === 'save' || item.type === 'card'" :text="item.type === 'save' ? 'Delete scene file' : 'Delete character card'" location="top">
+                    <SceneSaveContextMenu
+                        v-if="item.type === 'save'"
+                        :scene-path="item.path"
+                        :scene-name="item.subtitle || item.filename"
+                        :show-remove-from-quick-load="isRecentScene(item.path)"
+                        :disabled="!connected"
+                        size="x-small"
+                        @delete="confirmDeleteFile(item)"
+                    />
+                    <v-tooltip v-else-if="item.type === 'card'" text="Delete character card" location="top">
                         <template v-slot:activator="{ props }">
                             <v-btn v-bind="props" icon variant="text" size="x-small" color="delete" @click.stop="confirmDeleteFile(item)">
                                 <v-icon>mdi-file-remove-outline</v-icon>
@@ -137,6 +146,7 @@
 
 <script>
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import SceneSaveContextMenu from './SceneSaveContextMenu.vue';
 
 const SAVE_DISPLAY_LIMIT = 10;
 const CHARACTER_CARDS_ID = '$CHARACTER_CARDS$';
@@ -145,11 +155,13 @@ export default {
     name: 'SceneBrowser',
     components: {
         ConfirmActionPrompt,
+        SceneSaveContextMenu,
     },
     props: {
         connected: Boolean,
         sceneLoadingAvailable: Boolean,
         visible: Boolean,
+        config: Object,
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'isConnected'],
     emits: ['load-save', 'load-card'],
@@ -346,6 +358,11 @@ export default {
 
         confirmDeleteFile(item) {
             this.$refs.deleteFilePrompt.initiateAction({ path: item.path, filename: item.filename });
+        },
+
+        isRecentScene(path) {
+            const recents = this.config?.recent_scenes?.scenes || [];
+            return recents.some((scene) => scene.path === path);
         },
 
         deleteFile(path) {

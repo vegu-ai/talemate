@@ -25,12 +25,15 @@ boundary, NOT Prompt.request).
 
 from __future__ import annotations
 
+import locale
 from collections import deque
+from datetime import datetime
 
 import pytest
 
 from conftest import client_responses
 
+import talemate.prompts.base as prompts_base
 from talemate.prompts.base import (
     JoinableList,
     Prompt,
@@ -244,23 +247,62 @@ class TestRandomAndBullet:
 
 
 class TestSystemTime:
-    def test_full_format(self):
-        p = Prompt.from_text("X")
-        s = p.system_time("full")
-        # Should contain weekday name and 'at'
-        assert " at " in s
+    @pytest.fixture
+    def fixed_now(self, monkeypatch):
+        # The exact-string assertions below assume the C locale for %A/%B/%p.
+        prev_locale = locale.setlocale(locale.LC_TIME)
+        locale.setlocale(locale.LC_TIME, "C")
 
-    def test_iso_format(self):
-        p = Prompt.from_text("X")
-        s = p.system_time("iso")
-        # ISO-like: "YYYY-MM-DDTHH:MM:SS"
-        assert s[4] == "-"
-        assert "T" in s
+        def _freeze(dt):
+            class _FrozenDatetime(datetime):
+                @classmethod
+                def now(cls, tz=None):
+                    return dt
 
-    def test_unknown_format_falls_back_to_full(self):
+            monkeypatch.setattr(prompts_base, "datetime", _FrozenDatetime)
+
+        yield _freeze
+        locale.setlocale(locale.LC_TIME, prev_locale)
+
+    def test_full_format(self, fixed_now):
+        fixed_now(datetime(2026, 2, 5, 14, 30, 45))
         p = Prompt.from_text("X")
-        s = p.system_time("totally-bogus")
-        assert " at " in s
+        assert p.system_time("full") == "Thursday, February 5, 2026 at 2:30 PM"
+
+    def test_date_format(self, fixed_now):
+        fixed_now(datetime(2026, 2, 5, 14, 30, 45))
+        p = Prompt.from_text("X")
+        assert p.system_time("date") == "February 5, 2026"
+
+    def test_time_format(self, fixed_now):
+        fixed_now(datetime(2026, 2, 5, 14, 30, 45))
+        p = Prompt.from_text("X")
+        assert p.system_time("time") == "2:30 PM"
+
+    def test_time_format_midnight(self, fixed_now):
+        fixed_now(datetime(2026, 2, 5, 0, 5, 0))
+        p = Prompt.from_text("X")
+        assert p.system_time("time") == "12:05 AM"
+
+    def test_time_format_noon(self, fixed_now):
+        fixed_now(datetime(2026, 2, 5, 12, 5, 0))
+        p = Prompt.from_text("X")
+        assert p.system_time("time") == "12:05 PM"
+
+    def test_iso_format(self, fixed_now):
+        fixed_now(datetime(2026, 2, 5, 14, 30, 45))
+        p = Prompt.from_text("X")
+        assert p.system_time("iso") == "2026-02-05T14:30:45"
+
+    def test_datetime_format(self, fixed_now):
+        fixed_now(datetime(2026, 2, 5, 14, 30, 45))
+        p = Prompt.from_text("X")
+        assert p.system_time("datetime") == "2026-02-05 14:30:45"
+
+    def test_unknown_format_falls_back_to_full(self, fixed_now):
+        fixed_now(datetime(2026, 2, 5, 14, 30, 45))
+        p = Prompt.from_text("X")
+        assert p.system_time("totally-bogus") == "Thursday, February 5, 2026 at 2:30 PM"
 
 
 class TestTimeDiff:

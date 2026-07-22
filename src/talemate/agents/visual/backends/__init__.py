@@ -5,6 +5,7 @@ import random
 from typing import ClassVar
 import time
 from talemate.instance import get_agent
+from talemate.agents.base import AgentDetailColor
 from talemate.agents.visual.schema import (
     BackendBase,
     BackendStatus,
@@ -50,7 +51,7 @@ class Backend(BackendBase):
         return None
 
     @property
-    def status_color(self) -> str:
+    def status_color(self) -> AgentDetailColor:
         if self.status.type == BackendStatusType.ERROR:
             return "error"
         elif self.status.type == BackendStatusType.DISCONNECTED:

@@ -21,6 +21,7 @@ import pydantic
 import pytest
 import pytest_asyncio
 
+import talemate.agents.tts.pocket_tts as pocket_tts_module
 import talemate.agents.tts.voice_library as voice_library
 import talemate.instance as instance
 from talemate.agents.tts import TTSAgent
@@ -28,6 +29,7 @@ from talemate.agents.tts.openai_compatible import (
     _parse_voices_payload,
     _resolve_voices_url,
 )
+from talemate.config.state import get_config
 from talemate.agents.tts.schema import (
     Chunk,
     MAX_TAG_LENGTH,
@@ -2276,3 +2278,233 @@ class TestResolveVoicesUrl:
         # KoboldCPP exposes /v1/audio/voices on its OpenAI-compat endpoint.
         url = _resolve_voices_url("http://localhost:5001/v1", "audio/voices")
         assert url == "http://localhost:5001/v1/audio/voices"
+
+
+# ---------------------------------------------------------------------------
+# Pocket TTS
+# ---------------------------------------------------------------------------
+
+
+def _pocket_tts_stub_instance(agent, has_voice_cloning: bool = True):
+    """Stand-in for PocketTTSInstance matching the agent's current settings."""
+    return types.SimpleNamespace(
+        model_language=agent.pocket_tts_language,
+        temp=agent.pocket_tts_temp,
+        lsd_decode_steps=agent.pocket_tts_lsd_decode_steps,
+        noise_clamp=agent.pocket_tts_noise_clamp,
+        eos_threshold=agent.pocket_tts_eos_threshold,
+        quantize=agent.pocket_tts_quantize,
+        model=types.SimpleNamespace(has_voice_cloning=has_voice_cloning, device="cpu"),
+        voice_states={},
+    )
+
+
+class TestPocketTTSReloadDecision:
+    """Reload decision for the cached Pocket TTS model (issue #133).
+
+    pocket_tts silently falls back to the public non-voice-cloning weights when
+    the gated download fails; once a HF token is configured, the cached
+    fallback model must be discarded so the gated download is retried.
+    """
+
+    def test_no_instance_reloads(self, tts_agent):
+        assert tts_agent._pocket_tts_should_reload(None)
+
+    def test_unchanged_params_do_not_reload(self, tts_agent):
+        inst = _pocket_tts_stub_instance(tts_agent)
+        assert not tts_agent._pocket_tts_should_reload(inst)
+
+    def test_param_change_reloads(self, tts_agent):
+        inst = _pocket_tts_stub_instance(tts_agent)
+        tts_agent.actions["pocket_tts"].config["temp"].value = 1.2
+        assert tts_agent._pocket_tts_should_reload(inst)
+
+    def test_fallback_model_without_token_does_not_reload(self, tts_agent, monkeypatch):
+        monkeypatch.setattr(pocket_tts_module, "get_token", lambda: None)
+        inst = _pocket_tts_stub_instance(tts_agent, has_voice_cloning=False)
+        assert not tts_agent._pocket_tts_should_reload(inst)
+
+    def test_fallback_model_with_token_reloads(self, tts_agent, monkeypatch):
+        inst = _pocket_tts_stub_instance(tts_agent, has_voice_cloning=False)
+        monkeypatch.setattr(get_config().huggingface, "api_key", "hf_test_token")
+        assert tts_agent._pocket_tts_should_reload(inst)
+
+    def test_fallback_model_with_env_token_reloads(self, tts_agent, monkeypatch):
+        inst = _pocket_tts_stub_instance(tts_agent, has_voice_cloning=False)
+        monkeypatch.setenv("HF_TOKEN", "hf_env_token")
+        assert tts_agent._pocket_tts_should_reload(inst)
+
+    def test_fallback_model_with_token_file_reloads(self, tts_agent, monkeypatch):
+        # hf auth login writes a token file; get_token() resolves it the same
+        # way the download itself will
+        monkeypatch.setattr(pocket_tts_module, "get_token", lambda: "hf_file_token")
+        inst = _pocket_tts_stub_instance(tts_agent, has_voice_cloning=False)
+        assert tts_agent._pocket_tts_should_reload(inst)
+
+    def test_intact_model_with_token_does_not_reload(self, tts_agent, monkeypatch):
+        inst = _pocket_tts_stub_instance(tts_agent)
+        monkeypatch.setattr(get_config().huggingface, "api_key", "hf_test_token")
+        assert not tts_agent._pocket_tts_should_reload(inst)
+
+
+class TestPocketTTSApplyHfToken:
+    def test_cleared_config_token_removes_exported_env_var(
+        self, tts_agent, monkeypatch
+    ):
+        monkeypatch.delenv("HF_TOKEN", raising=False)
+        monkeypatch.setattr(get_config().huggingface, "api_key", "hf_cfg_token")
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_cfg_token"
+
+        monkeypatch.setattr(get_config().huggingface, "api_key", None)
+        tts_agent._pocket_tts_apply_hf_token()
+        assert "HF_TOKEN" not in os.environ
+
+    def test_user_set_env_var_is_left_alone(self, tts_agent, monkeypatch):
+        monkeypatch.setenv("HF_TOKEN", "hf_user_token")
+        monkeypatch.setattr(get_config().huggingface, "api_key", None)
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_user_token"
+
+    def test_displaced_user_env_var_is_restored_on_clear(self, tts_agent, monkeypatch):
+        monkeypatch.setenv("HF_TOKEN", "hf_user_token")
+        monkeypatch.setattr(get_config().huggingface, "api_key", "hf_cfg_token")
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_cfg_token"
+
+        monkeypatch.setattr(get_config().huggingface, "api_key", None)
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_user_token"
+
+    def test_displaced_value_survives_config_token_change(self, tts_agent, monkeypatch):
+        monkeypatch.setenv("HF_TOKEN", "hf_user_token")
+        for cfg_token in ("hf_cfg_token_a", "hf_cfg_token_b"):
+            monkeypatch.setattr(get_config().huggingface, "api_key", cfg_token)
+            tts_agent._pocket_tts_apply_hf_token()
+            assert os.environ["HF_TOKEN"] == cfg_token
+
+        monkeypatch.setattr(get_config().huggingface, "api_key", None)
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_user_token"
+
+    def test_displaced_value_survives_repeated_apply_of_same_token(
+        self, tts_agent, monkeypatch
+    ):
+        # apply runs on every generation, so the steady state between a set
+        # and a clear is N applies of the same unchanged token - none of them
+        # may clobber the displaced value with Talemate's own export
+        monkeypatch.setenv("HF_TOKEN", "hf_user_token")
+        monkeypatch.setattr(get_config().huggingface, "api_key", "hf_cfg_token")
+        for _ in range(3):
+            tts_agent._pocket_tts_apply_hf_token()
+            assert os.environ["HF_TOKEN"] == "hf_cfg_token"
+
+        monkeypatch.setattr(get_config().huggingface, "api_key", None)
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_user_token"
+
+    def test_user_env_value_identical_to_config_token_round_trips(
+        self, tts_agent, monkeypatch
+    ):
+        monkeypatch.setenv("HF_TOKEN", "hf_same_token")
+        monkeypatch.setattr(get_config().huggingface, "api_key", "hf_same_token")
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_same_token"
+
+        monkeypatch.setattr(get_config().huggingface, "api_key", None)
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_same_token"
+
+    def test_external_change_while_token_set_becomes_restore_target(
+        self, tts_agent, monkeypatch
+    ):
+        monkeypatch.setenv("HF_TOKEN", "hf_user_1")
+        monkeypatch.setattr(get_config().huggingface, "api_key", "hf_cfg_token")
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_cfg_token"
+
+        # env changed out-of-band while the config token stays set: the next
+        # apply adopts the newer external value as the restore target
+        monkeypatch.setenv("HF_TOKEN", "hf_user_2")
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_cfg_token"
+
+        monkeypatch.setattr(get_config().huggingface, "api_key", None)
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_user_2"
+
+    def test_external_deletion_while_token_set_makes_clear_unset(
+        self, tts_agent, monkeypatch
+    ):
+        monkeypatch.setenv("HF_TOKEN", "hf_user_token")
+        monkeypatch.setattr(get_config().huggingface, "api_key", "hf_cfg_token")
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_cfg_token"
+
+        # user deletes the var while the config token stays set: the restore
+        # target becomes "unset", not the pre-export value
+        monkeypatch.delenv("HF_TOKEN")
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_cfg_token"
+
+        monkeypatch.setattr(get_config().huggingface, "api_key", None)
+        tts_agent._pocket_tts_apply_hf_token()
+        assert "HF_TOKEN" not in os.environ
+
+    def test_out_of_band_change_resets_bookkeeping(self, tts_agent, monkeypatch):
+        monkeypatch.setenv("HF_TOKEN", "hf_user_token")
+        monkeypatch.setattr(get_config().huggingface, "api_key", "hf_cfg_token")
+        tts_agent._pocket_tts_apply_hf_token()
+
+        # env changed out-of-band: clearing must not overwrite it
+        monkeypatch.setenv("HF_TOKEN", "hf_external_token")
+        monkeypatch.setattr(get_config().huggingface, "api_key", None)
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_external_token"
+
+        # and the dropped bookkeeping must not mistake a later user value
+        # equal to the old export for Talemate's own
+        monkeypatch.setenv("HF_TOKEN", "hf_cfg_token")
+        monkeypatch.setattr(get_config().huggingface, "api_key", "hf_cfg_token_2")
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_cfg_token_2"
+        monkeypatch.setattr(get_config().huggingface, "api_key", None)
+        tts_agent._pocket_tts_apply_hf_token()
+        assert os.environ["HF_TOKEN"] == "hf_cfg_token"
+
+
+class TestPocketTTSAgentDetails:
+    def test_no_warning_when_voice_cloning_available(self, tts_agent):
+        tts_agent.pocket_tts_instance = _pocket_tts_stub_instance(tts_agent)
+        assert "pocket_tts_voice_cloning" not in tts_agent.pocket_tts_agent_details
+
+    def test_warning_when_voice_cloning_unavailable(self, tts_agent):
+        tts_agent.pocket_tts_instance = _pocket_tts_stub_instance(
+            tts_agent, has_voice_cloning=False
+        )
+        warning = tts_agent.pocket_tts_agent_details["pocket_tts_voice_cloning"]
+        assert warning["color"] == "warning"
+        assert warning["value"] == "Voice cloning unavailable"
+
+    def test_warning_surfaces_when_api_enabled_but_unused(self, tts_agent):
+        # No narrator/character voice uses pocket_tts, but the api is enabled:
+        # details flagged surface_when_unused must still reach the agent card,
+        # while informational chips (model, voice cache) stay hidden.
+        tts_agent.is_enabled = True
+        tts_agent.actions["_config"].config["apis"].value = ["pocket_tts"]
+        tts_agent.pocket_tts_instance = _pocket_tts_stub_instance(
+            tts_agent, has_voice_cloning=False
+        )
+        details = tts_agent.agent_details
+        assert "pocket_tts_voice_cloning" in details
+        assert "pocket_tts_model" not in details
+        assert "pocket_tts_voice_cache" not in details
+
+    def test_error_details_of_unused_apis_stay_hidden(self, tts_agent):
+        # openai is enabled but unconfigured (no api key) and no voice uses it:
+        # its error detail must not reach the agent card - the api status in
+        # the voice UI already surfaces it.
+        tts_agent.is_enabled = True
+        tts_agent.actions["_config"].config["apis"].value = ["openai"]
+        assert tts_agent.openai_agent_details["openai_api_key"]["color"] == "error"
+        assert "openai_api_key" not in tts_agent.agent_details

@@ -158,8 +158,8 @@ If the model fails to download:
 
 - Check your internet connection
 - Verify you have accepted the terms on [Hugging Face](https://huggingface.co/kyutai/pocket-tts)
-- Make sure your [HuggingFace Token](#huggingface-token) is set correctly
-- Try restarting Talemate
+- Make sure your [HuggingFace Token](#huggingface-token) is set correctly, then generate again — no restart is needed; the download is retried on the next generation
+- While the voice-cloning model is unavailable, the Voice agent card shows a "Voice cloning unavailable" warning
 
 ### Voice Cloning Not Working
 

@@ -9,6 +9,7 @@ import numpy as np
 import pydantic
 import structlog
 import torch
+from huggingface_hub import get_token
 from pydantic import ConfigDict
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentDetail
 from talemate.ux.schema import Field
@@ -175,6 +176,12 @@ class PocketTTSInstance(pydantic.BaseModel):
 
 
 class PocketTTSMixin:
+    # last token this mixin exported to HF_TOKEN, and the env value that export
+    # displaced, so a cleared config token restores the environment instead of
+    # destroying a user-provided value
+    _pocket_tts_env_token: str | None = None
+    _pocket_tts_displaced_env_token: str | None = None
+
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
         actions["_config"].config["apis"].choices.append(
@@ -339,10 +346,52 @@ class PocketTTSMixin:
         return self.config.huggingface.api_key
 
     def _pocket_tts_apply_hf_token(self):
-        """Export the configured HF token as HF_TOKEN so huggingface_hub can fetch gated weights; falls back to any existing env var."""
+        """Export the configured HF token as HF_TOKEN so huggingface_hub can fetch gated weights.
+
+        When the config token is cleared again, HF_TOKEN is restored to the
+        value the export displaced (or unset if there was none). An env value
+        changed out-of-band is never overwritten by the clear, and the most
+        recently observed external value wins as the restore target.
+        """
         token = self.pocket_tts_hf_token
         if token:
+            current = os.environ.get("HF_TOKEN")
+            if current != self._pocket_tts_env_token:
+                self._pocket_tts_displaced_env_token = current
             os.environ["HF_TOKEN"] = token
+            self._pocket_tts_env_token = token
+        elif self._pocket_tts_env_token:
+            if os.environ.get("HF_TOKEN") == self._pocket_tts_env_token:
+                if self._pocket_tts_displaced_env_token is not None:
+                    os.environ["HF_TOKEN"] = self._pocket_tts_displaced_env_token
+                else:
+                    del os.environ["HF_TOKEN"]
+            # whether restored or changed out-of-band, the export is gone -
+            # drop the bookkeeping so a later external value equal to the old
+            # export is not mistaken for Talemate's own
+            self._pocket_tts_env_token = None
+            self._pocket_tts_displaced_env_token = None
+
+    def _pocket_tts_should_reload(self, instance: PocketTTSInstance | None) -> bool:
+        if instance is None:
+            return True
+        return (
+            instance.model_language != self.pocket_tts_language
+            or instance.temp != self.pocket_tts_temp
+            or instance.lsd_decode_steps != self.pocket_tts_lsd_decode_steps
+            or instance.noise_clamp != self.pocket_tts_noise_clamp
+            or instance.eos_threshold != self.pocket_tts_eos_threshold
+            or instance.quantize != self.pocket_tts_quantize
+            # pocket_tts silently falls back to the public non-voice-cloning
+            # weights when the gated download fails, so while a token is
+            # available the cached fallback model must be discarded to retry
+            # the gated download. get_token() mirrors the credential
+            # resolution the download itself uses (env var, hf auth token file).
+            or (
+                bool(self.pocket_tts_hf_token or get_token())
+                and not instance.model.has_voice_cloning
+            )
+        )
 
     @property
     def pocket_tts_configured(self) -> bool:
@@ -382,6 +431,19 @@ class PocketTTSMixin:
             description="Cached Pocket TTS voice states",
         ).model_dump()
 
+        if not instance.model.has_voice_cloning:
+            details["pocket_tts_voice_cloning"] = AgentDetail(
+                icon="mdi-alert",
+                value="Voice cloning unavailable",
+                description=(
+                    "The gated Pocket TTS voice-cloning model could not be downloaded. "
+                    "Accept the model terms at https://huggingface.co/kyutai/pocket-tts, "
+                    "set your HuggingFace Token in the Pocket TTS settings, then generate again."
+                ),
+                color="warning",
+                surface_when_unused=True,
+            ).model_dump()
+
         return details
 
     def pocket_tts_delete_voice(self, voice: Voice):
@@ -420,17 +482,7 @@ class PocketTTSMixin:
 
         instance: PocketTTSInstance | None = getattr(self, "pocket_tts_instance", None)
 
-        reload_model = (
-            instance is None
-            or instance.model_language != self.pocket_tts_language
-            or instance.temp != self.pocket_tts_temp
-            or instance.lsd_decode_steps != self.pocket_tts_lsd_decode_steps
-            or instance.noise_clamp != self.pocket_tts_noise_clamp
-            or instance.eos_threshold != self.pocket_tts_eos_threshold
-            or instance.quantize != self.pocket_tts_quantize
-        )
-
-        if reload_model:
+        if self._pocket_tts_should_reload(instance):
             # Voice clone embeddings are tied to the underlying language model, so
             # they survive sampling-param changes (temp, eos_threshold, quantize, ...)
             # but must be discarded when the language itself changes.

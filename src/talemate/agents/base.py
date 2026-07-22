@@ -170,12 +170,20 @@ def optimize_prompt_caching_action() -> AgentAction:
     )
 
 
+AgentDetailColor = Literal[
+    "grey", "primary", "muted", "orange", "success", "warning", "error"
+]
+
+
 class AgentDetail(pydantic.BaseModel):
     value: str | None = None
     description: str | None = None
     icon: str | None = None
-    color: str = "grey"
+    color: AgentDetailColor = "grey"
     hidden: bool = False
+    # surface this detail even when the subsystem emitting it is not in use
+    # (e.g. a TTS api no voice currently points at)
+    surface_when_unused: bool = False
 
 
 class DynamicInstruction(pydantic.BaseModel):

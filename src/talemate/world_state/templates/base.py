@@ -436,6 +436,19 @@ class Collection(pydantic.BaseModel):
             return group.find(template_uid)
         return None
 
+    def find_template_by_id(self, template_id: str) -> Template | None:
+        """Resolve a `group_uid__template_uid` id to a template.
+
+        Returns None for empty/malformed ids or when no template matches.
+        """
+        if not template_id:
+            return None
+        try:
+            group_uid, template_uid = template_id.split("__", 1)
+        except ValueError:
+            return None
+        return self.find_template(group_uid, template_uid)
+
     def remove(self, group: Group, save: bool = True):
         existing = self.find(group.uid)
         if existing is None:

@@ -463,14 +463,9 @@ class Scene(Emitter):
         if not self.writing_style_template:
             return None
 
-        try:
-            group_uid, template_uid = self.writing_style_template.split("__", 1)
-            # Ensure template collection is initialized via manager
-            return self.world_state_manager.template_collection.find_template(
-                group_uid, template_uid
-            )
-        except ValueError:
-            return None
+        return self.world_state_manager.template_collection.find_template_by_id(
+            self.writing_style_template
+        )
 
     def agent_persona(self, agent_name: str):
         """
@@ -480,14 +475,7 @@ class Scene(Emitter):
         uid = (self.agent_persona_templates or {}).get(agent_name)
         if not uid:
             return None
-        try:
-            group_uid, template_uid = uid.split("__", 1)
-        except ValueError:
-            return None
-        # Ensure template collection is initialized via manager
-        return self.world_state_manager.template_collection.find_template(
-            group_uid, template_uid
-        )
+        return self.world_state_manager.template_collection.find_template_by_id(uid)
 
     @property
     def agent_persona_names(self) -> dict[str, str]:

@@ -40,7 +40,9 @@ from talemate.game.engine.nodes.world_state import GenerationOptions, Spices
 from talemate.agents.editor.nodes import CleanUpNarration
 from talemate.agents.director.auto_direct_nodes import GenerateSceneTypes
 from talemate.agents.visual.nodes import ApplyStyle, ApplyStyles
-from talemate.agents.visual.schema import VisualPrompt
+from talemate.agents.visual.schema import VisualPrompt, VisualPromptPart
+from talemate.world_state.templates.base import Template
+from talemate.world_state.templates.visual import VisualStyle
 from talemate.agents.world_state.nodes import StateReinforcement
 from talemate.scene.schema import SceneType
 from talemate.game import focal as focal_module
@@ -342,16 +344,43 @@ async def test_apply_styles_state_passthrough(mock_scene):
     assert isinstance(captured["prompt"], VisualPrompt)
 
 
-@pytest.mark.asyncio
-async def test_apply_style_state_passthrough(mock_scene):
-    captured = {}
+class _FakeTemplateCollection:
+    """Minimal stand-in for the world-state template Collection, keyed by
+    (group_uid, template_uid)."""
+
+    def __init__(self, templates: dict):
+        self.templates = templates
+
+    def find_template(self, group_uid, template_uid):
+        return self.templates.get((group_uid, template_uid))
+
+    def find_template_by_id(self, template_id):
+        if not template_id:
+            return None
+        try:
+            group_uid, template_uid = template_id.split("__", 1)
+        except ValueError:
+            return None
+        return self.find_template(group_uid, template_uid)
+
+
+def _digital_art_template() -> VisualStyle:
+    return VisualStyle(
+        name="Digital Art",
+        uid="digital_art",
+        group="visual_styles",
+        positive_keywords=["masterpiece", "vibrant colors"],
+        negative_keywords=["blurry"],
+        positive_descriptive="digital painting",
+        instructions="Make it pop",
+    )
+
+
+def _run_apply_style_graph(captured, template_id):
     node = ApplyStyle()
     prompt = VisualPrompt()
-    # NOTE: agent.apply_style crashes on any template_id other than
-    # "UNSPECIFIED" (it feeds the id string into style_template(), which
-    # expects a VIS_TYPE) - pre-existing bug outside issue #115's scope.
-    const = make_constant(state="marker", prompt=prompt, template_id="UNSPECIFIED")
-    capture = make_capture(captured, "state", "prompt", "prompt_part")
+    const = make_constant(state="marker", prompt=prompt, template_id=template_id)
+    capture = make_capture(captured, "state", "prompt", "template_id", "prompt_part")
 
     graph = build_graph(const, node, capture)
     graph.connect(const.get_output_socket("state"), node.get_input_socket("state"))
@@ -362,12 +391,96 @@ async def test_apply_style_state_passthrough(mock_scene):
     graph.connect(node.get_output_socket("state"), capture.get_input_socket("state"))
     graph.connect(node.get_output_socket("prompt"), capture.get_input_socket("prompt"))
     graph.connect(
+        node.get_output_socket("template_id"), capture.get_input_socket("template_id")
+    )
+    graph.connect(
         node.get_output_socket("prompt_part"), capture.get_input_socket("prompt_part")
     )
+    return graph, prompt
+
+
+@pytest.mark.asyncio
+async def test_apply_style_state_passthrough(mock_scene):
+    """ApplyStyle passes state, prompt and template_id through (issue #115
+    socket regression coverage, now exercising a real template id after the
+    #123 fix)."""
+    mock_scene._world_state_templates = _FakeTemplateCollection(
+        {("visual_styles", "digital_art"): _digital_art_template()}
+    )
+    captured = {}
+    graph, prompt = _run_apply_style_graph(captured, "visual_styles__digital_art")
 
     await execute_graph(mock_scene, graph)
 
     assert captured["state"] == "marker"
+    assert captured["prompt"] is prompt
+    assert captured["template_id"] == "visual_styles__digital_art"
+
+
+@pytest.mark.asyncio
+async def test_apply_style_resolves_template_part(mock_scene):
+    """apply_style crashed on any real template id (str fed into the
+    VIS_TYPE-expecting style_template); it now resolves the template directly
+    via find_template and inserts a part built from it at the front of the
+    prompt's part list (issue #123)."""
+    mock_scene._world_state_templates = _FakeTemplateCollection(
+        {("visual_styles", "digital_art"): _digital_art_template()}
+    )
+    captured = {}
+    graph, prompt = _run_apply_style_graph(captured, "visual_styles__digital_art")
+
+    await execute_graph(mock_scene, graph)
+
+    part = captured["prompt_part"]
+    assert isinstance(part, VisualPromptPart)
+    assert prompt.parts[0] is part
+    assert part.positive_keywords_raw == ["masterpiece", "vibrant colors"]
+    assert part.negative_keywords_raw == ["blurry"]
+    assert part.positive_descriptive == "digital painting"
+    assert part.instructions == "Make it pop"
+
+
+@pytest.mark.asyncio
+async def test_apply_style_wrong_template_type_no_crash(mock_scene):
+    """A valid id pointing at a non-visual template (e.g. a writing style)
+    must degrade to no part instead of crashing on the missing keyword
+    fields (PR #132 review)."""
+    mock_scene._world_state_templates = _FakeTemplateCollection(
+        {("writing_styles", "flowery"): Template(name="Flowery")}
+    )
+    captured = {}
+    graph, prompt = _run_apply_style_graph(captured, "writing_styles__flowery")
+
+    await execute_graph(mock_scene, graph)
+
+    assert captured["prompt_part"] is None
+    assert prompt.parts == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "template_id",
+    [
+        "visual_styles__nonexistent",  # unknown template
+        "nonexistent_group__digital_art",  # unknown group
+        "UNSPECIFIED",  # not a template id (former special case, #123)
+        "no-separator",  # malformed
+        "",  # empty
+    ],
+)
+async def test_apply_style_unknown_template_id_no_crash(mock_scene, template_id):
+    """Unknown, malformed or empty template ids resolve to no part and leave
+    the prompt unchanged instead of crashing (issue #123)."""
+    mock_scene._world_state_templates = _FakeTemplateCollection(
+        {("visual_styles", "digital_art"): _digital_art_template()}
+    )
+    captured = {}
+    graph, prompt = _run_apply_style_graph(captured, template_id)
+
+    await execute_graph(mock_scene, graph)
+
+    assert captured["prompt_part"] is None
+    assert prompt.parts == []
     assert captured["prompt"] is prompt
 
 

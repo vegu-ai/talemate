@@ -33,6 +33,7 @@ from conftest import (
     client_responses,
 )
 from _character_test_helpers import (
+    DEFAULT_CONSOLIDATE,
     KIND_DESCRIPTION,
     KIND_DIALOGUE_INSTRUCTIONS,
     KIND_NAME,
@@ -464,6 +465,12 @@ async def test_generate_character_unified_example_dialogue_guidance_rendered(cre
     assert "User-provided guidance for the dialogue examples:" in prompt
     assert "She stammers when nervous." in prompt
     assert result.example_dialogue == ['Elena: "Oh dear!"']
+
+
+def test_consolidate_default(creator):
+    # the shipped setting must stay the derived "everything" composition -
+    # a hardcoded, narrowed or reordered value= fails here
+    assert creator.cc_consolidate == DEFAULT_CONSOLIDATE
 
 
 def test_consolidate_templates_default(creator):

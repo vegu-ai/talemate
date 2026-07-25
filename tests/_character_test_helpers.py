@@ -18,6 +18,11 @@ corresponding *real* production method can parse:
 
 import json
 
+from talemate.agents.creator.character import (
+    CHARACTER_GENERATION_ASPECTS,
+    CONSOLIDATE_TEMPLATES_FLAG,
+)
+
 # prompt kinds per real request path, for routing assertions against
 # MockClient.prompt_history (see the corresponding Prompt.request calls)
 KIND_NAME = "analyze_freeform_24"  # creator.determine-character-name
@@ -27,17 +32,8 @@ KIND_SHEET = "create"  # world_state.extract-character-sheet
 KIND_FOCAL = "analyze_1024"  # focal.request default response_length
 KIND_UNIFIED = "create_4096"  # creator.generate-character @ default budget
 
-# the character_creation "Consolidate" config default (for restoring after
-# tests that widen or narrow the selection): every aspect, plus the
-# 'Attribute templates' fold flag
-DEFAULT_CONSOLIDATE = [
-    "name",
-    "description",
-    "attributes",
-    "dialogue_instructions",
-    "example_dialogue",
-    "attribute_templates",
-]
+# the character_creation "Consolidate" config default
+DEFAULT_CONSOLIDATE = list(CHARACTER_GENERATION_ASPECTS) + [CONSOLIDATE_TEMPLATES_FLAG]
 
 
 def prompt_kinds(client) -> list[str]:

@@ -17,6 +17,11 @@
              old modal's card surface — on the bare viewport background their
              internal surfaces read as disconnected grey islands -->
         <v-sheet class="app-settings-content pa-4" rounded="md">
+            <!-- the page header for every page — page components carry none of their own -->
+            <AppSettingsPageHeader v-if="currentPage" :title="currentPage.title" :icon="currentPage.icon">
+                <div v-if="currentPage.descriptionHtml" v-html="currentPage.descriptionHtml"></div>
+                <template v-else>{{ currentPage.description }}</template>
+            </AppSettingsPageHeader>
             <v-window v-model="page" :touch="false">
                 <v-window-item value="gameplay">
                     <AppSettingsGameplay :config="app_config" />
@@ -25,15 +30,9 @@
                     <AppSettingsPlayerCharacter :config="app_config" />
                 </v-window-item>
                 <v-window-item value="appearance-messages">
-                    <AppSettingsPageHeader title="Messages" icon="mdi-script-text">
-                        Style the different message types in the scene view. Changes preview live in the scene while you edit.
-                    </AppSettingsPageHeader>
                     <AppConfigAppearanceScene ref="appearance-messages" :immutableConfig="app_config" :sceneActive="sceneActive" @changed="onAppearanceChanged"></AppConfigAppearanceScene>
                 </v-window-item>
                 <v-window-item value="appearance-visuals">
-                    <AppSettingsPageHeader title="Visuals" icon="mdi-image-outline">
-                        Message visuals and scene backdrop behavior.
-                    </AppSettingsPageHeader>
                     <AppConfigAppearanceAssets ref="appearance-visuals" :immutableConfig="app_config" :sceneActive="sceneActive" @changed="onAppearanceChanged"></AppConfigAppearanceAssets>
                 </v-window-item>
                 <v-window-item value="api-keys">
@@ -67,22 +66,16 @@
                 </v-window-item>
                 <v-window-item value="content-classification">
                     <AppSettingsStringList
-                        title="Content Classification"
-                        icon="mdi-cube-scan"
                         input-label="Add content classification (Press enter to add)"
                         :list="app_config.creator.content_context"
                         @update:list="(list) => app_config.creator.content_context = list">
-                        Available content classification choices when generating characters or scenarios.
                     </AppSettingsStringList>
                 </v-window-item>
                 <v-window-item value="perspective-presets">
                     <AppSettingsStringList
-                        title="Perspective Presets"
-                        icon="mdi-eye-outline"
                         input-label="Add perspective preset (Press enter to add)"
                         :list="app_config.creator.perspective_presets"
                         @update:list="(list) => app_config.creator.perspective_presets = list">
-                        Reusable narrative perspective / tense strings offered in the scene outline. Use <code>{player_name}</code> as a placeholder for the player character — it will be substituted at prompt render time.
                     </AppSettingsStringList>
                 </v-window-item>
             </v-window>

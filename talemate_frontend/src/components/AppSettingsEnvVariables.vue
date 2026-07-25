@@ -1,13 +1,5 @@
 <template>
-    <AppSettingsPageHeader title="Environment Variables" icon="mdi-variable">
-        <p class="mb-1">Named values passed as environment variables to processes Talemate spawns — currently the <span class="text-primary">Pi Bridge</span> client, where pi's <code>models.json</code> can reference them as <code>$NAME</code>.</p>
-        Values are encrypted at rest in Talemate's configuration file.
-    </AppSettingsPageHeader>
     <v-card variant="tonal">
-        <v-card-title class="text-subtitle-1">
-            <v-icon start size="small">mdi-variable</v-icon>
-            Variables
-        </v-card-title>
         <v-card-text>
             <div v-if="envVariableNames.length === 0" class="text-grey text-body-2 mb-4">
                 No environment variables defined yet — add one below.
@@ -44,13 +36,8 @@
 </template>
 
 <script>
-import AppSettingsPageHeader from './AppSettingsPageHeader.vue';
-
 export default {
     name: 'AppSettingsEnvVariables',
-    components: {
-        AppSettingsPageHeader,
-    },
     props: {
         config: Object,
     },

@@ -1,7 +1,4 @@
 <template>
-    <AppSettingsPageHeader :title="title" :icon="icon">
-        <slot></slot>
-    </AppSettingsPageHeader>
     <v-row>
         <v-col cols="12">
             <v-list density="compact">
@@ -17,16 +14,9 @@
 </template>
 
 <script>
-import AppSettingsPageHeader from './AppSettingsPageHeader.vue';
-
 export default {
     name: 'AppSettingsStringList',
-    components: {
-        AppSettingsPageHeader,
-    },
     props: {
-        title: String,
-        icon: String,
         inputLabel: String,
         list: Array,
     },

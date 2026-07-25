@@ -5,6 +5,12 @@
 // the settings search in the drawer menu. An entry's optional `anchor` matches
 // a `data-setting-anchor` attribute in the page markup so search results can
 // scroll to and highlight the exact setting.
+//
+// `title`, `icon` and `description` are also what AppSettings.vue renders as
+// the page header — page components must not carry headers of their own. A page
+// whose description needs markup adds `descriptionHtml`, which the header
+// renders instead; `description` still carries the same words in plain text
+// because the search haystack is built from it.
 
 // API key providers rendered by AppSettingsApiKeys.vue. `id` doubles as the
 // legacy deep-link page value (`openAppConfig('application', '<id>')`) and the
@@ -121,7 +127,7 @@ export const SETTINGS_GROUPS = [
                 id: 'player-character',
                 title: 'Player Character',
                 icon: 'mdi-human-edit',
-                description: 'Default player character for scenes that do not define one.',
+                description: 'The default player character added to a scene when the scene does not come with a defined player character. Mostly relevant when you load character cards that aren\'t in the talemate scene format.',
                 entries: [
                     { label: 'Name', keywords: ['player', 'character', 'default'] },
                     { label: 'Gender', keywords: ['player', 'character'] },
@@ -139,7 +145,7 @@ export const SETTINGS_GROUPS = [
                 id: 'appearance-messages',
                 title: 'Messages',
                 icon: 'mdi-script-text',
-                description: 'Message styles and colors in the scene view.',
+                description: 'Style the different message types in the scene view. Changes preview live in the scene while you edit.',
                 entries: [
                     { label: 'Message styles', keywords: ['color', 'italic', 'bold', 'narrator', 'character', 'director', 'font'] },
                     { label: 'Quotes / emphasis styling', keywords: ['quotes', 'parentheses', 'brackets', 'emphasis', 'entities', 'highlight'] },
@@ -167,7 +173,7 @@ export const SETTINGS_GROUPS = [
                 id: 'api-keys',
                 title: 'API Keys',
                 icon: 'mdi-key-variant',
-                description: 'API keys for third party services.',
+                description: 'API keys and access tokens for third party services. Only fill in the services you use.',
                 entries: API_PROVIDERS.map((provider) => ({
                     label: provider.title,
                     anchor: provider.id,
@@ -178,7 +184,8 @@ export const SETTINGS_GROUPS = [
                 id: 'env-variables',
                 title: 'Environment Variables',
                 icon: 'mdi-variable',
-                description: 'Named values passed to processes Talemate spawns.',
+                description: 'Named values passed as environment variables to processes Talemate spawns — currently the Pi Bridge client, where pi\'s models.json can reference them as $NAME. Values are encrypted at rest in Talemate\'s configuration file.',
+                descriptionHtml: '<p class="mb-1">Named values passed as environment variables to processes Talemate spawns — currently the <span class="text-primary">Pi Bridge</span> client, where pi\'s <code>models.json</code> can reference them as <code>$NAME</code>.</p>Values are encrypted at rest in Talemate\'s configuration file.',
                 entries: [
                     { label: 'Environment variables', keywords: ['env', 'secret', 'pi bridge', 'variable'] },
                 ],
@@ -211,7 +218,7 @@ export const SETTINGS_GROUPS = [
                 id: 'presets-system-prompts',
                 title: 'System Prompts',
                 icon: 'mdi-text-box',
-                description: 'Global system prompt overrides.',
+                description: 'App wide overrides for the various system prompts, based on action type. Used when the client itself defines no override.',
                 entries: [
                     { label: 'System prompts', keywords: ['prompt', 'roleplay', 'override', 'decensor'] },
                 ],
@@ -226,7 +233,7 @@ export const SETTINGS_GROUPS = [
                 id: 'content-classification',
                 title: 'Content Classification',
                 icon: 'mdi-cube-scan',
-                description: 'Content classification choices for generation.',
+                description: 'Available content classification choices when generating characters or scenarios.',
                 entries: [
                     { label: 'Content classification', keywords: ['content context', 'rating', 'classification'] },
                 ],
@@ -235,7 +242,8 @@ export const SETTINGS_GROUPS = [
                 id: 'perspective-presets',
                 title: 'Perspective Presets',
                 icon: 'mdi-eye-outline',
-                description: 'Reusable narrative perspective / tense strings.',
+                description: 'Reusable narrative perspective / tense strings offered in the scene outline. Use {player_name} as a placeholder for the player character — it will be substituted at prompt render time.',
+                descriptionHtml: 'Reusable narrative perspective / tense strings offered in the scene outline. Use <code>{player_name}</code> as a placeholder for the player character — it will be substituted at prompt render time.',
                 entries: [
                     { label: 'Perspective presets', keywords: ['perspective', 'tense', 'pov', 'narrative'] },
                 ],

@@ -50,14 +50,7 @@
                 </v-alert>
             </v-card>
 
-            <v-alert v-else-if="scope=='app'" density="compact" color="primary" variant="text" class="mt-10">
-                <p>
-                    App wide override for the various system prompts based on action type.
-                </p>
-                <p class="text-caption text-grey">
-                    These will be used when there are no client specific overrides configured in the client.
-                </p>
-            </v-alert>
+            <v-alert v-else-if="scope=='app'" color="grey" variant="text" class="mt-10">Select a system prompt to edit</v-alert>
 
             <v-alert v-else-if="scope=='client'" density="compact" color="primary" variant="text" class="mt-10">
                 <p>

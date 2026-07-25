@@ -1,13 +1,5 @@
 <template>
     <div class="ma-3">
-        <v-alert color="white" variant="text" icon="mdi-image-outline" density="compact" class="mb-3">
-            <v-alert-title>Message Visual Rendering</v-alert-title>
-            <div class="text-grey">
-                Control when visuals are rendered inline with scene messages.
-            </div>
-        </v-alert>
-        <v-divider class="mb-3"></v-divider>
-        
         <v-row class="mb-3">
             <v-col cols="12">
                 <v-checkbox 

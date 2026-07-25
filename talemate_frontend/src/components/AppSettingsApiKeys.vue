@@ -1,7 +1,4 @@
 <template>
-    <AppSettingsPageHeader title="API Keys" icon="mdi-key-variant">
-        API keys and access tokens for third party services. Only fill in the services you use.
-    </AppSettingsPageHeader>
     <v-card v-for="provider in providers" :key="provider.id" class="mb-3" variant="tonal" :data-setting-anchor="provider.id">
         <v-card-title class="text-subtitle-1">
             <v-icon start size="small">{{ provider.icon || 'mdi-api' }}</v-icon>
@@ -36,14 +33,10 @@
 </template>
 
 <script>
-import AppSettingsPageHeader from './AppSettingsPageHeader.vue';
 import { API_PROVIDERS } from '../utils/appSettingsRegistry.js';
 
 export default {
     name: 'AppSettingsApiKeys',
-    components: {
-        AppSettingsPageHeader,
-    },
     props: {
         config: Object,
     },

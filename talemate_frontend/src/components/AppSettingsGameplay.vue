@@ -1,7 +1,4 @@
 <template>
-    <AppSettingsPageHeader title="General" icon="mdi-cog">
-        General game behavior.
-    </AppSettingsPageHeader>
     <v-row>
         <v-col cols="12" data-setting-anchor="auto_save">
             <v-checkbox color="primary" v-model="config.game.general.auto_save" label="Auto save" messages="Automatically save after each game-loop"></v-checkbox>
@@ -30,13 +27,8 @@
 </template>
 
 <script>
-import AppSettingsPageHeader from './AppSettingsPageHeader.vue';
-
 export default {
     name: 'AppSettingsGameplay',
-    components: {
-        AppSettingsPageHeader,
-    },
     props: {
         config: Object,
     },

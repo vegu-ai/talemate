@@ -1,7 +1,4 @@
 <template>
-    <AppSettingsPageHeader title="Default player character" icon="mdi-human-edit">
-        This will be default player character that will be added to a scene if the scene does not come with a defined player character. Mostly relevant when you load character-cards that aren't in the talemate scene format.
-    </AppSettingsPageHeader>
     <v-row>
         <v-col cols="6">
             <v-text-field v-model="config.game.default_player_character.name"
@@ -26,13 +23,8 @@
 </template>
 
 <script>
-import AppSettingsPageHeader from './AppSettingsPageHeader.vue';
-
 export default {
     name: 'AppSettingsPlayerCharacter',
-    components: {
-        AppSettingsPageHeader,
-    },
     props: {
         config: Object,
     },

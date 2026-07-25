@@ -33,7 +33,7 @@
 
     <!-- Per-field overrides -->
     <div v-for="(action_config, config_key) in actionSchema.config" :key="config_key">
-      <div v-if="action_config.scene_overridable">
+      <div v-if="action_config.scene_overridable && (fieldConditionMet(action_config) || isOverrideActive(config_key))">
         <UxField
           :field="action_config"
           :model-value="effectiveValue(config_key)"
@@ -53,7 +53,8 @@
     </div>
   </v-sheet>
 
-  <v-sheet v-else density="compact">
+  <!-- action's own condition unmet → render nothing -->
+  <v-sheet v-else-if="actionConditionMet" density="compact">
     <div v-if="actionSchema.description" class="text-muted mt-2 mb-3">
       {{ actionSchema.description }}
       <p v-if="actionSchema.warning" class="text-warning mt-2 text-caption">
@@ -68,7 +69,7 @@
 </template>
 
 <script>
-import { actionHasOverridable } from '@/constants/sceneAgentSettings';
+import { actionHasOverridable, effectiveConditionMet } from '@/constants/sceneAgentSettings';
 import UxField from './UxField.vue';
 import SceneOverrideToggle from './SceneOverrideToggle.vue';
 
@@ -84,6 +85,13 @@ export default {
     // Per-action sparse override slice: {enabled?: bool, config: {key: {value}}}
     // Always an object; empty when nothing is overridden.
     overrides: { type: Object, default: () => ({}) },
+    // The agent's full actions map (values + schema). Conditions address
+    // fields by their full path (e.g. "character_creation.config.fast") and
+    // may point into a different action, so the whole map is needed.
+    agentActions: { type: Object, required: true },
+    // Full sparse overlay {actions: {...}} — a condition's source field may
+    // itself be overridden for this scene.
+    overlay: { type: Object, default: () => ({ actions: {} }) },
     // Forwarded to UxField — required for wstemplate widgets.
     templates: { type: Object, default: null },
     // Forwarded to UxField — required for unified_api_key widgets.
@@ -92,7 +100,13 @@ export default {
   emits: ['update:overrides', 'change'],
   computed: {
     hasAnyOverridable() {
-      return actionHasOverridable(this.actionSchema);
+      return actionHasOverridable(this.actionSchema, this.conditionCtx);
+    },
+    conditionCtx() {
+      return { actions: this.agentActions, overlay: this.overlay, overrides: this.overrides };
+    },
+    actionConditionMet() {
+      return effectiveConditionMet(this.actionSchema?.condition, this.agentActions, this.overlay);
     },
     enabledOverrideActive() {
       return this.overrides && this.overrides.enabled !== undefined && this.overrides.enabled !== null;
@@ -103,6 +117,9 @@ export default {
     },
   },
   methods: {
+    fieldConditionMet(actionConfig) {
+      return effectiveConditionMet(actionConfig.condition, this.agentActions, this.overlay);
+    },
     isOverrideActive(configKey) {
       return !!(this.overrides?.config && this.overrides.config[configKey]);
     },

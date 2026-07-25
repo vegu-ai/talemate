@@ -1,3 +1,6 @@
+import { getProperty } from 'dot-prop';
+import { conditionMet } from '@/utils/uxConditions';
+
 /**
  * Validation rules for the scene agent-settings filename input
  * (used by the RequestInput dialog in AgentModal).
@@ -60,19 +63,59 @@ export function setActionOverrideSlice(actions, actionKey, perActionOverride) {
 }
 
 /**
+ * Resolve a condition attribute (e.g. "character_creation.config.fast") to the
+ * value scene mode should judge it by: the overlay first, the agent's global
+ * action values second. The sparse overlay mirrors the actions map shape, so
+ * the same dotted path addresses both.
+ */
+function effectiveConfigValue(actions, overlay, attribute) {
+  const path = attribute + '.value';
+  const overridden = getProperty(overlay?.actions ?? {}, path);
+  if (overridden !== undefined) return overridden;
+  return getProperty(actions ?? {}, path);
+}
+
+/**
+ * Evaluate a UX visibility condition against the scene's effective values —
+ * the condition's source field may itself be overridden for this scene.
+ */
+export function effectiveConditionMet(condition, actions, overlay) {
+  if (condition == null) return true;
+  return conditionMet(condition, effectiveConfigValue(actions, overlay, condition.attribute));
+}
+
+/** True if a per-action override slice holds anything at all. */
+function actionHasActiveOverride(overrides) {
+  if (!overrides) return false;
+  if (overrides.enabled !== undefined && overrides.enabled !== null) return true;
+  return Object.keys(overrides.config || {}).length > 0;
+}
+
+/**
  * True if an action schema has at least one scene-overridable surface —
  * either its container-level `enabled` flag or any config field. Used by
  * AgentModal (with the extra container guard) and AgentSceneSettings to
  * decide whether the scene tab / panel should render.
+ *
+ * @param conditionContext {actions, overlay, overrides} — the effective values
+ *   conditions resolve against, plus this action's own override slice. An
+ *   already-set override keeps its surface even when the gate is off: the
+ *   backend applies stored overrides without evaluating conditions, so hiding
+ *   one would leave it in effect and unreachable.
  */
-export function actionHasOverridable(actionSchema) {
+export function actionHasOverridable(actionSchema, conditionContext) {
   if (!actionSchema) return false;
+  const { actions, overlay, overrides } = conditionContext;
+  if (actionHasActiveOverride(overrides)) return true;
+  if (!effectiveConditionMet(actionSchema.condition, actions, overlay)) return false;
   // enabled_scene_overridable only matters when the action can actually be
   // disabled globally; otherwise there's no enable flag to override.
   if (actionSchema.enabled_scene_overridable && actionSchema.can_be_disabled) return true;
   const cfg = actionSchema.config || {};
   for (const ck in cfg) {
-    if (cfg[ck]?.scene_overridable) return true;
+    if (!cfg[ck]?.scene_overridable) continue;
+    if (!effectiveConditionMet(cfg[ck].condition, actions, overlay)) continue;
+    return true;
   }
   return false;
 }

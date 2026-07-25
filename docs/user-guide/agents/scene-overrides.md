@@ -35,7 +35,11 @@ When you activate an override, the field starts out seeded with the current glob
 
 Some agents also let you override whether an entire action is **enabled** for the scene, using the same link icon next to the action's enable checkbox.
 
-In Scene mode, the modal only shows the settings (and tabs) that actually support overriding, to keep the view focused. If an agent has no overridable settings at all, the Global / Scene switch won't appear.
+In Scene mode, the modal only shows the settings (and tabs) that actually support overriding, to keep the view focused. If an agent has no currently overridable settings at all, the Global / Scene switch won't appear.
+
+Some settings only apply while another setting is switched on — for example the Creator agent's Fast-mode fields (Consolidate, One-shot token budget, Fill in misses) only matter while **Fast Character Generation** is on. Those settings appear in Scene mode only while their gating setting allows it, and the gate is read as this scene sees it: the scene's override if there is one, otherwise the global value. So overriding the gate for a scene reveals the settings it gates, and a section (or tab) whose settings are all currently hidden drops out of Scene mode entirely.
+
+One exception keeps things recoverable: a setting you have **already** overridden stays visible even when its gate is off, so you can always see it in the count and clear it. Its stored value still applies whenever the gate is on again.
 
 ### Saving
 

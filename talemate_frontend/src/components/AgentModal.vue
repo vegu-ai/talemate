@@ -119,6 +119,8 @@
                     :action-schema="agent.data.actions[key]"
                     :app-config="appConfig"
                     :templates="templates"
+                    :agent-actions="agent.actions"
+                    :overlay="sceneOverrides"
                     :overrides="sceneOverrides.actions[key] || {}"
                     @update:overrides="(v) => updateActionOverrides(key, v)"
                     @change="dirtyScene = true"
@@ -170,6 +172,7 @@ import {
   SCENE_AGENT_SETTINGS_FILENAME_RULES,
   actionHasOverridable,
   countSceneOverrides,
+  effectiveConditionMet,
   setActionOverrideSlice,
 } from '@/constants/sceneAgentSettings';
 
@@ -312,7 +315,7 @@ export default {
       if (!this.sceneActive) return false;
       const actions = this.agent?.data?.actions || {};
       for (const key in actions) {
-        if (actionHasOverridable(actions[key])) return true;
+        if (actionHasOverridable(actions[key], this.sceneConditionCtx(key))) return true;
       }
       return false;
     },
@@ -325,7 +328,7 @@ export default {
       for (const key in actions) {
         const schema = actions[key];
         if (schema?.container) continue;
-        if (actionHasOverridable(schema)) return true;
+        if (actionHasOverridable(schema, this.sceneConditionCtx(key))) return true;
       }
       return false;
     },
@@ -407,6 +410,13 @@ export default {
       // whenever the dialog closes, persist changes
       if (!newVal) this.finalizeSave();
       this.$emit('update:dialog', newVal);
+    },
+    tabs(newTabs) {
+      // A condition flipping — e.g. toggling an override that gates another
+      // action — can drop the tab that is currently open; snap to a valid one
+      // instead of leaving the pane blank.
+      const valid = newTabs.map(t => t.name);
+      if (valid.length && !valid.includes(this.tab)) this.tab = valid[0];
     }
   },
   methods: {
@@ -422,18 +432,29 @@ export default {
       if (valid.length && !valid.includes(this.tab)) this.tab = valid[0];
     },
 
+    sceneConditionCtx(actionKey) {
+      return {
+        actions: this.agent?.actions,
+        overlay: this.sceneOverrides,
+        overrides: this.sceneOverrides.actions[actionKey],
+      };
+    },
+
     containerHasOverridable(actionKey) {
       const schema = this.agent?.data?.actions?.[actionKey];
-      return !!schema?.container && actionHasOverridable(schema);
+      return !!schema?.container && actionHasOverridable(schema, this.sceneConditionCtx(actionKey));
     },
 
     actionHasOverridableSchema(actionKey) {
       const schema = this.agent?.data?.actions?.[actionKey];
-      return actionHasOverridable(schema);
+      return actionHasOverridable(schema, this.sceneConditionCtx(actionKey));
     },
 
     testActionConditional(action) {
       if (action.condition == null) return true;
+      if (this.mode === 'scene') {
+        return effectiveConditionMet(action.condition, this.agent.actions, this.sceneOverrides);
+      }
       if (typeof(this.agent.client) !== 'object') return true;
       const value = getProperty(this.agent.actions, action.condition.attribute + ".value");
       return conditionMet(action.condition, value);

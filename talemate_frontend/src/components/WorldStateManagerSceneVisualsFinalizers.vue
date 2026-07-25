@@ -36,8 +36,10 @@
         <AgentSceneSettings
             :action="actionSchema"
             :action-schema="actionSchema"
+            :agent-actions="visualAgent.actions"
             :app-config="appConfig"
             :templates="templates"
+            :overlay="localOverrides"
             :overrides="localOverrides.actions[ACTION_KEY] || {}"
             @update:overrides="updateActionOverrides"
             @change="dirty = true"

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import isodate
 import structlog
 
@@ -12,6 +14,7 @@ from talemate.prompts import Prompt
 from talemate.scene_message import TimePassageMessage
 
 from talemate.util.response import extract_list
+from talemate.util.data import parse_attribute_lines
 
 from talemate.agents.base import (
     Agent,
@@ -33,6 +36,9 @@ from .reinforcements import WorldStateReinforcementsMixin
 from .pin_conditions import WorldStatePinConditionsMixin
 from .websocket_handler import WorldStateWebsocketHandler
 import talemate.agents.world_state.nodes
+
+if TYPE_CHECKING:
+    from talemate.character import Character
 
 log = structlog.get_logger("talemate.agents.world_state")
 
@@ -337,20 +343,7 @@ class WorldStateAgent(
     def _parse_character_sheet(
         self, response, max_attributes: int | None = None
     ) -> dict[str, str]:
-        data = {}
-        for line in response.split("\n"):
-            if not line.strip():
-                continue
-            if ":" not in line:
-                break
-            name, value = line.split(":", 1)
-            data[name.strip()] = value.strip()
-
-            # Enforce max_attributes limit if set
-            if max_attributes and max_attributes > 0 and len(data) >= max_attributes:
-                break
-
-        return data
+        return parse_attribute_lines(response, max_attributes=max_attributes)
 
     @set_processing
     async def extract_character_sheet(
@@ -361,9 +354,16 @@ class WorldStateAgent(
         augmentation_instructions: str = None,
         dynamic_instructions: list[DynamicInstruction] = [],
         max_attributes: int | None = None,
+        character: Character | None = None,
     ) -> dict[str, str]:
         """
         Attempts to extract a character sheet from the given text.
+
+        character: Explicit context character for the prompt - for callers
+            whose character is not in the scene yet (pre-creation flows).
+            Defaults to the scene lookup. When given, it renders as the
+            prompt's character context (a same-named scene character is
+            skipped), so the profiled character appears exactly once.
         """
 
         response, extracted = await Prompt.request(
@@ -375,7 +375,8 @@ class WorldStateAgent(
                 "max_tokens": self.client.max_token_length,
                 "text": text,
                 "name": name,
-                "character": self.scene.get_character(name),
+                "character": character or self.scene.get_character(name),
+                "context_character": character,
                 "alteration_instructions": alteration_instructions or "",
                 "augmentation_instructions": augmentation_instructions or "",
                 "dynamic_instructions": dynamic_instructions,

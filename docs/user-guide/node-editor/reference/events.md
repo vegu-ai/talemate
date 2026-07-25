@@ -410,6 +410,10 @@ Handlers can edit `response` in-place to clean up or transform the text (the Edi
 
 Emitted **before** the Creator agent generates example dialogue for a character (AI-assisted character creation, character card import).
 
+Not emitted when **Fast Character Generation** is on and the consolidated
+one-shot produces the examples itself — the events fire on the split flow
+and on fill-in-misses regeneration only.
+
 !!! payload "Payload"
 
     | Field | Type | Notes |
@@ -424,6 +428,9 @@ Emitted **before** the Creator agent generates example dialogue for a character 
 
 Emitted **after** the dialogue examples have been generated but **before** they are returned to the caller (and applied to the character).
 Handlers can mutate `dialogue_examples` to add, remove or rewrite examples.
+
+Like the `before` event, not emitted when the consolidated one-shot
+produces the examples (see above).
 
 !!! payload "Payload"
 

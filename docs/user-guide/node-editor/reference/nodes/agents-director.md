@@ -279,6 +279,12 @@ still appears in the debug console.
 Persists a character that currently only exists as part of the given context
 as a real character that can actively participate in the scene.
 
+Pre-generated `description`, `dialogue_instructions` and `example_dialogue`
+inputs (e.g. from an `agents/creator/GenerateCharacter` node) are used
+as-is instead of being generated again. When wiring a generated name into
+`character_name`, disable the `determine_name` property so the name is
+not determined twice.
+
 **Inputs**
 
 | Input | Type | Description |
@@ -286,7 +292,10 @@ as a real character that can actively participate in the scene.
 | `state` | `any` |  |
 | `character_name` | `str` | (optional) |
 | `context` | `str` | (optional) |
+| `description` | `str` | (optional) |
 | `attributes` | `dict,str` | (optional) |
+| `dialogue_instructions` | `str` | (optional) |
+| `example_dialogue` | `list` | (optional) |
 | `is_player` | `bool` | (optional) |
 
 **Outputs**

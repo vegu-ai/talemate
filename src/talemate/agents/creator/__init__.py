@@ -36,6 +36,7 @@ class CreatorAgent(
         actions = {"prompt_caching": optimize_prompt_caching_action()}
         MemoryRAGMixin.add_actions(actions)
         AssistantMixin.add_actions(actions)
+        CharacterCreatorMixin.add_actions(actions)
         return actions
 
     def __init__(

@@ -9,6 +9,8 @@ import pytest
 from unittest.mock import AsyncMock
 
 from talemate.agents.creator.assistant import ContentGenerationContext
+from talemate.agents.creator.character import CharacterGenerationRequest
+from talemate.world_state.templates.content import WritingStyle
 from ..conftest import mock_llm_client  # noqa: F401
 from ..test_creator_templates import (  # noqa: F401
     mock_scene,
@@ -168,6 +170,105 @@ class TestCreatorCharacterBaselines:
         )
         baseline_checker(
             capture_prompt(creator), AGENT, "determine_scenario_description"
+        )
+
+
+class TestCreatorGenerateCharacterBaselines:
+    """Baseline tests for the consolidated character generation one-shot."""
+
+    @pytest.mark.asyncio
+    async def test_generate_character__all_aspects(
+        self, active_context, baseline_checker
+    ):
+        creator = active_context
+        creator.client.send_prompt.return_value = "\n".join(
+            [
+                "<NAME>Elena</NAME>",
+                "<DESCRIPTION>Elena is a skilled healer.</DESCRIPTION>",
+                "<ATTRIBUTES>Age: early 30s\nOccupation: healer</ATTRIBUTES>",
+                "<DIALOGUE_INSTRUCTIONS>Speaks softly.</DIALOGUE_INSTRUCTIONS>",
+                '<EXAMPLE_DIALOGUE>Elena: "Oh dear!"</EXAMPLE_DIALOGUE>',
+            ]
+        )
+        await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=[
+                    "name",
+                    "description",
+                    "attributes",
+                    "dialogue_instructions",
+                    "example_dialogue",
+                ],
+                name="the tall woman with dark hair",
+                content="A mysterious healer arrives at the forest clearing.",
+            )
+        )
+        baseline_checker(
+            capture_prompt(creator), AGENT, "generate_character__all_aspects"
+        )
+
+    @pytest.mark.asyncio
+    async def test_generate_character__subset(self, active_context, baseline_checker):
+        creator = active_context
+        creator.client.send_prompt.return_value = "\n".join(
+            [
+                "<DESCRIPTION>Elena is a skilled healer.</DESCRIPTION>",
+                "<DIALOGUE_INSTRUCTIONS>Speaks softly.</DIALOGUE_INSTRUCTIONS>",
+            ]
+        )
+        await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=["description", "dialogue_instructions"],
+                name="Elena",
+                content="A mysterious healer arrives at the forest clearing.",
+            )
+        )
+        baseline_checker(capture_prompt(creator), AGENT, "generate_character__subset")
+
+    @pytest.mark.asyncio
+    async def test_generate_character__existing_character(
+        self, active_context, mock_scene, baseline_checker
+    ):
+        creator = active_context
+        character = mock_scene.get_character("Elena")
+        creator.client.send_prompt.return_value = "\n".join(
+            [
+                "<DESCRIPTION>Elena is a skilled healer.</DESCRIPTION>",
+                "<ATTRIBUTES>Age: early 30s\nOccupation: healer</ATTRIBUTES>",
+                '<EXAMPLE_DIALOGUE>Elena: "Oh dear!"</EXAMPLE_DIALOGUE>',
+            ]
+        )
+        await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=["description", "attributes", "example_dialogue"],
+                name="Elena",
+                character=character,
+            )
+        )
+        baseline_checker(
+            capture_prompt(creator), AGENT, "generate_character__existing_character"
+        )
+
+    @pytest.mark.asyncio
+    async def test_generate_character__writing_style(
+        self, active_context, mock_scene, baseline_checker
+    ):
+        creator = active_context
+        mock_scene.writing_style = WritingStyle(
+            name="Terse", instructions="Write in terse, Hemingway-esque prose."
+        )
+        creator.client.send_prompt.return_value = (
+            "<DESCRIPTION>Elena is a skilled healer.</DESCRIPTION>"
+        )
+        await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=["description"],
+                name="Elena",
+                content="A mysterious healer arrives at the forest clearing.",
+            )
+        )
+        baseline_checker(
+            capture_prompt(creator), AGENT, "generate_character__writing_style"
         )
 
 

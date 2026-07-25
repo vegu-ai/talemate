@@ -17,6 +17,7 @@ __all__ = [
     "DataParsingError",
     "fix_yaml_colon_in_strings",
     "fix_faulty_yaml",
+    "parse_attribute_lines",
 ]
 
 log = structlog.get_logger("talemate.util.dedupe")
@@ -50,6 +51,30 @@ class DataParsingError(Exception):
         self.message = message
         self.data = data
         super().__init__(self.message)
+
+
+def parse_attribute_lines(
+    text: str, max_attributes: int | None = None
+) -> dict[str, str]:
+    """Parse `Name: value` lines into an attributes dict.
+
+    The shared character-sheet attribute format: one attribute per line,
+    with a colon after the attribute name. Parsing stops at the first
+    non-empty line without a colon.
+    """
+    data = {}
+    for line in text.split("\n"):
+        if not line.strip():
+            continue
+        if ":" not in line:
+            break
+        name, value = line.split(":", 1)
+        data[name.strip()] = value.strip()
+
+        if max_attributes and max_attributes > 0 and len(data) >= max_attributes:
+            break
+
+    return data
 
 
 def fix_faulty_json(data: str) -> str:

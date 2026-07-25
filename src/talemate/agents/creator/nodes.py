@@ -9,6 +9,7 @@ from talemate.game.engine.nodes.core import (
 )
 from talemate.game.engine.nodes.registry import register
 from talemate.game.engine.nodes.agent import AgentSettingsNode, AgentNode
+from talemate.agents.creator.character import CharacterGenerationRequest
 
 log = structlog.get_logger("talemate.game.engine.nodes.agents.creator")
 
@@ -284,6 +285,166 @@ class DetermineCharacterDialogueInstructions(AgentNode):
                 "character": character,
                 "dialogue_instructions": dialogue_instructions,
                 "original": original,
+            }
+        )
+
+
+@register("agents/creator/GenerateCharacter")
+class GenerateCharacter(AgentNode):
+    """
+    Generates character data with a single consolidated prompt (the unified
+    generation approach from the creator agent's "Character Creation" Fast
+    Character Generation mode).
+
+    All aspects selected via the node's properties are generated in one go.
+    Aspects the consolidated response misses are handled according to the
+    creator agent's "Fill in misses" setting (individual follow-up requests
+    or left empty); the response budget comes from the agent's "One-shot
+    token budget" setting. A completely unparseable response raises an error.
+
+    This node only generates data - it does not add the character to the
+    scene. Wire the outputs into an `agents/director/PersistCharacter` node
+    to persist the character (disable `determine_name` on that node when
+    wiring a generated name, and wire `description` through as well, so
+    nothing is generated twice).
+
+    Generating example dialogue requires a name: provide `character_name`
+    or enable `generate_name` - the node errors otherwise.
+
+    Inputs:
+
+    - state: The current state of the graph
+    - character_name: The current or descriptive character name (optional)
+    - instructions: Guiding instructions / content for the creation (optional)
+    - description: An existing description to use as context (optional)
+
+    Properties:
+
+    - generate_name: Determine a fitting name
+    - generate_description: Generate the character description
+    - generate_attributes: Generate the character sheet (attributes)
+    - generate_dialogue_instructions: Generate dialogue (acting) instructions
+    - generate_example_dialogue: Generate example dialogue lines
+
+    Outputs:
+
+    - state: The state input, passed through
+    - character_name: The determined (or input) character name
+    - description: The generated description (empty if not generated)
+    - attributes: The generated attributes (empty if not generated)
+    - dialogue_instructions: The generated dialogue instructions (empty if not generated)
+    - example_dialogue: The generated example dialogue lines (empty if not generated)
+    """
+
+    _agent_name: ClassVar[str] = "creator"
+
+    class Fields:
+        generate_name = PropertyField(
+            name="generate_name",
+            description="Determine a fitting character name",
+            type="bool",
+            default=False,
+        )
+        generate_description = PropertyField(
+            name="generate_description",
+            description="Generate the character description",
+            type="bool",
+            default=True,
+        )
+        generate_attributes = PropertyField(
+            name="generate_attributes",
+            description="Generate the character sheet (attributes)",
+            type="bool",
+            default=True,
+        )
+        generate_dialogue_instructions = PropertyField(
+            name="generate_dialogue_instructions",
+            description="Generate dialogue (acting) instructions",
+            type="bool",
+            default=True,
+        )
+        generate_example_dialogue = PropertyField(
+            name="generate_example_dialogue",
+            description="Generate example dialogue lines",
+            type="bool",
+            default=False,
+        )
+
+    def __init__(self, title="Generate Character", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("character_name", socket_type="str", optional=True)
+        self.add_input("instructions", socket_type="str", optional=True)
+        self.add_input("description", socket_type="str", optional=True)
+
+        self.set_property("generate_name", False)
+        self.set_property("generate_description", True)
+        self.set_property("generate_attributes", True)
+        self.set_property("generate_dialogue_instructions", True)
+        self.set_property("generate_example_dialogue", False)
+
+        self.add_output("state", socket_type="any")
+        self.add_output("character_name", socket_type="str")
+        self.add_output("description", socket_type="str")
+        self.add_output("attributes", socket_type="dict")
+        self.add_output("dialogue_instructions", socket_type="str")
+        self.add_output("example_dialogue", socket_type="list")
+
+    async def run(self, state: GraphState):
+        character_name = self.normalized_input_value("character_name") or ""
+        instructions = self.normalized_input_value("instructions") or ""
+        description = self.normalized_input_value("description") or ""
+
+        aspects = []
+        if self.normalized_input_value("generate_name"):
+            aspects.append("name")
+        if self.normalized_input_value("generate_description"):
+            aspects.append("description")
+        if self.normalized_input_value("generate_attributes"):
+            aspects.append("attributes")
+        if self.normalized_input_value("generate_dialogue_instructions"):
+            aspects.append("dialogue_instructions")
+        if self.normalized_input_value("generate_example_dialogue"):
+            aspects.append("example_dialogue")
+
+        if not aspects:
+            raise InputValueError(
+                self, "generate_description", "No aspects selected for generation"
+            )
+
+        if (
+            "example_dialogue" in aspects
+            and "name" not in aspects
+            and not character_name
+        ):
+            raise InputValueError(
+                self,
+                "character_name",
+                "Example dialogue generation needs a name - provide "
+                "character_name or enable generate_name",
+            )
+
+        result = await self.agent.generate_character_aspects(
+            CharacterGenerationRequest(
+                aspects=aspects,
+                name=character_name,
+                content=instructions,
+                description=description,
+                unified=True,
+                consolidate=aspects,
+            )
+        )
+
+        self.set_output_values(
+            {
+                "state": state,
+                "character_name": result.name or character_name,
+                "description": result.description or "",
+                "attributes": result.attributes or {},
+                "dialogue_instructions": result.dialogue_instructions or "",
+                "example_dialogue": result.example_dialogue or [],
             }
         )
 

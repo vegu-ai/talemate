@@ -21,11 +21,39 @@ from talemate.prompts.response import (
     AfterAnchorExtractor,
     RegexExtractor,
     StripPrefixExtractor,
+    StrictAnchorExtractor,
     CodeBlockExtractor,
     ComplexCodeBlockExtractor,
     ResponseSpec,
     ExtractionError,
 )
+
+
+# ============================================================================
+# Tests for StrictAnchorExtractor
+# ============================================================================
+
+
+class TestStrictAnchorExtractor:
+    """Tests for the StrictAnchorExtractor class."""
+
+    def test_complete_block_extracts(self):
+        extractor = StrictAnchorExtractor(left="<NAME>", right="</NAME>")
+        assert extractor.extract("<NAME>Elena</NAME>") == "Elena"
+
+    def test_unclosed_tag_rejected(self):
+        extractor = StrictAnchorExtractor(left="<NAME>", right="</NAME>")
+        assert extractor.extract("<NAME>Elena, a healer with no close") is None
+
+    def test_close_only_rejected(self):
+        extractor = StrictAnchorExtractor(left="<NAME>", right="</NAME>")
+        assert extractor.extract("Elena</NAME>") is None
+
+    def test_fallback_to_full_not_honored(self):
+        extractor = StrictAnchorExtractor(
+            left="<NAME>", right="</NAME>", fallback_to_full=True
+        )
+        assert extractor.extract("Elena with no tags") is None
 
 
 # ============================================================================

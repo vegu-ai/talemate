@@ -95,8 +95,10 @@
     text you have started typing.
 - path: user-guide/agents/creator/settings.md
   title: Settings
-  summary: Creator agent settings; Dialogue Suggestion Length and Narrative Suggestion Length (max tokens for autocomplete),
-    Enable Hints toggle for curly-brace autocomplete hints, and long-term memory options.
+  summary: Creator agent settings; Character Creation (Fast consolidated single-prompt generation, Consolidate aspect selection
+    including the Attribute templates fold, One-shot token budget, Fill in misses), Dialogue Suggestion Length and Narrative
+    Suggestion Length (max tokens for autocomplete), Enable Hints toggle for curly-brace autocomplete hints, and long-term memory
+    options.
 - path: user-guide/agents/director/chat.md
   title: Director Chat
   summary: The director console chat for querying and modifying a loaded scene in natural language; covers chat modes (Normal,
@@ -697,10 +699,11 @@
     Settings.'
 - path: user-guide/node-editor/reference/nodes/agents-creator.md
   title: Creator Agent Nodes
-  summary: 'Node reference. Content creation through the creator agent: contextual generation, character creation and per-character
-    derivations (name, description, dialogue instructions) plus thematic lists. Nodes: Contextual Generate, Create Character,
-    Determine Character Description, Determine Character Dialogue Instructions, Determine Character Name, Determine Content
-    Context, and more.'
+  summary: 'Node reference. Content creation through the creator agent: contextual generation, character creation (including
+    the Generate Character node for consolidated single-prompt generation of name, description, attributes, dialogue instructions
+    and example dialogue) and per-character derivations, plus thematic lists. Nodes: Contextual Generate, Create Character,
+    Generate Character, Determine Character Description, Determine Character Dialogue Instructions, Determine Character Name,
+    Determine Content Context, and more.'
 - path: user-guide/node-editor/reference/nodes/agents-director-auto.md
   title: Director Auto-Direction Nodes
   summary: 'Node reference. The director''s automatic direction loop: pick candidates, determine scene intent, decide when
@@ -731,10 +734,11 @@
     Arc, Get Active Chat Plan ID, Get Active Plan, Insert Task, Manage Plan, Remove Task.'
 - path: user-guide/node-editor/reference/nodes/agents-director.md
   title: Director Agent Nodes
-  summary: 'Node reference. Director operations: scene direction, character persistence, voice assignment, chat message insertion,
-    dice rolls, actor/narrator direction functions and the director''s websocket handler modules. Nodes: Assign Voice, On
-    Persist Character Generate Visual, Direct Actor, Direct Narrator, Yield To Actor, Yield To User, Roll Dice, Insert Chat
-    Message, and more.'
+  summary: 'Node reference. Director operations: scene direction, character persistence (Persist Character accepts pre-generated
+    description, dialogue instructions and example dialogue, e.g. from the creator Generate Character node), voice assignment,
+    chat message insertion, dice rolls, actor/narrator direction functions and the director''s websocket handler modules. Nodes:
+    Assign Voice, On Persist Character Generate Visual, Direct Actor, Direct Narrator, Yield To Actor, Yield To User, Roll
+    Dice, Insert Chat Message, and more.'
 - path: user-guide/node-editor/reference/nodes/agents-editor.md
   title: Editor Agent Nodes
   summary: 'Node reference. Clean up user input, narration and character messages through the editor agent''s revision passes.

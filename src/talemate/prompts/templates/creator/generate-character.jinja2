@@ -1,0 +1,125 @@
+{#-
+Extractors (dynamic — one per requested aspect, strict: complete tag pairs
+only, a model that does not close its tags is not viable for consolidated
+generation):
+  - name: StrictAnchorExtractor("<NAME>", "</NAME>")
+  - description: StrictAnchorExtractor("<DESCRIPTION>", "</DESCRIPTION>")
+  - attributes: StrictAnchorExtractor("<ATTRIBUTES>", "</ATTRIBUTES>")
+  - dialogue_instructions: StrictAnchorExtractor("<DIALOGUE_INSTRUCTIONS>", "</DIALOGUE_INSTRUCTIONS>")
+  - example_dialogue: StrictAnchorExtractor("<EXAMPLE_DIALOGUE>", "</EXAMPLE_DIALOGUE>")
+-#}
+{# DYNAMIC INSTRUCTIONS #}
+{% set dynamic_instructions_text %}
+{% include "dynamic-instructions.jinja2" %}
+{% endset %}
+
+{# CONTENT TEXT #}
+{% set content_text %}
+<|SECTION:CONTENT|>
+{% if content -%}
+{{ content }}
+{% else -%}
+{% set scene_context_history = scene.context_history(budget=history_budget, min_dialogue=25, sections=False, keep_director=True) -%}
+{% if scene.num_history_entries < 25 %}{{ scene.description }}{% endif -%}
+{% for scene_context in scene_context_history -%}
+{{ scene_context }}
+{% endfor %}
+{% endif %}
+<|CLOSE_SECTION|>
+{% endset %}
+
+{# CHARACTER CONTEXT #}
+{% set character_context %}
+{% if character or description -%}
+<|SECTION:CHARACTER|>
+{% if character -%}
+{{ character.sheet }}
+{% endif -%}
+{% if description and (not character or description != character.description) -%}
+{{ description }}
+{% endif -%}
+<|CLOSE_SECTION|>
+{% endif %}
+{% endset %}
+
+{# TASK INSTRUCTIONS #}
+{% set task_instructions %}
+<|SECTION:TASK|>
+You are creating the character `{{ character_name }}` for {{ scene.context }}.
+
+Generate each of the following aspects for {{ character_name }}.
+
+{% if "name" in aspects -%}
+NAME: The character's name. If `{{ character_name }}` is already a distinct name, repeat it. If it is currently a description, give the character a distinct name. If we don't know the character's actual name, you must decide one. The name MUST fit the context of the scenario and the scene. The name only, nothing else.
+{% endif -%}
+{% if "description" in aspects -%}
+DESCRIPTION: The character description: an overview of the character in broad strokes — who they are and what defines them — not a continuation of any current narrative.
+{% endif -%}
+{% if "attributes" in aspects -%}
+ATTRIBUTES: A character sheet of attributes for {{ character_name }}. You are omniscient and can describe the character in detail; you are a creative writer and may fill any gaps in the profile with your own ideas. Expand on interesting details. Format MUST be one attribute per line, with a colon after the attribute name.{% if max_attributes and max_attributes > 0 %} At most {{ max_attributes }} attributes (lines).{% endif %}
+
+Example:
+Age: early 30s
+Appearance: <description of appearance>
+Occupation: <what they do>
+<...>
+{% if attribute_instructions_text %}
+The following attributes MUST be present, each generated according to its instructions:
+{{ attribute_instructions_text }}
+{% endif %}
+{% if augment_attributes %}
+Additionally: {{ augment_attributes }}
+{% endif %}
+{% endif -%}
+{% if "dialogue_instructions" in aspects -%}
+DIALOGUE INSTRUCTIONS: Dialogue (acting) instructions for the actor playing {{ character_name }}. By default, all actors are instructed to use an informal and colloquial register with a conversational tone - natural, spontaneous, with a sense of immediacy. You may override this default where the character calls for it. Use simple language and structure the instructions in two short paragraphs:
+1. Default register — how {{ character_name }} normally speaks: vocabulary, formality, sentence structure, verbal habits, how they address others.
+2. Under pressure — how their speech changes when stressed, scared, angry, or pushed past their limit. Their composure must crack in a specific, visible way — shorter sentences, different word choices, breaking their own verbal patterns. NOT simply "more of the same".
+{% endif -%}
+{% if "example_dialogue" in aspects -%}
+EXAMPLE DIALOGUE: Up to {{ max_examples }} example dialogue lines that showcase how {{ character_name }} speaks and acts, one per line. Spoken words must be enclosed in quotation marks, and each line should include actions or mannerisms that showcase the character's personality. Cover DIFFERENT emotional registers - not just the character's default mode: include at least one example where their normal speech patterns break or shift under stress or strong emotion. Each line is formatted as `<character name>: "spoken dialogue" ... actions or narrative ...`{% if "name" in aspects %} (using the name from the NAME section){% endif %}.
+{% if example_dialogue_instructions %}
+User-provided guidance for the dialogue examples:
+{{ example_dialogue_instructions }}
+{% endif -%}
+{% endif -%}
+
+{{ character_name }} MUST feel like a believable character in the context of the scene, and relatable to the audience.
+<|CLOSE_SECTION|>
+<|SECTION:RESPONSE FORMAT|>
+Respond with each aspect inside its own tag pair — an opening AND a closing tag — in exactly this order and format:
+
+{% if "name" in aspects -%}
+<NAME>…</NAME>
+{% endif -%}
+{% if "description" in aspects -%}
+<DESCRIPTION>…</DESCRIPTION>
+{% endif -%}
+{% if "attributes" in aspects -%}
+<ATTRIBUTES>…</ATTRIBUTES>
+{% endif -%}
+{% if "dialogue_instructions" in aspects -%}
+<DIALOGUE_INSTRUCTIONS>…</DIALOGUE_INSTRUCTIONS>
+{% endif -%}
+{% if "example_dialogue" in aspects -%}
+<EXAMPLE_DIALOGUE>…</EXAMPLE_DIALOGUE>
+{% endif -%}
+Every tag MUST be closed. Do not write anything outside the tag pairs.
+<|CLOSE_SECTION|>
+{% endset %}
+
+{# COMMON INSTRUCTIONS #}
+{% set common_instructions %}
+{% include "writing-style-instructions.jinja2" %}
+{% endset %}
+
+{% set required_instructions %}
+{{ content_text }}
+{{ character_context }}
+{{ task_instructions }}
+{{ common_instructions }}
+{% endset %}
+
+{# COMBINED TEMPLATE #}
+{{ limit_tokens(dynamic_instructions_text, max_tokens-count_tokens(required_instructions)) }}
+{{ required_instructions }}

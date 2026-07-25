@@ -20,7 +20,7 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Context ID Nodes](context-id.md) | 11 | Context IDs: build, convert, compress, read and write context-addressable values and pins. |
 | [Conversation Agent Nodes](agents-conversation.md) | 2 | Generate character dialogue through the conversation agent. |
 | [Core Nodes](core.md) | 7 | Graph plumbing: module Input/Output/Property, Route, Watch, Null and Stage. |
-| [Creator Agent Nodes](agents-creator.md) | 8 | Contextual content generation: character attributes, dialogue instructions, content context and thematic lists. |
+| [Creator Agent Nodes](agents-creator.md) | 9 | Contextual content generation: character attributes, dialogue instructions, content context and thematic lists. |
 | [Data Nodes](data.md) | 11 | General value handling: get/set, conditionals, sorting, selection, UUIDs, JSON, object updates and length/capping helpers. |
 | [Dict And List Nodes](data-collections.md) | 14 | Dictionaries and lists: make, get, set, update, pop, append, combine and collect. |
 | [Director Agent Nodes](agents-director.md) | 15 | Director operations: scene direction, character persistence, voice assignment, dice rolls, narrator/actor direction functions and websocket handlers. |

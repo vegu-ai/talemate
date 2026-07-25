@@ -1,0 +1,22 @@
+## Content
+A mysterious healer arrives at the forest clearing.
+
+## Task
+You are creating the character `Elena` for Fantasy adventure story.
+
+Generate each of the following aspects for Elena.
+
+DESCRIPTION: The character description: an overview of the character in broad strokes — who they are and what defines them — not a continuation of any current narrative.
+DIALOGUE INSTRUCTIONS: Dialogue (acting) instructions for the actor playing Elena. By default, all actors are instructed to use an informal and colloquial register with a conversational tone - natural, spontaneous, with a sense of immediacy. You may override this default where the character calls for it. Use simple language and structure the instructions in two short paragraphs:
+1. Default register — how Elena normally speaks: vocabulary, formality, sentence structure, verbal habits, how they address others.
+2. Under pressure — how their speech changes when stressed, scared, angry, or pushed past their limit. Their composure must crack in a specific, visible way — shorter sentences, different word choices, breaking their own verbal patterns. NOT simply "more of the same".
+Elena MUST feel like a believable character in the context of the scene, and relatable to the audience.
+
+## Response format
+Respond with each aspect inside its own tag pair — an opening AND a closing tag — in exactly this order and format:
+
+<DESCRIPTION>…</DESCRIPTION>
+<DIALOGUE_INSTRUCTIONS>…</DIALOGUE_INSTRUCTIONS>
+Every tag MUST be closed. Do not write anything outside the tag pairs.
+
+The length of your response must fit within 4 paragraphs.

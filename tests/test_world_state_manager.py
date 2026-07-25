@@ -2,9 +2,9 @@
 Unit tests for `talemate.world_state.manager.WorldStateManager`.
 
 Focuses on the pure CRUD / state-mutation entry points - skipping the
-LLM-driven generation paths (`create_character`, `apply_template_*`,
-`add_suggestion`, etc. that depend on creator agents producing real
-content). Each test invokes the real manager method on a real scene.
+LLM-driven generation paths (`apply_template_*`, `add_suggestion`, etc.
+that depend on creator agents producing real content). Each test invokes
+the real manager method on a real scene.
 """
 
 import pytest

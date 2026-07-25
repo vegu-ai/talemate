@@ -47,11 +47,19 @@ def create(scene: "Scene") -> "ScopedAPI":
 
             director = get_agent("director")
 
+            # lazy: this module loads during talemate.agents.base init, long
+            # before the director package can be imported
+            from talemate.agents.director.character_management import (
+                PersistCharacterRequest,
+            )
+
             character = run_async(
                 director.persist_character(
-                    name=validated.character_name,
-                    content=validated.content,
-                    determine_name=validated.determine_name,
+                    PersistCharacterRequest(
+                        name=validated.character_name,
+                        content=validated.content,
+                        determine_name=validated.determine_name,
+                    )
                 )
             )
 

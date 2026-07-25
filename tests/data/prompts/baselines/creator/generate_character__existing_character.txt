@@ -1,0 +1,37 @@
+## Content
+A peaceful clearing in the heart of an ancient forest.Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Character
+name: Elena
+gender: female
+age: early 30s
+occupation: Healer
+
+## Task
+You are creating the character `Elena` for Fantasy adventure story.
+
+Generate each of the following aspects for Elena.
+
+DESCRIPTION: The character description: an overview of the character in broad strokes — who they are and what defines them — not a continuation of any current narrative.
+ATTRIBUTES: A character sheet of attributes for Elena. You are omniscient and can describe the character in detail; you are a creative writer and may fill any gaps in the profile with your own ideas. Expand on interesting details. Format MUST be one attribute per line, with a colon after the attribute name.
+
+Example:
+Age: early 30s
+Appearance: <description of appearance>
+Occupation: <what they do>
+<...>
+
+EXAMPLE DIALOGUE: Up to 5 example dialogue lines that showcase how Elena speaks and acts, one per line. Spoken words must be enclosed in quotation marks, and each line should include actions or mannerisms that showcase the character's personality. Cover DIFFERENT emotional registers - not just the character's default mode: include at least one example where their normal speech patterns break or shift under stress or strong emotion. Each line is formatted as `<character name>: "spoken dialogue" ... actions or narrative ...`.
+Elena MUST feel like a believable character in the context of the scene, and relatable to the audience.
+
+## Response format
+Respond with each aspect inside its own tag pair — an opening AND a closing tag — in exactly this order and format:
+
+<DESCRIPTION>…</DESCRIPTION>
+<ATTRIBUTES>…</ATTRIBUTES>
+<EXAMPLE_DIALOGUE>…</EXAMPLE_DIALOGUE>
+Every tag MUST be closed. Do not write anything outside the tag pairs.
+
+The length of your response must fit within 4 paragraphs.

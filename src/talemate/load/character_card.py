@@ -680,6 +680,9 @@ async def _determine_character_attributes(
         world_state = instance.get_agent("world_state")
         character.base_attributes = await world_state.extract_character_sheet(
             name=character.name,
+            # the imported character has no actor yet - without the explicit
+            # context character the prompt's active-character loop misses it
+            character=character,
             dynamic_instructions=relevant_info.to_dynamic_instructions(scenario=False),
         )
 

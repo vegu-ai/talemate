@@ -72,6 +72,7 @@ def agents():
         world_state=handles["world_state"],
         director=handles["director"],
         client=scene.mock_client,
+        scene=scene,
     )
 
 
@@ -217,6 +218,16 @@ async def test_process_characters_extractions_enabled(agents):
     mock_voice.assert_awaited_once()
     assert scene.character_data == {"Hero": character}
 
+    # the sheet prompt carries the *generated* description - description
+    # extraction ran first and replaced the card text, and the context
+    # character is read at call time
+    sheet_prompt = str(agents.client.prompt_history[1]["prompt"])
+    assert "is the generated hero." in sheet_prompt
+    # the raw card description does not reach it: it rides in the SCENARIO
+    # dynamic instruction, which this call site drops (scenario=False), and
+    # no text= is passed
+    assert "raw description" not in sheet_prompt
+
 
 async def test_process_characters_extractions_disabled_keeps_raw_data(agents):
     character = _card_character()
@@ -265,6 +276,36 @@ async def test_process_characters_individual_gating(agents):
     assert prompt_kinds(agents.client) == [KIND_SHEET]
     assert character.base_attributes == {"Name": "Hero", "Age": "20"}
     assert character.description == "raw description"
+
+
+async def test_process_characters_sheet_prompt_carries_character_context(agents):
+    # split-import state: the character is registered in character_data but
+    # has no actor yet (activation happens later), so the sheet prompt's
+    # active-character loop misses it - the explicit context character must
+    # carry the description. An unrelated active character still renders.
+    character = Character(
+        name="Hero", description="raw description", greeting_text="hi"
+    )
+    other = Character(name="Bram", description="A veteran smith.", color="#fff")
+    await agents.scene.add_actor(
+        agents.scene.Actor(other, None), commit_to_memory=False
+    )
+    scene = _scene_stub()
+
+    async with MockClientContext():
+        client_responses.get().append(sheet_response("Hero", {"Age": "20"}))
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "",
+            LoadingStatus(None),
+            _options_all_disabled(extract_attributes=True),
+        )
+
+    prompt = str(agents.client.prompt_history[0]["prompt"])
+    assert prompt.count("raw description") == 1
+    assert prompt.count("A veteran smith.") == 1
 
 
 # ---------------------------------------------------------------------------

@@ -53,6 +53,7 @@
   - "Scene Types: Applying a scene type template never actually registered the scene type on the scene's intent state — the template wrote to a non-existent attribute, so template-picked scene types were silently lost."
   - "Character Creation: A description typed into the world editor's character creator was silently discarded when AI generation was enabled, leaving the new character with no description. Provided descriptions are now kept."
   - "Character Card Import: Cancelling an import now actually aborts it — the split-mode per-aspect extractions, content-context determination, and story-intent generation each swallowed the cancellation as a warning, so the import completed anyway (and a cancel during story-intent generation leaked into the next unrelated generation)."
+  - "Character Card Import: Attribute extraction no longer runs blind in the default (non-Fast) import mode — the character being profiled was missing from its own extraction prompt, so attributes were generated from the greeting and character book alone, without the character's description. Imported attributes now reflect the description."
 
 0.38.0:
   features:

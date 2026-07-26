@@ -477,7 +477,9 @@ class CharacterCreatorMixin:
         instructions: str = "",
         information: str = "",
         dynamic_instructions: list = None,
-    ):
+    ) -> str:
+        """The generated description, or an empty string when the model
+        produced nothing."""
         vars_dict = {
             "character": character,
             "scene": self.scene,
@@ -496,7 +498,16 @@ class CharacterCreatorMixin:
             "create",
             vars=vars_dict,
         )
-        return extracted["response"].strip()
+
+        description = extracted["response"].strip()
+
+        # the template primes the response with the character's name, so a
+        # generation that produced nothing comes back as the bare name -
+        # report it as empty rather than as a one-word description
+        if description == character.name.strip():
+            return ""
+
+        return description
 
     @set_processing
     async def determine_character_goals(

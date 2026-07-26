@@ -144,7 +144,8 @@ def create(scene: "Scene") -> "ScopedAPI":
 
             Returns:
 
-            - str - The generated description
+            - str - The generated description, or an empty string when the model
+              produced nothing
 
             Raises:
 

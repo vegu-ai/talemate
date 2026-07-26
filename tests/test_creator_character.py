@@ -83,6 +83,33 @@ def _titles_section(prompt_text: str, title: str) -> str:
 
 
 @pytest.mark.asyncio
+async def test_determine_character_description(creator):
+    character = Character(name="Alice", description="A curious girl.")
+
+    async with MockClientContext():
+        client_responses.get().append(description_response("Alice", "is a tinkerer."))
+        description = await creator.determine_character_description(character)
+
+    assert description == "Alice is a tinkerer."
+
+
+@pytest.mark.asyncio
+async def test_determine_character_description_prime_only_reads_as_empty(creator):
+    # the template primes the response with the character's name, so a
+    # generation that produced nothing at all (empty client response, e.g.
+    # after the user ignores a generation error) comes back as the bare
+    # name - callers must see that as "nothing generated", not as a
+    # one-word description
+    character = Character(name="Alice", description="A curious girl.")
+
+    async with MockClientContext():
+        client_responses.get().append("")
+        description = await creator.determine_character_description(character)
+
+    assert description == ""
+
+
+@pytest.mark.asyncio
 async def test_determine_character_dialogue_examples(creator):
     character = Character(name="Alice", description="A curious girl.")
 

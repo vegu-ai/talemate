@@ -22,6 +22,7 @@ import pytest
 
 from conftest import MockClientContext, MockScene, bootstrap_scene, client_responses
 from _character_test_helpers import (
+    KIND_DESCRIPTION,
     KIND_FOCAL,
     KIND_SHEET,
     KIND_UNIFIED,
@@ -309,6 +310,154 @@ async def test_process_characters_sheet_prompt_carries_character_context(agents)
 
 
 # ---------------------------------------------------------------------------
+# Split-mode fallback to the card's own data
+# ---------------------------------------------------------------------------
+
+
+async def test_process_characters_split_mode_description_error_keeps_card_text(agents):
+    # the description step blanks the character before regenerating (a stale
+    # description would bias the rewrite) - a failed generation must put the
+    # card's text back instead of leaving the character description-less
+    character = _card_character()
+    scene = _scene_stub()
+
+    with patch.object(
+        agents.creator,
+        "determine_character_description",
+        autospec=True,
+        side_effect=RuntimeError("boom"),
+    ):
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "",
+            LoadingStatus(None),
+            _options_all_disabled(extract_description=True),
+        )
+
+    assert character.description == "raw description"
+
+
+async def test_process_characters_split_mode_empty_description_keeps_card_text(agents):
+    # an empty generation (e.g. a reasoning model that emits no answer) is the
+    # same data loss without an exception
+    character = _card_character()
+    scene = _scene_stub()
+
+    with patch.object(
+        agents.creator,
+        "determine_character_description",
+        autospec=True,
+        return_value="",
+    ):
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "",
+            LoadingStatus(None),
+            _options_all_disabled(extract_description=True),
+        )
+
+    assert character.description == "raw description"
+
+
+async def test_process_characters_split_mode_dead_generation_keeps_card_text(agents):
+    # the same miss through the full stack: an empty client response (the
+    # user ignoring a generation error) is primed back up to the bare
+    # character name by the description template, and must still read as
+    # "nothing generated"
+    character = _card_character()
+    scene = _scene_stub()
+
+    async with MockClientContext():
+        client_responses.get().append("")
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "",
+            LoadingStatus(None),
+            _options_all_disabled(extract_description=True),
+        )
+
+    assert prompt_kinds(agents.client) == [KIND_DESCRIPTION]
+    assert character.description == "raw description"
+
+
+async def test_process_characters_split_mode_examples_error_keeps_card_examples(agents):
+    # same contract for example dialogue, which is blanked before generating
+    # so the card's examples don't ride along as "existing examples"
+    character = _card_character()
+    scene = _scene_stub()
+
+    with patch.object(
+        agents.creator,
+        "determine_character_dialogue_examples",
+        autospec=True,
+        side_effect=RuntimeError("boom"),
+    ):
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "raw mes example",
+            LoadingStatus(None),
+            _options_all_disabled(extract_dialogue_examples=True),
+        )
+
+    assert character.example_dialogue == ["Hero: raw example"]
+
+
+async def test_process_characters_split_mode_empty_examples_keeps_card_examples(agents):
+    # a response that makes no add_dialogue_example calls yields no examples -
+    # the card's own examples must survive (parity with fast mode's miss
+    # handling)
+    character = _card_character()
+    scene = _scene_stub()
+
+    async with MockClientContext():
+        client_responses.get().append("no calls in this response")
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "raw mes example",
+            LoadingStatus(None),
+            _options_all_disabled(extract_dialogue_examples=True),
+        )
+
+    assert prompt_kinds(agents.client) == [KIND_FOCAL]
+    assert character.example_dialogue == ["Hero: raw example"]
+
+
+async def test_process_characters_split_mode_examples_prompt_omits_card_examples(
+    agents,
+):
+    # the blanking that makes the fallback necessary still has to happen: the
+    # focal request renders the character's existing examples, and the card's
+    # raw examples must not be fed back as such
+    character = _card_character()
+    scene = _scene_stub()
+
+    async with MockClientContext():
+        client_responses.get().append(example_dialogue_response("generated example"))
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "raw mes example",
+            LoadingStatus(None),
+            _options_all_disabled(extract_dialogue_examples=True),
+        )
+
+    prompt = str(agents.client.prompt_history[0]["prompt"])
+    assert "Hero: raw example" not in prompt
+    assert character.example_dialogue == ["Hero: generated example"]
+
+
+# ---------------------------------------------------------------------------
 # Fast (consolidated) mode routing
 # ---------------------------------------------------------------------------
 
@@ -560,6 +709,10 @@ async def test_process_characters_split_mode_cancellation_propagates(
                 LoadingStatus(None),
                 _options_all_disabled(**{aspect: True}),
             )
+
+    # an aborted import leaves no half-blanked character behind
+    assert character.description == "raw description"
+    assert character.example_dialogue == ["Hero: raw example"]
 
 
 async def test_determine_character_context_cancellation_propagates(agents):

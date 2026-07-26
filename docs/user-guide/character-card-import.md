@@ -121,6 +121,12 @@ By default, importing a character card runs several AI generation steps that enr
 
 - **Generate Story Intent**: AI generates the overall story intent for the scene. When the Director's auto-direct is enabled, this also covers scene type generation and scene intent setup.
 
+!!! info "Failed description or example dialogue generations keep the card's data"
+    If the description or example dialogue generation fails or comes back empty, the
+    card's own version is kept and the import carries on with the remaining steps. With
+    the Creator agent's [**Fast Character Generation**](/talemate/user-guide/agents/creator/settings)
+    enabled, a consolidated response that cannot be parsed at all still aborts the import.
+
 Use the **Full** / **Minimal** preset buttons to toggle all AI generation steps at once. **Minimal** also disables episode title generation, reducing the import to the bare card data (name, description, greetings, example dialogue) — the fastest possible import.
 
 !!! tip "Simplified Import"

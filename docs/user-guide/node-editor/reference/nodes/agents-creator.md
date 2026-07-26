@@ -112,7 +112,7 @@ Determines the description for a character.
 
 | Output | Type | Description |
 | --- | --- | --- |
-| `description` | `str` | The determined description |
+| `description` | `str` | The determined description (empty if the model produced nothing) |
 
 ## Determine Character Dialogue Instructions
 

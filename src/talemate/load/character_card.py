@@ -645,6 +645,9 @@ async def _determine_character_description(
     """Determine and set character description."""
     loading_status(f"Determine description for {character.name}...")
 
+    # keep the card's description so a generation miss can restore it
+    original_description = character.description
+
     try:
         creator = instance.get_agent("creator")
         dynamic_instructions = relevant_info.to_dynamic_instructions(scenario=False)
@@ -657,14 +660,20 @@ async def _determine_character_description(
             text=relevant_info.scenario.content if relevant_info.scenario else "",
             dynamic_instructions=dynamic_instructions,
         )
+
+        if not character.description:
+            character.description = original_description
+
         log.debug(
             "character_description",
             character=character.name,
             description=character.description,
         )
     except GenerationCancelled:
+        character.description = original_description
         raise
     except Exception as e:
+        character.description = original_description
         log.warning("determine_character_description", error=e)
 
 
@@ -734,6 +743,9 @@ async def _determine_character_dialogue_examples(
     """
     loading_status(f"Determine dialogue examples for {character.name}...")
 
+    # keep the card's examples so a generation miss can restore them
+    original_example_dialogue = list(character.example_dialogue)
+
     try:
         creator = instance.get_agent("creator")
 
@@ -742,6 +754,9 @@ async def _determine_character_dialogue_examples(
         text = (
             original_dialogue_examples_text if original_dialogue_examples_text else ""
         )
+
+        # needs to be empty here, so the card's examples don't bias the rewrite
+        character.example_dialogue = []
 
         character.example_dialogue = (
             await creator.determine_character_dialogue_examples(
@@ -754,6 +769,9 @@ async def _determine_character_dialogue_examples(
             )
         )
 
+        if not character.example_dialogue:
+            character.example_dialogue = original_example_dialogue
+
         log.debug(
             "determine_character_dialogue_examples",
             character=character.name,
@@ -761,8 +779,10 @@ async def _determine_character_dialogue_examples(
             examples=character.example_dialogue,
         )
     except GenerationCancelled:
+        character.example_dialogue = original_example_dialogue
         raise
     except Exception as e:
+        character.example_dialogue = original_example_dialogue
         log.warning("determine_character_dialogue_examples", error=e)
 
 
@@ -1445,7 +1465,6 @@ async def _process_characters_for_import(
                 )
 
             if import_options.extract_dialogue_examples:
-                character.example_dialogue = []
                 await _determine_character_dialogue_examples(
                     character,
                     loading_status,

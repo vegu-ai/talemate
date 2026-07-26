@@ -84,7 +84,7 @@ class DetermineCharacterDescription(AgentNode):
 
     Outputs:
 
-    - description: The determined description
+    - description: The determined description (empty if the model produced nothing)
     """
 
     _agent_name: ClassVar[str] = "creator"

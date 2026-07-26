@@ -463,6 +463,7 @@ import PromptsView from './prompts/PromptsView.vue';
 import PromptsMenu from './prompts/PromptsMenu.vue';
 // import debounce
 import { debounce } from 'lodash';
+import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '@/constants/visual';
 import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 import AutocompleteMixin from './AutocompleteMixin.js';
@@ -854,7 +855,11 @@ export default {
     // state override (`direction.always_on`). Mirrors the backend's
     // `direction_enabled_with_override` property.
     directionAvailable() {
-      const agentEnabled = this.agentStatus?.director?.actions?.scene_direction?.enabled || false;
+      const agentEnabled = effectiveActionEnabled(
+        this.agentStatus?.director?.actions,
+        this.agentStatus?.director?.scene_overrides,
+        'scene_direction',
+      );
       const sceneForced = this.scene?.data?.direction_always_on || false;
       return agentEnabled || sceneForced;
     },

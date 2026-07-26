@@ -246,7 +246,6 @@ class PromptFinalizationMixin:
             enabled=True,
             container=True,
             can_be_disabled=True,
-            enabled_scene_overridable=True,
             label="Prompt Finalization",
             icon="mdi-auto-fix",
             description="Post-processing of image generation prompts. Actions run in order, right before the prompt is sent to the image generation backend.",

@@ -405,6 +405,7 @@ import AssetView from './AssetView.vue';
 import EntityHighlightMixin from './EntityHighlightMixin.js';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import RevisionStackMixin from './RevisionStackMixin.js';
+import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { isVisualAgentReady, VIS_TYPE } from '@/constants/visual';
 import { isKnownSceneCharacter } from '@/utils/entityActions';
 import { parseCharacterMessage } from '@/utils/characterMessage.js';
@@ -666,7 +667,13 @@ export default {
             return null;
         },
         editorRevisionsEnabled() {
-            return this.agentStatus && this.agentStatus.editor && this.agentStatus.editor.actions && this.agentStatus.editor.actions["revision"] && this.agentStatus.editor.actions["revision"].enabled;
+            // Effective value: the backend gates revision on resolve_enabled,
+            // so a scene override has to reach this toolbar too.
+            return effectiveActionEnabled(
+                this.agentStatus?.editor?.actions,
+                this.agentStatus?.editor?.scene_overrides,
+                'revision',
+            );
         },
         editorRevisionMethod() {
             return this.agentStatus?.editor?.actions?.revision?.config?.revision_method?.value || null;

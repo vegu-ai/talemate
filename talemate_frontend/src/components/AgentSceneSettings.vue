@@ -69,7 +69,7 @@
 </template>
 
 <script>
-import { actionHasOverridable, effectiveConditionMet } from '@/constants/sceneAgentSettings';
+import { actionHasOverridable, effectiveConditionMet, hasEnabledOverride } from '@/constants/sceneAgentSettings';
 import UxField from './UxField.vue';
 import SceneOverrideToggle from './SceneOverrideToggle.vue';
 
@@ -109,7 +109,7 @@ export default {
       return effectiveConditionMet(this.actionSchema?.condition, this.agentActions, this.overlay);
     },
     enabledOverrideActive() {
-      return this.overrides && this.overrides.enabled !== undefined && this.overrides.enabled !== null;
+      return hasEnabledOverride(this.overrides);
     },
     effectiveEnabled() {
       if (this.enabledOverrideActive) return this.overrides.enabled;

@@ -14,6 +14,7 @@ from typing import Optional
 
 import pytest
 
+import talemate.agents as agents_module
 from talemate.agents.base import (
     Agent,
     AgentAction,
@@ -130,6 +131,65 @@ class TestAgentActionConditionalModel:
     def test_default_value_is_none(self):
         cond = AgentActionConditional(attribute="x")
         assert cond.value is None
+
+
+# ---------------------------------------------------------------------------
+# AgentAction.enabled_scene_overridable
+# ---------------------------------------------------------------------------
+
+
+class TestAgentActionEnabledSceneOverridable:
+    def test_defaults_to_can_be_disabled(self):
+        action = AgentAction(label="Toggleable", can_be_disabled=True)
+        assert action.enabled_scene_overridable is True
+
+    def test_defaults_to_false_when_not_disableable(self):
+        action = AgentAction(label="Always on")
+        assert action.enabled_scene_overridable is False
+
+    def test_explicit_opt_out_is_respected(self):
+        action = AgentAction(
+            label="Global only",
+            can_be_disabled=True,
+            enabled_scene_overridable=False,
+        )
+        assert action.enabled_scene_overridable is False
+
+    def test_explicit_opt_in_is_respected(self):
+        action = AgentAction(
+            label="Toggleable",
+            can_be_disabled=True,
+            enabled_scene_overridable=True,
+        )
+        assert action.enabled_scene_overridable is True
+
+    def test_explicit_opt_in_without_can_be_disabled_raises(self):
+        with pytest.raises(ValueError, match="requires can_be_disabled=True"):
+            AgentAction(label="Always on", enabled_scene_overridable=True)
+
+    def test_shipped_toggleable_actions_are_scene_overridable(self):
+        """Every action a user can turn off globally can also be turned off per scene.
+
+        Derived from production so a new toggleable action is covered without
+        touching this test.
+        """
+        offenders = []
+        toggleable = []
+        for agent_type, agent_cls in agents_module.AGENT_CLASSES.items():
+            for action_key, action in agent_cls.init_actions().items():
+                if action.can_be_disabled:
+                    toggleable.append(f"{agent_type}.{action_key}")
+                if action.enabled_scene_overridable is not action.can_be_disabled:
+                    offenders.append(
+                        f"{agent_type}.{action_key} "
+                        f"(can_be_disabled={action.can_be_disabled}, "
+                        f"enabled_scene_overridable={action.enabled_scene_overridable})"
+                    )
+
+        assert not offenders
+        # Guards against a vacuous pass if init_actions ever stops returning
+        # the shipped set.
+        assert len(toggleable) >= 20
 
 
 # ---------------------------------------------------------------------------

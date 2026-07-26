@@ -188,7 +188,8 @@
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
   summary: Overriding selected agent settings for a single scene via the Global/Scene switch in the agent modal; sparse per-field
-    overrides with link icons, the agent-settings.json overrides file stored per project, and choosing, swapping, or opting
+    overrides with link icons, overriding whether an action is enabled at all, how quick-toggle chips show and write the
+    scene's effective value, the agent-settings.json overrides file stored per project, and choosing, swapping, or opting
     out of an overrides file in scene settings.
 - path: user-guide/agents/summarizer/index.md
   title: Overview

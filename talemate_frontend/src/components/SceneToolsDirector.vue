@@ -156,6 +156,7 @@
 
 <script>
 import RequestInput from './RequestInput.vue';
+import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 
 export default {
@@ -186,7 +187,13 @@ export default {
     },
     computed: {
         sceneDirectionEnabled() {
-            return this.agentStatus?.director?.actions?.scene_direction?.enabled || false;
+            // Effective value — the backend reads scene_direction through
+            // resolve_enabled, so a scene override applies here too.
+            return effectiveActionEnabled(
+                this.agentStatus?.director?.actions,
+                this.agentStatus?.director?.scene_overrides,
+                'scene_direction',
+            );
         },
         charactersMissingActingInstructions() {
             if (!this.sceneCharacters) return [];

@@ -37,7 +37,7 @@ export function countSceneOverrides(overlay) {
   let n = 0;
   for (const k in actions) {
     const a = actions[k];
-    if (a.enabled !== undefined && a.enabled !== null) n += 1;
+    if (hasEnabledOverride(a)) n += 1;
     if (a.config) n += Object.keys(a.config).length;
   }
   return n;
@@ -51,9 +51,8 @@ export function countSceneOverrides(overlay) {
 export function setActionOverrideSlice(actions, actionKey, perActionOverride) {
   const next = { ...actions };
   const isEmpty =
-    !perActionOverride ||
-    ((perActionOverride.enabled === undefined || perActionOverride.enabled === null) &&
-      (!perActionOverride.config || Object.keys(perActionOverride.config).length === 0));
+    !hasEnabledOverride(perActionOverride) &&
+    (!perActionOverride?.config || Object.keys(perActionOverride.config).length === 0);
   if (isEmpty) {
     delete next[actionKey];
   } else {
@@ -68,7 +67,7 @@ export function setActionOverrideSlice(actions, actionKey, perActionOverride) {
  * action values second. The sparse overlay mirrors the actions map shape, so
  * the same dotted path addresses both.
  */
-function effectiveConfigValue(actions, overlay, attribute) {
+export function effectiveConfigValue(actions, overlay, attribute) {
   const path = attribute + '.value';
   const overridden = getProperty(overlay?.actions ?? {}, path);
   if (overridden !== undefined) return overridden;
@@ -84,10 +83,44 @@ export function effectiveConditionMet(condition, actions, overlay) {
   return conditionMet(condition, effectiveConfigValue(actions, overlay, condition.attribute));
 }
 
+/**
+ * The per-action override slice for `actionKey` in a sparse overlay, or null
+ * when the scene overrides nothing on that action.
+ */
+export function actionOverrideSlice(overlay, actionKey) {
+  return overlay?.actions?.[actionKey] || null;
+}
+
+/** True when a per-action override slice pins the action's enable flag. */
+export function hasEnabledOverride(slice) {
+  return !!slice && slice.enabled !== undefined && slice.enabled !== null;
+}
+
+/** True when the scene overrides an action's container-level enable flag. */
+export function enabledOverrideActive(overlay, actionKey) {
+  return hasEnabledOverride(actionOverrideSlice(overlay, actionKey));
+}
+
+/** True when the scene overrides one of an action's config fields. */
+export function configOverrideActive(overlay, actionKey, configKey) {
+  return !!actionOverrideSlice(overlay, actionKey)?.config?.[configKey];
+}
+
+/**
+ * An action's enable flag as the scene sees it — the override when one is
+ * active, the agent's global flag otherwise. Mirrors `Agent.resolve_enabled`.
+ */
+export function effectiveActionEnabled(actions, overlay, actionKey) {
+  if (enabledOverrideActive(overlay, actionKey)) {
+    return !!overlay.actions[actionKey].enabled;
+  }
+  return !!actions?.[actionKey]?.enabled;
+}
+
 /** True if a per-action override slice holds anything at all. */
 function actionHasActiveOverride(overrides) {
   if (!overrides) return false;
-  if (overrides.enabled !== undefined && overrides.enabled !== null) return true;
+  if (hasEnabledOverride(overrides)) return true;
   return Object.keys(overrides.config || {}).length > 0;
 }
 

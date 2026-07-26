@@ -115,7 +115,9 @@ class AgentAction(pydantic.BaseModel):
     # Only meaningful on actions that are themselves dynamic registries.
     dynamic_registry_component: str | None = None
 
-    enabled_scene_overridable: bool = False
+    # None means "follow can_be_disabled" — every action whose enable flag can be
+    # toggled at all is overridable per scene unless it opts out explicitly.
+    enabled_scene_overridable: bool | None = None
 
     @pydantic.model_validator(mode="after")
     def _enabled_scene_overridable_requires_can_be_disabled(self):
@@ -123,6 +125,10 @@ class AgentAction(pydantic.BaseModel):
         # flag is itself togglable. Without can_be_disabled the global UI
         # never exposes an Enable checkbox, so a scene-level override has
         # nothing to override.
+        if self.enabled_scene_overridable is None:
+            self.enabled_scene_overridable = self.can_be_disabled
+            return self
+
         if self.enabled_scene_overridable and not self.can_be_disabled:
             raise ValueError(
                 f"AgentAction {self.label!r}: enabled_scene_overridable=True "

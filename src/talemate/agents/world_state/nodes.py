@@ -55,7 +55,7 @@ class ExtractCharacterSheet(AgentNode):
 
     Outputs:
 
-    - character_sheet: The extracted character sheet (dict)
+    - character_sheet: The extracted character sheet (dict, empty if the model produced nothing)
     """
 
     _agent_name: ClassVar[str] = "world_state"

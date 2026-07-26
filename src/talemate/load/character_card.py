@@ -687,13 +687,18 @@ async def _determine_character_attributes(
 
     try:
         world_state = instance.get_agent("world_state")
-        character.base_attributes = await world_state.extract_character_sheet(
+        generated = await world_state.extract_character_sheet(
             name=character.name,
             # the imported character has no actor yet - without the explicit
             # context character the prompt's active-character loop misses it
             character=character,
             dynamic_instructions=relevant_info.to_dynamic_instructions(scenario=False),
         )
+
+        # an extraction that produced nothing must not replace the card's
+        # own attributes
+        if generated:
+            character.base_attributes = generated
 
         # any values that are lists should be converted to strings joined by ,
         for k, v in character.base_attributes.items():

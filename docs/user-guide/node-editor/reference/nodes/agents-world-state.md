@@ -235,7 +235,7 @@ modify the character's existing sheet.
 
 | Output | Type | Description |
 | --- | --- | --- |
-| `character_sheet` | `dict` | The extracted character sheet (dict) |
+| `character_sheet` | `dict` | The extracted character sheet (dict, empty if the model produced nothing) |
 
 ## Request World State
 

@@ -359,6 +359,9 @@ class WorldStateAgent(
         """
         Attempts to extract a character sheet from the given text.
 
+        Returns an empty dict when the generation produced no attribute
+        content.
+
         character: Explicit context character for the prompt - for callers
             whose character is not in the scene yet (pre-creation flows).
             Defaults to the scene lookup. When given, it renders as the
@@ -389,9 +392,17 @@ class WorldStateAgent(
         #
         # break as soon as a non-empty line is found that doesn't contain a :
 
-        return self._parse_character_sheet(
+        sheet = self._parse_character_sheet(
             extracted["response"], max_attributes=max_attributes
         )
+
+        # the template primes the response with "Name: <name>\nAge:", so a
+        # generation that produced nothing is primed back up into a sheet
+        # carrying just the character's own name - report that as empty
+        if not any(value for key, value in sheet.items() if key.lower() != "name"):
+            return {}
+
+        return sheet
 
     @set_processing
     async def summarize_and_pin(self, message_id: int, num_messages: int = 3) -> str:

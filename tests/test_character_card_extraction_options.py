@@ -457,6 +457,138 @@ async def test_process_characters_split_mode_examples_prompt_omits_card_examples
     assert character.example_dialogue == ["Hero: generated example"]
 
 
+async def test_process_characters_split_mode_attributes_error_keeps_card_attributes(
+    agents,
+):
+    # regression guard: the step must not grow a blank-before-generating
+    # phase like its description/example-dialogue siblings without also
+    # restoring the card's attributes when the generation dies
+    character = _card_character()
+    character.base_attributes["gender"] = "female"
+    scene = _scene_stub()
+
+    with patch.object(
+        agents.world_state,
+        "extract_character_sheet",
+        autospec=True,
+        side_effect=RuntimeError("boom"),
+    ):
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "",
+            LoadingStatus(None),
+            _options_all_disabled(extract_attributes=True),
+        )
+
+    assert character.base_attributes == {"gender": "female"}
+
+
+async def test_process_characters_split_mode_empty_attributes_keeps_card_attributes(
+    agents,
+):
+    # an extraction that produced nothing is not a reason to drop the card's
+    # own attributes either
+    character = _card_character()
+    character.base_attributes["gender"] = "female"
+    scene = _scene_stub()
+
+    with patch.object(
+        agents.world_state,
+        "extract_character_sheet",
+        autospec=True,
+        return_value={},
+    ):
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "",
+            LoadingStatus(None),
+            _options_all_disabled(extract_attributes=True),
+        )
+
+    assert character.base_attributes == {"gender": "female"}
+
+
+async def test_process_characters_split_mode_dead_generation_keeps_card_attributes(
+    agents,
+):
+    # the same miss through the full stack: an empty client response is
+    # primed back up to the bare "Name: Hero\nAge:" by the sheet template,
+    # which used to be written over the card's attributes as a junk sheet
+    character = _card_character()
+    character.base_attributes["gender"] = "female"
+    scene = _scene_stub()
+
+    async with MockClientContext():
+        client_responses.get().append("")
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "",
+            LoadingStatus(None),
+            _options_all_disabled(extract_attributes=True),
+        )
+
+    assert prompt_kinds(agents.client) == [KIND_SHEET]
+    assert character.base_attributes == {"gender": "female"}
+
+
+async def test_process_characters_split_mode_dead_generation_leaves_sheet_unshadowed(
+    agents,
+):
+    # Character.sheet falls back to name + description only while
+    # base_attributes is empty - a junk sheet from a dead generation used to
+    # win over that fallback and hide the description from every later prompt
+    character = _card_character()
+    scene = _scene_stub()
+
+    async with MockClientContext():
+        client_responses.get().append("")
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "",
+            LoadingStatus(None),
+            _options_all_disabled(extract_attributes=True),
+        )
+
+    assert character.base_attributes == {}
+    assert "raw description" in character.sheet
+
+
+async def test_process_characters_split_mode_attributes_cancellation_keeps_card_attributes(
+    agents,
+):
+    # same guard for cancellation: an aborted import leaves the card's
+    # attributes behind untouched
+    character = _card_character()
+    character.base_attributes["gender"] = "female"
+    scene = _scene_stub()
+
+    with patch.object(
+        agents.world_state,
+        "extract_character_sheet",
+        autospec=True,
+        side_effect=GenerationCancelled(),
+    ):
+        with pytest.raises(GenerationCancelled):
+            await _process_characters_for_import(
+                scene,
+                [character],
+                ["hi"],
+                "",
+                LoadingStatus(None),
+                _options_all_disabled(extract_attributes=True),
+            )
+
+    assert character.base_attributes == {"gender": "female"}
+
+
 # ---------------------------------------------------------------------------
 # Fast (consolidated) mode routing
 # ---------------------------------------------------------------------------

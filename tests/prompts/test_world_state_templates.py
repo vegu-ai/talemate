@@ -428,6 +428,53 @@ class TestWorldStateAgentExtractMethods:
         # Verify response has at most 3 attributes
         assert len(response) <= 3
 
+    @pytest.mark.asyncio
+    async def test_extract_character_sheet_prime_only_reads_as_empty(
+        self, active_context
+    ):
+        """A generation that produced nothing reads as an empty sheet."""
+        agent = active_context
+
+        # the template primes the response with "Name: <name>\nAge:", so an
+        # empty client response (e.g. the user ignoring a generation error)
+        # is primed back up into {"Name": "Elena", "Age": ""} - callers must
+        # see that as "nothing generated", not as a sheet worth keeping
+        agent.client.send_prompt = AsyncMock(return_value="")
+
+        response = await agent.extract_character_sheet(
+            name="Elena", text="A skilled healer with gentle manners."
+        )
+
+        assert response == {}
+
+    @pytest.mark.asyncio
+    async def test_extract_character_sheet_without_attribute_values_reads_as_empty(
+        self, active_context
+    ):
+        """Attribute names without any values carry no content either."""
+        agent = active_context
+
+        agent.client.send_prompt = AsyncMock(
+            return_value="Name: Elena\nAge:\nOccupation:\n"
+        )
+
+        response = await agent.extract_character_sheet(name="Elena", text="")
+
+        assert response == {}
+
+    @pytest.mark.asyncio
+    async def test_extract_character_sheet_keeps_sheet_with_any_content(
+        self, active_context
+    ):
+        """A single populated attribute is enough to keep the whole sheet."""
+        agent = active_context
+
+        agent.client.send_prompt = AsyncMock(return_value="Name: Elena\nAge: 25\n")
+
+        response = await agent.extract_character_sheet(name="Elena", text="")
+
+        assert response == {"Name": "Elena", "Age": "25"}
+
 
 class TestWorldStateAgentRequestMethods:
     """Tests for world_state agent request methods."""

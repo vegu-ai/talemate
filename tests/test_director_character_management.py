@@ -1164,7 +1164,9 @@ class TestPersistCharacterGenerationModes:
         self, scene, director
     ):
         # the trailing enforcement block was removed - for generated sheets
-        # the cap relies on max_attributes threading through extraction
+        # the cap relies on max_attributes threading through extraction. The
+        # primed Name line is scaffold, so a limit of 2 buys 2 attributes
+        # beside it
         director.actions["character_management"].config["max_attributes"].value = 2
         try:
             async with MockClientContext():
@@ -1189,7 +1191,11 @@ class TestPersistCharacterGenerationModes:
         finally:
             director.actions["character_management"].config["max_attributes"].value = 0
 
-        assert character.base_attributes == {"Name": "Elena", "Age": "30"}
+        assert character.base_attributes == {
+            "Name": "Elena",
+            "Age": "30",
+            "Occupation": "healer",
+        }
 
     @pytest.mark.asyncio
     async def test_split_mode_template_overflow_truncated_before_prompts(
@@ -1240,9 +1246,14 @@ class TestPersistCharacterGenerationModes:
         finally:
             director.actions["character_management"].config["max_attributes"].value = 0
 
-        # capped to the first two (insertion order) before the description
-        # prompt - the prompt must not render the discarded attributes
-        assert character.base_attributes == {"Name": "Bram", "Age": "40"}
+        # capped to the first two budgeted attributes (insertion order, the
+        # character's own name is free) before the description prompt - the
+        # prompt must not render the discarded attributes
+        assert character.base_attributes == {
+            "Name": "Bram",
+            "Age": "40",
+            "Occupation": "smith",
+        }
         description_prompt = str(scene.mock_client.prompt_history[0]["prompt"])
         assert "Age: 40" in description_prompt
         assert "Height" not in description_prompt

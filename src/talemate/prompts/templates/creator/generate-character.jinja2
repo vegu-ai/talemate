@@ -56,7 +56,7 @@ NAME: The character's name. If `{{ character_name }}` is already a distinct name
 DESCRIPTION: The character description: an overview of the character in broad strokes — who they are and what defines them — not a continuation of any current narrative.
 {% endif -%}
 {% if "attributes" in aspects -%}
-ATTRIBUTES: A character sheet of attributes for {{ character_name }}. You are omniscient and can describe the character in detail; you are a creative writer and may fill any gaps in the profile with your own ideas. Expand on interesting details. Format MUST be one attribute per line, with a colon after the attribute name.{% if max_attributes and max_attributes > 0 %} At most {{ max_attributes }} attributes (lines).{% endif %}
+ATTRIBUTES: A character sheet of attributes for {{ character_name }}. You are omniscient and can describe the character in detail; you are a creative writer and may fill any gaps in the profile with your own ideas. Expand on interesting details. Format MUST be one attribute per line, with a colon after the attribute name. Do not include the character's name as an attribute.{% if max_attributes and max_attributes > 0 %} At most {{ max_attributes }} attributes (lines).{% endif %}
 
 Example:
 Age: early 30s

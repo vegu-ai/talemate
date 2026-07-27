@@ -162,9 +162,11 @@ The Character Management settings control how the director handles character cre
 Controls the maximum number of attributes that will be generated when creating or updating character sheets. This applies when the director creates new characters or when character sheets are generated through templates.
 
 - **0** (default): No limit - attributes are generated without restriction
-- **1-40**: Limits the character sheet to this many attributes
+- **1-40**: Generates at most this many attributes (the character's own name is not counted)
 
 When a limit is set, the AI is instructed to generate no more than the specified number of attributes, and any excess attributes are trimmed during processing.
+
+If the sheet carries the character's own name as a `Name` attribute, it does not count towards the limit - it is scaffolding rather than a generated trait.
 
 This setting is useful when you want to keep character sheets concise, or when working with characters that might otherwise generate an excessive number of attributes.
 

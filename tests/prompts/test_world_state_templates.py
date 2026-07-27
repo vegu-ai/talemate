@@ -425,8 +425,47 @@ class TestWorldStateAgentExtractMethods:
             name="Elena", text="Elena is a healer.", max_attributes=3
         )
 
-        # Verify response has at most 3 attributes
-        assert len(response) <= 3
+        # the primed name line is scaffold, so the limit buys 3 attributes
+        # beside it
+        assert response == {
+            "name": "Elena",
+            "age": "25",
+            "occupation": "Healer",
+            "status": "healthy",
+        }
+
+    @pytest.mark.asyncio
+    async def test_extract_character_sheet_max_attributes_of_one(self, active_context):
+        """A limit of 1 buys one real attribute, not a name-only sheet."""
+        agent = active_context
+
+        agent.client.send_prompt = AsyncMock(
+            return_value="Name: Elena\nAge: 25\nOccupation: Healer"
+        )
+
+        response = await agent.extract_character_sheet(
+            name="Elena", text="Elena is a healer.", max_attributes=1
+        )
+
+        assert response == {"Name": "Elena", "Age": "25"}
+
+    @pytest.mark.asyncio
+    async def test_extract_character_sheet_max_attributes_of_two(self, active_context):
+        """The limit counts generated attributes, not the primed name line."""
+        agent = active_context
+
+        # nothing name-like in the generation - Prompt.send prepends the
+        # template's "Name: Elena\nAge:" prime, which is exactly the case that
+        # used to cost a slot
+        agent.client.send_prompt = AsyncMock(
+            return_value=" 25\nOccupation: Healer\nWeapon: staff"
+        )
+
+        response = await agent.extract_character_sheet(
+            name="Elena", text="Elena is a healer.", max_attributes=2
+        )
+
+        assert response == {"Name": "Elena", "Age": "25", "Occupation": "Healer"}
 
     @pytest.mark.asyncio
     async def test_extract_character_sheet_prime_only_reads_as_empty(
@@ -1103,11 +1142,15 @@ class TestWorldStateAgentHelperMethods:
         assert result == {"name": "Elena", "age": "25", "occupation": "Healer"}
 
     def test_parse_character_sheet_with_max_attributes(self, world_state_agent):
-        """Test _parse_character_sheet respects max_attributes."""
+        """Test _parse_character_sheet respects max_attributes.
+
+        The name line is the template's prime, not a generated attribute, so
+        the limit applies to what follows it.
+        """
         response = "name: Elena\nage: 25\noccupation: Healer\nstatus: healthy"
         result = world_state_agent._parse_character_sheet(response, max_attributes=2)
 
-        assert len(result) == 2
+        assert result == {"name": "Elena", "age": "25", "occupation": "Healer"}
 
     def test_parse_character_sheet_stops_at_non_attribute_line(self, world_state_agent):
         """Test _parse_character_sheet stops at line without colon."""

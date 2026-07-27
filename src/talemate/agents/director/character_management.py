@@ -6,6 +6,7 @@ import talemate.instance as instance
 import talemate.agents.tts.voice_library as voice_library
 from talemate.agents.tts.schema import Voice
 from talemate.util import random_color, chunk_items_by_tokens, remove_substring_names
+from talemate.util.data import trim_attributes
 from talemate.character import Character, set_voice, activate_character
 from talemate.status import LoadingStatus
 from talemate.exceptions import GenerationCancelled
@@ -205,7 +206,7 @@ class CharacterManagementMixin:
                 "max_attributes": AgentActionConfig(
                     type="number",
                     label="Limit character attributes",
-                    description="Maximum number of attributes to generate for character sheets. Set to 0 for unlimited (default).",
+                    description="Maximum number of attributes to generate for character sheets, not counting the character's name. Set to 0 for unlimited (default).",
                     value=0,
                     min=0,
                     max=40,
@@ -591,19 +592,20 @@ class CharacterManagementMixin:
 
             # Enforce max_attributes limit on base_attributes if configured -
             # before aspect generation, so the downstream prompts render the
-            # truncated sheet
-            if max_attrs and len(character.base_attributes) > max_attrs:
-                # Keep only the first N attributes (preserving insertion order)
-                limited_attrs = dict(
-                    list(character.base_attributes.items())[:max_attrs]
+            # truncated sheet. Same budget rule as the generated sheet: the
+            # character's own name does not cost a slot.
+            if max_attrs:
+                limited_attrs = trim_attributes(
+                    character.base_attributes, max_attributes=max_attrs
                 )
-                log.debug(
-                    "persist_character",
-                    limiting_attributes=True,
-                    original_count=len(character.base_attributes),
-                    limited_count=len(limited_attrs),
-                )
-                character.base_attributes = limited_attrs
+                if len(limited_attrs) < len(character.base_attributes):
+                    log.debug(
+                        "persist_character",
+                        limiting_attributes=True,
+                        original_count=len(character.base_attributes),
+                        limited_count=len(limited_attrs),
+                    )
+                    character.base_attributes = limited_attrs
 
             if not fast and request.generate:
                 split = await self._prepare_split_generation(

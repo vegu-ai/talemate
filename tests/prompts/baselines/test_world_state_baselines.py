@@ -160,6 +160,25 @@ class TestWorldStateExtractBaselines:
         baseline_checker(capture_prompt(agent), AGENT, "extract_character_sheet")
 
     @pytest.mark.asyncio
+    async def test_extract_character_sheet__with_max_attributes(
+        self, active_context, baseline_checker
+    ):
+        # the cap instruction only renders when a limit is set, so without
+        # this the wording is unpinned by any test
+        agent = active_context
+        agent.client.send_prompt = AsyncMock(
+            return_value="name: Elena\nage: 25\noccupation: Healer"
+        )
+        await agent.extract_character_sheet(
+            name="Elena",
+            text="A skilled healer with gentle manners.",
+            max_attributes=3,
+        )
+        baseline_checker(
+            capture_prompt(agent), AGENT, "extract_character_sheet__with_max_attributes"
+        )
+
+    @pytest.mark.asyncio
     async def test_extract_character_sheet__with_alteration(
         self, active_context, baseline_checker
     ):

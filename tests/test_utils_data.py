@@ -19,6 +19,8 @@ from talemate.util.data import (
     DataParsingError,
     fix_yaml_colon_in_strings,
     fix_faulty_yaml,
+    parse_attribute_lines,
+    trim_attributes,
 )
 
 
@@ -837,3 +839,123 @@ active: false
     assert result[0]["name"] == "Fixed YAML"
     assert result[0]["id"] == 999
     assert result[0]["active"] is False
+
+
+class TestParseAttributeLines:
+    """The character sheet's `Name` line is prompt scaffold, not an attribute -
+    extract-character-sheet.jinja2 primes it into every generation, so it must
+    not consume a slot of the attribute budget."""
+
+    def test_name_line_does_not_consume_a_slot(self):
+        text = "Name: Hero\nAge: 40\nScars: three"
+
+        assert parse_attribute_lines(text, max_attributes=1) == {
+            "Name": "Hero",
+            "Age": "40",
+        }
+
+    def test_two_attributes_beside_the_name(self):
+        text = "Name: Hero\nAge: 40\nScars: three\nCreed: none"
+
+        assert parse_attribute_lines(text, max_attributes=2) == {
+            "Name": "Hero",
+            "Age": "40",
+            "Scars": "three",
+        }
+
+    def test_name_exemption_is_case_insensitive(self):
+        text = "name: Hero\nAge: 40\nScars: three"
+
+        assert parse_attribute_lines(text, max_attributes=1) == {
+            "name": "Hero",
+            "Age": "40",
+        }
+
+    def test_sheet_without_a_name_line_is_unaffected(self):
+        text = "Age: 40\nScars: three"
+
+        assert parse_attribute_lines(text, max_attributes=1) == {"Age": "40"}
+
+    def test_name_line_after_the_budget_is_still_kept(self):
+        text = "Age: 40\nName: Hero\nScars: three"
+
+        assert parse_attribute_lines(text, max_attributes=1) == {
+            "Age": "40",
+            "Name": "Hero",
+        }
+
+    def test_no_limit_keeps_everything(self):
+        text = "Name: Hero\nAge: 40\nScars: three"
+
+        assert parse_attribute_lines(text) == {
+            "Name": "Hero",
+            "Age": "40",
+            "Scars": "three",
+        }
+
+    def test_zero_is_no_limit(self):
+        text = "Name: Hero\nAge: 40\nScars: three"
+
+        assert len(parse_attribute_lines(text, max_attributes=0)) == 3
+
+    def test_stops_at_the_first_line_without_a_colon(self):
+        text = "Name: Hero\nAge: 40\nprose sneaks in here\nScars: three"
+
+        assert parse_attribute_lines(text, max_attributes=5) == {
+            "Name": "Hero",
+            "Age": "40",
+        }
+
+    def test_repeated_attribute_costs_a_single_slot(self):
+        text = "Name: Hero\nAge: 40\nAge: 41\nScars: three"
+
+        assert parse_attribute_lines(text, max_attributes=1) == {
+            "Name": "Hero",
+            "Age": "41",
+        }
+
+
+class TestTrimAttributes:
+    def test_trims_to_budget_excluding_the_name(self):
+        attributes = {"Name": "Hero", "Age": "40", "Scars": "three"}
+
+        assert trim_attributes(attributes, max_attributes=1) == {
+            "Name": "Hero",
+            "Age": "40",
+        }
+
+    def test_name_after_the_budget_is_filled_is_still_kept(self):
+        # the trim must scan past a filled budget rather than stop at it -
+        # the augment path appends the primed Name after the template
+        # attributes, so a late Name is reachable
+        attributes = {"Age": "40", "Scars": "three", "Name": "Hero"}
+
+        assert trim_attributes(attributes, max_attributes=1) == {
+            "Age": "40",
+            "Name": "Hero",
+        }
+
+    def test_name_in_the_middle_of_the_sheet_is_free(self):
+        attributes = {"Age": "40", "Name": "Hero", "Scars": "three"}
+
+        assert trim_attributes(attributes, max_attributes=2) == attributes
+
+    def test_name_last_does_not_rescue_trimmed_attributes(self):
+        attributes = {"Age": "40", "Scars": "three", "Name": "Hero", "Creed": "none"}
+
+        assert trim_attributes(attributes, max_attributes=1) == {
+            "Age": "40",
+            "Name": "Hero",
+        }
+
+    def test_no_limit_returns_a_copy(self):
+        attributes = {"Name": "Hero", "Age": "40"}
+        result = trim_attributes(attributes)
+
+        assert result == attributes
+        assert result is not attributes
+
+    def test_sheet_within_budget_is_untouched(self):
+        attributes = {"Age": "40", "Scars": "three"}
+
+        assert trim_attributes(attributes, max_attributes=5) == attributes

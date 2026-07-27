@@ -434,6 +434,26 @@ async def test_generate_character_unified_max_attributes(creator):
     assert result.attributes == {"Age": "30", "Occupation": "healer"}
 
 
+@pytest.mark.asyncio
+async def test_generate_character_unified_max_attributes_ignores_name_line(creator):
+    # the one-shot prompt asks the model not to repeat the name as an
+    # attribute, but a model that does anyway must not spend the budget on it
+    async with MockClientContext():
+        client_responses.get().append(
+            unified_response(attributes="Name: Elena\nAge: 30\nOccupation: healer")
+        )
+        result = await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=["attributes"],
+                name="Elena",
+                content="A healer.",
+                max_attributes=1,
+            )
+        )
+
+    assert result.attributes == {"Name": "Elena", "Age": "30"}
+
+
 def test_unknown_aspect_rejected_at_construction():
     # the aspects Literal is the contract - pydantic rejects unknown aspects
     # at construction, before any generation method runs

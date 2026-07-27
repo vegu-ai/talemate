@@ -159,7 +159,7 @@ The Character Management settings control how the director handles character cre
 
 ##### Limit character attributes
 
-Controls the maximum number of attributes that will be generated when creating or updating character sheets. This applies when the director creates new characters or when character sheets are generated through templates.
+Controls the maximum number of attributes that will be generated when creating or updating character sheets. This applies when the director creates new characters, when character sheets are generated through templates, and when a character sheet is generated during [character card import](../../character-card-import.md).
 
 - **0** (default): No limit - attributes are generated without restriction
 - **1-40**: Generates at most this many attributes (the character's own name is not counted)

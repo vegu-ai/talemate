@@ -113,7 +113,7 @@ By default, importing a character card runs several AI generation steps that enr
 
 - **Generate Description**: AI rewrites the character description. When disabled, the card's original description is kept as-is.
 
-- **Extract Attributes**: AI extracts a structured attribute sheet (age, appearance, personality, etc.) from the card.
+- **Extract Attributes**: AI extracts a structured attribute sheet (age, appearance, personality, etc.) from the card. The Director's [**Limit character attributes**](/talemate/user-guide/agents/director/settings/#limit-character-attributes) setting caps how many attributes this generates.
 
 - **Generate Dialogue Instructions**: AI generates acting instructions that guide how the character speaks and behaves.
 

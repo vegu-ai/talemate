@@ -681,6 +681,7 @@ async def _determine_character_attributes(
     character,
     loading_status: LoadingStatus,
     relevant_info: RelevantCharacterInfo,
+    max_attrs: int | None = None,
 ) -> None:
     """Determine and set character attributes."""
     loading_status("Determine character attributes...")
@@ -693,6 +694,7 @@ async def _determine_character_attributes(
             # context character the prompt's active-character loop misses it
             character=character,
             dynamic_instructions=relevant_info.to_dynamic_instructions(scenario=False),
+            max_attributes=max_attrs,
         )
 
         # an extraction that produced nothing must not replace the card's
@@ -1303,6 +1305,7 @@ async def _process_character_fast(
     original_dialogue_examples_text: str,
     import_options: CharacterCardImportOptions,
     max_examples: int = 5,
+    max_attrs: int | None = None,
 ) -> None:
     """Fast mode: route the enabled extraction aspects through the creator
     agent's consolidated generation (one prompt instead of one per aspect).
@@ -1321,6 +1324,7 @@ async def _process_character_fast(
         original_dialogue_examples_text: Original dialogue examples text from character card
         import_options: Import options
         max_examples: Maximum number of dialogue examples to generate (default: 5)
+        max_attrs: Maximum number of attributes to generate (None for unlimited)
     """
     creator = instance.get_agent("creator")
 
@@ -1363,6 +1367,7 @@ async def _process_character_fast(
                     scenario=False
                 ),
                 max_examples=max_examples,
+                max_attributes=max_attrs,
                 content_role="text",
             )
         )
@@ -1426,6 +1431,9 @@ async def _process_characters_for_import(
     director = instance.get_agent("director")
     creator = instance.get_agent("creator")
 
+    # 0 means unlimited
+    max_attrs = director.cm_max_attributes or None
+
     for character in characters:
         # Add character to character_data without activating
         # Characters will be activated later by _activate_characters_from_greeting
@@ -1450,6 +1458,7 @@ async def _process_characters_for_import(
                 relevant_info=relevant_info,
                 original_dialogue_examples_text=original_dialogue_examples_text,
                 import_options=import_options,
+                max_attrs=max_attrs,
             )
         else:
             if import_options.extract_description:
@@ -1461,7 +1470,10 @@ async def _process_characters_for_import(
 
             if import_options.extract_attributes:
                 await _determine_character_attributes(
-                    character, loading_status, relevant_info=relevant_info
+                    character,
+                    loading_status,
+                    relevant_info=relevant_info,
+                    max_attrs=max_attrs,
                 )
 
             if import_options.extract_dialogue_instructions:

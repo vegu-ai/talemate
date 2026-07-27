@@ -385,9 +385,9 @@
   title: Character Card Import
   summary: How to import TavernAI-style character cards (Chara Card V0-V3, PNG/JPG/WebP images or JSON) from the home screen's
     Import dropzone or the Scene Library's Character Cards section to create a new scene. Covers the import dialog, character
-    detection/manual selection, options for character book entries, alternate greetings, shared context setup, writing style
-    template, player character setup, and troubleshooting
-    failed analysis.
+    detection/manual selection, the AI Generation section (per-step generation toggles with card-data fallback, Full/Minimal
+    presets, and the director's attribute limit capping extracted attributes), options for character book entries, alternate
+    greetings, shared context setup, writing style template, player character setup, and troubleshooting failed analysis.
 - path: user-guide/clients/auto-retry.md
   title: Auto Retry
   summary: 'Per-client sliders (0-5, default 0 = notify immediately) for automatically retrying response issues before the

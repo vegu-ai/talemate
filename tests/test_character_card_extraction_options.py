@@ -84,6 +84,14 @@ def fast_mode(agents):
     agents.creator.actions["character_creation"].config["fast"].value = False
 
 
+@pytest.fixture
+def max_attributes(agents):
+    config = agents.director.actions["character_management"].config["max_attributes"]
+    previous = config.value
+    yield lambda value: setattr(config, "value", value)
+    config.value = previous
+
+
 def _scene_stub():
     return SimpleNamespace(
         name=None,
@@ -799,6 +807,95 @@ async def test_process_characters_fast_mode_cancellation_propagates(fast_mode):
             )
 
     assert character.example_dialogue == ["Hero: raw example"]
+
+
+# ---------------------------------------------------------------------------
+# Director attribute limit
+# ---------------------------------------------------------------------------
+
+
+async def test_process_characters_split_mode_sheet_capped_by_max_attributes(
+    agents, max_attributes
+):
+    max_attributes(2)
+    character = _card_character()
+    scene = _scene_stub()
+
+    async with MockClientContext():
+        client_responses.get().append(
+            sheet_response(
+                "Hero", {"Age": "20", "Occupation": "knight", "Mood": "grim"}
+            )
+        )
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "",
+            LoadingStatus(None),
+            _options_all_disabled(extract_attributes=True),
+        )
+
+    # enforced twice: prompt instruction + parser truncation
+    assert "at most 2 attributes" in str(agents.client.prompt_history[0]["prompt"])
+    assert character.base_attributes == {"Name": "Hero", "Age": "20"}
+
+
+async def test_process_characters_split_mode_zero_max_attributes_uncapped(agents):
+    # 0 means unlimited - the default - and must not reach the prompt
+    assert agents.director.cm_max_attributes == 0
+    character = _card_character()
+    scene = _scene_stub()
+
+    async with MockClientContext():
+        client_responses.get().append(
+            sheet_response(
+                "Hero", {"Age": "20", "Occupation": "knight", "Mood": "grim"}
+            )
+        )
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "",
+            LoadingStatus(None),
+            _options_all_disabled(extract_attributes=True),
+        )
+
+    assert "at most" not in str(agents.client.prompt_history[0]["prompt"])
+    assert character.base_attributes == {
+        "Name": "Hero",
+        "Age": "20",
+        "Occupation": "knight",
+        "Mood": "grim",
+    }
+
+
+async def test_process_characters_fast_mode_capped_by_max_attributes(
+    fast_mode, max_attributes
+):
+    agents = fast_mode
+    max_attributes(2)
+    character = _card_character()
+    scene = _scene_stub()
+
+    async with MockClientContext():
+        client_responses.get().append(
+            unified_response(
+                attributes="Age: 20\nOccupation: knight\nMood: grim",
+            )
+        )
+        await _process_characters_for_import(
+            scene,
+            [character],
+            ["hi"],
+            "",
+            LoadingStatus(None),
+            _options_all_disabled(extract_attributes=True),
+        )
+
+    assert "At most 2 attributes" in str(agents.client.prompt_history[0]["prompt"])
+    assert character.base_attributes == {"Age": "20", "Occupation": "knight"}
 
 
 @pytest.mark.parametrize(

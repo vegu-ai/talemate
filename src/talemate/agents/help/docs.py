@@ -3,14 +3,17 @@ Documentation access tools for the help agent.
 
 Exposes the bundled markdown documentation (docs/ in the talemate root) to the
 LLM through four focal callbacks: look up pages by topic (find_docs, a
-keyword-scored match over the generated index), full-text search, read a full
-document, and read a single section of a document. The generated index
+keyword-scored match over the generated index, weighted by token rarity and
+diluted by how many distinct tokens a summary has), full-text search, read a
+full document, and read a single section of a document. The generated index
 (docs-index.yaml, shipped next to this module) provides path/title/summary for
 every page; only a compact section overview of it is injected into the prompt.
 """
 
+import math
 import re
 from pathlib import Path
+from typing import NamedTuple
 
 import structlog
 import yaml
@@ -97,6 +100,29 @@ FIND_DOCS_LIMIT = 5
 _index_cache: list[dict] | None = None
 
 
+class _IndexedEntry(NamedTuple):
+    """An index entry with its fields tokenized for scoring."""
+
+    entry: dict
+    title_tokens: set[str]
+    path_tokens: set[str]
+    summary_tokens: set[str]
+    title_phrase: str
+    path_phrase: str
+    summary_phrase: str
+
+
+class _ScoringIndex(NamedTuple):
+    """The index prepared for scoring, with its corpus-wide statistics."""
+
+    entries: list[_IndexedEntry]
+    idf: dict[str, float]
+    average_summary_tokens: float
+
+
+_scoring_cache: tuple[list[dict], _ScoringIndex] | None = None
+
+
 def docs_available() -> bool:
     return DOCS_DIR.is_dir()
 
@@ -171,14 +197,79 @@ def _token_set(text: str) -> set[str]:
     return raw | set(_token_seq(text))
 
 
+def _phrase_text(text: str) -> str:
+    """The token sequence as a padded string, so phrases match on word boundaries."""
+    return f" {' '.join(_token_seq(text))} "
+
+
+def _scoring_index() -> _ScoringIndex:
+    """
+    The loaded index prepared for scoring: per-entry token sets and phrase
+    strings, the inverse document frequency of every token, and the average
+    number of distinct summary tokens. Rebuilt whenever a different index is
+    loaded.
+    """
+    global _scoring_cache
+    index = load_docs_index()
+    if _scoring_cache is not None and _scoring_cache[0] is index:
+        return _scoring_cache[1]
+
+    entries = [
+        _IndexedEntry(
+            entry=entry,
+            title_tokens=_token_set(entry["title"]),
+            path_tokens=_token_set(entry["path"]),
+            summary_tokens=_token_set(entry["summary"]),
+            title_phrase=_phrase_text(entry["title"]),
+            path_phrase=_phrase_text(entry["path"]),
+            summary_phrase=_phrase_text(entry["summary"]),
+        )
+        for entry in index
+    ]
+
+    document_frequency: dict[str, int] = {}
+    for indexed in entries:
+        for token in (
+            indexed.title_tokens | indexed.path_tokens | indexed.summary_tokens
+        ):
+            document_frequency[token] = document_frequency.get(token, 0) + 1
+
+    total = len(entries)
+    scoring = _ScoringIndex(
+        entries=entries,
+        # BM25's idf: a token in every page is worth almost nothing, a token
+        # in one page is worth several times an average one
+        idf={
+            token: math.log(1 + (total - count + 0.5) / (count + 0.5))
+            for token, count in document_frequency.items()
+        },
+        # floored at one token so an index whose summaries all tokenize to
+        # nothing cannot divide by zero
+        average_summary_tokens=max(
+            1.0, sum(len(indexed.summary_tokens) for indexed in entries) / max(total, 1)
+        ),
+    )
+    _scoring_cache = (index, scoring)
+    return scoring
+
+
 def find_docs(query: str, limit: int = FIND_DOCS_LIMIT) -> list[dict] | str:
     """
     Look up documentation pages by topic.
 
     Keyword-scored match over the full index (path, title, summary) -
     deterministic, no LLM involved. Tokens match on word boundaries (a
-    query token "set" does not match "settings"). Returns the best
-    matches with their path, title, summary and manual URL.
+    query token "set" does not match "settings") and are weighted by how
+    rare they are across the index, so a distinctive term ("koboldcpp")
+    counts for far more than a ubiquitous one ("context"). Token hits in a
+    summary are diluted by the whole of its length; the phrase bonus is
+    diluted only once a summary runs past twice the typical length, and an
+    ordinary-length summary keeps it in full - deliberately, since an exact
+    phrase in a summary of normal length is a real signal, and taxing it
+    demotes pages that are long because they genuinely cover a lot. So a
+    summary well past typical cannot buy rank with a passing mention; one
+    just over it still can. Returns the best matches with their path, title,
+    summary and manual URL.
     """
     query_seq = _token_seq(query or "")
     if not query_seq:
@@ -188,29 +279,42 @@ def find_docs(query: str, limit: int = FIND_DOCS_LIMIT) -> list[dict] | str:
     # word-boundary phrase, only meaningful for multi-word queries
     phrase = f" {' '.join(query_seq)} " if len(query_seq) > 1 else None
 
+    scoring = _scoring_index()
     scored: list[tuple[float, dict]] = []
-    for entry in load_docs_index():
-        title_set = _token_set(entry["title"])
-        path_set = _token_set(entry["path"])
-        summary_set = _token_set(entry["summary"])
+    for indexed in scoring.entries:
+        # a longer-than-average summary dilutes its own matches; a shorter
+        # one is not rewarded for its brevity
+        dilution = max(
+            1.0, len(indexed.summary_tokens) / scoring.average_summary_tokens
+        )
+        # a phrase hit is a single event, not one chance per token, so it is
+        # diluted by how far the summary runs PAST typical length rather than
+        # by the whole of it: an ordinary summary pays nothing, and only one
+        # that has bought enough text for a passing mention to be likely does.
+        # This leaves a deadband below 2x that the generator's summary cap
+        # keeps most entries inside - the cap is the primary control here and
+        # this is the backstop against a pathological entry, not a full fix
+        phrase_dilution = max(1.0, dilution - 1.0)
         score = 0.0
         for token in tokens:
-            if token in title_set:
-                score += 3
-            if token in path_set:
-                score += 2
-            if token in summary_set:
-                score += 1
+            weight = scoring.idf.get(token, 0.0)
+            if token in indexed.title_tokens:
+                score += 3 * weight
+            if token in indexed.path_tokens:
+                score += 2 * weight
+            if token in indexed.summary_tokens:
+                score += weight / dilution
         if phrase:
-            if phrase in f" {' '.join(_token_seq(entry['title']))} ":
+            if phrase in indexed.title_phrase:
                 score += 5
-            elif (
-                phrase in f" {' '.join(_token_seq(entry['path']))} "
-                or phrase in f" {' '.join(_token_seq(entry['summary']))} "
-            ):
+            elif phrase in indexed.path_phrase:
                 score += 3
+            elif phrase in indexed.summary_phrase:
+                # titles and paths are not length-variable, summaries are: an
+                # undiluted bonus here is rank a long summary buys outright
+                score += 3 / phrase_dilution
         if score > 0:
-            scored.append((score, entry))
+            scored.append((score, indexed.entry))
     scored.sort(key=lambda item: (-item[0], item[1]["path"]))
     if not scored:
         return (

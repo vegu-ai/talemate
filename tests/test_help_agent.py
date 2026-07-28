@@ -233,6 +233,139 @@ def test_find_docs_real_index_smoke():
     )
 
 
+@pytest.mark.parametrize(
+    "query,expected",
+    [
+        ("koboldcpp client setup", "user-guide/clients/types/koboldcpp.md"),
+        ("openrouter api key", "user-guide/apis/openrouter.md"),
+        ("context db", "user-guide/world-editor/context-db.md"),
+        ("tracking a state", "user-guide/tracking-a-state.md"),
+        (
+            "collector nodes",
+            "user-guide/node-editor/core-concepts/collector_nodes.md",
+        ),
+        ("character card import", "user-guide/character-card-import.md"),
+        # a thorough summary must keep its phrase bonus: this page is the only
+        # one about the pi coding agent, and competes with node-reference
+        # pages that match nothing but the token "agent"
+        ("coding agent", "user-guide/clients/types/pi-bridge.md"),
+    ],
+)
+def test_find_docs_canonical_pages(query, expected):
+    # pinned against the shipped index: regenerating docs-index.yaml must not
+    # silently displace the page that answers these questions
+    results = docs.find_docs(query)
+    assert isinstance(results, list)
+    assert results[0]["path"] == expected
+
+
+def test_find_docs_rare_tokens_outweigh_common_ones():
+    # against the shipped index, where many pages are titled "Settings" and
+    # only a handful mention KoboldCpp at all - the distinctive token has to
+    # decide the match, or the query drowns in generic settings pages. Any
+    # KoboldCpp page is a right answer here; the point is that one wins.
+    results = docs.find_docs("koboldcpp settings")
+    assert isinstance(results, list)
+    assert "koboldcpp" in results[0]["path"]
+
+
+# the real #169 case: a summary hand-extended to describe a documentation
+# section accurately, which then surfaced for topics the page barely mentions
+BLOAT = (
+    " Covers per-step toggles for content context, description, attributes, "
+    "dialogue instructions, example dialogue and story intent, Full/Minimal "
+    "presets, and card-data fallback when a step is off or fails."
+)
+BLOATED_PATH = "user-guide/character-card-import.md"
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "dialogue instructions",
+        "example dialogue",
+        "story intent",
+        "content context",
+    ],
+)
+def test_find_docs_long_summary_cannot_displace_better_matches(query, monkeypatch):
+    # #169: padding a summary with topics the page only mentions in passing
+    # must not buy it rank. It may still reach the last slot - the words are
+    # genuinely there, and a page whose token score plus its diluted phrase
+    # bonus still earns that slot keeps it - but it may never take a slot
+    # above the one it enters at.
+    index = docs.load_docs_index()
+    assert any(entry["path"] == BLOATED_PATH for entry in index)
+    bloated_index = [
+        {**entry, "summary": entry["summary"] + BLOAT}
+        if entry["path"] == BLOATED_PATH
+        else entry
+        for entry in index
+    ]
+
+    trimmed = [entry["path"] for entry in docs.find_docs(query)]
+    monkeypatch.setattr(docs, "load_docs_index", lambda: bloated_index)
+    bloated = [entry["path"] for entry in docs.find_docs(query)]
+
+    assert BLOATED_PATH not in trimmed
+    if BLOATED_PATH in bloated:
+        assert bloated[-1] == BLOATED_PATH
+        assert bloated[:-1] == trimmed[:-1]
+    else:
+        assert bloated == trimmed
+
+
+def test_find_docs_summary_phrase_bonus_is_diluted(monkeypatch):
+    # the phrase bonus is the one component that could still be bought with
+    # length: an exact phrase planted in a padded summary used to add a flat
+    # +3 and evict a page whose token score alone outscored the intruder
+    index = docs.load_docs_index()
+    bloated_index = [
+        {**entry, "summary": entry["summary"] + BLOAT}
+        if entry["path"] == BLOATED_PATH
+        else entry
+        for entry in index
+    ]
+    monkeypatch.setattr(docs, "load_docs_index", lambda: bloated_index)
+
+    # "dialogue instructions" is in BLOAT verbatim, so the padded entry takes
+    # the summary-phrase branch - and must still stay out of the results
+    paths = [entry["path"] for entry in docs.find_docs("dialogue instructions")]
+    assert BLOATED_PATH not in paths
+    assert "user-guide/agents/summarizer/settings.md" in paths
+
+
+def test_find_docs_phrase_dilution_bites_past_typical_length(monkeypatch):
+    # the other side of the trade from the canonical "coding agent" pin: that
+    # page wins its own topic at its real summary length, and has to lose once
+    # its summary runs well past typical.
+    #
+    # Padded to 2.5x typical deliberately. Pad much further and the page loses
+    # on summary-token dilution alone, which would leave this test passing with
+    # the phrase dilution deleted entirely; at 2.5x it still wins on an
+    # undiluted bonus, so only the dilution can decide it.
+    index = docs.load_docs_index()
+    target = "user-guide/clients/types/pi-bridge.md"
+    scoring = docs._scoring_index()
+    indexed = next(e for e in scoring.entries if e.entry["path"] == target)
+    # "zz0 zz1 ..." - distinct filler tokens that match no real query
+    filler_tokens = int(scoring.average_summary_tokens * 2.5) - len(
+        indexed.summary_tokens
+    )
+    assert filler_tokens > 0
+    filler = " " + " ".join(f"zz{i}" for i in range(filler_tokens))
+    padded = [
+        {**entry, "summary": entry["summary"] + filler}
+        if entry["path"] == target
+        else entry
+        for entry in index
+    ]
+
+    assert docs.find_docs("coding agent")[0]["path"] == target
+    monkeypatch.setattr(docs, "load_docs_index", lambda: padded)
+    assert docs.find_docs("coding agent")[0]["path"] != target
+
+
 def test_docs_section_overview(stub_docs_index):
     overview = docs.docs_section_overview()
     by_prefix = {entry["prefix"]: entry for entry in overview}

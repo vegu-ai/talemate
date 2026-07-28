@@ -836,9 +836,14 @@ async def test_process_characters_split_mode_sheet_capped_by_max_attributes(
             _options_all_disabled(extract_attributes=True),
         )
 
-    # enforced twice: prompt instruction + parser truncation
+    # enforced twice: prompt instruction + parser truncation. the primed Name
+    # line does not spend a slot (#162), so 2 attributes survive beside it
     assert "at most 2 attributes" in str(agents.client.prompt_history[0]["prompt"])
-    assert character.base_attributes == {"Name": "Hero", "Age": "20"}
+    assert character.base_attributes == {
+        "Name": "Hero",
+        "Age": "20",
+        "Occupation": "knight",
+    }
 
 
 async def test_process_characters_split_mode_zero_max_attributes_uncapped(agents):

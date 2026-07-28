@@ -701,8 +701,8 @@
 - path: user-guide/node-editor/reference/nodes/agents-creator.md
   title: Creator Agent Nodes
   summary: 'Node reference. Content creation through the creator agent: contextual generation, character creation (including
-    the Generate Character node for consolidated single-prompt generation of name, description, attributes, dialogue instructions
-    and example dialogue) and per-character derivations, plus thematic lists. Nodes: Contextual Generate, Create Character,
+    the Generate Character node, which generates name, description, attributes, dialogue instructions and example dialogue
+    following the creator agent''s Character Creation settings) and per-character derivations, plus thematic lists. Nodes: Contextual Generate, Create Character,
     Generate Character, Determine Character Description, Determine Character Dialogue Instructions, Determine Character Name,
     Determine Content Context, and more.'
 - path: user-guide/node-editor/reference/nodes/agents-director-auto.md

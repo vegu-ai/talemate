@@ -25,6 +25,7 @@ from talemate.prompts import Prompt
 from talemate.prompts.response import ResponseSpec, StrictAnchorExtractor
 from talemate.util.data import parse_attribute_lines
 from talemate.ux.schema import Condition
+from talemate.world_state.templates.content import GenerationOptions
 
 from .response_specs import NAME_SPEC
 
@@ -190,6 +191,9 @@ class CharacterGenerationRequest(pydantic.BaseModel):
             generation (split mode or one-shot fallback): "information"
             layers it on top of the scene context, "text" replaces the
             scene context with it
+        generation_options: Caller-selected spice / writing style, applied to
+            the description (the aspect whose prose they shape) and, when the
+            consolidated prompt is used, to the one-shot that produces it
         attribute_instructions: Per-attribute generation instructions
             (from attribute world-state templates) to fold into the
             attributes section of the one-shot (and of its individual
@@ -216,6 +220,7 @@ class CharacterGenerationRequest(pydantic.BaseModel):
     max_examples: int = 5
     max_attributes: int | None = None
     dynamic_instructions: list | None = None
+    generation_options: GenerationOptions | None = None
     content_role: Literal["information", "text"] = "information"
     attribute_instructions: list[AttributeInstructionSpec] | None = None
     augment_attributes: str = ""
@@ -477,6 +482,7 @@ class CharacterCreatorMixin:
         instructions: str = "",
         information: str = "",
         dynamic_instructions: list = None,
+        generation_options: GenerationOptions | None = None,
     ) -> str:
         """The generated description, or an empty string when the model
         produced nothing."""
@@ -488,6 +494,10 @@ class CharacterCreatorMixin:
             "instructions": instructions,
             "information": information,
         }
+
+        vars_dict.update(
+            self._generation_option_vars(generation_options, character.name)
+        )
 
         if dynamic_instructions:
             vars_dict["dynamic_instructions"] = dynamic_instructions
@@ -663,6 +673,29 @@ class CharacterCreatorMixin:
         template."""
         return CONSOLIDATE_TEMPLATES_FLAG in self.cc_consolidate
 
+    def _generation_option_vars(
+        self,
+        generation_options: GenerationOptions | None,
+        character_name: str | None = None,
+    ) -> dict:
+        """Rendered spice / writing style prompt vars for the caller's
+        generation options.
+
+        Mirrors contextual generation: an option-supplied writing style wins
+        over the scene's, and the scene's applies when the caller did not pick
+        one.
+        """
+        options = generation_options or GenerationOptions()
+        if not options.writing_style:
+            options = options.model_copy(
+                update={"writing_style": self.scene.writing_style}
+            )
+
+        return {
+            "spice": options.render_spice(self.scene, character_name),
+            "writing_style": options.render_writing_style(self.scene, character_name),
+        }
+
     # consolidated character generation
 
     @set_processing
@@ -730,6 +763,9 @@ class CharacterCreatorMixin:
                 "augment_attributes": request.augment_attributes,
                 "history_budget": one_shot_history_budget(
                     self.client.max_token_length, response_budget
+                ),
+                **self._generation_option_vars(
+                    request.generation_options, request.effective_name
                 ),
             },
             response_spec=response_spec,
@@ -974,6 +1010,7 @@ class CharacterCreatorMixin:
             if request.content_role == "information"
             else "",
             dynamic_instructions=request.dynamic_instructions,
+            generation_options=request.generation_options,
         )
         working_character.description = result.description
 

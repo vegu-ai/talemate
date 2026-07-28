@@ -215,7 +215,7 @@
         "as_scene_message": true
       },
       "x": 31,
-      "y": 2217,
+      "y": 1840,
       "width": 319,
       "height": 151,
       "collapsed": false,
@@ -230,7 +230,7 @@
         "stage": 5
       },
       "x": 411,
-      "y": 2267,
+      "y": 1890,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -313,22 +313,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "agents/world_state/StateReinforcement",
-      "base_type": "core/Node"
-    },
-    "1aa94d91-7040-4fcd-9ca6-8a161e98a3fd": {
-      "title": "Director Message",
-      "id": "1aa94d91-7040-4fcd-9ca6-8a161e98a3fd",
-      "properties": {
-        "source": "ai",
-        "action": "actor_instruction"
-      },
-      "x": 844,
-      "y": 902,
-      "width": 210,
-      "height": 162,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/message/DirectorMessage",
       "base_type": "core/Node"
     },
     "132e5d44-542b-455c-8e7d-23defde39b80": {
@@ -453,52 +437,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "a2457116-35cb-4571-ba1a-cbf63851544e": {
-      "title": "GET created_character",
-      "id": "a2457116-35cb-4571-ba1a-cbf63851544e",
-      "properties": {
-        "name": "created_character",
-        "scope": "local"
-      },
-      "x": 39,
-      "y": 1860,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "ab17bcda-58a1-4b82-bb98-460b14ede0c8": {
-      "title": "SET obj.dialogue_instructions",
-      "id": "ab17bcda-58a1-4b82-bb98-460b14ede0c8",
-      "properties": {
-        "attribute": "dialogue_instructions"
-      },
-      "x": 799,
-      "y": 1880,
-      "width": 244,
-      "height": 98,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/Set",
-      "base_type": "core/Node"
-    },
-    "161d2a52-575a-4edb-8a92-f7e9bf08c368": {
-      "title": "Stage 4",
-      "id": "161d2a52-575a-4edb-8a92-f7e9bf08c368",
-      "properties": {
-        "stage": 4
-      },
-      "x": 1080,
-      "y": 1950,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "5041f12d-507f-4f5d-a26f-048625974602": {
       "title": "Make Text",
       "id": "5041f12d-507f-4f5d-a26f-048625974602",
@@ -520,36 +458,21 @@
       "properties": {},
       "x": 580,
       "y": 550,
-      "width": 245,
-      "height": 206,
+      "width": 338,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/creator/CreateCharacter",
       "base_type": "core/Graph"
     },
-    "8a050403-5c69-46f7-abe2-f65db4553942": {
-      "title": "TRUE",
-      "id": "8a050403-5c69-46f7-abe2-f65db4553942",
-      "properties": {
-        "value": true
-      },
-      "x": 400,
-      "y": 720,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
     "a748570f-e8ce-4281-84db-abe75decc5ad": {
       "title": "Visual Settings",
       "id": "a748570f-e8ce-4281-84db-abe75decc5ad",
       "properties": {},
-      "x": 60,
-      "y": 2480,
+      "x": 63,
+      "y": 2105,
       "width": 405,
-      "height": 1846,
+      "height": 2386,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/visual/Settings",
@@ -561,8 +484,8 @@
       "properties": {
         "stage": 6
       },
-      "x": 990,
-      "y": 2640,
+      "x": 993,
+      "y": 2265,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -576,8 +499,8 @@
       "properties": {
         "instructions": null
       },
-      "x": 650,
-      "y": 2580,
+      "x": 653,
+      "y": 2205,
       "width": 261,
       "height": 112,
       "collapsed": false,
@@ -592,8 +515,8 @@
         "name": "created_character",
         "scope": "local"
       },
-      "x": 40,
-      "y": 2720,
+      "x": 43,
+      "y": 2345,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -605,8 +528,8 @@
       "title": "RSwitch",
       "id": "71e63a09-153c-4fb3-9274-a63129aaf045",
       "properties": {},
-      "x": 450,
-      "y": 2590,
+      "x": 453,
+      "y": 2215,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -618,8 +541,8 @@
       "title": "Backend Status",
       "id": "2e7d01c6-2699-42ba-8ea5-9f7c9e3421b5",
       "properties": {},
-      "x": 60,
-      "y": 2580,
+      "x": 63,
+      "y": 2205,
       "width": 170,
       "height": 66,
       "collapsed": false,
@@ -631,8 +554,8 @@
       "title": "AND Router",
       "id": "d629347c-57f7-4681-9c90-9b8a196e0e74",
       "properties": {},
-      "x": 280,
-      "y": 2510,
+      "x": 283,
+      "y": 2135,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -640,20 +563,49 @@
       "registry": "core/ANDRouter",
       "base_type": "core/Node"
     },
-    "a9f17ddc-fc8f-4257-8e32-45ac111fd50d": {
-      "title": "Determine Character Dialogue Instructions",
-      "id": "a9f17ddc-fc8f-4257-8e32-45ac111fd50d",
+    "1aa94d91-7040-4fcd-9ca6-8a161e98a3fd": {
+      "title": "Director Message",
+      "id": "1aa94d91-7040-4fcd-9ca6-8a161e98a3fd",
       "properties": {
-        "instructions": null,
-        "update_existing": false
+        "source": "ai",
+        "action": "actor_instruction",
+        "subtype": ""
       },
-      "x": 350,
-      "y": 1960,
-      "width": 344,
-      "height": 142,
+      "x": 840,
+      "y": 900,
+      "width": 210,
+      "height": 206,
       "collapsed": false,
       "inherited": false,
-      "registry": "agents/creator/DetermineCharacterDialogueInstructions",
+      "registry": "scene/message/DirectorMessage",
+      "base_type": "core/Node"
+    },
+    "73929369-2611-45a6-aeeb-7c8c88e2636b": {
+      "title": "Null",
+      "id": "73929369-2611-45a6-aeeb-7c8c88e2636b",
+      "properties": {},
+      "x": 620,
+      "y": 1120,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Null",
+      "base_type": "core/Node"
+    },
+    "8a050403-5c69-46f7-abe2-f65db4553942": {
+      "title": "TRUE",
+      "id": "8a050403-5c69-46f7-abe2-f65db4553942",
+      "properties": {
+        "value": true
+      },
+      "x": 420,
+      "y": 720,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
       "base_type": "core/Node"
     }
   },
@@ -709,10 +661,6 @@
     "76c8118f-bc77-4e4c-8ea3-ca04302edcff.state": [
       "4bd273e6-8898-42b0-b381-660e2be2dfda.state"
     ],
-    "1aa94d91-7040-4fcd-9ca6-8a161e98a3fd.message": [
-      "132e5d44-542b-455c-8e7d-23defde39b80.message",
-      "365a4706-9af5-40c5-a5da-cd0604ce9363.object"
-    ],
     "365a4706-9af5-40c5-a5da-cd0604ce9363.value": [
       "41c0c2cd-d39b-4528-a5fe-459094393ba3.item"
     ],
@@ -722,19 +670,11 @@
       "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.character_name"
     ],
     "5102b824-63dc-429a-9e91-c1fb57246741.value": [
-      "1aa94d91-7040-4fcd-9ca6-8a161e98a3fd.action",
-      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.instructions"
+      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.instructions",
+      "1aa94d91-7040-4fcd-9ca6-8a161e98a3fd.action"
     ],
     "fd4cd318-121b-47de-84a0-b1ab62c5601b.value": [
       "41c0c2cd-d39b-4528-a5fe-459094393ba3.list"
-    ],
-    "a2457116-35cb-4571-ba1a-cbf63851544e.value": [
-      "a9f17ddc-fc8f-4257-8e32-45ac111fd50d.state",
-      "a9f17ddc-fc8f-4257-8e32-45ac111fd50d.character",
-      "ab17bcda-58a1-4b82-bb98-460b14ede0c8.object"
-    ],
-    "ab17bcda-58a1-4b82-bb98-460b14ede0c8.value": [
-      "161d2a52-575a-4edb-8a92-f7e9bf08c368.state"
     ],
     "5041f12d-507f-4f5d-a26f-048625974602.value": [
       "b50e23d4-b456-4385-b80e-c2b6884c7855.template"
@@ -744,12 +684,6 @@
     ],
     "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.character": [
       "970f12d0-330e-41b3-b025-9a53bcf2fc6f.value"
-    ],
-    "8a050403-5c69-46f7-abe2-f65db4553942.value": [
-      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate",
-      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate_attributes",
-      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.is_active",
-      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.assign_voice"
     ],
     "a748570f-e8ce-4281-84db-abe75decc5ad.agent_enabled": [
       "d629347c-57f7-4681-9c90-9b8a196e0e74.a"
@@ -770,8 +704,20 @@
     "d629347c-57f7-4681-9c90-9b8a196e0e74.yes": [
       "71e63a09-153c-4fb3-9274-a63129aaf045.check"
     ],
-    "a9f17ddc-fc8f-4257-8e32-45ac111fd50d.dialogue_instructions": [
-      "ab17bcda-58a1-4b82-bb98-460b14ede0c8.value"
+    "1aa94d91-7040-4fcd-9ca6-8a161e98a3fd.message": [
+      "132e5d44-542b-455c-8e7d-23defde39b80.message",
+      "365a4706-9af5-40c5-a5da-cd0604ce9363.object"
+    ],
+    "73929369-2611-45a6-aeeb-7c8c88e2636b.value": [
+      "1aa94d91-7040-4fcd-9ca6-8a161e98a3fd.subtype"
+    ],
+    "8a050403-5c69-46f7-abe2-f65db4553942.value": [
+      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate",
+      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate_attributes",
+      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.is_active",
+      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.assign_voice",
+      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate_dialogue_instructions",
+      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate_example_dialogue"
     ]
   },
   "groups": [
@@ -798,7 +744,7 @@
     {
       "title": "Stage 5 - Emit status",
       "x": 4,
-      "y": 2129,
+      "y": 1752,
       "width": 541,
       "height": 267,
       "color": "#3f789e",
@@ -807,8 +753,8 @@
     },
     {
       "title": "Stage 6 - Visualize",
-      "x": 5,
-      "y": 2401,
+      "x": 8,
+      "y": 2026,
       "width": 1110,
       "height": 500,
       "color": "#a1309b",
@@ -824,16 +770,6 @@
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
-    },
-    {
-      "title": "Stage 4 - Generate acting instructions",
-      "x": 3,
-      "y": 1751,
-      "width": 1218,
-      "height": 376,
-      "color": "#3f789e",
-      "font_size": 24,
-      "inherited": false
     }
   ],
   "comments": [],
@@ -842,14 +778,60 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "17baefca-1fa5-4a58-a0d3-6a5a50795395",
+      "id": "030f2db6-b362-479e-ac6a-56198035a214",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
+    },
+    {
+      "id": "fa600cb9-24c4-4be7-9c56-20dc0067eef3",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "c85fb2eb-b371-461a-a96a-fb0489cced85",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "72a60805-ce60-4e1b-8905-a2aafee8c2d0",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
     }
   ],
-  "module_properties": {},
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the function",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "allow_multiple_calls": {
+      "name": "allow_multiple_calls",
+      "description": "Function can be called multiple times during AI Function Calling",
+      "type": "bool",
+      "default": false,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
   "style": {
     "title_color": "#573a2e",
     "node_color": "#392f2c",

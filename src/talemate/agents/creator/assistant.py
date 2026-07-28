@@ -1,6 +1,5 @@
 import json
 import re
-import random
 from typing import TYPE_CHECKING, Tuple
 import traceback
 import uuid
@@ -116,25 +115,14 @@ class ContentGenerationContext(pydantic.BaseModel):
 
     @property
     def spice(self) -> str:
-        spice_level = self.generation_options.spice_level
-
         if self.template and not getattr(self.template, "supports_spice", False):
             # template supplied that doesn't support spice
             return ""
 
-        if spice_level == 0:
-            # no spice
-            return ""
+        spice = self.generation_options.render_spice(self.scene, self.character)
 
-        if not self.generation_options.spices:
-            # no spices
+        if not spice:
             return ""
-
-        # randomly determine if we should add spice (0.0 - 1.0)
-        if random.random() > spice_level:
-            return ""
-
-        spice = self.generation_options.spices.render(self.scene, self.character)
 
         log.debug(
             "spice_applied",
@@ -163,11 +151,7 @@ class ContentGenerationContext(pydantic.BaseModel):
             # template supplied that doesn't support style
             return ""
 
-        if not self.generation_options.writing_style:
-            # no writing style
-            return ""
-
-        return self.generation_options.writing_style.render(self.scene, self.character)
+        return self.generation_options.render_writing_style(self.scene, self.character)
 
     def set_state(self, key: str, value: str | int | float | bool):
         self.state[key] = value

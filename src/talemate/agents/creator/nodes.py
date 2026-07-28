@@ -292,15 +292,18 @@ class DetermineCharacterDialogueInstructions(AgentNode):
 @register("agents/creator/GenerateCharacter")
 class GenerateCharacter(AgentNode):
     """
-    Generates character data with a single consolidated prompt (the unified
-    generation approach from the creator agent's "Character Creation" Fast
-    Character Generation mode).
+    Generates character data through the creator agent's character
+    generation pipeline, following the agent's "Character Creation"
+    settings.
 
-    All aspects selected via the node's properties are generated in one go.
-    Aspects the consolidated response misses are handled according to the
-    creator agent's "Fill in misses" setting (individual follow-up requests
-    or left empty); the response budget comes from the agent's "One-shot
-    token budget" setting. A completely unparseable response raises an error.
+    With "Fast Character Generation" enabled, the aspects listed in the
+    agent's "Consolidate" setting are generated with a single
+    consolidated prompt (response budget from the "One-shot token budget"
+    setting; aspects the response misses are handled according to the
+    "Fill in misses" setting - individual follow-up requests or left
+    empty; a completely unparseable response raises an error). Remaining
+    aspects - or all of them, with Fast mode disabled - are generated
+    individually.
 
     This node only generates data - it does not add the character to the
     scene. Wire the outputs into an `agents/director/PersistCharacter` node
@@ -317,6 +320,12 @@ class GenerateCharacter(AgentNode):
     - character_name: The current or descriptive character name (optional)
     - instructions: Guiding instructions / content for the creation (optional)
     - description: An existing description to use as context (optional)
+    - generation_options: Spice / writing style to shape the description (optional)
+    - generate_name: Whether to generate a name (optional)
+    - generate_description: Whether to generate a description (optional)
+    - generate_attributes: Whether to generate attributes (optional)
+    - generate_dialogue_instructions: Whether to generate dialogue instructions (optional)
+    - generate_example_dialogue: Whether to generate example dialogue lines (optional)
 
     Properties:
 
@@ -330,7 +339,7 @@ class GenerateCharacter(AgentNode):
 
     - state: The state input, passed through
     - character_name: The determined (or input) character name
-    - description: The generated description (empty if not generated)
+    - description: The generated (or input) description
     - attributes: The generated attributes (empty if not generated)
     - dialogue_instructions: The generated dialogue instructions (empty if not generated)
     - example_dialogue: The generated example dialogue lines (empty if not generated)
@@ -378,6 +387,16 @@ class GenerateCharacter(AgentNode):
         self.add_input("character_name", socket_type="str", optional=True)
         self.add_input("instructions", socket_type="str", optional=True)
         self.add_input("description", socket_type="str", optional=True)
+        self.add_input(
+            "generation_options", socket_type="generation_options", optional=True
+        )
+        self.add_input("generate_name", socket_type="bool", optional=True)
+        self.add_input("generate_description", socket_type="bool", optional=True)
+        self.add_input("generate_attributes", socket_type="bool", optional=True)
+        self.add_input(
+            "generate_dialogue_instructions", socket_type="bool", optional=True
+        )
+        self.add_input("generate_example_dialogue", socket_type="bool", optional=True)
 
         self.set_property("generate_name", False)
         self.set_property("generate_description", True)
@@ -396,6 +415,7 @@ class GenerateCharacter(AgentNode):
         character_name = self.normalized_input_value("character_name") or ""
         instructions = self.normalized_input_value("instructions") or ""
         description = self.normalized_input_value("description") or ""
+        generation_options = self.normalized_input_value("generation_options")
 
         aspects = []
         if self.normalized_input_value("generate_name"):
@@ -432,8 +452,7 @@ class GenerateCharacter(AgentNode):
                 name=character_name,
                 content=instructions,
                 description=description,
-                unified=True,
-                consolidate=aspects,
+                generation_options=generation_options,
             )
         )
 
@@ -441,7 +460,9 @@ class GenerateCharacter(AgentNode):
             {
                 "state": state,
                 "character_name": result.name or character_name,
-                "description": result.description or "",
+                # an aspect that wasn't generated passes its input through, so
+                # downstream state writes don't blank a supplied value
+                "description": result.description or description,
                 "attributes": result.attributes or {},
                 "dialogue_instructions": result.dialogue_instructions or "",
                 "example_dialogue": result.example_dialogue or [],

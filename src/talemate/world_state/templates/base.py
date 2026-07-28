@@ -105,7 +105,24 @@ class Template(pydantic.BaseModel):
             **vars,
         )
 
-        return value.format(**kwargs)
+        # user-authored template text may contain literal braces (JSON
+        # examples, {unknown} placeholders) - render it raw rather than
+        # crash the generation that includes it. AttributeError/TypeError
+        # cover compound fields ({character_name.first}, {player_name[0]}):
+        # once the first component resolves, str.format raises those instead
+        # of KeyError - and player_name is None in scenes without a player
+        try:
+            return value.format(**kwargs)
+        except (KeyError, IndexError, ValueError, AttributeError, TypeError) as e:
+            log.warning(
+                "template.formatted: instructions contain braces that are "
+                "not valid placeholders - using the raw text",
+                template=self.name,
+                template_type=self.template_type,
+                prop_name=prop_name,
+                error=str(e),
+            )
+            return value
 
 
 TemplateType = TypeVar("TemplateType", bound=Template)

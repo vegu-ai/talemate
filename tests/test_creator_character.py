@@ -24,6 +24,11 @@ from talemate.agents.tts.schema import Voice
 from talemate.agents.visual.schema import PromptFinalizer
 from talemate.character import Character
 from talemate.exceptions import LLMAccuracyError
+from talemate.world_state.templates.content import (
+    GenerationOptions,
+    Spices,
+    WritingStyle,
+)
 
 from conftest import (
     MockClient,
@@ -62,6 +67,22 @@ def creator():
         _agent.client = client
         _agent.scene = scene
     return agent
+
+
+@pytest.fixture
+def scene_writing_style(creator, monkeypatch):
+    """Give the scene a writing style. `Scene.writing_style` is a read-only
+    property resolving a template id against the template collection, so the
+    test shadows it on the MockScene class instead."""
+
+    def _set(instructions: str):
+        monkeypatch.setattr(
+            type(creator.scene),
+            "writing_style",
+            WritingStyle(name="Scene style", instructions=instructions),
+        )
+
+    return _set
 
 
 @pytest.fixture
@@ -107,6 +128,175 @@ async def test_determine_character_description_prime_only_reads_as_empty(creator
         description = await creator.determine_character_description(character)
 
     assert description == ""
+
+
+@pytest.mark.asyncio
+async def test_determine_character_description_renders_generation_options(creator):
+    # the caller's writing style and spice shape the description - the aspect
+    # whose prose they apply to
+    character = Character(name="Alice", description="A curious girl.")
+
+    async with MockClientContext():
+        client_responses.get().append(description_response("Alice", "is a tinkerer."))
+        await creator.determine_character_description(
+            character,
+            generation_options=GenerationOptions(
+                writing_style=WritingStyle(
+                    name="Terse", instructions="Write in terse prose."
+                ),
+                spices=Spices(
+                    name="Mood", instructions="{spice}", spices=["Make it ominous."]
+                ),
+                spice_level=1.0,
+            ),
+        )
+
+    prompt = str(creator.client.prompt_history[-1]["prompt"])
+    assert "Write in terse prose." in prompt
+    assert "Make it ominous." in prompt
+
+
+@pytest.mark.asyncio
+async def test_determine_character_description_without_generation_options(creator):
+    # no options and no scene writing style - no writing style / spice
+    # sections at all, and in particular no empty ones
+    character = Character(name="Alice", description="A curious girl.")
+
+    async with MockClientContext():
+        client_responses.get().append(description_response("Alice", "is a tinkerer."))
+        await creator.determine_character_description(character)
+
+    prompt = str(creator.client.prompt_history[-1]["prompt"])
+    assert "WRITING STYLE" not in prompt
+    assert "SPICE" not in prompt
+
+
+@pytest.mark.asyncio
+async def test_scene_writing_style_applies_to_split_description_without_options(
+    creator, scene_writing_style
+):
+    # the scene's writing style reaches split-mode description generation
+    # even when the caller passes no generation options (card import, the
+    # DetermineCharacterDescription node and the scripting API pass nothing)
+    scene_writing_style("Write in flowery prose.")
+    character = Character(name="Alice", description="A curious girl.")
+
+    async with MockClientContext():
+        client_responses.get().append(description_response("Alice", "is a tinkerer."))
+        await creator.determine_character_description(character)
+
+    prompt = str(creator.client.prompt_history[-1]["prompt"])
+    assert "Write in flowery prose." in prompt
+
+
+@pytest.mark.asyncio
+async def test_writing_style_with_literal_braces_renders_raw(
+    creator, scene_writing_style
+):
+    # user-authored writing styles may contain literal braces (JSON
+    # examples, {unknown} placeholders) - they must render raw instead of
+    # crashing the generation
+    scene_writing_style('Emit JSON like {"mood": "dark"} and stay terse.')
+
+    async with MockClientContext():
+        client_responses.get().append(
+            unified_response(description="Elena is a skilled healer.")
+        )
+        await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=["description"],
+                name="Elena",
+                content="A healer arrives.",
+            )
+        )
+
+    prompt = str(creator.client.prompt_history[-1]["prompt"])
+    assert 'Emit JSON like {"mood": "dark"} and stay terse.' in prompt
+
+
+@pytest.mark.asyncio
+async def test_generate_character_unified_renders_generation_options(creator):
+    # the one-shot covers the description too, so the same options apply
+    async with MockClientContext():
+        client_responses.get().append(
+            unified_response(description="Elena is a skilled healer.")
+        )
+        await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=["description"],
+                name="Elena",
+                content="A healer arrives.",
+                generation_options=GenerationOptions(
+                    writing_style=WritingStyle(
+                        name="Terse", instructions="Write in terse prose."
+                    ),
+                    spices=Spices(
+                        name="Mood",
+                        instructions="{spice}",
+                        spices=["Make it ominous."],
+                    ),
+                    spice_level=1.0,
+                ),
+            )
+        )
+
+    prompt = str(creator.client.prompt_history[-1]["prompt"])
+    assert "Write in terse prose." in prompt
+    assert "Make it ominous." in prompt
+
+
+@pytest.mark.asyncio
+async def test_generation_options_writing_style_wins_over_the_scene(
+    creator, scene_writing_style
+):
+    # a caller-selected writing style overrides the scene's, rather than
+    # rendering both
+    scene_writing_style("Write in flowery prose.")
+
+    async with MockClientContext():
+        client_responses.get().append(
+            unified_response(description="Elena is a skilled healer.")
+        )
+        await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=["description"],
+                name="Elena",
+                content="A healer arrives.",
+                generation_options=GenerationOptions(
+                    writing_style=WritingStyle(
+                        name="Terse", instructions="Write in terse prose."
+                    )
+                ),
+            )
+        )
+
+    prompt = str(creator.client.prompt_history[-1]["prompt"])
+    assert "Write in terse prose." in prompt
+    assert "Write in flowery prose." not in prompt
+
+
+@pytest.mark.asyncio
+async def test_scene_writing_style_applies_without_generation_options(
+    creator, scene_writing_style
+):
+    # regression guard for the one-shot's own writing style section, which
+    # the generation options share a template with
+    scene_writing_style("Write in flowery prose.")
+
+    async with MockClientContext():
+        client_responses.get().append(
+            unified_response(description="Elena is a skilled healer.")
+        )
+        await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=["description"],
+                name="Elena",
+                content="A healer arrives.",
+            )
+        )
+
+    prompt = str(creator.client.prompt_history[-1]["prompt"])
+    assert "Write in flowery prose." in prompt
 
 
 @pytest.mark.asyncio

@@ -114,6 +114,43 @@ class TestTemplateFormatted:
         result = t.formatted("query", scene, "Alice", custom="extra-value")
         assert result == "extra-value"
 
+    def test_literal_braces_fall_back_to_raw_text(self, scene):
+        # user-authored text with braces that aren't placeholders (JSON
+        # examples, unknown fields) must render raw, not raise
+        t = make_state_template(query='Emit JSON like {"mood": "dark"}.')
+        assert (
+            t.formatted("query", scene, "Alice") == 'Emit JSON like {"mood": "dark"}.'
+        )
+
+    def test_unknown_placeholder_falls_back_to_raw_text(self, scene):
+        t = make_state_template(query="Use a {tone} voice for {character_name}.")
+        # one bad field poisons the whole format call - the raw text comes
+        # back, known placeholders included
+        assert (
+            t.formatted("query", scene, "Alice")
+            == "Use a {tone} voice for {character_name}."
+        )
+
+    def test_compound_attribute_field_falls_back_to_raw_text(self, scene):
+        # str.format only raises KeyError when the FIRST field component
+        # misses - {character_name.first} resolves character_name and then
+        # raises AttributeError on the str
+        t = make_state_template(query="Refer to {character_name.first} only.")
+        assert (
+            t.formatted("query", scene, "Alice")
+            == "Refer to {character_name.first} only."
+        )
+
+    def test_compound_index_field_on_none_falls_back_to_raw_text(self, scene):
+        # player_name is None in a scene without a player character - the
+        # same template renders fine in one scene and raised TypeError in
+        # another, by scene state rather than syntax
+        t = make_state_template(query="Use {player_name[0]} as the initial.")
+        assert (
+            t.formatted("query", scene, "Alice")
+            == "Use {player_name[0]} as the initial."
+        )
+
 
 # ---------------------------------------------------------------------------
 # Priority enum + Template.priority field

@@ -9,9 +9,7 @@ Open by clicking the **Creator** agent in the agent list.
 These settings control how AI-assisted character creation generates characters —
 this applies everywhere characters are created with AI assistance: the world
 editor, the scene tools character introduction and character card import.
-(The `Generate Character` node always uses consolidated generation for its
-selected aspects and inherits the **Fill in misses** and **One-shot token
-budget** settings.)
+The `Generate Character` node follows these settings as well.
 
 ##### Fast Character Generation
 

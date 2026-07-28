@@ -15,7 +15,7 @@ Direct rendering tests are NOT included as they don't test real code paths.
 
 Common Template Usage Summary:
 -----------------------------
-All 29 common templates are include-only templates used by various agent templates:
+All 30 common templates are include-only templates used by various agent templates:
 
 1. base.jinja2 - Base template that assembles context (includes many other common templates)
 2. building-blocks.jinja2 - Scene building blocks documentation (1 use)
@@ -31,23 +31,25 @@ All 29 common templates are include-only templates used by various agent templat
 12. gamestate-context.jinja2 - Game state data section (2 uses)
 12a. gamestate-context-path.jinja2 - Targeted game state slice via path
      (rendered by render_game_state Jinja global, 0 direct {% include %} uses)
-13. internal-note-help.jinja2 - Internal note help text (8 uses)
-14. memory-context.jinja2 - Memory/RAG context section (12 uses)
-15. memory-query.jinja2 - Memory query helper (included by templates)
-16. narrative-patterns.jinja2 - Narrative pattern instructions (1 use)
-17. response-length.jinja2 - Response length instructions (7 uses)
-18. scene-context.jinja2 - Scene history section (20 uses)
-19. scene-context-volatile.jinja2 - Scene with volatile context placement (3 uses)
-20. scene-intent-hybrid.jinja2 - Scene intent with technical option (3 uses)
-21. scene-intent-inline.jinja2 - Inline scene intent instructions (10 uses)
-22. scene-intent.jinja2 - Scene intent (non-technical) (19 uses)
-23. scene-intent-technical.jinja2 - Technical scene intent format (1 use)
-24. scene-types.jinja2 - Scene types listing (1 use)
-25. task-information.jinja2 - Task-specific information section (4 uses)
-26. useful-context-ids.jinja2 - Context ID documentation (2 uses)
-27. user-controlled-character.jinja2 - Player character indication (1 use)
-28. world-state-snapshot.jinja2 - Durable world-state snapshot as scene memory (2 uses)
-29. writing-style-instructions.jinja2 - Writing style section (6 uses)
+13. generation-options-instructions.jinja2 - Caller-selected writing style and
+    spice sections, rendered from the `writing_style` / `spice` prompt vars (2 uses)
+14. internal-note-help.jinja2 - Internal note help text (8 uses)
+15. memory-context.jinja2 - Memory/RAG context section (12 uses)
+16. memory-query.jinja2 - Memory query helper (included by templates)
+17. narrative-patterns.jinja2 - Narrative pattern instructions (1 use)
+18. response-length.jinja2 - Response length instructions (7 uses)
+19. scene-context.jinja2 - Scene history section (20 uses)
+20. scene-context-volatile.jinja2 - Scene with volatile context placement (3 uses)
+21. scene-intent-hybrid.jinja2 - Scene intent with technical option (3 uses)
+22. scene-intent-inline.jinja2 - Inline scene intent instructions (10 uses)
+23. scene-intent.jinja2 - Scene intent (non-technical) (19 uses)
+24. scene-intent-technical.jinja2 - Technical scene intent format (1 use)
+25. scene-types.jinja2 - Scene types listing (1 use)
+26. task-information.jinja2 - Task-specific information section (4 uses)
+27. useful-context-ids.jinja2 - Context ID documentation (2 uses)
+28. user-controlled-character.jinja2 - Player character indication (1 use)
+29. world-state-snapshot.jinja2 - Durable world-state snapshot as scene memory (2 uses)
+30. writing-style-instructions.jinja2 - Writing style section (6 uses)
 
 Testing Strategy:
 ----------------
@@ -133,6 +135,7 @@ class TestCommonTemplatesDocumentation:
             "content-classification.jinja2",
             "context_id_items.jinja2",
             "dynamic-instructions.jinja2",
+            "generation-options-instructions.jinja2",
             "extra-context.jinja2",
             "extra-context-dynamic.jinja2",
             "extra-context-static.jinja2",

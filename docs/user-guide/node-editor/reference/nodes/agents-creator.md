@@ -81,8 +81,10 @@ Node module (base type `core/Graph`) defined in `src/talemate/agents/creator/mod
 | `description` | `str` | (optional) |
 | `generate` | `bool` | (optional) |
 | `generate_attributes` | `bool` | (optional) |
-| `generation_options` | `generation_options` | (optional) |
+| `generate_dialogue_instructions` | `bool` | (optional) |
+| `generate_example_dialogue` | `bool` | (optional) |
 | `is_active` | `bool` | (optional) |
+| `generation_options` | `generation_options` | (optional) |
 | `is_player` | `bool` | (optional) |
 | `assign_voice` | `bool` | (optional) |
 
@@ -213,15 +215,18 @@ for the given description, via the creator agent.
 
 `agents/creator/GenerateCharacter`
 
-Generates character data with a single consolidated prompt (the unified
-generation approach from the creator agent's "Character Creation" Fast
-Character Generation mode).
+Generates character data through the creator agent's character
+generation pipeline, following the agent's "Character Creation"
+settings.
 
-All aspects selected via the node's properties are generated in one go.
-Aspects the consolidated response misses are handled according to the
-creator agent's "Fill in misses" setting (individual follow-up requests
-or left empty); the response budget comes from the agent's "One-shot
-token budget" setting. A completely unparseable response raises an error.
+With "Fast Character Generation" enabled, the aspects listed in the
+agent's "Consolidate" setting are generated with a single
+consolidated prompt (response budget from the "One-shot token budget"
+setting; aspects the response misses are handled according to the
+"Fill in misses" setting - individual follow-up requests or left
+empty; a completely unparseable response raises an error). Remaining
+aspects - or all of them, with Fast mode disabled - are generated
+individually.
 
 This node only generates data - it does not add the character to the
 scene. Wire the outputs into an `agents/director/PersistCharacter` node
@@ -240,6 +245,12 @@ or enable `generate_name` - the node errors otherwise.
 | `character_name` | `str` | The current or descriptive character name (optional) |
 | `instructions` | `str` | Guiding instructions / content for the creation (optional) |
 | `description` | `str` | An existing description to use as context (optional) |
+| `generation_options` | `generation_options` | Spice / writing style to shape the description (optional) |
+| `generate_name` | `bool` | Whether to generate a name (optional) |
+| `generate_description` | `bool` | Whether to generate a description (optional) |
+| `generate_attributes` | `bool` | Whether to generate attributes (optional) |
+| `generate_dialogue_instructions` | `bool` | Whether to generate dialogue instructions (optional) |
+| `generate_example_dialogue` | `bool` | Whether to generate example dialogue lines (optional) |
 
 **Outputs**
 
@@ -247,7 +258,7 @@ or enable `generate_name` - the node errors otherwise.
 | --- | --- | --- |
 | `state` | `any` | The state input, passed through |
 | `character_name` | `str` | The determined (or input) character name |
-| `description` | `str` | The generated description (empty if not generated) |
+| `description` | `str` | The generated (or input) description |
 | `attributes` | `dict` | The generated attributes (empty if not generated) |
 | `dialogue_instructions` | `str` | The generated dialogue instructions (empty if not generated) |
 | `example_dialogue` | `list` | The generated example dialogue lines (empty if not generated) |

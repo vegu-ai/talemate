@@ -249,9 +249,11 @@ Provides a required `state` input causing the node to only run when a state is p
 
 `agents/ToggleAgentAction`
 
-Allows disabling or enabling an agent action
+Allows disabling or enabling an agent action that can be disabled
 
-Raises an error if the agent or the action cannot be found.
+Raises an error if the agent or the action cannot be found, or if the
+action is one that cannot be disabled — those are always enabled and
+are not togglable from a graph.
 
 **Inputs**
 
@@ -269,7 +271,7 @@ Raises an error if the agent or the action cannot be found.
 | `state` | `any` | The state input, passed through |
 | `agent` | `agent` | The resolved agent instance |
 | `action_name` | `str` | The action name, passed through |
-| `enabled` | `bool` | The enabled state that was set |
+| `enabled` | `bool` | The action's effective enabled state after the write — when a scene override is active it takes the write, so this reflects the override rather than the agent's global setting |
 
 **Properties**
 

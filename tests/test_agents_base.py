@@ -62,6 +62,7 @@ class _ToggleableAgent(Agent):
             "main": AgentAction(
                 enabled=True,
                 label="Main",
+                can_be_disabled=True,
                 config={
                     "field": AgentActionConfig(
                         type="text", label="field", value="orig"
@@ -190,6 +191,33 @@ class TestAgentActionEnabledSceneOverridable:
         # Guards against a vacuous pass if init_actions ever stops returning
         # the shipped set.
         assert len(toggleable) >= 20
+
+
+# ---------------------------------------------------------------------------
+# AgentAction.enabled vs can_be_disabled
+# ---------------------------------------------------------------------------
+
+
+class TestAgentActionDisabledRequiresCanBeDisabled:
+    """`enabled=False` without `can_be_disabled` is unreachable by construction.
+
+    `resolve_enabled` reports such an action on regardless, so the declaration
+    would disagree with the resolver — and with the direct `.enabled` readers
+    (`save_config`, the help agent's action payload).
+    """
+
+    def test_declaring_disabled_without_can_be_disabled_raises(self):
+        with pytest.raises(ValueError, match="enabled=False requires"):
+            AgentAction(label="Unreachable", enabled=False)
+
+    def test_disabled_is_allowed_when_disableable(self):
+        action = AgentAction(label="Opt In", enabled=False, can_be_disabled=True)
+        assert action.enabled is False
+
+    def test_enabled_and_non_disableable_is_the_normal_case(self):
+        action = AgentAction(label="Always on")
+        assert action.enabled is True
+        assert action.can_be_disabled is False
 
 
 # ---------------------------------------------------------------------------
@@ -464,6 +492,110 @@ class TestApplyConfig:
         original = a.actions["main"].config["field"].value
         await a.apply_config()
         assert a.actions["main"].config["field"].value == original
+
+
+class TestApplyConfigEnabledValidation:
+    """`enabled` loaded from config.yaml is validated against the declaration.
+
+    Regression coverage for issue #174: a saved `enabled: false` disabled an
+    action declared `can_be_disabled=False`, which the UI exposes no control
+    to turn back on. The value got there because an action missing from the
+    saved config was disabled outright and then persisted by `save_config`.
+    """
+
+    def _agent(self) -> _MinimalAgent:
+        return _MinimalAgent(
+            actions={
+                "locked": AgentAction(
+                    enabled=True,
+                    label="Locked",
+                    container=True,
+                    can_be_disabled=False,
+                    config={
+                        "field": AgentActionConfig(
+                            type="number", label="field", value=1
+                        )
+                    },
+                ),
+                "toggleable": AgentAction(
+                    enabled=True,
+                    label="Toggleable",
+                    can_be_disabled=True,
+                ),
+            }
+        )
+
+    @pytest.mark.asyncio
+    async def test_stale_disabled_flag_is_discarded_when_not_disableable(self):
+        a = self._agent()
+        await a.apply_config(
+            actions={
+                "locked": {"enabled": False, "config": {"field": {"value": 5}}},
+                "toggleable": {"enabled": True},
+            }
+        )
+        assert a.actions["locked"].enabled is True
+        # The rest of the saved action is still applied.
+        assert a.actions["locked"].config["field"].value == 5
+
+    @pytest.mark.asyncio
+    async def test_saved_disabled_flag_is_honored_when_disableable(self):
+        a = self._agent()
+        await a.apply_config(
+            actions={
+                "locked": {"enabled": True},
+                "toggleable": {"enabled": False},
+            }
+        )
+        assert a.actions["toggleable"].enabled is False
+
+    @pytest.mark.asyncio
+    async def test_action_absent_from_saved_config_keeps_declared_default(self):
+        """A config predating the action must not silently disable it."""
+        a = self._agent()
+        await a.apply_config(actions={"unrelated": {"enabled": True}})
+        assert a.actions["locked"].enabled is True
+        assert a.actions["toggleable"].enabled is True
+
+    @pytest.mark.asyncio
+    async def test_declared_disabled_action_stays_disabled_when_absent(self):
+        """The absent-key fallback is the declaration, not an unconditional True."""
+        a = _MinimalAgent(
+            actions={
+                "opt_in": AgentAction(
+                    enabled=False, label="Opt In", can_be_disabled=True
+                ),
+            }
+        )
+        await a.apply_config(actions={"unrelated": {"enabled": True}})
+        assert a.actions["opt_in"].enabled is False
+
+    def test_no_shipped_action_declares_disabled_and_non_disableable(self):
+        """Cheap sweep of the shipped declarations.
+
+        `AgentAction` rejects this combination at construction, so this is a
+        belt-and-braces check that every shipped agent's `init_actions()`
+        actually builds — it is not the primary guard.
+
+        Forcing `enabled=True` for every non-disableable action is only
+        correct while no shipped action declares the contradictory
+        combination of `enabled=False` and `can_be_disabled=False` — such an
+        action would be permanently off with no way to reach it.
+        """
+        offenders = []
+        non_disableable = []
+        for agent_type, agent_cls in agents_module.AGENT_CLASSES.items():
+            for action_key, action in agent_cls.init_actions().items():
+                if action.can_be_disabled:
+                    continue
+                non_disableable.append(f"{agent_type}.{action_key}")
+                if not action.enabled:
+                    offenders.append(f"{agent_type}.{action_key}")
+
+        assert not offenders
+        # Guards against a vacuous pass if init_actions ever stops returning
+        # the shipped set.
+        assert len(non_disableable) >= 20
 
 
 # ---------------------------------------------------------------------------

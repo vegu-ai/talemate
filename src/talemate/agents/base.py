@@ -120,6 +120,22 @@ class AgentAction(pydantic.BaseModel):
     enabled_scene_overridable: bool | None = None
 
     @pydantic.model_validator(mode="after")
+    def _disabled_requires_can_be_disabled(self):
+        # An action nothing can turn on that ships turned off is unreachable:
+        # the global UI renders no Enable checkbox without can_be_disabled,
+        # and `resolve_enabled` reports it on regardless. Rejecting the
+        # combination at construction keeps the declaration and the resolver
+        # from disagreeing — including for dynamically synthesized children,
+        # which the shipped-action sweep in the tests cannot see.
+        if not self.enabled and not self.can_be_disabled:
+            raise ValueError(
+                f"AgentAction {self.label!r}: enabled=False requires "
+                "can_be_disabled=True — an action that cannot be disabled "
+                "always resolves as enabled"
+            )
+        return self
+
+    @pydantic.model_validator(mode="after")
     def _enabled_scene_overridable_requires_can_be_disabled(self):
         # An enable-flag override only makes sense when the global enable
         # flag is itself togglable. Without can_be_disabled the global UI
@@ -878,10 +894,18 @@ class Agent(ABC):
 
     def resolve_enabled(self, action_key: str) -> bool:
         """Return the effective enabled flag for a container action."""
+        action = self.actions[action_key]
+
+        # The declaration wins: an action without can_be_disabled has no
+        # Enable control anywhere in the UI, so an override that turns it off
+        # (hand-edited or written by an older version) could never be undone.
+        if not action.can_be_disabled:
+            return True
+
         return bool(
             self._resolve(
                 lambda o: o.get_enabled(self.agent_type, action_key),
-                lambda: self.actions[action_key].enabled,
+                lambda: action.enabled,
             )
         )
 
@@ -913,6 +937,18 @@ class Agent(ABC):
 
         Note: this updates an *existing* override; it does not create a new one.
         """
+        # Same rule as resolve_enabled / apply_config: the declaration wins.
+        # Writing the flag here would otherwise persist a value the resolver
+        # ignores, leaving the stored config disagreeing with what runs.
+        if not self.actions[action_key].can_be_disabled:
+            log.warning(
+                "write_enabled refused: action cannot be disabled",
+                agent=self.agent_type,
+                action=action_key,
+                requested=enabled,
+            )
+            return
+
         self._route_write(
             lambda o: o.get_enabled(self.agent_type, action_key) is not UNSET,
             lambda o: o.set_enabled(self.agent_type, action_key, enabled),
@@ -949,9 +985,20 @@ class Agent(ABC):
             if not kwargs.get("actions"):
                 continue
 
-            action.enabled = (
-                kwargs.get("actions", {}).get(action_key, {}).get("enabled", False)
-            )
+            if not action.can_be_disabled:
+                # See resolve_enabled: nothing in the UI can turn these back
+                # on, so a saved `enabled: false` (written by an older version
+                # or hand-edited) is discarded rather than honored.
+                action.enabled = True
+            else:
+                # Falling back to the action's current value rather than False
+                # keeps an action the saved config predates in the state it
+                # ships with, instead of silently disabling it on first load.
+                action.enabled = (
+                    kwargs.get("actions", {})
+                    .get(action_key, {})
+                    .get("enabled", action.enabled)
+                )
 
             if not action.config:
                 continue

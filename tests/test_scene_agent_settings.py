@@ -63,6 +63,12 @@ class _ResolverAgent(Agent):
                     ),
                 },
             ),
+            "locked": AgentAction(
+                enabled=True,
+                label="Locked",
+                container=True,
+                can_be_disabled=False,
+            ),
         }
         self.scene = scene
         self.processing = 0
@@ -291,6 +297,50 @@ class TestAgentResolveEnabled:
         overrides.clear_enabled("resolver-test", "container")
         agent = _ResolverAgent(scene=_scene_with_overrides(overrides))
         assert agent.resolve_enabled("container") is True
+
+    def test_override_cannot_disable_a_non_disableable_action(self, tmp_path: Path):
+        """A hand-edited or legacy scene file must not turn off an action the
+        UI offers no Enable control for — it could never be undone."""
+        overrides = SceneAgentSettings(filepath=tmp_path / "x.json")
+        overrides.set_enabled("resolver-test", "locked", False)
+        agent = _ResolverAgent(scene=_scene_with_overrides(overrides))
+        assert agent.resolve_enabled("locked") is True
+
+
+class TestAgentWriteEnabled:
+    """`write_enabled` obeys the same declaration-wins rule as the resolver, so
+    a write can't persist a value `resolve_enabled` would then ignore."""
+
+    def test_writes_global_flag_when_disableable(self):
+        agent = _ResolverAgent(scene=None)
+        agent.write_enabled("container", False)
+        assert agent.actions["container"].enabled is False
+        assert agent.resolve_enabled("container") is False
+
+    def test_writes_active_override_when_disableable(self, tmp_path: Path):
+        overrides = SceneAgentSettings(filepath=tmp_path / "x.json")
+        overrides.set_enabled("resolver-test", "container", True)
+        agent = _ResolverAgent(scene=_scene_with_overrides(overrides))
+        agent.write_enabled("container", False)
+        assert overrides.get_enabled("resolver-test", "container") is False
+        # the global flag is left alone when an override took the write
+        assert agent.actions["container"].enabled is True
+
+    def test_refuses_to_disable_a_non_disableable_action(self):
+        agent = _ResolverAgent(scene=None)
+        agent.write_enabled("locked", False)
+        assert agent.actions["locked"].enabled is True
+        assert agent.resolve_enabled("locked") is True
+
+    def test_refuses_to_write_a_non_disableable_action_to_an_override(
+        self, tmp_path: Path
+    ):
+        overrides = SceneAgentSettings(filepath=tmp_path / "x.json")
+        overrides.set_enabled("resolver-test", "locked", True)
+        agent = _ResolverAgent(scene=_scene_with_overrides(overrides))
+        agent.write_enabled("locked", False)
+        assert overrides.get_enabled("resolver-test", "locked") is True
+        assert agent.resolve_enabled("locked") is True
 
 
 # ---------------------------------------------------------------------------

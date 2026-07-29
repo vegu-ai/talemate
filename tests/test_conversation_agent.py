@@ -124,15 +124,17 @@ class TestActionRegistration:
         _, conversation, _ = conversation_scene
         assert conversation.conversation_format == "movie_script"
 
-    def test_format_returns_movie_script_when_override_disabled(
-        self, conversation_scene
-    ):
+    def test_format_ignores_a_disabled_flag_on_the_override(self, conversation_scene):
+        # `generation_override` is declared can_be_disabled=False, so nothing
+        # in the UI can switch it off and `resolve_enabled` reports it on
+        # regardless of a stored flag (issue #174). The configured format
+        # therefore still applies — the movie_script fallback in
+        # `conversation_format` is unreachable for a healthy config.
         _, conversation, _ = conversation_scene
-        # Override config value first, then disable. Should fall back to
-        # the movie_script default.
+        assert conversation.actions["generation_override"].can_be_disabled is False
         conversation.actions["generation_override"].config["format"].value = "chat"
         conversation.actions["generation_override"].enabled = False
-        assert conversation.conversation_format == "movie_script"
+        assert conversation.conversation_format == "chat"
 
     def test_format_returns_value_when_override_enabled(self, conversation_scene):
         _, conversation, _ = conversation_scene

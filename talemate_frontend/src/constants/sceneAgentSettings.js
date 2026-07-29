@@ -111,6 +111,9 @@ export function configOverrideActive(overlay, actionKey, configKey) {
  * active, the agent's global flag otherwise. Mirrors `Agent.resolve_enabled`.
  */
 export function effectiveActionEnabled(actions, overlay, actionKey) {
+  // An action without can_be_disabled has no enable control anywhere, so the
+  // declaration wins over any stored flag — matches Agent.resolve_enabled.
+  if (actions?.[actionKey] && !actions[actionKey].can_be_disabled) return true;
   if (enabledOverrideActive(overlay, actionKey)) {
     return !!overlay.actions[actionKey].enabled;
   }

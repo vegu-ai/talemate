@@ -152,9 +152,11 @@ class AgentSettingsNode(Node):
 @register("agents/ToggleAgentAction")
 class ToggleAgentAction(Node):
     """
-    Allows disabling or enabling an agent action
+    Allows disabling or enabling an agent action that can be disabled
 
-    Raises an error if the agent or the action cannot be found.
+    Raises an error if the agent or the action cannot be found, or if the
+    action is one that cannot be disabled — those are always enabled and
+    are not togglable from a graph.
 
     Inputs:
 
@@ -168,7 +170,9 @@ class ToggleAgentAction(Node):
     - state: The state input, passed through
     - agent: The resolved agent instance
     - action_name: The action name, passed through
-    - enabled: The enabled state that was set
+    - enabled: The action's effective enabled state after the write — when a
+      scene override is active it takes the write, so this reflects the
+      override rather than the agent's global setting
     """
 
     class Fields:
@@ -229,7 +233,18 @@ class ToggleAgentAction(Node):
             raise InputValueError(
                 self,
                 "action_name",
-                f"Could not find action {action_name} in agent {agent}",
+                f"Could not find action {action_name} in agent {agent.agent_type}",
+            )
+
+        if not action.can_be_disabled:
+            # The write would be refused, so say so rather than pass the graph
+            # through as if the action had been toggled. Matches how this node
+            # already reports an unknown agent or action.
+            raise InputValueError(
+                self,
+                "action_name",
+                f"Action {action_name} on agent {agent.agent_type} is always "
+                "enabled and cannot be toggled",
             )
 
         agent.write_enabled(action_name, enabled)
@@ -239,7 +254,10 @@ class ToggleAgentAction(Node):
                 "state": self.get_input_value("state"),
                 "agent": agent,
                 "action_name": action_name,
-                "enabled": enabled,
+                # Read back through the resolver rather than echoing the input:
+                # when a scene override is active it takes the write, so this
+                # reflects the override rather than the agent's global setting.
+                "enabled": agent.resolve_enabled(action_name),
             }
         )
 

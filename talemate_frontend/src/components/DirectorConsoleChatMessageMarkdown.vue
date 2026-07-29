@@ -96,8 +96,109 @@ export default {
 
 <style scoped>
 
-.markdown-body > :deep(p:not(:first-child)) {
-    margin-top: 10px;
+/* Vuetify's reset zeroes padding and margin on every element, so all block
+   spacing below has to be restated - including the list padding the markers
+   live in. */
+
+.markdown-body :deep(p),
+.markdown-body :deep(ul),
+.markdown-body :deep(ol),
+.markdown-body :deep(pre),
+.markdown-body :deep(blockquote),
+.markdown-body :deep(table) {
+    margin-bottom: 12px;
+}
+
+.markdown-body :deep(p),
+.markdown-body :deep(li) {
+    line-height: 1.6;
+}
+
+/* Headings */
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3),
+.markdown-body :deep(h4),
+.markdown-body :deep(h5),
+.markdown-body :deep(h6) {
+    color: rgba(var(--v-theme-mutedheader), 1);
+    font-weight: 600;
+    line-height: 1.35;
+    margin: 22px 0 8px 0;
+}
+
+.markdown-body :deep(h1) {
+    font-size: 1.2em;
+}
+
+.markdown-body :deep(h2) {
+    font-size: 1.12em;
+}
+
+.markdown-body :deep(h3) {
+    font-size: 1.05em;
+}
+
+/* browser defaults put h5/h6 below body size, which inverts the hierarchy */
+.markdown-body :deep(h4),
+.markdown-body :deep(h5),
+.markdown-body :deep(h6) {
+    font-size: 1em;
+}
+
+/* Lists */
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+    padding-left: 24px;
+}
+
+.markdown-body :deep(li) {
+    margin-bottom: 6px;
+}
+
+.markdown-body :deep(li:last-child) {
+    margin-bottom: 0;
+}
+
+.markdown-body :deep(li > ul),
+.markdown-body :deep(li > ol) {
+    margin-top: 6px;
+    margin-bottom: 0;
+}
+
+.markdown-body :deep(li > p) {
+    margin-bottom: 6px;
+}
+
+.markdown-body :deep(li > *:last-child) {
+    margin-bottom: 0;
+}
+
+/* Quotes and rules */
+.markdown-body :deep(blockquote) {
+    border-left: 3px solid rgba(var(--v-theme-muted), 0.5);
+    padding-left: 12px;
+    color: rgba(var(--v-theme-muted), 1);
+}
+
+.markdown-body :deep(blockquote > *:last-child) {
+    margin-bottom: 0;
+}
+
+.markdown-body :deep(hr) {
+    border: none;
+    border-top: 1px solid rgba(var(--v-border-color), 0.3);
+    margin: 20px 0;
+}
+
+/* The message bubble supplies its own padding, so the outermost blocks of a
+   message must not add to it. */
+.markdown-body > :deep(*:first-child) {
+    margin-top: 0;
+}
+
+.markdown-body > :deep(*:last-child) {
+    margin-bottom: 0;
 }
 
 /* Inline code styling */
@@ -121,7 +222,6 @@ export default {
     word-break: break-word;
     overflow-wrap: anywhere;
     border-radius: 6px;
-    margin: 8px 0 10px 0;
 }
 
 .markdown-body :deep(pre code) {
@@ -147,7 +247,6 @@ export default {
 /* Table styling */
 .markdown-body :deep(table) {
     border-collapse: collapse;
-    margin: 10px 0;
     width: 100%;
 }
 

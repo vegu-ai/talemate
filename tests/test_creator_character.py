@@ -558,6 +558,26 @@ async def test_generate_character_unified_example_drops_bare_name_lines(creator)
 
 
 @pytest.mark.asyncio
+async def test_generate_character_unified_example_replaces_smart_quotes(creator):
+    async with MockClientContext():
+        client_responses.get().append(
+            unified_response(
+                name="Elena",
+                example_dialogue="Elena: “Hello.” She smiles.",
+            )
+        )
+        result = await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=["name", "example_dialogue"],
+                name="the tall woman",
+                content="A healer arrives.",
+            )
+        )
+
+    assert result.example_dialogue == ['Elena: "Hello." She smiles.']
+
+
+@pytest.mark.asyncio
 async def test_generate_character_unified_example_speaker_heuristics(creator):
     # multi-word name-shaped prefixes (another character's line) are dropped -
     # including non-ASCII names; single-word prefixes are kept - they are

@@ -502,6 +502,29 @@ class TestPersistCharacterExampleDialogue:
         assert prompt_kinds(scene.mock_client) == [KIND_DIALOGUE_INSTRUCTIONS]
         assert not character.example_dialogue
 
+    @pytest.mark.asyncio
+    async def test_supplied_examples_are_smart_quote_normalized(self, scene, director):
+        # pre-supplied examples (node graph literals, ws payload) skip the
+        # generation step entirely, so this is the only place they are cleaned
+        async with MockClientContext():
+            client_responses.get().append("speaks softly")
+            character = await director.persist_character(
+                PersistCharacterRequest(
+                    name="Isolde",
+                    content="A travelling scribe",
+                    determine_name=False,
+                    generate_attributes=False,
+                    description="Already described.",
+                    narrate_entry=False,
+                    example_dialogue=["Isolde: “Ink and patience.” She nods."],
+                )
+            )
+
+        assert character is not None
+        # no example dialogue prompt ran - the supplied list was used as-is
+        assert prompt_kinds(scene.mock_client) == [KIND_DIALOGUE_INSTRUCTIONS]
+        assert character.example_dialogue == ['Isolde: "Ink and patience." She nods.']
+
     def test_payload_fields_match_persist_character_signature(self):
         """Every field the websocket payload exposes must be a
         PersistCharacterRequest field — guards backend/frontend parity when

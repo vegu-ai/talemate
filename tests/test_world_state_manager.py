@@ -287,6 +287,18 @@ class TestUpdateCharacterScalars:
             "Alice: goodbye",
         ]
 
+    @pytest.mark.asyncio
+    async def test_update_character_actor_replaces_smart_quotes(self, scene, manager):
+        ch = make_actor(scene, "Alice")
+        await manager.update_character_actor(
+            "Alice",
+            example_dialogue=["Alice: “hi”", "“hello!” ‘really’"],
+        )
+        assert ch.example_dialogue == [
+            'Alice: "hi"',
+            "Alice: \"hello!\" 'really'",
+        ]
+
 
 # ---------------------------------------------------------------------------
 # rename_character_folder

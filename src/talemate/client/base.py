@@ -1984,12 +1984,7 @@ class ClientBase:
             self.end_request()
 
             if REPLACE_SMART_QUOTES:
-                response = (
-                    response.replace("“", '"')
-                    .replace("”", '"')
-                    .replace("‘", "'")
-                    .replace("’", "'")
-                )
+                response = util.replace_smart_quotes(response)
 
             time_end = time.time()
 

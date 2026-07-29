@@ -24,6 +24,7 @@ from talemate.game import focal
 from talemate.prompts import Prompt
 from talemate.prompts.response import ResponseSpec, StrictAnchorExtractor
 from talemate.util.data import parse_attribute_lines
+from talemate.util.strings import replace_smart_quotes
 from talemate.ux.schema import Condition
 from talemate.world_state.templates.content import GenerationOptions
 
@@ -263,13 +264,14 @@ def _normalize_example_dialogue_lines(
     - lines with an unrecognized name-shaped speaker prefix (another
       character's line) are dropped
     - anything else is prefixed with the final name
+    - typographic quotes are replaced with their ascii equivalents
     """
     known_prefixes = {
         p.lower() for p in [example_name, *(other_known_names or [])] if p and p.strip()
     }
     normalized = []
     for line in lines:
-        line = line.strip()
+        line = replace_smart_quotes(line).strip()
         if not line:
             continue
         speaker, colon, rest = line.partition(":")

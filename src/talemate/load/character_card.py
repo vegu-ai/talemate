@@ -17,7 +17,12 @@ from talemate.exceptions import GenerationCancelled, LLMAccuracyError, UnknownDa
 from talemate.files import identify_character_card_spec
 from talemate.status import LoadingStatus
 from talemate.config import get_config
-from talemate.util import extract_metadata, select_best_texts_by_keyword, count_tokens
+from talemate.util import (
+    extract_metadata,
+    select_best_texts_by_keyword,
+    count_tokens,
+    replace_smart_quotes,
+)
 from talemate.util.colors import unique_random_colors
 from talemate.agents.base import DynamicInstruction
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
@@ -1790,8 +1795,10 @@ def character_from_chara_data(data: dict) -> Character:
     if "color" in data:
         character.color = data["color"]
     if "mes_example" in data:
-        new_line_match = "\r\n" if "\r\n" in data["mes_example"] else "\n"
-        for message in data["mes_example"].split("<START>"):
+        # cards are hand-written; typographic quotes are common in them
+        mes_example = replace_smart_quotes(data["mes_example"])
+        new_line_match = "\r\n" if "\r\n" in mes_example else "\n"
+        for message in mes_example.split("<START>"):
             if message.strip(new_line_match):
                 character.example_dialogue.extend(
                     [m for m in message.split(new_line_match) if m]

@@ -676,6 +676,16 @@ class TestCharacterFromCharaData:
         c = character_from_chara_data(data)
         assert "Bob: Hi!" in c.example_dialogue
 
+    def test_mes_example_replaces_smart_quotes(self):
+        data = {
+            "name": "Alice",
+            "mes_example": "<START>\nAlice: “Hi there.” She waves. ‘Really.’\n",
+        }
+        c = character_from_chara_data(data)
+        assert c.example_dialogue == [
+            "Alice: \"Hi there.\" She waves. 'Really.'",
+        ]
+
     def test_gender_field_persists_to_base_attributes(self):
         # 'gender' on Character is a read-only @property backed by
         # base_attributes; the loader writes to base_attributes so the

@@ -117,7 +117,7 @@ By default, importing a character card runs several AI generation steps that enr
 
 - **Generate Dialogue Instructions**: AI generates acting instructions that guide how the character speaks and behaves.
 
-- **Generate Example Dialogue**: AI generates example dialogue for the character. When disabled, the card's original example dialogue is imported verbatim.
+- **Generate Example Dialogue**: AI generates example dialogue for the character. When disabled, the card's original example dialogue is imported as-is, with typographic quotes converted to straight quotes.
 
 - **Generate Story Intent**: AI generates the overall story intent for the scene. When the Director's auto-direct is enabled, this also covers scene type generation and scene intent setup.
 
@@ -180,7 +180,7 @@ Import an existing player character from another Talemate scene.
 
 - Character attributes (determined by AI analysis, if enabled)
 
-- Dialogue examples (generated from character card data, or imported verbatim if generation is disabled)
+- Dialogue examples (generated from character card data, or imported as-is if generation is disabled, with typographic quotes converted to straight quotes)
 
 - Character color (automatically assigned unique colors)
 

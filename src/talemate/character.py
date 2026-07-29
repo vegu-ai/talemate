@@ -352,7 +352,7 @@ class Character(pydantic.BaseModel):
         """
         Append a new example dialogue line.
         """
-        text = (example or "").strip()
+        text = util.replace_smart_quotes(example or "").strip()
         if not text:
             return
         self.example_dialogue.append(text)
@@ -363,7 +363,7 @@ class Character(pydantic.BaseModel):
         """
         if index < 0 or index >= len(self.example_dialogue):
             return
-        value = (text or "").strip()
+        value = util.replace_smart_quotes(text or "").strip()
         if not value:
             # empty string behaves like delete
             await self.remove_example_dialogue(index)

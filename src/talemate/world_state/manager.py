@@ -17,6 +17,7 @@ from talemate.character import (
 )
 from talemate.instance import get_agent
 from talemate.emit import emit
+from talemate.util import replace_smart_quotes
 from talemate.world_state import (
     ContextPin,
     ManualContext,
@@ -502,8 +503,10 @@ class WorldStateManager:
 
         if example_dialogue:
             for idx, example in enumerate(example_dialogue):
+                example = replace_smart_quotes(example)
                 if not example.startswith(f"{character_name}:"):
-                    example_dialogue[idx] = f"{character_name}: {example}"
+                    example = f"{character_name}: {example}"
+                example_dialogue[idx] = example
 
         character.example_dialogue = example_dialogue
 

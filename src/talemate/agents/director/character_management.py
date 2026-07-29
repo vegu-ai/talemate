@@ -5,7 +5,12 @@ import structlog
 import talemate.instance as instance
 import talemate.agents.tts.voice_library as voice_library
 from talemate.agents.tts.schema import Voice
-from talemate.util import random_color, chunk_items_by_tokens, remove_substring_names
+from talemate.util import (
+    random_color,
+    chunk_items_by_tokens,
+    remove_substring_names,
+    replace_smart_quotes,
+)
 from talemate.util.data import trim_attributes
 from talemate.character import Character, set_voice, activate_character
 from talemate.status import LoadingStatus
@@ -638,6 +643,12 @@ class CharacterManagementMixin:
                 )
 
             if example_dialogue:
+                # generated examples arrive already normalized from the
+                # creator; pre-supplied ones (node graph literals, ws payload)
+                # skip generation, so this is where they get cleaned
+                example_dialogue = [
+                    replace_smart_quotes(example) for example in example_dialogue
+                ]
                 character.example_dialogue = example_dialogue
                 log.debug("persist_character", example_dialogue=example_dialogue)
 

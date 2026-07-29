@@ -11,7 +11,6 @@ not exercised by `tests/test_world_state_templates.py`:
 """
 
 import os
-import shutil
 
 import pytest
 import yaml
@@ -26,18 +25,6 @@ from talemate.world_state.templates.base import (
     name_to_id,
 )
 from talemate.world_state.templates.state_reinforcement import StateReinforcement
-
-
-TEMPLATE_TEST_PATH = os.path.join(os.path.dirname(__file__), "data", "templates_base")
-
-
-@pytest.fixture(autouse=True)
-def clean_template_dir():
-    if os.path.exists(TEMPLATE_TEST_PATH):
-        shutil.rmtree(TEMPLATE_TEST_PATH)
-    os.makedirs(TEMPLATE_TEST_PATH, exist_ok=True)
-    yield
-    shutil.rmtree(TEMPLATE_TEST_PATH)
 
 
 def make_state_template(**overrides) -> StateReinforcement:
@@ -222,16 +209,16 @@ class TestSanitizeData:
             yaml.dump(data, f)
         return path
 
-    def test_loads_with_missing_uid_assigns_one(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_with_missing_uid_assigns_one(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path, {"author": "a", "name": "n", "description": "d", "templates": {}}
         )
         g = Group.load(path)
         assert g.uid  # assigned a new uuid
 
-    def test_loads_with_missing_name_assigns_uid_prefix(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_with_missing_name_assigns_uid_prefix(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -245,8 +232,8 @@ class TestSanitizeData:
         g = Group.load(path)
         assert g.name == "abcdefgh"
 
-    def test_loads_with_null_description_and_author(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_with_null_description_and_author(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -260,8 +247,8 @@ class TestSanitizeData:
         assert g.description == ""
         assert g.author == ""
 
-    def test_loads_drops_null_template(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_drops_null_template(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -275,8 +262,8 @@ class TestSanitizeData:
         g = Group.load(path)
         assert g.templates == {}
 
-    def test_loads_assigns_template_uid_from_key(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_assigns_template_uid_from_key(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -300,8 +287,8 @@ class TestSanitizeData:
         # template.group should match the group's uid
         assert g.templates["key1"].group == "g-uid"
 
-    def test_loads_assigns_template_name_from_key(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_assigns_template_name_from_key(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -322,11 +309,11 @@ class TestSanitizeData:
         # name was missing -> set to first 8 chars of template_id
         assert g.templates["abcdefghijkl"].name == "abcdefgh"
 
-    def test_loads_drops_template_with_missing_template_type(self):
+    def test_loads_drops_template_with_missing_template_type(self, template_dir):
         # A template with no `template_type` field should be dropped (the
         # missing-type branch deletes and `continue`s, so it doesn't fall
         # into the invalid-type branch and double-delete).
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -346,8 +333,8 @@ class TestSanitizeData:
         g = Group.load(path)
         assert "tid1" not in g.templates
 
-    def test_loads_drops_template_with_invalid_template_type(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_drops_template_with_invalid_template_type(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -367,8 +354,8 @@ class TestSanitizeData:
         g = Group.load(path)
         assert "tid1" not in g.templates
 
-    def test_loads_with_non_int_priority_falls_back_to_one(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_with_non_int_priority_falls_back_to_one(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {

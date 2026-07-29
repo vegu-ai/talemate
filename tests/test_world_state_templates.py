@@ -1,11 +1,11 @@
 """
 Integration tests for world state template Group and Collection file operations.
 
-Tests actual YAML file creation, loading, updating, and deletion under tests/data/templates/.
+Tests actual YAML file creation, loading, updating, and deletion in a per-test
+temporary template directory.
 """
 
 import os
-import shutil
 
 import pytest
 import yaml
@@ -16,18 +16,6 @@ from talemate.world_state.templates.base import (
     Group,
 )
 from talemate.world_state.templates.state_reinforcement import StateReinforcement
-
-TEMPLATE_TEST_PATH = os.path.join(os.path.dirname(__file__), "data", "templates")
-
-
-@pytest.fixture(autouse=True)
-def clean_template_dir():
-    """Ensure a clean template directory before and after each test."""
-    if os.path.exists(TEMPLATE_TEST_PATH):
-        shutil.rmtree(TEMPLATE_TEST_PATH)
-    os.makedirs(TEMPLATE_TEST_PATH, exist_ok=True)
-    yield
-    shutil.rmtree(TEMPLATE_TEST_PATH)
 
 
 def make_template(**overrides) -> dict:
@@ -59,35 +47,35 @@ def make_group(name="Test Group", templates=None, **overrides) -> Group:
 
 
 class TestGroupSaveAndLoad:
-    def test_save_creates_yaml_file(self):
+    def test_save_creates_yaml_file(self, template_dir):
         group = make_group()
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
         assert group.path is not None
         assert os.path.exists(group.path)
         assert group.path.endswith(".yaml")
 
-    def test_save_sets_path_on_group(self):
+    def test_save_sets_path_on_group(self, template_dir):
         group = make_group()
         assert group.path is None
 
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
-        expected = os.path.join(TEMPLATE_TEST_PATH, "test-group.yaml")
+        expected = os.path.join(template_dir, "test-group.yaml")
         assert group.path == expected
 
-    def test_save_does_not_overwrite_existing_path(self):
+    def test_save_does_not_overwrite_existing_path(self, template_dir):
         group = make_group()
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
         original_path = group.path
 
         # Saving again should reuse the same path
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
         assert group.path == original_path
 
-    def test_saved_yaml_contains_group_data(self):
+    def test_saved_yaml_contains_group_data(self, template_dir):
         group = make_group(name="My Group", author="Alice", description="desc")
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
         with open(group.path, "r") as f:
             data = yaml.safe_load(f)
@@ -98,10 +86,10 @@ class TestGroupSaveAndLoad:
         assert data["uid"] == group.uid
         assert "path" not in data  # path should be excluded from YAML
 
-    def test_saved_yaml_contains_templates(self):
+    def test_saved_yaml_contains_templates(self, template_dir):
         tmpl = StateReinforcement(**make_template(name="Mood Check"))
         group = make_group(templates=[tmpl])
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
         with open(group.path, "r") as f:
             data = yaml.safe_load(f)
@@ -110,10 +98,10 @@ class TestGroupSaveAndLoad:
         assert data["templates"][tmpl.uid]["name"] == "Mood Check"
         assert data["templates"][tmpl.uid]["query"] == "What is the character's mood?"
 
-    def test_load_roundtrip(self):
+    def test_load_roundtrip(self, template_dir):
         tmpl = StateReinforcement(**make_template(name="Roundtrip"))
         group = make_group(name="Roundtrip Group", templates=[tmpl])
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
         loaded = Group.load(group.path)
 
@@ -124,11 +112,11 @@ class TestGroupSaveAndLoad:
         assert tmpl.uid in loaded.templates
         assert loaded.templates[tmpl.uid].name == "Roundtrip"
 
-    def test_save_assigns_group_uid_to_templates(self):
+    def test_save_assigns_group_uid_to_templates(self, template_dir):
         tmpl = StateReinforcement(**make_template())
         tmpl.group = None  # explicitly unset
         group = make_group(templates=[tmpl])
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
         assert tmpl.group == group.uid
 
@@ -137,9 +125,9 @@ class TestGroupSaveAndLoad:
 
 
 class TestGroupDelete:
-    def test_delete_removes_file(self):
+    def test_delete_removes_file(self, template_dir):
         group = make_group()
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
         path = group.path
         assert os.path.exists(path)
 
@@ -152,9 +140,9 @@ class TestGroupDelete:
         # Should not raise
         group.delete()
 
-    def test_delete_after_file_already_removed_does_not_raise(self):
+    def test_delete_after_file_already_removed_does_not_raise(self, template_dir):
         group = make_group()
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
         os.remove(group.path)
 
         # File already gone, should not raise
@@ -162,9 +150,9 @@ class TestGroupDelete:
 
 
 class TestGroupUpdate:
-    def test_update_changes_metadata(self):
+    def test_update_changes_metadata(self, template_dir):
         group = make_group(name="Original")
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
         updated = make_group(name="Updated", author="Bob", description="new desc")
         group.update(updated)
@@ -177,10 +165,10 @@ class TestGroupUpdate:
         loaded = Group.load(group.path)
         assert loaded.name == "Updated"
 
-    def test_update_ignores_templates_by_default(self):
+    def test_update_ignores_templates_by_default(self, template_dir):
         tmpl = StateReinforcement(**make_template())
         group = make_group(templates=[tmpl])
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
         updated = make_group()  # no templates
         group.update(updated)
@@ -189,9 +177,9 @@ class TestGroupUpdate:
 
 
 class TestGroupTemplateOperations:
-    def test_insert_template(self):
+    def test_insert_template(self, template_dir):
         group = make_group()
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
         tmpl = StateReinforcement(**make_template(name="Inserted"))
         group.insert_template(tmpl)
@@ -202,9 +190,9 @@ class TestGroupTemplateOperations:
         loaded = Group.load(group.path)
         assert tmpl.uid in loaded.templates
 
-    def test_insert_duplicate_raises(self):
+    def test_insert_duplicate_raises(self, template_dir):
         group = make_group()
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
         tmpl = StateReinforcement(**make_template())
         group.insert_template(tmpl)
@@ -212,10 +200,10 @@ class TestGroupTemplateOperations:
         with pytest.raises(ValueError, match="already exists"):
             group.insert_template(tmpl)
 
-    def test_update_template(self):
+    def test_update_template(self, template_dir):
         tmpl = StateReinforcement(**make_template(name="V1"))
         group = make_group(templates=[tmpl])
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
         tmpl.name = "V2"
         group.update_template(tmpl)
@@ -223,10 +211,10 @@ class TestGroupTemplateOperations:
         loaded = Group.load(group.path)
         assert loaded.templates[tmpl.uid].name == "V2"
 
-    def test_delete_template(self):
+    def test_delete_template(self, template_dir):
         tmpl = StateReinforcement(**make_template())
         group = make_group(templates=[tmpl])
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
         group.delete_template(tmpl)
 
@@ -235,9 +223,9 @@ class TestGroupTemplateOperations:
         loaded = Group.load(group.path)
         assert tmpl.uid not in loaded.templates
 
-    def test_delete_nonexistent_template_is_noop(self):
+    def test_delete_nonexistent_template_is_noop(self, template_dir):
         group = make_group()
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
         tmpl = StateReinforcement(**make_template())
         # Should not raise
@@ -252,25 +240,25 @@ class TestGroupTemplateOperations:
 
 
 class TestCollectionLoadFromDir:
-    def test_load_empty_directory(self):
-        collection = Collection.load(TEMPLATE_TEST_PATH)
+    def test_load_empty_directory(self, template_dir):
+        collection = Collection.load(template_dir)
         assert len(collection.groups) == 0
 
-    def test_load_single_group(self):
+    def test_load_single_group(self, template_dir):
         group = make_group(name="Solo")
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
 
-        collection = Collection.load(TEMPLATE_TEST_PATH)
+        collection = Collection.load(template_dir)
         assert len(collection.groups) == 1
         assert collection.groups[0].uid == group.uid
 
-    def test_load_multiple_groups(self):
+    def test_load_multiple_groups(self, template_dir):
         g1 = make_group(name="Group A")
         g2 = make_group(name="Group B")
-        g1.save(TEMPLATE_TEST_PATH)
-        g2.save(TEMPLATE_TEST_PATH)
+        g1.save(template_dir)
+        g2.save(template_dir)
 
-        collection = Collection.load(TEMPLATE_TEST_PATH)
+        collection = Collection.load(template_dir)
         assert len(collection.groups) == 2
         loaded_uids = {g.uid for g in collection.groups}
         assert g1.uid in loaded_uids
@@ -299,9 +287,9 @@ class TestCollectionFind:
 
 
 class TestCollectionRemove:
-    def test_remove_deletes_group_and_file(self):
+    def test_remove_deletes_group_and_file(self, template_dir):
         group = make_group()
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
         path = group.path
 
         collection = Collection(groups=[group])
@@ -310,10 +298,10 @@ class TestCollectionRemove:
         assert len(collection.groups) == 0
         assert not os.path.exists(path)
 
-    def test_remove_by_deserialized_group(self):
+    def test_remove_by_deserialized_group(self, template_dir):
         """Simulates the real bug: removing via a different Group object with same uid."""
         group = make_group(name="Original")
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
         path = group.path
 
         collection = Collection(groups=[group])
@@ -338,9 +326,9 @@ class TestCollectionRemove:
         with pytest.raises(ValueError, match="not found"):
             collection.remove(group)
 
-    def test_remove_without_save(self):
+    def test_remove_without_save(self, template_dir):
         group = make_group()
-        group.save(TEMPLATE_TEST_PATH)
+        group.save(template_dir)
         path = group.path
 
         collection = Collection(groups=[group])
@@ -351,17 +339,17 @@ class TestCollectionRemove:
 
 
 class TestCollectionSave:
-    def test_save_persists_all_groups(self):
+    def test_save_persists_all_groups(self, template_dir):
         g1 = make_group(name="Group One")
         g2 = make_group(name="Group Two")
         collection = Collection(groups=[g1, g2])
-        collection.save(TEMPLATE_TEST_PATH)
+        collection.save(template_dir)
 
         assert os.path.exists(g1.path)
         assert os.path.exists(g2.path)
 
         # Verify by loading
-        loaded = Collection.load(TEMPLATE_TEST_PATH)
+        loaded = Collection.load(template_dir)
         assert len(loaded.groups) == 2
 
 

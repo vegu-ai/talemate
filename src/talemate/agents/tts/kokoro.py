@@ -9,12 +9,6 @@ from pydantic import ConfigDict
 import traceback
 from pathlib import Path
 
-
-import torch
-import soundfile as sf
-from kokoro import KPipeline
-
-
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
@@ -31,6 +25,16 @@ from .providers import register
 from .voice_library import add_default_voices
 
 log = structlog.get_logger("talemate.agents.tts.kokoro")
+
+
+def _import_heavy_deps():
+    # kokoro pulls in torch and costs ~4.3s / ~843MB, so it is loaded on first
+    # generation rather than at import.
+    global torch, sf, KPipeline
+    import torch
+    import soundfile as sf
+    from kokoro import KPipeline
+
 
 CUSTOM_VOICE_STORAGE = (
     Path(__file__).parent.parent.parent.parent.parent / "tts" / "voice" / "kokoro"
@@ -207,6 +211,7 @@ class KokoroMixin:
                 pass
 
     def _kokoro_mix(self, mixer: VoiceMixer) -> "torch.Tensor":
+        _import_heavy_deps()
         pipeline = KPipeline(lang_code="a")
 
         packs = [
@@ -230,6 +235,7 @@ class KokoroMixin:
 
     async def kokoro_test_mix(self, mixer: VoiceMixer):
         """Test a mixed voice by generating a sample."""
+        _import_heavy_deps()
         mixed_voice_tensor = self._kokoro_mix(mixer)
 
         loop = asyncio.get_event_loop()
@@ -257,6 +263,7 @@ class KokoroMixin:
 
     async def kokoro_save_mix(self, voice_id: str, mixer: VoiceMixer) -> Path:
         """Save a voice tensor to disk."""
+        _import_heavy_deps()
         # Ensure the directory exists
         CUSTOM_VOICE_STORAGE.mkdir(parents=True, exist_ok=True)
 
@@ -273,6 +280,7 @@ class KokoroMixin:
         file_path: str,
     ) -> None:
         """Generate audio from text using the given voice."""
+        _import_heavy_deps()
         try:
             generator = pipeline(text, voice=voice)
             for i, (gs, ps, audio) in enumerate(generator):
@@ -295,7 +303,7 @@ class KokoroMixin:
             log.debug(
                 "kokoro - reinitializing tts instance",
             )
-            # Lazy import heavy dependencies only when needed
+            _import_heavy_deps()
 
             self.kokoro_instance = KokoroInstance(
                 # a= American English

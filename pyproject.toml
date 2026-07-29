@@ -80,6 +80,7 @@ dev = [
     "pytest>=6.2",
     "pytest-asyncio>=0.25.3",
     "pytest-cov>=4.0",
+    "pytest-xdist>=3.8",
     "mypy>=0.910",
     "mkdocs-material>=9.5.27",
     "mkdocs-awesome-pages-plugin>=2.9.2",
@@ -155,6 +156,13 @@ explicit = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+# Distribute across cores by default. The worker count comes from
+# `pytest_xdist_auto_num_workers` in tests/conftest.py, which respects CPU
+# affinity and any cgroup quota, and falls back to in-process execution on a
+# single CPU. `-n0` runs serially, which is what you want for `-s` /
+# `--capture=no` or readable output. (`--pdb` needs no flag — xdist disables
+# distribution for it by itself.)
+addopts = "-n auto --dist worksteal"
 
 [tool.coverage.run]
 source = ["src/talemate"]

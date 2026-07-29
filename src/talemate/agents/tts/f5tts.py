@@ -8,23 +8,13 @@ import pydantic
 from pydantic import ConfigDict
 import re
 
-import torch
-
-
-# Lazy imports for heavy dependencies
-def _import_heavy_deps():
-    global F5TTS
-    from f5_tts.api import F5TTS
-
-
-CUDA_AVAILABLE = torch.cuda.is_available()
-
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
     AgentDetail,
 )
 from talemate.ux.schema import Field
+from talemate.util.gpu import cuda_available
 
 from .schema import Voice, Chunk, GenerationContext, VoiceProvider, INFO_CHUNK_SIZE
 from .voice_library import add_default_voices
@@ -32,6 +22,13 @@ from .providers import register, provider
 from .util import voice_is_talemate_asset
 
 log = structlog.get_logger("talemate.agents.tts.f5tts")
+
+
+def _import_heavy_deps():
+    # The f5_tts model stack is only needed once a generation actually runs.
+    global F5TTS
+    from f5_tts.api import F5TTS
+
 
 REF_TEXT = "You awaken aboard your ship, the Starlight Nomad. A soft hum resonates throughout the vessel indicating its systems are online."
 
@@ -202,7 +199,7 @@ class F5TTSMixin:
             config={
                 "device": AgentActionConfig(
                     type="text",
-                    value="cuda" if CUDA_AVAILABLE else "cpu",
+                    value="cuda" if cuda_available() else "cpu",
                     label="Device",
                     choices=[
                         {"value": "cpu", "label": "CPU"},

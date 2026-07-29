@@ -8,7 +8,6 @@ from pathlib import Path
 import numpy as np
 import pydantic
 import structlog
-import torch
 from huggingface_hub import get_token
 from pydantic import ConfigDict
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentDetail
@@ -23,8 +22,9 @@ log = structlog.get_logger("talemate.agents.tts.pocket_tts")
 
 
 def _import_heavy_deps():
-    global sf, TTSModel
+    global sf, torch, TTSModel
     import soundfile as sf
+    import torch
     from pocket_tts import TTSModel
 
 

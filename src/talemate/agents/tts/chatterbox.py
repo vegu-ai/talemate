@@ -7,24 +7,13 @@ import structlog
 import pydantic
 from pydantic import ConfigDict
 
-import torch
-
-
-# Lazy imports for heavy dependencies
-def _import_heavy_deps():
-    global ta, ChatterboxTTS
-    import torchaudio as ta
-    from chatterbox.tts import ChatterboxTTS
-
-
-CUDA_AVAILABLE = torch.cuda.is_available()
-
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
     AgentDetail,
 )
 from talemate.ux.schema import Field
+from talemate.util.gpu import cuda_available
 
 from .schema import Voice, Chunk, GenerationContext, VoiceProvider, INFO_CHUNK_SIZE
 from .voice_library import add_default_voices
@@ -32,6 +21,15 @@ from .providers import register, provider
 from .util import voice_is_talemate_asset
 
 log = structlog.get_logger("talemate.agents.tts.chatterbox")
+
+
+def _import_heavy_deps():
+    # torchaudio and the chatterbox model stack are only needed once a
+    # generation actually runs.
+    global ta, ChatterboxTTS
+    import torchaudio as ta
+    from chatterbox.tts import ChatterboxTTS
+
 
 add_default_voices(
     [
@@ -162,7 +160,7 @@ class ChatterboxMixin:
             config={
                 "device": AgentActionConfig(
                     type="text",
-                    value="cuda" if CUDA_AVAILABLE else "cpu",
+                    value="cuda" if cuda_available() else "cpu",
                     label="Device",
                     choices=[
                         {"value": "cpu", "label": "CPU"},

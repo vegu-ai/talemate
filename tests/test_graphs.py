@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 import pytest
 import enum
 import pydantic
@@ -44,7 +45,7 @@ def mock_scene():
 
 
 @pytest.fixture
-def mock_scene_with_assets():
+def mock_scene_with_assets(tmp_path):
     scene = MockScene()
     bootstrap_scene(scene)
 
@@ -55,8 +56,13 @@ def mock_scene_with_assets():
     with open(test_scene_path, "r") as f:
         test_scene_data = json.load(f)
 
-    # Override scenes_dir to point to test data directory
-    test_scenes_dir = os.path.join(BASE_DIR, "data", "scenes")
+    # Work against a copy: the fixture writes library.json, and the source tree
+    # copy is git-tracked and shared by every worker.
+    test_scenes_dir = os.path.join(tmp_path, "scenes")
+    shutil.copytree(
+        os.path.join(BASE_DIR, "data", "scenes"),
+        test_scenes_dir,
+    )
     scene.scenes_dir = lambda: test_scenes_dir
     scene.project_name = "talemate-laboratory"
 

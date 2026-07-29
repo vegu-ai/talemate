@@ -899,8 +899,11 @@ async def generate_agent(tts_agent, fresh_voice_library, monkeypatch):
 
     yield tts_agent
 
-    # restore
-    instance.AGENTS = original_agents
+    # restore in place — modules that did `from talemate.instance import AGENTS`
+    # hold a reference to this dict, so rebinding it would leave them looking at
+    # a stale copy for the rest of the session.
+    instance.AGENTS.clear()
+    instance.AGENTS.update(original_agents)
 
 
 async def _drain_queue(agent: TTSAgent, timeout: float = 1.0):

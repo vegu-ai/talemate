@@ -164,7 +164,9 @@ class TestAssignVoiceToCharacterEarlyReturn:
         assert result is None  # early return (no calls list)
 
     @pytest.mark.asyncio
-    async def test_skipped_when_no_voices_available(self, scene, director, tts_agent):
+    async def test_skipped_when_no_voices_available(
+        self, scene, director, tts_agent, monkeypatch
+    ):
         # Force should_assign_voice to True and have ready APIs, but no voices
         # in the global library or the scene library.
         with patch.object(type(tts_agent), "enabled", property(lambda self: True)):
@@ -174,8 +176,10 @@ class TestAssignVoiceToCharacterEarlyReturn:
                 property(lambda self: ["someapi"]),
             ):
                 # Replace the voice library with an empty one
-                voice_library_mod.VOICE_LIBRARY = voice_library_mod.VoiceLibrary(
-                    voices={}
+                monkeypatch.setattr(
+                    voice_library_mod,
+                    "VOICE_LIBRARY",
+                    voice_library_mod.VoiceLibrary(voices={}),
                 )
                 # Scene's voice_library may be empty by default — ensure so
                 scene.voice_library = voice_library_mod.VoiceLibrary(voices={})
@@ -199,8 +203,10 @@ class TestAssignVoiceToCharacterWithVoices:
     ):
         # Stand up a global voice library with one Voice
         v = Voice(label="V", provider="someapi", provider_id="v1")
-        voice_library_mod.VOICE_LIBRARY = voice_library_mod.VoiceLibrary(
-            voices={v.id: v}
+        monkeypatch.setattr(
+            voice_library_mod,
+            "VOICE_LIBRARY",
+            voice_library_mod.VoiceLibrary(voices={v.id: v}),
         )
         scene.voice_library = voice_library_mod.VoiceLibrary(voices={})
 

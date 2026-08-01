@@ -172,7 +172,8 @@ export default {
                                         "New `agent.help.chat.before` / `.after` events fire around help chat responses.",
                                         "Scene assets gain `asset_deleted`, `scene.backdrop_changed`, `scene.cover_image_changed`, and `character.cover_image_changed` events alongside the existing `asset_saved`.",
                                         "All new events are documented in the node editor's Events reference.",
-                                        "A new Generate Character node generates character data in one prompt; wire its outputs into Persist Character to add the character to the scene."
+                                        "A new Generate Character node generates character data following the creator agent's Character Creation settings; wire its outputs into Persist Character to add the character to the scene.",
+                                        "The Create Character module now builds through that node, gaining `generate_dialogue_instructions` (on) and `generate_example_dialogue` (off) inputs; the simulation suite enables both."
                                     ]
                                 },
                                 {
@@ -195,7 +196,9 @@ export default {
                                         "The help agent refuses to change settings for an agent whose dialog is open, asking to close it first.",
                                         "Agent settings in Scene mode now honor each setting's visibility conditions, so gated settings and empty sections no longer show up as scene overrides.",
                                         "Pocket TTS: pasting a Hugging Face token now enables the gated voice-cloning download without a restart, and the agent warns while cloning is unavailable.",
-                                        "Director chat: images generated from the chat are now inserted into the conversation that requested them."
+                                        "Director chat: images generated from the chat are now inserted into the conversation that requested them.",
+                                        "Agent sections that are always on by design — Summarization, Conversation and Narrator Generation, Character Portraits — are no longer switched off in the background by a stale configuration value.",
+                                        "Agent settings added in a new release now arrive in the state they ship with instead of switched off; settings you switched off yourself stay off."
                                     ]
                                 },
                                 {
@@ -211,7 +214,11 @@ export default {
                                         "Character card import: a failed or cancelled description or example dialogue generation now keeps the card's own text.",
                                         "Character card import: cancelling an import now aborts it instead of letting it run to completion.",
                                         "Character card import: attribute extraction now sees the character's description, so imported attributes reflect it.",
-                                        "A description typed into the world editor's character creator is no longer discarded when AI generation is enabled."
+                                        "A description typed into the world editor's character creator is no longer discarded when AI generation is enabled.",
+                                        "The director's Limit character attributes setting now applies to character card import, in both the split and Fast flows.",
+                                        "The director's attribute limit now delivers the number it promises — the character's own name no longer costs one of the allowed slots.",
+                                        "Fast character creation no longer asks for the name as an attribute, so it is neither duplicated nor counted against the limit.",
+                                        "Example dialogue no longer keeps typographic quotes — they are converted to straight quotes on import, manual entry, and generation, so lines render as speech."
                                     ]
                                 },
                                 {
@@ -228,6 +235,13 @@ export default {
                                     "items": [
                                         "Simultaneous generation failures are now queued and answered one after another, so earlier generations resume and their results are no longer lost.",
                                         "Pending error dialogs are cancelled cleanly when the scene is unloaded or the frontend disconnects."
+                                    ]
+                                },
+                                {
+                                    "title": "Help & Documentation",
+                                    "items": [
+                                        "Documentation lookups now rank the page a question is about above pages that only mention the topic in passing.",
+                                        "Help and director chat answers render headings, lists, quotes and paragraphs with proper spacing and indentation instead of one solid block."
                                     ]
                                 },
                                 {

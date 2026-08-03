@@ -35,6 +35,8 @@ When you activate an override, the field starts out seeded with the current glob
 
 Any action that can be switched off globally can also be switched off for the scene alone: its **enable** checkbox carries the same link icon as the individual settings. So a scene can turn off Auto Narration, Revision, Scene Analysis, Long Term Memory and so on without touching your global configuration.
 
+Some sections are always on by design — for example the World State's Character Portraits, the Summarizer's Scene History, and the Conversation and Narrator Generation sections. They have no enable checkbox and cannot be switched off globally or per scene; a `false` left for one in the configuration file (or in a scene's overrides) is ignored.
+
 In Scene mode, the modal only shows the settings (and tabs) that actually support overriding, to keep the view focused. If an agent has no currently overridable settings at all, the Global / Scene switch won't appear.
 
 Some settings only apply while another setting is switched on — for example the Creator agent's Fast-mode fields (Consolidate, One-shot token budget, Fill in misses) only matter while **Fast Character Generation** is on. Those settings appear in Scene mode only while their gating setting allows it, and the gate is read as this scene sees it: the scene's override if there is one, otherwise the global value. So overriding the gate for a scene reveals the settings it gates, and a section (or tab) whose settings are all currently hidden drops out of Scene mode entirely.

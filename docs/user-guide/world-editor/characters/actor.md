@@ -23,6 +23,9 @@ You can press the **:material-auto-fix: Generate** button on top of the instruct
 
 It can also be useful to provide examples of how the character should speak. Examples are provided one line at a time.
 
+!!! note "Use straight quotes for spoken words"
+    Talemate delimits spoken words with the straight quote `"`. Typographic quotes (`“ ” „ ‘ ’ ‚`) in an example line are converted to their plain equivalents when the line is saved — a line that kept fancy quotes would be treated as narration and mis-chunked by dialogue parsing and text-to-speech. Characters saved before 0.39.0 keep their fancy quotes until the affected line is saved again.
+
 #### Example
 
 > `*Ramunakz sighs deeply, a sound like wind whispering through a graveyard.* "Time, like your fleeting life, flows ever onward. Struggle only prolongs the inevitable."`

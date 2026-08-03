@@ -23,7 +23,7 @@ The tabs that appear depend on the client type. The core set is:
 | **Reasoning** | [Reasoning model support](reasoning.md) settings. |
 | **System Prompts** | Per-client [system prompt overrides](../app-settings/system-prompts.md). |
 
-Some client types add extra tabs (for example the **Endpoint Override** tab on remote clients, or the **Concurrency** tab on clients that support concurrent requests).
+Some client types add extra tabs (for example the **Endpoint Override** tab on remote clients, the **Concurrency** tab on clients that support concurrent requests, or the **Parameters** tab on the [OpenRouter client](types/openrouter.md)).
 
 ### Advanced tab
 

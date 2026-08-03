@@ -14,6 +14,9 @@ If this is toggled on the character description and some attributes will automat
 
 If the name is left blank, it will also be generated based on the instructions.
 
+!!! tip "Fast mode"
+    AI-assisted character creation routes through the Creator agent. Its [Character Creation settings](/talemate/user-guide/agents/creator/settings/) offer a **Fast Character Generation** mode that consolidates the generation into a single prompt instead of one prompt per aspect.
+
 ### AI Generation Instructions
 
 Here you can provide instructions for the AI to generate the character. This can include the character's appearance, personality, and other details.
@@ -35,7 +38,7 @@ If this is toggled on, the AI will generate some attributes for the character ba
 
 ### Generate Example Dialogue
 
-If this is toggled on, the AI will generate a few example dialogue lines for the character, showcasing how they speak and act.
+If this is toggled on (it is off by default), the AI will generate a few example dialogue lines for the character, showcasing how they speak and act.
 
 When enabled, an **Example dialogue guidance** field appears where you can optionally steer how the examples are written — tone, speech patterns, quirks (e.g. "Speaks in short sentences, dry humor"). Leave it blank to let the AI infer the voice from the character's description and attributes.
 

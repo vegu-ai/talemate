@@ -2,7 +2,7 @@
 
 If you want to add an Mistral.ai client, change the `Client Type` to `Mistral.ai`.
 
-![Client Mistral.ai](/talemate/img/0.26.0/client-mistral.png)
+![Client Mistral.ai](/talemate/img/0.39.0/client-mistral.png)
 
 Click `Save` to add the client.
 
@@ -36,6 +36,10 @@ Which model to use. Currently defaults to `mixtral-8x22`.
 
 !!! note "Talemate lags behind Mistral.ai"
     When Mistral.ai adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.
+
+##### Context Length
+
+Maximum context length (in tokens) for generations sent to Mistral.ai. If you are not sure, leave the default value.
 
 ##### Concurrent Inference
 

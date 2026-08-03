@@ -63,7 +63,7 @@ The pi provider to route generations through (default `openrouter`). Suggestions
 
 Free-form model id, with suggestions from pi's catalog for the selected provider. Model ids that are not in the catalog are passed through to the provider as-is, so newly released or custom models work without waiting for a catalog update.
 
-##### Max token length
+##### Context Length
 
 Maximum context length (in tokens) to send with a generation request. If you are not sure leave the default value.
 

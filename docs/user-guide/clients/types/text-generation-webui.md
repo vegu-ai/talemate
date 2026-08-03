@@ -37,7 +37,7 @@ If the Text-Generation-WebUI instance requires an API key, you can set it here.
 
 This will cause requests to go to the `chat/completions` API instead and Text-Generation-WebUI will be in control of the prompt template. Coercion (pre-filling the beginning of the response) keeps working through the API's `continue_` mechanism.
 
-This is a trade-off: keep it disabled for full control of the prompt template in Talemate, or enable it to trust that the template configured on the remote end is correct — useful when you don't know which prompt template to pick.
+This is **off by default**. It is a trade-off: keep it disabled for full control of the prompt template in Talemate, or enable it to trust that the template configured on the remote end is correct — useful when you don't know which prompt template to pick. While it is enabled, Talemate's own prompt template selection for the client has no effect.
 
 With reasoning models, Text-Generation-WebUI separates the thinking from the response on its end, so no reasoning pattern is needed in this mode — the reasoning is captured automatically. Note that the model spends tokens on thinking either way, so make sure response budgets account for it.
 

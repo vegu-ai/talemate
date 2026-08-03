@@ -41,7 +41,7 @@ If your llama.cpp server is configured to require authentication, you can set th
 
 When enabled, Talemate uses the server's `/apply-template` endpoint to render prompts through the model's built-in chat template instead of applying a prompt template itself. Coercion (pre-filling the beginning of the response) keeps working, since the server leaves the assistant turn open for continuation.
 
-This is a trade-off: keep it disabled for full control of the prompt template in Talemate, or enable it to trust the model's built-in chat template on the server — useful when you don't know which prompt template to pick.
+This is **off by default**. It is a trade-off: keep it disabled for full control of the prompt template in Talemate, or enable it to trust the model's built-in chat template on the server — useful when you don't know which prompt template to pick.
 
 Reasoning models work as usual — enable Reasoning on the client and the think block is separated out by the configured reasoning pattern. When Reasoning is disabled, Talemate asks thinking-capable templates (Qwen, GLM, ...) not to open a think block via `enable_thinking`.
 

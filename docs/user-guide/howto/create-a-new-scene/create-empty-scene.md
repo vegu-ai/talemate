@@ -1,8 +1,10 @@
 # Create an empty scene
 
-To start a new, empty scene, go to the :material-home: **Home** screen and click on the :material-plus: **Create** button in the left sidebar.
+To start a new, empty scene, go to the :material-home: **Home** screen and click the **Create new scene** card — it sits in the right-hand column of the [scene browser](/talemate/user-guide/scene-browser/), below the Import dropzone.
 
 ![Create empty scene](/talemate/img/0.26.0/create-new-scene.png)
+
+A **New scene setup** dialog opens where you give the scene a name and can optionally pick a writing style, a director persona, and whether the Director should assist with story setup. For this walkthrough just enter a name and click :material-check-circle-outline: **Continue**.
 
 After a moment of loading you will be taken to the new scene and `creative` mode will be enabled. In `creative` mode normal scene progression is suspended and input in the scene view will be for command execution only. (covered elsewhere, ignore for now)
 

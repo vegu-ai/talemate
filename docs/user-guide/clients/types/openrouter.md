@@ -2,7 +2,7 @@
 
 If you want to add an OpenRouter client, change the `Client Type` to `OpenRouter`.
 
-![Client OpenRouter](/talemate/img/0.31.0/client-openrouter.png)
+![Client OpenRouter](/talemate/img/0.39.0/client-openrouter.png)
 
 Click `Save` to add the client.
 
@@ -40,7 +40,7 @@ A unique name for the client that makes sense to you.
 
 Choose any model available via your OpenRouter account. Talemate dynamically fetches the list of models associated with your API key so new models will show up automatically.
 
-##### Max token length
+##### Context Length
 
 Maximum context length (in tokens) that OpenRouter should consider. If you are not sure leave the default value.
 

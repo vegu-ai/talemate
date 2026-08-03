@@ -3,9 +3,7 @@
 !!! note "First time setup?"
     If this is your first time launching Talemate, the [Setup Wizard](setup-wizard.md) will guide you through adding your first client and configuring essential settings. This page covers manual client configuration for adding additional clients or if you skipped the wizard.
 
-Once Talemate is up and running and you are connected, you will see a notification in the corner instructing you to configured a client.
-
-![no clients](/talemate/img/0.26.0/no-clients.png)
+Once Talemate is up and running and you are connected, the Home screen shows a warning at the top while no client is configured, reminding you that all enabled clients and agents need to be configured before you can load scenes.
 
 Talemate uses client(s) to connect to local or remote AI text generation APIs like koboldcpp, text-generation-webui or OpenAI.
 
@@ -22,7 +20,7 @@ On the right hand side click the **:material-plus-box: ADD CLIENT** button.
 
 The client configuration window will appear. Here you can choose the type of client you want to add.
 
-![connect a client add client modal](/talemate/img/0.30.0/connect-a-client-add-client-modal.png)
+![connect a client add client modal](/talemate/img/0.39.0/connect-a-client-add-client-modal.png)
 
 ## Choose an API / Client Type
 

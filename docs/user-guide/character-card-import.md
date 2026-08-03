@@ -63,7 +63,7 @@ The middle panel allows you to select which characters from the card should be i
 
 Talemate uses the [Director Agent](/talemate/user-guide/agents/director) to analyze greeting texts and automatically detect multiple characters present in the character card. All detected characters are selected by default.
 
-![Character Selection and Import Options](/talemate/img/0.34.0/character-card-2.png)
+![Character Selection and Import Options](/talemate/img/0.39.0/character-card-2.png)
 
 - Use checkboxes to select/deselect characters
 

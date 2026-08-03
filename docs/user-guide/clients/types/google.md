@@ -2,7 +2,7 @@
 
 If you want to add an Google client, change the `Client Type` to `Google`.
 
-![Client Google](/talemate/img/0.26.0/client-google.png)
+![Client Google](/talemate/img/0.39.0/client-google.png)
 
 Click `Save` to add the client.
 
@@ -37,6 +37,9 @@ Which model to use. Currently defaults to `gemini-1.0`.
 !!! note "Talemate lags behind Google"
     When Google adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.
 
+##### Context Length
+
+Maximum context length (in tokens) for generations sent to Google. If you are not sure, leave the default value.
 
 ##### Disable Safety Settings
 

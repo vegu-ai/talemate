@@ -2,7 +2,7 @@
 
 If you want to add an Groq client, change the `Client Type` to `Groq`.
 
-![Client Groq](/talemate/img/0.26.0/client-groq.png)
+![Client Groq](/talemate/img/0.39.0/client-groq.png)
 
 Click `Save` to add the client.
 
@@ -36,4 +36,8 @@ Which model to use. Currently defaults to `llama3-70b-8192`.
 
 !!! note "Talemate lags behind Groq"
     When Groq adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.
+
+##### Context Length
+
+Maximum context length (in tokens) for generations sent to Groq. If you are not sure, leave the default value.
 --8<-- "docs/snippets/common.md:client-response-length"

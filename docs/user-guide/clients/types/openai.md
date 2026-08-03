@@ -2,7 +2,7 @@
 
 If you want to add an OpenAI client, change the `Client Type` to `OpenAI`.
 
-![Client OpenAI](/talemate/img/0.26.0/client-openai.png)
+![Client OpenAI](/talemate/img/0.39.0/client-openai.png)
 
 Click `Save` to add the client.
 
@@ -36,6 +36,10 @@ Which model to use. Currently defaults to `gpt-4o`.
 
 !!! note "Talemate lags behind OpenAI"
     When OpenAI adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.
+
+##### Context Length
+
+Maximum context length (in tokens) for generations sent to OpenAI. If you are not sure, leave the default value.
 
 ##### Reasoning models (o1, o3, gpt-5)
 

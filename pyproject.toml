@@ -138,6 +138,11 @@ override-dependencies = [
   # numba needs numpy < 2.3
   "numpy>=2,<2.3",
   "pydantic>=2.11",
+  # torch 2.11 cu128 pins setuptools<82 (setuptools 82 removed pkg_resources);
+  # nothing we ship imports pkg_resources and 83.0.0 carries the MANIFEST.in
+  # unicode-normalization security fix, so override the pin. Confirmed working
+  # with torch 2.11.0+cu128 (full suite + app boot).
+  "setuptools>=83",
 ]
 
 [tool.uv.sources]

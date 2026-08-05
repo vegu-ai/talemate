@@ -1,7 +1,8 @@
 import pytest
+from unittest.mock import AsyncMock, MagicMock
 
 import talemate.instance as instance
-from conftest import MockMemoryAgent, MockScene
+from conftest import MockMemoryAgent, MockScene, bootstrap_scene
 
 from talemate.game.engine.context_id import (
     ContextID,
@@ -1208,6 +1209,65 @@ async def test_director_instructions_with_none_value(mock_scene_story_config):
     assert context_item is not None
     value = await context_item.get(mock_scene_story_config)
     assert value is None
+
+
+# Tests for Story Introduction Context ID
+
+
+@pytest.mark.asyncio
+async def test_story_introduction_context_item_set(mock_scene_story_config):
+    """Test setting the story introduction through context item."""
+    # `context_id_item_from_path` reads through `scene.get_intro`, which needs
+    # the editor agent.
+    bootstrap_scene(mock_scene_story_config)
+
+    handler = StoryConfigurationContext.instance_from_path(
+        ["introduction"], mock_scene_story_config
+    )
+
+    item = await handler.context_id_item_from_path(
+        "story_configuration",
+        ["introduction"],
+        "story_configuration:introduction",
+        mock_scene_story_config,
+    )
+
+    mock_scene_story_config.emit_status = MagicMock()
+    mock_scene_story_config.emit_history = AsyncMock()
+
+    new_intro = "A brand new introduction."
+    await item.set(mock_scene_story_config, new_intro)
+    assert mock_scene_story_config.intro == new_intro
+
+    # The main view only renders the intro from an emit_history pass, the
+    # World Editor off scene status.
+    mock_scene_story_config.emit_status.assert_called_once()
+    mock_scene_story_config.emit_history.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_story_configuration_set_only_emits_history_for_introduction(
+    mock_scene_story_config,
+):
+    """Other story configuration values must not trigger a history re-emit."""
+    handler = StoryConfigurationContext.instance_from_path(
+        ["description"], mock_scene_story_config
+    )
+
+    item = await handler.context_id_item_from_path(
+        "story_configuration",
+        ["description"],
+        "story_configuration:description",
+        mock_scene_story_config,
+    )
+
+    mock_scene_story_config.emit_status = MagicMock()
+    mock_scene_story_config.emit_history = AsyncMock()
+
+    await item.set(mock_scene_story_config, "A different description")
+    assert mock_scene_story_config.description == "A different description"
+    mock_scene_story_config.emit_status.assert_not_called()
+    mock_scene_story_config.emit_history.assert_not_awaited()
 
 
 # Tests for Scene Perspective Context ID

@@ -329,12 +329,14 @@ class StoryConfigurationContextItem(ContextIDItem):
         from talemate.scene.schema import ScenePhase
 
         intent_changed = False
+        intro_changed = False
         if self.context_type == "title":
             scene.title = value or ""
         elif self.context_type == "description":
             scene.description = value or ""
         elif self.context_type == "introduction":
             scene.set_intro(value or "")
+            intro_changed = True
         elif self.context_type == "content_classification":
             scene.context = value or ""
         elif self.context_type == "story_intention":
@@ -372,6 +374,10 @@ class StoryConfigurationContextItem(ContextIDItem):
 
         if intent_changed:
             scene.emit_scene_intent()
+
+        if intro_changed:
+            scene.emit_status()
+            await scene.emit_history()
 
 
 class SceneTypeListItem(pydantic.BaseModel):

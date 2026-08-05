@@ -58,6 +58,7 @@ class EpisodesMixin:
 
         await self.signal_operation_done()
         self.scene.emit_status()
+        await self.scene.emit_history()
 
     async def handle_add_episode(self, data):
         """Add a new episode."""

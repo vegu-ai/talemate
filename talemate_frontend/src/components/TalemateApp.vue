@@ -68,7 +68,7 @@
       </v-app-bar-nav-icon>
       
       <v-tabs v-model="tab" color="primary">
-        <v-tab v-for="tab in availableTabs" :key="tab" :value="tab.value" @click.stop="tab.click">
+        <v-tab v-for="tab in availableTabs" :key="tab" :value="tab.value" @click.stop="onTabClick(tab)">
           <v-icon class="mr-1">{{ tab.icon() }}</v-icon>
           {{ tab.title() }}
           <span v-if="tab.alert && tab.alert()" class="ml-1 d-inline-flex">
@@ -376,7 +376,8 @@
             @appearance-preview="onAppearancePreview"
             @appearance-preview-clear="onAppearancePreviewClear"
             @page-changed="(page) => appSettingsPage = page"
-            @dirty-changed="(dirty) => appSettingsDirty = dirty" />
+            @dirty-changed="(dirty) => appSettingsDirty = dirty"
+            @save-state-changed="(state) => appSettingsSaveState = state" />
           </v-tabs-window-item>
 
         </v-tabs-window>
@@ -398,6 +399,26 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn color="primary" variant="text" @click="worldEditorUnavailable = false">OK</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-dialog v-model="unsavedSettingsPrompt" max-width="480" persistent>
+      <v-card>
+        <v-card-title>
+          <v-icon start color="warning">mdi-content-save-alert-outline</v-icon>
+          You have unsaved settings
+        </v-card-title>
+        <v-card-text>
+          You have unsaved changes in Settings. Save them, discard them, or leave them pending and return to Settings later.
+          <p v-if="appSettingsSaveState.externalChange" class="text-warning mt-2 text-caption">
+            The configuration was changed outside this view while you have unsaved edits — saving overwrites it.
+          </p>
+        </v-card-text>
+        <v-card-actions>
+          <v-btn color="delete" variant="text" prepend-icon="mdi-undo" @click="onUnsavedSettingsDiscard">Discard Changes</v-btn>
+          <v-spacer></v-spacer>
+          <v-btn color="muted" variant="text" @click="onUnsavedSettingsIgnore">Ignore</v-btn>
+          <v-btn color="primary" variant="text" prepend-icon="mdi-check-circle-outline" :disabled="!appSettingsSaveState.canSave" @click="onUnsavedSettingsSave">Save</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -662,6 +683,18 @@ export default {
       // Synced page state between AppSettingsMenu and AppSettings
       appSettingsPage: 'gameplay',
       appSettingsDirty: false,
+      // Whether AppSettings would accept a save right now, and whether the
+      // configuration changed elsewhere while it holds unsaved edits
+      appSettingsSaveState: { canSave: false, externalChange: false },
+      // Unsaved settings guard: tab the user tried to leave for, held while
+      // the confirmation dialog is open
+      unsavedSettingsPrompt: false,
+      unsavedSettingsTarget: null,
+      suppressUnsavedSettingsPrompt: false,
+      revertingTab: false,
+      // The tab the view is actually on — `tab` transiently holds a target
+      // the unsaved settings guard vetoes
+      committedTab: 'home',
       // Count of outdated prompt template overrides
       promptsOutdatedCount: 0,
       // Flag to ensure new-scene navigation only happens once per scene load
@@ -681,6 +714,11 @@ export default {
     },
     tab: {
       handler(newTab, oldTab) {
+        if(this.guardUnsavedSettings(newTab)) {
+          return;
+        }
+        this.committedTab = newTab;
+
         // Save scroll position when leaving main tab
         if(oldTab === 'main' && this.sceneActive) {
           this.mainTabScrollPosition = window.scrollY;
@@ -1597,7 +1635,10 @@ export default {
       }
       this.tab = 'world';
       this.$nextTick(() => {
-        this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
+        // the unsaved settings guard can veto the switch above, leaving the
+        // world window item unrendered — its commit path replays the tab's
+        // click, only this sub-navigation is dropped
+        this.$refs.worldStateManager?.show(tab, sub1, sub2, sub3);
       });
     },
     onOpenAgentMessages(agent_name) {
@@ -1672,6 +1713,80 @@ export default {
           this.$refs.appSettings.openLegacy(tab, page, item);
         }
       });
+    },
+    onTabClick(tabDef) {
+      // the tab's side effect acts on a view the guard may refuse to switch
+      // to — leaveSettingsTab() replays it once the user commits
+      if(this.settingsNavigationBlocked(tabDef.value)) {
+        return;
+      }
+      tabDef.click();
+    },
+    settingsNavigationBlocked(target) {
+      // leaving settings while edits are pending needs a decision first.
+      // Checked against committedTab, not `tab`: v-tabs updates the model
+      // before the click handler runs, so `tab` may already hold the target
+      return this.committedTab === 'settings'
+        && target !== 'settings'
+        && this.appSettingsDirty
+        && !this.suppressUnsavedSettingsPrompt;
+    },
+    guardUnsavedSettings(newTab) {
+      // Re-entrant call caused by the revert below: the view never left the
+      // settings tab, so no tab change side effect should run
+      if(this.revertingTab) {
+        this.revertingTab = false;
+        return true;
+      }
+      if(!this.settingsNavigationBlocked(newTab)) {
+        return false;
+      }
+      // hold the view on settings and let the user decide what to do with
+      // the edits
+      this.unsavedSettingsTarget = newTab;
+      this.unsavedSettingsPrompt = true;
+      this.revertingTab = true;
+      this.tab = 'settings';
+      return true;
+    },
+    onUnsavedSettingsIgnore() {
+      this.leaveSettingsTab();
+    },
+    onUnsavedSettingsSave() {
+      // fire and forget: the save is a websocket round-trip, the dirty
+      // state clears (and with it the tab badge) when it comes back
+      this.$refs.appSettings.saveConfig();
+      this.leaveSettingsTab();
+    },
+    onUnsavedSettingsDiscard() {
+      this.$refs.appSettings.discard();
+      this.leaveSettingsTab();
+    },
+    leaveSettingsTab() {
+      const target = this.unsavedSettingsTarget;
+      this.unsavedSettingsPrompt = false;
+      this.unsavedSettingsTarget = null;
+      if(!target) {
+        return;
+      }
+      // the target may have disappeared while the prompt was open (a scene
+      // unload removes 'main', 'world', ...) — the availableTabs watcher
+      // won't correct it, it already ran while settings (always available)
+      // was selected
+      const targetTab = this.availableTabs.find(tab => tab.value === target)
+        || this.availableTabs.find(tab => tab.value === 'home');
+      if(!targetTab) {
+        return;
+      }
+      // the edits may still be unsaved (Ignore, or a save whose round-trip
+      // hasn't landed yet) — suppress the guard so completing the navigation
+      // doesn't re-open the dialog
+      this.suppressUnsavedSettingsPrompt = true;
+      this.tab = targetTab.value;
+      this.$nextTick(() => { this.suppressUnsavedSettingsPrompt = false; });
+      // take the same path a real click does — the side effect was skipped
+      // when the guard vetoed the navigation
+      targetTab.click();
     },
     onAppSettingsNavigate({ page, anchor }) {
       if (this.$refs.appSettings) {

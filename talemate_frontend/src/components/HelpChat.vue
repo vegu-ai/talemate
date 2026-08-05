@@ -80,7 +80,7 @@
 
     <v-divider class="mb-2"></v-divider>
 
-    <v-alert v-if="!helpAvailable" type="warning" variant="tonal" density="compact" class="ma-2">
+    <v-alert v-if="!helpAvailable" type="warning" variant="tonal" density="compact" class="ma-2 help-unavailable-alert">
         {{ helpUnavailableReason }}
     </v-alert>
 
@@ -446,6 +446,11 @@ export default {
     display: flex;
     flex-direction: column;
     height: 100%;
+}
+/* keep the alert at its natural height - the flex column root would otherwise
+   stretch it to fill the space above the chat card */
+.help-unavailable-alert {
+    flex: 0 0 auto;
 }
 .chat-card {
     display: flex;

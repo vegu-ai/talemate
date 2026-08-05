@@ -369,9 +369,11 @@
 - path: user-guide/app-settings/game.md
   title: Game
   summary: 'Overview of the redesigned settings view (0.39.0: main-view Settings tab with grouped sidebar navigation, settings
-    search, and explicit Save/Discard with unsaved-change tracking) plus the Game group: auto save on game-loop completion,
-    auto progress to the next character, max backscroll message count, the agent activity bar toggle, releasing GPU cache on
-    scene load, and managing a default player character for imported scenes (e.g. ST character cards) that lack one.'
+    search, and explicit Save/Discard with unsaved-change tracking, including the unsaved-settings prompt shown when leaving
+    the Settings tab with pending edits - Ignore/Save/Discard Changes - and the warning badge on the tab) plus the Game
+    group: auto save on game-loop completion, auto progress to the next character, max backscroll message count, the agent
+    activity bar toggle, releasing GPU cache on scene load, and managing a default player character for imported scenes
+    (e.g. ST character cards) that lack one.'
 - path: user-guide/app-settings/presets.md
   title: Presets
   summary: Presets settings group covering inference parameter presets (Analytical, Conversation, and other per-action presets

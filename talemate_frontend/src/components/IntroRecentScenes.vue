@@ -228,6 +228,17 @@ export default {
     gap: 12px;
 }
 
+.tile {
+    position: relative;
+}
+
+/* z-index sits on the tile, not the card: it isn't transitionable, so keeping it
+   tied to the card's own :hover would drop it the instant the pointer leaves,
+   letting a later sibling paint over the card while it scales back down */
+.tile:hover {
+    z-index: 1;
+}
+
 .tile :deep(.v-card-title) {
     font-size: 0.9rem;
     line-height: 1.3;
@@ -244,6 +255,15 @@ export default {
     padding-right: 0;
     padding-top: 4px;
     padding-bottom: 0;
+}
+
+.tile :deep(.v-card) {
+    transition: transform 0.2s ease;
+}
+
+/* scale instead of size changes so neighbouring tiles don't shift */
+.tile :deep(.v-card:not(.v-card--disabled):hover) {
+    transform: scale(1.04);
 }
 
 .v-card:disabled {

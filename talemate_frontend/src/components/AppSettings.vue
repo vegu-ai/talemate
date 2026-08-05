@@ -3,7 +3,7 @@
         <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1 app-settings-toolbar">
             <v-icon class="mr-2" color="primary">{{ currentPage?.icon || 'mdi-cog' }}</v-icon>
             <span class="text-subtitle-2 mr-4">{{ currentPage?.group }} <span class="text-muted">/</span> {{ currentPage?.title }}</span>
-            <v-btn color="primary" variant="text" prepend-icon="mdi-check-circle-outline" :disabled="!dirty || embeddingsBusy" @click="saveConfig">Save</v-btn>
+            <v-btn color="primary" variant="text" prepend-icon="mdi-check-circle-outline" :disabled="!canSave" @click="saveConfig">Save</v-btn>
             <v-btn v-if="dirty" color="muted" variant="text" prepend-icon="mdi-undo" @click="discard">Discard</v-btn>
             <span v-if="dirty" class="text-muted text-caption mr-2">Unsaved changes.</span>
             <v-chip v-if="externalChange" size="small" label color="warning" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
@@ -128,6 +128,7 @@ export default {
         'appearance-preview-clear',
         'page-changed',
         'dirty-changed',
+        'save-state-changed',
     ],
     data() {
         return {
@@ -156,6 +157,14 @@ export default {
             // applies an embedding set — only block saving from that page
             return this.busy && this.page === 'presets-embeddings';
         },
+        canSave() {
+            return this.dirty && !this.embeddingsBusy;
+        },
+        saveState() {
+            // what a save from outside this component (the unsaved changes
+            // prompt) needs to know before offering one
+            return { canSave: this.canSave, externalChange: this.externalChange };
+        },
     },
     watch: {
         page(newPage) {
@@ -163,6 +172,9 @@ export default {
         },
         dirty(isDirty) {
             this.$emit('dirty-changed', isDirty);
+        },
+        saveState(state) {
+            this.$emit('save-state-changed', state);
         },
         visible(isVisible) {
             if (!isVisible) {
@@ -354,6 +366,11 @@ export default {
         },
 
         saveConfig() {
+            if (!this.canSave) {
+                // callers outside this component (the unsaved changes prompt)
+                // can't see what disables the toolbar's Save button
+                return;
+            }
             this.mergeSubcomponentConfigs();
             this.saving = true;
             this.sendRequest({

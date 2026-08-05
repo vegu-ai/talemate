@@ -52,7 +52,7 @@ AVAILABLE_MODELS = []
 # Available providers will be populated dynamically from OpenRouter API once a valid API key is set
 AVAILABLE_PROVIDERS = []
 
-DEFAULT_MODEL = "google/gemini-3-flash-preview"
+DEFAULT_MODEL = "google/gemini-3.6-flash"
 
 # Sampler parameters whose inclusion in the request payload is user-toggleable.
 # Some OpenRouter providers hard-error when these are sent for certain models
@@ -210,6 +210,11 @@ async_signals.get("config.saved").connect(on_config_saved)
 class Defaults(ToggleableParametersConfig, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = DEFAULT_MODEL
+    # Reasoning on by default: with it off the client is coercible, and several
+    # providers (Google, Anthropic) reject the coercion prefill outright since
+    # the request then ends on a model turn.
+    reason_enabled: bool = True
+    reason_tokens: int = 2048
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 

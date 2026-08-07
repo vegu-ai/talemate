@@ -199,17 +199,17 @@
       </v-navigation-drawer>
 
       <!-- director console navigation drawer -->
-      <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
+      <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="rightToolsDrawerWidth" disable-resize-watcher>
         <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :app-ready="ready" :open="directorConsoleDrawer" />
       </v-navigation-drawer>
 
       <!-- help chat navigation drawer -->
-      <v-navigation-drawer v-model="helpDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
+      <v-navigation-drawer v-model="helpDrawer" app location="right" :width="rightToolsDrawerWidth" disable-resize-watcher>
         <HelpChat v-if="helpDrawer && connected" :scene-active="sceneActive" :agent-status="agentStatus" :ux-snapshot="buildUxSnapshot" />
       </v-navigation-drawer>
 
       <!-- debug tools navigation drawer -->
-      <v-navigation-drawer v-model="debugDrawer" app location="right" width="400" disable-resize-watcher>
+      <v-navigation-drawer v-model="debugDrawer" app location="right" :width="rightToolsDrawerWidth" disable-resize-watcher>
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
           <DebugTools ref="debugTools" :scene="scene" :prompts="promptsViewPrompts" :app-config="appConfig" @clear-prompts="clearPrompts"></DebugTools>
@@ -820,7 +820,7 @@ export default {
       return this.tab === 'main' && this.sceneActive && this.scene.environment === 'creative';
     },
     leftDrawerWidth() {
-      // Wider drawer for prompts tab to match debug tools drawer
+      // Wider drawer for the prompts tab's denser listing
       return this.tab === 'prompts' ? 400 : 300;
     },
     promptsViewPrompts() {
@@ -865,9 +865,9 @@ export default {
       // Use preview if available, otherwise fall back to saved config
       return this.appearancePreview ?? (this.appConfig ? this.appConfig.appearance : {});
     },
-    directorConsoleWidth() {
-      // based on the screen width, set the width of the director console
-      const screenWidth = window.innerWidth;
+    rightToolsDrawerWidth() {
+      // based on the current (reactive) window width, set the width of the right hand drawers
+      const screenWidth = this.$vuetify.display.width;
       if(screenWidth <= 1920) {
         return 400;
       } else if(screenWidth <= 2560) {

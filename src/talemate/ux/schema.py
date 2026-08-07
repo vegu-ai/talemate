@@ -7,6 +7,7 @@ __all__ = [
     "Note",
     "Condition",
     "DynamicLabel",
+    "DynamicSpan",
     "FieldGroup",
     "FieldType",
     "Field",
@@ -178,6 +179,17 @@ class DynamicLabel(pydantic.BaseModel):
     labels: dict[str, str]
 
 
+class DynamicSpan(pydantic.BaseModel):
+    """
+    Per-row span override for a table column: when the row's value for
+    `attribute` (a sibling column) matches a key in `spans`, that span is
+    used instead of the column's static span.
+    """
+
+    attribute: str
+    spans: dict[str, int]
+
+
 class Column(Field):
     # grid width (out of 12) in the table widget's stacked row layout;
     # the frontend falls back to a per-type default when unset
@@ -187,7 +199,12 @@ class Column(Field):
     # instead of the fields grid — bool columns only
     rail: bool = False
 
+    # marks a rail bool column as the row's enable toggle — the table widget
+    # dims the row's fields while it is off
+    disables_row: bool = False
+
     dynamic_label: DynamicLabel | None = None
+    dynamic_span: DynamicSpan | None = None
 
 
 # resolve the "Column" forward reference in Field.columns

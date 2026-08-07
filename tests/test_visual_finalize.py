@@ -9,6 +9,7 @@ from talemate.agents.visual.finalize import (
     apply_fuzzy,
     apply_regex,
     cleanup_prompt,
+    finalizer_table_columns,
     validate_finalizers,
 )
 from talemate.agents.visual.schema import (
@@ -132,6 +133,36 @@ def test_finalizer_is_yaml_safe():
     dumped = yaml.dump(finalizer.model_dump())
     assert "python/object" not in dumped
     assert PromptFinalizer(**yaml.safe_load(dumped)) == finalizer
+
+
+def test_selector_row_spans_fill_the_row_for_every_mode():
+    # the selector columns (mode, target, flags, types) share one row - the
+    # flags column's condition and the types column's dynamic span are
+    # hand-mirrored complements, so a mode or flag change that only updates
+    # one of them must fail here instead of leaving a ragged row
+    selectors = [
+        column
+        for column in finalizer_table_columns()
+        if not column.rail and (column.span or 12) < 12
+    ]
+
+    for mode in FINALIZER_MODE:
+        row = {"mode": mode.value}
+        total = 0
+        for column in selectors:
+            condition = column.condition
+            if condition:
+                value = condition.value
+                allowed = value if isinstance(value, list) else [value]
+                if row.get(condition.attribute) not in allowed:
+                    continue
+            span = column.span
+            if column.dynamic_span:
+                span = column.dynamic_span.spans.get(
+                    row.get(column.dynamic_span.attribute), span
+                )
+            total += span
+        assert total == 12, f"{mode.value} selector row spans sum to {total}"
 
 
 class TestAppliesTo:

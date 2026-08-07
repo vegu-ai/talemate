@@ -70,13 +70,14 @@ export function finalizerTableColumns() {
       label: '',
       default_value: true,
       rail: true,
+      disables_row: true,
     },
     {
       name: 'mode',
       type: 'text',
       label: 'Mode',
       default_value: FINALIZER_MODE.EXACT,
-      span: 4,
+      span: 3,
       choices: [
         { label: 'Exact match', value: FINALIZER_MODE.EXACT },
         { label: 'Fuzzy match', value: FINALIZER_MODE.FUZZY },
@@ -89,7 +90,7 @@ export function finalizerTableColumns() {
       type: 'text',
       label: 'Target',
       default_value: FINALIZER_TARGET.POSITIVE,
-      span: 4,
+      span: 3,
       choices: [
         { label: 'Positive', value: FINALIZER_TARGET.POSITIVE },
         { label: 'Negative', value: FINALIZER_TARGET.NEGATIVE },
@@ -100,19 +101,30 @@ export function finalizerTableColumns() {
       name: 'flags',
       type: 'flags',
       label: 'Flags',
-      span: 6,
+      span: 3,
       choices: [
         { label: 'Case sensitive', value: 'case_sensitive' },
         { label: 'Dot all (regex)', value: 'dot_all' },
         { label: 'Multiline (regex)', value: 'multiline' },
       ],
+      // fuzzy matching is always case insensitive and AI mode has no
+      // flags — the stored value is ignored for those modes
+      condition: {
+        attribute: 'mode',
+        value: [FINALIZER_MODE.EXACT, FINALIZER_MODE.REGEX],
+      },
     },
     {
       name: 'vis_types',
       type: 'flags',
       label: 'Types',
       description: 'Visual types this action applies to. Empty applies to all.',
-      span: 6,
+      span: 3,
+      // take over the row when the flags column is hidden
+      dynamic_span: {
+        attribute: 'mode',
+        spans: { [FINALIZER_MODE.FUZZY]: 6, [FINALIZER_MODE.AI]: 6 },
+      },
       choices: VIS_TYPE_OPTIONS.map(visType => ({
         label: titleCase(visType),
         value: visType,

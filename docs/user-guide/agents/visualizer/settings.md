@@ -159,7 +159,7 @@ A table of actions, executed from top to bottom. Each row has:
     - **AI**: Sends the prompt to the AI together with the instruction from the *Instruct* field and replaces the prompt with the result.
 - **Match**: The search string (exact, fuzzy) or pattern (regex). Hidden for AI, which only uses the instruction.
 - **Replace / Instruct**: The replacement text, or — in AI mode, where the field is labeled *Instruct* — the instruction for AI processing. Leaving the replacement empty removes the match (fuzzy mode removes the whole matching segment).
-- **Flags**: Case sensitivity and regex behavior flags.
+- **Flags** (exact and regex modes only): Case sensitivity and regex behavior flags.
 - **Target**: Whether the action applies to the positive prompt (default), the negative prompt, or both.
 - **Types**: Restrict the action to specific visual types (character portrait, scene background, ...). Empty applies to all.
 

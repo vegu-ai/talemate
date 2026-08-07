@@ -1,12 +1,8 @@
 <template>
 
     <div>
-        <div class="text-caption text-muted" v-if="label">
-            <strong>{{ label }}</strong>
-        </div>
-        <v-alert color="muted" variant="text" v-if="description">
-            {{ description }}
-        </v-alert>
+        <div class="text-subtitle-2 text-mutedheader" v-if="label">{{ label }}</div>
+        <div class="text-body-2 text-muted mb-3" :class="{ 'mt-1': label }" v-if="description">{{ description }}</div>
 
         <!-- Preset insert: appends editable copies of the selected preset's rows -->
         <div v-if="allow_add && presets && presets.length" class="d-flex align-center mb-4" style="max-width: 480px;">
@@ -25,63 +21,71 @@
                 Insert
             </v-btn>
         </div>
+
+        <div v-if="!values.length" class="text-caption text-muted mb-3">{{ emptyHint }}</div>
+
         <!-- Each row renders as a stacked card so wide column sets don't get
              squished into table cells (this widget lives inside modals and
              narrow editor panes). -->
         <!-- no color prop: on an outlined card it would tint the whole
              card text (inputs included), not just the border -->
         <v-card v-for="(value, index) in values" :key="index" variant="outlined" class="mb-3">
-            <!-- fields grid plus a slim vertical control rail on the right,
-                 so row controls don't cost a full row of vertical space -->
-            <div class="d-flex">
-                <v-card-text class="pb-2 flex-grow-1">
-                    <v-row dense>
-                        <v-col v-for="column in visibleColumns(values[index])" :key="column.name" cols="12" :sm="(column.span || defaultSpan(column)) >= 12 ? 12 : 6" :md="column.span || defaultSpan(column)">
-                            <ConfigWidgetField
-                                v-model="values[index][column.name]"
-                                @update:modelValue="save(index, column.name, $event)"
-                                :name="column.name"
-                                :default="value[column.name]"
-                                :type="column.type"
-                                :label="columnLabel(column, values[index])"
-                                :description="column.description"
-                                :choices="column.choices"
-                                :rows="column.rows"
-                                :max-rows="column.max_rows"
-                                :auto-grow="column.auto_grow"
-                                density="compact"
-                                :max="column.max" :min="column.min" :step="column.step" />
-                        </v-col>
-                    </v-row>
-                </v-card-text>
-                <div class="d-flex flex-column align-center pa-1">
-                    <span class="text-caption text-muted">#{{ index + 1 }}</span>
+            <!-- slim header row: index + summary on the left, row controls on
+                 the right, so controls don't cost a full row of vertical space
+                 and the fields grid gets the full card width -->
+            <div class="d-flex align-center px-4 pt-2">
+                <span class="text-caption text-muted mr-2">#{{ index + 1 }}</span>
+                <span class="text-caption text-mutedheader">{{ rowSummary(values[index]) }}</span>
+                <v-spacer></v-spacer>
+                <div v-for="column in railColumns(values[index])" :key="column.name" class="d-flex align-center">
                     <v-checkbox-btn
-                        v-for="column in railColumns(values[index])"
-                        :key="column.name"
                         v-model="values[index][column.name]"
                         @update:modelValue="save(index, column.name, $event)"
                         density="compact"
                         color="primary"
                         class="flex-grow-0"
                     ></v-checkbox-btn>
-                    <template v-if="allow_reorder">
-                        <v-btn icon size="small" density="compact" variant="text" :disabled="index === 0" @click="moveRow(index, -1)">
-                            <v-icon>mdi-arrow-up</v-icon>
-                        </v-btn>
-                        <v-btn icon size="small" density="compact" variant="text" :disabled="index === values.length - 1" @click="moveRow(index, 1)">
-                            <v-icon>mdi-arrow-down</v-icon>
-                        </v-btn>
-                    </template>
-                    <v-btn v-if="allow_delete" icon size="small" density="compact" variant="text" color="delete" @click="removeRow(index)">
-                        <v-icon>mdi-close-circle</v-icon>
-                    </v-btn>
+                    <v-tooltip activator="parent" location="top">{{ railLabel(column) }}</v-tooltip>
                 </div>
+                <template v-if="allow_reorder && values.length > 1">
+                    <v-btn icon size="small" density="compact" variant="text" :disabled="index === 0" @click="moveRow(index, -1)">
+                        <v-icon>mdi-arrow-up</v-icon>
+                        <v-tooltip activator="parent" location="top">Move up</v-tooltip>
+                    </v-btn>
+                    <v-btn icon size="small" density="compact" variant="text" :disabled="index === values.length - 1" @click="moveRow(index, 1)">
+                        <v-icon>mdi-arrow-down</v-icon>
+                        <v-tooltip activator="parent" location="top">Move down</v-tooltip>
+                    </v-btn>
+                </template>
+                <v-btn v-if="allow_delete" icon size="small" density="compact" variant="text" color="delete" class="ml-1" @click="removeRow(index)">
+                    <v-icon>mdi-close-circle</v-icon>
+                    <v-tooltip activator="parent" location="top">Remove</v-tooltip>
+                </v-btn>
             </div>
+            <v-card-text class="pt-1 pb-2" :class="{ 'row-fields--disabled': rowDisabled(values[index]) }">
+                <v-row dense>
+                    <v-col v-for="column in visibleColumns(values[index])" :key="column.name" cols="12" :sm="columnSpan(column, values[index]) >= 12 ? 12 : 6" :md="columnSpan(column, values[index])">
+                        <ConfigWidgetField
+                            v-model="values[index][column.name]"
+                            @update:modelValue="save(index, column.name, $event)"
+                            :name="column.name"
+                            :default="value[column.name]"
+                            :type="column.type"
+                            :label="columnLabel(column, values[index])"
+                            :description="column.description"
+                            :choices="column.choices"
+                            :rows="column.rows"
+                            :max-rows="column.max_rows"
+                            :auto-grow="column.auto_grow"
+                            density="compact"
+                            :max="column.max" :min="column.min" :step="column.step" />
+                    </v-col>
+                </v-row>
+            </v-card-text>
         </v-card>
 
         <!-- Add button -->
-        <v-btn v-if="allow_add" class="mt-2" color="primary" variant="outlined" @click="addRow">
+        <v-btn v-if="allow_add" class="mt-2 mb-6" color="primary" variant="outlined" @click="addRow">
             <v-icon start>mdi-plus</v-icon>
             Add
         </v-btn>
@@ -154,6 +158,13 @@ export default {
     emits: [
         "save"
     ],
+    computed: {
+        emptyHint() {
+            if (!this.allow_add) return "No entries yet."
+            if (this.presets && this.presets.length) return "No entries yet — use Add to create one, or insert a preset."
+            return "No entries yet — use Add to create one."
+        }
+    },
     created() {
         // per-keystroke field edits debounce the save emission — consumers
         // like the character finalizers editor persist to the backend on
@@ -193,6 +204,44 @@ export default {
                 if (override !== undefined) return override
             }
             return column.label
+        },
+        // grid width for a column in the given row, honoring the column's
+        // dynamic_span override (talemate.ux.schema.DynamicSpan)
+        columnSpan(column, row) {
+            const dyn = column.dynamic_span
+            if (dyn && dyn.spans) {
+                const override = dyn.spans[String(row[dyn.attribute])]
+                if (override !== undefined) return override
+            }
+            return column.span || this.defaultSpan(column)
+        },
+        // rail columns are commonly unlabelled (the checkbox stands on its
+        // own), so the tooltip falls back to a title-cased column name
+        // (`enabled` -> "Enabled", `some_flag` -> "Some Flag")
+        railLabel(column) {
+            if (column.label) return column.label
+            return column.name.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+        },
+        // scanning aid in the row header: the selected choice labels of the
+        // row's single-choice columns, e.g. "Exact match · Positive"
+        rowSummary(row) {
+            return this.visibleColumns(row)
+                .filter(column => column.type !== 'flags' && Array.isArray(column.choices))
+                .map(column => column.choices.find(choice => choice.value == row[column.name])?.label)
+                .filter(Boolean)
+                .join(' · ')
+        },
+        // an explicitly disabled row dims its fields, but keeps its controls
+        // legible so it can be switched back on. The row's enable toggle is
+        // whichever rail column declares `disables_row`
+        // (talemate.ux.schema.Column). Values arrive loosely typed across the
+        // websocket, so any present-but-falsy value dims — a missing key does
+        // not, matching the backend default of enabled.
+        rowDisabled(row) {
+            const column = this.columns.find(c => c.rail && c.disables_row)
+            if (!column) return false
+            const value = row[column.name]
+            return value !== undefined && !value
         },
         // grid width (of 12) for a column without an explicit `span`
         defaultSpan(column) {
@@ -246,6 +295,8 @@ export default {
             if (!this.selectedPreset) return
             const rows = JSON.parse(JSON.stringify(this.selectedPreset.rows || []))
             this.values.push(...rows)
+            // clear the selection so a second click can't silently duplicate
+            this.selectedPreset = null
             this.emitSave()
         },
         // Move the row at the specified index up (-1) or down (1)
@@ -259,3 +310,14 @@ export default {
     }
 }
 </script>
+<style scoped>
+.row-fields--disabled {
+    opacity: 0.45;
+}
+
+/* outlined-variant borders are currentColor (full text brightness) since the
+   cards carry no color prop — tone them down to a subtle frame */
+.v-card--variant-outlined {
+    border-color: rgb(var(--v-theme-card_border));
+}
+</style>

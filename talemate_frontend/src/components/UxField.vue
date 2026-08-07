@@ -301,14 +301,16 @@
   <!-- Field notes — `note_on_value` matches against the current modelValue,
        which in scene mode is the effective value (override when active). -->
   <template v-if="field.note != null">
-    <v-alert variant="outlined" density="compact" :color="field.note.color || 'muted'" :icon="field.note.icon">
+    <!-- mb-4: the next field's slider renders its thumb label always, which
+         would otherwise overlap the note -->
+    <v-alert variant="outlined" density="compact" :color="field.note.color || 'muted'" class="mb-4" :icon="field.note.icon">
       <div class="text-caption text-mutedheader">{{ field.note.title || field.label }}</div>
       <span class="text-muted text-caption">{{ field.note.text }}</span>
     </v-alert>
   </template>
   <template v-else-if="field.note_on_value != null">
     <template v-for="(note, noteKey) in field.note_on_value" :key="noteKey">
-      <v-alert v-if="modelValue == noteKey || String(modelValue) == noteKey" variant="outlined" density="compact" :color="note.color || 'muted'" class="my-2" :icon="note.icon">
+      <v-alert v-if="modelValue == noteKey || String(modelValue) == noteKey" variant="outlined" density="compact" :color="note.color || 'muted'" class="mt-2 mb-4" :icon="note.icon">
         <span class="text-caption text-uppercase mr-2">
           {{ noteKey.toLowerCase() === 'true' ? 'ENABLED' : noteKey.replace(/_/g, ' ') }}
         </span>

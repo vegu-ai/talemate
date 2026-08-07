@@ -19,7 +19,7 @@ from talemate.agents.base import (
     AgentEmission,
 )
 from talemate.prompts import Prompt
-from talemate.ux.schema import Column, Condition, DynamicLabel
+from talemate.ux.schema import Column, Condition, DynamicLabel, DynamicSpan
 
 __all__ = [
     "PromptFinalizationMixin",
@@ -149,13 +149,14 @@ def finalizer_table_columns() -> list[Column]:
             label="",
             default_value=True,
             rail=True,
+            disables_row=True,
         ),
         Column(
             name="mode",
             type="text",
             label="Mode",
             default_value=FINALIZER_MODE.EXACT.value,
-            span=4,
+            span=3,
             choices=[
                 {"label": "Exact match", "value": FINALIZER_MODE.EXACT.value},
                 {"label": "Fuzzy match", "value": FINALIZER_MODE.FUZZY.value},
@@ -168,7 +169,7 @@ def finalizer_table_columns() -> list[Column]:
             type="text",
             label="Target",
             default_value="POSITIVE",
-            span=4,
+            span=3,
             choices=[
                 {"label": "Positive", "value": "POSITIVE"},
                 {"label": "Negative", "value": "NEGATIVE"},
@@ -179,19 +180,30 @@ def finalizer_table_columns() -> list[Column]:
             name="flags",
             type="flags",
             label="Flags",
-            span=6,
+            span=3,
             choices=[
                 {"label": "Case sensitive", "value": "case_sensitive"},
                 {"label": "Dot all (regex)", "value": "dot_all"},
                 {"label": "Multiline (regex)", "value": "multiline"},
             ],
+            # fuzzy matching is always case insensitive and AI mode has no
+            # flags — the stored value is ignored for those modes
+            condition=Condition(
+                attribute="mode",
+                value=[FINALIZER_MODE.EXACT.value, FINALIZER_MODE.REGEX.value],
+            ),
         ),
         Column(
             name="vis_types",
             type="flags",
             label="Types",
             description="Visual types this action applies to. Empty applies to all.",
-            span=6,
+            span=3,
+            # take over the row when the flags column is hidden
+            dynamic_span=DynamicSpan(
+                attribute="mode",
+                spans={FINALIZER_MODE.FUZZY.value: 6, FINALIZER_MODE.AI.value: 6},
+            ),
             choices=[
                 {
                     "label": vis_type.value.replace("_", " ").title(),

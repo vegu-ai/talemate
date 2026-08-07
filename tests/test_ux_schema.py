@@ -104,6 +104,18 @@ def test_field_condition_serialization():
     assert dumped["condition"] == {"attribute": "other_field", "value": ["a", "b"]}
 
 
+def test_field_dynamic_span_serialization():
+    column = ux_schema.Column(
+        name="vis_types",
+        type="flags",
+        label="Types",
+        span=3,
+        dynamic_span=ux_schema.DynamicSpan(attribute="mode", spans={"AI": 6}),
+    )
+    dumped = column.model_dump()
+    assert dumped["dynamic_span"] == {"attribute": "mode", "spans": {"AI": 6}}
+
+
 def test_field_group_serialization():
     field = ux_schema.Field(
         type="text",

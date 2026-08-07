@@ -61,6 +61,7 @@ export default createVuetify({
           context_investigation: colors.orange.lighten4,
           play_audio: colors.yellow.darken2,
           avatar_border: colors.grey.darken3,
+          card_border: colors.grey.darken3,
           defaultBadge: colors.deepOrange.darken2,
 
 

@@ -224,3 +224,6 @@ The WebSocket URL is determined in this order:
 2. **Auto-detection** (`ws://<current-browser-hostname>:5050/ws`)
 
 This means you can use a single Docker image across different environments (staging, production) by simply changing the environment variable.
+
+!!! info "`0.0.0.0` in the WebSocket URL"
+    `0.0.0.0` is a bind address, not an address a browser can connect to. If the environment variable's host is `0.0.0.0`, the frontend replaces it with the hostname the page was loaded from — the configured port and path are kept. So `ws://0.0.0.0:6060/ws` behaves like auto-detection for the host, but on port `6060`.

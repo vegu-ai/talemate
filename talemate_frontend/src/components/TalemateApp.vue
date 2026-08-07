@@ -1056,6 +1056,17 @@ export default {
         console.log("VITE_TALEMATE_BACKEND_WEBSOCKET_URL is set but not a valid WebSocket URL:", envWebsocketUrl);
       }
       let websocketUrl = isValidUrl ? envWebsocketUrl : `ws://${currentUrl.hostname}:5050/ws`;
+      // 0.0.0.0 is a server bind address, not a reachable client target
+      // (recent Chrome refuses it outright) — resolve it to whatever host
+      // the UI itself was loaded from, which serves both ports.
+      if (isValidUrl) {
+        let wsUrl = new URL(websocketUrl);
+        if (wsUrl.hostname === '0.0.0.0') {
+          wsUrl.hostname = currentUrl.hostname;
+          websocketUrl = wsUrl.toString();
+          console.log("VITE_TALEMATE_BACKEND_WEBSOCKET_URL points at 0.0.0.0, using page hostname:", websocketUrl);
+        }
+      }
 
       console.log("urls", { websocketUrl, currentUrl }, {env : import.meta.env});
 

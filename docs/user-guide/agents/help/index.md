@@ -4,7 +4,7 @@ The help agent provides an interactive help chat that answers questions about Ta
 
 It grounds its answers in the documentation that ships with Talemate: it knows the documentation's sections and can look up relevant pages by topic, search the documentation, read whole pages, or read individual sections before answering.
 
-Open the help chat via the :material-help-circle-outline: icon in the app bar. It is available at any time - no scene needs to be loaded.
+Open the help chat via the :material-help-circle-outline: icon in the app bar. No scene needs to be loaded. The icon is only there while the Help agent is enabled - if you don't see it, enable the agent under **Settings → Connections → Agents → Help**.
 
 ![Help chat answering a question about dialogue styling](/talemate/img/0.39.0/help-agent-chat.png)
 
@@ -28,7 +28,7 @@ When you ask it to, it can also **change** settings:
 - Agent settings, either globally or as a [per-scene override](/talemate/user-guide/agents/scene-overrides) for the currently loaded scene - it can also remove a scene override so the setting falls back to the global value again.
 - Application settings in the game, appearance, and creator sections.
 
-So things like "switch the conversation format to Narrative", "lower the editor revision to only run on dialogue", "turn off auto save" or "override the visualizer style for this scene only" can be done right from the chat. Changes are applied immediately, the chat records exactly what changed (old and new value), and any open settings dialogs refresh live.
+So things like "switch the conversation format to Narrative", "lower the editor revision to only run on dialogue", "turn off auto save" or "override the visualizer style for this scene only" can be done right from the chat. Changes are applied immediately, the chat records exactly what changed (old and new value), and an open settings view picks them up live.
 
 Some things are intentionally out of reach:
 
@@ -36,10 +36,10 @@ Some things are intentionally out of reach:
 - Clients are read-only - client changes (model, context length, etc.) must be made in the client settings.
 - Complex settings (tables, weight maps, template pickers) are read-only in chat and must be edited in the settings interface directly.
 
-!!! note "Open settings dialogs"
-    If the settings dialog of the agent you want to change is currently open, the help agent will ask you to close it first. The dialog holds its own copy of the settings - it would not show the change, and closing it could overwrite it.
+!!! note "Unsaved settings edits"
+    Having the Settings tab open is fine - applied changes show up there live. But while the settings view holds **unsaved edits**, the help agent refuses to change anything - agent settings and application settings alike - and asks you to save or discard them first. That view edits a working copy of your *whole* configuration and saves all of it at once, so its **Save** would push the pre-change values back over whatever the agent just wrote for you. Which page you happen to be on makes no difference.
 
-    Application settings work differently: having the Settings tab open is fine, and applied changes show up in it live. Only when the settings view has **unsaved edits** will the help agent ask you to save or discard them before it changes an application setting.
+    Unsaved edits stay pending when you switch to another main tab, and so does the refusal. Save or discard them, then ask again.
 
 ## Chats
 
@@ -51,7 +51,7 @@ The most recent answer can be regenerated via the refresh button next to the mes
 
 Each chat has a **Scene Aware** toggle. When enabled and a scene is loaded, the help agent can see the scene title, its characters, and recent scene progress, so you can ask scene-specific questions. When disabled the conversation is completely unaware of your scene.
 
-The help agent also receives a small snapshot of what you are currently looking at in the interface (active tab, open panels, the settings view's current page, and any open client or agent settings dialog including its selected tab), so questions like "what does this setting do?" can be answered in context.
+The help agent also receives a small snapshot of what you are currently looking at in the interface - the active tab, which drawers you have open, whether a scene is loaded and what it is doing, and the state of the settings view: the page you are on, whether it has unsaved edits, and which client or agent you have selected there (for an agent, also whether it is in **Global** or **Scene** mode). So questions like "what does this setting do?" can be answered in context.
 
 ## Non-blocking
 

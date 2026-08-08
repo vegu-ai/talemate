@@ -355,7 +355,6 @@ class GoogleImageMixin:
                 ],
                 label="Model",
                 description="Google image model",
-                save_on_change=True,
                 scene_overridable=False,
             ),
         }
@@ -386,7 +385,6 @@ class GoogleImageMixin:
             step=1,
             label="Max References",
             description="Maximum number of reference images for editing (1-3)",
-            save_on_change=True,
             scene_overridable=False,
         )
         actions["google_image_edit"] = AgentAction(

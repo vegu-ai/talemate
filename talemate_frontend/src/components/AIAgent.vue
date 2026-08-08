@@ -19,7 +19,7 @@
     <div v-if="isConnected()">
         <v-list density="compact">
             <!-- Ctrl + click toggles agent enable/disable when allowed -->
-            <v-list-item  v-for="(agent, index) in state.agents" :key="index" @click="listItemClicked($event, agent, index)">
+            <v-list-item  v-for="(agent, index) in state.agents" :key="index" @click="listItemClicked($event, agent)">
                 <v-list-item-title>
                     <v-progress-circular v-if="agent.status === 'busy'" indeterminate="disable-shrink" color="primary"
                         size="14"></v-progress-circular>
@@ -137,12 +137,10 @@
                 </div>
             </v-list-item>
         </v-list>
-        <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" :templates="templates" :app-config="appConfig" :scene="scene" @save="saveAgent" @update:dialog="updateDialog" ref="modal"></AgentModal>
     </div>
 </template>
-    
+
 <script>
-import AgentModal from './AgentModal.vue';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
 import AgentMessages from './AgentMessages.vue';
 import {
@@ -156,7 +154,6 @@ import {
 
 export default {
     components: {
-        AgentModal,
         AgentMessages
     },
     emits: ['agents-updated'],
@@ -165,16 +162,6 @@ export default {
         return {
             state: {
                 agents: [],
-                dialog: false,
-                currentAgent: {
-                    type: '',
-                    client: '',
-                    status: 'idle',
-                    label: '',
-                    name: '',
-                    data: {},
-                },
-                formTitle: ''
             },
             maxMessagesPerAgent: 25,
             agentHasMessages: {},
@@ -187,7 +174,6 @@ export default {
             type: Object,
             default: () => ({})
         },
-        templates: Object,
         appConfig: Object,
         scene: Object,
     },
@@ -221,24 +207,9 @@ export default {
         'isConnected',
         'getClients',
         'openAgentActionOverrides',
+        'openAgentSettings',
     ],
-    provide() {
-        return {
-            state: this.state
-        };
-    },
     methods: {
-        uxSnapshot() {
-            // what the open agent modal shows, for the help agent's UX snapshot
-            if(!this.state.dialog) return null;
-            const tab = this.$refs.modal?.tab || null;
-            return {
-                agent: this.state.currentAgent?.name || null,
-                agent_label: this.state.currentAgent?.label || null,
-                tab: tab === '_config' ? 'general' : tab,
-            };
-        },
-
         sceneOverrideCount(agent) {
             return countSceneOverrides(agent?.data?.scene_overrides);
         },
@@ -259,10 +230,10 @@ export default {
          * Handles clicks on an agent list item.
          *
          * Behaviour:
-         *  - Regular click opens the agent edit modal (existing behaviour).
+         *  - Regular click takes the user to the agent's settings page.
          *  - Ctrl-/Cmd-click toggles the agent's enabled state **iff** the agent supports toggling (agent.data.has_toggle).
          */
-        listItemClicked(event, agent, index) {
+        listItemClicked(event, agent) {
             // If the user is holding Ctrl (Windows/Linux) or Cmd (macOS)
             if (isPrimaryModifier(event)) {
                 // Only toggle agents that explicitly allow it
@@ -275,8 +246,8 @@ export default {
                 return;
             }
 
-            // Fallback to default behaviour – open the edit dialog
-            this.editAgent(index);
+            // Fallback to default behaviour – open the agent's settings page
+            this.openAgentSettings(agent.name);
         },
         configurationRequired() {
             let clients = this.getClients();
@@ -390,14 +361,6 @@ export default {
 
             // Save the agent to persist the changes
             this.saveAgent(agent);
-
-            // Send update to server
-            this.getWebsocket().send(JSON.stringify({
-                type: 'agent_action',
-                agent_name: agent.name,
-                action_name: action_name,
-                enabled: action.enabled
-            }));
         },
         toggleSubConfig(agent, action_name, config_name, config) {
             if (this.isConfigOverridden(agent, action_name, config_name)) {
@@ -415,16 +378,6 @@ export default {
 
             // Save the agent to persist the changes
             this.saveAgent(agent);
-
-            // Send update to server using the same type as action toggles
-            this.getWebsocket().send(JSON.stringify({
-                type: 'agent_action',
-                agent_name: agent.name,
-                action_name: action_name,
-                config: {
-                    [config_name]: config.value
-                }
-            }));
         },
         getQuickToggleActions(agent) {
             const result = {};
@@ -451,10 +404,6 @@ export default {
         getActive() {
             return this.state.agents.find(a => a.status === 'busy');
         },
-        openModal() {
-            this.state.formTitle = 'Add AI Agent';
-            this.state.dialog = true;
-        },
         saveAgent(agent) {
             const index = this.state.agents.findIndex(c => c.name === agent.name);
             if (index === -1) {
@@ -463,29 +412,6 @@ export default {
                 this.state.agents[index] = agent;
             }
             this.$emit('agents-updated', this.state.agents);
-        },
-        editAgent(index) {
-            // deep clone to prevent real-time status updates from overriding unsaved edits
-            this.state.currentAgent = JSON.parse(JSON.stringify(this.state.agents[index]));
-            this.state.formTitle = 'Edit AI Agent';
-            this.state.dialog = true;
-        },
-        deleteAgent(index) {
-            if (window.confirm('Are you sure you want to delete this agent?')) {
-                this.state.agents.splice(index, 1);
-                this.$emit('agents-updated', this.state.agents);
-            }
-        },
-        updateDialog(newVal) {
-            this.state.dialog = newVal;
-        },
-        openSettings(agentName, section) {
-            let index = this.state.agents.findIndex(a => a.name === agentName);
-            if (index !== -1) {
-                this.editAgent(index);
-                if(section)
-                    this.$refs.modal.tab = section;
-            }
         },
         openMessages(agentName) {
             console.log("openMessages", agentName, this.agentMessagesRefs);
@@ -519,12 +445,6 @@ export default {
                         agent.actions[i] = {...data.data.actions[i]};
                     }
                     agent.enabled = data.data.enabled;
-
-                    // If the modal is open and this is the current agent, update choices only (preserve user's unsaved values)
-                    if (this.state.dialog && this.state.currentAgent && this.state.currentAgent.name === data.name && this.$refs.modal) {
-                        // Update choices directly in the modal's local agent object to avoid triggering the watcher
-                        this.$refs.modal.updateChoicesOnly(agent);
-                    }
 
                     // sort agents by label
 

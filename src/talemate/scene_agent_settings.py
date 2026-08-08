@@ -208,7 +208,7 @@ class SceneAgentSettings(pydantic.BaseModel):
         action.enabled = None
 
     # ------------------------------------------------------------------
-    # Bulk replacement (used by the AgentModal save flow)
+    # Bulk replacement (used by agent_config/save_scene_overrides)
     # ------------------------------------------------------------------
 
     def replace_agent_overrides(self, agent_type: str, override: dict) -> None:

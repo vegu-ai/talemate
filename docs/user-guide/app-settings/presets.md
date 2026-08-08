@@ -37,7 +37,7 @@ Allows you to add, remove and manage various embedding models for the memory age
 
 ![App settings - Presets - System Prompts](/talemate/img/0.39.0/app-settings-presets-system-prompts.png)
 
-This panel lets you override the global system prompts for the entire application for each prompt kind (Conversation, Narration, Creation, and so on). Per-client overrides live on the **System Prompts** tab of each client's [configuration dialog](../clients/client-configuration.md).
+This panel lets you override the global system prompts for the entire application for each prompt kind (Conversation, Narration, Creation, and so on). Per-client overrides live in the **System Prompts** section of each client's [editor](../clients/client-configuration.md).
 
 See [System Prompt Overrides](system-prompts.md) for the full reference, including:
 

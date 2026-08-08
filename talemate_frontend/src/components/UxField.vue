@@ -5,7 +5,7 @@
     :model-value="modelValue"
     @update:modelValue="onValue"
     @keyup="$emit('change')"
-    @blur="$emit('change', field.save_on_change)"
+    @blur="$emit('change')"
     :readonly="readonly"
     :label="field.label"
     :hint="field.description"
@@ -23,7 +23,7 @@
     :model-value="modelValue"
     @update:modelValue="onValue"
     @keyup="$emit('change')"
-    @blur="$emit('change', field.save_on_change)"
+    @blur="$emit('change')"
     :readonly="readonly"
     :label="field.label"
     :hint="field.description"
@@ -290,6 +290,7 @@
     :config-path="field.value"
     :title="field.label"
     :app-config="appConfig"
+    :deferred="deferred"
     class="mt-3"
   />
 
@@ -330,10 +331,10 @@ import { rowsFieldForTemplateType } from '@/utils/templateMappings';
 
 // Renders a single uniform UX field definition (talemate.ux.schema.Field)
 // across all supported widget types. Shared by the agent settings renderers
-// ([[AgentGlobalSettings.vue]] and [[AgentSceneSettings.vue]] — the latter
+// ([[AgentConfigSection.vue]] and [[AgentSceneSettings.vue]] — the latter
 // passes a `prepend` slot for the override toggle and `readonly` when the
 // override is inactive) and the client extra-field renderer
-// ([[ClientModal.vue]]).
+// ([[ClientConfigEditor.vue]]).
 export default {
   components: { ConfigWidgetTable, ConfigWidgetUnifiedApiKey, ConfigWidgetWeights, GraduatedSlider },
   props: {
@@ -344,6 +345,9 @@ export default {
     templates: { type: Object, default: null },
     // Required for unified_api_key widgets.
     appConfig: { type: Object, default: null },
+    // Forwarded to the unified_api_key widget: `appConfig` is an unsaved
+    // working copy whose owner persists it, not the live config.
+    deferred: { type: Boolean, default: false },
   },
   emits: ['update:modelValue', 'change'],
   computed: {
@@ -410,7 +414,7 @@ export default {
     },
     onValueAndCommit(value) {
       this.$emit('update:modelValue', value);
-      this.$emit('change', this.field.save_on_change);
+      this.$emit('change');
     },
     onVector2Update(index, value) {
       const next = [...(this.modelValue || [0, 0])];

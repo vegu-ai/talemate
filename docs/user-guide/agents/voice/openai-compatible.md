@@ -1,40 +1,43 @@
 # OpenAI Compatible
 
 !!! info "Updated in 0.37.0"
-    The OpenAI Compatible tab is now a registry — add as many backends as you need, each with its own URL, key, model, and voice list. Voices are auto-fetched when the server supports it.
+    OpenAI Compatible is now a registry — add as many backends as you need, each with its own URL, key, model, and voice list. Voices are auto-fetched when the server supports it.
 
 Use this backend to connect Talemate to any TTS service that implements the OpenAI speech API format. Each registered backend talks to one server, has its own settings, and contributes its own voices to the global voice library.
 
 You can register multiple backends side by side — for example a local server and a hosted one, or two local servers running different models — and pick which ones are active from the [Enabled APIs](settings.md#enabled-apis) list.
 
-## The OpenAI Compatible tab
+## The OpenAI Compatible section
 
-Open the Voice agent settings and switch to the **OpenAI Compatible** tab. This is the management tab for the registry. Every backend you add appears as its own sub-tab beneath it.
+Open the Voice agent settings (**Settings → Connections → Agents → Voice**) and expand the **OpenAI Compatible** section. This is where the registry is managed — every backend you add gets its own :material-subdirectory-arrow-right: section nested underneath it.
 
-![OpenAI Compatible management tab with several registered backends](/talemate/img/0.37.0/voice-openai-compatible-management-tab.png)
+![OpenAI Compatible registry section with several registered backends](/talemate/img/0.40.0/voice-openai-compatible-registry.png)
 
 ### Adding a backend
 
-Use the **Add Backend** control on the management tab. You will be asked for a display label; Talemate derives an internal slug from it. Once added, the new backend:
+Type a display label into the field at the top of the registry section and press **:material-plus: Add backend**; Talemate derives an internal slug from the label and shows it below the field before you add. Once added, the new backend:
 
-- Appears as a sub-tab below the management tab.
+- Appears as its own section nested under **OpenAI Compatible**.
 - Shows up as a checkbox in the Voice agent's [Enabled APIs](settings.md#enabled-apis) list, so you can turn it on or off without losing its configuration.
-- Starts with sensible defaults you can edit on the per-backend tab.
+- Starts with sensible defaults you can edit in that section.
 
-![Add Backend dialog on the OpenAI Compatible tab](/talemate/img/0.37.0/voice-openai-compatible-add-backend.png)
+![Adding a backend to the OpenAI Compatible registry](/talemate/img/0.40.0/voice-openai-compatible-add-backend.png)
 
 !!! note "Enable the backend in Enabled APIs"
     Adding a backend registers it but does not necessarily enable it for generation. Make sure the backend's checkbox is on under the Voice agent's [Enabled APIs](settings.md#enabled-apis) before you expect voices from it to be selectable.
 
 ### Removing or renaming a backend
 
-Both controls live on the management tab next to each backend entry. Removing a backend also removes any voices that were registered under it from the voice library; renaming only changes the display label and does not invalidate stored voices.
+Both controls live in the registry section, on each backend's entry: :material-pencil: renames it, :material-delete: removes it. Removing a backend also removes any voices that were registered under it from the voice library; renaming only changes the display label and does not invalidate stored voices.
+
+!!! note
+    Adding, renaming and removing take effect immediately — they change which backends exist rather than the value of a setting, so they are not part of the settings toolbar's **Save**. The fields inside a backend's section are.
 
 ## Per-backend settings
 
-Each backend renders its own sub-tab under the OpenAI Compatible parent.
+Each backend renders its own section nested under **OpenAI Compatible**.
 
-![Per-backend OpenAI Compatible tab](/talemate/img/0.37.0/voice-openai-compatible-backend-tab.png)
+![Per-backend OpenAI Compatible section](/talemate/img/0.40.0/voice-openai-compatible-backend-panel.png)
 
 ##### API Base URL
 
@@ -42,11 +45,11 @@ Base URL of the OpenAI-compatible TTS server, including the `/v1` path. Default:
 
 The backend reports `API URL not set` and will not generate audio until this value is provided.
 
-This field saves on blur, so you can edit it and immediately use **Refresh voices** without closing the agent settings dialog.
+**Refresh voices** asks the running agent for the list, so it uses the last *saved* URL — save your changes before using it (the button is disabled while the settings page has unsaved edits).
 
 ##### API Key
 
-API key for the server. Leave empty if the server does not require authentication — Talemate will send a placeholder value so the underlying OpenAI client accepts the request. This field saves on blur.
+API key for the server. Leave empty if the server does not require authentication — Talemate will send a placeholder value so the underlying OpenAI client accepts the request.
 
 ##### Model
 
@@ -60,7 +63,7 @@ Override the path Talemate uses to list voices. Leave empty to probe a small set
 - An absolute path (e.g. `/voices`) — anchored to the host root.
 - A full URL (e.g. `https://example.com/list-voices`) — used as-is.
 
-Use this when your server exposes a non-standard listing path. This field saves on blur.
+Use this when your server exposes a non-standard listing path.
 
 ##### Chunk size
 
@@ -68,7 +71,9 @@ Split text into chunks of this size before sending to the server. Smaller values
 
 ## Refresh voices
 
-Each backend row on the management tab has a **Refresh voices** button. Pressing it asks the server for the voices it can produce and merges the result into the global voice library, keyed under the backend's slug.
+Each backend row in the registry section has a **:material-refresh: Refresh voices** button. Pressing it asks the server for the voices it can produce and merges the result into the global voice library, keyed under the backend's slug.
+
+It runs against the configuration the agent is currently using, so the button is disabled while the settings page has unsaved changes — save first, then refresh.
 
 The auto-fetcher tries the optional [Voices endpoint](#voices-endpoint-optional) first. If none is configured, it probes a few common compat-server paths in order:
 
@@ -105,7 +110,7 @@ Refer to your TTS server's documentation for supported voice identifiers. Once a
 
 ## Auto-managed backends
 
-Some Talemate clients can register a backend on this tab automatically when they have a TTS model loaded. The clearest example is [KoboldCpp](../../clients/types/koboldcpp.md#tts-auto-setup), which registers a backend pointing at its own URL and refreshes its voice list as soon as it sees a TTS model.
+Some Talemate clients can register a backend in this registry automatically when they have a TTS model loaded. The clearest example is [KoboldCpp](../../clients/types/koboldcpp.md#tts-auto-setup), which registers a backend pointing at its own URL and refreshes its voice list as soon as it sees a TTS model.
 
 Auto-managed backends behave the same as manually-added ones once registered. If the underlying client later stops serving TTS (for example, KoboldCpp restarts without a TTS model), the backend's slug is dropped from Enabled APIs but its configuration is kept, so it re-enables cleanly the next time the server comes back.
 

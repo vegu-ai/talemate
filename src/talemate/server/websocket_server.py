@@ -7,7 +7,7 @@ import traceback
 import structlog
 
 import talemate.instance as instance
-from talemate import Scene
+from talemate import Scene, VERSION
 from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.config.schema import SceneAssetUpload
 from talemate.config import get_config, Config
@@ -481,6 +481,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             {
                 "type": "app_config",
                 "data": data,
+                "version": VERSION,
             }
         )
 

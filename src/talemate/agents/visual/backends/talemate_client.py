@@ -183,7 +183,6 @@ class TalemateClientMixin:
                         "appear, ensure you have enabled vision in the client's "
                         "settings (Vision tab) for a client with a vision-capable model."
                     ),
-                    save_on_change=True,
                     scene_overridable=False,
                 ),
             },

@@ -295,16 +295,14 @@ class HelpChatMixin:
     def _chat_settings_callbacks(
         self, ux_snapshot: dict | None = None
     ) -> list[focal.Callback]:
-        # writes targeting the agent whose settings dialog is open would be
-        # invisible in (and overwritable by) that dialog - refuse them.
-        # best-effort: the snapshot is from message-send time, so a dialog
-        # opened mid-generation is not seen
-        open_agent_modal = ((ux_snapshot or {}).get("agent_settings_modal") or {}).get(
-            "agent"
-        )
-        # the settings view lives in the main viewport now — merely having it
-        # open is fine (incoming config pushes are handled cleanly); only
-        # unsaved edits there conflict with a config write
+        # The settings view lives in the main viewport - merely having it open
+        # is fine (incoming config pushes are handled cleanly); only unsaved
+        # edits there conflict with a write. That view holds a working copy of
+        # the WHOLE config and saves it from whatever page is showing, so its
+        # dirty flag gates agent settings and app config alike - the page it
+        # happens to be on says nothing about what a Save would overwrite.
+        # Best-effort: the snapshot is from message-send time, so edits made
+        # mid-generation are not seen.
         app_settings_dirty = bool(
             ((ux_snapshot or {}).get("app_settings_modal") or {}).get("dirty")
         )
@@ -316,14 +314,19 @@ class HelpChatMixin:
             agent: str, action: str, setting: str, value, scope: str = "global"
         ):
             return await settings.update_agent_setting(
-                agent, action, setting, value, scope, open_agent_modal=open_agent_modal
+                agent,
+                action,
+                setting,
+                value,
+                scope,
+                app_settings_dirty=app_settings_dirty,
             )
 
         async def clear_agent_setting_scene_override(
             agent: str, action: str, setting: str
         ):
             return await settings.clear_agent_setting_scene_override(
-                agent, action, setting, open_agent_modal=open_agent_modal
+                agent, action, setting, app_settings_dirty=app_settings_dirty
             )
 
         async def read_app_config(section: str):

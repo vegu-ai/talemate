@@ -1,10 +1,10 @@
 # OpenAI Client
 
-If you want to add an OpenAI client, change the `Client Type` to `OpenAI`.
+If you want to add an OpenAI client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `OpenAI` from the client type menu.
 
 ![Client OpenAI](/talemate/img/0.39.0/client-openai.png)
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### OpenAI API Key
 

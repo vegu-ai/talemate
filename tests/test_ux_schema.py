@@ -146,7 +146,6 @@ def test_agent_action_config_defaults_preserved():
     assert config.scope == "global"
     assert config.scene_overridable is True
     assert config.quick_toggle is False
-    assert config.save_on_change is False
     assert config.choices is None
     assert config.value_migration is None
 
@@ -192,7 +191,7 @@ def test_agent_action_serializes_config_via_shared_schema():
     assert config["choices"] == [{"label": "A", "value": "a"}]
     assert config["condition"] == {"attribute": "_config.config.x", "value": True}
     # uniform-schema keys are present for the frontend renderer
-    for key in ("required", "group", "note_on_value", "save_on_change"):
+    for key in ("required", "group", "note_on_value"):
         assert key in config
 
 

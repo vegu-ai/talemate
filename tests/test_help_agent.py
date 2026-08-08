@@ -849,7 +849,7 @@ async def test_update_agent_setting_refuses_secret_fields(settings_env):
     result = await help_settings.update_agent_setting(
         "conversation", "generation_override", "instructions", "x"
     )
-    assert "settings dialog" in result
+    assert "agent settings page" in result
 
 
 @pytest.mark.asyncio
@@ -1091,30 +1091,33 @@ async def test_chat_send_with_setting_update(help_agent, settings_env):
 
 
 @pytest.mark.asyncio
-async def test_update_agent_setting_refused_while_modal_open(settings_env, tmp_path):
-    # write targeting the agent whose settings dialog is open is refused
+async def test_update_agent_setting_refused_while_app_settings_dirty(
+    settings_env, tmp_path
+):
+    # the settings view saves its whole working copy from whatever page is
+    # showing, so ANY unsaved edit there would push the pre-change values back
     result = await help_settings.update_agent_setting(
         "conversation",
         "generation_override",
         "length",
         256,
         "global",
-        open_agent_modal="conversation",
+        app_settings_dirty=True,
     )
     assert isinstance(result, str)
-    assert "settings dialog" in result
+    assert "unsaved edits" in result
 
     agent = instance.get_agent("conversation")
     assert agent.actions["generation_override"].config["length"].value == 192
 
-    # a different agent's open dialog does not block the write
+    # an open but clean settings view is not a conflict
     result = await help_settings.update_agent_setting(
         "conversation",
         "generation_override",
         "length",
         256,
         "global",
-        open_agent_modal="summarizer",
+        app_settings_dirty=False,
     )
     assert result["applied"] is True
 
@@ -1127,18 +1130,18 @@ async def test_update_agent_setting_refused_while_modal_open(settings_env, tmp_p
         "conversation",
         "generation_override",
         "length",
-        open_agent_modal="conversation",
+        app_settings_dirty=True,
     )
     assert isinstance(result, str)
-    assert "settings dialog" in result
+    assert "unsaved edits" in result
     assert agent.resolve_config("generation_override", "length") == 384
 
 
 @pytest.mark.asyncio
-async def test_chat_send_setting_update_refused_while_modal_open(
+async def test_chat_send_setting_update_refused_while_app_settings_dirty(
     help_agent, settings_env
 ):
-    """The ux snapshot's open agent modal reaches the settings tools."""
+    """The ux snapshot's dirty settings view reaches the settings tools."""
     chat = help_agent.chat_create()
 
     call_block = json.dumps(
@@ -1157,20 +1160,26 @@ async def test_chat_send_setting_update_refused_while_modal_open(
     async with MockClientContext():
         responses = client_responses.get()
         responses.append(f"```json\n{call_block}\n```")
-        responses.append("The conversation settings dialog is open - close it first.")
+        responses.append("The settings view has unsaved edits - save them first.")
 
         await help_agent.chat_send(
             chat.id,
             "Set the conversation generation length to 256",
             ux_snapshot={
-                "agent_settings_modal": {"agent": "conversation", "tab": "general"}
+                # the user is on an unrelated page - the dirty flag covers the
+                # whole working copy (including page-owned extra changes)
+                "app_settings_modal": {
+                    "tab": "settings",
+                    "page": "gameplay",
+                    "dirty": True,
+                }
             },
         )
 
     messages = help_agent.chat_get(chat.id).messages
     tool_results = [m for m in messages if m.type == "doc_result"]
     assert len(tool_results) == 1
-    assert "settings dialog" in tool_results[0].result
+    assert "unsaved edits" in tool_results[0].result
 
     agent = instance.get_agent("conversation")
     assert agent.actions["generation_override"].config["length"].value == 192

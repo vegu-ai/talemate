@@ -75,10 +75,17 @@ export default {
             if (selection.length === 0) {
                 return;
             }
-            this.$emit('navigate', { page: selection[0], anchor: null });
+            this.$emit('navigate', { page: selection[0], anchor: null, item: null });
         },
         onSelectResult(result) {
-            this.$emit('navigate', { page: result.page.id, anchor: result.entry ? result.entry.anchor : null });
+            // `item` is what the page's setSelection() needs to open the right
+            // row (an agent, a client); entries without one just scroll to
+            // their anchor
+            this.$emit('navigate', {
+                page: result.page.id,
+                anchor: result.entry ? result.entry.anchor : null,
+                item: result.entry ? (result.entry.item || null) : null,
+            });
         },
     },
 }

@@ -101,12 +101,31 @@ export default {
             valid: false,
             extra_params: {},
             input: '',
+            // whether the dialog's outcome has already been reported — set by
+            // proceed / cancel before they close it
+            answered: false,
             builtInRules: {
                 required: value => !!value || 'Required.',
             }
         }
     },
     emits: ['continue', 'cancel'],
+
+    watch: {
+        open(isOpen) {
+            if (isOpen) {
+                this.answered = false;
+                return;
+            }
+            if (this.answered) {
+                return;
+            }
+            // Esc / click-outside closes the v-dialog on its own. Callers that
+            // keep pending state for the dialog (or await its outcome) would
+            // wait forever, so a dismissal reports as a cancel.
+            this.$emit('cancel');
+        },
+    },
 
     methods: {
         proceed() {
@@ -115,10 +134,12 @@ export default {
                 return;
             }
 
+            this.answered = true;
             this.$emit('continue', this.input, this.extra_params);
             this.open = false;
         },
         cancel() {
+            this.answered = true;
             this.$emit('cancel');
             this.open = false;
         },

@@ -39,15 +39,16 @@ DOCS_INDEX = [
 ]
 
 UX_SNAPSHOT = {
-    "active_tab": "home",
+    "active_tab": "settings",
     "open_drawers": ["scene"],
     "scene_active": False,
     "scene_environment": None,
-    "client_settings_modal": None,
-    "agent_settings_modal": {
+    "app_settings_modal": {
+        "tab": "settings",
+        "page": "agents",
+        "dirty": False,
         "agent": "editor",
-        "agent_label": "Editor",
-        "tab": "revision",
+        "mode": "global",
     },
     "app_ready": True,
     "waiting_for_input": False,

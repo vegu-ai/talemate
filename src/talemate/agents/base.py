@@ -420,8 +420,7 @@ class Agent(ABC):
         """Sparse override dict for THIS agent from the active scene, if any.
 
         Empty dict means: no scene loaded, or no overrides set for this
-        agent. The frontend uses this to populate the Scene tab in the
-        AgentModal.
+        agent. The frontend renders it as the Agents page's Scene mode.
         """
         if not agent:
             return {}
@@ -921,7 +920,7 @@ class Agent(ABC):
         """Update an action config field — scene override if one is active for this field, else global.
 
         Note: this updates an *existing* override; it does not create a new one.
-        New overrides are installed via the AgentModal save flow
+        New overrides are installed through ``agent_config/save_scene_overrides``
         (see ``server.agent_config.replace_agent_overrides``).
         """
         self._route_write(

@@ -1,10 +1,10 @@
 # OpenRouter Client
 
-If you want to add an OpenRouter client, change the `Client Type` to `OpenRouter`.
+If you want to add an OpenRouter client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `OpenRouter` from the client type menu.
 
-![Client OpenRouter](/talemate/img/0.39.0/client-openrouter.png)
+![Client OpenRouter](/talemate/img/0.40.0/client-openrouter.png)
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### OpenRouter API Key
 
@@ -18,11 +18,14 @@ For additional instructions on obtaining and setting your OpenRouter API key, se
 
 ![OpenRouter settings](/talemate/img/0.39.0/api-keys-openrouter.png)
 
+!!! info "The API key is in the client editor too"
+    The **OpenRouter API Key** card sits in the **General** section of the client editor, so you can paste your key there instead of going to the API Keys page. It is the same key either way.
+
 Click `Save` and after a moment the client should have a red dot next to it, saying that there is no model loaded.
 
-Click the :material-cogs: icon to open the client settings and select a model.
+Click the :material-cogs: icon to go to the client's editor on the Clients settings page and select a model.
 
-![OpenRouter select model](/talemate/img/0.31.0/client-openrouter-select-model.png).
+![OpenRouter select model](/talemate/img/0.40.0/client-openrouter-select-model.png).
 
 Click save and the client should have a green dot next to it, indicating that it is ready to go.
 
@@ -49,7 +52,7 @@ Maximum context length (in tokens) that OpenRouter should consider. If you are n
 
 ### Parameters
 
-The **Parameters** tab in the client settings lets you control which sampler parameters are sent with each request. Some model providers on OpenRouter reject requests that include parameters they don't support for the selected model, returning an error instead of a generation. If you run into this, you can turn the offending parameter off so it is left out of the request entirely.
+The **Parameters** section of the client editor lets you control which sampler parameters are sent with each request. Some model providers on OpenRouter reject requests that include parameters they don't support for the selected model, returning an error instead of a generation. If you run into this, you can turn the offending parameter off so it is left out of the request entirely.
 
 Each parameter has its own toggle:
 

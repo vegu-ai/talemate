@@ -258,7 +258,6 @@ class OpenAIMixin:
                 ],
                 label="Model",
                 description="OpenAI image model",
-                save_on_change=True,
                 note_on_value={
                     "gpt-image-1": AgentActionNote(
                         color="warning",

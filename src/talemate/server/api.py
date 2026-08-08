@@ -12,7 +12,7 @@ from talemate.client.base import (
     resolve_all_generation_errors,
     resolve_generation_error,
 )
-from talemate.config import get_config, Config, commit_config, update_config
+from talemate.config import get_config, Config, commit_config
 from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.server.websocket_server import WebsocketHandler
 from talemate.util.data import JSONEncoder
@@ -200,15 +200,6 @@ async def websocket_endpoint(websocket):
                     handler.request_scenes_list(query, list_images)
                 elif action_type == "request_scenes_tree":
                     handler.request_scenes_tree()
-                elif action_type == "configure_clients":
-                    await update_config({"clients": data.get("clients")})
-                    await instance.instantiate_clients()
-                    await instance.purge_clients()
-                    await instance.emit_clients_status(wait_for_status=True)
-                    await instance.ensure_agent_llm_client()
-                elif action_type == "configure_agents":
-                    await update_config({"agents": data.get("agents")})
-                    await instance.configure_agents()
                 elif action_type == "request_client_status":
                     await handler.request_client_status()
                 elif action_type == "request_scene_assets":

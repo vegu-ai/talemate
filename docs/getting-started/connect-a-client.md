@@ -18,9 +18,11 @@ On the right hand side click the **:material-plus-box: ADD CLIENT** button.
 
     ![open clients](/talemate/img/0.26.0/open-clients.png)
 
-The client configuration window will appear. Here you can choose the type of client you want to add.
+This takes you to **Settings → Connections → Clients** with the **Client type** menu open. Pick the type of client you want to add and it is created right away, with its editor next to the list.
 
-![connect a client add client modal](/talemate/img/0.39.0/connect-a-client-add-client-modal.png)
+![connect a client add client](/talemate/img/0.40.0/connect-a-client-add-client.png)
+
+Fill in the client's settings and click **:material-check-circle-outline: Save** in the toolbar at the top to apply them. Nothing is connected until you save.
 
 ## Choose an API / Client Type
 
@@ -71,3 +73,5 @@ You can tell the client is assigned to the agent by checking the tag beneath the
 If for some reason the client is not assigned to the agent, you can manually assign it to all agents by clicking the **:material-transit-connection-variant: Assign to all agents** button.
 
 ![Connect a client assign to all agents](/talemate/img/0.26.0/connect-a-client-assign-to-all-agents.png)
+
+The same action is available on the [Clients settings page](/talemate/user-guide/clients/client-configuration/), above the client editor. There it is applied when you save, and it is disabled while the client itself is disabled — enable the client first.

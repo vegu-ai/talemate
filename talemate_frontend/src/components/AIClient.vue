@@ -211,8 +211,8 @@
               <!-- edit client button -->
               <v-tooltip text="Edit client">
                 <template v-slot:activator="{ props }">
-                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="editClient(index)" icon="mdi-cogs"></v-btn>
-  
+                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openClientSettings(client.name)" icon="mdi-cogs"></v-btn>
+
                 </template>
               </v-tooltip>
 
@@ -243,40 +243,23 @@
                   <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="assignClientToAllAgents(index)" icon="mdi-transit-connection-variant"></v-btn>
                 </template>
               </v-tooltip>
-              
-              <!-- delete the client button -->
-              <v-tooltip text="Delete client">
-                <template v-slot:activator="{ props }">
-                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="deleteClient(index)" icon="mdi-close-thick"></v-btn>
-                </template>
-              </v-tooltip>
-              
+
             </v-list-item-subtitle>
           </div>
         </v-list-item>
       </v-list>
     </div>
 
-    <ClientModal
-      ref="modal"
-      :dialog="state.dialog"
-      :formTitle="state.formTitle"
-      :immutable-config="immutableConfig"
-      :available-presets="availablePresets"
-      :app-config="appConfig"
-      @save="saveClient"
-      @error="propagateError"
-      @update:dialog="updateDialog">
-    </ClientModal>
     <v-alert type="warning" variant="tonal" v-if="state.clients.length === 0">You have no LLM clients configured. Add one.</v-alert>
-    <v-btn @click="openModal" elevation="0" prepend-icon="mdi-plus-box">Add client</v-btn>
+    <v-btn @click="openClientSettings({action: 'add'})" elevation="0" prepend-icon="mdi-plus-box">Add client</v-btn>
   </div>
 </template>
-  
+
 <script>
-import ClientModal from './ClientModal.vue';
 import AIClientRequestInformation from './AIClientRequestInformation.vue';
 import GraduatedSlider from './GraduatedSlider.vue';
+import { TOKEN_GRADUATIONS } from '@/utils/clientPresets';
+import { agentsRequiringClient } from '@/utils/agentAssignments';
 
 // user-editable fields compared against client_status echoes to confirm a save
 const SAVE_ECHO_FIELDS = [
@@ -310,7 +293,6 @@ export default {
     appConfig: Object,
   },
   components: {
-    ClientModal,
     AIClientRequestInformation,
     GraduatedSlider,
   },
@@ -320,33 +302,9 @@ export default {
       pendingSaves: {},
       clientStatusCheck: null,
       hideDisabled: true,
-      clientImmutable: {},
-      tokenGraduations: [
-        { from: 0, step: 64 },
-        { from: 1024, step: 256 },
-        { from: 4096, step: 512 },
-        { from: 8192, step: 1024 },
-        { from: 65536, step: 2048 },
-      ],
+      tokenGraduations: TOKEN_GRADUATIONS,
       state: {
         clients: [],
-        dialog: false,
-        currentClient: {
-          name: '',
-          type: '',
-          api_url: '',
-          model_name: '',
-          max_token_length: 8192,
-          double_coercion: null,
-          rate_limit: null,
-          data_format: null,
-          section_format: null,
-          enforce_response_length: 'adaptive',
-          data: {
-            has_prompt_template: false,
-          }
-        },
-        formTitle: ''
       }
     }
   },
@@ -380,37 +338,31 @@ export default {
       return this.state.clients.filter(client => client.status === 'disabled').length;
     }
   },
+  watch: {
+    appConfig(config) {
+      // a saved config is the only signal that a client was removed — the
+      // whole object is replaced on every app_config push, so a shallow
+      // watcher is enough
+      if (!config || !config.clients) {
+        return;
+      }
+      this.pruneRemovedClients(Object.keys(config.clients));
+    },
+  },
   inject: [
     'getWebsocket',
     'registerMessageHandler',
     'isConnected',
     'getAgents',
     'openAppConfig',
+    'openClientSettings',
   ],
-  provide() {
-    return {
-      state: this.state
-    };
-  },
   emits: [
     'clients-updated',
     'client-assigned',
     'open-app-config',
-    'save',
-    'error',
   ],
   methods: {
-
-    uxSnapshot() {
-      // what the open client modal shows, for the help agent's UX snapshot
-      if(!this.state.dialog) return null;
-      const modal = this.$refs.modal;
-      return {
-        client_name: modal?.client?.name || this.state.currentClient?.name || null,
-        client_type: modal?.client?.type || this.state.currentClient?.type || null,
-        tab: modal?.tab || null,
-      };
-    },
 
     callErrorAction(client, action) {
       if(action.action_name === 'openAppConfig') {
@@ -433,26 +385,7 @@ export default {
       return false;
     },
     getActive() {
-      return this.state.clients.find(a => a.status === 'busy');      
-    },
-    openModal(initialData = null) {
-      this.state.currentClient = {
-        name: 'llama.cpp',
-        type: 'llamacpp',
-        api_url: 'http://localhost:8080',
-        model_name: '',
-        max_token_length: 8192,
-        enforce_response_length: 'adaptive',
-        data: {
-          has_prompt_template: false,
-        },
-        ...initialData
-      };
-      this.state.formTitle = 'Add Client';
-      this.state.dialog = true;
-    },
-    propagateError(error) {
-      this.$emit('error', error);
+      return this.state.clients.find(a => a.status === 'busy');
     },
 
     saveClientDelayed(client) {
@@ -481,8 +414,22 @@ export default {
         snapshot[field] = client[field];
       }
       this.pendingSaves[client.name] = { sentAt: Date.now(), snapshot };
-      this.state.dialog = false; // Close the dialog after saving the client
       this.$emit('clients-updated', this.state.clients);
+    },
+
+    // Called when a config save carrying these rows was refused: the local
+    // values are optimistic and will never be echoed, so drop the dirty flags
+    // and the pending echo snapshots and let the next client_status broadcast
+    // put the backend's truth back on screen.
+    resetPendingSaves() {
+      for (const name of Object.keys(this.saveDelayTimeouts)) {
+        clearTimeout(this.saveDelayTimeouts[name]);
+        delete this.saveDelayTimeouts[name];
+      }
+      this.pendingSaves = {};
+      for (const client of this.state.clients) {
+        client.dirty = false;
+      }
     },
 
     // Decides whether an incoming client_status may be applied to a client
@@ -513,34 +460,35 @@ export default {
 
       return false;
     },
-    editClient(index) {
-      this.state.currentClient = { ...this.state.clients[index] };
-      this.state.formTitle = 'Edit AI Client';
-      this.state.dialog = true;
-    },
-    deleteClient(index) {
-      if (window.confirm('Are you sure you want to delete this client?')) {
-        const name = this.state.clients[index].name;
-        this.clientImmutable[name] = new Date().getTime();
+    // Clients are added and removed on the settings Clients page — drop the
+    // entries a saved config no longer carries instead of leaving the drawer
+    // showing purged clients (the backend has no removal broadcast, only the
+    // config it echoes back).
+    pruneRemovedClients(names) {
+      for (let i = this.state.clients.length - 1; i >= 0; i--) {
+        const name = this.state.clients[i].name;
+        if (names.includes(name)) {
+          continue;
+        }
         if (this.saveDelayTimeouts[name]) {
           clearTimeout(this.saveDelayTimeouts[name]);
           delete this.saveDelayTimeouts[name];
         }
         delete this.pendingSaves[name];
-        this.state.clients.splice(index, 1);
-        this.$emit('clients-updated', this.state.clients);
+        this.state.clients.splice(i, 1);
       }
     },
     assignClientToAllAgents(index) {
-      let agents = this.getAgents();
-      let client = this.state.clients[index];
+      const agents = this.getAgents();
+      const client = this.state.clients[index];
 
       this.saveClient(client);
 
-      for (let i = 0; i < agents.length; i++) {
-        agents[i].client = client.name;
-        console.log("Assigning client", client.name, "to agent", agents[i].name);
+      for (const agent of agentsRequiringClient(agents)) {
+        agent.client = client.name;
       }
+      // the full list, not just the reassigned ones — the save writes the
+      // whole `config.agents` map
       this.$emit('client-assigned', agents);
     },
 
@@ -601,26 +549,10 @@ export default {
       );
     },
 
-    updateDialog(newVal) {
-      this.state.dialog = newVal;
-    },
     handleMessage(data) {
 
       // Handle client_status message type
       if (data.type === 'client_status') {
-
-        if(this.clientImmutable[data.name]) {
-
-          const now = new Date().getTime();
-          const lastImmutable = this.clientImmutable[data.name];
-          if(now - lastImmutable > 1000) {
-            delete this.clientImmutable[data.name]
-          }
-          
-          // If we have just deleted a client, we need to wait for the next client_status message
-          console.log("Ignoring client_status message for immutable client", data.name)
-          return;
-        }
 
         // Find the client with the given name
         const client = this.state.clients.find(client => client.name === data.name);

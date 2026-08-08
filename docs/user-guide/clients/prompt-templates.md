@@ -20,7 +20,7 @@ If a client shows a yellow triangle next to it, it means that the prompt templat
 
 ![Client unknown prompt template](/talemate/img/0.26.0/client-unknown-prompt-template.png)
 
-Click the two cogwheels to the right of the triangle to open the client settings.
+Click the two cogwheels to the right of the triangle to go to the client's editor on the Clients settings page.
 
 ![Client unknown prompt template modal](/talemate/img/0.26.0/client-unknown-prompt-template-modal.png)
 

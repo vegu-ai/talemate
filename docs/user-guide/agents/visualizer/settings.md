@@ -110,7 +110,7 @@ This setting is enabled by default.
 
 ![This image shows the "Styles" configuration tab within the dark-mode "Visualizer" interface, listing various dropdown menus for customizing generation settings. Options include "Art Style," set to "Digital Art," alongside selectors for character cards, portraits, and scene elements. A "Manage styles" box at the bottom indicates that additional styles can be created in the Templates manager.](/talemate/img/0.34.0/visual-agent-general-3.png)
 
-The Styles tab allows you to configure visual styles for different types of content. Each style is a template that defines how prompts are formatted and what visual characteristics are applied.
+The Styles section allows you to configure visual styles for different types of content. Each style is a template that defines how prompts are formatted and what visual characteristics are applied.
 
 ### Style Options
 
@@ -135,11 +135,11 @@ These styles are applied automatically when generating images based on the visua
 
 ## Prompt Finalization
 
-![Visualizer prompt finalization settings](/talemate/img/0.39.0/visualizer-prompt-finalization.png)
+![Visualizer prompt finalization settings](/talemate/img/0.40.0/visualizer-prompt-finalization.png)
 
-The Prompt Finalization tab defines a chain of post-processing actions applied to the final prompt strings right before they are sent to the image generation backend. Use it to clean up recurring unwanted keywords, enforce specific phrasing, or transform the whole prompt with an AI instruction. The same finalization is applied to `prompt only` generation output, and custom node graphs can invoke it through the `Finalize Prompt` node.
+The Prompt Finalization section defines a chain of post-processing actions applied to the final prompt strings right before they are sent to the image generation backend. Use it to clean up recurring unwanted keywords, enforce specific phrasing, or transform the whole prompt with an AI instruction. The same finalization is applied to `prompt only` generation output, and custom node graphs can invoke it through the `Finalize Prompt` node.
 
-All settings in this section can be overridden per scene through the Agent Modal's scene mode.
+All settings in this section can be overridden per scene through the [Agents settings page](/talemate/user-guide/agents/scene-overrides)'s **Scene** mode.
 
 ### Presets
 
@@ -226,7 +226,7 @@ The preset picker includes resolution options optimized for different model type
 To select a resolution preset:
 
 1. Open the Visualizer agent settings
-2. Navigate to the backend configuration tab (ComfyUI, SD.Next, or AUTOMATIC1111)
+2. Expand the backend configuration section (ComfyUI, SD.Next, or AUTOMATIC1111)
 3. Find the **Resolutions** section
 4. Click the dropdown menu button next to the resolution you want to change
 5. Select the appropriate preset for your model

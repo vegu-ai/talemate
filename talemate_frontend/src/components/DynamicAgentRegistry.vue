@@ -28,7 +28,7 @@
     <v-divider class="my-3" />
 
     <p class="text-caption text-muted mb-2" v-if="children.length === 0">
-      No entries yet. Add one above — it will appear as its own tab below.
+      No entries yet. Add one above — it will appear as its own section below.
     </p>
 
     <v-list v-else density="compact" class="pa-0" bg-color="transparent">

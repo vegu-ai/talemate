@@ -209,7 +209,6 @@ class Automatic1111Mixin:
                     value="http://localhost:7860",
                     label="API URL",
                     description="The URL of the AUTOMATIC1111 API",
-                    save_on_change=True,
                     scene_overridable=False,
                 ),
                 "steps": AgentActionConfig(

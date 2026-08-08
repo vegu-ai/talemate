@@ -162,4 +162,4 @@ In the client listing find the :material-tune: selected preset and click it to e
 
 ![select group](/talemate/img/0.30.0/inference-preset-group-applied.png)
 
-You can also pick the preset group from the **Inference Presets** dropdown on the **Advanced** tab of the [client configuration](client-configuration.md) dialog.
+You can also pick the preset group from the **Inference Presets** dropdown in the **Advanced** section of the [client editor](client-configuration.md).

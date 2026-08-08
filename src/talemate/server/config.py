@@ -20,15 +20,36 @@ from talemate.config.schema import (
 from talemate.config import get_config, Config, update_config
 from talemate.emit import emit
 from talemate.files import scenes_directory, RESERVED_SCENES_DIRS
-from talemate.instance import emit_clients_status, get_client
+from talemate.instance import (
+    configure_agents,
+    emit_clients_status,
+    ensure_agent_llm_client,
+    get_client,
+    instantiate_clients,
+    purge_clients,
+)
 
 from .websocket_plugin import Plugin
 
 log = structlog.get_logger("talemate.server.config")
 
+# config sections whose apply pipeline failed and that the next save has to
+# apply again even when it diffs as unchanged - the config is stored before it
+# is applied, so a failed apply leaves the stored config ahead of the running
+# instance and every later diff against it reads "nothing changed".
+#
+# Process state rather than per-connection state: plugins are built per
+# websocket connection, but the stale runtime outlives the connection the
+# failed save came in on (a frontend reload does not re-apply anything).
+PENDING_REAPPLY: set[str] = set()
+
 
 class ConfigPayload(pydantic.BaseModel):
     config: AppConfigData
+    # echoed back with the completion so a sender can tell its own save apart
+    # from one made elsewhere (the settings view and the clients / agents
+    # drawer both save through this action)
+    request_id: str | None = None
 
 
 class DefaultCharacterPayload(pydantic.BaseModel):
@@ -111,18 +132,100 @@ class ConfigPlugin(Plugin):
 
     async def handle_save(self, data):
         app_config_data = ConfigPayload(**data)
-        await update_config(app_config_data.config.model_dump())
-        self.websocket_handler.queue_put(
-            {
-                "type": "app_config",
-                "data": get_config().model_dump(),
-                "version": VERSION,
-            }
+
+        config_before = get_config().model_dump()
+        # signal=False: config.changed receivers broadcast app_config, and the
+        # frontend must only adopt a config that is already applied - the
+        # broadcast is fired below, after the apply pipeline
+        await update_config(app_config_data.config.model_dump(), signal=False)
+        config_after = get_config().model_dump()
+
+        clients_changed = (
+            config_before["clients"] != config_after["clients"]
+            or "clients" in PENDING_REAPPLY
         )
+        agents_changed = (
+            config_before["agents"] != config_after["agents"]
+            or "agents" in PENDING_REAPPLY
+        )
+
+        if PENDING_REAPPLY:
+            log.warning(
+                "config save: re-applying sections left unapplied by an earlier save",
+                sections=sorted(PENDING_REAPPLY),
+            )
+
+        # sections that made it all the way through their apply - only what is
+        # missing from here is stale if a later step raises. Recording the whole
+        # save instead would put the expensive half of the pipeline (tear down,
+        # re-instantiate, block on wait_for_status) on every later save because
+        # the agent half failed.
+        applied: set[str] = set()
+
+        try:
+            if clients_changed:
+                await instantiate_clients()
+                await purge_clients()
+                await emit_clients_status(wait_for_status=True)
+                if agents_changed:
+                    # the agent half below is the agents section's own apply -
+                    # the clients are live as of here
+                    applied.add("clients")
+
+            if agents_changed:
+                # configure_agents ends with ensure_agent_llm_client itself
+                await configure_agents()
+                applied.add("agents")
+            elif clients_changed:
+                # repointing the agents is the tail of the client apply when
+                # the agents section is not being reconfigured, so the clients
+                # only count as applied once it is through
+                await ensure_agent_llm_client()
+                applied.add("clients")
+        except Exception as exc:
+            # the config is already stored and will be committed to disk, so
+            # the frontend gets it either way - what failed is the apply, and
+            # saying "save failed" would send the user looking for a config
+            # that is not coming back
+            unapplied = {
+                section
+                for section, changed in (
+                    ("clients", clients_changed),
+                    ("agents", agents_changed),
+                )
+                if changed and section not in applied
+            }
+            log.error(
+                "config save: apply failed",
+                error=exc,
+                clients_changed=clients_changed,
+                agents_changed=agents_changed,
+                unapplied=sorted(unapplied),
+            )
+            PENDING_REAPPLY.difference_update(applied)
+            PENDING_REAPPLY.update(unapplied)
+            await get_config().set_dirty()
+            # `stage` lets the sender tell an apply failure (payload accepted
+            # and stored) from a refused payload (nothing stored) - the two
+            # call for opposite handling of whatever was stacked on the save
+            await self.signal_operation_failed(
+                f"Configuration was saved, but applying it failed: {exc}",
+                request_id=app_config_data.request_id,
+                failed_action="save",
+                extra={"stage": "apply"},
+            )
+            return
+
+        PENDING_REAPPLY.difference_update(applied)
+
+        # broadcasts app_config to every connected frontend (see
+        # WebsocketHandler.on_config_changed)
+        await get_config().set_dirty()
         self.websocket_handler.queue_put(
             {
                 "type": "config",
                 "action": "save_complete",
+                "request_id": app_config_data.request_id,
             }
         )
 

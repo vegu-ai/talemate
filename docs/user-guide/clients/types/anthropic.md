@@ -1,10 +1,10 @@
 # Anthropic Client
 
-If you want to add an Anthropic client, change the `Client Type` to `Anthropic`.
+If you want to add an Anthropic client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `Anthropic` from the client type menu.
 
 ![Client Anthropic](/talemate/img/0.39.0/client-anthropic.png)
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### Anthropic API Key
 

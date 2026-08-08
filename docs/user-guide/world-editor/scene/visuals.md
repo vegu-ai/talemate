@@ -40,7 +40,7 @@ Click an image to access its menu:
 
 ## Prompt Finalization
 
-This sub-tab edits the Visualizer agent's **per-scene overrides** for [Prompt Finalization](/talemate/user-guide/agents/visualizer/settings/#prompt-finalization) without leaving the world editor — the same overrides you would otherwise manage through the Agent Modal's scene mode.
+This sub-tab edits the Visualizer agent's **per-scene overrides** for [Prompt Finalization](/talemate/user-guide/agents/visualizer/settings/#prompt-finalization) without leaving the world editor — the same overrides you would otherwise manage in **Scene** mode on the Agents settings page.
 
 Click the :material-link-variant-off: icon next to a field to activate an override for the scene, then edit and **Save**. Overrides are stored in the scene's agent-settings file; if the scene doesn't have one linked yet, it is created with the default name on first save.
 

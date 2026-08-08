@@ -37,11 +37,17 @@ def get_config() -> Config:
     return CONFIG
 
 
-async def update_config(other_config: dict):
+async def update_config(other_config: dict, signal: bool = True):
     """Apply a partial config update from a dict.
 
     Each top-level key in ``other_config`` replaces the corresponding field
     on the active ``Config`` (validated through pydantic first).
+
+    ``signal=False`` marks the config dirty without firing ``config.changed``.
+    Receivers of that signal broadcast the config to connected frontends, so a
+    caller that still has to APPLY the update (instantiate clients, reconfigure
+    agents) uses it to hold the broadcast back until the running instance
+    matches what it ships, then fires ``set_dirty()`` itself.
     """
     keys = list(other_config.keys())
     validated = Config.model_validate(other_config)
@@ -49,6 +55,11 @@ async def update_config(other_config: dict):
     config: Config = get_config()
     for key in keys:
         setattr(config, key, getattr(validated, key))
+
+    if not signal:
+        # still dirty: commit_config() is what writes it to disk
+        config.dirty = True
+        return
 
     await config.set_dirty()
 

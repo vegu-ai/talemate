@@ -6,9 +6,9 @@ Talemate supports reasoning models that can perform step-by-step thinking before
 
 To enable reasoning support for a client:
 
-1. Open the **Clients** dialog from the main toolbar
+1. Open the **:material-cog: Settings** tab in the top navigation — it opens on **Connections → Clients**
 2. Select the client you want to configure
-3. Navigate to the **Reasoning** tab in the client configuration
+3. Open the **Reasoning** section of the [client editor](client-configuration.md)
 
 ![Client reasoning configuration](/talemate/img/0.32.0/client-reasoning-2.png)
 

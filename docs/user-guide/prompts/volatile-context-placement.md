@@ -32,12 +32,12 @@ Volatile context placement is controlled at two levels: per-client and per-agent
 
 ### Per-Client Setting
 
-The primary toggle is the **Optimize for Prompt Caching** setting on each LLM client, found on the **Advanced** tab of the [client configuration](../clients/client-configuration.md) dialog.
+The primary toggle is the **Optimize for Prompt Caching** setting on each LLM client, found in the **Advanced** section of the [client editor](../clients/client-configuration.md).
 
 ![Optimize for Prompt Caching toggle in client settings](../../img/0.36.0/client-optimize-prompt-caching.png)
 
-1. Click the cogwheels on a client in the sidebar to open its configuration
-2. Open the **Advanced** tab
+1. Click the cogwheels on a client in the sidebar to go to its editor on the Clients settings page
+2. Open the **Advanced** section
 3. Enable the **Optimize for Prompt Caching** checkbox to move volatile context after scene history
 
 This setting applies to all agents using this client, unless overridden at the agent level.

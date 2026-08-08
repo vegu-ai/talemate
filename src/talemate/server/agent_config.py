@@ -12,7 +12,7 @@ frontend re-renders with the new tab list.
 
 import structlog
 
-from talemate.config import commit_config
+from talemate.config import commit_config, get_config
 from talemate.instance import AGENTS
 from talemate.scene_agent_settings import (
     SceneAgentSettings,
@@ -35,6 +35,14 @@ class AgentConfigPlugin(Plugin):
     # helpers
     # ------------------------------------------------------------------
 
+    async def _refuse(self, data: dict, message: str) -> None:
+        """Refuse a request, telling the sender which of its requests failed."""
+        await self.signal_operation_failed(
+            message,
+            request_id=data.get("request_id"),
+            failed_action=data.get("action"),
+        )
+
     async def _resolve_registry(self, data: dict):
         """Validate ``agent_type`` + ``action_key`` and return the resolved
         agent. On any failure, surface it via ``signal_operation_failed`` so
@@ -46,26 +54,34 @@ class AgentConfigPlugin(Plugin):
         if not agent:
             msg = f"Agent '{agent_type}' not found"
             log.warning(msg, action=data.get("action"))
-            await self.signal_operation_failed(msg)
+            await self._refuse(data, msg)
             return None, None, None
         if not action_key or not agent.is_dynamic_registry(action_key):
             msg = f"'{action_key}' is not a dynamic registry on agent '{agent_type}'"
             log.warning(msg, action=data.get("action"))
-            await self.signal_operation_failed(msg)
+            await self._refuse(data, msg)
             return None, None, None
         return agent, agent_type, action_key
 
-    async def _persist_and_broadcast(self, agent) -> None:
-        # NOTE: this path runs alongside the bulk ``configure_agents`` save
-        # path AND the help agent's settings tools (background tasks, NOT
-        # serialized by the websocket dispatcher). Every writer replaces the
-        # ``Config.agents[agent_type]`` slot in one synchronous event-loop
-        # step, so interleaving can't tear the entry — the exposure is
-        # whole-entry last-writer-wins, which the AgentModal's unchanged-save
-        # skip keeps rare. If entry building ever gains awaits, add a lock.
+    async def _persist_and_broadcast(self, agent, data: dict) -> None:
+        # Concurrent writers of ``Config.agents``: this path, ``config/save``
+        # (whole map) and the help agent's settings tools (background tasks,
+        # not serialized by the dispatcher). Each writes in one synchronous
+        # event-loop step, so no entry can tear; what a writer CAN do is ship a
+        # map assembled before this op landed. The broadcast below is the
+        # defense — it refreshes what those writers assemble from.
         await agent.save_config()
+        # Holders of a config snapshot (the settings working copy, the stacking
+        # base the drawer saves on) would otherwise still carry the pre-op
+        # entry and undo this write on their next full-config save. Broadcast
+        # before the status echo, so a frontend adopting the config sees it
+        # first.
+        await get_config().set_dirty()
         await commit_config()
         await agent.emit_status()
+        await self.signal_operation_done(
+            signal_only=True, request_id=data.get("request_id")
+        )
 
     # ------------------------------------------------------------------
     # handlers
@@ -84,14 +100,12 @@ class AgentConfigPlugin(Plugin):
 
         label = (data.get("label") or "").strip()
         if not label:
-            await self.signal_operation_failed("Label is required")
+            await self._refuse(data, "Label is required")
             return
 
         slug = slugify(label)
         if not slug:
-            await self.signal_operation_failed(
-                f"Could not derive a slug from label '{label}'"
-            )
+            await self._refuse(data, f"Could not derive a slug from label '{label}'")
             return
 
         existing = set(agent.dynamic_child_slugs(action_key))
@@ -110,11 +124,11 @@ class AgentConfigPlugin(Plugin):
                 slug=unique_slug,
                 error=str(exc),
             )
-            await self.signal_operation_failed(str(exc))
+            await self._refuse(data, str(exc))
             return
 
         await agent.persist_dynamic_external_state(action_key)
-        await self._persist_and_broadcast(agent)
+        await self._persist_and_broadcast(agent, data)
 
     async def handle_unregister_child(self, data: dict):
         """Remove a child entry from a dynamic-action registry.
@@ -127,12 +141,12 @@ class AgentConfigPlugin(Plugin):
 
         slug = data.get("slug")
         if not slug:
-            await self.signal_operation_failed("Slug is required")
+            await self._refuse(data, "Slug is required")
             return
 
         agent.unregister_dynamic_child(action_key, slug)
         await agent.persist_dynamic_external_state(action_key)
-        await self._persist_and_broadcast(agent)
+        await self._persist_and_broadcast(agent, data)
 
     async def handle_rename_child(self, data: dict):
         """Rename a child entry's label (slug stays frozen).
@@ -146,30 +160,31 @@ class AgentConfigPlugin(Plugin):
         slug = data.get("slug")
         label = (data.get("label") or "").strip()
         if not slug:
-            await self.signal_operation_failed("Slug is required")
+            await self._refuse(data, "Slug is required")
             return
         if not label:
-            await self.signal_operation_failed("Label is required")
+            await self._refuse(data, "Label is required")
             return
 
         agent.rename_dynamic_child_label(action_key, slug, label)
-        await self._persist_and_broadcast(agent)
+        await self._persist_and_broadcast(agent, data)
 
     # ------------------------------------------------------------------
     # Per-scene agent overrides
     # ------------------------------------------------------------------
 
-    async def _refuse_scene_overrides(self, agent, message: str) -> None:
+    async def _refuse_scene_overrides(self, agent, data: dict, message: str) -> None:
         """Reject an override save and put the frontend back on the truth.
 
-        Callers (the AgentModal, the agent panel's quick-toggle chips) update
-        their local copy of the overlay optimistically, so a refusal that only
-        raised an error toast would leave a value on screen that was never
-        stored. Re-emitting agent status ships the unchanged overlay back.
+        Senders (the settings view's override buffer, the agent panel's
+        quick-toggle chips, the world editor's finalizers) update their local
+        copy of the overlay optimistically, so a refusal that only raised an
+        error toast would leave a value on screen that was never stored.
+        Re-emitting agent status ships the unchanged overlay back.
         """
         if agent:
             await agent.emit_status()
-        await self.signal_operation_failed(message)
+        await self._refuse(data, message)
 
     async def handle_save_scene_overrides(self, data: dict):
         """Persist a sparse per-agent override set into the scene's
@@ -177,7 +192,8 @@ class AgentConfigPlugin(Plugin):
 
         Required: ``agent_type``, ``override`` (sparse AgentOverride dict).
         Optional: ``filename`` (creates / re-links the file when supplied;
-        used by the modal's first-time naming flow).
+        the Agents settings page sends it with the first slice of a save for
+        a scene that has no agent-settings file yet).
         """
         agent_type = data.get("agent_type")
         override = data.get("override")
@@ -185,13 +201,13 @@ class AgentConfigPlugin(Plugin):
 
         agent = AGENTS.get(agent_type) if agent_type else None
         if not agent:
-            await self.signal_operation_failed(f"Agent '{agent_type}' not found")
+            await self._refuse(data, f"Agent '{agent_type}' not found")
             return
 
         scene = getattr(agent, "scene", None)
         if scene is None:
             await self._refuse_scene_overrides(
-                agent, f"Agent '{agent_type}' is not connected to a scene"
+                agent, data, f"Agent '{agent_type}' is not connected to a scene"
             )
             return
 
@@ -209,6 +225,7 @@ class AgentConfigPlugin(Plugin):
             # the filename — so this is not always a "not saved yet" scene.
             await self._refuse_scene_overrides(
                 agent,
+                data,
                 "This scene has no save file, so its agent overrides cannot be "
                 "changed. Save the scene first.",
             )
@@ -218,7 +235,7 @@ class AgentConfigPlugin(Plugin):
         # and must stay inside ``save_dir``.
         if filename is not None and not is_safe_settings_filename(filename):
             await self._refuse_scene_overrides(
-                agent, f"Invalid agent-settings filename: {filename!r}"
+                agent, data, f"Invalid agent-settings filename: {filename!r}"
             )
             return
 
@@ -255,7 +272,7 @@ class AgentConfigPlugin(Plugin):
         if scene.agent_overrides is None:
             if not filename:
                 await self._refuse_scene_overrides(
-                    agent, "No agent-settings file linked; filename is required"
+                    agent, data, "No agent-settings file linked; filename is required"
                 )
                 return
             target_path = agent_settings_dir(scene.save_dir) / filename
@@ -290,7 +307,9 @@ class AgentConfigPlugin(Plugin):
             )
             rollback()
             await self._refuse_scene_overrides(
-                agent, f"Failed to write agent-settings file: {exc.strerror or exc}"
+                agent,
+                data,
+                f"Failed to write agent-settings file: {exc.strerror or exc}",
             )
             return
 
@@ -300,6 +319,9 @@ class AgentConfigPlugin(Plugin):
         # Overrides live in their own file, so the scene itself only needs
         # persisting when this save linked one: the auto-save writes the
         # `agent_settings_file` reference so the link survives reload. Repeat
-        # saves (modal re-saves, quick-toggle chip flips) skip it — otherwise
-        # every chip click would rewrite the scene JSON or mark it unsaved.
-        await self.signal_operation_done(signal_only=not linked_file)
+        # saves (the settings page, the agents drawer, quick-toggle chip flips)
+        # skip it — otherwise every chip click would rewrite the scene JSON or
+        # mark it unsaved.
+        await self.signal_operation_done(
+            signal_only=not linked_file, request_id=data.get("request_id")
+        )

@@ -6,6 +6,7 @@
         icon="mdi-close"
         variant="text"
         color="muted"
+        :disabled="saveInFlight"
         @click="dismissWizard"
       />
       <v-card-title class="text-h5 text-center mb-6">
@@ -134,14 +135,39 @@
               </v-col>
             </v-row>
             
-            <v-btn color="primary" variant="tonal" :disabled="clientTypesLoading || !clientPresetOptions.length" @click="openClientModal" prepend-icon="mdi-plus">
+            <!-- the same editor the settings Clients page uses, in its
+                 reduced (simple) field set — bound to a local draft client
+                 that is written on Add Client -->
+            <v-row v-if="draftClient" justify="center" class="mb-2">
+              <v-col cols="12" md="8" class="text-left">
+                <ClientConfigEditor
+                  ref="clientEditor"
+                  simple
+                  :client="draftClient"
+                  :meta="draftClientMeta"
+                  :config="draftConfig"
+                  :validate-name="validateClientName"
+                  @rename="(name) => draftClient.name = name"
+                />
+              </v-col>
+            </v-row>
+
+            <v-btn color="primary" variant="tonal" :disabled="clientTypesLoading || !draftClient" @click="addClient" prepend-icon="mdi-plus">
               Add Client
             </v-btn>
-            
+
             <div v-if="waitingForClient" class="mt-8 text-caption text-medium-emphasis">
               <v-progress-circular indeterminate size="24" color="primary" class="mr-2"></v-progress-circular>
-              Waiting for you to add a client...
+              Waiting for the client to be created...
             </div>
+
+            <v-row v-if="saveError" justify="center" class="mt-4">
+              <v-col cols="12" md="8">
+                <v-alert type="error" variant="tonal" density="compact" icon="mdi-alert-circle-outline">
+                  <div class="text-body-2">{{ saveErrorText('client') }}</div>
+                </v-alert>
+              </v-col>
+            </v-row>
           </v-card-text>
         </v-window-item>
 
@@ -334,10 +360,18 @@
             </v-row>
 
             <div class="mt-6">
-              <v-btn color="primary" variant="tonal" @click="nextOrFinish">
+              <v-btn color="primary" variant="tonal" :loading="finishing" :disabled="finishing" @click="nextOrFinish">
                 {{ shouldShowVisualStep ? 'Next' : 'Apply & finish' }}
               </v-btn>
             </div>
+
+            <v-row v-if="saveError" justify="center" class="mt-4">
+              <v-col cols="12" md="8">
+                <v-alert type="error" variant="tonal" density="compact" icon="mdi-alert-circle-outline">
+                  <div class="text-body-2">{{ saveErrorText('agent settings') }}</div>
+                </v-alert>
+              </v-col>
+            </v-row>
 
             <div class="text-caption text-medium-emphasis mt-4">
               You can change these settings any time in <strong>Agents → Memory</strong>.
@@ -422,10 +456,18 @@
             </v-row>
 
             <div class="mt-6">
-              <v-btn color="primary" variant="tonal" @click="finishWizard">
+              <v-btn color="primary" variant="tonal" :loading="finishing" :disabled="finishing" @click="finishWizard">
                 Apply & finish
               </v-btn>
             </div>
+
+            <v-row v-if="saveError" justify="center" class="mt-4">
+              <v-col cols="12" md="8">
+                <v-alert type="error" variant="tonal" density="compact" icon="mdi-alert-circle-outline">
+                  <div class="text-body-2">{{ saveErrorText('agent settings') }}</div>
+                </v-alert>
+              </v-col>
+            </v-row>
           </v-card-text>
         </v-window-item>
       </v-window>
@@ -436,21 +478,32 @@
           <v-btn
             v-if="step > 1"
             variant="text"
+            :disabled="saveInFlight"
             @click="goBack"
             prepend-icon="mdi-arrow-left"
           >
             Back
           </v-btn>
         </div>
-        <v-btn variant="text" color="muted" @click="dismissWizard">Skip setup for now</v-btn>
+        <!-- leaving while a save is in flight (the client step's as much as
+             the finishing one) would move the wizard off an answer it can no
+             longer show -->
+        <v-btn variant="text" color="muted" :disabled="saveInFlight" @click="dismissWizard">Skip setup for now</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 
 <script>
+import { getProperty, setProperty } from 'dot-prop';
+import ClientConfigEditor from './ClientConfigEditor.vue';
+import { buildClientFromDefaults } from '@/utils/clientPresets';
+
 export default {
   name: 'OnboardingWizard',
+  components: {
+    ClientConfigEditor,
+  },
   props: {
     clients: {
       type: Array,
@@ -461,8 +514,8 @@ export default {
       default: () => []
     }
   },
-  emits: ['open-client-modal', 'wizard-completed'],
-  inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
+  emits: ['wizard-completed'],
+  inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'appConfig', 'saveAppConfig'],
     data() {
     return {
       dialog: false,
@@ -470,6 +523,21 @@ export default {
       clientType: null, // 'remote' | 'local'
       selectedClientPreset: null,
       clientTypes: {},
+      // the client the embedded editor edits, and the config copy it writes
+      // cross-references (the provider's unified API key) into — both are
+      // folded into the app config when the client is added
+      draftClient: null,
+      draftConfig: {},
+      // error message of a failed save, shown in the wizard itself
+      saveError: null,
+      // that failure was an apply failure — the settings were stored, only
+      // applying them to the running clients/agents failed
+      applyFailed: false,
+      // the client a failed apply stored: it exists in the config (and in the
+      // `clients` prop) but not in the running client set, so it is neither a
+      // taken name nor a client that still needs adding — re-sending it is the
+      // retry, and a fresh draft would only ever add a second client
+      applyFailedClient: null,
       clientTypesLoading: false,
       memoryEmbeddingsPreset: 'default',
       memoryDevice: 'cpu',
@@ -477,6 +545,9 @@ export default {
       memoryEmbeddingsUserSelected: false,
       visualAgentChoice: 'enable', // 'enable' | 'skip'
       waitingForClient: false,
+      // the finishing save is in flight; the wizard stays open until it is
+      // answered so a failure can be shown instead of a false success
+      finishing: false,
       completed: false,
       dismissed: false,
       systemCapabilities: null,
@@ -484,6 +555,12 @@ export default {
     }
   },
   computed: {
+    // a config save this wizard is waiting on — leaving now (Back, Skip, the
+    // close button) would take the wizard off the answer, and on the client
+    // step off the step that has to show it
+    saveInFlight() {
+      return this.finishing || this.waitingForClient;
+    },
     shouldShow() {
       if (this.dismissed) return false;
       if (this.completed) return false;
@@ -491,8 +568,14 @@ export default {
       // Show if we have no clients
       if (this.clients.length === 0) return true;
 
-      // If we have clients but are in the middle of the wizard (step 3 specifically)
-      if (this.step === 3 || this.step === 4) return true;
+      // Past the first step the user is inside the wizard: a client stored by
+      // one of its own saves (an apply failure stores one without applying it)
+      // or by another window must not pull the dialog out from under them
+      if (this.step > 1) return true;
+
+      // back on step 1 with a failure of this wizard's own still unanswered —
+      // the step that shows it, and retries it, is one click away
+      if (this.applyFailedClient || this.saveError) return true;
 
       return false;
     },
@@ -577,6 +660,9 @@ export default {
       if (total && total >= fourGiB) return true;
       return false;
     },
+    draftClientMeta() {
+      return (this.clientTypes || {})[this.selectedClientPreset] || {};
+    },
     shouldShowVisualStep() {
       return ['google', 'openrouter'].includes(this.selectedClientPreset);
     },
@@ -600,15 +686,38 @@ export default {
       },
     },
     step(newVal) {
+      if (newVal === 2) {
+        this.prepareDraftClient();
+      }
       if (newVal === 3 && this.dialog) {
         this.requestSystemCapabilities();
       }
     },
+    selectedClientPreset() {
+      if (this.step === 2) {
+        // a different client type is a different field set — start over.
+        // The retry token stays: it gates the clients watcher off step 2 (the
+        // stored client is in `clients`, so dropping it here bounces the
+        // wizard to step 3), and prepareDraftClient already refuses to
+        // restore a retry whose type doesn't match. onComplete/onError
+        // retire it when the next save answers.
+        this.prepareDraftClient();
+      }
+    },
     clients: {
       handler(newVal) {
+        // the client this step saves is stored before it is applied, so its
+        // own save shows up here — advancing on that would take the wizard off
+        // the step that has to report the failure and off the draft that
+        // retries it. Its callbacks advance instead.
+        if (this.waitingForClient || this.applyFailedClient) {
+          return;
+        }
         if (newVal.length > 0 && this.step === 2) {
+          // a client arrived without this step storing it (another window, or
+          // a save whose answer was lost) — whatever it reported is moot
+          this.clearSaveError();
           this.step = 3;
-          this.waitingForClient = false;
           this.requestSystemCapabilities();
         }
       },
@@ -637,6 +746,12 @@ export default {
         this.clientTypes = data.data || {};
         this.clientTypesLoading = false;
         this.ensureSelectedPreset();
+        if (this.step === 2) {
+          // the type list is what the draft is built from — it may have
+          // arrived only now (the preset watcher wouldn't fire if the
+          // pre-selected type is already the right one)
+          this.prepareDraftClient();
+        }
         return;
       }
 
@@ -707,6 +822,11 @@ export default {
       }
     },
     dismissWizard() {
+      if (this.saveInFlight) {
+        // the buttons that reach this are disabled while a save is in flight —
+        // this covers whatever else calls it
+        return;
+      }
       this.dismissed = true;
       this.dialog = false;
     },
@@ -734,23 +854,110 @@ export default {
     buildClientPreset(typeValue) {
       const meta = (this.clientTypes || {})[typeValue];
       if (!meta) {
-        return { type: typeValue, name: typeValue };
+        return { type: typeValue, name: typeValue, enabled: true };
       }
-
-      const defaults = meta.defaults || {};
-
-      return {
-        type: typeValue,
-        name: meta.name_prefix || meta.title || typeValue,
-        ...defaults,
-      };
+      return buildClientFromDefaults(meta, typeValue, this.takenClientNames());
     },
-    openClientModal() {
-      this.waitingForClient = true;
+    takenClientNames() {
+      return (this.clients || [])
+        .map(client => client.name)
+        .filter(name => name !== this.applyFailedClient?.name);
+    },
+    validateClientName(value) {
+      const name = (value || '').trim();
+      if (!name) {
+        return 'Client name is required.';
+      }
+      // the client of a failed apply is in the config under its own name —
+      // re-sending it overwrites that entry instead of adding a second client,
+      // so it must not read as taken
+      if (name === this.applyFailedClient?.name) {
+        return true;
+      }
+      if ((this.clients || []).some(client => client.name === name)) {
+        return 'Client name already exists.';
+      }
+      return true;
+    },
+    // Seeds the embedded editor: a fresh client from the type's defaults and
+    // a config copy for the cross-references the editor writes (the
+    // provider's unified API key).
+    prepareDraftClient() {
       this.ensureSelectedPreset();
-      const preset = this.buildClientPreset(this.selectedClientPreset);
-      preset._simpleMode = true;
-      this.$emit('open-client-modal', preset);
+      if (!this.selectedClientPreset || !this.clientTypes[this.selectedClientPreset]) {
+        this.draftClient = null;
+        return;
+      }
+      this.draftConfig = JSON.parse(JSON.stringify(this.appConfig() || {}));
+      const retry = this.applyFailedClient;
+      if (retry && retry.type === this.selectedClientPreset) {
+        // the draft is being rebuilt (a re-entry of this step, or the type
+        // list arriving late) while a retry is armed — restore what was sent,
+        // so Add Client re-sends it instead of seeding a second client
+        this.draftClient = JSON.parse(JSON.stringify(retry));
+        return;
+      }
+      this.draftClient = this.buildClientPreset(this.selectedClientPreset);
+      this.clearSaveError();
+    },
+    clearSaveError() {
+      this.saveError = null;
+      this.applyFailed = false;
+    },
+    // An apply failure already reads as a whole sentence from the backend
+    // ("saved, but applying it failed") — the settings did land, so the
+    // refusal wording would contradict it.
+    saveErrorText(subject) {
+      return this.applyFailed ? this.saveError : `The ${subject} could not be saved: ${this.saveError}`;
+    },
+    addClient() {
+      if (!this.draftClient || this.validateClientName(this.draftClient.name) !== true) {
+        return;
+      }
+      const client = JSON.parse(JSON.stringify(this.draftClient));
+      // the unified API key is application state, not client state — carry
+      // the editor's edit over from the draft config
+      const keyPath = this.draftClientMeta.unified_api_key_config_path || null;
+      const apiKey = keyPath ? getProperty(this.draftConfig, keyPath) : undefined;
+      this.clearSaveError();
+      this.waitingForClient = true;
+      const requestId = this.saveAppConfig((config) => {
+        if (!config.clients) {
+          config.clients = {};
+        }
+        config.clients[client.name] = client;
+        if (keyPath) {
+          setProperty(config, keyPath, apiKey || null);
+        }
+      }, {
+        label: 'client setup',
+        // neither a refused save nor a failed apply creates the client, so
+        // the "waiting for the client" spinner would run forever
+        onError: (error, applyFailed) => {
+          this.waitingForClient = false;
+          this.saveError = error;
+          this.applyFailed = !!applyFailed;
+          // a failed apply DID store the client — the broadcast that carries
+          // it moves the wizard on to the next step, so remember it for the
+          // retry the user gets by coming back here
+          this.applyFailedClient = applyFailed ? client : null;
+        },
+        onComplete: () => {
+          // the client is running now, and with it anything an earlier failed
+          // apply left behind (the backend re-applies those on any save)
+          this.applyFailedClient = null;
+          this.clearSaveError();
+          this.waitingForClient = false;
+          if (this.step === 2) {
+            this.step = 3;
+            this.requestSystemCapabilities();
+          }
+        },
+      });
+      if (!requestId) {
+        this.waitingForClient = false;
+        this.saveError = 'Talemate is still starting up — try again in a moment.';
+      }
     },
     nextOrFinish() {
       if (this.shouldShowVisualStep) {
@@ -760,77 +967,90 @@ export default {
       }
     },
     finishWizard() {
-      this.applyMemorySettings();
-      if (this.shouldShowVisualStep && this.visualAgentChoice === 'enable') {
-        this.applyVisualSettings();
+      const withVisual = this.shouldShowVisualStep && this.visualAgentChoice === 'enable';
+      this.clearSaveError();
+      this.finishing = true;
+      // one save carries both agent mutations — two saves would race, the
+      // second building on a config copy the first hasn't landed in yet
+      const requestId = this.saveAppConfig((config) => {
+        this.applyMemorySettings(config);
+        if (withVisual) {
+          this.applyVisualSettings(config);
+        }
+      }, {
+        label: 'agent setup',
+        // closing on a refused save would claim an agent setup that never
+        // happened — same handling the client step already does. An apply
+        // failure stays open too: the settings are stored but the agents are
+        // still the old ones, and pressing the button again re-applies them.
+        onError: (error, applyFailed) => {
+          this.finishing = false;
+          this.saveError = error;
+          this.applyFailed = !!applyFailed;
+        },
+        onComplete: () => {
+          this.finishing = false;
+          this.completed = true;
+          this.$emit('wizard-completed');
+        },
+      });
+      if (!requestId) {
+        this.finishing = false;
+        this.saveError = 'Talemate is still starting up — try again in a moment.';
       }
-      this.completed = true;
-      this.$emit('wizard-completed');
     },
-    applyMemorySettings() {
+    // agent settings are stored as {enabled, client, actions: {<key>: {enabled,
+    // config: {<key>: {value}}}}} — reach into (and create) that entry without
+    // disturbing anything else the agent has persisted
+    agentActionEntry(config, agentName, actionKey) {
+      if (!config.agents) {
+        config.agents = {};
+      }
+      const agent = config.agents[agentName] || (config.agents[agentName] = {});
+      if (!agent.actions) {
+        agent.actions = {};
+      }
+      const action = agent.actions[actionKey] || (agent.actions[actionKey] = {});
+      if (!action.config) {
+        action.config = {};
+      }
+      return action;
+    },
+    applyMemorySettings(config) {
       const memoryAgent = this.agents.find(a => a.name === 'memory' || a.type === 'memory');
-      if (memoryAgent) {
-        this.getWebsocket().send(JSON.stringify({
-          type: 'configure_agents',
-          agents: {
-            [memoryAgent.name]: {
-              actions: {
-                _config: {
-                  config: {
-                    embeddings: { value: this.memoryEmbeddingsPreset },
-                    device: { value: this.memoryDevice },
-                  },
-                },
-              },
-            },
-          },
-        }));
-      }
+      if (!memoryAgent) return;
+
+      const action = this.agentActionEntry(config, memoryAgent.name, '_config');
+      action.config.embeddings = { value: this.memoryEmbeddingsPreset };
+      action.config.device = { value: this.memoryDevice };
     },
-    applyVisualSettings() {
+    applyVisualSettings(config) {
       const visualAgent = this.agents.find(a => a.name === 'visual' || a.type === 'visual');
       if (!visualAgent) return;
 
       const provider = this.selectedClientPreset; // 'google' or 'openrouter'
       if (!['google', 'openrouter'].includes(provider)) return;
 
-      const configUpdate = {
-        _config: {
-          config: {
-            backend: { value: provider },
-            backend_image_edit: { value: provider },
-            backend_image_analyzation: { value: provider },
-            automatic_generation: { value: true },
-          }
-        },
-        [`${provider}_image_create`]: { enabled: true },
-        [`${provider}_image_edit`]: { enabled: true },
-        [`${provider}_image_analyzation`]: { enabled: true },
-      };
+      const general = this.agentActionEntry(config, visualAgent.name, '_config');
+      general.config.backend = { value: provider };
+      general.config.backend_image_edit = { value: provider };
+      general.config.backend_image_analyzation = { value: provider };
+      general.config.automatic_generation = { value: true };
 
-      if (provider === 'google') {
-        configUpdate['google_image_analyzation'] = {
-          config: { model: { value: 'gemini-3-flash-preview' } },
-          enabled: true,
-        };
-        configUpdate['google_image_create'] = {
-          config: { model: { value: 'gemini-3-pro-image-preview' } },
-          enabled: true,
-        };
-        configUpdate['google_image_edit'] = {
-          config: { model: { value: 'gemini-3-pro-image-preview' } },
-          enabled: true,
-        };
+      const models = provider === 'google' ? {
+        google_image_analyzation: 'gemini-3-flash-preview',
+        google_image_create: 'gemini-3-pro-image-preview',
+        google_image_edit: 'gemini-3-pro-image-preview',
+      } : {};
+
+      for (const operation of ['image_create', 'image_edit', 'image_analyzation']) {
+        const key = `${provider}_${operation}`;
+        const action = this.agentActionEntry(config, visualAgent.name, key);
+        action.enabled = true;
+        if (models[key]) {
+          action.config.model = { value: models[key] };
+        }
       }
-
-      this.getWebsocket().send(JSON.stringify({
-        type: 'configure_agents',
-        agents: {
-          [visualAgent.name]: {
-            actions: configUpdate
-          },
-        },
-      }));
     }
   }
   ,

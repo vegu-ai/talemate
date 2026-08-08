@@ -33,11 +33,11 @@ After selecting your provider type, you will choose a specific client to configu
 
 For **Hosted API** users, OpenRouter is selected by default. For **Self-hosted** users, KoboldCpp is selected by default.
 
-Select your preferred client from the dropdown and click **Add Client** to open the client configuration dialog.
+Select your preferred client from the dropdown. The essential settings for that client type — its name, API URL and key, and the model — appear right below the dropdown. Fill them in and click **Add Client** to create the client.
 
-![Setup wizard step 2 - add client](../img/0.35.0/setup-wizard-step2-add-client.png)
+![Setup wizard step 2 - add client](../img/0.40.0/setup-wizard-step2-add-client.png)
 
-Once you complete the client configuration, the wizard will automatically advance to the next step.
+Once the client has been created, the wizard will automatically advance to the next step.
 
 !!! info "Reasoning Models"
     If you are using a reasoning model (like DeepSeek R1 or GLM), you will need to enable reasoning in the client settings after setup. For OpenRouter users, new clients have reasoning enabled by default with a budget of 2048 reasoning tokens, so the default model selected during the wizard (Gemini 3.6 Flash) and other reasoning models work out of the box. If you switch to a model that does not reason, you can turn reasoning off in the client settings.

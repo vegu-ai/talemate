@@ -7,10 +7,10 @@ updating application config sections, and a read-only view of the configured
 clients. Secret values (API keys) are never exposed and cannot be written.
 
 Write operations mirror the frontend save paths: agent settings persist via
-``Agent.save_config`` + ``commit_config`` and re-emit the agent status; app
-config writes re-validate the whole section through its pydantic model and
-fire ``config.changed`` so the frontend receives a fresh ``app_config``
-payload.
+``Agent.save_config`` + ``commit_config`` and re-emit the agent status, app
+config writes re-validate the whole section through its pydantic model, and
+both fire ``config.changed`` so every frontend receives a fresh ``app_config``
+payload instead of keeping a snapshot that predates the write.
 """
 
 from typing import TYPE_CHECKING, Any, Literal
@@ -178,7 +178,7 @@ def _field_payload(
     if field.max is not None:
         payload["max"] = field.max
     if field.type not in WRITABLE_FIELD_TYPES or _is_secret_field(field):
-        payload["read_only"] = "can only be changed through the settings dialog"
+        payload["read_only"] = "can only be changed on the agent settings page"
     if not field.scene_overridable:
         payload["scene_overridable"] = False
 
@@ -286,20 +286,28 @@ def _resolve_setting(
     return agent, action, field
 
 
-def _open_modal_conflict(agent_type: str, open_agent_modal: str | None) -> str | None:
-    """Refusal message when the target agent's settings dialog is open.
+def _settings_dirty_conflict(app_settings_dirty: bool) -> str | None:
+    """Refusal message when the settings view holds unsaved edits.
 
-    The dialog holds its own copy of the agent's settings: it will not show
-    an external change, and closing it with pending edits writes the stale
-    copy back - silently reverting anything changed while it was open.
+    Agent configuration is edited on the settings tab, which holds a working
+    copy of the WHOLE configuration and saves all of it at once from whatever
+    page is showing - so unsaved edits anywhere in that view (including the
+    per-page extra changes folded into its dirty state) would push the
+    pre-change values back over whatever is written here. A merely open
+    settings view is fine: it adopts an incoming config cleanly, and edits
+    kept while the user is on another tab still count (the frontend reports
+    ``dirty`` off-screen). Same gating as ``update_app_config``.
+
+    Best-effort by construction: the flag rides on the UX snapshot taken when
+    the message was sent, so edits made while the agent is answering are not
+    seen.
     """
-    if not open_agent_modal or open_agent_modal != agent_type:
+    if not app_settings_dirty:
         return None
     return (
-        f"The settings dialog for the '{agent_type}' agent is currently open in "
-        "the interface - it holds its own copy of the settings, so it would not "
-        "show this change and could overwrite it when it closes. Ask the user to "
-        "close the dialog first, then apply the change again."
+        "The application settings view has unsaved edits - saving them would "
+        "overwrite this change. Ask the user to save or discard their settings "
+        "changes first, then apply the change again."
     )
 
 
@@ -327,7 +335,7 @@ def _scene_for_overrides(agent: "Agent") -> "tuple[Any, str | None]":
 def _ensure_scene_overlay(scene) -> SceneAgentSettings:
     """Return the scene's overlay, creating the default-named one if missing.
 
-    Unlike the AgentModal flow, no scene save is forced to persist the link:
+    Unlike the websocket flow, no scene save is forced to persist the link:
     a file with the default name is auto-linked on every scene load
     (scene_agent_settings.resolve_link_on_load).
     """
@@ -341,8 +349,11 @@ def _ensure_scene_overlay(scene) -> SceneAgentSettings:
 
 async def _persist_agent_config(agent: "Agent") -> None:
     # same sequence as the frontend-driven save paths
-    # (server.agent_config._persist_and_broadcast)
+    # (server.agent_config._persist_and_broadcast) — including the app_config
+    # broadcast, without which every frontend keeps a config snapshot that
+    # predates this write and reverts it on its next full-config save
     await agent.save_config()
+    await get_config().set_dirty()
     await commit_config()
     await agent.emit_status()
 
@@ -353,13 +364,13 @@ async def update_agent_setting(
     setting_key: str,
     value: Any,
     scope: Literal["global", "scene"] = "global",
-    open_agent_modal: str | None = None,
+    app_settings_dirty: bool = False,
 ) -> dict | str:
     """Update one agent setting - the global value or a per-scene override.
 
     ``setting_key`` may be ``"enabled"`` to toggle the action itself.
-    ``open_agent_modal`` names the agent whose settings dialog is open in the
-    frontend (from the UX snapshot) - writes targeting it are refused.
+    ``app_settings_dirty`` flags that the settings view in the frontend has
+    unsaved edits (from the UX snapshot) - agent writes are refused then.
     """
     if scope not in ("global", "scene"):
         return f"Invalid scope '{scope}'. Use 'global' or 'scene'."
@@ -369,7 +380,7 @@ async def update_agent_setting(
         return resolved
     agent, action, field = resolved
 
-    conflict = _open_modal_conflict(agent_type, open_agent_modal)
+    conflict = _settings_dirty_conflict(app_settings_dirty)
     if conflict:
         return conflict
 
@@ -413,12 +424,12 @@ async def update_agent_setting(
     if _is_secret_field(field):
         return (
             f"Setting '{setting_key}' holds an API key or password and can only be "
-            "changed through the settings dialog."
+            "changed on the agent settings page."
         )
     if field.type not in WRITABLE_FIELD_TYPES:
         return (
             f"Setting '{setting_key}' ({field.type}) is too complex to change here - "
-            "the user should edit it in the agent's settings dialog."
+            "the user should edit it on the agent settings page."
         )
 
     try:
@@ -461,7 +472,7 @@ async def clear_agent_setting_scene_override(
     agent_type: str,
     action_key: str,
     setting_key: str,
-    open_agent_modal: str | None = None,
+    app_settings_dirty: bool = False,
 ) -> dict | str:
     """Remove a per-scene override so the setting falls back to its global value."""
     resolved = _resolve_setting(agent_type, action_key, setting_key)
@@ -469,7 +480,7 @@ async def clear_agent_setting_scene_override(
         return resolved
     agent, _action, field = resolved
 
-    conflict = _open_modal_conflict(agent_type, open_agent_modal)
+    conflict = _settings_dirty_conflict(app_settings_dirty)
     if conflict:
         return conflict
 

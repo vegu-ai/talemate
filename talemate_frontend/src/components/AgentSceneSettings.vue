@@ -40,6 +40,7 @@
           :readonly="!isOverrideActive(config_key)"
           :templates="templates"
           :app-config="appConfig"
+          :deferred="deferred"
           @update:modelValue="(v) => setEffectiveValue(config_key, v)"
         >
           <template v-slot:prepend>
@@ -96,6 +97,10 @@ export default {
     templates: { type: Object, default: null },
     // Forwarded to UxField — required for unified_api_key widgets.
     appConfig: { type: Object, default: null },
+    // Forwarded to UxField: `appConfig` is the host's unsaved working copy and
+    // the host's Save persists it. Hosts rendering against the live config
+    // leave this off — see ConfigWidgetUnifiedApiKey.
+    deferred: { type: Boolean, default: false },
   },
   emits: ['update:overrides', 'change'],
   computed: {

@@ -707,7 +707,6 @@ class ComfyUIMixin:
                 value="http://localhost:8188",
                 label="API URL",
                 description="The URL of the backend API",
-                save_on_change=True,
                 scene_overridable=False,
             ),
             "workflow": AgentActionConfig(
@@ -716,7 +715,6 @@ class ComfyUIMixin:
                 label="Workflow",
                 description="The workflow to use for comfyui (workflow file name inside ./templates/comfyui-workflows)",
                 choices=[],
-                save_on_change=True,
                 scene_overridable=False,
             ),
             "model": AgentActionConfig(

@@ -60,7 +60,7 @@ When all six tests are finished, the status banner changes to **Tests Finished**
 A failure tells you that the model under test could not satisfy a specific minimum-viability requirement:
 
 - **Basic Instruction Following fails** — the model is not reliably following literal formatting instructions. Expect downstream problems with almost any structured Talemate feature.
-- **Data Response Instruction Following fails** — the model struggles to return JSON/YAML in the format Talemate requests. Check the client's **Structured Data Format** setting on the [Advanced tab](client-configuration.md) and confirm the chosen format is one the model can actually produce.
+- **Data Response Instruction Following fails** — the model struggles to return JSON/YAML in the format Talemate requests. Check the client's **Structured Data Format** setting in the [Advanced section](client-configuration.md) and confirm the chosen format is one the model can actually produce.
 - **Conversation Generation fails** — the conversation agent's client is producing output Talemate cannot parse as a single character's dialogue.
 - **Narrative Generation fails** — the narrator's output contains dialogue markers like `VERA-7:` or `NIKO-12:`, meaning the model is slipping into actor-style output instead of continuous prose.
 - **Function Calling fails** — the model cannot reliably produce function calls in the format required by [FOCAL](../node-editor/core-concepts/functions.md). This will disable most of the director's advanced tooling.

@@ -51,14 +51,28 @@ class Plugin:
         if hasattr(cls, "sub_handlers"):
             cls.sub_handlers = {}
 
-    async def signal_operation_failed(self, message: str, emit_status: bool = True):
-        self.websocket_handler.queue_put(
-            {
-                "type": self.router,
-                "action": "operation_done",
-                "error": {"message": message},
-            }
-        )
+    async def signal_operation_failed(
+        self,
+        message: str,
+        emit_status: bool = True,
+        request_id: str | None = None,
+        failed_action: str | None = None,
+        extra: dict | None = None,
+    ):
+        payload = {
+            "type": self.router,
+            "action": "operation_done",
+            "error": {"message": message},
+        }
+        # a router is shared by every sender on it - carry back what failed so
+        # a client can tell its own refused request apart from somebody else's
+        if request_id is not None:
+            payload["request_id"] = request_id
+        if failed_action is not None:
+            payload["failed_action"] = failed_action
+        if extra:
+            payload.update(extra)
+        self.websocket_handler.queue_put(payload)
         if emit_status:
             emit("status", message=message, status="error")
 
@@ -67,10 +81,14 @@ class Plugin:
         signal_only: bool = False,
         allow_auto_save: bool = True,
         emit_status_message: EmitStatusMessage | str | dict = None,
+        request_id: str | None = None,
     ):
-        self.websocket_handler.queue_put(
-            {"type": self.router, "action": "operation_done", "data": {}}
-        )
+        payload = {"type": self.router, "action": "operation_done", "data": {}}
+        # same reason as signal_operation_failed: a router is shared by every
+        # sender on it, so a completion has to say whose request it answers
+        if request_id is not None:
+            payload["request_id"] = request_id
+        self.websocket_handler.queue_put(payload)
 
         if emit_status_message:
             if isinstance(emit_status_message, str):
@@ -204,7 +222,11 @@ class Plugin:
                 error=e,
                 traceback=traceback.format_exc(),
             )
-            await self.signal_operation_failed(f"Error during {action_name}: {e}")
+            await self.signal_operation_failed(
+                f"Error during {action_name}: {e}",
+                request_id=data.get("request_id"),
+                failed_action=action_name,
+            )
             return
 
         # Handlers decorated with @background_task return a Task. Attach a

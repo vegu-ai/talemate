@@ -92,7 +92,7 @@ class OpenAICompatibleMixin:
             label="OpenAI Compatible",
             description=(
                 "Manage OpenAI-compatible TTS backends. Each backend you add "
-                "appears as its own tab below."
+                "appears as its own section below."
             ),
             dynamic_registry_component="TTSOpenAICompatibleBackends",
             config={
@@ -139,9 +139,6 @@ class OpenAICompatibleMixin:
                         "Base URL of the OpenAI-compatible TTS server "
                         "(e.g. http://localhost:8000/v1)"
                     ),
-                    # Persist on blur so the user can immediately click
-                    # Refresh voices without closing the agent settings.
-                    save_on_change=True,
                     scene_overridable=False,
                 ),
                 "api_key": AgentActionConfig(
@@ -149,7 +146,6 @@ class OpenAICompatibleMixin:
                     value="",
                     label="API Key",
                     description="API key for the server (leave empty if not required)",
-                    save_on_change=True,
                     scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
@@ -167,7 +163,6 @@ class OpenAICompatibleMixin:
                         "Override path or absolute URL for the voice-listing "
                         "endpoint. Leave empty to probe common defaults."
                     ),
-                    save_on_change=True,
                     scene_overridable=False,
                 ),
                 "chunk_size": AgentActionConfig(

@@ -95,7 +95,6 @@ class VisualAgent(
                         value="",
                         label="Backend (text to image)",
                         description="The backend to use for basic text to image generation",
-                        save_on_change=True,
                         scene_overridable=False,
                     ),
                     "backend_image_edit": AgentActionConfig(
@@ -109,7 +108,6 @@ class VisualAgent(
                         value="",
                         label="Backend (image editing)",
                         description="The backend to use for contextual image editing",
-                        save_on_change=True,
                         scene_overridable=False,
                     ),
                     "backend_image_analyzation": AgentActionConfig(
@@ -123,7 +121,6 @@ class VisualAgent(
                         value="",
                         label="Backend (image analysis)",
                         description="The backend to use for image analysis",
-                        save_on_change=True,
                         scene_overridable=False,
                     ),
                     "timeout": AgentActionConfig(

@@ -1,10 +1,10 @@
 # Google Client
 
-If you want to add an Google client, change the `Client Type` to `Google`.
+If you want to add an Google client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `Google` from the client type menu.
 
 ![Client Google](/talemate/img/0.39.0/client-google.png)
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### Google Cloud Credentials
 

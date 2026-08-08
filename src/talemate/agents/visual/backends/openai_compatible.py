@@ -164,7 +164,6 @@ class OpenAICompatibleMixin:
                         "(e.g., http://localhost:8080). The /v1 path will be "
                         "appended automatically if not present."
                     ),
-                    save_on_change=True,
                     scene_overridable=False,
                 ),
                 "api_key": AgentActionConfig(
@@ -172,7 +171,6 @@ class OpenAICompatibleMixin:
                     value="",
                     label="API Key",
                     description="Optional API key for authentication.",
-                    save_on_change=True,
                     scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
@@ -182,7 +180,6 @@ class OpenAICompatibleMixin:
                     description=(
                         "The model name to use for vision analysis. (May be optional depending on the API endpoint)"
                     ),
-                    save_on_change=True,
                     scene_overridable=False,
                 ),
             },

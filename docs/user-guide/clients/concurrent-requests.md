@@ -36,7 +36,7 @@ For clients that support concurrent requests, you will see a toggle button in th
 
 Click the button to enable concurrent requests. When enabled, the button will appear highlighted.
 
-You can also enable this feature through the client's settings dialog under the **Concurrency** tab.
+You can also enable this feature in the **Concurrency** section of the client editor on the [Clients settings page](client-configuration.md).
 
 ## Important Considerations
 

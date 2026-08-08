@@ -1,3 +1,5 @@
+import { getProperty } from 'dot-prop';
+
 // Evaluates the shared UX field/action visibility condition
 // (talemate.ux.schema.Condition) against an already-resolved value.
 //
@@ -11,4 +13,14 @@ export function conditionMet(condition, resolvedValue) {
     return condition.value.some(v => v == resolvedValue);
   }
   return resolvedValue == condition.value;
+}
+
+// Agent-side resolution: the condition attribute names an action config value.
+// A non-dict agent `client` satisfies the condition — the dynamic-children
+// pattern installs object-shaped clients for some agents, and their actions
+// must stay visible.
+export function agentActionConditionMet(condition, actions, agentClient) {
+  if (condition == null) return true;
+  if (typeof agentClient !== 'object') return true;
+  return conditionMet(condition, getProperty(actions, condition.attribute + '.value'));
 }

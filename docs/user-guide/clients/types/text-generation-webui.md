@@ -4,14 +4,14 @@
     If you do not have a Text-Generation-WebUI instance running, you can follow their setup instructions 
     in their [GitHub repository](https://github.com/oobabooga/text-generation-webui).
 
-If you want to add an Text-Generation-WebUI client, change the `Client Type` to `Text-Generation-WebUI (ooba)`.
+If you want to add a Text-Generation-WebUI client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `Text-Generation-WebUI (ooba)` from the client type menu.
 
 ![Client Text-Generation-WebUI](/talemate/img/0.26.0/client-ooba.png)
 
 !!! note "Should work out of the box with a local Text-Generation-WebUI instance"
     The default values should work with a local Text-Generation-WebUI instance if you have followed their setup instructions and are running the server on the default port.
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### Ready to use
 

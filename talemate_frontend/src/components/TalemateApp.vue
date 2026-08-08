@@ -87,7 +87,7 @@
       <VisualLibrary ref="visualLibrary" :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
 
 
-      <v-tooltip text="Help" location="top">
+      <v-tooltip text="Help" location="top" v-if="helpAvailable">
         <template v-slot:activator="{ props }">
           <v-app-bar-nav-icon @click="toggleNavigation('help')" v-bind="props"><v-icon>mdi-help-circle-outline</v-icon></v-app-bar-nav-icon>
         </template>
@@ -191,9 +191,9 @@
         </v-alert>
 
         <v-list>
-          <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" :immutable-config="appConfig" :app-config="appConfig"></AIClient>
+          <AIClient ref="aiClient" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" :immutable-config="appConfig" :app-config="appConfig"></AIClient>
           <v-divider></v-divider>
-          <AIAgent ref="aiAgent" @agents-updated="saveAgents" :agentState="agentState" :templates="worldStateTemplates" :app-config="appConfig" :scene="scene"></AIAgent>
+          <AIAgent ref="aiAgent" @agents-updated="saveAgents" :agentState="agentState" :app-config="appConfig" :scene="scene"></AIAgent>
           <!-- More sections can be added here -->
         </v-list>
       </v-navigation-drawer>
@@ -441,7 +441,6 @@
     v-if="connected && appConfig && appConfig.clients"
     :clients="Object.values(appConfig.clients || {})"
     :agents="Object.values(agentStatus || {})"
-    @open-client-modal="(preset) => $refs.aiClient.openModal(preset)"
   />
 </template>
   
@@ -488,6 +487,7 @@ import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '@/constants/visual';
 import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 import AutocompleteMixin from './AutocompleteMixin.js';
+import { SETTINGS_PAGES } from '../utils/appSettingsRegistry.js';
 
 export default {
   components: {
@@ -651,6 +651,12 @@ export default {
       scene: {},
       actAs: null,
       appConfig: {},
+      // config payload of the most recent `config/save` — the base later
+      // saves stack on while any of them is still in flight (see saveAppConfig)
+      pendingConfigSave: null,
+      // in-flight config saves, oldest first: [{id, label, onError}]
+      configSaves: [],
+      configSaveSeq: 0,
       worldStateTemplates: {},
       // busy status of agents
       agentStatus: {},
@@ -680,8 +686,10 @@ export default {
       recentTemplates: [],
       // Synced tab state between PromptsMenu and PromptsView
       promptsMainTab: 'prompts',
-      // Synced page state between AppSettingsMenu and AppSettings
-      appSettingsPage: 'gameplay',
+      // Synced page state between AppSettingsMenu and AppSettings — AppSettings
+      // opens on the registry's first page and only emits page-changed on a
+      // change, so the initial value has to come from the same source
+      appSettingsPage: SETTINGS_PAGES[0].id,
       appSettingsDirty: false,
       // Whether AppSettings would accept a save right now, and whether the
       // configuration changed elsewhere while it holds unsaved edits
@@ -702,6 +710,13 @@ export default {
     }
   },
   watch:{
+    helpAvailable(available) {
+      // disabling the agent while its drawer is open leaves an open chat with
+      // no way to close it once the toggle is gone
+      if(!available) {
+        this.helpDrawer = false;
+      }
+    },
     availableTabs(tabs) {
       // check if tab still exists
       // in tabs
@@ -810,6 +825,13 @@ export default {
     },
   },
   computed: {
+    // The help chat is the help agent's only surface, so a disabled agent
+    // takes its app bar toggle with it. Only an explicit `disabled` status
+    // hides it — an agent that is merely uninitialized still opens, since the
+    // chat is where the user finds out why.
+    helpAvailable() {
+      return this.agentStatus.help?.status !== 'disabled';
+    },
     sceneBackdropStyle() {
       if (!this.sceneBackdropSrc) {
         return {};
@@ -937,6 +959,7 @@ export default {
       getClients: () => this.getClients(),
       getAgents: () => this.getAgents(),
       openAgentSettings: this.openAgentSettings,
+      openClientSettings: this.openClientSettings,
       requestSceneAssets: (asset_ids) => this.requestSceneAssets(asset_ids),
       requestAssets: (assets) => this.requestAssets(assets),
       creativeEditor: () => this.$refs.creativeEditor,
@@ -944,6 +967,8 @@ export default {
       setEnvScene: () => this.setEnvScene(),
       requestAppConfig: () => this.requestAppConfig(),
       appConfig: () => this.appConfig,
+      saveAppConfig: (mutate, options) => this.saveAppConfig(mutate, options),
+      sendConfigSave: (config, options) => this.sendConfigSave(config, options),
       openAppConfig: this.openAppConfig,
       openAgentActionOverrides: () => this.$refs.agentActionOverrides?.open(),
       openSceneTimeline: (options) => this.$refs.sceneTimeline.open(options),
@@ -1091,6 +1116,17 @@ export default {
       };
       this.websocket.onclose = (event) => {
         console.log('WebSocket connection closed', event);
+        // in-flight config saves can no longer be answered — drop them so a
+        // later save doesn't stack on a payload that may never have landed,
+        // and tell each sender, or its in-flight state (the wizard's
+        // finishing/waitingForClient) survives the socket it died on
+        for (const save of this.configSaves) {
+          if (save.onError) {
+            save.onError('The connection to the backend was lost before the save was answered.');
+          }
+        }
+        this.configSaves = [];
+        this.pendingConfigSave = null;
         this.connected = false;
         this.connecting = false;
         this.sceneActive = false;
@@ -1191,6 +1227,17 @@ export default {
         this.setClientStatus(data);
       }
 
+      if(data.type === 'config' && data.request_id) {
+        // completions are only ours when the id matches one we sent
+        if(data.action === 'save_complete') {
+          this.onConfigSaveComplete(data.request_id);
+        } else if(data.action === 'operation_done' && data.error) {
+          // `stage: 'apply'` marks a payload that WAS stored — only applying
+          // it to the running clients/agents failed
+          this.onConfigSaveFailed(data.request_id, data.error.message || 'unknown error', data.stage === 'apply');
+        }
+      }
+
       if(data.type === 'rate_limited') {
         this.$refs.rateLimitAlert.open(data.data.client, data.data.reset_time, data.data.rate_limit);
         return;
@@ -1259,6 +1306,11 @@ export default {
 
       if (data.type === 'app_config') {
         this.appConfig = data.data;
+        // NOTE: pendingConfigSave is deliberately NOT cleared here — a
+        // broadcast may belong to somebody else's save (another window, the
+        // help agent) and arrives before our own completion; dropping the
+        // base then would make an in-flight save's changes disappear from
+        // the next one. onConfigSaveComplete clears it.
         if(data.version) {
           this.version = data.version;
           if (!versionsMatch(data.version)) {
@@ -1481,49 +1533,150 @@ export default {
     requestAppConfig() {
       this.websocket.send(JSON.stringify({ type: 'request_app_config' }));
     },
-    saveClients(clients) {
-      console.log("saveClients", clients)
-
-      const saveData = {}
-
-      for(let client of clients) {
-        saveData[client.name] = {
-          ...client,
+    /**
+     * Sends one `config/save` tagged with a request id, which the backend
+     * echoes on `save_complete` / `operation_done` — the router is shared, so
+     * that id is the only way a sender recognizes its own answer.
+     *
+     * `options`: {label} names the change for error reporting, {onError} /
+     * {onComplete} are called when this save (or one stacked on it) is refused
+     * or confirmed. Returns the request id.
+     */
+    sendConfigSave(config, options = {}) {
+      const requestId = `cfg-${Date.now()}-${++this.configSaveSeq}`;
+      // clone: callers pass working copies that keep being edited
+      const payload = JSON.parse(JSON.stringify(config));
+      this.configSaves.push({
+        id: requestId,
+        label: options.label || 'settings',
+        onError: options.onError || null,
+        onComplete: options.onComplete || null,
+      });
+      this.pendingConfigSave = payload;
+      this.websocket.send(JSON.stringify({
+        type: 'config',
+        action: 'save',
+        request_id: requestId,
+        config: payload,
+      }));
+      return requestId;
+    },
+    /**
+     * Sends a full `config/save` with `mutate` applied to a deep clone of the
+     * CURRENT config.
+     *
+     * The payload must be complete: the backend validates the whole Config
+     * model and applies deletion-by-omission, so anything left out is reset.
+     * Build on the stored config, never on a settings page's working copy.
+     */
+    saveAppConfig(mutate, options = {}) {
+      // The stored config only catches up on the broadcast that follows a
+      // save, so while one is in flight stack onto what was last sent.
+      const base = this.pendingConfigSave || this.appConfig;
+      if (!base || !Object.keys(base).length) {
+        // an empty base would reset every section to its defaults
+        console.warn('saveAppConfig: no app config available yet, save skipped');
+        return null;
+      }
+      const config = JSON.parse(JSON.stringify(base));
+      mutate(config);
+      return this.sendConfigSave(config, options);
+    },
+    onConfigSaveComplete(requestId) {
+      const index = this.configSaves.findIndex(save => save.id === requestId);
+      if (index === -1) {
+        // a save from another window — the stored config is refreshed by the
+        // broadcast, nothing here is waiting on it
+        return;
+      }
+      const [save] = this.configSaves.splice(index, 1);
+      if (!this.configSaves.length) {
+        // every save is answered — the stored config is authoritative again
+        this.pendingConfigSave = null;
+      }
+      if (save.onComplete) {
+        save.onComplete();
+      }
+    },
+    onConfigSaveFailed(requestId, error, applyFailed = false) {
+      const index = this.configSaves.findIndex(save => save.id === requestId);
+      if (index === -1) {
+        return;
+      }
+      if (applyFailed) {
+        // the payload was stored, so anything stacked on it carries accepted
+        // content and is answered on its own — this save fails alone
+        const [save] = this.configSaves.splice(index, 1);
+        if (!this.configSaves.length) {
+          this.pendingConfigSave = null;
+        }
+        // the backend message already reads as a whole sentence ("saved, but
+        // applying it failed") — prefixing it would contradict it
+        this.uxErrorHandler(error);
+        if (save.onError) {
+          save.onError(error, true);
+        }
+        return;
+      }
+      // whatever was sent after the refused payload was built ON it, so it
+      // carries the same rejected content — none of it can be trusted. Saves
+      // sent BEFORE it are untouched and still resolve on their own.
+      const affected = this.configSaves.splice(index);
+      // back to the stored config as the stacking base — the refused payload
+      // must not seed another save
+      this.pendingConfigSave = null;
+      const labels = [...new Set(affected.map(save => save.label))].join(', ');
+      this.uxErrorHandler(`Settings save failed (${labels}): ${error}`);
+      for (const save of affected) {
+        if (save.onError) {
+          save.onError(error);
         }
       }
-      this.websocket.send(JSON.stringify({ type: 'configure_clients', clients: saveData }));
+      // the drawer keeps its rows optimistically ahead of the backend while a
+      // save is confirmed — let the next status broadcast restore the truth
+      this.$refs.aiClient?.resetPendingSaves();
+    },
+    saveClients(clients) {
+      this.saveAppConfig((config) => {
+        // full map replacement — frontend-only keys (status, data, ...) are
+        // ignored by the pydantic client models
+        const saveData = {};
+        for(let client of clients) {
+          saveData[client.name] = { ...client };
+        }
+        config.clients = saveData;
+      }, { label: 'clients' });
     },
     saveAgents(agents) {
-      const saveData = {}
+      this.saveAppConfig((config) => {
+        const saveData = {};
 
-      for(let agent of agents) {
-        console.log("agent", agent)
-        const requiresLLM = agent.data?.requires_llm_client || false;
+        for(let agent of agents) {
+          const requiresLLM = agent.data?.requires_llm_client || false;
 
-        let client;
+          let client;
 
-        if(requiresLLM) {
+          if(requiresLLM) {
 
-          if(agent.client?.client) {
-            client = agent.client?.client?.value;
+            if(agent.client?.client) {
+              client = agent.client?.client?.value;
+            } else {
+              client = agent.client || null;
+            }
+
           } else {
-            client = agent.client || null;
+            client = null;
           }
 
-        } else {
-          client = null;
+          saveData[agent.name] = {
+            enabled: agent.enabled,
+            actions: agent.actions,
+            client: client,
+          }
         }
 
-        saveData[agent.name] = {
-          enabled: agent.enabled,
-          actions: agent.actions,
-          client: client,
-        }
-      }
-
-      console.log("saveAgents",{ saveData, agents })
-
-      this.websocket.send(JSON.stringify({ type: 'configure_agents', agents: saveData }));
+        config.agents = saveData;
+      }, { label: 'agents' });
     },
     requestSceneAssets(asset_ids) {
       if (this._sceneAssetsRequester) {
@@ -1563,8 +1716,9 @@ export default {
         ],
         scene_active: this.sceneActive,
         scene_environment: this.sceneActive ? this.scene?.environment : null,
-        client_settings_modal: this.$refs.aiClient?.uxSnapshot() || null,
-        agent_settings_modal: this.$refs.aiAgent?.uxSnapshot() || null,
+        // client and agent configuration live on the settings tab — the
+        // settings snapshot reports which page (and which client / agent on
+        // it) the user is looking at
         app_settings_modal: this.$refs.appSettings?.uxSnapshot() || null,
         app_ready: this.ready,
         waiting_for_input: this.waitingForInput,
@@ -1612,8 +1766,26 @@ export default {
       }
       return null;
     },
+    // Agent and client settings live on the settings tab — both helpers take
+    // the same route into it as openAppConfig (so the unsaved-settings guard
+    // behaves identically) and then deep-link the page.
     openAgentSettings(agentName, section) {
-      this.$refs.aiAgent.openSettings(agentName, section);
+      this.openAppConfig();
+      this.$nextTick(() => {
+        if (this.$refs.appSettings) {
+          this.$refs.appSettings.navigate('agents', null, { agent: agentName, tab: section || '_config' });
+        }
+      });
+    },
+    // `item` is a client name, or {action: 'add'} to open the type picker
+    openClientSettings(item) {
+      const selection = typeof item === 'string' ? { client: item } : (item || {});
+      this.openAppConfig();
+      this.$nextTick(() => {
+        if (this.$refs.appSettings) {
+          this.$refs.appSettings.navigate('clients', selection.action === 'add' ? 'add-client' : null, selection);
+        }
+      });
     },
     callAgentTool(actionName, args) {
       const dispatch = {
@@ -1799,9 +1971,9 @@ export default {
       // when the guard vetoed the navigation
       targetTab.click();
     },
-    onAppSettingsNavigate({ page, anchor }) {
+    onAppSettingsNavigate({ page, anchor, item }) {
       if (this.$refs.appSettings) {
-        this.$refs.appSettings.navigate(page, anchor);
+        this.$refs.appSettings.navigate(page, anchor, item || null);
       }
     },
     uxErrorHandler(error) {

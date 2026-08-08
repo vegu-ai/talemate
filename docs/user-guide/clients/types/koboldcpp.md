@@ -10,14 +10,14 @@
 !!! info "Support for KoboldCpp's TTS"
     If your KoboldCpp instance loads a TTS model, the [Voice agent](/talemate/user-guide/agents/voice/) will automatically register it as an OpenAI-compatible backend. See [TTS auto-setup](#tts-auto-setup) below.
 
-If you want to add an KoboldCpp client, change the `Client Type` to `KoboldCpp`.
+If you want to add an KoboldCpp client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `KoboldCpp` from the client type menu.
 
 ![Client KoboldCpp](/talemate/img/0.26.0/client-koboldcpp.png)
 
 !!! note "Should work out of the box with a local KoboldCpp instance"
     The default values should work with a local KoboldCpp instance if you have followed their setup instructions and are running the server on the default port.
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### Ready to use
 
@@ -76,7 +76,7 @@ When using the United API (the default), the following parameters are supported:
 
 When a KoboldCpp client has a TTS model loaded, the [Voice agent](/talemate/user-guide/agents/voice/) automatically registers it as an [OpenAI Compatible](/talemate/user-guide/agents/voice/openai-compatible/) backend — no manual configuration needed.
 
-![Auto-registered KoboldCpp backend on the OpenAI Compatible tab](/talemate/img/0.37.0/voice-openai-compatible-management-tab.png)
+![Auto-registered KoboldCpp backend in the OpenAI Compatible section](/talemate/img/0.40.0/voice-openai-compatible-registry.png)
 
 #### Lifecycle
 

@@ -40,9 +40,9 @@
     the log.
 - path: getting-started/connect-a-client.md
   title: Connect a client
-  summary: 'Manually add an AI client after (or instead of) the setup wizard: the ADD CLIENT button, choosing among remote
-    APIs (OpenAI, Anthropic, Mistral, Cohere, DeepSeek, Groq, Google, OpenRouter) and local APIs (KoboldCpp, llama.cpp, Ollama,
-    Text-Generation-WebUI, LMStudio, TabbyAPI), and assigning the client to all agents.'
+  summary: 'Manual client setup: Add client opens Settings → Connections → Clients with the client type menu, you fill in
+    the editor and press Save in the toolbar to connect. Lists the supported remote and local client types and covers automatic
+    agent assignment and the Assign to all agents action.'
 - path: getting-started/installation/docker.md
   title: Docker
   summary: 'Docker install: clone the repo, copy config.example.yaml to config.yaml, run docker compose up, and open http://localhost:8082.
@@ -68,9 +68,9 @@
     for speech, asterisks for actions), and get a quick tour of the scenario tools, agent activity bar, and world state panel.
 - path: getting-started/setup-wizard.md
   title: Setup Wizard
-  summary: 'First-launch setup wizard walkthrough: choose self-hosted vs hosted API provider, add your first client (OpenRouter
-    or KoboldCpp defaults), configure long-term memory embeddings (Alibaba-NLP/gte-base-en-v1.5 vs standard model, CUDA vs
-    CPU), optionally enable the Visual Agent for Google/OpenRouter, and how to skip or re-access these settings later.'
+  summary: 'First-launch wizard: self-hosted vs hosted API, picking and adding a client (OpenRouter or KoboldCpp by default)
+    with its name, URL, key and model, the long-term memory embeddings model (Better/Standard) and CUDA/CPU device, optional
+    Visual agent setup, then Apply & finish. Also covers skipping it.'
 - path: index.md
   title: Talemate Documentation
   summary: Root landing page describing Talemate as AI roleplay with strong narration and world/game state tracking, with
@@ -140,10 +140,10 @@
     range, repetition handling, and unwanted prose detection.
 - path: user-guide/agents/help/index.md
   title: Overview
-  summary: 'Help agent overview: the interactive help chat opened from the app bar help icon, grounded in the bundled documentation;
-    multi-turn persistent chats, the per-chat Scene Aware toggle, UX snapshot context, reading and changing settings from
-    the chat (agent settings globally or per scene, app config; API keys and clients are off limits), and why it cannot change
-    scene content (defer to director chat).'
+  summary: 'Help agent overview: the in-app help chat opened from the app bar icon, grounded in the shipped documentation.
+    Covers what it can read and change (agent settings globally or per scene, game/appearance/creator settings), what stays
+    out of reach (API keys, clients), its refusal while the settings view has unsaved edits, multiple chats, and the Scene
+    Aware toggle.'
 - path: user-guide/agents/help/settings.md
   title: Settings
   summary: 'Help agent settings: response token budget, tool call rounds, tool calls per round, and custom instructions.'
@@ -187,10 +187,9 @@
     toggles, time passage narration prompting, and Auto Narration chance/weights.
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
-  summary: Overriding selected agent settings for a single scene via the Global/Scene switch in the agent modal; sparse per-field
-    overrides with link icons, overriding whether an action is enabled at all, how quick-toggle chips show and write the
-    scene's effective value, the agent-settings.json overrides file stored per project, and choosing, swapping, or opting
-    out of an overrides file in scene settings.
+  summary: 'Per-scene agent overrides: sparse per-field overrides edited on the Agents settings page (Settings → Connections
+    → Agents) via the Global/Scene switch and the link icons that activate or clear a field, applied only by the settings
+    toolbar''s Save. Also covers quick-toggle chips that write immediately and the project-level agent-settings/ JSON file.'
 - path: user-guide/agents/summarizer/index.md
   title: Overview
   summary: Introduces the Summarizer agent; dialogue summarization, layered history (multi-level summaries), scene analysis
@@ -243,10 +242,10 @@
     (Visualize Scene/Character/Moment), and generation via Director Chat.
 - path: user-guide/agents/visualizer/settings.md
   title: Settings
-  summary: Visualizer settings; separate backends per operation, generation timeout, automatic setup/generation, prompt generation
-    options (fallback prompt type, max length, automatic reference analysis, editing prompt revision), style templates per
-    visual type, Prompt Finalization post-processing actions (exact/fuzzy/regex/AI) with presets, and resolution presets for
-    local backends.
+  summary: 'Visualizer agent settings sections: General (text-to-image, editing and analysis backends, timeout, automatic
+    setup/generation), Prompt Generation (fallback prompt type, max prompt length, automatic reference analysis, editing-prompt
+    revision), Styles per visual type, Prompt Finalization (presets, post-processing actions in exact/fuzzy/regex/AI modes),
+    and resolution presets for local backends.'
 - path: user-guide/agents/visualizer/visual-library.md
   title: Visual Library
   summary: The Visual Library for managing generated images; Prompt vs Instruct generation modes, visual types (character
@@ -278,9 +277,9 @@
     summing to 1.0) and saving them for character or narrator use.
 - path: user-guide/agents/voice/openai-compatible.md
   title: OpenAI Compatible
-  summary: Registering multiple OpenAI-compatible TTS backends (0.37.0 registry); per-backend base URL, API key, model, voices
-    endpoint, and chunk size, auto-fetching voice lists (KoboldCpp, Speaches, openedai-speech paths), manual voice entry,
-    auto-managed backends, and troubleshooting.
+  summary: 'The Voice agent''s OpenAI Compatible backend registry: adding, renaming and removing backends, the per-backend
+    API base URL, key, model, voices endpoint and chunk size, the Refresh voices auto-fetch, adding voices manually in the
+    Voice Library, and auto-managed backends registered by clients such as KoboldCpp.'
 - path: user-guide/agents/voice/openai.md
   title: OpenAI
   summary: OpenAI TTS backend; requires an API key and offers model selection between GPT-4o Mini TTS, TTS-1, and TTS-1 HD.
@@ -357,10 +356,9 @@
     auto-attach.'
 - path: user-guide/app-settings/application.md
   title: Connections
-  summary: The Connections group of the application settings, holding the single API Keys page where keys for external services
-    (OpenAI, Anthropic, etc.) are stored - including the HuggingFace token (added 0.38.0) needed to download gated model weights
-    such as the Pocket TTS voice-cloning model - and the Environment Variables store (added 0.39.0) for encrypted named values
-    passed to spawned processes like the Pi Bridge client.
+  summary: 'The Connections settings group: its Clients and Agents pages (documented separately), plus API Keys — one page
+    holding every service key, including the HuggingFace token for gated model weights — and Environment Variables, named
+    encrypted values passed to processes Talemate spawns such as the Pi Bridge client.'
 - path: user-guide/app-settings/creator.md
   title: Storytelling
   summary: 'Storytelling settings group (formerly Creator) holding global picker lists: Content Classification strings for scene setup and Perspective
@@ -368,21 +366,21 @@
     substitution and how to add or remove presets.'
 - path: user-guide/app-settings/game.md
   title: Game
-  summary: 'Overview of the redesigned settings view (0.39.0: main-view Settings tab with grouped sidebar navigation, settings
-    search, and explicit Save/Discard with unsaved-change tracking, including the unsaved-settings prompt shown when leaving
-    the Settings tab with pending edits - Ignore/Save/Discard Changes - and the warning badge on the tab) plus the Game
-    group: auto save on game-loop completion, auto progress to the next character, max backscroll message count, the agent
-    activity bar toggle, releasing GPU cache on scene load, and managing a default player character for imported scenes
-    (e.g. ST character cards) that lack one.'
+  summary: 'How the Settings tab works — sidebar groups (Connections, Game, Appearance, Presets, Storytelling), the search
+    field, and the toolbar Unsaved changes / Save / Discard flow with its leave-the-tab prompt — followed by the Game group:
+    auto save, auto progress, max backscroll, agent activity bar, release GPU cache on scene load, and the default player
+    character.'
 - path: user-guide/app-settings/presets.md
   title: Presets
-  summary: Presets settings group covering inference parameter presets (Analytical, Conversation, and other per-action presets
-    used by agents), embedding model management for the memory agent via chromadb, and the global system prompt override panel.
+  summary: 'The Presets settings group and its three pages: Inference (per-action generation parameter presets), Embeddings
+    (embedding models for the memory agent via chromadb), and System Prompts (app-wide overrides per prompt kind; per-client
+    overrides live in the client editor).'
 - path: user-guide/app-settings/system-prompts.md
   title: System Prompt Overrides
-  summary: Override the system prompt per prompt kind (Conversation, Narration, Creation, Direction, Analysis, Editing, World
-    State, Summarization) at app level or per client, with resolution order, Normal vs Uncensored variants, the pencil override
-    indicator, and using {{ system_prompt }} to append to the default prompt.
+  summary: 'System prompt overrides per prompt kind (Conversation, Narration, Creation, Direction, Analysis, Editing, World
+    State, Summarization): the client → app-level → built-in resolution order, where each is edited (Presets → System Prompts,
+    or the client editor''s System Prompts section), Normal/Uncensored variants, the pencil icon marking active overrides,
+    and {{ system_prompt }}.'
 - path: user-guide/character-card-import.md
   title: Character Card Import
   summary: How to import TavernAI-style character cards (Chara Card V0-V3, PNG/JPG/WebP images or JSON) from the home screen's
@@ -392,25 +390,26 @@
     greetings, shared context setup, writing style template, player character setup, and troubleshooting failed analysis.
 - path: user-guide/clients/auto-retry.md
   title: Auto Retry
-  summary: 'Per-client sliders (0-5, default 0 = notify immediately) for automatically retrying response issues before the
-    generation error dialog appears: empty responses, API rate limiting (HTTP 429, with growing backoff between attempts),
-    and reasoning models that skip their reasoning tokens. Covers the retry notification with its abort option and where each
-    slider lives (Advanced tab; Reasoning tab for missing reasoning).'
+  summary: 'Per-client automatic retries (0-5) before a response issue is reported: the Empty Response and Rate Limited sliders
+    in the client editor''s Advanced section, and Missing Reasoning in the Reasoning section (only with Pattern Not Found
+    Behavior set to Fail). Covers the HTTP 429 backoff and how this differs from the client-side Rate Limit cap.'
 - path: user-guide/clients/client-configuration.md
   title: Client Configuration
-  summary: 'Tour of the per-client settings dialog and its tabs (General, Coercion, Advanced, Reasoning, System Prompts):
-    where to find Inference Presets, Structured Data Format, Section Format, Response Length Enforcement, Prompt Caching,
-    Rate Limit, and Auto Retry, plus the Simple View toggle for quick setup.'
+  summary: 'The Clients settings page (Settings → Connections → Clients): the client list with status dots and the Unsaved
+    chip, adding a client from the client type menu, the editor''s collapsible sections (General, Coercion, Advanced, Reasoning,
+    System Prompts), Assign to all agents and Remove, shared provider API keys, and the toolbar Save/Discard that applies
+    everything.'
 - path: user-guide/clients/concurrent-requests.md
   title: Concurrent Requests (Experimental)
-  summary: Experimental feature that lets certain clients (Anthropic, OpenAI, Google, MistralAI, OpenRouter, Pi Bridge, llama.cpp)
-    run multiple LLM requests in parallel — used by visual/image prompt generation, function-calling batches (director chat
-    query actions, help agent doc lookups), multi-query world state updates, and background world state snapshots. Covers
-    how to enable it via the client-list toggle or Concurrency tab and rate-limit caveats.
+  summary: Experimental concurrent requests, letting a client run several LLM queries in parallel (visual prompt generation,
+    function-calling batches, multi-query world state). Lists the supported clients (Anthropic, OpenAI, Google, MistralAI,
+    OpenRouter, Pi Bridge, llama.cpp), enabling it from the client list toggle or the client editor's Concurrency section,
+    and rate-limit caveats.
 - path: user-guide/clients/endpoint-override.md
   title: Endpoint Override
-  summary: 'How to point a remote client at a custom API endpoint such as a LiteLLM proxy gateway: the Endpoint Override tab,
-    Base URL and separate API Key fields, and the warning to never send your real provider API key to untrusted proxies.'
+  summary: 'Pointing a remote client at a different endpoint (for example a local LiteLLM proxy) from the Endpoint Override
+    section of the client editor: the base URL and a separate API key for the proxy, with a warning to only use endpoints
+    you trust.'
 - path: user-guide/clients/hibernate.md
   title: Hibernation
   summary: How to hibernate (temporarily disable) a client via the power button in the client list to declutter the UI without
@@ -422,106 +421,110 @@
     Cohere, Groq, Google) and local (KoboldCpp, llama.cpp, Text-Generation-WebUI, LMStudio) client types.
 - path: user-guide/clients/model-testing-harness.md
   title: Model Testing Harness
-  summary: 'Bundled scene (0.37.0+) that runs six minimum-viability tests against the clients assigned to your agents: instruction
-    following, JSON/YAML data responses, conversation and narrative generation, FOCAL function calling, and multi-step problem
-    solving. Explains how to load it, read pass/fail results, and diagnose which client setting is broken.'
+  summary: The bundled model-testing-harness scene that runs six minimum-viability tests against the clients your agents use
+    — basic instruction following, structured data response, conversation, narration, FOCAL function calling and problem solving
+    — how to load it from the Scene Library and what each failure implies.
 - path: user-guide/clients/presets.md
   title: Inference Configuration
-  summary: 'Editing inference presets (Analytical, Conversation, Creative, Deterministic, Scene Direction, Summarization,
-    etc.) in App Settings: parameters like temperature, top-p/k, min-p, penalties, and advanced samplers (XTC, DRY, Smoothing,
-    Adaptive-P), per-client parameter support, the Apply-to-all and Reset actions, and creating custom preset groups assigned
-    per client.'
+  summary: 'Inference presets under Settings → Presets → Inference: the preset categories (Analytical, Conversation, Creative,
+    Deterministic, Scene Direction, Summarization) and how agents pick one per action, the available parameters (temperature,
+    top-p/top-k, min-p, penalties, XTC, DRY, smoothing, adaptive-p), the Apply to all and Reset actions, and creating preset
+    groups selected per client.'
 - path: user-guide/clients/prompt-templates.md
   title: Prompt Templates
-  summary: 'Why the correct prompt template is vital for local clients (KoboldCpp, llama.cpp, Text-Generation-WebUI, LMStudio,
-    TabbyAPI): the yellow-triangle warning for unset templates, automatic detection via HuggingFace, manual selection, and
-    where user templates are stored.'
+  summary: 'Prompt templates for the clients where Talemate builds the prompt (KoboldCpp, llama.cpp, Text-Generation-WebUI,
+    LMStudio, TabbyAPI): the warning triangle for an unset template, Determine via HuggingFace, picking one manually in the
+    client editor, and adding user templates from the Prompts view.'
 - path: user-guide/clients/rate-limiting.md
   title: Rate Limiting
-  summary: 'Capping a client to N requests per minute via the slider on the Advanced tab, and what happens when the limit
-    is hit: a popup where you can wait for the countdown or abort the generation.'
+  summary: Talemate's own client-side requests-per-minute cap, set with the Rate Limit slider in the client editor's Advanced
+    section, and the notification when the limit is hit (wait out a countdown or abort). Distinct from the Rate Limited auto-retry
+    for HTTP 429.
 - path: user-guide/clients/reasoning.md
   title: Reasoning Model Support
-  summary: 'Enabling reasoning (thinking) models per client: the Reasoning tab, Reasoning Tokens allocation and how it behaves
-    on APIs without native support, regex patterns to strip thinking from responses, Pattern Not Found behavior, and per-action
-    overrides to force reasoning off for individual agent actions via the prompt detail view.'
+  summary: 'Reasoning model support per client: Enable Reasoning and the Reasoning Tokens budget in the client editor''s Reasoning
+    section, the pattern stripped from the response and Pattern Not Found Behavior (Fail/Ignore) with its Auto Retry slider,
+    per-action reasoning overrides added from a prompt''s detail view, and the automatic disabling of coercion.'
 - path: user-guide/clients/recommended-models.md
   title: Recommended Local Models
   summary: Talemate no longer maintains a model list; points to external benchmarks, advises 7B minimum (unquantized for 7B/8B
     if possible), and suggests validating candidates with the Model Testing Harness.
 - path: user-guide/clients/response-length.md
   title: Response Length Enforcement
-  summary: 'The Response Length Enforcement setting on the Advanced tab: four modes combining token-budget capping (max_tokens)
-    and human-readable length instructions appended to prompts, including the token-to-paragraph instruction table and the
-    not-recommended Uncapped mode.'
+  summary: 'The Response Length Enforcement setting in the client editor''s Advanced section: the four modes (limit tokens
+    and send instructions, limit tokens, send instructions, uncapped) and the token-budget-to-instruction table used when
+    instructions are appended.'
 - path: user-guide/clients/section-format.md
   title: Section Format
-  summary: 'Per-client setting (0.37.0+) that controls how prompt sections like Characters/Scene/Task are delimited: Markdown
-    headings versus paired uppercase XML tags, where to change it on the Advanced tab, and the sidebar tag shown for non-default
-    values.'
+  summary: 'The per-client Section Format setting in the client editor''s Advanced section, controlling how prompt section
+    boundaries are rendered: Talemate decides, Markdown headings, or paired uppercase XML tags. Notes the tag shown on the
+    client''s sidebar row for non-default values.'
 - path: user-guide/clients/template-locking.md
   title: Template Locking
-  summary: Using the Lock Template checkbox to prevent a client's prompt template from auto-updating when the model changes
-    — useful for pinning reasoning vs non-reasoning template variants — with step-by-step lock and unlock instructions.
+  summary: 'Template locking: the Lock Template checkbox in the client editor pins a prompt template so it stops following
+    the loaded model, useful for keeping reasoning and non-reasoning variants on separate clients. Covers choosing the template
+    to lock and unlocking to restore automatic detection.'
 - path: user-guide/clients/types/anthropic.md
   title: Anthropic Client
-  summary: 'Adding an Anthropic client: setting the client type, entering the Anthropic API key via SET API KEY, and the Client
-    Name and Model settings (any model id can be typed manually if the list lags behind).'
+  summary: 'Adding an Anthropic client from Settings → Connections → Clients: the missing-API-key warning and the Set API
+    Key shortcut to the API Keys page, plus the client name, model and context length settings.'
 - path: user-guide/clients/types/cohere.md
   title: Cohere Client
-  summary: 'Adding a Cohere client: setting the client type, entering the Cohere API key, and the Client Name and Model settings
-    (defaults to command-r-plus; manual model names accepted).'
+  summary: 'Adding a Cohere client from Settings → Connections → Clients: the missing-API-key warning and the Set API Key
+    shortcut to the API Keys page, plus the client name, model (defaults to command-r-plus) and context length settings.'
 - path: user-guide/clients/types/deepseek.md
   title: DeepSeek Client
-  summary: Adding a DeepSeek client and API key, choosing between deepseek-chat and deepseek-reasoner, and the requirement
-    to enable Reasoning with sufficient Reasoning Tokens (512-1024+) when using deepseek-reasoner to avoid empty responses.
+  summary: 'Adding a DeepSeek client from Settings → Connections → Clients: the missing-API-key warning and the Set API Key
+    shortcut to the API Keys page, the client name, model (deepseek-chat or deepseek-reasoner) and context length, and enabling
+    Reasoning with a 512-1024 token budget for deepseek-reasoner.'
 - path: user-guide/clients/types/google.md
   title: Google Client
-  summary: 'Adding a Google Gemini client: setting up Google Cloud API credentials, Client Name and Model settings, and the
-    Disable Safety Settings option to turn off Google''s harmful-content response validation.'
+  summary: 'Adding a Google client from Settings → Connections → Clients: the missing-credentials warning and the shortcut
+    to the API Keys page for Google credentials, plus the client name, model, context length and Disable Safety Settings.'
 - path: user-guide/clients/types/groq.md
   title: Groq Client
-  summary: 'Adding a Groq client: setting the client type, entering the Groq API key, and the Client Name and Model settings
-    (defaults to llama3-70b-8192; manual model names accepted).'
+  summary: 'Adding a Groq client from Settings → Connections → Clients: the missing-API-key warning and the Set API Key shortcut
+    to the API Keys page, plus the client name, model and context length settings.'
 - path: user-guide/clients/types/koboldcpp.md
   title: KoboldCpp Client
-  summary: 'Connecting to a KoboldCpp instance: API URL (United API by default, append /v1 for OpenAI mode), API key, context
-    length, the full table of United-API sampler parameters (XTC, DRY, Smoothing, Adaptive-P, etc.), automatic Visual agent
-    and TTS/Voice agent auto-setup when Kobold loads image or TTS models, and connection troubleshooting.'
+  summary: 'Adding a KoboldCpp client: API URL (United API by default, append /v1 for the OpenAI abstraction), API key and
+    context length, the generation parameters the United API supports, automatic Visual agent setup, and the TTS auto-setup
+    that registers the instance as an OpenAI Compatible voice backend.'
 - path: user-guide/clients/types/llamacpp.md
   title: llama.cpp Client
-  summary: 'Connecting to a llama-server instance: API URL (default port 8080), optional API key, the ''API handles prompt
-    template'' option (renders prompts via the server''s /apply-template endpoint using the model''s built-in chat template;
-    response pre-filling keeps working), context length, and the Concurrent Inference toggle (requires parallel slots on the
-    server). Includes could-not-connect troubleshooting and a sample llama-server launch command.'
+  summary: 'Adding a llama.cpp client for llama-server: API URL (default port 8080) and key, the ''API handles prompt template''
+    option that uses the server''s /apply-template endpoint, context length, Concurrent Inference in the Concurrency section
+    (needs parallel slots), and connection troubleshooting.'
 - path: user-guide/clients/types/lmstudio.md
   title: LMStudio Client
-  summary: 'Connecting to an LMStudio instance: API URL (default port 1234), API key, and context length settings, plus the
-    gotcha that the server must be started inside the LMStudio app for connections to work.'
+  summary: 'Adding an LMStudio client: API URL (default http://localhost:1234), API key and context length, plus troubleshooting
+    for bad generations (wrong prompt template) and connection failures — LMStudio''s server has to be started, not just the
+    application.'
 - path: user-guide/clients/types/mistral.md
   title: Mistral.ai Client
-  summary: 'Adding a Mistral.ai client: setting the client type, entering the Mistral.ai API key, and the Client Name and
-    Model settings (defaults to mixtral-8x22; manual model names accepted).'
+  summary: 'Adding a Mistral.ai client from Settings → Connections → Clients: the missing-API-key warning and the Set API
+    Key shortcut to the API Keys page, plus the client name, model, context length and Concurrent Inference in the Concurrency
+    section.'
 - path: user-guide/clients/types/ollama.md
   title: Ollama Client
-  summary: 'Connecting to an Ollama server (default http://localhost:11434): selecting a model from the auto-fetched list,
-    the ''API handles prompt template'' option (recommended off), the ''Allow thinking'' option for thinking-capable models,
-    and troubleshooting offline/no-model states.'
+  summary: 'Adding an Ollama client: API URL (default http://localhost:11434), the model picked from the list Talemate fetches
+    from your local instance, and the ''API handles prompt template'' and ''Allow thinking'' options, plus the offline and
+    no-model-loaded warnings.'
 - path: user-guide/clients/types/openai-compatible.md
   title: OpenAI Compatible Client
-  summary: 'Using the generic OpenAI-compatible client for services without official Talemate support, with DeepInfra as the
-    worked example: API URL/key, manual model name entry, the ''API handles prompt template'' option, and the Parameters tab
-    toggles to omit temperature/top_p/presence_penalty for services that reject them.'
+  summary: 'The generic OpenAI Compatible client for services without official support, with DeepInfra as the worked example:
+    API URL, key, manually typed model name, ''API handles prompt template'' and context length, plus the Parameters toggles
+    that omit temperature, top_p or presence_penalty from requests.'
 - path: user-guide/clients/types/openai.md
   title: OpenAI Client
-  summary: 'Adding an OpenAI client and API key, the Model setting (defaults to gpt-4o), and required setup for o1/o3/gpt-5
-    reasoning models: enable Reasoning and allocate 512-1024+ Reasoning Tokens, since empty responses usually mean the reasoning
-    budget was exhausted.'
+  summary: 'Adding an OpenAI client from Settings → Connections → Clients: the missing-API-key warning and the Set API Key
+    shortcut to the API Keys page, the client name, model and context length, and guidance for the o1/o3/gpt-5 reasoning families
+    (enable Reasoning, 512-1024 reasoning tokens).'
 - path: user-guide/clients/types/openrouter.md
   title: OpenRouter Client
-  summary: 'Adding an OpenRouter client: entering the API key, picking a model from the list dynamically fetched from your
-    account (refresh by re-saving), the Max token length (context) setting, and the Parameters tab with per-parameter send
-    toggles for providers that reject unsupported sampler parameters.'
+  summary: 'Adding an OpenRouter client: the API key, set on the API Keys page or from the card in the client editor''s General
+    section, the model chosen from the list fetched for your key (save again to refresh), context length, and the Parameters
+    toggles that omit individual samplers some providers reject.'
 - path: user-guide/clients/types/pi-bridge.md
   title: Pi Bridge Client
   summary: 'Driving generations through the pi coding agent''s headless RPC mode: pi binary requirement, pi-managed authentication
@@ -531,14 +534,13 @@
     ./pi config directory).'
 - path: user-guide/clients/types/tabbyapi.md
   title: TabbyAPI Client
-  summary: 'Connecting to a TabbyAPI instance: API URL (e.g. http://localhost:5000/v1), API key, context length, the ''API
-    handles prompt template'' option (recommended off), and could-not-connect troubleshooting.'
+  summary: 'Adding a TabbyAPI client: API URL and key, the ''API handles prompt template'' option (recommended off) and context
+    length, plus troubleshooting for bad generations and connection failures.'
 - path: user-guide/clients/types/text-generation-webui.md
   title: Text-Generation-WebUI Client
-  summary: 'Connecting to a Text-Generation-WebUI (ooba) instance: API URL (default port 5000), API key, the ''API handles
-    prompt template'' option (routes requests to chat/completions so the backend applies the prompt template; response pre-filling
-    keeps working via continue_), and context length, plus troubleshooting for bad generations (wrong prompt template), ''No
-    model loaded'', and connection failures.'
+  summary: 'Adding a Text-Generation-WebUI (ooba) client: API URL and key, the ''API handles prompt template (chat/completions)''
+    option — off by default, keeps coercion working and lets the server separate reasoning — and context length, plus troubleshooting
+    for no model loaded and connection failures.'
 - path: user-guide/debug-tools.md
   title: Debug Tools
   summary: The Debug Tools panel (bug icon in the toolbar) with its Prompts tab (inspect all AI prompts sent, force reasoning
@@ -968,9 +970,9 @@
     with min/max dialogue, manual dialogue/summary detail ratios, enforce boundary, and max token budget.'
 - path: user-guide/prompts/deduplication.md
   title: Prompt Deduplication
-  summary: Line-level fuzzy dedupe pass (removes >32-char lines with >=95% similarity) toggled per client on the Advanced
-    tab; recommended off because it breaks prompt caching and can mangle structured content. Covers opting out per template
-    with disable_dedupe() or the Prompt from Template node's dedupe property.
+  summary: 'Prompt deduplication: the line-level fuzzy pass that drops lines over 32 characters with ≥95% similarity to an
+    earlier one, why it is off by default (it breaks prompt caching and can damage structured content), the per-client Deduplicate
+    Prompts toggle in the Advanced section, and opting out with disable_dedupe().'
 - path: user-guide/prompts/index.md
   title: Prompt Manager
   summary: 'Central UI for the Jinja2 prompt templates driving all AI interactions: template groups (default/user/scene/custom)
@@ -989,9 +991,9 @@
     fallback_to_full, tracked_tags for nested tags, and mod_response_length for extending the response token budget.
 - path: user-guide/prompts/volatile-context-placement.md
   title: Volatile Context Placement
-  summary: The Optimize for Prompt Caching client setting (Advanced tab) moves volatile content (RAG memory, dynamic notes)
-    after scene history so provider prompt caches stay valid, cutting latency and cost on Anthropic/OpenAI/Google; includes
-    per-agent Auto/On/Off overrides and guidance on when not to enable it (local or weaker models).
+  summary: 'Volatile context placement: moving RAG memory and dynamic notes after the scene history so the cacheable prompt
+    prefix stays stable. Covers the per-client Optimize for Prompt Caching toggle in the client editor''s Advanced section,
+    the per-agent Auto/On/Off override, and when not to enable it (local or weaker models).'
 - path: user-guide/restoring-scenes.md
   title: Restoring Scenes
   summary: Two ways to return a scene to a previous state, the timeline (drag a slider across the automatic changelog version
@@ -1184,8 +1186,9 @@
     perspective and tense, description, and the introduction text shown when a user first enters the scene.
 - path: user-guide/world-editor/scene/settings.md
   title: Settings
-  summary: Scene-level settings, selecting a writing style template, locking the save file to prevent overwriting, the experimental
-    tag, restoration settings (designate a save as restore point and reset via Restore Scene), and the agent settings file.
+  summary: 'The world editor''s Scene Settings tab: writing style template, locked save file, the experimental tag, restoration
+    settings (designating another save file as a restore point and the Restore Scene button), and the Agent settings file
+    dropdown that auto-links, picks or opts out of the scene''s agent overrides file.'
 - path: user-guide/world-editor/scene/shared-context.md
   title: Shared World & Episodes
   summary: The Shared World panel, create shared context .json files to share characters, world entries, and history across
@@ -1193,9 +1196,9 @@
     new scenes from an episode.
 - path: user-guide/world-editor/scene/visuals.md
   title: Scene Visuals
-  summary: 'World Editor Scene Visuals tab: manage background illustrations and scene illustrations (upload, Generate New,
-    Generate Variation with batch prompts), set the scene cover image, set/unset the scene backdrop with the Render backdrop
-    switch, and edit the visualizer agent''s per-scene Prompt Finalization overrides.'
+  summary: 'The Scene Editor''s Visuals tab: Background Illustration and Scene Illustration grids with cover and backdrop
+    badges, drag-and-drop upload, Generate Variation and Generate New, per-image actions, and the Prompt Finalization sub-tab
+    for the Visualizer agent''s per-scene overrides.'
 - path: user-guide/world-editor/suggestions.md
   title: Suggestions
   summary: The Suggestions view where agent-proposed world changes (currently character changes only) accumulate for review,

@@ -1,10 +1,10 @@
 # Groq Client
 
-If you want to add an Groq client, change the `Client Type` to `Groq`.
+If you want to add an Groq client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `Groq` from the client type menu.
 
 ![Client Groq](/talemate/img/0.39.0/client-groq.png)
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### Groq API Key
 

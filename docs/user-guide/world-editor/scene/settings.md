@@ -42,11 +42,11 @@ This setting controls how the scene uses [per-scene agent overrides](/talemate/u
 
 Overrides are stored in a JSON file inside an `agent-settings/` folder in the scene's project directory. The **Agent settings file** dropdown decides which file (if any) the scene is linked to:
 
-- **Auto-link (default)** — the scene automatically uses `agent-settings/agent-settings.json` if it exists in the project folder. This is the normal behavior. If you haven't set any overrides yet, the first one you create in the agent modal will create this file.
+- **Auto-link (default)** — the scene automatically uses `agent-settings/agent-settings.json` if it exists in the project folder. This is the normal behavior. If you haven't set any overrides yet, the first one you save on the Agents settings page will create this file.
 - **None (opt out)** — disable per-scene overrides for this scene. It uses your global agent configuration only and will not auto-link to a default file.
 - **A specific file** — link the scene to a particular overrides file in the project's `agent-settings/` folder. Any additional override files in that folder appear in the list, letting a project keep more than one set of overrides and switch between them.
 
-Once a file is linked, you edit the actual overrides in the agent modal under the **Scene** tab. See [Per-Scene Agent Overrides](/talemate/user-guide/agents/scene-overrides) for the full workflow.
+Once a file is linked, you edit the actual overrides on the Agents settings page (**Settings → Connections → Agents**) in **Scene** mode. See [Per-Scene Agent Overrides](/talemate/user-guide/agents/scene-overrides) for the full workflow.
 
 !!! note
     Overrides are project-level, so every save file in the same project — including **Save As** copies and restore points — shares the same `agent-settings/` folder. Scene exports include this folder, so overrides travel with the scene when shared.

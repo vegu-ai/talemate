@@ -1,7 +1,7 @@
 # Section Format
 
 !!! info "New in 0.37.0"
-    Per-client setting that controls how prompt sections are delimited. Found on the **Advanced** tab of the [client configuration](client-configuration.md) dialog.
+    Per-client setting that controls how prompt sections are delimited. Found in the **Advanced** section of the [client editor](client-configuration.md).
 
 Talemate's prompt templates split their content into named sections (for example *Characters*, *Scene*, *Task*). The **Section Format** setting controls how those section boundaries are rendered in the text that is sent to the model.
 
@@ -17,10 +17,10 @@ The setting only changes the delimiters Talemate inserts around sections. It doe
 
 ## Where to set it
 
-![Section Format dropdown on the Advanced tab](/talemate/img/0.37.0/client-config-section-format.png)
+![Section Format dropdown in the Advanced section](/talemate/img/0.37.0/client-config-section-format.png)
 
-1. Click the cogwheels on a client in the sidebar to open its [configuration dialog](client-configuration.md).
-2. Open the **Advanced** tab.
+1. Click the cogwheels on a client in the sidebar to go to its [editor on the Clients settings page](client-configuration.md).
+2. Open the **Advanced** section.
 3. Pick a value from the **Section Format** dropdown, next to **Structured Data Format**.
 4. Click **Save**.
 

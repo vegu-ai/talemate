@@ -12,14 +12,16 @@ Each overridden field is independent. You can override the conversation length f
 
 ## Editing overrides: the Global / Scene switch
 
-Overrides are edited in the same place as global settings — the **agent modal** (opened by clicking an agent in the agent panel).
+Overrides are edited in the same place as global settings — the **Agents settings page** at **Settings → Connections → Agents**. Clicking an agent in the agent panel opens it there directly.
 
-When a scene is loaded and the agent has at least one setting that supports overrides, a **Global / Scene** switch appears at the top of the modal:
+When a scene is loaded and the agent has at least one setting that supports overrides, a **Global / Scene** switch appears in the header of the agent's detail pane:
 
-- **Global** — the normal view. Changes here affect every scene.
-- **Scene** — the override view. Changes here apply only to the current scene.
+- **:material-earth: Global** — the normal view. Changes here affect every scene.
+- **:material-movie-open-outline: Scene** — the override view. Changes here apply only to the current scene.
 
 A small number next to the **Scene** button shows how many overrides are currently active for that agent.
+
+![The Agents settings page in Scene mode](/talemate/img/0.40.0/agents-scene-overrides.png)
 
 !!! note
     The switch only appears while a saved scene is loaded. Overrides need a scene (and its project folder) to be stored in, so they aren't available on the placeholder/empty scene.
@@ -37,28 +39,30 @@ Any action that can be switched off globally can also be switched off for the sc
 
 Some sections are always on by design — for example the World State's Character Portraits, the Summarizer's Scene History, and the Conversation and Narrator Generation sections. They have no enable checkbox and cannot be switched off globally or per scene; a `false` left for one in the configuration file (or in a scene's overrides) is ignored.
 
-In Scene mode, the modal only shows the settings (and tabs) that actually support overriding, to keep the view focused. If an agent has no currently overridable settings at all, the Global / Scene switch won't appear.
+In Scene mode, the page only shows the settings (and sections) that actually support overriding, to keep the view focused. If an agent has no currently overridable settings at all, the Global / Scene switch won't appear.
 
-Some settings only apply while another setting is switched on — for example the Creator agent's Fast-mode fields (Consolidate, One-shot token budget, Fill in misses) only matter while **Fast Character Generation** is on. Those settings appear in Scene mode only while their gating setting allows it, and the gate is read as this scene sees it: the scene's override if there is one, otherwise the global value. So overriding the gate for a scene reveals the settings it gates, and a section (or tab) whose settings are all currently hidden drops out of Scene mode entirely.
+Some settings only apply while another setting is switched on — for example the Creator agent's Fast-mode fields (Consolidate, One-shot token budget, Fill in misses) only matter while **Fast Character Generation** is on. Those settings appear in Scene mode only while their gating setting allows it, and the gate is read as this scene sees it: the scene's override if there is one, otherwise the global value. So overriding the gate for a scene reveals the settings it gates, and a section whose settings are all currently hidden drops out of Scene mode entirely.
 
 One exception keeps things recoverable: a setting you have **already** overridden stays visible even when its gate is off, so you can always see it in the count and clear it. Its stored value still applies whenever the gate is on again.
 
 ### Saving
 
-Overrides are saved automatically when you close the agent modal, the same way global settings are. If the scene doesn't yet have an overrides file (see below), you'll be asked to name one the first time you save an override.
+Overrides are treated like every other edit on the settings page: activating one, or changing an overridden value, marks the page as having **Unsaved changes**, and nothing reaches the scene until you press **:material-check-circle-outline: Save** in the settings toolbar. **:material-undo: Discard** drops them again. Switching agents, switching back to **Global**, or leaving the page writes nothing on its own — the pending overrides simply stay pending.
+
+If the scene doesn't yet have an overrides file (see below), the first save that carries an override asks you to name one before it writes; cancelling that prompt cancels the save and leaves your edits untouched.
 
 ## Quick-toggle chips
 
-Some actions and settings are also exposed as quick-toggle chips directly on the agent in the agent panel, so they can be flipped mid-play without opening the modal.
+Some actions and settings are also exposed as quick-toggle chips directly on the agent in the agent panel, so they can be flipped mid-play without opening the settings page.
 
 A chip always shows the value the loaded scene is actually running on — the scene override when one is active, your global value otherwise — and clicking it changes exactly the value it is showing:
 
 - **No override active** — the chip toggles the global setting, as it always has.
 - **Override active** — the chip carries a small :material-movie-open-cog-outline: marker and toggles the scene's override only. Your global setting is left alone; hover the chip to see what it currently is.
 
-Unlike the modal, a chip writes immediately — there is nothing to close and no save step.
+Unlike the settings page, a chip writes immediately — there is no pending state and no save step.
 
-To go back to following the global value, clear the override in the agent modal's **Scene** mode.
+To go back to following the global value, clear the override in **Scene** mode on the Agents settings page and save.
 
 ## The overrides file
 
@@ -74,7 +78,7 @@ A few things worth knowing:
 
 Which overrides file a scene uses is controlled from **World Editor → Scene → Settings**, in the **Agent settings file** dropdown. See [Scene Settings](/talemate/user-guide/world-editor/scene/settings#agent-settings-file) for the full description. In short, you can:
 
-- **Auto-link (default)** — the scene automatically uses `agent-settings.json` if one exists in the project. This is the normal behavior. The first override you set in the agent modal creates this file.
+- **Auto-link (default)** — the scene automatically uses `agent-settings.json` if one exists in the project. This is the normal behavior. The first override you save creates this file — you are prompted for its name.
 - **Pick a specific file** — link the scene to a particular file in the project's `agent-settings/` folder. This lets a project hold more than one overrides file and switch between them.
 - **None (opt out)** — disable per-scene overrides entirely for this scene. The scene uses global configuration only and won't auto-link to a default file.
 

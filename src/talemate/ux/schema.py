@@ -127,8 +127,6 @@ class Field(pydantic.BaseModel):
     required: bool = False
     # marks settings that can cause many additional prompts when enabled
     expensive: bool = False
-    # value changes should be saved immediately rather than on dialog save
-    save_on_change: bool = False
 
     @pydantic.field_validator("choices", mode="before")
     @classmethod

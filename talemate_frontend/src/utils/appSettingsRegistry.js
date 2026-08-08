@@ -105,6 +105,72 @@ export const API_PROVIDERS = [
 
 export const SETTINGS_GROUPS = [
     {
+        title: 'Connections',
+        icon: 'mdi-connection',
+        pages: [
+            {
+                id: 'clients',
+                title: 'Clients',
+                icon: 'mdi-network-outline',
+                description: 'The LLM backends Talemate generates with. Add, configure and remove clients — new and removed clients are connected or disconnected when you save.',
+                entries: [
+                    { label: 'Add client', anchor: 'add-client', keywords: ['new client', 'llm', 'backend', 'provider', 'openai', 'openrouter', 'anthropic', 'koboldcpp', 'llamacpp', 'ollama', 'tabbyapi'] },
+                    { label: 'Client name', anchor: 'client_name', keywords: ['rename', 'client'] },
+                    { label: 'Assign to all agents', anchor: 'assign-to-all-agents', keywords: ['assign', 'agents', 'all', 'default client'] },
+                    { label: 'API URL', anchor: 'api_url', keywords: ['endpoint', 'host', 'port', 'api key'] },
+                    { label: 'Context length', anchor: 'max_token_length', keywords: ['max token length', 'tokens', 'context'] },
+                    { label: 'Prompt template', anchor: 'prompt_template', keywords: ['llm template', 'model', 'lock template'] },
+                    { label: 'Coercion', anchor: 'coercion', keywords: ['double coercion', 'prefill', 'refusal'] },
+                    { label: 'Reasoning', anchor: 'reasoning', keywords: ['thinking', 'reason tokens', 'strip pattern'] },
+                    { label: 'Rate limit and retries', anchor: 'advanced', keywords: ['requests per minute', 'throttle', 'retry', 'inference preset', 'prompt caching'] },
+                    { label: 'Client system prompts', anchor: 'system_prompts', keywords: ['prompt', 'override', 'decensor'] },
+                ],
+            },
+            {
+                id: 'agents',
+                title: 'Agents',
+                icon: 'mdi-transit-connection-variant',
+                description: 'Per-agent configuration — which client an agent generates with and how it behaves.',
+                // one entry per built-in agent; the anchor matches the
+                // `data-setting-anchor` on the agent's row in the master list
+                entries: [
+                    { label: 'Conversation', anchor: 'agent-conversation', keywords: ['agent', 'dialogue', 'actor', 'speech', 'character talk', 'acting instructions'], item: { agent: 'conversation' } },
+                    { label: 'Narrator', anchor: 'agent-narrator', keywords: ['agent', 'narration', 'description', 'storyteller', 'auto narration', 'look at'], item: { agent: 'narrator' } },
+                    { label: 'Creator', anchor: 'agent-creator', keywords: ['agent', 'character creation', 'autocomplete', 'suggestions', 'generation hints'], item: { agent: 'creator' } },
+                    { label: 'Director', anchor: 'agent-director', keywords: ['agent', 'guidance', 'scene direction', 'arcs', 'intent', 'auto direct'], item: { agent: 'director' } },
+                    { label: 'Editor', anchor: 'agent-editor', keywords: ['agent', 'revision', 'polish', 'cleanup', 'repetition', 'unwanted prose', 'formatting'], item: { agent: 'editor' } },
+                    { label: 'Summarizer', anchor: 'agent-summarizer', keywords: ['agent', 'summarization', 'history', 'layered history', 'analysis', 'context budget'], item: { agent: 'summarizer' } },
+                    { label: 'World State', anchor: 'agent-world_state', keywords: ['agent', 'tracking', 'character progression', 'reinforcement', 'states', 'snapshot'], item: { agent: 'world_state' } },
+                    { label: 'Visualizer', anchor: 'agent-visual', keywords: ['agent', 'visual', 'images', 'art', 'portraits', 'backdrops', 'stable diffusion', 'comfyui'], item: { agent: 'visual' } },
+                    { label: 'Voice', anchor: 'agent-tts', keywords: ['agent', 'tts', 'text to speech', 'narration audio', 'elevenlabs', 'openai compatible backends'], item: { agent: 'tts' } },
+                    { label: 'Memory', anchor: 'agent-memory', keywords: ['agent', 'long term memory', 'rag', 'vector db', 'chromadb', 'embeddings', 'recall'], item: { agent: 'memory' } },
+                    { label: 'Help', anchor: 'agent-help', keywords: ['agent', 'help chat', 'assistant', 'support', 'docs'], item: { agent: 'help' } },
+                ],
+            },
+            {
+                id: 'api-keys',
+                title: 'API Keys',
+                icon: 'mdi-key-variant',
+                description: 'API keys and access tokens for third party services. Only fill in the services you use.',
+                entries: API_PROVIDERS.map((provider) => ({
+                    label: provider.title,
+                    anchor: provider.id,
+                    keywords: ['api key', 'key', 'token', ...(provider.keywords || [])],
+                })),
+            },
+            {
+                id: 'env-variables',
+                title: 'Environment Variables',
+                icon: 'mdi-variable',
+                description: 'Named values passed as environment variables to processes Talemate spawns — currently the Pi Bridge client, where pi\'s models.json can reference them as $NAME. Values are encrypted at rest in Talemate\'s configuration file.',
+                descriptionHtml: '<p class="mb-1">Named values passed as environment variables to processes Talemate spawns — currently the <span class="text-primary">Pi Bridge</span> client, where pi\'s <code>models.json</code> can reference them as <code>$NAME</code>.</p>Values are encrypted at rest in Talemate\'s configuration file.',
+                entries: [
+                    { label: 'Environment variables', keywords: ['env', 'secret', 'pi bridge', 'variable'] },
+                ],
+            },
+        ],
+    },
+    {
         title: 'Game',
         icon: 'mdi-gamepad-square',
         pages: [
@@ -161,33 +227,6 @@ export const SETTINGS_GROUPS = [
                     { label: 'Auto backdrop', keywords: ['backdrop', 'background', 'immersive'] },
                     { label: 'Backdrop message panel opacity', keywords: ['backdrop', 'opacity', 'legibility', 'panel'] },
                     { label: 'Backdrop message text shadow', keywords: ['backdrop', 'shadow', 'legibility'] },
-                ],
-            },
-        ],
-    },
-    {
-        title: 'Connections',
-        icon: 'mdi-connection',
-        pages: [
-            {
-                id: 'api-keys',
-                title: 'API Keys',
-                icon: 'mdi-key-variant',
-                description: 'API keys and access tokens for third party services. Only fill in the services you use.',
-                entries: API_PROVIDERS.map((provider) => ({
-                    label: provider.title,
-                    anchor: provider.id,
-                    keywords: ['api key', 'key', 'token', ...(provider.keywords || [])],
-                })),
-            },
-            {
-                id: 'env-variables',
-                title: 'Environment Variables',
-                icon: 'mdi-variable',
-                description: 'Named values passed as environment variables to processes Talemate spawns — currently the Pi Bridge client, where pi\'s models.json can reference them as $NAME. Values are encrypted at rest in Talemate\'s configuration file.',
-                descriptionHtml: '<p class="mb-1">Named values passed as environment variables to processes Talemate spawns — currently the <span class="text-primary">Pi Bridge</span> client, where pi\'s <code>models.json</code> can reference them as <code>$NAME</code>.</p>Values are encrypted at rest in Talemate\'s configuration file.',
-                entries: [
-                    { label: 'Environment variables', keywords: ['env', 'secret', 'pi bridge', 'variable'] },
                 ],
             },
         ],

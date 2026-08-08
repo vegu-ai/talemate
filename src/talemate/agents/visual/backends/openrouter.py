@@ -463,7 +463,6 @@ class OpenRouterMixin:
                 choices=choices,
                 label="Model",
                 description="OpenRouter model (select appropriate model for the task)",
-                save_on_change=True,
                 scene_overridable=False,
             ),
             "provider_only": AgentActionConfig(
@@ -472,7 +471,6 @@ class OpenRouterMixin:
                 choices=provider_choices,
                 label="Only use these providers",
                 description="Manually limit the providers to use for the selected model. This will override the default provider selection for this model.",
-                save_on_change=True,
                 scene_overridable=False,
             ),
             "provider_ignore": AgentActionConfig(
@@ -481,7 +479,6 @@ class OpenRouterMixin:
                 choices=provider_choices,
                 label="Ignore these providers",
                 description="Ignore these providers for the selected model. This will override the default provider selection for this model.",
-                save_on_change=True,
                 scene_overridable=False,
             ),
         }
@@ -511,7 +508,6 @@ class OpenRouterMixin:
             step=1,
             label="Max References",
             description="Maximum number of reference images for editing (1-3)",
-            save_on_change=True,
             scene_overridable=False,
         )
 

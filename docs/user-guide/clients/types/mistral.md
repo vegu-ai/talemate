@@ -1,10 +1,10 @@
 # Mistral.ai Client
 
-If you want to add an Mistral.ai client, change the `Client Type` to `Mistral.ai`.
+If you want to add an Mistral.ai client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `MistralAI` from the client type menu.
 
 ![Client Mistral.ai](/talemate/img/0.39.0/client-mistral.png)
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 ### Mistral.ai API Key
 
@@ -43,7 +43,7 @@ Maximum context length (in tokens) for generations sent to Mistral.ai. If you ar
 
 ##### Concurrent Inference
 
-Found under the **Concurrency** tab in the client settings. When enabled, batch operations that need several queries (currently visual prompt generation for image generation) can send multiple requests to the Mistral.ai API in parallel instead of one at a time, which can speed those operations up.
+Found in the **Concurrency** section of the client editor. When enabled, batch operations that need several queries (currently visual prompt generation for image generation) can send multiple requests to the Mistral.ai API in parallel instead of one at a time, which can speed those operations up.
 
 This is **off by default**. Whether concurrent requests actually complete in parallel depends on your Mistral.ai account's rate limits. See the [Concurrent Requests](/talemate/user-guide/clients/concurrent-requests/) page for more detail.
 --8<-- "docs/snippets/common.md:client-response-length"

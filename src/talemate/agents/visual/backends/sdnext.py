@@ -318,7 +318,6 @@ class SDNextMixin:
                 value="http://localhost:7860",
                 label="API URL",
                 description="The URL of the SD.Next API",
-                save_on_change=True,
                 scene_overridable=False,
             ),
             "auth_method": AgentActionConfig(
@@ -331,7 +330,6 @@ class SDNextMixin:
                     {"label": "Basic (username/password)", "value": "basic"},
                     {"label": "Bearer (API Key)", "value": "bearer"},
                 ],
-                save_on_change=True,
                 scene_overridable=False,
             ),
             "username": AgentActionConfig(
@@ -340,7 +338,6 @@ class SDNextMixin:
                 value="",
                 label="Username",
                 description="Username for basic authentication.",
-                save_on_change=True,
                 condition=AgentActionConditional(
                     attribute=f"{action_name}.config.auth_method", value="basic"
                 ),
@@ -351,7 +348,6 @@ class SDNextMixin:
                 value="",
                 label="Password",
                 description="Password for basic authentication.",
-                save_on_change=True,
                 condition=AgentActionConditional(
                     attribute=f"{action_name}.config.auth_method", value="basic"
                 ),
@@ -362,7 +358,6 @@ class SDNextMixin:
                 value="",
                 label="API Key",
                 description="API Key for bearer authentication.",
-                save_on_change=True,
                 condition=AgentActionConditional(
                     attribute=f"{action_name}.config.auth_method", value="bearer"
                 ),

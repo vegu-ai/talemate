@@ -35,6 +35,8 @@
 </template>
 
 <script>
+import { getProperty, setProperty } from 'dot-prop';
+
 export default {
   name: 'ConfigWidgetUnifiedApiKey',
   props: {
@@ -54,18 +56,51 @@ export default {
       type: Object,
       default: null,
     },
+    // Hosted inside a page that owns an unsaved working copy of the config
+    // (the settings pages, the client editor): write the key into it and let
+    // that page's Save persist it, so Discard discards the key too and a Save
+    // can't push the pre-edit value back over it.
+    // Left off, the host renders against the LIVE config and has no Save of
+    // its own, so the key is stored on blur via `config/save_unified_api_key`.
+    // No shipped field reaches that branch today — the one live-config host
+    // (the world editor's scene settings) renders scene-overridable fields
+    // only, and every unified_api_key declaration opts out of those — but it
+    // stays the contract for a host without a working copy.
+    deferred: {
+      type: Boolean,
+      default: false,
+    },
   },
   inject: ['getWebsocket'],
   data() {
     return {
-      apiKey: '',
+      storedKey: '',
       expanded: false,
     };
+  },
+  computed: {
+    apiKey: {
+      get() {
+        if (this.deferred) {
+          return this.configPath ? getProperty(this.appConfig || {}, this.configPath) || '' : '';
+        }
+        return this.storedKey;
+      },
+      set(value) {
+        if (this.deferred) {
+          if (this.appConfig && this.configPath) {
+            setProperty(this.appConfig, this.configPath, value || null);
+          }
+          return;
+        }
+        this.storedKey = value;
+      },
+    },
   },
   watch: {
     appConfig: {
       immediate: true,
-      handler(newVal) {
+      handler() {
         this.updateApiKey();
       },
     },
@@ -81,14 +116,15 @@ export default {
       if (!this.appConfig || !this.configPath) {
         return;
       }
-      const [section, key] = this.configPath.split('.');
-      const keyValue = this.appConfig[section]?.[key] || '';
-      this.apiKey = keyValue;
+      const keyValue = getProperty(this.appConfig, this.configPath) || '';
+      if (!this.deferred) {
+        this.storedKey = keyValue;
+      }
       // Auto-collapse if key is set, expand if not set
       this.expanded = !keyValue;
     },
     save() {
-      if (!this.configPath) {
+      if (!this.configPath || this.deferred) {
         return;
       }
       this.getWebsocket().send(JSON.stringify({

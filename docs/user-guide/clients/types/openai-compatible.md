@@ -8,7 +8,7 @@ Allows you to use Talemate with a service that exposes an openai-like API.
 
 ## DeepInfra
 
-If you want to add a DeepInfra client, change the `Client Type` to `DeepInfra`.
+If you want to add a DeepInfra client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `OpenAI Compatible API` from the client type menu.
 
 ![Client DeepInfra](/talemate/img/0.26.0/client-deepinfra.png)
 
@@ -60,7 +60,7 @@ The number of tokens to use as context when generating text. Defaults to `8192`.
 
 ### Parameters
 
-The **Parameters** tab in the client settings lets you control which sampler parameters are sent with each request. Some OpenAI-compatible services reject requests that include parameters they don't support for the selected model, returning an error instead of a generation. If you run into this, you can turn the offending parameter off so it is left out of the request entirely.
+The **Parameters** section of the client editor lets you control which sampler parameters are sent with each request. Some OpenAI-compatible services reject requests that include parameters they don't support for the selected model, returning an error instead of a generation. If you run into this, you can turn the offending parameter off so it is left out of the request entirely.
 
 Each parameter has its own toggle:
 
@@ -72,7 +72,7 @@ All three are enabled by default. Turning a toggle off omits that parameter from
 
 ### Ready to use
 
-Click `Save` to add the client.
+Click `Save` in the toolbar to add the client.
 
 Once it is added, the client should appear in the clients list and should display the currently loaded model.
 

@@ -78,6 +78,7 @@
   - "Help Agent: Documentation lookups now find the page that actually answers the question. Every word counted the same, so asking about 'koboldcpp settings' returned five different agent settings pages and no KoboldCpp page at all — the common word decided the match and the rest were ties broken alphabetically. Distinctive words now count for far more than ubiquitous ones. Page length also buys far less rank: a longer description of a page used to be a strictly better one, every extra word another free chance to match, so describing a page more thoroughly made it surface for topics it only mentions in passing. Those matches are now diluted by how much the description covers, so a page that mentions a topic in passing no longer outranks the page about it."
   - "Story Introduction: Setting the introduction through the director or through the Set Introduction node now updates the scene view and the World Editor right away instead of only after a scene reload."
   - "Drawer Widths: The director console and help chat drawers no longer stay locked to the window size measured when the page was loaded — they now follow the current window size."
+  - "Dependencies: Excluded nltk 3.10.1 from the accepted version range — that release ships a CWD-import security hook that breaks Talemate's standard install layout (virtualenv inside the project directory), crashing startup on any install not using the committed lock. The lock now resolves nltk 3.10.2, where the hook was removed upstream."
 
 0.38.0:
   features:

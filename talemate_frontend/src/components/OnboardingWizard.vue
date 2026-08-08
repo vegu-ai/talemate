@@ -1,12 +1,11 @@
 <template>
-  <v-dialog :model-value="dialog" persistent scrollable max-width="960" @update:model-value="onDialogUpdate">
+  <v-dialog :model-value="wizardSessionActive" persistent scrollable max-width="960" @update:model-value="onDialogUpdate">
     <v-card class="pa-4 wizard-card">
       <v-btn
         class="wizard-close"
         icon="mdi-close"
         variant="text"
         color="muted"
-        :disabled="saveInFlight"
         @click="dismissWizard"
       />
       <v-card-title class="text-h5 text-center mb-6">
@@ -14,7 +13,8 @@
         Welcome to Talemate
       </v-card-title>
       
-      <v-window v-model="step" class="wizard-window">
+      <!-- no swipe: it would change the step outside the transition methods -->
+      <v-window v-model="step" :touch="false" class="wizard-window">
         <!-- Step 1: Choose Client Type -->
         <v-window-item :value="1">
           <v-card-text>
@@ -152,14 +152,16 @@
               </v-col>
             </v-row>
 
-            <v-btn color="primary" variant="tonal" :disabled="clientTypesLoading || !draftClient" @click="addClient" prepend-icon="mdi-plus">
+            <v-btn
+              color="primary"
+              variant="tonal"
+              :loading="waitingForClient"
+              :disabled="clientTypesLoading || !draftClient || saveInFlight"
+              @click="addClient"
+              prepend-icon="mdi-plus"
+            >
               Add Client
             </v-btn>
-
-            <div v-if="waitingForClient" class="mt-8 text-caption text-medium-emphasis">
-              <v-progress-circular indeterminate size="24" color="primary" class="mr-2"></v-progress-circular>
-              Waiting for the client to be created...
-            </div>
 
             <v-row v-if="saveError" justify="center" class="mt-4">
               <v-col cols="12" md="8">
@@ -475,8 +477,9 @@
       <v-divider class="mt-2" />
       <v-card-actions class="justify-space-between">
         <div>
+          <!-- no way back from step 3: the client it follows is already created, so the step behind it could only add a second one -->
           <v-btn
-            v-if="step > 1"
+            v-if="step > 1 && step !== 3"
             variant="text"
             :disabled="saveInFlight"
             @click="goBack"
@@ -485,10 +488,11 @@
             Back
           </v-btn>
         </div>
-        <!-- leaving while a save is in flight (the client step's as much as
-             the finishing one) would move the wizard off an answer it can no
-             longer show -->
-        <v-btn variant="text" color="muted" :disabled="saveInFlight" @click="dismissWizard">Skip setup for now</v-btn>
+        <!-- leaving the wizard stays possible while a save is unanswered, or a
+             save that never gets answered would trap the user in the dialog —
+             they forfeit the report, not the save. Back waits: it stays inside
+             the wizard, which would have to show that answer. -->
+        <v-btn variant="text" color="muted" @click="dismissWizard">Skip setup for now</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -518,7 +522,8 @@ export default {
   inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'appConfig', 'saveAppConfig'],
     data() {
     return {
-      dialog: false,
+      // set once in mounted(); cleared only by dismiss or the finishing save
+      wizardSessionActive: false,
       step: 1,
       clientType: null, // 'remote' | 'local'
       selectedClientPreset: null,
@@ -548,36 +553,16 @@ export default {
       // the finishing save is in flight; the wizard stays open until it is
       // answered so a failure can be shown instead of a false success
       finishing: false,
-      completed: false,
-      dismissed: false,
       systemCapabilities: null,
       systemCapabilitiesLoading: false,
     }
   },
   computed: {
-    // a config save this wizard is waiting on — leaving now (Back, Skip, the
-    // close button) would take the wizard off the answer, and on the client
-    // step off the step that has to show it
+    // a config save this wizard is waiting on — Back waits for it and Add
+    // Client can't re-fire while it's out; the exits deliberately do not
+    // (see the actions block)
     saveInFlight() {
       return this.finishing || this.waitingForClient;
-    },
-    shouldShow() {
-      if (this.dismissed) return false;
-      if (this.completed) return false;
-
-      // Show if we have no clients
-      if (this.clients.length === 0) return true;
-
-      // Past the first step the user is inside the wizard: a client stored by
-      // one of its own saves (an apply failure stores one without applying it)
-      // or by another window must not pull the dialog out from under them
-      if (this.step > 1) return true;
-
-      // back on step 1 with a failure of this wizard's own still unanswered —
-      // the step that shows it, and retries it, is one click away
-      if (this.applyFailedClient || this.saveError) return true;
-
-      return false;
     },
     clientPresetOptions() {
       const entries = Object.entries(this.clientTypes || {});
@@ -673,56 +658,19 @@ export default {
     },
   },
   watch: {
-    shouldShow: {
-      immediate: true,
-      handler(newVal) {
-        this.dialog = !!newVal;
-        if (newVal) {
-          this.ensureClientTypesLoaded();
-          if (this.step === 3) {
-            this.requestSystemCapabilities();
-          }
-        }
-      },
-    },
-    step(newVal) {
-      if (newVal === 2) {
-        this.prepareDraftClient();
-      }
-      if (newVal === 3 && this.dialog) {
-        this.requestSystemCapabilities();
-      }
-    },
     selectedClientPreset() {
       if (this.step === 2) {
-        // a different client type is a different field set — start over.
-        // The retry token stays: it gates the clients watcher off step 2 (the
-        // stored client is in `clients`, so dropping it here bounces the
-        // wizard to step 3), and prepareDraftClient already refuses to
-        // restore a retry whose type doesn't match. onComplete/onError
-        // retire it when the next save answers.
+        // a different client type is a different field set — start over, and
+        // whatever the old form's save reported no longer belongs on screen.
+        // Clearing has to happen here rather than in prepareDraftClient: that
+        // one also runs when the type list arrives late, where it would wipe
+        // an error the restored form is still the answer to.
+        // An armed retry stays armed: prepareDraftClient refuses to restore
+        // one whose type doesn't match, and only a completed save retires it.
+        this.clearSaveError();
         this.prepareDraftClient();
       }
     },
-    clients: {
-      handler(newVal) {
-        // the client this step saves is stored before it is applied, so its
-        // own save shows up here — advancing on that would take the wizard off
-        // the step that has to report the failure and off the draft that
-        // retries it. Its callbacks advance instead.
-        if (this.waitingForClient || this.applyFailedClient) {
-          return;
-        }
-        if (newVal.length > 0 && this.step === 2) {
-          // a client arrived without this step storing it (another window, or
-          // a save whose answer was lost) — whatever it reported is moot
-          this.clearSaveError();
-          this.step = 3;
-          this.requestSystemCapabilities();
-        }
-      },
-      deep: true
-    }
   },
   methods: {
     ensureClientTypesLoaded() {
@@ -818,27 +766,17 @@ export default {
     onDialogUpdate(newVal) {
       // Dialog is persistent; only allow closing via our explicit dismiss action
       if (newVal) {
-        this.dialog = true;
+        this.wizardSessionActive = true;
       }
     },
     dismissWizard() {
-      if (this.saveInFlight) {
-        // the buttons that reach this are disabled while a save is in flight —
-        // this covers whatever else calls it
-        return;
-      }
-      this.dismissed = true;
-      this.dialog = false;
+      this.wizardSessionActive = false;
     },
     goBack() {
-      // Step navigation (only needed for 2 -> 1, but support 3 -> 2 as well)
+      // 4 -> 3 and 2 -> 1
       this.waitingForClient = false;
       if (this.step === 4) {
         this.step = 3;
-        return;
-      }
-      if (this.step === 3) {
-        this.step = 2;
         return;
       }
       this.step = 1;
@@ -849,7 +787,9 @@ export default {
       this.selectedClientPreset = (type === 'remote') ? 'openrouter' : 'koboldcpp';
       this.step = 2;
       this.ensureClientTypesLoaded();
-      this.ensureSelectedPreset();
+      // seeds the step's form from the selected type — with the type list
+      // still in flight this leaves no draft, and its arrival seeds it instead
+      this.prepareDraftClient();
     },
     buildClientPreset(typeValue) {
       const meta = (this.clientTypes || {})[typeValue];
@@ -932,15 +872,19 @@ export default {
       }, {
         label: 'client setup',
         // neither a refused save nor a failed apply creates the client, so
-        // the "waiting for the client" spinner would run forever
+        // the "adding" state would run forever
         onError: (error, applyFailed) => {
           this.waitingForClient = false;
           this.saveError = error;
           this.applyFailed = !!applyFailed;
-          // a failed apply DID store the client — the broadcast that carries
-          // it moves the wizard on to the next step, so remember it for the
-          // retry the user gets by coming back here
-          this.applyFailedClient = applyFailed ? client : null;
+          // a failed apply DID store the client, so a fresh draft would only
+          // ever add a second one — remember what was sent, so this step
+          // re-sends it as the retry. A refusal stores nothing and un-stores
+          // nothing: whatever is armed stays armed, and only a completed save
+          // (which re-applies everything stored) retires it.
+          if (applyFailed) {
+            this.applyFailedClient = client;
+          }
         },
         onComplete: () => {
           // the client is running now, and with it anything an earlier failed
@@ -948,7 +892,7 @@ export default {
           this.applyFailedClient = null;
           this.clearSaveError();
           this.waitingForClient = false;
-          if (this.step === 2) {
+          if (this.wizardSessionActive && this.step === 2) {
             this.step = 3;
             this.requestSystemCapabilities();
           }
@@ -990,7 +934,7 @@ export default {
         },
         onComplete: () => {
           this.finishing = false;
-          this.completed = true;
+          this.wizardSessionActive = false;
           this.$emit('wizard-completed');
         },
       });
@@ -1056,6 +1000,13 @@ export default {
   ,
   created() {
     this.registerMessageHandler(this.handleMessage);
+  },
+  mounted() {
+    // per the parent's v-if, mount means this connection's config is in hand
+    if (this.clients.length === 0) {
+      this.wizardSessionActive = true;
+      this.ensureClientTypesLoaded();
+    }
   },
   beforeUnmount() {
     if (this.unregisterMessageHandler) {

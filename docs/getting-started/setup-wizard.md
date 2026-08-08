@@ -70,7 +70,7 @@ Faster performance on NVIDIA GPUs. Recommended if you have an NVIDIA GPU with su
 
 Works on any system. Use this if you do not have an NVIDIA GPU or prefer not to use GPU memory for embeddings.
 
-![Setup wizard step 3 - memory configuration](../img/0.35.0/setup-wizard-step3-memory.png)
+![Setup wizard step 3 - memory configuration](../img/0.40.0/setup-wizard-step3-memory.png)
 
 The wizard will automatically detect your system capabilities and suggest appropriate defaults based on your available hardware.
 

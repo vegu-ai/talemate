@@ -438,7 +438,7 @@
   />
   <VersionMismatchAlert ref="versionMismatchAlert" />
   <OnboardingWizard
-    v-if="connected && appConfig && appConfig.clients"
+    v-if="connected && configReceivedThisConnection && appConfig && appConfig.clients"
     :clients="Object.values(appConfig.clients || {})"
     :agents="Object.values(agentStatus || {})"
   />
@@ -636,6 +636,8 @@ export default {
       inputRequestInfo: null,
       connectTimeout: null,
       connected: false,
+      // appConfig survives disconnects; this marks the CURRENT connection's config
+      configReceivedThisConnection: false,
       connecting: false,
       reconnect: true,
       errorMessage: null,
@@ -1128,6 +1130,7 @@ export default {
         this.configSaves = [];
         this.pendingConfigSave = null;
         this.connected = false;
+        this.configReceivedThisConnection = false;
         this.connecting = false;
         this.sceneActive = false;
         this.scene = {};
@@ -1306,6 +1309,7 @@ export default {
 
       if (data.type === 'app_config') {
         this.appConfig = data.data;
+        this.configReceivedThisConnection = true;
         // NOTE: pendingConfigSave is deliberately NOT cleared here — a
         // broadcast may belong to somebody else's save (another window, the
         // help agent) and arrives before our own completion; dropping the

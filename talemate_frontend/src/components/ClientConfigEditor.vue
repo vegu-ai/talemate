@@ -321,7 +321,7 @@
 <script>
 
 import { conditionMet } from '@/utils/uxConditions';
-import { CLIENT_MODEL_DEFAULTS, TOKEN_GRADUATIONS } from '@/utils/clientPresets';
+import { TOKEN_GRADUATIONS } from '@/utils/clientPresets';
 import AppConfigPresetsSystemPrompts from './AppConfigPresetsSystemPrompts.vue';
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
 import GraduatedSlider from './GraduatedSlider.vue';
@@ -420,7 +420,7 @@ export default {
     // value for most client fields (e.g. "Talemate decides").
     values() {
       const client = this.client || {};
-      const defaults = { ...CLIENT_MODEL_DEFAULTS, ...(this.meta.defaults || {}) };
+      const defaults = { ...(this.meta.model_defaults || {}), ...(this.meta.defaults || {}) };
       return new Proxy({}, {
         get: (_, key) => client[key] === undefined ? defaults[key] : client[key],
         set: (_, key, value) => {

@@ -31,7 +31,11 @@ from talemate.prompts.base import Prompt, active_template_uid
 from talemate.emit import emit
 from talemate.path import LOGS_DIR
 from talemate.config import get_config, Config
-from talemate.config.schema import EmbeddingFunctionPreset, Client as ClientConfig
+from talemate.config.schema import (
+    EmbeddingFunctionPreset,
+    Client as ClientConfig,
+    resolve_config_cls,
+)
 import talemate.emit.async_signals as async_signals
 from talemate.exceptions import (
     SceneInactiveError,
@@ -367,7 +371,7 @@ class ClientBase:
         try:
             return get_config().clients[self.name]
         except KeyError:
-            config_cls = getattr(self, "config_cls", ClientConfig)
+            config_cls = resolve_config_cls(type(self))
             return config_cls(type=self.client_type, name=self.name)
 
     @property

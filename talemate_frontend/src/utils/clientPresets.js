@@ -36,17 +36,6 @@ export function buildClientFromDefaults(meta, type, takenNames) {
     };
 }
 
-// Defaults the backend client model (`config.schema.Client`) applies to fields
-// `Meta.defaults` does not carry. Display only: a new client is seeded by
-// omission (above) and the model fills these in on save, so the editor needs
-// them to show the effective value before the first round-trip.
-export const CLIENT_MODEL_DEFAULTS = {
-    reason_failure_behavior: 'fail',
-    enforce_response_length: 'adaptive',
-    optimize_prompt_caching: false,
-    dedupe_enabled: false,
-};
-
 // Step sizes for the context-length slider. Shared by the client editor and
 // the drawer's inline slider so the two surfaces snap to the same values.
 export const TOKEN_GRADUATIONS = [

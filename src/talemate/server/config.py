@@ -16,6 +16,7 @@ from talemate.config import Config as AppConfigData
 from talemate.config.schema import (
     AgentActionOverride,
     GamePlayerCharacter,
+    resolve_config_cls,
 )
 from talemate.config import get_config, Config, update_config
 from talemate.emit import emit
@@ -125,6 +126,17 @@ class SetAgentActionOverridePayload(pydantic.BaseModel):
 
 class ClearAgentActionOverridePayload(pydantic.BaseModel):
     key: str
+
+
+def client_model_defaults(client_type: str) -> dict:
+    """Field defaults of the config model a client of `client_type` saves to.
+
+    Instantiated and dumped rather than read off `model_fields` so that
+    default_factory fields and nested models serialize exactly as they would
+    in a saved config.
+    """
+    config_cls = resolve_config_cls(CLIENT_CLASSES[client_type])
+    return config_cls(type=client_type, name="").model_dump(exclude={"type", "name"})
 
 
 class ConfigPlugin(Plugin):
@@ -426,7 +438,10 @@ class ConfigPlugin(Plugin):
         log.info("Requesting client types")
 
         clients = {
-            client_type: CLIENT_CLASSES[client_type].Meta().model_dump()
+            client_type: {
+                **CLIENT_CLASSES[client_type].Meta().model_dump(),
+                "model_defaults": client_model_defaults(client_type),
+            }
             for client_type in CLIENT_CLASSES
         }
 

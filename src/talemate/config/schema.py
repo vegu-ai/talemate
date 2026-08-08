@@ -558,6 +558,11 @@ class RecentScenes(pydantic.BaseModel):
         self.scenes = [s for s in self.scenes if os.path.exists(s.path)]
 
 
+def resolve_config_cls(client_cls) -> type[Client]:
+    """The config model a client class saves through - its own, else the base."""
+    return getattr(client_cls, "config_cls", None) or Client
+
+
 def validate_client_type(
     v: Any,
     handler: pydantic.ValidatorFunctionWrapHandler,
@@ -571,8 +576,8 @@ def validate_client_type(
     if isinstance(v, dict):
         client_cls = get_client_class(v.get("type"))
         if client_cls:
-            config_cls = getattr(client_cls, "config_cls", None)
-            if config_cls:
+            config_cls = resolve_config_cls(client_cls)
+            if config_cls is not Client:
                 return config_cls(**v)
             else:
                 return handler(v)
@@ -580,8 +585,8 @@ def validate_client_type(
     elif isinstance(v, Client):
         client_cls = get_client_class(v.type)
         if client_cls:
-            config_cls = getattr(client_cls, "config_cls", None)
-            if config_cls:
+            config_cls = resolve_config_cls(client_cls)
+            if config_cls is not Client:
                 return config_cls(**v.model_dump())
             else:
                 return handler(v)

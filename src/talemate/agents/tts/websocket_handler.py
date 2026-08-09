@@ -156,6 +156,11 @@ class TTSWebsocketHandler(Plugin):
             self.on_app_config_change_followup
         )
 
+    def disconnect(self):
+        async_signals.get("config.changed.follow").disconnect(
+            self.on_app_config_change_followup
+        )
+
     async def on_app_config_change_followup(self, event):
         self._send_api_status()
 

@@ -14,6 +14,7 @@ from talemate.config import get_config, Config
 from talemate.context import ActiveScene
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 import talemate.emit.async_signals as async_signals
+from talemate.exceptions import ControlFlowException
 from talemate.files import list_scenes_directory, list_scenes_tree
 from talemate.load import load_scene, SceneInitialization
 from talemate.scene_assets import Asset, get_media_type_from_file_path, VIS_TYPE
@@ -113,14 +114,27 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
     def disconnect(self):
         try:
             super().disconnect()
+            async_signals.get("config.changed").disconnect(self.on_config_changed)
+
+            for route, plugin in self.routes.items():
+                if not hasattr(plugin, "disconnect"):
+                    continue
+                try:
+                    plugin.disconnect()
+                except ControlFlowException:
+                    raise
+                except Exception:
+                    # one plugin's teardown must not skip the others
+                    log.error(
+                        "disconnect: plugin teardown failed",
+                        plugin=route,
+                        error=traceback.format_exc(),
+                    )
+
             abort_wait_for_input()
 
             # Cleanup scene assets batching
             self._cleanup_scene_assets_batching()
-
-            for plugin in self.routes.values():
-                if hasattr(plugin, "disconnect"):
-                    plugin.disconnect()
         finally:
             # a failure above must not leave the agents bound to the scene of
             # this connection

@@ -15,6 +15,7 @@ from enum import IntEnum
 from talemate.game.engine.nodes.base_types import base_node_type, BASE_TYPES
 from talemate.game.engine.nodes.registry import get_node, register
 from talemate.exceptions import (
+    ControlFlowException,
     ExitScene,
     ResetScene,
     RestartSceneLoop,
@@ -90,15 +91,15 @@ def get_type_class(type_str: str) -> Any:
     raise ValueError(f"Could not find class for type {type_str}")
 
 
-class LoopContinue(Exception):
+class LoopContinue(ControlFlowException):
     pass
 
 
-class LoopBreak(Exception):
+class LoopBreak(ControlFlowException):
     pass
 
 
-class LoopExit(Exception):
+class LoopExit(ControlFlowException):
     pass
 
 
@@ -2477,6 +2478,9 @@ class Listen(Graph):
         node_state = await self.node_state_push(self, state)
         try:
             await self.execute(state, state_values={"event": event})
+        except StopModule:
+            await self.node_state_pop(node_state, self, state)
+            return
         except Exception as exc:
             await self.node_state_pop(
                 node_state, self, state, error=traceback.format_exc()

@@ -53,6 +53,7 @@ from talemate.game.engine.nodes.core import (
     Stage,
     StageExit,
     StopGraphExecution,
+    StopModule,
     Trigger,
     Watch,
     dynamic_node_import,
@@ -1725,6 +1726,37 @@ async def test_listen_execute_from_event_failsafe_skips_recent_failure():
         await listen.execute_from_event("ignored")
 
     assert listen._failed is None
+
+
+@pytest.mark.asyncio
+async def test_listen_execute_from_event_stop_module_is_not_a_failure():
+    """StopModule from the inner graph ends the run cleanly, so the fail-safe
+    is not armed and the next event still executes the body."""
+
+    executed = []
+
+    class StopModuleNode(Node):
+        def setup(self):
+            self.add_input("trigger", optional=True)
+
+        async def run(self, state):
+            executed.append(state.data.get("event"))
+            raise StopModule()
+
+    listen = Listen(title="listen")
+    listen.set_property("event_name", "evt")
+    entry = Entry()
+    n = StopModuleNode()
+    listen.add_node(entry)
+    listen.add_node(n)
+    listen.connect(entry.outputs[0], n.inputs[0])
+
+    with GraphContext():
+        await listen.execute_from_event("first")
+        assert listen._failed is None
+        await listen.execute_from_event("second")
+
+    assert executed == ["first", "second"]
 
 
 @pytest.mark.asyncio

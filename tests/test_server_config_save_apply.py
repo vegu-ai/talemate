@@ -285,6 +285,38 @@ async def test_apply_failure_reports_a_saved_but_unapplied_config(
     assert app_config.dirty is True
 
 
+@pytest.mark.asyncio
+async def test_a_failing_config_changed_receiver_reports_the_same_way(
+    app_config, plugin, apply_calls
+):
+    """
+    A receiver of the broadcast is the last leg of applying a saved config -
+    one that errors out leaves whoever it feeds on the old config, so the save
+    cannot be answered as a clean one either.
+    """
+
+    async def boom(config):
+        raise RuntimeError("receiver blew up")
+
+    signal = async_signals.get("config.changed")
+    signal.connect(boom)
+    try:
+        payload = _payload(app_config)
+        payload["request_id"] = "save-45"
+
+        await plugin.handle_save(payload)
+    finally:
+        signal.disconnect(boom)
+
+    messages = plugin.websocket_handler.messages
+    assert messages[-1]["action"] == "operation_done"
+    assert messages[-1]["request_id"] == "save-45"
+    assert messages[-1]["failed_action"] == "save"
+    assert messages[-1]["stage"] == "apply"
+    assert "receiver blew up" in messages[-1]["error"]["message"]
+    assert [message.get("action") for message in messages].count("save_complete") == 0
+
+
 async def _failing_client_save(app_config, plugin, monkeypatch) -> None:
     """A clients save whose apply pipeline raises - what a retry starts from."""
 

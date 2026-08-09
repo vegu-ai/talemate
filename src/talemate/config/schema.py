@@ -765,10 +765,11 @@ class Config(pydantic.BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    async def set_dirty(self):
+    async def set_dirty(self) -> list[tuple]:
         self.dirty = True
-        await async_signals.get("config.changed").send(self)
-        await async_signals.get("config.changed.follow").send(self)
+        failures = await async_signals.get("config.changed").send(self)
+        failures += await async_signals.get("config.changed.follow").send(self)
+        return failures
 
 
 class SceneAssetUpload(pydantic.BaseModel):

@@ -1,5 +1,6 @@
 __all__ = [
     "TalemateError",
+    "ControlFlowException",
     "TalemateInterrupt",
     "ExitScene",
     "RestartSceneLoop",
@@ -21,7 +22,18 @@ class TalemateError(Exception):
     pass
 
 
-class TalemateInterrupt(Exception):
+class ControlFlowException(Exception):
+    """
+    Control flow exceptions must propagate uncaught through signal receiver dispatch (`AsyncSignal.send`)
+
+    `SceneInactiveError`, the client's `ClientDisabledError` and the node engine's `StopModule` are
+    deliberately not members - receiver isolation applies to them.
+    """
+
+    pass
+
+
+class TalemateInterrupt(ControlFlowException):
     """
     Exception to interrupt the game loop
     """
@@ -117,7 +129,7 @@ class UnknownDataSpec(TalemateError):
     pass
 
 
-class ActedAsCharacter(Exception):
+class ActedAsCharacter(ControlFlowException):
     """
     Raised when the user acts as another character
     than the main player character
@@ -128,9 +140,9 @@ class ActedAsCharacter(Exception):
         super().__init__(f"Acted as character: {character_name}")
 
 
-class AbortCommand(IOError):
+class AbortCommand(ControlFlowException, IOError):
     pass
 
 
-class AbortWaitForInput(IOError):
+class AbortWaitForInput(ControlFlowException, IOError):
     pass

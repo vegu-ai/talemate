@@ -1,8 +1,15 @@
+import structlog
+import traceback
+
+from talemate.exceptions import ControlFlowException
+
 __all__ = [
     "register",
     "get",
     "handlers",
 ]
+
+log = structlog.get_logger("talemate.emit.async_signals")
 
 handlers = {}
 
@@ -23,9 +30,22 @@ class AsyncSignal:
         except ValueError:
             pass
 
-    async def send(self, emission):
+    async def send(self, emission) -> list[tuple]:
+        failures = []
         for receiver in self.receivers:
-            await receiver(emission)
+            try:
+                await receiver(emission)
+            except ControlFlowException:
+                raise
+            except Exception as exc:
+                log.error(
+                    "Error in signal receiver",
+                    signal=self.name,
+                    receiver=repr(receiver),
+                    error=traceback.format_exc(),
+                )
+                failures.append((receiver, exc))
+        return failures
 
 
 def _register(name: str):

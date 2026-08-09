@@ -322,7 +322,22 @@ class ConfigPlugin(Plugin):
 
         # broadcasts app_config to every connected frontend (see
         # WebsocketHandler.on_config_changed)
-        await get_config().set_dirty()
+        failures = await get_config().set_dirty()
+
+        if failures:
+            message = (
+                f"Configuration was saved, but applying it failed: {failures[0][1]}"
+            )
+            if len(failures) > 1:
+                message += f" (+{len(failures) - 1} more, see backend log)"
+            await self.signal_operation_failed(
+                message,
+                request_id=app_config_data.request_id,
+                failed_action="save",
+                extra={"stage": "apply"},
+            )
+            return
+
         self.websocket_handler.queue_put(
             {
                 "type": "config",

@@ -488,6 +488,7 @@ import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from
 import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 import AutocompleteMixin from './AutocompleteMixin.js';
 import { SETTINGS_PAGES } from '../utils/appSettingsRegistry.js';
+import { createConfigSaveQueue } from '../utils/configSaveQueue.js';
 
 export default {
   components: {
@@ -653,12 +654,6 @@ export default {
       scene: {},
       actAs: null,
       appConfig: {},
-      // config payload of the most recent `config/save` — the base later
-      // saves stack on while any of them is still in flight (see saveAppConfig)
-      pendingConfigSave: null,
-      // in-flight config saves, oldest first: [{id, label, onError}]
-      configSaves: [],
-      configSaveSeq: 0,
       worldStateTemplates: {},
       // busy status of agents
       agentStatus: {},
@@ -926,6 +921,16 @@ export default {
       return agentEnabled || sceneForced;
     },
   },
+  created() {
+    // The queue outlives individual websockets — its callbacks read
+    // `this.websocket` when they run, so reconnects need no re-wiring.
+    this.configSaveQueue = createConfigSaveQueue({
+      send: (message) => this.websocket.send(JSON.stringify(message)),
+      getConfig: () => this.appConfig,
+      notifyError: (error) => this.uxErrorHandler(error),
+      resetPendingSaves: () => this.$refs.aiClient?.resetPendingSaves(),
+    });
+  },
   mounted() {
     this.connect();
     this.favicon = document.querySelector('link[rel="icon"]');
@@ -1122,13 +1127,7 @@ export default {
         // later save doesn't stack on a payload that may never have landed,
         // and tell each sender, or its in-flight state (the wizard's
         // finishing/waitingForClient) survives the socket it died on
-        for (const save of this.configSaves) {
-          if (save.onError) {
-            save.onError('The connection to the backend was lost before the save was answered.');
-          }
-        }
-        this.configSaves = [];
-        this.pendingConfigSave = null;
+        this.configSaveQueue.dropAll('The connection to the backend was lost before the save was answered.');
         this.connected = false;
         this.configReceivedThisConnection = false;
         this.connecting = false;
@@ -1231,14 +1230,7 @@ export default {
       }
 
       if(data.type === 'config' && data.request_id) {
-        // completions are only ours when the id matches one we sent
-        if(data.action === 'save_complete') {
-          this.onConfigSaveComplete(data.request_id);
-        } else if(data.action === 'operation_done' && data.error) {
-          // `stage: 'apply'` marks a payload that WAS stored — only applying
-          // it to the running clients/agents failed
-          this.onConfigSaveFailed(data.request_id, data.error.message || 'unknown error', data.stage === 'apply');
-        }
+        this.configSaveQueue.handleMessage(data);
       }
 
       if(data.type === 'rate_limited') {
@@ -1310,11 +1302,12 @@ export default {
       if (data.type === 'app_config') {
         this.appConfig = data.data;
         this.configReceivedThisConnection = true;
-        // NOTE: pendingConfigSave is deliberately NOT cleared here — a
-        // broadcast may belong to somebody else's save (another window, the
-        // help agent) and arrives before our own completion; dropping the
-        // base then would make an in-flight save's changes disappear from
-        // the next one. onConfigSaveComplete clears it.
+        // NOTE: the config-save queue's stacking base is deliberately NOT
+        // cleared here — a broadcast may belong to somebody else's save
+        // (another window, the help agent) and arrives before our own
+        // completion; dropping the base then would make an in-flight save's
+        // changes disappear from the next one. The queue clears it when the
+        // last of its own saves is answered.
         if(data.version) {
           this.version = data.version;
           if (!versionsMatch(data.version)) {
@@ -1537,108 +1530,11 @@ export default {
     requestAppConfig() {
       this.websocket.send(JSON.stringify({ type: 'request_app_config' }));
     },
-    /**
-     * Sends one `config/save` tagged with a request id, which the backend
-     * echoes on `save_complete` / `operation_done` — the router is shared, so
-     * that id is the only way a sender recognizes its own answer.
-     *
-     * `options`: {label} names the change for error reporting, {onError} /
-     * {onComplete} are called when this save (or one stacked on it) is refused
-     * or confirmed. Returns the request id.
-     */
     sendConfigSave(config, options = {}) {
-      const requestId = `cfg-${Date.now()}-${++this.configSaveSeq}`;
-      // clone: callers pass working copies that keep being edited
-      const payload = JSON.parse(JSON.stringify(config));
-      this.configSaves.push({
-        id: requestId,
-        label: options.label || 'settings',
-        onError: options.onError || null,
-        onComplete: options.onComplete || null,
-      });
-      this.pendingConfigSave = payload;
-      this.websocket.send(JSON.stringify({
-        type: 'config',
-        action: 'save',
-        request_id: requestId,
-        config: payload,
-      }));
-      return requestId;
+      return this.configSaveQueue.sendConfigSave(config, options);
     },
-    /**
-     * Sends a full `config/save` with `mutate` applied to a deep clone of the
-     * CURRENT config.
-     *
-     * The payload must be complete: the backend validates the whole Config
-     * model and applies deletion-by-omission, so anything left out is reset.
-     * Build on the stored config, never on a settings page's working copy.
-     */
     saveAppConfig(mutate, options = {}) {
-      // The stored config only catches up on the broadcast that follows a
-      // save, so while one is in flight stack onto what was last sent.
-      const base = this.pendingConfigSave || this.appConfig;
-      if (!base || !Object.keys(base).length) {
-        // an empty base would reset every section to its defaults
-        console.warn('saveAppConfig: no app config available yet, save skipped');
-        return null;
-      }
-      const config = JSON.parse(JSON.stringify(base));
-      mutate(config);
-      return this.sendConfigSave(config, options);
-    },
-    onConfigSaveComplete(requestId) {
-      const index = this.configSaves.findIndex(save => save.id === requestId);
-      if (index === -1) {
-        // a save from another window — the stored config is refreshed by the
-        // broadcast, nothing here is waiting on it
-        return;
-      }
-      const [save] = this.configSaves.splice(index, 1);
-      if (!this.configSaves.length) {
-        // every save is answered — the stored config is authoritative again
-        this.pendingConfigSave = null;
-      }
-      if (save.onComplete) {
-        save.onComplete();
-      }
-    },
-    onConfigSaveFailed(requestId, error, applyFailed = false) {
-      const index = this.configSaves.findIndex(save => save.id === requestId);
-      if (index === -1) {
-        return;
-      }
-      if (applyFailed) {
-        // the payload was stored, so anything stacked on it carries accepted
-        // content and is answered on its own — this save fails alone
-        const [save] = this.configSaves.splice(index, 1);
-        if (!this.configSaves.length) {
-          this.pendingConfigSave = null;
-        }
-        // the backend message already reads as a whole sentence ("saved, but
-        // applying it failed") — prefixing it would contradict it
-        this.uxErrorHandler(error);
-        if (save.onError) {
-          save.onError(error, true);
-        }
-        return;
-      }
-      // whatever was sent after the refused payload was built ON it, so it
-      // carries the same rejected content — none of it can be trusted. Saves
-      // sent BEFORE it are untouched and still resolve on their own.
-      const affected = this.configSaves.splice(index);
-      // back to the stored config as the stacking base — the refused payload
-      // must not seed another save
-      this.pendingConfigSave = null;
-      const labels = [...new Set(affected.map(save => save.label))].join(', ');
-      this.uxErrorHandler(`Settings save failed (${labels}): ${error}`);
-      for (const save of affected) {
-        if (save.onError) {
-          save.onError(error);
-        }
-      }
-      // the drawer keeps its rows optimistically ahead of the backend while a
-      // save is confirmed — let the next status broadcast restore the truth
-      this.$refs.aiClient?.resetPendingSaves();
+      return this.configSaveQueue.saveAppConfig(mutate, options);
     },
     saveClients(clients) {
       this.saveAppConfig((config) => {

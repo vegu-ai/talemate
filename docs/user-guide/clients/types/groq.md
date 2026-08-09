@@ -2,7 +2,7 @@
 
 If you want to add an Groq client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `Groq` from the client type menu.
 
-![Client Groq](/talemate/img/0.39.0/client-groq.png)
+![Client Groq](/talemate/img/0.40.0/client-groq.png)
 
 Click `Save` in the toolbar to add the client.
 
@@ -32,7 +32,7 @@ A unique name for the client that makes sense to you.
 
 ##### Model
 
-Which model to use. Currently defaults to `llama3-70b-8192`.
+Which model to use. Currently defaults to `moonshotai/kimi-k2-instruct`.
 
 !!! note "Talemate lags behind Groq"
     When Groq adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.

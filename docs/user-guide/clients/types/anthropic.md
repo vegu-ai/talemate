@@ -2,7 +2,7 @@
 
 If you want to add an Anthropic client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `Anthropic` from the client type menu.
 
-![Client Anthropic](/talemate/img/0.39.0/client-anthropic.png)
+![Client Anthropic](/talemate/img/0.40.0/client-anthropic.png)
 
 Click `Save` in the toolbar to add the client.
 
@@ -32,7 +32,7 @@ A unique name for the client that makes sense to you.
 
 ##### Model
 
-Which model to use. Currently defaults to `claudr-3.5-sonnet`.
+Which model to use. Currently defaults to `claude-haiku-4-5`.
 
 !!! note "Talemate lags behind Anthropic"
     When Anthropic adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.

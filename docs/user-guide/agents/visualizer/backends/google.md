@@ -2,7 +2,7 @@
 
 The Google backend provides image generation, editing, and analysis capabilities using Google's Gemini image models. It supports text-to-image generation, image editing with reference images, and AI-powered image analysis.
 
-![A screenshot of the "Visualizer" application settings interface with the "General" tab selected. It shows configuration dropdowns for Client and various Backends (text to image, image editing, image analysis) all set to "Google," alongside an image generation timeout slider positioned at 301. Additional settings include a checked "Automatic Setup" box, an unchecked "Automatic Generation" box, and a "Fallback Prompt Type" menu set to "Keywords."](/talemate/img/0.34.0/visual-agent-google-4.png)
+![A screenshot of the "Visualizer" agent settings with the "General" section expanded. It shows a Client dropdown set to "openrouter" and the Backend dropdowns (text to image, image editing, image analysis) all set to "Google," alongside an image generation timeout slider positioned at 301. Additional settings include a checked "Automatic Setup" box and an unchecked "Automatic Generation" box, with collapsed sections for the three Google backends and Styles below it.](/talemate/img/0.40.0/visual-agent-google-4.png)
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ For text-to-image generation, configure the following settings:
     - **gemini-2.5-flash-image**: Faster generation, good quality
     - **gemini-3-pro-image-preview**: Higher quality, slower generation
 
-![A dark-themed settings interface for a "Visualizer" application, specifically showing the "Google Text to Image" configuration panel. The main view displays a masked input field for a configured Google API Key and a dropdown menu selecting the "gemini-3-pro-image-preview" model.](/talemate/img/0.34.0/visual-agent-google-5.png)
+![A dark-themed settings page for the "Visualizer" agent, specifically showing the expanded "Google Text to image" section. It displays a masked input field for a configured Google API Key and a dropdown menu selecting the "gemini-3-pro-image-preview" model.](/talemate/img/0.40.0/visual-agent-google-5.png)
 
 The Google backend automatically handles aspect ratios based on the format you select:
 
@@ -51,7 +51,7 @@ For image editing, configure similar settings but with an additional option:
 - **Model**: Select the image generation model (same options as text-to-image)
 - **Max References**: Configure the maximum number of reference images (1-3). This determines how many reference images you can provide when editing an image.
 
-![A dark-themed configuration interface for the "Visualizer" application displaying settings for the "Google Image Editing" tab. The panel features a configured Google API key section and a dropdown menu selecting the "gemini-3-pro-image-preview" model. A slider control at the bottom sets the "Max References" value to 3.](/talemate/img/0.34.0/visual-agent-google-6.png)
+![A dark-themed configuration page for the "Visualizer" agent displaying the expanded "Google Image editing" section. It features a collapsed, configured Google API key panel and a dropdown menu selecting the "gemini-3-pro-image-preview" model. A slider control at the bottom sets the "Max References" value to 3.](/talemate/img/0.40.0/visual-agent-google-6.png)
 
 !!! note "Reference Images"
     Google's image editing models can use up to 3 reference images to guide the editing process. The "Max References" setting controls how many reference images Talemate will send to the API. You can adjust this based on your needs, but keep in mind that more references may provide better context for complex edits.
@@ -65,6 +65,7 @@ For image analysis, configure the following:
     - **gemini-2.5-flash**: Fast analysis, good for general use
     - **gemini-2.5-pro**: Higher quality analysis
     - **gemini-3-pro-preview**: Latest model with improved capabilities
+    - **gemini-3-flash-preview**: Latest fast model
 
 !!! note "Analysis Models"
     Image analysis uses text models that support vision capabilities, not the image generation models. These models can analyze images and provide detailed descriptions, answer questions about image content, and extract information from visual content.

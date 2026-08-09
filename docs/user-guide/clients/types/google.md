@@ -2,7 +2,7 @@
 
 If you want to add an Google client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `Google` from the client type menu.
 
-![Client Google](/talemate/img/0.39.0/client-google.png)
+![Client Google](/talemate/img/0.40.0/client-google.png)
 
 Click `Save` in the toolbar to add the client.
 
@@ -32,7 +32,7 @@ A unique name for the client that makes sense to you.
 
 ##### Model
 
-Which model to use. Currently defaults to `gemini-1.0`.
+Which model to use. Currently defaults to `gemini-3.5-flash`.
 
 !!! note "Talemate lags behind Google"
     When Google adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.

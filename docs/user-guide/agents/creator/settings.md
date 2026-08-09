@@ -73,7 +73,7 @@ On by default.
 
 These settings control the [Autocomplete](/talemate/user-guide/agents/creator/autocomplete) feature.
 
-![Conversation agent autocomplete settings](/talemate/img/0.38.0/creator-autocomplete-settings.png)
+![Conversation agent autocomplete settings](/talemate/img/0.40.0/creator-autocomplete-settings.png)
 
 ##### Dialogue Suggestion Length
 
@@ -82,6 +82,22 @@ How many tokens to generate (max.) when autocompleting character actions.
 ##### Narrative Suggestion Length
 
 How many tokens to generate (max.) when autocompleting narrative text.
+
+##### Character Attribute Suggestion Length
+
+How many tokens to generate (max.) when autocompleting a character attribute field.
+
+##### Character Detail Suggestion Length
+
+How many tokens to generate (max.) when autocompleting a character detail or description field.
+
+##### Scene Intro Suggestion Length
+
+How many tokens to generate (max.) when autocompleting the scene intro field.
+
+##### Context Investigation Suggestion Length
+
+How many tokens to generate (max.) when autocompleting a context-investigation message.
 
 ##### Enable Hints
 

@@ -2,7 +2,7 @@
 
 The SD.Next backend provides image generation and editing capabilities using Stable Diffusion Next (SD.Next), a fork of AUTOMATIC1111's Stable Diffusion WebUI. SD.Next offers improved performance and additional features while maintaining compatibility with the AUTOMATIC1111 API.
 
-![This screenshot displays the "General" settings menu of the "Visualizer" interface, featuring a dark theme with purple accents. Configuration options show "Google" selected as the client, with "SD.Next" set as the backend for both text-to-image and image editing tasks. The panel also includes an image generation timeout slider set to 301, a checked "Automatic Setup" box, and a "Fallback Prompt Type" dropdown set to Keywords.](/talemate/img/0.34.0/visual-agent-sdnext-1.png)
+![This screenshot displays the "General" section of the "Visualizer" agent settings, featuring a dark theme with purple accents. Configuration options show "openrouter" selected as the client, with "SD.Next" set as the backend for both text-to-image and image editing tasks and no image analysis backend. The section also includes an image generation timeout slider set to 301, a checked "Automatic Setup" box and an unchecked "Automatic Generation" box, with the collapsed SD.Next and Styles sections below it.](/talemate/img/0.40.0/visual-agent-sdnext-1.png)
 
 ## Prerequisites
 
@@ -38,17 +38,17 @@ For text-to-image generation, configure the following settings:
 - **Prompt Type**: Choose between "Keywords" or "Descriptive" prompt formatting
 - **Resolutions**: Configure the pixel dimensions for Square, Portrait, and Landscape formats
 
-![This screenshot displays the "Visualizer" interface for SD.Next text-to-image generation, featuring configuration settings for the API URL, 40 sampling steps, DPM++ 2M method, and a CFG scale of 7.0. The panel also shows the selected model as "juggernautXL_juggXlByRundiffusion" along with adjustable resolution presets for square, portrait, and landscape formats.](/talemate/img/0.34.0/visual-agent-sdnext-2.png)
+![This screenshot displays the "Visualizer" agent settings with the "SD.Next Text to image" section expanded, featuring configuration settings for the API URL, an authentication method of "None", 40 sampling steps, the DPM++ 2M method, and a CFG scale of 7.0. The section also shows a "Keywords" prompting type and an empty model selection, along with adjustable resolution presets for square, portrait, and landscape formats.](/talemate/img/0.40.0/visual-agent-sdnext-2.png)
 
-![This screenshot displays a dark-themed user interface form with a dropdown menu labeled "Authentication Method" selected to "Basic (username/password)". Below the menu are two text input fields for entering a "Username" and "Password" under a section header labeled "AUTHENTICATION (OPTIONAL, SERVER DEPENDENT)".](/talemate/img/0.34.0/visual-agent-sdnext-3.png)
+![This screenshot displays a dark-themed user interface form with a dropdown menu labeled "Authentication Method" selected to "Basic (username/password)". Below the menu are two text input fields for entering a "Username" and "Password" under a section header labeled "AUTHENTICATION (OPTIONAL, SERVER DEPENDENT)".](/talemate/img/0.40.0/visual-agent-sdnext-3.png)
 
-![This image displays a dark-themed user interface configuration panel for setting up authentication parameters. It features a dropdown menu where "Bearer (API Key)" is selected as the Authentication Method, positioned above a text input field labeled "API Key".](/talemate/img/0.34.0/visual-agent-sdnext-4.png)
+![This image displays a dark-themed user interface configuration panel for setting up authentication parameters. It features a dropdown menu where "Bearer (API Key)" is selected as the Authentication Method, positioned above a text input field labeled "API Key".](/talemate/img/0.40.0/visual-agent-sdnext-4.png)
 
 ### Image Editing Configuration
 
 For image editing, configure similar settings. SD.Next supports image editing through its img2img API, which uses a single reference image.
 
-![User interface for the "Visualizer" software displaying the "Image editing configuration for SD.Next" panel with a dark theme. It features adjustable sliders for Steps (set to 40) and CFG Scale (set to 7.0), alongside dropdown menus for the Sampling Method and Model selection. The bottom section includes input fields for defining specific pixel dimensions for square, portrait, and landscape image resolutions.](/talemate/img/0.34.0/visual-agent-sdnext-5.png)
+![The "Visualizer" agent settings with the "SD.Next Image editing" section expanded, in a dark theme. It features adjustable sliders for Steps (set to 40) and CFG Scale (set to 7.0), alongside dropdown menus for the Sampling Method, a "Descriptive" prompting type and an empty Model selection. The bottom part includes input fields for defining specific pixel dimensions for square, portrait, and landscape image resolutions.](/talemate/img/0.40.0/visual-agent-sdnext-5.png)
 
 !!! note "Reference Images"
     SD.Next image editing supports a single reference image. When editing an image, provide one reference image that will be used as the base for the edit.

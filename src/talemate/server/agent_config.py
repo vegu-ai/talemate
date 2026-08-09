@@ -7,7 +7,7 @@ a child action, unregistering it, renaming its label.
 
 Each handler runs the canonical agent method (which fires lifecycle hooks),
 saves the updated agent config to disk, and re-emits the agent status so the
-frontend re-renders with the new tab list.
+frontend re-renders with the new section list.
 """
 
 import structlog

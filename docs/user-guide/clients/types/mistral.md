@@ -2,7 +2,7 @@
 
 If you want to add an Mistral.ai client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `MistralAI` from the client type menu.
 
-![Client Mistral.ai](/talemate/img/0.39.0/client-mistral.png)
+![Client Mistral.ai](/talemate/img/0.40.0/client-mistral.png)
 
 Click `Save` in the toolbar to add the client.
 
@@ -32,7 +32,7 @@ A unique name for the client that makes sense to you.
 
 ##### Model
 
-Which model to use. Currently defaults to `mixtral-8x22`.
+Which model to use. Currently defaults to `open-mixtral-8x22b`.
 
 !!! note "Talemate lags behind Mistral.ai"
     When Mistral.ai adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.

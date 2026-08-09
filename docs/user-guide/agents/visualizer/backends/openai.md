@@ -2,7 +2,7 @@
 
 The OpenAI backend provides image generation, editing, and analysis capabilities using OpenAI's image models. It supports text-to-image generation with DALL·E 3 and GPT-Image models, image editing with GPT-Image models, and AI-powered image analysis using vision-capable GPT models.
 
-![The image displays the "General" settings tab of the "Visualizer" interface, featuring a dark-themed layout with a sidebar menu on the left. The main panel includes dropdown menus where "Google" is selected as the client and "OpenAI" is chosen for text-to-image, image editing, and image analysis backends. Additional controls show an image generation timeout slider set to 301, checkboxes for automatic setup and generation, and a selector for the fallback prompt type.](/talemate/img/0.34.0/visual-agent-openai-1.png)
+![The image displays the "General" section of the "Visualizer" agent settings in a dark-themed layout. It includes dropdown menus where "openrouter" is selected as the client and "OpenAI" is chosen for the text-to-image, image editing, and image analysis backends. Additional controls show an image generation timeout slider set to 301 and checkboxes for automatic setup and automatic generation, with collapsed sections for the three OpenAI backends and Styles below it.](/talemate/img/0.40.0/visual-agent-openai-1.png)
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ For text-to-image generation, configure the following settings:
     - **gpt-image-1**: OpenAI's GPT-Image model (may require organization verification)
     - **gpt-image-1-mini**: Smaller version of GPT-Image (may require organization verification)
 
-![A screenshot of the "Visualizer" application settings interface with the "OpenAI Text to Image" tab selected on the left sidebar. The main panel displays a masked input field for a configured OpenAI API key and a dropdown menu set to the "dall-e-3" model.](/talemate/img/0.34.0/visual-agent-openai-2.png)
+![A screenshot of the "Visualizer" agent settings with the "OpenAI Text to image" section expanded. It displays a masked input field for a configured OpenAI API key and a dropdown menu set to the "dall-e-3" model.](/talemate/img/0.40.0/visual-agent-openai-2.png)
 
 !!! warning "Organization Verification"
     The **gpt-image-1** and **gpt-image-1-mini** models may require your OpenAI organization to be verified before you can use them. If you encounter errors with these models, you may need to complete OpenAI's organization verification process.
@@ -64,7 +64,7 @@ For image editing, configure similar settings but note that DALL·E 3 does not s
     - **gpt-image-1**: Full-featured image editing model (may require organization verification)
     - **gpt-image-1-mini**: Smaller image editing model (may require organization verification)
 
-![This screenshot displays the settings interface for an application called "Visualizer," specifically showing the "OpenAI Image Editing" configuration panel. The right side features a dropdown menu for selecting the model "gpt-image-1" beneath a configured API key section. An orange notification box at the bottom alerts the user that this specific model may require OpenAI organization verification.](/talemate/img/0.34.0/visual-agent-openai-3.png)
+![This screenshot displays the "Visualizer" agent settings, specifically the expanded "OpenAI Image editing" section. It features a dropdown menu for selecting the model "gpt-image-1" beneath a collapsed, configured API key panel. An orange notification box at the bottom alerts the user that this specific model may require OpenAI organization verification.](/talemate/img/0.40.0/visual-agent-openai-3.png)
 
 !!! warning "DALL·E 3 Limitations"
     DALL·E 3 does not support image editing. If you select DALL·E 3 for image editing, you will receive an error. Use **gpt-image-1** or **gpt-image-1-mini** for image editing instead.
@@ -81,7 +81,7 @@ For image analysis, configure the following:
     - **gpt-4.1-mini**: Fast analysis model with vision capabilities
     - **gpt-4o-mini**: Alternative vision model option
 
-![This image shows the settings interface for an application named Visualizer, with the "OpenAI Image Analysis" tab selected on the left sidebar. The main panel allows users to configure the OpenAI vision API, displaying a confirmed API key status. A dropdown menu below specifically indicates that the "gpt-4.1-mini" model is selected.](/talemate/img/0.34.0/visual-agent-openai-4.png)
+![This image shows the "Visualizer" agent settings with the "OpenAI Image analysis" section expanded. It allows users to configure the OpenAI vision API and displays a configured API key status. A dropdown menu below specifically indicates that the "gpt-4.1-mini" model is selected.](/talemate/img/0.40.0/visual-agent-openai-4.png)
 
 !!! note "Analysis Models"
     Image analysis uses text models that support vision capabilities, not the image generation models. These models can analyze images and provide detailed descriptions, answer questions about image content, and extract information from visual content.

@@ -7,7 +7,7 @@
 
 If you want to add an LMStudio client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `LMStudio` from the client type menu.
 
-![Client LMStudio](/talemate/img/0.26.0/client-lmstudio.png)
+![Client LMStudio](/talemate/img/0.40.0/client-lmstudio.png)
 
 !!! note "Should work out of the box with a local LMStudio instance"
     The default values should work with a local LMStudio instance if you have followed their setup instructions and are running the server on the default port.

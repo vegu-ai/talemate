@@ -416,7 +416,7 @@ class PiBridgeClient(ConcurrentInferenceMixin, ClientBase):
                         "authentication (environment API keys, pi's auth.json, "
                         "subscription auth) and model resolution, including custom "
                         "providers defined in pi's models.json. Variables from "
-                        "Settings → Application → Environment Variables are passed "
+                        "Settings → Connections → Environment Variables are passed "
                         "to pi, so models.json can reference them as $NAME."
                     ),
                     required=False,

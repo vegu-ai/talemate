@@ -29,7 +29,7 @@ Confirm ComfyUI is running in your browser by visiting http://localhost:8188 or 
 
 In the Visualizer agent settings, select ComfyUI as your backend for text-to-image generation, image editing, or both. You'll need to configure each backend separately if you want to use ComfyUI for different operations.
 
-![The image displays the General settings tab of the Visualizer interface, featuring a sidebar with active indicators for ComfyUI and Google modules. Dropdown menus in the main panel show ComfyUI selected for text-to-image and image editing backends, with Google selected for image analysis. The interface also includes an image generation timeout slider set to 301 and an enabled Automatic Setup checkbox.](/talemate/img/0.34.0/visual-agent-comfyui-1.png)
+![The image displays the "General" section of the Visualizer agent settings. Dropdown menus show "openrouter" as the client, ComfyUI selected for the text-to-image and image editing backends, and Google selected for image analysis. The section also includes an image generation timeout slider set to 301 and an enabled Automatic Setup checkbox, with collapsed sections for the configured backends and Styles below it.](/talemate/img/0.40.0/visual-agent-comfyui-1.png)
 
 ### Text-to-Image Configuration
 
@@ -45,8 +45,8 @@ For text-to-image generation, configure the following settings:
 
 - **Resolutions**: Configure the pixel dimensions for Square, Portrait, and Landscape formats
 
-![A screenshot of the "Visualizer" application's dark-mode settings panel specifically for ComfyUI text-to-image generation. The interface features configuration fields for the API URL, a workflow dropdown set to "z_image_turbo.json," model selection, and a "Descriptive" prompting type. The lower section includes adjustable numeric inputs for defining pixel dimensions for Square, Portrait, and Landscape image resolutions.](/talemate/img/0.34.0/visual-agent-comfyui-2.png)
-![This screenshot displays the dark-themed settings interface of an application named "Visualizer," specifically configured for ComfyUI text-to-image generation. The main panel features input fields for the API URL, workflow selection (set to default-sdxl), and model choice (juggernautXL), along with a prompting type setting. Below these options is a "Resolutions" section allowing users to define specific pixel dimensions for Square, Portrait, and Landscape image outputs.](/talemate/img/0.34.0/visual-agent-comfyui-3.png)
+![A screenshot of the "Visualizer" agent's dark-mode settings section for ComfyUI text-to-image generation. It features configuration fields for the API URL, a workflow dropdown set to "default-sdxl.json," an empty model selection, and a "Descriptive" prompting type. The lower part includes adjustable numeric inputs for defining pixel dimensions for Square, Portrait, and Landscape image resolutions.](/talemate/img/0.40.0/visual-agent-comfyui-2.png)
+![This screenshot displays the dark-themed "Visualizer" agent settings, specifically the section configured for ComfyUI text-to-image generation. It features input fields for the API URL, workflow selection (set to default-sdxl.json), and an empty model choice, along with the prompting type set to "Keywords". Below these options is a "Resolutions" section allowing users to define specific pixel dimensions for Square, Portrait, and Landscape image outputs.](/talemate/img/0.40.0/visual-agent-comfyui-3.png)
 
 ### Image Editing Configuration
 
@@ -55,7 +55,7 @@ For image editing, configure similar settings but select an image editing workfl
 !!! note "Prompt Type for Image Editing"
     Image editing workflows typically use **Descriptive** prompt formatting by default, as most image editing models (like Qwen Image Edit) work better with descriptive instructions rather than keyword-based prompts.
 
-![A screenshot of the "Visualizer" application settings interface, specifically showing the configuration panel for "ComfyUI Image Editing." The main view displays input fields for the API URL, a selected workflow file named "qwen_image_edit.json," descriptive prompting settings, and resolution presets for square, portrait, and landscape aspect ratios.](/talemate/img/0.34.0/visual-agent-comfyui-4.png)
+![A screenshot of the "Visualizer" agent settings, specifically showing the "ComfyUI Image editing" section. It displays input fields for the API URL, a selected workflow file named "default-sdxl.json," descriptive prompting settings, and resolution presets for square, portrait, and landscape aspect ratios.](/talemate/img/0.40.0/visual-agent-comfyui-4.png)
 ![This screenshot shows a browser tab group labeled "Visualizer" marked with a green status dot on a dark background. The group contains four tabs: a Google link, two green-tinted ComfyUI tabs with image and pencil icons, and a gray tab titled "References 3".](/talemate/img/0.34.0/visual-agent-comfyui-5.png)
 
 

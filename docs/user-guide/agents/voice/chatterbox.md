@@ -2,15 +2,11 @@
 
 Local zero shot voice cloning from .wav files.
 
-![Chatterbox API settings](/talemate/img/0.32.0/chatterbox-api-settings.png)
+![Chatterbox API settings](/talemate/img/0.40.0/chatterbox-api-settings.png)
 
 ##### Device
 
 Auto-detects best available option
-
-##### Model
-
-Default Chatterbox model optimized for speed
 
 ##### Chunk size
 

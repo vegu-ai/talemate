@@ -2,11 +2,19 @@
 
 ## General
 
-![Editor agent settings](/talemate/img/0.29.0/editor-agent-settings.png)
+![Editor agent settings](/talemate/img/0.40.0/editor-agent-settings.png)
 
-##### Fix exposition
+##### Client
 
-If enabled the editor will attempt to fix exposition in the generated dialogue.
+The text-generation client to use for editor generations.
+
+##### Optimize for Prompt Caching
+
+Places volatile context (long term memory, dynamic notes) after the scene history so that the stable part of the prompt can be cached by API backends. May confuse weaker models. `Auto` defers to the client setting.
+
+##### Cleanup content
+
+If enabled the editor will automatically clean up formatting, exposition and emotes in AI and user messages.
 
 It will do this based on the selected format. 
 
@@ -18,6 +26,10 @@ Applies the same rules as above to the narrator messages.
 
 Applies the same rules as above to the user input messages.
 
+###### Allow incomplete sentences
+
+If enabled, user input and user-edited messages will not have incomplete sentences stripped from the end.
+
 ##### Add detail
 
 Will take the generate message and attempt to add more detail to it.
@@ -28,7 +40,7 @@ Will take the generate message and attempt to add more detail to it.
 
 ## Revision
 
-![Editor agent revision settings](/talemate/img/0.38.0/editor-revision-settings-dedupe.png)
+![Editor agent revision settings](/talemate/img/0.40.0/editor-revision-settings-dedupe.png)
 
 When :material-typewriter: revision is enabled the editor will analyze and attempt to fix character messages, narrator messages, and contextual generation (such as character attributes, details, world context, etc.).
 
@@ -78,19 +90,19 @@ Which method to use to fix issues.
 
 **Dedupe (Fast and dumb)**
 
-![Editor agent revision settings - Dedupe](/talemate/img/0.38.0/editor-revision-settings-dedupe.png)
+![Editor agent revision settings - Dedupe](/talemate/img/0.40.0/editor-revision-settings-dedupe.png)
 
 When **Dedupe** is active it will be restricted to finding repetition and removing it without replacing it with something else, nor understanding the intent or context, so it may sometimes cause disjointed dialogue. This method is much faster as it will never prompt the AI for analysis and fixes. (If repetition detection is set to semantic similarity, it will still use the embedding function to find repetition, but it will not prompt the AI for analysis and fixes.)
 
 **Unslop (AI assisted)**
 
-![Editor agent revision settings - Unslop](/talemate/img/0.38.0/editor-revision-settings-unslop.png)
+![Editor agent revision settings - Unslop](/talemate/img/0.40.0/editor-revision-settings-unslop.png)
 
 When **Unslop** is active, it calls 1 additional prompt after a generation and will attempt to remove repetition, purple prose, unnatural dialogue, and over-description. May cause details to be lost. This is a general-purpose cleanup method that can also use unwanted prose detection when enabled.
 
 **Targeted Rewrite (AI assisted)**
 
-![Editor agent revision settings - Targeted Rewrite](/talemate/img/0.38.0/editor-revision-settings-rewrite.png)
+![Editor agent revision settings - Targeted Rewrite](/talemate/img/0.40.0/editor-revision-settings-rewrite.png)
 
 When **Targeted Rewrite** is active, unwanted prose detection becomes available and when issues are detected the AI will attempt to rewrite the message to fix the issues. This method checks for specific problems first, then only rewrites if enough issues are found.
 

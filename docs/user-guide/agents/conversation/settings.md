@@ -2,7 +2,7 @@
 
 ## General
 
-![Conversation agent general settings](/talemate/img/0.30.0/conversation-general-settings.png)
+![Conversation agent general settings](/talemate/img/0.40.0/conversation-general-settings.png)
 
 !!! note "Inference perameters"
     Inference parameters are NOT configured through any individual agent.
@@ -13,19 +13,16 @@
 
 The text-generation client to use for conversation generation.
 
-##### Auto Break Repetition
+##### Optimize for Prompt Caching
 
-If checked and talemate detects a repetitive response (based on a threshold), it will automatically re-generate the resposne with increased randomness parameters.
-
-!!! note "Deprecated"
-    This will soon be removed in favor of the new [Editor Agent Revision Action](/talemate/user-guide/agents/editor/settings#revision)
+Places volatile context (long term memory, dynamic notes) after the scene history so that the stable part of the prompt can be cached by API backends. May confuse weaker models. `Auto` defers to the client setting.
 
 !!! note "Natural flow was moved"
     The natural flow settings have been moved to the [Director Agent](/talemate/user-guide/agents/director) settings as part of the auto direction feature.
 
 ## Generation
 
-![Conversation agent generation settings](/talemate/img/0.29.0/conversation-generation-settings.png)
+![Conversation agent generation settings](/talemate/img/0.40.0/conversation-generation-settings.png)
 
 ##### Format
 
@@ -63,9 +60,13 @@ General, broad isntructions for ALL actors in the scene. This will be appended t
 
 If > 0 will offset the instructions for the actor (both broad and character specific) into the history by that many turns. Some LLMs struggle to generate coherent continuations if the scene is interrupted by instructions right before the AI is asked to generate dialogue. This allows to shift the instruction backwards.
 
+##### Include character names in stop tokens
+
+Some models may generate the names of other characters during internal reasoning, which can cause generation to stop early. If you experience sudden generation stops, try disabling this option.
+
 ## :material-script-text: Content
 
-![Conversation agent content settings](/talemate/img/0.30.0/conversation-content-settings.png)
+![Conversation agent content settings](/talemate/img/0.40.0/conversation-content-settings.png)
 
 Content settings control what contextual information is included in the prompts sent to the AI when generating character dialogue.
 

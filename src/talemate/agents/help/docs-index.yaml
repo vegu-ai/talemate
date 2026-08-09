@@ -3,385 +3,388 @@
 # Generated file - regenerate with the docs-index claude skill in the work repo.
 - path: dev/howto/add-a-worldstate-template-type.md
   title: Adding a new world-state template
-  summary: 'Developer walkthrough for adding a new world-state template type: define the pydantic schema in src/talemate/world_state/templates,
-    build a WorldStateManagerTemplate* Vue component, and register it in WorldStateManagerTemplates.vue with conditional rendering,
-    icon/color, and help message.'
+  summary: 'Developer walkthrough for adding a world-state template type: a pydantic Template subclass under src/talemate/world_state/templates
+    with @register, a WorldStateManagerTemplate*.vue component, then wiring it into WorldStateManagerTemplates.vue - iconForTemplate,
+    helpMessages and templateTypes.'
 - path: dev/index.md
   title: Coming soon
-  summary: Placeholder landing page for the developer documentation section; contains no content yet beyond a coming-soon
-    notice.
+  summary: Placeholder page stating that the developer documentation section has not been written yet.
+- path: dev/nodes-glossary.md
+  title: Node reference glossary
+  summary: The node reference pages under docs/user-guide/node-editor/reference/nodes/ are generated from the live node registry.
+    Run 'uv run python -m talemate.game.engine.nodes.tools glossary --write' to regenerate and '--check' to fail on drift;
+    hand-written intro text is preserved.
 - path: dev/templates.md
   title: Template Overrides
-  summary: 'Older developer guide to Jinja2 prompt templates: section tag structure, overriding defaults via ./templates/prompts/{agent}/,
-    creator agent character-creation template naming (character-attributes/details/example-dialogue), extending templates
-    with Jinja2 inheritance, and a list of template functions like set_prepared_response, query_scene, and query_memory.'
+  summary: 'Older reference for Talemate''s Jinja2 prompt templates: section tags, overriding a default by dropping a same-named
+    file into ./templates/prompts/{agent}/, the creator naming convention, extending with {% extends %} and blocks, and the
+    Jinja helpers.'
 - path: dev/third-party-reference.md
   title: Third Party API docs
-  summary: 'Link collection to external chat-completion API references for backends Talemate supports: Anthropic, Cohere,
-    Google AI, Groq, KoboldCpp, LMStudio, Mistral, OpenAI, TabbyAPI, and Text-Generation-WebUI.'
+  summary: Bare link list to the upstream chat-completion API references for Anthropic, Cohere, Google AI, Groq, KoboldCpp,
+    LMStudio, Mistral AI, OpenAI, TabbyAPI and Text-Generation-WebUI.
 - path: getting-started/advanced/change-host-and-port.md
   title: Changing host and port
-  summary: How to change the backend (default localhost:5050) and frontend (default localhost:8082) host/port via TALEMATE_BACKEND_/FRONTEND_HOST/PORT
-    env vars or --host/--port CLI flags, point the frontend at a new backend with VITE_TALEMATE_BACKEND_WEBSOCKET_URL, plus
-    Docker runtime configuration and 0.36.x-to-0.37.0 upgrade notes (frontend port 8080-to-8082, renamed compose variables).
+  summary: Changing the backend (localhost:5050) and frontend (localhost:8082) bind addresses via TALEMATE_BACKEND_HOST/PORT
+    and TALEMATE_FRONTEND_HOST/PORT or the --host/--port CLI flags, rebuilding the frontend with VITE_TALEMATE_BACKEND_WEBSOCKET_URL,
+    Docker Compose, and the 0.37.0 rename notes.
 - path: getting-started/advanced/debug-logging.md
   title: Debug Logging
-  summary: Enable verbose DEBUG-level logging with TALEMATE_DEBUG=1 on Linux and Windows; errors then also go to a rotating
-    logs/errors.log file. Includes how to disable it again.
+  summary: Set TALEMATE_DEBUG=1 before starting the server to switch from INFO to DEBUG logging and write errors to logs/errors.log
+    (rotating). Gives the Linux prefix and Windows SET syntax for enabling and disabling it.
 - path: getting-started/advanced/environment-variables.md
   title: Environment variables
-  summary: 'Reference table of all environment variables Talemate reads at startup: backend/frontend host and port, VITE_TALEMATE_BACKEND_WEBSOCKET_URL,
-    TALEMATE_DEBUG, TALEMATE_LOG_PROMPTS, API-key encryption vars (TALEMATE_DISABLE_KEYRING, TALEMATE_ENCRYPTION_KEY_DIR),
-    and Docker Compose passthroughs.'
+  summary: 'Reference table of every environment variable Talemate reads: TALEMATE_BACKEND_HOST/PORT, TALEMATE_FRONTEND_HOST/PORT,
+    VITE_TALEMATE_BACKEND_WEBSOCKET_URL, TALEMATE_DEBUG, TALEMATE_LOG_PROMPTS, TALEMATE_PI_BRIDGE_TRACE, TALEMATE_DISABLE_KEYRING,
+    TALEMATE_ENCRYPTION_KEY_DIR and the Docker Compose passthroughs.'
 - path: getting-started/advanced/prompt-logging.md
   title: Prompt Logging
-  summary: Enable TALEMATE_LOG_PROMPTS=1 to write every prompt and model response to logs/prompt_log.jsonl; documents the
-    full record schema (kind, tokens, client, agent_stack, generation_parameters, template_uid, etc.) and jq recipes for inspecting
-    the log.
+  summary: Set TALEMATE_LOG_PROMPTS=1 to append every prompt and response to logs/prompt_log.jsonl. Documents the record schema
+    - kind, prompt, response, token counts, client_name, agent_stack, generation_parameters, inference_preset, reasoning,
+    template_uid.
 - path: getting-started/connect-a-client.md
   title: Connect a client
-  summary: 'Manual client setup: Add client opens Settings → Connections → Clients with the client type menu, you fill in
-    the editor and press Save in the toolbar to connect. Lists the supported remote and local client types and covers automatic
-    agent assignment and the Assign to all agents action.'
+  summary: 'Adding an LLM client and assigning agents. Client types: OpenAI, Anthropic, Mistral, Cohere, DeepSeek, Groq, Gemini,
+    OpenRouter, Pi Bridge, KoboldCpp, llama.cpp, Ollama, Text-Generation-WebUI, LMStudio, TabbyAPI.'
 - path: getting-started/installation/docker.md
   title: Docker
-  summary: 'Docker install: clone the repo, copy config.example.yaml to config.yaml, run docker compose up, and open http://localhost:8082.
-    Notes on pre-built CUDA images vs manual build and using host.docker.internal to reach local APIs on the host machine.'
+  summary: 'Quick Docker install: clone the repo, copy config.example.yaml to config.yaml, ''docker compose up'', then browse
+    to http://localhost:8082. Notes the prebuilt CUDA-enabled GHCR images, docker-compose.manual.yml for local builds, host.docker.internal
+    for local APIs, and the pi agent.'
 - path: getting-started/installation/linux.md
   title: Linux
-  summary: 'Linux install: python and uv prerequisites, running install.sh (which downloads portable Node.js 22 and offers
-    CUDA pytorch) and start.sh, plus manual setup of the venv, backend (uv run src/talemate/server/run.py runserver), and
-    frontend (corepack pnpm serve).'
+  summary: 'Linux install: python plus uv, then clone, ''source install.sh'' (optionally with CUDA pytorch) and ''source start.sh'';
+    install.sh downloads a portable Node.js 22. Also the manual path - uv venv, uv pip install -e ''.[dev]'', run.py runserver
+    and corepack pnpm.'
 - path: getting-started/installation/troubleshoot.md
   title: Common issues
-  summary: 'Installation troubleshooting: Windows frontend failures caused by special characters in the path, Docker creating
-    a config.yaml directory when the example config was not copied, configuring VITE_TALEMATE_BACKEND_WEBSOCKET_URL at container
-    runtime, and running behind a reverse proxy with SSL/nginx WebSocket upgrades.'
+  summary: 'Install troubleshooting: Windows frontend failures from special characters in the path, Docker creating a config.yaml
+    directory when the example config was not copied, setting VITE_TALEMATE_BACKEND_WEBSOCKET_URL for the container, and nginx
+    WebSocket upgrade for SSL proxies.'
 - path: getting-started/installation/windows.md
   title: Windows
-  summary: 'Windows install: download the release ZIP and double-click start.bat, which auto-downloads portable Python 3 and
-    Node.js 22 and builds the web client; open http://localhost:8082. Also documents the maintenance scripts install.bat,
-    install-cuda.bat, and update.bat.'
+  summary: 'Windows install: extract the release ZIP and double-click start.bat, which downloads portable Python 3 and Node.js
+    22, creates the venv, installs backend and frontend dependencies with uv and pnpm, and builds the web client. Lists install.bat,
+    install-cuda.bat and update.bat.'
 - path: getting-started/load-a-scene.md
   title: Load a scenario
-  summary: Load the introductory Infinity Quest scenario from the Home screen's Quick Load, send a first interaction (quotes
-    for speech, asterisks for actions), and get a quick tour of the scenario tools, agent activity bar, and world state panel.
+  summary: 'First-play walkthrough: load the Infinity Quest demo from Quick load on the Home screen (first load downloads
+    the long-term memory model), send a message using quotes for speech and asterisks for actions, then tour the scene tools
+    and world state panel.'
 - path: getting-started/setup-wizard.md
   title: Setup Wizard
-  summary: 'First-launch wizard: self-hosted vs hosted API, picking and adding a client (OpenRouter or KoboldCpp by default)
-    with its name, URL, key and model, the long-term memory embeddings model (Better/Standard) and CUDA/CPU device, optional
-    Visual agent setup, then Apply & finish. Also covers skipping it.'
+  summary: 'The first-launch wizard: pick a self-hosted client (KoboldCpp, Text-Generation-WebUI, llama.cpp, LMStudio, TabbyAPI)
+    or hosted API (OpenRouter, Google, Anthropic), then set up memory embeddings and the Visual agent.'
 - path: index.md
   title: Talemate Documentation
-  summary: Root landing page describing Talemate as AI roleplay with strong narration and world/game state tracking, with
-    links to installation (Windows, Linux, Docker) and first steps (setup wizard, connect a client, load a scene, interact).
+  summary: Documentation landing page - one-line description of Talemate plus links to the Windows, Linux and Docker installation
+    pages and the first-steps pages (Setup Wizard, Connect a client, Load a scene, Interact with the scene).
 - path: user-guide/agents/conversation/index.md
   title: Overview
-  summary: Introduces the Conversation (Actor) agent, which generates character-driven dialogue and actions and requires a
-    text-generation client to be configured and assigned.
+  summary: Overview of the Conversation agent, also called the Actor agent, which generates character-driven dialogue and
+    actions. Requires a text-generation client configured and assigned.
 - path: user-guide/agents/conversation/settings.md
   title: Settings
-  summary: Conversation agent settings; client selection, Auto Break Repetition (deprecated), dialogue Format (Narrative,
-    Screenplay, Chat, AI Aware), Generation Length, Jiggle randomness, Task/Actor Instructions and instruction offset, plus
-    Content toggles for Use Scene Intent and Use Writing Style.
+  summary: 'Conversation agent settings: Client, Optimize for Prompt Caching; Generation Format (Narrative, Screenplay, Chat
+    legacy, AI Aware), Generation Length, Jiggle, Task Instructions, Actor Instructions; Use Scene Intent, Use Writing Style,
+    Long Term Memory.'
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
-  summary: How to use AI autocomplete (ctrl+Enter/cmd+Enter) to continue partially typed text, steer it with trailing curly-brace
-    hints, use the Redo/Undo chip, and which fields support it (main input, message edits, character attributes/details/description,
-    scene intro).
+  summary: 'Creator agent autocomplete: continue partially typed text with ctrl+Enter, steer it with a trailing curly-brace
+    hint block, and the Redo and Undo chips. Supported fields include the main input, message edits, character attributes,
+    scene intro and dialogue examples.'
 - path: user-guide/agents/creator/index.md
   title: Overview
-  summary: Introduces the Creator agent used for creative content generation tasks, with its Autocomplete feature for continuing
-    text you have started typing.
+  summary: Overview of the Creator agent, used for creative tasks that produce new context. Its main documented feature is
+    Autocomplete, triggered with ctrl+Enter and steered with curly-brace hints.
 - path: user-guide/agents/creator/settings.md
   title: Settings
-  summary: Creator agent settings; Character Creation (Fast consolidated single-prompt generation, Consolidate aspect selection
-    including the Attribute templates fold, One-shot token budget, Fill in misses), Dialogue Suggestion Length and Narrative
-    Suggestion Length (max tokens for autocomplete), Enable Hints toggle for curly-brace autocomplete hints, and long-term memory
-    options.
+  summary: 'Creator agent settings: Character Creation options Fast Character Generation, Consolidate, One-shot token budget
+    and Fill in misses; Long Term Memory; and Autocomplete suggestion length per field type plus Enable Hints.'
 - path: user-guide/agents/director/chat.md
   title: Director Chat
-  summary: The director console chat for querying and modifying a loaded scene in natural language; covers chat modes (Normal,
-    Decisive, No Spoilers), write-action confirmation and its timeout, enabling/disabling and locked actions, director personas,
-    and multiple concurrent chats with auto-generated titles.
+  summary: 'The experimental Director Console chat: what you can ask the director to do, the Normal / Decisive / No Spoilers
+    modes, write-action confirmation with its countdown timeout, enabling actions per group, locked actions, director personas,
+    and multiple concurrent chats.'
 - path: user-guide/agents/director/index.md
   title: Overview
-  summary: Overview of the Director agent as a game master; lists its features - Autonomous Scene Direction, Director Chat,
-    Director Planning, Dynamic Actions (clickable player choices), and Guide Scene.
+  summary: Overview of the Director agent as game master, listing Autonomous Scene Direction, Director Chat, Director Planning
+    for multi-beat arc generation, Dynamic Actions and Guide Scene.
 - path: user-guide/agents/director/planning.md
   title: Director Planning
-  summary: Director Planning (0.37.0); autonomous task lists during chat vs the Generate Long Progress dialog for multi-beat
-    scene arcs, including turns, dialogue ratio, Expand vs Turn-by-turn execution, Close the arc, outline/expansion critique,
-    the Plan banner statuses, Arc Generation agent settings, and troubleshooting.
+  summary: 'Director Planning (0.37.0): the autonomous manage_plan todo list versus the Generate long progress dialog that
+    plans a multi-beat arc. Covers Number of turns, Dialogue ratio, Expand vs Turn by turn, Close the arc, Outline critique,
+    the Plan banner and Arc Generation settings.'
 - path: user-guide/agents/director/scene-direction.md
   title: Autonomous Scene Direction
-  summary: Enabling the director to progress scenes automatically; requires story/scene intentions, covers the '#' and '##'
-    player-input prefixes for steering, manual turn triggering, turn balance, prompting the user for input, general/context
-    settings, the Direction tab and timeline, custom director action nodes, and troubleshooting.
+  summary: 'Autonomous Scene Direction: requirements, enabling it, nudging the director from the main input with # and ##
+    prefixes, the manual Scene direction turn button, turn balance, settings Enable Analysis Step, Response Token Budget,
+    Max Actions Per Turn, Scene Context Ratio and Stale History Share, and the Direction tab.'
 - path: user-guide/agents/director/settings.md
   title: Settings
-  summary: Director agent settings; direct scene/actors and direction stickiness, Dynamic Actions (chance, number, instructions),
-    Guide Scene (guide actors/narrator, guidance length), Scene Direction options, Character Management (attribute limit,
-    auto voice assignment, generate visuals), and Director Chat settings (token budget, iteration limit, context ratio, confirm
-    timeout, custom instructions).
+  summary: 'Director agent settings: General (Client, Optimize for Prompt Caching, Character Direction Style, Direction Stickiness),
+    Long Term Memory, Dynamic Actions, Guide Scene, Scene Direction, Character Management, Director Chat budgets and Arc Generation.'
 - path: user-guide/agents/editor/index.md
   title: Overview
-  summary: Introduces the experimental Editor agent, which post-processes generated content to add detail to dialogue and
-    fix exposition markers.
+  summary: Short overview of the experimental Editor agent, which post-processes generated content to add detail to dialogue
+    and fix exposition markers.
 - path: user-guide/agents/editor/revisions.md
   title: Revisions
-  summary: How editor revisions (0.30.0) detect and fix repetition and unwanted prose; automatic revision status indicators
-    and Agent Messages dialog, automatic revision targets, and manually triggering a revision on the latest message via the
-    Revise chip with version history preserved.
+  summary: 'Editor revisions (0.30.0) for detecting and fixing repetition and unwanted prose: the automatic revision status
+    indicators, the Agent Messages dialog, Automatic Revision Targets, and manual revision via the Revise chip with its version
+    paginator.'
 - path: user-guide/agents/editor/settings.md
   title: Settings
-  summary: Editor agent settings; fix exposition options, add detail, and the Revision section - enable/automatic revision,
-    revision targets, methods (Dedupe, Unslop, Targeted Rewrite), repetition detection (fuzzy vs semantic similarity), thresholds,
-    range, repetition handling, and unwanted prose detection.
+  summary: 'Editor agent settings: General (Client, Optimize for Prompt Caching, Cleanup content, Fix narrator messages, Fix
+    user input, Allow incomplete sentences, Add detail) and Revision - Enable Revision, Automatic Revision, Revision Method
+    (Dedupe, Unslop, Targeted Rewrite), similarity threshold and unwanted prose detection.'
 - path: user-guide/agents/help/index.md
   title: Overview
-  summary: 'Help agent overview: the in-app help chat opened from the app bar icon, grounded in the shipped documentation.
-    Covers what it can read and change (agent settings globally or per scene, game/appearance/creator settings), what stays
-    out of reach (API keys, clients), its refusal while the settings view has unsaved edits, multiple chats, and the Scene
+  summary: 'Overview of the Help agent''s interactive help chat, opened from the app bar: how it grounds answers in the bundled
+    documentation, what settings it can read and change, what stays off-limits such as API keys and clients, and the Scene
     Aware toggle.'
 - path: user-guide/agents/help/settings.md
   title: Settings
-  summary: 'Help agent settings: response token budget, tool call rounds, tool calls per round, and custom instructions.'
+  summary: 'Help agent settings: Response token budget, Tool call rounds for documentation lookups and settings reads before
+    it must answer, Tool calls per round, and Custom instructions.'
 - path: user-guide/agents/index.md
   title: Overview
-  summary: Top-level overview of all Talemate agents (Conversation, Creator, Director, Editor, Long-term Memory, Narrator,
-    Summarizer, Visualizer, Voice, World State) with one-line descriptions and a pointer to per-scene agent overrides.
+  summary: One-paragraph descriptions of every Talemate agent - Conversation, Creator, Director, Editor, Help, Long-term Memory,
+    Narrator, Summarizer, Visualizer, Voice and World State - plus a pointer to per-scene agent overrides.
 - path: user-guide/agents/memory/embeddings.md
   title: Embeddings
-  summary: Managing embedding models via application settings Presets; pre-configured options (all-MiniLM-L6-v2, gte-base-en-v1.5,
-    OpenAI text-embedding-3-small), adding custom sentence-transformer models, and editing properties like trust remote code,
-    device, distance, distance mod, and distance function. Notes INSTRUCTOR removal in 0.35.0.
+  summary: 'Embedding presets under Settings, Presets, Embeddings: the bundled all-MiniLM-L6-v2, gte-base-en-v1.5 and OpenAI
+    text-embedding-3-small, adding sentence-transformer models from Huggingface, and the properties Trust Remote Code, Device,
+    Distance and Distance Function.'
 - path: user-guide/agents/memory/index.md
   title: Overview
-  summary: Introduces the Memory agent, which manages long-term memory via embeddings using ChromaDB as the backend.
+  summary: Very short overview of the Memory agent, which manages long term memory via embeddings and currently supports only
+    ChromaDB as a backend.
 - path: user-guide/agents/memory/koboldcpp.md
   title: KoboldCpp Embeddings
-  summary: Using an embeddings model loaded in KoboldCpp (--embeddingsmodel flag); Talemate auto-detects it and switches the
-    Memory agent to the Client API embedding, plus how to revert to a local embedding.
+  summary: 'Using an embeddings model already loaded in KoboldCpp: start it with the --embeddingsmodel flag and the Memory
+    agent auto-detects it, switching the embedding to Client API. Also how to revert to a local embedding.'
 - path: user-guide/agents/memory/settings.md
   title: Settings
-  summary: Memory agent settings; selecting the embedding to use and the device (cpu/cuda), including the 0.37.0 behavior
-    where device changes no longer require a restart.
+  summary: 'Memory agent settings: the Embeddings picker, with presets managed under Embedding presets and OpenAI needing
+    an API key, and the Device setting for cpu or cuda, which since 0.37.0 no longer requires a restart.'
 - path: user-guide/agents/memory/testing.md
   title: Testing Embeddings
-  summary: How to test embedding accuracy by inspecting memory requests in the debug tools Memory tab, reading result distances
-    (green/yellow/red), and when to tweak embedding settings.
+  summary: 'Evaluating embedding accuracy with the debug tools Memory tab: watch memory requests during normal play, open
+    a request to inspect its results, and read the distance colour coding to decide whether to tweak embedding settings.'
 - path: user-guide/agents/narrator/auto-narration.md
   title: Auto Narration
-  summary: Auto Narration (0.37.0, replaces Narrate after Dialogue); a probability-gated dispatcher that fires Progress Story,
-    Narrate Scene, or Narrate Environment after actor turns. Covers the decision gates, Chance setting, auto-rebalancing action
-    weight sliders, the Disable-during-scene-direction option, and debug-logging troubleshooting.
+  summary: 'Auto Narration (0.37.0), the probability-gated replacement for Narrate after Dialogue: the per-turn gates, the
+    Chance slider, the auto-rebalancing Action Weights for Progress Story, Narrate Scene and Narrate Environment, and Disable
+    during scene direction.'
 - path: user-guide/agents/narrator/index.md
   title: Overview
-  summary: Introduces the Narrator agent for narrative text generation; explains scene intention awareness (story intention,
-    scene type, phase intention), writing style templates, and links to Auto Narration.
+  summary: 'Overview of the Narrator agent: how it uses story intention, scene type and scene phase intention from the World
+    Editor, how a writing style template influences narration, and a pointer to Auto Narration.'
 - path: user-guide/agents/narrator/settings.md
   title: Settings
-  summary: Narrator agent settings; client, generation override instructions, per-narration-type generation lengths (progress
-    story, scene, query, character, time passage, after dialogue, entry/exit), Use Scene Intent and Use Writing Style content
-    toggles, time passage narration prompting, and Auto Narration chance/weights.
+  summary: 'Narrator agent settings: General (Client, Optimize for Prompt Caching, Jiggle, Instructions, Generation Length
+    Per Narration Type), Use Scene Intent, Use Writing Style, Narrate time passage, the Auto Narration section with Chance
+    and Action Weights, and Long Term Memory.'
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
-  summary: 'Per-scene agent overrides: sparse per-field overrides edited on the Agents settings page (Settings → Connections
-    → Agents) via the Global/Scene switch and the link icons that activate or clear a field, applied only by the settings
-    toolbar''s Save. Also covers quick-toggle chips that write immediately, the project-level agent-settings/ JSON file, and
-    what cannot be overridden per scene (always-on sections, API keys and passwords).'
+  summary: 'Per-scene agent overrides: how sparse per-field overrides work, the Global / Scene switch on the Agents settings
+    page, activating a field via the link icon, settings that can never be overridden, gated settings, quick-toggle chips,
+    and the agent-settings JSON file.'
 - path: user-guide/agents/summarizer/index.md
   title: Overview
-  summary: Introduces the Summarizer agent; dialogue summarization, layered history (multi-level summaries), scene analysis
-    shared with other agents, and experimental context investigation into history layers.
+  summary: 'Overview of the Summarizer agent: dialogue summarization, layered history that re-summarizes at decreasing detail,
+    scene analysis shared with other agents, and the experimental context investigation.'
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
-  summary: Summarizer settings; token threshold and summarization method, custom instructions, layered history (thresholds,
-    max layers, chunking, analyzation), scene analysis (length, deep analysis, investigation cap, caching), and Scene Context
-    History budget controls (max budget, best fit mode, dialogue/summary ratios, summary boundary).
+  summary: 'Summarizer settings: General (Client, Token Threshold, Summarization Method, Custom instructions), Layered History
+    (token threshold, max layers, chunk size, analysation), Long term memory, Scene Analysis with deep analysis, and Scene
+    History budget controls (Best Fit Mode, dialogue/summary ratios, summary boundary).'
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
-  summary: Configuring the deprecated AUTOMATIC1111 text-to-image backend (API URL, steps, sampling method, CFG scale, resolutions);
-    its limitations (no image editing, auth, or model selection), sampler guidance, and the recommendation to migrate to SD.Next.
+  summary: 'The deprecated AUTOMATIC1111 text-to-image backend, superseded by SD.Next: prerequisites, API URL, Steps, Sampling
+    Method, Schedule Type, CFG Scale, Prompt Type and resolutions, its limitations, and automatic setup via KoboldCpp.'
 - path: user-guide/agents/visualizer/backends/comfyui.md
   title: ComfyUI
-  summary: Setting up ComfyUI as a text-to-image and image-editing backend; port/listen flags, workflow and model selection,
-    and building custom workflows with required Talemate node titles (Positive/Negative Prompt, Resolution, Load Model, Reference
-    1-3), Lightning LoRA, API export, and placing workflows in templates/comfyui-workflows.
+  summary: 'Setting up the ComfyUI visualizer backend: starting ComfyUI with --port and --listen, configuring API URL, Workflow,
+    Model, Prompt Type and resolutions, and custom workflows using the node titles Talemate Positive Prompt, Talemate Negative
+    Prompt, Talemate Resolution and Talemate Reference, exported with Export (API).'
 - path: user-guide/agents/visualizer/backends/google.md
   title: Google
-  summary: Configuring the Google (Gemini) visual backend for text-to-image, image editing (up to 3 reference images), and
-    image analysis; getting an AI Studio API key and choosing models like gemini-2.5-flash-image, gemini-3-pro-image-preview,
-    and vision text models for analysis.
+  summary: 'The Google visualizer backend using Gemini image models: a Google AI Studio API key, text-to-image with gemini-2.5-flash-image
+    and gemini-3-pro-image-preview, image editing with Max References, image analysis with vision-capable Gemini models, and
+    aspect-ratio handling.'
 - path: user-guide/agents/visualizer/backends/openai-compatible-vision.md
   title: OpenAI Compatible (Vision)
-  summary: Using any OpenAI-compatible chat endpoint with vision support (llama.cpp, Ollama, vLLM) as the image analysis backend;
-    base URL, optional API key, model name, and troubleshooting connection or model issues.
+  summary: 'Using any OpenAI-compatible multimodal endpoint such as llama.cpp, Ollama or vLLM as the visualizer''s image analysis
+    backend: the Base URL, optional API Key and Model settings, and troubleshooting connection, empty-response and model-not-found
+    errors.'
 - path: user-guide/agents/visualizer/backends/openai.md
   title: OpenAI
-  summary: Configuring the OpenAI visual backend; DALL-E 3 and gpt-image-1/mini for text-to-image, GPT-Image models for editing
-    (single reference, org verification may be required), gpt-4.1-mini/gpt-4o-mini for analysis, and per-model resolutions.
+  summary: 'The OpenAI visualizer backend: setting the API key, text-to-image models dall-e-3, gpt-image-1 and gpt-image-1-mini
+    with fixed resolutions, image editing with gpt-image models only, image analysis with gpt-4.1-mini or gpt-4o-mini, and
+    organization verification caveats.'
 - path: user-guide/agents/visualizer/backends/openrouter.md
   title: OpenRouter
-  summary: Configuring OpenRouter as a visual backend for text-to-image, editing, and analysis; API key setup, unfiltered
-    model lists (verify capability yourself), Max References, and provider filtering with only-use/ignore lists.
+  summary: 'The OpenRouter visualizer backend: the API key and configuring text-to-image, image editing with Max References
+    and image analysis, each with an unfiltered model dropdown. Also provider filtering with Only use these providers and
+    Ignore these providers.'
 - path: user-guide/agents/visualizer/backends/sdnext.md
   title: SD.Next
-  summary: Configuring SD.Next for text-to-image and img2img image editing; API URL, authentication methods (none, basic,
-    bearer API key incl. ArliAI), steps/sampler/CFG, dynamic model and sampler lists, resolutions, and remote access security
-    notes.
+  summary: 'The SD.Next visualizer backend for text-to-image and img2img editing: API URL, authentication with None, Basic
+    or Bearer API key, Steps, Sampling Method, CFG Scale, Model, Prompt Type and resolutions, plus dynamic model and sampler
+    fetching.'
 - path: user-guide/agents/visualizer/backends/talemate-client.md
   title: Talemate Client (Vision)
-  summary: Reusing an existing vision-enabled Talemate LLM client (KoboldCpp, llama.cpp, text-generation-webui) as the image
-    analysis backend; enabling the Vision toggle on the client, selecting it in the Visualizer, advantages over a separate
-    endpoint, and troubleshooting.
+  summary: 'Reusing an existing Talemate LLM client for image analysis: the Enable Vision toggle in client settings, supported
+    on KoboldCpp, llama.cpp and text-generation-webui, selecting the client under Backend (image analysis), and troubleshooting
+    empty dropdowns.'
 - path: user-guide/agents/visualizer/index.md
   title: Overview
-  summary: Overview of the Visualizer agent for image generation; the three operations (text-to-image, image editing, image
-    analysis), supported backends per operation, style templates, Visual Library and inline visuals, scenario-tool shortcuts
-    (Visualize Scene/Character/Moment), and generation via Director Chat.
+  summary: 'Overview of the Visualizer agent: text-to-image, image editing and image analysis, the supported backends ComfyUI,
+    Google, OpenAI, OpenRouter, SD.Next and AUTOMATIC1111, style templates, inline visuals, the Visual Library, and the Visualize
+    Scene / Character / Moment shortcuts.'
 - path: user-guide/agents/visualizer/settings.md
   title: Settings
-  summary: 'Visualizer agent settings sections: General (text-to-image, editing and analysis backends, timeout, automatic
-    setup/generation), Prompt Generation (fallback prompt type, max prompt length, automatic reference analysis, editing-prompt
-    revision), Styles per visual type, Prompt Finalization (presets, post-processing actions in exact/fuzzy/regex/AI modes),
-    and resolution presets for local backends.'
+  summary: 'Visualizer agent settings: General (Client, separate backends for text to image, image editing and image analysis,
+    Image Generation Timeout, Automatic Setup, Automatic Generation), Prompt Generation with Fallback Prompt Type and Automatic
+    Analysis of References, the Styles pickers, Prompt Finalization and resolution presets.'
 - path: user-guide/agents/visualizer/visual-library.md
   title: Visual Library
-  summary: The Visual Library for managing generated images; Prompt vs Instruct generation modes, visual types (character
-    card/portrait, scene card/background/illustration), regenerating, iterating with reference images, saving to shared scene
-    assets, uploading, reference configuration and tags, cover crop, and AI image analysis.
+  summary: 'The Visual Library: generating images in Prompt or Instruct mode, the visual types character card, portrait, scene
+    background and illustration, formats, reference images, saving to Scene Assets, queue management, asset actions such as
+    set cover and set backdrop, tags and Sync from Analysis.'
 - path: user-guide/agents/voice/chatterbox.md
   title: Chatterbox
-  summary: Chatterbox local voice cloning backend; device/model/chunk-size settings, voice requirements (5-15s clean .wav),
-    creating a voice in the Voice Library, and per-voice parameters like exaggeration level and CFG/pace.
+  summary: 'The Chatterbox local zero-shot voice cloning backend: Device and Chunk size settings, .wav reference audio requirements,
+    creating a voice in the Voice Library with Label, Voice ID, Speed and Tags, plus Exaggeration Level and CFG / Pace.'
 - path: user-guide/agents/voice/elevenlabs.md
   title: ElevenLabs
-  summary: ElevenLabs TTS backend; API key setup, model selection, subscription voice-slot limits warning, copying voice IDs
-    from the ElevenLabs voice lab, and adding those voices in Talemate's Voice Library.
+  summary: 'The ElevenLabs TTS backend: API key setup, Model, Chunk size and the Jinja2 Audio tag format template, the subscription
+    voice-limit warning, and copying an ElevenLabs voice ID to register it as a voice in Talemate.'
 - path: user-guide/agents/voice/f5tts.md
   title: F5-TTS
-  summary: F5-TTS local voice cloning backend; device, model variants (F5TTS_v1_Base etc.), NFE steps, chunk size, exclamation-mark
-    replacement, reference audio and reference text requirements for creating voices, plus speed and CFG strength parameters.
+  summary: 'The F5-TTS local voice cloning backend: Device, Model (F5TTS_v1_Base, F5TTS_Base, E2TTS_Base), NFE Step, Chunk
+    size, Replace exclamation marks, reference audio requirements, and creating a voice with Reference Text, Speed, Tags and
+    CFG Strength.'
 - path: user-guide/agents/voice/google.md
   title: Google Gemini-TTS
-  summary: Google Gemini-TTS backend; requires a Google Cloud API key and lets you select from available Google TTS models.
+  summary: 'The Google Gemini-TTS backend: obtaining a Google Cloud API key and setting it here or under Connections, API
+    Keys, plus the Model and Chunk size settings.'
 - path: user-guide/agents/voice/index.md
   title: Overview
-  summary: Overview of the Voice (TTS) agent; per-character voice assignment, speaker separation, voice library, supported
-    local APIs (Kokoro, F5-TTS, Chatterbox, Pocket TTS) and remote APIs (ElevenLabs, Google, OpenAI, OpenAI Compatible), enabling
-    the agent, and character voice fallback behavior.
+  summary: 'Overview of the refactored Voice (TTS) agent: per-character voice assignment, speaker separation, the voice library
+    and director integration. Lists the local APIs Kokoro, F5-TTS, Chatterbox and Pocket TTS and the remote APIs ElevenLabs,
+    Google Gemini-TTS, OpenAI and OpenAI Compatible.'
 - path: user-guide/agents/voice/kokoro.md
   title: Kokoro
-  summary: Kokoro TTS backend with predefined voice models; creating mixed voices via the Mixer (2-4 base voices with weights
-    summing to 1.0) and saving them for character or narrator use.
+  summary: 'The Kokoro TTS backend: its predefined voice models, and creating mixed voices in the Voice Library through the
+    Mixer option by combining 2-4 base voices with weights that sum to 1.0.'
 - path: user-guide/agents/voice/openai-compatible.md
   title: OpenAI Compatible
-  summary: 'The Voice agent''s OpenAI Compatible backend registry: adding, renaming and removing backends, the per-backend
-    API base URL, key, model, voices endpoint and chunk size, the Refresh voices auto-fetch, adding voices manually in the
-    Voice Library, and auto-managed backends registered by clients such as KoboldCpp.'
+  summary: 'The OpenAI Compatible TTS registry (0.37.0): adding, renaming and removing backends, each with its API Base URL,
+    API Key, Model, Voices endpoint and Chunk size, plus Refresh voices and auto-managed backends registered by clients like
+    KoboldCpp.'
 - path: user-guide/agents/voice/openai.md
   title: OpenAI
-  summary: OpenAI TTS backend; requires an API key and offers model selection between GPT-4o Mini TTS, TTS-1, and TTS-1 HD.
+  summary: 'The OpenAI TTS backend: setting the OpenAI API key, choosing the Model (GPT-4o Mini TTS, TTS 1, TTS 1 HD) and
+    the Chunk size setting.'
 - path: user-guide/agents/voice/pocket-tts.md
   title: Pocket TTS
-  summary: Pocket TTS, Kyutai's CPU-based voice-cloning model; HuggingFace token for gated downloads, language/model selection,
-    temperature and decode parameters, int8 quantization, chunk size, v1-to-v2 migration, built-in voices, custom .wav or
-    hf:// catalog voices, and troubleshooting.
+  summary: 'The CPU-based Pocket TTS backend from Kyutai on pocket-tts v2: first-time model download, gated voice-cloning
+    terms, the HuggingFace Token setting, the Language / Model dropdown, Temperature, LSD Decode Steps, Noise Clamp, EOS Threshold,
+    Quantize (int8) and Chunk Size.'
 - path: user-guide/agents/voice/settings.md
   title: Settings
-  summary: Voice agent settings; enabling multiple TTS APIs, narrator voice selection, speaker separation modes (none, simple,
-    mixed, AI assisted), auto-generate toggles per message type, and the 0.37.0 Automatic Setup that registers OpenAI Compatible
-    backends for clients with TTS models.
+  summary: 'Voice agent settings: Enabled APIs (Kokoro, F5-TTS, Chatterbox, Pocket TTS, ElevenLabs, Google Gemini-TTS, OpenAI,
+    OpenAI Compatible), Narrator Voice, Speaker Separation modes No separation, Simple, Mixed and AI assisted, the auto-generate
+    toggles, Automatic Setup and Audio tags.'
 - path: user-guide/agents/voice/troubleshooting.md
   title: TTS Troubleshooting
-  summary: Fixing common TTS problems, chiefly FFmpeg-not-found/libtorchcodec errors for Chatterbox and F5-TTS; the install-ffmpeg.bat
-    script on Windows, package-manager install on Linux/macOS, and verifying the installation.
+  summary: 'Common TTS problems, focused on missing FFmpeg required by Chatterbox and F5-TTS: the libtorchcodec error symptoms,
+    running install-ffmpeg.bat on Windows or a package manager on Linux/macOS, and restarting Talemate.'
 - path: user-guide/agents/voice/voice-library.md
   title: Voice Library
-  summary: The Voice Library for managing voices across all TTS providers; global vs scene scope tabs, API status colors,
-    adding voices per provider, automatic (Director) and manual character voice assignment, and free-form tagging, filtering,
-    and search.
+  summary: 'The Voice Library: opening it from the app bar, the Global / Scene / Characters scope tabs, the API status colours,
+    adding voices with Label, Provider ID, Tags and provider parameters, scene-scoped voices, character voice assignment,
+    and tagging with search.'
 - path: user-guide/agents/world-state/index.md
   title: Overview
-  summary: Introduces the World State agent, which generates world state snapshots (location, time, character states) and
-    reinforces tracked states, and can propose character progression changes as the story advances.
+  summary: 'Overview of the World State agent: generating the world state snapshot of location, time of day, weather and character
+    states, reinforcing tracked states, and character progression that updates a character''s description and attributes.'
 - path: user-guide/agents/world-state/settings.md
   title: Settings
-  summary: World State agent settings; snapshot update frequency and moment size, durable snapshot with max items and stale-entry
-    eviction, pin to context, state reinforcement and conditional context pin updates, character progression checks and suggestions,
-    and character portrait auto-selection/generation.
+  summary: 'World State agent settings: Update World State (initial snapshot, Turns, Lines in the moment, Include Look at,
+    Add Detail, Custom instructions, Pin to context, Durable snapshot with Max items tracked), state reinforcement, Character
+    Progression, Character Portraits and Long Term Memory.'
 - path: user-guide/api-key-encryption.md
   title: API Key Encryption
-  summary: 'Explains how Talemate (0.36.0+) automatically encrypts API keys in config.yaml with Fernet (ENC: prefix), where
-    the encryption key is stored (OS keyring vs file-based fallback, TALEMATE_ENCRYPTION_KEY env var), automatic migration
-    of plaintext keys, and recovery from lost/corrupted keys and Docker deployment considerations.'
+  summary: Since 0.36.0 all api_key and override_api_key fields are Fernet-encrypted in config.yaml with an 'ENC:' prefix.
+    Covers OS keyring storage, the secrets/encryption.key fallback, TALEMATE_DISABLE_KEYRING, TALEMATE_ENCRYPTION_KEY_DIR,
+    Docker volumes, and losing the key.
 - path: user-guide/apis/anthropic.md
   title: Anthropic API Setup
-  summary: Set the Anthropic API key for text generation in Settings under Connections, API Keys (scroll or search for Anthropic);
-    includes where to create keys on console.anthropic.com.
+  summary: Create an Anthropic API key at console.anthropic.com/settings/keys, then add it under Settings -> Connections ->
+    API Keys -> Anthropic and save.
 - path: user-guide/apis/cohere.md
   title: Cohere API Setup
-  summary: Set the Cohere API key for text generation in Settings under Connections, API Keys (scroll or search for Cohere);
-    includes where to create keys on dashboard.cohere.com.
+  summary: Create a Cohere API key at dashboard.cohere.com/api-keys, then add it under Settings -> Connections -> API Keys
+    -> Cohere and save.
 - path: user-guide/apis/elevenlabs.md
   title: ElevenLabs
-  summary: Set the ElevenLabs API key for text-to-speech in Settings under Connections, API Keys (scroll or search for ElevenLabs),
-    then configure the Voice agent to use it.
+  summary: Create an ElevenLabs account and copy the API key from your profile, then add it under Settings -> Connections
+    -> API Keys -> ElevenLabs and save before configuring the voice agent.
 - path: user-guide/apis/google.md
   title: Google Cloud Setup
-  summary: 'Set up Google Cloud for Gemini via Vertex AI: create a project and service account, download the credentials JSON
-    into the talemate directory, and configure the credentials path and Google Cloud location in Settings under Connections, API Keys (Google entry).'
+  summary: 'Setting up Google Gemini via Vertex AI: create a Google Cloud project, enable the Vertex AI API, create a service
+    account and download its JSON credentials, then set the Credentials Path and Location under Settings -> Connections ->
+    API Keys -> Google.'
 - path: user-guide/apis/groq.md
   title: Groq API Setup
-  summary: Set the Groq API key for text generation in Settings under Connections, API Keys (scroll or search for groq); includes
-    where to create keys on console.groq.com.
+  summary: Create a Groq API key at console.groq.com/keys, then add it under Settings -> Connections -> API Keys -> groq and
+    save.
 - path: user-guide/apis/mistral.md
   title: Mistral.ai API Setup
-  summary: Set the Mistral.ai API key for text generation in Settings under Connections, API Keys (scroll or search for mistral.ai);
-    includes where to create keys on console.mistral.ai.
+  summary: Create a Mistral.ai API key at console.mistral.ai/api-keys, then add it under Settings -> Connections -> API Keys
+    -> mistral.ai and save.
 - path: user-guide/apis/openai.md
   title: OpenAI API Setup
-  summary: Set the OpenAI API key for text, image, and audio generation in Settings under Connections, API Keys (scroll or search
-    for OpenAI); includes where to create keys on platform.openai.com.
+  summary: Create an OpenAI API key at platform.openai.com/api-keys, then add it under Settings -> Connections -> API Keys
+    -> OpenAI and save. OpenAI is usable for text, image and audio generation.
 - path: user-guide/apis/openrouter.md
   title: OpenRouter API Setup
-  summary: Set the OpenRouter API key (from openrouter.ai/keys) in Settings under Connections, API Keys (scroll or search for
-    OpenRouter), to use any model available through OpenRouter.
+  summary: Create an OpenRouter API key at openrouter.ai/keys, then paste it into the API Key field under Settings -> Connections
+    -> API Keys -> OpenRouter and save to reach any model OpenRouter exposes.
 - path: user-guide/app-settings/appearance.md
   title: Appearance
-  summary: 'Appearance settings for the scene feed: per-message-type styling (narrator, actor, director, time, context investigations)
-    with italic/bold/color/visibility, text markup styling for quotes, parentheses, brackets, emphasis, and entity highlights,
-    live preview, and Visuals-page controls for avatar/card/scene-illustration cadence (Always/On Change/Never), size, and
-    auto-attach.'
+  summary: Appearance settings, split into Messages and Visuals. Messages covers per-type italic/bold/show/color for narrator,
+    actor, director and time messages plus markup styling for quotes, brackets and entity highlights. Visuals covers render
+    cadence, display size and Auto Backdrop.
 - path: user-guide/app-settings/application.md
   title: Connections
-  summary: 'The Connections settings group: its Clients and Agents pages (documented separately), plus API Keys — one page
-    holding every service key, including the HuggingFace token for gated model weights — and Environment Variables, named
-    encrypted values passed to processes Talemate spawns such as the Pi Bridge client.'
+  summary: The Connections settings group - Clients, Agents and the API Keys page holding all third-party credentials, including
+    the HuggingFace token for gated weights like Pocket TTS, plus the Environment Variables page (0.39.0) passed to spawned
+    processes.
 - path: user-guide/app-settings/creator.md
   title: Storytelling
-  summary: 'Storytelling settings group (formerly Creator) holding global picker lists: Content Classification strings for scene setup and Perspective
-    Presets (added 0.38.0) for the scene outline''s perspective/tense comboboxes, including the {player_name} placeholder
-    substitution and how to add or remove presets.'
+  summary: The Storytelling settings group with two global picker lists - Content Classification strings offered when setting
+    up a scene, and Perspective Presets (0.38.0) offered in every scene-outline 'Perspective and tense' combobox - plus the
+    {player_name} placeholder.
 - path: user-guide/app-settings/game.md
   title: Game
-  summary: 'How the Settings tab works — sidebar groups (Connections, Game, Appearance, Presets, Storytelling), the search
-    field, and the toolbar Unsaved changes / Save / Discard flow with its leave-the-tab prompt — followed by the Game group:
-    auto save, auto progress, max backscroll, agent activity bar, release GPU cache on scene load, and the default player
-    character.'
+  summary: 'The Game settings group: Auto save, Auto progress, Max backscroll, Show agent activity bar, Release GPU cache
+    on scene load, and the default Player Character. Also how the Settings tab works - sidebar groups, search, and the unsaved
+    changes indicator with Save/Discard.'
 - path: user-guide/app-settings/presets.md
   title: Presets
-  summary: 'The Presets settings group and its three pages: Inference (per-action generation parameter presets), Embeddings
-    (embedding models for the memory agent via chromadb), and System Prompts (app-wide overrides per prompt kind; per-client
-    overrides live in the client editor).'
+  summary: The Presets settings group with three pages - Inference (per-action generation parameter presets such as Analytical
+    and Conversation), Embeddings (embedding models for the memory agent's chromadb), and System Prompts (app-wide overrides
+    per prompt kind).
 - path: user-guide/app-settings/system-prompts.md
   title: System Prompt Overrides
-  summary: 'System prompt overrides per prompt kind (Conversation, Narration, Creation, Direction, Analysis, Editing, World
-    State, Summarization): the client → app-level → built-in resolution order, where each is edited (Presets → System Prompts,
-    or the client editor''s System Prompts section), Normal/Uncensored variants, the pencil icon marking active overrides,
-    and {{ system_prompt }}.'
+  summary: Overriding system prompts per prompt kind (Conversation, Narration, Creation, Direction, Analysis, Editing, World
+    State, Summarization). Explains the client override > app-level override > built-in default order, the Normal vs Uncensored
+    tabs, the Apply Default button and {{ system_prompt }} inlining.
 - path: user-guide/character-card-import.md
   title: Character Card Import
   summary: How to import TavernAI-style character cards (Chara Card V0-V3, PNG/JPG/WebP images or JSON) from the home screen's
@@ -391,826 +394,798 @@
     greetings, shared context setup, writing style template, player character setup, and troubleshooting failed analysis.
 - path: user-guide/clients/auto-retry.md
   title: Auto Retry
-  summary: 'Per-client automatic retries (0-5) before a response issue is reported: the Empty Response and Rate Limited sliders
-    in the client editor''s Advanced section, and Missing Reasoning in the Reasoning section (only with Pattern Not Found
-    Behavior set to Fail). Covers the HTTP 429 backoff and how this differs from the client-side Rate Limit cap.'
+  summary: 'Per-client sliders (0-5) that silently retry before the generation error dialog appears: Empty Response and Rate
+    Limited (HTTP 429, backing off up to 30s) in the Advanced section, and Missing Reasoning in the Reasoning section.'
 - path: user-guide/clients/client-configuration.md
   title: Client Configuration
-  summary: 'The Clients settings page (Settings → Connections → Clients): the client list with status dots and the Unsaved
-    chip, adding a client from the client type menu, the editor''s collapsible sections (General, Coercion, Advanced, Reasoning,
-    System Prompts), Assign to all agents and Remove, shared provider API keys, and the toolbar Save/Discard that applies
-    everything.'
+  summary: 'Configuring clients on Settings -> Connections -> Clients: the client list with status dots and Unsaved chips,
+    Add client type menu, Assign to all agents, the General/Coercion/Advanced/Reasoning/System Prompts sections, and the Save/Discard
+    toolbar.'
 - path: user-guide/clients/concurrent-requests.md
   title: Concurrent Requests (Experimental)
-  summary: Experimental concurrent requests, letting a client run several LLM queries in parallel (visual prompt generation,
-    function-calling batches, multi-query world state). Lists the supported clients (Anthropic, OpenAI, Google, MistralAI,
-    OpenRouter, Pi Bridge, llama.cpp), enabling it from the client list toggle or the client editor's Concurrency section,
-    and rate-limit caveats.
+  summary: 'Experimental per-client toggle in the Concurrency section that runs batch LLM queries in parallel: visual prompts,
+    function calling, world state updates. Supported by Anthropic, OpenAI, Google, MistralAI, OpenRouter, Pi Bridge and llama.cpp.'
 - path: user-guide/clients/endpoint-override.md
   title: Endpoint Override
-  summary: 'Pointing a remote client at a different endpoint (for example a local LiteLLM proxy) from the Endpoint Override
-    section of the client editor: the base URL and a separate API key for the proxy, with a warning to only use endpoints
-    you trust.'
+  summary: The Endpoint Override section on remote clients, pointing a client at a proxy gateway such as LiteLLM via a Base
+    URL plus a separate API Key that is the proxy's key, not your real provider key. Warns against untrusted endpoints.
 - path: user-guide/clients/hibernate.md
   title: Hibernation
-  summary: How to hibernate (temporarily disable) a client via the power button in the client list to declutter the UI without
-    deleting it, and how to re-enable it.
+  summary: 'Hibernating a client with the :material-power: button on its entry to shrink its presence in the client list instead
+    of deleting and re-creating it; the same button re-enables it.'
 - path: user-guide/clients/index.md
   title: Overview
-  summary: Introduction to Talemate clients that connect agents to local or remote text-generation APIs, why using multiple
-    clients for different tasks is encouraged, and an index of setup guides for all supported remote (OpenAI, Anthropic, Mistral,
-    Cohere, Groq, Google) and local (KoboldCpp, llama.cpp, Text-Generation-WebUI, LMStudio) client types.
+  summary: 'Landing page for LLM clients: using different models for management vs. creative tasks, the Model Testing Harness
+    for qualifying one, and the supported types - remote (OpenAI, Anthropic, mistral.ai, Cohere, Groq, Gemini) and local (KoboldCpp,
+    llama.cpp, LMStudio).'
 - path: user-guide/clients/model-testing-harness.md
   title: Model Testing Harness
-  summary: The bundled model-testing-harness scene that runs six minimum-viability tests against the clients your agents use
-    — basic instruction following, structured data response, conversation, narration, FOCAL function calling and problem solving
-    — how to load it from the Scene Library and what each failure implies.
+  summary: 'The bundled model-testing-harness scene that auto-runs six minimum-viability tests against the clients assigned
+    to your agents: Basic Instruction Following, Data Response, Conversation Generation, Narrative Generation, Function Calling
+    (FOCAL) and Problem Solving.'
 - path: user-guide/clients/presets.md
   title: Inference Configuration
-  summary: 'Inference presets under Settings → Presets → Inference: the preset categories (Analytical, Conversation, Creative,
-    Deterministic, Scene Direction, Summarization) and how agents pick one per action, the available parameters (temperature,
-    top-p/top-k, min-p, penalties, XTC, DRY, smoothing, adaptive-p), the Apply to all and Reset actions, and creating preset
-    groups selected per client.'
+  summary: 'The Settings -> Presets -> Inference editor: preset categories picked per agent action (Analytical, Conversation,
+    Creative, Deterministic, Scene Direction, Summarization), the parameters (temperature, top-p, top-k, min-p, penalties,
+    XTC, DRY), and preset groups.'
 - path: user-guide/clients/prompt-templates.md
   title: Prompt Templates
-  summary: 'Prompt templates for the clients where Talemate builds the prompt (KoboldCpp, llama.cpp, Text-Generation-WebUI,
-    LMStudio, TabbyAPI): the warning triangle for an unset template, Determine via HuggingFace, picking one manually in the
-    client editor, and adding user templates from the Prompts view.'
+  summary: Why the correct prompt template matters for clients where Talemate builds the prompt (KoboldCpp, llama.cpp, Text-Generation-WebUI,
+    LMStudio, TabbyAPI), the warning for an unset template falling back to Alpaca, and the DETERMINE VIA HUGGINGFACE button.
 - path: user-guide/clients/rate-limiting.md
   title: Rate Limiting
-  summary: Talemate's own client-side requests-per-minute cap, set with the Rate Limit slider in the client editor's Advanced
-    section, and the notification when the limit is hit (wait out a countdown or abort). Distinct from the Rate Limited auto-retry
-    for HTTP 429.
+  summary: Talemate's own client-side requests-per-minute cap, the Rate Limit slider in the Advanced section. Hitting the
+    cap opens a popup to wait or abort the generation; distinct from the Auto Retry Rate Limited slider that reacts to API
+    429s.
 - path: user-guide/clients/reasoning.md
   title: Reasoning Model Support
-  summary: 'Reasoning model support per client: Enable Reasoning and the Reasoning Tokens budget in the client editor''s Reasoning
-    section, the pattern stripped from the response and Pattern Not Found Behavior (Fail/Ignore) with its Auto Retry slider,
-    per-action reasoning overrides added from a prompt''s detail view, and the automatic disabling of coercion.'
+  summary: 'The client Reasoning section: Enable Reasoning, Reasoning Tokens budgets, Strip pattern presets (Default, gpt-oss,
+    gemma-4, thinking-arrow), the Validation pattern, Pattern Not Found Behavior and Reason Prefill, plus per-agent-action
+    reasoning overrides.'
 - path: user-guide/clients/recommended-models.md
   title: Recommended Local Models
-  summary: Talemate no longer maintains a model list; points to external benchmarks, advises 7B minimum (unquantized for 7B/8B
-    if possible), and suggests validating candidates with the Model Testing Harness.
+  summary: Talemate no longer maintains a recommended-model list; points at the oobabooga benchmark leaderboard, advises against
+    going below 7B (unquantized for 7B/8B), and suggests running the Model Testing Harness on a candidate.
 - path: user-guide/clients/response-length.md
   title: Response Length Enforcement
-  summary: 'The Response Length Enforcement setting in the client editor''s Advanced section: the four modes (limit tokens
-    and send instructions, limit tokens, send instructions, uncapped) and the token-budget-to-instruction table used when
-    instructions are appended.'
+  summary: 'The Advanced-section dropdown choosing how response length is enforced: Limit tokens and send instructions (default),
+    Limit tokens, Send instructions, or Uncapped, plus the token-budget-to-instruction mapping used when templates lack them.'
 - path: user-guide/clients/section-format.md
   title: Section Format
-  summary: 'The per-client Section Format setting in the client editor''s Advanced section, controlling how prompt section
-    boundaries are rendered: Talemate decides, Markdown headings, or paired uppercase XML tags. Notes the tag shown on the
-    client''s sidebar row for non-default values.'
+  summary: 'Per-client Advanced setting controlling how prompt section boundaries are rendered: Talemate decides (default,
+    same as Markdown), Markdown (## Characters headings), or XML (paired uppercase tags). Non-default choices show as a tag
+    on the sidebar row.'
 - path: user-guide/clients/template-locking.md
   title: Template Locking
-  summary: 'Template locking: the Lock Template checkbox in the client editor pins a prompt template so it stops following
-    the loaded model, useful for keeping reasoning and non-reasoning variants on separate clients. Covers choosing the template
-    to lock and unlocking to restore automatic detection.'
+  summary: The Lock Template checkbox that stops a client's prompt template from auto-updating when the model changes, useful
+    for pinning reasoning vs. non-reasoning variants. Covers checking the box, picking the template to lock, saving, and unlocking.
 - path: user-guide/clients/types/anthropic.md
   title: Anthropic Client
-  summary: 'Adding an Anthropic client from Settings → Connections → Clients: the missing-API-key warning and the Set API
-    Key shortcut to the API Keys page, plus the client name, model and context length settings.'
+  summary: 'Adding an Anthropic client from Settings -> Connections -> Clients, setting the shared Anthropic API key via SET
+    API KEY, and its settings: Client Name, Model (defaults to claude-haiku-4-5) and Context Length.'
 - path: user-guide/clients/types/cohere.md
   title: Cohere Client
-  summary: 'Adding a Cohere client from Settings → Connections → Clients: the missing-API-key warning and the Set API Key
-    shortcut to the API Keys page, plus the client name, model (defaults to command-r-plus) and context length settings.'
+  summary: 'Adding a Cohere client from Settings -> Connections -> Clients, setting the shared Cohere API key via SET API
+    KEY, and its settings: Client Name, Model (defaults to command-r-plus) and Context Length.'
 - path: user-guide/clients/types/deepseek.md
   title: DeepSeek Client
-  summary: 'Adding a DeepSeek client from Settings → Connections → Clients: the missing-API-key warning and the Set API Key
-    shortcut to the API Keys page, the client name, model (deepseek-chat or deepseek-reasoner) and context length, and enabling
-    Reasoning with a 512-1024 token budget for deepseek-reasoner.'
+  summary: Adding a DeepSeek client and its API key from platform.deepseek.com, plus Client Name, Model (deepseek-chat or
+    deepseek-reasoner) and Context Length. deepseek-reasoner needs Reasoning enabled with 512-1024 Reasoning Tokens or it
+    returns empty content.
 - path: user-guide/clients/types/google.md
   title: Google Client
-  summary: 'Adding a Google client from Settings → Connections → Clients: the missing-credentials warning and the shortcut
-    to the API Keys page for Google credentials, plus the client name, model, context length and Disable Safety Settings.'
+  summary: Adding a Google (Gemini) client and its Google Cloud credentials via SETUP GOOGLE API CREDENTIALS, plus Client
+    Name, Model (defaults to gemini-3.5-flash), Context Length, and Disable Safety Settings for harmful-content response validation.
 - path: user-guide/clients/types/groq.md
   title: Groq Client
-  summary: 'Adding a Groq client from Settings → Connections → Clients: the missing-API-key warning and the Set API Key shortcut
-    to the API Keys page, plus the client name, model and context length settings.'
+  summary: 'Adding a Groq client from Settings -> Connections -> Clients, setting the shared Groq API key via SET API KEY,
+    and its settings: Client Name, Model (defaults to moonshotai/kimi-k2-instruct) and Context Length.'
 - path: user-guide/clients/types/koboldcpp.md
   title: KoboldCpp Client
-  summary: 'Adding a KoboldCpp client: API URL (United API by default, append /v1 for the OpenAI abstraction), API key and
-    context length, the generation parameters the United API supports, automatic Visual agent setup, and the TTS auto-setup
-    that registers the instance as an OpenAI Compatible voice backend.'
+  summary: 'Setting up a KoboldCpp client: API Url (append /v1 for the OpenAI abstraction), API Key, Context Length, and the
+    inference-preset parameters the United API supports (min-p, XTC, DRY, Smoothing). Also Visual and Voice agent auto-setup.'
 - path: user-guide/clients/types/llamacpp.md
   title: llama.cpp Client
-  summary: 'Adding a llama.cpp client for llama-server: API URL (default port 8080) and key, the ''API handles prompt template''
-    option that uses the server''s /apply-template endpoint, context length, Concurrent Inference in the Concurrency section
-    (needs parallel slots), and connection troubleshooting.'
+  summary: 'Setting up a client against llama-server: API URL (default http://localhost:8080), API Key, Context Length, the
+    off-by-default ''API handles prompt template'' option using the server''s /apply-template endpoint, and Concurrent Inference
+    needing parallel slots.'
 - path: user-guide/clients/types/lmstudio.md
   title: LMStudio Client
-  summary: 'Adding an LMStudio client: API URL (default http://localhost:1234), API key and context length, plus troubleshooting
-    for bad generations (wrong prompt template) and connection failures — LMStudio''s server has to be started, not just the
-    application.'
+  summary: 'Setting up an LMStudio client: Client Name, API Url (default http://localhost:1234), API Key and Context Length
+    (8192), plus troubleshooting - assign the correct prompt template, and start the server from inside LMStudio, not just
+    the app.'
 - path: user-guide/clients/types/mistral.md
   title: Mistral.ai Client
-  summary: 'Adding a Mistral.ai client from Settings → Connections → Clients: the missing-API-key warning and the Set API
-    Key shortcut to the API Keys page, plus the client name, model, context length and Concurrent Inference in the Concurrency
-    section.'
+  summary: 'Adding a MistralAI client and its API key, plus its settings: Client Name, Model (defaults to open-mixtral-8x22b),
+    Context Length, and Concurrent Inference in the Concurrency section, whose parallelism depends on your account''s rate
+    limits.'
 - path: user-guide/clients/types/ollama.md
   title: Ollama Client
-  summary: 'Adding an Ollama client: API URL (default http://localhost:11434), the model picked from the list Talemate fetches
-    from your local instance, and the ''API handles prompt template'' and ''Allow thinking'' options, plus the offline and
-    no-model-loaded warnings.'
+  summary: 'Setting up an Ollama client: API URL (default http://localhost:11434), Model picked from the list Talemate fetches
+    from your local instance, ''API handles prompt template'' (leave off) and ''Allow thinking''. Covers the offline and no-model-loaded
+    warnings.'
 - path: user-guide/clients/types/openai-compatible.md
   title: OpenAI Compatible Client
-  summary: 'The generic OpenAI Compatible client for services without official support, with DeepInfra as the worked example:
-    API URL, key, manually typed model name, ''API handles prompt template'' and context length, plus the Parameters toggles
-    that omit temperature, top_p or presence_penalty from requests.'
+  summary: 'Generic client for services exposing an OpenAI-like API, illustrated with DeepInfra: API Url, API Key, ''API handles
+    prompt template'' (recommended off), free-form model name and Context Length, plus the Parameters toggles for unsupported
+    sampler parameters.'
 - path: user-guide/clients/types/openai.md
   title: OpenAI Client
-  summary: 'Adding an OpenAI client from Settings → Connections → Clients: the missing-API-key warning and the Set API Key
-    shortcut to the API Keys page, the client name, model and context length, and guidance for the o1/o3/gpt-5 reasoning families
-    (enable Reasoning, 512-1024 reasoning tokens).'
+  summary: Adding an OpenAI client and its API key, plus Client Name, Model (defaults to gpt-4o) and Context Length. The o1,
+    o3 and gpt-5 reasoning families need the client's Reasoning option enabled with 512-1024 Reasoning Tokens or you get empty
+    output.
 - path: user-guide/clients/types/openrouter.md
   title: OpenRouter Client
-  summary: 'Adding an OpenRouter client: the API key, set on the API Keys page or from the card in the client editor''s General
-    section, the model chosen from the list fetched for your key (save again to refresh), context length, and the Parameters
-    toggles that omit individual samplers some providers reject.'
+  summary: Adding an OpenRouter client, entering the key on the API Keys page or the OpenRouter API Key card in the client
+    editor, and picking a model from the list Talemate fetches on save. Documents the Parameters toggles for providers that
+    reject sampler parameters.
 - path: user-guide/clients/types/pi-bridge.md
   title: Pi Bridge Client
-  summary: 'Driving generations through the pi coding agent''s headless RPC mode: pi binary requirement, pi-managed authentication
-    (env keys, auth.json incl. subscription auth, custom models.json providers), the encrypted environment variable store
-    for models.json secrets ($NAME references), free-form provider/model fields with catalog suggestions, thinking level mapping,
-    per-request pi instances for concurrency, why sampler parameters/presets do not apply, and Docker usage (pi preinstalled,
-    ./pi config directory).'
+  summary: Client that routes generations through the pi coding agent in headless RPC mode, so pi handles provider auth and
+    model resolution. Covers installing the pi binary, credential sources, the encrypted Environment Variables store, and
+    the Thinking Level setting.
 - path: user-guide/clients/types/tabbyapi.md
   title: TabbyAPI Client
-  summary: 'Adding a TabbyAPI client: API URL and key, the ''API handles prompt template'' option (recommended off) and context
-    length, plus troubleshooting for bad generations and connection failures.'
+  summary: 'Setting up a TabbyAPI client: Client Name, API Url (e.g. http://localhost:5000/v1), API Key, the discouraged ''API
+    handles prompt template'' option that switches to chat/completions, and Context Length (8192), plus connection troubleshooting.'
 - path: user-guide/clients/types/text-generation-webui.md
   title: Text-Generation-WebUI Client
-  summary: 'Adding a Text-Generation-WebUI (ooba) client: API URL and key, the ''API handles prompt template (chat/completions)''
-    option — off by default, keeps coercion working and lets the server separate reasoning — and context length, plus troubleshooting
-    for no model loaded and connection failures.'
+  summary: 'Setting up an ooba Text-Generation-WebUI client: API Url, API Key, Context Length (8192), and the off-by-default
+    ''API handles prompt template (chat/completions)'' option, under which Talemate''s template selection is ignored and thinking
+    is separated remotely.'
 - path: user-guide/debug-tools.md
   title: Debug Tools
-  summary: The Debug Tools panel (bug icon in the toolbar) with its Prompts tab (inspect all AI prompts sent, force reasoning
-    off per action), Memory tab (memory retrieval requests), and Vars tab. Explains game state variables, setting up watched
-    paths in the Game State editor, and editing scene state.
+  summary: 'The bug-icon Debug Tools panel with its Prompts, Memory and Vars tabs: inspecting sent prompts (and forcing reasoning
+    off per action), watching memory retrieval, editing watched game state variables, and the Game State Editor for slash-separated
+    paths and the full state JSON.'
 - path: user-guide/howto/create-a-new-scene/create-empty-scene.md
   title: Create an empty scene
-  summary: Tutorial step 1 of creating a basic scene, start a new empty scene from the Home screen Create button, fill in
-    the scene outline (title, content classification, description, introduction) in the world editor, and save it with a project
-    name.
+  summary: Walkthrough for starting a blank scene from the Home screen's Create new scene card and the New scene setup dialog
+    (name, writing style, director persona), then filling in the scene outline - title, content classification, description,
+    introduction - and saving it.
 - path: user-guide/howto/create-a-new-scene/create-npc.md
   title: Add an AI controlled character
-  summary: Tutorial step 3 of creating a basic scene, create an AI-controlled character (NPC) via Create Character with AI
-    generation instructions, refine the generated attributes/description, and save the scene.
+  summary: 'Second half of the new-scene walkthrough: create an AI (non-player) character via Create Character with Enable
+    AI Generation and AI Generation Instructions, leaving Controlled by Player off. Review the generated attributes, then
+    use the Actor tab''s Generate button for dialogue instructions.'
 - path: user-guide/howto/create-a-new-scene/create-player-character.md
   title: Add the player character
-  summary: Tutorial step 2 of creating a basic scene, add a player character using the Create Character button with AI generation
-    instructions and the Controlled by Player toggle, then save the scene.
+  summary: 'Walkthrough step for adding the player character in the World Editor Characters tab: Create Character, Enable
+    AI Generation with instructions, the Name and Description fields, and the Controlled by Player switch. Uses the example
+    character Annabelle.'
 - path: user-guide/howto/create-a-new-scene/test.md
   title: Test your scene
-  summary: Tutorial step 4 of creating a basic scene, exit the World Editor, switch from Creative mode to Play mode via the
-    gamepad button, and verify you control the player character and the AI character responds.
+  summary: 'Closing step of the create-a-scene walkthrough: leave the World Editor and switch from Creative mode to Play mode
+    with the gamepad button near the message input, taking control of the player character.'
 - path: user-guide/howto/infinity-quest-dynamic/1-create-the-scene-project.md
   title: 1 - Scene Project
-  summary: Node editor crash course part 1, create the Infinity Quest Dynamic scene project, fill in title/description/content
-    classification, import the Kaira and Elmer characters from the original Infinity Quest scene, and finalize the setup.
+  summary: 'Part 1 of the node editor crash course: create the Infinity Quest Dynamic scene project, fill in Title, Content
+    Classification and Description, import and activate the Elmer and Kaira characters from infinity-quest.json, then set
+    the Locked save file and restoration file in Scene > Settings.'
 - path: user-guide/howto/infinity-quest-dynamic/2-initial-nodes.md
   title: 2 - Initial Nodes
-  summary: Node editor crash course part 2, extend a custom Scene Loop from the default Talemate loop, create an event module
-    hooked into scene initialization, test it, and make the dynamic introduction generation run only once on first load.
+  summary: 'Part 2 of the node editor crash course: extend the default Scene Loop, add an Event module (On Scene Init) bound
+    to scene_loop_init, and wire Generate Progress Narration, Make Text and Set Introduction. Gated to run once with Get State,
+    Set State and a Switch.'
 - path: user-guide/howto/infinity-quest-dynamic/3-improvements.md
   title: 3 - Improvements
-  summary: Node editor crash course part 3, replace narrator generation with the dedicated Contextual Generate node for the
-    scene introduction, add a reset mechanism to make testing easier, and generate a random thematic list to reduce AI bias
-    in premises.
+  summary: 'Part 3 of the node editor crash course: swap Generate Progress Narration for a Contextual Generate node (context_type
+    scene intro), add Stage 0/Stage 1 with a RESET Make Bool and Unset State for regenerating the intro, plus random theme
+    selection via Generate Thematic List.'
 - path: user-guide/howto/infinity-quest-dynamic/4-get-organized.md
   title: 4 - Get organized
-  summary: Node editor crash course part 4, organize the graph by selecting a node chain and extracting it into a separate
-    submodule via the Create Module button, plus visual polish like styling/groups for agent actions.
+  summary: 'Part 4 of the node editor crash course: extract the theme and premise node chain into a new Generate Premise submodule
+    from a selection, clean up the auto-created socket nodes, and replace the original chain in On Scene Init. Adds an OUT
+    theme socket and a Module Style node.'
 - path: user-guide/howto/infinity-quest-dynamic/5-agentic-workflow.md
   title: 5 - Agentic Flow
-  summary: Node editor crash course part 5, build a multi-agent, multi-stage workflow, stage 1 generates a random theme, stage
-    2 has the Summarizer agent analyze it, stage 3 uses the analysis to inform the Creator agent's introduction generation.
-    Covers stages, and reorganizing module inputs/outputs.
+  summary: 'Part 5 of the node editor crash course: split Generate Premise into staged groups - Stage 1 Generate Theme, Stage
+    2 Analyze Theme (Get Agent Summarizer, Prompt from Template, Generate Response), Stage 3 Generate Introduction - passing
+    data between them via local state.'
 - path: user-guide/howto/infinity-quest-dynamic/6-reusable-module.md
   title: 6 - Reusable Module
-  summary: Node editor crash course part 6, turn the scene-specific premise generator into a reusable module, rename/re-register
-    modules, expose a reset toggle and content-control inputs, add an analysis on/off switch, propagate settings, and package
-    it as a Talemate module usable in any scene.
+  summary: 'Part 6 of the node editor crash course: turn the scene-specific generator into a reusable Dynamic Premise module,
+    expose reset, topic, analysis_instructions and analysis_enabled through Module Property and Input Socket nodes, rewrite
+    the prompt templates with jinja2, then install it into templates/modules.'
 - path: user-guide/howto/infinity-quest-dynamic/7-polish.md
   title: 7 - Polish
-  summary: Node editor crash course part 7 (final), polish touches for shipping the Dynamic Story module, status indication,
-    node comments, error handling, generating a story intention, and defaulting to the scene_loop_init event.
+  summary: 'Part 7 of the node editor crash course: add an Emit Status busy indicator at Stage 0, canvas comments, and an
+    error-handling group (Argument, Unpack Exception, Case, Coallesce, Return, Error Handler). Also sets scene_loop_init as
+    the default event.'
 - path: user-guide/howto/infinity-quest-dynamic/index.md
   title: Building a Dynamic Story Generator with the Node Editor
-  summary: Overview and table of contents for the 7-part node editor crash course that ports Infinity Quest to a dynamic story
-    generator, teaching node workflows, AI agent usage (Creator, Summarizer), stages, and building reusable modules.
+  summary: 'Overview and table of contents for the seven-part node editor tutorial that ports Infinity Quest to a dynamic
+    story generator, shipped as the Dynamic Storyline node in 0.30. Parts: Scene Project, Initial Nodes, Improvements, Get
+    Organized, Agentic Workflow, Reusable Module, Polish.'
 - path: user-guide/howto/use-dynamic-story-module/index.md
   title: Use the dynamic story module
-  summary: Tutorial for installing and configuring the built-in Dynamic Storyline module (0.30+) from the world editor Mods
-    tab to randomize the scene introduction of any scene, including keeping a locked foundation save file to restart new stories
-    from.
+  summary: 'Tutorial for applying the shipped Dynamic Storyline module to any scene: save a progress-free foundation scene
+    with Locked save file, install the module from the World Editor''s Mods tab, Configure it with a topic and analysis instructions,
+    then Reload Scene to trigger generation.'
 - path: user-guide/inline-visuals.md
   title: Inline Visuals
-  summary: The inline visuals feature (0.35.0+) that displays generated images directly in the scene feed. Covers generating
-    via scene tools, director chat, autonomous direction and context investigation, quick actions and portrait management,
-    and display settings, visual types (scene illustration/background/card, character card/portrait), render cadence, display
-    size, and auto-attach.
+  summary: Images generated by the visualizer displayed inside the scene feed (0.35.0). Covers the scene tools visualizer
+    menu (Visualize Scene Card/Background, per-character Card/Portrait, Visualize Moment), Director chat and autonomous direction,
+    the image context menu, the scene backdrop and Immersive toggle.
 - path: user-guide/integrations/runpod.md
   title: RunPod
-  summary: 'Run text-generation-webui on rented RunPod GPUs: add the RunPod API key (the settings category for it no longer exists in current versions; backend restart
-    was required), deploy a pod with the ''RunPod TheBloke LLMs'' template named to include ''thebloke llms'' or ''textgen'' so
-    Talemate auto-discovers it, and load models via the pod''s web UI. Notes the instructions are somewhat outdated.'
+  summary: Outdated guide (the RunPod settings category no longer exists) to running text-generation-webui on RunPod GPUs
+    - the API key, community vs secure cloud, the 'RunPod TheBloke LLMs' template, the pod-name requirement for auto-discovery,
+    and port 7860.
 - path: user-guide/interacting.md
   title: Interacting with the scene
-  summary: How to play a scene, dialogue input conventions (quotes for speech, asterisks for actions), linebreaks, acting
-    as another character or the narrator via tab (act-as), quick actions, player direction with
+  summary: 'Playing a scene from the input box: quotes for speech and asterisks for actions, shift+enter linebreaks, tab to
+    act as another character, ''@'' quick actions, ''#'' player direction for the autonomous director (0.37.0), ctrl+enter
+    autocomplete, and message revision history.'
 - path: user-guide/node-editor/core-concepts/collector_nodes.md
   title: Collector Nodes
-  summary: 'Dict Collector and List Collector nodes that aggregate multiple inputs via dynamic sockets: key inference rules,
-    the Make Key-Value Pair node, adding/removing input slots, nested collection, and the Advanced Format / Jinja2 Format
-    nodes for turning collected data into formatted strings.'
+  summary: 'Dict Collector and List Collector nodes with dynamic item{i} sockets: key inference from the source node''s name,
+    Make Key-Value Pair tuples, adding input slots, nested collection, and Format vs Advanced Format vs Jinja2 Format.'
 - path: user-guide/node-editor/core-concepts/command_module.md
   title: Command Modules
-  summary: 'Registering scene commands invoked with !name:arg0;arg1 syntax: creating a Command module, setting its name property,
-    wiring Argument nodes to processing logic, and a full !instruct_actor example. Command modules load automatically with
-    the scene.'
+  summary: 'Command node modules let players type "!name:arg_0;arg_1" in the scene: the module''s name property, Argument
+    nodes, and an !instruct_actor example. Command modules load automatically with the scene, no scene-loop placement needed.'
 - path: user-guide/node-editor/core-concepts/error-handling.md
   title: Error Handling
-  summary: Catching exceptions in node graphs with the Error Handler node (attach a handler function that receives an exc
-    argument) and Unpack Exception (extract name/message for display or branching), with an example that logs errors to scene
-    history.
+  summary: Catching uncaught graph exceptions with the Error Handler node (core/ErrorHandler) and a handler function taking
+    an `exc` argument, plus Unpack Exception (core/functions/UnpackException) to split it into name and message.
 - path: user-guide/node-editor/core-concepts/events.md
   title: Events
-  summary: 'Creating Event modules that run when a specific event is emitted: accessing the event payload via the Event node,
-    activating by adding to the scene loop with an event_name, or via auto_register on the module properties. Includes a worked
-    example hooking the director''s generate-choices prompt to inject a dynamic instruction.'
+  summary: 'Event node modules run when a named event fires: the Event node exposes the emission object, and activation is
+    either placing the module in the scene loop with an `event_name` or setting `event_name` plus `auto_register`. Example
+    hooks agent.director.generate_choices.inject_instructions.'
 - path: user-guide/node-editor/core-concepts/functions.md
   title: Functions
-  summary: 'Building callable functions from node graphs: inline functions (Argument, Return, Define Function, Get Function,
-    Call Function, Call For Each nodes), self-contained Function modules, and exposing functions to the LLM via FOCAL AI function
-    calling (AI Function Callback, AI Function Calling, Process AI Function Call) with a complete Jinja2 prompt example.'
+  summary: Inline functions (Argument, Return, Define Function, Get Function, Call Function, Call For Each) versus reusable
+    Function modules, and FOCAL AI function calling via AI Function Callback / AI Function Calling / Process AI Function Call,
+    with a focal.callbacks.<name>.render() jinja2 template example.
 - path: user-guide/node-editor/core-concepts/modularity.md
   title: Modularity
-  summary: The difference between Python nodes and code-less node modules, module core types (Module, Command, Event, Function,
-    Scene Loop), the module load-order priority (scene > templates/modules/ > built-in) that lets you override built-ins,
-    and promoting scene modules to shared modules with copy vs move.
+  summary: Nodes versus node modules, the module base types (Module, Command, Event, Function, Scene Loop), and load priority
+    - scene modules override templates/modules/ which override built-ins. Also promoting a scene module to a shared module,
+    Copy vs Move.
 - path: user-guide/node-editor/core-concepts/module-inheritance.md
   title: Module Inheritance
-  summary: 'Extending an existing node module via ''Extend current'': inherited nodes are live references so base-module changes
-    propagate to extensions; you can add but not modify base logic. Explains the extends property and when to copy instead
-    of extend.'
+  summary: 'Extending a node module via the `extends` property ("Extend current" in the Create Module menu): inherited nodes
+    stay live references so base-module changes propagate, and the extension can only add. Contrasts Copy (independent duplicate)
+    with Extend.'
 - path: user-guide/node-editor/core-concepts/package.md
   title: Installable Packages
-  summary: 'Packaging node modules so users can install them from the Mods list without the node editor: creating a Package
-    module, its properties (name, author, description, restart-scene-loop flag), the Install Node Module and Promote Config
-    nodes, and deploying to templates/modules/.'
+  summary: 'Making node modules installable so they appear in a scene''s Mods list: the Package module and its properties
+    (name, author, description, installable, restart scene loop), the Install Node Module and Promote Config nodes, and templates/modules/.'
 - path: user-guide/node-editor/core-concepts/prompt-templates.md
   title: Prompt Templates
-  summary: 'Using Jinja2 prompt templates in graphs: the Prompt from Template node (template_file vs template_text, variables,
-    scope, dedupe), Template Variables and Generate Response nodes, template scope/file storage locations, prompting for JSON/YAML
-    data structures with data_response, and two full worked examples.'
+  summary: 'Jinja2 prompt templates in graphs: the Prompt from Template node (template_file vs template_text, variables, scope,
+    dedupe), Template Variables and Generate Response, where scoped .jinja2 files are stored, and data_response for JSON/YAML
+    structures.'
 - path: user-guide/node-editor/core-concepts/prompt_building.md
   title: Prompt Building
-  summary: 'The Build Prompt node as a high-level alternative to manual templates: automatic context assembly with include_*
-    toggles (scene intent, memory/RAG, scene, character, gamestate context), dynamic instructions, token-budget management
-    via reserved_tokens, and how it maps onto the common/base.jinja2 template.'
+  summary: 'The Build Prompt node as the quick alternative to hand-built templates: the include_scene_intent / extra_context
+    / memory_context / scene_context / character_context / gamestate_context toggles, reserved_tokens budgeting, memory_prompt
+    RAG query, dedupe_enabled, prefill_prompt and Dynamic Instruction inputs.'
 - path: user-guide/node-editor/core-concepts/staging.md
   title: Staging
-  summary: 'Using core/Stage nodes to split long node chains into ordered execution steps: stage priority numbers (negative
-    allowed), pass-through state sockets, how unstaged nodes run last, sharing data between stages with Set/Get State, and
-    the X-key shortcut to drop a Stage node while dragging a connection.'
+  summary: 'The core/Stage node orders execution inside a module: the integer `stage` property (lowest first, unstaged nodes
+    run last), the state/state_b/state_c/state_d passthrough sockets, the X drag shortcut, and local-scope Set State / Get
+    State.'
 - path: user-guide/node-editor/core-concepts/states.md
   title: State Management
-  summary: The state nodes (SetState, GetState, UnsetState, HasState, CounterState and conditional variants) and their scopes
-    — local, parent, shared, scene loop, and game (saved with the scene) — plus agent-specific state nodes with scene and
-    context scopes, and guidance on choosing scope lifetimes.
+  summary: State nodes (SetState, GetState, UnsetState, HasState, CounterState and the Conditional variants) and their scopes
+    - local, parent, shared, scene loop, game (saved with the scene) - plus agent state nodes with `scene` and `context` scopes.
 - path: user-guide/node-editor/core-concepts/switches.md
   title: Switches and conditional routing
-  summary: 'Conditional routing nodes: Switch (truthy yes/no branching), RSwitch and RSwitchAdvanced (value selection), ORRouter/ANDRouter
-    for combining flags, Case for multi-way exact-match branching, plus Invert and Coallesce helpers, with input/output payload
-    tables and practical patterns.'
+  summary: 'Conditional routing nodes: core/Switch (truthiness, pass_through), core/RSwitch and RSwitchAdvanced, ORRouter
+    and ANDRouter with grouped a-d flags, core/Case multi-way matching (attribute_name, case_a-d), Invert and Coallesce. Only
+    None, False and UNRESOLVED are falsy.'
 - path: user-guide/node-editor/core-concepts/user-interface.md
   title: Using the node editor
-  summary: 'Node editor UI walkthrough: opening it from creative mode, the Module Library (listing groups, filtering, creating/deleting
-    modules, registry paths with $N), the toolbar (debug menu, scene/module test runs, breakpoints), canvas operations (adding,
-    connecting, selecting, copying, aligning nodes), quick W/S/X shortcuts for Watch/SetState/Stage nodes, groups, and comments.'
+  summary: 'Node editor UI walkthrough: opening it in creative mode, the Module Library (scene / agents / core / installed
+    groups, locked modules, Create Module types, registry paths), the toolbar debug menu with scene-test, module-test and
+    breakpoints, and canvas work - node search, groups, comments, and the W / S / X drag shortcuts.'
 - path: user-guide/node-editor/index.md
   title: Introduction
-  summary: Brief introduction to the node editor (added in 0.30.0), which enables code-less creation of complex scenes and
-    reusable modules.
+  summary: One-paragraph entry point for the node editor (introduced in 0.30.0), linking the node reference, event reference
+    and template functions pages.
 - path: user-guide/node-editor/reference/events.md
   title: Events
-  summary: 'Reference list of all supported events with payload tables: game loop and scene loop lifecycle events, regenerate
-    events, per-agent events (conversation, creator, editor, help, narrator, director, world state, summarization, TTS, visual
-    generation and prompt finalization), and scene asset events (asset saved/deleted, backdrop and cover image changes), including
-    which payload fields are mutable for injecting instructions or rewriting responses.'
+  summary: 'Every event a node graph can listen for, with payload fields: game loop (game_loop, game_loop_actor_iter, game_loop_new_message,
+    player_turn_start), scene loop (scene_init, scene_loop_init/_after, start/end cycle, error), regenerate.msg.*, per-agent
+    hooks including inject_instructions and .generated, and scene asset events.'
 - path: user-guide/node-editor/reference/nodes/agents-conversation.md
   title: Conversation Agent Nodes
-  summary: 'Node reference. Generate character dialogue through the conversation agent. Nodes: Generate Conversation, Conversation
-    Settings.'
+  summary: Two nodes - Generate Conversation (agents/conversation/Generate) which produces a character's dialogue via the
+    conversation agent without pushing it to history, and Conversation Settings which exposes every conversation agent setting
+    as an output socket.
 - path: user-guide/node-editor/reference/nodes/agents-creator.md
   title: Creator Agent Nodes
-  summary: 'Node reference. Content creation through the creator agent: contextual generation, character creation (including
-    the Generate Character node, which generates name, description, attributes, dialogue instructions and example dialogue
-    following the creator agent''s Character Creation settings) and per-character derivations, plus thematic lists. Nodes: Contextual Generate, Create Character,
-    Generate Character, Determine Character Description, Determine Character Dialogue Instructions, Determine Character Name,
-    Determine Content Context, and more.'
+  summary: 'Nine creator-agent nodes: Contextual Generate (context_type), Generate Character (Fast mode consolidation and
+    fill-in-misses), the Create Character module, Determine Character Name / Description / Dialogue Instructions, Determine
+    Content Context, Generate Thematic List and Creator Settings.'
 - path: user-guide/node-editor/reference/nodes/agents-director-auto.md
   title: Director Auto-Direction Nodes
-  summary: 'Node reference. The director''s automatic direction loop: pick candidates, determine scene intent, decide when
-    an instruction is due and generate the auto-direction itself. Nodes: Auto Direction, Auto Direct Candidates [DEPRECATED],
-    Determine Scene Intent, Generate Auto Direction, Generate Scene Types, Is Due For Instruction [DEPRECATED].'
+  summary: 'Six auto-direction nodes: the Auto Direction and Generate Auto Direction modules, Determine Scene Intent, Generate
+    Scene Types (instructions, max_scene_types), plus the deprecated Auto Direct Candidates and Is Due For Instruction.'
 - path: user-guide/node-editor/reference/nodes/agents-director-chat-actions.md
   title: Director Chat Actions
-  summary: 'Node reference. The actions the director chat AI can take. Each module defines one callable action — its name,
-    description and instructions (shown in the properties below) are what the director AI sees when deciding what to do. Nodes:
-    Director Action Create Image, Director Action Direct Scene, Director Action Direct Story Arc, Director Action Gameplay,
-    Director Action Prompt User, and more.'
+  summary: 'The ten actions the director chat AI can invoke, each a DirectorChatAction module with instructions, example_json
+    and allow_concurrent properties: create_image, direct_scene, direct_story_arc, gameplay, ooc, query, update_context, update_gamestate,
+    yield_to_user, plus Director Action Summary.'
 - path: user-guide/node-editor/reference/nodes/agents-director-chat-instructors.md
   title: Director Chat Instructors
-  summary: 'Node reference. Instructor modules the director chat uses to apply changes: instruct characters and the narrator,
-    and update world, history, gamestate, story and character configuration. Nodes: Instruct Character, Instruct Character
-    Changes, Instruct Character Config Updates, Instruct Character Creation, Instruct Character Updates, Instruct History
-    Updates, Instruct Narrator, and more.'
+  summary: 'Ten instructor modules the director chat uses to apply changes: Instruct Character, Instruct Narrator (narration_type),
+    Instruct Character Creation / Updates / Changes / Config Updates, Instruct World Updates, Instruct History Updates, Instruct
+    Gamestate Updates and Instruct Story Config Updates.'
 - path: user-guide/node-editor/reference/nodes/agents-director-chat.md
   title: Director Chat Nodes
-  summary: 'Node reference. Plumbing for the director chat: build the chat context, define action arguments, confirm actions
-    and run sub-actions, plus the context/query modules the chat uses to look things up. Nodes: Director Action Argument,
-    Director Action Confirm, Agent Report Issue, Character Context, Character Names Context, Direct Context Update, Director
-    Agent Retrieve Context, and more.'
+  summary: 'Director chat plumbing: Director Action Argument, Director Action Confirm (accepted/rejected, raise_on_reject),
+    Director Chat Sub Action gating (availability, force_enabled), Get Director Chat Context, and the context/query modules
+    - character context, query world information / game state / scene direction, toggle character.'
 - path: user-guide/node-editor/reference/nodes/agents-director-plan.md
   title: Director Planning Nodes
-  summary: 'Node reference. Director plans: create plans and tasks, advance and complete them, and read plan state from graphs.
-    Nodes: Complete Task, Create Outline, Create Plan, Critique Outline, Delete Plan, Edit Task, Estimate Words, Expand Story
-    Arc, Get Active Chat Plan ID, Get Active Plan, Insert Task, Manage Plan, Remove Task.'
+  summary: 'Director plan nodes: Create Plan, Create Outline, Critique Outline, Insert / Edit / Remove / Complete Task, Delete
+    Plan, Get Active Plan and Get Active Chat Plan ID, Expand Story Arc (chunk_size, close_arc), Estimate Words and the manage_plan
+    chat action module.'
 - path: user-guide/node-editor/reference/nodes/agents-director.md
   title: Director Agent Nodes
-  summary: 'Node reference. Director operations: scene direction, character persistence (Persist Character accepts pre-generated
-    description, dialogue instructions and example dialogue, e.g. from the creator Generate Character node), voice assignment,
-    chat message insertion, dice rolls, actor/narrator direction functions and the director''s websocket handler modules. Nodes:
-    Assign Voice, On Persist Character Generate Visual, Direct Actor, Direct Narrator, Yield To Actor, Yield To User, Roll
-    Dice, Insert Chat Message, and more.'
+  summary: 'Fifteen director nodes: Scene Direction (max_actions, always_on, run_immediately), Persist Character, Assign Voice,
+    Log Director Action, Insert Chat Message, Roll Dice, Instruct Avatar Generation, the direct_actor / direct_narrator /
+    yield_to_user function modules and Director Settings.'
 - path: user-guide/node-editor/reference/nodes/agents-editor.md
   title: Editor Agent Nodes
-  summary: 'Node reference. Clean up user input, narration and character messages through the editor agent''s revision passes.
-    Nodes: Clean Up Character Message, Clean Up Narration, Clean Up User Input, Editor Settings.'
+  summary: 'Four editor-agent nodes: Clean Up Character Message (exposition formatting, quote balancing), Clean Up Narration,
+    Clean Up User Input (never edits input starting with the ! @ / command prefixes), each with a `force` property, and Editor
+    Settings.'
 - path: user-guide/node-editor/reference/nodes/agents-memory.md
   title: Memory Agent Nodes
-  summary: 'Node reference. Query the long-term memory database (RAG) and unpack the returned memory documents. Nodes: Query
-    Context DB, Unpack Memory Document.'
+  summary: Query Context DB (agents/memory/QueryContextDB) for RAG lookups with queries, meta_filters, max_tokens, limit and
+    iterate plus fn_filter / fn_formatter functions, and Unpack Memory Document which exposes meta, id, raw, as_text, as_dict,
+    context_id.
 - path: user-guide/node-editor/reference/nodes/agents-narrator.md
   title: Narrator Agent Nodes
-  summary: 'Node reference. Generate narration through the narrator agent: scene progress, environment, queries, character
-    entries/exits and time passage. Nodes: Auto Narration, Generate After Dialog Narration, Generate Character Entry Narration,
-    Generate Character Exit Narration, Generate Character Narration, Generate Environment Narration, Generate Progress Narration,
-    Generate Query Narration, and more.'
+  summary: 'Twelve narrator nodes generating NarratorMessages without pushing them to history: Generate Progress, Scene, Environment,
+    Query, Character, Character Entry / Exit, After Dialog and Time Narration, all with narrative_direction and response_length,
+    plus the autoNarration event module and Narrator Settings.'
 - path: user-guide/node-editor/reference/nodes/agents-summarizer.md
   title: Summarizer Agent Nodes
-  summary: 'Node reference. Summarization through the summarizer agent: scene progression summaries and tag generation. Nodes:
-    Generate Tags, On Message Set Avatar, Summarizer Settings, Summarize Scene Progression, Wsh Summarize Scene Progress.'
+  summary: 'Five summarizer nodes: Summarize Scene Progression (summary and analysis outputs), Generate Tags, the onMessageSetAvatar
+    event module listening on agent.conversation.generated, Summarizer Settings and the summarize_scene_progress websocket
+    handler.'
 - path: user-guide/node-editor/reference/nodes/agents-tts.md
   title: Voice Agent Nodes
-  summary: 'Node reference. Text-to-speech through the voice agent: resolve voices (including the narrator''s), unpack voice
-    data and generate speech. Nodes: Generate TTS, Get Narrator Voice, Get Voice, TTS Agent Settings, Unpack Voice.'
+  summary: 'TTS nodes: Generate TTS (speaks text using an explicit voice or a character''s assigned voice), Get Voice by voice_id,
+    Get Narrator Voice, Unpack Voice (label, provider, provider_id, provider_model, tags, is_scene_asset) and TTS Agent Settings.'
 - path: user-guide/node-editor/reference/nodes/agents-visual-generation.md
   title: Visualizer Agent Generation Nodes
-  summary: 'Node reference. Run visual generation: build generation requests, select the backend, generate images and analyze
-    them. Prompts come from the prompt nodes. Nodes: Analyze Images, Backend Status, Generate Image, Visual Generation Request,
-    Select Backend, Unpack Visual Generation Request, Unpack Visual Generation Response.'
+  summary: 'Visual generation nodes: Visual Generation Request (vis_type, gen_type TEXT_TO_IMAGE/IMAGE_EDIT/UPLOAD, format,
+    reference_assets, asset attachment context), Generate Image, Select Backend, Backend Status (can_generate_images, can_edit_images,
+    max_references), Analyze Images, and the request/response unpackers.'
 - path: user-guide/node-editor/reference/nodes/agents-visual-modules.md
   title: Visualizer Agent Modules
-  summary: 'Node reference. Ready-made visual generation flows built on the visualizer prompt and generation nodes: generate
-    visual assets, avatars, portraits, image edits and regenerations, plus the visualizer''s websocket handlers. Nodes: Determine
-    Visual References, Generate Avatar, Generate Character Portrait Legacy, Generate Image Edit, Generate Visual Asset, Regenerate
-    Visual Asset, and more.'
+  summary: 'Ready-made visual flows: Generate Visual Asset, Generate Avatar (set_current_avatar / set_default_avatar), Generate
+    Image Edit, Regenerate Visual Asset, Determine Visual References, Set Cover Image From Generation, the legacy character
+    portrait module, and the visualize / revisualize / generate_tags websocket handlers.'
 - path: user-guide/node-editor/reference/nodes/agents-visual.md
   title: Visualizer Agent Prompt Nodes
-  summary: 'Node reference. Build visual prompts: assemble prompt parts, apply styles, finalize prompts and unpack them into
-    compiled positive/negative prompt strings. Generation itself happens through the generation nodes, and ready-made flows
-    live in Visualizer Agent Modules. Nodes: Apply Style, Apply Styles, Visual Enum Values, Finalize Prompt, Visual Prompt,
-    Visual Prompt Part, Visual Settings, Unpack Visual Prompt, and more.'
+  summary: 'Visual prompt building: Visual Prompt Part (keyword lists, "no ..." implied negatives), Visual Prompt (KEYWORDS
+    vs DESCRIPTIVE), Apply Style by template_id vs Apply Styles (art style plus vis_type subject style), Finalize Prompt,
+    Unpack Visual Prompt and Visual Enum Values. Notes the 0.39.0 Apply Style UNSPECIFIED change.'
 - path: user-guide/node-editor/reference/nodes/agents-world-state.md
   title: World State Agent Nodes
-  summary: 'Node reference. World state operations through the world state agent: advance time, run character progression,
-    evaluate queries, extract character sheets and emit the world state to the frontend. Nodes: Advance Time, Character Progression,
-    Deactivate Character, Determine Character Avatar, Determine Character Presence, Emit World State, Evaluate Query, Extract
-    Character Sheet, and more.'
+  summary: 'Thirteen world-state nodes: Advance Time (ISO 8601, TimePassageMessage), Character Progression (as_suggestions),
+    Determine Character Presence, Deactivate Character, Extract Character Sheet, Evaluate Query, State Reinforcement (interval,
+    insert_method), Request and Emit World State, and determineCharacterAvatar.'
 - path: user-guide/node-editor/reference/nodes/agents.md
   title: Agent Nodes
-  summary: 'Node reference. Generic agent interaction available for every agent: fetch an agent instance, call agent functions
-    (optionally conditionally), and read or count agent state variables. Nodes: Call Agent Function, Call Agent Function (Conditional),
-    Counter Agent State, Dynamic Instruction, Get Agent, Get Agent State, Set Agent State, Toggle Agent Action, Unset Agent
-    State.'
+  summary: 'Generic per-agent nodes: Get Agent, Call Agent Function and its conditional variant, Get / Set / Unset / Counter
+    Agent State (scene vs context scope), Toggle Agent Action, and Dynamic Instruction which builds a header/content object
+    for prompt injection.'
 - path: user-guide/node-editor/reference/nodes/assets-meta.md
   title: Asset Meta And Selection Nodes
-  summary: 'Node reference. Asset metadata and selection: search assets, build selection contexts, and construct attachment
-    contexts for passing assets into generation requests. Nodes: Make Asset Attachment Context, Make Asset Meta, Search Assets,
-    Select Assets, Unpack Asset Meta, Unpack Asset Selection Context.'
+  summary: 'Asset metadata and selection: Make Asset Attachment Context (auto-attach to messages, scene/character cover, default/current
+    avatar), Make and Unpack Asset Meta, Search Assets (vis_type, character_name, tags with all/any/none matching), Select
+    Assets chaining and Unpack Asset Selection Context.'
 - path: user-guide/node-editor/reference/nodes/assets.md
   title: Asset Nodes
-  summary: 'Node reference. Manage scene assets (images and other files): add, fetch, list, remove and update them, and set
-    cover and avatar images. Nodes: Add Asset, Asset Exists, Get Asset, Get Assets, List Assets, Remove Asset, Set Avatar
-    Image, Set Cover Image, Update Message Assets.'
+  summary: 'Scene asset CRUD: Add Asset from a base64 data URL, Get Asset, Get Assets, List Assets, Asset Exists (yes/no routing,
+    allow_partial), Remove Asset, Set Cover Image, Set Avatar Image (default or current) and Update Message Assets.'
 - path: user-guide/node-editor/reference/nodes/context-id.md
   title: Context ID Nodes
-  summary: 'Node reference. Context IDs address pieces of scene context (character attributes, world entries, etc.) with a
-    uniform string format so they can be read, written, pinned and rendered generically. Nodes: Character Context IDs, Compress
-    Context ID Part, Context ID Get Value, Context ID Meta Entries, Context ID Set Value, Is Pin Active, Path to Context ID,
-    Remove Pin, Render Context IDs, and more.'
+  summary: 'Context IDs address scene context entries generically: Path to Context ID, Context ID Get/Set Value, Character
+    Context IDs (attributes, details, acting instructions, example dialogue), Scan and Render Context IDs, Context ID Meta
+    Entries, Compress Context ID Part, and Set Pin / Remove Pin / Is Pin Active.'
 - path: user-guide/node-editor/reference/nodes/core-functions.md
   title: Function Nodes
-  summary: 'Node reference. Define and call reusable functions inside node graphs. A `core/functions/Function` module defines
-    the body, **Define Function** / **Get Function** / **Call Function** wire it up, and **Call For Each** maps a function
-    over a list. **Error Handler** and **Unpack Exception** deal with failures raised inside a call. See Functions for the
-    full concept walkthrough. Nodes: Error Handler, Argument, Breakpoint, Call For Each, Call Function, Define Function, Get
-    Function, Return, Scoped API Function, and more.'
+  summary: 'Function nodes: Argument, Return, Define Function, Get Function, Call Function, Call For Each (argument_name),
+    Error Handler and Unpack Exception, Breakpoint (only pauses in creative mode), Run Module, and Scoped API Function which
+    runs python in the quarantined scoped environment.'
 - path: user-guide/node-editor/reference/nodes/core-logic.md
   title: Logic Nodes
-  summary: 'Node reference. Branching and comparison: switches route execution based on a value, routers pick one of several
-    paths, and the boolean nodes combine conditions. See Switches for how conditional flow works in graphs. Nodes: AND Router,
-    Apply Default, As Bool, Case, Case Router, Coallesce, Invert, Make Bool, OR Router, RSwitch, RSwitch Advanced, Switch.'
+  summary: 'Branching and comparison nodes: Switch, RSwitch and RSwitch Advanced, AND Router and OR Router (flags a-d), Case
+    and Case Router (string match on the value or a named attribute), Coallesce, Invert, Make Bool, As Bool and Apply Default
+    for UNRESOLVED.'
 - path: user-guide/node-editor/reference/nodes/core.md
   title: Core Nodes
-  summary: 'Node reference. Structural plumbing every module graph is built from. **Input**, **Output** and **Module Property**
-    define a module''s interface — the sockets and properties it exposes when used as a node inside another graph (see Modularity).
-    **Stage** controls execution order between disconnected branches (see Staging), **Route** and **Watch** pass values through
-    (Watch also surfaces them in the debug tools), and **Null** is an explicit no-op. Nodes: Input Socket, Module Property,
-    Null, Output Socket, Route, Stage, Watch, and more.'
+  summary: 'Structural nodes every module graph uses: Input Socket and Output Socket (input_type, optional, group) and Module
+    Property define the module''s interface; Stage sets execution order; Route, Watch (logs values in creative mode) and Null.'
 - path: user-guide/node-editor/reference/nodes/data-collections.md
   title: Dict And List Nodes
-  summary: 'Node reference. Build and manipulate dictionaries and lists. The **Dict Collector** and **List Collector** aggregate
-    any number of inputs through dynamic sockets — see Collector Nodes for how key inference works with **Make Key-Value Pair**.
-    Nodes: Combine Lists, Dict Collector, Dict Get, Dict Get (Path), Dict To Key-Value Pairs, Dict Pop, Dict Set, Dict Update,
-    List Append, and more.'
+  summary: 'Dict and list nodes: Make Dict, Make List, Dict Get, Dict Get (Path) with dotted paths, Dict Set, Dict Pop, Dict
+    Update (shallow vs deep merge, create_copy), Dict To Key-Value Pairs, List Append, List Remove, Combine Lists, Make Key-Value
+    Pair, and the dynamic-socket Dict Collector and List Collector.'
 - path: user-guide/node-editor/reference/nodes/data-number.md
   title: Number Nodes
-  summary: 'Node reference. Numeric values: conversion, arithmetic, comparison, clamping, averaging and random numbers. Nodes:
-    As Number, Average, Basic Arithmetic, Clamp, Compare, Make Number, Min Max, Random, Sum.'
+  summary: 'Numeric nodes: Make Number, As Number, Basic Arithmetic (add, subtract, multiply, divide, power, modulo), Compare
+    with float tolerance, Clamp, Min Max, Sum, Average (mean/median/mode) and Random (uniform, integer, normal or choice).'
 - path: user-guide/node-editor/reference/nodes/data-string.md
   title: String Nodes
-  summary: 'Node reference. String manipulation: formatting, case, join/split, replace, trim, substrings and excerpts. The
-    **Advanced Format** (`{name}` placeholders) and **Jinja2 Format** (`{{ name }}` templates) nodes build strings from dynamic
-    inputs — connect other nodes into their input slots and each connected value becomes a template variable (see Collector
-    Nodes for the key inference rules). Nodes: Advanced Format, As String, Case, Condensed, Excerpt, Extract, Format, Join,
-    Make String, Make Text, Replace, Split, String Check, and more.'
+  summary: 'String nodes: Make String and Make Text, Format, Advanced Format ({name} with dynamic inputs) and Jinja2 Format
+    ({{ name }}), Case, Condensed, Excerpt, Extract by left/right anchors, Join, Split, Replace, Substring, Trim, As String
+    and String Check (startswith/endswith/contains/exact).'
 - path: user-guide/node-editor/reference/nodes/data.md
   title: Data Nodes
-  summary: 'Node reference. General-purpose value handling: get/set on arbitrary objects, conditionals, sorting and selection,
-    UUID generation, JSON parsing/serialization and length capping. Nodes: Cap Length, Contains, Get, JSON, Length, Select
-    Item, Set, Set Conditional, Sort, Update Object, UUID.'
+  summary: 'General value handling: Get and Set / Set Conditional (getattr, dict key or list index), Update Object with dynamic
+    inputs, Contains, Length, Cap Length, Sort by sort_keys, Select Item (random, cycle, sorted_cycle), JSON parsing and UUID
+    generation.'
 - path: user-guide/node-editor/reference/nodes/event.md
   title: Event Nodes
-  summary: 'Node reference. Emit messages and status updates from graphs, and react to scene events with the **Event** listener
-    node. See Events for the event system and the Events reference for every event a graph can listen to. Nodes: Emit Agent
-    Message, Emit Scene Status, Emit Status, Emit Status (Conditional), Emit System Message, Emit World Editor Sync, Event.'
+  summary: 'Emit and listen nodes: Emit Status and Emit Status (Conditional), Emit System Message (title, font_color, icon,
+    markdown), Emit Agent Message, Emit Scene Status, Emit World Editor Sync, and the Event node that returns the current
+    event object inside an event module.'
 - path: user-guide/node-editor/reference/nodes/focal.md
   title: AI Function Nodes (Focal)
-  summary: 'Node reference. Talemate''s AI function-calling layer ("focal"). Define callable functions with typed arguments,
-    hand them to an agent prompt, then unpack the calls the AI made and collect their results. Used by flows like the director
-    chat actions. Nodes: AI Function Argument, AI Function Callback, Collect AI Function Call Results, AI Function Calling,
-    AI Function Callback Metadata, and more.'
+  summary: 'FOCAL AI function-calling nodes: AI Function Argument (typed, with instructions), AI Function Callback (allow_multiple_calls,
+    allow_concurrent), AI Function Callback Metadata (instructions and examples), AI Function Calling (template or prompt,
+    callbacks, agent, max_calls, retries, max_concurrent), Process AI Function Call, Unpack AI Function Call and Collect AI
+    Function Call Results.'
 - path: user-guide/node-editor/reference/nodes/index.md
   title: Node Reference
-  summary: Index of the node editor's complete node reference - every node category page with node counts. Start here to find
-    which page documents a specific node.
+  summary: 'Landing page for the node reference: registry paths (e.g. scene/GetCharacter) and links to every category page
+    with its node count - agent, focal, asset, context ID, core, data, scene, state, prompt, response, ux, util, validation
+    and websocket.'
 - path: user-guide/node-editor/reference/nodes/input.md
   title: Input Nodes
-  summary: 'Node reference. Receive and process player input inside the scene loop. Nodes: Process Input, Get Input.'
+  summary: Get Input (input/WaitForInput) which waits for player input in the scene loop, with reason, prefix, allow_commands
+    (! prefix) and an abort_condition chain, plus the Process Input module that cleans the text and returns the interaction
+    state.
 - path: user-guide/node-editor/reference/nodes/prompt.md
   title: Prompt Nodes
-  summary: 'Node reference. Build prompts and run generation from graphs: load and render prompt templates, assemble prompts
-    dynamically (see Prompt Building), and generate a response with a client. Nodes: Build Prompt, Clean Response, Generate
-    Response, Load Template, Prompt From Template, Render Prompt, Template Variables.'
+  summary: 'Prompt and generation nodes: Build Prompt (include_* context toggles, reserved_tokens, memory_prompt, dedupe_enabled,
+    prefill), Prompt From Template (template_file vs template_text, scope), Load Template, Render Prompt, Template Variables,
+    Clean Response and Generate Response (action_type, response_length, data_output, response_spec).'
 - path: user-guide/node-editor/reference/nodes/raise.md
   title: Flow Exception Nodes
-  summary: 'Node reference. Stop or redirect graph execution by raising exceptions: **Stop** ends the current run, **Input
-    Value Error** reports invalid socket input, and **Acted As Character** signals that a character turn happened. See Error
-    Handling. Nodes: Acted As Character, Input Value Error, Stop.'
+  summary: 'Three exception-raising nodes: Stop (StopGraphExecution, StopModule, LoopBreak, LoopContinue, LoopExit, ExitScene,
+    RestartSceneLoop, ResetScene, StageExit), Input Value Error (message and field) and Acted As Character.'
 - path: user-guide/node-editor/reference/nodes/response.md
   title: Response Parsing Nodes
-  summary: 'Node reference. Extract structured data from LLM responses. A **Response Spec** describes the expected format;
-    extractors pull out anchored sections, code blocks, lists or regex matches from the raw response text. Nodes: After Anchor
-    Extractor, Anchor Extractor, AsIs Extractor, Code Block Extractor, Complex Anchor Extractor, Complex Code Block Extractor,
-    Regex Extractor, Response Spec, and more.'
+  summary: 'Extractor nodes for LLM output plus Response Spec (named extractors, required fields): Anchor and After Anchor,
+    nesting-aware Complex Anchor and Complex Code Block, Code Block, Regex (pattern, group, all_matches), AsIs and Strip Prefix,
+    all sharing trim and fallback_to_full.'
 - path: user-guide/node-editor/reference/nodes/scene-characters.md
   title: Scene Character Nodes
-  summary: 'Node reference. Everything about characters in the scene: fetch them (by name or player status), create and persist
-    new ones, activate/deactivate them for the current scene, and read or write their attributes, details and descriptions.
-    Nodes: Activate Character, Deactivate Character, Get Character, Get Character Attribute, Get Character Description, Get
-    Character Detail, and more.'
+  summary: 'Eighteen character nodes: Get Character (partial match), Get Player Character, List Characters (active/inactive/all),
+    Make Character, Activate and Deactivate, Remove Character and Remove All Characters, Is Player / Is Active checks, Get
+    and Set Character Attribute, Detail and Description, Unpack Character, and Update Character Data (including renaming).'
 - path: user-guide/node-editor/reference/nodes/scene-history.md
   title: Scene History Nodes
-  summary: 'Node reference. Work with the scene''s message history and its summarized archive: query messages by type or id,
-    push/pop messages, and manage static archive entries (pre-authored history that survives summarization). Nodes: Character
-    Activity, Context History, Create Static Archive Entry, Get Message By ID, Scene Has History, Last Message of Type, Pop
-    History, Push History, and more.'
+  summary: 'History nodes: Push History and Pop History, Get Message By ID, Last Message of Type (stop_on_time_passage), Scene
+    Has History, Context History (token budget, keep_* flags, min_dialogue_length, label_chapters), Character Activity, and
+    the static archive entry nodes with Unpack Archive Entry.'
 - path: user-guide/node-editor/reference/nodes/scene-intent.md
   title: Scene Intent Nodes
-  summary: 'Node reference. Read and change the scene''s intention state: the overall scene intent, the active scene phase
-    and the scene types that define how different phases play. Nodes: Get Scene Intent, Get Scene Type, Get Scene Types, Is
-    Scene Phase Active, Make Scene Type, Remove Scene Type, Set Scene Intent, Set Scene Phase, Unpack Scene Phase, Unpack
-    Scene Type.'
+  summary: 'Scene intention nodes: Get Scene Intent (intent, phase, scene_type, start, direction_always_on / run_immediately
+    / instructions), Set Scene Intent and Set Scene Phase, Get / Make / Remove Scene Type, Get Scene Types, Is Scene Phase
+    Active, and the Unpack Scene Phase and Unpack Scene Type nodes.'
 - path: user-guide/node-editor/reference/nodes/scene-messages.md
   title: Scene Message Nodes
-  summary: 'Node reference. Create and manipulate messages in the scene log: character, narrator and director messages, message
-    versions, context visibility and message metadata. Nodes: Add Message Version, Character Message, Director Message, Narrator
-    Message, Toggle Message Context Visibility, Unpack Message Meta.'
+  summary: 'Message-object nodes: Character Message (auto "Name: " prefix, avatar capture), Narrator Message, Director Message
+    (action, subtype, meta), Add Message Version which appends to the revision stack, Toggle Message Context Visibility (hide
+    from the AI) and Unpack Message Meta.'
 - path: user-guide/node-editor/reference/nodes/scene-world-state.md
   title: World Entry Nodes
-  summary: 'Node reference. Read and write the scene''s world entries (the world information shown in the world state panel)
-    and build generation options — writing styles and spices — that steer content generation. Nodes: Get World Entries, Get
-    World Entry, Remove World Entry, Save World Entry, Generation Options, Spices, Writing Style, Unpack World Entry.'
+  summary: 'World entry nodes: Get World Entry and Get World Entries (id filter, raise_on_missing), Save World Entry (text,
+    meta, create_pin), Remove World Entry and Unpack World Entry, plus the generation-option nodes Generation Options, Spices
+    (spice_level) and Writing Style.'
 - path: user-guide/node-editor/reference/nodes/scene.md
   title: Scene Nodes
-  summary: 'Node reference. Scene lifecycle and metadata. The **Scene Loop** module is the heart of a playable scene — it
-    processes turns, input and events (see the Command Module and Events concepts). The Get/Set pairs manage the scene''s
-    title, description, introduction and content classification, and the storyline modules drive dynamic storylines. Nodes:
-    Creative Loop, Dynamic Storyline, Game Loop Actor Iteration, Generate Storyline, Get Content Classification, Get Story
-    Description, and more.'
+  summary: 'Scene lifecycle and metadata nodes: Scene Loop and Creative Loop, the Game Loop Actor Iteration trigger, Select
+    Actor For Turn, Restore Scene, Get and Set Title, Description, Introduction and Content Classification, Get Scene State
+    and Get Scene Loop State, Unpack Interaction State, and the Dynamic Storyline / Generate Storyline modules.'
 - path: user-guide/node-editor/reference/nodes/state.md
   title: State Nodes
-  summary: 'Node reference. Read and write named variables in the graph state. Every variable lives in a **scope**: `local`
-    (this module run), `parent`, `shared` (all modules in the graph), `scene loop` (reset each loop iteration) or `game` (persisted
-    with the scene save). See States for scope semantics. The `...Path` variants address nested values with dotted paths,
-    and the counter nodes increment numeric state in place. Nodes: Counter State (Conditional), Set State (Conditional), Unset
-    State (Conditional), State Counter, State Counter (Path), Game State, Get State, and more.'
+  summary: 'Fourteen state nodes: Get / Set / Unset / Has State and their "(Path)" dotted-path variants, State Counter with
+    increment, reset and reset_cap, the Conditional Set / Unset / Counter variants that require a state input, and Game State.
+    Scopes: local, parent, shared, scene loop, game.'
 - path: user-guide/node-editor/reference/nodes/util-packaging.md
   title: Packaging Nodes
-  summary: 'Node reference. Package node modules for reuse and installation into scenes — see Package for the packaging workflow.
-    Nodes: Dynamic Storyline Package, Install Node Module, Package, Promote Config.'
+  summary: The Package graph node (package_name, author, description, installable, restart_scene_loop) with Install Node Module
+    and Promote Config (node_registry, property_name, exposed_property_name, required, label), plus the shipped Dynamic Storyline
+    package module.
 - path: user-guide/node-editor/reference/nodes/util.md
   title: Utility Nodes
-  summary: 'Node reference. Miscellaneous helpers: counters, string diffs, list extraction from text, ISO date durations and
-    the **Module Style** node that sets a module''s canvas appearance. Nodes: Counter, Diff, Extract List, ISO Date Duration,
-    Module Style.'
+  summary: 'Utility nodes: Counter (increments a key in a dict), Diff (plain text or inline HTML), Extract List (numbered
+    or bulleted lists from LLM text), ISO Date Duration (amount and unit to "P3D") and Module Style (title colour, icon).'
 - path: user-guide/node-editor/reference/nodes/ux.md
   title: UX Nodes
-  summary: 'Node reference. Build interactive user-facing elements from graphs: choice menus, notices and text inputs, emitted
-    to the interface and styled with **Style Element**. Nodes: Build Choice Element, Build Notice Element, Build Text Input
-    Element, Emit UX Element, Style UX Element.'
+  summary: 'UX element nodes: Build Choice Element (choices, multi_select, timeout_seconds, closable), Build Text Input Element
+    (multiline, rows, placeholder), Build Notice Element, Style UX Element (tint, mdi icon, apply_scene_colors) and Emit UX
+    Element which awaits submit/cancel and returns cancelled and timed_out.'
 - path: user-guide/node-editor/reference/nodes/validation.md
   title: Validation Nodes
-  summary: 'Node reference. Validate values inside graphs — set/unset checks, containment, characters, asset IDs and context
-    ID strings/items — producing pass/fail results you can branch on. Nodes: Validate Asset ID, Validate Character, Validate
-    Context ID Item, Validate Context ID String, Validate Value Contained, Validate Value Is Not Set, Validate Value Is Set.'
+  summary: 'Seven validators that raise an error on failure with a "{value}" error_message: Validate Value Is Set (blank_string_is_unset)
+    and Is Not Set, Validate Value Contained, Validate Character (create_placeholder), Validate Asset ID, Validate Context
+    ID String / Context ID Item.'
 - path: user-guide/node-editor/reference/nodes/websocket.md
   title: Websocket Nodes
-  summary: 'Node reference. Plumbing for module-defined websocket handlers: route requests, queue responses and signal operation
-    success or failure to the frontend. Nodes: Get Websocket Router, Websocket Operation Done, Websocket Operation Failed,
-    Websocket Response.'
+  summary: 'Nodes for module-defined websocket handlers: Get Websocket Router by route name, Websocket Response (action name
+    plus a data payload dict), Websocket Operation Done (signal_only, allow_auto_save, status message) and Websocket Operation
+    Failed.'
 - path: user-guide/node-editor/reference/template_functions.md
   title: Template Functions
-  summary: 'Reference for functions available inside prompt templates: response scaffolding (set_prepared_response, set_data_response,
-    disable_dedupe), scene/memory/text queries (query_scene, query_memory, query_text, query_text_eval, instruct_text), agent
-    access (agent_action, agent_config), utilities (time_diff, text_to_chunks, to_int, to_str, len, max, min, join, count_tokens,
-    data_format_type, llm_can_be_coerced, config), and the condensed filter.'
+  summary: 'Functions available inside jinja2 prompt templates: set_prepared_response and set_data_response scaffolding, disable_dedupe,
+    query_scene, query_memory, query_text, query_text_eval, instruct_text, agent_action, agent_config, time_diff, text_to_chunks,
+    count_tokens, llm_can_be_coerced and the `condensed` filter.'
 - path: user-guide/node-editor/reference/useful-template-patterns.md
   title: Template Pattern Cheat Sheet
-  summary: 'Copy-paste Jinja2 patterns for prompt templates: scene context with token budgets, memory retrieval via rag_build,
-    character context with conditional detail, including reusable templates (scene-context, memory-context, character-context),
-    budget-based conditionals, and response scaffolding with bot_token, set_prepared_response, and set_data_response.'
+  summary: 'Copy-paste jinja2 prompt snippets: scene history via scene.context_history(budget=...), memory via agent_action("narrator",
+    "rag_build"), character context with filtered_sheet and query_memory, the scene-context / memory-context / character-context
+    / extra-context templates, token-budget conditionals, and bot_token / set_prepared_response scaffolding.'
 - path: user-guide/prompts/context-history-review.md
   title: Scene Context History Review
-  summary: 'The Scene Context tab of the Prompt Manager visualizes how scene history is assembled into AI context, with color-coded
-    sections (layered history, archived summaries, dialogue), per-section token counts, and tunable settings: best fit mode
-    with min/max dialogue, manual dialogue/summary detail ratios, enforce boundary, and max token budget.'
+  summary: The Prompt Manager's Scene Context tab, rendering scene history as color-coded Layered History / Archived / Dialogue
+    sections with token, entry and budget counts. Documents Best Fit mode, Dialogue Ratio, Summary Detail Ratio, Enforce Boundary
+    and Max Budget.
 - path: user-guide/prompts/deduplication.md
   title: Prompt Deduplication
-  summary: 'Prompt deduplication: the line-level fuzzy pass that drops lines over 32 characters with ≥95% similarity to an
-    earlier one, why it is off by default (it breaks prompt caching and can damage structured content), the per-client Deduplicate
-    Prompts toggle in the Advanced section, and opting out with disable_dedupe().'
+  summary: 'The line-level fuzzy dedupe pass controlled by the per-client Deduplicate Prompts toggle in the Advanced section.
+    Recommends leaving it off because it breaks prompt caching, and shows the opt-outs: disable_dedupe() and the Prompt from
+    Template node''s property.'
 - path: user-guide/prompts/index.md
   title: Prompt Manager
-  summary: 'Central UI for the Jinja2 prompt templates driving all AI interactions: template groups (default/user/scene/custom)
-    with priority-based override resolution, the Active tab''s resolved template tree with outdated-override indicators, template
-    editing, response extraction directives (AnchorExtractor, RegexExtractor, etc.), and the Prompts tab for inspecting sent
-    prompts with a Test Changes re-send button. Includes 0.36.0 template restructuring upgrade notes.'
+  summary: 'Overview of the Prompt Manager and its Prompts, Template Files, LLM Prompt Templates and Scene Context tabs: Jinja2
+    template groups (default, user, scene, custom) and their priority, the resolved template tree with override indicators,
+    and Test Changes.'
 - path: user-guide/prompts/llm-prompt-templates.md
   title: LLM Prompt Templates
-  summary: 'Manage base chat-format templates (ChatML, Llama3, Mistral, etc.) that wrap prompts for local LLM inference: built-in
-    vs user templates in templates/llm-prompt/std/, creating and copying templates, pasting GGUF/llama.cpp chat templates
-    with supported variables (messages, enable_thinking, thinking_budget), and assigning a template to a client.'
+  summary: 'The Prompt Manager tab for base chat-format templates (ChatML, Llama3, Mistral, Gemma4): built-in templates/llm-prompt/std/
+    vs update-safe user templates, creating, copying and deleting them, pasting GGUF chat templates, and assigning one to
+    a client.'
 - path: user-guide/prompts/redefining-response-extraction.md
   title: Redefining Response Extraction
-  summary: Advanced guide to customizing how content is extracted from LLM responses using template extractor functions (set_anchor_extractor,
-    set_as_is_extractor, set_after_anchor_extractor), with a worked example separating <ANALYSIS> from <DIALOGUE> tags, plus
-    fallback_to_full, tracked_tags for nested tags, and mod_response_length for extending the response token budget.
+  summary: Overriding a template's default AsIsExtractor with set_anchor_extractor / set_as_is_extractor / set_after_anchor_extractor
+    in the template body, worked through a dialogue example using <ANALYSIS> and <DIALOGUE> tags. Covers tracked_tags and
+    fallback_to_full.
 - path: user-guide/prompts/volatile-context-placement.md
   title: Volatile Context Placement
-  summary: 'Volatile context placement: moving RAG memory and dynamic notes after the scene history so the cacheable prompt
-    prefix stays stable. Covers the per-client Optimize for Prompt Caching toggle in the client editor''s Advanced section,
-    the per-agent Auto/On/Off override, and when not to enable it (local or weaker models).'
+  summary: Moving volatile context (RAG memory, dynamic notes) after the scene history to preserve provider prompt caches,
+    via the per-client 'Optimize for Prompt Caching' toggle in the Advanced section and the per-agent Auto/On/Off override.
+    Includes when not to enable it.
 - path: user-guide/restoring-scenes.md
   title: Restoring Scenes
-  summary: Two ways to return a scene to a previous state, the timeline (drag a slider across the automatic changelog version
-    history to preview any revision, then roll the active scene back in place with an automatic backup, fork it to a new save,
-    or open it as a new unsaved scene from the Quick Load card menu) and restore from a designated restore point save file.
-    Opened from the scene tools Save menu, a message's Fork button, or the scene card's three-dot menu.
+  summary: The Timeline built from the scene's changelog deltas, opened from the Save menu, a message's Fork button, a Quick
+    load card menu or a Scene Library save row, with Roll back, Open at this revision and Fork to new save; plus Restore Scene
+    from a restore point.
 - path: user-guide/saving.md
   title: Saving
-  summary: How scene saving works, .json save files in the project directory, automatic changelog version history, restore
-    points, saving from the scene or world editor, auto save (and why the toggle can be locked), Save As, and forking a copy
-    of a scene from a message via the timeline.
+  summary: How scene saves work - .json files in the scene project directory with an automatic changelog version history.
+    Covers saving from the scene tools or world editor, the auto save toggle, locked save files, Save As for checkpoints and
+    restore points, and forking.
 - path: user-guide/scenario-tools.md
   title: Scene Tools
-  summary: The scene tools toolbar and agent activity bar. Covers actor actions, director actions, narrator actions, advancing
-    time, world state actions, creative tools (e.g. taking characters in/out of the scene, introducing new characters with
-    optional example dialogue generation and guidance), the visualizer menu, and saving, with Ctrl/Cmd modifier click behavior.
+  summary: 'Reference for the tool bar above the input box: the agent activity bar, the quick-settings chips (Auto Save, Auto
+    Progress, Immersive) and the Regenerate, Actor, Director, Narrator, Advance time, World state, Creative tools, Visualizer
+    and Saving menus.'
 - path: user-guide/scene-browser.md
   title: Home Screen & Scene Library
-  summary: 'The home screen landing page: Quick load recent-scene cards, the Scene Library file tree (projects with cover
-    thumbnails, save files, asset/node-module counts, filtering, Show all saves), deleting save files, character cards, and
-    entire scene projects (type-name confirmation), the Import dropzone for scenes and character cards, and creating a new
-    blank scene.'
+  summary: Tour of the Home screen - Quick load cards with their Timeline / Remove / Delete menu, the Scene Library tree of
+    scene projects and save files with filtering and character cards, the Import dropzone for .json/.zip scenes and .png/.webp
+    cards, and Create new scene.
 - path: user-guide/scene-directory.md
   title: Scene Directory Structure
-  summary: Layout of a scene's project directory under scenes/, save .json files, and the assets/, changelog/, backups/, nodes/,
-    templates/, shared-context/, and info/ subdirectories, and why the structure matters for backups and restores.
+  summary: What lives in a scene's project directory under scenes/ - the .json save files plus assets/ (images and TTS audio),
+    changelog/ (snapshots and deltas powering the Timeline), backups/, nodes/ (node editor graphs), templates/, shared-context/
+    and info/.
 - path: user-guide/scene-state-reset.md
   title: Reset Scene State
-  summary: The Reset Scene State dialog for selectively clearing scene-internal state, context DB (memory/RAG reimport), history,
-    intent state, agent states, and reinforcements, without touching character definitions or world entries. Useful for stale
-    cached data or restarting progression.
+  summary: The Reset Scene State dialog for selectively clearing scene internals without touching character or world definitions
+    - Context DB (reimport of the vector memory), History (messages, archived summaries and layered history), Intent State,
+    Agent States and Reinforcements.
 - path: user-guide/templates/attribute.md
   title: Character Attribute
-  summary: 'Create and use Character Attribute templates for AI-generating character traits in the World Editor: attribute
-    name, generation priority, additional instructions with {character_name}/{player_name} variables, spice and writing-style
-    support flags, favorites, and applying the template in the Character Editor''s Attributes section.'
+  summary: 'Creating a Character attribute world-state template used by the World Editor''s Character Attributes section:
+    template name and type, Attribute name, Priority (generation order), description, Additional instructions with {character_name},
+    and Supports spice.'
 - path: user-guide/templates/detail.md
   title: Character Detail
-  summary: 'Create and use Character Detail templates for AI-generating longer-form character backstory answers: question/statement
-    field (questions work best), additional instructions with {character_name}/{player_name} variables, spice and writing-style
-    support flags, and applying the template in the Character Editor''s Details section.'
+  summary: 'Creating a Character detail world-state template used by the World Editor''s Character Details section: template
+    name and type, the Question / Statement field (questions work best), description, Additional instructions, Supports spice
+    and Favorite.'
 - path: user-guide/templates/groups.md
   title: Groups
-  summary: All world-state templates live in groups; this page covers creating a group (name, author, description) via the
-    Create Group button in the Templates sidebar and deleting a group.
+  summary: Template groups are the containers all world-state templates live in. Covers creating one with the Create Group
+    button (name, author, description) and removing it with Remove Group from the Templates list in the left sidebar.
 - path: user-guide/templates/index.md
   title: Templates
-  summary: 'Overview of the Templates tab and the six world-state template types: Character Attribute, Character Detail, Spices
-    (randomization), Writing Style, State Reinforcement (tracked states), and Scene Type. Templates are organized into groups
-    and shared across all games.'
+  summary: 'Overview of the Templates tab and the template types available: Character Attribute, Character Detail, Spices,
+    Writing Style, State Reinforcement, Scene Type, Visual Style, Visual Prompt Finalizer and Agent Persona. Templates live
+    in groups shared across scenes.'
 - path: user-guide/templates/scene_type.md
   title: Scene Types
-  summary: Create Scene Type templates whose instructions guide the director's style and pacing for a scene; currently an
-    early WIP, usable only via import in the World Editor's Scene Direction section.
+  summary: Creating a Scene type template - name, type, description, and the scene type instructions that govern the director's
+    actions when that scene type is played, plus Favorite. Warns it is early WIP and consumed by the World Editor's Scene
+    Direction section.
 - path: user-guide/templates/spice.md
   title: Spice Collection
-  summary: 'Create Spice Collection templates that inject a random {spice} instruction into attribute/detail generation: writing
-    the additional-instructions pattern, adding or AI-generating spice values, and a worked example of applying a collection
-    with the Generation Settings spice button and raising the application chance (ctrl-click) to 100%.'
+  summary: 'Creating a Spice collection template that injects randomness into attribute and detail generation: description,
+    Additional instructions built around the {spice} variable, adding spice values by hand or with the Generate dialog, and
+    the Spice picker.'
 - path: user-guide/templates/state.md
   title: State Reinforcement
-  summary: 'Create State Reinforcement templates to track character or world states: question/attribute name, state type (all
-    characters, player, NPCs, world), context attachment method, re-evaluation interval in turns, additional instructions,
-    and auto-create for new characters; generated from the Character Editor''s States tab.'
+  summary: 'Creating a state reinforcement template for automatically tracked character and world states: the question or
+    attribute name, description, State Type (All Characters, Player Character, World), Context Attachment Method, and update
+    every N turns.'
 - path: user-guide/templates/visual-finalizer.md
   title: Visual Prompt Finalizer
-  summary: 'Visual prompt finalizer templates: reusable sets of image-prompt post-processing actions (exact/fuzzy/regex replace
-    or AI instruction) insertable into the visualizer agent''s Prompt Finalization table via the Preset picker; includes the
-    shipped Ideogram JSON preset and create/edit/delete steps.'
+  summary: Creating a Visual prompt finalizer template - a reusable table of post-processing actions (exact, fuzzy or regex
+    match-and-replace, or an AI instruction) that rewrite image generation prompts. Covers the Actions field and the shipped
+    Ideogram JSON preset.
 - path: user-guide/templates/writing-style.md
   title: Writing Styles
-  summary: Create Writing Style templates that apply tone/style instructions to generated content, and configure phrase detection
-    (0.30.0+) for the Editor agent's revision actions using regex or semantic-similarity matching against unwanted phrases,
-    including the requirement to set the writing style in Scene Settings.
+  summary: 'Creating a Writing style template: description, the writing style instructions passed to the AI, Favorite, and
+    Phrase Detection which lists unwanted phrases matched by regex or semantic similarity for the Editor agent''s Revision
+    actions.'
 - path: user-guide/time-passage.md
   title: Time Passage Management
-  summary: Inserting time passage markers via the Advance Time scene tool (preset durations or custom) or between messages
-    in the scene view, editing and deleting them in the scene view or World State Manager, and how time passages affect the
-    AI's temporal context.
+  summary: Time passage markers - inserting them from the Advance Time menu presets or Custom dialog, editing them in the
+    scene view or the World State Manager history, deleting them, and how they drive separate summarization and clear actor
+    directions.
 - path: user-guide/tracking-a-state.md
   title: Tracked states
-  summary: Introduction to tracked states, periodic reinforcements of character or world facts kept in AI context. Explains
-    what they are, how to reach the character editor and world editor state managers, inspecting state values, quickly applying
-    states via templates, and the context attachment method.
+  summary: 'What tracked states are - periodic re-inforcement of a character''s or the world''s state kept in the AI context
+    - where to set them up (character editor, world editor), favorited state templates, and the four Context Attachment Methods:
+    Passive, Sequential, Conversation Context and All Context.'
 - path: user-guide/visual-library.md
   title: Visual Library
-  summary: The Visual Library dialog for generating and managing images, prompt/instruct modes, visual types, reference images,
-    iterating and regenerating, the image queue, saving to scene assets, uploads, reference configuration, cover crop, and
-    AI image analysis with tag generation.
+  summary: Snippet-include stub rendering the Visual Library page from the visualizer agent docs - managing generated images
+    from the toolbar image icon, the Queue vs Scene Assets sections, and the Text to Image / Image Edit / Image Analysis backend
+    capability indicators.
 - path: user-guide/voice-library.md
   title: Voice Library
-  summary: The Voice Library for managing TTS voices across all providers, global vs scene scope tabs, API status, creating
-    and managing voices, automatic and manual character voice assignment, and organizing voices with tags, filtering, and
-    search.
+  summary: Snippet-include stub rendering the Voice Library page from the voice agent docs - the unified hub for managing
+    voices across all TTS providers, opened from the voice icon in the app bar and requiring the voice agent to be enabled.
 - path: user-guide/world-editor/characters/actor.md
   title: Actor management
-  summary: The Actor tab for AI characters, define dialogue instructions (acting/speaking directions like to a stage actor)
-    and line-by-line dialogue examples to shape a character's speech style, with AI generate support for instructions.
+  summary: 'The AI-only Actor tab of the character editor: Dialogue Instructions for how the character acts and speaks, with
+    an AI Generate button, and Dialogue Examples added one line at a time with ctrl+Enter autocomplete. Spoken words must
+    use straight quotes.'
 - path: user-guide/world-editor/characters/attributes.md
   title: Attributes
-  summary: Managing character attributes (short snapshot traits) in the character editor, adding via the New attribute input,
-    editing, removing, and generating attributes in bulk using attribute templates.
+  summary: 'The character editor''s Attributes tab: adding an attribute via the New attribute input, editing and removing
+    attributes, and bulk-generating from attribute templates using the Templates button, per-template checkboxes and Generate
+    Selected.'
 - path: user-guide/world-editor/characters/create.md
   title: Character creation
-  summary: Creating a new character with the Create Character button, the AI generation toggle and instructions field, name,
-    description, generate-attributes option, the generate-example-dialogue option with its optional guidance field, and the
-    Controlled by Player switch.
+  summary: 'Reference for the Create New Character dialog in the World Editor''s Characters tab, field by field: Enable AI
+    Generation, AI Generation Instructions, Name, Description, Generate Attributes, Generate Example Dialogue and Controlled
+    by Player. Mentions the Creator agent''s Fast Character Generation mode.'
 - path: user-guide/world-editor/characters/deactivate.md
   title: Activate and Deactivate Characters
-  summary: Temporarily removing a character from dialogue generation with the Deactivate button and bringing them back with
-    Activate, instant, without narration, versus doing it through scene tools which narrates the exit/entrance.
+  summary: How to temporarily take a character out of the scene and bring them back with the Deactivate and Activate buttons
+    beneath the character portrait in the Characters tab. Instant and without narration, unlike the equivalent scene tools
+    actions.
 - path: user-guide/world-editor/characters/delete.md
   title: Delete character
-  summary: Permanently deleting a character from a scene via the Delete button in the character editor, with a type-the-name
-    confirmation step.
+  summary: 'How to permanently remove a character from a scene: select the character in the World Editor''s Characters tab,
+    click the Delete button beneath the portrait, and confirm by typing the character''s name into the confirmation field.'
 - path: user-guide/world-editor/characters/description.md
   title: Description
-  summary: Editing a character's description (defining characteristics, personality, background, motivations) in the Description
-    tab, changes apply automatically as you type, with AI generate/autocomplete support.
+  summary: The character editor's Description tab - a short to medium description of the character's defining characteristics,
+    personality, background and motivations. Changes apply as you type but need a scene save if auto-save is off; supports
+    Generate and autocomplete.
 - path: user-guide/world-editor/characters/details.md
   title: Details
-  summary: Managing character details (freeform background/history entries, names can be titles or questions), adding, editing,
-    removing, setting up a tracked state from a detail, pinning a detail to context, and generating details from templates.
+  summary: 'The character editor''s Details tab: adding details via the New detail input, editing and removing them, wiring
+    a detail to a tracked state with Setup Auto State, pinning one into the AI context with Add pin, and bulk-generating from
+    detail templates.'
 - path: user-guide/world-editor/characters/folders.md
   title: Folders
-  summary: Organizing the character list sidebar into collapsible folders (0.37+), assigning via the folder input in the character
-    editor, renaming, expanding/collapsing, member count chips, and how folder assignments sync across scenes.
+  summary: 'Organizing the character list sidebar into collapsible folders: assigning a character via the folder input at
+    the top of the character editor, clearing it to ungroup, renaming a folder from the sidebar''s pencil icon, and per-scene
+    expand and collapse memory.'
 - path: user-guide/world-editor/characters/import.md
   title: Import character
-  summary: Importing a character from another existing Talemate scene using the Import character button in the Characters
-    tab, pick source scene, pick character, import.
+  summary: 'How to import a character from another Talemate scene: in the World Editor''s Characters tab click Import character,
+    pick the source scene and character in the dialog, then click Import.'
 - path: user-guide/world-editor/characters/index.md
   title: Character Editor
-  summary: Overview of the Characters tab in the World Editor and a character's components, attributes, details, description,
-    tracked states, actor management (dialogue instructions/examples), and visuals, plus links to activation, player control,
-    and folders.
+  summary: Overview of the World Editor's Characters tab and the components a character is made of, linking to Attributes,
+    Details, Description, Tracked states, Actor management and Visuals. Also covers deactivating characters, changing the
+    player character, and folders.
 - path: user-guide/world-editor/characters/player.md
   title: Make or Unmark a Player Character
-  summary: Switching which character is player-controlled at any time, the Make Player Character button (auto-demotes the
-    previous player to AI, auto-activates deactivated characters) and unmarking so all characters are AI-controlled.
+  summary: 'How to change which character the player controls: the Player and AI chips in the character list, the Make Player
+    Character button (which demotes the previous player and auto-activates a deactivated character), and the Unmark as Player
+    button.'
 - path: user-guide/world-editor/characters/states.md
   title: Tracked states
-  summary: Setting up tracked state reinforcements for a character in the States tab, naming the state (questions work best),
-    update frequency in turns, context attachment method, additional instructions, and refreshing or resetting a state.
+  summary: 'Per-character tracked states (state reinforcements) in the character editor''s States tab: creating one from the
+    New state input, the reinforcement interval in turns, Context Attachment Method, Additional Instructions, and the Refresh
+    State and Reset State buttons.'
 - path: user-guide/world-editor/characters/visuals.md
   title: Character Visuals
-  summary: The character Visuals tab with its four sub-tabs, cover images (CHARACTER_CARD reference images), portraits (types,
-    management, automatic emotion-based selection, missing-tags warning), rules for permanent visual traits, and prompt finalization,
-    plus generation prerequisites.
+  summary: 'The character editor''s Visuals tab and its sub-tabs: Cover Image and Portrait (drag-and-drop, Generate from Reference,
+    Generate New, batch mode, Set as Cover or Default or Current), Rules for static visual traits, and character-level Prompt
+    Finalization. Covers tag-driven automatic portrait selection.'
 - path: user-guide/world-editor/context-db.md
   title: Context DB
-  summary: Browsing and searching the scene's semantic memory database (Memory Agent) in the world editor, embedding-based
-    search with the Search Strictness slider (0.1-2.0), manually adding entries, and a reset tool to rebuild the database.
+  summary: 'The read-only Context DB browser for the Memory agent''s vector store: embedding-based search, the Search Strictness
+    slider (0.1-2.0, default 1.0) which writes distance_mod to the active embedding preset, manually adding entries, and the
+    Reset tool that rebuilds the database.'
 - path: user-guide/world-editor/generation-settings.md
   title: Generation Settings
-  summary: World editor AI content generation controls, ctrl+click Generate for an instructions dialog (seed material that
-    must be reflected), alt+click to rewrite existing content, generation length with per-context-type memory, and applying
-    writing style and spice templates.
+  summary: 'The world editor''s generation settings bar: ctrl+click Generate for an Instructions dialog, the Generation Length
+    dropdown from Tiny (8 tokens) to Complete (1024) remembered per context type, applying writing style templates, and spice
+    collection templates with the Spice Chance control.'
 - path: user-guide/world-editor/history/index.md
   title: History
-  summary: The scene History manager, static archived entries (manually dated pre-scene backstory), summary entries auto-generated
-    by the Summarizer agent, and layered history. Covers editing, deleting, regenerating, inspecting sources, compression
-    statistics, Regenerate everything, and reset.
+  summary: 'The World Editor''s History tab: the three entry types (static archived, summary archived, layered), editing entries
+    by double-click, deleting, regenerating and inspecting them, adding static entries with Entry Text plus Unit and Amount
+    duration, and Regenerate All History.'
 - path: user-guide/world-editor/history/layered-history.md
   title: Layered History
-  summary: Explains layered history compression, base layer 0 (static plus summary entries) is re-summarized into increasingly
-    compressed layers 1+, creating a detail gradient so old events stay in AI context. Covers compression statistics, configuration,
-    management, and how layers appear in context.
+  summary: 'Conceptual explanation of layered history: base layer static and summary entries, higher layers compressing further
+    (useful up to about Layer 3), and the resulting detail gradient in the AI context. Covers compression statistics and the
+    Summarizer agent settings that configure it.'
 - path: user-guide/world-editor/pins.md
   title: Pins
-  summary: Pinning context entries so the AI always includes them in generation, creating pins from the Context editor or
-    from character details, toggling pins active/inactive, and conditional automatic pinning via AI prompt conditions or game
-    state conditions.
+  summary: 'Pinning context entries so the AI always considers them: creating pins from the Context editor or a character
+    detail, toggling Pin active, and the two automation modes - AI Prompt conditions evaluated by the World State agent, and
+    Game State conditions built from condition groups and state paths.'
 - path: user-guide/world-editor/scene/direction.md
   title: Direction
-  summary: The scene Direction tab, set director instructions (story-specific guidance for director chat and auto-direction),
-    the overall story intention, and the current scene phase/intention, both required for the director's Autonomous Scene
-    Direction to be available.
+  summary: 'The Scene tab''s Direction panel where you set story intent used by the Narrator and the director''s Autonomous
+    Scene Direction: scene-specific Director Instructions, the Overall Intention, and the Current Phase (Scene Type template
+    plus Current Scene Intention).'
 - path: user-guide/world-editor/scene/export.md
   title: Export
-  summary: Exporting a scene from the world editor, Talemate scene format (currently the only format), choosing the export
-    file name, and the reset-progress option that clears messages, choices, and stateful data for a clean distributable copy.
+  summary: 'The Scene tab''s Export panel: choosing between Talemate Scene (JSON only) and Complete Scene Package (ZIP with
+    assets, nodes, info, templates and per-scene agent settings), setting the export file name, and the Reset progress option.'
 - path: user-guide/world-editor/scene/game-state.md
   title: Game State
-  summary: The Game State tab for viewing and editing persistent game state variables used by node modules, a raw JSON editor
-    (invalid JSON is rejected) and a Watched Variables manager for adding/removing watch paths shown in Debug Tools.
+  summary: 'The Scene tab''s Game State editor: a JSON editor for the scene''s persisted game state variables, saved when
+    you click outside and rejected if invalid, plus a Watched Variables panel that feeds the Debug Tools Vars panel. These
+    variables are the node editor''s game scope.'
 - path: user-guide/world-editor/scene/outline.md
   title: Outline
-  summary: The scene Outline tab, edit the scene's title, content classification (tone/expectation of generated content),
-    perspective and tense, description, and the introduction text shown when a user first enters the scene.
+  summary: 'The Scene tab''s Outline panel: Title, Content Classification, the four perspective-and-tense fields (scene default
+    plus player, other and narrator overrides, with the {player_name} placeholder and shipped presets), the internal Description,
+    and the player-facing Introduction.'
 - path: user-guide/world-editor/scene/settings.md
   title: Settings
-  summary: 'The world editor''s Scene Settings tab: writing style template, locked save file, the experimental tag, restoration
-    settings (designating another save file as a restore point and the Restore Scene button), and the Agent settings file
-    dropdown that auto-links, picks or opts out of the scene''s agent overrides file.'
+  summary: 'The Scene tab''s Settings panel: selecting a writing style template, the Locked save file flag, the Experimental
+    tag, Restoration Settings for designating a restore point and using Restore Scene, and the Agent settings file dropdown
+    for per-scene agent overrides.'
 - path: user-guide/world-editor/scene/shared-context.md
   title: Shared World & Episodes
-  summary: The Shared World panel, create shared context .json files to share characters, world entries, and history across
-    scenes in a project, link scenes, bulk-share elements, and manage episodes (alternative storylines) including creating
-    new scenes from an episode.
+  summary: 'The Scene tab''s Shared World panel: creating a shared context file, linking a scene to it, bulk sharing characters
+    and world entries, and creating new scenes that inherit it. Also covers Episodes (alternative introductions) and marking
+    items as Shared to World Context.'
 - path: user-guide/world-editor/scene/visuals.md
   title: Scene Visuals
-  summary: 'The Scene Editor''s Visuals tab: Background Illustration and Scene Illustration grids with cover and backdrop
-    badges, drag-and-drop upload, Generate Variation and Generate New, per-image actions, and the Prompt Finalization sub-tab
-    for the Visualizer agent''s per-scene overrides.'
+  summary: 'The Scene tab''s Visuals sub-tabs: Background Illustration and Scene Illustration with drag-and-drop upload, Generate
+    Variation, Generate New, Cover and Backdrop badges and the Render backdrop switch, plus per-scene Prompt Finalization
+    overrides for the Visualizer agent.'
 - path: user-guide/world-editor/suggestions.md
   title: Suggestions
-  summary: The Suggestions view where agent-proposed world changes (currently character changes only) accumulate for review,
-    plus manually requesting proposals via the Suggest Changes button in the character editor.
+  summary: The Suggestions view where agents collect proposed world changes (currently only character changes). Covers requesting
+    proposals manually with the Suggest Changes button in the character editor and reviewing new proposals.
 - path: user-guide/world-editor/world/states.md
   title: Tracked states
-  summary: Setting up world-level tracked state reinforcements via the New State Reinforcement button in the World editor,
-    question or state description, optional pre-specified value, update frequency in turns, context attachment method, additional
-    instructions, and resetting the reinforcement.
+  summary: 'Scene-wide tracked states created from the World tab''s New State Reinforcement button: the question or state
+    description, an optional pre-specified value, the update interval in turns, Context Attachment Method and Additional Instructions,
+    plus Reset State Reinforcement.'
 - path: user-guide/world-state.md
   title: World State
-  summary: The world state snapshot panel, characters, objects, and tracked states summarized by the World State agent, clickable
-    entity highlights in recent scene messages, manual and automatic snapshot refreshing, how the snapshot carries forward,
-    wiping it, and pinning the snapshot to the scene.
+  summary: The world state snapshot panel maintained by the World State Agent - character entries with emotional state and
+    Look at / Manage Character / Make real shortcuts, object entries and tracked states, clickable entity highlights, manual
+    refresh, durable carry-forward and the Pin to context setting.

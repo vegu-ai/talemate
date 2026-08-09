@@ -1,9 +1,9 @@
 """OpenAI-compatible TTS endpoints — multi-backend.
 
-This mixin exposes a single management tab in the TTS agent settings ("OpenAI
-Compatible") that lets the user register any number of named backends. Each
-registered backend renders as its own sub-tab below the management tab and
-carries its own URL/key/model/voice list.
+This mixin exposes a single management section in the TTS agent settings
+("OpenAI Compatible") that lets the user register any number of named backends.
+Each registered backend renders as its own expansion panel below the management
+section and carries its own URL/key/model/voice list.
 
 The mixin's per-backend helpers follow the dynamic-registry naming convention
 (``_<registry_key>_<name>(slug, ...)``) so the TTSAgent's ``api_attr`` /
@@ -83,7 +83,7 @@ class OpenAICompatibleMixin:
 
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
-        # The static management tab. No generation config — it only carries
+        # The static management section. No generation config — it only carries
         # the dynamic-children registry blob.
         actions[REGISTRY_KEY] = AgentAction(
             enabled=True,
@@ -101,7 +101,7 @@ class OpenAICompatibleMixin:
                     value="[]",
                     label="Registered backends",
                     description=(
-                        "Internal — managed by the Add Backend UI on this tab."
+                        "Internal — managed by the Add Backend UI in this section."
                     ),
                     scene_overridable=False,
                 ),

@@ -327,13 +327,15 @@ def test_find_docs_summary_phrase_bonus_is_diluted(monkeypatch):
         else entry
         for entry in index
     ]
+    trimmed = [entry["path"] for entry in docs.find_docs("dialogue instructions")]
     monkeypatch.setattr(docs, "load_docs_index", lambda: bloated_index)
 
     # "dialogue instructions" is in BLOAT verbatim, so the padded entry takes
-    # the summary-phrase branch - and must still stay out of the results
+    # the summary-phrase branch - and must still stay out of the results,
+    # displacing nothing
     paths = [entry["path"] for entry in docs.find_docs("dialogue instructions")]
     assert BLOATED_PATH not in paths
-    assert "user-guide/agents/summarizer/settings.md" in paths
+    assert paths == trimmed
 
 
 def test_find_docs_phrase_dilution_bites_past_typical_length(monkeypatch):

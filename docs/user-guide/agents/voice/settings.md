@@ -1,6 +1,6 @@
 # Settings
 
-![Voice agent settings](/talemate/img/0.32.0/voice-agent-settings.png)
+![Voice agent settings](/talemate/img/0.40.0/voice-agent-settings.png)
 
 ##### Enabled APIs
 
@@ -26,6 +26,8 @@ The dropdown shows all available voices from all enabled APIs, with the format: 
 
 !!! info "Voice Management"
     Voices are managed through the Voice Library, accessible from the main application bar. Adding, removing, or modifying voices should be done through the Voice Library interface.
+
+    When you enable or disable APIs, the voice choices only refresh once the changes are saved.
 
 ##### Speaker Separation
 
@@ -63,9 +65,15 @@ Default: **on**.
 
 When enabled, the Voice agent automatically registers an [OpenAI Compatible](openai-compatible.md) backend for any configured client that exposes a TTS endpoint, and keeps that backend's enabled state in sync with what the client currently has loaded.
 
-The clearest example is [KoboldCpp](../../clients/types/koboldcpp.md#tts-auto-setup): when a KoboldCpp client has a TTS model loaded, a matching backend appears on the OpenAI Compatible tab without any manual configuration. When the client restarts without a TTS model, the backend is dropped from [Enabled APIs](#enabled-apis) but its settings are preserved.
+The clearest example is [KoboldCpp](../../clients/types/koboldcpp.md#tts-auto-setup): when a KoboldCpp client has a TTS model loaded, a matching backend appears in the OpenAI Compatible section without any manual configuration. When the client restarts without a TTS model, the backend is dropped from [Enabled APIs](#enabled-apis) but its settings are preserved.
 
 Turning this off stops the agent from auto-registering or auto-toggling any backends. Existing backends — auto-managed or not — stay where they are; you take over enabling and disabling them yourself.
+
+##### Audio tags
+
+Use AI to inject audio tags (e.g. `[laughing]`, `[whispering]`) into dialogue for TTS providers that support them (currently ElevenLabs v3). Requires the Summarizer agent.
+
+Off by default.
 
 ## Advanced Settings
 

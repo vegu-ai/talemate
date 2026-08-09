@@ -1,13 +1,13 @@
 # Settings
 
-![Memory agent settings](/talemate/img/0.27.0/memory-agent-settings.png)
+![Memory agent settings](/talemate/img/0.40.0/memory-agent-settings.png)
 
 ##### Embeddings
 
-Select which embedding to use. Embeddings themselves are managed through the [Application Settings](/talemate/agents/memory/embeddings).
+Select which embedding to use. Embeddings themselves are managed through the [Embedding presets](/talemate/user-guide/agents/memory/embeddings).
 
 !!! info "openAI"
-    If you are using the OpenAI API, you will need to have an API key and set it in the application config. See [here](/apis/openai.md) for setting up the OpenAI API key.
+    If you are using the OpenAI API, you will need to have an API key set under **Connections → API Keys**. See the [OpenAI API setup](/talemate/user-guide/apis/openai/) for setting up the OpenAI API key.
 
 ###### Device
 

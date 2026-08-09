@@ -2,7 +2,7 @@
 
 The OpenRouter backend provides access to image generation, editing, and analysis capabilities through OpenRouter's unified API. OpenRouter allows you to access multiple AI providers through a single API, giving you flexibility to choose from various models and providers.
 
-![A dark-themed settings interface for the "Visualizer" application, displaying a sidebar with General, OpenRouter, and Styles navigation options. The main panel allows configuration of backend services, showing "OpenRouter" selected for text-to-image, image editing, and image analysis, with "Google" set as the client. Additional controls include a slider for image generation timeout set to 301 and checkboxes for automatic setup and generation.](/talemate/img/0.34.0/visual-agent-openrouter-1.png)
+![A dark-themed settings page for the "Visualizer" agent with the "General" section expanded and collapsed sections for Prompt Generation, Prompt Finalization, the three OpenRouter backends and Styles below it. The expanded section shows "OpenRouter" selected for text-to-image, image editing, and image analysis, with "openrouter" set as the client. Additional controls include a slider for image generation timeout set to 301 and checkboxes for automatic setup and generation.](/talemate/img/0.40.0/visual-agent-openrouter-1.png)
 
 ## Prerequisites
 
@@ -34,7 +34,7 @@ For text-to-image generation, configure the following settings:
 - **Only use these providers**: Optionally filter to specific providers (e.g., only use Google or OpenAI)
 - **Ignore these providers**: Optionally exclude specific providers from consideration
 
-![This screenshot depicts the "Visualizer" settings interface, specifically the "OpenRouter Text to Image" configuration tab. The panel displays an active API Key section, a model selection dropdown currently set to "google/gemini-2.5-flash-image", and additional options to filter specific service providers.](/talemate/img/0.34.0/visual-agent-openrouter-2.png)
+![This screenshot depicts the "Visualizer" agent settings, specifically the expanded "OpenRouter Text to image" section. It displays a configured API Key panel, a model selection dropdown currently set to "google/gemini-3-pro-image-preview", and additional options to filter specific service providers.](/talemate/img/0.40.0/visual-agent-openrouter-2.png)
 
 !!! warning "Model Selection"
     There is no reliable way for Talemate to determine which models support text-to-image generation, so the model list is unfiltered. Please consult the [OpenRouter documentation](https://openrouter.ai/docs) to verify that your selected model supports image generation before using it.
@@ -54,7 +54,7 @@ For image editing, configure similar settings with an additional option:
 - **Max References**: Configure the maximum number of reference images (1-3). This determines how many reference images you can provide when editing an image.
 - **Provider filtering**: Optionally filter providers (same as text-to-image)
 
-![This screenshot displays the settings interface for an application named Visualizer, specifically focusing on the "OpenRouter - Image Editing" configuration tab. The main panel features input fields for an OpenRouter API key, a model selection dropdown set to "google/gemini-2.5-flash-image," and provider filtering options. Additionally, a slider at the bottom allows users to adjust the "Max References," which is currently set to 1.](/talemate/img/0.34.0/visual-agent-openrouter-3.png)
+![This screenshot displays the "Visualizer" agent settings, specifically the expanded "OpenRouter Image editing" section. It features a collapsed, configured OpenRouter API key panel, a model selection dropdown set to "google/gemini-3-pro-image-preview," and provider filtering options. Additionally, a slider at the bottom allows users to adjust the "Max References," which is currently set to 1.](/talemate/img/0.40.0/visual-agent-openrouter-3.png)
 
 !!! warning "Model Selection"
     There is no reliable way for Talemate to determine which models support image editing, so the model list is unfiltered. Image editing refers to image generation with support for 1 or more contextual reference images. Please consult the [OpenRouter documentation](https://openrouter.ai/docs) to verify that your selected model supports image editing before using it.
@@ -67,7 +67,7 @@ For image analysis, configure the following:
 - **Model**: Select a vision-capable text model from OpenRouter
 - **Provider filtering**: Optionally filter providers
 
-![A screenshot of the "Visualizer" application interface showing the "OpenRouter Image Analysis" settings panel. The configuration area displays a model selection dropdown set to "google/gemini-2.5-flash" alongside a configured API key field. An informational box notes that the model list is unfiltered and users should verify that their chosen text generation model supports multi-modal vision capabilities.](/talemate/img/0.34.0/visual-agent-openrouter-4.png)
+![A screenshot of the "Visualizer" agent settings showing the expanded "OpenRouter Image analysis" section. It displays a model selection dropdown set to "google/gemini-3-flash-preview" below a collapsed, configured API key panel. An informational box notes that the model list is unfiltered and users should verify that their chosen text generation model supports multi-modal vision capabilities.](/talemate/img/0.40.0/visual-agent-openrouter-4.png)
 
 !!! warning "Model Selection"
     There is no reliable way for Talemate to determine which models support image analysis, so the model list is unfiltered. Image analysis requires a text generation model that is multi-modal and supports vision capabilities. Please consult the [OpenRouter documentation](https://openrouter.ai/docs) to verify that your selected model supports vision before using it.

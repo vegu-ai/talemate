@@ -18,7 +18,7 @@ To enable reasoning support for a client:
 
 Once reasoning is enabled, you can configure the **Reasoning Tokens** setting using the slider:
 
-![Reasoning tokens configuration](/talemate/img/0.32.0/client-reasoning.png)
+![Reasoning tokens configuration](/talemate/img/0.40.0/client-reasoning.png)
 
 ### Recommended Token Amounts
 
@@ -45,19 +45,25 @@ The behavior of the reasoning tokens setting depends on your API provider:
 
 ## Response Pattern Configuration
 
-When reasoning is enabled, you may need to configure a **Pattern to strip from the response** to remove the thinking process from the final output.
+When reasoning is enabled, you may need to configure a **Strip pattern** to remove the thinking process from the final output.
 
 ### Default Patterns
 
-Talemate provides quick-access buttons for common reasoning patterns:
+Talemate provides quick-access buttons that fill in the **Strip pattern** and the **Validation pattern** for common reasoning formats:
 
-- **Default** - Uses the built-in pattern: `.*?</think>`
-- **`.*?◁/think▷`** - For models using arrow-style thinking delimiters
-- **`.*?</think>`** - For models using XML-style think tags
+- **Default** - Clears both fields, falling back to the pattern provided by the model's prompt template (or `.*?</think>`)
+- **gpt-oss** - For the harmony channel format used by gpt-oss models
+- **gemma-4** - For the channel format used by gemma-4 models
+- **◁think▷** - For models using arrow-style thinking delimiters
+- **&lt;think&gt;** - For models using XML-style think tags
 
 ### Custom Patterns
 
 You can also specify a custom regular expression pattern that matches your model's reasoning format. This pattern will be used to strip the thinking tokens from the response before displaying it to the user.
+
+### Validation Pattern (reasoning start)
+
+Optional. A pattern that matches the **start** of the reasoning tokens. If it is set and is not found in the response (and the response was not prefilled), the model never reasoned and the response is returned as-is instead of failing.
 
 ### Pattern Not Found Behavior
 
@@ -67,6 +73,10 @@ When the configured reasoning pattern is not found in a response, you can contro
 - **Ignore** - Returns the response as-is without stripping anything. Use this when the model may sometimes respond without reasoning tokens (e.g., for simple queries).
 
 When set to **Fail**, the **Auto Retry** slider next to it lets the client automatically retry a number of times before you are notified. See [Auto Retry](auto-retry.md).
+
+## Reason Prefill
+
+Mostly for base models that do not have reasoning built in, but were fine-tuned for reasoning. Whatever you put here is prefilled into the response to force the model to reason — for example `<think>`, assuming that is the actual start of the thinking process for your model.
 
 ## Forcing Reasoning Off for Specific Actions
 

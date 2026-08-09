@@ -180,8 +180,8 @@ class TalemateClientMixin:
                     description=(
                         "Select which Talemate client to use for image analysis. "
                         "Only clients with vision enabled are shown. If no clients "
-                        "appear, ensure you have enabled vision in the client's "
-                        "settings (Vision tab) for a client with a vision-capable model."
+                        "appear, enable vision via the eye icon on the client card "
+                        "for a client with a vision-capable model."
                     ),
                     scene_overridable=False,
                 ),

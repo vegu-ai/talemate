@@ -1,6 +1,6 @@
 # Settings
 
-![Help agent settings](/talemate/img/0.39.0/help-agent-settings.png)
+![Help agent settings](/talemate/img/0.40.0/help-agent-settings.png)
 
 ##### Response token budget
 

@@ -10,7 +10,7 @@ Allows you to use Talemate with a service that exposes an openai-like API.
 
 If you want to add a DeepInfra client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `OpenAI Compatible API` from the client type menu.
 
-![Client DeepInfra](/talemate/img/0.26.0/client-deepinfra.png)
+![Client DeepInfra](/talemate/img/0.40.0/client-deepinfra.png)
 
 ### Settings
 

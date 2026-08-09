@@ -13,7 +13,7 @@ THis is helpful wehn you want to point the client at a proxy gateway to serve th
 
 Clients that support it will have an **Endpoint Override** section in their editor on the Clients settings page that allows you to override the endpoint.
 
-![Endpoint Override](/talemate/img/0.31.0/client-endpoint-override.png)
+![Endpoint Override](/talemate/img/0.40.0/client-endpoint-override.png)
 
 ##### Base URL
 

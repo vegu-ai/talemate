@@ -1,12 +1,16 @@
 # Settings
 
-![This image displays a dark user interface header labeled "Visualizer," accented with a chromatic aberration effect and a green status dot. Below the title, there are two badges: one labeled "Google" with a monitor icon, and a warning badge featuring a triangle alert symbol that reads "No backend configured."](/talemate/img/0.34.0/visual-agent-general-1.png)
+![This image displays a dark user interface header labeled "Visualizer," accented with a chromatic aberration effect and a green status dot. Next to the title there are two badges: one labeled "openrouter" with a monitor icon, and a warning badge featuring a triangle alert symbol that reads "No backend configured."](/talemate/img/0.40.0/visual-agent-general-1.png)
 
 The Visualizer agent settings are organized into four main sections: **General**, **Prompt Generation**, **Styles**, and **Prompt Finalization**. Additionally, each backend may have its own configuration options, including [resolution presets](#resolution-presets) for local image generation backends.
 
-![A dark-mode settings interface for a 'Visualizer' tool displaying the 'General' configuration tab. It features dropdown menus showing 'Google' selected as the client with no backends currently configured, alongside a slider for image generation timeout and checkboxes for automatic setup options.](/talemate/img/0.34.0/visual-agent-general-2.png)
+![A dark-mode settings page for the 'Visualizer' agent with the 'General' section expanded. It features dropdown menus showing 'openrouter' selected as the client with no backends currently configured, alongside a slider for image generation timeout and checkboxes for automatic setup options. The 'Prompt Generation', 'Prompt Finalization' and 'Styles' sections are collapsed below it.](/talemate/img/0.40.0/visual-agent-general-2.png)
 
 ## General Settings
+
+### Client
+
+The text-generation client used for the agent's text generations, such as image prompt generation.
 
 ### Backend Configuration
 
@@ -108,7 +112,7 @@ This setting is enabled by default.
 
 ## Styles Configuration
 
-![This image shows the "Styles" configuration tab within the dark-mode "Visualizer" interface, listing various dropdown menus for customizing generation settings. Options include "Art Style," set to "Digital Art," alongside selectors for character cards, portraits, and scene elements. A "Manage styles" box at the bottom indicates that additional styles can be created in the Templates manager.](/talemate/img/0.34.0/visual-agent-general-3.png)
+![This image shows the "Styles" section expanded within the dark-mode "Visualizer" agent settings, listing various dropdown menus for customizing generation settings. Options include "Art Style," set to "Digital Art," alongside selectors for character cards, portraits, scene elements and object illustrations. A "Manage styles" box at the bottom indicates that additional styles can be created in the Templates manager.](/talemate/img/0.40.0/visual-agent-general-3.png)
 
 The Styles section allows you to configure visual styles for different types of content. Each style is a template that defines how prompts are formatted and what visual characteristics are applied.
 
@@ -120,6 +124,7 @@ The Styles section allows you to configure visual styles for different types of 
 - **Scene Card**: The style to use for scene card visual prompt generation
 - **Scene Background**: The style to use for scene background visual prompt generation
 - **Scene Illustration**: The style to use for scene illustration visual prompt generation
+- **Object Illustration**: The style to use for object illustration visual prompt generation
 
 !!! info "Managing Styles"
     Additional styles can be created and managed in the Templates manager. Styles are reusable templates that define visual characteristics, keywords, and instructions for different types of visual content.

@@ -49,7 +49,7 @@ export default {
     },
     description: {
       type: String,
-      default: 'This API key is stored in application settings and shared across all clients of this type. You can also edit it from the Application settings.',
+      default: 'This API key is stored in application settings and shared across all clients of this type. You can also edit it on the API Keys page.',
     },
     // The host's unsaved working copy of the config — the key is written into
     // it and the host's Save persists it, so Discard drops the key too.

@@ -8,7 +8,7 @@ The llama.cpp client connects to the `llama-server` executable from the llama.cp
 
 If you want to add a llama.cpp client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `llama.cpp` from the client type menu.
 
-![Client llama.cpp](/talemate/img/0.38.0/client-llamacpp.png)
+![Client llama.cpp](/talemate/img/0.40.0/client-llamacpp.png)
 
 !!! note "Should work out of the box with a local llama.cpp server"
     The default values should work with a local llama.cpp server if you are running `llama-server` on the default port (8080).

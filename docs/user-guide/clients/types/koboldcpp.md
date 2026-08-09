@@ -12,7 +12,7 @@
 
 If you want to add an KoboldCpp client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `KoboldCpp` from the client type menu.
 
-![Client KoboldCpp](/talemate/img/0.26.0/client-koboldcpp.png)
+![Client KoboldCpp](/talemate/img/0.40.0/client-koboldcpp.png)
 
 !!! note "Should work out of the box with a local KoboldCpp instance"
     The default values should work with a local KoboldCpp instance if you have followed their setup instructions and are running the server on the default port.

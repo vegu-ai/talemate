@@ -4,17 +4,25 @@
 
 General summarization settings.
 
-![Summarizer agent general settings](/talemate/img/0.29.0/summarizer-general-settings.png)
+![Summarizer agent general settings](/talemate/img/0.40.0/summarizer-general-settings.png)
 
-##### Summarize to long term memory archive
+##### Client
+
+The text-generation client to use for summarization.
+
+##### Optimize for Prompt Caching
+
+Places volatile context (long term memory, dynamic notes) after the scene history so that the stable part of the prompt can be cached by API backends. May confuse weaker models. `Auto` defers to the client setting.
+
+##### Summarization
 
 Automatically summarize scene dialogue when the number of tokens in the history exceeds a threshold. This helps keep the context history from growing too large.
 
-###### Token threshold
+###### Token Threshold
 
 The number of tokens in the history that will trigger the summarization process.
 
-###### Summarization method
+###### Summarization Method
 
 The method used to summarize the scene dialogue. 
 
@@ -27,7 +35,7 @@ The method used to summarize the scene dialogue.
 
 Help the AI summarize by including the last few summaries as additional context. Some models may incorporate this context into the new summary directly, so if you find yourself with a bunch of similar history entries, try setting this to 0.
 
-##### Custom Instructions
+###### Custom instructions
 
 Custom instructions for the summarization agent. These instructions are included in the summarization prompt to guide how summaries are generated. Use this to customize the summarization style, focus areas, or format for your specific needs.
 
@@ -43,16 +51,16 @@ Not only does this allow to keep more context in the history, albeit with earlie
 
 Right now this is considered an experimental feature, and whether or not its feasible in the long term will depend on how well it works in practice.
 
-![Summarizer agent layered history settings](/talemate/img/0.29.0/summarizer-layered-history-settings.png)
+![Summarizer agent layered history settings](/talemate/img/0.40.0/summarizer-layered-history-settings.png)
 
-##### Enable layered history
+##### Enable Layered history
 
 Allows you to enable or disable the layered history summarization.
 
 !!! note "Enabling this on big scenes"
     If you enable this on a big established scene, the next time the summarization agent runs, it will take a while to process the entire history and generate the layers.
 
-##### Token threshold
+##### Token Threshold
 
 The number of tokens in the layer that will trigger the summarization process to the next layer.
 
@@ -70,9 +78,9 @@ Setting this higher than the token threshold does nothing.
 
 During the summarization itself, the text will be furhter split into chunks where each chunk is summarized separately. This setting controls the size of those chunks. This is a character length setting, **NOT** token length.
 
-##### Enable analyzation
+##### Enable analysation
 
-Enables the analyzation of the chunks and their relationship to each other before summarization. This can greatly improve the quality of the summarization, but will also result in a bigger size requirement of the output.
+Analyses the chunks and their relationship to each other before summarization. This can greatly improve the quality of the summarization, but will also result in a bigger size requirement of the output.
 
 ##### Maximum response length
 
@@ -87,7 +95,7 @@ The maximum length of the response that the summarizer agent will generate.
 
 ## Scene Analysis
 
-![Summarizer agent scene analysis settings](/talemate/img/0.29.0/summarizer-scene-analysis-settings.png)
+![Summarizer agent scene analysis settings](/talemate/img/0.40.0/summarizer-scene-analysis-settings.png)
 
 When enabled scene analysis will be performed during conversation and narration tasks. This analysis will be used to provide additional context to other agents, which should hopefully improve the quality of the generated content.
 
@@ -105,11 +113,7 @@ Enable scene analysis for narration tasks.
 
 ##### Deep analysis
 
-Enable context investigations based on the initial analysis.
-
-##### Max. content investigations
-
-The maximum number of content investigations that can be performed. This is a safety feature to prevent the AI from going overboard with the investigations. The number here is to be taken per layer in the history. So if this is set to 1 and there are 2 layers, this will perform 2 investigations.
+Performs targeted memory retrieval based on the initial analysis, surfacing additional relevant context for the other agents.
 
 ##### Cache analysis
 
@@ -118,7 +122,7 @@ Cache the analysis results for the scene. Enable this to prevent regenerationg t
 !!! info
     This cache is anchored to the last message in the scene (excluding the current message). Editing that message will invalidate the cache.
 
-## Scene Context History
+## Scene History
 
 Controls how scene history is split between actual dialogue and summarized content when generating context for AI prompts. These settings can also be adjusted and previewed through the [Scene Context tab](/talemate/user-guide/prompts/context-history-review/) in the Prompt Manager.
 

@@ -2,7 +2,7 @@
 
 If you want to add a DeepSeek client, go to **Settings → Connections → Clients**, click **:material-plus-box: Add client** and pick `DeepSeek` from the client type menu.
 
-![Client DeepSeek](/talemate/img/0.39.0/client-deepseek.png)
+![Client DeepSeek](/talemate/img/0.40.0/client-deepseek.png)
 
 Click `Save` in the toolbar to add the client.
 
@@ -16,7 +16,7 @@ Click the `SET API KEY` button. This will open the application settings on the A
 
 You can obtain an API key from the [DeepSeek Platform](https://platform.deepseek.com/).
 
-![DeepSeek settings](/talemate/img/0.35.0/deepseek-settings.png)
+![DeepSeek settings](/talemate/img/0.40.0/api-keys-deepseek.png)
 
 Click `Save` and after a moment the client should have a green dot next to it, indicating that it is ready to go.
 

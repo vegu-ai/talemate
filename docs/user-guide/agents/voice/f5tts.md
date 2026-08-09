@@ -2,7 +2,7 @@
 
 Local zero shot voice cloning from .wav files.
 
-![F5-TTS configuration](/talemate/img/0.32.0/f5tts-api-settings.png)
+![F5-TTS configuration](/talemate/img/0.40.0/f5tts-api-settings.png)
 
 ##### Device
 Auto-detects best available option (GPU preferred)

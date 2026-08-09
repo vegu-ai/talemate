@@ -2,7 +2,7 @@
 
 ## Update World State
 
-![World state agent update world state settings](/talemate/img/0.38.0/world-state-update-world-state-settings.png)
+![World state agent update world state settings](/talemate/img/0.40.0/world-state-update-world-state-settings.png)
 
 ##### Update world state
 
@@ -68,9 +68,9 @@ How many turns to wait before the conditional context pins are updated.
 
 ## Character Progression
 
-![World state agent character progression settings](/talemate/img/0.29.0/world-state-character-progression-settings.png)
+![World state agent character progression settings](/talemate/img/0.40.0/world-state-character-progression-settings.png)
 
-##### Frquency of checks
+##### Frequency of checks
 
 How often ot check for character progression.
 
@@ -86,9 +86,13 @@ If enabled, the proposed changes will be presented as suggestions to the player.
 
 Enable this to have the player character be included in the progression checks.
 
+##### Max. number of changes proposed / applied
+
+The maximum number of changes to propose or apply per character. Defaults to 1.
+
 ## Character Portraits
 
-![World state agent character portraits settings](/talemate/img/0.35.0/world-state-character-portraits-settings.png)
+![World state agent character portraits settings](/talemate/img/0.40.0/world-state-character-portraits-settings.png)
 
 The Character Portraits settings control how character avatars are displayed alongside dialogue messages and whether they should change automatically based on the scene context.
 

@@ -81,6 +81,10 @@ Pass `-n0` to run serially while debugging a specific test:
 uv run pytest tests/ -n0 -s -x
 ```
 
+The frontend has its own suite — run `pnpm test` from `talemate_frontend/` (see
+`talemate_frontend/README.md` for the pnpm setup). CI runs both suites on every
+pull request.
+
 ## Questions?
 
 If you're unsure whether your contribution would be welcome, please open an issue to discuss it first. This saves everyone time and ensures alignment with the project's direction.

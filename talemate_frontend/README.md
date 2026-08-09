@@ -23,5 +23,18 @@ pnpm serve
 pnpm build
 ```
 
+### Runs the unit tests
+```
+pnpm test
+```
+
+Watch mode:
+```
+pnpm test:watch
+```
+
+The suites live in `tests/unit/*.spec.js` and run in the `node` environment —
+there is no DOM. Run both commands from `talemate_frontend`.
+
 ### Customize configuration
 See [Configuration Reference](https://vite.dev/config/).

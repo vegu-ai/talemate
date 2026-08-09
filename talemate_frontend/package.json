@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "serve": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.1",
@@ -35,7 +37,8 @@
     "postcss": "^8.5.3",
     "vite": "^7.3.5",
     "vite-plugin-runtime-env": "^1.0.0",
-    "vite-plugin-vuetify": "^2.1.1"
+    "vite-plugin-vuetify": "^2.1.1",
+    "vitest": "^4.1.10"
   },
   "browserslist": [
     "> 1%",

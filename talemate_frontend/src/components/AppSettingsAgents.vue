@@ -160,6 +160,11 @@ import {
     serializeSceneOverlay,
     setActionOverrideSlice,
 } from '@/constants/sceneAgentSettings';
+import {
+    mergeSceneOverrides,
+    parseDynamicChildren,
+    reconcileDynamicChildren as reconcileEntryChildren,
+} from '@/utils/agentSettingsReconcile';
 
 // Mapping from `AgentAction.dynamic_registry_component` to the component that
 // renders that registry.
@@ -955,7 +960,7 @@ export default {
         },
 
         dynamicChildren(actionKey) {
-            return this.parseChildren(this.effectiveActions?.[actionKey]?.config?.dynamic_children?.value);
+            return parseDynamicChildren(this.effectiveActions?.[actionKey]?.config?.dynamic_children?.value);
         },
 
         // a frame handed to a socket that is not OPEN is discarded silently, so
@@ -1030,57 +1035,11 @@ export default {
             }));
         },
 
-        // A registry op changes which child actions exist. Any working copy
-        // entry for that agent predates the change — saving it as-is would
-        // push the stale registry blob back and undo the add / remove.
-        // Reconcile the membership only; field values the user has edited are
-        // left alone. Keyed off the entry existing rather than off this
+        // Keyed off the working copy entry existing rather than off this
         // session's materialize bookkeeping: a config loaded with the agent
         // already persisted needs the same treatment.
         reconcileDynamicChildren(agentType, schemaActions) {
-            const entry = this.config?.agents?.[agentType];
-            if (!entry?.actions || !Object.keys(schemaActions).length) {
-                // an empty action map means the agent reported no schema (e.g.
-                // it is not instantiated) — not an instruction to drop actions
-                return;
-            }
-            // A stored action carries no parent_key (that is schema, not
-            // value), so an unregistered child is recognized by the registry
-            // whose stored blob still lists it — captured BEFORE the blobs are
-            // synced to their new values.
-            const parentOfStoredChild = {};
-            for (const [key, action] of Object.entries(entry.actions)) {
-                for (const child of this.parseChildren(action?.config?.dynamic_children?.value)) {
-                    parentOfStoredChild[child.slug] = key;
-                }
-            }
-            const registryKeys = new Set();
-            for (const [key, schema] of Object.entries(schemaActions)) {
-                if (schema.config?.dynamic_children) {
-                    registryKeys.add(key);
-                    if (entry.actions[key]?.config?.dynamic_children) {
-                        entry.actions[key].config.dynamic_children = { value: schema.config.dynamic_children.value };
-                    }
-                }
-                if (schema.parent_key && !entry.actions[key]) {
-                    const config = {};
-                    for (const [configKey, field] of Object.entries(schema.config || {})) {
-                        config[configKey] = { value: field.value };
-                    }
-                    entry.actions[key] = { enabled: schema.enabled, config: config };
-                }
-            }
-            // only registry children are ours to drop — an action missing from
-            // the live schema for any other reason (a build without that
-            // feature, a partially reported agent) keeps its stored config
-            for (const key of Object.keys(entry.actions)) {
-                if (schemaActions[key]) {
-                    continue;
-                }
-                if (registryKeys.has(parentOfStoredChild[key])) {
-                    delete entry.actions[key];
-                }
-            }
+            reconcileEntryChildren(this.config?.agents?.[agentType], schemaActions);
         },
 
         // Repairs the working copy from the config the backend broadcast with
@@ -1124,73 +1083,22 @@ export default {
         // what anyone else (quick-toggle chips, the agent modal, the world
         // editor) wrote to the same file while we were buffering.
         reconcileSceneOverrides(agentType) {
-            const buffered = this.sceneOverrideBuffer[agentType];
-            if (!buffered) {
-                return;
-            }
-            const live = normalizeSceneOverlay(this.liveAgents[agentType]?.data?.scene_overrides);
-            if (serializeSceneOverlay(buffered) === serializeSceneOverlay(live)) {
-                // stored state caught up with the buffer — our commit landed
-                // (or someone stored the same thing); stop shadowing the agent
+            const result = mergeSceneOverrides({
+                buffered: this.sceneOverrideBuffer[agentType],
+                seed: this.sceneOverrideSeed[agentType],
+                live: this.liveAgents[agentType]?.data?.scene_overrides,
+            });
+            if (result.action === 'merge') {
+                this.sceneOverrideBuffer[agentType] = result.merged;
+                this.sceneOverrideSeed[agentType] = result.seed;
+            } else if (result.action === 'clear') {
+                // stop shadowing the agent
                 delete this.sceneOverrideBuffer[agentType];
                 delete this.sceneOverrideSeed[agentType];
-                return;
             }
-            const seed = this.sceneOverrideSeed[agentType] || { actions: {} };
-            if (serializeSceneOverlay(seed) === serializeSceneOverlay(live)) {
-                // stored state is still what we started from — the difference
-                // is just this page's unsaved edits
-                return;
-            }
-            // Somebody else wrote to this agent's overrides. The commit is a
-            // full-slice replace, so keeping the buffer as-is would silently
-            // revert their write; adopt it for every action the user has not
-            // touched and report only what actually collides.
-            const merged = { actions: { ...buffered.actions } };
-            const conflicts = [];
-            const keys = new Set([
-                ...Object.keys(live.actions),
-                ...Object.keys(seed.actions),
-                ...Object.keys(buffered.actions),
-            ]);
-            for (const key of keys) {
-                const liveSlice = this.serializeSlice(live, key);
-                if (liveSlice === this.serializeSlice(seed, key)) {
-                    continue;
-                }
-                if (this.serializeSlice(buffered, key) !== this.serializeSlice(seed, key)) {
-                    conflicts.push(key);
-                    continue;
-                }
-                if (live.actions[key]) {
-                    merged.actions[key] = JSON.parse(JSON.stringify(live.actions[key]));
-                } else {
-                    delete merged.actions[key];
-                }
-            }
-            this.sceneOverrideBuffer[agentType] = merged;
-            this.sceneOverrideSeed[agentType] = live;
-            if (conflicts.length) {
+            if (result.conflicts.length) {
                 const label = this.liveAgents[agentType]?.label || agentType;
                 this.$emit('extra-error', `${label}: scene overrides were changed elsewhere — your unsaved edits are kept and will overwrite them on save.`);
-            }
-            if (serializeSceneOverlay(merged) === serializeSceneOverlay(live)) {
-                delete this.sceneOverrideBuffer[agentType];
-                delete this.sceneOverrideSeed[agentType];
-            }
-        },
-
-        serializeSlice(overlay, actionKey) {
-            const slice = overlay?.actions?.[actionKey];
-            return slice ? serializeSceneOverlay({ actions: { [actionKey]: slice } }) : '';
-        },
-
-        parseChildren(blob) {
-            try {
-                const parsed = JSON.parse(blob || '[]');
-                return Array.isArray(parsed) ? parsed : [];
-            } catch (_e) {
-                return [];
             }
         },
 

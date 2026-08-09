@@ -51,14 +51,15 @@ def isolated_config_signals():
 
 
 @pytest.fixture(autouse=True)
-def reset_pending_reapply():
+def fresh_apply_pipeline(monkeypatch):
     """
-    The set of sections awaiting a re-apply is process state (see
-    PENDING_REAPPLY) - keep a failed apply in one test out of the next.
+    The pipeline carries the set of sections awaiting a re-apply as process
+    state (see ConfigApplyPipeline.pending) - hand every test its own instance
+    so a failed apply in one stays out of the next.
     """
-    server_config.PENDING_REAPPLY.clear()
-    yield
-    server_config.PENDING_REAPPLY.clear()
+    monkeypatch.setattr(
+        server_config, "APPLY_PIPELINE", server_config.ConfigApplyPipeline()
+    )
 
 
 class _MockWebsocketHandler:
@@ -388,8 +389,73 @@ async def test_failure_during_a_forced_reapply_keeps_the_section_pending(
         "emit",
         "emit",
     ]
-    assert server_config.PENDING_REAPPLY == {"clients"}
+    assert server_config.APPLY_PIPELINE.pending == {"clients"}
     assert plugin.websocket_handler.messages[-1]["stage"] == "apply"
+
+
+@pytest.mark.asyncio
+async def test_failure_in_the_client_finalize_keeps_the_section_pending(
+    app_config, plugin, apply_calls, monkeypatch
+):
+    """
+    Repointing the agents is the tail of a clients-only apply, so the section
+    counts as applied only once it is through - marking it after the apply
+    steps instead would report clients the agents never got pointed at as live.
+    """
+
+    async def boom(*args, **kwargs):
+        raise RuntimeError("no client to point at")
+
+    monkeypatch.setattr(server_config, "ensure_agent_llm_client", boom)
+
+    clients = app_config.model_dump()["clients"]
+    clients["TestClient"]["model"] = "gpt-4o"
+
+    await plugin.handle_save(_payload(app_config, clients=clients))
+
+    assert _called(apply_calls) == [
+        "instantiate_clients",
+        "purge_clients",
+        "emit_clients_status",
+        "emit",
+        "emit",
+    ]
+    assert server_config.APPLY_PIPELINE.pending == {"clients"}
+    assert plugin.websocket_handler.messages[-1]["stage"] == "apply"
+
+
+def test_a_cover_declaration_that_does_not_reach_backward_is_refused(monkeypatch):
+    """
+    A section's apply can only deliver the finalize of a section that already
+    ran - a forward, self-referencing or misspelled entry would just no-op, so
+    the pipeline refuses it where it is built.
+    """
+    monkeypatch.setattr(
+        server_config.ClientsApplySection, "covers_finalize_of", ("agents",)
+    )
+
+    with pytest.raises(ValueError, match="agents"):
+        server_config.ConfigApplyPipeline()
+
+
+def test_a_section_key_outside_the_literal_is_refused(monkeypatch):
+    """
+    The keys carry the outcome of a run - one outside ApplySectionKey would
+    only surface as a validation error raised out of the pipeline, where it
+    would mask whatever the apply actually failed on.
+    """
+    monkeypatch.setattr(server_config.ClientsApplySection, "key", "clientz")
+
+    with pytest.raises(ValueError, match="not an ApplySectionKey"):
+        server_config.ConfigApplyPipeline()
+
+
+def test_two_sections_claiming_the_same_key_are_refused(monkeypatch):
+    """A key is what a pending record names - two sections cannot share one."""
+    monkeypatch.setattr(server_config.ClientsApplySection, "key", "agents")
+
+    with pytest.raises(ValueError, match="another section already claims"):
+        server_config.ConfigApplyPipeline()
 
 
 async def _failing_agent_save(app_config, plugin, monkeypatch) -> None:
@@ -421,7 +487,7 @@ async def test_retry_of_a_failed_agent_apply_runs_the_agent_pipeline_only(
     await plugin.handle_save(_payload(app_config))
 
     assert _called(apply_calls) == ["configure_agents", "emit", "emit"]
-    assert not server_config.PENDING_REAPPLY
+    assert not server_config.APPLY_PIPELINE.pending
     assert plugin.websocket_handler.messages[-1]["action"] == "save_complete"
 
 
@@ -449,7 +515,7 @@ async def test_a_clean_client_apply_is_not_recorded_when_the_agents_fail(
     await plugin.handle_save(_payload(app_config, clients=clients, agents=agents))
 
     monkeypatch.setattr(server_config, "configure_agents", recorder)
-    assert server_config.PENDING_REAPPLY == {"agents"}
+    assert server_config.APPLY_PIPELINE.pending == {"agents"}
     apply_calls.clear()
 
     await plugin.handle_save(_payload(app_config))
@@ -467,7 +533,7 @@ async def test_two_failed_applies_accumulate_both_sections(
     # section it was dragging along stays pending too
     await _failing_client_save(app_config, plugin, monkeypatch)
 
-    assert server_config.PENDING_REAPPLY == {"clients", "agents"}
+    assert server_config.APPLY_PIPELINE.pending == {"clients", "agents"}
     apply_calls.clear()
 
     payload = _payload(app_config)
@@ -482,7 +548,7 @@ async def test_two_failed_applies_accumulate_both_sections(
         "emit",
         "emit",
     ]
-    assert not server_config.PENDING_REAPPLY
+    assert not server_config.APPLY_PIPELINE.pending
 
 
 @pytest.mark.asyncio

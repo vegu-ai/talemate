@@ -3,6 +3,8 @@ import structlog
 import os
 import shutil
 
+from typing import Literal, get_args
+
 from talemate import VERSION
 from talemate.changelog import delete_changelog_files, scene_ref_from_path
 from talemate.client.model_prompts import model_prompt, PromptSpec
@@ -34,15 +36,155 @@ from .websocket_plugin import Plugin
 
 log = structlog.get_logger("talemate.server.config")
 
-# config sections whose apply pipeline failed and that the next save has to
-# apply again even when it diffs as unchanged - the config is stored before it
-# is applied, so a failed apply leaves the stored config ahead of the running
-# instance and every later diff against it reads "nothing changed".
-#
+
+ApplySectionKey = Literal["clients", "agents"]
+
+
+class ApplySection:
+    """One config section's share of the ``config/save`` apply pipeline.
+
+    `apply` brings the section's slice of the config into the running
+    instance, `finalize` is the tail of that work another section's apply may
+    already deliver (see `covers_finalize_of`).
+    """
+
+    key: ApplySectionKey
+    # section keys whose finalize this section's apply delivers itself - a
+    # section listed here needs no standalone finalize when this one follows it
+    covers_finalize_of: tuple[ApplySectionKey, ...] = ()
+
+    def changed(self, config_before: dict, config_after: dict) -> bool:
+        return config_before[self.key] != config_after[self.key]
+
+    async def apply(self):
+        raise NotImplementedError()
+
+    async def finalize(self):
+        pass
+
+
+class ClientsApplySection(ApplySection):
+    key = "clients"
+
+    async def apply(self):
+        await instantiate_clients()
+        await purge_clients()
+        await emit_clients_status(wait_for_status=True)
+
+    async def finalize(self):
+        # repoint the agents at the (re)instantiated clients
+        await ensure_agent_llm_client()
+
+
+class AgentsApplySection(ApplySection):
+    key = "agents"
+    # configure_agents ends with ensure_agent_llm_client itself
+    covers_finalize_of = ("clients",)
+
+    async def apply(self):
+        await configure_agents()
+
+
+class ApplyOutcome(pydantic.BaseModel):
+    """What one pipeline run tried, what got through, and what stopped it."""
+
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
+    applying: set[ApplySectionKey]
+    applied: set[ApplySectionKey]
+    error: Exception | None = None
+
+    @property
+    def unapplied(self) -> set[ApplySectionKey]:
+        return self.applying - self.applied
+
+
+class ConfigApplyPipeline:
+    """The sections a saved config is applied through, in order."""
+
+    def __init__(self):
+        self.sections: tuple[ApplySection, ...] = (
+            ClientsApplySection(),
+            AgentsApplySection(),
+        )
+
+        # keys are unique and in-Literal, and a cover reaches backward only: a
+        # section can only deliver the finalize of one that already ran, so a
+        # forward, self-referencing or misspelled entry is a declaration bug -
+        # and one that would otherwise no-op (or surface as a validation error
+        # from inside run()) at save time. Raised from the module-level
+        # singleton, so it fails at import rather than on somebody's save.
+        ran: set[ApplySectionKey] = set()
+        for section in self.sections:
+            if section.key not in get_args(ApplySectionKey):
+                raise ValueError(
+                    f"{type(section).__name__}.key is '{section.key}', "
+                    f"which is not an ApplySectionKey"
+                )
+            if section.key in ran:
+                raise ValueError(
+                    f"{type(section).__name__}.key is '{section.key}', "
+                    f"which another section already claims"
+                )
+            for covered in section.covers_finalize_of:
+                if covered not in ran:
+                    raise ValueError(
+                        f"{type(section).__name__}.covers_finalize_of names "
+                        f"'{covered}', which is not a section applied before it"
+                    )
+            ran.add(section.key)
+
+        # config sections whose apply pipeline failed and that the next save
+        # has to apply again even when it diffs as unchanged - the config is
+        # stored before it is applied, so a failed apply leaves the stored
+        # config ahead of the running instance and every later diff against it
+        # reads "nothing changed".
+        self.pending: set[ApplySectionKey] = set()
+
+    async def run(self, config_before: dict, config_after: dict) -> ApplyOutcome:
+        applying = [
+            section
+            for section in self.sections
+            if section.changed(config_before, config_after)
+            or section.key in self.pending
+        ]
+        applying_keys = {section.key for section in applying}
+
+        if self.pending:
+            log.warning(
+                "config save: re-applying sections left unapplied by an earlier save",
+                sections=sorted(self.pending),
+            )
+
+        # sections that made it all the way through their apply - only what is
+        # missing from here is stale if a later step raises. Recording the whole
+        # save instead would put the expensive half of the pipeline (tear down,
+        # re-instantiate, block on wait_for_status) on every later save because
+        # the agent half failed.
+        applied: set[ApplySectionKey] = set()
+
+        try:
+            for index, section in enumerate(applying):
+                await section.apply()
+                covered = any(
+                    section.key in later.covers_finalize_of
+                    for later in applying[index + 1 :]
+                )
+                if not covered:
+                    await section.finalize()
+                applied.add(section.key)
+        except Exception as exc:
+            self.pending = (self.pending - applied) | (applying_keys - applied)
+            return ApplyOutcome(applying=applying_keys, applied=applied, error=exc)
+
+        self.pending -= applied
+        return ApplyOutcome(applying=applying_keys, applied=applied)
+
+
 # Process state rather than per-connection state: plugins are built per
 # websocket connection, but the stale runtime outlives the connection the
 # failed save came in on (a frontend reload does not re-apply anything).
-PENDING_REAPPLY: set[str] = set()
+APPLY_PIPELINE = ConfigApplyPipeline()
 
 
 class ConfigPayload(pydantic.BaseModel):
@@ -152,83 +294,31 @@ class ConfigPlugin(Plugin):
         await update_config(app_config_data.config.model_dump(), signal=False)
         config_after = get_config().model_dump()
 
-        clients_changed = (
-            config_before["clients"] != config_after["clients"]
-            or "clients" in PENDING_REAPPLY
-        )
-        agents_changed = (
-            config_before["agents"] != config_after["agents"]
-            or "agents" in PENDING_REAPPLY
-        )
+        outcome = await APPLY_PIPELINE.run(config_before, config_after)
 
-        if PENDING_REAPPLY:
-            log.warning(
-                "config save: re-applying sections left unapplied by an earlier save",
-                sections=sorted(PENDING_REAPPLY),
-            )
-
-        # sections that made it all the way through their apply - only what is
-        # missing from here is stale if a later step raises. Recording the whole
-        # save instead would put the expensive half of the pipeline (tear down,
-        # re-instantiate, block on wait_for_status) on every later save because
-        # the agent half failed.
-        applied: set[str] = set()
-
-        try:
-            if clients_changed:
-                await instantiate_clients()
-                await purge_clients()
-                await emit_clients_status(wait_for_status=True)
-                if agents_changed:
-                    # the agent half below is the agents section's own apply -
-                    # the clients are live as of here
-                    applied.add("clients")
-
-            if agents_changed:
-                # configure_agents ends with ensure_agent_llm_client itself
-                await configure_agents()
-                applied.add("agents")
-            elif clients_changed:
-                # repointing the agents is the tail of the client apply when
-                # the agents section is not being reconfigured, so the clients
-                # only count as applied once it is through
-                await ensure_agent_llm_client()
-                applied.add("clients")
-        except Exception as exc:
+        if outcome.error is not None:
             # the config is already stored and will be committed to disk, so
             # the frontend gets it either way - what failed is the apply, and
             # saying "save failed" would send the user looking for a config
             # that is not coming back
-            unapplied = {
-                section
-                for section, changed in (
-                    ("clients", clients_changed),
-                    ("agents", agents_changed),
-                )
-                if changed and section not in applied
-            }
             log.error(
                 "config save: apply failed",
-                error=exc,
-                clients_changed=clients_changed,
-                agents_changed=agents_changed,
-                unapplied=sorted(unapplied),
+                error=outcome.error,
+                clients_changed="clients" in outcome.applying,
+                agents_changed="agents" in outcome.applying,
+                unapplied=sorted(outcome.unapplied),
             )
-            PENDING_REAPPLY.difference_update(applied)
-            PENDING_REAPPLY.update(unapplied)
             await get_config().set_dirty()
             # `stage` lets the sender tell an apply failure (payload accepted
             # and stored) from a refused payload (nothing stored) - the two
             # call for opposite handling of whatever was stacked on the save
             await self.signal_operation_failed(
-                f"Configuration was saved, but applying it failed: {exc}",
+                f"Configuration was saved, but applying it failed: {outcome.error}",
                 request_id=app_config_data.request_id,
                 failed_action="save",
                 extra={"stage": "apply"},
             )
             return
-
-        PENDING_REAPPLY.difference_update(applied)
 
         # broadcasts app_config to every connected frontend (see
         # WebsocketHandler.on_config_changed)

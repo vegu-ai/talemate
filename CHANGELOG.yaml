@@ -6,6 +6,7 @@
   - "Help Agent: The help chat toggle in the app bar is hidden while the Help agent is disabled."
   changes:
   - "Client & Agent Settings: The unused save-on-blur path for unified API keys was removed, including the `config/save_unified_api_key` websocket action — keys save through the settings pages' explicit Save."
+  - "Per-Scene Agent Overrides: Secrets-adjacent agent settings (API keys, passwords) can no longer be overridden per scene — enforced at the field-type level. Overrides for such fields carried by hand-edited or imported agent-settings files no longer take effect."
   fixes:
   - "Event Handling: An error in one event listener no longer skips the remaining listeners for that event — the error is logged and delivery continues, while deliberate interrupts such as scene exit or restart, generation cancellation and node loop control still propagate as before. Saving the configuration reports a 'saved, but applying it failed' notice when one of its listeners errors, instead of reporting a clean save."
   - "Startup: The backend no longer crashes when config.yaml does not exist — a source install starts with default settings and writes the file automatically. Docker installs still need config.yaml created before the first `docker compose up`."

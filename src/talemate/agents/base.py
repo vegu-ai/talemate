@@ -24,7 +24,7 @@ from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
-from talemate.ux.schema import Action, Condition, Note
+from talemate.ux.schema import SECRET_FIELD_TYPES, Action, Condition, Note
 from talemate.ux.schema import Field as UxField
 from talemate.config import get_config, Config
 import talemate.config.schema as config_schema
@@ -58,6 +58,26 @@ log = structlog.get_logger("talemate.agents.base")
 AgentActionConditional = Condition
 AgentActionNote = Note
 
+# Reads and writes both run on hot paths, so a stale overlay entry for a field
+# that cannot be overridden is reported once per field rather than per access.
+# One shared key per field on purpose: it is the same anomaly either way.
+_NON_OVERRIDABLE_WARNED: set[tuple[str, str, str]] = set()
+
+
+def _warn_once_non_overridable(
+    agent_type: str, action_key: str, config_key: str
+) -> None:
+    key = (agent_type, action_key, config_key)
+    if key in _NON_OVERRIDABLE_WARNED:
+        return
+    _NON_OVERRIDABLE_WARNED.add(key)
+    log.warning(
+        "scene override inert: field is not scene-overridable",
+        agent_type=agent_type,
+        action_key=action_key,
+        config_key=config_key,
+    )
+
 
 class AgentActionConfig(UxField):
     """
@@ -90,11 +110,13 @@ class AgentActionConfig(UxField):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @pydantic.model_validator(mode="after")
-    def _unified_api_key_is_never_scene_overridable(self):
-        # The unified-key widget writes into an app-config working copy that
-        # the host's Save persists; the scene-override renderer has no such
-        # copy, so an overridable declaration would render a dead field.
-        if self.type == "unified_api_key":
+    def _secret_fields_are_never_scene_overridable(self):
+        # Secret values belong to the installation, not to a scene: a scene
+        # file is shareable, and an override would leak the credential with it.
+        # The unified-key widget additionally writes into an app-config working
+        # copy the scene-override renderer has no access to, so an overridable
+        # declaration would render a dead field.
+        if self.type in SECRET_FIELD_TYPES:
             self.scene_overridable = False
         return self
 
@@ -430,6 +452,11 @@ class Agent(ABC):
 
         Empty dict means: no scene loaded, or no overrides set for this
         agent. The frontend renders it as the Agents page's Scene mode.
+
+        Entries the resolvers ignore are filtered out: shipping them would make
+        the frontend seed its override buffer with values the following save
+        strips, so the echo would come back smaller than what was sent and read
+        as a conflicting edit from elsewhere.
         """
         if not agent:
             return {}
@@ -439,7 +466,26 @@ class Agent(ABC):
         agent_override = overrides.agents.get(agent.agent_type)
         if not agent_override:
             return {}
-        return agent_override.model_dump(exclude_none=True)
+
+        payload = agent_override.model_dump(exclude_none=True)
+        actions = getattr(agent, "actions", None) or {}
+
+        for action_key, action_override in (payload.get("actions") or {}).items():
+            # undeclared keys pass through — a missing action is not proof the
+            # field is gone (dynamic children are installed per config)
+            action = actions.get(action_key)
+            if action is None:
+                continue
+            if "enabled" in action_override and not action.can_be_disabled:
+                action_override.pop("enabled")
+            declared = action.config or {}
+            config_override = action_override.get("config") or {}
+            for config_key in list(config_override.keys()):
+                field = declared.get(config_key)
+                if field is not None and not field.scene_overridable:
+                    config_override.pop(config_key)
+
+        return payload
 
     @classmethod
     async def init_nodes(cls, scene: "Scene", state: GraphState):
@@ -893,8 +939,39 @@ class Agent(ABC):
                 return value
         return fallback()
 
+    def _non_overridable_guard(
+        self, action_key: str, config_key: str
+    ) -> AgentActionConfig | None:
+        """The declared field when it forbids scene overrides, else None.
+
+        Warns once when the overlay holds an entry for such a field. An
+        undeclared key returns None — there is no declaration to obey.
+        """
+        action = self.actions.get(action_key)
+        field = action.config.get(config_key) if action and action.config else None
+        if field is None or field.scene_overridable:
+            return None
+
+        overrides = self.scene_overrides()
+        if (
+            overrides is not None
+            and overrides.get_value(self.agent_type, action_key, config_key)
+            is not UNSET
+        ):
+            _warn_once_non_overridable(self.agent_type, action_key, config_key)
+        return field
+
     def resolve_config(self, action_key: str, config_key: str):
-        """Return the effective value for an action config field — scene override if any, else global."""
+        """Return the effective value for an action config field.
+
+        Scene override if one applies, else the global value. A field declared
+        non-overridable always resolves global, whatever the overlay holds.
+        """
+        # the declaration wins — the UI offers no control to clear a stored value
+        field = self._non_overridable_guard(action_key, config_key)
+        if field is not None:
+            return field.value
+
         return self._resolve(
             lambda o: o.get_value(self.agent_type, action_key, config_key),
             lambda: self.actions[action_key].config[config_key].value,
@@ -932,6 +1009,13 @@ class Agent(ABC):
         New overrides are installed through ``agent_config/save_scene_overrides``
         (see ``server.agent_config.replace_agent_overrides``).
         """
+        # the declaration wins — routing to the overlay would persist a value
+        # `resolve_config` ignores
+        field = self._non_overridable_guard(action_key, config_key)
+        if field is not None:
+            field.value = value
+            return
+
         self._route_write(
             lambda o: o.get_value(self.agent_type, action_key, config_key) is not UNSET,
             lambda o: o.set_value(self.agent_type, action_key, config_key, value),

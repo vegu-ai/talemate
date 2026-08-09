@@ -29,6 +29,7 @@ from talemate.scene_agent_settings import (
     agent_settings_dir,
 )
 from talemate.util.encryption import SENSITIVE_FIELD_NAMES
+from talemate.ux.schema import SECRET_FIELD_TYPES
 
 if TYPE_CHECKING:
     from talemate.agents.base import Agent, AgentAction, AgentActionConfig
@@ -45,9 +46,6 @@ __all__ = [
 log = structlog.get_logger("talemate.agents.help.settings")
 
 REDACTED = "(hidden)"
-
-# field types whose values must never be shown to (or written by) the LLM
-SECRET_FIELD_TYPES = ("password", "unified_api_key")
 
 # field types the update tool can write - everything else (tables, weights,
 # vectors, template pickers, ...) is UI-only
@@ -182,8 +180,12 @@ def _field_payload(
     if not field.scene_overridable:
         payload["scene_overridable"] = False
 
+    # A stored value for a non-overridable field is inert — `resolve_config`
+    # ignores it — so reporting it would name an effective value that is not in
+    # effect. Secret types are covered by this: the validator forces them
+    # non-overridable.
     overrides = agent.scene_overrides()
-    if overrides is not None and not _is_secret_field(field):
+    if overrides is not None and field.scene_overridable:
         override_value = overrides.get_value(agent.agent_type, action_key, config_key)
         if override_value is not UNSET:
             payload["scene_override"] = override_value
@@ -201,8 +203,9 @@ def _action_payload(agent: "Agent", action_key: str, action: "AgentAction") -> d
     if action.can_be_disabled:
         payload["can_be_disabled"] = True
 
+    # `resolve_enabled` ignores a stored flag for a non-disableable action
     overrides = agent.scene_overrides()
-    if overrides is not None:
+    if overrides is not None and action.can_be_disabled:
         enabled_override = overrides.get_enabled(agent.agent_type, action_key)
         if enabled_override is not UNSET:
             payload["enabled_scene_override"] = enabled_override
@@ -442,9 +445,12 @@ async def update_agent_setting(
         field.value = coerced
         await _persist_agent_config(agent)
 
+        # a stored value for a non-overridable field masks nothing — the
+        # resolver ignores it, so the global write is already effective
         overrides = agent.scene_overrides()
         if (
             overrides is not None
+            and field.scene_overridable
             and overrides.get_value(agent_type, action_key, setting_key) is not UNSET
         ):
             result["warning"] = (
@@ -507,7 +513,9 @@ async def clear_agent_setting_scene_override(
         "agent": agent_type,
         "action": action_key,
         "setting": setting_key,
-        "removed_override_value": previous,
+        "removed_override_value": (
+            REDACTED if field is not None and _is_secret_field(field) else previous
+        ),
     }
 
 

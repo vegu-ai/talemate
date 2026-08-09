@@ -189,7 +189,8 @@
   title: Per-Scene Agent Overrides
   summary: 'Per-scene agent overrides: sparse per-field overrides edited on the Agents settings page (Settings → Connections
     → Agents) via the Global/Scene switch and the link icons that activate or clear a field, applied only by the settings
-    toolbar''s Save. Also covers quick-toggle chips that write immediately and the project-level agent-settings/ JSON file.'
+    toolbar''s Save. Also covers quick-toggle chips that write immediately, the project-level agent-settings/ JSON file, and
+    what cannot be overridden per scene (always-on sections, API keys and passwords).'
 - path: user-guide/agents/summarizer/index.md
   title: Overview
   summary: Introduces the Summarizer agent; dialogue summarization, layered history (multi-level summaries), scene analysis

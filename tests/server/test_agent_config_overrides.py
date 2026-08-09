@@ -12,9 +12,12 @@ from pathlib import Path
 import pytest
 
 import talemate.instance as instance
-from talemate.agents.base import Agent, AgentAction
-from talemate.scene_agent_settings import SceneAgentSettings
-from talemate.server.agent_config import AgentConfigPlugin
+from talemate.agents.base import Agent, AgentAction, AgentActionConfig
+from talemate.scene_agent_settings import UNSET, SceneAgentSettings
+from talemate.server.agent_config import (
+    AgentConfigPlugin,
+    strip_non_overridable_fields,
+)
 
 AGENT_TYPE = "override-test"
 
@@ -31,6 +34,14 @@ class _OverrideAgent(Agent):
                 label="Container",
                 container=True,
                 can_be_disabled=True,
+                config={
+                    "fmt": AgentActionConfig(
+                        type="text", label="fmt", value="global-fmt"
+                    ),
+                    "api_key": AgentActionConfig(
+                        type="password", label="api key", value="global-key"
+                    ),
+                },
             )
         }
         self.scene = scene
@@ -181,3 +192,74 @@ async def test_failed_first_write_leaves_the_scene_unlinked(wired, tmp_path: Pat
     # or the next load silently auto-links the project's overrides
     assert scene._agent_settings_opted_out is True
     assert _errors(handler)
+
+
+@pytest.mark.asyncio
+async def test_save_drops_values_for_non_overridable_fields(wired):
+    plugin, scene, agent, handler = wired
+
+    await plugin.handle_save_scene_overrides(
+        {
+            "agent_type": AGENT_TYPE,
+            "filename": "agent-settings.json",
+            "override": {
+                "actions": {
+                    "container": {
+                        "enabled": True,
+                        "config": {
+                            "fmt": {"value": "scene-fmt"},
+                            "api_key": {"value": "scene-key"},
+                        },
+                    }
+                }
+            },
+        }
+    )
+
+    overrides = scene.agent_overrides
+    assert overrides.get_value(AGENT_TYPE, "container", "fmt") == "scene-fmt"
+    assert overrides.get_value(AGENT_TYPE, "container", "api_key") is UNSET
+    assert not _errors(handler)
+
+    on_disk = await SceneAgentSettings(
+        filepath=Path(overrides.filepath)
+    ).init_from_file()
+    assert on_disk.get_value(AGENT_TYPE, "container", "api_key") is UNSET
+
+
+class TestStripNonOverridableFields:
+    def _agent(self):
+        return _OverrideAgent(scene=None)
+
+    def _override(self, config: dict, action_key="container") -> dict:
+        return {"actions": {action_key: {"config": config}}}
+
+    def test_strips_declared_non_overridable_field(self):
+        override = self._override(
+            {"fmt": {"value": "a"}, "api_key": {"value": "secret"}}
+        )
+        stripped = strip_non_overridable_fields(self._agent(), override)
+        assert stripped == ["container.api_key"]
+        assert override["actions"]["container"]["config"] == {"fmt": {"value": "a"}}
+
+    def test_unknown_config_key_passes_through(self):
+        override = self._override({"gone_in_this_version": {"value": 1}})
+        assert strip_non_overridable_fields(self._agent(), override) == []
+        assert "gone_in_this_version" in override["actions"]["container"]["config"]
+
+    def test_unknown_action_key_passes_through(self):
+        """Dynamic children are only installed for the current config, so an
+        unknown action is not proof the field is gone."""
+        override = self._override({"api_key": {"value": "secret"}}, action_key="child")
+        assert strip_non_overridable_fields(self._agent(), override) == []
+        assert "api_key" in override["actions"]["child"]["config"]
+
+    def test_enabled_only_override_is_untouched(self):
+        override = {"actions": {"container": {"enabled": False}}}
+        assert strip_non_overridable_fields(self._agent(), override) == []
+        assert override == {"actions": {"container": {"enabled": False}}}
+
+    def test_empty_override_is_untouched(self):
+        override = {}
+        assert strip_non_overridable_fields(self._agent(), override) == []
+        assert override == {}

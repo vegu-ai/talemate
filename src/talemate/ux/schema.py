@@ -10,6 +10,8 @@ __all__ = [
     "DynamicSpan",
     "FieldGroup",
     "FieldType",
+    "FIELD_TYPE_IS_SECRET",
+    "SECRET_FIELD_TYPES",
     "Field",
     "Column",
 ]
@@ -30,6 +32,28 @@ FieldType = Literal[
     "password",
     "unified_api_key",
 ]
+
+# Whether a widget type holds a secret value — redacted from LLM-facing
+# payloads and never overridable per scene. Every FieldType is named
+# explicitly so adding one forces a decision here; the test keeps it exhaustive.
+FIELD_TYPE_IS_SECRET: dict[FieldType, bool] = {
+    "autocomplete": False,
+    "blob": False,
+    "bool": False,
+    "flags": False,
+    "number": False,
+    "table": False,
+    "text": False,
+    "vector2": False,
+    "weights": False,
+    "wstemplate": False,
+    "password": True,
+    "unified_api_key": True,
+}
+
+SECRET_FIELD_TYPES: frozenset[FieldType] = frozenset(
+    field_type for field_type, secret in FIELD_TYPE_IS_SECRET.items() if secret
+)
 
 
 class Action(pydantic.BaseModel):

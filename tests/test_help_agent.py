@@ -18,6 +18,7 @@ from talemate.agents.help import HelpAgent, docs
 from talemate.agents.help.chat import INITIAL_MESSAGE
 from talemate.agents.help.schema import HelpChatStore
 from talemate.game.focal.util import strip_call_blocks
+from talemate.scene_agent_settings import SceneAgentSettings
 
 from conftest import MockClient, MockClientContext, bootstrap_engine, client_responses
 
@@ -908,6 +909,138 @@ async def test_update_agent_setting_scene_override(settings_env, tmp_path):
         "conversation", "generation_override", "length"
     )
     assert "No scene override" in result
+
+
+def test_read_agent_settings_omits_inert_scene_overrides(settings_env, tmp_path):
+    """`resolve_config` ignores an overlay value for a non-overridable field, so
+    reporting it would name an effective value that is not in effect."""
+    agent = instance.get_agent("conversation")
+    scene = _SceneStub(tmp_path)
+    overrides = SceneAgentSettings(filepath=tmp_path / "agent-settings.json")
+    overrides.set_value("conversation", "generation_override", "length", 384)
+    overrides.set_value(
+        "conversation", "prompt_caching", "optimize_prompt_caching", "on"
+    )
+    scene.agent_overrides = overrides
+    agent.scene = scene
+
+    try:
+        payload = help_settings.read_agent_settings("conversation")
+    finally:
+        agent.scene = None
+
+    length = payload["actions"]["generation_override"]["settings"]["length"]
+    assert length["scene_override"] == 384
+
+    caching = payload["actions"]["prompt_caching"]["settings"][
+        "optimize_prompt_caching"
+    ]
+    assert caching["scene_overridable"] is False
+    assert "scene_override" not in caching
+
+
+@pytest.mark.asyncio
+async def test_clear_scene_override_redacts_a_secret_value(settings_env, tmp_path):
+    """The clear tool must not hand the removed credential back to the LLM."""
+    agent = instance.get_agent("conversation")
+    field = agent.actions["generation_override"].config["instructions"]
+    original_type = field.type
+    field.type = "password"
+
+    scene = _SceneStub(tmp_path)
+    overrides = SceneAgentSettings(filepath=tmp_path / "agent-settings.json")
+    overrides.set_value(
+        "conversation", "generation_override", "instructions", "super-secret"
+    )
+    scene.agent_overrides = overrides
+    agent.scene = scene
+
+    try:
+        result = await help_settings.clear_agent_setting_scene_override(
+            "conversation", "generation_override", "instructions"
+        )
+    finally:
+        field.type = original_type
+        agent.scene = None
+
+    assert result["cleared"] is True
+    assert result["removed_override_value"] == help_settings.REDACTED
+    assert "super-secret" not in json.dumps(result)
+    assert (
+        overrides.get_value("conversation", "generation_override", "instructions")
+        is help_settings.UNSET
+    )
+
+
+@pytest.mark.asyncio
+async def test_clear_scene_override_returns_real_value_for_normal_fields(
+    settings_env, tmp_path
+):
+    agent = instance.get_agent("conversation")
+    scene = _SceneStub(tmp_path)
+    overrides = SceneAgentSettings(filepath=tmp_path / "agent-settings.json")
+    overrides.set_value("conversation", "generation_override", "length", 384)
+    scene.agent_overrides = overrides
+    agent.scene = scene
+
+    try:
+        result = await help_settings.clear_agent_setting_scene_override(
+            "conversation", "generation_override", "length"
+        )
+    finally:
+        agent.scene = None
+
+    assert result["removed_override_value"] == 384
+
+
+@pytest.mark.asyncio
+async def test_global_write_does_not_warn_about_an_inert_override(
+    settings_env, tmp_path
+):
+    """`resolve_config` ignores the stored value, so the global write IS in
+    effect — a masking warning would be wrong."""
+    agent = instance.get_agent("conversation")
+    scene = _SceneStub(tmp_path)
+    overrides = SceneAgentSettings(filepath=tmp_path / "agent-settings.json")
+    overrides.set_value(
+        "conversation", "prompt_caching", "optimize_prompt_caching", "on"
+    )
+    overrides.set_value("conversation", "generation_override", "length", 384)
+    scene.agent_overrides = overrides
+    agent.scene = scene
+
+    try:
+        inert = await help_settings.update_agent_setting(
+            "conversation", "prompt_caching", "optimize_prompt_caching", "off", "global"
+        )
+        masked = await help_settings.update_agent_setting(
+            "conversation", "generation_override", "length", 256, "global"
+        )
+    finally:
+        agent.scene = None
+
+    assert "warning" not in inert
+    # an override that really does mask the global value still warns
+    assert "scene override" in masked["warning"]
+
+
+def test_action_payload_omits_inert_enabled_override(settings_env, tmp_path):
+    agent = instance.get_agent("conversation")
+    scene = _SceneStub(tmp_path)
+    overrides = SceneAgentSettings(filepath=tmp_path / "agent-settings.json")
+    # `generation_override` has no Enable control; `use_long_term_memory` does
+    overrides.set_enabled("conversation", "generation_override", False)
+    overrides.set_enabled("conversation", "use_long_term_memory", False)
+    scene.agent_overrides = overrides
+    agent.scene = scene
+
+    try:
+        payload = help_settings.read_agent_settings("conversation")
+    finally:
+        agent.scene = None
+
+    assert "enabled_scene_override" not in payload["actions"]["generation_override"]
+    assert payload["actions"]["use_long_term_memory"]["enabled_scene_override"] is False
 
 
 @pytest.mark.asyncio

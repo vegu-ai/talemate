@@ -39,6 +39,8 @@ Any action that can be switched off globally can also be switched off for the sc
 
 Some sections are always on by design — for example the World State's Character Portraits, the Summarizer's Scene History, and the Conversation and Narrator Generation sections. They have no enable checkbox and cannot be switched off globally or per scene; a `false` left for one in the configuration file (or in a scene's overrides) is ignored.
 
+API keys and passwords are never scene-overridable. They belong to your installation rather than to any one story — a scene file is something you can share — so they never appear in Scene mode, and a value left for one in a scene's overrides file is ignored.
+
 In Scene mode, the page only shows the settings (and sections) that actually support overriding, to keep the view focused. If an agent has no currently overridable settings at all, the Global / Scene switch won't appear.
 
 Some settings only apply while another setting is switched on — for example the Creator agent's Fast-mode fields (Consolidate, One-shot token budget, Fill in misses) only matter while **Fast Character Generation** is on. Those settings appear in Scene mode only while their gating setting allows it, and the gate is read as this scene sees it: the scene's override if there is one, otherwise the global value. So overriding the gate for a scene reveals the settings it gates, and a section whose settings are all currently hidden drops out of Scene mode entirely.

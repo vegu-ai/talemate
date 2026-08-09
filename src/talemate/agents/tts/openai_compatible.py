@@ -146,7 +146,6 @@ class OpenAICompatibleMixin:
                     value="",
                     label="API Key",
                     description="API key for the server (leave empty if not required)",
-                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",

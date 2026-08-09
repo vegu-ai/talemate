@@ -171,7 +171,6 @@ class OpenAICompatibleMixin:
                     value="",
                     label="API Key",
                     description="Optional API key for authentication.",
-                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",

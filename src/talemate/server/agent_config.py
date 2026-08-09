@@ -26,6 +26,29 @@ from .websocket_plugin import Plugin
 log = structlog.get_logger("talemate.server.agent_config")
 
 
+def strip_non_overridable_fields(agent, override: dict) -> list[str]:
+    """Drop config values the agent declares as non-overridable from a sparse
+    override dict (mutated in place) and return what was removed.
+
+    Keys with no matching declaration are left alone — ``agent.actions`` only
+    carries the dynamic children installed for the current config, so an
+    unknown key is not proof that the field does not exist.
+    """
+    stripped = []
+    for action_key, action_override in (override.get("actions") or {}).items():
+        config_override = (action_override or {}).get("config") or {}
+        if not config_override:
+            continue
+        action = agent.actions.get(action_key)
+        declared = action.config or {} if action is not None else {}
+        for config_key in list(config_override.keys()):
+            field = declared.get(config_key)
+            if field is not None and not field.scene_overridable:
+                config_override.pop(config_key)
+                stripped.append(f"{action_key}.{config_key}")
+    return stripped
+
+
 class AgentConfigPlugin(Plugin):
     """Live mutations to an agent's stored configuration."""
 
@@ -295,7 +318,16 @@ class AgentConfigPlugin(Plugin):
             scene.agent_settings_file = filename
             linked_file = True
 
-        scene.agent_overrides.replace_agent_overrides(agent_type, override or {})
+        override = override or {}
+        stripped = strip_non_overridable_fields(agent, override)
+        if stripped:
+            log.warning(
+                "scene-overrides save dropped non-overridable fields",
+                agent_type=agent_type,
+                fields=stripped,
+            )
+
+        scene.agent_overrides.replace_agent_overrides(agent_type, override)
         try:
             await scene.agent_overrides.write_to_file()
         except OSError as exc:

@@ -6,6 +6,8 @@ and client extra fields (`talemate.client.base.ExtraField`).
 
 from __future__ import annotations
 
+import typing
+
 import pydantic
 import pytest
 
@@ -79,6 +81,21 @@ def test_field_note_string_assignment_serializes_as_note():
 def test_field_rejects_unknown_type():
     with pytest.raises(pydantic.ValidationError):
         ux_schema.Field(type="select", label="Legacy")
+
+
+def test_field_type_is_secret_is_exhaustive():
+    """A new FieldType must be classified as secret or not before it ships."""
+    assert set(ux_schema.FIELD_TYPE_IS_SECRET) == set(
+        typing.get_args(ux_schema.FieldType)
+    )
+
+
+def test_secret_field_types_derived_from_the_mapping():
+    assert ux_schema.SECRET_FIELD_TYPES == frozenset({"password", "unified_api_key"})
+    assert all(
+        ux_schema.FIELD_TYPE_IS_SECRET[field_type]
+        for field_type in ux_schema.SECRET_FIELD_TYPES
+    )
 
 
 def test_field_table_type_with_columns():

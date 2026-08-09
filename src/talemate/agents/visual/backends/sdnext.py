@@ -351,7 +351,6 @@ class SDNextMixin:
                 condition=AgentActionConditional(
                     attribute=f"{action_name}.config.auth_method", value="basic"
                 ),
-                scene_overridable=False,
             ),
             "api_key": AgentActionConfig(
                 type="password",
@@ -361,7 +360,6 @@ class SDNextMixin:
                 condition=AgentActionConditional(
                     attribute=f"{action_name}.config.auth_method", value="bearer"
                 ),
-                scene_overridable=False,
             ),
             "steps": AgentActionConfig(
                 title="Sampler Settings",

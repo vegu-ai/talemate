@@ -111,19 +111,20 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             self.routes[handler_cls.router] = handler_cls(self)
 
     def disconnect(self):
-        super().disconnect()
-        abort_wait_for_input()
+        try:
+            super().disconnect()
+            abort_wait_for_input()
 
-        # Cleanup scene assets batching
-        self._cleanup_scene_assets_batching()
+            # Cleanup scene assets batching
+            self._cleanup_scene_assets_batching()
 
-        memory_agent = instance.get_agent("memory")
-        if memory_agent and self.scene:
-            memory_agent.close_db(self.scene)
-
-        for plugin in self.routes.values():
-            if hasattr(plugin, "disconnect"):
-                plugin.disconnect()
+            for plugin in self.routes.values():
+                if hasattr(plugin, "disconnect"):
+                    plugin.disconnect()
+        finally:
+            # a failure above must not leave the agents bound to the scene of
+            # this connection
+            self.release_scene()
 
     def connect(self):
         super().connect()
@@ -144,6 +145,31 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
 
         return scene
 
+    def release_scene(self) -> Scene:
+        """Tear down the current scene and detach it from the global agents.
+
+        Rebinds to a fresh (inactive) placeholder rather than dropping the
+        scene, so scene-free generation keeps working and the next connection
+        does not inherit the released scene's per-scene overrides.
+        """
+        if self.scene:
+            # before the fallible close: `active` is the abort gate in-flight
+            # work polls, so it must drop even when the teardown fails
+            self.scene.active = False
+            try:
+                instance.get_agent("memory").close_db(self.scene)
+                self.scene.disconnect()
+            except Exception:
+                # the rebind is the invariant - a failed teardown must not
+                # leave the agents on the released scene
+                log.error(
+                    "release_scene: outgoing scene teardown failed",
+                    error=traceback.format_exc(),
+                )
+
+        self.scene = self.init_scene()
+        return self.scene
+
     async def load_scene(
         self,
         path_or_data,
@@ -154,18 +180,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         scene_initialization: dict | None = None,
     ):
         try:
-            if self.scene:
-                instance.get_agent("memory").close_db(self.scene)
-                self.scene.disconnect()
-                self.scene.active = False
-
-            scene = self.init_scene()
-
-            if not scene:
-                await asyncio.sleep(0.1)
-                return
-
-            self.scene = scene
+            scene = self.release_scene()
 
             scene.active = True
 

@@ -79,17 +79,16 @@ async def websocket_endpoint(websocket):
         # no user response can arrive anymore - terminate any coroutine still
         # waiting on a generation error dialog
         resolve_all_generation_errors("cancel")
-        handler.disconnect()
-        if handler.scene:
-            handler.scene.active = False
-            handler.scene.continue_scene = False
-            if scene_task:
-                scene_task.cancel()
-        # Clear the active websocket reference so a new frontend can connect.
-        if _active_frontend_websocket is websocket:
-            _active_frontend_websocket = None
-        if _active_frontend_websocket_handler is handler:
-            _active_frontend_websocket_handler = None
+        if scene_task:
+            scene_task.cancel()
+        try:
+            handler.disconnect()
+        finally:
+            # Clear the active websocket reference so a new frontend can connect.
+            if _active_frontend_websocket is websocket:
+                _active_frontend_websocket = None
+            if _active_frontend_websocket_handler is handler:
+                _active_frontend_websocket_handler = None
 
     # Create a task to send messages from the queue
     async def send_messages():

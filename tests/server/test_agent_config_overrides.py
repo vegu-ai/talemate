@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 import talemate.instance as instance
-from talemate.agents.base import Agent, AgentAction, AgentActionConfig
+from _agent_override_test_helpers import override_agent_class
 from talemate.scene_agent_settings import UNSET, SceneAgentSettings
 from talemate.server.agent_config import (
     AgentConfigPlugin,
@@ -21,35 +21,7 @@ from talemate.server.agent_config import (
 
 AGENT_TYPE = "override-test"
 
-
-class _OverrideAgent(Agent):
-    agent_type = AGENT_TYPE
-    verbose_name = "Override Test"
-    requires_llm_client = False
-
-    def __init__(self, scene):
-        self.actions = {
-            "container": AgentAction(
-                enabled=True,
-                label="Container",
-                container=True,
-                can_be_disabled=True,
-                config={
-                    "fmt": AgentActionConfig(
-                        type="text", label="fmt", value="global-fmt"
-                    ),
-                    "api_key": AgentActionConfig(
-                        type="password", label="api key", value="global-key"
-                    ),
-                },
-            )
-        }
-        self.scene = scene
-        self.processing = 0
-        self.emitted = 0
-
-    async def emit_status(self, processing: bool = None):
-        self.emitted += 1
+_OverrideAgent = override_agent_class(AGENT_TYPE)
 
 
 class _Scene:

@@ -156,15 +156,37 @@ import {
     actionHasOverridable,
     countSceneOverrides,
     effectiveConditionMet,
-    normalizeSceneOverlay,
-    serializeSceneOverlay,
-    setActionOverrideSlice,
 } from '@/constants/sceneAgentSettings';
+import {
+    OP_KIND,
+    adoptRegistryOp as adoptRegistryOpInto,
+    attributeOperation,
+    dropPendingOps as forgetPendingOps,
+    makeRequestId,
+    registryOpInFlight as hasRegistryOpInFlight,
+    trackRequest as recordRequest,
+} from '@/utils/agentConfigOps';
 import {
     mergeSceneOverrides,
     parseDynamicChildren,
     reconcileDynamicChildren as reconcileEntryChildren,
 } from '@/utils/agentSettingsReconcile';
+import {
+    agentClient as readAgentClient,
+    agentEnabled as readAgentEnabled,
+    effectiveActionsFor as readEffectiveActions,
+    entryAction as entryActionSlice,
+    materializeAgentEntry,
+} from '@/utils/agentSettingsWorkingCopy';
+import {
+    COMMIT_DECISION,
+    bufferOverrideSlice,
+    buildCommitPayloads,
+    pendingSceneAgents as collectPendingSceneAgents,
+    prepareCommitDecision,
+    resetForSceneChange,
+    sceneOverlayFor as readSceneOverlay,
+} from '@/utils/sceneOverrideCommit';
 
 // Mapping from `AgentAction.dynamic_registry_component` to the component that
 // renders that registry.
@@ -362,10 +384,7 @@ export default {
         // agent types whose buffered overlay differs from what the scene
         // currently has stored — the payloads Save has to send
         pendingSceneAgents() {
-            return Object.keys(this.sceneOverrideBuffer).filter((agentType) => {
-                const live = normalizeSceneOverlay(this.liveAgents[agentType]?.data?.scene_overrides);
-                return serializeSceneOverlay(this.sceneOverrideBuffer[agentType]) !== serializeSceneOverlay(live);
-            });
+            return collectPendingSceneAgents(this.sceneOverrideBuffer, this.liveAgents);
         },
         hasPendingSceneOverrides() {
             return this.pendingSceneAgents.length > 0;
@@ -379,7 +398,7 @@ export default {
         // working copy still carries the pre-op membership, and saving it
         // would undo the op (validate() refuses the save meanwhile)
         registryOpInFlight() {
-            return Object.values(this.pendingOps).some(op => op.kind === 'registry');
+            return hasRegistryOpInFlight(this.pendingOps);
         },
         // the host's connection state — an answer this page is waiting for
         // cannot outlive the socket it was sent on
@@ -498,19 +517,12 @@ export default {
             if (next === previous) {
                 return;
             }
-            // buffered overlays belong to the scene they were edited against;
-            // a different (or unloaded) scene can't receive them
-            const dropped = Object.keys(this.sceneOverrideBuffer).length > 0;
-            this.sceneOverrideBuffer = {};
-            this.sceneOverrideSeed = {};
-            this.committingAgents = {};
-            // answers to slices committed against the previous scene have
-            // nothing left to report on (registry ops are scene-independent)
-            for (const [id, op] of Object.entries(this.pendingOps)) {
-                if (op.kind === 'commit') {
-                    delete this.pendingOps[id];
-                }
-            }
+            const { dropped } = resetForSceneChange({
+                buffer: this.sceneOverrideBuffer,
+                seed: this.sceneOverrideSeed,
+                committingAgents: this.committingAgents,
+                pendingOps: this.pendingOps,
+            });
             this.pendingFilename = null;
             if (dropped) {
                 this.$emit('extra-error', 'The scene changed — unsaved scene overrides were discarded.');
@@ -627,55 +639,16 @@ export default {
         // effective values — working copy first, live schema as fallback
         // ------------------------------------------------------------------
 
-        liveClientName(agent) {
-            // agent_status.client is the agent's detail payload: a plain
-            // client name for LLM agents, a chip dict for agents that report
-            // more (the client name then lives under `client.client.value`)
-            const client = agent?.client;
-            if (client && typeof client === 'object') {
-                return client.client ? client.client.value : null;
-            }
-            return client || null;
-        },
-
         agentEnabled(agentType) {
-            const stored = this.config?.agents?.[agentType];
-            if (stored && typeof stored.enabled === 'boolean') {
-                return stored.enabled;
-            }
-            return !!this.liveAgents[agentType]?.data?.enabled;
+            return readAgentEnabled(this.config, this.liveAgents, agentType);
         },
 
         agentClient(agentType) {
-            const stored = this.config?.agents?.[agentType];
-            if (stored && stored.client) {
-                return stored.client;
-            }
-            // the running agent's assignment stands in for an unset one, but
-            // only while the working copy still has that client — after it is
-            // removed here, "unassigned" is the truth (the backend assigns a
-            // new one when the save is applied)
-            const live = this.liveClientName(this.liveAgents[agentType]);
-            return (live && this.config?.clients?.[live]) ? live : null;
+            return readAgentClient(this.config, this.liveAgents, agentType);
         },
 
         effectiveActionsFor(agentType) {
-            const schemaActions = this.liveAgents[agentType]?.data?.actions || {};
-            const storedActions = this.config?.agents?.[agentType]?.actions || {};
-            const actions = {};
-            for (const [key, schema] of Object.entries(schemaActions)) {
-                const stored = storedActions[key] || {};
-                const config = {};
-                for (const [configKey, field] of Object.entries(schema.config || {})) {
-                    const storedValue = stored.config?.[configKey]?.value;
-                    config[configKey] = { value: storedValue === undefined ? field.value : storedValue };
-                }
-                actions[key] = {
-                    enabled: typeof stored.enabled === 'boolean' ? stored.enabled : schema.enabled,
-                    config: config,
-                };
-            }
-            return actions;
+            return readEffectiveActions(this.config, this.liveAgents, agentType);
         },
 
         actionConditionMet(schema) {
@@ -705,50 +678,19 @@ export default {
         // write path — materialize on first edit, then apply
         // ------------------------------------------------------------------
 
-        // Builds the agent's complete persisted entry from the effective
-        // values so a save carries everything the retired agent modal used to
-        // send. Called on the first edit of an agent only.
+        // The agent's full persisted entry, built on the first edit of this
+        // session so an untouched agent never fabricates dirty state.
         materialize(agentType) {
             if (this.materialized[agentType]) {
                 return this.config.agents[agentType];
             }
-            if (!this.config.agents) {
-                this.config.agents = {};
-            }
-            const data = this.liveAgents[agentType]?.data || {};
-            const effective = this.effectiveActionsFor(agentType);
-            const actions = {};
-            for (const [key, values] of Object.entries(effective)) {
-                const config = {};
-                for (const [configKey, field] of Object.entries(values.config)) {
-                    config[configKey] = { value: field.value };
-                }
-                actions[key] = { enabled: values.enabled, config: config };
-            }
-            this.config.agents[agentType] = {
-                ...(this.config.agents[agentType] || {}),
-                enabled: this.agentEnabled(agentType),
-                // agents that don't generate never carry a client — same
-                // normalization the old save path applied
-                client: data.requires_llm_client ? this.agentClient(agentType) : null,
-                actions: actions,
-            };
+            const entry = materializeAgentEntry(this.config, this.liveAgents, agentType);
             this.materialized[agentType] = true;
-            return this.config.agents[agentType];
+            return entry;
         },
 
         entryAction(agentType, actionKey) {
-            const entry = this.materialize(agentType);
-            if (!entry.actions) {
-                entry.actions = {};
-            }
-            if (!entry.actions[actionKey]) {
-                entry.actions[actionKey] = { enabled: true, config: {} };
-            }
-            if (!entry.actions[actionKey].config) {
-                entry.actions[actionKey].config = {};
-            }
-            return entry.actions[actionKey];
+            return entryActionSlice(this.materialize(agentType), actionKey);
         },
 
         setAgentEnabled(value) {
@@ -798,17 +740,7 @@ export default {
         },
 
         sceneOverlayFor(agentType) {
-            if (!agentType) {
-                return { actions: {} };
-            }
-            // the buffer overlays what the agent currently reports, the same
-            // way the working copy overlays the live schema — an agent_status
-            // refresh must not clobber unsaved edits
-            const buffered = this.sceneOverrideBuffer[agentType];
-            if (buffered) {
-                return buffered;
-            }
-            return normalizeSceneOverlay(this.liveAgents[agentType]?.data?.scene_overrides);
+            return readSceneOverlay({ buffer: this.sceneOverrideBuffer, liveAgents: this.liveAgents }, agentType);
         },
 
         sceneConditionCtx(actionKey) {
@@ -836,15 +768,12 @@ export default {
         },
 
         setSceneOverrideSlice(agentType, actionKey, slice) {
-            const overlay = this.sceneOverlayFor(agentType);
-            if (!this.sceneOverrideBuffer[agentType]) {
-                // remember what the scene held when buffering started, so a
-                // write from elsewhere can be told apart from our own edits
-                this.sceneOverrideSeed[agentType] = normalizeSceneOverlay(overlay);
-            }
-            this.sceneOverrideBuffer[agentType] = {
-                actions: setActionOverrideSlice(overlay.actions, actionKey, slice),
-            };
+            bufferOverrideSlice(
+                { buffer: this.sceneOverrideBuffer, seed: this.sceneOverrideSeed, liveAgents: this.liveAgents },
+                agentType,
+                actionKey,
+                slice,
+            );
         },
 
         // ---- extra-changes contract (see AppSettings.saveConfig) -----------
@@ -860,27 +789,37 @@ export default {
             // a re-entrant save (or a prompt still open from a previous one)
             // must not strand the earlier promise
             this.resolveFilenamePrompt(false);
-            if (!this.hasPendingSceneOverrides) {
+            const decision = prepareCommitDecision({
+                pending: this.hasPendingSceneOverrides,
+                commitInFlight: this.commitInFlight,
+                overridesAvailable: this.sceneOverridesAvailable,
+                settingsFile: this.sceneSettingsFile,
+            });
+            if (decision === COMMIT_DECISION.NOTHING) {
                 return Promise.resolve(true);
             }
-            if (this.commitInFlight) {
-                // the previous slice hasn't been answered yet; sending another
-                // would race the echo the buffer reconciles against
+            if (decision === COMMIT_DECISION.BLOCKED_COMMIT_IN_FLIGHT) {
                 this.$emit('extra-error', 'Scene overrides are still saving — try again in a moment.');
                 return Promise.resolve(false);
             }
-            if (!this.sceneOverridesAvailable) {
+            if (decision === COMMIT_DECISION.BLOCKED_UNAVAILABLE) {
                 this.$emit('extra-error', 'Scene overrides cannot be saved for this scene.');
                 return Promise.resolve(false);
             }
-            if (this.sceneSettingsFile) {
+            if (decision === COMMIT_DECISION.READY) {
                 this.pendingFilename = null;
                 return Promise.resolve(true);
             }
-            return new Promise((resolve) => {
-                this._filenamePromptResolve = resolve;
-                this.$refs.namingDialog.openDialog({ input: DEFAULT_SCENE_AGENT_SETTINGS_FILENAME });
-            });
+            if (decision === COMMIT_DECISION.NEEDS_FILENAME) {
+                return new Promise((resolve) => {
+                    this._filenamePromptResolve = resolve;
+                    this.$refs.namingDialog.openDialog({ input: DEFAULT_SCENE_AGENT_SETTINGS_FILENAME });
+                });
+            }
+            // an unknown token means the module and this chain drifted apart —
+            // abort the save rather than let it fall through to a send
+            this.$emit('extra-error', `Scene overrides were not saved (unknown save decision "${decision}").`);
+            return Promise.resolve(false);
         },
 
         onNamingConfirm(filename) {
@@ -915,22 +854,14 @@ export default {
                 this.$emit('extra-error', 'Not connected to the backend — scene overrides were not saved.');
                 return;
             }
-            let filename = this.sceneSettingsFile ? null : this.pendingFilename;
-            for (const agentType of this.pendingSceneAgents) {
-                const payload = {
-                    type: 'agent_config',
-                    action: 'save_scene_overrides',
-                    agent_type: agentType,
-                    // server-side `_prune_empty` cleans up empties on write
-                    override: this.sceneOverlayFor(agentType),
-                    request_id: this.trackRequest('commit', agentType),
-                };
-                if (filename) {
-                    // only the first slice links the file; the rest write into it
-                    payload.filename = filename;
-                    filename = null;
-                }
-                this.committingAgents[agentType] = true;
+            const payloads = buildCommitPayloads({
+                agentTypes: this.pendingSceneAgents,
+                overlayFor: (agentType) => this.sceneOverlayFor(agentType),
+                filename: this.sceneSettingsFile ? null : this.pendingFilename,
+                makeId: (agentType) => this.trackRequest(OP_KIND.COMMIT, agentType),
+            });
+            for (const payload of payloads) {
+                this.committingAgents[payload.agent_type] = true;
                 this.getWebsocket().send(JSON.stringify(payload));
             }
             this.pendingFilename = null;
@@ -974,30 +905,16 @@ export default {
         // ids for our own requests on the shared agent_config router, so an
         // answer can be attributed to the request that caused it
         trackRequest(kind, agentType) {
-            const id = `agentcfg-${Date.now()}-${++this.opSeq}`;
-            this.pendingOps[id] = { kind, agentType };
+            const id = makeRequestId(++this.opSeq);
+            recordRequest(this.pendingOps, id, kind, agentType);
             return id;
         },
 
         // The socket is gone, and with it every answer still outstanding on it.
         // Nothing else retires these entries, so they would gate saving
         // (validate, prepareExtraChanges) for the rest of the session.
-        //
-        // Dropping them loses no state: a registry op is persisted and
-        // broadcast before it is answered, and the host re-requests the config
-        // when the socket reopens — so the app_config that follows carries the
-        // op, and the repair the answer would have done runs off that broadcast
-        // instead (registryRepairs). A committed slice is answered by an
-        // agent_status, which the backend re-emits for every agent on connect,
-        // and its buffer survives a commit either way — a slice that never
-        // landed is simply saved again.
         dropPendingOps() {
-            for (const [id, op] of Object.entries(this.pendingOps)) {
-                if (op.kind === 'registry') {
-                    this.registryRepairs[op.agentType] = true;
-                }
-                delete this.pendingOps[id];
-            }
+            forgetPendingOps(this.pendingOps, this.registryRepairs);
             this.committingAgents = {};
         },
 
@@ -1011,7 +928,7 @@ export default {
                 action: action,
                 agent_type: this.selectedName,
                 action_key: actionKey,
-                request_id: this.trackRequest('registry', this.selectedName),
+                request_id: this.trackRequest(OP_KIND.REGISTRY, this.selectedName),
                 ...extra,
             }));
         },
@@ -1042,40 +959,16 @@ export default {
             reconcileEntryChildren(this.config?.agents?.[agentType], schemaActions);
         },
 
-        // Repairs the working copy from the config the backend broadcast with
-        // a registry op, which is the state the op was persisted into. The
-        // live schema is NOT that state yet: the completion is queued
-        // directly while agent_status is debounced, so the broadcast is all
-        // this answer has to go on.
         adoptRegistryOp(agentType) {
-            const persisted = this.persistedAgents[agentType];
-            if (!persisted) {
-                // no broadcast to build from — fall back to an entry off the
-                // (pre-op) schema, which the agent_status that follows still
-                // reconciles the membership into
-                if (!this.config?.agents?.[agentType]) {
-                    this.materialize(agentType);
-                }
-                return;
-            }
-            if (!this.config.agents) {
-                this.config.agents = {};
-            }
-            if (!this.config.agents[agentType]) {
-                // the working copy has no entry for this agent, so the next
-                // Save would ship a config without it and drop the op — give
-                // it the persisted one, which already carries the op
-                this.config.agents[agentType] = JSON.parse(JSON.stringify(persisted));
+            const adopted = adoptRegistryOpInto({
+                config: this.config,
+                agentType: agentType,
+                persistedEntry: this.persistedAgents[agentType],
+                materialize: () => this.materialize(agentType),
+            });
+            if (adopted) {
                 this.materialized[agentType] = true;
-                return;
             }
-            // an entry that predates the op (loaded with it, or materialized
-            // by an edit made while the op was in flight): its registry blob
-            // is the pre-op one. The persisted actions carry the new
-            // membership in the shape the reconciler reads — a child action
-            // added here has no entry of its own until the status lands, which
-            // the backend synthesizes from the blob on save either way.
-            this.reconcileDynamicChildren(agentType, persisted.actions || {});
         },
 
         // Every agent_status carries the agent's stored overrides, which is the
@@ -1141,11 +1034,10 @@ export default {
                 // world editor — an answer is ours only when it echoes an id we
                 // sent, so neither their failures land in this page's error
                 // channel nor ours go unreported
-                const ours = this.pendingOps[message.request_id];
+                const ours = attributeOperation(this.pendingOps, message.request_id);
                 if (!ours) {
                     return;
                 }
-                delete this.pendingOps[message.request_id];
                 if (message.error) {
                     // a refused override save (or registry op) — the buffered
                     // edits stay put so the user can fix and retry

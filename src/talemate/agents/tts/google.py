@@ -158,7 +158,6 @@ class GoogleMixin:
                     type="unified_api_key",
                     value="google.api_key",
                     label="Google API Key",
-                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",

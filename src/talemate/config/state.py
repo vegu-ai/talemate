@@ -22,7 +22,12 @@ async_signals.register(
 
 def _load_config() -> Config:
     log.debug("loading config", file_path=CONFIG_FILE)
-    with open(CONFIG_FILE, "r") as file:
+    try:
+        file = open(CONFIG_FILE, "r")
+    except FileNotFoundError:
+        log.info("config file not found, starting with defaults", file_path=CONFIG_FILE)
+        return Config()
+    with file:
         yaml_data = yaml.safe_load(file)
         if yaml_data is None:
             yaml_data = {}

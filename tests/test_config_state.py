@@ -109,6 +109,24 @@ class TestLoadConfig:
         assert isinstance(cfg, Config)
         assert cfg.dirty is False
 
+    def test_missing_file_returns_defaults(self, monkeypatch, tmp_path):
+        path = tmp_path / "does_not_exist.yaml"
+        monkeypatch.setattr(config_state, "CONFIG_FILE", path)
+
+        cfg = config_state._load_config()
+        defaults = Config()
+        assert isinstance(cfg, Config)
+        assert cfg.clients == defaults.clients
+        assert cfg.agents == defaults.agents
+        assert cfg.dirty is defaults.dirty
+
+    def test_missing_file_is_not_created_on_load(self, monkeypatch, tmp_path):
+        path = tmp_path / "does_not_exist.yaml"
+        monkeypatch.setattr(config_state, "CONFIG_FILE", path)
+
+        config_state._load_config()
+        assert not path.exists()
+
     def test_decrypts_api_keys_during_load(self, monkeypatch, tmp_path):
         # Write an unencrypted (plaintext-passthrough) value; decrypt_value
         # returns input unchanged when ENC_PREFIX is absent.

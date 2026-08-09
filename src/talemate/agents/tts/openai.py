@@ -108,7 +108,6 @@ class OpenAIMixin:
                     type="unified_api_key",
                     value="openai.api_key",
                     label="OpenAI API Key",
-                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",

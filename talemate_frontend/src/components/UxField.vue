@@ -284,13 +284,12 @@
     />
   </div>
 
-  <!-- unified_api_key — bound to global app config; no per-field value. -->
+  <!-- unified_api_key — bound to the host's app-config working copy; no per-field value. -->
   <ConfigWidgetUnifiedApiKey
     v-else-if="field.type === 'unified_api_key'"
     :config-path="field.value"
     :title="field.label"
     :app-config="appConfig"
-    :deferred="deferred"
     class="mt-3"
   />
 
@@ -345,9 +344,6 @@ export default {
     templates: { type: Object, default: null },
     // Required for unified_api_key widgets.
     appConfig: { type: Object, default: null },
-    // Forwarded to the unified_api_key widget: `appConfig` is an unsaved
-    // working copy whose owner persists it, not the live config.
-    deferred: { type: Boolean, default: false },
   },
   emits: ['update:modelValue', 'change'],
   computed: {

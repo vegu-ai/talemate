@@ -85,7 +85,6 @@ class ElevenLabsMixin:
                     type="unified_api_key",
                     value="elevenlabs.api_key",
                     label="ElevenLabs API Key",
-                    scene_overridable=False,
                 ),
                 "model": AgentActionConfig(
                     type="text",

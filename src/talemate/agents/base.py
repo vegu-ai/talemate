@@ -89,6 +89,15 @@ class AgentActionConfig(UxField):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    @pydantic.model_validator(mode="after")
+    def _unified_api_key_is_never_scene_overridable(self):
+        # The unified-key widget writes into an app-config working copy that
+        # the host's Save persists; the scene-override renderer has no such
+        # copy, so an overridable declaration would render a dead field.
+        if self.type == "unified_api_key":
+            self.scene_overridable = False
+        return self
+
 
 class AgentAction(pydantic.BaseModel):
     enabled: bool = True

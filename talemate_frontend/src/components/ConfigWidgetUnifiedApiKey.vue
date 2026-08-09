@@ -1,5 +1,5 @@
 <template>
-  <div v-if="configPath" class="mb-4">
+  <div v-if="configPath && appConfig" class="mb-4">
     <v-card variant="outlined" color="primary">
       <v-card-title class="text-subtitle-1 d-flex align-center">
         <v-icon class="mr-2">mdi-key-variant</v-icon>
@@ -18,11 +18,10 @@
       </v-card-title>
       <v-expand-transition>
         <v-card-text v-show="expanded || !apiKey" class="text-muted">
-          <v-text-field 
-            type="password" 
+          <v-text-field
+            type="password"
             color="muted"
-            v-model="apiKey" 
-            @blur="save"
+            v-model="apiKey"
             density="comfortable"
           ></v-text-field>
           <div class="text-caption text-medium-emphasis mt-2">
@@ -52,48 +51,29 @@ export default {
       type: String,
       default: 'This API key is stored in application settings and shared across all clients of this type. You can also edit it from the Application settings.',
     },
+    // The host's unsaved working copy of the config — the key is written into
+    // it and the host's Save persists it, so Discard drops the key too.
+    // Required: without a working copy the field would render but every
+    // keystroke would go nowhere, so the widget refuses to render instead.
     appConfig: {
       type: Object,
-      default: null,
-    },
-    // Hosted inside a page that owns an unsaved working copy of the config
-    // (the settings pages, the client editor): write the key into it and let
-    // that page's Save persist it, so Discard discards the key too and a Save
-    // can't push the pre-edit value back over it.
-    // Left off, the host renders against the LIVE config and has no Save of
-    // its own, so the key is stored on blur via `config/save_unified_api_key`.
-    // No shipped field reaches that branch today — the one live-config host
-    // (the world editor's scene settings) renders scene-overridable fields
-    // only, and every unified_api_key declaration opts out of those — but it
-    // stays the contract for a host without a working copy.
-    deferred: {
-      type: Boolean,
-      default: false,
+      required: true,
     },
   },
-  inject: ['getWebsocket'],
   data() {
     return {
-      storedKey: '',
       expanded: false,
     };
   },
   computed: {
     apiKey: {
       get() {
-        if (this.deferred) {
-          return this.configPath ? getProperty(this.appConfig || {}, this.configPath) || '' : '';
-        }
-        return this.storedKey;
+        return this.configPath ? getProperty(this.appConfig || {}, this.configPath) || '' : '';
       },
       set(value) {
-        if (this.deferred) {
-          if (this.appConfig && this.configPath) {
-            setProperty(this.appConfig, this.configPath, value || null);
-          }
-          return;
+        if (this.appConfig && this.configPath) {
+          setProperty(this.appConfig, this.configPath, value || null);
         }
-        this.storedKey = value;
       },
     },
   },
@@ -101,40 +81,22 @@ export default {
     appConfig: {
       immediate: true,
       handler() {
-        this.updateApiKey();
+        this.syncExpanded();
       },
     },
     configPath: {
       immediate: true,
       handler() {
-        this.updateApiKey();
+        this.syncExpanded();
       },
     },
   },
   methods: {
-    updateApiKey() {
+    syncExpanded() {
       if (!this.appConfig || !this.configPath) {
         return;
       }
-      const keyValue = getProperty(this.appConfig, this.configPath) || '';
-      if (!this.deferred) {
-        this.storedKey = keyValue;
-      }
-      // Auto-collapse if key is set, expand if not set
-      this.expanded = !keyValue;
-    },
-    save() {
-      if (!this.configPath || this.deferred) {
-        return;
-      }
-      this.getWebsocket().send(JSON.stringify({
-        type: 'config',
-        action: 'save_unified_api_key',
-        data: {
-          config_path: this.configPath,
-          api_key: this.apiKey || null,
-        }
-      }));
+      this.expanded = !this.apiKey;
     },
   },
 };

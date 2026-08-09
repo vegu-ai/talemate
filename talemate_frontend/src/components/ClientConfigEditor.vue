@@ -21,7 +21,7 @@
         </v-col>
       </v-row>
       <ConfigWidgetUnifiedApiKey v-if="unifiedApiKeyPath" :config-path="unifiedApiKeyPath"
-        :title="meta.title + ' API Key'" :description="unifiedApiKeyDescription" :app-config="config" deferred />
+        :title="meta.title + ' API Key'" :description="unifiedApiKeyDescription" :app-config="config" />
       <v-combobox v-if="meta.manual_model && modelChoices" v-model="values.model" :items="modelChoices" label="Model" density="compact"></v-combobox>
       <v-text-field v-else-if="meta.manual_model" v-model="values.model" label="Manually specify model name" density="compact"></v-text-field>
     </template>
@@ -56,10 +56,8 @@
             </v-col>
           </v-row>
 
-          <!-- UNIFIED API KEY — bound to the working config copy so it is saved
-               with everything else instead of applying on blur -->
           <ConfigWidgetUnifiedApiKey v-if="unifiedApiKeyPath" :config-path="unifiedApiKeyPath"
-            :title="meta.title + ' API Key'" :description="unifiedApiKeyDescription" :app-config="config" deferred />
+            :title="meta.title + ' API Key'" :description="unifiedApiKeyDescription" :app-config="config" />
 
           <!-- MODEL -->
           <v-combobox v-if="meta.manual_model && modelChoices" v-model="values.model" :items="modelChoices" label="Model" density="compact"></v-combobox>
@@ -68,7 +66,7 @@
 
           <!-- EXTRA FIELDS WITHOUT A GROUP -->
           <UxField v-for="field in generalExtraFields" :key="field.name" :field="field"
-            :model-value="values[field.name]" @update:model-value="(v) => setValue(field.name, v)" :app-config="config" deferred />
+            :model-value="values[field.name]" @update:model-value="(v) => setValue(field.name, v)" :app-config="config" />
 
           <v-row class="mt-1">
             <v-col cols="4" data-setting-anchor="max_token_length">
@@ -282,7 +280,7 @@
           </v-row>
           <!-- extra fields promoted to the reasoning section -->
           <UxField v-for="field in extraFieldsBySection['reasoning']" :key="field.name" :field="field"
-            :model-value="values[field.name]" @update:model-value="(v) => setValue(field.name, v)" :app-config="config" deferred />
+            :model-value="values[field.name]" @update:model-value="(v) => setValue(field.name, v)" :app-config="config" />
         </v-expansion-panel-text>
       </v-expansion-panel>
 
@@ -294,7 +292,7 @@
         <v-expansion-panel-text>
           <v-alert v-if="group.description" color="muted" variant="text" density="compact" :icon="group.icon" class="mb-2 pre-wrap">{{ group.description.replace(/{client_type}/g, client.type) }}</v-alert>
           <UxField v-for="field in extraFieldsByGroup[group.name]" :key="field.name" :field="field"
-            :model-value="values[field.name]" @update:model-value="(v) => setValue(field.name, v)" :app-config="config" deferred />
+            :model-value="values[field.name]" @update:model-value="(v) => setValue(field.name, v)" :app-config="config" />
         </v-expansion-panel-text>
       </v-expansion-panel>
 

@@ -51,7 +51,6 @@
             :model-value="valueOf(configKey)"
             :templates="templates"
             :app-config="appConfig"
-            deferred
             @update:modelValue="(v) => $emit('update:value', configKey, v)"
           />
         </div>
@@ -92,8 +91,7 @@ export default {
     // consulted for the object/string quirk in the action condition test.
     agentClient: { type: null, default: null },
     // Full app config working copy; only used by the unified_api_key widget,
-    // which writes into it (`deferred`) instead of saving on blur - this page
-    // saves everything explicitly.
+    // which writes into it - this page saves everything explicitly.
     appConfig: { type: Object, default: null },
     // World-state templates payload; used by the wstemplate selector.
     templates: { type: Object, default: null },

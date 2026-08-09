@@ -760,9 +760,6 @@ export default {
                 overlay: this.sceneOverlay,
                 templates: this.templates,
                 appConfig: this.config,
-                // this page holds a working copy, so a unified_api_key field
-                // writes into it and the toolbar Save persists it
-                deferred: true,
                 'onUpdate:overrides': (slice) => this.setSceneOverrideSlice(this.selectedName, actionKey, slice),
             };
         },

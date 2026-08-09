@@ -455,7 +455,6 @@ class OpenRouterMixin:
                 type="unified_api_key",
                 value="openrouter.api_key",
                 label="OpenRouter API Key",
-                scene_overridable=False,
             ),
             "model": AgentActionConfig(
                 type="autocomplete",

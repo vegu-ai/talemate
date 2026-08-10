@@ -892,7 +892,7 @@ Emitted **before** an optional `prepare_fn` runs against an audio chunk (e.g. te
 
     | Field | Type | Notes |
     |-------|------|-------|
-    | `chunk` | `Chunk` | The TTS chunk about to be prepared |
+    | `chunk` | `Chunk` | **Mutable.** The TTS chunk about to be prepared |
     | `context` | `GenerationContext` | The full generation context (all chunks for the current request) |
     | `wav_bytes` | `bytes \| None` | Always `None` at this point |
 
@@ -906,7 +906,7 @@ Fires after a chunk's `prepare_fn` has run but before audio generation starts. H
 
     | Field | Type | Notes |
     |-------|------|-------|
-    | `chunk` | `Chunk` | The prepared TTS chunk |
+    | `chunk` | `Chunk` | **Mutable.** The prepared TTS chunk |
     | `context` | `GenerationContext` | The full generation context |
     | `wav_bytes` | `bytes \| None` | Always `None` at this point |
 
@@ -920,9 +920,11 @@ Emitted **immediately before** the chunk is sent to the active TTS backend for s
 
     | Field | Type | Notes |
     |-------|------|-------|
-    | `chunk` | `Chunk` | The TTS chunk about to be synthesised |
+    | `chunk` | `Chunk` | **Mutable.** The TTS chunk about to be synthesised |
     | `context` | `GenerationContext` | The full generation context |
     | `wav_bytes` | `bytes \| None` | Always `None` at this point |
+
+The voice agent provides the `Unpack Generation Emission` and `Set Chunk Text` nodes for this event, which read and rewrite the chunk's text without going through `Get` and `Set` — see [Text Manipulation](../../agents/voice/text-manipulation.md).
 
 ---
 
@@ -934,7 +936,7 @@ Fires after the TTS backend returns audio for a chunk and before the audio is pl
 
     | Field | Type | Notes |
     |-------|------|-------|
-    | `chunk` | `Chunk` | The TTS chunk that was synthesised |
+    | `chunk` | `Chunk` | The TTS chunk that was synthesised (changes no longer affect the audio) |
     | `context` | `GenerationContext` | The full generation context |
     | `wav_bytes` | `bytes \| None` | **Mutable.** The synthesised audio bytes (None if generation failed) |
 

@@ -1,4 +1,6 @@
 0.40.0.dev:
+  features:
+  - "TTS Text Manipulation: Node graphs can now rewrite what the voice agent speaks. Two new nodes — `agents/tts/UnpackGenerationEmission` and `agents/tts/SetChunkText` — expose the text of an `agent.tts.generate.before` event and write a modified text back, so the audio can fix a mispronounced name or expand an abbreviation while the message in the scene stays as it is."
   improvements:
   - "Audio Playback: The status bar audio controls gained a volume slider, and volume and mute now persist in the application configuration — a reload no longer resets them."
   - "Client & Agent Settings: Client and agent configuration moved out of their standalone dialogs into the application settings as two new Connections pages, sharing the settings framework's explicit save model — edits (including adding and removing clients) are tracked as unsaved changes with Save and Discard, validated before saving, and flagged instead of clobbered when the configuration changes elsewhere. Agent scene overrides are edited on the same page via the familiar Global/Scene mode toggle and save together with everything else, prompting once for the scene's settings file name when needed. The Clients and Agents side panel keeps live status and quick actions, now writing through the same unified save path, and the settings search finds every agent by name."

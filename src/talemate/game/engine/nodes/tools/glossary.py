@@ -205,7 +205,7 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
     ),
     "agents-tts": (
         "Voice Agent Nodes",
-        "Text-to-speech: get and unpack voices and generate speech through the voice agent.",
+        "Text-to-speech: get and unpack voices, generate speech and read or rewrite generation text through the voice agent.",
     ),
     "agents-visual": (
         "Visualizer Agent Prompt Nodes",

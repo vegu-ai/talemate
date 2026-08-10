@@ -299,6 +299,11 @@
   summary: 'Voice agent settings: Enabled APIs (Kokoro, F5-TTS, Chatterbox, Pocket TTS, ElevenLabs, Google Gemini-TTS, OpenAI,
     OpenAI Compatible), Narrator Voice, Speaker Separation modes No separation, Simple, Mixed and AI assisted, the auto-generate
     toggles, Automatic Setup and Audio tags.'
+- path: user-guide/agents/voice/text-manipulation.md
+  title: Text Manipulation
+  summary: 'Rewriting TTS text with a node module before audio is generated: listen for agent.tts.generate.before, wire Event
+    to Unpack Generation Emission and Set Chunk Text, replace text with the Replace node (fix mispronounced names) or prepend/append
+    with Jinja2 Format, and why rewrites belong on generate.before rather than prepare.before.'
 - path: user-guide/agents/voice/troubleshooting.md
   title: TTS Troubleshooting
   summary: 'Common TTS problems, focused on missing FFmpeg required by Chatterbox and F5-TTS: the libtorchcodec error symptoms,
@@ -754,7 +759,8 @@
 - path: user-guide/node-editor/reference/nodes/agents-tts.md
   title: Voice Agent Nodes
   summary: 'TTS nodes: Generate TTS (speaks text using an explicit voice or a character''s assigned voice), Get Voice by voice_id,
-    Get Narrator Voice, Unpack Voice (label, provider, provider_id, provider_model, tags, is_scene_asset) and TTS Agent Settings.'
+    Get Narrator Voice, Unpack Voice (label, provider, provider_id, provider_model, tags, is_scene_asset), Unpack Generation
+    Emission and Set Chunk Text (read and rewrite the text of an agent.tts.generate.before chunk) and TTS Agent Settings.'
 - path: user-guide/node-editor/reference/nodes/agents-visual-generation.md
   title: Visualizer Agent Generation Nodes
   summary: 'Visual generation nodes: Visual Generation Request (vis_type, gen_type TEXT_TO_IMAGE/IMAGE_EDIT/UPLOAD, format,

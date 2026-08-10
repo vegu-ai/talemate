@@ -929,6 +929,9 @@ export default {
       getConfig: () => this.appConfig,
       notifyError: (error) => this.uxErrorHandler(error),
       resetPendingSaves: () => this.$refs.aiClient?.resetPendingSaves(),
+      // `connected` still reads true while a socket is closing, and a
+      // reconnect hands out a CONNECTING one — only OPEN can carry a save.
+      isConnected: () => this.connected && this.websocket?.readyState === WebSocket.OPEN,
     });
   },
   mounted() {

@@ -2,7 +2,10 @@
 // sense together. One queue serves the whole app and outlives individual
 // websockets; the request id handed to a sender is the only channel that ties
 // an answer back to its save.
-export function createConfigSaveQueue({ send, getConfig, notifyError, resetPendingSaves }) {
+//
+// `isConnected` reports whether the socket can carry a save right now; leaving
+// it out means every save is attempted.
+export function createConfigSaveQueue({ send, getConfig, notifyError, resetPendingSaves, isConnected }) {
     // in-flight config saves, oldest first: [{id, label, onError, onComplete}]
     const configSaves = [];
     let configSaveSeq = 0;
@@ -17,9 +20,26 @@ export function createConfigSaveQueue({ send, getConfig, notifyError, resetPendi
      *
      * `options`: {label} names the change for error reporting, {onError} /
      * {onComplete} are called when this save (or one stacked on it) is refused
-     * or confirmed. Returns the request id.
+     * or confirmed. Returns the request id, or null when there is no
+     * connection to send on.
      */
     function sendConfigSave(config, options = {}) {
+        // Nothing may be recorded before the send is known to be possible: a
+        // queue entry and a stacking base left behind by a dropped frame would
+        // seed later saves with a payload the backend never received.
+        if (isConnected && !isConnected()) {
+            const label = options.label || 'settings';
+            const error = 'not connected';
+            notifyError(`Settings save failed (${label}): ${error}`);
+            if (options.onError) {
+                options.onError(error);
+            }
+            // same as a refused save: the drawer's optimistic rows would keep
+            // their dirty flags and pending echo snapshots, and those suppress
+            // the client_status broadcasts that would restore the truth
+            resetPendingSaves();
+            return null;
+        }
         const requestId = `cfg-${Date.now()}-${++configSaveSeq}`;
         // clone: callers pass working copies that keep being edited
         const payload = JSON.parse(JSON.stringify(config));

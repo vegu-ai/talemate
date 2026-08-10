@@ -12,7 +12,7 @@ If the configuration is changed elsewhere while you have unsaved edits — from 
 
 ![App settings - search](/talemate/img/0.39.0/app-settings-search.png)
 
-The **Game** group holds general game behavior and the default player character.
+The **Game** group holds general game behavior, the default player character, and the sound playback settings.
 
 ## :material-cog: General
 
@@ -53,3 +53,19 @@ This character is used when a scene is loaded that does not define a player char
 ##### Add default character to blank talemate scenes
 
 When creating a new scene, add the default player character to the scene.
+
+## :material-volume-high: Sound
+
+![App settings - Game - Sound](/talemate/img/0.40.0/app-settings-sound.png)
+
+Playback volume and mute for generated speech and sounds. Both settings persist in the application configuration, so they survive a reload.
+
+The same controls live in the status bar next to the audio playback buttons — a compact volume slider and a mute toggle. Changes there apply immediately and are saved for you; changes on this page apply when you save your settings.
+
+##### Sound volume
+
+Playback volume for generated speech and sounds, from 0% to 100%.
+
+##### Mute sound
+
+Silences all audio playback. The volume setting is kept, so unmuting returns to the previous volume.

@@ -201,6 +201,16 @@ export const SETTINGS_GROUPS = [
                     { label: 'Add default character to blank scenes', anchor: 'add_default_character', keywords: ['blank', 'new scene'] },
                 ],
             },
+            {
+                id: 'sound',
+                title: 'Sound',
+                icon: 'mdi-volume-high',
+                description: 'Playback volume and mute for generated speech and sounds.',
+                entries: [
+                    { label: 'Sound volume', anchor: 'sound_volume', keywords: ['sound', 'audio', 'volume', 'tts', 'voice', 'playback', 'loudness'] },
+                    { label: 'Mute sound', anchor: 'sound_muted', keywords: ['sound', 'audio', 'mute', 'silence', 'tts', 'voice'] },
+                ],
+            },
         ],
     },
     {

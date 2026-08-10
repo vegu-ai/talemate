@@ -702,6 +702,11 @@ class AgentActionsConfig(pydantic.BaseModel):
     overrides: Dict[str, AgentActionOverride] = pydantic.Field(default_factory=dict)
 
 
+class SoundConfig(pydantic.BaseModel):
+    volume: float = pydantic.Field(default=1.0, ge=0.0, le=1.0)
+    muted: bool = False
+
+
 class Config(pydantic.BaseModel):
     clients: Dict[str, AnnotatedClient] = {}
 
@@ -760,6 +765,8 @@ class Config(pydantic.BaseModel):
     prompts: PromptsConfig = PromptsConfig()
 
     agent_actions: AgentActionsConfig = AgentActionsConfig()
+
+    sound: SoundConfig = SoundConfig()
 
     dirty: bool = pydantic.Field(default=False, exclude=True)
 

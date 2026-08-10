@@ -14,6 +14,18 @@ function makeQueue(config = { game: { general: { auto_save: true } } }) {
     return { queue: createConfigSaveQueue(deps), ...deps };
 }
 
+function makeDisconnectedQueue(config = { game: { general: { auto_save: true } } }) {
+    const connected = { value: false };
+    const deps = {
+        send: vi.fn(),
+        getConfig: vi.fn(() => config),
+        notifyError: vi.fn(),
+        resetPendingSaves: vi.fn(),
+        isConnected: () => connected.value,
+    };
+    return { queue: createConfigSaveQueue(deps), connected, ...deps };
+}
+
 function sentConfig(send, callIndex = 0) {
     return send.mock.calls[callIndex][0].config;
 }
@@ -205,6 +217,81 @@ describe("saveAppConfig with an empty base", () => {
 
         expect(requestId).toBeNull();
         expect(send).not.toHaveBeenCalled();
+    });
+});
+
+describe("disconnected", () => {
+    it("refuses sendConfigSave and reports the failure under its label", () => {
+        const { queue, send, notifyError } = makeDisconnectedQueue();
+        const onError = vi.fn();
+
+        const requestId = queue.sendConfigSave({ game: {} }, { label: "game", onError });
+
+        expect(requestId).toBeNull();
+        expect(send).not.toHaveBeenCalled();
+        expect(notifyError).toHaveBeenCalledWith("Settings save failed (game): not connected");
+        expect(onError).toHaveBeenCalledWith("not connected");
+    });
+
+    it("resets the optimistic rows of the drawer, like a refused save", () => {
+        const { queue, resetPendingSaves } = makeDisconnectedQueue();
+
+        queue.sendConfigSave({ game: {} }, { label: "clients" });
+
+        expect(resetPendingSaves).toHaveBeenCalledTimes(1);
+    });
+
+    it("records no in-flight save for the refused sendConfigSave", () => {
+        const { queue } = makeDisconnectedQueue();
+        const onError = vi.fn();
+
+        queue.sendConfigSave({ game: {} }, { label: "game", onError });
+        onError.mockClear();
+        queue.dropAll("connection lost");
+
+        expect(onError).not.toHaveBeenCalled();
+    });
+
+    it("refuses saveAppConfig and reports the failure", () => {
+        const { queue, send, notifyError } = makeDisconnectedQueue({ game: {} });
+        const onError = vi.fn();
+
+        const requestId = queue.saveAppConfig(config => {
+            config.dropped = true;
+        }, { label: "game", onError });
+
+        expect(requestId).toBeNull();
+        expect(send).not.toHaveBeenCalled();
+        expect(notifyError).toHaveBeenCalledWith("Settings save failed (game): not connected");
+        expect(onError).toHaveBeenCalledWith("not connected");
+    });
+
+    it("leaves no stacking base behind, so the next save builds on the stored config", () => {
+        const { queue, send, connected } = makeDisconnectedQueue({ game: {} });
+
+        queue.saveAppConfig(config => {
+            config.dropped = true;
+        }, { onError: vi.fn() });
+        connected.value = true;
+        queue.saveAppConfig(config => {
+            config.next = true;
+        });
+
+        expect(sentConfig(send)).toEqual({ game: {}, next: true });
+    });
+});
+
+describe("without a connection signal", () => {
+    it("sends the save", () => {
+        const { queue, send, notifyError } = makeQueue({ game: {} });
+
+        const requestId = queue.saveAppConfig(config => {
+            config.next = true;
+        });
+
+        expect(requestId).not.toBeNull();
+        expect(send).toHaveBeenCalledTimes(1);
+        expect(notifyError).not.toHaveBeenCalled();
     });
 });
 

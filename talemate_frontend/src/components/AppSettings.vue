@@ -33,6 +33,9 @@
                 <v-window-item value="player-character">
                     <AppSettingsPlayerCharacter :config="app_config" />
                 </v-window-item>
+                <v-window-item value="sound">
+                    <AppSettingsSound :config="app_config" />
+                </v-window-item>
                 <v-window-item value="appearance-messages">
                     <AppConfigAppearanceScene ref="appearance-messages" :immutableConfig="app_config" :sceneActive="sceneActive" @changed="onAppearanceChanged"></AppConfigAppearanceScene>
                 </v-window-item>
@@ -104,6 +107,7 @@
 import AppSettingsPageHeader from './AppSettingsPageHeader.vue';
 import AppSettingsGameplay from './AppSettingsGameplay.vue';
 import AppSettingsPlayerCharacter from './AppSettingsPlayerCharacter.vue';
+import AppSettingsSound from './AppSettingsSound.vue';
 import AppSettingsAgents from './AppSettingsAgents.vue';
 import AppSettingsApiKeys from './AppSettingsApiKeys.vue';
 import AppSettingsClients from './AppSettingsClients.vue';
@@ -122,6 +126,7 @@ export default {
         AppSettingsPageHeader,
         AppSettingsGameplay,
         AppSettingsPlayerCharacter,
+        AppSettingsSound,
         AppSettingsAgents,
         AppSettingsApiKeys,
         AppSettingsClients,

@@ -373,8 +373,9 @@
 - path: user-guide/app-settings/game.md
   title: Game
   summary: 'The Game settings group: Auto save, Auto progress, Max backscroll, Show agent activity bar, Release GPU cache
-    on scene load, and the default Player Character. Also how the Settings tab works - sidebar groups, search, and the unsaved
-    changes indicator with Save/Discard.'
+    on scene load, the default Player Character, and the Sound page (persisted playback volume and mute, also controlled
+    from the status bar). Also how the Settings tab works - sidebar groups, search, and the unsaved changes indicator with
+    Save/Discard.'
 - path: user-guide/app-settings/presets.md
   title: Presets
   summary: The Presets settings group with three pages - Inference (per-action generation parameter presets such as Analytical

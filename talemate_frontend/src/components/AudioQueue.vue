@@ -12,9 +12,29 @@
       @click="toggleMute"
     >
       <v-tooltip activator="parent" location="top">Toggle mute</v-tooltip>
-      <v-icon>{{ isMuted ? 'mdi-volume-off' : 'mdi-volume-high' }}</v-icon>
+      <v-icon>{{ volumeIcon }}</v-icon>
     </v-btn>
-    
+
+    <span class="volume-control">
+      <v-tooltip activator="parent" location="top">Volume</v-tooltip>
+      <v-slider
+        :model-value="volumeLocal"
+        class="volume-slider"
+        aria-label="Volume"
+        :min="0"
+        :max="1"
+        :step="0.01"
+        density="compact"
+        hide-details
+        thumb-size="10"
+        track-size="2"
+        @update:modelValue="onVolumeInput"
+        @start="onVolumeDragStart"
+        @end="onVolumeDragEnd"
+        @update:focused="onVolumeFocusChange"
+      ></v-slider>
+    </span>
+
     <v-btn
       icon
       size="small"
@@ -45,29 +65,83 @@
 </template>
 
 <script>
+import { createSoundControl } from '@/utils/soundControl';
+
 export default {
   name: 'AudioQueue',
   data() {
     return {
       queue: [],
       audioContext: null,
+      gainNode: null,
       isPlaying: false,
       isPaused: false,
-      isMuted: false,
       currentSource: null,
       currentBuffer: null,
       currentAudioItem: null,
       pausedAt: 0,
-      startedAt: 0
+      startedAt: 0,
+      // built here rather than in created() so the computeds and watchers
+      // below, which are set up first, can already read it
+      soundControl: createSoundControl({
+        save: (patch, options) => this.saveAppConfig((config) => {
+          config.sound = { ...(config.sound || {}), ...patch };
+        }, options),
+        getSound: () => this.appConfig()?.sound
+      })
     };
   },
   emits: ['message-audio-played'],
-  inject: ['getWebsocket', 'registerMessageHandler'],
+  inject: ['getWebsocket', 'registerMessageHandler', 'appConfig', 'saveAppConfig'],
+  computed: {
+    soundConfig() {
+      return this.appConfig()?.sound;
+    },
+    volumeLocal() {
+      return this.soundControl.state.volumeLocal;
+    },
+    isMuted() {
+      return this.soundControl.isMuted();
+    },
+    effectiveVolume() {
+      return this.soundControl.effectiveVolume();
+    },
+    effectiveGain() {
+      return this.isMuted ? 0 : this.effectiveVolume;
+    },
+    volumeIcon() {
+      if (this.isMuted) {
+        return 'mdi-volume-off';
+      } else if (this.effectiveVolume === 0) {
+        return 'mdi-volume-mute';
+      } else if (this.effectiveVolume <= 0.33) {
+        return 'mdi-volume-low';
+      } else if (this.effectiveVolume <= 0.66) {
+        return 'mdi-volume-medium';
+      }
+      return 'mdi-volume-high';
+    }
+  },
+  watch: {
+    effectiveGain(value) {
+      this.applyGain(value);
+    },
+    soundConfig() {
+      this.soundControl.configChanged();
+    }
+  },
   created() {
     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    this.gainNode = this.audioContext.createGain();
+    this.gainNode.connect(this.audioContext.destination);
+    this.soundControl.configChanged();
+    this.applyGain(this.effectiveGain);
     this.registerMessageHandler(this.handleMessage);
   },
   methods: {
+    applyGain(value) {
+      this.gainNode.gain.value = value;
+    },
     handleMessage(data) {
       if (data.type === 'audio_queue') {
         this.addToQueue(data.data.audio_data, data.data.message_id);
@@ -114,9 +188,7 @@ export default {
       const source = this.audioContext.createBufferSource();
       source.buffer = this.currentBuffer;
       this.currentSource = source;
-      if (!this.isMuted) {
-        source.connect(this.audioContext.destination);
-      }
+      source.connect(this.gainNode);
       source.onended = () => {
         if (!this.isPaused) {
           this.isPlaying = false;
@@ -161,12 +233,19 @@ export default {
       }
     },
     toggleMute() {
-      this.isMuted = !this.isMuted;
-      if (this.isMuted && this.currentSource) {
-        this.currentSource.disconnect(this.audioContext.destination);
-      } else if (this.currentSource) {
-        this.currentSource.connect(this.audioContext.destination);
-      }
+      this.soundControl.toggleMute();
+    },
+    onVolumeInput(value) {
+      this.soundControl.input(value);
+    },
+    onVolumeDragStart() {
+      this.soundControl.dragStart();
+    },
+    onVolumeDragEnd(value) {
+      this.soundControl.dragEnd(value);
+    },
+    onVolumeFocusChange(focused) {
+      this.soundControl.setFocused(focused);
     },
     togglePlayPause() {
       if (this.isPaused) {
@@ -207,5 +286,21 @@ export default {
 .audio-queue {
   display: flex;
   align-items: center;
+}
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  flex: 0 0 80px;
+}
+
+.audio-queue :deep(.volume-slider.v-input--horizontal) {
+  margin-inline: 4px;
+}
+
+/* the queue lives in the system bar, whose height is fixed at 24px — the
+   slider's default control height would push its content out of the bar */
+.audio-queue :deep(.volume-slider.v-input--horizontal > .v-input__control) {
+  min-height: 0;
 }
 </style>

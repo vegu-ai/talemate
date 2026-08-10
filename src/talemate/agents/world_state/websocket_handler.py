@@ -13,6 +13,7 @@ __all__ = [
 
 class RequestUpdatePayload(pydantic.BaseModel):
     reset: bool = False
+    instructions: str = ""
 
 
 class SummarizeAndPinPayload(pydantic.BaseModel):
@@ -43,7 +44,9 @@ class WorldStateWebsocketHandler(Plugin):
         # refresh doesn't lock the UI. cancel_in_flight=True so the user's
         # explicit refresh — especially a reset — takes priority over any
         # in-progress automatic snapshot.
-        await self.agent.dispatch_world_state_update(cancel_in_flight=True)
+        await self.agent.dispatch_world_state_update(
+            cancel_in_flight=True, instructions=payload.instructions
+        )
         await self.signal_operation_done(allow_auto_save=False)
 
     async def handle_cancel_request_update(self, data: dict):

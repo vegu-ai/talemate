@@ -684,6 +684,51 @@ class TestWorldStateSnapshotMemoryRecall:
         mock_memory_agent.multi_query.assert_not_called()
 
 
+class TestWorldStateSnapshotInstructions:
+    """One-off instructions handed to a single snapshot pass reach the prompt."""
+
+    def _seed(self, agent, mock_scene):
+        mock_scene.history = [
+            CharacterMessage(message="Hero: I shove the door open.", source="Hero")
+        ]
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"Hero": {"emotion": "tense", "snapshot": "Door shoved open",'
+                ' "mentions": []}}, "items": {}, "places": {}, "location": "x"}'
+            )
+        )
+
+    @pytest.mark.asyncio
+    async def test_instructions_injected(self, active_context, mock_scene):
+        """The instructions are a subsection of the task, not a sibling section
+        that could read as the task definition itself."""
+        agent = active_context
+        self._seed(agent, mock_scene)
+        instructions = "Pay attention to the state of the door."
+
+        await agent.request_world_state(instructions=instructions)
+
+        prompt_text = str(agent.client.send_prompt.call_args[0][0])
+        assert instructions in prompt_text
+        # Three hashes: the agent-config custom instructions render as a
+        # top-level "## Additional instructions" section.
+        subsection = prompt_text.index("### Additional instructions")
+        assert subsection > prompt_text.index('Produce the "examine" data')
+        assert subsection < prompt_text.index("Required response:")
+
+    @pytest.mark.asyncio
+    async def test_section_omitted_without_instructions(
+        self, active_context, mock_scene
+    ):
+        agent = active_context
+        self._seed(agent, mock_scene)
+
+        await agent.request_world_state()
+
+        prompt_text = str(agent.client.send_prompt.call_args[0][0])
+        assert "### Additional instructions" not in prompt_text
+
+
 class TestWorldStateAgentFocusKnobs:
     """Tests for the update_world_state focus_lines and
     include_context_investigation knobs."""

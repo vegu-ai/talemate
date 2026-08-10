@@ -12,7 +12,7 @@
             <!-- update world state -->
             <v-list-item density="compact" prepend-icon="mdi-refresh" @click="updateWorlState($event)">
                 <v-list-item-title>Update world snapshot</v-list-item-title>
-                <v-list-item-subtitle>{{ primaryModifierLabel }}+click to wipe and start fresh</v-list-item-subtitle>
+                <v-list-item-subtitle>{{ primaryModifierLabel }}+click to add instructions or wipe and start fresh</v-list-item-subtitle>
             </v-list-item>
 
             <!-- track state -->
@@ -125,18 +125,22 @@
         world-default-insert="never"
         @create="createStateReinforcement"
     />
+
+    <WorldStateRefreshDialog ref="updateWorldStateDialog" />
 </template>
 
 <script>
 import ContextualGenerateFromTopic from './ContextualGenerateFromTopic.vue';
 import QuickCreateStateReinforcement from './QuickCreateStateReinforcement.vue';
-import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
+import WorldStateRefreshDialog from './WorldStateRefreshDialog.vue';
+import { primaryModifierLabel } from '@/utils/keyboardModifiers';
 
 export default {
     name: 'SceneToolsWorld',
     components: {
         ContextualGenerateFromTopic,
         QuickCreateStateReinforcement,
+        WorldStateRefreshDialog,
     },
     props: {
         disabled: Boolean,
@@ -353,12 +357,7 @@ export default {
         },
 
         updateWorlState(event) {
-            const reset = !!event && isPrimaryModifier(event);
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_agent',
-                action: 'request_update',
-                reset,
-            }));
+            this.$refs.updateWorldStateDialog.handleClick(event);
         },
 
         saveGeneratedWorldEntry(topic, content) {

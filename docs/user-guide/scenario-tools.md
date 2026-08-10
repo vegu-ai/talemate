@@ -204,7 +204,7 @@ By default the [:material-script-text: Narrator Agent](/talemate/user-guide/agen
 
 The :material-earth: world state menu lets you set up and manage tracked states, apply favorited state templates, and generate or edit world context — all without leaving the scene.
 
-![World State Actions](/talemate/img/0.39.0/scene-tool-world-state-actions.png)
+![World State Actions](/talemate/img/0.40.0/scene-tool-world-state-actions.png)
 
 !!! info "What is a tracked state?"
 
@@ -243,7 +243,7 @@ Open the World State Manager to view and edit world entries and character contex
 
 #### :material-refresh: Update world snapshot
 
-Regenerates the world state snapshot shown in the left :material-earth: `World` panel. Hold ++ctrl++ (or ++cmd++) while clicking to wipe the snapshot and start fresh.
+Regenerates the world state snapshot shown in the left :material-earth: `World` panel. Hold ++ctrl++ (or ++cmd++) while clicking to open a dialog with an optional instructions box that guides this one update and a **Wipe and start fresh** checkbox that discards the current snapshot. A plain click updates immediately.
 
 !!! info "Does not run state re-inforcement"
     This only refreshes the world state snapshot displayed in the left panel under the :material-earth: `World` section; it does not re-inforce the tracked states of the world or characters.

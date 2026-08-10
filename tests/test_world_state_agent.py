@@ -13,7 +13,8 @@ The function under test is always invoked via its real public entry point.
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -31,6 +32,7 @@ from talemate.agents.world_state import (
     WorldStateAgent,
     WorldStateAgentEmission,
 )
+from talemate.agents.world_state.websocket_handler import WorldStateWebsocketHandler
 from talemate.world_state import ContextPin, Reinforcement
 
 
@@ -347,6 +349,31 @@ class TestUpdateWorldState:
         assert observed["background"] is True
 
     @pytest.mark.asyncio
+    async def test_dispatch_forwards_instructions_through_the_chain(  # noqa: F811
+        self, scene, monkeypatch
+    ):
+        """Instructions handed to the dispatch survive the whole chain — tracked
+        task -> WorldState.request_update -> apply_snapshot_update -> the
+        snapshot prompt call. Only the LLM-calling end is stubbed."""
+        from talemate.world_state import WorldStateResponse
+
+        agent = instance_module.get_agent("world_state")
+        # Empty response: apply_snapshot_update returns right after the call,
+        # so nothing but the threading is under test here.
+        request_world_state = AsyncMock(return_value=WorldStateResponse())
+        monkeypatch.setattr(agent, "request_world_state", request_world_state)
+
+        assert await agent.dispatch_world_state_update(
+            instructions="Focus on the broken door."
+        )
+        await agent._tracked_task(SNAPSHOT_TASK)
+
+        assert (
+            request_world_state.await_args.kwargs["instructions"]
+            == "Focus on the broken door."
+        )
+
+    @pytest.mark.asyncio
     async def test_increments_when_not_due(self, scene, monkeypatch):  # noqa: F811
         from talemate.world_state import WorldState
 
@@ -364,6 +391,81 @@ class TestUpdateWorldState:
         await agent.update_world_state()
         assert agent.next_update == 1
         assert called["flag"] is False
+
+
+# ---------------------------------------------------------------------------
+# websocket handler — handle_request_update
+# ---------------------------------------------------------------------------
+
+
+class TestRequestUpdateWebsocketHandler:
+    """The manual refresh: reset stays handler-side, instructions travel to
+    the agent's dispatch."""
+
+    def _handler(self, scene) -> WorldStateWebsocketHandler:  # noqa: F811
+        ws = SimpleNamespace(scene=scene, queue_put=Mock())
+        handler = WorldStateWebsocketHandler(websocket_handler=ws)
+        handler.signal_operation_done = AsyncMock()
+        return handler
+
+    def _record_calls(self, monkeypatch, agent) -> tuple[list[str], AsyncMock]:
+        """Record reset/dispatch in call order. reset is patched on the
+        WorldState class (pydantic models don't allow per-instance overrides)."""
+        from talemate.world_state import WorldState
+
+        calls: list[str] = []
+        monkeypatch.setattr(WorldState, "reset", lambda self: calls.append("reset"))
+        dispatch = AsyncMock(side_effect=lambda **kwargs: calls.append("dispatch"))
+        monkeypatch.setattr(agent, "dispatch_world_state_update", dispatch)
+        return calls, dispatch
+
+    @pytest.mark.asyncio
+    async def test_default_payload_dispatches_without_reset(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        calls, dispatch = self._record_calls(monkeypatch, agent)
+
+        await self._handler(scene).handle_request_update({})
+
+        assert calls == ["dispatch"]
+        assert dispatch.await_args.kwargs["cancel_in_flight"] is True
+        assert dispatch.await_args.kwargs["instructions"] == ""
+
+    @pytest.mark.asyncio
+    async def test_reset_applied_before_dispatch(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        calls, _ = self._record_calls(monkeypatch, agent)
+
+        await self._handler(scene).handle_request_update({"reset": True})
+
+        assert calls == ["reset", "dispatch"]
+
+    @pytest.mark.asyncio
+    async def test_instructions_forwarded_to_dispatch(self, scene, monkeypatch):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        _, dispatch = self._record_calls(monkeypatch, agent)
+
+        await self._handler(scene).handle_request_update(
+            {"instructions": "Focus on the broken door."}
+        )
+
+        assert dispatch.await_args.kwargs["instructions"] == "Focus on the broken door."
+
+    @pytest.mark.asyncio
+    async def test_reset_and_instructions_together(self, scene, monkeypatch):  # noqa: F811
+        """What the refresh dialog sends when the user types instructions and
+        ticks reset."""
+        agent = instance_module.get_agent("world_state")
+        calls, dispatch = self._record_calls(monkeypatch, agent)
+
+        await self._handler(scene).handle_request_update(
+            {"reset": True, "instructions": "Rebuild from the fire onward."}
+        )
+
+        assert calls == ["reset", "dispatch"]
+        assert (
+            dispatch.await_args.kwargs["instructions"]
+            == "Rebuild from the fire onward."
+        )
 
 
 # ---------------------------------------------------------------------------

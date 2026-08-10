@@ -278,7 +278,9 @@ class WorldStateSnapshotMixin:
 
         self.next_update = 0
 
-    async def dispatch_world_state_update(self, cancel_in_flight: bool = False) -> bool:
+    async def dispatch_world_state_update(
+        self, cancel_in_flight: bool = False, instructions: str = ""
+    ) -> bool:
         """
         Run the world state snapshot as a single-flight tracked task. Returns
         True if a generation was started, False if one was already in flight.
@@ -291,10 +293,12 @@ class WorldStateSnapshotMixin:
         ``cancel_in_flight=True`` cancels a running snapshot and starts a fresh
         one — used by the manual refresh, where the user's explicit action
         (especially a reset) should take priority over an in-progress run.
+
+        ``instructions`` is one-off guidance for this pass only.
         """
         task = await self.run_tracked_task(
             SNAPSHOT_TASK,
-            lambda: self.scene.world_state.request_update(),
+            lambda: self.scene.world_state.request_update(instructions=instructions),
             background=self.snapshot_runs_in_background,
             cancel_in_flight=cancel_in_flight,
             error_handler=self.on_world_state_error,
@@ -314,7 +318,7 @@ class WorldStateSnapshotMixin:
         log.error("update_world_state", error=error)
 
     @set_processing
-    async def request_world_state(self) -> WorldStateResponse:
+    async def request_world_state(self, instructions: str = "") -> WorldStateResponse:
         # Walk scene.history backward collecting up to `focus_lines` narrative
         # messages. TimePassageMessage is a hard boundary — the moment on the
         # other side is a different scene, not what we're highlighting. Other
@@ -403,6 +407,7 @@ class WorldStateSnapshotMixin:
                 "durable_snapshot": durable_snapshot,
                 "current_state_payload": current_state_payload,
                 "custom_instructions": self.update_world_state_custom_instructions,
+                "instructions": instructions,
             },
         )
 
@@ -417,7 +422,9 @@ class WorldStateSnapshotMixin:
             world_state=world_state, anchor_message_ids=anchor_message_ids
         )
 
-    async def apply_snapshot_update(self, world_state: "WorldState"):
+    async def apply_snapshot_update(
+        self, world_state: "WorldState", instructions: str = ""
+    ):
         """
         Generate a fresh world-state snapshot and merge it into ``world_state``.
 
@@ -446,7 +453,7 @@ class WorldStateSnapshotMixin:
         world_state.emit(status="requested")
 
         try:
-            response = await self.request_world_state()
+            response = await self.request_world_state(instructions=instructions)
         except GenerationCancelled:
             world_state.emit()
             return

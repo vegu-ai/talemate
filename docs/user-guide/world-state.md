@@ -105,9 +105,14 @@ To keep the snapshot from collecting stale entries, an entity that the agent lea
 
 When you move to a new point in time (a [time jump](/talemate/user-guide/time-passage/)), the snapshot is treated as a clean scene cut and rebuilt fresh, since the previous moment no longer applies.
 
-### Wiping the snapshot
+### Guiding a refresh and wiping the snapshot
 
-If you want to discard everything the snapshot has accumulated and start over, hold **Ctrl** (or **Cmd** on macOS) while clicking the refresh icon. This wipes the current snapshot and regenerates it from scratch.
+Hold **Ctrl** (or **Cmd** on macOS) while clicking the refresh icon to open a dialog with two optional fields:
+
+- an **instructions** box that guides this one refresh — for example "Focus on what the characters are carrying". The instructions apply only to the refresh you are starting; they are not remembered.
+- a **Wipe and start fresh** checkbox that discards everything the snapshot has accumulated and regenerates it from scratch.
+
+Leave both empty and press **Continue** for an ordinary refresh. A plain click (no modifier) still refreshes immediately without opening the dialog.
 
 ### Cancelling a refresh
 

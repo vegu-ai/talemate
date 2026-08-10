@@ -242,7 +242,7 @@ class WorldState(BaseModel):
         """
         emit("world_state", status=status, data=self.model_dump())
 
-    async def request_update(self, initial_only: bool = False):
+    async def request_update(self, initial_only: bool = False, instructions: str = ""):
         """
         Public entry point for refreshing the world-state snapshot.
 
@@ -254,6 +254,7 @@ class WorldState(BaseModel):
         Arguments:
         - initial_only: When true, emit the current state without requesting a
           new one if characters already exist or automatic updates are off.
+        - instructions: One-off guidance for this snapshot pass only.
         """
 
         if initial_only and self.characters:
@@ -265,7 +266,7 @@ class WorldState(BaseModel):
             self.emit()
             return
 
-        await self.agent.apply_snapshot_update(self)
+        await self.agent.apply_snapshot_update(self, instructions=instructions)
 
     async def persist(self):
         """

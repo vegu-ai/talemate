@@ -222,20 +222,26 @@
         </div>
     </v-sheet>
 </v-list>
+
+<WorldStateRefreshDialog ref="refreshDialog" />
 </template>
 
 <script>
 
+import WorldStateRefreshDialog from './WorldStateRefreshDialog.vue';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import {
     dispatchExamineEntity,
     dispatchLookAtEntity,
     isKnownSceneCharacter,
 } from '@/utils/entityActions';
-import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
+import { primaryModifierLabel } from '@/utils/keyboardModifiers';
 
 export default {
     name: 'WorldState',
+    components: {
+        WorldStateRefreshDialog,
+    },
     mixins: [VisualAssetsMixin],
     data() {
         return {
@@ -279,7 +285,7 @@ export default {
             return (this.sceneData?.data?.assets?.assets) || {};
         },
         refreshTooltip() {
-            return `Update world snapshot (${primaryModifierLabel}+click to wipe and start fresh)`;
+            return `Update world snapshot (${primaryModifierLabel}+click to add instructions or wipe and start fresh)`;
         },
     },
 
@@ -361,12 +367,7 @@ export default {
             });
         },
         refresh(event) {
-            const reset = !!event && isPrimaryModifier(event);
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_agent',
-                action: 'request_update',
-                reset,
-            }));
+            this.$refs.refreshDialog.handleClick(event);
         },
         cancelRequest() {
             this.getWebsocket().send(JSON.stringify({

@@ -589,7 +589,7 @@ class TestRequestUpdatePreservesSnapshotOnPartialPatch:
             ),
         }
 
-        async def fake_request_world_state():
+        async def fake_request_world_state(instructions: str = ""):
             return WorldStateResponse(
                 world_state={
                     "characters": {

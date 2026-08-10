@@ -40,6 +40,16 @@
                             ></v-text-field>
                         </v-col>
                     </v-row>
+                    <v-row v-if="checkboxLabel">
+                        <v-col cols="12">
+                            <v-checkbox
+                                v-model="checked"
+                                :label="checkboxLabel"
+                                :messages="checkboxHint"
+                                density="compact"
+                            ></v-checkbox>
+                        </v-col>
+                    </v-row>
                 </v-form>
             </v-card-text>
             <v-card-actions>
@@ -88,9 +98,31 @@ export default {
             type: Array,
             default: () => [],
         },
+        // Whether the input has to be filled in before Continue is enabled.
+        required: {
+            type: Boolean,
+            default: true,
+        },
+        // When set, an optional checkbox is rendered below the input and its
+        // state is handed to the `continue` handler as `checked` on the params.
+        checkboxLabel: {
+            type: String,
+            default: null,
+        },
+        checkboxHint: {
+            type: String,
+            default: '',
+        },
+        checkboxDefault: {
+            type: Boolean,
+            default: false,
+        },
     },
     computed: {
         combinedRules() {
+            if (!this.required) {
+                return this.rules;
+            }
             return [this.builtInRules.required, ...this.rules];
         },
     },
@@ -101,6 +133,7 @@ export default {
             valid: false,
             extra_params: {},
             input: '',
+            checked: false,
             // whether the dialog's outcome has already been reported — set by
             // proceed / cancel before they close it
             answered: false,
@@ -135,7 +168,8 @@ export default {
             }
 
             this.answered = true;
-            this.$emit('continue', this.input, this.extra_params);
+            const params = this.checkboxLabel ? { ...this.extra_params, checked: this.checked } : this.extra_params;
+            this.$emit('continue', this.input, params);
             this.open = false;
         },
         cancel() {
@@ -147,6 +181,7 @@ export default {
             this.open = true;
             this.extra_params = extra_params || {};
             this.input = extra_params?.input || '';
+            this.checked = extra_params?.checked ?? this.checkboxDefault;
             // auto focus on input next tick
             this.$nextTick(() => {
                 if(this.inputType === 'multiline') {

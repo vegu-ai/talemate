@@ -23,6 +23,9 @@ To insert a time passage after a specific message:
 
 Available time units: minutes, hours, days, weeks, months, years.
 
+!!! note "Months and Years"
+    Scene time is tracked as elapsed seconds, so months and years use fixed lengths: a month is 30 days and a year is 365 days. This applies both to advancing time and to how elapsed time is displayed.
+
 ![Inserting a time passage in the scene view](../img/0.36.0/time-passage-insert.png)
 
 ## Editing Time Passages

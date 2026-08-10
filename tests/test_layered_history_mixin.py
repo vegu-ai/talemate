@@ -44,7 +44,7 @@ def make_archived_entries(count: int, chars_per_entry: int = 50) -> list[dict]:
         text = _pad(f"AH{i}", chars_per_entry)
         entry = ArchiveEntry(
             text=text,
-            ts=f"PT{i}M",
+            ts=i * 60,
             start=i * 10,
             end=i * 10 + 9,
         ).model_dump(exclude_none=True)
@@ -61,7 +61,7 @@ def make_archived_entries_range(
         text = _pad(f"AH{i}", chars_per_entry)
         entry = ArchiveEntry(
             text=text,
-            ts=f"PT{i}M",
+            ts=i * 60,
             start=i * 10,
             end=i * 10 + 9,
         ).model_dump(exclude_none=True)
@@ -76,7 +76,7 @@ def make_static_entries(count: int, chars_per_entry: int = 50) -> list[dict]:
         text = _pad(f"SH{i}", chars_per_entry)
         entry = ArchiveEntry(
             text=text,
-            ts=f"PT{i}M",
+            ts=i * 60,
         ).model_dump(exclude_none=True)
         entries.append(entry)
     return entries
@@ -297,7 +297,7 @@ class TestBaseLayerConstruction:
         scene, summarizer = scene_with_summarizer
         # 2 entries of 55c each = 110 >= threshold=100
         scene.archived_history = make_archived_entries(2, chars_per_entry=55)
-        # Entries have ts="PT0M" and ts="PT1M"
+        # Entries have ts=0 and ts=60
 
         await summarizer.summarize_to_layered_history()
 
@@ -306,8 +306,8 @@ class TestBaseLayerConstruction:
         assert "ts_start" in entry
         assert "ts_end" in entry
         # ts_start comes from first entry, ts_end from last entry
-        assert entry["ts_start"] == "PT0M"
-        assert entry["ts_end"] == "PT1M"
+        assert entry["ts_start"] == 0
+        assert entry["ts_end"] == 60
 
 
 # ---------------------------------------------------------------------------
@@ -726,18 +726,18 @@ class TestCompileLayeredHistory:
                     "text": "Summary A",
                     "start": 0,
                     "end": 2,
-                    "ts": "PT0S",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT1M",
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 60,
                     "id": "a1",
                 },
                 {
                     "text": "Summary B",
                     "start": 3,
                     "end": 5,
-                    "ts": "PT2M",
-                    "ts_start": "PT2M",
-                    "ts_end": "PT3M",
+                    "ts": 120,
+                    "ts_start": 120,
+                    "ts_end": 180,
                     "id": "b1",
                 },
             ]
@@ -755,27 +755,27 @@ class TestCompileLayeredHistory:
                     "text": "L0-A",
                     "start": 0,
                     "end": 2,
-                    "ts": "PT0S",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT1M",
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 60,
                     "id": "l0a",
                 },
                 {
                     "text": "L0-B",
                     "start": 3,
                     "end": 5,
-                    "ts": "PT2M",
-                    "ts_start": "PT2M",
-                    "ts_end": "PT3M",
+                    "ts": 120,
+                    "ts_start": 120,
+                    "ts_end": 180,
                     "id": "l0b",
                 },
                 {
                     "text": "L0-C",
                     "start": 6,
                     "end": 8,
-                    "ts": "PT4M",
-                    "ts_start": "PT4M",
-                    "ts_end": "PT5M",
+                    "ts": 240,
+                    "ts_start": 240,
+                    "ts_end": 300,
                     "id": "l0c",
                 },
             ],
@@ -784,9 +784,9 @@ class TestCompileLayeredHistory:
                     "text": "L1-X",
                     "start": 0,
                     "end": 1,
-                    "ts": "PT0S",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT3M",
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 180,
                     "id": "l1x",
                 },
             ],
@@ -807,18 +807,18 @@ class TestCompileLayeredHistory:
                     "text": "L0-A",
                     "start": 0,
                     "end": 2,
-                    "ts": "PT0S",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT1M",
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 60,
                     "id": "l0a",
                 },
                 {
                     "text": "L0-B",
                     "start": 3,
                     "end": 5,
-                    "ts": "PT2M",
-                    "ts_start": "PT2M",
-                    "ts_end": "PT3M",
+                    "ts": 120,
+                    "ts_start": 120,
+                    "ts_end": 180,
                     "id": "l0b",
                 },
             ],
@@ -827,9 +827,9 @@ class TestCompileLayeredHistory:
                     "text": "L1-X",
                     "start": 0,
                     "end": 0,
-                    "ts": "PT0S",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT1M",
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 60,
                     "id": "l1x",
                 },
             ],
@@ -848,9 +848,9 @@ class TestCompileLayeredHistory:
                     "text": "L0-A",
                     "start": 0,
                     "end": 2,
-                    "ts": "PT0S",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT1M",
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 60,
                     "id": "l0a",
                 },
             ]
@@ -872,9 +872,9 @@ class TestCompileLayeredHistory:
         """include_base_layer appends archived_history entries past layer 0."""
         scene, summarizer = scene_with_summarizer
         scene.archived_history = [
-            {"text": "AH0", "start": 0, "end": 9, "ts": "PT0S", "id": "ah0"},
-            {"text": "AH1", "start": 10, "end": 19, "ts": "PT1M", "id": "ah1"},
-            {"text": "AH2", "start": 20, "end": 29, "ts": "PT2M", "id": "ah2"},
+            {"text": "AH0", "start": 0, "end": 9, "ts": 0, "id": "ah0"},
+            {"text": "AH1", "start": 10, "end": 19, "ts": 60, "id": "ah1"},
+            {"text": "AH2", "start": 20, "end": 29, "ts": 120, "id": "ah2"},
         ]
         scene.layered_history = [
             [
@@ -882,9 +882,9 @@ class TestCompileLayeredHistory:
                     "text": "L0-A",
                     "start": 0,
                     "end": 1,
-                    "ts": "PT0S",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT1M",
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 60,
                     "id": "l0a",
                 },
             ]
@@ -913,18 +913,18 @@ class TestCompileLayeredHistory:
                     "text": "L0-A",
                     "start": 0,
                     "end": 2,
-                    "ts": "PT0S",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT1M",
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 60,
                     "id": "l0a",
                 },
                 {
                     "text": "L0-B",
                     "start": 3,
                     "end": 5,
-                    "ts": "PT2M",
-                    "ts_start": "PT2M",
-                    "ts_end": "PT3M",
+                    "ts": 120,
+                    "ts_start": 120,
+                    "ts_end": 180,
                     "id": "l0b",
                 },
             ],
@@ -934,9 +934,9 @@ class TestCompileLayeredHistory:
                     "text": "L2-X",
                     "start": 0,
                     "end": 0,
-                    "ts": "PT0S",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT1M",
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 60,
                     "id": "l2x",
                 },
             ],
@@ -960,27 +960,27 @@ class TestCompileLayeredHistory:
                     "text": "L0-A",
                     "start": 0,
                     "end": 2,
-                    "ts": "PT0S",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT1M",
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 60,
                     "id": "l0a",
                 },
                 {
                     "text": "L0-B",
                     "start": 3,
                     "end": 5,
-                    "ts": "PT2M",
-                    "ts_start": "PT2M",
-                    "ts_end": "PT3M",
+                    "ts": 120,
+                    "ts_start": 120,
+                    "ts_end": 180,
                     "id": "l0b",
                 },
                 {
                     "text": "L0-C",
                     "start": 6,
                     "end": 8,
-                    "ts": "PT4M",
-                    "ts_start": "PT4M",
-                    "ts_end": "PT5M",
+                    "ts": 240,
+                    "ts_start": 240,
+                    "ts_end": 300,
                     "id": "l0c",
                 },
             ]

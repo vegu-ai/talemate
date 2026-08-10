@@ -323,8 +323,8 @@ class TestBasicContextHistory:
         # with archived_history end values within history range.
         messages = [_make_message(i, 200) for i in range(30)]
         archived = [
-            {"text": "The party arrived at the ancient ruins.", "ts": "PT0S", "end": 9},
-            {"text": "They discovered a hidden chamber.", "ts": "PT30M", "end": 19},
+            {"text": "The party arrived at the ancient ruins.", "ts": 0, "end": 9},
+            {"text": "They discovered a hidden chamber.", "ts": 1800, "end": 19},
         ]
         scene = _make_scene(test_data, history=messages, archived_history=archived)
         result = scene.context_history(budget=8192)
@@ -388,17 +388,17 @@ class TestLayeredHistory:
         # can't cover all of them, leaving archived_boundary > 0 so the
         # layer entry isn't excluded by the boundary check.
         archived = [
-            {"text": _pad("Archived early", 500), "ts": "PT0S", "end": 4},
-            {"text": _pad("Archived mid", 500), "ts": "PT10M", "end": 9},
-            {"text": _pad("Archived late", 500), "ts": "PT30M", "end": 14},
-            {"text": _pad("Archived recent", 500), "ts": "PT1H", "end": 19},
+            {"text": _pad("Archived early", 500), "ts": 0, "end": 4},
+            {"text": _pad("Archived mid", 500), "ts": 600, "end": 9},
+            {"text": _pad("Archived late", 500), "ts": 1800, "end": 14},
+            {"text": _pad("Archived recent", 500), "ts": 3600, "end": 19},
         ]
         layered = [
             [  # Layer 0 covers archived 0-1
                 {
                     "text": "The adventure began with the party forming.",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT10M",
+                    "ts_start": 0,
+                    "ts_end": 600,
                     "start": 0,
                     "end": 1,
                 },
@@ -425,25 +425,25 @@ class TestLayeredHistory:
 
         messages = [_make_message(i, 200) for i in range(30)]
         archived = [
-            {"text": "The party arrived at the ancient ruins.", "ts": "PT0S", "end": 4},
+            {"text": "The party arrived at the ancient ruins.", "ts": 0, "end": 4},
             {
                 "text": "They discovered a hidden chamber beneath the temple.",
-                "ts": "PT30M",
+                "ts": 1800,
                 "end": 9,
             },
             {
                 "text": "A mysterious figure emerged from the shadows.",
-                "ts": "PT1H",
+                "ts": 3600,
                 "end": 14,
             },
-            {"text": "The confrontation revealed secrets.", "ts": "PT1H30M", "end": 19},
+            {"text": "The confrontation revealed secrets.", "ts": 5400, "end": 19},
         ]
         layered = [
             [
                 {
                     "text": "Layered summary of early events.",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT30M",
+                    "ts_start": 0,
+                    "ts_end": 1800,
                     "start": 0,
                     "end": 1,
                 }
@@ -473,17 +473,17 @@ class TestLayeredHistory:
         # archived_boundary.
         messages = [_make_message(i, 200) for i in range(30)]
         archived = [
-            {"text": _pad("Archived early", 500), "ts": "PT0S", "end": 4},
-            {"text": _pad("Archived mid-early", 500), "ts": "PT10M", "end": 9},
-            {"text": _pad("Archived mid-late", 500), "ts": "PT30M", "end": 14},
-            {"text": _pad("Archived recent", 500), "ts": "PT1H", "end": 19},
+            {"text": _pad("Archived early", 500), "ts": 0, "end": 4},
+            {"text": _pad("Archived mid-early", 500), "ts": 600, "end": 9},
+            {"text": _pad("Archived mid-late", 500), "ts": 1800, "end": 14},
+            {"text": _pad("Archived recent", 500), "ts": 3600, "end": 19},
         ]
         layered = [
             [
                 {
                     "text": "The adventure began with the party forming.",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT10M",
+                    "ts_start": 0,
+                    "ts_end": 600,
                     "start": 0,
                     "end": 0,
                 }
@@ -647,7 +647,7 @@ class TestAssuredDialogueNum:
 
         # Archived history covers up to index 8, so summarized_to = 9
         # Only message 9 is after the boundary
-        archived = [{"text": "Summary", "ts": "PT0S", "end": 9}]
+        archived = [{"text": "Summary", "ts": 0, "end": 9}]
 
         scene = MockScene()
         scene.history = messages
@@ -677,7 +677,7 @@ class TestAssuredDialogueNum:
         ]
 
         # summarized_to = 5, so messages 5-9 are after boundary (5 messages)
-        archived = [{"text": "Summary", "ts": "PT0S", "end": 5}]
+        archived = [{"text": "Summary", "ts": 0, "end": 5}]
 
         scene = MockScene()
         scene.history = messages
@@ -708,7 +708,7 @@ class TestAssuredDialogueNum:
         ]
 
         # summarized_to = 8, so only messages 8-9 are after boundary
-        archived = [{"text": "Summary", "ts": "PT0S", "end": 8}]
+        archived = [{"text": "Summary", "ts": 0, "end": 8}]
 
         scene = MockScene()
         scene.history = messages
@@ -769,7 +769,7 @@ class TestEdgeCases:
         # Create a scene with archived_history pointing beyond current history
         scene = mock_scene(
             archived_history=[
-                {"text": "Old content", "ts": "PT0S", "end": 100}  # end > len(history)
+                {"text": "Old content", "ts": 0, "end": 100}  # end > len(history)
             ]
         )
         result = scene.context_history(budget=8192)
@@ -781,7 +781,7 @@ class TestEdgeCases:
         """Should handle archived history entries without 'end' key (static entries)."""
         scene = mock_scene(
             archived_history=[
-                {"text": "Static backstory", "ts": "PT0S"}  # No 'end' key
+                {"text": "Static backstory", "ts": 0}  # No 'end' key
             ]
         )
         result = scene.context_history(budget=8192)
@@ -842,7 +842,7 @@ class TestDialogueSummaryBoundary:
         # Archived history with end=6 means it covers indices 0-5
         # summarized_to = 6, so traditionally dialogue would start at index 6
         # But with expansion enabled, dialogue should expand backwards
-        archived = [{"text": "Summary of early messages", "ts": "PT0S", "end": 6}]
+        archived = [{"text": "Summary of early messages", "ts": 0, "end": 6}]
 
         scene = MockScene()
         scene.history = messages
@@ -877,7 +877,7 @@ class TestDialogueSummaryBoundary:
         ]
 
         # Archived history covers messages 0-7 (summarized_to = 8)
-        archived = [{"text": "Summary of early messages", "ts": "PT0S", "end": 7}]
+        archived = [{"text": "Summary of early messages", "ts": 0, "end": 7}]
 
         scene = MockScene()
         scene.history = messages
@@ -916,7 +916,7 @@ class TestDialogueSummaryBoundary:
 
         # Archived history with end=6 means it covers indices 0-5
         # summarized_to = 6, so dialogue starts at index 6
-        archived = [{"text": "Summary of early messages", "ts": "PT0S", "end": 6}]
+        archived = [{"text": "Summary of early messages", "ts": 0, "end": 6}]
 
         scene = MockScene()
         scene.history = messages
@@ -953,17 +953,17 @@ class TestDialogueSummaryBoundary:
         archived = [
             {
                 "text": "First summary chunk with lots of content.",
-                "ts": "PT0S",
+                "ts": 0,
                 "end": 3,
             },
             {
                 "text": "Second summary chunk with more content.",
-                "ts": "PT30M",
+                "ts": 1800,
                 "end": 5,
             },
             {
                 "text": "Third summary chunk covering recent events.",
-                "ts": "PT1H",
+                "ts": 3600,
                 "end": 7,
             },
         ]
@@ -1008,12 +1008,12 @@ class TestDialogueSummaryBoundary:
 
         # 6 archived entries covering different message ranges
         archived = [
-            {"text": "Summary A", "ts": "PT0S", "end": 3},  # idx 0
-            {"text": "Summary B", "ts": "PT10M", "end": 7},  # idx 1
-            {"text": "Summary C", "ts": "PT20M", "end": 11},  # idx 2
-            {"text": "Summary D", "ts": "PT30M", "end": 15},  # idx 3
-            {"text": "Summary E", "ts": "PT1H", "end": 20},  # idx 4
-            {"text": "Summary F", "ts": "PT1H30M", "end": 25},  # idx 5
+            {"text": "Summary A", "ts": 0, "end": 3},  # idx 0
+            {"text": "Summary B", "ts": 600, "end": 7},  # idx 1
+            {"text": "Summary C", "ts": 1200, "end": 11},  # idx 2
+            {"text": "Summary D", "ts": 1800, "end": 15},  # idx 3
+            {"text": "Summary E", "ts": 3600, "end": 20},  # idx 4
+            {"text": "Summary F", "ts": 5400, "end": 25},  # idx 5
         ]
 
         # Layered history covers archived entries 0-3
@@ -1021,8 +1021,8 @@ class TestDialogueSummaryBoundary:
             [  # Layer 0 (base layer)
                 {
                     "text": "Layered summary of early events",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT30M",
+                    "ts_start": 0,
+                    "ts_end": 1800,
                     "end": 3,  # archived_history index, NOT message index
                 },
             ],
@@ -1075,20 +1075,20 @@ class TestDialogueSummaryBoundary:
         messages = [_make_message(i, 200) for i in range(30)]
 
         archived = [
-            {"text": _pad("Early archived 1", 50), "ts": "PT0S", "end": 3},
-            {"text": _pad("Early archived 2", 50), "ts": "PT10M", "end": 7},
-            {"text": _pad("Early archived 3", 50), "ts": "PT20M", "end": 11},
-            {"text": _pad("Gap summary middle", 50), "ts": "PT30M", "end": 15},
-            {"text": _pad("Gap summary later", 50), "ts": "PT1H", "end": 20},
-            {"text": _pad("Near dialogue", 50), "ts": "PT1H30M", "end": 25},
+            {"text": _pad("Early archived 1", 50), "ts": 0, "end": 3},
+            {"text": _pad("Early archived 2", 50), "ts": 600, "end": 7},
+            {"text": _pad("Early archived 3", 50), "ts": 1200, "end": 11},
+            {"text": _pad("Gap summary middle", 50), "ts": 1800, "end": 15},
+            {"text": _pad("Gap summary later", 50), "ts": 3600, "end": 20},
+            {"text": _pad("Near dialogue", 50), "ts": 5400, "end": 25},
         ]
 
         layered = [
             [
                 {
                     "text": _pad("Layered summary", 50),
-                    "ts_start": "PT0S",
-                    "ts_end": "PT20M",
+                    "ts_start": 0,
+                    "ts_end": 1200,
                     "end": 2,
                 }
             ],
@@ -1129,9 +1129,9 @@ class TestDialogueSummaryBoundary:
         messages = [_make_message(i, 300) for i in range(20)]
 
         archived = [
-            {"text": _pad("Early summary 0-7", 50), "ts": "PT0S", "end": 7},
-            {"text": _pad("Middle summary 8-15", 50), "ts": "PT30M", "end": 15},
-            {"text": _pad("Recent summary 16-18", 50), "ts": "PT1H", "end": 18},
+            {"text": _pad("Early summary 0-7", 50), "ts": 0, "end": 7},
+            {"text": _pad("Middle summary 8-15", 50), "ts": 1800, "end": 15},
+            {"text": _pad("Recent summary 16-18", 50), "ts": 3600, "end": 18},
         ]
 
         scene = MockScene()
@@ -1171,9 +1171,9 @@ class TestDialogueSummaryBoundary:
 
         # Archived entries - small ranges that dialogue can fully cover
         archived = [
-            {"text": "Summary of message 0-2", "ts": "PT0S", "end": 2},
-            {"text": "Summary of message 3-5", "ts": "PT30M", "end": 5},
-            {"text": "Summary of message 6-8", "ts": "PT1H", "end": 8},
+            {"text": "Summary of message 0-2", "ts": 0, "end": 2},
+            {"text": "Summary of message 3-5", "ts": 1800, "end": 5},
+            {"text": "Summary of message 6-8", "ts": 3600, "end": 8},
         ]
 
         scene = MockScene()
@@ -1217,7 +1217,7 @@ class TestDialogueSummaryBoundary:
         archived = [
             {
                 "text": _pad(f"Archived {i}", 50),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 5 - 1,
             }
             for i in range(10)
@@ -1228,8 +1228,8 @@ class TestDialogueSummaryBoundary:
             [
                 {
                     "text": _pad("Layered first half", 50),
-                    "ts_start": "PT0S",
-                    "ts_end": "PT40M",
+                    "ts_start": 0,
+                    "ts_end": 2400,
                     "start": 0,
                     "end": 4,
                 }
@@ -1307,7 +1307,7 @@ class TestLayeredDetailGradient:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 3 - 1,
             }
             for i in range(8)
@@ -1318,29 +1318,29 @@ class TestLayeredDetailGradient:
         layer_0 = [
             {
                 "text": _pad("L0-A", self.L0_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 1,
             },
             {
                 "text": _pad("L0-B", self.L0_CHARS),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 2,
                 "end": 2,
             },
             {
                 "text": _pad("L0-C", self.L0_CHARS),
-                "ts_start": "PT20M",
-                "ts_end": "PT30M",
+                "ts_start": 1200,
+                "ts_end": 1800,
                 "start": 3,
                 "end": 3,
             },
             {
                 "text": _pad("L0-D", self.L0_CHARS),
-                "ts_start": "PT30M",
-                "ts_end": "PT50M",
+                "ts_start": 1800,
+                "ts_end": 3000,
                 "start": 4,
                 "end": 5,
             },
@@ -1350,15 +1350,15 @@ class TestLayeredDetailGradient:
         layer_1 = [
             {
                 "text": _pad("L1-X", self.L1_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 1,
             },
             {
                 "text": _pad("L1-Y", self.L1_CHARS),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 2,
                 "end": 2,
             },
@@ -1426,7 +1426,7 @@ class TestLayeredDetailGradient:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 5 - 1,
             }
             for i in range(6)
@@ -1437,22 +1437,22 @@ class TestLayeredDetailGradient:
         layer_0 = [
             {
                 "text": _pad("L0-A", self.L0_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 0,
             },
             {
                 "text": _pad("L0-B", self.L0_CHARS),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 1,
                 "end": 1,
             },
             {
                 "text": _pad("L0-C", self.L0_CHARS),
-                "ts_start": "PT20M",
-                "ts_end": "PT30M",
+                "ts_start": 1200,
+                "ts_end": 1800,
                 "start": 2,
                 "end": 3,
             },
@@ -1462,8 +1462,8 @@ class TestLayeredDetailGradient:
         layer_1 = [
             {
                 "text": _pad("L1-overview", self.L1_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT20M",
+                "ts_start": 0,
+                "ts_end": 1200,
                 "start": 0,
                 "end": 1,
             },
@@ -1502,13 +1502,13 @@ class TestLayeredDetailGradient:
         messages = self._make_messages(20)
 
         archived = [
-            {"text": _pad("Archived early", self.ARCH_CHARS), "ts": "PT0S", "end": 5},
+            {"text": _pad("Archived early", self.ARCH_CHARS), "ts": 0, "end": 5},
             {
                 "text": _pad("Archived middle", self.ARCH_CHARS),
-                "ts": "PT30M",
+                "ts": 1800,
                 "end": 10,
             },
-            {"text": _pad("Archived recent", self.ARCH_CHARS), "ts": "PT1H", "end": 15},
+            {"text": _pad("Archived recent", self.ARCH_CHARS), "ts": 3600, "end": 15},
         ]
 
         scene = MockScene()
@@ -1548,7 +1548,7 @@ class TestLayeredDetailGradient:
         archived = [
             {
                 "text": _pad(f"Archived {i}", 300),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 6 - 1,
             }
             for i in range(8)
@@ -1559,29 +1559,29 @@ class TestLayeredDetailGradient:
         layer_0 = [
             {
                 "text": _pad("L0-A", 200),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 1,
             },
             {
                 "text": _pad("L0-B", 200),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 2,
                 "end": 2,
             },
             {
                 "text": _pad("L0-C", 200),
-                "ts_start": "PT20M",
-                "ts_end": "PT30M",
+                "ts_start": 1200,
+                "ts_end": 1800,
                 "start": 3,
                 "end": 3,
             },
             {
                 "text": _pad("L0-D", 200),
-                "ts_start": "PT30M",
-                "ts_end": "PT50M",
+                "ts_start": 1800,
+                "ts_end": 3000,
                 "start": 4,
                 "end": 5,
             },
@@ -1591,15 +1591,15 @@ class TestLayeredDetailGradient:
         layer_1 = [
             {
                 "text": _pad("L1-X", 100),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 1,
             },
             {
                 "text": _pad("L1-Y", 100),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 2,
                 "end": 2,
             },
@@ -1661,7 +1661,7 @@ class TestLayeredDetailGradient:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 5 - 1,
             }
             for i in range(4)
@@ -1670,8 +1670,8 @@ class TestLayeredDetailGradient:
         layer_0 = [
             {
                 "text": _pad("L0-entry", self.L0_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 0,
             },
@@ -1680,8 +1680,8 @@ class TestLayeredDetailGradient:
         layer_1 = [
             {
                 "text": _pad("L1-entry", self.L1_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 0,
             },
@@ -1728,7 +1728,7 @@ class TestLayeredDetailGradient:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 5 - 1,
             }
             for i in range(4)
@@ -1737,15 +1737,15 @@ class TestLayeredDetailGradient:
         layer_0 = [
             {
                 "text": _pad("L0-A", self.L0_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 1,
             },
             {
                 "text": _pad("L0-B", self.L0_CHARS),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 2,
                 "end": 2,
             },
@@ -1815,7 +1815,7 @@ class TestIndependentRatios:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 3 - 1,
             }
             for i in range(6)
@@ -1824,15 +1824,15 @@ class TestIndependentRatios:
         layer_0 = [
             {
                 "text": _pad("L0-A", self.L0_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 0,
             },
             {
                 "text": _pad("L0-B", self.L0_CHARS),
-                "ts_start": "PT10M",
-                "ts_end": "PT20M",
+                "ts_start": 600,
+                "ts_end": 1200,
                 "start": 1,
                 "end": 1,
             },
@@ -1896,7 +1896,7 @@ class TestIndependentRatios:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 5 - 1,
             }
             for i in range(6)
@@ -1953,7 +1953,7 @@ class TestIndependentRatios:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 5 - 1,
             }
             for i in range(6)
@@ -1962,8 +1962,8 @@ class TestIndependentRatios:
         layer_0 = [
             {
                 "text": _pad("L0-entry", self.L0_CHARS),
-                "ts_start": "PT0S",
-                "ts_end": "PT10M",
+                "ts_start": 0,
+                "ts_end": 600,
                 "start": 0,
                 "end": 1,
             },
@@ -2020,7 +2020,7 @@ class TestIndependentRatios:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 3 - 1,
             }
             for i in range(6)
@@ -2029,8 +2029,8 @@ class TestIndependentRatios:
         layer_0 = [
             {
                 "text": _pad(f"L0-{i}", self.L0_CHARS),
-                "ts_start": f"PT{i * 10}M",
-                "ts_end": f"PT{(i + 1) * 10}M",
+                "ts_start": i * 600,
+                "ts_end": (i + 1) * 600,
                 "start": i,
                 "end": i,
             }
@@ -2115,7 +2115,7 @@ class TestBestFit:
         archived = [
             {
                 "text": _pad(f"Archived {i}", cls.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 3 - 1,
             }
             for i in range(num_archived)
@@ -2125,8 +2125,8 @@ class TestBestFit:
             layer_0 = [
                 {
                     "text": _pad(f"L0-{i}", cls.L0_CHARS),
-                    "ts_start": f"PT{i * 20}M",
-                    "ts_end": f"PT{(i + 1) * 20}M",
+                    "ts_start": i * 1200,
+                    "ts_end": (i + 1) * 1200,
                     "start": i * 2,
                     "end": i * 2 + 1,
                 }
@@ -2136,8 +2136,8 @@ class TestBestFit:
             layer_1 = [
                 {
                     "text": _pad(f"L1-{i}", cls.L1_CHARS),
-                    "ts_start": f"PT{i * 40}M",
-                    "ts_end": f"PT{(i + 1) * 40}M",
+                    "ts_start": i * 2400,
+                    "ts_end": (i + 1) * 2400,
                     "start": i * 2,
                     "end": i * 2 + 1,
                 }
@@ -2433,7 +2433,7 @@ class TestBestFit:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 2 - 1,  # covers all 10 messages
             }
             for i in range(5)
@@ -2484,7 +2484,7 @@ class TestBestFit:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 2 - 1,
             }
             for i in range(5)
@@ -2554,7 +2554,7 @@ class TestBestFit:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 6 - 1,
             }
             for i in range(5)
@@ -2612,7 +2612,7 @@ class TestBestFit:
 
         # Lower level: 10 entries, each 100 tokens
         lower_entries = [
-            {"text": _pad(f"lower-{i}", 100), "ts": f"PT{i}M"} for i in range(10)
+            {"text": _pad(f"lower-{i}", 100), "ts": i * 60} for i in range(10)
         ]
         lower_formatted = [e["text"] for e in lower_entries]
         lower_tokens = [100] * 10  # 1000 tokens total
@@ -2624,22 +2624,22 @@ class TestBestFit:
         upper_entries = [
             {
                 "text": _pad("upper-0", 50),
-                "ts_start": "PT0M",
-                "ts_end": "PT3M",
+                "ts_start": 0,
+                "ts_end": 180,
                 "start": 0,
                 "end": 2,
             },
             {
                 "text": _pad("upper-1", 50),
-                "ts_start": "PT3M",
-                "ts_end": "PT5M",
+                "ts_start": 180,
+                "ts_end": 300,
                 "start": 3,
                 "end": 4,
             },
             {
                 "text": _pad("upper-2", 50),
-                "ts_start": "PT6M",
-                "ts_end": "PT9M",
+                "ts_start": 360,
+                "ts_end": 540,
                 "start": 6,
                 "end": 8,
             },
@@ -2763,15 +2763,15 @@ class TestBestFit:
         messages = [_make_message(i, self.MSG_CHARS) for i in range(10)]
         # Mix of summary entries (with end) and permanent notes (without end)
         archived = [
-            {"text": _pad("Permanent note", self.ARCH_CHARS), "ts": "PT0S"},
+            {"text": _pad("Permanent note", self.ARCH_CHARS), "ts": 0},
             {
                 "text": _pad("Summary 0", self.ARCH_CHARS),
-                "ts": "PT10M",
+                "ts": 600,
                 "end": 3,
             },
             {
                 "text": _pad("Summary 1", self.ARCH_CHARS),
-                "ts": "PT20M",
+                "ts": 1200,
                 "end": 7,
             },
         ]
@@ -2860,8 +2860,8 @@ class TestBestFit:
         messages = [director_msg] + [_make_message(i, 120) for i in range(1, 25)]
         # 2 archived entries covering messages 0..19
         archived = [
-            {"text": _pad("Summary 0", 200), "ts": "PT10M", "end": 9},
-            {"text": _pad("Summary 1", 200), "ts": "PT20M", "end": 19},
+            {"text": _pad("Summary 0", 200), "ts": 600, "end": 9},
+            {"text": _pad("Summary 1", 200), "ts": 1200, "end": 19},
         ]
 
         scene = MockScene()
@@ -2900,8 +2900,8 @@ class TestBestFit:
 
         messages = [_make_message(i, 120) for i in range(25)]
         archived = [
-            {"text": _pad("Summary 0", 200), "ts": "PT10M", "end": 9},
-            {"text": _pad("Summary 1", 200), "ts": "PT20M", "end": 19},
+            {"text": _pad("Summary 0", 200), "ts": 600, "end": 9},
+            {"text": _pad("Summary 1", 200), "ts": 1200, "end": 19},
         ]
 
         scene = MockScene()
@@ -2975,9 +2975,9 @@ class TestBestFit:
         messages = [_make_message(i, self.MSG_CHARS) for i in range(20)]
         # Archived entries deliberately missing 'start' field
         archived = [
-            {"text": _pad("Archived 0", self.ARCH_CHARS), "ts": "PT0S", "end": 4},
-            {"text": _pad("Archived 1", self.ARCH_CHARS), "ts": "PT10M", "end": 9},
-            {"text": _pad("Archived 2", self.ARCH_CHARS), "ts": "PT20M", "end": 14},
+            {"text": _pad("Archived 0", self.ARCH_CHARS), "ts": 0, "end": 4},
+            {"text": _pad("Archived 1", self.ARCH_CHARS), "ts": 600, "end": 9},
+            {"text": _pad("Archived 2", self.ARCH_CHARS), "ts": 1200, "end": 14},
         ]
 
         scene = MockScene()
@@ -3031,7 +3031,7 @@ class TestBestFit:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "start": i * 3,
                 "end": i * 3 + 2,
             }
@@ -3042,8 +3042,8 @@ class TestBestFit:
         layer_0 = [
             {
                 "text": _pad(f"L0-{i}", self.L0_CHARS),
-                "ts_start": f"PT{i * 30}M",
-                "ts_end": f"PT{(i + 1) * 30}M",
+                "ts_start": i * 1800,
+                "ts_end": (i + 1) * 1800,
                 "start": i * 2,
                 "end": i * 2 + 1,
             }
@@ -3054,8 +3054,8 @@ class TestBestFit:
         layer_1 = [
             {
                 "text": _pad(f"L1-{i}", self.L1_CHARS),
-                "ts_start": f"PT{i * 60}M",
-                "ts_end": f"PT{(i + 1) * 60}M",
+                "ts_start": i * 3600,
+                "ts_end": (i + 1) * 3600,
                 "start": i * 2,
                 "end": i * 2 + 1,
             }
@@ -3177,7 +3177,7 @@ class TestBuildPreviewParity:
         archived = [
             {
                 "text": _pad(f"Archived {i}", cls.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "end": (i + 1) * 3 - 1,
             }
             for i in range(num_archived)
@@ -3187,8 +3187,8 @@ class TestBuildPreviewParity:
             layer_0 = [
                 {
                     "text": _pad(f"L0-{i}", cls.L0_CHARS),
-                    "ts_start": f"PT{i * 20}M",
-                    "ts_end": f"PT{(i + 1) * 20}M",
+                    "ts_start": i * 1200,
+                    "ts_end": (i + 1) * 1200,
                     "start": i * 2,
                     "end": i * 2 + 1,
                 }
@@ -3198,8 +3198,8 @@ class TestBuildPreviewParity:
             layer_1 = [
                 {
                     "text": _pad(f"L1-{i}", cls.L1_CHARS),
-                    "ts_start": f"PT{i * 40}M",
-                    "ts_end": f"PT{(i + 1) * 40}M",
+                    "ts_start": i * 2400,
+                    "ts_end": (i + 1) * 2400,
                     "start": i * 2,
                     "end": i * 2 + 1,
                 }
@@ -3285,7 +3285,7 @@ class TestBuildPreviewParity:
         archived = [
             {
                 "text": _pad(f"Archived {i}", self.ARCH_CHARS),
-                "ts": f"PT{i * 10}M",
+                "ts": i * 600,
                 "start": i * 3,
                 "end": i * 3 + 2,
             }
@@ -3295,8 +3295,8 @@ class TestBuildPreviewParity:
         layer_0 = [
             {
                 "text": _pad(f"L0-{i}", self.L0_CHARS),
-                "ts_start": f"PT{i * 30}M",
-                "ts_end": f"PT{(i + 1) * 30}M",
+                "ts_start": i * 1800,
+                "ts_end": (i + 1) * 1800,
                 "start": i * 2,
                 "end": i * 2 + 1,
             }
@@ -3306,8 +3306,8 @@ class TestBuildPreviewParity:
         layer_1 = [
             {
                 "text": _pad(f"L1-{i}", self.L1_CHARS),
-                "ts_start": f"PT{i * 60}M",
-                "ts_end": f"PT{(i + 1) * 60}M",
+                "ts_start": i * 3600,
+                "ts_end": (i + 1) * 3600,
                 "start": i * 2,
                 "end": i * 2 + 1,
             }

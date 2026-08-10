@@ -51,6 +51,8 @@
 </template>
 
 <script>
+import { amountUnitToSeconds } from '@/utils/time';
+
 export default {
     name: "SceneToolsTime",
     props: {
@@ -68,57 +70,57 @@ export default {
                     label: "Minutes",
                     icon: "mdi-timer-sand",
                     options: [
-                        {"value": "PT5M", "title": "5 minutes"},
-                        {"value": "PT15M", "title": "15 minutes"},
-                        {"value": "PT30M", "title": "30 minutes"},
+                        {"value": amountUnitToSeconds(5, 'minutes'), "title": "5 minutes"},
+                        {"value": amountUnitToSeconds(15, 'minutes'), "title": "15 minutes"},
+                        {"value": amountUnitToSeconds(30, 'minutes'), "title": "30 minutes"},
                     ],
                 },
                 {
                     label: "Hours",
                     icon: "mdi-clock-outline",
                     options: [
-                        {"value": "PT1H", "title": "1 hour"},
-                        {"value": "PT2H", "title": "2 hours"},
-                        {"value": "PT4H", "title": "4 hours"},
-                        {"value": "PT8H", "title": "8 hours"},
-                        {"value": "PT12H", "title": "12 hours"},
+                        {"value": amountUnitToSeconds(1, 'hours'), "title": "1 hour"},
+                        {"value": amountUnitToSeconds(2, 'hours'), "title": "2 hours"},
+                        {"value": amountUnitToSeconds(4, 'hours'), "title": "4 hours"},
+                        {"value": amountUnitToSeconds(8, 'hours'), "title": "8 hours"},
+                        {"value": amountUnitToSeconds(12, 'hours'), "title": "12 hours"},
                     ],
                 },
                 {
                     label: "Days",
                     icon: "mdi-weather-sunny",
                     options: [
-                        {"value": "P1D", "title": "1 day"},
-                        {"value": "P2D", "title": "2 days"},
-                        {"value": "P3D", "title": "3 days"},
+                        {"value": amountUnitToSeconds(1, 'days'), "title": "1 day"},
+                        {"value": amountUnitToSeconds(2, 'days'), "title": "2 days"},
+                        {"value": amountUnitToSeconds(3, 'days'), "title": "3 days"},
                     ],
                 },
                 {
                     label: "Weeks",
                     icon: "mdi-calendar-week",
                     options: [
-                        {"value": "P7D", "title": "1 week"},
-                        {"value": "P14D", "title": "2 weeks"},
+                        {"value": amountUnitToSeconds(1, 'weeks'), "title": "1 week"},
+                        {"value": amountUnitToSeconds(2, 'weeks'), "title": "2 weeks"},
                     ],
                 },
                 {
                     label: "Months",
                     icon: "mdi-calendar-month",
                     options: [
-                        {"value": "P1M", "title": "1 month"},
-                        {"value": "P3M", "title": "3 months"},
-                        {"value": "P6M", "title": "6 months"},
+                        {"value": amountUnitToSeconds(1, 'months'), "title": "1 month"},
+                        {"value": amountUnitToSeconds(3, 'months'), "title": "3 months"},
+                        {"value": amountUnitToSeconds(6, 'months'), "title": "6 months"},
                     ],
                 },
                 {
                     label: "Years",
                     icon: "mdi-calendar-multiple",
                     options: [
-                        {"value": "P1Y", "title": "1 year"},
-                        {"value": "P2Y", "title": "2 years"},
-                        {"value": "P3Y", "title": "3 years"},
-                        {"value": "P5Y", "title": "5 years"},
-                        {"value": "P10Y", "title": "10 years"},
+                        {"value": amountUnitToSeconds(1, 'years'), "title": "1 year"},
+                        {"value": amountUnitToSeconds(2, 'years'), "title": "2 years"},
+                        {"value": amountUnitToSeconds(3, 'years'), "title": "3 years"},
+                        {"value": amountUnitToSeconds(5, 'years'), "title": "5 years"},
+                        {"value": amountUnitToSeconds(10, 'years'), "title": "10 years"},
                     ],
                 },
             ],
@@ -139,21 +141,8 @@ export default {
             this.customTimeDialog = true;
         },
 
-        amountUnitToIso8601(amount, unit) {
-            const n = Math.abs(amount);
-            switch (unit) {
-                case 'minutes': return `PT${n}M`;
-                case 'hours':   return `PT${n}H`;
-                case 'days':    return `P${n}D`;
-                case 'weeks':   return `P${n}W`;
-                case 'months':  return `P${n}M`;
-                case 'years':   return `P${n}Y`;
-                default: throw new Error(`Invalid unit: ${unit}`);
-            }
-        },
-
         submitCustomTime() {
-            this.advanceTime(this.amountUnitToIso8601(this.customTimeAmount, this.customTimeUnit));
+            this.advanceTime(amountUnitToSeconds(this.customTimeAmount, this.customTimeUnit));
             this.customTimeDialog = false;
         },
     },

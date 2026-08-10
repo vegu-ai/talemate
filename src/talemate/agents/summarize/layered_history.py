@@ -248,15 +248,15 @@ class LayeredHistoryMixin:
         """
         return "\n\n".join(self.compile_layered_history(layer_index))
 
-    def _lh_extract_timestamps(self, chunk: list[dict]) -> tuple[str, str, str]:
+    def _lh_extract_timestamps(self, chunk: list[dict]) -> tuple[int, int, int]:
         """
         Extracts timestamps from a chunk of entries.
         Returns (ts, ts_start, ts_end)
         """
         if not chunk:
-            return "PT1S", "PT1S", "PT1S"
+            return 0, 0, 0
 
-        ts = chunk[0].get("ts", "PT1S")
+        ts = chunk[0].get("ts", 0)
         ts_start = chunk[0].get("ts_start", ts)
         ts_end = chunk[-1].get("ts_end", chunk[-1].get("ts", ts))
 

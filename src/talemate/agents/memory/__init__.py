@@ -372,7 +372,7 @@ class MemoryAgent(Agent):
         return True
 
     @set_processing
-    async def add(self, text, character=None, uid=None, ts: str = None, **kwargs):
+    async def add(self, text, character=None, uid=None, ts: int = None, **kwargs):
         if not text:
             return
         if self.readonly:
@@ -433,7 +433,7 @@ class MemoryAgent(Agent):
                     **kwargs,
                 )
 
-    def _add(self, text, character=None, ts: str = None, **kwargs):
+    def _add(self, text, character=None, ts: int = None, **kwargs):
         raise NotImplementedError()
 
     @set_processing
@@ -1174,7 +1174,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         release_cuda_cache()
 
-    def _add(self, text, character=None, uid=None, ts: str = None, **kwargs):
+    def _add(self, text, character=None, uid=None, ts: int = None, **kwargs):
         metadatas = []
         ids = []
         scene = self.scene
@@ -1185,7 +1185,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 "source": "talemate",
                 "session": scene.memory_session_id,
             }
-            if ts:
+            if ts is not None:
                 meta["ts"] = ts
             meta.update(kwargs)
             metadatas.append(meta)
@@ -1199,7 +1199,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 "source": "talemate",
                 "session": scene.memory_session_id,
             }
-            if ts:
+            if ts is not None:
                 meta["ts"] = ts
             meta.update(kwargs)
             metadatas.append(meta)
@@ -1355,10 +1355,10 @@ class ChromaDBMemoryAgent(MemoryAgent):
         return results
 
     def convert_ts_to_date_prefix(self, ts):
-        if not ts:
+        if ts is None:
             return None
         try:
-            return util.iso8601_diff_to_human(ts, self.scene.ts)
+            return util.diff_to_human(util.coerce_ts(ts), self.scene.ts)
         except Exception as e:
             log.error(
                 "chromadb agent",

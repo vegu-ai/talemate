@@ -9,6 +9,7 @@ Tests for time passage operations:
 import pytest
 
 from talemate.history import (
+    collect_time_passages,
     insert_time_passage,
     delete_time_passage,
     insert_time_passage_after_message,
@@ -28,15 +29,15 @@ def _msg(text: str) -> CharacterMessage:
     return CharacterMessage(message=text, source="ai")
 
 
-def _time(ts: str) -> TimePassageMessage:
-    return TimePassageMessage(ts=ts, message=f"{ts} later")
+def _time(ts: int) -> TimePassageMessage:
+    return TimePassageMessage(ts=ts, message=f"{ts} seconds later")
 
 
 def make_scene(
     history: list,
     archived_history: list,
     layered_history: list | None = None,
-    ts: str = "PT0S",
+    ts: int = 0,
 ):
     """Build a real `Scene` populated with the requested timeline state.
 
@@ -69,8 +70,8 @@ class TestInsertTimePassageBasic:
                 _msg("D"),  # 3
             ],
             archived_history=[
-                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 2-3", "start": 2, "end": 3, "ts": "PT0S", "id": "a2"},
+                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": 0, "id": "a1"},
+                {"text": "Sum 2-3", "start": 2, "end": 3, "ts": 0, "id": "a2"},
             ],
         )
 
@@ -78,7 +79,7 @@ class TestInsertTimePassageBasic:
 
         # TimePassageMessage inserted at original start=2
         assert isinstance(scene.history[2], TimePassageMessage)
-        assert tp.ts == "PT2H"
+        assert tp.ts == 7200
 
         # First entry: start=0 < insertion_index=2, end=1 < 2 => unchanged
         assert scene.archived_history[0]["start"] == 0
@@ -89,7 +90,7 @@ class TestInsertTimePassageBasic:
         assert scene.archived_history[1]["end"] == 4
 
         # fix_time should set timestamp on second entry
-        assert scene.archived_history[1]["ts"] == "PT2H"
+        assert scene.archived_history[1]["ts"] == 7200
 
     def test_insert_before_first_entry(self):
         """Insert before the very first summarized entry (start=0)."""
@@ -101,8 +102,8 @@ class TestInsertTimePassageBasic:
                 _msg("D"),  # 3
             ],
             archived_history=[
-                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 2-3", "start": 2, "end": 3, "ts": "PT0S", "id": "a2"},
+                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": 0, "id": "a1"},
+                {"text": "Sum 2-3", "start": 2, "end": 3, "ts": 0, "id": "a2"},
             ],
         )
 
@@ -118,9 +119,9 @@ class TestInsertTimePassageBasic:
         assert scene.archived_history[1]["start"] == 3
         assert scene.archived_history[1]["end"] == 4
 
-        # Time passage at index 0, both entries end > 0 => both get PT30M
-        assert scene.archived_history[0]["ts"] == "PT30M"
-        assert scene.archived_history[1]["ts"] == "PT30M"
+        # Time passage at index 0, both entries end > 0 => both get 30 minutes
+        assert scene.archived_history[0]["ts"] == 1800
+        assert scene.archived_history[1]["ts"] == 1800
 
     def test_insert_before_last_entry(self):
         """Insert before the last entry only shifts that entry's indices."""
@@ -132,8 +133,8 @@ class TestInsertTimePassageBasic:
                 _msg("D"),  # 3
             ],
             archived_history=[
-                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 2-3", "start": 2, "end": 3, "ts": "PT0S", "id": "a2"},
+                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": 0, "id": "a1"},
+                {"text": "Sum 2-3", "start": 2, "end": 3, "ts": 0, "id": "a2"},
             ],
         )
 
@@ -152,7 +153,7 @@ class TestInsertTimePassageBasic:
         scene = make_scene(
             history=[_msg("A"), _msg("B")],
             archived_history=[
-                {"text": "Sum", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
+                {"text": "Sum", "start": 0, "end": 1, "ts": 0, "id": "a1"},
             ],
         )
 
@@ -174,7 +175,7 @@ class TestInsertTimePassageValidation:
         scene = make_scene(
             history=[_msg("A")],
             archived_history=[
-                {"text": "Static", "ts": "PT0S", "id": "s1"},
+                {"text": "Static", "ts": 0, "id": "s1"},
             ],
         )
 
@@ -186,7 +187,7 @@ class TestInsertTimePassageValidation:
         scene = make_scene(
             history=[_msg("A")],
             archived_history=[
-                {"text": "Sum", "start": 0, "end": 0, "ts": "PT0S", "id": "a1"},
+                {"text": "Sum", "start": 0, "end": 0, "ts": 0, "id": "a1"},
             ],
         )
 
@@ -198,7 +199,7 @@ class TestInsertTimePassageValidation:
         scene = make_scene(
             history=[_msg("A")],
             archived_history=[
-                {"text": "Sum", "start": 0, "end": 0, "ts": "PT0S", "id": "a1"},
+                {"text": "Sum", "start": 0, "end": 0, "ts": 0, "id": "a1"},
             ],
         )
 
@@ -223,13 +224,13 @@ class TestInsertTimePassageWithExisting:
             history=[
                 _msg("A"),  # 0
                 _msg("B"),  # 1
-                _time("PT1H"),  # 2 — existing 1h passage
+                _time(3600),  # 2 — existing 1h passage
                 _msg("C"),  # 3
                 _msg("D"),  # 4
             ],
             archived_history=[
-                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 3-4", "start": 3, "end": 4, "ts": "PT1H", "id": "a2"},
+                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": 0, "id": "a1"},
+                {"text": "Sum 3-4", "start": 3, "end": 4, "ts": 3600, "id": "a2"},
             ],
         )
 
@@ -239,17 +240,17 @@ class TestInsertTimePassageWithExisting:
         # scene.history should now be:
         # [msg, msg, time(1h), time(2h), msg, msg]
         assert isinstance(scene.history[2], TimePassageMessage)
-        assert scene.history[2].ts == "PT1H"  # original
+        assert scene.history[2].ts == 3600  # original
         assert isinstance(scene.history[3], TimePassageMessage)
-        assert scene.history[3].ts == "PT2H"  # newly inserted
+        assert scene.history[3].ts == 7200  # newly inserted
 
         # Indices: existing time passage at idx 2 is < insertion_index=3, unaffected
         # Second entry: start 3->4, end 4->5
         assert scene.archived_history[1]["start"] == 4
         assert scene.archived_history[1]["end"] == 5
 
-        # Cumulative: PT1H + PT2H = PT3H
-        assert scene.archived_history[1]["ts"] == "PT3H"
+        # Cumulative: 1h + 2h = 3h
+        assert scene.archived_history[1]["ts"] == 10800
 
     def test_insert_before_entry_that_precedes_existing_passage(self):
         """
@@ -260,13 +261,13 @@ class TestInsertTimePassageWithExisting:
             history=[
                 _msg("A"),  # 0
                 _msg("B"),  # 1
-                _time("PT3H"),  # 2
+                _time(10800),  # 2
                 _msg("C"),  # 3
                 _msg("D"),  # 4
             ],
             archived_history=[
-                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 3-4", "start": 3, "end": 4, "ts": "PT3H", "id": "a2"},
+                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": 0, "id": "a1"},
+                {"text": "Sum 3-4", "start": 3, "end": 4, "ts": 10800, "id": "a2"},
             ],
         )
 
@@ -275,7 +276,7 @@ class TestInsertTimePassageWithExisting:
 
         # New passage at index 0, everything else shifted
         assert isinstance(scene.history[0], TimePassageMessage)
-        assert scene.history[0].ts == "PT30M"
+        assert scene.history[0].ts == 1800
 
         # First entry: start 0->1, end 1->2
         assert scene.archived_history[0]["start"] == 1
@@ -285,8 +286,8 @@ class TestInsertTimePassageWithExisting:
         assert scene.archived_history[1]["start"] == 4
         assert scene.archived_history[1]["end"] == 5
 
-        # Cumulative: PT30M (idx 0) + PT3H (idx 3) = PT3H30M
-        assert scene.archived_history[1]["ts"] == "PT3H30M"
+        # Cumulative: 30m (idx 0) + 3h (idx 3) = 3h30m
+        assert scene.archived_history[1]["ts"] == 12600
 
 
 # ---------------------------------------------------------------------------
@@ -310,8 +311,8 @@ class TestInsertTimePassageLayeredHistory:
                 _msg("D"),  # 3
             ],
             archived_history=[
-                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 2-3", "start": 2, "end": 3, "ts": "PT0S", "id": "a2"},
+                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": 0, "id": "a1"},
+                {"text": "Sum 2-3", "start": 2, "end": 3, "ts": 0, "id": "a2"},
             ],
             layered_history=[
                 [
@@ -319,9 +320,9 @@ class TestInsertTimePassageLayeredHistory:
                         "text": "L0 covers both",
                         "start": 0,
                         "end": 1,
-                        "ts": "STALE",
-                        "ts_start": "STALE",
-                        "ts_end": "STALE",
+                        "ts": -1,
+                        "ts_start": -1,
+                        "ts_end": -1,
                         "id": "l0a",
                     },
                 ],
@@ -335,9 +336,9 @@ class TestInsertTimePassageLayeredHistory:
         assert scene.layered_history[0][0]["end"] == 1
 
         # But timestamps should be updated via fix_time
-        assert scene.layered_history[0][0]["ts"] == "PT0S"
-        assert scene.layered_history[0][0]["ts_start"] == "PT0S"
-        assert scene.layered_history[0][0]["ts_end"] == "PT2H"
+        assert scene.layered_history[0][0]["ts"] == 0
+        assert scene.layered_history[0][0]["ts_start"] == 0
+        assert scene.layered_history[0][0]["ts_end"] == 7200
 
 
 # ---------------------------------------------------------------------------
@@ -354,13 +355,13 @@ class TestDeleteTimePassageBasic:
             history=[
                 _msg("A"),  # 0
                 _msg("B"),  # 1
-                _time("PT2H"),  # 2
+                _time(7200),  # 2
                 _msg("C"),  # 3
                 _msg("D"),  # 4
             ],
             archived_history=[
-                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 3-4", "start": 3, "end": 4, "ts": "PT2H", "id": "a2"},
+                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": 0, "id": "a1"},
+                {"text": "Sum 3-4", "start": 3, "end": 4, "ts": 7200, "id": "a2"},
             ],
         )
 
@@ -380,18 +381,18 @@ class TestDeleteTimePassageBasic:
 
         # No time passages left — fix_time returns early without updating
         # individual entry timestamps, but scene.ts is set to starting_time
-        assert scene.ts == "PT0S"
+        assert scene.ts == 0
 
     def test_delete_first_time_passage(self):
         """Delete a time passage at index 0."""
         scene = make_scene(
             history=[
-                _time("PT1H"),  # 0
+                _time(3600),  # 0
                 _msg("A"),  # 1
                 _msg("B"),  # 2
             ],
             archived_history=[
-                {"text": "Sum 1-2", "start": 1, "end": 2, "ts": "PT1H", "id": "a1"},
+                {"text": "Sum 1-2", "start": 1, "end": 2, "ts": 3600, "id": "a1"},
             ],
         )
 
@@ -406,15 +407,15 @@ class TestDeleteTimePassageBasic:
         scene = make_scene(
             history=[
                 _msg("A"),  # 0
-                _time("PT1H"),  # 1
+                _time(3600),  # 1
                 _msg("B"),  # 2
-                _time("PT2H"),  # 3
+                _time(7200),  # 3
                 _msg("C"),  # 4
             ],
             archived_history=[
-                {"text": "Sum 0", "start": 0, "end": 0, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 2", "start": 2, "end": 2, "ts": "PT1H", "id": "a2"},
-                {"text": "Sum 4", "start": 4, "end": 4, "ts": "PT3H", "id": "a3"},
+                {"text": "Sum 0", "start": 0, "end": 0, "ts": 0, "id": "a1"},
+                {"text": "Sum 2", "start": 2, "end": 2, "ts": 3600, "id": "a2"},
+                {"text": "Sum 4", "start": 4, "end": 4, "ts": 10800, "id": "a3"},
             ],
         )
 
@@ -424,7 +425,7 @@ class TestDeleteTimePassageBasic:
         # History: [msg, msg, time(2h), msg]
         assert len(scene.history) == 4
         assert isinstance(scene.history[2], TimePassageMessage)
-        assert scene.history[2].ts == "PT2H"
+        assert scene.history[2].ts == 7200
 
         # Indices shifted: entries after idx 1 decremented
         assert scene.archived_history[0]["start"] == 0
@@ -434,8 +435,8 @@ class TestDeleteTimePassageBasic:
         assert scene.archived_history[2]["start"] == 3
         assert scene.archived_history[2]["end"] == 3
 
-        # Only PT2H remains, affects third entry
-        assert scene.archived_history[2]["ts"] == "PT2H"
+        # Only the 2h passage remains, affects third entry
+        assert scene.archived_history[2]["ts"] == 7200
 
 
 class TestDeleteTimePassageValidation:
@@ -446,7 +447,7 @@ class TestDeleteTimePassageValidation:
         scene = make_scene(
             history=[_msg("A"), _msg("B")],
             archived_history=[
-                {"text": "Sum", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
+                {"text": "Sum", "start": 0, "end": 1, "ts": 0, "id": "a1"},
             ],
         )
 
@@ -466,7 +467,7 @@ class TestDeleteTimePassageValidation:
     def test_negative_index_raises(self):
         """Negative history_index should raise IndexError."""
         scene = make_scene(
-            history=[_time("PT1H"), _msg("A")],
+            history=[_time(3600), _msg("A")],
             archived_history=[],
         )
 
@@ -487,8 +488,8 @@ class TestDeleteTimePassageRoundTrip:
                 _msg("D"),  # 3
             ],
             archived_history=[
-                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 2-3", "start": 2, "end": 3, "ts": "PT0S", "id": "a2"},
+                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": 0, "id": "a1"},
+                {"text": "Sum 2-3", "start": 2, "end": 3, "ts": 0, "id": "a2"},
             ],
         )
 
@@ -525,8 +526,8 @@ class TestInsertTimePassageAfterMessage:
         scene = make_scene(
             history=msgs,
             archived_history=[
-                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 2", "start": 2, "end": 2, "ts": "PT0S", "id": "a2"},
+                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": 0, "id": "a1"},
+                {"text": "Sum 2", "start": 2, "end": 2, "ts": 0, "id": "a2"},
             ],
         )
 
@@ -537,7 +538,7 @@ class TestInsertTimePassageAfterMessage:
         # Inserted at index 1 (after msg A at 0)
         assert scene.history[1] is tp
         assert isinstance(tp, TimePassageMessage)
-        assert tp.ts == "PT1H"
+        assert tp.ts == 3600
         assert len(scene.history) == 4
 
         # Indices shifted: entries with start/end >= 1 get bumped
@@ -552,7 +553,7 @@ class TestInsertTimePassageAfterMessage:
         scene = make_scene(
             history=msgs,
             archived_history=[
-                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
+                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": 0, "id": "a1"},
             ],
         )
 
@@ -561,7 +562,7 @@ class TestInsertTimePassageAfterMessage:
         # Inserted at index 2 (after end of list)
         assert len(scene.history) == 3
         assert scene.history[2] is tp
-        assert tp.ts == "P3D"
+        assert tp.ts == 259200
 
         # Archived entries: start=0, end=1, both < 2 => unchanged
         assert scene.archived_history[0]["start"] == 0
@@ -585,15 +586,15 @@ class TestInsertTimePassageAfterMessage:
         scene = make_scene(
             history=msgs,
             archived_history=[
-                {"text": "Sum 0", "start": 0, "end": 0, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 1-2", "start": 1, "end": 2, "ts": "PT0S", "id": "a2"},
+                {"text": "Sum 0", "start": 0, "end": 0, "ts": 0, "id": "a1"},
+                {"text": "Sum 1-2", "start": 1, "end": 2, "ts": 0, "id": "a2"},
             ],
         )
 
         insert_time_passage_after_message(scene, msgs[0].id, amount=2, unit="hours")
 
         # Time passage at index 1, second entry now starts at 2
-        assert scene.archived_history[1]["ts"] == "PT2H"
+        assert scene.archived_history[1]["ts"] == 7200
 
 
 # ---------------------------------------------------------------------------
@@ -606,13 +607,13 @@ class TestDeleteTimePassageById:
 
     def test_delete_by_id(self):
         """Delete a time passage using its message id."""
-        tp = _time("PT2H")
+        tp = _time(7200)
         msgs = [_msg("A"), tp, _msg("B")]
         scene = make_scene(
             history=msgs,
             archived_history=[
-                {"text": "Sum 0", "start": 0, "end": 0, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 2", "start": 2, "end": 2, "ts": "PT2H", "id": "a2"},
+                {"text": "Sum 0", "start": 0, "end": 0, "ts": 0, "id": "a1"},
+                {"text": "Sum 2", "start": 2, "end": 2, "ts": 7200, "id": "a2"},
             ],
         )
 
@@ -656,26 +657,26 @@ class TestUpdateTimePassageById:
 
     def test_update_duration(self):
         """Update a time passage from 2h to 30 minutes."""
-        tp = _time("PT2H")
+        tp = _time(7200)
         msgs = [_msg("A"), tp, _msg("B")]
         scene = make_scene(
             history=msgs,
             archived_history=[
-                {"text": "Sum 0", "start": 0, "end": 0, "ts": "PT0S", "id": "a1"},
-                {"text": "Sum 2", "start": 2, "end": 2, "ts": "PT2H", "id": "a2"},
+                {"text": "Sum 0", "start": 0, "end": 0, "ts": 0, "id": "a1"},
+                {"text": "Sum 2", "start": 2, "end": 2, "ts": 7200, "id": "a2"},
             ],
         )
 
         update_time_passage_by_id(scene, tp.id, amount=30, unit="minutes")
 
-        assert tp.ts == "PT30M"
+        assert tp.ts == 1800
         assert "30 minutes" in tp.message.lower()
-        # fix_time recalculates: second entry should now be PT30M
-        assert scene.archived_history[1]["ts"] == "PT30M"
+        # fix_time recalculates: second entry should now be 30 minutes
+        assert scene.archived_history[1]["ts"] == 1800
 
     def test_update_preserves_position(self):
         """Updating does not change the position or history length."""
-        tp = _time("PT1H")
+        tp = _time(3600)
         msgs = [_msg("A"), tp, _msg("B")]
         scene = make_scene(
             history=msgs,
@@ -686,7 +687,7 @@ class TestUpdateTimePassageById:
 
         assert len(scene.history) == 3
         assert scene.history[1] is tp
-        assert tp.ts == "P3D"
+        assert tp.ts == 259200
 
     def test_invalid_message_id_raises(self):
         """Non-existent message id raises ValueError."""
@@ -708,3 +709,55 @@ class TestUpdateTimePassageById:
 
         with pytest.raises(ValueError, match="not a TimePassageMessage"):
             update_time_passage_by_id(scene, msgs[0].id, amount=1, unit="hours")
+
+
+# ---------------------------------------------------------------------------
+# Tests: collect -> update round trip (the WSM edit path)
+# ---------------------------------------------------------------------------
+
+
+class TestTimePassageEditRoundTrip:
+    """The editor reads a passage as amount/unit and writes the pair back."""
+
+    def test_sub_minute_passage_is_not_erased(self):
+        """A passage shorter than a minute survives an untouched save."""
+        tp = _time(1)
+        scene = make_scene(
+            history=[_msg("A"), tp, _msg("B")],
+            archived_history=[
+                {"text": "Sum 2", "start": 2, "end": 2, "ts": 0, "id": "a1"},
+            ],
+        )
+
+        passage = collect_time_passages(scene)[0]
+        update_time_passage_by_id(
+            scene,
+            tp.id,
+            amount=passage["amount"],
+            unit=passage["unit"],
+        )
+
+        assert (passage["amount"], passage["unit"]) == (1, "minutes")
+        assert tp.ts == 60
+        assert tp.message == "1 Minute later"
+        assert scene.archived_history[0]["ts"] == 60
+
+    def test_round_trip_leaves_whole_units_untouched(self):
+        """Durations that map cleanly onto a unit come back unchanged."""
+        for seconds, expected in ((604800, "7 Days later"), (7200, "2 Hours later")):
+            tp = _time(seconds)
+            scene = make_scene(
+                history=[_msg("A"), tp],
+                archived_history=[],
+            )
+
+            passage = collect_time_passages(scene)[0]
+            update_time_passage_by_id(
+                scene,
+                tp.id,
+                amount=passage["amount"],
+                unit=passage["unit"],
+            )
+
+            assert tp.ts == seconds
+            assert tp.message == expected

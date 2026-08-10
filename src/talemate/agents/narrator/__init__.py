@@ -570,7 +570,7 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
     @store_context_state("narrative_direction", "response_length", time_narration=True)
     async def narrate_time_passage(
         self,
-        duration: str,
+        duration: int,
         time_passed: str,
         narrative_direction: str,
         response_length: int | None = None,

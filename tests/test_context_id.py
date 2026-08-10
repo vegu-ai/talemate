@@ -166,7 +166,7 @@ def test_world_entry_manual_context_id(entry_input, expected_entry_id):
 )
 def test_dynamic_history_entry_context_id(entry_id, layer, expected_path):
     """Test DynamicHistoryEntryContextID creation."""
-    entry = HistoryEntry(text="test", ts="PT1S", index=0, layer=layer, id=entry_id)
+    entry = HistoryEntry(text="test", ts=1, index=0, layer=layer, id=entry_id)
     context_id = DynamicHistoryEntryContextID.make(entry)
     assert context_id.entry_id == entry_id
     assert context_id.layer == layer
@@ -183,7 +183,7 @@ def test_dynamic_history_entry_context_id(entry_id, layer, expected_path):
 )
 def test_static_history_entry_context_id(entry_id):
     """Test StaticHistoryEntryContextID creation."""
-    entry = HistoryEntry(text="test", ts="PT1S", index=0, layer=0, id=entry_id)
+    entry = HistoryEntry(text="test", ts=1, index=0, layer=0, id=entry_id)
     context_id = StaticHistoryEntryContextID.make(entry)
     assert context_id.entry_id == entry_id
     assert context_id.path == [entry_id]
@@ -262,13 +262,13 @@ def test_get_context_id_type_missing():
         ),
         (
             "history_entry.static",
-            HistoryEntry(text="test", ts="PT1S", index=0, layer=0, id="hist_123"),
+            HistoryEntry(text="test", ts=1, index=0, layer=0, id="hist_123"),
             StaticHistoryEntryContextID,
             {"entry_id": "hist_123", "path": ["hist_123"]},
         ),
         (
             "history_entry.dynamic",
-            HistoryEntry(text="test", ts="PT1S", index=0, layer=3, id="hist_456"),
+            HistoryEntry(text="test", ts=1, index=0, layer=3, id="hist_456"),
             DynamicHistoryEntryContextID,
             {
                 "entry_id": "hist_456",
@@ -360,14 +360,14 @@ def test_context_id_from_object_comprehensive():
 
     static_hist = context_id_from_object(
         "history_entry.static",
-        HistoryEntry(text="test", ts="PT1S", index=0, layer=0, id="test_123"),
+        HistoryEntry(text="test", ts=1, index=0, layer=0, id="test_123"),
     )
     assert isinstance(static_hist, StaticHistoryEntryContextID)
     assert static_hist.path == ["test_123"]
 
     dynamic_hist = context_id_from_object(
         "history_entry.dynamic",
-        HistoryEntry(text="test", ts="PT1S", index=0, layer=2, id="test_456"),
+        HistoryEntry(text="test", ts=1, index=0, layer=2, id="test_456"),
     )
     assert isinstance(dynamic_hist, DynamicHistoryEntryContextID)
 

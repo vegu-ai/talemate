@@ -481,10 +481,10 @@ class ContextHistoryMixin:
         return parts_dialogue, dialogue_start_idx, exhausted
 
     @staticmethod
-    def _context_history_format_archived_entry(entry: dict, scene_ts: str) -> str:
+    def _context_history_format_archived_entry(entry: dict, scene_ts: int) -> str:
         """Format a single archived history entry with relative timestamp."""
         try:
-            time_message = util.iso8601_diff_to_human(entry["ts"], scene_ts)
+            time_message = util.diff_to_human(entry["ts"], scene_ts)
             text = f"{time_message}: {entry['text']}"
         except Exception as e:
             log.error("context_history", error=e, traceback=traceback.format_exc())
@@ -495,7 +495,7 @@ class ContextHistoryMixin:
     @staticmethod
     def _context_history_format_layered_entry(
         entry: dict,
-        scene_ts: str,
+        scene_ts: int,
         chapter_info: tuple[int, int] | None = None,
     ) -> tuple[str, str | None]:
         """Format a single layered history entry with relative timestamps.
@@ -508,8 +508,8 @@ class ContextHistoryMixin:
         Returns:
             (formatted_text, chapter_number or None)
         """
-        time_message_start = util.iso8601_diff_to_human(entry["ts_start"], scene_ts)
-        time_message_end = util.iso8601_diff_to_human(entry["ts_end"], scene_ts)
+        time_message_start = util.diff_to_human(entry["ts_start"], scene_ts)
+        time_message_end = util.diff_to_human(entry["ts_end"], scene_ts)
 
         if time_message_start == time_message_end:
             time_message = time_message_start
@@ -590,7 +590,7 @@ class ContextHistoryMixin:
     @staticmethod
     def _context_history_collect_layer(
         layer: list[dict],
-        scene_ts: str,
+        scene_ts: int,
         budget: int,
         prev_boundary: int,
         *,

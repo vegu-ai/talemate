@@ -31,7 +31,7 @@
 </template>
 
 <script>
-import { parseIsoDuration } from '@/utils/time';
+import { secondsToAmountUnit } from '@/utils/time';
 
 export default {
   data() {
@@ -45,7 +45,31 @@ export default {
       units: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
     }
   },
-  props: ['text', 'message_id', 'ts', 'uxLocked', 'appBusy', 'isLastMessage'],
+  props: {
+    text: {
+      type: String,
+      required: true
+    },
+    message_id: {
+      required: true
+    },
+    ts: {
+      type: Number,
+      required: true
+    },
+    uxLocked: {
+      type: Boolean,
+      required: true
+    },
+    appBusy: {
+      type: Boolean,
+      required: true
+    },
+    isLastMessage: {
+      type: Boolean,
+      default: false
+    },
+  },
   inject: ['getWebsocket', 'getMessageStyle', 'getMessageColor'],
   methods: {
     toggle() {
@@ -60,7 +84,7 @@ export default {
     },
     startEdit() {
       if (this.uxLocked || this.appBusy) return;
-      const parsed = parseIsoDuration(this.ts);
+      const parsed = secondsToAmountUnit(this.ts);
       this.editAmount = parsed.amount;
       this.editUnit = parsed.unit;
       this.editing = true;

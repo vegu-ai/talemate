@@ -53,15 +53,15 @@ def mock_count_tokens():
 # Two static (no `end`) archive notes followed by four real summaries.
 # The best-fit archived level previously only saw the four summaries.
 STATIC_ENTRIES = [
-    {"text": _pad("Static 0", 200), "ts": "PT0S"},
-    {"text": _pad("Static 1", 200), "ts": "PT1M"},
+    {"text": _pad("Static 0", 200), "ts": 0},
+    {"text": _pad("Static 1", 200), "ts": 60},
 ]
 
 SUMMARY_ENTRIES = [
-    {"text": _pad("Summary 0", 200), "ts": "PT2M", "start": 0, "end": 5},
-    {"text": _pad("Summary 1", 200), "ts": "PT3M", "start": 6, "end": 8},
-    {"text": _pad("Summary 2", 200), "ts": "PT4M", "start": 9, "end": 11},
-    {"text": _pad("Summary 3", 200), "ts": "PT5M", "start": 12, "end": 14},
+    {"text": _pad("Summary 0", 200), "ts": 120, "start": 0, "end": 5},
+    {"text": _pad("Summary 1", 200), "ts": 180, "start": 6, "end": 8},
+    {"text": _pad("Summary 2", 200), "ts": 240, "start": 9, "end": 11},
+    {"text": _pad("Summary 3", 200), "ts": 300, "start": 12, "end": 14},
 ]
 
 
@@ -70,9 +70,9 @@ def _layer0_entry(label, start, end):
     # entries) — distinct from SUMMARY_ENTRIES' message-index start/end.
     return {
         "text": _pad(label, 300),
-        "ts": "PT3M",
-        "ts_start": "PT2M",
-        "ts_end": "PT5M",
+        "ts": 180,
+        "ts_start": 120,
+        "ts_end": 300,
         "start": start,
         "end": end,
     }
@@ -85,7 +85,7 @@ def _make_scene(archived_history, layer0) -> MockScene:
     ]
     scene.archived_history = archived_history
     scene.layered_history = [layer0]
-    scene.ts = "PT6M"
+    scene.ts = 360
 
     agents = bootstrap_scene(scene)
     summarizer = agents["summarizer"]

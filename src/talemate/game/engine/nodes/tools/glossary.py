@@ -317,7 +317,7 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
     ),
     "util": (
         "Utility Nodes",
-        "Miscellaneous helpers: counters, diffs, list extraction, ISO date durations and module styling.",
+        "Miscellaneous helpers: counters, diffs, list extraction, durations and module styling.",
     ),
     "util-packaging": (
         "Packaging Nodes",

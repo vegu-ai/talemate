@@ -49,7 +49,7 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [State Nodes](state.md) | 14 | Graph state variables: get/set/unset across scopes (local, parent, shared, scene loop, game), counters and path variants. |
 | [String Nodes](data-string.md) | 16 | Strings: formatting, templates, joining, splitting, cleanup and excerpts. |
 | [Summarizer Agent Nodes](agents-summarizer.md) | 5 | Summarization: scene progression summaries, tag generation and message avatar hooks. |
-| [Utility Nodes](util.md) | 5 | Miscellaneous helpers: counters, diffs, list extraction, ISO date durations and module styling. |
+| [Utility Nodes](util.md) | 5 | Miscellaneous helpers: counters, diffs, list extraction, durations and module styling. |
 | [UX Nodes](ux.md) | 5 | User-facing interface elements: choice elements, status displays and interactive prompts. |
 | [Validation Nodes](validation.md) | 7 | Validate values: characters, asset IDs, context IDs, containment and set/unset checks. |
 | [Visualizer Agent Generation Nodes](agents-visual-generation.md) | 7 | Visual generation: generation requests, image generation, backend selection/status and image analysis. |

@@ -85,7 +85,7 @@ def create_mock_scene(
     scene.intro = intro
     scene.outline = outline
     scene.title = title
-    scene.ts = "PT2H30M"
+    scene.ts = 9000
     scene.environment = "scene"
     # Default narrative perspective so templates gated on
     # ``scene.perspectives.default`` render their branches. Tests that want the

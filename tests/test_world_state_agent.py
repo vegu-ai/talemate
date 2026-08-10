@@ -117,11 +117,11 @@ class TestEmissionDataclasses:
         agent = instance_module.get_agent("world_state")
         em = TimePassageEmission(
             agent=agent,
-            duration="PT1H",
+            duration=3600,
             narrative="time passed",
             human_duration="1 hour later",
         )
-        assert em.duration == "PT1H"
+        assert em.duration == 3600
         assert em.narrative == "time passed"
         assert em.human_duration == "1 hour later"
 
@@ -135,9 +135,9 @@ class TestAdvanceTime:
     @pytest.mark.asyncio
     async def test_emits_time_passage_message(self, scene):  # noqa: F811
         agent = instance_module.get_agent("world_state")
-        msg = await agent.advance_time("PT30M", narrative="thirty minutes pass")
+        msg = await agent.advance_time(1800, narrative="thirty minutes pass")
         # Returns a TimePassageMessage with the duration we passed
-        assert msg.ts == "PT30M"
+        assert msg.ts == 1800
         # Human duration formatted
         assert "later" in msg.message
 
@@ -145,7 +145,7 @@ class TestAdvanceTime:
     async def test_pushes_message_into_history(self, scene):  # noqa: F811
         agent = instance_module.get_agent("world_state")
         before = len(scene.history)
-        await agent.advance_time("PT1H")
+        await agent.advance_time(3600)
         assert len(scene.history) == before + 1
 
     @pytest.mark.asyncio

@@ -10,6 +10,7 @@ from talemate.game.engine.nodes.core import (
 from talemate.game.engine.nodes.registry import register
 from talemate.game.engine.nodes.agent import AgentSettingsNode, AgentNode
 import talemate.game.focal as focal
+from talemate.util.time import coerce_ts
 from talemate.world_state import InsertionMode
 from talemate.world_state.manager import WorldStateManager
 
@@ -492,7 +493,7 @@ class CharacterProgression(AgentNode):
 @register("agents/world_state/AdvanceTime")
 class AdvanceTime(AgentNode):
     """
-    Advances the scene time by the given ISO 8601 duration. Pushes a
+    Advances the scene time by the given number of seconds. Pushes a
     TimePassageMessage to the scene history, emits it to the UI and fires
     the time passage signal (which other agents may react to, e.g. to
     narrate the time passage using the narration instructions).
@@ -500,7 +501,7 @@ class AdvanceTime(AgentNode):
     Inputs:
 
     - state: The graph state
-    - duration: The duration to advance as an ISO 8601 duration (e.g. "PT1H")
+    - duration: The duration to advance in seconds (e.g. 3600 for an hour)
     - narration_instructions: Instructions for narrating the time passage
       (optional)
 
@@ -517,9 +518,11 @@ class AdvanceTime(AgentNode):
     class Fields:
         duration = PropertyField(
             name="duration",
-            description="The duration to advance",
-            type="str",
-            default="P0T1S",
+            description="The duration to advance, in seconds",
+            type="int",
+            default=1,
+            min=0,
+            step=1,
         )
         narration_instructions = PropertyField(
             name="narration_instructions",
@@ -533,19 +536,20 @@ class AdvanceTime(AgentNode):
 
     def setup(self):
         self.add_input("state")
-        self.add_input("duration", socket_type="str")
+        self.add_input("duration", socket_type="int")
         self.add_input("narration_instructions", socket_type="str", optional=True)
 
         self.set_property("narration_instructions", "")
-        self.set_property("duration", "P0T1S")
+        self.set_property("duration", 1)
 
         self.add_output("state")
-        self.add_output("duration", socket_type="str")
+        self.add_output("duration", socket_type="int")
         self.add_output("narration_instructions", socket_type="str")
         self.add_output("message", socket_type="message")
 
     async def run(self, state: GraphState):
-        duration: str = self.normalized_input_value("duration")
+        # saved graphs may still carry a legacy ISO8601 duration string
+        duration: int = coerce_ts(self.normalized_input_value("duration"))
         narration_instructions: str = self.normalized_input_value(
             "narration_instructions"
         )

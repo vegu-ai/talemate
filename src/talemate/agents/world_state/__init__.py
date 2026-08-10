@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import isodate
 import structlog
 
 import talemate.emit.async_signals
@@ -58,7 +57,7 @@ class TimePassageEmission(WorldStateAgentEmission):
     Emission class for time passage
     """
 
-    duration: str
+    duration: int
     narrative: str | None = None
     human_duration: str | None = None
 
@@ -115,14 +114,17 @@ class WorldStateAgent(
         return True
 
     async def advance_time(
-        self, duration: str, narrative: str = None
+        self, duration: int | str, narrative: str = None
     ) -> TimePassageMessage:
         """
         Emit a time passage message
+
+        `duration` is a number of seconds, but user-saved node graphs may still
+        carry a legacy ISO8601 duration string.
         """
 
-        isodate.parse_duration(duration)
-        human_duration = util.iso8601_duration_to_human(duration, suffix=" later")
+        duration = util.coerce_ts(duration)
+        human_duration = util.duration_to_human(duration, suffix=" later")
         message = TimePassageMessage(ts=duration, message=human_duration)
 
         log.debug("world_state.advance_time", message=message)

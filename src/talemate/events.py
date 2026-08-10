@@ -52,7 +52,7 @@ class HistoryEvent(Event):
 class ArchiveEvent(Event):
     text: str
     memory_id: str
-    ts: str | None = None
+    ts: int | None = None
 
 
 class CharacterStateEvent(Event):

@@ -11,23 +11,17 @@ from typing import TYPE_CHECKING, Callable
 import structlog
 import traceback
 import uuid
-import datetime
-import isodate
 
 from talemate.emit import emit
 import talemate.emit.async_signals as async_signals
 from talemate.instance import get_agent
 from talemate.scene_message import SceneMessage, TimePassageMessage
-from talemate.util import (
-    count_tokens,
-    iso8601_diff_to_human,
-    iso8601_add,
-    duration_to_timedelta,
-)
+from talemate.util import count_tokens
 from talemate.util.time import (
-    amount_unit_to_iso8601_duration,
-    iso8601_duration_to_amount_unit,
-    iso8601_duration_to_human,
+    amount_unit_to_seconds,
+    seconds_to_amount_unit,
+    duration_to_human,
+    diff_to_human,
 )
 from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
@@ -71,22 +65,22 @@ class ArchiveEntry(pydantic.BaseModel):
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:8])
     start: int | None = None
     end: int | None = None
-    ts: str = pydantic.Field(default_factory=lambda: "PT1S")
+    ts: int = 0
 
 
 class LayeredArchiveEntry(ArchiveEntry):
-    ts_start: str | None = None
-    ts_end: str | None = None
+    ts_start: int | None = None
+    ts_end: int | None = None
 
 
 class HistoryEntry(pydantic.BaseModel):
     text: str
-    ts: str
+    ts: int
     index: int
     layer: int
     id: str | None = None
-    ts_start: str | None = None
-    ts_end: str | None = None
+    ts_start: int | None = None
+    ts_end: int | None = None
     time: str | None = None
     time_start: str | None = None
     time_end: str | None = None
@@ -104,9 +98,9 @@ class SourceEntry(pydantic.BaseModel):
     id: str | int
     start: int | None = None
     end: int | None = None
-    ts: str | None = None
-    ts_start: str | None = None
-    ts_end: str | None = None
+    ts: int | None = None
+    ts_start: int | None = None
+    ts_end: int | None = None
 
     def __str__(self):
         return self.text
@@ -114,7 +108,7 @@ class SourceEntry(pydantic.BaseModel):
 
 class TimePassageEntry(pydantic.BaseModel):
     history_index: int
-    ts: str
+    ts: int
     amount: int
     unit: str
     human: str
@@ -378,15 +372,15 @@ def count_message_types_at_tail(
 
 
 def history_with_relative_time(
-    history: list[dict], scene_time: str, layer: int = 0
+    history: list[dict], scene_time: int, layer: int = 0
 ) -> list[dict]:
     """
-    Cycles through a list of Archived History entries and runs iso8601_diff_to_human
+    Cycles through a list of Archived History entries and runs diff_to_human
 
     Will return a list of dictionaries with the following keys
 
     - text `str`: the history text
-    - ts `str `: the original timestamp
+    - ts `int`: the original timestamp in seconds
     - time `str`: the human readable time
     """
 
@@ -399,13 +393,9 @@ def history_with_relative_time(
             layer=layer,
             ts_start=entry.get("ts_start", None),
             ts_end=entry.get("ts_end", None),
-            time=iso8601_diff_to_human(scene_time, entry["ts"]),
-            time_start=iso8601_diff_to_human(
-                scene_time, entry["ts_start"] if entry.get("ts_start") else None
-            ),
-            time_end=iso8601_diff_to_human(
-                scene_time, entry["ts_end"] if entry.get("ts_end") else None
-            ),
+            time=diff_to_human(scene_time, entry["ts"]),
+            time_start=diff_to_human(scene_time, entry.get("ts_start", None)),
+            time_end=diff_to_human(scene_time, entry.get("ts_end", None)),
             start=entry.get("start", None),
             end=entry.get("end", None),
         ).model_dump()
@@ -421,14 +411,14 @@ def collect_time_passages(scene: "Scene") -> list[dict]:
     passages = []
     for idx, message in enumerate(scene.history):
         if isinstance(message, TimePassageMessage):
-            amount, unit = iso8601_duration_to_amount_unit(message.ts)
+            amount, unit = seconds_to_amount_unit(message.ts)
             passages.append(
                 TimePassageEntry(
                     history_index=idx,
                     ts=message.ts,
                     amount=amount,
                     unit=unit,
-                    human=iso8601_duration_to_human(message.ts, suffix=" later"),
+                    human=duration_to_human(message.ts, suffix=" later"),
                 ).model_dump()
             )
     return passages
@@ -462,9 +452,9 @@ def insert_time_passage(
 
     insertion_index = entry["start"]
 
-    iso_duration = amount_unit_to_iso8601_duration(amount, unit)
-    human = iso8601_duration_to_human(iso_duration, suffix=" later")
-    tp_message = TimePassageMessage(ts=iso_duration, message=human)
+    duration = amount_unit_to_seconds(amount, unit)
+    human = duration_to_human(duration, suffix=" later")
+    tp_message = TimePassageMessage(ts=duration, message=human)
 
     scene.history.insert(insertion_index, tp_message)
 
@@ -533,9 +523,9 @@ def insert_time_passage_after_message(
         raise ValueError(f"Message with id {message_id} not found in scene.history")
     insertion_index = msg_index + 1
 
-    iso_duration = amount_unit_to_iso8601_duration(amount, unit)
-    human = iso8601_duration_to_human(iso_duration, suffix=" later")
-    tp_message = TimePassageMessage(ts=iso_duration, message=human)
+    duration = amount_unit_to_seconds(amount, unit)
+    human = duration_to_human(duration, suffix=" later")
+    tp_message = TimePassageMessage(ts=duration, message=human)
 
     scene.history.insert(insertion_index, tp_message)
 
@@ -586,9 +576,9 @@ def update_time_passage_by_id(
     if not isinstance(message, TimePassageMessage):
         raise ValueError("Message is not a TimePassageMessage")
 
-    iso_duration = amount_unit_to_iso8601_duration(amount, unit)
-    message.ts = iso_duration
-    message.message = iso8601_duration_to_human(iso_duration, suffix=" later")
+    duration = amount_unit_to_seconds(amount, unit)
+    message.ts = duration
+    message.message = duration_to_human(duration, suffix=" later")
 
     scene.fix_time()
 
@@ -887,14 +877,14 @@ async def validate_history(scene: "Scene", commit_to_memory: bool = True) -> boo
     return not invalid
 
 
-async def add_history_entry(scene: "Scene", text: str, offset: str) -> ArchiveEntry:
+async def add_history_entry(scene: "Scene", text: str, offset: int) -> ArchiveEntry:
     """
     Inserts a manual history entry into the base (archived) history.
 
     Args:
         scene: The active Scene instance.
         text: Human-provided text for the entry.
-        offset: ISO-8601 duration representing how long **before the current scene time** the entry occurred.
+        offset: Number of seconds **before the current scene time** the entry occurred.
 
     Returns:
         The created ArchiveEntry dataclass instance.
@@ -909,7 +899,7 @@ async def add_history_entry(scene: "Scene", text: str, offset: str) -> ArchiveEn
         # first entry we can just push it to the front of the history
         entry = ArchiveEntry(
             text=text,
-            ts="PT0S",
+            ts=0,
             id=str(uuid.uuid4())[:8],
         ).model_dump(exclude_none=True)
         scene.archived_history.append(entry)
@@ -924,71 +914,51 @@ async def add_history_entry(scene: "Scene", text: str, offset: str) -> ArchiveEn
             first_summary = entry
             break
 
-    # Parse and convert to timedelta for arithmetic
-    scene_td = duration_to_timedelta(isodate.parse_duration(scene.ts))
-    offset_td = duration_to_timedelta(isodate.parse_duration(offset))
-
-    new_ts_td: datetime.timedelta = scene_td - offset_td
+    new_ts: int = scene.ts - offset
 
     log.debug(
         "add_history_entry",
         is_first_entry=is_first_entry,
         scene_ts=scene.ts,
         offset=offset,
-        scene_td=scene_td,
-        offset_td=offset_td,
-        new_ts_td=new_ts_td,
+        new_ts=new_ts,
     )
 
     # If offset predates the current scene start, shift timeline earlier so
     # that the *relative* distance between existing events is preserved.
-    if new_ts_td.total_seconds() < 0:
-        log.debug(
-            "offset is before scene start, shifting timeline", new_ts_td=new_ts_td
-        )
+    if new_ts < 0:
+        log.debug("offset is before scene start, shifting timeline", new_ts=new_ts)
         # Amount we must shift the whole timeline forward so that the new
-        # entry can be placed at PT0S.  This is the *earliness* gap between
+        # entry can be placed at zero.  This is the *earliness* gap between
         # the requested offset and the current earliest timestamp.
-        # We need to shift by: offset - scene.ts (which is positive since offset > scene.ts)
-        # Since we already have the timedeltas, we can compute this directly
-        shift_td = offset_td - scene_td  # This will be positive
-        shift_iso = isodate.duration_isoformat(shift_td)
+        shift = offset - scene.ts
 
-        log.debug("shift_iso", shift_iso=shift_iso)
+        log.debug("shift", shift=shift)
 
         # Shift everything forward by the calculated amount so that the
-        # timeline can accommodate the earlier entry at PT0S.
-        shift_scene_timeline(scene, shift_iso)
+        # timeline can accommodate the earlier entry at zero.
+        shift_scene_timeline(scene, shift)
 
-        # After shifting, the new entry will sit at PT0S
-        new_ts_td = datetime.timedelta(seconds=0)
+        new_ts = 0
 
     if first_summary is not None:
-        first_summary_td = duration_to_timedelta(
-            isodate.parse_duration(first_summary["ts"])
-        )
-
         # New entry must be OLDER (i.e. smaller duration) than the first summary entry.
-        if new_ts_td >= first_summary_td:
+        if new_ts >= first_summary["ts"]:
             raise ValueError(
                 "New entry must be older than the first summarized history entry."
             )
 
     # Build ArchiveEntry
-    new_ts_str = isodate.duration_isoformat(new_ts_td)
-    archive_entry = ArchiveEntry(text=text, ts=new_ts_str)
+    archive_entry = ArchiveEntry(text=text, ts=new_ts)
 
     # Insert maintaining chronological order (ascending by duration)
     inserted = False
     for idx, existing in enumerate(scene.archived_history):
-        try:
-            existing_ts_td = duration_to_timedelta(
-                isodate.parse_duration(existing.get("ts", "PT0S"))
-            )
-        except Exception:
+        existing_ts = existing.get("ts")
+        if existing_ts is None:
             continue
 
-        if new_ts_td < existing_ts_td:
+        if new_ts < existing_ts:
             scene.archived_history.insert(
                 idx, archive_entry.model_dump(exclude_none=True)
             )
@@ -1046,14 +1016,12 @@ async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEn
     if is_oldest_entry:
         # The removed first entry is always at 0s.  We therefore need to shift
         # the timeline by the timestamp of **what is now** the first entry so
-        # that it becomes ``PT0S``.
-        shift_iso = (
-            (scene.archived_history[0].get("ts") or "PT0S")
-            if scene.archived_history
-            else "PT0S"
+        # that it becomes zero.
+        shift = (
+            (scene.archived_history[0].get("ts") or 0) if scene.archived_history else 0
         )
         # Apply the negative shift to the entire scene timeline.
-        shift_scene_timeline(scene, f"-{shift_iso}")
+        shift_scene_timeline(scene, -shift)
 
     # Ensure scene time remains consistent
     try:
@@ -1066,24 +1034,15 @@ async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEn
     return removed_entry
 
 
-def _shift_entry_ts(entry: dict, shift_iso: str):
+def _shift_entry_ts(entry: dict, shift: int):
     """Shift *in-place* the ts/ts_start/ts_end fields of a raw archive entry, clamping to >= 0."""
     for key in ["ts", "ts_start", "ts_end"]:
-        if entry.get(key):
-            try:
-                entry[key] = iso8601_add(entry[key], shift_iso, clamp_non_negative=True)
-            except Exception as e:  # pragma: no cover – defensive only
-                log.error(
-                    "shift_entry_ts",
-                    error=e,
-                    key=key,
-                    value=entry.get(key),
-                    shift_iso=shift_iso,
-                )
+        if entry.get(key) is not None:
+            entry[key] = max(0, entry[key] + shift)
 
 
-def shift_scene_timeline(scene: "Scene", shift_iso: str):
-    """Shift *every* timeline reference in the scene by the provided ISO-8601 duration.
+def shift_scene_timeline(scene: "Scene", shift: int):
+    """Shift *every* timeline reference in the scene by the provided number of seconds.
 
     The function mutates the scene in place:
 
@@ -1091,29 +1050,21 @@ def shift_scene_timeline(scene: "Scene", shift_iso: str):
     2. ``ts``, ``ts_start``, ``ts_end`` of every entry in ``scene.archived_history``
     3. Same fields for every entry in every layer in ``scene.layered_history``
 
-    ``shift_iso`` can be positive (move forward in time) or negative (move backward).
+    ``shift`` can be positive (move forward in time) or negative (move backward).
     """
 
-    if shift_iso in ["PT0S", "P0D", "PT0H", "P0M", "P0S", "-PT0S", "-P0D"]:
+    if shift == 0:
         # No-op
         return
 
     # 1) shift scene timestamp
-    try:
-        scene.ts = iso8601_add(scene.ts, shift_iso, clamp_non_negative=True)
-    except Exception as e:  # pragma: no cover – defensive only
-        log.error(
-            "shift_scene_timeline.scene_ts",
-            error=e,
-            scene_ts=scene.ts,
-            shift_iso=shift_iso,
-        )
+    scene.ts = max(0, scene.ts + shift)
 
     # 2) shift archived_history entries
     for entry in scene.archived_history:
-        _shift_entry_ts(entry, shift_iso)
+        _shift_entry_ts(entry, shift)
 
     # 3) shift layered history entries
     for layer in scene.layered_history:
         for entry in layer:
-            _shift_entry_ts(entry, shift_iso)
+            _shift_entry_ts(entry, shift)

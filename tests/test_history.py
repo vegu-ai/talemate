@@ -16,7 +16,7 @@ def scene_factory():
     `ts`/`archived_history`/`layered_history` API changes.
     """
 
-    def _factory(ts: str = "PT0S", archived=None, layered=None):
+    def _factory(ts: int = 0, archived=None, layered=None):
         scene = Scene()
         scene.ts = ts
         scene.archived_history = archived or []
@@ -32,56 +32,56 @@ def scene_factory():
 
 
 @pytest.mark.parametrize(
-    "initial_ts, archived_tss, layered_tss, shift_iso, expected_scene_ts, expected_archived_ts, expected_layered_ts",
+    "initial_ts, archived_tss, layered_tss, shift, expected_scene_ts, expected_archived_ts, expected_layered_ts",
     [
         # Hours / minutes
         (
-            "PT2H",  # initial
-            ["PT1H", "PT90M"],
-            ["PT30M"],
-            "PT1H",  # +1 hour
-            "PT3H",
-            ["PT2H", "PT2H30M"],
-            ["PT1H30M"],
+            7200,  # initial
+            [3600, 5400],
+            [1800],
+            3600,  # +1 hour
+            10800,
+            [7200, 9000],
+            [5400],
         ),
         (
-            "PT2H",
-            ["PT1H", "PT90M"],
-            ["PT30M"],
-            "-PT30M",  # -30 minutes
-            "PT1H30M",
-            ["PT30M", "PT1H"],
-            ["P0D"],  # zero becomes P0D
+            7200,
+            [3600, 5400],
+            [1800],
+            -1800,  # -30 minutes
+            5400,
+            [1800, 3600],
+            [0],  # clamped to zero
         ),
         # Months
         (
-            "P2M",
-            ["P1M", "P6M"],
-            ["P3M"],
-            "P1M",  # +1 month
-            "P3M",
-            ["P2M", "P7M"],
-            ["P4M"],
+            5184000,
+            [2592000, 15552000],
+            [7776000],
+            2592000,  # +1 month
+            7776000,
+            [5184000, 18144000],
+            [10368000],
         ),
         # Years
         (
-            "P3Y",
-            ["P1Y", "P2Y"],
-            ["P6M"],
-            "-P1Y",  # -1 year
-            "P2Y",
-            ["P0D", "P1Y"],
-            ["P0D"],  # clamped to zero
+            94608000,
+            [31536000, 63072000],
+            [15552000],
+            -31536000,  # -1 year
+            63072000,
+            [0, 31536000],
+            [0],  # clamped to zero
         ),
         # Huge shift – 1000 years
         (
-            "P0D",
-            ["P1Y"],
-            ["P2Y"],
-            "P1000Y",
-            "P1000Y",
-            ["P1001Y"],
-            ["P1002Y"],
+            0,
+            [31536000],
+            [63072000],
+            31536000000,
+            31536000000,
+            [31567536000],
+            [31599072000],
         ),
     ],
     ids=["hour_plus", "hour_minus", "month_plus", "year_minus", "millennia_plus"],
@@ -91,7 +91,7 @@ def test_shift_scene_timeline_basic(
     initial_ts,
     archived_tss,
     layered_tss,
-    shift_iso,
+    shift,
     expected_scene_ts,
     expected_archived_ts,
     expected_layered_ts,
@@ -103,7 +103,7 @@ def test_shift_scene_timeline_basic(
 
     scene = scene_factory(initial_ts, archived, layered)
 
-    shift_scene_timeline(scene, shift_iso)
+    shift_scene_timeline(scene, shift)
 
     assert scene.ts == expected_scene_ts
     assert [e["ts"] for e in scene.archived_history] == expected_archived_ts
@@ -111,12 +111,12 @@ def test_shift_scene_timeline_basic(
 
 
 def test_shift_scene_timeline_noop(scene_factory):
-    """A shift of PT0S (and variants) should not mutate the scene."""
+    """A shift of zero should not mutate the scene."""
 
     scene = scene_factory(
-        "PT0S",
-        archived=[{"ts": "PT1H", "ts_start": "PT30M", "ts_end": "PT90M"}],
-        layered=[[{"ts": "PT15M"}]],
+        0,
+        archived=[{"ts": 3600, "ts_start": 1800, "ts_end": 5400}],
+        layered=[[{"ts": 900}]],
     )
 
     import copy
@@ -127,7 +127,7 @@ def test_shift_scene_timeline_noop(scene_factory):
         copy.deepcopy(scene.layered_history),
     )
 
-    shift_scene_timeline(scene, "PT0S")
+    shift_scene_timeline(scene, 0)
 
     assert scene.ts == pre_state[0]
     assert scene.archived_history == pre_state[1]

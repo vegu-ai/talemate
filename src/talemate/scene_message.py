@@ -539,7 +539,7 @@ class DirectorMessage(SceneMessage):
 
 
 class TimePassageMessage(SceneMessage):
-    ts: str = "PT0S"
+    ts: int = 0
     source: str = "manual"
     typ: str = "time"
 

@@ -117,8 +117,8 @@ class TestWorldStateAnalyzeBaselines:
         agent = active_context
         agent.client.send_prompt = AsyncMock(return_value="History analysis.")
         entries = [
-            {"ts": "PT1H", "text": "The hero arrived at the village."},
-            {"ts": "PT2H", "text": "The hero met with the village elder."},
+            {"ts": 3600, "text": "The hero arrived at the village."},
+            {"ts": 7200, "text": "The hero met with the village elder."},
         ]
         await agent.analyze_history_and_follow_instructions(
             entries=entries,

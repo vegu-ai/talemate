@@ -708,7 +708,7 @@ Emitted when the world state agent advances the time in the scene.
     | Field | Type | Notes |
     |-------|------|-------|
     | `agent` | `WorldStateAgent` | The agent instance |
-    | `duration` | `str` | The duration of the time passage (ISO 8601 duration) |
+    | `duration` | `int` | The duration of the time passage, in seconds |
     | `human_duration` | `str` | The human-readable duration of the time passage |
     | `narrative` | `str` | The narrative direction of the time passage |
 

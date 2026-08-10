@@ -17,7 +17,7 @@ from .base import (
     register_context_id_handler,
     register_context_id_meta,
 )
-from talemate.util import iso8601_diff_to_human
+from talemate.util import diff_to_human
 from talemate.context import active_scene
 from talemate.history import HistoryEntry, update_history_entry
 
@@ -107,7 +107,7 @@ class HistoryContextItem(ContextIDItem):
     def human_id(self) -> str:
         layer = self.entry.layer
         scene: "Scene" = active_scene.get()
-        human_time_diff = iso8601_diff_to_human(scene.ts, self.entry.ts)
+        human_time_diff = diff_to_human(scene.ts, self.entry.ts)
         return f"History entry - {human_time_diff} (id `{self.entry.id}`, layer {layer}, index {self.entry.index})"
 
     async def get(self, scene: "Scene") -> str | None:
@@ -147,7 +147,7 @@ class HistoryContext(ContextIDHandler):
             if raw.get("start") is None and raw.get("end") is None:
                 entry = HistoryEntry(
                     text=raw.get("text", ""),
-                    ts=raw.get("ts", "PT0S"),
+                    ts=raw.get("ts", 0),
                     index=index,
                     layer=0,
                     id=raw.get("id"),
@@ -172,7 +172,7 @@ class HistoryContext(ContextIDHandler):
             if raw.get("end") is not None:
                 entry = HistoryEntry(
                     text=raw.get("text", ""),
-                    ts=raw.get("ts", "PT0S"),
+                    ts=raw.get("ts", 0),
                     index=index,
                     layer=0,
                     id=raw.get("id"),
@@ -195,7 +195,7 @@ class HistoryContext(ContextIDHandler):
             for index, raw in enumerate(layer):
                 entry = HistoryEntry(
                     text=raw.get("text", ""),
-                    ts=raw.get("ts", "PT0S"),
+                    ts=raw.get("ts", 0),
                     index=index,
                     layer=layer_index,
                     id=raw.get("id"),

@@ -294,8 +294,8 @@ The generated message is not added to the scene history by this node.
 `agents/narrator/GenerateTimeNarration`
 
 Generates narration for a passage of time, via the narrator agent's
-narrate_time_passage action. The ISO 8601 duration is converted to a
-human readable string before being handed to the narrator.
+narrate_time_passage action. The duration is converted to a human
+readable string before being handed to the narrator.
 
 The generated message is not added to the scene history by this node,
 nor does the node advance the scene time.
@@ -307,7 +307,7 @@ nor does the node advance the scene time.
 | `state` | `any` | The graph state |
 | `narrative_direction` | `str` | (optional) Optional direction the narrative should take |
 | `response_length` | `int` | (optional) Optional response length in tokens (0 for default) |
-| `duration` | `str` | The time passed as an ISO 8601 duration (e.g. "PT30M") |
+| `duration` | `int` | The time passed in seconds (e.g. 1800 for thirty minutes) |
 
 **Outputs**
 
@@ -321,7 +321,7 @@ nor does the node advance the scene time.
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `response_length` | `int` | `0` | Response length (0 for default) |
-| `duration` | `str` | `"P0T1S"` | duration |
+| `duration` | `int` | `1` | duration |
 | `narrative_direction` | `str` | `""` | Narrative directions |
 
 ## Narrator Settings

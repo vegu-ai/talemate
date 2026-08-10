@@ -62,7 +62,7 @@ def make_archived(
     text: str = "summary",
     start: int | None = None,
     end: int | None = None,
-    ts: str = "PT0S",
+    ts: int = 0,
     entry_id: str | None = None,
 ) -> dict:
     e = ArchiveEntry(text=text, ts=ts, start=start, end=end)
@@ -214,7 +214,7 @@ class TestPreviousSummaries:
         scene, summarizer = summarizer_scene
         scene.archived_history = [make_archived(entry_id="aa", start=0, end=5)]
 
-        ghost = ArchiveEntry(text="ghost", ts="PT1M", start=0, end=1)
+        ghost = ArchiveEntry(text="ghost", ts=60, start=0, end=1)
         ghost.id = "does-not-exist"
         with pytest.raises(ValueError):
             await summarizer.previous_summaries(ghost)
@@ -222,7 +222,7 @@ class TestPreviousSummaries:
     async def test_returns_empty_when_include_previous_zero(self, summarizer_scene):
         scene, summarizer = summarizer_scene
         summarizer.actions["archive"].config["include_previous"].value = 0
-        e = ArchiveEntry(text="e", ts="PT1M", start=0, end=5)
+        e = ArchiveEntry(text="e", ts=60, start=0, end=5)
         d = e.model_dump(exclude_none=True)
         scene.archived_history = [d]
         # Re-create entry that matches the dict id so we can look it up.
@@ -273,9 +273,9 @@ class TestPreviousSummaries:
                     "text": "L0-A",
                     "start": 0,
                     "end": 0,
-                    "ts": "PT0S",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT0S",
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 0,
                     "id": "l0a",
                 }
             ]
@@ -355,7 +355,7 @@ class TestBuildArchive:
             make_character_message("first"),
             make_character_message("second"),
             make_character_message("third"),
-            TimePassageMessage(ts="PT5M", message="Five minutes pass"),
+            TimePassageMessage(ts=300, message="Five minutes pass"),
             make_character_message("post-passage"),
             make_character_message("trailing"),
         ]
@@ -387,8 +387,8 @@ class TestBuildArchive:
         assert entry["text"] == "SUMMARIZED"
         assert entry["start"] == 0
         assert entry["end"] == 2
-        # Time passage 5M -> scene timestamp updated to "PT5M".
-        assert scene.ts == "PT5M"
+        # Time passage 5M -> scene timestamp updated to 300.
+        assert scene.ts == 300
 
     async def test_director_messages_skipped_at_start(self, summarizer_scene):
         scene, summarizer = summarizer_scene
@@ -398,7 +398,7 @@ class TestBuildArchive:
             DirectorMessage(message="cue!", source="ai"),
             make_character_message("first"),
             make_character_message("second"),
-            TimePassageMessage(ts="PT2M", message="Two minutes pass"),
+            TimePassageMessage(ts=120, message="Two minutes pass"),
             make_character_message("trailing"),
         ]
 
@@ -422,15 +422,13 @@ class TestBuildArchive:
         scene, summarizer = summarizer_scene
         summarizer.actions["archive"].config["threshold"].value = 100000
         # Existing archive ending at index 1 -> start = 2.
-        scene.archived_history = [
-            make_archived(text="prior", start=0, end=1, ts="PT1M")
-        ]
+        scene.archived_history = [make_archived(text="prior", start=0, end=1, ts=60)]
         scene.history = [
             make_character_message("a"),
             make_character_message("b"),
             make_character_message("c"),
             make_character_message("d"),
-            TimePassageMessage(ts="PT2M", message="Two minutes pass"),
+            TimePassageMessage(ts=120, message="Two minutes pass"),
             make_character_message("trailing"),
         ]
 
@@ -450,6 +448,39 @@ class TestBuildArchive:
         assert len(scene.archived_history) == 2
         assert scene.archived_history[1]["start"] == 2
         assert scene.archived_history[1]["text"] == "NEW SUMM"
+
+    async def test_null_ts_on_recent_archive_entry(self, summarizer_scene):
+        """Scenes saved before scene time became integer seconds may carry an
+        explicit null `ts` on an archive entry, which the migration keeps as
+        is. Summarization has to treat it as the start of the scene."""
+        scene, summarizer = summarizer_scene
+        summarizer.actions["archive"].config["threshold"].value = 100000
+        prior = make_archived(text="prior", start=0, end=1, ts=0)
+        prior["ts"] = None
+        scene.archived_history = [prior]
+        scene.history = [
+            make_character_message("a"),
+            make_character_message("b"),
+            make_character_message("c"),
+            make_character_message("d"),
+            TimePassageMessage(ts=120, message="Two minutes pass"),
+            make_character_message("trailing"),
+        ]
+
+        async def stub_summarize(text, extra_context=None, generation_options=None):
+            return "NEW SUMM"
+
+        summarizer.summarize = stub_summarize
+
+        async def stub_analyze(dialogue):
+            return ""
+
+        summarizer.analyze_dialoge = stub_analyze
+
+        await summarizer.build_archive(scene)
+
+        assert len(scene.archived_history) == 2
+        assert scene.archived_history[1]["ts"] == 120
 
 
 # ---------------------------------------------------------------------------

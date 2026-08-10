@@ -5,7 +5,6 @@ import traceback
 import uuid
 from typing import Generator, Callable
 
-import isodate
 import structlog
 from blinker import signal
 
@@ -186,7 +185,7 @@ class Scene(Emitter):
         self.game_state = GameState()
         self.agent_state = {}
         self.intent_state = SceneIntent()
-        self.ts = "PT0S"
+        self.ts: int = 0
         self.active = False
         self.Actor = Actor
         self.Player = Player
@@ -1398,8 +1397,8 @@ class Scene(Emitter):
                     for character in self.get_characters()
                 },
                 "scene_time": (
-                    util.iso8601_duration_to_human(self.ts, suffix="")
-                    if self.ts
+                    util.duration_to_human(self.ts, suffix="")
+                    if self.ts is not None
                     else None
                 ),
                 "saved": self.saved,
@@ -1449,8 +1448,8 @@ class Scene(Emitter):
             "scene_status",
             scene=self.name,
             scene_time=self.ts,
-            human_ts=util.iso8601_duration_to_human(self.ts, suffix="")
-            if self.ts
+            human_ts=util.duration_to_human(self.ts, suffix="")
+            if self.ts is not None
             else None,
             saved=self.saved,
         )
@@ -1512,21 +1511,17 @@ class Scene(Emitter):
         self.context = context
         self.emit_status()
 
-    def advance_time(self, ts: str):
+    def advance_time(self, ts: int):
         """
-        Accepts an iso6801 duration string and advances the scene's world state by that amount
+        Accepts a number of seconds and advances the scene's world state by that amount
         """
         log.debug(
             "advance_time",
             ts=ts,
             scene_ts=self.ts,
-            duration=isodate.parse_duration(ts),
-            scene_duration=isodate.parse_duration(self.ts),
         )
 
-        self.ts = isodate.duration_isoformat(
-            isodate.parse_duration(self.ts) + isodate.parse_duration(ts)
-        )
+        self.ts += ts
 
     def sync_time(self):
         """
@@ -1534,7 +1529,7 @@ class Scene(Emitter):
         advance the world state by the amount of time passed for each
         """
         # reset time
-        self.ts = "PT0S"
+        self.ts = 0
 
         # archived history (if "ts" is set) should provide the base line
         # find the first archived_history entry from the back that has a ts
@@ -1542,7 +1537,7 @@ class Scene(Emitter):
 
         if self.archived_history:
             for i in range(len(self.archived_history) - 1, -1, -1):
-                if self.archived_history[i].get("ts"):
+                if self.archived_history[i].get("ts") is not None:
                     self.ts = self.archived_history[i]["ts"]
                     break
 
@@ -1579,10 +1574,10 @@ class Scene(Emitter):
             self.ts = ts
 
     def _fix_time(self):
-        starting_time = "PT0S"
+        starting_time = 0
 
         for archived_entry in self.archived_history:
-            if "ts" in archived_entry and "end" not in archived_entry:
+            if archived_entry.get("ts") is not None and "end" not in archived_entry:
                 starting_time = archived_entry["ts"]
             elif "end" in archived_entry:
                 break
@@ -1599,7 +1594,7 @@ class Scene(Emitter):
         cumulative_time_jumps = []
         ts = starting_time
         for idx, ts_jump in time_jumps:
-            ts = util.iso8601_add(ts, ts_jump)
+            ts += ts_jump
             cumulative_time_jumps.append((idx, ts))
 
         try:
@@ -1627,7 +1622,7 @@ class Scene(Emitter):
                 else:
                     break
 
-            if best_ts:
+            if best_ts is not None:
                 entry["ts"] = best_ts
                 ts = entry["ts"]
             else:
@@ -1665,20 +1660,20 @@ class Scene(Emitter):
         log.debug("fix_time", ending_time=ending_time)
         self.ts = ending_time
 
-    def calc_time(self, start_idx: int = 0, end_idx: int = None):
+    def calc_time(self, start_idx: int = 0, end_idx: int = None) -> int | None:
         """
         Loops through self.history looking for TimePassageMessage and will
-        return the sum iso8601 duration string
+        return the sum of the durations in seconds
 
         Defines start and end indexes
         """
 
-        ts = "PT0S"
+        ts = 0
         found = False
 
         for message in self.history[start_idx:end_idx]:
             if isinstance(message, TimePassageMessage):
-                ts = util.iso8601_add(ts, message.ts)
+                ts += message.ts
                 found = True
 
         if not found:
@@ -1977,10 +1972,8 @@ class Scene(Emitter):
         archive_entries = []
 
         for ah in self.archived_history:
-            ts = ah.get("ts", "PT1S")
-
-            if not ah.get("ts"):
-                ah["ts"] = ts
+            if ah.get("ts") is None:
+                ah["ts"] = 0
 
             if not ah.get("text"):
                 continue

@@ -311,7 +311,7 @@ class SummarizeAgent(
 
         tokens = 0
         dialogue_entries = []
-        ts = "PT0S"
+        ts = 0
         time_passage_termination = False
 
         token_threshold = self.archive_threshold
@@ -319,7 +319,9 @@ class SummarizeAgent(
         log.debug("build_archive", start=start, recent_entry=recent_entry)
 
         if recent_entry:
-            ts = recent_entry.get("ts", ts)
+            # legacy entries may carry an explicit null ts, which the migration
+            # preserves rather than inventing a timestamp for
+            ts = recent_entry.get("ts") or 0
 
         # we ignore the most recent entry, as the user may still chose to
         # regenerate it
@@ -339,7 +341,7 @@ class SummarizeAgent(
 
             if isinstance(dialogue, TimePassageMessage):
                 log.debug("build_archive", time_passage_message=dialogue)
-                ts = util.iso8601_add(ts, dialogue.ts)
+                ts = ts + dialogue.ts
 
                 if i == start:
                     log.debug(

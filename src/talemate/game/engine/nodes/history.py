@@ -25,7 +25,7 @@ from talemate.history import (
     history_with_relative_time,
 )
 from talemate.game.engine.context_id.history import HistoryContextItem
-from talemate.util.time import amount_unit_to_iso8601_duration
+from talemate.util.time import amount_unit_to_seconds
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -309,9 +309,9 @@ class UnpackArchiveEntry(Node):
     - layer: The history layer the entry belongs to
     - start: Index of the first source entry covered by the entry (None for static entries)
     - end: Index of the last source entry covered by the entry (None for static entries)
-    - ts_start: Starting timestamp of the covered range (ISO 8601 duration)
-    - ts_end: Ending timestamp of the covered range (ISO 8601 duration)
-    - ts: Timestamp of the entry (ISO 8601 duration)
+    - ts_start: Starting timestamp of the covered range (seconds since scene start)
+    - ts_end: Ending timestamp of the covered range (seconds since scene start)
+    - ts: Timestamp of the entry (seconds since scene start)
     - time: Human readable time relative to the current scene time
     - time_start: Human readable starting time of the covered range
     - time_end: Human readable ending time of the covered range
@@ -330,9 +330,9 @@ class UnpackArchiveEntry(Node):
         self.add_output("layer", socket_type="int")
         self.add_output("start", socket_type="int")
         self.add_output("end", socket_type="int")
-        self.add_output("ts_start", socket_type="str")
-        self.add_output("ts_end", socket_type="str")
-        self.add_output("ts", socket_type="str")
+        self.add_output("ts_start", socket_type="int")
+        self.add_output("ts_end", socket_type="int")
+        self.add_output("ts", socket_type="int")
         self.add_output("time", socket_type="str")
         self.add_output("time_start", socket_type="str")
         self.add_output("time_end", socket_type="str")
@@ -396,7 +396,7 @@ class CreateStaticArchiveEntry(Node):
     Create a static (manually written) archive entry in the scene's base history,
     dated a given amount of time before the current scene time.
 
-    The time amount and unit are converted to an ISO 8601 duration offset. The
+    The time amount and unit are converted to an offset in seconds. The
     entry must predate the summarized history.
 
     Inputs:
@@ -410,7 +410,7 @@ class CreateStaticArchiveEntry(Node):
 
     - state: The state input, passed through
     - entry: The created archive entry
-    - offset: The ISO 8601 duration offset that was applied
+    - offset: The offset in seconds that was applied
     - context_id: Context ID for the created entry
     - time_unit: The time unit input, passed through
     - time_amount: The time amount input, passed through
@@ -453,7 +453,7 @@ class CreateStaticArchiveEntry(Node):
 
         self.add_output("state")
         self.add_output("entry", socket_type="history/archive_entry")
-        self.add_output("offset", socket_type="str")
+        self.add_output("offset", socket_type="int")
         self.add_output("context_id", socket_type="context_id")
         self.add_output("time_unit", socket_type="str")
         self.add_output("time_amount", socket_type="int")
@@ -467,7 +467,7 @@ class CreateStaticArchiveEntry(Node):
         time_amount = self.get_input_value("time_amount")
 
         try:
-            offset = amount_unit_to_iso8601_duration(time_amount, time_unit)
+            offset = amount_unit_to_seconds(time_amount, time_unit)
         except ValueError as e:
             raise InputValueError(self, "time_unit", str(e))
 

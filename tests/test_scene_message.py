@@ -541,12 +541,12 @@ class TestTimePassageMessage:
         m = TimePassageMessage(message="A day later")
         assert m.typ == "time"
         assert m.source == "manual"
-        assert m.ts == "PT0S"
+        assert m.ts == 0
 
     def test_dict_includes_ts(self):
-        m = TimePassageMessage(message="A day later", ts="P1D")
+        m = TimePassageMessage(message="A day later", ts=86400)
         d = m.to_dict()
-        assert d["ts"] == "P1D"
+        assert d["ts"] == 86400
         assert d["typ"] == "time"
 
 

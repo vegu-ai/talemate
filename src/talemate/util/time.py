@@ -1,105 +1,127 @@
-import datetime
-import isodate
+import re
+
 import structlog
 
 __all__ = [
-    "duration_to_timedelta",
-    "timedelta_to_duration",
-    "parse_duration_to_isodate_duration",
-    "iso8601_diff",
+    "UNIT_TO_SECONDS",
+    "amount_unit_to_seconds",
+    "seconds_to_amount_unit",
+    "duration_components",
     "flatten_duration_components",
-    "iso8601_duration_to_human",
-    "iso8601_diff_to_human",
-    "iso8601_add",
-    "iso8601_correct_duration",
-    "amount_unit_to_iso8601_duration",
-    "iso8601_duration_to_amount_unit",
+    "duration_to_human",
+    "diff_to_human",
+    "parse_iso8601_duration",
+    "coerce_ts",
+    "migrate_entry_time",
+    "migrate_scene_time",
 ]
 
 log = structlog.get_logger("talemate.util.time")
 
-# Mapping helper for unit conversion
-UNIT_TO_ISO = {
-    "minute": "M",
-    "minutes": "M",
-    "hour": "H",
-    "hours": "H",
-    "day": "D",
-    "days": "D",
-    "week": "W",
-    "weeks": "W",
-    "month": "M_month",  # special handling – months reside in date section
-    "months": "M_month",
-    "year": "Y",
-    "years": "Y",
+UNIT_TO_SECONDS = {
+    "second": 1,
+    "minute": 60,
+    "hour": 3600,
+    "day": 86400,
+    "week": 604800,
+    "month": 2_592_000,
+    "year": 31_536_000,
+}
+
+_PICKER_UNITS_LARGEST_FIRST = ("year", "month", "week", "day", "hour", "minute")
+
+_SCENE_TIME_KEYS = ("ts", "ts_start", "ts_end")
+
+_ISO8601_DURATION_RE = re.compile(
+    r"^(?P<sign>[-+])?P"
+    r"(?:(?P<years>\d+(?:[.,]\d+)?)Y)?"
+    r"(?:(?P<months>\d+(?:[.,]\d+)?)M)?"
+    r"(?:(?P<weeks>\d+(?:[.,]\d+)?)W)?"
+    r"(?:(?P<days>\d+(?:[.,]\d+)?)D)?"
+    r"(?:T(?=\d)"
+    r"(?:(?P<hours>\d+(?:[.,]\d+)?)H)?"
+    r"(?:(?P<minutes>\d+(?:[.,]\d+)?)M)?"
+    r"(?:(?P<seconds>\d+(?:[.,]\d+)?)S)?"
+    r")?$"
+)
+
+_ISO8601_COMPONENT_SECONDS = {
+    "years": 31_536_000,
+    "months": 2_592_000,
+    "weeks": 604800,
+    "days": 86400,
+    "hours": 3600,
+    "minutes": 60,
+    "seconds": 1,
 }
 
 
-def duration_to_timedelta(
-    duration: isodate.Duration | datetime.timedelta,
-) -> datetime.timedelta:
-    """Convert an isodate.Duration object or a datetime.timedelta object to a datetime.timedelta object."""
-    # Check if the duration is already a timedelta object
-    if isinstance(duration, datetime.timedelta):
-        return duration
+def amount_unit_to_seconds(amount: int, unit: str) -> int:
+    """Convert a numeric amount + textual unit into a number of seconds.
 
-    # If it's an isodate.Duration object with separate year, month, day, hour, minute, second attributes
-    days = int(duration.years * 365 + duration.months * 30 + duration.days)
-    seconds = int(duration.tdelta.seconds if hasattr(duration, "tdelta") else 0)
-    return datetime.timedelta(days=days, seconds=seconds)
+    Examples:
+        >>> amount_unit_to_seconds(5, "hours")  # 18000
+        >>> amount_unit_to_seconds(3, "days")   # 259200
+    """
+    if amount < 0:
+        amount = abs(amount)
 
+    unit_key = unit.lower().strip()
+    if unit_key.endswith("s"):
+        unit_key = unit_key[:-1]
 
-def timedelta_to_duration(delta: datetime.timedelta) -> isodate.Duration:
-    """Convert a datetime.timedelta object to an isodate.Duration object."""
-    total_days = delta.days
+    if unit_key not in UNIT_TO_SECONDS:
+        raise ValueError(
+            f"Invalid unit '{unit}'. Expected seconds, minutes, hours, days, weeks, months or years."
+        )
 
-    # Convert days back to years and months
-    years = total_days // 365
-    remaining_days = total_days % 365
-    months = remaining_days // 30
-    days = remaining_days % 30
-
-    # Convert remaining seconds
-    seconds = delta.seconds
-    hours = seconds // 3600
-    seconds %= 3600
-    minutes = seconds // 60
-    seconds %= 60
-
-    return isodate.Duration(
-        years=years,
-        months=months,
-        days=days,
-        hours=hours,
-        minutes=minutes,
-        seconds=seconds,
-    )
+    return amount * UNIT_TO_SECONDS[unit_key]
 
 
-def parse_duration_to_isodate_duration(duration_str):
-    """Parse ISO 8601 duration string and ensure the result is an isodate.Duration."""
-    parsed_duration = isodate.parse_duration(duration_str)
-    if isinstance(parsed_duration, datetime.timedelta):
-        return timedelta_to_duration(parsed_duration)
-    return parsed_duration
+def seconds_to_amount_unit(seconds: int) -> tuple[int, str]:
+    """Convert a number of seconds to the best-fit (amount, unit) pair.
+
+    Returns a single-unit representation suitable for a UI picker: the largest
+    unit the duration divides into evenly. The pickers offer no sub-minute
+    unit, so anything finer rounds to at least one minute. Zero returns
+    ``(0, "minutes")``. Mirrors ``secondsToAmountUnit`` in
+    ``talemate_frontend/src/utils/time.js``.
+
+    Examples:
+        >>> seconds_to_amount_unit(7200)    # (2, "hours")
+        >>> seconds_to_amount_unit(604800)  # (1, "weeks")
+        >>> seconds_to_amount_unit(93600)   # (26, "hours")
+        >>> seconds_to_amount_unit(1)       # (1, "minutes")
+    """
+    if not seconds:
+        return (0, "minutes")
+
+    for unit in _PICKER_UNITS_LARGEST_FIRST:
+        unit_seconds = UNIT_TO_SECONDS[unit]
+        if seconds % unit_seconds == 0:
+            return (seconds // unit_seconds, f"{unit}s")
+
+    # half-up, matching the frontend's Math.round - round() would go to even
+    return (max(1, (seconds + 30) // 60), "minutes")
 
 
-def iso8601_diff(duration_str1, duration_str2):
-    # Parse the ISO 8601 duration strings ensuring they are isodate.Duration objects
-    duration1 = parse_duration_to_isodate_duration(duration_str1)
-    duration2 = parse_duration_to_isodate_duration(duration_str2)
+def duration_components(seconds: int) -> tuple[int, int, int, int, int, int, int]:
+    """Split seconds into years, months, weeks, days, hours, minutes, seconds.
 
-    # Convert to timedelta
-    timedelta1 = duration_to_timedelta(duration1)
-    timedelta2 = duration_to_timedelta(duration2)
+    Uses the 30-day month / 365-day year conventions.
+    """
+    seconds = abs(int(seconds))
 
-    # Calculate the difference
-    difference_timedelta = abs(timedelta1 - timedelta2)
+    total_days, remainder = divmod(seconds, 86400)
 
-    # Convert back to Duration for further processing
-    difference = timedelta_to_duration(difference_timedelta)
+    years, remaining_days = divmod(total_days, 365)
+    months, remaining_days = divmod(remaining_days, 30)
+    weeks, days = divmod(remaining_days, 7)
 
-    return difference
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    return years, months, weeks, days, hours, minutes, seconds
 
 
 def flatten_duration_components(
@@ -162,8 +184,8 @@ def flatten_duration_components(
 
         # Determine remaining days after extracting full 365-day years so we can
         # optionally round up when the leftover portion represents roughly half a
-        # year or more (≥ 183 days).  This mirrors the previous behaviour that
-        # rounded up when ≥ 6 months remained, but is now based on actual day
+        # year or more (>= 183 days).  This mirrors the previous behaviour that
+        # rounded up when >= 6 months remained, but is now based on actual day
         # count which is more precise.
         remaining_days = total_days % 365
         # Convert leftover days to an approximate month count to mirror the original
@@ -177,46 +199,19 @@ def flatten_duration_components(
         return new_years, 0, 0, 0, 0, 0, 0
 
 
-def iso8601_duration_to_human(
-    iso_duration,
+def duration_to_human(
+    seconds: int,
     suffix: str = " ago",
     zero_time_default: str = "Recently",
     flatten: bool = True,
-):
-    # Parse the ISO8601 duration string into an isodate duration object
-    if not isinstance(iso_duration, isodate.Duration):
-        duration = isodate.parse_duration(iso_duration)
-    else:
-        duration = iso_duration
+) -> str:
+    years, months, weeks, days, hours, minutes, secs = duration_components(seconds)
 
-    # Extract years, months, days, and the time part as seconds
-    years, months, days, hours, minutes, seconds = 0, 0, 0, 0, 0, 0
-
-    if isinstance(duration, isodate.Duration):
-        years = duration.years
-        months = duration.months
-        days = duration.days
-        hours = duration.tdelta.seconds // 3600
-        minutes = (duration.tdelta.seconds % 3600) // 60
-        seconds = duration.tdelta.seconds % 60
-    elif isinstance(duration, datetime.timedelta):
-        days = duration.days
-        hours = duration.seconds // 3600
-        minutes = (duration.seconds % 3600) // 60
-        seconds = duration.seconds % 60
-
-    # Convert days to weeks and days if applicable
-    weeks, days = divmod(days, 7)
-
-    # If flattening is requested, adjust the components
     if flatten:
-        years, months, weeks, days, hours, minutes, seconds = (
-            flatten_duration_components(
-                years, months, weeks, days, hours, minutes, seconds
-            )
+        years, months, weeks, days, hours, minutes, secs = flatten_duration_components(
+            years, months, weeks, days, hours, minutes, secs
         )
 
-    # Build the human-readable components
     components = []
     if years:
         components.append(f"{years} Year{'s' if years > 1 else ''}")
@@ -230,10 +225,9 @@ def iso8601_duration_to_human(
         components.append(f"{hours} Hour{'s' if hours > 1 else ''}")
     if minutes:
         components.append(f"{minutes} Minute{'s' if minutes > 1 else ''}")
-    if seconds:
-        components.append(f"{seconds} Second{'s' if seconds > 1 else ''}")
+    if secs:
+        components.append(f"{secs} Second{'s' if secs > 1 else ''}")
 
-    # Construct the human-readable string
     if len(components) > 1:
         last = components.pop()
         human_str = ", ".join(components) + " and " + last
@@ -245,167 +239,136 @@ def iso8601_duration_to_human(
     return f"{human_str}{suffix}"
 
 
-def iso8601_diff_to_human(start, end, flatten: bool = True):
-    if not start or not end:
+def diff_to_human(a: int | None, b: int | None, flatten: bool = True) -> str:
+    if a is None or b is None:
         return ""
 
-    diff = iso8601_diff(start, end)
-
-    return iso8601_duration_to_human(diff, flatten=flatten)
+    return duration_to_human(abs(a - b), flatten=flatten)
 
 
-def iso8601_add(date_a: str, date_b: str, *, clamp_non_negative: bool = False) -> str:
-    """Add two ISO-8601 durations and return an ISO-8601 duration string.
+# MIGRATION ONLY: the helpers below exist to read scene time written before it
+# became integer seconds.
 
-    Parameters
-    ----------
-    date_a, date_b
-        Durations to add.
-    clamp_non_negative
-        If *True* and the resulting duration would be negative, the function
-        returns ``"P0D"`` (zero duration) instead of a negative value.
-    """
 
-    # Validate input – treat missing values as zero for convenience
-    if not date_a or not date_b:
-        return "PT0S"
-
-    result_duration = isodate.parse_duration(date_a.strip()) + isodate.parse_duration(
-        date_b.strip()
+def _iso8601_error(value) -> str:
+    return (
+        f"Not a valid ISO8601 duration: {value!r}. Expected [+-]PnYnMnWnDTnHnMnS, "
+        "e.g. 'P1Y2M3DT4H5M6S', with at least one component and decimals "
+        "written with '.' or ','."
     )
 
-    result_iso = isodate.duration_isoformat(result_duration)
 
-    if clamp_non_negative and result_iso.startswith("-"):
-        return "P0D"
+def parse_iso8601_duration(value: str) -> int:
+    if not value or not isinstance(value, str):
+        raise ValueError(_iso8601_error(value))
 
-    return result_iso
+    text = value.strip().upper()
 
+    # the old shipped default for "no time has passed yet", never a real duration
+    if text == "P0T1S":
+        return 1
 
-def iso8601_correct_duration(duration: str) -> str:
-    # Split the string into date and time components using 'T' as the delimiter
-    parts = duration.split("T")
+    match = _ISO8601_DURATION_RE.match(text)
+    if not match:
+        raise ValueError(_iso8601_error(value))
 
-    # Handle the date component
-    date_component = parts[0]
-    time_component = ""
+    groups = match.groupdict()
+    if not any(groups[name] is not None for name in _ISO8601_COMPONENT_SECONDS):
+        raise ValueError(_iso8601_error(value))
 
-    # If there's a time component, process it
-    if len(parts) > 1:
-        time_component = parts[1]
+    total = 0.0
+    for name, unit_seconds in _ISO8601_COMPONENT_SECONDS.items():
+        raw = groups[name]
+        if raw is not None:
+            total += float(raw.replace(",", ".")) * unit_seconds
 
-        # Check if the time component has any date values (Y, M, D) and move them to the date component
-        for char in "YD":  # Removed 'M' from this loop
-            if char in time_component:
-                index = time_component.index(char)
-                date_component += time_component[: index + 1]
-                time_component = time_component[index + 1 :]
+    if groups["sign"] == "-":
+        total = -total
 
-    # If the date component contains any time values (H, M, S), move them to the time component
-    for char in "HMS":
-        if char in date_component:
-            index = date_component.index(char)
-            time_component = date_component[index:] + time_component
-            date_component = date_component[:index]
-
-    # Combine the corrected date and time components
-    corrected_duration = date_component
-    if time_component:
-        corrected_duration += "T" + time_component
-
-    return corrected_duration
+    return round(total)
 
 
-def amount_unit_to_iso8601_duration(amount: int, unit: str) -> str:
-    """Converts numeric amount + textual unit into an ISO-8601 duration string.
+def coerce_ts(value) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"Cannot coerce {value!r} to scene time seconds")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return round(value)
+    if isinstance(value, str):
+        return parse_iso8601_duration(value)
+    raise ValueError(f"Cannot coerce {value!r} to scene time seconds")
 
-    Examples:
-        >>> amount_unit_to_iso8601_duration(5, "hours")  # 'PT5H'
-        >>> amount_unit_to_iso8601_duration(3, "days")   # 'P3D'
+
+def _coerce_time_field(
+    container: dict, key: str, tolerant: bool, fallback: int | None
+) -> None:
+    value = container.get(key)
+    if value is None:
+        return
+
+    try:
+        container[key] = coerce_ts(value)
+    except (ValueError, TypeError, OverflowError):
+        if not tolerant:
+            raise
+        log.warning(
+            "repaired_scene_time_value", key=key, value=value, repaired_to=fallback
+        )
+        container[key] = fallback
+
+
+def migrate_entry_time(
+    entry: dict, tolerant: bool = False, ts_fallback: int | None = None
+) -> dict:
     """
-    if amount < 0:
-        amount = abs(amount)
+    Migrate `ts` / `ts_start` / `ts_end` on a single history entry to integer
+    seconds, in place. See `migrate_scene_time` for the modes.
+    """
+    if not isinstance(entry, dict):
+        return entry
 
-    unit_key = unit.lower().strip()
-    if unit_key not in UNIT_TO_ISO:
-        raise ValueError(
-            f"Invalid unit '{unit}'. Expected minutes, hours, days, weeks, months or years."
+    for key in _SCENE_TIME_KEYS:
+        _coerce_time_field(
+            entry,
+            key,
+            tolerant=tolerant,
+            fallback=ts_fallback if key == "ts" else None,
         )
 
-    code = UNIT_TO_ISO[unit_key]
-
-    # Months go in the date section with M but distinct from minutes
-    if code == "M_month":
-        return f"P{amount}M"
-
-    if code in ["H", "M", "S"]:
-        # time components require the T designator
-        return f"PT{amount}{code}"
-    else:
-        return f"P{amount}{code}"
+    return entry
 
 
-def iso8601_duration_to_amount_unit(iso_duration: str) -> tuple[int, str]:
-    """Convert an ISO-8601 duration to the best-fit (amount, unit) pair.
-
-    Returns a single-unit representation suitable for a UI picker.
-    For mixed durations the value is converted to the smallest applicable unit.
-    Zero durations return ``(0, "minutes")``.
-
-    Examples:
-        >>> iso8601_duration_to_amount_unit("PT2H")    # (2, "hours")
-        >>> iso8601_duration_to_amount_unit("P3D")      # (3, "days")
-        >>> iso8601_duration_to_amount_unit("P1DT2H")   # (26, "hours")
+def migrate_scene_time(scene_data: dict, tolerant: bool = False) -> dict:
     """
-    duration = isodate.parse_duration(iso_duration)
+    Migrate legacy ISO8601 duration scene time to integer seconds, in place.
 
-    years, months, days, hours, minutes = 0, 0, 0, 0, 0
+    Covers `ts` on the scene itself and on time passage messages, as well as
+    `ts` / `ts_start` / `ts_end` on archived and layered history entries.
+    Already migrated (integer) values pass through untouched.
 
-    if isinstance(duration, isodate.Duration):
-        years = duration.years
-        months = duration.months
-        days = duration.days
-        hours = duration.tdelta.seconds // 3600
-        minutes = (duration.tdelta.seconds % 3600) // 60
-    elif isinstance(duration, datetime.timedelta):
-        days = duration.days
-        hours = duration.seconds // 3600
-        minutes = (duration.seconds % 3600) // 60
+    Args:
+        tolerant: When False a value that cannot be coerced raises - loading a
+        save half migrated would silently corrupt its timeline, so a bad value
+        fails the load instead. When True a bad value is logged and repaired
+        instead (to None where the field is nullable, to 0 where it is not),
+        for callers that recover damaged data rather than refuse it.
 
-    # Count how many components are non-zero
-    components = [
-        (years, "years"),
-        (months, "months"),
-        (days, "days"),
-        (hours, "hours"),
-        (minutes, "minutes"),
-    ]
-    non_zero = [(v, u) for v, u in components if v]
+    Raises:
+        ValueError | TypeError | OverflowError: If a time value cannot be
+        coerced and `tolerant` is False.
+    """
+    _coerce_time_field(scene_data, "ts", tolerant=tolerant, fallback=0)
 
-    if not non_zero:
-        return (0, "minutes")
+    for message in scene_data.get("history") or []:
+        if isinstance(message, dict) and message.get("typ") == "time":
+            migrate_entry_time(message, tolerant=tolerant, ts_fallback=0)
 
-    # If exactly one component, return it directly
-    if len(non_zero) == 1:
-        return non_zero[0]
+    for entry in scene_data.get("archived_history") or []:
+        migrate_entry_time(entry, tolerant=tolerant, ts_fallback=0)
 
-    # Multiple components: convert to the smallest applicable unit.
-    # Cannot mix months/years with days/hours/minutes reliably,
-    # so if months or years are present, prefer the largest calendar unit.
-    if years and not months and not days and not hours and not minutes:
-        return (years, "years")
-    if months or years:
-        # Fall back to months (approximate years as 12 months each)
-        total_months = years * 12 + months
-        if not days and not hours and not minutes:
-            return (total_months, "months")
-        # If sub-month components too, just return months (lossy but best fit)
-        return (total_months, "months")
+    for layer in scene_data.get("layered_history") or []:
+        for entry in layer or []:
+            migrate_entry_time(entry, tolerant=tolerant, ts_fallback=0)
 
-    # Only days/hours/minutes — convert to smallest non-zero
-    total_minutes = days * 24 * 60 + hours * 60 + minutes
-    if total_minutes % (24 * 60) == 0:
-        return (total_minutes // (24 * 60), "days")
-    if total_minutes % 60 == 0:
-        return (total_minutes // 60, "hours")
-    return (total_minutes, "minutes")
+    return scene_data

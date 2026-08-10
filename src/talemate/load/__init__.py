@@ -36,6 +36,7 @@ from talemate.history import validate_history
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
 from talemate.util.gpu import release_cuda_cache
+from talemate.util.time import migrate_scene_time
 from talemate.changelog import _get_overall_latest_revision
 from talemate.shared_context import SharedContext
 from talemate.scene_agent_settings import AGENT_SETTINGS_DIRNAME, resolve_link_on_load
@@ -301,6 +302,7 @@ async def load_scene_from_data(
 
     migrate_character_data(scene_data)
     migrate_director_chat_state(scene_data)
+    migrate_scene_time(scene_data)
 
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description

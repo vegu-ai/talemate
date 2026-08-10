@@ -330,7 +330,7 @@ class TestApplyBucketPatchTypes:
 
 class TestHasTimePassageBoundary:
     def test_no_prior_anchors_returns_false(self):
-        history = [TimePassageMessage(ts="PT1H", message="an hour later")]
+        history = [TimePassageMessage(ts=3600, message="an hour later")]
         assert not has_time_passage_boundary(history, [])
 
     def test_no_time_passage_in_history_returns_false(self):
@@ -340,10 +340,10 @@ class TestHasTimePassageBoundary:
 
     def test_time_passage_after_max_anchor_returns_true(self):
         anchored = NarratorMessage(message="anchor")
-        cut = TimePassageMessage(ts="PT1H", message="hour later")
+        cut = TimePassageMessage(ts=3600, message="hour later")
         assert has_time_passage_boundary([anchored, cut], [anchored.id])
 
     def test_time_passage_before_anchor_returns_false(self):
-        cut = TimePassageMessage(ts="PT1H", message="hour earlier")
+        cut = TimePassageMessage(ts=3600, message="hour earlier")
         anchored = NarratorMessage(message="anchor")
         assert not has_time_passage_boundary([cut, anchored], [anchored.id])

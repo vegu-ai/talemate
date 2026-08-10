@@ -27,7 +27,7 @@ _13 nodes._
 
 `agents/world_state/AdvanceTime`
 
-Advances the scene time by the given ISO 8601 duration. Pushes a
+Advances the scene time by the given number of seconds. Pushes a
 TimePassageMessage to the scene history, emits it to the UI and fires
 the time passage signal (which other agents may react to, e.g. to
 narrate the time passage using the narration instructions).
@@ -37,7 +37,7 @@ narrate the time passage using the narration instructions).
 | Input | Type | Description |
 | --- | --- | --- |
 | `state` | `any` | The graph state |
-| `duration` | `str` | The duration to advance as an ISO 8601 duration (e.g. "PT1H") |
+| `duration` | `int` | The duration to advance in seconds (e.g. 3600 for an hour) |
 | `narration_instructions` | `str` | Instructions for narrating the time passage (optional) |
 
 **Outputs**
@@ -45,7 +45,7 @@ narrate the time passage using the narration instructions).
 | Output | Type | Description |
 | --- | --- | --- |
 | `state` | `any` | The state input, passed through |
-| `duration` | `str` | The duration of the emitted message |
+| `duration` | `int` | The duration of the emitted message |
 | `narration_instructions` | `str` | The narration instructions, passed through |
 | `message` | `message` | The TimePassageMessage that was added to the history |
 
@@ -54,7 +54,7 @@ narrate the time passage using the narration instructions).
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `narration_instructions` | `str` | `""` | The instructions for the narration |
-| `duration` | `str` | `"P0T1S"` | The duration to advance |
+| `duration` | `int` | `1` | The duration to advance, in seconds. Min: 0. |
 
 ## Character Progression
 

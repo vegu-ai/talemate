@@ -699,7 +699,7 @@
       "id": "9f2040ea-b7e0-4e55-9da4-cb34b5aae137",
       "properties": {
         "narration_instructions": "",
-        "duration": "P0T1S"
+        "duration": 1
       },
       "x": -1476,
       "y": 1487,
@@ -728,7 +728,7 @@
       "base_type": "core/Node"
     },
     "d45f746a-3cd4-46f3-82e9-5c2d6bd88ed4": {
-      "title": "ISO Date Duration",
+      "title": "Duration",
       "id": "d45f746a-3cd4-46f3-82e9-5c2d6bd88ed4",
       "properties": {
         "unit": "day",

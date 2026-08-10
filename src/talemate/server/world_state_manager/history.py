@@ -21,8 +21,8 @@ from talemate.scene_message import TimePassageMessage
 from talemate.server.world_state_manager import world_state_templates
 from talemate.status import background_task
 from talemate.util.time import (
-    amount_unit_to_iso8601_duration,
-    iso8601_duration_to_human,
+    amount_unit_to_seconds,
+    duration_to_human,
 )
 
 log = structlog.get_logger("talemate.server.world_state_manager.history")
@@ -202,15 +202,13 @@ class HistoryMixin:
         payload = AddHistoryEntryPayload(**data)
 
         try:
-            iso_offset = amount_unit_to_iso8601_duration(
-                int(payload.amount), payload.unit
-            )
+            offset = amount_unit_to_seconds(int(payload.amount), payload.unit)
         except ValueError as e:
             await self.signal_operation_failed(str(e))
             return
 
         try:
-            await add_history_entry(self.scene, payload.text, iso_offset)
+            await add_history_entry(self.scene, payload.text, offset)
         except Exception as e:
             log.error("add_history_entry", error=e)
             await self.signal_operation_failed(str(e))
@@ -248,9 +246,7 @@ class HistoryMixin:
         payload = UpdateTimePassagePayload(**data)
 
         try:
-            iso_duration = amount_unit_to_iso8601_duration(
-                int(payload.amount), payload.unit
-            )
+            duration = amount_unit_to_seconds(int(payload.amount), payload.unit)
         except ValueError as e:
             await self.signal_operation_failed(str(e))
             return
@@ -266,8 +262,8 @@ class HistoryMixin:
             await self.signal_operation_failed("Entry is not a time passage")
             return
 
-        message.ts = iso_duration
-        message.message = iso8601_duration_to_human(iso_duration, suffix=" later")
+        message.ts = duration
+        message.message = duration_to_human(duration, suffix=" later")
 
         self.scene.fix_time()
         self.scene.emit_status()

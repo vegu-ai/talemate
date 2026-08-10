@@ -772,7 +772,7 @@
     Unpack Visual Prompt and Visual Enum Values. Notes the 0.39.0 Apply Style UNSPECIFIED change.'
 - path: user-guide/node-editor/reference/nodes/agents-world-state.md
   title: World State Agent Nodes
-  summary: 'Thirteen world-state nodes: Advance Time (ISO 8601, TimePassageMessage), Character Progression (as_suggestions),
+  summary: 'Thirteen world-state nodes: Advance Time (duration in seconds, TimePassageMessage), Character Progression (as_suggestions),
     Determine Character Presence, Deactivate Character, Extract Character Sheet, Evaluate Query, State Reinforcement (interval,
     insert_method), Request and Emit World State, and determineCharacterAvatar.'
 - path: user-guide/node-editor/reference/nodes/agents.md
@@ -905,7 +905,8 @@
 - path: user-guide/node-editor/reference/nodes/util.md
   title: Utility Nodes
   summary: 'Utility nodes: Counter (increments a key in a dict), Diff (plain text or inline HTML), Extract List (numbered
-    or bulleted lists from LLM text), ISO Date Duration (amount and unit to "P3D") and Module Style (title colour, icon).'
+    or bulleted lists from LLM text), Duration (amount and unit to a number of seconds) and Module Style (title colour,
+    icon).'
 - path: user-guide/node-editor/reference/nodes/ux.md
   title: UX Nodes
   summary: 'UX element nodes: Build Choice Element (choices, multi_select, timeout_seconds, closable), Build Text Input Element

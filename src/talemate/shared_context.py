@@ -8,6 +8,7 @@ from .character import Character
 from .world_state import WorldState, ManualContext
 from .save import SceneEncoder
 from .history import ArchiveEntry, static_history as get_static_history
+from .util.time import migrate_entry_time
 import deepdiff
 
 if TYPE_CHECKING:
@@ -155,8 +156,12 @@ class SharedContext(pydantic.BaseModel):
         self.world_state = WorldState(**data["world_state"])
         # optional fields for backward compatibility
         self.share_static_history = data.get("share_static_history", False)
+        # Sidecar files written before scene time became integer seconds carry
+        # ISO8601 durations and are never rewritten on disk, so they have to be
+        # converted on every read.
         self.static_history = [
-            ArchiveEntry(**entry) for entry in data.get("static_history", [])
+            ArchiveEntry(**migrate_entry_time(entry))
+            for entry in data.get("static_history", [])
         ]
         log.debug(
             "init_from_file",

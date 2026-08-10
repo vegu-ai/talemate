@@ -81,7 +81,7 @@ Compiles history for inclusion in a prompt context.
 Create a static (manually written) archive entry in the scene's base history,
 dated a given amount of time before the current scene time.
 
-The time amount and unit are converted to an ISO 8601 duration offset. The
+The time amount and unit are converted to an offset in seconds. The
 entry must predate the summarized history.
 
 **Inputs**
@@ -99,7 +99,7 @@ entry must predate the summarized history.
 | --- | --- | --- |
 | `state` | `any` | The state input, passed through |
 | `entry` | `history/archive_entry` | The created archive entry |
-| `offset` | `str` | The ISO 8601 duration offset that was applied |
+| `offset` | `int` | The offset in seconds that was applied |
 | `context_id` | `context_id` | Context ID for the created entry |
 | `time_unit` | `str` | The time unit input, passed through |
 | `time_amount` | `int` | The time amount input, passed through |
@@ -299,9 +299,9 @@ build a context ID for it.
 | `layer` | `int` | The history layer the entry belongs to |
 | `start` | `int` | Index of the first source entry covered by the entry (None for static entries) |
 | `end` | `int` | Index of the last source entry covered by the entry (None for static entries) |
-| `ts_start` | `str` | Starting timestamp of the covered range (ISO 8601 duration) |
-| `ts_end` | `str` | Ending timestamp of the covered range (ISO 8601 duration) |
-| `ts` | `str` | Timestamp of the entry (ISO 8601 duration) |
+| `ts_start` | `int` | Starting timestamp of the covered range (seconds since scene start) |
+| `ts_end` | `int` | Ending timestamp of the covered range (seconds since scene start) |
+| `ts` | `int` | Timestamp of the entry (seconds since scene start) |
 | `time` | `str` | Human readable time relative to the current scene time |
 | `time_start` | `str` | Human readable starting time of the covered range |
 | `time_end` | `str` | Human readable ending time of the covered range |

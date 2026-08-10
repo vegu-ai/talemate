@@ -293,8 +293,8 @@ class TestWorldStateAgentAnalyzeMethods:
         agent.client.send_prompt = AsyncMock(return_value=f"  {expected_summary}  ")
 
         entries = [
-            {"ts": "PT1H", "text": "The hero arrived at the village."},
-            {"ts": "PT2H", "text": "The hero met with the village elder."},
+            {"ts": 3600, "text": "The hero arrived at the village."},
+            {"ts": 7200, "text": "The hero met with the village elder."},
         ]
 
         response = await agent.analyze_history_and_follow_instructions(
@@ -593,7 +593,7 @@ class TestWorldStateAgentRequestMethods:
         # history exists — independent of whatever the fixture happens to default.
         mock_scene.history = [
             NarratorMessage(message="The hero rested by the fire."),
-            TimePassageMessage(message="Three days later", ts="P3D"),
+            TimePassageMessage(message="Three days later", ts=259200),
         ]
         mock_scene.intro = "You step into the forest clearing."
         response = await agent.request_world_state()

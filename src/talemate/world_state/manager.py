@@ -98,7 +98,7 @@ class HistoryEntry(pydantic.BaseModel):
     text: str
     start: int = None
     end: int = None
-    ts: str = None
+    ts: int = None
 
 
 class History(pydantic.BaseModel):

@@ -709,7 +709,7 @@ class TestCountCharacterMessagesSinceDirector:
         real_scene.history = [
             director,
             _char_msg("a1", character="Alice"),
-            TimePassageMessage(ts="PT1H", message="an hour later"),
+            TimePassageMessage(ts=3600, message="an hour later"),
             _char_msg("a2", character="Alice"),
         ]
         result = real_scene.count_character_messages_since_director(
@@ -757,7 +757,7 @@ class TestLastMessageOfType:
 
     def test_stop_on_time_passage(self, real_scene):
         n = NarratorMessage(message="n", source="ai")
-        tp = TimePassageMessage(ts="PT1H", message="later")
+        tp = TimePassageMessage(ts=3600, message="later")
         real_scene.history = [n, tp, _char_msg("c")]
         # Walking from the end: char (no match), time-passage (stop) -> None.
         assert (
@@ -803,7 +803,7 @@ class TestCollectMessages:
 
     def test_stop_on_time_passage_breaks(self, real_scene):
         a = _char_msg("a")
-        tp = TimePassageMessage(ts="PT1H", message="later")
+        tp = TimePassageMessage(ts=3600, message="later")
         b = _char_msg("b")
         real_scene.history = [a, tp, b]
         result = real_scene.collect_messages(stop_on_time_passage=True)
@@ -1032,12 +1032,12 @@ class TestDeleteMessage:
     async def test_delete_time_passage_resyncs_time(self, real_scene):
         # When a TimePassageMessage is removed, sync_time runs and emit_status
         # is called -- the latter requires a running event loop.
-        tp = TimePassageMessage(ts="PT1H", message="later")
+        tp = TimePassageMessage(ts=3600, message="later")
         real_scene.history = [tp]
-        real_scene.ts = "PT1H"
+        real_scene.ts = 3600
         real_scene.delete_message(tp.id)
-        # sync_time without remaining time-passage messages resets to PT0S.
-        assert real_scene.ts == "PT0S"
+        # sync_time without remaining time-passage messages resets to zero.
+        assert real_scene.ts == 0
 
 
 # ---------------------------------------------------------------------------
@@ -1047,41 +1047,41 @@ class TestDeleteMessage:
 
 class TestAdvanceTime:
     def test_advance_time_adds_durations(self, real_scene):
-        real_scene.ts = "PT1H"
-        real_scene.advance_time("PT30M")
-        assert real_scene.ts == "PT1H30M"
+        real_scene.ts = 3600
+        real_scene.advance_time(1800)
+        assert real_scene.ts == 5400
 
     def test_advance_time_supports_zero(self, real_scene):
-        real_scene.ts = "PT5M"
-        real_scene.advance_time("PT0S")
-        assert real_scene.ts == "PT5M"
+        real_scene.ts = 300
+        real_scene.advance_time(0)
+        assert real_scene.ts == 300
 
 
 class TestSyncTime:
     def test_sync_time_sums_history_passages(self, real_scene):
         real_scene.history = [
             _char_msg("a"),
-            TimePassageMessage(ts="PT1H", message="later"),
+            TimePassageMessage(ts=3600, message="later"),
             _char_msg("b"),
-            TimePassageMessage(ts="PT30M", message="more later"),
+            TimePassageMessage(ts=1800, message="more later"),
         ]
-        # No archived_history, so we start from PT0S and sum.
+        # No archived_history, so we start from zero and sum.
         real_scene.sync_time()
-        assert real_scene.ts == "PT1H30M"
+        assert real_scene.ts == 5400
 
     def test_sync_time_uses_archived_baseline(self, real_scene):
-        real_scene.archived_history = [{"ts": "PT2H", "end": 0}]
+        real_scene.archived_history = [{"ts": 7200, "end": 0}]
         # No additional time passages after end=0.
         real_scene.history = [_char_msg("a")]
         real_scene.sync_time()
-        assert real_scene.ts == "PT2H"
+        assert real_scene.ts == 7200
 
     def test_sync_time_with_no_data_resets_to_zero(self, real_scene):
-        real_scene.ts = "PT5H"  # leftover
+        real_scene.ts = 18000  # leftover
         real_scene.history = []
         real_scene.archived_history = []
         real_scene.sync_time()
-        assert real_scene.ts == "PT0S"
+        assert real_scene.ts == 0
 
 
 class TestCalcTime:
@@ -1091,20 +1091,20 @@ class TestCalcTime:
 
     def test_sums_passages_in_range(self, real_scene):
         real_scene.history = [
-            TimePassageMessage(ts="PT1H", message="later"),
+            TimePassageMessage(ts=3600, message="later"),
             _char_msg("a"),
-            TimePassageMessage(ts="PT30M", message="more"),
+            TimePassageMessage(ts=1800, message="more"),
         ]
         # Full range
-        assert real_scene.calc_time() == "PT1H30M"
+        assert real_scene.calc_time() == 5400
 
     def test_partial_range(self, real_scene):
         real_scene.history = [
-            TimePassageMessage(ts="PT1H", message="later"),
-            TimePassageMessage(ts="PT30M", message="more"),
+            TimePassageMessage(ts=3600, message="later"),
+            TimePassageMessage(ts=1800, message="more"),
         ]
         # Only the first passage included.
-        assert real_scene.calc_time(0, 1) == "PT1H"
+        assert real_scene.calc_time(0, 1) == 3600
 
 
 # ---------------------------------------------------------------------------
@@ -1281,10 +1281,10 @@ class TestPushHistory:
 
     @pytest.mark.asyncio
     async def test_push_history_advances_time_for_time_passage(self, real_scene):
-        real_scene.ts = "PT0S"
-        tp = TimePassageMessage(ts="PT1H", message="later")
+        real_scene.ts = 0
+        tp = TimePassageMessage(ts=3600, message="later")
         await real_scene.push_history(tp)
-        assert real_scene.ts == "PT1H"
+        assert real_scene.ts == 3600
 
     @pytest.mark.asyncio
     async def test_push_history_emits_push_history_signal(self, real_scene):
@@ -1312,7 +1312,7 @@ class TestPushArchive:
     async def test_push_archive_appends_dict_form(self, real_scene):
         from talemate.history import ArchiveEntry
 
-        entry = ArchiveEntry(text="my entry", id="abc", ts="PT5M")
+        entry = ArchiveEntry(text="my entry", id="abc", ts=300)
         captured: list = []
 
         async def listener(event):
@@ -1486,7 +1486,7 @@ class TestFixTimeErrorHandling:
     def test_fix_time_swallows_exception_and_restores_ts(self, real_scene):
         # Force _fix_time to raise by giving it malformed archived data and
         # confirm fix_time restores the original ts and does not propagate.
-        real_scene.ts = "PT3H"
+        real_scene.ts = 10800
         # archived_history is iterated as dicts; non-dict entries crash the
         # `"ts" in archived_entry` membership test.
         real_scene.archived_history = [None]  # type: ignore[list-item]
@@ -1494,7 +1494,7 @@ class TestFixTimeErrorHandling:
         # Should not raise.
         real_scene.fix_time()
         # ts is restored to the snapshot taken at the start of fix_time.
-        assert real_scene.ts == "PT3H"
+        assert real_scene.ts == 10800
 
 
 class TestRecentHistoryNoBudget:
@@ -1549,7 +1549,7 @@ class TestPushArchiveDictShape:
     async def test_archived_dict_excludes_none_fields(self, real_scene):
         from talemate.history import ArchiveEntry
 
-        entry = ArchiveEntry(text="x", id="i1", ts="PT1S")
+        entry = ArchiveEntry(text="x", id="i1", ts=1)
         await real_scene.push_archive(entry)
         stored = real_scene.archived_history[0]
         # Optional fields like start/end/ts_start/ts_end aren't on the entry,

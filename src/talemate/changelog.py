@@ -83,6 +83,7 @@ import uuid
 
 from talemate.save import SceneEncoder
 from talemate.path import SCENES_DIR
+from talemate.util.time import migrate_scene_time
 from pathlib import Path
 
 if TYPE_CHECKING:
@@ -440,7 +441,13 @@ def _load_latest_scene_data(scene: "Scene") -> dict | None:
         return None
     try:
         with open(path, "r") as f:
-            return json.load(f)
+            data = json.load(f)
+        # The snapshot is the baseline every new delta is diffed against. A
+        # pre-migration snapshot still holds ISO8601 durations, which would
+        # make every scene time field diff against the live (integer)
+        # serialization. Migrated in memory only - the file itself is left as
+        # written.
+        return migrate_scene_time(data, tolerant=True)
     except Exception as e:
         log.error("read_latest_failed", error=e, path=path)
         return None
@@ -798,6 +805,11 @@ async def reconstruct_cleanup(data: dict) -> dict:
 
     _repair_forced_list_fields(data)
     _repair_history(data)
+    # Runs after the deltas have been applied: revisions written before the
+    # scene time migration carry ISO8601 durations in both the base snapshot
+    # and the deltas, so they have to reconstruct as-written and be converted
+    # at the end.
+    migrate_scene_time(data, tolerant=True)
     return data
 
 

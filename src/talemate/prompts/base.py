@@ -36,7 +36,8 @@ from talemate.util import (
     dedupe_string,
     extract_list,
     remove_extra_linebreaks,
-    iso8601_diff_to_human,
+    coerce_ts,
+    diff_to_human,
 )
 from talemate.util.data import extract_data_auto, DataParsingError
 from talemate.util.path import get_path_value
@@ -1061,11 +1062,16 @@ class Prompt(pydantic.BaseModel):
         else:
             emit("status", status=status, message=message)
 
-    def time_diff(self, iso8601_time: str):
-        scene = active_scene.get()
-        if not iso8601_time:
+    def time_diff(self, ts: int | str | None):
+        if ts is None or ts == "":
             return ""
-        return iso8601_diff_to_human(iso8601_time, scene.ts)
+        scene = active_scene.get()
+        try:
+            # templates may hand us legacy ISO8601 durations from memory metadata
+            ts = coerce_ts(ts)
+        except ValueError:
+            return ""
+        return diff_to_human(ts, scene.ts)
 
     def system_time(
         self, format: Literal["full", "date", "time", "iso", "datetime"] = "full"

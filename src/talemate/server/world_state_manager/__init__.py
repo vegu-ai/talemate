@@ -1079,8 +1079,6 @@ class WorldStateManagerPlugin(
         )
 
         await self.signal_operation_done()
-        self.scene.emit_status()
-        await self.scene.emit_history()
 
     async def handle_update_scene_settings(self, data):
         payload = SceneSettingsPayload(**data)

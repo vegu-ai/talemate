@@ -13,6 +13,7 @@ MagicMock for domain objects.
 from __future__ import annotations
 
 import os
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -424,6 +425,44 @@ class TestSimpleSetters:
         assert real_scene.name == "the name"
         assert real_scene.title == "the title"
         assert real_scene.description == "the description"
+
+    def test_set_intro_does_not_emit(self, real_scene):
+        """`set_intro` is the silent setter behind the sync scripting API;
+        emitting writers go through `apply_intro`."""
+        real_scene.emit_status = MagicMock()
+        real_scene.emit_history = AsyncMock()
+        real_scene.set_intro("the intro")
+        assert real_scene.intro == "the intro"
+        real_scene.emit_status.assert_not_called()
+        real_scene.emit_history.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_apply_intro_emits_status_and_history(self, real_scene):
+        real_scene.emit_status = MagicMock()
+        real_scene.emit_history = AsyncMock()
+        await real_scene.apply_intro("a brand new intro")
+        assert real_scene.intro == "a brand new intro"
+        real_scene.emit_status.assert_called_once()
+        real_scene.emit_history.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_apply_intro_without_history_emit(self, real_scene):
+        real_scene.emit_status = MagicMock()
+        real_scene.emit_history = AsyncMock()
+        await real_scene.apply_intro("a brand new intro", emit_history=False)
+        assert real_scene.intro == "a brand new intro"
+        real_scene.emit_status.assert_called_once()
+        real_scene.emit_history.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_apply_intro_none_coerces_to_empty(self, real_scene):
+        """A None intro must never be stored or reach get_intro via the emits."""
+        real_scene.emit_status = MagicMock()
+        real_scene.emit_history = AsyncMock()
+        await real_scene.apply_intro(None)
+        assert real_scene.intro == ""
+        real_scene.emit_status.assert_called_once()
+        real_scene.emit_history.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_set_environment_writes_attribute(self, real_scene):

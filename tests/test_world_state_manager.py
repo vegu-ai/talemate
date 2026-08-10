@@ -7,6 +7,8 @@ that depend on creator agents producing real content). Each test invokes
 the real manager method on a real scene.
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from _world_state_helpers import (
@@ -676,6 +678,9 @@ class TestSceneSettings:
     async def test_update_scene_outline_sets_fields(self, scene, manager):
         from talemate.scene.schema import ScenePerspectives
 
+        scene.emit_status = MagicMock()
+        scene.emit_history = AsyncMock()
+
         await manager.update_scene_outline(
             title="My Story",
             description="An epic tale.",
@@ -695,15 +700,25 @@ class TestSceneSettings:
         assert scene.perspectives.other == ""
         assert scene.perspectives.narrator == ""
 
+        scene.emit_status.assert_called_once()
+        scene.emit_history.assert_awaited_once()
+
     @pytest.mark.asyncio
     async def test_update_scene_outline_perspectives_default_empty(
         self, scene, manager
     ):
+        scene.emit_status = MagicMock()
+        scene.emit_history = AsyncMock()
+
         await manager.update_scene_outline(title="x")
         assert scene.perspectives.default == ""
         assert scene.perspectives.player == ""
         assert scene.perspectives.other == ""
         assert scene.perspectives.narrator == ""
+
+        assert scene.intro == ""
+        scene.emit_status.assert_called_once()
+        scene.emit_history.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_update_scene_settings_basic(self, scene, manager):

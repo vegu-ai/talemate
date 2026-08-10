@@ -8,10 +8,6 @@ class EpisodesPayload(pydantic.BaseModel):
     episodes: list[dict] = pydantic.Field(default_factory=list)
 
 
-class SetIntroPayload(pydantic.BaseModel):
-    intro: str
-
-
 class AddEpisodePayload(pydantic.BaseModel):
     intro: str
     title: str | None = None
@@ -42,23 +38,6 @@ class EpisodesMixin:
                 "data": {"episodes": [episode.model_dump() for episode in episodes]},
             }
         )
-
-    async def handle_set_intro(self, data):
-        """Set the scene intro from a selected episode."""
-        payload = SetIntroPayload(**data)
-        self.scene.intro = payload.intro
-
-        self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": "intro_set",
-                "data": payload.model_dump(),
-            }
-        )
-
-        await self.signal_operation_done()
-        self.scene.emit_status()
-        await self.scene.emit_history()
 
     async def handle_add_episode(self, data):
         """Add a new episode."""

@@ -7,6 +7,7 @@
   - "Documentation: Every agent, voice-backend, visualizer-backend and client documentation screenshot that still showed the retired configuration modals was retaken against the Settings → Connections pages — 75 images across roughly 40 pages — and the surrounding prose was brought in line with the 0.40 UI: renamed and removed settings corrected, newly added settings documented, and modal-era wording in image captions rewritten."
   changes:
   - "Client & Agent Settings: The unused save-on-blur path for unified API keys was removed, including the `config/save_unified_api_key` websocket action — keys save through the settings pages' explicit Save."
+  - "World State Manager: The unused `set_intro` websocket action was removed — nothing in the interface had called it since 0.34.0."
   - "Per-Scene Agent Overrides: Secrets-adjacent agent settings (API keys, passwords) can no longer be overridden per scene — enforced at the field-type level. Overrides for such fields carried by hand-edited or imported agent-settings files no longer take effect."
   fixes:
   - "Event Handling: An error in one event listener no longer skips the remaining listeners for that event — the error is logged and delivery continues, while deliberate interrupts such as scene exit or restart, generation cancellation and node loop control still propagate as before. Saving the configuration reports a 'saved, but applying it failed' notice when one of its listeners errors, instead of reporting a clean save."

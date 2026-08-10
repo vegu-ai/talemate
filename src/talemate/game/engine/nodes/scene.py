@@ -1691,11 +1691,7 @@ class SetIntroduction(Node):
         introduction = self.require_input("introduction")
         emit_history = self.get_input_value("emit_history")
 
-        scene.set_intro(introduction)
-        scene.emit_status()
-
-        if emit_history:
-            await scene.emit_history()
+        await scene.apply_intro(introduction, emit_history=emit_history)
 
         self.set_output_values({"state": self.get_input_value("state")})
 

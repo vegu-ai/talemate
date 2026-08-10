@@ -1046,13 +1046,14 @@ class WorldStateManager:
         scene = self.scene
         scene.title = title
         scene.description = description
-        scene.intro = intro
         scene.context = context
         # `perspectives=None` preserves the existing nested object; clearing the
         # four perspective fields is rarely what a partial outline update wants,
         # and the frontend always sends a complete `ScenePerspectives` payload.
         if perspectives is not None:
             scene.perspectives = perspectives
+        # Last, so the emits describe the fully updated scene.
+        await scene.apply_intro(intro)
 
         return scene
 

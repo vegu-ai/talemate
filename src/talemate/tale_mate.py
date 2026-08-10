@@ -561,7 +561,16 @@ class Scene(Emitter):
         return getattr(self, "node_graph", getattr(self, "creative_node_graph", None))
 
     def set_intro(self, intro: str):
+        # Silent setter — emitting writers go through apply_intro; load paths
+        # assign scene.intro directly.
         self.intro = intro
+
+    async def apply_intro(self, intro: str | None, emit_history: bool = True):
+        # None is licensed but coerced: get_intro cannot take a None intro.
+        self.set_intro(intro or "")
+        self.emit_status()
+        if emit_history:
+            await self.emit_history()
 
     def set_name(self, name: str):
         self.name = name

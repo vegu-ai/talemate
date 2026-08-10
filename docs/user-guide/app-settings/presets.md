@@ -9,7 +9,7 @@ Change inference parameters, embedding parameters and global system prompt overr
 
     This document will NOT explain what each setting does.
 
-![App settings - Presets - Inference](/talemate/img/0.39.0/app-settings-presets-inference.png)
+![App settings - Presets - Inference](/talemate/img/0.40.0/app-settings-presets-inference.png)
 
 If you're familiar with editing inference parameters from other similar applications, be aware that there is a significant difference in how TaleMate handles these settings.
 

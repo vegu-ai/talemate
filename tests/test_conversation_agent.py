@@ -9,7 +9,8 @@ Targets:
 - ``agent_details`` populated dictionary.
 - ``set_generation_overrides`` writing context attributes when enabled.
 - ``clean_result`` post-processing of LLM output.
-- ``allow_repetition_break`` and ``inject_prompt_paramters``.
+- ``allow_repetition_break`` and the character-name stopping strings the
+  agent/client handshake produces.
 - ``converse`` happy path through ``Prompt.request`` mock for both
   movie_script and narrative formats, including character-name
   prefix handling.
@@ -211,11 +212,20 @@ class TestAgentDetails:
 
 
 class TestSetGenerationOverrides:
-    def test_does_nothing_when_disabled(self, conversation_scene):
+    def test_ignores_a_disabled_flag_on_the_override(self, conversation_scene):
+        # `generation_override` is can_be_disabled=False, so `resolve_enabled`
+        # reports it on regardless of a stored flag and the early return in
+        # `set_generation_overrides` is unreachable — every attribute is still
+        # written.
         _, conversation, _ = conversation_scene
         conversation.actions["generation_override"].enabled = False
-        # Should not raise even without a client_context active.
-        conversation.set_generation_overrides()
+        conversation.actions["generation_override"].config["length"].value = 333
+
+        with client_context_module.ClientContext():
+            conversation.set_generation_overrides()
+            data = client_context_module.context_data.get()
+            assert data["conversation"]["length"] == 333
+            assert data["conversation"]["inject_character_names"] is True
 
     def test_writes_length_to_conversation_context(self, conversation_scene):
         _, conversation, _ = conversation_scene
@@ -287,11 +297,11 @@ class TestCleanResult:
 
 
 # ---------------------------------------------------------------------------
-# allow_repetition_break / inject_prompt_paramters
+# allow_repetition_break / character names in stop tokens
 # ---------------------------------------------------------------------------
 
 
-class TestAllowRepetitionBreakAndInject:
+class TestAllowRepetitionBreak:
     def test_allow_repetition_break_only_for_converse(self, conversation_scene):
         _, conversation, _ = conversation_scene
         assert conversation.allow_repetition_break("conversation", "converse") is True
@@ -299,42 +309,48 @@ class TestAllowRepetitionBreakAndInject:
             conversation.allow_repetition_break("conversation", "build_prompt") is False
         )
 
-    def test_inject_prompt_parameters_noop_with_inject_enabled_and_empty(
+
+def _stopping_strings_for_conversation(conversation, preset_strings: list[str]):
+    """Run the agent/client handshake that assembles the stopping strings.
+
+    The agent publishes the toggle to the conversation context and the client
+    decides whether to add the character names on top of whatever the
+    inference preset already contributed.
+    """
+    params = {"extra_stopping_strings": list(preset_strings)}
+    with client_context_module.ClientContext():
+        client_context_module.set_client_context_attribute(
+            "conversation",
+            {"talking_character": "Alice", "other_characters": ["Bob"]},
+        )
+        conversation.set_generation_overrides()
+        conversation.client.tune_prompt_parameters_conversation(params)
+    return params["extra_stopping_strings"]
+
+
+class TestInjectCharacterNamesIntoStop:
+    def test_names_added_alongside_preset_strings_when_enabled(
         self, conversation_scene
     ):
         _, conversation, _ = conversation_scene
-        params = {}
-        conversation.inject_prompt_paramters(params, "conversation", "converse")
-        # When inject_character_names_into_stop is True (default) and no
-        # stopping strings are present, the function leaves params untouched.
-        assert "extra_stopping_strings" not in params
+        conversation.actions["generation_override"].config[
+            "inject_character_names_into_stop"
+        ].value = True
 
-    def test_inject_prompt_parameters_resets_when_inject_disabled(
-        self, conversation_scene
-    ):
+        strings = _stopping_strings_for_conversation(conversation, ["PRESET"])
+        assert "PRESET" in strings
+        assert "Bob:" in strings
+        assert "BOB\n" in strings
+
+    def test_only_names_dropped_when_disabled(self, conversation_scene):
         _, conversation, _ = conversation_scene
         conversation.actions["generation_override"].config[
             "inject_character_names_into_stop"
         ].value = False
-        params = {"extra_stopping_strings": ["EXISTING"]}
-        conversation.inject_prompt_paramters(params, "conversation", "converse")
-        # When inject_character_names_into_stop is False, any stopping
-        # strings already populated (e.g. character names added by the
-        # client) are wiped.
-        assert params["extra_stopping_strings"] == []
 
-    def test_inject_prompt_parameters_preserves_existing_with_inject_enabled(
-        self, conversation_scene
-    ):
-        _, conversation, _ = conversation_scene
-        # When inject_character_names_into_stop is True AND extra_stopping_strings
-        # is already populated, it is left untouched.
-        conversation.actions["generation_override"].config[
-            "inject_character_names_into_stop"
-        ].value = True
-        params = {"extra_stopping_strings": ["EXISTING"]}
-        conversation.inject_prompt_paramters(params, "conversation", "converse")
-        assert params["extra_stopping_strings"] == ["EXISTING"]
+        # The preset's own stopping strings must survive the toggle.
+        strings = _stopping_strings_for_conversation(conversation, ["PRESET"])
+        assert strings == ["PRESET"]
 
 
 # ---------------------------------------------------------------------------

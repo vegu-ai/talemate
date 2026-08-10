@@ -1267,6 +1267,9 @@ class ClientBase:
         conversation_context = client_context_attribute("conversation")
         parameters["max_tokens"] = conversation_context.get("length", 96)
 
+        if not conversation_context.get("inject_character_names", True):
+            return
+
         dialog_stopping_strings = [
             f"{character}:" for character in conversation_context["other_characters"]
         ]
@@ -1280,6 +1283,34 @@ class ClientBase:
             parameters["extra_stopping_strings"] += dialog_stopping_strings
         else:
             parameters["extra_stopping_strings"] = dialog_stopping_strings
+
+    def build_stopping_strings(
+        self, parameters: dict, cap: int | None = None, warn: bool = True
+    ) -> list[str]:
+        """
+        Merges the global stopping strings with the ones collected for this
+        generation (presets, conversation agent, ...).
+
+        `cap` is the maximum number of stop sequences the api accepts - any
+        strings past it are dropped and logged. Clients whose cap is hit as a
+        matter of routine pass `warn=False` to log at debug instead.
+        """
+
+        stopping_strings = STOPPING_STRINGS + parameters.get(
+            "extra_stopping_strings", []
+        )
+
+        if cap is not None and len(stopping_strings) > cap:
+            log_fn = self.log.warning if warn else self.log.debug
+            log_fn(
+                "too many stopping strings, truncating",
+                client_type=self.client_type,
+                max_stopping_strings=cap,
+                dropped=stopping_strings[cap:],
+            )
+            stopping_strings = stopping_strings[:cap]
+
+        return stopping_strings
 
     def clean_prompt_parameters(self, parameters: dict):
         """
@@ -1993,12 +2024,16 @@ class ClientBase:
             time_end = time.time()
 
             # stopping strings sometimes get appended to the end of the response anyways
-            # split the response by the first stopping string and take the first part
+            # cut the response at the earliest occurrence of any stopping string
 
-            for stopping_string in STOPPING_STRINGS + extra_stopping_strings:
-                if stopping_string in response:
-                    response = response.split(stopping_string)[0]
-                    break
+            cut_indices = [
+                response.find(stopping_string)
+                for stopping_string in STOPPING_STRINGS + extra_stopping_strings
+                if stopping_string in response
+            ]
+
+            if cut_indices:
+                response = response[: min(cut_indices)]
 
             agent_context = active_agent.get()
 

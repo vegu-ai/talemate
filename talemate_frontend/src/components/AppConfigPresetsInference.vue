@@ -108,7 +108,9 @@
                                 </v-col>
                             </v-row>
 
-                            <v-divider></v-divider>
+                            <v-combobox class="mt-2" density="compact" v-model="selectedPreset.extra_stopping_strings" multiple chips closable-chips clearable hide-selected label="Extra Stopping Strings" placeholder="Type and press [Enter] to add" messages="Additional strings that stop generation for this preset. Support varies by client; clients without native stop support trim the text after generation." @update:model-value="setPresetChanged()"></v-combobox>
+
+                            <v-divider class="mt-4"></v-divider>
 
                             <v-tabs v-model="extra_tab" background-color="transparent" color="secondary" density="compact">
                                 <v-tab value="xtc">XTC</v-tab>
@@ -278,7 +280,7 @@ export default {
         },
 
         reset() {
-            this.presetsScope()[this.selected[0]] = {...this.immutableConfig.presets.inference_defaults[this.selected[0]]}
+            this.presetsScope()[this.selected[0]] = this.deepCopy(this.immutableConfig.presets.inference_defaults[this.selected[0]])
         },
 
         applyToAll() {
@@ -288,7 +290,7 @@ export default {
                 if(key === this.selected[0]) {
                     continue;
                 }
-                presets[key] = {...source, changed: true};
+                presets[key] = {...this.deepCopy(source), changed: true};
             }
         },
 

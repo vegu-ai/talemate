@@ -14,7 +14,7 @@ from talemate.client.api_handles import (
     ApiHandlesPromptTemplateMixin,
     api_handles_prompt_template_extra_fields,
 )
-from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults
+from talemate.client.base import ClientBase, Defaults
 from talemate.client.registry import register
 from talemate.client.vision import VisionConfig, vision_extra_fields, OpenAIVisionMixin
 from talemate.config.schema import Client as BaseClientConfig
@@ -121,9 +121,7 @@ class TextGeneratorWebuiClient(
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
-        parameters["stopping_strings"] = STOPPING_STRINGS + parameters.get(
-            "extra_stopping_strings", []
-        )
+        parameters["stopping_strings"] = self.build_stopping_strings(parameters)
         # is this needed?
         parameters["max_new_tokens"] = parameters["max_tokens"]
         parameters["stop"] = parameters["stopping_strings"]

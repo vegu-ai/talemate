@@ -33,6 +33,10 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger("talemate.client.koboldcpp")
 
+# koboldcpp's documented stop sequence limit since v1.45.2; older builds
+# cap lower, newer versions allow more.
+MAX_STOPPING_STRINGS = 16
+
 
 class KoboldCppClientDefaults(Defaults):
     api_url: str = "http://localhost:5001"
@@ -201,6 +205,19 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
                 "top_p",
                 "temperature",
             ]
+
+    def tune_prompt_parameters(self, parameters: dict, kind: str):
+        super().tune_prompt_parameters(parameters, kind)
+
+        if self.is_openai:
+            # openai mode's supported parameters carry no stopping_strings
+            # reroute, so a built list would be dropped at clean - whether
+            # that mode should gain native stop is a separate scope decision
+            return
+
+        parameters["stopping_strings"] = self.build_stopping_strings(
+            parameters, cap=MAX_STOPPING_STRINGS
+        )
 
     @property
     def supports_embeddings(self) -> bool:

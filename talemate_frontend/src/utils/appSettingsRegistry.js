@@ -251,7 +251,7 @@ export const SETTINGS_GROUPS = [
                 icon: 'mdi-matrix',
                 description: 'Inference parameter presets and preset groups.',
                 entries: [
-                    { label: 'Inference presets', keywords: ['temperature', 'top_p', 'top_k', 'min_p', 'repetition penalty', 'sampling', 'preset group'] },
+                    { label: 'Inference presets', keywords: ['temperature', 'top_p', 'top_k', 'min_p', 'repetition penalty', 'sampling', 'preset group', 'stopping strings', 'stop sequence', 'stop'] },
                 ],
             },
             {

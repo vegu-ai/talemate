@@ -10,7 +10,6 @@ from talemate.client.api_handles import (
     api_handles_prompt_template_extra_fields,
 )
 from talemate.client.base import (
-    STOPPING_STRINGS,
     ClientBase,
     CommonDefaults,
     ParameterReroute,
@@ -117,8 +116,7 @@ class LlamaCppClient(
 
         # Feed llama.cpp stop strings explicitly so generation halts early.
         # extra_stopping_strings is injected by Talemate (e.g. conversation agent).
-        stop = STOPPING_STRINGS + parameters.get("extra_stopping_strings", [])
-        parameters["stop"] = stop
+        parameters["stop"] = self.build_stopping_strings(parameters)
 
         # We always stream in generate() (to track incremental tokens), so remove
         # any upstream stream flag to avoid confusion in debugging.

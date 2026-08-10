@@ -8,7 +8,7 @@ If you wish to alter the inference parameters sent with the generation requests 
 
 Open the **Settings** tab in the top navigation, then select :material-matrix: **Inference** under the :material-tune: **Presets** group in the sidebar.
 
-![selected preset](/talemate/img/0.39.0/inference-presets-1.png)
+![selected preset](/talemate/img/0.40.0/inference-presets-1.png)
 
 !!! warning
     Not all clients support all parameters, and generally it is assumed that the client implementation handles the parameters in a sane way, especially if values are passed for all of them. All presets are used and will be selected depending on the action the agent is performing. If you don't know what these mean, it is recommended to leave them as they are.
@@ -70,6 +70,14 @@ The inference preset editor provides access to the following generation paramete
 | Repetition Penalty | 1.0 - 1.2 | Applies a multiplicative penalty to repeated tokens. |
 | Repetition Penalty Range | 0 - 8192 | Number of tokens to look back when calculating repetition penalty. |
 
+### Extra Stopping Strings
+
+A list of custom strings that end generation early for any request using the preset. Type a string into the field and press Enter to add it; remove its chip to delete it again.
+
+How the strings take effect depends on the client. Clients with native stop support (llama.cpp, Ollama, Text-Generation-WebUI, KoboldCpp (United API), LM Studio) send them with the request, so generation halts as soon as one is produced. All other clients let the generation finish and then trim the response at the earliest occurrence of any of the strings.
+
+Some backends cap the number of stop sequences per request (LM Studio 4, KoboldCpp 16). When the combined list exceeds the cap, the excess strings are dropped from the request and noted in Talemate's log — the dropped strings still apply through the post-generation cut.
+
 ### Advanced Parameters
 
 These parameters are organized into tabs in the preset editor and provide finer control over sampling behavior.
@@ -120,6 +128,7 @@ Different clients support different subsets of these parameters:
 - **KoboldCpp (OpenAI mode)**: Limited to temperature, top_p, presence_penalty, and max_tokens.
 - **Remote APIs** (OpenAI, Anthropic, etc.): Typically support temperature, top_p, and penalty parameters. Advanced parameters like XTC, DRY, and Adaptive-P are generally not available.
 - **Other local APIs**: Parameter support varies by implementation.
+- **Extra Stopping Strings**: llama.cpp, Ollama, Text-Generation-WebUI, KoboldCpp (United API) and LM Studio receive the strings natively and halt generation early, subject to the per-backend caps described under [Extra Stopping Strings](#extra-stopping-strings). Every other client trims the response after generation instead.
 
 ## Editing a preset
 

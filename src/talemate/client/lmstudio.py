@@ -1,8 +1,16 @@
 import pydantic
 from openai import AsyncOpenAI
 
-from talemate.client.base import ClientBase, ParameterReroute, CommonDefaults
+from talemate.client.base import (
+    ClientBase,
+    ParameterReroute,
+    CommonDefaults,
+)
 from talemate.client.registry import register
+
+# LMStudio defers parameter semantics to the OpenAI API reference, which
+# documents up to 4 stop sequences.
+MAX_STOPPING_STRINGS = 4
 
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
@@ -34,6 +42,16 @@ class LMStudioClient(ClientBase):
                 talemate_parameter="stopping_strings", client_parameter="stop"
             ),
         ]
+
+    def tune_prompt_parameters(self, parameters: dict, kind: str):
+        super().tune_prompt_parameters(parameters, kind)
+
+        # warn=False: with only 4 slots any scene with a couple of other
+        # characters overflows on every conversation generation, and the user
+        # has nothing to act on
+        parameters["stopping_strings"] = self.build_stopping_strings(
+            parameters, cap=MAX_STOPPING_STRINGS, warn=False
+        )
 
     @property
     def api_key(self):

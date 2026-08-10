@@ -394,6 +394,10 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         return result
 
     def set_generation_overrides(self):
+        set_conversation_context_attribute(
+            "inject_character_names", self.inject_character_names_into_stop
+        )
+
         if not self.resolve_enabled("generation_override"):
             return
 
@@ -527,9 +531,3 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         self, kind: str, agent_function_name: str, auto: bool = False
     ):
         return agent_function_name == "converse"
-
-    def inject_prompt_paramters(
-        self, prompt_param: dict, kind: str, agent_function_name: str
-    ):
-        if not self.inject_character_names_into_stop:
-            prompt_param["extra_stopping_strings"] = []

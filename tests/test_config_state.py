@@ -29,6 +29,7 @@ from talemate.config.schema import (
     Client,
     Config,
     EmbeddingFunctionPreset,
+    InferenceParameters,
     InferencePresetGroup,
     InferencePresets,
     RecentScene,
@@ -228,6 +229,26 @@ class TestSaveConfig:
             assert "analytical" in preserved
             assert "conversation" not in preserved
 
+    def test_round_trips_extra_stopping_strings_on_a_changed_preset(
+        self, isolated_config, tmp_path
+    ):
+        isolated_config.presets.inference.analytical.changed = True
+        isolated_config.presets.inference.analytical.extra_stopping_strings = [
+            "<<END>>"
+        ]
+
+        config_state.save_config()
+        data = _read_back(tmp_path / "config.yaml")
+        assert data["presets"]["inference"]["analytical"]["extra_stopping_strings"] == [
+            "<<END>>"
+        ]
+
+        # CONFIG_FILE points at the file just written, so the load path sees it.
+        reloaded = config_state._load_config()
+        assert reloaded.presets.inference.analytical.extra_stopping_strings == [
+            "<<END>>"
+        ]
+
     def test_drops_inference_section_when_no_presets_changed(
         self, isolated_config, tmp_path
     ):
@@ -276,6 +297,27 @@ class TestSaveConfig:
         group = data["presets"]["inference_groups"]["g1"]
         assert "analytical" in group["presets"]
         assert "creative" not in group["presets"]
+
+    def test_round_trips_extra_stopping_strings_on_a_changed_group_preset(
+        self, isolated_config, tmp_path
+    ):
+        presets = InferencePresets()
+        presets.analytical.changed = True
+        presets.analytical.extra_stopping_strings = ["<<END>>"]
+        isolated_config.presets.inference_groups = {
+            "g1": InferencePresetGroup(name="g1", presets=presets),
+        }
+
+        config_state.save_config()
+        data = _read_back(tmp_path / "config.yaml")
+        group = data["presets"]["inference_groups"]["g1"]
+        assert group["presets"]["analytical"]["extra_stopping_strings"] == ["<<END>>"]
+
+        # CONFIG_FILE points at the file just written, so the load path sees it.
+        reloaded = config_state._load_config()
+        assert reloaded.presets.inference_groups[
+            "g1"
+        ].presets.analytical.extra_stopping_strings == ["<<END>>"]
 
     def test_strip_unified_api_key_configs_removes_unified_keys(
         self, isolated_config, tmp_path, monkeypatch
@@ -541,3 +583,11 @@ class TestEnvVariableNameValidation:
             }
         )
         assert config.env == {"GOOD_NAME": "v1", "_ALSO_GOOD": "v2"}
+
+
+class TestExtraStoppingStringValidation:
+    def test_blank_entries_dropped_and_whitespace_preserved(self):
+        # blank entries would truncate every response at its first match;
+        # a trailing space is meaningful though
+        params = InferenceParameters(extra_stopping_strings=["", "  ", "Bob: "])
+        assert params.extra_stopping_strings == ["Bob: "]

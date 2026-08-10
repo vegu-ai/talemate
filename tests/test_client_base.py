@@ -19,6 +19,7 @@ import asyncio
 import time
 
 import pytest
+from structlog.testing import capture_logs
 
 import talemate.config.state as config_state
 from talemate.agents.context import ActiveAgent, active_agent
@@ -26,6 +27,7 @@ from talemate.client import base as base_module
 from talemate.client.base import (
     EMPTY_RESPONSE_MESSAGE,
     HTTP_ERROR_MESSAGES,
+    STOPPING_STRINGS,
     ClientBase,
     ClientDisabledError,
     CommonDefaults,
@@ -50,6 +52,9 @@ from talemate.exceptions import ReasoningResponseError
 # ---------------------------------------------------------------------------
 # Helpers / fixtures
 # ---------------------------------------------------------------------------
+
+
+TRUNCATION_EVENT = "too many stopping strings, truncating"
 
 
 class _StubClient(ClientBase):
@@ -92,6 +97,14 @@ def cfg_isolation():
     config_state.CONFIG.clients.update(saved_clients)
     config_state.CONFIG.presets.embeddings.clear()
     config_state.CONFIG.presets.embeddings.update(saved_embeddings)
+
+
+@pytest.fixture
+def preset_isolation():
+    """Snapshot/restore the inference presets, yielding the live ones."""
+    saved = config_state.CONFIG.presets.inference.model_copy(deep=True)
+    yield config_state.CONFIG.presets.inference
+    config_state.CONFIG.presets.inference = saved
 
 
 @pytest.fixture
@@ -805,6 +818,94 @@ class TestCleanPromptParameters:
         assert params["extra_stopping_strings"] == ["END"]
 
 
+class TestPresetExtraStoppingStrings:
+    def test_preset_extra_stopping_strings_reach_the_client(
+        self, stub_client, preset_isolation
+    ):
+        preset_isolation.creative.extra_stopping_strings = ["<<STOP>>"]
+        with _make_active_agent_context():
+            with ClientContext():
+                params = stub_client.generate_prompt_parameters("narrate")
+        assert params["extra_stopping_strings"] == ["<<STOP>>"]
+
+    def test_preset_extra_stopping_strings_are_copied(
+        self, stub_client, preset_isolation
+    ):
+        # Agents and the client append to this list in place, so a shared
+        # reference would grow the stored preset with every generation.
+        preset_isolation.creative.extra_stopping_strings = ["<<STOP>>"]
+        with _make_active_agent_context():
+            with ClientContext():
+                params = stub_client.generate_prompt_parameters("narrate")
+        params["extra_stopping_strings"].append("<<MORE>>")
+        assert preset_isolation.creative.extra_stopping_strings == ["<<STOP>>"]
+
+    def test_conversation_kind_keeps_preset_and_character_strings(
+        self, stub_client, preset_isolation
+    ):
+        preset_isolation.conversation.extra_stopping_strings = ["<<STOP>>"]
+        with _make_active_agent_context():
+            with ClientContext():
+                set_client_context_attribute(
+                    "conversation",
+                    {"talking_character": "Alice", "other_characters": ["Bob"]},
+                )
+                params = stub_client.generate_prompt_parameters("conversation")
+        assert params["extra_stopping_strings"] == ["<<STOP>>", "Bob:", "BOB\n"]
+
+
+class TestBuildStoppingStrings:
+    def test_merges_extra_stopping_strings_without_cap(self, stub_client):
+        params = {"extra_stopping_strings": ["Bob: ", "Eve: "]}
+        with capture_logs() as logs:
+            stopping_strings = stub_client.build_stopping_strings(params)
+        assert stopping_strings == STOPPING_STRINGS + ["Bob: ", "Eve: "]
+        # nothing to truncate, so nothing is logged
+        assert not [entry for entry in logs if entry["event"] == TRUNCATION_EVENT]
+
+    def test_cap_truncates_and_warns(self, stub_client):
+        extra = [f"Char{i}: " for i in range(5)]
+        params = {"extra_stopping_strings": list(extra)}
+        with capture_logs() as logs:
+            stopping_strings = stub_client.build_stopping_strings(params, cap=3)
+
+        assert stopping_strings == (STOPPING_STRINGS + extra)[:3]
+
+        truncations = [entry for entry in logs if entry["event"] == TRUNCATION_EVENT]
+        assert len(truncations) == 1
+        assert truncations[0]["log_level"] == "warning"
+        assert truncations[0]["client_type"] == "stub"
+        assert truncations[0]["max_stopping_strings"] == 3
+        assert truncations[0]["dropped"] == (STOPPING_STRINGS + extra)[3:]
+
+    def test_warn_false_logs_at_debug(self, stub_client):
+        extra = [f"Char{i}: " for i in range(5)]
+        params = {"extra_stopping_strings": list(extra)}
+        with capture_logs() as logs:
+            stopping_strings = stub_client.build_stopping_strings(
+                params, cap=3, warn=False
+            )
+
+        assert stopping_strings == (STOPPING_STRINGS + extra)[:3]
+
+        truncations = [entry for entry in logs if entry["event"] == TRUNCATION_EVENT]
+        assert len(truncations) == 1
+        assert truncations[0]["log_level"] == "debug"
+
+    def test_no_truncation_when_within_cap(self, stub_client):
+        params = {"extra_stopping_strings": ["Bob: "]}
+        with capture_logs() as logs:
+            stopping_strings = stub_client.build_stopping_strings(params, cap=16)
+        assert stopping_strings == STOPPING_STRINGS + ["Bob: "]
+        assert not [entry for entry in logs if entry["event"] == TRUNCATION_EVENT]
+
+    def test_does_not_mutate_the_global_list(self, stub_client):
+        before = list(STOPPING_STRINGS)
+        params = {"extra_stopping_strings": ["Bob: "]}
+        stub_client.build_stopping_strings(params)
+        assert STOPPING_STRINGS == before
+
+
 class TestTunePromptParametersConversation:
     def test_sets_max_tokens_and_stopping_strings(self, stub_client):
         params = {}
@@ -842,6 +943,22 @@ class TestTunePromptParametersConversation:
             stub_client.tune_prompt_parameters_conversation(params)
         assert "PRESET" in params["extra_stopping_strings"]
         assert "Bob:" in params["extra_stopping_strings"]
+
+    def test_skips_character_names_when_injection_turned_off(self, stub_client):
+        params = {"extra_stopping_strings": ["PRESET"]}
+        with ClientContext():
+            set_client_context_attribute(
+                "conversation",
+                {
+                    "talking_character": "Alice",
+                    "other_characters": ["Bob"],
+                    "length": 300,
+                    "inject_character_names": False,
+                },
+            )
+            stub_client.tune_prompt_parameters_conversation(params)
+        assert params["extra_stopping_strings"] == ["PRESET"]
+        assert params["max_tokens"] == 300
 
     def test_default_max_tokens_when_length_missing(self, stub_client):
         params = {}
@@ -1661,6 +1778,44 @@ class TestSendPromptEndToEnd:
                 set_client_context_attribute("requires_active_scene", False)
                 out = await client.send_prompt("hi", kind="conversation")
         assert out == "useful answer"
+
+    @pytest.mark.asyncio
+    async def test_splits_at_preset_stopping_string(
+        self, cfg_isolation, preset_isolation
+    ):
+        _register_client_config("preset_stop", model="some-model", enabled=True)
+        preset_isolation.conversation.extra_stopping_strings = ["<<CUT>>"]
+        client = _OfflineClient(
+            name="preset_stop", response="useful answer<<CUT>> garbage tail"
+        )
+        client.connected = True
+        client.remote_model_name = "some-model"
+
+        with _make_active_agent_context():
+            with ClientContext(requires_active_scene=False):
+                set_client_context_attribute("requires_active_scene", False)
+                out = await client.send_prompt("hi", kind="conversation")
+        assert out == "useful answer"
+
+    @pytest.mark.asyncio
+    async def test_cuts_at_earliest_stopping_string_occurrence(
+        self, cfg_isolation, preset_isolation
+    ):
+        # The earliest occurrence in the response wins, even when it belongs
+        # to a later entry in the stopping string list.
+        _register_client_config("earliest_stop", model="some-model", enabled=True)
+        preset_isolation.conversation.extra_stopping_strings = ["<<LATE>>", "<<EARLY>>"]
+        client = _OfflineClient(
+            name="earliest_stop", response="safe<<EARLY>>leak<<LATE>>tail"
+        )
+        client.connected = True
+        client.remote_model_name = "some-model"
+
+        with _make_active_agent_context():
+            with ClientContext(requires_active_scene=False):
+                set_client_context_attribute("requires_active_scene", False)
+                out = await client.send_prompt("hi", kind="conversation")
+        assert out == "safe"
 
     @pytest.mark.asyncio
     async def test_strips_reasoning_when_enabled(self, cfg_isolation):

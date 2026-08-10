@@ -433,7 +433,7 @@
   title: Inference Configuration
   summary: 'The Settings -> Presets -> Inference editor: preset categories picked per agent action (Analytical, Conversation,
     Creative, Deterministic, Scene Direction, Summarization), the parameters (temperature, top-p, top-k, min-p, penalties,
-    XTC, DRY), and preset groups.'
+    XTC, DRY, extra stopping strings and which clients apply them natively vs by trimming), and preset groups.'
 - path: user-guide/clients/prompt-templates.md
   title: Prompt Templates
   summary: Why the correct prompt template matters for clients where Talemate builds the prompt (KoboldCpp, llama.cpp, Text-Generation-WebUI,

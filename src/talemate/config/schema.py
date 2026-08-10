@@ -391,6 +391,7 @@ class InferenceParameters(pydantic.BaseModel):
     frequency_penalty: float | None = 0.05
     repetition_penalty: float | None = 1.0
     repetition_penalty_range: int | None = 1024
+    extra_stopping_strings: list[str] = pydantic.Field(default_factory=list)
 
     xtc_threshold: float | None = 0.1
     xtc_probability: float | None = 0.0
@@ -408,6 +409,15 @@ class InferenceParameters(pydantic.BaseModel):
     # this determines whether or not it should be persisted
     # to the config file
     changed: bool = False
+
+    @pydantic.field_validator("extra_stopping_strings")
+    @classmethod
+    def drop_blank_stopping_strings(cls, value: list[str]) -> list[str]:
+        # a blank entry silently truncates every response at its first match
+        # (an empty separator matches at position 0) - drop instead of raising
+        # so a stray config entry cannot break generation. surviving entries
+        # keep their whitespace, a trailing space as in "Bob: " is meaningful
+        return [entry for entry in value if entry.strip()]
 
 
 class InferencePresets(pydantic.BaseModel):

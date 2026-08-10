@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 import asyncio
 import functools
 import hashlib
+import threading
 import traceback
 import numpy as np
 from typing import Callable
@@ -105,6 +106,8 @@ class MemoryAgent(Agent):
         self.db = None
         self.memory_tracker = {}
         self._ready_to_add = False
+        self._db_generation = 0
+        self._db_lock = threading.Lock()
 
         async_signals.get("config.changed").connect(self.on_config_changed)
 
@@ -347,6 +350,27 @@ class MemoryAgent(Agent):
     async def count(self):
         raise NotImplementedError()
 
+    async def _wait_until_ready(self) -> bool:
+        """
+        Wait for the db to become writable.
+
+        Returns False when the agent was rebound to another scene while waiting -
+        the write belongs to a scene that is gone, and writing it once the next
+        scene installs its db would put it in the wrong collection.
+        """
+        scene = self.scene
+
+        while not self._ready_to_add:
+            if self.scene is not scene:
+                break
+            await asyncio.sleep(0.1)
+
+        if self.scene is not scene:
+            log.debug("memory agent", status="scene released while waiting for db")
+            return False
+
+        return True
+
     @set_processing
     async def add(self, text, character=None, uid=None, ts: str = None, **kwargs):
         if not text:
@@ -355,8 +379,8 @@ class MemoryAgent(Agent):
             log.debug("memory agent", status="readonly")
             return
 
-        while not self._ready_to_add:
-            await asyncio.sleep(0.1)
+        if not await self._wait_until_ready():
+            return
 
         log.debug(
             "memory agent add",
@@ -418,8 +442,8 @@ class MemoryAgent(Agent):
             log.debug("memory agent", status="readonly")
             return
 
-        while not self._ready_to_add:
-            await asyncio.sleep(0.1)
+        if not await self._wait_until_ready():
+            return
 
         log.debug("memory agent add many", len=len(objects))
 
@@ -441,8 +465,8 @@ class MemoryAgent(Agent):
             log.debug("memory agent", status="readonly")
             return
 
-        while not self._ready_to_add:
-            await asyncio.sleep(0.1)
+        if not await self._wait_until_ready():
+            return
 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._delete, meta)
@@ -893,15 +917,20 @@ class ChromaDBMemoryAgent(MemoryAgent):
     def _set_db(self):
         self._ready_to_add = False
 
+        # scene and generation have to be snapshotted together: a rebind between
+        # the two reads would pair an old collection name with a post-bump
+        # generation, and both install checks would pass
+        with self._db_lock:
+            generation = self._db_generation
+            scene = self.scene
+
+        collection_name = self.make_collection_name(scene)
+
         if not getattr(self, "db_client", None):
             log.info("chromadb agent", status="setting up db client to persistent db")
             self.db_client = chromadb.PersistentClient(
                 settings=Settings(anonymized_telemetry=False)
             )
-
-        openai_key = self.openai_api_key
-
-        self.collection_name = collection_name = self.make_collection_name(self.scene)
 
         log.info(
             "chromadb agent",
@@ -910,6 +939,31 @@ class ChromaDBMemoryAgent(MemoryAgent):
             embeddings=self.embeddings,
         )
 
+        db = self._build_collection(collection_name)
+        count = db.count()
+
+        with self._db_lock:
+            if self._db_generation != generation or self.scene is not scene:
+                # cleanup belongs to `close_db`, which works by name, so the stale
+                # handle is simply dropped. accepted residual: this build may have
+                # re-created the collection as an empty shell after `close_db`
+                # deleted it - nothing was ever added to it and a later load of
+                # the same scene reuses it
+                log.warning(
+                    "chromadb agent",
+                    status="discarding stale db handle",
+                    collection_name=collection_name,
+                )
+                return
+
+            self.db = db
+            self.collection_name = collection_name
+            scene._memory_never_persisted = count == 0
+            log.info("chromadb agent", status="db ready")
+            self._ready_to_add = True
+
+    def _build_collection(self, collection_name):
+        openai_key = self.openai_api_key
         distance_function = self.distance_function
         collection_metadata = {"hnsw:space": distance_function}
         device = self.actions["_config"].config["device"].value
@@ -931,12 +985,13 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 api_key=openai_key,
                 model_name=model_name,
             )
-            self.db = self.db_client.get_or_create_collection(
+            return self.db_client.get_or_create_collection(
                 collection_name,
                 embedding_function=openai_ef,
                 metadata=collection_metadata,
             )
-        elif self.using_client_api_embeddings:
+
+        if self.using_client_api_embeddings:
             log.info(
                 "chromadb",
                 embeddings="Client API",
@@ -958,51 +1013,98 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
             ef = embeddings_client.embeddings_function
 
-            self.db = self.db_client.get_or_create_collection(
+            return self.db_client.get_or_create_collection(
                 collection_name, embedding_function=ef, metadata=collection_metadata
             )
-        else:
-            log.info(
-                "chromadb",
-                embeddings="SentenceTransformer",
-                model=model_name,
+
+        log.info(
+            "chromadb",
+            embeddings="SentenceTransformer",
+            model=model_name,
+            device=device,
+            distance_function=distance_function,
+        )
+
+        try:
+            # ChromaDB caches models in a class-level dict keyed only by model name,
+            # ignoring device — so a device switch would silently reuse the old model.
+            # Evict only when the cached model's device differs from the requested one,
+            # otherwise reuse it (avoids an expensive reload on every set_db call).
+            ST = embedding_functions.SentenceTransformerEmbeddingFunction
+            cached = ST.models.get(model_name)
+            if (
+                cached is not None
+                and getattr(cached, "device", None) is not None
+                and cached.device.type != device
+            ):
+                self._release_embedding_model(ST.models.pop(model_name))
+
+            ef = ST(
+                model_name=model_name,
+                trust_remote_code=self.trust_remote_code,
                 device=device,
-                distance_function=distance_function,
             )
-
-            try:
-                # ChromaDB caches models in a class-level dict keyed only by model name,
-                # ignoring device — so a device switch would silently reuse the old model.
-                # Evict only when the cached model's device differs from the requested one,
-                # otherwise reuse it (avoids an expensive reload on every set_db call).
-                ST = embedding_functions.SentenceTransformerEmbeddingFunction
-                cached = ST.models.get(model_name)
-                if (
-                    cached is not None
-                    and getattr(cached, "device", None) is not None
-                    and cached.device.type != device
-                ):
-                    self._release_embedding_model(ST.models.pop(model_name))
-
-                ef = ST(
-                    model_name=model_name,
-                    trust_remote_code=self.trust_remote_code,
-                    device=device,
+        except ValueError as e:
+            if "`trust_remote_code=True` to remove this error" in str(e):
+                raise EmbeddingsModelLoadError(
+                    model_name,
+                    "Model requires `Trust remote code` to be enabled",
                 )
-            except ValueError as e:
-                if "`trust_remote_code=True` to remove this error" in str(e):
-                    raise EmbeddingsModelLoadError(
-                        model_name, "Model requires `Trust remote code` to be enabled"
-                    )
-                raise EmbeddingsModelLoadError(model_name, str(e))
+            raise EmbeddingsModelLoadError(model_name, str(e))
 
-            self.db = self.db_client.get_or_create_collection(
-                collection_name, embedding_function=ef, metadata=collection_metadata
+        return self.db_client.get_or_create_collection(
+            collection_name, embedding_function=ef, metadata=collection_metadata
+        )
+
+    def _cleanup_memory(
+        self, scene, collection_name, db, remove_unsaved_memory: bool = True
+    ):
+        if not scene.saved and not scene.saved_memory_session_id:
+            # scene was never saved so we can discard the memory
+            log.info(
+                "chromadb agent",
+                status="discarding memory",
+                collection_name=collection_name,
+            )
+            try:
+                self.db_client.delete_collection(collection_name)
+            except chromadb.errors.NotFoundError as exc:
+                log.debug("chromadb agent", status="collection not found", details=exc)
+            except ValueError as exc:
+                log.error(
+                    "chromadb agent", error="failed to delete collection", details=exc
+                )
+            return
+
+        if not scene.saved and remove_unsaved_memory:
+            # scene was saved but memory was never persisted
+            # so we need to remove the memory from the db
+            if not scene.memory_session_id:
+                return
+
+            if scene.saved_memory_session_id == scene.memory_session_id:
+                return
+
+            if db is None:
+                try:
+                    db = self.db_client.get_collection(collection_name)
+                except chromadb.errors.NotFoundError:
+                    return
+
+            log.info(
+                "chromadb agent",
+                status="removing unsaved memory",
+                session_id=scene.memory_session_id,
             )
 
-        self.scene._memory_never_persisted = self.db.count() == 0
-        log.info("chromadb agent", status="db ready")
-        self._ready_to_add = True
+            db.delete(
+                where={
+                    "$and": [
+                        {"session": scene.memory_session_id},
+                        {"source": "talemate"},
+                    ]
+                }
+            )
 
     def clear_db(self):
         if not self.db:
@@ -1015,49 +1117,49 @@ class ChromaDBMemoryAgent(MemoryAgent):
         self.db.delete(where={"source": "talemate"})
 
     def drop_db(self):
-        if not self.db:
+        # the generation is bumped even without a handle, so an in-flight
+        # `_set_db` cannot install a collection this call is about to delete
+        with self._db_lock:
+            self._db_generation += 1
+            self._ready_to_add = False
+            db = self.db
+            collection_name = getattr(self, "collection_name", None)
+            self.db = None
+
+        if not db:
             return
 
         log.info(
-            "chromadb agent", status="dropping db", collection_name=self.collection_name
+            "chromadb agent", status="dropping db", collection_name=collection_name
         )
 
         try:
-            self.db_client.delete_collection(self.collection_name)
+            self.db_client.delete_collection(collection_name)
+        except chromadb.errors.NotFoundError as exc:
+            log.debug("chromadb agent", status="collection not found", details=exc)
         except ValueError as exc:
             if "Collection not found" not in str(exc):
                 raise
 
     def close_db(self, scene, remove_unsaved_memory: bool = True):
-        if not self.db:
+        # the handle is dropped and the generation bumped before the fallible
+        # cleanup below: a raise must not leave the released scene's handle
+        # installed past the agent's rebind, and an in-flight `_set_db` has to be
+        # invalidated even when it has not installed its handle yet
+        with self._db_lock:
+            self._db_generation += 1
+            self._ready_to_add = False
+            db = self.db
+            self.db = None
+
+        if not getattr(self, "db_client", None):
             return
 
-        log.info(
-            "chromadb agent", status="closing db", collection_name=self.collection_name
-        )
+        collection_name = self.make_collection_name(scene)
 
-        if not scene.saved and not scene.saved_memory_session_id:
-            # scene was never saved so we can discard the memory
-            collection_name = self.make_collection_name(scene)
-            log.info(
-                "chromadb agent",
-                status="discarding memory",
-                collection_name=collection_name,
-            )
-            try:
-                self.db_client.delete_collection(collection_name)
-            except chromadb.errors.NotFoundError as exc:
-                log.error("chromadb agent", error="collection not found", details=exc)
-            except ValueError as exc:
-                log.error(
-                    "chromadb agent", error="failed to delete collection", details=exc
-                )
-        elif not scene.saved and remove_unsaved_memory:
-            # scene was saved but memory was never persisted
-            # so we need to remove the memory from the db
-            self._remove_unsaved_memory()
+        log.info("chromadb agent", status="closing db", collection_name=collection_name)
 
-        self.db = None
+        self._cleanup_memory(scene, collection_name, db, remove_unsaved_memory)
 
     def _release_embedding_model(self, model):
         """Release an embedding model and free GPU memory if applicable."""
@@ -1293,17 +1395,4 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
     def _remove_unsaved_memory(self):
         scene = self.scene
-
-        if not scene.memory_session_id:
-            return
-
-        if scene.saved_memory_session_id == self.scene.memory_session_id:
-            return
-
-        log.info(
-            "chromadb agent",
-            status="removing unsaved memory",
-            session_id=scene.memory_session_id,
-        )
-
-        self._delete({"session": scene.memory_session_id, "source": "talemate"})
+        self._cleanup_memory(scene, self.make_collection_name(scene), self.db)

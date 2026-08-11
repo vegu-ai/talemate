@@ -313,6 +313,7 @@ import { LGraphCanvas, LiteGraph } from 'litegraph.js';
 import { initializeGraphFromJSON, normalizeHexColor } from '@/utils/litegraphUtils'
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 import { convertGraphToJSON, convertSelectedGraphToJSON } from '@/utils/exportGraph.js'
+import { hasEditableProperties } from '@/utils/moduleProperties';
 //import '@/utils/litegraphSearchBox'
 import { Codemirror } from 'vue-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
@@ -498,13 +499,7 @@ export default {
             if (!this.graph || !this.graph.talemateFields) {
                 return false;
             }
-            const editableTypes = ['str', 'int', 'float', 'bool', 'text'];
-            for (let key in this.graph.talemateFields) {
-                if (editableTypes.includes(this.graph.talemateFields[key].type)) {
-                    return true;
-                }
-            }
-            return false;
+            return hasEditableProperties(this.graph.talemateFields);
         },
         sceneReadyForNodeEditing() {
             if(!this.scene) {

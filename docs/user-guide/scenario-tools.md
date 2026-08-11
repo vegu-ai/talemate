@@ -354,6 +354,14 @@ Once it is done, the character will now be part of the scene and can be interact
     ![Indicator](/talemate/img/0.26.0/scene-tool-creative-introduce-indicator.png) a little human icon will appear next to the :material-puzzle-edit: `Creative Actions` button if there is a character that can be introduced.
 
 
+### :material-console-line: Custom Commands
+
+Commands that a scene defines through [command modules](/talemate/user-guide/node-editor/core-concepts/command_module/) in the node editor can be run from this menu instead of being typed with `!`.
+
+The menu only appears when the loaded scene actually exposes commands to it — a command module decides that by carrying a menu id. Commands sharing a menu id sit together in one sub menu, labelled with that id.
+
+Clicking a command runs it. If the command takes arguments, a dialog asks for them first — a checkbox, a number field, a text area (one list item per line) or a text field, depending on the argument. Leave a field blank to let the command's own handling for that argument apply.
+
 ### :material-image-frame: Visualizer
 
 !!! info "Availability"

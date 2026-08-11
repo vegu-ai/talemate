@@ -27,6 +27,11 @@ The parser always turns the positional fields into `arg_0`, `arg_1`, …
 
 That `name` is what players will type after `!` to invoke the command.
 
+The same panel carries two more properties:
+
+* **icon** – the icon the command gets in the scene tools menu. Click one of the common icons or type any Material Design Icon name; the field previews the icon as soon as the name matches an icon that actually exists. Defaults to `mdi-console-line`.
+* **menu** – the menu id that puts the command into the scene tools menu. Empty (the default) keeps the command typed-only. See [Adding a command to the scene tools menu](#adding-a-command-to-the-scene-tools-menu).
+
 ### Building the command logic
 
 Command modules are specialised *Function* modules.  Internally they work exactly like the functions described in the [Functions guide](functions.md) – you define one or more *Argument* nodes, process them, then connect the last node to **Define Function** (or simply rely on the module wrapper).
@@ -68,6 +73,34 @@ Now players (or tests) can type:
 ```
 
 The graph runs, the AI generates a response as Alice, and the message appears in the scene.
+
+---
+
+## Adding a command to the scene tools menu
+
+Every command can be typed with `!`. Give the module a **menu** id and it also appears in the :material-console-line: custom commands menu in the scene tools.
+
+* Commands that share a menu id are grouped into one sub menu, labelled with that id.
+* The entry shows the module's **icon** and uses the module's **title** as its label.
+* An empty **menu** keeps the command typed-only.
+
+The custom commands menu is only shown while the loaded scene has at least one command with a menu id.
+
+### Prompting for arguments
+
+If the module defines *Argument* nodes, clicking the entry opens a dialog that asks for them before the command runs. The input depends on the argument's type:
+
+| Argument type | Input |
+| --- | --- |
+| `bool` | Checkbox |
+| `int`, `float` | Number field |
+| `list` | Multi-line text area — one list item per line |
+| anything else | Text field |
+
+A field left blank is omitted from the call entirely, so the argument arrives unset and whatever the module does for a missing argument applies — it is not turned into an empty string or a `0`.
+
+!!! note "Argument names"
+    The dialog labels each field with the argument's name and passes the values under those names, while typed invocation always fills `arg_0`, `arg_1`, … in order. Keep the positional names if the command should be usable both ways.
 
 ---
 

@@ -38,7 +38,7 @@ from talemate.events import (
     RegenerateGeneration,
     SceneStateEvent,
 )
-from talemate.game.engine.nodes.scene import SceneLoopEvent
+from talemate.game.engine.nodes.scene import SceneCommandsCatalogEvent, SceneLoopEvent
 from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.creator.assistant import (
     AutocompleteEmission,
@@ -74,6 +74,7 @@ for _model in (
     PlayerTurnStartEvent,
     RegenerateGeneration,
     SceneLoopEvent,
+    SceneCommandsCatalogEvent,
     ConversationAgentEmission,
     ContextualGenerateEmission,
     AutocompleteEmission,

@@ -218,8 +218,12 @@
                     :scene="scene"
                     :world-state-templates="worldStateTemplates"
                 />
+                <!-- custom commands -->
+
+                <SceneToolsCommands :disabled="appBusy || !appReady" />
+
                 <!-- visualizer actions -->
-             
+
                 <SceneToolsVisual
                     :disabled="appBusy || !appReady"
                     :agent-status="agentStatus"
@@ -252,6 +256,7 @@ import SceneToolsDirector from './SceneToolsDirector.vue';
 import SceneToolsNarrator from './SceneToolsNarrator.vue';
 import SceneToolsActor from './SceneToolsActor.vue';
 import SceneToolsCreative from './SceneToolsCreative.vue';
+import SceneToolsCommands from './SceneToolsCommands.vue';
 import SceneToolsVisual from './SceneToolsVisual.vue';
 import SceneToolsWorld from './SceneToolsWorld.vue';
 import SceneToolsSettings from './SceneToolsSettings.vue';
@@ -269,6 +274,7 @@ export default {
         SceneToolsNarrator,
         SceneToolsActor,
         SceneToolsCreative,
+        SceneToolsCommands,
         SceneToolsVisual,
         SceneToolsSave,
         SceneToolsWorld,

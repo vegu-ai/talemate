@@ -629,8 +629,10 @@
     Make Key-Value Pair tuples, adding input slots, nested collection, and Format vs Advanced Format vs Jinja2 Format.'
 - path: user-guide/node-editor/core-concepts/command_module.md
   title: Command Modules
-  summary: 'Command node modules let players type "!name:arg_0;arg_1" in the scene: the module''s name property, Argument
-    nodes, and an !instruct_actor example. Command modules load automatically with the scene, no scene-loop placement needed.'
+  summary: 'Command node modules let players type "!name:arg_0;arg_1" in the scene: the module''s name/icon/menu properties,
+    Argument nodes, and an !instruct_actor example. A menu id exposes the command in the scene tools custom commands menu,
+    with a dialog that prompts for declared arguments. Command modules load automatically with the scene, no scene-loop
+    placement needed.'
 - path: user-guide/node-editor/core-concepts/error-handling.md
   title: Error Handling
   summary: Catching uncaught graph exceptions with the Error Handler node (core/ErrorHandler) and a handler function taking
@@ -981,9 +983,11 @@
 - path: user-guide/scenario-tools.md
   title: Scene Tools
   summary: 'Reference for the tool bar above the input box: the agent activity bar, the quick-settings chips (Auto Save, Auto
-    Progress, Immersive) and the Regenerate, Actor, Director, Narrator, Advance time, World state, Creative tools, Visualizer
-    and Saving menus. Also covers user-defined shortcuts - custom entries with a label, icon and standing instructions added
-    to the Actor, Director, Narrator and Visualizer menus via Add shortcut, stored in the application configuration.'
+    Progress, Immersive) and the Regenerate, Actor, Director, Narrator, Advance time, World state, Creative tools, Custom
+    Commands, Visualizer and Saving menus. Also covers user-defined shortcuts - custom entries with a label, icon and standing
+    instructions added to the Actor, Director, Narrator and Visualizer menus via Add shortcut, stored in the application
+    configuration - and the Custom Commands menu that runs scene command modules (grouped by menu id, with an argument
+    prompt dialog).'
 - path: user-guide/scene-browser.md
   title: Home Screen & Scene Library
   summary: Tour of the Home screen - Quick load cards with their Timeline / Remove / Delete menu, the Scene Library tree of

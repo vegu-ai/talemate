@@ -1,9 +1,11 @@
 import structlog
 import asyncio
-from typing import TYPE_CHECKING, ClassVar
+import pydantic
+from typing import TYPE_CHECKING, ClassVar, Literal
 from .core import (
     Loop,
     Node,
+    NodeBase,
     GraphState,
     UNRESOLVED,
     LoopBreak,
@@ -14,6 +16,7 @@ from .core import (
     Trigger,
 )
 from .registry import register, get_nodes_by_base_type, get_node
+from .run import FunctionArgument
 from .event import (
     connect_listeners,
     disconnect_listeners,
@@ -39,6 +42,7 @@ from talemate.util.colors import random_color
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
+    from .command import Command
 
 log = structlog.get_logger("talemate.game.engine.nodes.scene")
 
@@ -48,11 +52,107 @@ async_signals.register(
     "scene_loop_error",
     "scene_loop_init",
     "scene_loop_init_after",
+    "scene_commands_catalog",
 )
 
 
 class SceneLoopEvent(events.Event):
     pass
+
+
+class SceneCommandsCatalogEvent(events.Event):
+    catalog: list[dict]
+
+
+COMMAND_ARGUMENT_TYPES = ("str", "int", "float", "bool", "list", "any")
+
+
+class CommandArgument(pydantic.BaseModel):
+    name: str
+    typ: Literal["str", "int", "float", "bool", "list", "any"] = "any"
+
+    @pydantic.field_validator("typ", mode="before")
+    @classmethod
+    def coerce_typ(cls, value):
+        return value if value in COMMAND_ARGUMENT_TYPES else "any"
+
+
+class CommandCatalogEntry(pydantic.BaseModel):
+    """
+    A command as it is offered to the scene tools menu. Metadata comes from
+    user-authored module JSON, so it is coerced rather than validated.
+    """
+
+    name: str
+    label: str
+    icon: str
+    menu: str = ""
+    args: list[CommandArgument] = pydantic.Field(default_factory=list)
+
+    @pydantic.field_validator("label", "icon", "menu", mode="before")
+    @classmethod
+    def coerce_to_str(cls, value) -> str:
+        return str(value)
+
+    @pydantic.field_validator("menu")
+    @classmethod
+    def strip_menu(cls, value: str) -> str:
+        return value.strip()
+
+
+def resolve_node_command(state: GraphState, command_name: str) -> type[NodeBase] | None:
+    """
+    Resolve a registered command node by its command name.
+
+    Returns None if no command is registered under the given name.
+    """
+
+    registry_name: str | None = (state.data.get("_commands") or {}).get(command_name)
+
+    if not registry_name:
+        return None
+
+    command_node = get_node(registry_name)
+    if not command_node:
+        log.error(
+            "Command node not found",
+            command_name=command_name,
+            registry_name=registry_name,
+        )
+        return None
+
+    return command_node
+
+
+async def run_node_command(
+    state: GraphState, command_name: str, command_kwargs: dict
+) -> bool:
+    """
+    Run a registered command node by its command name.
+
+    Returns False if no command is registered under the given name.
+    """
+
+    command_node = resolve_node_command(state, command_name)
+
+    if not command_node:
+        return False
+
+    task = asyncio.create_task(command_node().execute_command(state, **command_kwargs))
+    task.add_done_callback(_log_command_task_error)
+
+    return True
+
+
+def _log_command_task_error(task: asyncio.Task):
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if isinstance(exc, GenerationCancelled):
+        log.debug("Command execution cancelled")
+        return
+    if exc:
+        log.error("Command execution failed", error=str(exc), exc_info=exc)
 
 
 @register("scene/GetSceneState")
@@ -1042,29 +1142,10 @@ class WaitForInput(Node):
         # remove ! from the command name
         command_name = command_name.lstrip("!")
 
-        # get the command node from the scene
-        registry_name: str | None = state.data["_commands"].get(command_name)
-
-        if not registry_name:
-            return False
-
         # turn args into dict with arg_{N} keys
         args_dict = {f"arg_{i}": arg for i, arg in enumerate(args)}
 
-        command_node = get_node(registry_name)
-        if not command_node:
-            log.error(
-                "Command node not found",
-                command_name=command_name,
-                registry_name=registry_name,
-            )
-            return False
-
-        # create task
-        asyncio.create_task(command_node().execute_command(state, **args_dict))
-
-        # wait command_node().execute_command(state, **args_dict)
-        return True
+        return await run_node_command(state, command_name, args_dict)
 
     async def _handle_director_input(
         self, scene: "Scene", state: GraphState, raw_text: str
@@ -1840,14 +1921,65 @@ class SceneLoop(Loop):
         nodes directory.
         """
         state.data["_commands"] = {}
+        catalog_by_name = {}
 
         for node_cls in get_nodes_by_base_type("command/Command"):
             _node = node_cls()
             command_name = _node.get_property("name")
             state.data["_commands"][command_name] = _node.registry
+            # a module without a name yields UNRESOLVED (a class) here — it can
+            # never be invoked and would break the catalog's JSON/sort contract
+            if isinstance(command_name, str) and command_name:
+                if command_name in catalog_by_name:
+                    log.warning(
+                        "Duplicate command name",
+                        command=f"!{command_name}",
+                        module=_node.registry,
+                    )
+                catalog_by_name[command_name] = CommandCatalogEntry(
+                    name=command_name,
+                    label=_node.title,
+                    icon=_node.get_property("icon"),
+                    menu=_node.get_property("menu"),
+                    args=await self.collect_command_args(_node),
+                )
             log.info(
                 "Registered command", command=f"!{command_name}", module=_node.registry
             )
+
+        catalog = [
+            entry.model_dump()
+            for entry in sorted(catalog_by_name.values(), key=lambda entry: entry.name)
+        ]
+        state.data["_command_catalog"] = catalog
+
+        await async_signals.get("scene_commands_catalog").send(
+            SceneCommandsCatalogEvent(
+                scene=scene, event_type="scene_commands_catalog", catalog=catalog
+            )
+        )
+
+    async def collect_command_args(
+        self, command_node: "Command"
+    ) -> list[CommandArgument]:
+        """
+        Collects the argument definitions of a command module from its
+        FunctionArgument nodes.
+        """
+
+        args = []
+
+        for arg_node in await command_node.get_nodes(
+            fn_filter=lambda node: isinstance(node, FunctionArgument)
+        ):
+            arg_name = arg_node.get_property("name")
+            if not isinstance(arg_name, str) or not arg_name:
+                continue
+            args.append(
+                CommandArgument(name=arg_name, typ=arg_node.get_property("typ"))
+            )
+
+        return args
 
     async def init_agent_nodes(self, scene: "Scene", state: GraphState):
         """

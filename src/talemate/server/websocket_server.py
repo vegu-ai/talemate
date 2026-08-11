@@ -35,6 +35,7 @@ from talemate.server import (
     package_manager,
     prompts,
     scene_assets as scene_assets_plugin,
+    scene_commands,
 )
 from talemate.server.scene_assets_batching import SceneAssetsBatchingMixin
 
@@ -78,6 +79,9 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             ),
             prompts.PromptsPlugin.router: prompts.PromptsPlugin(self),
             scene_assets_plugin.SceneAssetsPlugin.router: scene_assets_plugin.SceneAssetsPlugin(
+                self
+            ),
+            scene_commands.SceneCommandsPlugin.router: scene_commands.SceneCommandsPlugin(
                 self
             ),
             ux.UxPlugin.router: ux.UxPlugin(self),

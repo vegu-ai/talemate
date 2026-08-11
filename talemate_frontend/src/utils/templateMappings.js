@@ -24,6 +24,8 @@ export function iconForTemplate(template) {
         return 'mdi-drama-masks';
     } else if (templateType == 'scene_type') {
         return 'mdi-movie-open';
+    } else if (templateType == 'scene_tool_shortcut') {
+        return 'mdi-lightning-bolt';
     }
     return 'mdi-cube-scan';
 }
@@ -55,6 +57,8 @@ export function colorForTemplate(template) {
         return 'persona';
     } else if (templateType == 'scene_type') {
         return 'highlight6';
+    } else if (templateType == 'scene_tool_shortcut') {
+        return 'highlight7';
     }
     return 'grey';
 }

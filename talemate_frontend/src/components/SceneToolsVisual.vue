@@ -68,11 +68,13 @@
                 section="visual"
                 :catalog="shortcutCatalog"
                 :shortcuts="shortcuts"
+                :templates="shortcutTemplates"
                 :characters="characters"
                 :disabled="disabled"
                 @run="runShortcut"
                 @edit="(shortcut) => $emit('shortcut-edit', shortcut)"
                 @add="(section) => $emit('shortcut-add', section)"
+                @add-template="(template) => $emit('shortcut-add-template', template)"
             />
         </v-list>
     </v-menu>
@@ -109,7 +111,7 @@ export default {
     components: {
         SceneToolsShortcutItems,
     },
-    emits: ['shortcut-add', 'shortcut-edit'],
+    emits: ['shortcut-add', 'shortcut-edit', 'shortcut-add-template'],
     props: {
         agentStatus: {
             type: Object,
@@ -136,6 +138,10 @@ export default {
             default: () => [],
         },
         shortcuts: {
+            type: Object,
+            default: () => ({}),
+        },
+        shortcutTemplates: {
             type: Object,
             default: () => ({}),
         },

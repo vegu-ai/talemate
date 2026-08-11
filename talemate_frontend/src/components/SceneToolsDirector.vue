@@ -40,12 +40,14 @@
                 section="director"
                 :catalog="shortcutCatalog"
                 :shortcuts="shortcuts"
+                :templates="shortcutTemplates"
                 :characters="npcCharacters"
                 :disabled="disabled"
                 :disabled-actions="sceneDirectionEnabled ? {} : { 'director.scene_direction_turn': 'Scene direction is disabled' }"
                 @run="runShortcut"
                 @edit="(shortcut) => $emit('shortcut-edit', shortcut)"
                 @add="(section) => $emit('shortcut-add', section)"
+                @add-template="(template) => $emit('shortcut-add-template', template)"
             />
         </v-list>
     </v-menu>
@@ -191,9 +193,13 @@ export default {
             type: Object,
             default: () => ({}),
         },
+        shortcutTemplates: {
+            type: Object,
+            default: () => ({}),
+        },
     },
     inject: ['getWebsocket', 'getActAsCharacterName', 'openDirectorConsole', 'openAgentSettings'],
-    emits: ['shortcut-add', 'shortcut-edit'],
+    emits: ['shortcut-add', 'shortcut-edit', 'shortcut-add-template'],
     data() {
         return {
             primaryModifierLabel,

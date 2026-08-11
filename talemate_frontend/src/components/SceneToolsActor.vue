@@ -22,11 +22,13 @@
                 section="actor"
                 :catalog="shortcutCatalog"
                 :shortcuts="shortcuts"
+                :templates="shortcutTemplates"
                 :characters="npcCharacters"
                 :disabled="disabled"
                 @run="runShortcut"
                 @edit="(shortcut) => $emit('shortcut-edit', shortcut)"
                 @add="(section) => $emit('shortcut-add', section)"
+                @add-template="(template) => $emit('shortcut-add-template', template)"
             />
         </v-list>
     </v-menu>
@@ -60,9 +62,13 @@ export default {
             type: Object,
             default: () => ({}),
         },
+        shortcutTemplates: {
+            type: Object,
+            default: () => ({}),
+        },
     },
     inject: ['getWebsocket'],
-    emits: ['shortcut-add', 'shortcut-edit'],
+    emits: ['shortcut-add', 'shortcut-edit', 'shortcut-add-template'],
     data() {
         return {
             primaryModifierLabel,

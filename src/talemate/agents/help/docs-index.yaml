@@ -986,7 +986,8 @@
     Progress, Immersive) and the Regenerate, Actor, Director, Narrator, Advance time, World state, Creative tools, Custom
     Commands, Visualizer and Saving menus. Also covers user-defined shortcuts - custom entries with a label, icon and standing
     instructions added to the Actor, Director, Narrator and Visualizer menus via Add shortcut, stored in the application
-    configuration - and the Custom Commands menu that runs scene command modules (grouped by menu id, with an argument
+    configuration, shared as scene tool shortcut templates via Save as template and installed again through the Add from
+    template submenu - and the Custom Commands menu that runs scene command modules (grouped by menu id, with an argument
     prompt dialog).'
 - path: user-guide/scene-browser.md
   title: Home Screen & Scene Library
@@ -1020,8 +1021,14 @@
 - path: user-guide/templates/index.md
   title: Templates
   summary: 'Overview of the Templates tab and the template types available: Character Attribute, Character Detail, Spices,
-    Writing Style, State Reinforcement, Scene Type, Visual Style, Visual Prompt Finalizer and Agent Persona. Templates live
-    in groups shared across scenes.'
+    Writing Style, State Reinforcement, Scene Type, Visual Style, Visual Prompt Finalizer, Agent Persona and Scene Tool
+    Shortcut. Templates live in groups shared across scenes.'
+- path: user-guide/templates/scene-tool-shortcut.md
+  title: Scene Tool Shortcuts
+  summary: 'Creating a Scene tool shortcut template that packages a scene tool action with a label, an icon and canned
+    instructions: the Action, Label, Instructions and Icon fields, installing it into the scene tools menu with Install
+    shortcut (duplicates are skipped, templates whose action no longer exists are blocked), and sharing it by passing on
+    the group file in templates/world-state.'
 - path: user-guide/templates/scene_type.md
   title: Scene Types
   summary: Creating a Scene type template - name, type, description, and the scene type instructions that govern the director's

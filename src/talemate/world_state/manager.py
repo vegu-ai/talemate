@@ -1,3 +1,5 @@
+import os
+import uuid
 from typing import TYPE_CHECKING, Any, Callable, Union
 
 import pydantic
@@ -5,6 +7,9 @@ import structlog
 
 import talemate.world_state.templates as world_state_templates
 from talemate.agents.tts.util import get_voice
+from talemate.config import commit_config, get_config
+from talemate.config.schema import SceneToolShortcut
+from talemate.scene_tools import SCENE_TOOL_ACTIONS
 from talemate.scene_agent_settings import (
     UNCHANGED as AGENT_SETTINGS_UNCHANGED,
     apply_scene_settings_link,
@@ -779,11 +784,27 @@ class WorldStateManager:
             group: The Group object to be added.
         """
         exists = self.template_collection.find(group.uid)
-        if not exists:
-            self.template_collection.groups.append(group)
-            group.save()
-        else:
+
+        if exists:
+            # the group is deserialized from a client payload, so its `path` is
+            # not authority over which file gets written: a known group always
+            # saves back to the file it was loaded from (`update` copies the
+            # fields, never the path)
             exists.update(group)
+            return
+
+        # an unknown group derives its file from its name - taking the inbound
+        # path would let it name (and overwrite) another group's file
+        group.path = None
+        target = group.derived_path(world_state_templates.TEMPLATE_PATH)
+
+        if os.path.exists(target):
+            raise ValueError(
+                f"A template group file named {os.path.basename(target)} already exists"
+            )
+
+        self.template_collection.groups.append(group)
+        group.save(world_state_templates.TEMPLATE_PATH)
 
     async def remove_template_group(self, group: world_state_templates.Group):
         """
@@ -1007,6 +1028,90 @@ class WorldStateManager:
                 return
 
         return await template.generate(self.scene, character_name, **kwargs)
+
+    async def apply_template_scene_tool_shortcut(
+        self,
+        template: str | world_state_templates.SceneToolShortcutTemplate,
+        **kwargs,
+    ) -> SceneToolShortcut | None:
+        """
+        Adds a scene tool shortcut to the application config.
+
+        Arguments:
+            template: The SceneToolShortcutTemplate object defining the shortcut. Can also be a string representing the template uid.
+
+        Returns:
+            The created SceneToolShortcut, or None if the template references an
+            unknown action or an identical shortcut already exists.
+        """
+
+        if isinstance(template, str):
+            template_uid = template
+            template = self.template_collection.flat(
+                types=["scene_tool_shortcut"]
+            ).templates.get(template_uid)
+            if not template:
+                log.error(
+                    "apply_template_scene_tool_shortcut: template not found",
+                    template=template_uid,
+                )
+                return
+
+        if template.action_id not in {action.id for action in SCENE_TOOL_ACTIONS}:
+            log.warning(
+                "apply_template_scene_tool_shortcut: unknown action",
+                template=template.name,
+                action_id=template.action_id,
+            )
+            emit(
+                "status",
+                message=f"Shortcut template '{template.name}' refers to an action that no longer exists",
+                status="warning",
+            )
+            return
+
+        config = get_config()
+        instructions = template.instructions or ""
+
+        for shortcut in config.shortcuts.scene_tools.values():
+            if (
+                shortcut.action_id == template.action_id
+                and shortcut.label == template.label
+                and shortcut.icon == template.icon
+                and shortcut.instructions == instructions
+            ):
+                log.debug(
+                    "apply_template_scene_tool_shortcut: shortcut already exists",
+                    template=template.name,
+                    action_id=template.action_id,
+                )
+                emit(
+                    "status",
+                    message=f"Shortcut '{template.label}' already exists",
+                    status="info",
+                )
+                return
+
+        shortcut = SceneToolShortcut(
+            uid=str(uuid.uuid4()),
+            action_id=template.action_id,
+            label=template.label,
+            icon=template.icon,
+            instructions=instructions,
+        )
+
+        config.shortcuts.scene_tools[shortcut.uid] = shortcut
+
+        await config.set_dirty()
+        await commit_config()
+
+        emit(
+            "status",
+            message=f"Shortcut '{template.label}' added to scene tools",
+            status="success",
+        )
+
+        return shortcut
 
     async def activate_character(self, character_name: str):
         """

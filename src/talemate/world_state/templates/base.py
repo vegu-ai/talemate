@@ -207,6 +207,19 @@ class Group(pydantic.BaseModel):
                     template_type=template_type,
                 )
                 del data["templates"][template_id]
+                continue
+
+            # a hand edited template must not fail the whole group's load
+            try:
+                MODELS[template_type](**template)
+            except pydantic.ValidationError as exc:
+                log.warning(
+                    "Template is invalid",
+                    template_id=template_id,
+                    template_type=template_type,
+                    error=str(exc),
+                )
+                del data["templates"][template_id]
 
         return data
 
@@ -215,9 +228,33 @@ class Group(pydantic.BaseModel):
         cleaned_name = self.name.replace(" ", "-").lower()
         return f"{cleaned_name}.yaml"
 
+    def derived_path(self, path: str) -> str:
+        """
+        The file this group writes to when it has no path yet, derived from
+        its name. The name is user supplied, so it must not be able to name
+        a file outside of `path`.
+        """
+
+        filename = self.filename
+
+        if "/" in filename or "\\" in filename or os.sep in filename:
+            raise ValueError(
+                f"Template group name must not contain path separators: {self.name}"
+            )
+
+        root = os.path.realpath(path)
+        target = os.path.realpath(os.path.join(root, filename))
+
+        if os.path.dirname(target) != root:
+            raise ValueError(
+                f"Template group name resolves outside of {path}: {self.name}"
+            )
+
+        return os.path.join(path, filename)
+
     def save(self, path: str = TEMPLATE_PATH):
         if not self.path:
-            self.path = os.path.join(path, self.filename)
+            self.path = self.derived_path(path)
 
         # ensure `group` is set on all templates
         for template in self.templates.values():

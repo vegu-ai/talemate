@@ -888,21 +888,31 @@ class TestManagerTemplateGroupCRUD:
     """Use the manager's template_collection (mounted on scene)."""
 
     @pytest.mark.asyncio
-    async def test_save_template_group_appends_new(self, scene, manager, tmp_path):
+    async def test_save_template_group_appends_new(
+        self, scene, manager, tmp_path, monkeypatch
+    ):
+        import os
+
         from talemate.world_state.templates.base import Group
 
+        # Redirect the template root so save() writes to tmp_path instead of
+        # the project dir - an unknown group derives its own file there
+        monkeypatch.setattr(
+            "talemate.world_state.templates.TEMPLATE_PATH", str(tmp_path)
+        )
         # Inject empty collection so we don't depend on real disk
         scene._world_state_templates = type(manager.template_collection)(groups=[])
         group = Group(author="me", name="g1", description="x", uid="g1-uid")
-        # Pre-set path so save() writes to tmp_path instead of the project dir
-        group.path = str(tmp_path / "g1.yaml")
+        # An inbound path is not honored (see TestSaveTemplateGroupOwnership in
+        # tests/test_world_state_templates.py)
+        group.path = str(tmp_path / "somewhere-else.yaml")
 
         await manager.save_template_group(group)
         assert manager.template_collection.find("g1-uid") is not None
         # The file was written
-        import os
-
+        assert group.path == str(tmp_path / "g1.yaml")
         assert os.path.exists(group.path)
+        assert not os.path.exists(tmp_path / "somewhere-else.yaml")
 
     @pytest.mark.asyncio
     async def test_save_template_group_update_existing(self, scene, manager, tmp_path):

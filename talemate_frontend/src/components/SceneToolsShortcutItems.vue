@@ -23,11 +23,38 @@
     >
         <v-list-item-title class="text-muted">Add shortcut</v-list-item-title>
     </v-list-item>
+
+    <v-menu v-if="templateRows.length" open-on-hover location="end">
+        <template v-slot:activator="{ props }">
+            <v-list-item
+                v-bind="props"
+                density="compact"
+                prepend-icon="mdi-cube-scan"
+                append-icon="mdi-chevron-right"
+                :disabled="disabled"
+                @click.stop
+            >
+                <v-list-item-title class="text-muted">Add from template</v-list-item-title>
+            </v-list-item>
+        </template>
+        <v-list>
+            <v-list-item
+                v-for="row in templateRows"
+                :key="row.key"
+                density="compact"
+                :prepend-icon="row.template.icon"
+                @click="$emit('add-template', row.template)"
+            >
+                <v-list-item-title>{{ row.template.label }}</v-list-item-title>
+                <v-list-item-subtitle>{{ row.entry.label }}</v-list-item-subtitle>
+            </v-list-item>
+        </v-list>
+    </v-menu>
 </template>
 
 <script>
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
-import { expandShortcutEntries } from '@/utils/sceneToolShortcuts';
+import { expandShortcutEntries, shortcutTemplatesForSection } from '@/utils/sceneToolShortcuts';
 
 export default {
     name: 'SceneToolsShortcutItems',
@@ -41,6 +68,10 @@ export default {
             type: Object,
             default: () => ({}),
         },
+        templates: {
+            type: Object,
+            default: () => ({}),
+        },
         characters: {
             type: Array,
             default: () => [],
@@ -51,7 +82,7 @@ export default {
             default: () => ({}),
         },
     },
-    emits: ['run', 'edit', 'add'],
+    emits: ['run', 'edit', 'add', 'add-template'],
     data() {
         return {
             primaryModifierLabel,
@@ -60,6 +91,10 @@ export default {
     computed: {
         rows() {
             return expandShortcutEntries(this.shortcuts, this.catalog, this.section, this.characters);
+        },
+
+        templateRows() {
+            return shortcutTemplatesForSection(this.templates, this.catalog, this.section);
         },
     },
     methods: {

@@ -188,7 +188,15 @@
 
                 <!-- Scene Type Template -->
                 <div v-else-if="template.template_type === 'scene_type'">
-                    <TemplateSceneType 
+                    <TemplateSceneType
+                        :immutableTemplate="template"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                    />
+                </div>
+
+                <!-- Scene Tool Shortcut Template -->
+                <div v-else-if="template.template_type === 'scene_tool_shortcut'">
+                    <TemplateSceneToolShortcut
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -273,7 +281,10 @@ import TemplateCharacterAttribute from './TemplateCharacterAttribute.vue';
 import TemplateCharacterDetail from './TemplateCharacterDetail.vue';
 import TemplateSpices from './TemplateSpices.vue';
 import TemplateSceneType from './TemplateSceneType.vue';
+import TemplateSceneToolShortcut from './TemplateSceneToolShortcut.vue';
 import { iconForTemplate, colorForTemplate } from '../utils/templateMappings.js';
+import { validateGroupName } from '../utils/sceneToolShortcuts.js';
+import { adoptedTemplateUid } from '../utils/templateSaveEcho.js';
 
 export default {
     name: 'Templates',
@@ -289,6 +300,7 @@ export default {
         TemplateCharacterDetail,
         TemplateSpices,
         TemplateSceneType,
+        TemplateSceneToolShortcut,
     },
     props: {
         immutableTemplates: Object,
@@ -360,6 +372,7 @@ export default {
                 { "title": "Visual prompt finalizer", "value": 'visual_finalizer'},
                 { "title": "Agent persona", "value": 'agent_persona'},
                 { "title": "Scene type", "value": 'scene_type'},
+                { "title": "Scene tool shortcut", "value": 'scene_tool_shortcut'},
             ],
             template: null,
             group: null,
@@ -376,6 +389,7 @@ export default {
                 visual_finalizer: "Visual prompt finalizer templates define a reusable set of post-processing actions (exact, fuzzy or regex match and replace, or AI processing) applied to image generation prompts. Select one as the preset in the visualizer agent's Prompt Finalization settings.",
                 agent_persona: "Agent personas define how an agent should present and behave in prompts (tone, perspective, style). Assign a persona per agent in Scene Settings. (Currently director only)",
                 scene_type: "Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene.",
+                scene_tool_shortcut: "Scene tool shortcut templates package a scene tool action together with a label, an icon and canned instructions. Installing one adds the shortcut to your scene tools menu, where it can be run with a single click.",
             }
         };
     },
@@ -396,6 +410,11 @@ export default {
             } else if(this.template && this.template.template_type === 'character_detail') {
                 if(!this.template.detail)
                     this.template.detail = this.template.name;
+            } else if(this.template && this.template.template_type === 'scene_tool_shortcut') {
+                if(!this.template.label)
+                    this.template.label = this.template.name;
+                if(!this.template.icon)
+                    this.template.icon = iconForTemplate(this.template);
             }
         },
 
@@ -410,18 +429,7 @@ export default {
             return true
         },
 
-        validateGroupName(value) {
-            if (value == null) {
-                return true;
-            }
-            // Characters invalid in Windows and Linux filenames
-            // Windows: < > : " / \ | ? *
-            // Linux: / (null byte is not possible to input from UI)
-            if(/[<>:"/\\|?*]/.test(value)) {
-                return "Name contains invalid characters";
-            }
-            return true;
-        },
+        validateGroupName,
 
         selectTemplate(index) {
             if(index === '$DESELECTED') {
@@ -612,6 +620,14 @@ export default {
 
             if (message.action == 'template_saved') {
                 this.dirty = false;
+                const uid = adoptedTemplateUid(this.template, message.data.template);
+                if (uid) {
+                    this.template.uid = uid;
+                    // the menu's re-select of the created template now finds the
+                    // form already on that uid and leaves it alone, so the
+                    // selection it stands for has to be recorded here
+                    this.selected = [`${this.template.group}__${uid}`];
+                }
                 this.requestTemplates();
             } else if (message.action == 'template_deleted') {
                 if (this.selected && this.selected[0] && this.selected[0].includes(message.data.template.uid)) {

@@ -11,6 +11,7 @@
 </template>
 
 <script>
+import { statusTransition } from '@/utils/statusNotification';
 
 export default {
     data() {
@@ -71,27 +72,17 @@ export default {
         },
 
         handleMessage(data) {
-            if(data.type === 'status') {
+            const transition = statusTransition(this.statusMessageType, data);
 
-                if(data.data && data.data.as_scene_message)
-                    return;
-
-                // `idle` + empty message is the wire-level "clear" signal
-                // (set_loading post-call + LoadingStatus.done()). Always
-                // clear on it, never on local state — a handler may emit
-                // a terminal status (info/warning/etc.) just before
-                // set_loading's trailing idle empty fires, and keying on
-                // local state would let that trailing emit blank-stomp it.
-                if(data.status === 'idle' && !data.message) {
-                    this.statusMessage = false;
-                    this.statusMessageText = '';
-                    this.statusMessageType = '';
-                } else {
-                    this.statusMessage = true;
-                    this.statusMessageText = data.message;
-                    this.statusMessageType = data.status;
-                    this.cancellable = data.data && data.data.cancellable;
-                }
+            if(transition.op === 'clear') {
+                this.statusMessage = false;
+                this.statusMessageText = '';
+                this.statusMessageType = '';
+            } else if(transition.op === 'show') {
+                this.statusMessage = true;
+                this.statusMessageText = transition.text;
+                this.statusMessageType = transition.type;
+                this.cancellable = transition.cancellable;
             }
         },
     },

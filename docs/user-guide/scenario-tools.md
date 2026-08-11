@@ -463,3 +463,20 @@ A shortcut that cannot run right now stays visible as a dimmed entry with the re
 
 !!! info "Shortcuts are application wide"
     Shortcuts are stored in the application configuration, not in the scene, so they are available in every scene you load.
+
+#### Sharing a shortcut as a template
+
+A shortcut can be saved as a [Scene tool shortcut template](/talemate/user-guide/templates/scene-tool-shortcut), which is what makes it shareable.
+
+Open a shortcut with `ctrl` (Cmd on macOS) + click and click **:material-cube-scan: Save as template** in the dialog. A second dialog asks for a **Template group** — pick one of the existing groups from the dropdown, or type a name to create a new group. The shortcut's action, label, icon and instructions are written into that group as a template, and the dialog confirms which group it went into.
+
+Template groups are stored as single files in the `templates/world-state` directory, so sharing a shortcut means handing that group's file to someone else, who drops it into the same directory.
+
+#### Installing a shortcut from a template
+
+Every menu that carries shortcuts also carries an **:material-cube-scan: Add from template** entry below **Add shortcut**, whenever there is at least one shortcut template for that menu. Hovering it opens a submenu listing the templates, each with the action it runs below its label. Clicking one adds it to your shortcuts right away.
+
+Shortcut templates can also be installed from the template itself — see [Scene tool shortcut templates](/talemate/user-guide/templates/scene-tool-shortcut).
+
+!!! info "Installed shortcuts are copies"
+    Installing a template copies it into your own shortcuts, so editing or deleting the shortcut afterwards leaves the template alone. Installing the same template twice does nothing — a shortcut with the same action, label, icon and instructions is not added a second time.

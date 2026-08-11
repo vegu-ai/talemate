@@ -3,6 +3,9 @@
         <v-card>
             <v-card-title>{{ editing ? 'Edit Shortcut' : 'Add Shortcut' }}</v-card-title>
             <v-card-text>
+                <v-alert v-if="templateSaved" type="success" variant="text" density="compact" class="mb-2">{{ templateSaved }}</v-alert>
+                <v-alert v-if="templateError" type="error" variant="text" density="compact" class="mb-2">{{ templateError }}</v-alert>
+
                 <v-select
                     v-model="actionId"
                     :items="actionItems"
@@ -32,9 +35,32 @@
             </v-card-text>
             <v-card-actions>
                 <v-btn v-if="editing" color="delete" variant="text" prepend-icon="mdi-close-box-outline" @click="remove">Delete</v-btn>
+                <v-btn v-if="editing" color="primary" variant="text" prepend-icon="mdi-cube-scan" @click="openTemplateDialog" :disabled="!isValid">Save as template</v-btn>
                 <v-spacer></v-spacer>
                 <v-btn color="cancel" variant="text" @click="dialog = false">Cancel</v-btn>
                 <v-btn color="primary" variant="text" prepend-icon="mdi-check-circle-outline" @click="save" :disabled="!isValid">Save</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="templateDialog" max-width="480">
+        <v-card>
+            <v-card-title>Save as Template</v-card-title>
+            <v-card-text>
+                <v-combobox
+                    v-model="templateGroupName"
+                    :items="templateGroupNames"
+                    label="Template group"
+                    prepend-inner-icon="mdi-group"
+                    hint="Pick a group or type a name to create a new one."
+                    persistent-hint
+                    :rules="[v => validateGroupName(v)]"
+                ></v-combobox>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="cancel" variant="text" @click="templateDialog = false">Cancel</v-btn>
+                <v-btn color="primary" variant="text" prepend-icon="mdi-cube-scan" @click="saveAsTemplate" :disabled="!templateGroupValid">Save template</v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>
@@ -43,6 +69,7 @@
 <script>
 import { v4 as uuidv4 } from 'uuid';
 import IconPicker from './IconPicker.vue';
+import { shortcutAsTemplate, templateGroupByName, templateSaveTransition, validateGroupName } from '@/utils/sceneToolShortcuts';
 
 const SECTION_LABELS = {
     narrator: 'Narrator',
@@ -61,8 +88,12 @@ export default {
             type: Array,
             default: () => [],
         },
+        templateGroups: {
+            type: Array,
+            default: () => [],
+        },
     },
-    inject: ['appConfig', 'saveAppConfig'],
+    inject: ['appConfig', 'saveAppConfig', 'getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
     data() {
         return {
             dialog: false,
@@ -73,9 +104,21 @@ export default {
             instructions: '',
             icon: '',
             iconValid: false,
+            templateDialog: false,
+            templateGroupName: '',
+            templateSaved: null,
+            templateError: null,
+            pendingTemplateSave: null,
         }
     },
     computed: {
+        templateGroupNames() {
+            return this.templateGroups.map(group => group.name);
+        },
+        templateGroupValid() {
+            const name = (this.templateGroupName || '').trim();
+            return !!name && validateGroupName(name) === true;
+        },
         actionItems() {
             return this.catalog.map(entry => ({
                 title: `${this.sectionLabel(entry.section)} · ${entry.label}`,
@@ -89,6 +132,11 @@ export default {
     watch: {
         dialog(value) {
             if (!value) {
+                // a save the backend never echoed would otherwise still be
+                // waiting the next time the modal is opened
+                this.pendingTemplateSave = null;
+                this.templateError = null;
+                this.templateDialog = false;
                 return;
             }
             // the picker stays mounted between openings, so re-opening with the
@@ -101,6 +149,8 @@ export default {
         },
     },
     methods: {
+        validateGroupName,
+
         sectionLabel(section) {
             return SECTION_LABELS[section] || section;
         },
@@ -117,6 +167,9 @@ export default {
             this.instructions = '';
             this.icon = '';
             this.iconValid = false;
+            this.templateSaved = null;
+            this.templateError = null;
+            this.pendingTemplateSave = null;
         },
 
         open(section) {
@@ -168,6 +221,89 @@ export default {
 
             this.dialog = false;
         },
+
+        openTemplateDialog() {
+            this.templateSaved = null;
+            this.templateError = null;
+            this.templateGroupName = '';
+            this.templateDialog = true;
+        },
+
+        saveAsTemplate() {
+            const groupName = (this.templateGroupName || '').trim();
+
+            if (!this.templateGroupValid) {
+                return;
+            }
+
+            const group = templateGroupByName(this.templateGroups, groupName);
+            const template = shortcutAsTemplate({
+                action_id: this.actionId,
+                label: this.label,
+                icon: this.icon,
+                instructions: this.instructions,
+            }, group ? group.uid : null, uuidv4());
+
+            const requestId = uuidv4();
+
+            this.templateError = null;
+            this.templateDialog = false;
+
+            if (group) {
+                this.pendingTemplateSave = { template, groupName, requestId };
+                this.sendSaveTemplate(template, requestId);
+                return;
+            }
+
+            // a template can only be saved into a group the backend already
+            // knows — create it first, minting its uid here so the echo can be
+            // told apart from any other save of a group by that name
+            const groupUid = uuidv4();
+            this.pendingTemplateSave = { template, groupName, groupUid, requestId };
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'save_template_group',
+                request_id: requestId,
+                group: {
+                    uid: groupUid,
+                    name: groupName,
+                    author: '',
+                    description: '',
+                    templates: {},
+                },
+            }));
+        },
+
+        sendSaveTemplate(template, requestId) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'save_template',
+                request_id: requestId,
+                template,
+            }));
+        },
+
+        handleMessage(message) {
+            const pending = this.pendingTemplateSave;
+            const transition = templateSaveTransition(pending, message);
+
+            if (transition.op === 'send-template') {
+                this.pendingTemplateSave = { ...pending, template: transition.template };
+                this.sendSaveTemplate(transition.template, pending.requestId);
+            } else if (transition.op === 'complete') {
+                this.pendingTemplateSave = null;
+                this.templateSaved = `Saved to template group '${pending.groupName}'`;
+            } else if (transition.op === 'fail') {
+                this.pendingTemplateSave = null;
+                this.templateError = transition.message;
+            }
+        },
+    },
+    created() {
+        this.registerMessageHandler(this.handleMessage);
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
     },
 }
 </script>

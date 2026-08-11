@@ -70,7 +70,7 @@
         @cancel="pendingDirectedRegen = null"
     />
 
-    <SceneToolShortcutModal ref="shortcutModal" :catalog="sceneToolActions" />
+    <SceneToolShortcutModal ref="shortcutModal" :catalog="sceneToolActions" :template-groups="templateGroups" />
 
     <!-- Hotbuttons Section -->
     <div class="hotbuttons-section">
@@ -164,8 +164,10 @@
                     :npc-characters="npc_characters"
                     :shortcut-catalog="sceneToolActions"
                     :shortcuts="sceneToolShortcuts"
+                    :shortcut-templates="sceneToolShortcutTemplates"
                     @shortcut-add="openShortcutModal"
                     @shortcut-edit="editShortcut"
+                    @shortcut-add-template="installShortcutTemplate"
                 />
 
                 <!-- narrator actions -->
@@ -176,8 +178,10 @@
                     :npc-characters="npc_characters"
                     :shortcut-catalog="sceneToolActions"
                     :shortcuts="sceneToolShortcuts"
+                    :shortcut-templates="sceneToolShortcutTemplates"
                     @shortcut-add="openShortcutModal"
                     @shortcut-edit="editShortcut"
+                    @shortcut-add-template="installShortcutTemplate"
                 />
 
                 <!-- director actions -->
@@ -190,8 +194,10 @@
                     :agent-status="agentStatus"
                     :shortcut-catalog="sceneToolActions"
                     :shortcuts="sceneToolShortcuts"
+                    :shortcut-templates="sceneToolShortcutTemplates"
                     @shortcut-add="openShortcutModal"
                     @shortcut-edit="editShortcut"
+                    @shortcut-add-template="installShortcutTemplate"
                 />
 
                 <!-- advance time -->
@@ -232,8 +238,10 @@
                     :player-character="playerCharacterName"
                     :shortcut-catalog="sceneToolActions"
                     :shortcuts="sceneToolShortcuts"
+                    :shortcut-templates="sceneToolShortcutTemplates"
                     @shortcut-add="openShortcutModal"
                     @shortcut-edit="editShortcut"
+                    @shortcut-add-template="installShortcutTemplate"
                 />
 
                 <!-- save menu -->
@@ -265,6 +273,7 @@ import SceneToolsTime from './SceneToolsTime.vue';
 import SceneToolShortcutModal from './SceneToolShortcutModal.vue';
 import RequestInput from './RequestInput.vue';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
+import { applyShortcutTemplateMessage } from '@/utils/sceneToolShortcuts';
 
 export default {
 
@@ -350,6 +359,14 @@ export default {
 
         sceneToolShortcuts() {
             return this.appConfig()?.shortcuts?.scene_tools || {};
+        },
+
+        sceneToolShortcutTemplates() {
+            return this.worldStateTemplates?.by_type?.scene_tool_shortcut || {};
+        },
+
+        templateGroups() {
+            return this.worldStateTemplates?.managed?.groups || [];
         },
     },
     data() {
@@ -461,6 +478,10 @@ export default {
 
         editShortcut(shortcut) {
             this.$refs.shortcutModal.openEdit(shortcut);
+        },
+
+        installShortcutTemplate(template) {
+            this.getWebsocket().send(JSON.stringify(applyShortcutTemplateMessage(template)));
         },
 
         directedRegenerateContinue(direction) {

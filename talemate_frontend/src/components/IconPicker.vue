@@ -20,6 +20,7 @@
             placeholder="mdi-sword-cross"
             density="compact"
             hide-details="auto"
+            :rules="rules"
             :error-messages="errorMessages"
         >
             <template v-slot:append-inner>
@@ -60,6 +61,12 @@ export default {
         modelValue: {
             type: String,
             default: '',
+        },
+        // rules of the surrounding form the icon field takes part in — the
+        // picker's own complaints ride on `error-messages` instead
+        rules: {
+            type: Array,
+            default: () => [],
         },
     },
     emits: ['update:modelValue', 'update:valid'],

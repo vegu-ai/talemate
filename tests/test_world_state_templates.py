@@ -7,11 +7,17 @@ temporary template directory.
 
 import os
 
+import pydantic
 import pytest
 import yaml
 
+from conftest import MockScene
+from talemate.server.world_state_manager import SaveWorldStateTemplateGroupPayload
+from talemate.world_state.manager import WorldStateManager
 from talemate.world_state.templates.agent import AgentPersona
 from talemate.world_state.templates.base import (
+    TEMPLATE_PATH,
+    TEMPLATE_PATH_TALEMATE,
     Collection,
     Group,
 )
@@ -319,6 +325,30 @@ class TestCollectionRemove:
         assert len(collection.groups) == 0
         assert not os.path.exists(path)
 
+    def test_remove_ignores_the_incoming_group_path(self, template_dir, tmp_path):
+        """Deletion goes through the collection's own group, so a path on the
+        incoming (websocket deserialized) group never reaches the filesystem."""
+        group = make_group()
+        group.save(template_dir)
+        path = group.path
+
+        outside = tmp_path / "config.yaml"
+        outside.write_text("keep me")
+
+        collection = Collection(groups=[group])
+        collection.remove(
+            Group(
+                uid=group.uid,
+                name=group.name,
+                author=group.author,
+                description=group.description,
+                path=str(outside),
+            )
+        )
+
+        assert not os.path.exists(path)
+        assert outside.read_text() == "keep me"
+
     def test_remove_nonexistent_raises(self):
         collection = Collection(groups=[])
         group = make_group()
@@ -437,6 +467,185 @@ class TestGroupDiff:
 
         diff = g1.diff(g2)
         assert len(diff.templates) == 0
+
+
+class TestGroupSavePathContainment:
+    def test_traversal_name_is_refused(self, template_dir):
+        group = make_group(name="../../config")
+
+        with pytest.raises(ValueError, match="path separators"):
+            group.save(template_dir)
+
+        assert group.path is None
+        escaped = os.path.join(template_dir, "..", "..", "config.yaml")
+        assert not os.path.exists(escaped)
+
+    @pytest.mark.parametrize("name", ["sub/dir", "sub\\dir", "/etc/passwd"])
+    def test_separator_name_is_refused(self, template_dir, name):
+        group = make_group(name=name)
+
+        with pytest.raises(ValueError, match="path separators"):
+            group.save(template_dir)
+
+        assert group.path is None
+        assert os.listdir(template_dir) == []
+
+    def test_dots_without_separator_still_save(self, template_dir):
+        group = make_group(name="..")
+        group.save(template_dir)
+
+        assert group.path == os.path.join(template_dir, "...yaml")
+        assert os.path.exists(group.path)
+
+    def test_normal_name_still_saves(self, template_dir):
+        tmpl = StateReinforcement(**make_template())
+        group = make_group(name="My Cool Templates", templates=[tmpl])
+        group.save(template_dir)
+
+        assert group.path == os.path.join(template_dir, "my-cool-templates.yaml")
+        assert os.path.exists(group.path)
+        assert Group.load(group.path).uid == group.uid
+
+    def test_existing_path_from_disk_is_kept(self, template_dir):
+        """A group loaded off a disk walk saves back to where it came from,
+        even when that is a subdirectory of the path passed to save()."""
+        nested = os.path.join(template_dir, "nested")
+        os.makedirs(nested)
+        group = make_group(name="Nested Group")
+        group.save(nested)
+
+        loaded = Collection.load(template_dir).groups[0]
+        tmpl = StateReinforcement(**make_template(name="Added"))
+        loaded.insert_template(tmpl)
+
+        assert loaded.path == os.path.join(nested, "nested-group.yaml")
+        assert tmpl.uid in Group.load(loaded.path).templates
+
+
+class TestSaveTemplateGroupPayloadPath:
+    """The entry-point belt: an inbound `path` is refused before it reaches
+    the manager (which ignores it anyway, see
+    `TestSaveTemplateGroupOwnership`)."""
+
+    def make_payload(self, **overrides) -> dict:
+        group = {
+            "name": "Inbound Group",
+            "author": "Test Author",
+            "description": "A test group",
+        }
+        group.update(overrides)
+        return {"group": group}
+
+    def test_absent_path_passes(self):
+        payload = SaveWorldStateTemplateGroupPayload(**self.make_payload())
+        assert payload.group.path is None
+
+    def test_contained_path_passes(self):
+        path = os.path.join(TEMPLATE_PATH_TALEMATE, "inbound-group.yaml")
+        payload = SaveWorldStateTemplateGroupPayload(**self.make_payload(path=path))
+
+        assert payload.group.path == path
+
+    @pytest.mark.parametrize(
+        "path",
+        [
+            os.path.join(TEMPLATE_PATH, "..", "..", "config.yaml"),
+            "/workspace/config.yaml",
+            "/etc/passwd",
+        ],
+    )
+    def test_path_outside_the_template_directory_is_refused(self, path: str):
+        with pytest.raises(
+            pydantic.ValidationError, match="outside of the template directory"
+        ):
+            SaveWorldStateTemplateGroupPayload(**self.make_payload(path=path))
+
+    def test_tmp_path_outside_the_template_directory_is_refused(self, tmp_path):
+        outside = str(tmp_path / "config.yaml")
+
+        with pytest.raises(
+            pydantic.ValidationError, match="outside of the template directory"
+        ):
+            SaveWorldStateTemplateGroupPayload(**self.make_payload(path=outside))
+
+
+class TestSaveTemplateGroupOwnership:
+    """`WorldStateManager.save_template_group` decides which file a group
+    writes to: a known group keeps its own, an unknown one derives a fresh
+    one. Whatever `path` the client sent is never consulted."""
+
+    @pytest.fixture
+    def manager(self, monkeypatch, template_dir) -> WorldStateManager:
+        # `Group.save` binds TEMPLATE_PATH as a default argument, so only the
+        # lookups the manager does at call time can be redirected
+        monkeypatch.setattr(
+            "talemate.world_state.templates.TEMPLATE_PATH", template_dir
+        )
+        manager = WorldStateManager(MockScene())
+        manager.scene._world_state_templates = Collection.load(template_dir)
+        return manager
+
+    async def test_inbound_path_of_an_unknown_group_is_ignored(
+        self, manager, template_dir
+    ):
+        other = make_group(name="Other")
+        other.save(template_dir)
+
+        inbound = make_group(name="Inbound", path=other.path)
+        await manager.save_template_group(inbound)
+
+        assert inbound.path == os.path.join(template_dir, "inbound.yaml")
+        assert Group.load(other.path).uid == other.uid
+
+    async def test_unknown_group_is_added_to_the_collection(
+        self, manager, template_dir
+    ):
+        group = make_group(name="Fresh")
+
+        await manager.save_template_group(group)
+
+        assert manager.template_collection.find(group.uid) is group
+        assert os.path.exists(os.path.join(template_dir, "fresh.yaml"))
+
+    async def test_known_group_saves_back_to_its_own_file(self, manager, template_dir):
+        nested = os.path.join(template_dir, "talemate")
+        os.makedirs(nested)
+        known = make_group(name="Known")
+        known.save(nested)
+        manager.scene._world_state_templates = Collection.load(template_dir)
+
+        other = make_group(name="Other")
+        other.save(template_dir)
+
+        inbound = make_group(
+            name="Known", uid=known.uid, description="edited", path=other.path
+        )
+        await manager.save_template_group(inbound)
+
+        saved = Group.load(os.path.join(nested, "known.yaml"))
+        assert saved.description == "edited"
+        assert Group.load(other.path).uid == other.uid
+        assert not os.path.exists(os.path.join(template_dir, "known.yaml"))
+
+    async def test_colliding_derived_name_is_refused(self, manager, template_dir):
+        existing = make_group(name="Human")
+        existing.save(template_dir)
+
+        fresh = make_group(name="Human")
+
+        with pytest.raises(ValueError, match="human.yaml already exists"):
+            await manager.save_template_group(fresh)
+
+        assert Group.load(existing.path).uid == existing.uid
+        assert manager.template_collection.find(fresh.uid) is None
+
+    async def test_separator_name_is_refused(self, manager, template_dir):
+        group = make_group(name="../escape")
+
+        with pytest.raises(ValueError, match="path separators"):
+            await manager.save_template_group(group)
+
+        assert manager.template_collection.find(group.uid) is None
 
 
 class TestGroupFilename:

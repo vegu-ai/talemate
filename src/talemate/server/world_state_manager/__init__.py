@@ -1,4 +1,5 @@
 import asyncio
+import os
 import uuid
 from typing import Any, Union
 import base64
@@ -149,6 +150,26 @@ class ApplyWorldStateTemplatesPayload(pydantic.BaseModel):
 
 class SaveWorldStateTemplateGroupPayload(pydantic.BaseModel):
     group: world_state_templates.Group
+
+    @pydantic.field_validator("group")
+    @classmethod
+    def _validate_group_path(
+        cls, v: world_state_templates.Group
+    ) -> world_state_templates.Group:
+        # a group that already has a path saves straight to it, so an inbound
+        # path must not be able to name a file outside the template directory
+        if not v.path:
+            return v
+
+        root = os.path.realpath(world_state_templates.TEMPLATE_PATH)
+        target = os.path.realpath(v.path)
+
+        if target == root or os.path.commonpath([root, target]) != root:
+            raise ValueError(
+                f"Template group path is outside of the template directory: {v.path}"
+            )
+
+        return v
 
 
 class DeleteWorldStateTemplateGroupPayload(pydantic.BaseModel):

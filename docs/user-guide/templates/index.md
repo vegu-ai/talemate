@@ -36,3 +36,6 @@ Visual prompt finalizer templates define a reusable set of post-processing actio
 
 ### :material-account-voice: Agent Persona
 Agent persona templates define how an agent should present and behave in prompts — tone, perspective, style. Assign a persona per agent in the [Scene Settings](/talemate/user-guide/world-editor/scene/settings). (Currently used by the director.)
+
+### :material-lightning-bolt: Scene Tool Shortcut
+Scene tool shortcut templates package a [scene tool shortcut](/talemate/user-guide/scenario-tools#shortcuts) — an agent action with a label, an icon and canned instructions. Installing one adds the shortcut to the scene tools menu it belongs to. See [Scene Tool Shortcuts](/talemate/user-guide/templates/scene-tool-shortcut).

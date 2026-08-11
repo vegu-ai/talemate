@@ -408,3 +408,50 @@ Generated images can be viewed and managed in the [Visual Library](/talemate/use
 ### :material-content-save: Saving
 
 Context menu that will provide you with `Save` and `Save As` options, restoration actions — `Restore` to the configured [restore point](/talemate/user-guide/world-editor/scene/settings#restoration-settings) and the [`Timeline`](/talemate/user-guide/restoring-scenes) for rolling back or forking from any revision — and `Reset Scene State`.
+
+### :material-lightning-bolt: Shortcuts
+
+A shortcut is a menu entry you define yourself: an agent action with a label, an icon and optional standing instructions. If you keep typing the same direction into the same action, turn it into a shortcut and it becomes a single click.
+
+The :material-account-voice: Actor, :material-bullhorn: Director, :material-script-text: Narrator and :material-image-frame: Visualizer menus each carry an **:material-plus: Add shortcut** entry at the bottom, below their regular actions.
+
+#### Creating a shortcut
+
+Clicking **Add shortcut** opens the shortcut dialog.
+
+![Shortcut creation dialog](/talemate/img/0.40.0/scene-tool-shortcut-modal.png)
+
+**Action** — the agent action the shortcut runs. The dropdown lists every eligible action, prefixed with the menu section it belongs to:
+
+| Section | Actions |
+| --- | --- |
+| :material-account-voice: **Actor** | Actor Action |
+| :material-bullhorn: **Director** | Generate dynamic actions, Scene direction turn |
+| :material-script-text: **Narrator** | Progress Story, Narrate Environment, Look at Scene, Look at Character |
+| :material-image-frame: **Visual** | Visualize Scene (Card), Visualize Scene (Background), Visualize Character (Card), Visualize Character (Portrait) |
+
+**Label** — the title the shortcut gets in the menu.
+
+**Instructions** — optional direction handed to the agent whenever the shortcut runs. This is the same kind of text you would type into the `ctrl`-click direction prompt of the action itself. Leave it empty to run the action as-is.
+
+**Icon** — click one of the common icons in the grid, or type any Material Design Icon name (for example `mdi-sword-cross`) into the field below it. The icon is previewed in the field as soon as the name matches an icon that actually exists — misspelled or unknown names are rejected. The link below the field opens the [full Material Design Icons listing](https://pictogrammers.com/library/mdi/) to browse names.
+
+Saving adds the shortcut to its menu right away, below the menu's regular actions and above the **Add shortcut** entry.
+
+![Shortcut entries in a scene tool menu](/talemate/img/0.40.0/scene-tool-shortcut-menu.png)
+
+#### Running a shortcut
+
+Click the shortcut and the action runs immediately with the stored instructions — you are not prompted for anything.
+
+Actions that target a character — **Actor Action**, **Look at Character** and the **Visualize Character** actions — render one entry per character in the scene, with the character's name appended to the label. **Actor Action** and **Look at Character** list the non-player characters; the **Visualize Character** actions also include the player character, like their regular menu entries. The character is decided by which entry you click, not stored in the shortcut, so a single shortcut keeps up with whoever is in the scene. An **Actor Action** shortcut additionally gets one entry with no character attached, which picks a random non-player character to act.
+
+A shortcut that cannot run right now stays visible as a dimmed entry with the reason under its label — when the scene has no character the action could target, or when the action itself is disabled (for example **Scene direction turn** while scene direction is off). A plain click does nothing there; `ctrl`+click still opens it for editing.
+
+#### Editing and deleting a shortcut
+
+!!! note "Keyboard modifiers"
+    Hold `ctrl` (Cmd on macOS) while clicking a shortcut to open it in the dialog instead of running it. Every field can be changed, and **Delete** removes the shortcut.
+
+!!! info "Shortcuts are application wide"
+    Shortcuts are stored in the application configuration, not in the scene, so they are available in every scene you load.

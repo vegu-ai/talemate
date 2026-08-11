@@ -717,6 +717,26 @@ class SoundConfig(pydantic.BaseModel):
     muted: bool = False
 
 
+class SceneToolShortcut(pydantic.BaseModel):
+    uid: str
+    action_id: str
+    label: str
+    icon: str
+    instructions: str = ""
+
+
+class ShortcutsConfig(pydantic.BaseModel):
+    scene_tools: dict[str, SceneToolShortcut] = pydantic.Field(default_factory=dict)
+
+    @pydantic.model_validator(mode="after")
+    def sync_uids_to_keys(self) -> "ShortcutsConfig":
+        # a hand edited config must not fail to load over a mismatched uid
+        for uid, shortcut in self.scene_tools.items():
+            if shortcut.uid != uid:
+                shortcut.uid = uid
+        return self
+
+
 class Config(pydantic.BaseModel):
     clients: Dict[str, AnnotatedClient] = {}
 
@@ -777,6 +797,8 @@ class Config(pydantic.BaseModel):
     agent_actions: AgentActionsConfig = AgentActionsConfig()
 
     sound: SoundConfig = SoundConfig()
+
+    shortcuts: ShortcutsConfig = ShortcutsConfig()
 
     dirty: bool = pydantic.Field(default=False, exclude=True)
 

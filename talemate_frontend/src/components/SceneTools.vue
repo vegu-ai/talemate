@@ -70,6 +70,8 @@
         @cancel="pendingDirectedRegen = null"
     />
 
+    <SceneToolShortcutModal ref="shortcutModal" :catalog="sceneToolActions" />
+
     <!-- Hotbuttons Section -->
     <div class="hotbuttons-section">
 
@@ -157,15 +159,40 @@
 
                 <!-- actor actions -->
 
-                <SceneToolsActor :disabled="appBusy || !appReady" :npc-characters="npc_characters" />
+                <SceneToolsActor
+                    :disabled="appBusy || !appReady"
+                    :npc-characters="npc_characters"
+                    :shortcut-catalog="sceneToolActions"
+                    :shortcuts="sceneToolShortcuts"
+                    @shortcut-add="openShortcutModal"
+                    @shortcut-edit="editShortcut"
+                />
 
                 <!-- narrator actions -->
 
-                <SceneToolsNarrator :disabled="appBusy || !appReady" ref="narratorTools" :npc-characters="npc_characters" />
+                <SceneToolsNarrator
+                    :disabled="appBusy || !appReady"
+                    ref="narratorTools"
+                    :npc-characters="npc_characters"
+                    :shortcut-catalog="sceneToolActions"
+                    :shortcuts="sceneToolShortcuts"
+                    @shortcut-add="openShortcutModal"
+                    @shortcut-edit="editShortcut"
+                />
 
                 <!-- director actions -->
 
-                <SceneToolsDirector :disabled="appBusy || !appReady" ref="directorTools" :npc-characters="npc_characters" :scene-characters="scene_characters" :agent-status="agentStatus" />
+                <SceneToolsDirector
+                    :disabled="appBusy || !appReady"
+                    ref="directorTools"
+                    :npc-characters="npc_characters"
+                    :scene-characters="scene_characters"
+                    :agent-status="agentStatus"
+                    :shortcut-catalog="sceneToolActions"
+                    :shortcuts="sceneToolShortcuts"
+                    @shortcut-add="openShortcutModal"
+                    @shortcut-edit="editShortcut"
+                />
 
                 <!-- advance time -->
 
@@ -193,12 +220,16 @@
                 />
                 <!-- visualizer actions -->
              
-                <SceneToolsVisual 
+                <SceneToolsVisual
                     :disabled="appBusy || !appReady"
                     :agent-status="agentStatus"
                     :visual-agent-ready="visualAgentReady"
                     :npc-characters="npc_characters"
                     :player-character="playerCharacterName"
+                    :shortcut-catalog="sceneToolActions"
+                    :shortcuts="sceneToolShortcuts"
+                    @shortcut-add="openShortcutModal"
+                    @shortcut-edit="editShortcut"
                 />
 
                 <!-- save menu -->
@@ -226,6 +257,7 @@ import SceneToolsWorld from './SceneToolsWorld.vue';
 import SceneToolsSettings from './SceneToolsSettings.vue';
 import SceneToolsSave from './SceneToolsSave.vue';
 import SceneToolsTime from './SceneToolsTime.vue';
+import SceneToolShortcutModal from './SceneToolShortcutModal.vue';
 import RequestInput from './RequestInput.vue';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 
@@ -242,6 +274,7 @@ export default {
         SceneToolsWorld,
         SceneToolsSettings,
         SceneToolsTime,
+        SceneToolShortcutModal,
         RequestInput,
     },
     props: {
@@ -308,6 +341,10 @@ export default {
         visibleQuickSettings() {
             return this.quickSettings.filter(option => !option.condition || option.condition());
         },
+
+        sceneToolShortcuts() {
+            return this.appConfig()?.shortcuts?.scene_tools || {};
+        },
     },
     data() {
         return {
@@ -326,6 +363,7 @@ export default {
             canRegenerateReason: null,
             npc_characters: [],
             scene_characters: [],
+            sceneToolActions: [],
             agentMessages: {},
             messageHighlights: {},
             pendingDirectedRegen: null,
@@ -401,6 +439,22 @@ export default {
         openAgentMessages(agent_name) {
             delete this.agentMessages[agent_name];
             this.$emit('open-agent-messages', agent_name);
+        },
+
+        requestSceneToolActions() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'config',
+                action: 'request_scene_tool_actions',
+                data: {},
+            }));
+        },
+
+        openShortcutModal(section) {
+            this.$refs.shortcutModal.open(section);
+        },
+
+        editShortcut(shortcut) {
+            this.$refs.shortcutModal.openEdit(shortcut);
         },
 
         directedRegenerateContinue(direction) {
@@ -511,7 +565,15 @@ export default {
                     this.commandActive = false;
                     this.commandName = null;
                 }
+            } else if (data.type === "config" && data.action === "scene_tool_actions") {
+                this.sceneToolActions = data.data.actions;
+                return;
             } else if (data.type === "scene_status") {
+                // the catalog is static per backend build — keep requesting on
+                // scene_status until the first response lands, then never again
+                if (!this.sceneToolActions.length) {
+                    this.requestSceneToolActions();
+                }
                 this.canAutoSave = data.data.can_auto_save;
                 this.canRegenerate = data.data.can_regenerate;
                 this.canRegenerateReason = data.data.can_regenerate_reason;

@@ -35,6 +35,18 @@
                 <v-list-item-title>Generate long progress</v-list-item-title>
                 <v-list-item-subtitle>Plan and generate a whole progress arc</v-list-item-subtitle>
             </v-list-item>
+
+            <SceneToolsShortcutItems
+                section="director"
+                :catalog="shortcutCatalog"
+                :shortcuts="shortcuts"
+                :characters="npcCharacters"
+                :disabled="disabled"
+                :disabled-actions="sceneDirectionEnabled ? {} : { 'director.scene_direction_turn': 'Scene direction is disabled' }"
+                @run="runShortcut"
+                @edit="(shortcut) => $emit('shortcut-edit', shortcut)"
+                @add="(section) => $emit('shortcut-add', section)"
+            />
         </v-list>
     </v-menu>
 
@@ -156,6 +168,7 @@
 
 <script>
 import RequestInput from './RequestInput.vue';
+import SceneToolsShortcutItems from './SceneToolsShortcutItems.vue';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 
@@ -163,14 +176,24 @@ export default {
     name: "SceneToolsDirector",
     components: {
         RequestInput,
+        SceneToolsShortcutItems,
     },
     props: {
         npcCharacters: Array,
         sceneCharacters: Array,
         disabled: Boolean,
         agentStatus: Object,
+        shortcutCatalog: {
+            type: Array,
+            default: () => [],
+        },
+        shortcuts: {
+            type: Object,
+            default: () => ({}),
+        },
     },
     inject: ['getWebsocket', 'getActAsCharacterName', 'openDirectorConsole', 'openAgentSettings'],
+    emits: ['shortcut-add', 'shortcut-edit'],
     data() {
         return {
             primaryModifierLabel,
@@ -218,6 +241,19 @@ export default {
             let callback = this[`action${params.action}`];
             if(callback){
                 callback({}, input, params);
+            }
+        },
+
+        runShortcut({shortcut, entry}) {
+            switch (entry.id) {
+                case 'director.request_dynamic_choices':
+                    this.actionRequestDynamicChoices({}, shortcut.instructions);
+                    break;
+                case 'director.scene_direction_turn':
+                    this.actionSceneDirectionTurn({}, shortcut.instructions);
+                    break;
+                default:
+                    console.warn('unhandled scene tool shortcut action', entry.id);
             }
         },
 

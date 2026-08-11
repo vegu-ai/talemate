@@ -31,6 +31,7 @@ from talemate.instance import (
     instantiate_clients,
     purge_clients,
 )
+from talemate.scene_tools import SCENE_TOOL_ACTIONS
 
 from .websocket_plugin import Plugin
 
@@ -550,6 +551,19 @@ class ConfigPlugin(Plugin):
                 "type": "config",
                 "action": "client_types",
                 "data": clients,
+            }
+        )
+
+    async def handle_request_scene_tool_actions(self, data):
+        log.info("Requesting scene tool actions")
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "config",
+                "action": "scene_tool_actions",
+                "data": {
+                    "actions": [action.model_dump() for action in SCENE_TOOL_ACTIONS],
+                },
             }
         )
 

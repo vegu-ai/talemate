@@ -982,7 +982,8 @@
   title: Scene Tools
   summary: 'Reference for the tool bar above the input box: the agent activity bar, the quick-settings chips (Auto Save, Auto
     Progress, Immersive) and the Regenerate, Actor, Director, Narrator, Advance time, World state, Creative tools, Visualizer
-    and Saving menus.'
+    and Saving menus. Also covers user-defined shortcuts - custom entries with a label, icon and standing instructions added
+    to the Actor, Director, Narrator and Visualizer menus via Add shortcut, stored in the application configuration.'
 - path: user-guide/scene-browser.md
   title: Home Screen & Scene Library
   summary: Tour of the Home screen - Quick load cards with their Timeline / Remove / Delete menu, the Scene Library tree of

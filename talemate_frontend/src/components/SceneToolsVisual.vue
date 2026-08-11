@@ -63,6 +63,17 @@
                 <v-list-item-title>Visualize Moment (Illustration)</v-list-item-title>
                 <v-list-item-subtitle>Generate an image of the current moment</v-list-item-subtitle>
             </v-list-item>
+
+            <SceneToolsShortcutItems
+                section="visual"
+                :catalog="shortcutCatalog"
+                :shortcuts="shortcuts"
+                :characters="characters"
+                :disabled="disabled"
+                @run="runShortcut"
+                @edit="(shortcut) => $emit('shortcut-edit', shortcut)"
+                @add="(section) => $emit('shortcut-add', section)"
+            />
         </v-list>
     </v-menu>
     
@@ -92,8 +103,13 @@
 <script>
 import { VIS_TYPE, VIS_TYPE_OPTIONS } from '@/constants/visual';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
+import SceneToolsShortcutItems from './SceneToolsShortcutItems.vue';
 export default {
     name: 'SceneToolsVisual',
+    components: {
+        SceneToolsShortcutItems,
+    },
+    emits: ['shortcut-add', 'shortcut-edit'],
     props: {
         agentStatus: {
             type: Object,
@@ -114,7 +130,15 @@ export default {
         playerCharacter: {
             type: String,
             default: null,
-        }
+        },
+        shortcutCatalog: {
+            type: Array,
+            default: () => [],
+        },
+        shortcuts: {
+            type: Object,
+            default: () => ({}),
+        },
     },
 
     computed: {
@@ -197,6 +221,24 @@ export default {
                 this.dialogOpen = true;
             } else {
                 this.generateImage(character_name, altPressed, null, vis_type);
+            }
+        },
+        runShortcut({shortcut, entry, character}) {
+            switch (entry.id) {
+                case 'visual.visualize_environment_card':
+                    this.generateImage(null, false, shortcut.instructions, VIS_TYPE.SCENE_CARD);
+                    break;
+                case 'visual.visualize_environment_background':
+                    this.generateImage(null, false, shortcut.instructions, VIS_TYPE.SCENE_BACKGROUND);
+                    break;
+                case 'visual.visualize_character_card':
+                    this.generateImage(character, false, shortcut.instructions, VIS_TYPE.CHARACTER_CARD);
+                    break;
+                case 'visual.visualize_character_portrait':
+                    this.generateImage(character, false, shortcut.instructions, VIS_TYPE.CHARACTER_PORTRAIT);
+                    break;
+                default:
+                    console.warn('unhandled scene tool shortcut action', entry.id);
             }
         },
         submitDialog() {

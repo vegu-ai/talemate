@@ -260,32 +260,7 @@ import AIClientRequestInformation from './AIClientRequestInformation.vue';
 import GraduatedSlider from './GraduatedSlider.vue';
 import { TOKEN_GRADUATIONS } from '@/utils/clientPresets';
 import { agentsRequiringClient } from '@/utils/agentAssignments';
-
-// user-editable fields compared against client_status echoes to confirm a save
-const SAVE_ECHO_FIELDS = [
-  'max_token_length',
-  'api_url',
-  'reason_tokens',
-  'effort_level',
-  'preset_group',
-  'reason_enabled',
-  'vision_enabled',
-  'concurrent_inference_enabled',
-  'rate_limit',
-  'retry_empty_response',
-  'retry_rate_limit',
-  'retry_missing_reasoning',
-  'data_format',
-  'section_format',
-  'double_coercion',
-];
-
-// echoed at the top level of the client_status message rather than in data
-const TOP_LEVEL_ECHO_FIELDS = ['max_token_length', 'api_url'];
-
-// how long after a save the backend stays non-authoritative while we wait for
-// the confirming echo; a status arriving later than this is applied as-is
-const SAVE_ECHO_GRACE_MS = 3000;
+import { createClientSaveState } from '@/utils/clientSaveState';
 
 export default {
   props: {
@@ -298,8 +273,6 @@ export default {
   },
   data() {
     return {
-      saveDelayTimeouts: {},
-      pendingSaves: {},
       clientStatusCheck: null,
       hideDisabled: true,
       tokenGraduations: TOKEN_GRADUATIONS,
@@ -389,14 +362,7 @@ export default {
     },
 
     saveClientDelayed(client) {
-      client.dirty = true;
-      if (this.saveDelayTimeouts[client.name]) {
-        clearTimeout(this.saveDelayTimeouts[client.name]);
-      }
-      this.saveDelayTimeouts[client.name] = setTimeout(() => {
-        delete this.saveDelayTimeouts[client.name];
-        this.saveClient(client);
-      }, 500);
+      this.saveState.scheduleSave(client, () => this.saveClient(client));
     },
 
     saveClient(client) {
@@ -406,59 +372,12 @@ export default {
       } else {
         this.state.clients[index] = client;
       }
-      // stay dirty until the backend echoes these values back (or the grace
-      // window expires) so stale client_status messages can't rubberband the UI
-      client.dirty = true;
-      const snapshot = {};
-      for (const field of SAVE_ECHO_FIELDS) {
-        snapshot[field] = client[field];
-      }
-      this.pendingSaves[client.name] = { sentAt: Date.now(), snapshot };
+      this.saveState.recordSent(client);
       this.$emit('clients-updated', this.state.clients);
     },
 
-    // Called when a config save carrying these rows was refused: the local
-    // values are optimistic and will never be echoed, so drop the dirty flags
-    // and the pending echo snapshots and let the next client_status broadcast
-    // put the backend's truth back on screen.
     resetPendingSaves() {
-      for (const name of Object.keys(this.saveDelayTimeouts)) {
-        clearTimeout(this.saveDelayTimeouts[name]);
-        delete this.saveDelayTimeouts[name];
-      }
-      this.pendingSaves = {};
-      for (const client of this.state.clients) {
-        client.dirty = false;
-      }
-    },
-
-    // Decides whether an incoming client_status may be applied to a client
-    // with local edits. Confirmed (echo matches what we sent) and grace-expired
-    // saves clear the dirty flag; anything else is a stale echo and is ignored.
-    echoResolvesDirtyState(client, data) {
-      if (this.saveDelayTimeouts[client.name]) {
-        // still debouncing local edits
-        return false;
-      }
-
-      const pending = this.pendingSaves[client.name];
-      const echoed = (field) =>
-        TOP_LEVEL_ECHO_FIELDS.includes(field) ? data[field] : data.data[field];
-      const normalize = (v) => (v === undefined || v === null || v === '') ? null : v;
-      const confirmed = !pending || SAVE_ECHO_FIELDS.every((field) => {
-        // fields the client type doesn't use are not part of the contract
-        if (pending.snapshot[field] === undefined) return true;
-        return normalize(pending.snapshot[field]) === normalize(echoed(field));
-      });
-      const graceExpired = pending && (Date.now() - pending.sentAt) > SAVE_ECHO_GRACE_MS;
-
-      if (confirmed || graceExpired) {
-        delete this.pendingSaves[client.name];
-        client.dirty = false;
-        return true;
-      }
-
-      return false;
+      this.saveState.reset(this.state.clients);
     },
     // Clients are added and removed on the settings Clients page — drop the
     // entries a saved config no longer carries instead of leaving the drawer
@@ -470,11 +389,7 @@ export default {
         if (names.includes(name)) {
           continue;
         }
-        if (this.saveDelayTimeouts[name]) {
-          clearTimeout(this.saveDelayTimeouts[name]);
-          delete this.saveDelayTimeouts[name];
-        }
-        delete this.pendingSaves[name];
+        this.saveState.forget(name);
         this.state.clients.splice(i, 1);
       }
     },
@@ -557,7 +472,7 @@ export default {
         // Find the client with the given name
         const client = this.state.clients.find(client => client.name === data.name);
 
-        if (client && client.dirty && !this.echoResolvesDirtyState(client, data)) {
+        if (client && client.dirty && !this.saveState.echoResolves(client, data)) {
           // local edits pending or save not yet echoed back - ignore stale status
           return;
         }
@@ -673,6 +588,8 @@ export default {
     }
   },
   created() {
+    // deliberately not in data(): timers and snapshots need no reactivity
+    this.saveState = createClientSaveState();
     this.registerMessageHandler(this.handleMessage);
   },
 }

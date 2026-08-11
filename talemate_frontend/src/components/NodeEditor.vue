@@ -216,9 +216,9 @@
                         <v-card-text v-else-if="propertyEditorType === 'json'">
                             <Codemirror
                                 v-model="propertyEditorValue"
-                                ref="propertyEditorCodeInput"
                                 :extensions="extensions"
                                 :style="propertyEditorStyle"
+                                @ready="onPropertyEditorCodeReady"
                                 @keydown.capture="onPropertyEditorKeydown"
                             ></Codemirror>
                             <span class="text-caption text-muted">({{ primaryModifierLabel }}+Enter to submit changes)</span>
@@ -309,6 +309,7 @@
 </template>
 
 <script>
+import { markRaw } from 'vue';
 import { LGraphCanvas, LiteGraph } from 'litegraph.js';
 import { initializeGraphFromJSON, normalizeHexColor } from '@/utils/litegraphUtils'
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
@@ -329,6 +330,8 @@ import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 const UNRESOLVED = "type(<class 'talemate.game.engine.nodes.core.UNRESOLVED'>)";
 const NONE = "NoneType(None)";
 const CANVAS_HEIGHT_OFFSET = 500;
+// the vuetify dialog focus trap steals focus right after open, so focus has to be applied once it has settled
+const PROPERTY_EDITOR_FOCUS_DELAY = 100;
 
 export default {
     name: 'NodeEditor',
@@ -379,6 +382,7 @@ export default {
             propertyEditorValidator: (v) => v,
             propertyEditorValidationErrorMessage: null,
             propertyEditorTitle: null,
+            propertyEditorCodeView: null,
             nodeLibrarySearch: '',
             selectedNodePath: null,
             debugLoadPath: "select-actor-for-turn.json",
@@ -541,6 +545,13 @@ export default {
             },
             deep: true
         },
+
+        propertyEditor(isOpen) {
+            if (!isOpen) {
+                // closing the dialog unmounts and destroys the editor, a new one announces itself via @ready
+                this.propertyEditorCodeView = null;
+            }
+        },
     },
     
     methods: {
@@ -586,14 +597,20 @@ export default {
             this.propertyEditorTitle = title;
             this.propertyEditorValidationErrorMessage = null;
 
-            // focus on text field
             this.$nextTick(() => {
-                if(this.propertyEditorType === 'text') {
-                    setTimeout(() => {
+                setTimeout(() => {
+                    if(this.propertyEditorType === 'text') {
                         this.$refs.propertyEditorTextInput.focus();
-                    }, 100);
-                }
+                    } else if(this.propertyEditorType === 'json' && this.propertyEditorCodeView) {
+                        this.propertyEditorCodeView.focus();
+                    }
+                }, PROPERTY_EDITOR_FOCUS_DELAY);
             });
+        },
+
+        onPropertyEditorCodeReady(payload) {
+            // markRaw: deep reactivity on the CodeMirror EditorView breaks its internals
+            this.propertyEditorCodeView = markRaw(payload.view);
         },
 
         cancelPropertyEditor() {

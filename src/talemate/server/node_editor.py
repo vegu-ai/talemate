@@ -17,6 +17,7 @@ from talemate.game.engine.nodes.registry import (
     export_node_definitions,
     import_node_definition,
     normalize_registry_name,
+    requires_module_sync,
     validate_registry_path,
 )
 from talemate.game.engine.nodes.layout import (
@@ -30,6 +31,7 @@ from talemate.game.engine.nodes.layout import (
 )
 from talemate.game.engine.nodes.run import BreakpointEvent
 from talemate.save import save_node_module, combine_paths
+from talemate.emit import emit
 import talemate.emit.async_signals as signals
 
 from .websocket_plugin import Plugin
@@ -139,10 +141,28 @@ class NodeEditorPlugin(Plugin):
         with Interaction(reset_requested=True):
             return
 
-    async def handle_sync_node_modules(self, data: dict):
+    async def _sync_node_modules(self):
         scene_loop: SceneLoop = self.scene.creative_node_graph
         await scene_loop.register_commands(self.scene, scene_loop._state)
         await scene_loop.init_agent_nodes(self.scene, scene_loop._state)
+
+    async def _auto_sync_node_modules(self, base_type: str | None):
+        if not requires_module_sync(base_type):
+            return
+
+        scene_loop: SceneLoop | None = getattr(self.scene, "creative_node_graph", None)
+
+        if not scene_loop or not getattr(scene_loop, "_state", None):
+            return
+
+        await self._sync_node_modules()
+
+        # no signal_operation_done here - an extra operation_done envelope on the
+        # shared router would clear an unrelated request's busy state
+        emit("status", message="Node modules synced", status="success")
+
+    async def handle_sync_node_modules(self, data: dict):
+        await self._sync_node_modules()
 
         await self.signal_operation_done(emit_status_message="Node modules synced")
 
@@ -179,6 +199,7 @@ class NodeEditorPlugin(Plugin):
             }
         )
 
+    @requires_creative_environment
     async def handle_create_mode_module(self, data: dict):
         request = RequestCreateNodeModule(**data)
 
@@ -325,6 +346,8 @@ class NodeEditorPlugin(Plugin):
 
         await self.handle_request_node_module({"path": filename})
 
+        await self._auto_sync_node_modules(new_graph_cls._base_type)
+
     async def _create_module_from_nodes(
         self, scene, nodes_data, title, registry, module_type, filename
     ):
@@ -440,6 +463,8 @@ class NodeEditorPlugin(Plugin):
             }
         )
 
+        await self._auto_sync_node_modules(graph.base_type)
+
     @requires_creative_environment
     async def handle_delete_node_module(self, data: dict):
         request = RequestDeleteNodeModule(**data)
@@ -462,9 +487,12 @@ class NodeEditorPlugin(Plugin):
         except FileNotFoundError:
             pass
 
+        deleted_base_type = None
+
         for scene_node in list(self.scene._NODE_DEFINITIONS.values()):
             if scene_node._module_path == path:
                 self.scene._NODE_DEFINITIONS.pop(scene_node._registry, None)
+                deleted_base_type = scene_node._base_type
                 break
 
         self.websocket_handler.queue_put(
@@ -476,6 +504,8 @@ class NodeEditorPlugin(Plugin):
         )
 
         await self.handle_request_node_library({})
+
+        await self._auto_sync_node_modules(deleted_base_type)
 
     async def handle_list_template_projects(self, data: dict):
         """Returns list of existing project folder names under templates/modules/"""
@@ -588,6 +618,8 @@ class NodeEditorPlugin(Plugin):
         )
 
         await self.handle_request_node_library({})
+
+        await self._auto_sync_node_modules(graph.base_type)
 
     @requires_creative_environment
     async def handle_test_run(self, data: dict):

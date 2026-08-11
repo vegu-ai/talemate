@@ -43,6 +43,8 @@ Command modules are specialised *Function* modules.  Internally they work exactl
 
 !!! note "Command modules are automatically loaded"
     You **do not** need to load the command module into the scene graph as a node. It is automatically loaded when the scene is loaded making it available to use in the scene.
+
+    Saving the module in the node editor takes effect right away as well — no scene reload and no manual sync needed.
 ---
 
 ## Example – `!instruct_actor`

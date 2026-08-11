@@ -33,7 +33,11 @@ from talemate.client.context import (
 )
 from talemate.scene_agent_settings import UNSET
 from talemate.game.engine.nodes.core import GraphState
-from talemate.game.engine.nodes.registry import get_nodes_by_base_type, get_node
+from talemate.game.engine.nodes.registry import (
+    get_nodes_by_base_type,
+    get_node,
+    register_module_sync_base_type,
+)
 from talemate.game.engine.nodes.run import FunctionWrapper
 
 if TYPE_CHECKING:
@@ -52,6 +56,10 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.agents.base")
+
+AGENT_WEBSOCKET_HANDLER_BASE_TYPE = register_module_sync_base_type(
+    "agents/AgentWebsocketHandler"
+)
 
 
 # Backwards-compat aliases — the shared UX schema now owns these shapes.
@@ -496,7 +504,7 @@ class Agent(ABC):
 
         cls.websocket_handler.clear_sub_handlers()
 
-        for node_cls in get_nodes_by_base_type("agents/AgentWebsocketHandler"):
+        for node_cls in get_nodes_by_base_type(AGENT_WEBSOCKET_HANDLER_BASE_TYPE):
             _node = node_cls()
             handler_name = _node.get_property("name")
             agent_type = _node.get_property("agent")

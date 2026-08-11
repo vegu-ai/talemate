@@ -11,7 +11,10 @@ import traceback
 from typing import Any, TYPE_CHECKING, Callable, Awaitable, Literal
 
 from talemate.prompts.base import Prompt
-from talemate.game.engine.nodes.registry import get_nodes_by_base_type, get_node
+from talemate.game.engine.nodes.registry import (
+    get_nodes_by_base_type,
+    get_node,
+)
 from talemate.game.engine.nodes.core import GraphState, UNRESOLVED
 import talemate.game.focal as focal
 from talemate.game.engine.nodes.run import FunctionWrapper
@@ -39,6 +42,7 @@ from .exceptions import ActionRejected, UnknownAction
 from .gating import (
     ActionMode,
     CallbackDescriptor,
+    DIRECTOR_CHAT_ACTION_BASE_TYPE,
     is_action_id_enabled,
     extract_all_callback_descriptors,
 )
@@ -71,7 +75,7 @@ async def init_action_nodes(scene: "Scene", state: GraphState) -> None:
 
     director_chat_actions = {}
 
-    for node_cls in get_nodes_by_base_type("agents/director/DirectorChatAction"):
+    for node_cls in get_nodes_by_base_type(DIRECTOR_CHAT_ACTION_BASE_TYPE):
         _node = node_cls()
         action_name = _node.get_property("name")
         director_chat_actions[action_name] = _node.registry

@@ -29,11 +29,15 @@ __all__ = [
     "get_nodes_by_base_type",
     "validate_registry_path",
     "NodeNotFoundError",
+    "register_module_sync_base_type",
+    "requires_module_sync",
 ]
 
 log = structlog.get_logger("talemate.game.engine.nodes.registry")
 
 NODES = {}
+
+MODULE_SYNC_BASE_TYPES: set[str] = set()
 
 # Maps legacy registry names to their current equivalents so saved graphs
 # referencing a renamed node keep loading. Old names resolve via get_node()
@@ -124,6 +128,15 @@ def get_nodes_by_base_type(base_type: str) -> list["NodeBase"]:
             nodes[node_name] = node_cls
 
     return list(nodes.values())
+
+
+def register_module_sync_base_type(base_type: str) -> str:
+    MODULE_SYNC_BASE_TYPES.add(base_type)
+    return base_type
+
+
+def requires_module_sync(base_type: str | None) -> bool:
+    return bool(base_type) and base_type in MODULE_SYNC_BASE_TYPES
 
 
 class register:

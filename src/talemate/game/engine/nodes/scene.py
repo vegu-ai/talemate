@@ -15,7 +15,12 @@ from .core import (
     PropertyField,
     Trigger,
 )
-from .registry import register, get_nodes_by_base_type, get_node
+from .registry import (
+    register,
+    get_nodes_by_base_type,
+    get_node,
+    register_module_sync_base_type,
+)
 from .run import FunctionArgument
 from .event import (
     connect_listeners,
@@ -65,6 +70,8 @@ class SceneCommandsCatalogEvent(events.Event):
 
 
 COMMAND_ARGUMENT_TYPES = ("str", "int", "float", "bool", "list", "any")
+
+COMMAND_BASE_TYPE = register_module_sync_base_type("command/Command")
 
 
 class CommandArgument(pydantic.BaseModel):
@@ -1920,13 +1927,13 @@ class SceneLoop(Loop):
         This is used to register commands that are defined in the scene
         nodes directory.
         """
-        state.data["_commands"] = {}
+        commands = {}
         catalog_by_name = {}
 
-        for node_cls in get_nodes_by_base_type("command/Command"):
+        for node_cls in get_nodes_by_base_type(COMMAND_BASE_TYPE):
             _node = node_cls()
             command_name = _node.get_property("name")
-            state.data["_commands"][command_name] = _node.registry
+            commands[command_name] = _node.registry
             # a module without a name yields UNRESOLVED (a class) here — it can
             # never be invoked and would break the catalog's JSON/sort contract
             if isinstance(command_name, str) and command_name:
@@ -1951,6 +1958,7 @@ class SceneLoop(Loop):
             entry.model_dump()
             for entry in sorted(catalog_by_name.values(), key=lambda entry: entry.name)
         ]
+        state.data["_commands"] = commands
         state.data["_command_catalog"] = catalog
 
         await async_signals.get("scene_commands_catalog").send(

@@ -380,6 +380,43 @@ class TestAutoDirectMethods:
         assert len(prompt_text) > 0
 
     @pytest.mark.asyncio
+    async def test_auto_direct_set_scene_intent_renders_instructions(
+        self, active_context
+    ):
+        """User direction for the determination is rendered into the prompt."""
+        director = active_context
+
+        director.client.send_prompt = AsyncMock(
+            return_value='{"function": "do_nothing"}'
+        )
+
+        await director.auto_direct_set_scene_intent(
+            require=False, instructions="Move them out of the tavern."
+        )
+
+        prompt_text = str(director.client.send_prompt.call_args[0][0])
+
+        assert "The user has given the following direction" in prompt_text
+        assert "Move them out of the tavern." in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_auto_direct_set_scene_intent_without_instructions(
+        self, active_context
+    ):
+        """No instructions - no direction block."""
+        director = active_context
+
+        director.client.send_prompt = AsyncMock(
+            return_value='{"function": "do_nothing"}'
+        )
+
+        await director.auto_direct_set_scene_intent(require=False)
+
+        prompt_text = str(director.client.send_prompt.call_args[0][0])
+
+        assert "The user has given the following direction" not in prompt_text
+
+    @pytest.mark.asyncio
     async def test_auto_direct_generate_scene_types_calls_client(self, active_context):
         """Test that auto_direct_generate_scene_types calls the LLM client via focal."""
         director = active_context

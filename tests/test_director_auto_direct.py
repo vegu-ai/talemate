@@ -26,9 +26,6 @@ from __future__ import annotations
 
 import pytest
 
-from conftest import MockScene, bootstrap_scene
-
-import talemate.instance as instance
 from talemate.character import Character
 from talemate.scene_message import (
     CharacterMessage,
@@ -40,18 +37,6 @@ from talemate.scene_message import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def scene():
-    s = MockScene()
-    bootstrap_scene(s)
-    return s
-
-
-@pytest.fixture
-def director(scene):
-    return instance.get_agent("director")
 
 
 async def _add_character(scene, name, *, is_player=False):

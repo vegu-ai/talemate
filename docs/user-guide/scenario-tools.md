@@ -101,7 +101,7 @@ Automatically picks a character to generate dialogue and actions based on the cu
 
 Opens a context menu with director-driven actions for the scene.
 
-![Director Actions](../img/0.37.0/director-scene-tools-menu.png)
+![Director Actions](../img/0.40.0/director-scene-tools-menu.png)
 
 #### :material-tournament: Generate dynamic actions
 
@@ -118,6 +118,13 @@ Greyed out when Scene Direction is disabled in the [director agent settings](/ta
 
 !!! note "Keyboard modifiers"
     Hold `ctrl` (Cmd on macOS) while clicking to provide one-off instructions for the director to follow on this turn only.
+
+#### :material-flag-variant: Evaluate scene intent
+
+Asks the director to evaluate the current [scene intent](/talemate/user-guide/world-editor/scene/direction) and update it if the scene has moved on. The director may also decide the current intent still fits — the status message "Director left the scene intent unchanged" reports that outcome.
+
+!!! note "Keyboard modifiers"
+    Hold `ctrl` (Cmd on macOS) while clicking to provide an optional direction that guides the determination.
 
 #### :material-movie-open: Generate long progress
 

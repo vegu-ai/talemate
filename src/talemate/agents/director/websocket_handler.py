@@ -13,7 +13,7 @@ from .action_core.gating import (
 )
 from talemate.context import interaction, handle_generation_cancelled
 from talemate.status import set_loading
-from talemate.exceptions import GenerationCancelled
+from talemate.exceptions import GenerationCancelled, GenerationProcessingError
 from .scene_direction.schema import UserInteractionMessage
 from .character_management import PersistCharacterRequest
 
@@ -25,6 +25,10 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.server.director")
+
+# scene intent text is free-form and can run long - the status snackbar only
+# has room for a taste of it
+SCENE_INTENT_STATUS_MAX_LENGTH = 100
 
 
 class InstructionPayload(pydantic.BaseModel):
@@ -111,6 +115,51 @@ class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
             )
             await self.director.direction_append_message(message)
         await self.director.direction_execute_turn()
+
+    @set_loading("Determining scene intent", cancellable=True, as_async=True)
+    async def handle_determine_scene_intent(self, data: dict):
+        """
+        Manually trigger the director's scene intent evaluation.
+
+        If instructions are provided they are passed on as the user's
+        direction for the determination.
+        """
+        payload = InstructionPayload(**data)
+
+        try:
+            phase = await self.director.auto_direct_set_scene_intent(
+                require=False,
+                raise_on_error=True,
+                instructions=payload.instructions,
+            )
+        except GenerationProcessingError as exc:
+            await self.signal_operation_failed(f"Scene intent evaluation failed: {exc}")
+            return
+
+        if phase is None:
+            await self.signal_operation_done(
+                signal_only=True,
+                emit_status_message={
+                    "message": "Director left the scene intent unchanged",
+                    "status": "info",
+                },
+            )
+            return
+
+        scene_types = self.scene.intent_state.scene_types or {}
+        scene_type = scene_types.get(phase.scene_type)
+
+        message = (
+            f"Scene intent set: {scene_type.name if scene_type else phase.scene_type}"
+        )
+
+        intent = " ".join((phase.intent or "").split())
+        if intent:
+            if len(intent) > SCENE_INTENT_STATUS_MAX_LENGTH:
+                intent = f"{intent[:SCENE_INTENT_STATUS_MAX_LENGTH].rstrip()}..."
+            message = f"{message} - {intent}"
+
+        await self.signal_operation_done(emit_status_message=message)
 
     @set_loading("Generating dynamic actions", cancellable=True, as_async=True)
     async def handle_request_dynamic_choices(self, data: dict):

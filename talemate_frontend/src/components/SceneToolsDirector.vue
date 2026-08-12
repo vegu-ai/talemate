@@ -26,6 +26,15 @@
                 <v-list-item-title>Scene direction turn<v-chip variant="text" color="highlight5" class="ml-1" size="x-small">{{ primaryModifierLabel }}: Provide direction</v-chip></v-list-item-title>
                 <v-list-item-subtitle>Manually trigger a scene direction turn</v-list-item-subtitle>
             </v-list-item>
+            <!-- Evaluate scene intent -->
+            <v-list-item
+                density="compact"
+                @click="actionDetermineSceneIntent"
+                prepend-icon="mdi-flag-variant"
+            >
+                <v-list-item-title>Evaluate scene intent<v-chip variant="text" color="highlight5" class="ml-1" size="x-small">{{ primaryModifierLabel }}: Provide direction</v-chip></v-list-item-title>
+                <v-list-item-subtitle>Have the director evaluate and possibly update the scene intent</v-list-item-subtitle>
+            </v-list-item>
             <!-- Generate long progress -->
             <v-list-item
                 density="compact"
@@ -305,6 +314,28 @@ export default {
                 {
                     type: 'director',
                     action: 'scene_direction_turn',
+                    instructions: instructions || "",
+                }
+            ));
+        },
+
+        /**
+         * Manually trigger a scene intent evaluation
+         * @method actionDetermineSceneIntent
+         * @param {string} instructions - Direction for the evaluation
+         */
+
+        actionDetermineSceneIntent(ev, instructions="") {
+
+            if (isPrimaryModifier(ev)) {
+                this.requestDirection({action: 'DetermineSceneIntent'});
+                return;
+            }
+
+            this.getWebsocket().send(JSON.stringify(
+                {
+                    type: 'director',
+                    action: 'determine_scene_intent',
                     instructions: instructions || "",
                 }
             ));

@@ -43,19 +43,21 @@ class ConversationWebsocketHandler(Plugin):
         Generate an actor action
         """
         payload = RequestActorActionPayload(**data)
-        character = None
-        actor = None
 
         if payload.character:
             character = self.scene.get_character(payload.character)
             actor = character.actor
         else:
-            actor = random.choice(list(self.scene.get_npc_characters())).actor
+            npcs = list(self.scene.get_npc_characters())
 
-            if not actor:
-                log.error("handle_request_actor_action: No actor found")
+            if not npcs:
+                log.error("handle_request_actor_action: No NPCs in the scene")
+                await self.signal_operation_failed(
+                    "No NPCs in the scene — nothing to direct"
+                )
                 return
 
+            actor = random.choice(npcs).actor
             character = actor.character
 
         if payload.instructions_through_director:

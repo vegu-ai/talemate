@@ -364,6 +364,19 @@ def update_baselines(request):
     return request.config.getoption("--update-baselines")
 
 
+@pytest.fixture
+def scene():
+    """A ``MockScene`` with the real agent stack wired onto it."""
+    s = MockScene()
+    bootstrap_scene(s)
+    return s
+
+
+@pytest.fixture
+def director(scene):
+    return instance.get_agent("director")
+
+
 def bootstrap_scene(mock_scene):
     """Wire a MockClient and the mock_scene into every agent."""
     bootstrap_engine()

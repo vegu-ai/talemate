@@ -32,6 +32,7 @@ from talemate.instance import (
     purge_clients,
 )
 from talemate.scene_tools import SCENE_TOOL_ACTIONS
+from talemate.world_state.templates.theme import resolve_theme
 
 from .websocket_plugin import Plugin
 
@@ -266,6 +267,19 @@ class ClearAgentActionOverridePayload(pydantic.BaseModel):
     key: str
 
 
+def app_config_message(config: Config) -> dict:
+    """The `app_config` push, built the same way `config.changed` builds it.
+
+    The frontend repaints from the resolved theme this carries, so a payload
+    without it reads as "no theme" and drops the app back to the defaults.
+    """
+
+    data = config.model_dump()
+    data.update(theme=resolve_theme(config))
+
+    return {"type": "app_config", "data": data, "version": VERSION}
+
+
 def client_model_defaults(client_type: str) -> dict:
     """Field defaults of the config model a client of `client_type` saves to.
 
@@ -359,9 +373,7 @@ class ConfigPlugin(Plugin):
 
         await config.set_dirty()
 
-        self.websocket_handler.queue_put(
-            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
-        )
+        self.websocket_handler.queue_put(app_config_message(config))
         self.websocket_handler.queue_put(
             {
                 "type": "config",
@@ -677,9 +689,7 @@ class ConfigPlugin(Plugin):
             }
         )
 
-        self.websocket_handler.queue_put(
-            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
-        )
+        self.websocket_handler.queue_put(app_config_message(config))
 
     def _active_scene_realpath(self) -> str | None:
         scene = self.scene
@@ -740,9 +750,7 @@ class ConfigPlugin(Plugin):
 
         config: Config = get_config()
 
-        self.websocket_handler.queue_put(
-            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
-        )
+        self.websocket_handler.queue_put(app_config_message(config))
 
     async def handle_delete_scene_project(self, data):
         payload = DeleteSceneProjectPayload(**data)
@@ -794,9 +802,7 @@ class ConfigPlugin(Plugin):
             }
         )
 
-        self.websocket_handler.queue_put(
-            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
-        )
+        self.websocket_handler.queue_put(app_config_message(config))
 
     async def handle_set_agent_action_override(self, data):
         payload = SetAgentActionOverridePayload(**data["data"])

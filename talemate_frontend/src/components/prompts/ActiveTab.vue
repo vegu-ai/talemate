@@ -182,7 +182,7 @@
 import { Codemirror } from 'vue-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
-import { oneDark } from '@codemirror/theme-one-dark';
+import { codeEditorExtensions } from '@/utils/codeEditorTheme.js';
 import { EditorView } from '@codemirror/view';
 import GroupManagement from './GroupManagement.vue';
 import TemplateTree from './TemplateTree.vue';
@@ -237,17 +237,6 @@ export default {
         },
         outdatedCount() {
             return this.templates.filter(t => t.is_outdated).length;
-        },
-        extensions() {
-            return [
-                markdown({
-                    base: markdownLanguage,
-                    codeLanguages: languages,
-                }),
-                oneDark,
-                EditorView.lineWrapping,
-                EditorView.editable.of(false)
-            ];
         },
         overrideTargets() {
             if (!this.selectedTemplate) return [];
@@ -344,6 +333,19 @@ export default {
             this.templateContent = content;
             this.loadingContent = false;
         }
+    },
+    setup() {
+        const extensions = codeEditorExtensions(
+            markdown({
+                base: markdownLanguage,
+                codeLanguages: languages,
+            }),
+            EditorView.editable.of(false),
+        );
+
+        return {
+            extensions,
+        };
     }
 };
 </script>

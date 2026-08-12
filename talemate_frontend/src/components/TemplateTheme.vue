@@ -25,6 +25,23 @@
             </v-btn-toggle>
             <div class="text-caption text-muted mt-1">How text and overlays are drawn on top of the theme - set it to match the Surfaces panel.</div>
 
+            <v-select
+                v-model="template.code_editor"
+                :items="codeEditorThemes"
+                label="Code editor theme"
+                density="compact"
+                class="mt-4"
+                @update:model-value="saveTemplate"
+                messages="Syntax colors for the in-app code editors.">
+                <template v-slot:item="{ props, item }">
+                    <v-list-item
+                        v-bind="props"
+                        :subtitle="item.raw.dark ? 'Dark' : 'Light'"
+                        :prepend-icon="item.raw.dark ? 'mdi-weather-night' : 'mdi-white-balance-sunny'">
+                    </v-list-item>
+                </template>
+            </v-select>
+
             <v-checkbox
                 v-model="template.favorite"
                 label="Favorite"
@@ -155,6 +172,7 @@
 </template>
 
 <script>
+import { CODE_EDITOR_THEMES } from '@/utils/codeEditorTheme';
 import {
     THEME_COLOR_GROUPS,
     hydrateThemeTemplate,
@@ -178,6 +196,7 @@ export default {
             dirty: false,
             openPanels: ['app'],
             colorGroups: THEME_COLOR_GROUPS,
+            codeEditorThemes: CODE_EDITOR_THEMES,
         };
     },
     emits: ['update'],

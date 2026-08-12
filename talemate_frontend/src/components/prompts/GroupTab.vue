@@ -263,8 +263,7 @@
 import { Codemirror } from 'vue-codemirror';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
-import { oneDark } from '@codemirror/theme-one-dark';
-import { EditorView } from '@codemirror/view';
+import { codeEditorExtensions } from '@/utils/codeEditorTheme.js';
 import TemplateTree from './TemplateTree.vue';
 import ConfirmActionPrompt from '../ConfirmActionPrompt.vue';
 
@@ -383,16 +382,6 @@ export default {
             }
             return Array.from(agents).sort();
         },
-        extensions() {
-            return [
-                markdown({
-                    base: markdownLanguage,
-                    codeLanguages: languages,
-                }),
-                oneDark,
-                EditorView.lineWrapping
-            ];
-        }
     },
     watch: {
         group: {
@@ -712,6 +701,18 @@ export default {
     },
     unmounted() {
         this.unregisterMessageHandler(this.handleMessage);
+    },
+    setup() {
+        const extensions = codeEditorExtensions(
+            markdown({
+                base: markdownLanguage,
+                codeLanguages: languages,
+            }),
+        );
+
+        return {
+            extensions,
+        };
     }
 };
 </script>

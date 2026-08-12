@@ -20,6 +20,7 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.37.1",
+    "@fsegurai/codemirror-theme-bundle": "6.4.2",
     "@mdi/font": "7.4.47",
     "core-js": "^3.37.1",
     "dot-prop": "^9.0.0",

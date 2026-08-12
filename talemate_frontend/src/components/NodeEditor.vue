@@ -318,8 +318,7 @@ import { hasEditableProperties } from '@/utils/moduleProperties';
 //import '@/utils/litegraphSearchBox'
 import { Codemirror } from 'vue-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
-import { oneDark } from '@codemirror/theme-one-dark'
-import { EditorView } from '@codemirror/view'
+import { codeEditorExtensions } from '@/utils/codeEditorTheme.js'
 
 import NodeEditorLibrary from './NodeEditorLibrary.vue';
 import NodeEditorLog from './NodeEditorLog.vue';
@@ -1184,11 +1183,7 @@ export default {
 
     setup() {
 
-        const extensions = [
-            markdown(),
-            oneDark,
-            EditorView.lineWrapping
-        ];
+        const extensions = codeEditorExtensions(markdown());
 
         const propertyEditorStyle = {
             maxHeight: "600px"

@@ -491,8 +491,7 @@ import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 import AutocompleteMixin from './AutocompleteMixin.js';
 import { SETTINGS_PAGES } from '../utils/appSettingsRegistry.js';
 import { createConfigSaveQueue } from '../utils/configSaveQueue.js';
-import { setActiveThemeColors } from '../utils/messageColors.js';
-import { applyTheme } from '../plugins/vuetify';
+import { applyAppConfigTheme } from '../utils/appTheme.js';
 import { buildNameKeyedPayload } from '../utils/nameKeyedMap.js';
 
 export default {
@@ -1313,8 +1312,7 @@ export default {
       }
 
       if (data.type === 'app_config') {
-        setActiveThemeColors(data.data?.theme?.colors ?? null);
-        applyTheme(data.data?.theme);
+        applyAppConfigTheme(data.data);
         this.appConfig = data.data;
         this.configReceivedThisConnection = true;
         // NOTE: the config-save queue's stacking base is deliberately NOT

@@ -4,6 +4,7 @@
  */
 
 import { DEFAULT_APPEARANCE_COLORS } from './messageColors.js';
+import { DEFAULT_CODE_EDITOR_THEME, isCodeEditorTheme } from './codeEditorTheme.js';
 
 const THEME_APP_SLOTS = [
     'primary',
@@ -270,10 +271,12 @@ function defaultThemeColor(groupKey, slot, themeColors) {
 /**
  * Fills in every color slot and appearance entry a `theme` template does not
  * carry yet, defaulting to the colors and mode of the currently active vuetify
- * theme (pass `$vuetify.theme.current.colors` and `$vuetify.theme.current.dark`).
- * Slots the template already holds are left alone.
+ * theme (pass `$vuetify.theme.current.colors` and `$vuetify.theme.current.dark`)
+ * and, when `themeCodeEditor` is given, to the editor theme it is running with
+ * (pass `getActiveCodeEditorTheme()`). Slots the template already holds are
+ * left alone.
  */
-export function hydrateThemeTemplate(template, themeColors, themeDark) {
+export function hydrateThemeTemplate(template, themeColors, themeDark, themeCodeEditor) {
     const colors = { ...(template.colors || {}) };
 
     for (const group of THEME_COLOR_GROUPS) {
@@ -301,6 +304,12 @@ export function hydrateThemeTemplate(template, themeColors, themeDark) {
 
     if (typeof template.dark !== 'boolean') {
         template.dark = typeof themeDark === 'boolean' ? themeDark : true;
+    }
+
+    if (!isCodeEditorTheme(template.code_editor)) {
+        template.code_editor = isCodeEditorTheme(themeCodeEditor)
+            ? themeCodeEditor
+            : DEFAULT_CODE_EDITOR_THEME;
     }
 
     template.colors = colors;

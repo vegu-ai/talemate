@@ -27,8 +27,7 @@
 
 import { Codemirror } from 'vue-codemirror'
 import { json } from '@codemirror/lang-json'
-import { oneDark } from '@codemirror/theme-one-dark'
-import { EditorView } from '@codemirror/view'
+import { codeEditorExtensions } from '@/utils/codeEditorTheme.js'
 
 export default {
     name: 'DebugToolSceneState',
@@ -90,11 +89,7 @@ export default {
     },
     setup() {
 
-        const extensions = [
-            json(),
-            oneDark,
-            EditorView.lineWrapping
-        ];
+        const extensions = codeEditorExtensions(json());
 
         const promptEditorStyle = {
             maxHeight: "1440px",

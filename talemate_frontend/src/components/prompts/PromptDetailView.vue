@@ -214,8 +214,7 @@
 import { Codemirror } from 'vue-codemirror'
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
-import { oneDark } from '@codemirror/theme-one-dark'
-import { EditorView } from '@codemirror/view'
+import { codeEditorExtensions } from '@/utils/codeEditorTheme.js'
 
 export default {
     name: 'PromptDetailView',
@@ -410,14 +409,12 @@ export default {
         this.registerMessageHandler(this.handleMessage);
     },
     setup() {
-        const extensions = [
+        const extensions = codeEditorExtensions(
             markdown({
                 base: markdownLanguage,
                 codeLanguages: languages,
             }),
-            oneDark,
-            EditorView.lineWrapping
-        ];
+        );
 
         return {
             extensions,

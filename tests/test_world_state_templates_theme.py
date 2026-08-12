@@ -5,7 +5,8 @@ and the manager entry point that activates a theme.
 Covers:
 - registration / polymorphic deserialization through a Group yaml round-trip
 - color validation and malformed templates being dropped instead of exploding
-- the shipped "Talemate Dark" group declaring every slot
+- the shipped "Themes" group and its dark and light templates declaring every
+  slot
 - `WorldStateManager.apply_template_theme`: config write, styling copied into
   the scene appearance, asset settings and color overrides left alone
 - `resolve_theme`: total fallback to the built-in default, and the lookup cache
@@ -35,6 +36,7 @@ from talemate.world_state.manager import (
 )
 from talemate.world_state.templates.base import (
     MODELS,
+    REPAIR_CONTEXT,
     TEMPLATE_PATH,
     TEMPLATE_PATH_TALEMATE,
     Collection,
@@ -42,6 +44,7 @@ from talemate.world_state.templates.base import (
 )
 from talemate.world_state.templates.shortcut import SceneToolShortcutTemplate
 from talemate.world_state.templates.theme import (
+    CODE_EDITOR_THEMES,
     AppColors,
     ChatColors,
     MessageColors,
@@ -51,11 +54,22 @@ from talemate.world_state.templates.theme import (
     ThemeAppearance,
     ThemeMessageStyle,
     _find_theme,
+    default_theme,
     invalidate_theme_cache,
     resolve_theme,
 )
 
 SHIPPED_THEMES_PATH = os.path.join(TEMPLATE_PATH_TALEMATE, "themes.yaml")
+SHIPPED_DARK_ID = "themes__dark"
+SHIPPED_LIGHT_ID = "themes__light"
+
+
+def raw_shipped_template(uid: str) -> dict:
+    """A shipped template as it is written on disk - validation fills in every
+    field it forgot to declare, so the file itself is what has to be read."""
+    with open(SHIPPED_THEMES_PATH, "r") as f:
+        return yaml.safe_load(f)["templates"][uid]
+
 
 # every value differs from the `SceneAppearance` default, so a test asserting
 # them only passes if the theme's styling was actually copied over
@@ -72,6 +86,13 @@ def make_template(**overrides) -> Theme:
     defaults = dict(name="Midnight")
     defaults.update(overrides)
     return Theme(**defaults)
+
+
+def load_template(**overrides) -> Theme:
+    """A theme validated the way one read off disk is - repairs allowed."""
+    defaults = dict(name="Midnight")
+    defaults.update(overrides)
+    return Theme.model_validate(defaults, context=REPAIR_CONTEXT)
 
 
 def make_styled_template(**overrides) -> Theme:
@@ -206,6 +227,58 @@ class TestThemeTemplateModel:
     def test_dark_defaults_to_true(self):
         assert make_template().dark is True
 
+    def test_code_editor_defaults_to_one_dark(self):
+        assert make_template().code_editor == "one-dark"
+
+    @pytest.mark.parametrize(
+        "code_editor", ["", "One Dark", "one_dark", "dracula", None, 7, ["dracula"]]
+    )
+    def test_unknown_code_editor_falls_back_to_one_dark_when_read_off_disk(
+        self, code_editor
+    ):
+        """An editor theme this version does not know must not cost the theme
+        its colors - `Group.sanitize_data` drops a template that fails to
+        validate, so the load path has to coerce rather than raise."""
+        assert load_template(code_editor=code_editor).code_editor == "one-dark"
+
+    @pytest.mark.parametrize(
+        "code_editor", ["", "One Dark", "one_dark", "dracula", None, 7, ["dracula"]]
+    )
+    def test_unknown_code_editor_is_rejected_without_the_repair_context(
+        self, code_editor
+    ):
+        """The repair belongs to the load path alone - a caller that did not
+        ask for it (a save arriving over the websocket) gets an error."""
+        with pytest.raises(pydantic.ValidationError, match="Unknown code editor"):
+            make_template(code_editor=code_editor)
+
+    @pytest.mark.parametrize("code_editor", ["one-dark\n", "  nord  "])
+    def test_code_editor_is_stripped(self, code_editor: str):
+        """A yaml block scalar appends a newline - a known id that carries one
+        is still that id, not an unknown one."""
+        assert make_template(code_editor=code_editor).code_editor == code_editor.strip()
+
+    @pytest.mark.parametrize("code_editor", CODE_EDITOR_THEMES)
+    def test_known_code_editor_is_kept(self, code_editor: str):
+        template = make_template(code_editor=code_editor)
+
+        assert template.code_editor == code_editor
+        assert template.resolved()["code_editor"] == code_editor
+
+    def test_every_shipped_code_editor_id_is_covered(self):
+        """The frontend bundles these ids - a coercion that silently swallowed
+        one of them would look like the fallback working."""
+        assert len(CODE_EDITOR_THEMES) == 8
+        assert CODE_EDITOR_THEMES[0] == "one-dark"
+
+    def test_resolved_carries_the_code_editor_theme(self):
+        template = make_template(code_editor="nord")
+
+        assert template.resolved()["code_editor"] == "nord"
+
+    def test_built_in_default_payload_carries_the_code_editor_theme(self):
+        assert default_theme()["code_editor"] == "one-dark"
+
     def test_locked_node_selected_matches_core_node(self):
         colors = make_template().colors.node_editor
         assert colors.locked_node_selected == colors.core_node
@@ -278,6 +351,71 @@ class TestThemeTemplateModel:
         assert restored.colors.surfaces.background == "#FFFFFF"
         assert restored.colors.surfaces.surface == "#212121"
 
+    def test_yaml_without_a_code_editor_theme_loads_with_the_default(
+        self, template_dir
+    ):
+        """A hand authored theme written before the field existed has to keep
+        loading - it just gets the default editor theme."""
+        template = make_template()
+        group = make_group(name="Themes", templates=[template])
+        group.save(template_dir)
+
+        with open(group.path, "r") as f:
+            data = yaml.safe_load(f)
+        del data["templates"][template.uid]["code_editor"]
+        with open(group.path, "w") as f:
+            yaml.dump(data, f)
+
+        restored = Group.load(group.path).templates[template.uid]
+
+        assert restored.name == "Midnight"
+        assert restored.code_editor == "one-dark"
+
+    def test_yaml_with_a_block_scalar_code_editor_theme_loads(self, template_dir):
+        """A yaml block scalar appends a newline - it names a known editor
+        theme, so the load must keep it rather than fall back."""
+        template = make_template(code_editor="nord")
+        group = make_group(name="Themes", templates=[template])
+        group.save(template_dir)
+
+        with open(group.path, "r") as f:
+            data = yaml.safe_load(f)
+        data["templates"][template.uid]["code_editor"] = "nord\n"
+        with open(group.path, "w") as f:
+            yaml.dump(data, f)
+
+        restored = Group.load(group.path).templates[template.uid]
+
+        assert restored.code_editor == "nord"
+
+    def test_yaml_with_an_unknown_code_editor_theme_keeps_its_colors(
+        self, template_dir
+    ):
+        """A hand edited theme naming an editor theme this version does not
+        know used to be dropped from its group entirely - every color gone, and
+        permanently, the next save of the group writes the file back out
+        without it."""
+        template = make_template(colors={"app": {"primary": "#123456"}})
+        group = make_group(name="Themes", templates=[template])
+        group.save(template_dir)
+
+        with open(group.path, "r") as f:
+            data = yaml.safe_load(f)
+        data["templates"][template.uid]["code_editor"] = "dracula"
+        with open(group.path, "w") as f:
+            yaml.dump(data, f)
+
+        loaded = Group.load(group.path)
+
+        assert template.uid in loaded.templates
+
+        restored = loaded.templates[template.uid]
+
+        assert restored.name == "Midnight"
+        assert restored.code_editor == "one-dark"
+        assert restored.colors.app.primary == "#123456"
+        assert restored.colors.model_dump() == template.colors.model_dump()
+
 
 class TestThemeColorValidation:
     @pytest.mark.parametrize(
@@ -331,28 +469,89 @@ class TestThemeColorValidation:
 # ---------------------------------------------------------------------------
 
 
-class TestShippedThemeGroup:
+class TestShippedThemesGroup:
+    """Both shipped themes live in one group, which is what makes it possible
+    for one of them to shadow the other."""
+
     @pytest.fixture
     def shipped(self) -> Group:
         return Group.load(SHIPPED_THEMES_PATH)
 
-    def test_loads(self, shipped):
-        (template,) = shipped.templates.values()
+    def test_group_uid_and_name_are_stable(self, shipped):
+        assert shipped.uid == "themes"
+        assert shipped.name == "Themes"
 
+    def test_ships_both_themes(self, shipped):
+        assert set(shipped.templates) == {"dark", "light"}
+
+        for uid, template in shipped.templates.items():
+            assert type(template) is Theme
+            assert template.uid == uid
+            assert template.group == "themes"
+
+    def test_theme_ids_are_stable(self, shipped):
+        """These are the ids the config stores - a rename here silently drops
+        every user back to the built-in default."""
+        assert {f"{shipped.uid}__{uid}" for uid in shipped.templates} == {
+            SHIPPED_DARK_ID,
+            SHIPPED_LIGHT_ID,
+        }
+
+    def test_both_ids_resolve_off_the_template_directory_to_different_themes(
+        self, monkeypatch
+    ):
+        """One group holding both themes is new - a lookup that returned the
+        same template for both ids would mean one shadows the other, which a
+        group per theme made impossible."""
+        loads = []
+        original = Collection.load
+
+        def _load(path: str = TEMPLATE_PATH):
+            loads.append(path)
+            return original(path)
+
+        monkeypatch.setattr(Collection, "load", _load)
+
+        cfg = Config()
+
+        cfg.appearance.theme = SHIPPED_DARK_ID
+        dark = resolve_theme(cfg)
+
+        cfg.appearance.theme = SHIPPED_LIGHT_ID
+        light = resolve_theme(cfg)
+
+        assert loads and set(loads) == {TEMPLATE_PATH}
+        assert dark != light
+        assert dark["dark"] is True
+        assert light["dark"] is False
+        assert dark["colors"]["surfaces"]["background"] == "#121212"
+        assert light["colors"]["surfaces"]["background"] == "#F6F1E9"
+        assert dark["code_editor"] == "one-dark"
+        assert light["code_editor"] == "vscode-light"
+
+
+class TestShippedDarkTheme:
+    @pytest.fixture
+    def shipped(self) -> Group:
+        return Group.load(SHIPPED_THEMES_PATH)
+
+    @pytest.fixture
+    def template(self, shipped) -> Theme:
+        return shipped.templates["dark"]
+
+    @pytest.fixture
+    def raw(self) -> dict:
+        return raw_shipped_template("dark")
+
+    def test_loads(self, template):
         assert type(template) is Theme
         assert template.name == "Talemate Dark"
 
-    def test_uids_are_stable(self, shipped):
-        (template,) = shipped.templates.values()
-
-        assert shipped.uid == "talemate_dark"
-        assert template.uid == "default"
+    def test_uids_are_stable(self, shipped, template):
+        assert template.uid == "dark"
         assert template.group == shipped.uid
 
-    def test_declares_every_slot(self, shipped):
-        with open(SHIPPED_THEMES_PATH, "r") as f:
-            raw = yaml.safe_load(f)["templates"]["default"]
-
+    def test_declares_every_slot(self, raw):
         for group_name, model in [
             ("app", AppColors),
             ("node_editor", NodeEditorColors),
@@ -364,32 +563,35 @@ class TestShippedThemeGroup:
 
         assert set(raw["appearance"]) == set(ThemeAppearance.model_fields)
 
-    def test_declares_the_surfaces_group_and_the_dark_flag(self, shipped):
-        with open(SHIPPED_THEMES_PATH, "r") as f:
-            raw = yaml.safe_load(f)["templates"]["default"]
+    def test_declares_every_top_level_field(self, raw):
+        """A field added to the model but forgotten here would ship as its
+        default, which is only visible where the shipped value differs from
+        that default - i.e. usually not at all."""
+        assert set(raw) == set(Theme.model_fields)
 
+    def test_declares_the_surfaces_group_and_the_dark_flag(self, raw, template):
         assert raw["colors"]["surfaces"]["background"] == "#121212"
         assert raw["dark"] is True
-
-        (template,) = shipped.templates.values()
 
         assert template.colors.surfaces.surface == "#212121"
         assert template.dark is True
 
-    def test_matches_the_built_in_default(self, shipped):
-        (template,) = shipped.templates.values()
+    def test_declares_the_code_editor_theme(self, template):
+        assert template.code_editor == "one-dark"
+        assert template.resolved()["code_editor"] == "one-dark"
 
+    def test_matches_the_built_in_default(self, template):
         assert template.resolved() == Theme(name="Default").resolved()
 
     def test_is_resolvable_by_id(self, shipped):
         cfg = Config()
-        cfg.appearance.theme = f"{shipped.uid}__default"
+        cfg.appearance.theme = SHIPPED_DARK_ID
 
         resolved = resolve_theme(cfg, collection=Collection(groups=[shipped]))
 
         assert resolved["colors"]["app"]["primary"] == "#9575CD"
 
-    def test_is_resolvable_from_the_template_directory(self, shipped, monkeypatch):
+    def test_is_resolvable_from_the_template_directory(self, monkeypatch):
         """Production never passes a collection, it resolves off the shipped
         template directory. The shipped theme is value identical to the built-in
         fallback, so the payload alone cannot tell a successful resolve from a
@@ -404,7 +606,7 @@ class TestShippedThemeGroup:
         monkeypatch.setattr(Collection, "load", _load)
 
         cfg = Config()
-        cfg.appearance.theme = f"{shipped.uid}__default"
+        cfg.appearance.theme = SHIPPED_DARK_ID
 
         resolved = resolve_theme(cfg)
 
@@ -416,6 +618,103 @@ class TestShippedThemeGroup:
 
         assert found is not None
         assert found.name == "Talemate Dark"
+
+
+class TestShippedLightTheme:
+    @pytest.fixture
+    def shipped(self) -> Group:
+        return Group.load(SHIPPED_THEMES_PATH)
+
+    @pytest.fixture
+    def template(self, shipped) -> Theme:
+        return shipped.templates["light"]
+
+    @pytest.fixture
+    def raw(self) -> dict:
+        return raw_shipped_template("light")
+
+    def test_loads(self, template):
+        assert type(template) is Theme
+        assert template.name == "Talemate Light"
+
+    def test_uids_are_stable(self, shipped, template):
+        assert template.uid == "light"
+        assert template.group == shipped.uid
+
+    def test_declares_every_slot(self, raw):
+        for group_name, model in [
+            ("app", AppColors),
+            ("node_editor", NodeEditorColors),
+            ("messages", MessageColors),
+            ("chats", ChatColors),
+            ("surfaces", SurfaceColors),
+        ]:
+            assert set(raw["colors"][group_name]) == set(model.model_fields)
+
+        assert set(raw["appearance"]) == set(ThemeAppearance.model_fields)
+
+    def test_declares_every_top_level_field(self, raw):
+        assert set(raw) == set(Theme.model_fields)
+
+    def test_declares_light_surfaces_and_the_dark_flag(self, raw, template):
+        assert raw["colors"]["surfaces"]["background"] == "#F6F1E9"
+        assert raw["dark"] is False
+
+        assert template.colors.surfaces.background == "#F6F1E9"
+        assert template.colors.surfaces.surface == "#FBF8F3"
+        assert template.colors.surfaces.surface_bright == "#FEFCF8"
+        assert template.colors.surfaces.surface_light == "#EBE4DA"
+        assert template.dark is False
+
+    def test_declares_a_light_code_editor_theme(self, template):
+        assert template.code_editor == "vscode-light"
+        assert template.resolved()["code_editor"] == "vscode-light"
+
+    def test_differs_from_the_built_in_default(self, template):
+        """The dark theme is value identical to the built-in fallback, so a
+        resolve that quietly fell back would still look right. This one has to
+        differ everywhere the surfaces decide light from dark, otherwise the
+        same fallback would go unnoticed here too."""
+        built_in = Theme(name="Default")
+
+        assert template.resolved() != built_in.resolved()
+        assert template.dark != built_in.dark
+
+        for slot in SurfaceColors.model_fields:
+            light = getattr(template.colors.surfaces, slot)
+            assert light != getattr(built_in.colors.surfaces, slot)
+
+    def test_is_resolvable_by_id(self, shipped):
+        cfg = Config()
+        cfg.appearance.theme = SHIPPED_LIGHT_ID
+
+        resolved = resolve_theme(cfg, collection=Collection(groups=[shipped]))
+
+        assert resolved["dark"] is False
+        assert resolved["colors"]["surfaces"]["background"] == "#F6F1E9"
+        assert resolved["colors"]["app"]["primary"] == "#7B56C1"
+
+    def test_is_resolvable_from_the_template_directory(self, monkeypatch):
+        """The light theme shares its group with the dark one - resolving it
+        off the template directory is what says the dark theme, which is value
+        identical to the fallback, does not stand in for it."""
+        loads = []
+        original = Collection.load
+
+        def _load(path: str = TEMPLATE_PATH):
+            loads.append(path)
+            return original(path)
+
+        monkeypatch.setattr(Collection, "load", _load)
+
+        cfg = Config()
+        cfg.appearance.theme = SHIPPED_LIGHT_ID
+
+        resolved = resolve_theme(cfg)
+
+        assert loads == [TEMPLATE_PATH]
+        assert resolved["dark"] is False
+        assert resolved["colors"]["surfaces"]["background"] == "#F6F1E9"
 
 
 # ---------------------------------------------------------------------------
@@ -430,7 +729,7 @@ class TestResolveTheme:
     def test_shape(self):
         resolved = resolve_theme(Config())
 
-        assert set(resolved) == {"colors", "appearance", "dark"}
+        assert set(resolved) == {"colors", "appearance", "dark", "code_editor"}
         assert set(resolved["colors"]) == {
             "app",
             "node_editor",
@@ -528,6 +827,32 @@ class TestResolveTheme:
         assert set(resolved["colors"]["surfaces"]) == set(SurfaceColors.model_fields)
         assert resolved["colors"]["surfaces"]["background"] == "#121212"
         assert resolved["dark"] is True
+        assert resolved["code_editor"] == "one-dark"
+
+    def test_configured_code_editor_theme_resolves(self):
+        template = make_template(code_editor="tokyo-night-storm")
+        group = make_group(name="Themes", templates=[template])
+        cfg = Config()
+        cfg.appearance.theme = f"{group.uid}__{template.uid}"
+
+        resolved = resolve_theme(cfg, collection=Collection(groups=[group]))
+
+        assert resolved["code_editor"] == "tokyo-night-storm"
+
+    def test_unknown_code_editor_theme_resolves_with_the_theme_colors(self):
+        """Only the editor theme falls back - the active theme itself keeps
+        rendering, rather than the whole app dropping to the built-in default."""
+        template = load_template(
+            code_editor="dracula", colors={"app": {"primary": "#123456"}}
+        )
+        group = make_group(name="Themes", templates=[template])
+        cfg = Config()
+        cfg.appearance.theme = f"{group.uid}__{template.uid}"
+
+        resolved = resolve_theme(cfg, collection=Collection(groups=[group]))
+
+        assert resolved["code_editor"] == "one-dark"
+        assert resolved["colors"]["app"]["primary"] == "#123456"
 
 
 class TestResolveThemeCache:
@@ -965,6 +1290,24 @@ class TestSaveTemplateHandler:
         await plugin.handle_save_template({"template": edited.model_dump()})
 
         assert resolve_theme(config)["colors"]["app"]["primary"] == "#654321"
+
+    async def test_saving_an_unknown_code_editor_theme_is_rejected(
+        self, plugin, config, template_dir
+    ):
+        """A theme read off disk repairs an editor theme id this version does
+        not know, but a save naming one is a bad payload - accepting it would
+        silently persist the fallback over what the client asked for."""
+        template = make_template(code_editor="nord")
+        group = install_group(plugin, template_dir, [template])
+        config.appearance.theme = f"{group.uid}__{template.uid}"
+
+        edited = template.model_dump()
+        edited["code_editor"] = "github-ligth"
+
+        with pytest.raises(pydantic.ValidationError, match="Unknown code editor"):
+            await plugin.handle_save_template({"template": edited})
+
+        assert Group.load(group.path).templates[template.uid].code_editor == "nord"
 
     async def test_saving_another_theme_does_not_repush_app_config(
         self, plugin, config, template_dir

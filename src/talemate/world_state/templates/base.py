@@ -44,6 +44,18 @@ class register:
         return cls
 
 
+# validation context for a template read off disk. `sanitize_data` drops a
+# template that fails to validate - and permanently, the next save of the group
+# writes the file back out without it - so a value this version cannot
+# interpret is repaired on that path instead of raised on. Nothing else passes
+# it, which keeps a bad value in an API payload an error.
+REPAIR_CONTEXT = {"repair_unknown_choices": True}
+
+
+def repairs_unknown_choices(info: pydantic.ValidationInfo) -> bool:
+    return bool((info.context or {}).get("repair_unknown_choices"))
+
+
 def name_to_id(name: str) -> str:
     return name.replace(" ", "_").lower()
 
@@ -56,7 +68,7 @@ def validate_template(
     if isinstance(v, dict):
         if v["template_type"] not in MODELS:
             raise ValueError(f"Template type {v['template_type']} is not registered")
-        return MODELS[v["template_type"]](**v)
+        return MODELS[v["template_type"]].model_validate(v, context=info.context)
     elif isinstance(v, Template):
         if v.template_type not in MODELS:
             raise ValueError(f"Template type {v.template_type} is not registered")
@@ -142,7 +154,7 @@ class Group(pydantic.BaseModel):
         with open(path, "r") as f:
             data = yaml.safe_load(f)
             data = cls.sanitize_data(data)
-            return cls(path=path, **data)
+            return cls.model_validate({"path": path, **data}, context=REPAIR_CONTEXT)
 
     @classmethod
     def sanitize_data(cls, data: dict) -> dict:
@@ -209,9 +221,12 @@ class Group(pydantic.BaseModel):
                 del data["templates"][template_id]
                 continue
 
-            # a hand edited template must not fail the whole group's load
+            # a hand edited template must not fail the whole group's load.
+            # this probe is the drop site, so it validates with the same
+            # context `load` does - otherwise a repair the model only performs
+            # on the load path would never get the chance to happen
             try:
-                MODELS[template_type](**template)
+                MODELS[template_type].model_validate(template, context=REPAIR_CONTEXT)
             except pydantic.ValidationError as exc:
                 log.warning(
                     "Template is invalid",

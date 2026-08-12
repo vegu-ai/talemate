@@ -1,11 +1,18 @@
 # Themes
 
-Theme templates hold a complete set of colors for the interface surfaces, the application, the node editor, the scene messages and the chats, together with how message text is styled and whether the theme is light or dark. Applying one repaints Talemate with those colors.
+Theme templates hold a complete set of colors for the interface surfaces, the application, the node editor, the scene messages and the chats, together with how message text is styled, which color scheme the in-app code editors use and whether the theme is light or dark. Applying one repaints Talemate with those colors.
 
 A theme is a world state template like any other — it lives in a template group, is edited in the Templates tab, and is shared as a file.
 
-!!! info "Shipped theme: Talemate Dark"
-    Talemate ships a **Talemate Dark** theme, in a group of the same name, that reproduces the application's standard look. It is an ordinary template, so it can be edited — but the edits are written back to the file that ships with Talemate and an update can overwrite them. Build your own theme in your own group for changes that should stick.
+!!! info "Shipped themes: Talemate Dark and Talemate Light"
+    Talemate ships two themes, both in a group called **Themes**:
+
+    | Theme | What it looks like |
+    |-------|--------------------|
+    | **Talemate Dark** | The application's standard look |
+    | **Talemate Light** | The same palette worked out for a light page |
+
+    Both are ordinary templates, so they can be edited — but the edits are written back to the file that ships with Talemate and an update can overwrite them. Build your own theme in your own group for changes that should stick.
 
 ## Creating a theme
 
@@ -46,6 +53,28 @@ The **Mode** toggle above the panels marks the theme as **Light** or **Dark**. I
 !!! warning "Set Mode to match your Surfaces panel"
     Mode and the Surfaces panel have to agree. A theme with light surfaces left on Dark keeps its readable text, but draws white dividers and outlines on white cards and gives you dark scrollbars on a light page. A new theme starts on the mode you are currently running.
 
+### Code editor theme
+
+The **Code editor theme** select under the Mode toggle sets the syntax colors of the in-app code editors — the node editor's property editors, the game state and debug scene state views, and the prompt views. These editors are not painted from the color slots; the theme names one of eight ready-made editor themes for them instead.
+
+| Editor theme | Mode |
+|--------------|------|
+| **One Dark** | Dark — the default |
+| **GitHub Dark** | Dark |
+| **Monokai** | Dark |
+| **Nord** | Dark |
+| **Tokyo Night Storm** | Dark |
+| **VS Code Light** | Light |
+| **GitHub Light** | Light |
+| **Solarized Light** | Light |
+
+The choice is read live, like the colors — switching it repaints every open code editor immediately, with no reload. A theme that names no editor theme, or one this version of Talemate does not know, falls back to **One Dark**.
+
+Mode does not decide this: a dark theme is free to use a light editor theme and the other way around. But a light theme that leaves the editors on a dark one drops a dark rectangle into a light page.
+
+!!! tip "Pair a light theme with VS Code Light"
+    A light theme should take one of the three light editor themes, and **VS Code Light** is the safest of them — it is the one where every syntax color stays comfortably readable against the editor background, which is not true of every light editor theme. It is what the shipped Talemate Light theme uses.
+
 ### Message appearance
 
 The **Message appearance** panel sets how message text is written, independent of its color:
@@ -79,6 +108,8 @@ The theme supplies the color of every message and markup type. A color you set y
 
 Template groups are stored as single files in the `templates/world-state` directory, so sharing a theme means handing that group's file to someone else, who drops it into the same directory. There is no separate import or export.
 
+The file carries every theme in the group, not just the one you meant to pass on — the shipped **Themes** file holds both Talemate Dark and Talemate Light. Keep a theme you intend to share in a group of its own.
+
 ## Editing and deleting
 
 To edit an existing template, select it from the list of templates in the left sidebar and adjust the fields — updates are applied automatically.
@@ -88,7 +119,7 @@ To delete a template, select it and click **Remove template**, then confirm. If 
 ## Limitations
 
 !!! warning "What the theme does not reach"
-    The node editor canvas itself and the in-app code editors bring their own colors and do not follow the theme. Both stay dark, so they will stand out against a light theme.
+    The node editor canvas itself brings its own colors and does not follow the theme. It stays dark, so it will stand out against a light theme. The in-app code editors do follow the theme, but only through the [code editor theme](#code-editor-theme) it names — they are not painted from the color slots.
 
 !!! warning "Opening a theme group in an older Talemate"
-    A version of Talemate that does not know the `theme` template type drops the themes out of any group it loads that contains them — and writes the group back without them if the group is saved. Keep a copy before handing a group to an older install.
+    A version of Talemate that does not know the `theme` template type drops the themes out of any group it loads that contains them — and writes the group back without them if the group is saved. The same goes one field down: an editor theme id the install does not know is repaired to **One Dark** as the theme loads, and the next save of the group writes that repaired value back over it. Keep a copy before handing a group to an older install.

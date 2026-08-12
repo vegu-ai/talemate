@@ -1037,12 +1037,14 @@
 - path: user-guide/templates/themes.md
   title: Themes
   summary: 'Creating a Theme template that defines Talemate''s colors - 67 slots grouped into Surfaces, App, Node
-    editor, Messages and Chats - plus the message text styling (italic, bold, visibility per message and markup type)
-    and a Light or Dark mode. Applying a theme: the colors are read live so editing them repaints the running app,
-    while the styling is copied into your Appearance settings once. A color set by hand in appearance settings still
-    overrides the theme. Message asset cadence and auto-attaching stay out of the theme. Covers the shipped Talemate
-    Dark theme, the fallback when a theme is deleted, sharing by passing on the group file in templates/world-state,
-    and the limits: the node editor canvas and in-app code editors keep their own colors.'
+    editor, Messages and Chats - plus the message text styling (italic, bold, visibility per message and markup type),
+    a Light or Dark mode and a Code editor theme picked from eight presets. Applying a theme: the colors and the
+    editor theme are read live so editing them repaints the running app, while the styling is copied into your
+    Appearance settings once. A color set by hand in appearance settings still overrides the theme. Message asset
+    cadence and auto-attaching stay out of the theme. Covers the shipped Talemate Dark and Talemate Light themes, the
+    fallback when a theme is deleted, sharing by passing on the group file in templates/world-state, and the limits:
+    the node editor canvas keeps its own colors, while the in-app code editors follow the theme only through the
+    editor theme it names.'
 - path: user-guide/templates/spice.md
   title: Spice Collection
   summary: 'Creating a Spice collection template that injects randomness into attribute and detail generation: description,

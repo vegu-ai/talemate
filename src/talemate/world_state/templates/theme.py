@@ -1,5 +1,5 @@
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, get_args
 
 import pydantic
 import structlog
@@ -8,6 +8,7 @@ from talemate.world_state.templates.base import (
     Collection,
     Template,
     register,
+    repairs_unknown_choices,
 )
 
 if TYPE_CHECKING:
@@ -33,6 +34,22 @@ __all__ = [
 log = structlog.get_logger("world-state.templates.theme")
 
 COLOR_VALID_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+CodeEditorTheme = Literal[
+    "one-dark",
+    "github-dark",
+    "monokai",
+    "nord",
+    "tokyo-night-storm",
+    "vscode-light",
+    "github-light",
+    "solarized-light",
+]
+
+# a tuple rather than a set - the membership test runs on unvalidated yaml,
+# which can hand it an unhashable value
+CODE_EDITOR_THEMES = get_args(CodeEditorTheme)
+DEFAULT_CODE_EDITOR_THEME = "one-dark"
 
 
 class ColorGroup(pydantic.BaseModel):
@@ -198,12 +215,40 @@ class Theme(Template):
     # those come from APCA contrast against each color itself, so they follow
     # the surfaces group rather than this flag.
     dark: bool = True
+    code_editor: CodeEditorTheme = DEFAULT_CODE_EDITOR_THEME
+
+    @pydantic.field_validator("code_editor", mode="before")
+    @classmethod
+    def _coerce_code_editor(cls, v, info: pydantic.ValidationInfo) -> str:
+        if isinstance(v, str):
+            # a yaml block scalar appends a newline
+            v = v.strip()
+
+        if v in CODE_EDITOR_THEMES:
+            return v
+
+        # only a template read off disk falls back: `Group.sanitize_data` drops
+        # one that fails to validate, so raising there would take all of the
+        # theme's colors with it. Everywhere else - a save coming in over the
+        # websocket above all - an id this version does not know is an error.
+        if not repairs_unknown_choices(info):
+            raise ValueError(f"Unknown code editor theme: {v}")
+
+        log.warning(
+            "unknown code editor theme, falling back",
+            code_editor=v,
+            theme=info.data.get("name"),
+            fallback=DEFAULT_CODE_EDITOR_THEME,
+        )
+
+        return DEFAULT_CODE_EDITOR_THEME
 
     def resolved(self) -> dict:
         return {
             "colors": self.colors.model_dump(),
             "appearance": self.appearance.model_dump(),
             "dark": self.dark,
+            "code_editor": self.code_editor,
         }
 
 
@@ -253,7 +298,7 @@ def _find_theme(theme_id: str, collection: Collection | None) -> Theme | None:
 def resolve_theme(config: "Config", collection: Collection | None = None) -> dict:
     """
     Resolves the active theme to
-    `{"colors": {...}, "appearance": {...}, "dark": bool}`.
+    `{"colors": {...}, "appearance": {...}, "dark": bool, "code_editor": str}`.
 
     Falls back to the built-in default for anything that does not resolve to a
     theme template - the app must never end up rendering unstyled.

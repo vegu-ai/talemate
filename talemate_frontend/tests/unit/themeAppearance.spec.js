@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from "node:url";
 import { DEFAULT_APPEARANCE_COLORS, setActiveThemeColors } from "@/utils/messageColors";
 import { SceneTextParser } from "@/utils/sceneMessageRenderer";
 import { hydrateThemeTemplate } from "@/utils/templateMappings";
+import { CODE_EDITOR_THEMES, DEFAULT_CODE_EDITOR_THEME } from "@/utils/codeEditorTheme";
 
 function read(path) {
     return readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf-8");
@@ -153,6 +154,70 @@ describe("hydrateThemeTemplate mode seed", () => {
 
     it("leaves the mode a stored theme carries alone", () => {
         expect(hydrateThemeTemplate({ dark: false }, {}, true).dark).toBe(false);
+    });
+});
+
+describe("hydrateThemeTemplate code editor seed", () => {
+    it("a theme without a code editor theme opens on the default", () => {
+        expect(hydrateThemeTemplate({}, {}).code_editor).toBe(DEFAULT_CODE_EDITOR_THEME);
+    });
+
+    it("a new theme is seeded with the editor theme it was created under", () => {
+        expect(hydrateThemeTemplate({}, {}, false, "github-light").code_editor).toBe("github-light");
+    });
+
+    it("leaves the code editor theme a stored theme carries alone", () => {
+        expect(hydrateThemeTemplate({ code_editor: "nord" }, {}).code_editor).toBe("nord");
+        expect(hydrateThemeTemplate({ code_editor: "nord" }, {}, false, "github-light").code_editor).toBe("nord");
+    });
+
+    it("falls back to the default for an id this frontend does not ship", () => {
+        expect(hydrateThemeTemplate({ code_editor: "vscode-dark" }, {}).code_editor).toBe(
+            DEFAULT_CODE_EDITOR_THEME,
+        );
+        expect(hydrateThemeTemplate({}, {}, false, "vscode-dark").code_editor).toBe(
+            DEFAULT_CODE_EDITOR_THEME,
+        );
+    });
+
+    it("only the create call site seeds from the running editor theme", () => {
+        expect(
+            read("../../src/components/Templates.vue"),
+            "Templates.vue seeds a new theme without the running editor theme",
+        ).toMatch(/hydrateThemeTemplate\([^;]*getActiveCodeEditorTheme\(\)\)/);
+        expect(
+            read("../../src/components/TemplateTheme.vue"),
+            "TemplateTheme.vue overwrites a stored theme's own editor theme with the running one",
+        ).not.toMatch(/getActiveCodeEditorTheme/);
+    });
+});
+
+describe("theme editor code editor select", () => {
+    const SOURCE = read("../../src/components/TemplateTheme.vue");
+
+    it("offers exactly the ids the backend model accepts", () => {
+        const backend = read("../../../src/talemate/world_state/templates/theme.py");
+        const literal = backend.match(/^CodeEditorTheme = Literal\[\n([\s\S]*?)^\]$/m);
+        expect(literal, "theme.py declares no CodeEditorTheme Literal").not.toBeNull();
+        expect(backend, "the theme model does not type code_editor on that Literal").toMatch(
+            /^ {4}code_editor: CodeEditorTheme = DEFAULT_CODE_EDITOR_THEME$/m,
+        );
+
+        const fallback = backend.match(/^DEFAULT_CODE_EDITOR_THEME = "([\w-]+)"$/m);
+        expect(fallback, "theme.py declares no DEFAULT_CODE_EDITOR_THEME").not.toBeNull();
+
+        const ids = [...literal[1].matchAll(/"([\w-]+)"/g)].map(match => match[1]);
+        expect(CODE_EDITOR_THEMES.map(theme => theme.value)).toEqual(ids);
+        expect(DEFAULT_CODE_EDITOR_THEME).toBe(fallback[1]);
+    });
+
+    it("drives the select off that list and saves the pick", () => {
+        const select = SOURCE.match(/<v-select[\s\S]*?>/);
+        expect(select, "TemplateTheme.vue has no select").not.toBeNull();
+        expect(select[0]).toMatch(/v-model="template\.code_editor"/);
+        expect(select[0]).toMatch(/:items="codeEditorThemes"/);
+        expect(select[0]).toMatch(/@update:model-value="saveTemplate"/);
+        expect(SOURCE).toMatch(/codeEditorThemes: CODE_EDITOR_THEMES,/);
     });
 });
 

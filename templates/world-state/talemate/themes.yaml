@@ -1,8 +1,8 @@
 author: Talemate
-description: The default Talemate appearance.
-name: Talemate Dark
+description: The themes that ship with Talemate.
+name: Themes
 templates:
-  default:
+  dark:
     appearance:
       actor:
         bold: false
@@ -51,6 +51,7 @@ templates:
       time:
         bold: false
         italic: false
+    code_editor: one-dark
     colors:
       app:
         cancel: '#B0BEC5'
@@ -126,10 +127,141 @@ templates:
         surface_variant: '#C8C8C8'
     dark: true
     favorite: false
-    group: talemate_dark
+    group: themes
     instructions: null
     name: Talemate Dark
     priority: 1
     template_type: theme
-    uid: default
-uid: talemate_dark
+    uid: dark
+  light:
+    appearance:
+      actor:
+        bold: false
+        italic: false
+      backdrop_panel_opacity: 0.8
+      backdrop_text_shadow: false
+      brackets:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      context_investigation:
+        bold: false
+        italic: false
+        show: true
+      director:
+        bold: false
+        italic: false
+        show: true
+      emphasis:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      entities:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      information:
+        bold: false
+        italic: false
+      narrator:
+        bold: false
+        italic: false
+      parentheses:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      quotes:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      time:
+        bold: false
+        italic: false
+    code_editor: vscode-light
+    colors:
+      app:
+        cancel: '#546E7A'
+        delete: '#CD2729'
+        dirty: '#A15700'
+        disabled: '#C62828'
+        enabled: '#2E7D32'
+        favorite: '#9E8300'
+        highlight1: '#3F51B5'
+        highlight2: '#9C27B0'
+        highlight3: '#4D7322'
+        highlight4: '#B71C1C'
+        highlight5: '#806000'
+        highlight6: '#9D5600'
+        highlight7: '#1565C0'
+        instructions: '#835A26'
+        muted: '#6B655D'
+        mutedbg: '#E3DBD0'
+        mutedheader: '#4E4A43'
+        normal: '#3C3C3C'
+        persona: '#C2185B'
+        primary: '#7B56C1'
+        secondary: '#C62E00'
+        subdued1: '#7986CB'
+        subdued2: '#BA68C8'
+        subdued3: '#649A33'
+        subdued4: '#EF5350'
+        subdued5: '#AE860D'
+        subdued6: '#CE7500'
+        subdued7: '#1E88E5'
+        unsaved: '#8A6700'
+      chats:
+        dchat_msg_action_result: '#854A39'
+        dchat_msg_code: '#854A39'
+        dchat_msg_compaction: '#868178'
+        dchat_msg_director: '#AD3D1A'
+        dchat_msg_loading: '#BC2700'
+        dchat_msg_user: '#6C3BC6'
+        hchat_msg_doc_result: '#0E65AB'
+        hchat_msg_help: '#4D6876'
+        hchat_msg_user: '#6C3BC6'
+      messages:
+        actor: '#6C3BC6'
+        avatar_border: '#BDB5AC'
+        brackets: '#CD2D2D'
+        card_border: '#BDB5AC'
+        context_investigation: '#86693C'
+        defaultBadge: '#C74016'
+        director: '#C62E00'
+        emphasis: '#6C3BC6'
+        entities: '#806000'
+        information: '#954F38'
+        narrator: '#7D4D90'
+        parentheses: '#A23C7A'
+        play_audio: '#B38104'
+        quotes: '#212121'
+        time: '#674D00'
+      node_editor:
+        core_node: '#607D8B'
+        core_node_selected: '#607D8B'
+        locked_node_selected: '#607D8B'
+        nodeeditorbg: '#E3DCD3'
+        scene_node: '#7B56C1'
+        scene_node_selected: '#5E35B1'
+        template_node: '#8D6E63'
+        template_node_selected: '#8D6E63'
+      surfaces:
+        background: '#F6F1E9'
+        on_surface_variant: '#F1EDE7'
+        surface: '#FBF8F3'
+        surface_bright: '#FEFCF8'
+        surface_light: '#EBE4DA'
+        surface_variant: '#4A4458'
+    dark: false
+    favorite: false
+    group: themes
+    instructions: null
+    name: Talemate Light
+    priority: 1
+    template_type: theme
+    uid: light
+uid: themes

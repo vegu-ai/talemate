@@ -292,6 +292,7 @@ import TemplateSceneType from './TemplateSceneType.vue';
 import TemplateSceneToolShortcut from './TemplateSceneToolShortcut.vue';
 import TemplateTheme from './TemplateTheme.vue';
 import { iconForTemplate, colorForTemplate, hydrateThemeTemplate } from '../utils/templateMappings.js';
+import { getActiveCodeEditorTheme } from '../utils/codeEditorTheme.js';
 import { validateGroupName } from '../utils/sceneToolShortcuts.js';
 import { adoptedTemplateUid } from '../utils/templateSaveEcho.js';
 
@@ -428,7 +429,7 @@ export default {
                 if(!this.template.icon)
                     this.template.icon = iconForTemplate(this.template);
             } else if(this.template && this.template.template_type === 'theme') {
-                hydrateThemeTemplate(this.template, this.$vuetify.theme.current.colors, this.$vuetify.theme.current.dark);
+                hydrateThemeTemplate(this.template, this.$vuetify.theme.current.colors, this.$vuetify.theme.current.dark, getActiveCodeEditorTheme());
             }
         },
 

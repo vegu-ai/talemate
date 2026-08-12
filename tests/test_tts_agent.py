@@ -11,6 +11,7 @@ where needed) are instantiated directly rather than mocked.
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import os
 import types
@@ -23,6 +24,7 @@ import pytest_asyncio
 
 import talemate.agents.tts.pocket_tts as pocket_tts_module
 import talemate.agents.tts.voice_library as voice_library
+import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
 from talemate.agents.tts import TTSAgent
 from talemate.agents.tts.openai_compatible import (
@@ -32,6 +34,7 @@ from talemate.agents.tts.openai_compatible import (
 from talemate.config.state import get_config
 from talemate.agents.tts.schema import (
     Chunk,
+    GenerationContext,
     MAX_TAG_LENGTH,
     MAX_TAGS_PER_VOICE,
     Voice,
@@ -1122,6 +1125,128 @@ class TestQueueLifecycle:
         # after natural drain, queue state is reset
         assert generate_agent._queue_id is None
         assert len(generate_agent._generation_queue) == 0
+
+
+# ---------------------------------------------------------------------------
+# _generate_chunk — backends that return no audio
+# ---------------------------------------------------------------------------
+
+
+class TestGenerateChunkWithoutAudio:
+    """Backends such as google/elevenlabs return ``None`` instead of raising
+    when generation fails. That chunk must be skipped without taking the rest
+    of the queue down with it."""
+
+    def _chunk(self, generate_fn, text: list[str]) -> Chunk:
+        return Chunk(
+            text=text,
+            type="dialogue",
+            character_name="Alice",
+            api="google",
+            message_id=7,
+            voice=_make_voice(),
+            generate_fn=generate_fn,
+        )
+
+    def _record_playback(self, agent, monkeypatch) -> list[tuple]:
+        """Stand in for play_audio, keeping its base64 encode so a ``None``
+        payload blows up here exactly as it does in production."""
+        played: list[tuple] = []
+
+        def _play(audio_data, message_id=None):
+            played.append((base64.b64encode(audio_data), message_id))
+
+        monkeypatch.setattr(agent, "play_audio", _play)
+        return played
+
+    @pytest.mark.asyncio
+    async def test_none_wav_bytes_is_skipped_and_generation_continues(
+        self, tts_agent, monkeypatch
+    ):
+        after_emissions: list = []
+
+        async def generate(chunk: Chunk, context: GenerationContext) -> bytes | None:
+            if chunk.text == ["first"]:
+                return None
+            return b"RIFF....WAVE"
+
+        async def on_generate_after(emission):
+            after_emissions.append(emission)
+
+        played = self._record_playback(tts_agent, monkeypatch)
+
+        signal = async_signals.get("agent.tts.generate.after")
+        signal.connect(on_generate_after)
+        try:
+            await tts_agent._generate_chunk(
+                self._chunk(generate, ["first", "second"]), GenerationContext()
+            )
+        finally:
+            signal.disconnect(on_generate_after)
+
+        assert played == [(base64.b64encode(b"RIFF....WAVE"), 7)]
+        assert [e.chunk.text for e in after_emissions] == [["second"]]
+
+    @pytest.mark.asyncio
+    async def test_handler_clearing_wav_bytes_is_skipped(self, tts_agent, monkeypatch):
+        """A generate.after handler may replace wav_bytes — the signal documents
+        it as mutable — so a node graph can leave a chunk with nothing to play."""
+
+        async def generate(chunk: Chunk, context: GenerationContext) -> bytes:
+            return b"RIFF....WAVE"
+
+        async def mute_first(emission):
+            if emission.chunk.text == ["first"]:
+                emission.wav_bytes = None
+
+        played = self._record_playback(tts_agent, monkeypatch)
+
+        signal = async_signals.get("agent.tts.generate.after")
+        signal.connect(mute_first)
+        try:
+            await tts_agent._generate_chunk(
+                self._chunk(generate, ["first", "second"]), GenerationContext()
+            )
+        finally:
+            signal.disconnect(mute_first)
+
+        assert played == [(base64.b64encode(b"RIFF....WAVE"), 7)]
+
+    @pytest.mark.asyncio
+    async def test_empty_wav_bytes_is_skipped(self, tts_agent, monkeypatch):
+        async def generate(chunk: Chunk, context: GenerationContext) -> bytes:
+            return b"" if chunk.text == ["first"] else b"RIFF....WAVE"
+
+        played = self._record_playback(tts_agent, monkeypatch)
+
+        await tts_agent._generate_chunk(
+            self._chunk(generate, ["first", "second"]), GenerationContext()
+        )
+
+        assert played == [(base64.b64encode(b"RIFF....WAVE"), 7)]
+
+    @pytest.mark.asyncio
+    async def test_queue_survives_a_chunk_without_audio(self, tts_agent, monkeypatch):
+        async def generate_none(chunk: Chunk, context: GenerationContext) -> None:
+            return None
+
+        async def generate_bytes(chunk: Chunk, context: GenerationContext) -> bytes:
+            return b"RIFF....WAVE"
+
+        played = self._record_playback(tts_agent, monkeypatch)
+
+        context = GenerationContext()
+        tts_agent._queue_id = "queue-1"
+        tts_agent._generation_queue.append(
+            (context, self._chunk(generate_none, ["silent"]))
+        )
+        tts_agent._generation_queue.append(
+            (context, self._chunk(generate_bytes, ["spoken"]))
+        )
+
+        await tts_agent._process_queue("queue-1")
+
+        assert played == [(base64.b64encode(b"RIFF....WAVE"), 7)]
 
 
 # ---------------------------------------------------------------------------

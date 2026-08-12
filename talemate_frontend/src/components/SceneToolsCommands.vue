@@ -51,7 +51,7 @@
 </template>
 
 <script>
-import { v4 as uuidv4 } from 'uuid';
+import { newUuid } from '@/utils/uuid';
 import { argFields, buildArgs, groupByMenu } from '@/utils/sceneCommands';
 
 export default {
@@ -123,7 +123,7 @@ export default {
         },
 
         sendRun(command, args) {
-            const requestId = uuidv4();
+            const requestId = newUuid();
             this.pendingRequestId = requestId;
             this.getWebsocket().send(JSON.stringify({
                 type: 'scene_commands',

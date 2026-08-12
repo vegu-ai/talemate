@@ -144,6 +144,7 @@
 
 <script>
 import { agentActionConditionMet } from '@/utils/uxConditions';
+import { hasOwnName } from '@/utils/nameKeyedMap';
 import AgentConfigSection from './AgentConfigSection.vue';
 import AgentSceneSettings from './AgentSceneSettings.vue';
 import DynamicAgentRegistry from './DynamicAgentRegistry.vue';
@@ -554,7 +555,7 @@ export default {
                 if (!entry || !entry.client) {
                     continue;
                 }
-                if (!this.config?.clients?.[entry.client]) {
+                if (!hasOwnName(this.config?.clients, entry.client)) {
                     const label = this.liveAgents[agentType]?.label || agentType;
                     this.selected = [agentType];
                     return { valid: false, error: `${label}: client "${entry.client}" does not exist.` };

@@ -73,6 +73,7 @@ import ClientConfigEditor from './ClientConfigEditor.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import { buildClientFromDefaults } from '@/utils/clientPresets';
 import { agentsRequiringClient } from '@/utils/agentAssignments';
+import { cloneNameKeyedMap, hasOwnName, isReservedName } from '@/utils/nameKeyedMap';
 
 // Clients page — master / detail management of `config.clients` in the app
 // settings working copy.
@@ -98,7 +99,7 @@ export default {
             // Meta().model_dump() per client type, from the client_types message
             clientTypes: {},
             // last known client_status per client name
-            liveStatus: {},
+            liveStatus: Object.create(null),
             typeMenu: false,
         }
     },
@@ -110,10 +111,10 @@ export default {
             return this.selected.length ? this.selected[0] : null;
         },
         selectedClient() {
-            if (!this.selectedName) {
+            if (!this.selectedName || !this.hasClient(this.selectedName)) {
                 return null;
             }
-            return this.config?.clients?.[this.selectedName] || null;
+            return this.config.clients[this.selectedName];
         },
         selectedMeta() {
             if (!this.selectedClient) {
@@ -151,6 +152,10 @@ export default {
         },
     },
     methods: {
+        hasClient(name) {
+            return hasOwnName(this.config?.clients, name);
+        },
+
         // save-time validation contract of the settings pages — AppSettings
         // asks every page that implements it before sending the config
         validate() {
@@ -184,7 +189,7 @@ export default {
                 return;
             }
             const name = typeof item === 'string' ? item : item?.client;
-            if (!name || !this.config?.clients?.[name]) {
+            if (!name || !this.hasClient(name)) {
                 return;
             }
             this.selected = [name];
@@ -221,8 +226,11 @@ export default {
             if (!name) {
                 return 'Client name is required.';
             }
-            if (name !== this.selectedName && name in (this.config?.clients || {})) {
+            if (name !== this.selectedName && this.hasClient(name)) {
                 return 'Client name already exists.';
+            }
+            if (isReservedName(name)) {
+                return `"${name}" is reserved and cannot be used as a client name.`;
             }
             return true;
         },
@@ -292,14 +300,14 @@ export default {
             if (!oldName || this.validateClientName(newName) !== true) {
                 return;
             }
-            const rebuilt = {};
+            // rebuilt in place rather than cloned and re-keyed, so the renamed
+            // client keeps its position in the map
+            const rebuilt = Object.create(null);
             for (const [key, client] of Object.entries(this.config.clients)) {
                 if (key === oldName) {
                     client.name = newName;
-                    rebuilt[newName] = client;
-                } else {
-                    rebuilt[key] = client;
                 }
+                rebuilt[key === oldName ? newName : key] = client;
             }
             this.config.clients = rebuilt;
             this.reassignAgents(oldName, newName);
@@ -316,7 +324,7 @@ export default {
 
         handleMessage(message) {
             if (message.type === 'client_status') {
-                if (!this.config?.clients?.[message.name]) {
+                if (!this.hasClient(message.name)) {
                     // status for a client the working copy doesn't (or no
                     // longer) knows about — the backend still emits for
                     // clients pending purge
@@ -345,7 +353,7 @@ export default {
         // connected — adopt what it already knows instead of waiting for the
         // next status broadcast
         for (const client of this.getClients()) {
-            if (this.config?.clients?.[client.name]) {
+            if (this.hasClient(client.name)) {
                 this.liveStatus[client.name] = client;
             }
         }

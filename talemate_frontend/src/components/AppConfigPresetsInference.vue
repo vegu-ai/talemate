@@ -199,6 +199,7 @@
 <script>
 
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import { hasOwnName, isReservedName } from '@/utils/nameKeyedMap';
 
 export default {
     name: 'AppConfigPresets',
@@ -217,7 +218,7 @@ export default {
             if(!this.config.inference_groups || !Object.keys(this.config.inference_groups).length) {
                 return items;
             }
-            for(let group in this.config.inference_groups) {
+            for(let group of Object.keys(this.config.inference_groups)) {
                 items.push({title: group, value: group});
             }
             return items;
@@ -258,7 +259,7 @@ export default {
         setSelection(group){
             console.log("Setting group", group);
             // ensure group is valid
-            if(!this.config.inference_groups[group]) {
+            if(!hasOwnName(this.config.inference_groups, group)) {
                 return;
             }
             this.group = group;
@@ -298,7 +299,10 @@ export default {
             if(!this.newGroupName) {
                 return;
             }
-            if(this.config.inference_groups[this.newGroupName]) {
+            if(hasOwnName(this.config.inference_groups, this.newGroupName)) {
+                return;
+            }
+            if(isReservedName(this.newGroupName)) {
                 return;
             }
 

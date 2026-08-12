@@ -36,6 +36,8 @@
 </template>
 
 <script>
+import { hasOwnName, isReservedName } from '@/utils/nameKeyedMap';
+
 export default {
     name: 'AppSettingsEnvVariables',
     props: {
@@ -64,18 +66,23 @@ export default {
             if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
                 return 'Letters, digits and underscores only; must not start with a digit';
             }
-            if (this.config?.env && name in this.config.env) {
+            if (hasOwnName(this.config?.env, name)) {
                 return 'Already exists — edit its row above';
+            }
+            if (isReservedName(name)) {
+                return `"${name}" is reserved and cannot be used as a variable name`;
             }
             return true;
         },
         envVariableAdd() {
             if (!this.envVariableAddValid) return;
             const name = this.env_variable_name_input.trim();
-            if (!this.config.env) {
-                this.config.env = {};
-            }
-            this.config.env[name] = this.env_variable_value_input;
+            // a computed key in a literal defines an own property; assigning
+            // `env[name]` would hit the prototype setter for '__proto__'
+            this.config.env = {
+                ...this.config.env,
+                [name]: this.env_variable_value_input,
+            };
             this.env_variable_name_input = '';
             this.env_variable_value_input = '';
         },

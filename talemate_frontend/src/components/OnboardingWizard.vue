@@ -502,6 +502,7 @@
 import { getProperty, setProperty } from 'dot-prop';
 import ClientConfigEditor from './ClientConfigEditor.vue';
 import { buildClientFromDefaults } from '@/utils/clientPresets';
+import { cloneNameKeyedMap, isReservedName } from '@/utils/nameKeyedMap';
 
 export default {
   name: 'OnboardingWizard',
@@ -808,6 +809,11 @@ export default {
       if (!name) {
         return 'Client name is required.';
       }
+      // ahead of the retry exemption below: a name the interface cannot carry
+      // must not get in on any path
+      if (isReservedName(name)) {
+        return `"${name}" is reserved and cannot be used as a client name.`;
+      }
       // the client of a failed apply is in the config under its own name —
       // re-sending it overwrites that entry instead of adding a second client,
       // so it must not read as taken
@@ -862,10 +868,9 @@ export default {
       this.clearSaveError();
       this.waitingForClient = true;
       const requestId = this.saveAppConfig((config) => {
-        if (!config.clients) {
-          config.clients = {};
-        }
-        config.clients[client.name] = client;
+        const clients = cloneNameKeyedMap(config.clients);
+        clients[client.name] = client;
+        config.clients = clients;
         if (keyPath) {
           setProperty(config, keyPath, apiKey || null);
         }

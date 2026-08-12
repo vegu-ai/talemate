@@ -30,6 +30,8 @@
  * - saveGeneratedImage(base64, request, namePrefix): method to save generated image as scene asset
  */
 
+import { newUuid } from '@/utils/uuid';
+
 /**
  * Creates a scene assets requester that batches and debounces asset requests.
  * 
@@ -178,7 +180,7 @@ export default {
             reader.onload = (evt) => {
                 const base64 = evt.target.result;
                 // Generate UUID and use first 10 characters for name
-                const uuid = crypto.randomUUID();
+                const uuid = newUuid();
                 const name = `${this.uploadConfig.namePrefix}_${uuid.slice(0, 10)}`;
                 
                 // Send to websocket with prefilled fields

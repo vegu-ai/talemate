@@ -176,7 +176,7 @@
 </template>
 
 <script>
-import { v4 as uuidv4 } from 'uuid';
+import { newUuid } from '@/utils/uuid';
 import VisualLibraryQueue from './VisualLibraryQueue.vue';
 import VisualLibraryPendingQueue from './VisualLibraryPendingQueue.vue';
 import VisualLibraryScene from './VisualLibraryScene.vue';
@@ -498,7 +498,7 @@ export default {
       // Add unique IDs to items if they don't have them
       const itemsWithIds = items.map(item => ({
         ...item,
-        id: item.id || uuidv4(),
+        id: item.id || newUuid(),
         status: 'pending',
       }));
       

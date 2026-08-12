@@ -36,5 +36,15 @@ pnpm test:watch
 The suites live in `tests/unit/*.spec.js` and run in the `node` environment —
 there is no DOM. Run both commands from `talemate_frontend`.
 
+### Lints the sources
+```
+pnpm lint
+```
+
+The flat config in `eslint.config.mjs` deliberately enables no style rules. It
+carries one restriction: `crypto.randomUUID()` is banned because it only exists
+in secure contexts, and Talemate is commonly served over plain HTTP from a LAN
+host. Use `newUuid()` from `src/utils/uuid.js` instead.
+
 ### Customize configuration
 See [Configuration Reference](https://vite.dev/config/).

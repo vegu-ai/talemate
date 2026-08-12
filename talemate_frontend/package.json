@@ -7,6 +7,7 @@
   "scripts": {
     "serve": "vite",
     "build": "vite build",
+    "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -34,11 +35,13 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.0",
+    "eslint": "^10.8.0",
     "postcss": "^8.5.3",
     "vite": "^7.3.5",
     "vite-plugin-runtime-env": "^1.0.0",
     "vite-plugin-vuetify": "^2.1.1",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "vue-eslint-parser": "^10.4.1"
   },
   "browserslist": [
     "> 1%",

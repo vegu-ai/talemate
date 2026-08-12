@@ -205,7 +205,7 @@
 </template>
 
 <script>
-import { v4 as uuidv4 } from 'uuid';
+import { newUuid } from '@/utils/uuid';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import AssetViewMixin from './AssetViewMixin.js';
 import VisualAssetGenerateMixin from './VisualAssetGenerateMixin.js';
@@ -410,7 +410,7 @@ export default {
                 ...this.buildGenerationRequest(prompt),
                 asset_attachment_context: {
                     allow_override: true,
-                    asset_name: `${this.typeConfig.namePrefix}_scene_${uuidv4().slice(0, 10)}_${idx + 1}`,
+                    asset_name: `${this.typeConfig.namePrefix}_scene_${newUuid().slice(0, 10)}_${idx + 1}`,
                 },
             }));
         },

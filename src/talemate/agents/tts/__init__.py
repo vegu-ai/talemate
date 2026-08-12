@@ -1225,7 +1225,28 @@ class TTSAgent(
             except Exception as e:
                 log.error("Error generating audio", error=e, chunk=_chunk)
                 continue
+
+            skipped_chunk = {
+                "api": chunk.api,
+                "text": _chunk.cleaned_text,
+                "character_name": _chunk.character_name,
+            }
+
+            # empty bytes as well as None: several backends return an empty
+            # buffer when the stream yields nothing, which plays as a decode
+            # error in the browser
+            if not emission.wav_bytes:
+                log.warning("No audio generated", **skipped_chunk)
+                continue
+
             await async_signals.get("agent.tts.generate.after").send(emission)
+
+            # the signal documents wav_bytes as mutable, so a handler can leave
+            # the chunk with nothing to play
+            if not emission.wav_bytes:
+                log.warning("Audio discarded before playback", **skipped_chunk)
+                continue
+
             self.play_audio(emission.wav_bytes, chunk.message_id)
             await asyncio.sleep(0.1)
 

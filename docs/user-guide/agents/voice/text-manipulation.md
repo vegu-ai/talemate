@@ -55,7 +55,7 @@ Then connect them:
     Backend-specific preparation runs before `agent.tts.generate.before`, so it does not re-run on the rewritten text.
 
 !!! note "Empty text does not cancel generation"
-    `Set Chunk Text` only changes what is spoken. Writing an empty string does not skip the chunk — it still reaches the backend and produces no audio for that chunk, and depending on the backend may abort the rest of the queued audio.
+    `Set Chunk Text` only changes what is spoken. Writing an empty string does not skip the chunk — it still reaches the backend, which produces no audio for it. The voice agent logs that chunk and skips it, and the rest of the queued audio still plays.
 
 ## Prepending or appending text
 

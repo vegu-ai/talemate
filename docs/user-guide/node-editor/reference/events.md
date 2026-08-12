@@ -932,13 +932,15 @@ The voice agent provides the `Unpack Generation Emission` and `Set Chunk Text` n
 
 Fires after the TTS backend returns audio for a chunk and before the audio is played back. Handlers can inspect (or replace) the produced audio via `wav_bytes`.
 
+A chunk the backend produced no audio for is skipped: it is logged and neither this event nor the playback happens for it. Handlers therefore always receive audio. A handler that empties `wav_bytes` itself is honoured the same way — the chunk is logged and skipped rather than played, and the rest of the queue continues.
+
 !!! payload "Payload"
 
     | Field | Type | Notes |
     |-------|------|-------|
     | `chunk` | `Chunk` | The TTS chunk that was synthesised (changes no longer affect the audio) |
     | `context` | `GenerationContext` | The full generation context |
-    | `wav_bytes` | `bytes \| None` | **Mutable.** The synthesised audio bytes (None if generation failed) |
+    | `wav_bytes` | `bytes` | **Mutable.** The synthesised audio bytes |
 
 ## Visual Agent Events
 

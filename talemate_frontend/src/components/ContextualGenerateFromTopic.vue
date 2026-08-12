@@ -51,7 +51,7 @@
 </template>
 
 <script>
-import { v4 as uuidv4 } from 'uuid';
+import { newUuid } from '@/utils/uuid';
 
 export default {
     name: 'ContextualGenerateFromTopic',
@@ -112,7 +112,7 @@ export default {
             this.topic = '';
             this.instructions = '';
             this.busy = false;
-            this.uid = uuidv4();
+            this.uid = newUuid();
             this.$nextTick(() => {
                 if (this.$refs.topicInput && this.$refs.topicInput.focus) {
                     this.$refs.topicInput.focus();

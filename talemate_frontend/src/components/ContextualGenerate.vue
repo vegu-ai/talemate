@@ -71,7 +71,7 @@
     </v-sheet>
 </template>
 <script>
-import { v4 as uuidv4 } from 'uuid';
+import { newUuid } from '@/utils/uuid';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
 
 // In-memory (non-persistent) per-uid selection memory, capped to 100 entries.
@@ -103,7 +103,7 @@ export default {
         uid: {
             type: String,
             required: false,
-            default: () => uuidv4()
+            default: () => newUuid()
         },
         templates: Object,
         generationOptions: {

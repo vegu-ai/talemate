@@ -2,6 +2,8 @@
 // effective values (working copy first, live schema as fallback) and
 // materializing them into a full persisted entry on the first edit.
 
+import { hasOwnName } from './nameKeyedMap.js';
+
 /**
  * The client name an `agent_status` payload reports: a plain client name for
  * LLM agents, a chip dict for agents that report more (the name then lives
@@ -41,7 +43,7 @@ export function agentClient(config, liveAgents, agentType) {
         return stored.client;
     }
     const live = liveClientName(liveAgents[agentType]);
-    return (live && config?.clients?.[live]) ? live : null;
+    return (live && hasOwnName(config?.clients, live)) ? live : null;
 }
 
 /**

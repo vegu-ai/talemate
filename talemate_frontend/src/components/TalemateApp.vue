@@ -489,6 +489,7 @@ import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 import AutocompleteMixin from './AutocompleteMixin.js';
 import { SETTINGS_PAGES } from '../utils/appSettingsRegistry.js';
 import { createConfigSaveQueue } from '../utils/configSaveQueue.js';
+import { buildNameKeyedPayload } from '../utils/nameKeyedMap.js';
 
 export default {
   components: {
@@ -659,7 +660,9 @@ export default {
       agentStatus: {},
       // scene state of agents
       agentState: {},
-      clientStatus: {},
+      // null prototype — keyed by user-chosen client names, see
+      // utils/nameKeyedMap.js
+      clientStatus: Object.create(null),
       // timestamps for last agent and client updates
       // received from the backend
       lastAgentUpdate: null,
@@ -1543,18 +1546,12 @@ export default {
       this.saveAppConfig((config) => {
         // full map replacement — frontend-only keys (status, data, ...) are
         // ignored by the pydantic client models
-        const saveData = {};
-        for(let client of clients) {
-          saveData[client.name] = { ...client };
-        }
-        config.clients = saveData;
+        config.clients = buildNameKeyedPayload(clients, (client) => ({ ...client }));
       }, { label: 'clients' });
     },
     saveAgents(agents) {
       this.saveAppConfig((config) => {
-        const saveData = {};
-
-        for(let agent of agents) {
+        config.agents = buildNameKeyedPayload(agents, (agent) => {
           const requiresLLM = agent.data?.requires_llm_client || false;
 
           let client;
@@ -1571,14 +1568,12 @@ export default {
             client = null;
           }
 
-          saveData[agent.name] = {
+          return {
             enabled: agent.enabled,
             actions: agent.actions,
             client: client,
           }
-        }
-
-        config.agents = saveData;
+        });
       }, { label: 'agents' });
     },
     requestSceneAssets(asset_ids) {

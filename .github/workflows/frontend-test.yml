@@ -29,6 +29,10 @@ jobs:
       working-directory: talemate_frontend
       run: pnpm install --frozen-lockfile
 
+    - name: Run lint
+      working-directory: talemate_frontend
+      run: pnpm lint
+
     - name: Run tests
       working-directory: talemate_frontend
       run: pnpm test

@@ -67,7 +67,7 @@
 </template>
 
 <script>
-import { v4 as uuidv4 } from 'uuid';
+import { newUuid } from '@/utils/uuid';
 import IconPicker from './IconPicker.vue';
 import { shortcutAsTemplate, templateGroupByName, templateSaveTransition, validateGroupName } from '@/utils/sceneToolShortcuts';
 
@@ -198,7 +198,7 @@ export default {
 
         save() {
             const shortcut = {
-                uid: this.editing ? this.uid : uuidv4(),
+                uid: this.editing ? this.uid : newUuid(),
                 action_id: this.actionId,
                 label: this.label.trim(),
                 icon: this.icon,
@@ -242,9 +242,9 @@ export default {
                 label: this.label,
                 icon: this.icon,
                 instructions: this.instructions,
-            }, group ? group.uid : null, uuidv4());
+            }, group ? group.uid : null, newUuid());
 
-            const requestId = uuidv4();
+            const requestId = newUuid();
 
             this.templateError = null;
             this.templateDialog = false;
@@ -258,7 +258,7 @@ export default {
             // a template can only be saved into a group the backend already
             // knows — create it first, minting its uid here so the echo can be
             // told apart from any other save of a group by that name
-            const groupUid = uuidv4();
+            const groupUid = newUuid();
             this.pendingTemplateSave = { template, groupName, groupUid, requestId };
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',

@@ -82,8 +82,8 @@ uv run pytest tests/ -n0 -s -x
 ```
 
 The frontend has its own suite — run `pnpm test` from `talemate_frontend/` (see
-`talemate_frontend/README.md` for the pnpm setup). CI runs both suites on every
-pull request.
+`talemate_frontend/README.md` for the pnpm setup), and `pnpm lint` for the
+frontend lint rules. CI runs both suites and the lint on every pull request.
 
 ## Questions?
 

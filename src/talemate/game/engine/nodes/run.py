@@ -739,6 +739,29 @@ class Function(Graph):
         )
 
 
+TEST_MODULE_KEY = "__test_module"
+
+
+def test_module_task_key(module_id: str) -> str:
+    return f"__run_{module_id}"
+
+
+def stop_test_module(state: GraphState) -> bool:
+    """Cancel a node-editor test module tracked in the state's shared dict.
+
+    Returns True when a test module was tracked, whether or not its task
+    still needed cancelling.
+    """
+    module = state.shared.pop(TEST_MODULE_KEY, None)
+    if module is None:
+        return False
+
+    task = state.shared.pop(test_module_task_key(module.id), None)
+    if task and not task.done():
+        task.cancel()
+    return True
+
+
 @register("core/RunModule")
 class RunModule(Node):
     """
@@ -781,7 +804,7 @@ class RunModule(Node):
                 f"Infinite loop detected. Running module from within itself: {self.title}"
             )
 
-        task_key = f"__run_{module.id}"
+        task_key = test_module_task_key(module.id)
         try:
             state.data["_in_run_module"] = module
 
@@ -810,6 +833,10 @@ class RunModule(Node):
             except asyncio.CancelledError:
                 self.set_output_values({"cancelled": True})
                 log.info("Module execution was cancelled", module=str(module))
+                # swallow only module-only cancels (test_stop); an outer cancel
+                # (scene unload) must propagate or the scene loop zombifies
+                if asyncio.current_task().cancelling() > 0:
+                    raise
                 return
             except PASSTHROUGH_ERRORS:
                 self.set_output_values({"done": True})

@@ -26,6 +26,8 @@ Skipped paths:
   in higher-level integration tests.
 """
 
+import asyncio
+
 import pytest
 
 from talemate.game.engine.nodes.core import (
@@ -587,6 +589,81 @@ async def test_run_module_wraps_inner_exception_as_module_error():
         failed_value = node.get_output_socket("failed").value
 
     assert "inner boom" in failed_value
+
+    await cleanup_pending_tasks()
+
+
+def _blocking_module(started: "asyncio.Event") -> Graph:
+    """A module whose chain blocks forever, so a cancel lands mid-run."""
+
+    class _Block(Node):
+        def __init__(self, **kw):
+            super().__init__(title="Block", **kw)
+
+        def setup(self):
+            self.add_input("state")
+
+        async def run(self, state):
+            started.set()
+            await asyncio.Event().wait()
+
+    inner = Graph()
+    entry = Entry(title="entry")
+    block = _Block()
+    inner.add_node(entry)
+    inner.add_node(block)
+    inner.connect(entry.outputs[0], block.get_input_socket("state"))
+    return inner
+
+
+@pytest.mark.asyncio
+async def test_run_module_swallows_module_only_cancel():
+    """test_stop cancels only the module task: RunModule must swallow the
+    resulting CancelledError (its own task is not being cancelled) and report
+    cancelled=True."""
+    from talemate.game.engine.nodes.core import GraphContext
+
+    started = asyncio.Event()
+    inner = _blocking_module(started)
+
+    node = RunModule()
+    node.set_property("module", inner)
+
+    with GraphContext(outer_state=GraphState()) as state:
+        run_task = asyncio.create_task(node.run(state))
+        await asyncio.wait_for(started.wait(), timeout=5)
+        state.shared[f"__run_{inner.id}"].cancel()
+        await asyncio.wait_for(run_task, timeout=5)
+        out = {sock.name: sock.value for sock in node.outputs}
+
+    assert out["cancelled"] is True
+    assert f"__run_{inner.id}" not in state.shared
+
+    await cleanup_pending_tasks()
+
+
+@pytest.mark.asyncio
+async def test_run_module_reraises_outer_cancel():
+    """On scene unload the surrounding scene-loop task is cancelled while it
+    awaits the module: RunModule must re-raise so the loop task dies instead
+    of running on untracked."""
+    from talemate.game.engine.nodes.core import GraphContext
+
+    started = asyncio.Event()
+    inner = _blocking_module(started)
+
+    node = RunModule()
+    node.set_property("module", inner)
+
+    with GraphContext(outer_state=GraphState()) as state:
+        run_task = asyncio.create_task(node.run(state))
+        await asyncio.wait_for(started.wait(), timeout=5)
+        run_task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await run_task
+
+    assert run_task.cancelled()
+    assert f"__run_{inner.id}" not in state.shared
 
     await cleanup_pending_tasks()
 

@@ -29,7 +29,11 @@ from talemate.game.engine.nodes.layout import (
     save_graph,
     PathInfo,
 )
-from talemate.game.engine.nodes.run import BreakpointEvent
+from talemate.game.engine.nodes.run import (
+    BreakpointEvent,
+    TEST_MODULE_KEY,
+    stop_test_module,
+)
 from talemate.save import save_node_module, combine_paths
 from talemate.emit import emit
 import talemate.emit.async_signals as signals
@@ -699,7 +703,7 @@ class NodeEditorPlugin(Plugin):
         if isinstance(graph, SceneLoop):
             graph.properties["trigger_game_loop"] = True
 
-        active_graph_state.shared["__test_module"] = graph
+        active_graph_state.shared[TEST_MODULE_KEY] = graph
 
     @requires_creative_environment
     async def handle_test_restart(self, data: dict):
@@ -733,11 +737,4 @@ class NodeEditorPlugin(Plugin):
 
     async def _stop_test(self):
         active_graph_state: GraphState = self.scene.nodegraph_state
-        module = active_graph_state.shared.pop("__test_module", None)
-
-        if not module:
-            return
-
-        task = active_graph_state.shared.pop(f"__run_{module.id}", None)
-        if task:
-            task.cancel()
+        stop_test_module(active_graph_state)

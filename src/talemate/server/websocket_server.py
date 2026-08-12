@@ -16,6 +16,7 @@ from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 import talemate.emit.async_signals as async_signals
 from talemate.exceptions import ControlFlowException
 from talemate.files import list_scenes_directory, list_scenes_tree
+from talemate.game.engine.nodes.run import stop_test_module
 from talemate.load import load_scene, SceneInitialization
 from talemate.scene_assets import Asset, get_media_type_from_file_path, VIS_TYPE
 from talemate.scene_message import versions_payload_for
@@ -175,6 +176,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             # before the fallible close: `active` is the abort gate in-flight
             # work polls, so it must drop even when the teardown fails
             self.scene.active = False
+            self._stop_scene_test_module(self.scene)
             try:
                 instance.get_agent("memory").close_db(self.scene)
                 self.scene.disconnect()
@@ -189,6 +191,25 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         self.scene = self.init_scene()
         return self.scene
 
+    def _stop_scene_test_module(self, scene: Scene) -> None:
+        """Cancel a node-editor test module still tracked on the outgoing scene
+        and tell the frontend, which never learns about it otherwise.
+        """
+        graph_state = scene.nodegraph_state
+        if graph_state is None:
+            return
+
+        if not stop_test_module(graph_state):
+            return
+
+        self.queue_put(
+            {
+                "type": "node_editor",
+                "action": "test_stopped",
+                "data": {},
+            }
+        )
+
     async def load_scene(
         self,
         path_or_data,
@@ -198,8 +219,9 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         rev: int | None = None,
         scene_initialization: dict | None = None,
     ):
+        owned_scene = None
         try:
-            scene = self.release_scene()
+            scene = owned_scene = self.release_scene()
 
             scene.active = True
 
@@ -255,7 +277,10 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         except Exception:
             log.error("load_scene", error=traceback.format_exc())
         finally:
-            self.scene.active = False
+            # a newer load_scene frame may already own `self.scene` by the time
+            # a cancelled frame unwinds here - only deactivate this frame's scene
+            if owned_scene is not None and self.scene is owned_scene:
+                owned_scene.active = False
 
     async def load_scene_failure(self, error: Exception):
         emit("status", message=str(error), status="error")

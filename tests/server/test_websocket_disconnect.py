@@ -7,6 +7,8 @@ reports — and generates with — the closed session's per-scene overrides.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from pathlib import Path
 
 import pytest
@@ -18,6 +20,8 @@ from _agent_override_test_helpers import override_agent_class, scene_overlay
 from talemate.agents.base import Agent
 from talemate.agents.tts.websocket_handler import TTSWebsocketHandler
 from talemate.emit.base import Receiver
+from talemate.game.engine.nodes.core import Entry, Graph, GraphContext, GraphState, Node
+from talemate.game.engine.nodes.run import RunModule
 from talemate.server import websocket_server
 from talemate.server.websocket_server import WebsocketHandler
 from talemate.tale_mate import Scene
@@ -47,15 +51,21 @@ class _MemoryAgent:
 class _ReleaseHandler:
     """Stand-in for the real handler, which is too heavy to construct.
 
-    It borrows the methods under test unbound — neither reads anything on
-    `self` but `scene`.
+    It borrows the methods under test unbound and records `queue_put`
+    messages instead of feeding a socket.
     """
 
     init_scene = WebsocketHandler.init_scene
     release_scene = WebsocketHandler.release_scene
+    load_scene = WebsocketHandler.load_scene
+    _stop_scene_test_module = WebsocketHandler._stop_scene_test_module
 
     def __init__(self, scene):
         self.scene = scene
+        self.queued = []
+
+    def queue_put(self, data):
+        self.queued.append(data)
 
 
 class _RaisingPlugin:
@@ -262,3 +272,209 @@ def test_disconnect_removes_the_tts_config_follow_receiver(
 
         assert plugin.on_app_config_change_followup not in follow.receivers
         assert len(follow.receivers) == baseline
+
+
+class _FakeTask:
+    def __init__(self, done=False):
+        self.cancelled = False
+        self._done = done
+
+    def done(self):
+        return self._done
+
+    def cancel(self):
+        self.cancelled = True
+
+
+def _running_test_module(scene, task=None):
+    """Track a node-editor test module on the scene the way handle_test_run
+    and RunModule do."""
+    scene.nodegraph_state = GraphState()
+    module = Graph()
+    task = task or _FakeTask()
+    scene.nodegraph_state.shared["__test_module"] = module
+    scene.nodegraph_state.shared[f"__run_{module.id}"] = task
+    return module, task
+
+
+def test_release_cancels_a_running_test_module(wired):
+    handler, scene, agent, memory = wired
+    module, task = _running_test_module(scene)
+
+    handler.release_scene()
+
+    assert task.cancelled is True
+    assert scene.nodegraph_state.shared == {}
+    assert handler.queued == [
+        {"type": "node_editor", "action": "test_stopped", "data": {}}
+    ]
+
+
+def test_release_stops_an_unstarted_test_module(wired):
+    """A module the creative loop has not picked up yet has no task - it must
+    still be dropped and the frontend told."""
+    handler, scene, agent, memory = wired
+    module, _ = _running_test_module(scene)
+    scene.nodegraph_state.shared.pop(f"__run_{module.id}")
+
+    handler.release_scene()
+
+    assert scene.nodegraph_state.shared == {}
+    assert handler.queued == [
+        {"type": "node_editor", "action": "test_stopped", "data": {}}
+    ]
+
+
+def test_release_without_a_test_module_sends_nothing(wired):
+    """No loop state at all: the scene never ran a loop."""
+    handler, scene, agent, memory = wired
+
+    handler.release_scene()
+
+    assert handler.queued == []
+
+
+def test_release_with_loop_state_but_no_test_module_sends_nothing(wired):
+    """The ordinary case: the scene ran a loop, so nodegraph_state exists,
+    but no test module was ever tracked on it."""
+    handler, scene, agent, memory = wired
+    scene.nodegraph_state = GraphState()
+    scene.nodegraph_state.shared["unrelated"] = 1
+
+    handler.release_scene()
+
+    assert handler.queued == []
+    assert scene.nodegraph_state.shared == {"unrelated": 1}
+
+
+def test_release_with_a_finished_test_task_sends_stopped_without_cancelling(wired):
+    handler, scene, agent, memory = wired
+    module, task = _running_test_module(scene, task=_FakeTask(done=True))
+
+    handler.release_scene()
+
+    assert task.cancelled is False
+    assert scene.nodegraph_state.shared == {}
+    assert handler.queued == [
+        {"type": "node_editor", "action": "test_stopped", "data": {}}
+    ]
+
+
+async def test_cancelled_load_with_parked_test_module_keeps_new_scene_active(
+    wired, monkeypatch
+):
+    """The join of this change: a scene task parked inside RunModule is
+    cancelled while its replacement load rebinds the handler. The old frame's
+    `finally` must not deactivate the incoming scene."""
+    handler, scene, agent, memory = wired
+
+    module_started = asyncio.Event()
+    scenes_started = []
+
+    class _Block(Node):
+        def __init__(self, **kw):
+            super().__init__(title="Block", **kw)
+
+        def setup(self):
+            self.add_input("state")
+
+        async def run(self, state):
+            module_started.set()
+            await asyncio.Event().wait()
+
+    async def fake_start(self):
+        scenes_started.append(self)
+        if len(scenes_started) == 1:
+            # first scene: park inside RunModule the way the creative loop
+            # does while running a test module
+            self.nodegraph_state = GraphState()
+            module = Graph()
+            entry = Entry(title="entry")
+            block = _Block()
+            module.add_node(entry)
+            module.add_node(block)
+            module.connect(entry.outputs[0], block.get_input_socket("state"))
+            self.nodegraph_state.shared["__test_module"] = module
+            node = RunModule()
+            node.set_property("module", module)
+            with GraphContext(outer_state=self.nodegraph_state) as state:
+                await node.run(state)
+        else:
+            await asyncio.Event().wait()
+
+    async def fake_load(scene, *args, **kwargs):
+        return scene
+
+    monkeypatch.setattr(Scene, "start", fake_start)
+    monkeypatch.setattr(websocket_server, "load_scene", fake_load)
+
+    task_a = asyncio.create_task(handler.load_scene("a.json"))
+    await asyncio.wait_for(module_started.wait(), timeout=5)
+    scene_a = scenes_started[0]
+
+    # what process_message does on load_scene: cancel, then immediately
+    # create the replacement load task
+    task_a.cancel()
+    task_b = asyncio.create_task(handler.load_scene("b.json"))
+
+    with contextlib.suppress(asyncio.CancelledError):
+        await asyncio.wait_for(task_a, timeout=5)
+    await asyncio.sleep(0.1)
+
+    assert task_a.cancelled()
+    assert len(scenes_started) == 2
+    scene_b = scenes_started[1]
+    assert handler.scene is scene_b
+    assert scene_a.active is False
+    assert scene_b.active is True
+    assert {m["action"] for m in handler.queued} == {"test_stopped"}
+
+    task_b.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await asyncio.wait_for(task_b, timeout=5)
+
+
+async def test_load_frame_exit_deactivates_its_scene(wired, monkeypatch):
+    """No replacement load: when the frame ends, the scene it loaded must end
+    inactive."""
+    handler, scene, agent, memory = wired
+
+    async def fake_start(self):
+        return
+
+    async def fake_load(scene, *args, **kwargs):
+        return scene
+
+    monkeypatch.setattr(Scene, "start", fake_start)
+    monkeypatch.setattr(websocket_server, "load_scene", fake_load)
+
+    await handler.load_scene("a.json")
+
+    assert handler.scene.active is False
+
+
+async def test_load_frame_exit_deactivates_its_scene_with_rev(wired, monkeypatch):
+    """The rev path rebinds the local scene mid-frame while self.scene stays
+    the release placeholder - the placeholder is what must end inactive."""
+    handler, scene, agent, memory = wired
+
+    async def fake_start(self):
+        return
+
+    async def fake_load(scene, *args, **kwargs):
+        scene.filename = "a.json"
+        return scene
+
+    async def fake_reconstruct(scene, to_rev, output_filename):
+        return "/tmp/nonexistent-rev.json"
+
+    monkeypatch.setattr(Scene, "start", fake_start)
+    monkeypatch.setattr(websocket_server, "load_scene", fake_load)
+    monkeypatch.setattr(
+        "talemate.changelog.write_reconstructed_scene", fake_reconstruct
+    )
+    monkeypatch.setattr(websocket_server.os, "remove", lambda path: None)
+
+    await handler.load_scene("a.json", rev=3)
+
+    assert handler.scene.active is False

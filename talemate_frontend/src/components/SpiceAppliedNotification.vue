@@ -1,5 +1,5 @@
 <template>
-    <v-snackbar color="grey-darken-4" location="top" v-model="spiceApplied" :timeout="5000" max-width="400" multi-line>
+    <v-snackbar color="mutedbg" location="top" v-model="spiceApplied" :timeout="5000" max-width="400" multi-line>
         <div class="text-caption text-highlight4">
             <v-icon color="highlight4">mdi-chili-mild</v-icon>
             Spice applied!

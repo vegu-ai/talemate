@@ -9,7 +9,7 @@
   <!-- Dialog for voice library -->
   <v-dialog v-model="dialog" max-width="1920">
     <v-card>
-      <v-toolbar density="comfortable" color="grey-darken-4">
+      <v-toolbar density="comfortable" color="mutedbg">
         <v-toolbar-title class="d-flex align-center">
           <v-icon class="mr-2" size="small" color="primary">mdi-account-voice</v-icon>
           Voice Library

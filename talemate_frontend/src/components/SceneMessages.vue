@@ -511,6 +511,10 @@ export default {
         appearanceConfig: {
             type: Object,
         },
+        themeColors: {
+            type: Object,
+            default: null,
+        },
         uxLocked: {
             type: Boolean,
             default: false,
@@ -744,7 +748,7 @@ export default {
     methods: {
 
         getMessageColor(typ) {
-            return resolveMessageColor(this.appearanceConfig, typ);
+            return resolveMessageColor(this.appearanceConfig, typ, this.themeColors);
         },
 
         getMessageTypeHidden(typ) {
@@ -761,7 +765,7 @@ export default {
         },
 
         getMessageStyle(typ) {
-            return resolveMessageStyle(this.appearanceConfig, typ);
+            return resolveMessageStyle(this.appearanceConfig, typ, this.themeColors);
         },
 
         clear() {

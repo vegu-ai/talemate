@@ -39,3 +39,6 @@ Agent persona templates define how an agent should present and behave in prompts
 
 ### :material-lightning-bolt: Scene Tool Shortcut
 Scene tool shortcut templates package a [scene tool shortcut](/talemate/user-guide/scenario-tools#shortcuts) — an agent action with a label, an icon and canned instructions. Installing one adds the shortcut to the scene tools menu it belongs to. See [Scene Tool Shortcuts](/talemate/user-guide/templates/scene-tool-shortcut).
+
+### :material-palette-swatch: Theme
+Theme templates define Talemate's colors — the interface surfaces, the general interface, the node editor, the scene messages and the chats — together with the message text styling and whether the theme is light or dark. Applying one makes it the active theme. See [Themes](/talemate/user-guide/templates/themes).

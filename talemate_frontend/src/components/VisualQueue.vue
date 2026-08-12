@@ -15,7 +15,7 @@
                     <span class="text-caption text-primary">Generating...</span>
                 </span>
             </v-card-title>
-            <v-toolbar density="compact" color="grey-darken-4">
+            <v-toolbar density="compact" color="mutedbg">
                 <v-btn rounded="sm" @click="deleteAll()" prepend-icon="mdi-close-box-outline">Discard All</v-btn>
                 <v-spacer></v-spacer>
                 <span v-if="selectedImage != null">

@@ -1,13 +1,13 @@
 <template>
     <v-card elevation="7" :style="{ maxWidth: MAX_CONTENT_WIDTH }" class="mb-2" density="compact">
-        <v-card-title class="text-body-2 text-grey-lighten-3"><v-icon class="mr-2" size="small" icon="mdi-clock"></v-icon>{{ entry.time }}
-            <span v-if="entry.id && hovered" class="text-caption text-grey-darken-1 ml-2">
+        <v-card-title class="text-body-2 text-high-emphasis"><v-icon class="mr-2" size="small" icon="mdi-clock"></v-icon>{{ entry.time }}
+            <span v-if="entry.id && hovered" class="text-caption text-disabled ml-2">
                 {{ entry.id }}
             </span>
             <span v-if="!editing && !locked && hovered" class="text-caption text-muted ml-2"><v-icon size="small" icon="mdi-pencil"></v-icon> double-click to edit</span>
         </v-card-title>
         <v-card-text>
-            <div v-if="!editing" class="history-entry text-grey-lighten-1 text-body-1" @dblclick="setEditing(true)" @mouseenter="hovered = true" @mouseleave="hovered = false">
+            <div v-if="!editing" class="history-entry text-medium-emphasis text-body-1" @dblclick="setEditing(true)" @mouseenter="hovered = true" @mouseleave="hovered = false">
                 {{ entry.text }}
             </div>
             <v-textarea v-else rows="1" auto-grow v-model="entry.text" @blur="setEditing(false)" @keydown.esc="setEditing(false)" ref="textarea" hint="Press Escape to cancel, Shift+Enter for new line, Enter to save" @keydown.enter="handleEnter" />

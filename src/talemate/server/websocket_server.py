@@ -38,6 +38,7 @@ from talemate.server import (
     scene_commands,
 )
 from talemate.server.scene_assets_batching import SceneAssetsBatchingMixin
+from talemate.world_state.templates.theme import resolve_theme
 
 __all__ = [
     "WebsocketHandler",
@@ -509,6 +510,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         data = config.model_dump()
 
         data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
+        data.update(theme=resolve_theme(config))
 
         self.queue_put(
             {

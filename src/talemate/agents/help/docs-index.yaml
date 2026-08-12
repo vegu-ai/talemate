@@ -1021,8 +1021,8 @@
 - path: user-guide/templates/index.md
   title: Templates
   summary: 'Overview of the Templates tab and the template types available: Character Attribute, Character Detail, Spices,
-    Writing Style, State Reinforcement, Scene Type, Visual Style, Visual Prompt Finalizer, Agent Persona and Scene Tool
-    Shortcut. Templates live in groups shared across scenes.'
+    Writing Style, State Reinforcement, Scene Type, Visual Style, Visual Prompt Finalizer, Agent Persona, Scene Tool
+    Shortcut and Theme. Templates live in groups shared across scenes.'
 - path: user-guide/templates/scene-tool-shortcut.md
   title: Scene Tool Shortcuts
   summary: 'Creating a Scene tool shortcut template that packages a scene tool action with a label, an icon and canned
@@ -1034,6 +1034,15 @@
   summary: Creating a Scene type template - name, type, description, and the scene type instructions that govern the director's
     actions when that scene type is played, plus Favorite. Warns it is early WIP and consumed by the World Editor's Scene
     Direction section.
+- path: user-guide/templates/themes.md
+  title: Themes
+  summary: 'Creating a Theme template that defines Talemate''s colors - 67 slots grouped into Surfaces, App, Node
+    editor, Messages and Chats - plus the message text styling (italic, bold, visibility per message and markup type)
+    and a Light or Dark mode. Applying a theme: the colors are read live so editing them repaints the running app,
+    while the styling is copied into your Appearance settings once. A color set by hand in appearance settings still
+    overrides the theme. Message asset cadence and auto-attaching stay out of the theme. Covers the shipped Talemate
+    Dark theme, the fallback when a theme is deleted, sharing by passing on the group file in templates/world-state,
+    and the limits: the node editor canvas and in-app code editors keep their own colors.'
 - path: user-guide/templates/spice.md
   title: Spice Collection
   summary: 'Creating a Spice collection template that injects randomness into attribute and detail generation: description,

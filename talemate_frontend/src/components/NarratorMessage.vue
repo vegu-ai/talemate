@@ -223,6 +223,7 @@ export default {
         brackets: sceneConfig.brackets || narratorStyles,
         entities: sceneConfig.entities,
         default: narratorStyles,
+        messageType: 'narrator',
       });
     },
     renderedText() {

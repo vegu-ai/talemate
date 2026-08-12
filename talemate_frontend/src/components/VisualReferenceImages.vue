@@ -43,7 +43,7 @@
 
     <v-dialog v-model="pickerOpen" max-width="1280">
       <v-card>
-        <v-toolbar density="comfortable" color="grey-darken-4">
+        <v-toolbar density="comfortable" color="mutedbg">
           <v-toolbar-title>Select Reference Images</v-toolbar-title>
         </v-toolbar>
         <v-divider></v-divider>

@@ -1,0 +1,120 @@
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath, URL } from "node:url";
+import { THEME_COLOR_GROUPS, hydrateThemeTemplate, vuetifySlotName } from "@/utils/templateMappings";
+import { flattenThemeColors } from "@/plugins/vuetify";
+
+function read(path) {
+    return readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf-8");
+}
+
+const THEME_SOURCE = read("../../../src/talemate/world_state/templates/theme.py");
+
+// the class body is every line up to the next top-level statement
+function classBody(className) {
+    const lines = THEME_SOURCE.split("\n");
+    const start = lines.findIndex(line => line.startsWith(`class ${className}(`));
+    expect(start, `theme.py has no class ${className}`).toBeGreaterThan(-1);
+
+    const body = [];
+    for (let i = start + 1; i < lines.length; i++) {
+        if (lines[i].trim() !== "" && !/^\s/.test(lines[i])) {
+            break;
+        }
+        body.push(lines[i]);
+    }
+    return body.join("\n");
+}
+
+function fieldNames(body) {
+    return [...body.matchAll(/^ {4}(\w+)\s*:/gm)].map(match => match[1]);
+}
+
+// the backend models are the source of truth — parse them instead of mirroring
+// them, so a slot added there with no frontend entry fails here
+function backendGroups() {
+    const body = classBody("ThemeColors");
+    const groups = [...body.matchAll(/^ {4}(\w+)\s*:\s*([A-Z]\w+)\s*=/gm)].map(match => ({
+        key: match[1],
+        model: match[2],
+    }));
+    expect(groups.map(group => group.key), "a ThemeColors field escaped the group parse").toEqual(
+        fieldNames(body),
+    );
+
+    for (const group of groups) {
+        const groupBody = classBody(group.model);
+        group.slots = [...groupBody.matchAll(/^ {4}(\w+)\s*:\s*str\s*=\s*"#[0-9A-Fa-f]{6}"/gm)].map(
+            match => match[1],
+        );
+        // a slot declared in another form is not drift, but this test can no
+        // longer see it — fail loudly rather than pass on a partial read
+        expect(group.slots, `a field in ${group.model} escaped the slot parse`).toEqual(
+            fieldNames(groupBody),
+        );
+    }
+
+    return groups;
+}
+
+describe("theme color slot parity", () => {
+    const groups = backendGroups();
+
+    it("parses the backend color models", () => {
+        expect(groups.length).toBeGreaterThan(0);
+        for (const group of groups) {
+            expect(group.slots.length, `no slots parsed from ${group.model}`).toBeGreaterThan(0);
+        }
+    });
+
+    it("the theme editor renders every group and slot the backend ships", () => {
+        expect(new Set(THEME_COLOR_GROUPS.map(group => group.key))).toEqual(
+            new Set(groups.map(group => group.key)),
+        );
+
+        for (const group of groups) {
+            const editor = THEME_COLOR_GROUPS.find(candidate => candidate.key === group.key);
+            expect(new Set(editor.slots), `${group.key} slots differ from ${group.model}`).toEqual(
+                new Set(group.slots),
+            );
+        }
+    });
+
+    it("vuetify merges every slot the backend ships, under the name vuetify knows", () => {
+        for (const group of groups) {
+            const payload = Object.fromEntries(group.slots.map(slot => [slot, "#010203"]));
+            const flat = flattenThemeColors({ colors: { [group.key]: payload } });
+            for (const slot of group.slots) {
+                const name = vuetifySlotName(group.key, slot);
+                expect(
+                    flat?.[name],
+                    `${group.key}.${slot} is missing from the vuetify merge as "${name}"`,
+                ).toBe("#010203");
+            }
+        }
+    });
+
+    // the surface slots are the one group whose backend field names are not the
+    // vuetify slot names - an underscore reaching vuetify paints nothing
+    it("the surface slots reach vuetify hyphenated", () => {
+        const surfaces = groups.find(group => group.key === "surfaces");
+        expect(surfaces, "theme.py has no surfaces color group").toBeDefined();
+
+        const payload = Object.fromEntries(surfaces.slots.map(slot => [slot, "#010203"]));
+        const flat = flattenThemeColors({ colors: { surfaces: payload } });
+        expect(Object.keys(flat).sort()).toEqual(
+            surfaces.slots.map(slot => slot.replace(/_/g, "-")).sort(),
+        );
+    });
+
+    it("the theme editor carries the backend's mode flag", () => {
+        expect(classBody("Theme"), "theme.py Theme has no `dark` flag").toMatch(
+            /^ {4}dark\s*:\s*bool\s*=/m,
+        );
+        expect(hydrateThemeTemplate({}, {}).dark).toBe(true);
+        // an assignment, not the getter's comparison
+        expect(read("../../src/components/TemplateTheme.vue")).toMatch(
+            /this\.template\.dark\s*=(?!=)/,
+        );
+    });
+});

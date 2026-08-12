@@ -688,6 +688,10 @@ class SceneAppearance(pydantic.BaseModel):
 class Appearance(pydantic.BaseModel):
     scene: SceneAppearance = SceneAppearance()
 
+    # world state template id (`<group_uid>__<template_uid>`) of the active
+    # theme, None means the built-in default
+    theme: str | None = None
+
 
 class PromptsConfig(pydantic.BaseModel):
     """Configuration for prompt template groups."""

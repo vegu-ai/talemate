@@ -1,5 +1,5 @@
 <template>
-  <v-card class="mb-2" variant="tonal" color="grey-darken-4">
+  <v-card class="mb-2" variant="tonal" color="mutedbg">
     <v-card-text class="text-muted">
       <div class="dropzone" @dragover.prevent @drop.prevent="onDrop">
         <div class="d-flex align-center">

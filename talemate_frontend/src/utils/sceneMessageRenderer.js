@@ -1,5 +1,5 @@
 import { marked, Marked } from 'marked';
-import { DEFAULT_APPEARANCE_COLORS } from './messageColors.js';
+import { DEFAULT_APPEARANCE_COLORS, themeMessageColor } from './messageColors.js';
 
 const DEFAULTS = {
     quotes: {
@@ -115,14 +115,12 @@ function compileEntityMentions(mentions) {
 
 export class SceneTextParser {
     constructor(config = {}) {
-        // Determine default color:
-        // 1. Use config.defaultColor if explicitly provided
-        // 2. Use message type default from DEFAULT_APPEARANCE_COLORS if messageType is specified
-        // 3. Otherwise use DEFAULTS.default.color
+        const themed = (typ, fallback) => themeMessageColor(config.themeColors, typ) ?? fallback;
+
         const defaultColor = config.defaultColor ??
-                            (config.messageType && DEFAULT_APPEARANCE_COLORS[config.messageType]) ??
-                            DEFAULTS.default.color;
-        
+                            (config.messageType && themed(config.messageType, DEFAULT_APPEARANCE_COLORS[config.messageType])) ??
+                            themed('emphasis', DEFAULTS.default.color);
+
         // Get the default message color from config.default if available
         const defaultMessageColor = config.default?.color ?? defaultColor;
         
@@ -150,11 +148,11 @@ export class SceneTextParser {
         };
         
         this.config = {
-            quotes: merge('quotes', { className: 'scene-quotes' }, { color: DEFAULTS.quotes.color, bold: DEFAULTS.quotes.bold, italic: DEFAULTS.quotes.italic }, true),
-            emphasis: merge('emphasis', { className: 'scene-emphasis' }, { color: DEFAULTS.emphasis.color, bold: DEFAULTS.emphasis.bold, italic: DEFAULTS.emphasis.italic }, true),
-            parentheses: merge('parentheses', { className: 'scene-parentheses' }, { color: DEFAULTS.parentheses.color, bold: DEFAULTS.parentheses.bold, italic: DEFAULTS.parentheses.italic }, true),
-            brackets: merge('brackets', { className: 'scene-brackets' }, { color: DEFAULTS.brackets.color, bold: DEFAULTS.brackets.bold, italic: DEFAULTS.brackets.italic }, true),
-            entities: merge('entities', { className: 'scene-entity' }, { color: DEFAULTS.entities.color, bold: DEFAULTS.entities.bold, italic: DEFAULTS.entities.italic }, true),
+            quotes: merge('quotes', { className: 'scene-quotes' }, { color: themed('quotes', DEFAULTS.quotes.color), bold: DEFAULTS.quotes.bold, italic: DEFAULTS.quotes.italic }, true),
+            emphasis: merge('emphasis', { className: 'scene-emphasis' }, { color: themed('emphasis', DEFAULTS.emphasis.color), bold: DEFAULTS.emphasis.bold, italic: DEFAULTS.emphasis.italic }, true),
+            parentheses: merge('parentheses', { className: 'scene-parentheses' }, { color: themed('parentheses', DEFAULTS.parentheses.color), bold: DEFAULTS.parentheses.bold, italic: DEFAULTS.parentheses.italic }, true),
+            brackets: merge('brackets', { className: 'scene-brackets' }, { color: themed('brackets', DEFAULTS.brackets.color), bold: DEFAULTS.brackets.bold, italic: DEFAULTS.brackets.italic }, true),
+            entities: merge('entities', { className: 'scene-entity' }, { color: themed('entities', DEFAULTS.entities.color), bold: DEFAULTS.entities.bold, italic: DEFAULTS.entities.italic }, true),
             prefix:   merge('prefix',   { className: 'scene-prefix' },   { color: DEFAULTS.prefix.color,  bold: true, italic: false }),
             default: merge('default', { className: 'scene-default' }, { color: defaultColor, bold: false, italic: false }),
         };

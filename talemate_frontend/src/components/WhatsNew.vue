@@ -45,7 +45,7 @@
                                                 max-width="400"
                                                 height="150"
                                             ></v-img>
-                                            <div v-if="feature.description" class="content text-white mt-1">{{ feature.description }}</div>
+                                            <div v-if="feature.description" class="content text-high-emphasis mt-1">{{ feature.description }}</div>
                                             <div v-if="feature.groups" class="items-list">
                                                 <div v-for="(group, gIndex) in feature.groups"
                                                     :key="gIndex"

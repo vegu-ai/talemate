@@ -1,6 +1,6 @@
 <template>
   <v-card elevation="7" density="compact">
-    <v-toolbar density="compact" color="grey-darken-4">
+    <v-toolbar density="compact" color="mutedbg">
       <v-btn rounded="sm" color="delete" @click="requestDiscardAll" prepend-icon="mdi-close-box-outline">
         <v-tooltip activator="parent" location="top">Discard all images in the queue.</v-tooltip>
         Discard All</v-btn>

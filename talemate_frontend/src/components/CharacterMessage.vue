@@ -239,6 +239,7 @@ export default {
         brackets: sceneConfig.brackets,
         entities: sceneConfig.entities,
         default: defaultStyles,
+        messageType: 'actor',
       });
     },
     renderedText() {

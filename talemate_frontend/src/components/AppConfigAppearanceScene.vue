@@ -120,7 +120,7 @@
 
 <script>
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
-import { DEFAULT_APPEARANCE_COLORS } from '@/utils/messageColors.js';
+import { getMessageColor } from '@/utils/messageColors.js';
 
 export default {
     name: 'AppConfigAppearanceScene',
@@ -179,6 +179,9 @@ export default {
         },
     },
     computed: {
+        themeColors() {
+            return this.immutableConfig?.theme?.colors ?? null;
+        },
         renderedNarratorMessagePreview() {
             const sceneConfig = this.config || {};
             const narratorStyles = sceneConfig.narrator_messages || {};
@@ -189,6 +192,7 @@ export default {
                 parentheses: sceneConfig.parentheses || narratorStyles,
                 brackets: sceneConfig.brackets || narratorStyles,
                 default: narratorStyles,
+                messageType: 'narrator',
             });
             
             return parser.parse('The quick brown fox jumps over the lazy dog. "Did you see that?" he wondered (with some surprise). The moment felt [significant] and *unforgettable*.');
@@ -211,6 +215,7 @@ export default {
                 parentheses: sceneConfig.parentheses || narratorStyles,
                 brackets: sceneConfig.brackets || narratorStyles,
                 default: defaultStyles,
+                messageType: 'actor',
             });
             
             return parser.parse('John walked into the room. "Wow, that was a quick brown fox - did you see it?" he exclaimed (still catching his breath). The scene was [dramatic] and *intense*.');
@@ -321,7 +326,8 @@ export default {
         hydrateMarkupStyle(sceneConfig, key, { italic = false, bold = false, withShow = false } = {}) {
             if (!sceneConfig[key]) {
                 const fresh = {
-                    color: DEFAULT_APPEARANCE_COLORS[key],
+                    // no stored color — resolution falls through to the theme
+                    color: null,
                     italic,
                     bold,
                     override_color: true,
@@ -367,15 +373,10 @@ export default {
         },
 
         getColor(typ, color) {
-            // if color is None load the default color
-            if (color === null) {
-                // Message-type keys use the `_messages` suffix in the config UI
-                // (e.g. "narrator_messages") but DEFAULT_APPEARANCE_COLORS is
-                // keyed by bare type name — strip the suffix on lookup.
-                const key = typ.endsWith('_messages') ? typ.slice(0, -'_messages'.length) : typ;
-                return DEFAULT_APPEARANCE_COLORS[key];
-            }
-            return color;
+            // This page keys message types with a `_messages` suffix; the shared
+            // resolver is keyed by bare name and reads the color off a config.
+            const key = typ.endsWith('_messages') ? typ.slice(0, -'_messages'.length) : typ;
+            return getMessageColor({ scene: { [`${key}_messages`]: { color } } }, key, this.themeColors);
         }
     },
 }

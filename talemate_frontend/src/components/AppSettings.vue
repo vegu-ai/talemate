@@ -1,6 +1,6 @@
 <template>
     <v-card variant="text" v-if="app_config !== null">
-        <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1 app-settings-toolbar">
+        <v-toolbar rounded="md" density="compact" color="mutedbg" class="pl-2 mb-1 app-settings-toolbar">
             <v-icon class="mr-2" color="primary">{{ currentPage?.icon || 'mdi-cog' }}</v-icon>
             <span class="text-subtitle-2 mr-4">{{ currentPage?.group }} <span class="text-muted">/</span> {{ currentPage?.title }}</span>
             <v-btn color="primary" variant="text" prepend-icon="mdi-check-circle-outline" :disabled="!canSave" @click="saveConfig">Save</v-btn>

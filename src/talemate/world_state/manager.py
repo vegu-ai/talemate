@@ -8,7 +8,7 @@ import structlog
 import talemate.world_state.templates as world_state_templates
 from talemate.agents.tts.util import get_voice
 from talemate.config import commit_config, get_config
-from talemate.config.schema import SceneToolShortcut
+from talemate.config.schema import SceneAppearance, SceneToolShortcut
 from talemate.scene_tools import SCENE_TOOL_ACTIONS
 from talemate.scene_agent_settings import (
     UNCHANGED as AGENT_SETTINGS_UNCHANGED,
@@ -42,6 +42,50 @@ if TYPE_CHECKING:
 log = structlog.get_logger("talemate.server.world_state_manager")
 
 _UNSET = object()
+
+# theme appearance key -> scene appearance key, the message types carry a
+# `_messages` suffix in the config schema
+THEME_APPEARANCE_MAP = {
+    "narrator": "narrator_messages",
+    "actor": "actor_messages",
+    "director": "director_messages",
+    "time": "time_messages",
+    "context_investigation": "context_investigation_messages",
+    "information": "information_messages",
+    "quotes": "quotes",
+    "parentheses": "parentheses",
+    "brackets": "brackets",
+    "emphasis": "emphasis",
+    "entities": "entities",
+    "backdrop_panel_opacity": "backdrop_panel_opacity",
+    "backdrop_text_shadow": "backdrop_text_shadow",
+}
+
+
+def apply_theme_appearance(
+    appearance: "world_state_templates.ThemeAppearance",
+    scene_appearance: SceneAppearance,
+):
+    """
+    Copies a theme's text styling onto the scene appearance config.
+
+    Only the fields the theme actually declares are copied - `color` overrides,
+    message assets and asset attachment belong to the user and survive a theme
+    switch. Colors are not copied at all, they are resolved from the active
+    theme on every config read.
+    """
+
+    for theme_key, config_key in THEME_APPEARANCE_MAP.items():
+        source = getattr(appearance, theme_key)
+        target = getattr(scene_appearance, config_key)
+
+        if not isinstance(source, pydantic.BaseModel):
+            setattr(scene_appearance, config_key, source)
+            continue
+
+        for field in type(source).model_fields:
+            if field in type(target).model_fields:
+                setattr(target, field, getattr(source, field))
 
 
 class CharacterSelect(pydantic.BaseModel):
@@ -791,6 +835,7 @@ class WorldStateManager:
             # saves back to the file it was loaded from (`update` copies the
             # fields, never the path)
             exists.update(group)
+            world_state_templates.invalidate_theme_cache()
             return
 
         # an unknown group derives its file from its name - taking the inbound
@@ -805,6 +850,7 @@ class WorldStateManager:
 
         self.template_collection.groups.append(group)
         group.save(world_state_templates.TEMPLATE_PATH)
+        world_state_templates.invalidate_theme_cache()
 
     async def remove_template_group(self, group: world_state_templates.Group):
         """
@@ -814,6 +860,7 @@ class WorldStateManager:
             group: The Group object to be removed.
         """
         self.template_collection.remove(group)
+        world_state_templates.invalidate_theme_cache()
 
     async def save_template(self, template: world_state_templates.AnnotatedTemplate):
         """
@@ -824,6 +871,7 @@ class WorldStateManager:
         """
         group = self.template_collection.find(template.group)
         group.update_template(template)
+        world_state_templates.invalidate_theme_cache()
         if getattr(template, "auto_create", False):
             await self.auto_apply_template(template)
 
@@ -833,6 +881,7 @@ class WorldStateManager:
         """
         group = self.template_collection.find(template.group)
         group.delete_template(template)
+        world_state_templates.invalidate_theme_cache()
 
     async def apply_all_auto_create_templates(self):
         """
@@ -1112,6 +1161,55 @@ class WorldStateManager:
         )
 
         return shortcut
+
+    async def apply_template_theme(
+        self,
+        template: str | world_state_templates.Theme,
+        **kwargs,
+    ) -> world_state_templates.AppliedTheme | None:
+        """
+        Makes a theme template the active theme in the application config and
+        copies its text styling into the scene appearance config.
+
+        Arguments:
+            template: The Theme object to activate. Can also be a string representing the template uid.
+
+        Returns:
+            An AppliedTheme carrying the activated theme id, or None if the template could not be resolved.
+        """
+
+        if isinstance(template, str):
+            template_uid = template
+            template = self.template_collection.flat(types=["theme"]).templates.get(
+                template_uid
+            )
+            if not template:
+                log.error(
+                    "apply_template_theme: template not found",
+                    template=template_uid,
+                )
+                return
+
+        theme_id = f"{template.group}__{template.uid}"
+
+        config = get_config()
+        config.appearance.theme = theme_id
+
+        apply_theme_appearance(template.appearance, config.appearance.scene)
+
+        await config.set_dirty()
+        await commit_config()
+
+        emit(
+            "status",
+            message=f"Theme '{template.name}' activated",
+            status="success",
+        )
+
+        return world_state_templates.AppliedTheme(
+            theme_id=theme_id,
+            name=template.name,
+        )
 
     async def activate_character(self, character_name: str):
         """

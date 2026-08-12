@@ -11,7 +11,7 @@
     <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-card flat>
         <v-card-text>
-            <v-card flat class="mb-2" color="grey-darken-4">
+            <v-card flat class="mb-2" color="mutedbg">
                 <v-card-text class="pa-2">
                     <v-row dense align="center" no-gutters>
                         <v-col cols="12" sm="12" md="auto">

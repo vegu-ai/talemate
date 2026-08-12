@@ -15,7 +15,7 @@ from talemate.world_state.manager import WorldStateManager, Suggestion
 from talemate.scene.schema import ScenePerspectives
 from talemate.status import background_task, set_loading
 import talemate.game.focal as focal
-from talemate.config import save_config
+from talemate.config import save_config, get_config, commit_config
 from talemate.server.websocket_plugin import Plugin
 
 from .scene_intent import SceneIntentMixin
@@ -136,14 +136,14 @@ class DeleteWorldStateTemplatePayload(pydantic.BaseModel):
 
 class ApplyWorldStateTemplatePayload(pydantic.BaseModel):
     template: world_state_templates.AnnotatedTemplate
-    character_name: str | None = (None,)
-    run_immediately: bool = (False,)
+    character_name: str | None = None
+    run_immediately: bool = False
 
 
 class ApplyWorldStateTemplatesPayload(pydantic.BaseModel):
     templates: list[world_state_templates.AnnotatedTemplate]
-    character_name: str | None = (None,)
-    run_immediately: bool = (False,)
+    character_name: str | None = None
+    run_immediately: bool = False
     source: str | None = None
     generation_options: world_state_templates.GenerationOptions | None = None
 
@@ -862,8 +862,21 @@ class WorldStateManagerPlugin(
             }
         )
 
+        template = payload.template
+        if template.template_type == "theme":
+            config = get_config()
+            if config.appearance.theme == f"{template.group}__{template.uid}":
+                await self.websocket_handler.on_config_changed(config)
+
         await self.handle_get_templates({})
         await self.signal_operation_done()
+
+    async def _deactivate_theme(self):
+        """Drops the active theme after the template backing it was deleted."""
+        config = get_config()
+        config.appearance.theme = None
+        await config.set_dirty()
+        await commit_config()
 
     async def handle_delete_template(self, data):
         payload = DeleteWorldStateTemplatePayload(**data)
@@ -884,6 +897,11 @@ class WorldStateManagerPlugin(
                 "data": payload.model_dump(),
             }
         )
+
+        if template.template_type == "theme":
+            active_theme = get_config().appearance.theme
+            if active_theme == f"{template.group}__{template.uid}":
+                await self._deactivate_theme()
 
         await self.handle_get_templates({})
         await self.signal_operation_done()
@@ -971,6 +989,10 @@ class WorldStateManagerPlugin(
                 "data": payload.model_dump(),
             }
         )
+
+        active_theme = get_config().appearance.theme
+        if active_theme and active_theme.split("__", 1)[0] == group.uid:
+            await self._deactivate_theme()
 
         await self.handle_get_templates({})
         await self.signal_operation_done()

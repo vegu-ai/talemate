@@ -11,7 +11,7 @@
   <!-- Dialog for visual library -->
   <v-dialog v-model="dialogModel" max-width="1920" min-height="600">
     <v-card>
-      <v-toolbar density="comfortable" color="grey-darken-4">
+      <v-toolbar density="comfortable" color="mutedbg">
         <v-toolbar-title class="d-flex align-center">
           <v-icon class="mr-2" size="small" color="primary">mdi-image-multiple-outline</v-icon>
           Visual Library

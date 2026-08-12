@@ -60,14 +60,14 @@
                     </div>
 
                     <!-- message preview -->
-                    <v-sheet color="grey-darken-4" rounded class="preview-panel pa-3" ref="previewPanel">
+                    <v-sheet color="mutedbg" rounded class="preview-panel pa-3" ref="previewPanel">
                         <v-progress-linear v-if="loadingPreview" indeterminate color="primary" class="mb-2"></v-progress-linear>
                         <template v-if="preview">
                             <p class="text-caption text-grey mb-2" v-if="preview.total_messages > preview.messages.length">
                                 Showing the last {{ preview.messages.length }} of {{ preview.total_messages }} messages
                             </p>
-                            <div v-if="preview.messages.length === 0" class="preview-message text-grey-lighten-1">
-                                <p class="text-caption text-grey mb-1"><v-icon size="x-small" class="mr-1">mdi-script-text-outline</v-icon>No messages yet — scene intro:</p>
+                            <div v-if="preview.messages.length === 0" class="preview-message text-medium-emphasis">
+                                <p class="text-caption text-medium-emphasis mb-1"><v-icon size="x-small" class="mr-1">mdi-script-text-outline</v-icon>No messages yet — scene intro:</p>
                                 <span class="preview-text">{{ preview.intro }}</span>
                             </div>
                             <div v-for="message in preview.messages" :key="message.id" class="preview-message" :class="{ 'preview-hidden': isHidden(message) }">
@@ -158,6 +158,7 @@ export default {
     props: {
         scene: Object,
         appearanceConfig: Object,
+        themeColors: Object,
     },
     inject: ['getWebsocket', 'registerMessageHandler'],
     emits: ['load-at-revision'],
@@ -245,7 +246,7 @@ export default {
         },
 
         messageColor(message) {
-            return getMessageColor(this.appearanceConfig, COLOR_KEYS[message.typ] || message.typ);
+            return getMessageColor(this.appearanceConfig, COLOR_KEYS[message.typ] || message.typ, this.themeColors);
         },
 
         messageLabel(message) {

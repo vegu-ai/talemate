@@ -71,7 +71,10 @@ To change a color:
 1. Click the **Color** button next to the message or markup type you want to customize
 2. Use the color picker that appears on the right side of the panel
 3. The preview updates immediately so you can see the result
-4. Click **Reset** to return to the default color
+4. Click **Reset** to clear your color and go back to the theme's color
+
+!!! info "Themes supply these colors"
+    Every message and markup color comes from the active [theme](/talemate/user-guide/templates/themes). A color you set here overrides the theme for that one type until you reset it, and **Reset** hands the color back to the theme — or to Talemate's built-in default when no theme is active.
 
 ## :material-image-outline: Visuals
 

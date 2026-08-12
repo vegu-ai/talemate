@@ -1,7 +1,7 @@
 <template>
   <v-dialog v-model="internalModel" max-width="720">
     <v-card>
-      <v-toolbar density="comfortable" color="grey-darken-4">
+      <v-toolbar density="comfortable" color="mutedbg">
         <v-toolbar-title>
           <v-icon class="mr-2" size="small" color="primary">mdi-image-plus</v-icon>
           Generate Image

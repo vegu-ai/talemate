@@ -1,0 +1,135 @@
+author: Talemate
+description: The default Talemate appearance.
+name: Talemate Dark
+templates:
+  default:
+    appearance:
+      actor:
+        bold: false
+        italic: false
+      backdrop_panel_opacity: 0.8
+      backdrop_text_shadow: true
+      brackets:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      context_investigation:
+        bold: false
+        italic: false
+        show: true
+      director:
+        bold: false
+        italic: false
+        show: true
+      emphasis:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      entities:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      information:
+        bold: false
+        italic: false
+      narrator:
+        bold: false
+        italic: false
+      parentheses:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      quotes:
+        bold: false
+        italic: false
+        override_color: true
+        show: true
+      time:
+        bold: false
+        italic: false
+    colors:
+      app:
+        cancel: '#B0BEC5'
+        delete: '#D32F2F'
+        dirty: '#FFB74D'
+        disabled: '#E57373'
+        enabled: '#81C784'
+        favorite: '#FFD740'
+        highlight1: '#9FA8DA'
+        highlight2: '#CE93D8'
+        highlight3: '#C5E1A5'
+        highlight4: '#EF5350'
+        highlight5: '#FFE082'
+        highlight6: '#FFCC80'
+        highlight7: '#90CAF9'
+        instructions: '#FFE0B2'
+        muted: '#9E9E9E'
+        mutedbg: '#212121'
+        mutedheader: '#BDBDBD'
+        normal: '#9E9E9E'
+        persona: '#F48FB1'
+        primary: '#9575CD'
+        secondary: '#FF5722'
+        subdued1: '#303F9F'
+        subdued2: '#7B1FA2'
+        subdued3: '#689F38'
+        subdued4: '#D32F2F'
+        subdued5: '#FFA000'
+        subdued6: '#F57C00'
+        subdued7: '#1976D2'
+        unsaved: '#FFD54F'
+      chats:
+        dchat_msg_action_result: '#FFCCBC'
+        dchat_msg_code: '#FFCCBC'
+        dchat_msg_compaction: '#616161'
+        dchat_msg_director: '#FF8A65'
+        dchat_msg_loading: '#FF7043'
+        dchat_msg_user: '#B39DDB'
+        hchat_msg_doc_result: '#64B5F6'
+        hchat_msg_help: '#90A4AE'
+        hchat_msg_user: '#B39DDB'
+      messages:
+        actor: '#B39DDB'
+        avatar_border: '#424242'
+        brackets: '#DC5D5D'
+        card_border: '#424242'
+        context_investigation: '#D5C0A1'
+        defaultBadge: '#E64A19'
+        director: '#FF5722'
+        emphasis: '#B39DDB'
+        entities: '#FFE082'
+        information: '#BA8574'
+        narrator: '#A180AE'
+        parentheses: '#DB9DC2'
+        play_audio: '#FBC02D'
+        quotes: '#FFFFFF'
+        time: '#FFECB3'
+      node_editor:
+        core_node: '#78909C'
+        core_node_selected: '#78909C'
+        locked_node_selected: '#78909C'
+        nodeeditorbg: '#616161'
+        scene_node: '#9575CD'
+        scene_node_selected: '#7E57C2'
+        template_node: '#A1887F'
+        template_node_selected: '#A1887F'
+      surfaces:
+        background: '#121212'
+        on_surface_variant: '#000000'
+        surface: '#212121'
+        surface_bright: '#CCBFD6'
+        surface_light: '#424242'
+        surface_variant: '#C8C8C8'
+    dark: true
+    favorite: false
+    group: talemate_dark
+    instructions: null
+    name: Talemate Dark
+    priority: 1
+    template_type: theme
+    uid: default
+uid: talemate_dark

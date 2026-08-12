@@ -202,6 +202,14 @@
                     />
                 </div>
 
+                <!-- Theme Template -->
+                <div v-else-if="template.template_type === 'theme'">
+                    <TemplateTheme
+                        :immutableTemplate="template"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                    />
+                </div>
+
             </v-form>
 
         </v-card-text>
@@ -282,7 +290,8 @@ import TemplateCharacterDetail from './TemplateCharacterDetail.vue';
 import TemplateSpices from './TemplateSpices.vue';
 import TemplateSceneType from './TemplateSceneType.vue';
 import TemplateSceneToolShortcut from './TemplateSceneToolShortcut.vue';
-import { iconForTemplate, colorForTemplate } from '../utils/templateMappings.js';
+import TemplateTheme from './TemplateTheme.vue';
+import { iconForTemplate, colorForTemplate, hydrateThemeTemplate } from '../utils/templateMappings.js';
 import { validateGroupName } from '../utils/sceneToolShortcuts.js';
 import { adoptedTemplateUid } from '../utils/templateSaveEcho.js';
 
@@ -301,6 +310,7 @@ export default {
         TemplateSpices,
         TemplateSceneType,
         TemplateSceneToolShortcut,
+        TemplateTheme,
     },
     props: {
         immutableTemplates: Object,
@@ -373,6 +383,7 @@ export default {
                 { "title": "Agent persona", "value": 'agent_persona'},
                 { "title": "Scene type", "value": 'scene_type'},
                 { "title": "Scene tool shortcut", "value": 'scene_tool_shortcut'},
+                { "title": "Theme", "value": 'theme'},
             ],
             template: null,
             group: null,
@@ -390,6 +401,7 @@ export default {
                 agent_persona: "Agent personas define how an agent should present and behave in prompts (tone, perspective, style). Assign a persona per agent in Scene Settings. (Currently director only)",
                 scene_type: "Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene.",
                 scene_tool_shortcut: "Scene tool shortcut templates package a scene tool action together with a label, an icon and canned instructions. Installing one adds the shortcut to your scene tools menu, where it can be run with a single click.",
+                theme: "Theme templates hold a complete set of colors for the app, its surfaces, the node editor, the scene messages and the chats, together with how message text is styled. Applying one repaints Talemate with those colors.",
             }
         };
     },
@@ -415,6 +427,8 @@ export default {
                     this.template.label = this.template.name;
                 if(!this.template.icon)
                     this.template.icon = iconForTemplate(this.template);
+            } else if(this.template && this.template.template_type === 'theme') {
+                hydrateThemeTemplate(this.template, this.$vuetify.theme.current.colors, this.$vuetify.theme.current.dark);
             }
         },
 

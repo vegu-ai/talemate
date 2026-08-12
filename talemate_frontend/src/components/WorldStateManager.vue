@@ -6,7 +6,7 @@
         </v-tabs>
 
         <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
-        <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1">
+        <v-toolbar rounded="md" density="compact" color="mutedbg" class="pl-2 mb-1">
 
             <RequestInput ref="requestSaveCopyName" title="Save Scene As" @continue="(name) => { saveScene(name) }" /> 
 

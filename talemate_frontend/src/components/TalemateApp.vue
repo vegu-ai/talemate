@@ -216,7 +216,7 @@
         </v-list>
       </v-navigation-drawer>
 
-      <v-container :class="(sceneActive ? '' : 'backdrop')" fluid style="height: 100%;">
+      <v-container fluid style="height: 100%;">
 
         <v-tabs-window v-model="tab" style="height: 100%;">
           <!-- HOME -->
@@ -269,6 +269,7 @@
                       <SceneMessages
                         ref="sceneMessages"
                         :appearance-config="effectiveAppearanceConfig"
+                        :theme-colors="effectiveThemeColors"
                         :ux-locked="uxLocked"
                         :app-busy="busy"
                         :agent-status="agentStatus"
@@ -434,6 +435,7 @@
     ref="sceneTimeline"
     :scene="scene"
     :appearance-config="effectiveAppearanceConfig"
+    :theme-colors="effectiveThemeColors"
     @load-at-revision="(target) => { resetViews(); $refs.sceneLanding.loadJsonSceneFromPath(target.path, false, target.rev); }"
   />
   <VersionMismatchAlert ref="versionMismatchAlert" />
@@ -489,6 +491,8 @@ import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 import AutocompleteMixin from './AutocompleteMixin.js';
 import { SETTINGS_PAGES } from '../utils/appSettingsRegistry.js';
 import { createConfigSaveQueue } from '../utils/configSaveQueue.js';
+import { setActiveThemeColors } from '../utils/messageColors.js';
+import { applyTheme } from '../plugins/vuetify';
 import { buildNameKeyedPayload } from '../utils/nameKeyedMap.js';
 
 export default {
@@ -886,6 +890,9 @@ export default {
     effectiveAppearanceConfig() {
       // Use preview if available, otherwise fall back to saved config
       return this.appearancePreview ?? (this.appConfig ? this.appConfig.appearance : {});
+    },
+    effectiveThemeColors() {
+      return this.appConfig?.theme?.colors ?? null;
     },
     rightToolsDrawerWidth() {
       // based on the current (reactive) window width, set the width of the right hand drawers
@@ -1306,6 +1313,8 @@ export default {
       }
 
       if (data.type === 'app_config') {
+        setActiveThemeColors(data.data?.theme?.colors ?? null);
+        applyTheme(data.data?.theme);
         this.appConfig = data.data;
         this.configReceivedThisConnection = true;
         // NOTE: the config-save queue's stacking base is deliberately NOT
@@ -2045,21 +2054,6 @@ export default {
 </script>
 
 <style scoped>
-.backdrop {
-  background-image: url('/src/assets/logo-13.1-backdrop.png');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 512px 512px;
-}
-
-.backdrop-active {
-  background-image: url('/src/assets/logo-13.1-backdrop.png');
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  background-position: center;
-  background-size: 512px 512px;
-}
-
 .logo {
   background-image: url('/src/assets/logo-13.1-transparent.png');
   background-repeat: no-repeat;

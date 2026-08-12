@@ -5,8 +5,13 @@ import 'vuetify/styles'
 // Vuetify
 import { createVuetify } from 'vuetify'
 import colors from 'vuetify/util/colors'
+import { vuetifySlotName } from '@/utils/templateMappings'
 
-export default createVuetify({
+// The groups exist for the theme editor only — vuetify wants every slot at
+// one level.
+const THEME_COLOR_GROUPS = ['app', 'surfaces', 'node_editor', 'messages', 'chats'];
+
+const vuetify = createVuetify({
   theme : {
     defaultTheme: 'dark',
     themes: {
@@ -85,3 +90,62 @@ export default createVuetify({
     }
   }
 })
+
+// vuetify merges its stock light/dark `variables` (border color, emphasis
+// opacities, code/kbd colors) into a theme when the instance is created and
+// never again, so a theme that flips to light has to be handed the light set
+// or it keeps dark's white borders.
+const STOCK_THEME_VARIABLES = {
+  light: { ...vuetify.theme.themes.value.light.variables },
+  dark: { ...vuetify.theme.themes.value.dark.variables },
+};
+
+export function flattenThemeColors(resolvedTheme) {
+  const colors = resolvedTheme?.colors;
+  if (!colors || typeof colors !== 'object') {
+    return null;
+  }
+
+  const flat = {};
+  for (const group of THEME_COLOR_GROUPS) {
+    const groupColors = colors[group];
+    if (!groupColors || typeof groupColors !== 'object') {
+      continue;
+    }
+    for (const [slot, value] of Object.entries(groupColors)) {
+      if (typeof value === 'string' && value) {
+        flat[vuetifySlotName(group, slot)] = value;
+      }
+    }
+  }
+
+  // `character` has no theme slot of its own, so it tracks the actor color
+  // instead of drifting away from it.
+  if (flat.actor) {
+    flat.character = flat.actor;
+  }
+
+  return Object.keys(flat).length ? flat : null;
+}
+
+export function applyTheme(resolvedTheme, themeInstance = vuetify.theme) {
+  const flat = flattenThemeColors(resolvedTheme);
+  const definition = themeInstance?.themes?.value?.dark;
+  if (!flat || !definition?.colors) {
+    return null;
+  }
+  // Mutating the reactive theme definition in place keeps slots the theme
+  // does not carry (cornflowerblue) and republishes the CSS variables.
+  Object.assign(definition.colors, flat);
+
+  if (typeof resolvedTheme.dark === 'boolean' && resolvedTheme.dark !== definition.dark) {
+    definition.dark = resolvedTheme.dark;
+    Object.assign(
+      definition.variables,
+      STOCK_THEME_VARIABLES[resolvedTheme.dark ? 'dark' : 'light'],
+    );
+  }
+  return flat;
+}
+
+export default vuetify

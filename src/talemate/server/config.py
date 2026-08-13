@@ -9,6 +9,7 @@ from talemate import VERSION
 from talemate.changelog import delete_changelog_files, scene_ref_from_path
 from talemate.client.model_prompts import model_prompt, PromptSpec
 from talemate.client.registry import CLIENT_CLASSES
+from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.client.base import (
     ClientBase,
     DEFAULT_REASONING_PATTERN,
@@ -272,9 +273,13 @@ def app_config_message(config: Config) -> dict:
 
     The frontend repaints from the resolved theme this carries, so a payload
     without it reads as "no theme" and drops the app back to the defaults.
+
+    Both keys are attached in the same order as the other two emitters, so
+    every `app_config` payload has one shape.
     """
 
     data = config.model_dump()
+    data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
     data.update(theme=resolve_theme(config))
 
     return {"type": "app_config", "data": data, "version": VERSION}

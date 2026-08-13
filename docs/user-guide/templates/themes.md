@@ -94,7 +94,7 @@ Applying does two different things, and the difference matters:
 
 **The colors are taken live.** Talemate remembers which theme is active and reads its colors as it renders. Editing the active theme's colors repaints the running application immediately — no reload, no applying again.
 
-**The styling is copied.** Applying writes the theme's message appearance into your [Appearance settings](/talemate/user-guide/app-settings/appearance/#messages), where it becomes yours to adjust. Editing the theme's Message appearance panel afterwards changes nothing until you apply the theme again.
+**The styling is copied.** Applying writes the theme's message appearance into your [Appearance settings](/talemate/user-guide/app-settings/appearance/#messages), where it becomes yours to adjust. Editing the theme's Message appearance panel afterwards changes nothing until you apply the theme again — or click [Restore from theme](/talemate/user-guide/app-settings/appearance/#restore-from-theme) on the appearance settings page to pick the edit up there.
 
 ### What a theme leaves alone
 
@@ -102,7 +102,7 @@ A theme does not touch the message asset settings — render cadence, display si
 
 ### Message colors and your own overrides
 
-The theme supplies the color of every message and markup type. A color you set yourself on the appearance settings page wins over the theme for that type — a deliberate exception, kept across theme switches. Click **Reset** next to the message or markup type to give the color back to the theme.
+The theme supplies the color of every message and markup type. A color you set yourself on the appearance settings page wins over the theme for that type — a deliberate exception, kept across theme switches. Click **Reset** next to the message or markup type to give the color back to the theme, or [Restore from theme](/talemate/user-guide/app-settings/appearance/#restore-from-theme) to hand all of them back at once.
 
 ## Sharing a theme
 

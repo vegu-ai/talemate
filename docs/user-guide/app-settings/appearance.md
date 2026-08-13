@@ -6,7 +6,7 @@ While you edit appearance settings, the scene view previews your changes live; t
 
 ## :material-script: Messages
 
-![App settings - Appearance - Messages](/talemate/img/0.39.0/app-settings-appearance-messages.png)
+![App settings - Appearance - Messages](/talemate/img/0.40.0/app-settings-appearance-messages.png)
 
 The Messages page gives you control over how text appears in the scene feed. You can customize the styling for different message types and special text formatting.
 
@@ -75,6 +75,20 @@ To change a color:
 
 !!! info "Themes supply these colors"
     Every message and markup color comes from the active [theme](/talemate/user-guide/templates/themes). A color you set here overrides the theme for that one type until you reset it, and **Reset** hands the color back to the theme — or to Talemate's built-in default when no theme is active.
+
+### Restore from Theme
+
+**Restore from theme** hands the whole message appearance back to the active theme. It asks for confirmation first, because it drops the appearance edits you made yourself:
+
+- Every color override is cleared, so each message type and each markup type follows the theme's color again
+- The theme's styling is copied in once more — italic and bold for every message and markup type, visibility for the types that can be hidden, own color for the markup types, and the [backdrop panel opacity and text shadow](#backdrop-legibility)
+
+The message asset settings — render cadence, display size, auto backdrop and auto-attaching — are left as they are. They are workflow preferences rather than a look, so they sit outside the theme by design.
+
+Restoring changes the settings you are editing, nothing more: keep it with **Save**, or drop it with **Discard**, like any other settings edit. It works with no theme template applied as well, restoring Talemate's built-in default.
+
+!!! info "Picking up a later edit to a theme"
+    A theme's colors are read live, but its styling is copied into these settings at the moment the theme is applied. Editing the theme's Message appearance panel afterwards does not reach an installation that already applied it — **Restore from theme** is how you pick those edits up.
 
 ## :material-image-outline: Visuals
 

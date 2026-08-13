@@ -223,6 +223,7 @@ export const SETTINGS_GROUPS = [
                 icon: 'mdi-script-text',
                 description: 'Style the different message types in the scene view. Changes preview live in the scene while you edit.',
                 entries: [
+                    { label: 'Restore from theme', anchor: 'restore-from-theme', keywords: ['theme', 'reset', 'restore', 'colors', 'styling'] },
                     { label: 'Message styles', keywords: ['color', 'italic', 'bold', 'narrator', 'character', 'director', 'font'] },
                     { label: 'Quotes / emphasis styling', keywords: ['quotes', 'parentheses', 'brackets', 'emphasis', 'entities', 'highlight'] },
                 ],

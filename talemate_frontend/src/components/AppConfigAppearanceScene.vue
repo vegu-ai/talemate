@@ -1,5 +1,14 @@
 <template>
     <div class="ma-3">
+        <div class="d-flex justify-end">
+            <v-tooltip :text="restoreFromThemeDisabledReason || 'Take the message styling, colors and backdrop legibility from the active theme, discarding your own appearance edits.'" max-width="350" location="top">
+                <template v-slot:activator="{ props }">
+                    <span v-bind="props">
+                        <v-btn variant="text" size="small" color="warning" prepend-icon="mdi-refresh" data-setting-anchor="restore-from-theme" :disabled="!!restoreFromThemeDisabledReason" @click="$refs.confirmRestoreFromTheme.initiateAction()">Restore from theme</v-btn>
+                    </span>
+                </template>
+            </v-tooltip>
+        </div>
         <v-table density="compact">
             <thead>
                 <tr>
@@ -116,15 +125,20 @@
             </div>
         </v-col>
     </v-row>
+
+    <ConfirmActionPrompt ref="confirmRestoreFromTheme" @confirm="restoreFromTheme" actionLabel="Restore from theme" icon="mdi-refresh" color="warning" confirmText="Restore" cancelText="Cancel" :maxWidth="400" description="Take the message styling, colors and backdrop legibility from the active theme? This discards your own appearance edits." />
 </template>
 
 <script>
+import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
 import { getMessageColor } from '@/utils/messageColors.js';
+import { restoreAppearanceFromTheme } from '@/utils/appearanceTheme';
 
 export default {
     name: 'AppConfigAppearanceScene',
     components: {
+        ConfirmActionPrompt,
     },
     props: {
         immutableConfig: Object,
@@ -132,6 +146,7 @@ export default {
     },
     emits: [
         'changed',
+        'restore-from-theme',
     ],
     watch: {
         immutableConfig: {
@@ -181,6 +196,13 @@ export default {
     computed: {
         themeColors() {
             return this.immutableConfig?.theme?.colors ?? null;
+        },
+        restoreFromThemeDisabledReason() {
+            const appearance = this.immutableConfig?.theme?.appearance;
+            if (!appearance || !Object.keys(appearance).length) {
+                return 'The active theme has not loaded yet, so there is nothing to restore from.';
+            }
+            return null;
         },
         renderedNarratorMessagePreview() {
             const sceneConfig = this.config || {};
@@ -346,6 +368,14 @@ export default {
         reset(typ, config) {
             config.color = null;
             this.color = this.getColor(typ, config.color);
+        },
+        restoreFromTheme() {
+            this.config = restoreAppearanceFromTheme(this.config, this.immutableConfig?.theme?.appearance);
+            // an open picker still holds the discarded override and would write
+            // it straight back onto the restored config on the next touch
+            this.colorPickerTarget = null;
+            this.color = "#000000";
+            this.$emit('restore-from-theme', this.config);
         },
         onColorChange() {
             if (this.colorPickerTarget && this.config[this.colorPickerTarget]) {

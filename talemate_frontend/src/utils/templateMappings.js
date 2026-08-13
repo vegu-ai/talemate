@@ -133,6 +133,26 @@ const THEME_APPEARANCE_TYPES = {
     entities: { override_color: true, show: true },
 };
 
+/**
+ * Theme appearance key -> scene appearance key, mirroring the backend's
+ * `THEME_APPEARANCE_MAP`.
+ */
+export const THEME_APPEARANCE_MAP = {
+    narrator: 'narrator_messages',
+    actor: 'actor_messages',
+    director: 'director_messages',
+    time: 'time_messages',
+    context_investigation: 'context_investigation_messages',
+    information: 'information_messages',
+    quotes: 'quotes',
+    parentheses: 'parentheses',
+    brackets: 'brackets',
+    emphasis: 'emphasis',
+    entities: 'entities',
+    backdrop_panel_opacity: 'backdrop_panel_opacity',
+    backdrop_text_shadow: 'backdrop_text_shadow',
+};
+
 const THEME_SLOT_LABELS = {
     mutedheader: 'Muted header',
     mutedbg: 'Muted background',

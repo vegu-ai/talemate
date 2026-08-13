@@ -270,9 +270,8 @@ export default {
                 this.autoAttachAssets = sceneConfig.auto_attach_assets !== undefined ? sceneConfig.auto_attach_assets : true;
 
                 // Backdrop legibility settings
-                this.backdropPanelOpacity = sceneConfig.backdrop_panel_opacity ?? 0.8;
-                this.backdropTextShadow = sceneConfig.backdrop_text_shadow ?? true;
-                
+                this.syncBackdropSettings();
+
                 // Overlay stored values onto the defaults (?? so 0 / false
                 // survive)
                 const config = defaultAssetConfig();
@@ -332,6 +331,13 @@ export default {
         // Expose auto_attach_assets for parent component
         get_auto_attach_assets() {
             return this.autoAttachAssets;
+        },
+        // called by the parent after it changed these values elsewhere, so the
+        // merge does not write the ones this page still holds back over them
+        syncBackdropSettings() {
+            const sceneConfig = this.immutableConfig?.appearance?.scene || {};
+            this.backdropPanelOpacity = sceneConfig.backdrop_panel_opacity ?? 0.8;
+            this.backdropTextShadow = sceneConfig.backdrop_text_shadow ?? true;
         },
         // Expose shared backdrop legibility settings for parent component
         get_backdrop_settings() {

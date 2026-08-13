@@ -37,7 +37,7 @@
                     <AppSettingsSound :config="app_config" />
                 </v-window-item>
                 <v-window-item value="appearance-messages">
-                    <AppConfigAppearanceScene ref="appearance-messages" :immutableConfig="app_config" :sceneActive="sceneActive" @changed="onAppearanceChanged"></AppConfigAppearanceScene>
+                    <AppConfigAppearanceScene ref="appearance-messages" :immutableConfig="app_config" :sceneActive="sceneActive" @changed="onAppearanceChanged" @restore-from-theme="onAppearanceRestoredFromTheme"></AppConfigAppearanceScene>
                 </v-window-item>
                 <v-window-item value="appearance-visuals">
                     <AppConfigAppearanceAssets ref="appearance-visuals" :immutableConfig="app_config" :sceneActive="sceneActive" @changed="onAppearanceChanged"></AppConfigAppearanceAssets>
@@ -310,13 +310,30 @@ export default {
             setTimeout(() => el.classList.remove('setting-flash'), 2500);
         },
 
+        // `system_prompt_defaults` and the resolved `theme` are server-derived
+        // extras rather than config. Both the baseline and an incoming payload
+        // go through here so the raw-JSON compare below never sees the two keys
+        // in different positions — a carried-forward key lands wherever it was
+        // spread on, and that alone would read as an outside change. The
+        // carry-forward itself is a safety net at the websocket boundary: every
+        // emitter sends both today.
+        normalizedPayload(config, carryFrom = null) {
+            const normalized = { ...config };
+            const extras = ['system_prompt_defaults', 'theme'];
+            const values = extras.map((key) => (
+                normalized[key] !== undefined ? normalized[key] : carryFrom?.[key]
+            ));
+            extras.forEach((key) => delete normalized[key]);
+            extras.forEach((key, index) => {
+                if (values[index] !== undefined) {
+                    normalized[key] = values[index];
+                }
+            });
+            return normalized;
+        },
+
         adoptConfig(config) {
-            // the app_config payload emitted alongside a save lacks
-            // system_prompt_defaults (only request_app_config and
-            // config-changed broadcasts include it) — carry it over
-            if (config.system_prompt_defaults === undefined && this.app_config?.system_prompt_defaults !== undefined) {
-                config = { ...config, system_prompt_defaults: this.app_config.system_prompt_defaults };
-            }
+            config = this.normalizedPayload(config, this.app_config);
             // deep-copy: ws payloads are parsed once and shared with every
             // registered handler (TalemateApp.appConfig stores the same
             // object) — editing an aliased working copy would leak unsaved
@@ -331,6 +348,22 @@ export default {
             if (!this.applyFailed) {
                 this.setSaveError(null);
             }
+        },
+
+        // The resolved theme is server-derived and no part of the draft (the
+        // backend drops it on save), so unsaved edits must not hold a theme
+        // change back — editing a theme and restoring the appearance from it is
+        // one workflow. The baseline moves with it, so a theme that changed on
+        // its own is neither an unsaved edit nor an external change.
+        adoptTheme(theme) {
+            if (theme === undefined) {
+                return;
+            }
+            const baseline = JSON.parse(this.snapshot);
+            baseline.theme = theme;
+            this.snapshot = JSON.stringify(baseline);
+            // through the snapshot, for the aliasing reason adoptConfig copies for
+            this.app_config.theme = JSON.parse(this.snapshot).theme;
         },
 
         // The apply-failure decoration belongs to one message only — every
@@ -407,6 +440,19 @@ export default {
             this.emitAppearancePreview();
         },
 
+        onAppearanceRestoredFromTheme(scene) {
+            // the visuals editor owns the backdrop values in the merge below and
+            // still holds the ones the restore replaced — refresh it off the
+            // restored scene first, or the merge writes the old ones back
+            this.app_config.appearance.scene = scene;
+            const appearanceAssets = this.$refs['appearance-visuals'];
+            if (appearanceAssets && appearanceAssets.syncBackdropSettings) {
+                appearanceAssets.syncBackdropSettings();
+            }
+            this.mergeSubcomponentConfigs();
+            this.emitAppearancePreview();
+        },
+
         emitAppearancePreview() {
             this.$emit('appearance-preview', this.app_config.appearance);
         },
@@ -421,7 +467,9 @@ export default {
                     // only flag an external change when the content actually
                     // differs from the baseline we're editing against.
                     this.pendingConfig = message.data;
-                    if (!this.saving && JSON.stringify(message.data) !== this.snapshot) {
+                    this.adoptTheme(message.data.theme);
+                    const incoming = JSON.stringify(this.normalizedPayload(message.data, this.app_config));
+                    if (!this.saving && incoming !== this.snapshot) {
                         this.externalChange = true;
                     }
                 } else {

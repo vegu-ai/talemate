@@ -16,7 +16,7 @@
             >Equalize</v-btn>
         </div>
         <div v-for="choice in choices" :key="choice.value" class="d-flex align-center">
-            <div class="weight-label text-caption" :class="{ 'text-disabled': isDisabled(choice.value) }">
+            <div class="weight-label text-caption" :class="{ 'text-medium-emphasis': isDisabled(choice.value) }">
                 {{ choice.label }}
                 <v-icon
                     v-if="isLockedAtFull(choice.value)"

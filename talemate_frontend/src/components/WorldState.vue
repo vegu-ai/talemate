@@ -21,7 +21,7 @@
 
         <!-- empty (no characters or objects) -->
 
-        <v-card elevation="7" v-if="Object.keys(characters).length === 0 && Object.keys(items).length === 0" class="text-center text-caption mx-3" density="compact" variant="tonal" color="grey">
+        <v-card elevation="7" v-if="Object.keys(characters).length === 0 && Object.keys(items).length === 0" class="text-center text-caption mx-3" density="compact" variant="tonal" color="muted">
             World state has not been updated yet.
         </v-card>
 
@@ -102,7 +102,7 @@
                                     v-bind="props"
                                     size="x-small"
                                     variant="outlined"
-                                    color="grey-lighten-1"
+                                    color="mutedheader"
                                     prepend-icon="mdi-image-auto-adjust"
                                     @click="openWorldStateManager('characters', name, 'reinforce', state.question)"
                                     class="mt-1">
@@ -205,7 +205,7 @@
                                     v-bind="props"
                                     size="x-small"
                                     variant="outlined"
-                                    color="grey-lighten-1"
+                                    color="mutedheader"
                                     prepend-icon="mdi-image-auto-adjust"
                                     @click="openWorldStateManager('world', 'states', state.question)"
                                     class="mt-1">

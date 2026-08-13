@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath, URL } from "node:url";
 import { THEME_COLOR_GROUPS, hydrateThemeTemplate, vuetifySlotName } from "@/utils/templateMappings";
 import vuetify, { flattenThemeColors } from "@/plugins/vuetify";
@@ -125,6 +126,98 @@ describe("theme color slot parity", () => {
                 ).toMatch(/^#[0-9a-fA-F]{6}$/);
             }
         }
+    });
+
+    // every one of these is a free string: vuetify puts the prop value straight
+    // into a class name, so a slot that does not exist paints nothing at all and
+    // the element silently falls back to its component default. a contrast walk
+    // cannot see that - an element painting nothing usually measures a better
+    // ratio than the wrong color it replaced.
+    //
+    // WHAT A GREEN RUN DOES NOT MEAN. This reads two shapes: a color attribute
+    // in the template, and a `color:` key in a script block. It cannot follow a
+    // color a function computes and returns, or one assembled from parts, and it
+    // never sees the python side. Green means no dead literal in the shapes
+    // below - not that the tree holds no dead binding.
+    it("every color literal in the markup resolves to a real slot", () => {
+        const componentDir = fileURLToPath(new URL("../../src", import.meta.url));
+        const files = [];
+        (function walk(dir) {
+            for (const entry of readdirSync(dir, { withFileTypes: true })) {
+                const full = join(dir, entry.name);
+                if (entry.isDirectory()) walk(full);
+                else if (entry.name.endsWith(".vue")) files.push(full);
+            }
+        })(componentDir);
+
+        const resolved = vuetify.theme.themes.value.dark.colors;
+        // vuetify's `isCssColor` accepts only `#`, `var(--`, `rgb(`, `rgba(`,
+        // `hsl(` and `hsla(`; anything else becomes a class name. so `inherit`
+        // and `currentColor` would be dead bindings too, and only these three
+        // are real: no color at all, and vuetify's own bundled utilities
+        const ALLOWED = new Set(["transparent", "", "white", "black"]);
+        const CSS_COLOR = /^(#|var\(--|rgba?\(|hsla?\()/;
+        const PROP = /(?:^|\s)(:?)(?:color|bg-color|track-color)="([^"]*)"/g;
+        // a `color:` key in a script block - the map or options object a
+        // component reads its color out of
+        const SCRIPT_COLOR = /\bcolor:\s*'([^']*)'/g;
+        // a `?` that opens a ternary, not the one in `?.` or `??`
+        const TERNARY = /\?(?![.?])/;
+
+        function literalsOf(raw, bound) {
+            if (!bound) {
+                return [raw];
+            }
+            const ternary = raw.match(TERNARY);
+            if (ternary) {
+                // only the branches are colors; the condition on the left may
+                // hold a quoted string that is not one
+                return quoted(raw.slice(ternary.index + 1));
+            }
+            if (raw.includes("||")) {
+                // `expr || 'fallback'` - the fallback is a color
+                return quoted(raw.slice(raw.indexOf("||")));
+            }
+            // a call hands its arguments to a helper: those strings are not
+            // colors, and what the helper returns cannot be read from here
+            if (raw.includes("(")) {
+                return [];
+            }
+            if (raw.startsWith("'")) {
+                return [raw.replace(/'/g, "")];
+            }
+            // a bare identifier is a variable holding the color
+            return [];
+        }
+
+        function quoted(expr) {
+            // a branch that is itself a call is opaque, so drop its arguments
+            return [...expr.replace(/\w+\([^)]*\)/g, "").matchAll(/'([^']*)'/g)].map(m => m[1]);
+        }
+
+        const dead = [];
+        for (const file of files) {
+            const source = readFileSync(file, "utf-8");
+            const found = [];
+            for (const match of source.matchAll(PROP)) {
+                found.push(...literalsOf(match[2].trim(), match[1] === ":"));
+            }
+            for (const match of source.matchAll(SCRIPT_COLOR)) {
+                found.push(match[1]);
+            }
+            for (const value of found) {
+                if (ALLOWED.has(value) || CSS_COLOR.test(value)) continue;
+                if (resolved[value] === undefined) {
+                    dead.push(`${file.slice(componentDir.length + 1)}: "${value}"`);
+                }
+            }
+        }
+
+        expect(
+            dead,
+            `color values vuetify cannot resolve - a palette name it does not ship, ` +
+            `a theme slot that does not exist, or a word that is no color at all:\n${dead.join("\n")}`,
+        ).toEqual([]);
     });
 
     it("the theme editor carries the backend's mode flag", () => {

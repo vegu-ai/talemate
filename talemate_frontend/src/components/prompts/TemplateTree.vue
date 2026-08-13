@@ -59,7 +59,7 @@
                 v-if="item.isUnresolvable && !item.isDirectory"
                 size="x-small"
                 label
-                color="grey"
+                color="muted"
                 variant="tonal"
                 class="ml-1"
             >
@@ -298,7 +298,7 @@ export default {
                 case 'user':
                     return 'success';
                 case 'default':
-                    return 'grey';
+                    return 'muted';
                 default:
                     return 'primary';
             }

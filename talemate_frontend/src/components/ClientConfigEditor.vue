@@ -225,7 +225,7 @@
               </v-alert>
             </v-col>
             <v-col cols="12" v-if="values.reason_enabled && requiresReasoningPattern">
-              <v-sheet class="text-caption text-right">
+              <v-sheet color="transparent" class="text-caption text-right">
                 <!-- each preset sets BOTH the strip and validation patterns for that model -->
                 <v-btn @click.stop="applyReasoningPreset('', '')" size="small" color="primary" variant="text">{{ 'Default' }}</v-btn>
                 <v-btn @click.stop="applyReasoningPreset('.*?final<\\|message\\|>', '<\\|channel\\|>analysis')" size="small" color="primary" variant="text">{{ 'gpt-oss' }}</v-btn>

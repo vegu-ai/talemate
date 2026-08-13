@@ -205,11 +205,11 @@ export default {
 
         statusColor(name) {
             switch (this.statusOf(name)) {
-                case 'warning': return 'orange';
-                case 'error': return 'red-darken-1';
-                case 'disabled': return 'grey-darken-2';
-                case null: return 'grey-darken-3';
-                default: return 'green';
+                case 'warning': return 'warning';
+                case 'error': return 'delete';
+                case 'disabled': return 'muted';
+                case null: return 'muted';
+                default: return 'success';
             }
         },
 

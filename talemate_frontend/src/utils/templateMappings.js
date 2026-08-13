@@ -26,7 +26,7 @@ const THEME_APP_SLOTS = [
     'highlight5',
     'highlight6',
     'highlight7',
-    'disabled',
+    'inactive',
     'module_selected',
     'module_locked_selected',
     'success',
@@ -208,7 +208,7 @@ export function colorForTemplate(template) {
     } else if (templateType == 'theme') {
         return 'secondary';
     }
-    return 'grey';
+    return 'muted';
 }
 
 /**

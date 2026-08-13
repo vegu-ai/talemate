@@ -63,7 +63,7 @@
                         </div>
                     </v-alert>
 
-                    <v-card elevation="3" variant="tonal" color="grey-darken-3">
+                    <v-card elevation="3" variant="tonal" color="surface-light">
                         <v-card-text class="text-muted" >
                             <div v-if="selectedItem">
                                 <div class="mb-2">

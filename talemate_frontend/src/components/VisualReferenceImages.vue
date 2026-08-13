@@ -1,5 +1,5 @@
 <template>
-  <v-card elevation="7" class="mt-2" color="grey" variant="tonal" v-if="editable || hasReferences">
+  <v-card elevation="7" class="mt-2" color="muted" variant="tonal" v-if="editable || hasReferences">
     <v-card-title class="d-flex align-center">
       <span>{{ title }}</span>
       <v-spacer></v-spacer>

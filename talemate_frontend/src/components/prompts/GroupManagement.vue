@@ -48,7 +48,7 @@
                         v-bind="props"
                         size="small"
                         variant="outlined"
-                        color="grey"
+                        color="muted"
                     >
                         <v-icon start>mdi-plus</v-icon>
                         Add Group
@@ -62,7 +62,7 @@
                     >
                         <v-list-item-title>{{ group.name }}</v-list-item-title>
                         <template v-slot:append>
-                            <v-chip size="x-small" label color="grey" variant="text">
+                            <v-chip size="x-small" label color="muted" variant="text">
                                 {{ group.template_count }}
                             </v-chip>
                         </template>

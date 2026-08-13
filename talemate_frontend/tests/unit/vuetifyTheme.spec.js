@@ -137,6 +137,18 @@ describe("applyTheme mode", () => {
         expect(rootBlock()).toContain("--v-theme-code: 245, 245, 245");
     });
 
+    // vuetify dims medium emphasis harder on light (0.60) than on dark (0.70),
+    // and wrappers that dim by opacity of their own multiply with it. the raise
+    // lives in the mode-flip branch, so a refactor that splits that branch would
+    // drop it silently.
+    it("raises the light theme's medium emphasis to dark's value", () => {
+        applyTheme(LIGHT);
+        expect(rootBlock()).toContain("--v-medium-emphasis-opacity: 0.7");
+
+        applyTheme(DARK);
+        expect(rootBlock()).toContain("--v-medium-emphasis-opacity: 0.7");
+    });
+
     it("flips the derived text colors with the surface colors", () => {
         applyTheme(DARK);
         expect(rootBlock()).toContain("--v-theme-on-surface: 255,255,255");

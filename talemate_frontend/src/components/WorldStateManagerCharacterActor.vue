@@ -48,7 +48,7 @@
                     </p>
                     <v-divider class="mt-2 mb-2"></v-divider>
                     <p>
-                        <v-icon size="small" color="orange" class="mr-1">mdi-flask</v-icon><span class="text-orange">Experimental feature</span> - whether or not this improves or degrades generations strongly depends on LLM  used. Giving too long instructions here may degrade the quality of the dialogue, especially in the beginning of the scene. 
+                        <v-icon size="small" color="warning" class="mr-1">mdi-flask</v-icon><span class="text-warning">Experimental feature</span> - whether or not this improves or degrades generations strongly depends on LLM  used. Giving too long instructions here may degrade the quality of the dialogue, especially in the beginning of the scene. 
                     </p>
                 </v-alert>
             </div>
@@ -98,7 +98,7 @@
                             <div class="d-flex justify-space-between align-start">
                                 <div class="text-muted flex-grow-1" style="white-space: pre-wrap;" v-html="renderSceneText(example)"></div>
                                 <v-btn 
-                                    color="red-darken-2" 
+                                    color="delete" 
                                     rounded="sm" 
                                     size="small" 
                                     icon 

@@ -160,7 +160,7 @@
             <v-card-title>Select Portrait</v-card-title>
             <v-card-text>
                 <div v-if="avatarSelectDialog.assetIds.length === 0" class="text-center text-medium-emphasis py-8">
-                    <v-icon size="48" color="grey">mdi-image-off-outline</v-icon>
+                    <v-icon size="48" color="muted">mdi-image-off-outline</v-icon>
                     <p class="mt-2">No portraits available for this character</p>
                 </div>
                 <VisualReferenceCarousel
@@ -193,7 +193,7 @@
             <v-card-title>Select Scene Illustration</v-card-title>
             <v-card-text>
                 <div v-if="illustrationSelectDialog.assetIds.length === 0" class="text-center text-medium-emphasis py-8">
-                    <v-icon size="48" color="grey">mdi-image-off-outline</v-icon>
+                    <v-icon size="48" color="muted">mdi-image-off-outline</v-icon>
                     <p class="mt-2">No scene illustrations available</p>
                 </div>
                 <VisualReferenceCarousel
@@ -226,7 +226,7 @@
             <v-card-title>Select Card</v-card-title>
             <v-card-text>
                 <div v-if="cardSelectDialog.assetIds.length === 0" class="text-center text-medium-emphasis py-8">
-                    <v-icon size="48" color="grey">mdi-image-off-outline</v-icon>
+                    <v-icon size="48" color="muted">mdi-image-off-outline</v-icon>
                     <p class="mt-2">No cards available</p>
                 </div>
                 <VisualReferenceCarousel

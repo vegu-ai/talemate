@@ -3,7 +3,7 @@
         <!-- Header with prompt metadata -->
         <div class="d-flex align-center flex-wrap mb-2">
             <span class="text-h6 mr-2">#{{ prompt.num }}</span>
-            <v-chip color="grey-lighten-1" variant="text">{{ prompt.agent_name }}</v-chip>
+            <v-chip color="mutedheader" variant="text">{{ prompt.agent_name }}</v-chip>
             <v-chip size="small" label class="mr-1" color="primary" variant="tonal">
                 <strong class="mr-1">action</strong>{{ prompt.agent_action }}
             </v-chip>
@@ -21,15 +21,15 @@
                         variant="text"
                         class="mr-1"
                         icon="mdi-brain"
-                        :color="reasoningOverrideActive ? 'delete' : 'grey-darken-1'"
+                        :color="reasoningOverrideActive ? 'delete' : 'muted'"
                         @click="toggleReasoningOverride"
                     />
                 </template>
             </v-tooltip>
-            <v-chip class="mr-1" size="small" color="grey" label variant="tonal">
+            <v-chip class="mr-1" size="small" color="muted" label variant="tonal">
                 <strong class="mr-1">task</strong> {{ prompt.kind }}
             </v-chip>
-            <v-chip size="small" color="grey" label variant="tonal">
+            <v-chip size="small" color="muted" label variant="tonal">
                 <strong class="mr-1">preset</strong> {{ prompt.inference_preset }}
             </v-chip>
             <v-chip size="small" color="primary" variant="text" label>
@@ -38,10 +38,10 @@
             <v-chip size="small" color="secondary" variant="text" label>
                 {{ prompt.response_tokens }}<v-icon size="14" class="ml-1">mdi-arrow-up-bold</v-icon>
             </v-chip>
-            <v-chip size="small" variant="text" label color="grey-darken-1">
+            <v-chip size="small" variant="text" label color="muted">
                 {{ prompt.time }}s<v-icon size="14" class="ml-1">mdi-clock</v-icon>
             </v-chip>
-            <v-chip color="grey" variant="text" prepend-icon="mdi-network-outline">
+            <v-chip color="muted" variant="text" prepend-icon="mdi-network-outline">
                 {{ prompt.client_name }}
             </v-chip>
             <v-chip
@@ -96,7 +96,7 @@
                             size="x-small"
                             variant="text"
                             v-if="promptHasDirtyParams"
-                            color="orange"
+                            color="warning"
                             @click.stop="resetParams"
                             prepend-icon="mdi-restore"
                         >Reset</v-btn>
@@ -130,7 +130,7 @@
                             size="x-small"
                             variant="text"
                             v-if="promptHasDirtyPrompt"
-                            color="orange"
+                            color="warning"
                             @click.stop="resetPrompt"
                             prepend-icon="mdi-restore"
                         >Reset</v-btn>
@@ -166,7 +166,7 @@
                                     size="x-small"
                                     variant="text"
                                     v-else-if="promptHasDirtyResponse"
-                                    color="orange"
+                                    color="warning"
                                     @click.stop="resetResponse"
                                     prepend-icon="mdi-restore"
                                 >Reset</v-btn>
@@ -196,7 +196,7 @@
             <template v-slot:activator="{ props }">
                 <v-btn
                     :disabled="busy"
-                    color="orange"
+                    color="warning"
                     variant="text"
                     @click.stop="testChanges"
                     v-bind="props"

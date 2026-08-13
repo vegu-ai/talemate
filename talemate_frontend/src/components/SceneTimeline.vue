@@ -32,7 +32,7 @@
                         :step="1"
                         hide-details
                         color="primary"
-                        track-color="grey-darken-2"
+                        track-color="border"
                         thumb-label
                         :disabled="applying"
                     >
@@ -60,7 +60,7 @@
                     </div>
 
                     <!-- message preview -->
-                    <v-sheet color="mutedbg" rounded class="preview-panel pa-3" ref="previewPanel">
+                    <v-sheet color="transparent" rounded class="preview-panel pa-3" ref="previewPanel">
                         <v-progress-linear v-if="loadingPreview" indeterminate color="primary" class="mb-2"></v-progress-linear>
                         <template v-if="preview">
                             <p class="text-caption text-medium-emphasis mb-2" v-if="preview.total_messages > preview.messages.length">

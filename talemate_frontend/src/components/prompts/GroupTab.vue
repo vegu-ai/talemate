@@ -49,7 +49,7 @@
                 <div class="tree-container">
                     <!-- Empty state when no templates exist -->
                     <div v-if="groupTemplates.length === 0 && !loading" class="text-center text-medium-emphasis pa-4">
-                        <v-icon size="48" color="grey-darken-1">mdi-file-outline</v-icon>
+                        <v-icon size="48" color="muted">mdi-file-outline</v-icon>
                         <div class="mt-2 text-body-2">No templates available</div>
                         <div class="text-caption">Templates will appear here once loaded</div>
                     </div>
@@ -153,7 +153,7 @@
 
                 <v-card v-else flat color="transparent" class="d-flex align-center justify-center" style="min-height: 300px;">
                     <v-card-text class="text-center text-medium-emphasis">
-                        <v-icon size="64" color="grey-darken-1">mdi-file-document-edit-outline</v-icon>
+                        <v-icon size="64" color="muted">mdi-file-document-edit-outline</v-icon>
                         <div class="mt-2">Select a template to edit</div>
                         <div class="text-caption">Click a muted template to create an override</div>
                     </v-card-text>
@@ -229,7 +229,7 @@
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn
-                        color="grey"
+                        color="muted"
                         variant="text"
                         @click="closeNewFileDialog"
                     >

@@ -10,7 +10,7 @@
                     v-bind="props"
                     size="small"
                     class="ml-2 mr-2"
-                    :color="directorPersonaName ? 'persona' : 'default'"
+                    :color="directorPersonaName ? 'persona' : ''"
                     label
                     clickable
                     :disabled="appBusy || !appReady"

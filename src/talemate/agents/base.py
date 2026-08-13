@@ -231,16 +231,16 @@ def optimize_prompt_caching_action() -> AgentAction:
     )
 
 
-AgentDetailColor = Literal[
-    "grey", "primary", "muted", "orange", "success", "warning", "error"
-]
+# theme slots only - a material palette name here paints a fixed color that no
+# theme can reach
+AgentDetailColor = Literal["primary", "muted", "success", "warning", "error"]
 
 
 class AgentDetail(pydantic.BaseModel):
     value: str | None = None
     description: str | None = None
     icon: str | None = None
-    color: AgentDetailColor = "grey"
+    color: AgentDetailColor = "muted"
     hidden: bool = False
     # surface this detail even when the subsystem emitting it is not in use
     # (e.g. a TTS api no voice currently points at)

@@ -107,7 +107,7 @@
 
       <v-tooltip text="Clients / Agents" location="top">
         <template v-slot:activator="{ props }">
-          <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="!ready" v-bind="props" color="red-darken-1"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
+          <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="!ready" v-bind="props" color="delete"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
           <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-else v-bind="props"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
         </template>
       </v-tooltip>
@@ -122,7 +122,7 @@
       <v-navigation-drawer :model-value="sceneDrawer && tab !== 'home'" @update:model-value="sceneDrawer = $event" app :width="leftDrawerWidth">
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
-          <p class="text-body-2" color="white">
+          <p class="text-body-2">
             Make sure the backend process is running.
           </p>
         </v-alert>
@@ -182,7 +182,7 @@
       <v-navigation-drawer v-model="drawer" app location="right" width="350" disable-resize-watcher>
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
-          <p class="text-body-2" color="white">
+          <p class="text-body-2">
             Make sure the backend process is running.
           </p>
         </v-alert>
@@ -423,7 +423,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-    <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
+    <v-snackbar v-model="errorNotification" color="delete" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
   </v-app>

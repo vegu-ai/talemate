@@ -25,10 +25,10 @@
                         size="14"></v-progress-circular>
                     <v-progress-circular v-else-if="agent.status === 'busy_bg'" indeterminate="disable-shrink" color="secondary"
                         size="14"></v-progress-circular>
-                    <v-icon v-else-if="agent.status === 'uninitialized'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
-                    <v-icon v-else-if="agent.status === 'disabled'" color="grey-darken-2" size="14">mdi-checkbox-blank-circle</v-icon>
-                    <v-icon v-else-if="agent.status === 'error'" color="red-darken-1" size="14">mdi-checkbox-blank-circle</v-icon>
-                    <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
+                    <v-icon v-else-if="agent.status === 'uninitialized'" color="warning" size="14">mdi-checkbox-blank-circle</v-icon>
+                    <v-icon v-else-if="agent.status === 'disabled'" color="muted" size="14">mdi-checkbox-blank-circle</v-icon>
+                    <v-icon v-else-if="agent.status === 'error'" color="delete" size="14">mdi-checkbox-blank-circle</v-icon>
+                    <v-icon v-else color="success" size="14">mdi-checkbox-blank-circle</v-icon>
 
                     <span class="ml-1" v-if="agent.label"> {{ agent.label }}</span>
                     <span class="ml-1" v-else> {{ agent.name }}</span>
@@ -51,7 +51,7 @@
                     <v-chip v-if="typeof(agent.client) === 'string'" 
                         prepend-icon="mdi-network-outline" 
                         size="x-small" 
-                        color="grey" 
+                        color="muted" 
                         variant="tonal" 
                         label>
                         {{ agent.client }}
@@ -66,7 +66,7 @@
                                 v-bind="props"
                                 :prepend-icon="detail.icon"
                                 label
-                                :color="detail.color || 'grey'"
+                                :color="detail.color || 'muted'"
                                 variant="tonal"
                                 >
                                 {{ detail.value }}
@@ -95,7 +95,7 @@
                                         v-bind="props"
                                         size="x-small"
                                         label
-                                        :color="actionEnabled(agent, action_name) ? 'success' : 'grey'"
+                                        :color="actionEnabled(agent, action_name) ? 'success' : 'muted'"
                                         variant="tonal"
                                         :prepend-icon="action.icon"
                                         @click.stop="toggleAction(agent, action_name, action)"
@@ -121,7 +121,7 @@
                                         v-bind="props"
                                         size="x-small"
                                         label
-                                        :color="configValue(agent, action_name, config_name) ? 'highlight3' : 'grey'"
+                                        :color="configValue(agent, action_name, config_name) ? 'highlight3' : 'muted'"
                                         variant="tonal"
                                         @click.stop="toggleSubConfig(agent, action_name, config_name, config)"
                                     >

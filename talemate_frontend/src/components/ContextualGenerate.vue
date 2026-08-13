@@ -61,7 +61,7 @@
         </v-card>
     </v-dialog>
 
-    <v-sheet class="text-right">
+    <v-sheet color="transparent" class="text-right">
         <v-spacer></v-spacer>
         <v-tooltip class="pre-wrap" :text="tooltipText" >
             <template v-slot:activator="{ props }">

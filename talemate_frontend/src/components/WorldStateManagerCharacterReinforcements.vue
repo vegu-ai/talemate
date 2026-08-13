@@ -1,5 +1,5 @@
 <template>
-    <v-row floating color="grey-darken-5">
+    <v-row floating>
         <v-col cols="3">
         </v-col>
         <v-col cols="3"></v-col>

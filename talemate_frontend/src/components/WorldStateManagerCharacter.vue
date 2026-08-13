@@ -179,7 +179,7 @@
                                 <v-list-item>
                                     <v-tooltip  v-if="confirmDelete === null"  max-width="300" :text="`Permanently delete ${character.name} - will ask for confirmation and cannot be undone.`">
                                         <template v-slot:activator="{ props }">
-                                            <v-btn @click.stop="confirmDelete=''; $nextTick(() => { $refs.confirmDeleteInput.focus() })" variant="tonal" v-bind="props" block color="red-darken-2" prepend-icon="mdi-close-box-outline">Delete</v-btn>
+                                            <v-btn @click.stop="confirmDelete=''; $nextTick(() => { $refs.confirmDeleteInput.focus() })" variant="tonal" v-bind="props" block color="delete" prepend-icon="mdi-close-box-outline">Delete</v-btn>
                                         </template>
                                     </v-tooltip>
                         
@@ -187,12 +187,12 @@
                                         <v-list-item-subtitle>Confirm Deletion</v-list-item-subtitle>
                                         <p class="text-medium-emphasis text-caption">
                                             Confirm that you want to delete <span class="text-primary">{{ character.name }}</span>, by
-                                            typing the character name and clicking <span class="text-red-darken-2">Delete</span> once more.
+                                            typing the character name and clicking <span class="text-delete">Delete</span> once more.
                                             This cannot be undone.
                                         </p>
-                                        <v-text-field ref="confirmDeleteInput" :disabled="deleteBusy" v-model="confirmDelete" color="red-darken-2" hide-details @keydown.enter="deleteCharacter" />
+                                        <v-text-field ref="confirmDeleteInput" :disabled="deleteBusy" v-model="confirmDelete" color="delete" hide-details @keydown.enter="deleteCharacter" />
                                         <v-btn v-if="confirmDelete !== character.name" :disabled="deleteBusy" variant="tonal" block color="secondary" prepend-icon="mdi-cancel" @click.stop="confirmDelete = null">Cancel</v-btn>
-                                        <v-btn v-else :disabled="deleteBusy" variant="tonal" block color="red-darken-2" prepend-icon="mdi-close-box-outline" @click.stop="deleteCharacter">Delete</v-btn>
+                                        <v-btn v-else :disabled="deleteBusy" variant="tonal" block color="delete" prepend-icon="mdi-close-box-outline" @click.stop="deleteCharacter">Delete</v-btn>
                                     </div>
                                 </v-list-item>
 
@@ -333,7 +333,7 @@
             <p class="mt-4">
                 <!-- Character description description -->
                 <strong class="text-high-emphasis">
-                    <v-icon size="small" class="mr-2" color="grey">mdi-text-account</v-icon>Description
+                    <v-icon size="small" class="mr-2" color="muted">mdi-text-account</v-icon>Description
                 </strong> is a description of the character. A summarization of their appearance, personality, and other relevant information as it relates to the scene.
             </p>
             <p class="mt-4">

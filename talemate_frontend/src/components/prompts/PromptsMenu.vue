@@ -115,7 +115,7 @@ export default {
                 case 'user':
                     return 'success';
                 case 'default':
-                    return 'grey';
+                    return 'muted';
                 default:
                     return 'primary';
             }

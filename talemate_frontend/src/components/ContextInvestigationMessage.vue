@@ -34,8 +34,8 @@
         <v-textarea
           ref="textarea"
           v-model="editing_text"
-          color="indigo-lighten-4"
-          bg-color="black"
+          color="highlight1"
+          bg-color="surface"
           auto-grow
           :hint="autocompleteInfoMessage(autocompleting) + ', Shift+Enter for newline'"
           :loading="autocompleting"

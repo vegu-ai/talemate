@@ -38,7 +38,7 @@ const vuetify = createVuetify({
           persona: colors.pink.lighten3,
           dirty: colors.orange.lighten2,
 
-          disabled: colors.red.lighten2,
+          inactive: colors.red.lighten2,
 
           // vuetify's stock dark values, pinned so a future vuetify release
           // cannot move them out from under Talemate Dark
@@ -95,6 +95,16 @@ const STOCK_THEME_VARIABLES = {
   dark: { ...vuetify.theme.themes.value.dark.variables },
 };
 
+// vuetify dims medium emphasis text harder on light (0.60) than on dark (0.70).
+// several wrappers - `.v-messages`, `.v-card-subtitle`, disabled list items -
+// dim by opacity of their own before any color is chosen, and the two multiply,
+// which put muted text on a light theme under AA. dark's value is readable
+// under the same stacking, so both modes use it.
+const THEME_VARIABLE_OVERRIDES = {
+  light: { 'medium-emphasis-opacity': 0.70 },
+  dark: {},
+};
+
 export function flattenThemeColors(resolvedTheme) {
   const colors = resolvedTheme?.colors;
   if (!colors || typeof colors !== 'object') {
@@ -135,9 +145,11 @@ export function applyTheme(resolvedTheme, themeInstance = vuetify.theme) {
 
   if (typeof resolvedTheme.dark === 'boolean' && resolvedTheme.dark !== definition.dark) {
     definition.dark = resolvedTheme.dark;
+    const mode = resolvedTheme.dark ? 'dark' : 'light';
     Object.assign(
       definition.variables,
-      STOCK_THEME_VARIABLES[resolvedTheme.dark ? 'dark' : 'light'],
+      STOCK_THEME_VARIABLES[mode],
+      THEME_VARIABLE_OVERRIDES[mode],
     );
   }
   return flat;

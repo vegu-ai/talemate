@@ -14,6 +14,7 @@ import unittest.mock
 from pathlib import Path
 from typing import Optional
 
+import pydantic
 import pytest
 
 import talemate.agents as agents_module
@@ -466,11 +467,19 @@ class TestDynamicInstruction:
 
 
 class TestAgentDetail:
-    def test_default_color_is_grey(self):
+    def test_default_color_is_a_theme_slot(self):
         d = AgentDetail()
-        assert d.color == "grey"
+        assert d.color == "muted"
         assert d.hidden is False
         assert d.value is None
+
+    @pytest.mark.parametrize("color", ["grey", "orange"])
+    def test_a_material_palette_name_is_rejected(self, color):
+        """A palette name paints a fixed color no theme can reach - the detail
+        chips are the one place the backend picks a color for the frontend."""
+
+        with pytest.raises(pydantic.ValidationError):
+            AgentDetail(color=color)
 
     def test_full_construction(self):
         d = AgentDetail(

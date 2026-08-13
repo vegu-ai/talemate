@@ -50,7 +50,7 @@
                     </v-btn-toggle>
                     <v-checkbox v-if="selectedAgent.data.has_toggle && mode === 'global'" :label="agentEnabled(selectedName) ? 'Enabled' : 'Enable'"
                         :model-value="agentEnabled(selectedName)" @update:modelValue="(v) => setAgentEnabled(!!v)"
-                        hide-details density="compact" color="green"></v-checkbox>
+                        hide-details density="compact" color="success"></v-checkbox>
                 </div>
 
                 <template v-if="mode === 'scene'">
@@ -621,11 +621,11 @@ export default {
 
         statusColor(agent) {
             switch (this.agentStatus(agent)) {
-                case 'uninitialized': return 'orange';
-                case 'warning': return 'orange';
-                case 'disabled': return 'grey-darken-2';
-                case 'error': return 'red-darken-1';
-                default: return 'green';
+                case 'uninitialized': return 'warning';
+                case 'warning': return 'warning';
+                case 'disabled': return 'muted';
+                case 'error': return 'delete';
+                default: return 'success';
             }
         },
 

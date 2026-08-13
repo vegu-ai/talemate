@@ -50,7 +50,7 @@ export default {
                 case 'info':
                     return 'info';
                 default:
-                    return 'grey-darken-1';
+                    return 'muted';
             }
         },
     },

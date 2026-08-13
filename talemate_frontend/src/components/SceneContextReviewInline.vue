@@ -212,10 +212,10 @@
                   <v-chip size="x-small" variant="tonal" :color="sectionColor(section)" class="ml-2" label>
                     {{ section.token_count }} tokens
                   </v-chip>
-                  <v-chip size="x-small" variant="outlined" color="grey" class="ml-1" label>
+                  <v-chip size="x-small" variant="outlined" color="muted" class="ml-1" label>
                     {{ section.entry_count }} {{ section.entry_count === 1 ? 'entry' : 'entries' }}
                   </v-chip>
-                  <v-chip v-if="section.budget != null" size="x-small" variant="outlined" color="grey" class="ml-1" label>
+                  <v-chip v-if="section.budget != null" size="x-small" variant="outlined" color="muted" class="ml-1" label>
                     budget: {{ section.budget }}
                   </v-chip>
                   <v-chip v-if="section.incomplete" size="x-small" variant="tonal" color="warning" class="ml-1" label>

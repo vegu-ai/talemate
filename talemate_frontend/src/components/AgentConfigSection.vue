@@ -1,5 +1,5 @@
 <template>
-  <v-sheet density="compact" v-if="actionConditionMet">
+  <v-sheet color="transparent" density="compact" v-if="actionConditionMet">
     <div>
       <v-checkbox
         v-if="!alwaysVisible && !schema.container"

@@ -100,7 +100,7 @@
                     <v-chip
                       v-bind="Object.assign({}, menuProps, tooltipProps)"
                       size="small"
-                      :color="currentArtStyleSource === 'scene' ? 'primary' : 'default'"
+                      :color="currentArtStyleSource === 'scene' ? 'primary' : ''"
                       label
                       clickable
                       class="mb-2"

@@ -85,7 +85,7 @@ class AppColors(ColorGroup):
     highlight5: str = "#FFE082"
     highlight6: str = "#FFCC80"
     highlight7: str = "#90CAF9"
-    disabled: str = "#E57373"
+    inactive: str = "#E57373"
     module_selected: str = "#7E57C2"
     module_locked_selected: str = "#78909C"
     # vuetify resolves its own semantics from these names, so the defaults are

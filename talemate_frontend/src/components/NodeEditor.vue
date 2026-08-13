@@ -302,7 +302,7 @@
 
 
 
-    <v-snackbar v-model="testErrorMessage" color="red-darken-2" location="top" close-on-content-click :timeout="8000" elevation="5">
+    <v-snackbar v-model="testErrorMessage" color="delete" location="top" close-on-content-click :timeout="8000" elevation="5">
         <v-icon>mdi-alert-circle</v-icon>
         <span class="ml-2">{{ testErrorMessage }}</span>
     </v-snackbar>
@@ -1213,7 +1213,7 @@ export default {
 
 .litegraph.lite-search-item:hover {
     color: rgb(var(--v-theme-primary));
-    background-color: #000;
+    background-color: rgb(var(--v-theme-surface));
 }
 
 .litegraph.litesearchbox input {

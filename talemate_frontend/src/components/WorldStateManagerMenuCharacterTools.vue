@@ -51,7 +51,7 @@
             <template v-slot:activator="{ props }">
                 <v-list-item v-bind="props">
                     <template v-slot:prepend>
-                        <v-chip label size="x-small" variant="flat" :color="folder.anyActive ? 'success' : 'grey-darken-3'" class="mr-2 folder-count-chip">{{ folder.count }}</v-chip>
+                        <v-chip label size="x-small" variant="flat" :color="folder.anyActive ? 'success' : 'surface-light'" class="mr-2 folder-count-chip">{{ folder.count }}</v-chip>
                     </template>
                     <v-list-item-title>{{ folder.name }}</v-list-item-title>
                     <template v-slot:append>

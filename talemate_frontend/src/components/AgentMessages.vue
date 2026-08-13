@@ -41,7 +41,7 @@
                                 </div>
                             </v-list-item>
                         </v-list>
-                        <v-divider color="white"></v-divider>
+                        <v-divider color="border"></v-divider>
                     </v-list-item>
 
                 </v-list>
@@ -119,7 +119,7 @@ export default {
 </style>
 <style>
 span.diff-delete {
-    color: rgb(var(--v-theme-disabled));
+    color: rgb(var(--v-theme-inactive));
 }
 .diff-insert {
     color: rgb(var(--v-theme-success));

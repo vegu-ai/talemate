@@ -1,5 +1,5 @@
 <template>
-  <v-sheet density="compact" v-if="hasAnyOverridable">
+  <v-sheet color="transparent" density="compact" v-if="hasAnyOverridable">
     <div v-if="actionSchema.description" class="text-muted mt-2">
       {{ actionSchema.description }}
       <p v-if="actionSchema.warning" class="text-warning mt-2 text-caption">
@@ -54,7 +54,7 @@
   </v-sheet>
 
   <!-- action's own condition unmet → render nothing -->
-  <v-sheet v-else-if="actionConditionMet" density="compact">
+  <v-sheet color="transparent" v-else-if="actionConditionMet" density="compact">
     <div v-if="actionSchema.description" class="text-muted mt-2 mb-3">
       {{ actionSchema.description }}
       <p v-if="actionSchema.warning" class="text-warning mt-2 text-caption">

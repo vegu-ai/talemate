@@ -1,7 +1,7 @@
 <template>
     <div>
         <div v-if="assets.length === 0" class="text-center text-medium-emphasis py-8">
-            <v-icon size="48" color="grey">mdi-image-off-outline</v-icon>
+            <v-icon size="48" color="muted">mdi-image-off-outline</v-icon>
             <slot name="empty"></slot>
         </div>
 
@@ -17,7 +17,7 @@
                 >
                     <div class="asset-image-container">
                         <div class="dropzone-content">
-                            <v-icon size="32" color="grey">mdi-tray-arrow-down</v-icon>
+                            <v-icon size="32" color="muted">mdi-tray-arrow-down</v-icon>
                             <span class="text-caption mt-2">Drop image</span>
                         </div>
                     </div>

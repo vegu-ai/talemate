@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-card elevation="2" class="mb-4" v-if="pendingItems.length > 0">
-      <v-toolbar density="compact" color="grey-darken-3">
+      <v-toolbar density="compact" color="surface-light">
         <v-toolbar-title class="text-subtitle-2">
           <v-icon class="mr-2" size="small">mdi-clock-outline</v-icon>
           Pending Queue ({{ pendingItems.length }})
@@ -44,7 +44,7 @@
                 <v-icon
                   v-else
                   size="32"
-                  color="grey"
+                  color="muted"
                   class="mb-2"
                 >
                   mdi-image-outline
@@ -95,14 +95,14 @@
                   label
                   size="small"
                   class="ma-1"
-                  color="grey"
+                  color="muted"
                 >
                   <v-icon start size="x-small">mdi-clock-outline</v-icon>
                   Queued
                 </v-chip>
               </div>
 
-              <v-card elevation="2" class="mt-2" color="grey" variant="tonal">
+              <v-card elevation="2" class="mt-2" color="muted" variant="tonal">
                 <v-card-title class="text-caption">Prompt</v-card-title>
                 <v-card-text class="pre-wrap text-body-2">{{ selectedItem.prompt }}</v-card-text>
               </v-card>
@@ -111,7 +111,7 @@
                 v-if="selectedItem.negative_prompt"
                 elevation="2"
                 class="mt-2"
-                color="grey"
+                color="muted"
                 variant="tonal"
               >
                 <v-card-title class="text-caption">Negative Prompt</v-card-title>

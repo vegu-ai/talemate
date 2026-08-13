@@ -674,10 +674,10 @@ export default {
         iconToColor(icon) {
             switch(icon) {
                 case 'mdi-console-line': return 'highlight1';
-                case 'mdi-alpha-e-circle': return 'yellow-darken-1';
-                case 'mdi-function': return 'orange-lighten-1';
-                case 'mdi-file': return 'grey';
-                case 'mdi-package-variant': return 'green-lighten-1';
+                case 'mdi-alpha-e-circle': return 'unsaved';
+                case 'mdi-function': return 'highlight6';
+                case 'mdi-file': return 'muted';
+                case 'mdi-package-variant': return 'highlight3';
                 case 'mdi-bullhorn': return 'director';
                 case 'mdi-source-branch-sync': return 'highlight6';
                 case 'mdi-web-box': return 'highlight7';

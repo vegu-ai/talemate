@@ -107,7 +107,7 @@
                                                 min="0"
                                                 :max="pins[selected].pin.decay"
                                                 step="1"
-                                                color="brown-darken-2"
+                                                color="dirty"
                                                 v-model="pins[selected].pin.decay_due"
                                                 label="Active decay counter"
                                                 thumb-label="always"

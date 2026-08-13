@@ -202,7 +202,7 @@
                 <v-card-actions>
                     <v-spacer></v-spacer>
                     <v-btn
-                        color="grey"
+                        color="muted"
                         variant="text"
                         @click="showNewGroupDialog = false"
                     >

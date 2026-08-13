@@ -9,7 +9,7 @@
         </v-btn>
       </template>
       <span v-if="!editing">{{ text }}</span>
-      <v-chip v-if="hovered && !editing" size="x-small" color="grey-lighten-1" variant="text" class="ml-2">
+      <v-chip v-if="hovered && !editing" size="x-small" color="mutedheader" variant="text" class="ml-2">
         <v-icon>mdi-pencil</v-icon>
         {{ uxLocked || appBusy ? 'Editing locked' : 'Double-click to edit.' }}
       </v-chip>

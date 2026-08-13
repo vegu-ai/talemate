@@ -16,12 +16,12 @@
             <v-progress-circular v-if="client.status === 'busy'" indeterminate="disable-shrink" color="primary"
               size="14"></v-progress-circular>
             
-            <v-icon v-else-if="client.status == 'warning'" color="orange" size="14">mdi-checkbox-blank-circle</v-icon>
-            <v-icon v-else-if="client.status == 'error'" color="red-darken-1" size="14">mdi-checkbox-blank-circle</v-icon>
+            <v-icon v-else-if="client.status == 'warning'" color="warning" size="14">mdi-checkbox-blank-circle</v-icon>
+            <v-icon v-else-if="client.status == 'error'" color="delete" size="14">mdi-checkbox-blank-circle</v-icon>
             <v-btn v-else-if="client.status == 'disabled'" size="x-small" class="mr-1" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleClient(client)" icon="mdi-power-standby"></v-btn>
 
             <!-- client status icon -->
-            <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
+            <v-icon v-else color="success" size="14">mdi-checkbox-blank-circle</v-icon>
 
             <!-- client name-->
             <span :class="client.status == 'disabled' ? 'text-medium-emphasis ml-1' : 'ml-1'"> {{ client.name }}</span>
@@ -44,29 +44,29 @@
             <v-list-item-title class="text-caption">
               <div class="d-flex flex-wrap align-center">
                 <!-- client type -->
-                <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-server-outline">{{ client.type }}</v-chip>
+                <v-chip label size="x-small" color="muted" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-server-outline">{{ client.type }}</v-chip>
                 
                 <!-- max token length -->
                 <v-tooltip text="Max. context tokens">
                   <template v-slot:activator="{ props }">
-                    <v-chip v-bind="props" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
+                    <v-chip v-bind="props" label size="x-small" color="muted" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
                   </template>
                 </v-tooltip>
                 
                 <!-- embeddings -->
                 <v-tooltip text="Embeddings model">
                   <template v-slot:activator="{ props }">
-                    <v-chip v-bind="props" v-if="client.embeddings_model_name" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-cube-unfolded">{{ client.embeddings_model_name }}</v-chip>
+                    <v-chip v-bind="props" v-if="client.embeddings_model_name" label size="x-small" color="muted" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-cube-unfolded">{{ client.embeddings_model_name }}</v-chip>
                   </template>
                 </v-tooltip>
                 
                 <!-- override base url -->
-                <v-chip v-if="client.data.override_base_url" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-api">{{ client.data.override_base_url }}</v-chip>
+                <v-chip v-if="client.data.override_base_url" label size="x-small" color="muted" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-api">{{ client.data.override_base_url }}</v-chip>
                 
                 <!-- rate limit -->
                 <v-tooltip text="Rate limit">
                   <template v-slot:activator="{ props }">
-                    <v-chip v-bind="props" v-if="client.rate_limit" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-speedometer">{{ client.rate_limit }}/min</v-chip>
+                    <v-chip v-bind="props" v-if="client.rate_limit" label size="x-small" color="muted" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-speedometer">{{ client.rate_limit }}/min</v-chip>
                   </template>
                 </v-tooltip>
                 
@@ -98,13 +98,13 @@
                 <!-- data format -->
                 <v-tooltip text="Data format">
                   <template v-slot:activator="{ props }">
-                    <v-chip v-bind="props" v-if="client.data_format" label size="x-small" color="grey" variant="tonal" class="mb-1" prepend-icon="mdi-code-json">{{ client.data_format.toUpperCase() }}</v-chip>
+                    <v-chip v-bind="props" v-if="client.data_format" label size="x-small" color="muted" variant="tonal" class="mb-1" prepend-icon="mdi-code-json">{{ client.data_format.toUpperCase() }}</v-chip>
                   </template>
                 </v-tooltip>
                 <!-- section format -->
                 <v-tooltip text="Section format">
                   <template v-slot:activator="{ props }">
-                    <v-chip v-bind="props" v-if="client.section_format" label size="x-small" color="grey" variant="tonal" class="mb-1" prepend-icon="mdi-xml">{{ client.section_format.toUpperCase() }}</v-chip>
+                    <v-chip v-bind="props" v-if="client.section_format" label size="x-small" color="muted" variant="tonal" class="mb-1" prepend-icon="mdi-xml">{{ client.section_format.toUpperCase() }}</v-chip>
                   </template>
                 </v-tooltip>
               </div>
@@ -175,7 +175,7 @@
               <!-- LLM prompt template warning -->
               <v-tooltip text="Could not determine LLM prompt template for this model. Using default. You can pick a template manually in the client options and new templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && !client.data.api_handles_prompt_template && client.data.meta.requires_prompt_template && !client.data.dedicated_default_template" max-width="300" >
                 <template v-slot:activator="{ props }">
-                  <v-icon x-size="14" class="mr-1" v-bind="props" color="orange">mdi-alert</v-icon>
+                  <v-icon x-size="14" class="mr-1" v-bind="props" color="warning">mdi-alert</v-icon>
                 </template>
               </v-tooltip>
 

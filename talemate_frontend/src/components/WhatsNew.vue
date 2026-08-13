@@ -34,7 +34,7 @@
                             <v-window-item v-for="item in whatsNew" :key="item.version" :value="item.version">
 
                                 <div class="feature-list">
-                                    <v-card v-for="feature in item.items" :key="feature.title" color="muted-bg" class="feature-entry mb-3">
+                                    <v-card v-for="feature in item.items" :key="feature.title" color="mutedbg" class="feature-entry mb-3">
                                         <v-card-text>
                                             <div class="feature-header text-primary">{{ feature.title }}</div>
                                             <v-img

@@ -29,7 +29,7 @@
                         <br><br>
                         Add a new entry or select an existing one to get started.
                         <br><br>
-                        <v-icon color="orange" class="mr-1">mdi-alert</v-icon> If you want to add details to an acting character do that through the character manager instead.
+                        <v-icon color="warning" class="mr-1">mdi-alert</v-icon> If you want to add details to an acting character do that through the character manager instead.
                     </v-alert>
                 </v-tabs-window-item>
             </v-tabs-window>

@@ -32,7 +32,7 @@
           ref="textarea"
           v-model="editing_text"
           color="narrator"
-          bg-color="black"
+          bg-color="surface"
 
           auto-grow
 

@@ -28,7 +28,7 @@
         <v-card>
             <v-card-title>
                 {{ inspectNode.title }}
-                <v-chip color="grey-lighten-1" variant="text">{{ inspectNode.nodeId.slice(0,8) }}</v-chip>
+                <v-chip color="mutedheader" variant="text">{{ inspectNode.nodeId.slice(0,8) }}</v-chip>
                 <v-chip size="small" label class="mr-1" color="primary" variant="tonal"><strong class="mr-1">type</strong>{{ inspectNode.nodeType }}</v-chip>
             </v-card-title>
             <v-card-text class="text-caption">

@@ -39,7 +39,7 @@
                         size="x-small"
                         variant="text"
                         label
-                        color="grey-darken-1"
+                        color="muted"
                     >
                         {{ prompt.time || 0 }}s
                         <v-icon size="14" class="ml-1">mdi-clock</v-icon>

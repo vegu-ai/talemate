@@ -6,7 +6,7 @@
         <v-tooltip v-for="(option, index) in visibleQuickSettings" :key="index" :text="option.description" location="top">
             <template v-slot:activator="{ props: tooltipProps }">
                 <v-chip size="x-small" v-bind="tooltipProps" @click="toggleQuickSetting(option.value)"
-                    :color="option.status() === true ? 'success' : 'grey'"
+                    :color="option.status() === true ? 'success' : 'muted'"
                     :disabled="appBusy || !appReady" class="ma-1">
                     <v-icon class="mr-1">{{ option.icon }}</v-icon>
                     {{ option.title }}
@@ -14,7 +14,7 @@
                     <v-icon class="ml-1" v-else-if="option.status() === false">mdi-circle-outline</v-icon>
                     <v-tooltip v-else :text="option.status()">
                         <template v-slot:activator="{ props }">
-                            <v-icon class="ml-1" v-bind="props" color="orange">mdi-alert-outline</v-icon>
+                            <v-icon class="ml-1" v-bind="props" color="warning">mdi-alert-outline</v-icon>
                         </template>
                     </v-tooltip>
                 </v-chip>
@@ -104,7 +104,7 @@
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey mr-3" v-bind="props"
                             @click="cancelAudioQueue" 
-                            :color="audioPlayedForMessageId ? 'play_audio' : 'default'"
+                            :color="audioPlayedForMessageId ? 'play_audio' : ''"
                             :disabled="!audioPlayedForMessageId" 
                             icon>
                             <v-icon>mdi-volume-high</v-icon>

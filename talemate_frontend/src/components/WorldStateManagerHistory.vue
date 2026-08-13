@@ -43,7 +43,7 @@
                         </v-card-text>
                     </v-card>
 
-                    <v-sheet class="ma-4 text-caption">
+                    <v-sheet color="transparent" class="ma-4 text-caption">
                         <span class="text-muted">Total time passed:</span> {{ scene?.data?.scene_time || '?' }}
                     </v-sheet>
 

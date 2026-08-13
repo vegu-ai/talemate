@@ -4,7 +4,7 @@
             <!-- System message (non-character message) -->
             <div v-if="!message.character" class="system-message">
                 <v-chip 
-                    :color="message.subtype === 'function_call' ? 'orange' : 'info'" 
+                    :color="message.subtype === 'function_call' ? 'warning' : 'info'" 
                     size="small" 
                     class="mr-2 mb-1"
                 >

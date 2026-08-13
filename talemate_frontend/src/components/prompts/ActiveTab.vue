@@ -41,7 +41,7 @@
                 <div class="tree-container">
                     <!-- Empty state when no templates exist -->
                     <div v-if="resolvedTemplates.length === 0 && !loading" class="text-center text-medium-emphasis pa-4">
-                        <v-icon size="48" color="grey-darken-1">mdi-file-outline</v-icon>
+                        <v-icon size="48" color="muted">mdi-file-outline</v-icon>
                         <div class="mt-2 text-body-2">No templates available</div>
                         <div class="text-caption">Templates will appear here once loaded</div>
                     </div>
@@ -86,7 +86,7 @@
                         size="x-small"
                         label
                         class="ml-2"
-                        color="grey"
+                        color="muted"
                     >
                         read-only
                         <v-tooltip activator="parent" location="bottom">
@@ -169,7 +169,7 @@
 
                 <v-card v-else flat color="transparent" class="d-flex align-center justify-center" style="min-height: 300px;">
                     <v-card-text class="text-center text-medium-emphasis">
-                        <v-icon size="64" color="grey-darken-1">mdi-file-document-outline</v-icon>
+                        <v-icon size="64" color="muted">mdi-file-document-outline</v-icon>
                         <div class="mt-2">Select a template to preview</div>
                     </v-card-text>
                 </v-card>
@@ -324,7 +324,7 @@ export default {
                 case 'user':
                     return 'success';
                 case 'default':
-                    return 'grey';
+                    return 'muted';
                 default:
                     return 'primary';
             }

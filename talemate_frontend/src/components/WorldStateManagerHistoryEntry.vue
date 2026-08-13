@@ -1,7 +1,7 @@
 <template>
     <v-card elevation="7" :style="{ maxWidth: MAX_CONTENT_WIDTH }" class="mb-2" density="compact">
         <v-card-title class="text-body-2 text-high-emphasis"><v-icon class="mr-2" size="small" icon="mdi-clock"></v-icon>{{ entry.time }}
-            <span v-if="entry.id && hovered" class="text-caption text-disabled ml-2">
+            <span v-if="entry.id && hovered" class="text-caption text-medium-emphasis ml-2">
                 {{ entry.id }}
             </span>
             <span v-if="!editing && !locked && hovered" class="text-caption text-muted ml-2"><v-icon size="small" icon="mdi-pencil"></v-icon> double-click to edit</span>

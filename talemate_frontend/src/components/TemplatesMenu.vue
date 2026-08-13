@@ -45,7 +45,7 @@
                 <v-list-item-subtitle>
                     <v-chip label size="x-small" variant="outlined" class="mr-1" v-if="template.state_type">{{ template.state_type
                     }}</v-chip>
-                    <v-chip v-if="template.favorite" label size="x-small" color="orange" variant="outlined"
+                    <v-chip v-if="template.favorite" label size="x-small" color="warning" variant="outlined"
                         class="mr-1">Favorite</v-chip>
                 </v-list-item-subtitle>
             </v-list-item>

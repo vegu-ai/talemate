@@ -20,7 +20,7 @@
           <v-list-item v-for="row in rows" :key="row.key">
             <v-list-item-title class="text-body-2">
               <span class="text-primary">{{ row.agentLabel }}</span>
-              <span class="text-disabled">.</span>
+              <span class="text-medium-emphasis">.</span>
               <span>{{ row.action }}</span>
             </v-list-item-title>
             <template #append>

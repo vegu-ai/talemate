@@ -1155,7 +1155,7 @@ class RevisionMixin:
                     "uuid": str(uuid.uuid4()),
                     "agent": "editor",
                     "header": "Aborted dedupe",
-                    "color": "red",
+                    "color": "delete",
                 },
                 meta={
                     "action": "revision_dedupe",
@@ -1235,7 +1235,7 @@ class RevisionMixin:
                         "content": f"Not enough issues found, returning original text - minimum issues is {self.revision_min_issues}. Found {num_issues} issues.",
                     },
                 ],
-                color="orange",
+                color="warning",
             )
             return original_text
 

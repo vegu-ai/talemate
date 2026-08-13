@@ -59,7 +59,7 @@
             <v-card-title>
                 <v-icon size="small" class="mr-2">mdi-text-box-search</v-icon>
                 Phrase Detection
-                <v-chip label size="x-small" color="grey" class="ml-2">
+                <v-chip label size="x-small" color="muted" class="ml-2">
                     {{ phrasesCount }} phrases
                 </v-chip>
             </v-card-title>

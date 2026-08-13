@@ -33,10 +33,10 @@
                 </template>
                 <span class="font-weight-bold" :class="`text-${t2iColor}`">Text to Image</span>
                 <template v-if="t2iBackendName || t2iGeneratorLabel">
-                  <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                  <v-divider vertical class="mx-1" color="mutedheader" />
                   <span v-if="t2iBackendName" class="text-medium-emphasis">{{ t2iBackendName }}</span>
                   <template v-if="t2iBackendName && t2iGeneratorLabel">
-                    <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                    <v-divider vertical class="mx-1" color="mutedheader" />
                   </template>
                   <span v-if="t2iGeneratorLabel" class="text-muted">{{ t2iGeneratorLabel }}</span>
                 </template>
@@ -58,10 +58,10 @@
                 </template>
                 <span class="font-weight-bold" :class="`text-${editColor}`">Image Edit</span>
                 <template v-if="editBackendName || editGeneratorLabel">
-                  <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                  <v-divider vertical class="mx-1" color="mutedheader" />
                   <span v-if="editBackendName" class="text-medium-emphasis">{{ editBackendName }}</span>
                   <template v-if="editBackendName && editGeneratorLabel">
-                    <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                    <v-divider vertical class="mx-1" color="mutedheader" />
                   </template>
                   <span v-if="editGeneratorLabel" class="text-muted">{{ editGeneratorLabel }}</span>
                 </template>
@@ -83,10 +83,10 @@
                 </template>
                 <span class="font-weight-bold" :class="`text-${analysisColor}`">Image Analysis</span>
                 <template v-if="analysisBackendName || analysisGeneratorLabel">
-                  <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                  <v-divider vertical class="mx-1" color="mutedheader" />
                   <span v-if="analysisBackendName" class="text-medium-emphasis">{{ analysisBackendName }}</span>
                   <template v-if="analysisBackendName && analysisGeneratorLabel">
-                    <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                    <v-divider vertical class="mx-1" color="mutedheader" />
                   </template>
                   <span v-if="analysisGeneratorLabel" class="text-muted">{{ analysisGeneratorLabel }}</span>
                 </template>

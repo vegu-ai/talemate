@@ -75,7 +75,7 @@
                             class="template-item"
                         >
                             <template v-slot:prepend>
-                                <v-icon size="small" color="grey">mdi-file-document-outline</v-icon>
+                                <v-icon size="small" color="muted">mdi-file-document-outline</v-icon>
                             </template>
                             <v-list-item-title class="text-body-2">{{ tmpl.name }}</v-list-item-title>
                         </v-list-item>
@@ -92,14 +92,14 @@
 
                 <v-card v-if="selectedTemplate" flat class="editor-container">
                     <v-card-subtitle class="pa-2 d-flex align-center">
-                        <v-chip size="small" label :color="selectedSource === 'user' ? 'primary' : 'grey'" variant="tonal">
+                        <v-chip size="small" label :color="selectedSource === 'user' ? 'primary' : 'muted'" variant="tonal">
                             {{ selectedSource === 'user' ? 'user/' : '' }}{{ selectedTemplate.name }}
                         </v-chip>
                         <v-chip
                             v-if="selectedSource === 'builtin'"
                             size="small"
                             label
-                            color="grey"
+                            color="muted"
                             variant="outlined"
                             class="ml-2"
                         >
@@ -163,7 +163,7 @@
 
                 <v-card v-else flat color="transparent" class="d-flex align-center justify-center" style="min-height: 300px;">
                     <v-card-text class="text-center text-medium-emphasis">
-                        <v-icon size="64" color="grey-darken-1">mdi-file-document-edit-outline</v-icon>
+                        <v-icon size="64" color="muted">mdi-file-document-edit-outline</v-icon>
                         <div class="mt-2">Select a template to view or edit</div>
                         <div class="text-caption">User templates are fully editable. Built-in templates are read-only but can be copied.</div>
                     </v-card-text>
@@ -196,7 +196,7 @@
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn color="grey" variant="text" @click="showNewDialog = false">Cancel</v-btn>
+                    <v-btn color="muted" variant="text" @click="showNewDialog = false">Cancel</v-btn>
                     <v-btn color="primary" variant="tonal" :disabled="!newFormValid" @click="createTemplate">Create</v-btn>
                 </v-card-actions>
             </v-card>

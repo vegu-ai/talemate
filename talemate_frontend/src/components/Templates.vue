@@ -73,7 +73,7 @@
             <v-chip label size="x-small" color="primary" class="ml-1">
                 <strong class="mr-2 text-deep-purple-lighten-3">Group</strong>{{ toLabel(group.name) }}
             </v-chip>
-            <v-chip label size="x-small" color="grey" class="ml-1">
+            <v-chip label size="x-small" color="muted" class="ml-1">
                 <strong class="mr-2 text-high-emphasis">Type</strong>{{ toLabel(template.template_type) }}
             </v-chip>
         </v-card-title>
@@ -83,7 +83,7 @@
             <v-chip label size="x-small" color="primary" class="ml-1">
                 <strong class="mr-2 text-deep-purple-lighten-3">Group</strong>{{ toLabel(group.name) }}
             </v-chip>
-            <v-chip label size="x-small" color="grey" class="ml-1" v-if="template.template_type">
+            <v-chip label size="x-small" color="muted" class="ml-1" v-if="template.template_type">
                 {{ toLabel(template.template_type) }}
             </v-chip>
         </v-card-title>

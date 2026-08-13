@@ -11,7 +11,7 @@
     <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-card flat>
         <v-card-text>
-            <v-card flat class="mb-2" color="mutedbg">
+            <v-card flat color="transparent" class="mb-2">
                 <v-card-text class="pa-2">
                     <v-row dense align="center" no-gutters>
                         <v-col cols="12" sm="12" md="auto">
@@ -149,7 +149,7 @@
                                 <v-tooltip text="Delete entry" >
                                     <template v-slot:activator="{ props }">
                                         <v-btn icon size="x-small" v-bind="props" rounded="sm"
-                                            variant="text" color="red-darken-1"
+                                            variant="text" color="delete"
                                             @click.stop="remove(entry.id)">
                                             <v-icon>mdi-close-box-outline</v-icon>
                                         </v-btn>
@@ -173,10 +173,10 @@
                                             v-if="entryIsPinned(entry.id)" color="success" icon
                                             @click.stop="selectPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
                                         <v-btn v-bind="props" size="x-small" rounded="sm" variant="text"
-                                            v-else-if="entryHasPin(entry.id)" color="red-darken-2" icon
+                                            v-else-if="entryHasPin(entry.id)" color="delete" icon
                                             @click.stop="selectPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
                                         <v-btn v-bind="props" size="x-small" rounded="sm" variant="text"
-                                            v-else color="grey-lighten-2" icon
+                                            v-else color="mutedheader" icon
                                             @click.stop="addPin(entry.id)"><v-icon>mdi-pin</v-icon></v-btn>
                                     </template>
                                 </v-tooltip>

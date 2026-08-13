@@ -70,7 +70,7 @@ A slot a theme does not carry yet is filled in with the color currently in use, 
 | Unsaved / Dirty / Favorite marker | The three state markers: not saved yet, edited, favorited |
 | Persona | Persona and character card icons |
 | Highlight 1 to 7 | The seven template and category accents — attributes, details, state reinforcement, spices, writing and visual style, scene types, scene tool shortcuts |
-| Disabled | Text and icons of a switched-off setting |
+| Inactive | Text and icons of a switched-off setting. Named `inactive` rather than `disabled` because Vuetify turns every slot name into a `text-<name>` class, and `text-disabled` is also one of its own utilities |
 | Selected node module / Selected locked node module | The two module tile borders in the node editor library |
 | Success / Info / Warning / Error | The status colors, used by toasts, alerts and any component that asks for a status |
 

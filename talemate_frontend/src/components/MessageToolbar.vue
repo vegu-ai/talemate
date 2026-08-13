@@ -1,13 +1,13 @@
 <template>
   <!-- editing indicator -->
-  <v-chip size="x-small" label color="indigo-lighten-4" variant="tonal" v-if="editing">
+  <v-chip size="x-small" label color="highlight1" variant="tonal" v-if="editing">
     <v-icon class="mr-1">mdi-pencil</v-icon>
     Editing - Press `enter` to submit. Click anywhere to cancel.
   </v-chip>
 
   <template v-else>
     <!-- edit hint -->
-    <v-chip size="x-small" color="grey-lighten-1" variant="text" class="mr-1">
+    <v-chip size="x-small" color="mutedheader" variant="text" class="mr-1">
       <v-icon>mdi-pencil</v-icon>
       {{ uxLocked || appBusy ? 'Editing locked' : 'Double-click to edit.' }}
     </v-chip>

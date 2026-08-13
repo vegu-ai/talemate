@@ -7,7 +7,7 @@
         variant="text"
         density="comfortable"
         :icon="active ? 'mdi-link-variant' : 'mdi-link-variant-off'"
-        :color="active ? 'primary' : 'grey'"
+        :color="active ? 'primary' : 'muted'"
         @click="$emit('toggle')"
       />
     </template>

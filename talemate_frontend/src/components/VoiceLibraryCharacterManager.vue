@@ -41,7 +41,7 @@
       <template v-slot:[`item.name`]="{ item }">
         <div class="d-flex align-center">
           <v-avatar
-            :color="item.color || 'grey'"
+            :color="item.color || 'muted'"
             size="24"
             class="mr-2"
           >

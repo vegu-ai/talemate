@@ -3,7 +3,7 @@
         <!-- New Scene Section -->
         <v-row>
             <v-col cols="12">
-                <v-card elevation="2" class="mt-4" color="grey-darken-2" variant="tonal">
+                <v-card elevation="2" class="mt-4" color="surface-light" variant="tonal">
                     <v-card-text class="d-flex justify-end align-center flex-wrap">
                         <v-chip 
                             v-if="selectedSharedContext" 
@@ -158,7 +158,7 @@
                             class="mt-2"
                         />
                     </div>
-                    <v-card v-else elevation="0" color="grey-darken-3" variant="tonal" class="mt-2">
+                    <v-card v-else elevation="0" color="surface-light" variant="tonal" class="mt-2">
                         <v-card-text class="text-medium-emphasis">
                             <span v-if="selectedSharedContext">There are no shared characters in the shared context.</span>
                             <span v-else>There are no characters in the current scene.</span>

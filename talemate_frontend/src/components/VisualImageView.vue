@@ -1,7 +1,7 @@
 <template>
   <v-row>
     <v-col cols="7">
-        <v-card elevation="7" color="grey-darken-3" variant="outlined">
+        <v-card elevation="7" color="surface-light" variant="outlined">
           <v-card-text>
             <CoverBBoxEditor
               v-if="editable && activeTab === 'cover_crop'"
@@ -58,15 +58,15 @@
                 </v-list-item>
               </v-list>
               
-              <v-card elevation="7" class="mt-2" color="grey" variant="tonal" v-if="meta.instructions">
+              <v-card elevation="7" class="mt-2" color="muted" variant="tonal" v-if="meta.instructions">
                 <v-card-title class="text-primary">Instructions</v-card-title>
                 <v-card-text class="pre-wrap">{{ meta.instructions }}</v-card-text>
               </v-card>
-              <v-card elevation="7" class="mt-2" color="grey" variant="tonal" v-if="meta.prompt">
+              <v-card elevation="7" class="mt-2" color="muted" variant="tonal" v-if="meta.prompt">
                 <v-card-title class="text-success">Prompt</v-card-title>
                 <v-card-text class="pre-wrap">{{ meta.prompt }}</v-card-text>
               </v-card>
-              <v-card elevation="7" class="mt-2" color="grey" variant="tonal" v-if="meta.negative_prompt">
+              <v-card elevation="7" class="mt-2" color="muted" variant="tonal" v-if="meta.negative_prompt">
                 <v-card-title class="text-delete">Negative Prompt</v-card-title>
                 <v-card-text class="pre-wrap">{{ meta.negative_prompt }}</v-card-text>
               </v-card>

@@ -830,12 +830,12 @@ export default {
 
 .module-locked-selected {
     border-width: 1px;
-    border-color: rgb(var(--v-theme-locked_node_selected));
+    border-color: rgb(var(--v-theme-module_locked_selected));
 }
 
 .module-selected {
     border-width: 1px;
-    border-color: rgb(var(--v-theme-scene_node_selected));
+    border-color: rgb(var(--v-theme-module_selected));
 }
 
 /* Reduce left indent for nested tree items */

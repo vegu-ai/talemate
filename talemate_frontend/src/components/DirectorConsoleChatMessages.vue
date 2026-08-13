@@ -118,7 +118,7 @@ export default {
     emits: ['confirm-action', 'remove-message', 'regenerate-last'],
     methods: {
         getMessageColor(m) {
-            if(m && (m.source === 'user' || m.type === 'user_interaction')) return 'dchat_msg_user';
+            if(m && (m.source === 'user' || m.type === 'user_interaction')) return 'actor';
             if(m && m.type === 'action_result') return 'dchat_msg_action_result';
             if(m && m.type === 'compaction_notice') return 'dchat_msg_compaction';
             if(m && m.type === 'asset_view') return 'dchat_msg_director';

@@ -68,8 +68,8 @@
     </div>
     <v-row class="ma-5" no-gutters>
         <v-col cols="8" class="pr-3">
-            <v-card color="black">
-                <v-card-text style="background-color: black;">
+            <v-card color="background">
+                <v-card-text>
                     <div>
                         <div class="mb-2 d-flex align-center">
                             <v-icon class="mr-2" :color="getColor('narrator_messages', config.narrator_messages?.color)">mdi-script-text-outline</v-icon>

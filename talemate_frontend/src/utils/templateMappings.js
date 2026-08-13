@@ -18,7 +18,6 @@ const THEME_APP_SLOTS = [
     'unsaved',
     'favorite',
     'dirty',
-    'instructions',
     'persona',
     'highlight1',
     'highlight2',
@@ -27,15 +26,13 @@ const THEME_APP_SLOTS = [
     'highlight5',
     'highlight6',
     'highlight7',
-    'subdued1',
-    'subdued2',
-    'subdued3',
-    'subdued4',
-    'subdued5',
-    'subdued6',
-    'subdued7',
-    'enabled',
     'disabled',
+    'module_selected',
+    'module_locked_selected',
+    'success',
+    'info',
+    'warning',
+    'error',
 ];
 
 /**
@@ -63,21 +60,6 @@ export const THEME_COLOR_GROUPS = [
         ],
     },
     {
-        key: 'node_editor',
-        title: 'Node editor',
-        icon: 'mdi-graph-outline',
-        slots: [
-            'nodeeditorbg',
-            'core_node',
-            'core_node_selected',
-            'template_node',
-            'template_node_selected',
-            'scene_node',
-            'scene_node_selected',
-            'locked_node_selected',
-        ],
-    },
-    {
         key: 'messages',
         title: 'Messages',
         icon: 'mdi-message-text-outline',
@@ -94,8 +76,7 @@ export const THEME_COLOR_GROUPS = [
             'emphasis',
             'entities',
             'play_audio',
-            'avatar_border',
-            'card_border',
+            'border',
             'defaultBadge',
         ],
     },
@@ -105,13 +86,9 @@ export const THEME_COLOR_GROUPS = [
         icon: 'mdi-forum-outline',
         slots: [
             'dchat_msg_director',
-            'dchat_msg_user',
             'dchat_msg_action_result',
-            'dchat_msg_loading',
             'dchat_msg_compaction',
-            'dchat_msg_code',
             'hchat_msg_help',
-            'hchat_msg_user',
             'hchat_msg_doc_result',
         ],
     },
@@ -156,11 +133,13 @@ export const THEME_APPEARANCE_MAP = {
 const THEME_SLOT_LABELS = {
     mutedheader: 'Muted header',
     mutedbg: 'Muted background',
-    nodeeditorbg: 'Node editor background',
-    // the template's own `favorite` and `instructions` fields sit next to these
-    // slots — the labels have to say which of the two is meant
+    // the template's own `favorite` field sits next to this slot — the label has
+    // to say which of the two is meant
     favorite: 'Favorite marker',
-    instructions: 'Instructions text',
+    module_selected: 'Selected node module',
+    module_locked_selected: 'Selected locked node module',
+    border: 'Avatar and card borders',
+    defaultBadge: 'Default asset badge',
 };
 
 const THEME_SLOT_PREFIXES = {

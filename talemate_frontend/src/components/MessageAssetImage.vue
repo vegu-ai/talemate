@@ -242,7 +242,7 @@ export default {
   margin-bottom: 4px;
   clear: left;
   overflow: hidden;
-  border: 2px solid rgb(var(--v-theme-avatar_border));
+  border: 2px solid rgb(var(--v-theme-border));
   width: var(--asset-width);
 }
 

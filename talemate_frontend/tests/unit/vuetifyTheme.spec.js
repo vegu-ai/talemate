@@ -3,8 +3,7 @@ import vuetify, { applyTheme, flattenThemeColors } from "@/plugins/vuetify";
 
 const THEME = {
     colors: {
-        app: { primary: "#101010", cornflowerblue: undefined },
-        node_editor: { core_node: "#202020", locked_node_selected: "#252525" },
+        app: { primary: "#101010", module_selected: "#202020", module_locked_selected: "#252525", cornflowerblue: undefined },
         messages: { narrator: "#303030", actor: "#404040" },
         chats: { hchat_msg_help: "#505050" },
         surfaces: { background: "#606060", surface_bright: "#707070", on_surface_variant: "#808080" },
@@ -27,8 +26,8 @@ describe("flattenThemeColors", () => {
     it("flattens every group into the slot namespace vuetify uses", () => {
         expect(flattenThemeColors(THEME)).toEqual({
             primary: "#101010",
-            core_node: "#202020",
-            locked_node_selected: "#252525",
+            module_selected: "#202020",
+            module_locked_selected: "#252525",
             narrator: "#303030",
             actor: "#404040",
             character: "#404040",
@@ -43,16 +42,24 @@ describe("flattenThemeColors", () => {
         const flat = flattenThemeColors({
             colors: {
                 surfaces: { surface_light: "#111111", surface_variant: "#222222" },
-                node_editor: { core_node_selected: "#333333" },
-                chats: { dchat_msg_code: "#444444" },
+                chats: { dchat_msg_compaction: "#444444" },
             },
         });
         expect(flat).toEqual({
             "surface-light": "#111111",
             "surface-variant": "#222222",
-            core_node_selected: "#333333",
-            dchat_msg_code: "#444444",
+            dchat_msg_compaction: "#444444",
         });
+    });
+
+    it("drops a group the theme no longer carries", () => {
+        const flat = flattenThemeColors({
+            colors: {
+                app: { primary: "#101010" },
+                node_editor: { core_node: "#202020" },
+            },
+        });
+        expect(flat).toEqual({ primary: "#101010" });
     });
 
     it("returns null for a missing or empty theme", () => {

@@ -13,6 +13,9 @@
 <script>
 import { statusTransition } from '@/utils/statusNotification';
 
+// status types the theme carries a color slot of the same name for
+const STATUS_COLORS = ['success', 'error', 'warning', 'info'];
+
 export default {
     data() {
         return {
@@ -57,18 +60,7 @@ export default {
         },
 
         notificationColor: function() {
-            switch(this.statusMessageType) {
-                case 'success':
-                    return 'success';
-                case 'error':
-                    return 'red-darken-2';
-                case 'warning':
-                    return 'orange-darken-4';
-                case 'info':
-                    return 'info';
-                default:
-                    return 'grey-darken-4';
-            }
+            return STATUS_COLORS.includes(this.statusMessageType) ? this.statusMessageType : 'mutedbg';
         },
 
         handleMessage(data) {

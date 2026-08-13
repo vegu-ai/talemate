@@ -48,7 +48,6 @@ from talemate.world_state.templates.theme import (
     AppColors,
     ChatColors,
     MessageColors,
-    NodeEditorColors,
     SurfaceColors,
     Theme,
     ThemeAppearance,
@@ -194,7 +193,7 @@ class TestThemeTemplateModel:
         template = make_template()
 
         assert template.colors.app.primary == "#9575CD"
-        assert template.colors.node_editor.core_node == "#78909C"
+        assert template.colors.app.module_locked_selected == "#78909C"
         assert template.colors.messages.narrator == "#A180AE"
         assert template.colors.chats.hchat_msg_doc_result == "#64B5F6"
         assert template.appearance.backdrop_panel_opacity == 0.8
@@ -279,9 +278,13 @@ class TestThemeTemplateModel:
     def test_built_in_default_payload_carries_the_code_editor_theme(self):
         assert default_theme()["code_editor"] == "one-dark"
 
-    def test_locked_node_selected_matches_core_node(self):
-        colors = make_template().colors.node_editor
-        assert colors.locked_node_selected == colors.core_node
+    def test_semantic_slots_carry_vuetifys_stock_dark_values(self):
+        colors = make_template().colors.app
+
+        assert colors.success == "#4CAF50"
+        assert colors.info == "#2196F3"
+        assert colors.warning == "#FB8C00"
+        assert colors.error == "#CF6679"
 
     def test_appearance_carries_no_asset_settings(self):
         fields = set(ThemeAppearance.model_fields)
@@ -436,7 +439,7 @@ class TestThemeColorValidation:
         assert AppColors(primary=color).primary == "#9575CD"
 
     @pytest.mark.parametrize(
-        "model", [AppColors, NodeEditorColors, MessageColors, ChatColors, SurfaceColors]
+        "model", [AppColors, MessageColors, ChatColors, SurfaceColors]
     )
     def test_every_default_is_a_valid_color(self, model):
         for name, value in model().model_dump().items():
@@ -467,6 +470,47 @@ class TestThemeColorValidation:
 # ---------------------------------------------------------------------------
 # shipped group
 # ---------------------------------------------------------------------------
+
+
+def _relative_luminance(color: str) -> float:
+    channels = [int(color[i : i + 2], 16) / 255 for i in (1, 3, 5)]
+    linear = [
+        c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels
+    ]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+
+def contrast_ratio(a: str, b: str) -> float:
+    luminances = sorted((_relative_luminance(a), _relative_luminance(b)))
+    return (luminances[1] + 0.05) / (luminances[0] + 0.05)
+
+
+class TestShippedThemeContrast:
+    """The status colors are the ones a theme author is most likely to get wrong,
+    because they read as fixed brand colors rather than theme slots. #276 asks
+    that consolidating slots cannot quietly cost readability.
+
+    The floor is the 3:1 that WCAG asks of user interface components - these
+    colors paint chips, icons and alert borders rather than body text. The
+    tightest of the eight is dark `error` at 4.47:1, which is vuetify's own
+    stock value.
+    """
+
+    FLOOR = 3.0
+
+    @pytest.fixture
+    def shipped(self) -> Group:
+        return Group.load(SHIPPED_THEMES_PATH)
+
+    @pytest.mark.parametrize("uid", ["dark", "light"])
+    @pytest.mark.parametrize("slot", ["success", "info", "warning", "error"])
+    def test_status_colors_clear_the_contrast_floor(self, shipped, uid, slot):
+        colors = shipped.templates[uid].colors
+        ratio = contrast_ratio(getattr(colors.app, slot), colors.surfaces.surface)
+
+        assert ratio >= self.FLOOR, (
+            f"{uid}.{slot} measures {ratio:.2f}:1 against its own surface"
+        )
 
 
 class TestShippedThemesGroup:
@@ -554,7 +598,6 @@ class TestShippedDarkTheme:
     def test_declares_every_slot(self, raw):
         for group_name, model in [
             ("app", AppColors),
-            ("node_editor", NodeEditorColors),
             ("messages", MessageColors),
             ("chats", ChatColors),
             ("surfaces", SurfaceColors),
@@ -644,7 +687,6 @@ class TestShippedLightTheme:
     def test_declares_every_slot(self, raw):
         for group_name, model in [
             ("app", AppColors),
-            ("node_editor", NodeEditorColors),
             ("messages", MessageColors),
             ("chats", ChatColors),
             ("surfaces", SurfaceColors),
@@ -732,7 +774,6 @@ class TestResolveTheme:
         assert set(resolved) == {"colors", "appearance", "dark", "code_editor"}
         assert set(resolved["colors"]) == {
             "app",
-            "node_editor",
             "messages",
             "chats",
             "surfaces",

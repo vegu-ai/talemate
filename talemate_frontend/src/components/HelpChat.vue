@@ -231,7 +231,7 @@ export default {
     },
     methods: {
         getMessageColor(m) {
-            if(m && m.source === 'user') return 'hchat_msg_user';
+            if(m && m.source === 'user') return 'actor';
             if(m && m.type === 'doc_result') return 'hchat_msg_doc_result';
             return 'hchat_msg_help';
         },

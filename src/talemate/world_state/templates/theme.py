@@ -20,7 +20,6 @@ __all__ = [
     "ThemeColors",
     "ThemeAppearance",
     "AppColors",
-    "NodeEditorColors",
     "MessageColors",
     "ChatColors",
     "SurfaceColors",
@@ -78,7 +77,6 @@ class AppColors(ColorGroup):
     unsaved: str = "#FFD54F"
     favorite: str = "#FFD740"
     dirty: str = "#FFB74D"
-    instructions: str = "#FFE0B2"
     persona: str = "#F48FB1"
     highlight1: str = "#9FA8DA"
     highlight2: str = "#CE93D8"
@@ -87,26 +85,15 @@ class AppColors(ColorGroup):
     highlight5: str = "#FFE082"
     highlight6: str = "#FFCC80"
     highlight7: str = "#90CAF9"
-    subdued1: str = "#303F9F"
-    subdued2: str = "#7B1FA2"
-    subdued3: str = "#689F38"
-    subdued4: str = "#D32F2F"
-    subdued5: str = "#FFA000"
-    subdued6: str = "#F57C00"
-    subdued7: str = "#1976D2"
-    enabled: str = "#81C784"
     disabled: str = "#E57373"
-
-
-class NodeEditorColors(ColorGroup):
-    nodeeditorbg: str = "#616161"
-    core_node: str = "#78909C"
-    core_node_selected: str = "#78909C"
-    template_node: str = "#A1887F"
-    template_node_selected: str = "#A1887F"
-    scene_node: str = "#9575CD"
-    scene_node_selected: str = "#7E57C2"
-    locked_node_selected: str = "#78909C"
+    module_selected: str = "#7E57C2"
+    module_locked_selected: str = "#78909C"
+    # vuetify resolves its own semantics from these names, so the defaults are
+    # its stock dark values rather than a palette of talemate's own
+    success: str = "#4CAF50"
+    info: str = "#2196F3"
+    warning: str = "#FB8C00"
+    error: str = "#CF6679"
 
 
 class MessageColors(ColorGroup):
@@ -124,20 +111,15 @@ class MessageColors(ColorGroup):
     emphasis: str = "#B39DDB"
     entities: str = "#FFE082"
     play_audio: str = "#FBC02D"
-    avatar_border: str = "#424242"
-    card_border: str = "#424242"
+    border: str = "#424242"
     defaultBadge: str = "#E64A19"
 
 
 class ChatColors(ColorGroup):
     dchat_msg_director: str = "#FF8A65"
-    dchat_msg_user: str = "#B39DDB"
     dchat_msg_action_result: str = "#FFCCBC"
-    dchat_msg_loading: str = "#FF7043"
     dchat_msg_compaction: str = "#616161"
-    dchat_msg_code: str = "#FFCCBC"
     hchat_msg_help: str = "#90A4AE"
-    hchat_msg_user: str = "#B39DDB"
     hchat_msg_doc_result: str = "#64B5F6"
 
 
@@ -156,7 +138,6 @@ class SurfaceColors(ColorGroup):
 
 class ThemeColors(pydantic.BaseModel):
     app: AppColors = pydantic.Field(default_factory=AppColors)
-    node_editor: NodeEditorColors = pydantic.Field(default_factory=NodeEditorColors)
     messages: MessageColors = pydantic.Field(default_factory=MessageColors)
     chats: ChatColors = pydantic.Field(default_factory=ChatColors)
     surfaces: SurfaceColors = pydantic.Field(default_factory=SurfaceColors)

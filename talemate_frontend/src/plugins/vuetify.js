@@ -9,7 +9,7 @@ import { vuetifySlotName } from '@/utils/templateMappings'
 
 // The groups exist for the theme editor only — vuetify wants every slot at
 // one level.
-const THEME_COLOR_GROUPS = ['app', 'surfaces', 'node_editor', 'messages', 'chats'];
+const THEME_COLOR_GROUPS = ['app', 'surfaces', 'messages', 'chats'];
 
 const vuetify = createVuetify({
   theme : {
@@ -35,52 +35,47 @@ const vuetify = createVuetify({
           highlight5: colors.amber.lighten3,
           highlight6: colors.orange.lighten3,
           highlight7: colors.blue.lighten3,
-          subdued1: colors.indigo.darken2,
-          subdued2: colors.purple.darken2,
-          subdued3: colors.lightGreen.darken2,
-          subdued4: colors.red.darken2,
-          subdued5: colors.amber.darken2,
-          subdued6: colors.orange.darken2,
-          subdued7: colors.blue.darken2,
           persona: colors.pink.lighten3,
           dirty: colors.orange.lighten2,
-          instructions: colors.orange.lighten4,
 
-          enabled: colors.green.lighten2,
           disabled: colors.red.lighten2,
 
-          // node editor
-          nodeeditorbg: colors.grey.darken2,
-          core_node: colors.blueGrey.lighten1,
-          core_node_selected: colors.blueGrey.lighten1,
-          template_node: colors.brown.lighten2,
-          template_node_selected: colors.brown.lighten2,
-          scene_node: colors.deepPurple.lighten2,
-          scene_node_selected: colors.deepPurple.lighten1,
+          // vuetify's stock dark values, pinned so a future vuetify release
+          // cannot move them out from under Talemate Dark
+          success: '#4CAF50',
+          info: '#2196F3',
+          warning: '#FB8C00',
+          error: '#CF6679',
+
+          // node module tiles in the node editor library
+          module_selected: colors.deepPurple.lighten1,
+          module_locked_selected: colors.blueGrey.lighten1,
 
           // messages
-          narrator: colors.deepPurple.lighten3,
+          narrator: '#A180AE',
+          actor: colors.deepPurple.lighten3,
           character: colors.shades.white,
           director: colors.deepOrange.base,
           time: colors.amber.lighten4,
           context_investigation: colors.orange.lighten4,
+          information: '#BA8574',
+          quotes: colors.shades.white,
+          parentheses: '#DB9DC2',
+          brackets: '#DC5D5D',
+          emphasis: colors.deepPurple.lighten3,
+          entities: colors.amber.lighten3,
           play_audio: colors.yellow.darken2,
-          avatar_border: colors.grey.darken3,
-          card_border: colors.grey.darken3,
+          border: colors.grey.darken3,
           defaultBadge: colors.deepOrange.darken2,
 
 
           // director chat
           dchat_msg_director: colors.deepOrange.lighten2,
-          dchat_msg_user: colors.deepPurple.lighten3,
           dchat_msg_action_result: colors.deepOrange.lighten4,
-          dchat_msg_loading: colors.deepOrange.lighten1,
           dchat_msg_compaction: colors.grey.darken2,
-          dchat_msg_code: colors.deepOrange.lighten4,
 
           // help chat
           hchat_msg_help: colors.blueGrey.lighten2,
-          hchat_msg_user: colors.deepPurple.lighten3,
           hchat_msg_doc_result: colors.blue.lighten2,
           
           // html colors

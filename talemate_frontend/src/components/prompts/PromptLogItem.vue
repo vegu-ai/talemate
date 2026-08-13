@@ -51,7 +51,7 @@
             <v-chip
                 v-if="prompt.agent_name"
                 size="x-small"
-                color="grey-lighten-1"
+                color="mutedheader"
                 variant="text"
             >
                 {{ prompt.agent_name }}
@@ -59,7 +59,7 @@
             <v-chip
                 v-if="prompt.agent_action"
                 size="x-small"
-                color="grey"
+                color="muted"
                 variant="text"
             >
                 {{ prompt.agent_action }}

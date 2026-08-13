@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 import { THEME_COLOR_GROUPS, hydrateThemeTemplate, vuetifySlotName } from "@/utils/templateMappings";
-import { flattenThemeColors } from "@/plugins/vuetify";
+import vuetify, { flattenThemeColors } from "@/plugins/vuetify";
 
 function read(path) {
     return readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf-8");
@@ -105,6 +105,26 @@ describe("theme color slot parity", () => {
         expect(Object.keys(flat).sort()).toEqual(
             surfaces.slots.map(slot => slot.replace(/_/g, "-")).sort(),
         );
+    });
+
+    // a slot name inside a `:color` prop is a free string that nothing checks,
+    // so a component can name a slot the fallback theme never declares. until
+    // the first app_config arrives, vuetify generates no rule for it and the
+    // element draws uncolored. asserting the resolved value rather than the
+    // source text also rejects a declared slot that resolves to undefined,
+    // which is what a mistyped `colors.<name>.<shade>` produces.
+    it("the fallback theme resolves every slot the backend ships to a color", () => {
+        const fallback = vuetify.theme.themes.value.dark.colors;
+
+        for (const group of groups) {
+            for (const slot of group.slots) {
+                const name = vuetifySlotName(group.key, slot);
+                expect(
+                    fallback[name],
+                    `${group.key}.${slot} does not resolve to a color in the fallback theme`,
+                ).toMatch(/^#[0-9a-fA-F]{6}$/);
+            }
+        }
     });
 
     it("the theme editor carries the backend's mode flag", () => {

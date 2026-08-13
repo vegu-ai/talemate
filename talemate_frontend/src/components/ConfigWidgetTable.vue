@@ -318,6 +318,6 @@ export default {
 /* outlined-variant borders are currentColor (full text brightness) since the
    cards carry no color prop — tone them down to a subtle frame */
 .v-card--variant-outlined {
-    border-color: rgb(var(--v-theme-card_border));
+    border-color: rgb(var(--v-theme-border));
 }
 </style>

@@ -233,7 +233,7 @@
               <!-- concurrent inference toggle -->
               <v-tooltip v-if="client.data && client.data.can_support_concurrent_inference" :text="(client.data && client.data.concurrent_inference_enabled) ? 'Disable concurrent requests' : 'Enable concurrent requests'" max-width="300">
                 <template v-slot:activator="{ props }">
-                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleConcurrentInference(index)" icon="mdi-approximately-equal" :color="(client.data && client.data.concurrent_inference_enabled) ? 'blue-lighten-3' : ''"></v-btn>
+                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleConcurrentInference(index)" icon="mdi-approximately-equal" :color="(client.data && client.data.concurrent_inference_enabled) ? 'highlight7' : ''"></v-btn>
                 </template>
               </v-tooltip>
   

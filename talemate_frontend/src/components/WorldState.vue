@@ -575,6 +575,6 @@ export default {
     display: inline-flex;
     transform: translateX(8px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-    border: 2px solid rgb(var(--v-theme-avatar_border));
+    border: 2px solid rgb(var(--v-theme-border));
 }
 </style>

@@ -4,7 +4,7 @@
     <div v-if="selectedAsset" class="mb-4 d-flex flex-column align-center">
       <div class="text-caption text-medium-emphasis mb-2">{{ label }}</div>
       <div class="reference-preview-wrapper position-relative">
-        <v-card variant="outlined" class="reference-preview" :style="{ borderColor: 'rgb(var(--v-theme-avatar_border))', width: '200px' }">
+        <v-card variant="outlined" class="reference-preview" :style="{ borderColor: 'rgb(var(--v-theme-border))', width: '200px' }">
           <div class="reference-image-container" :class="aspectClass">
             <v-img
               v-if="selectedAssetSrc"

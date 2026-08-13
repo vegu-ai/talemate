@@ -402,7 +402,7 @@ export default {
                 agent_persona: "Agent personas define how an agent should present and behave in prompts (tone, perspective, style). Assign a persona per agent in Scene Settings. (Currently director only)",
                 scene_type: "Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene.",
                 scene_tool_shortcut: "Scene tool shortcut templates package a scene tool action together with a label, an icon and canned instructions. Installing one adds the shortcut to your scene tools menu, where it can be run with a single click.",
-                theme: "Theme templates hold a complete set of colors for the app, its surfaces, the node editor, the scene messages and the chats, together with how message text is styled. Applying one repaints Talemate with those colors.",
+                theme: "Theme templates hold a complete set of colors for the app, its surfaces, the scene messages and the chats, together with how message text is styled. Applying one repaints Talemate with those colors. The node editor canvas keeps its own colors, but the borders of the module tiles in its library follow the App panel.",
             }
         };
     },

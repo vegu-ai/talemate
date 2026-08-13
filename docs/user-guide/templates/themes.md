@@ -1,6 +1,6 @@
 # Themes
 
-Theme templates hold a complete set of colors for the interface surfaces, the application, the node editor, the scene messages and the chats, together with how message text is styled, which color scheme the in-app code editors use and whether the theme is light or dark. Applying one repaints Talemate with those colors.
+Theme templates hold a complete set of colors for the interface surfaces, the application, the scene messages and the chats, together with how message text is styled, which color scheme the in-app code editors use and whether the theme is light or dark. Applying one repaints Talemate with those colors.
 
 A theme is a world state template like any other — it lives in a template group, is edited in the Templates tab, and is shared as a file.
 
@@ -34,17 +34,64 @@ Mark the template as a favorite to make it easier to find in the list of templat
 
 ### Colors
 
-The colors are edited in five accordion panels, 67 slots in total. Each slot opens a color picker and shows the color it currently holds; the theme is saved when the picker closes.
+The colors are edited in four accordion panels, 51 slots in total. Each slot opens a color picker and shows the color it currently holds; the theme is saved when the picker closes.
 
 | Panel | Slots | What it covers |
 |-------|-------|----------------|
 | **Surfaces** | 6 | The page background and the card surfaces everything else is drawn on. These decide whether the theme reads as light or dark, and Talemate works out readable text colors from them |
-| **App** | 29 | The general interface palette — primary and secondary, the muted tones, the highlight and subdued series, and the state colors (enabled, disabled, unsaved, dirty, favorite marker, delete, cancel) |
-| **Node editor** | 8 | The node editor background and the colors that tell core, template, scene and locked node modules apart, selected and unselected |
-| **Messages** | 15 | Every scene message type and text markup type, plus the message chrome around them — the play-audio icon, avatar and card borders, and the default badge |
-| **Chats** | 9 | The message colors of the director chat and the help chat |
+| **App** | 26 | The general interface palette — the accents, the muted tones, the highlight series, the status colors and the state markers |
+| **Messages** | 14 | Every scene message type and text markup type, plus the message chrome around them |
+| **Chats** | 5 | The message colors of the director chat and the help chat |
 
 A slot a theme does not carry yet is filled in with the color currently in use, so a new theme starts out looking exactly like what you already see.
+
+#### What each slot is for
+
+**Surfaces**
+
+| Slot | What it paints |
+|------|----------------|
+| Background | The page behind everything, including the scene message area |
+| Surface | Cards, dialogs, panels and the message backdrop |
+| Surface bright / Surface light | The lighter surface steps Vuetify draws for raised and inset areas |
+| Surface variant / On surface variant | The contrasting chip and tooltip pair — the second is the text drawn on the first |
+
+**App**
+
+| Slot | What it paints |
+|------|----------------|
+| Primary | The main accent: buttons, active tabs, focus |
+| Secondary | The second accent, used for background activity |
+| Delete | Destructive actions |
+| Cancel | Cancel, close and reset buttons |
+| Muted / Muted header | De-emphasized text, and the small captions above it |
+| Muted background | Toolbars and filled bands that sit on a card |
+| Normal | Body text in the message edit box |
+| Unsaved / Dirty / Favorite marker | The three state markers: not saved yet, edited, favorited |
+| Persona | Persona and character card icons |
+| Highlight 1 to 7 | The seven template and category accents — attributes, details, state reinforcement, spices, writing and visual style, scene types, scene tool shortcuts |
+| Disabled | Text and icons of a switched-off setting |
+| Selected node module / Selected locked node module | The two module tile borders in the node editor library |
+| Success / Info / Warning / Error | The status colors, used by toasts, alerts and any component that asks for a status |
+
+**Messages**
+
+| Slot | What it paints |
+|------|----------------|
+| Narrator, Actor, Director, Time, Context investigation, Information | The text of each scene message type |
+| Quotes, Parentheses, Brackets, Emphasis, Entities | The text markup inside a message |
+| Play audio | The play-audio icon once a message has been spoken |
+| Avatar and card borders | The border around avatars, message images and config tables |
+| Default asset badge | The badge marking the current visual asset |
+
+**Chats**
+
+| Slot | What it paints |
+|------|----------------|
+| Director chat — director, action result, compaction | The three director chat bubble kinds |
+| Help chat — help, doc result | The two help chat bubble kinds |
+
+Both chats draw your own messages in the **Actor** color, so the player's voice is one decision rather than three.
 
 ### Mode
 

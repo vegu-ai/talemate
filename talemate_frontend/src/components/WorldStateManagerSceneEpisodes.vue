@@ -1,6 +1,6 @@
 <template>
     <div>
-        <v-alert density="compact" variant="outlined" color="grey-darken-2" class="mb-4">
+        <v-alert density="compact" variant="outlined" color="muted" class="mb-4">
             <div class="text-muted">
                 Episodes are alternative introductions that can be used to create new scenes. They are shared across all scenes in the <span class="font-weight-bold text-primary">{{ scene?.data?.project_name || 'project' }}</span> project.
             </div>

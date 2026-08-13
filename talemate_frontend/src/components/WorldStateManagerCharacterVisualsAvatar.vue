@@ -80,7 +80,7 @@
             </template>
         </VisualAssetGrid>
 
-        <v-alert icon="mdi-account-circle" density="compact" variant="text" color="grey" class="mt-4">
+        <v-alert icon="mdi-account-circle" density="compact" variant="text" class="mt-4 text-medium-emphasis">
             <p>
                 Portraits are used in dialogue messages and character lists. They are typically
                 face-focused images with a <strong>square format</strong>.

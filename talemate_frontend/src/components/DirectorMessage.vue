@@ -35,7 +35,7 @@
     elevation="0" density="compact" >
 
       <div v-html="renderedText"></div>
-      <div class="text-grey text-caption">{{ action }}</div>
+      <div class="text-medium-emphasis text-caption">{{ action }}</div>
     </v-alert>
   </div>
 

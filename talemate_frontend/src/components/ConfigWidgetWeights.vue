@@ -3,7 +3,7 @@
         <div class="text-caption text-muted" v-if="label">
             <strong>{{ label }}</strong>
         </div>
-        <div class="text-caption text-grey mb-2 d-flex align-center" v-if="description || choices.length > 1">
+        <div class="text-caption text-medium-emphasis mb-2 d-flex align-center" v-if="description || choices.length > 1">
             <span v-if="description">{{ description }}</span>
             <v-btn
                 v-if="choices.length > 1"

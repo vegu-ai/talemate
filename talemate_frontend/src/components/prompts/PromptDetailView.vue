@@ -83,10 +83,10 @@
                         <v-icon>mdi-transit-connection-variant</v-icon> Agent Stack
                     </v-list-subheader>
                     <v-list-item v-for="(agent, index) in prompt.agent_stack" :key="index">
-                        <v-list-item-subtitle class="text-grey-lighten-3">
+                        <v-list-item-subtitle opacity="1" class="text-high-emphasis">
                             {{ agentParts(agent).name }}
                         </v-list-item-subtitle>
-                        <v-list-item-subtitle class="text-grey-lighten-1 text-caption">
+                        <v-list-item-subtitle opacity="1" class="text-medium-emphasis text-caption">
                             {{ agentParts(agent).action }}
                         </v-list-item-subtitle>
                     </v-list-item>
@@ -152,7 +152,7 @@
                 </v-tabs>
                 <v-window v-model="responseTab">
                     <v-window-item value="response">
-                        <v-card elevation="10" color="grey-darken-3" style="overflow-y:auto; max-height: calc(80vh - 200px);">
+                        <v-card elevation="10" color="surface-light" style="overflow-y:auto; max-height: calc(80vh - 200px);">
                             <v-card-title>
                                 Response
                                 <v-progress-circular
@@ -171,13 +171,13 @@
                                     prepend-icon="mdi-restore"
                                 >Reset</v-btn>
                             </v-card-title>
-                            <v-card-text :class="busy ? 'text-grey' : 'text-white'">
+                            <v-card-text :style="{ opacity: busy ? 0.6 : 1 }">
                                 <div class="prompt-view">{{ localPrompt.response }}</div>
                             </v-card-text>
                         </v-card>
                     </v-window-item>
                     <v-window-item value="reasoning">
-                        <v-card elevation="10" color="grey-darken-3" style="overflow-y:auto; max-height: calc(80vh - 200px);">
+                        <v-card elevation="10" color="surface-light" style="overflow-y:auto; max-height: calc(80vh - 200px);">
                             <v-card-title>Reasoning</v-card-title>
                             <v-card-text>
                                 <div class="prompt-view">{{ localPrompt.reasoning }}</div>

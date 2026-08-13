@@ -61,7 +61,7 @@
                     @rename="renameClient"
                 />
             </div>
-            <v-alert v-else color="grey" variant="text">Select a client to configure</v-alert>
+            <v-alert v-else class="text-medium-emphasis" variant="text">Select a client to configure</v-alert>
         </v-col>
     </v-row>
 

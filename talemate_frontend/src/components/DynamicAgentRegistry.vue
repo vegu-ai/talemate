@@ -172,7 +172,7 @@ export default {
 
 <style scoped>
 .dynamic-agent-registry code {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--v-theme-on-surface), 0.05);
   padding: 0 4px;
   border-radius: 3px;
 }

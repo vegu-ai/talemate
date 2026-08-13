@@ -1,5 +1,5 @@
 <template>
-    <v-sheet class="text-left ma-1">
+    <v-sheet color="transparent" class="text-left ma-1">
         
         <span class="text-caption mr-2 text-muted"><v-icon>mdi-auto-fix</v-icon> Generation Settings</span>
         <v-menu>

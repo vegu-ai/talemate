@@ -1,6 +1,6 @@
 <template>
     <v-list density="compact" slim selectable color="primary" v-model:selected="selected">
-        <v-list-subheader color="grey">
+        <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-lightbulb-on</v-icon>
             Proposals
         </v-list-subheader>
@@ -14,7 +14,7 @@
             </template>
             <v-list-item-title>{{ suggestion_target.name }}</v-list-item-title>
             <v-list-item-subtitle>
-                <v-chip label color="highlight1" elevation="7" size="x-small" variant="tonal" v-if="suggestion_target.type === 'character'">Character Changes</v-chip>
+                <v-chip label color="highlight1" size="x-small" variant="tonal" v-if="suggestion_target.type === 'character'">Character Changes</v-chip>
             </v-list-item-subtitle>
         </v-list-item>
         <v-alert v-if="suggestionObjects.length === 0" class="ma-2" color="muted" dense icon="mdi-lightbulb-off" density="compact" variant="outlined">

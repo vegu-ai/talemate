@@ -9,7 +9,7 @@
       <v-alert type="error" variant="outlined" density="compact">{{ error }}</v-alert>
     </div>
 
-    <div v-else-if="!preview" class="text-center pa-8 text-grey">
+    <div v-else-if="!preview" class="text-center pa-8 text-medium-emphasis">
       <v-icon size="64" class="mb-4">mdi-view-split-horizontal</v-icon>
       <p>No context preview loaded.</p>
       <p class="text-caption">Click Refresh to build a context preview.</p>

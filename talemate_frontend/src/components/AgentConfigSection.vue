@@ -8,9 +8,10 @@
         density="compact"
         color="primary"
         :model-value="values.enabled"
+        class="described-setting"
         @update:modelValue="(v) => $emit('update:enabled', !!v)">
         <template v-slot:message="{ message }">
-          <div class="text-caption text-grey mb-8">{{ message }}</div>
+          <div class="text-caption text-medium-emphasis mb-8">{{ message }}</div>
         </template>
       </v-checkbox>
       <div v-else-if="schema.container" class="text-muted mt-2">
@@ -119,3 +120,11 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+/* v-messages already mutes at --v-medium-emphasis-opacity, so the emphasis
+   class on the description multiplies with it and lands at 2.5:1 on light */
+.described-setting :deep(.v-messages) {
+    opacity: 1;
+}
+</style>

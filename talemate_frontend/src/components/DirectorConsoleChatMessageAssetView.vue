@@ -130,7 +130,7 @@ export default {
     display: flex;
     justify-content: center;
     margin-top: 8px;
-    background-color:#000;
+    background-color:rgb(var(--v-theme-mutedbg));
 }
 .asset-image {
     cursor: pointer;

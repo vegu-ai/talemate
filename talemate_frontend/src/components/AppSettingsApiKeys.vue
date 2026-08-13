@@ -5,7 +5,7 @@
             {{ provider.title }}
         </v-card-title>
         <v-card-text>
-            <div class="text-grey text-body-2 mb-2">
+            <div class="text-medium-emphasis text-body-2 mb-2">
                 <p v-if="provider.description" class="mb-1">{{ provider.description }}</p>
                 <template v-if="provider.id === 'google_api'">
                     <p class="mb-2"><strong>Option&nbsp;1 – API&nbsp;Key&nbsp;(recommended)</strong></p>

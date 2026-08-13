@@ -22,7 +22,7 @@
                     :generation-options="generationOptions" />
                 </v-tabs-window-item>
                 <v-tabs-window-item value="info">
-                    <v-alert type="info" color="grey" variant="text" icon="mdi-earth">
+                    <v-alert class="text-medium-emphasis" variant="text" icon="mdi-earth">
                         Add world information / lore and additional details.
                         <br><br>
                         You can also set up automatic reinforcement of world information states. This will cause the AI to regularly re-evaluate the state and update the detail accordingly.

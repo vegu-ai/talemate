@@ -2228,13 +2228,7 @@ export default {
     margin-right: 28px;
     /* tight, dense shadow so message text of every type stays legible
        over the backdrop */
-    text-shadow: 1px 1px 2px #000000, 0 0 6px rgba(0, 0, 0, 0.85);
-}
-
-/* character messages carry their own always-on shadow — align it with
-   the backdrop shadow so all types match */
-.scene-backdrop-active .message :deep(.character-message) {
-    text-shadow: inherit;
+    text-shadow: 1px 1px 2px rgb(var(--v-theme-surface)), 0 0 6px rgba(var(--v-theme-surface), 0.85);
 }
 
 /* backdrop text shadow disabled via appearance config */
@@ -2284,7 +2278,7 @@ export default {
 }
 
 .message.character {
-    color: #E0E0E0;
+    color: rgba(var(--v-theme-on-surface), 0.87);
 }
 
 .character-message {

@@ -37,10 +37,10 @@
                             <v-col :cols="selectedImage.context.format === 'portrait' ? 5 : 12">
                                 <v-card elevation="7" density="compact">
                                     <v-card-text>
-                                        <v-alert density="compact" v-if="selectedImage.context.vis_type" icon="mdi-panorama-variant-outline" variant="text" color="grey">
+                                        <v-alert density="compact" v-if="selectedImage.context.vis_type" icon="mdi-panorama-variant-outline" variant="text" class="text-medium-emphasis">
                                             {{ selectedImage.context.vis_type }}
                                         </v-alert>
-                                        <v-alert density="compact" v-if="selectedImage.context.prepared_prompt" icon="mdi-script-text-outline" variant="text" color="grey">
+                                        <v-alert density="compact" v-if="selectedImage.context.prepared_prompt" icon="mdi-script-text-outline" variant="text" class="text-medium-emphasis">
                                             <v-row>
                                                 <v-col :cols="selectedImage.context.format === 'portrait' ? 12 : 4">
                                                     <v-tooltip :text="selectedImage.context.prompt" class="pre-wrap" max-width="400">
@@ -58,10 +58,10 @@
                                                 </v-col>
                                             </v-row>
                                         </v-alert>
-                                        <v-alert density="compact" v-if="selectedImage.context.character_name" icon="mdi-account" variant="text" color="grey">
+                                        <v-alert density="compact" v-if="selectedImage.context.character_name" icon="mdi-account" variant="text" class="text-medium-emphasis">
                                             {{ selectedImage.context.character_name }}    
                                         </v-alert>
-                                        <v-alert density="compact" v-if="selectedImage.context.instructions" icon="mdi-comment-text" variant="text" color="grey">
+                                        <v-alert density="compact" v-if="selectedImage.context.instructions" icon="mdi-comment-text" variant="text" class="text-medium-emphasis">
                                             {{ selectedImage.context.instructions }}
                                         </v-alert>
 

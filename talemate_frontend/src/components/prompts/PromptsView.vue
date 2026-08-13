@@ -121,7 +121,7 @@
 
                 <!-- Prompts Tab -->
                 <v-window-item value="prompts">
-                    <div v-if="openPrompts.length === 0" class="text-center pa-8 text-grey">
+                    <div v-if="openPrompts.length === 0" class="text-center pa-8 text-medium-emphasis">
                         <v-icon size="64" class="mb-4">mdi-message-text-outline</v-icon>
                         <p>No prompts open.</p>
                         <p class="text-caption">Click on a prompt in the sidebar to view its details here.</p>

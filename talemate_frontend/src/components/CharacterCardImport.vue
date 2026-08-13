@@ -58,15 +58,15 @@
                 alt="Character Card"
                 style="width: 100%; max-width: 100%; max-height: 500px; height: auto; object-fit: contain; border-radius: 4px;"
               />
-              <div v-else-if="fileData && !isImageFile" class="text-caption text-grey pa-4">
+              <div v-else-if="fileData && !isImageFile" class="text-caption text-medium-emphasis pa-4">
                 <v-icon size="large" color="grey">mdi-file-document-outline</v-icon>
                 <div class="mt-2">JSON Character Card</div>
                 <div class="text-caption mt-1">{{ filename || 'Character card file' }}</div>
               </div>
-              <div v-else-if="filePath" class="text-caption text-grey pa-4">
+              <div v-else-if="filePath" class="text-caption text-medium-emphasis pa-4">
                 Image preview not available for file path
               </div>
-              <div v-else class="text-caption text-grey pa-4">
+              <div v-else class="text-caption text-medium-emphasis pa-4">
                 No image available
               </div>
             </v-card-text>
@@ -93,15 +93,15 @@
                     alt="Character Card Icon"
                     style="width: 100%; max-width: 100%; max-height: 800px; height: auto; object-fit: contain; border-radius: 4px;"
                   />
-                  <div v-else-if="fileData && !isImageFile" class="text-caption text-grey pa-4">
+                  <div v-else-if="fileData && !isImageFile" class="text-caption text-medium-emphasis pa-4">
                     <v-icon size="large" color="grey">mdi-file-document-outline</v-icon>
                     <div class="mt-2">JSON Character Card</div>
                     <div class="text-caption mt-1">{{ filename || 'Character card file' }}</div>
                   </div>
-                  <div v-else-if="filePath" class="text-caption text-grey pa-4">
+                  <div v-else-if="filePath" class="text-caption text-medium-emphasis pa-4">
                     Image preview not available for file path
                   </div>
-                  <div v-else class="text-caption text-grey pa-4">
+                  <div v-else class="text-caption text-medium-emphasis pa-4">
                     No image available
                   </div>
                 </v-card-text>
@@ -289,7 +289,7 @@
                   </div>
                   <v-expand-transition>
                   <div v-show="showGenerationOptions">
-                  <div class="text-caption text-grey mb-2">
+                  <div class="text-caption text-medium-emphasis mb-2">
                     Disabled steps fall back to the card's original data, significantly speeding up the import.
                   </div>
                   <v-tooltip text="If enabled, AI determines the content context (genre and tone) for the scene." max-width="300">
@@ -415,7 +415,7 @@
                     <!-- Default Character Template -->
                     <v-window-item value="template">
                       <v-card color="grey-darken-3" variant="outlined">
-                        <v-card-text class="text-grey-lighten-3">
+                        <v-card-text class="text-high-emphasis">
                           <v-text-field
                             v-model="playerCharacterTemplate.name"
                             label="Name"
@@ -438,7 +438,7 @@
                     <!-- Use Detected Character -->
                     <v-window-item value="existing">
                       <v-card color="grey-darken-3" variant="outlined">
-                        <v-card-text class="text-grey-lighten-3">
+                        <v-card-text class="text-high-emphasis">
                           <v-select
                             v-model="playerCharacterExisting"
                             :items="selectedCharacterNames"
@@ -456,7 +456,7 @@
                     <!-- Import from Another Scene -->
                     <v-window-item value="import">
                       <v-card color="grey-darken-3" variant="outlined">
-                        <v-card-text class="text-grey-lighten-3">
+                        <v-card-text class="text-high-emphasis">
                           <v-autocomplete
                             v-model="importSceneInput"
                             :items="scenes"

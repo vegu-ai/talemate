@@ -126,7 +126,7 @@
                     </v-expansion-panel>
                 </v-expansion-panels>
             </div>
-            <v-alert v-else color="grey" variant="text">Select an agent to configure</v-alert>
+            <v-alert v-else class="text-medium-emphasis" variant="text">Select an agent to configure</v-alert>
         </v-col>
     </v-row>
 

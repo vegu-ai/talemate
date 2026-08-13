@@ -108,7 +108,7 @@
           <v-icon class="mr-2" color="primary" size="small">mdi-account-lock-open</v-icon> Coercion
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <v-alert icon="mdi-account-lock-open" density="compact" color="grey-darken-1" variant="text">
+          <v-alert icon="mdi-account-lock-open" density="compact" class="text-medium-emphasis" variant="text">
             <div>
               If set, this text will be prepended to every LLM response, attempting to enforce compliance with the request.
               <p>
@@ -176,7 +176,7 @@
             </v-col>
           </v-row>
           <!-- AUTO RETRY -->
-          <v-alert icon="mdi-refresh" density="compact" color="grey-darken-1" variant="text">
+          <v-alert icon="mdi-refresh" density="compact" class="text-medium-emphasis" variant="text">
             Automatic retries on response issues before you are notified. (0 = notify immediately)
           </v-alert>
           <v-row>
@@ -196,7 +196,7 @@
           <v-icon class="mr-2" color="primary" size="small">mdi-brain</v-icon> Reasoning
         </v-expansion-panel-title>
         <v-expansion-panel-text>
-          <v-alert icon="mdi-brain" density="compact" color="grey-darken-1" variant="text">
+          <v-alert icon="mdi-brain" density="compact" class="text-medium-emphasis" variant="text">
             Configuration to deal with reasoning models.
           </v-alert>
           <v-row>

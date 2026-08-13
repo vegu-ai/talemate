@@ -161,7 +161,7 @@
                         </tr>
                     </tbody>
                 </v-table>
-                <v-alert v-else type="info" color="grey" variant="text" class="mt-2 mb-2">
+                <v-alert v-else icon="mdi-information" variant="text" class="mt-2 mb-2 text-medium-emphasis">
                     No phrases defined. Add a phrase below.
                 </v-alert>
                 

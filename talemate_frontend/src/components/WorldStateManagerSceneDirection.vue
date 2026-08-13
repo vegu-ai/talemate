@@ -6,10 +6,10 @@
             <v-form>
 
                 <v-card class="my-2" variant="text" color="muted">
-                    <v-card-title class="text-white">
+                    <v-card-title class="text-high-emphasis">
                         <v-icon color="primary" size="small" class="mr-2">mdi-bullhorn</v-icon>
                         Scene Direction</v-card-title>
-                    <v-card-text class="text-white">
+                    <v-card-text class="text-high-emphasis">
                         <v-alert color="warning" variant="outlined" density="compact" icon="mdi-flask" v-if="sceneIntent?.direction?.always_on">
                             A strong LLM (100B+), preferably with reasoning capabilities, is HIGHLY recommended for this to work in any meaningful way.
                         </v-alert>
@@ -45,7 +45,7 @@
 
                 <!-- director instructions -->
                 <v-card class="my-2" variant="text">
-                    <v-card-title class="text-white">
+                    <v-card-title class="text-high-emphasis">
                         <v-icon color="primary" size="small" class="mr-2">mdi-note-text</v-icon>
                         Director Instructions
                     </v-card-title>
@@ -184,7 +184,7 @@
                     <p>Manage the scene types that are available for the experience. Scene types are the different
                     types of scenes that can be played. Each scene type has different rules and constraints.</p>
                 </v-alert>
-                <v-toolbar color="mutedbg" variant="text">
+                <v-toolbar color="transparent">
                     <v-select
                         v-model="selectedSceneTypeTemplate"
                         :items="filteredSceneTypeTemplates"
@@ -219,7 +219,7 @@
                     <tr v-for="(sceneType, key) in this.sceneIntent.scene_types" :key="key">
                         <td class="name-column">{{ sceneType.name }}</td>
                         <td class="description-column align-start">
-                            <div class="full-cell-content bg-mutedbg">{{ sceneType.description }}</div>
+                            <div class="full-cell-content">{{ sceneType.description }}</div>
                         </td>
                         <td class="template-column">
                             <div v-if="sceneType.instructions || sceneType.instruction_template">

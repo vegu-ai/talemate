@@ -1,7 +1,7 @@
 <template>
     <v-card variant="tonal">
         <v-card-text>
-            <div v-if="envVariableNames.length === 0" class="text-grey text-body-2 mb-4">
+            <div v-if="envVariableNames.length === 0" class="text-medium-emphasis text-body-2 mb-4">
                 No environment variables defined yet — add one below.
             </div>
             <v-row v-for="name in envVariableNames" :key="name" dense>

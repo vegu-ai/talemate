@@ -1,7 +1,7 @@
 <template>
 
     <v-list density="compact" slim>
-        <v-list-subheader color="grey">
+        <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-plus</v-icon>
             Create
         </v-list-subheader>

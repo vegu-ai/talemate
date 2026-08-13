@@ -24,7 +24,7 @@
             <v-icon v-else color="green" size="14">mdi-checkbox-blank-circle</v-icon>
 
             <!-- client name-->
-            <span :class="client.status == 'disabled' ? 'text-grey-darken-2 ml-1' : 'ml-1'"> {{ client.name }}</span>
+            <span :class="client.status == 'disabled' ? 'text-medium-emphasis ml-1' : 'ml-1'"> {{ client.name }}</span>
 
             <!-- request information -->
             <AIClientRequestInformation :requestInformation="client.request_information" />

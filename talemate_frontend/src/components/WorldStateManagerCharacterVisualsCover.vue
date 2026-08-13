@@ -74,7 +74,7 @@
             </template>
         </VisualAssetGrid>
 
-        <v-alert icon="mdi-image-frame" density="compact" variant="text" color="grey" class="mt-4">
+        <v-alert icon="mdi-image-frame" density="compact" variant="text" class="mt-4 text-medium-emphasis">
             <p>
                 Cover images showcase a character's appearance, personality, and style. They are typically
                 full-body or upper-body images with a <strong>portrait orientation</strong>, ideal for character reference cards.

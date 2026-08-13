@@ -1,6 +1,6 @@
 <template>
     <v-list density="compact" slim>
-        <v-list-subheader color="grey">
+        <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-account-multiple-plus</v-icon>
             Create
         </v-list-subheader>
@@ -15,7 +15,7 @@
         </v-list-item>
     </v-list>
     <v-list density="compact" slim selectable color="primary" v-model:selected="selected" :opened="openedFolders" @update:opened="onOpenedChange" open-strategy="multiple">
-        <v-list-subheader color="grey">
+        <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-account-group</v-icon>
             Characters
         </v-list-subheader>
@@ -25,8 +25,8 @@
             </v-list-item-title>
             <v-list-item-subtitle>
                 <div class="text-caption">
-                    <v-chip v-if="!newCharacter.is_player" label size="x-small" color="warning" elevation="7">AI</v-chip>
-                    <v-chip v-else label size="x-small" color="info" elevation="7">Player</v-chip>
+                    <v-chip v-if="!newCharacter.is_player" label size="x-small" color="warning">AI</v-chip>
+                    <v-chip v-else label size="x-small" color="info">Player</v-chip>
                 </div>
             </v-list-item-subtitle>
         </v-list-item>

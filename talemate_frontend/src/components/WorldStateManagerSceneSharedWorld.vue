@@ -159,7 +159,7 @@
                         />
                     </div>
                     <v-card v-else elevation="0" color="grey-darken-3" variant="tonal" class="mt-2">
-                        <v-card-text class="text-grey">
+                        <v-card-text class="text-medium-emphasis">
                             <span v-if="selectedSharedContext">There are no shared characters in the shared context.</span>
                             <span v-else>There are no characters in the current scene.</span>
                         </v-card-text>

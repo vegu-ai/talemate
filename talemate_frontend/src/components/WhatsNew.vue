@@ -1115,7 +1115,7 @@ export default {
     gap: 8px;
     margin-bottom: 4px;
     font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(var(--v-theme-on-surface), 0.6);
 }
 .bullet {
     flex-shrink: 0;

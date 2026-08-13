@@ -13,7 +13,7 @@
 
     <!-- search results -->
     <v-list v-if="searchActive" density="compact" slim color="primary" selectable>
-        <v-list-subheader color="grey">
+        <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-magnify</v-icon>
             Results
         </v-list-subheader>
@@ -34,7 +34,7 @@
     <!-- navigation -->
     <v-list v-else density="compact" slim color="primary" :selected="[page]" selectable @update:selected="onSelectPage">
         <template v-for="group in groups" :key="group.title">
-            <v-list-subheader color="grey">
+            <v-list-subheader>
                 <v-icon color="primary" class="mr-1">{{ group.icon }}</v-icon>
                 {{ group.title }}
             </v-list-subheader>

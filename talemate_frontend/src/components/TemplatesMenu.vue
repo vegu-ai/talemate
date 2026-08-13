@@ -1,6 +1,6 @@
 <template>
     <v-list density="compact" slim>
-        <v-list-subheader color="grey">
+        <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-plus</v-icon>
             Create
         </v-list-subheader>
@@ -10,7 +10,7 @@
         </v-list-item>
     </v-list>
     <v-list v-for="(group, index) in safeGroups" :key="index" density="compact" slim color="primary" selectable  @update:selected="onSelectGroup" :selected="selectedGroups">
-        <v-list-subheader color="grey" v-if="index === 0">
+        <v-list-subheader v-if="index === 0">
             <v-icon color="primary" class="mr-1">mdi-cube-scan</v-icon>
             Templates
         </v-list-subheader>
@@ -19,8 +19,8 @@
             {{ toLabel(group.name) }}
         </v-list-item>
         <v-card v-if="groupIsOpen(index)">
-            <v-card-text class="text-grey text-caption">
-                <p><span class="text-white">Author</span> <span>{{ group.author }}</span></p>
+            <v-card-text class="text-medium-emphasis text-caption">
+                <p><span class="text-high-emphasis">Author</span> <span>{{ group.author }}</span></p>
                 {{ group.description }}
             </v-card-text>
         </v-card>

@@ -120,7 +120,7 @@
             </template>
         </VisualAssetGrid>
 
-        <v-alert :icon="typeConfig.icon" density="compact" variant="text" color="grey" class="mt-4">
+        <v-alert :icon="typeConfig.icon" density="compact" variant="text" class="mt-4 text-medium-emphasis">
             <p>{{ typeConfig.description }}</p>
             <p v-if="hasReferenceAssets && visualAgentReady" class="mt-2">
                 <strong>Tip:</strong> You can generate new variations using existing scene images as references.

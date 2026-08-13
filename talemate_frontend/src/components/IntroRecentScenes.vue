@@ -22,14 +22,14 @@
                         <v-card-title class="text-primary">
                             {{ filenameToTitle(scene.filename) }}
                         </v-card-title>
-                        <v-card-subtitle class="text-grey-lighten-1">
+                        <v-card-subtitle opacity="1" class="text-medium-emphasis">
                             {{ scene.name }}
                         </v-card-subtitle>
                         <v-card-text>
                             <div class="cover-image-placeholder">
                                 <v-img cover v-if="scene.cover_image != null && coverImages[scene.cover_image.id] != null" :src="getCoverImageSrc(scene.cover_image.id)" class="portrait-image"></v-img>
                             </div>
-                            <p class="text-caption text-center text-grey-lighten-1 bg-grey-darken-4">{{ prettyDate(scene.date) }}</p>
+                            <p class="text-caption text-center text-medium-emphasis">{{ prettyDate(scene.date) }}</p>
                         </v-card-text>
                     </v-card>
                     <div class="text-center">

@@ -109,12 +109,12 @@ export default {
 <style scoped>
 .close-button {
   opacity: 0.4;
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: rgba(var(--v-theme-on-surface), 0.6) !important;
   transition: opacity 0.2s ease;
 }
 
 .close-button:hover {
   opacity: 1;
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: rgba(var(--v-theme-on-surface), 0.9) !important;
 }
 </style>

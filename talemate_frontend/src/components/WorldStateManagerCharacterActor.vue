@@ -38,7 +38,7 @@
                 @blur="updateCharacterActor(true)"
                 rows="3" 
                 auto-grow></v-textarea>
-                <v-alert icon="mdi-bullhorn" density="compact" variant="text" color="grey">
+                <v-alert icon="mdi-bullhorn" density="compact" variant="text" class="text-medium-emphasis">
                     <p>
                         Any instructions you enter here will be inserted into the context right before
                         <span class="text-primary">{{ character.name }}</span> speaks the next line. It can have a strong effect on the style

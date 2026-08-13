@@ -34,7 +34,7 @@
                 <span class="font-weight-bold" :class="`text-${t2iColor}`">Text to Image</span>
                 <template v-if="t2iBackendName || t2iGeneratorLabel">
                   <v-divider vertical class="mx-1" color="grey-lighten-1" />
-                  <span v-if="t2iBackendName" class="text-grey-lighten-1">{{ t2iBackendName }}</span>
+                  <span v-if="t2iBackendName" class="text-medium-emphasis">{{ t2iBackendName }}</span>
                   <template v-if="t2iBackendName && t2iGeneratorLabel">
                     <v-divider vertical class="mx-1" color="grey-lighten-1" />
                   </template>
@@ -59,7 +59,7 @@
                 <span class="font-weight-bold" :class="`text-${editColor}`">Image Edit</span>
                 <template v-if="editBackendName || editGeneratorLabel">
                   <v-divider vertical class="mx-1" color="grey-lighten-1" />
-                  <span v-if="editBackendName" class="text-grey-lighten-1">{{ editBackendName }}</span>
+                  <span v-if="editBackendName" class="text-medium-emphasis">{{ editBackendName }}</span>
                   <template v-if="editBackendName && editGeneratorLabel">
                     <v-divider vertical class="mx-1" color="grey-lighten-1" />
                   </template>
@@ -84,7 +84,7 @@
                 <span class="font-weight-bold" :class="`text-${analysisColor}`">Image Analysis</span>
                 <template v-if="analysisBackendName || analysisGeneratorLabel">
                   <v-divider vertical class="mx-1" color="grey-lighten-1" />
-                  <span v-if="analysisBackendName" class="text-grey-lighten-1">{{ analysisBackendName }}</span>
+                  <span v-if="analysisBackendName" class="text-medium-emphasis">{{ analysisBackendName }}</span>
                   <template v-if="analysisBackendName && analysisGeneratorLabel">
                     <v-divider vertical class="mx-1" color="grey-lighten-1" />
                   </template>
@@ -261,21 +261,21 @@ export default {
       if (status === BACKEND_STATUS.OK) return 'success';
       if (status === BACKEND_STATUS.WARNING) return 'warning';
       if (status === BACKEND_STATUS.ERROR) return 'error';
-      return 'grey';
+      return 'medium-emphasis';
     },
     editColor() {
       const status = this.visualMeta?.image_edit?.status;
       if (status === BACKEND_STATUS.OK) return 'success';
       if (status === BACKEND_STATUS.WARNING) return 'warning';
       if (status === BACKEND_STATUS.ERROR) return 'error';
-      return 'grey';
+      return 'medium-emphasis';
     },
     analysisColor() {
       const status = this.visualMeta?.image_analyzation?.status;
       if (status === BACKEND_STATUS.OK) return 'success';
       if (status === BACKEND_STATUS.WARNING) return 'warning';
       if (status === BACKEND_STATUS.ERROR) return 'error';
-      return 'grey';
+      return 'medium-emphasis';
     },
     t2iTooltip() {
       const label = this.t2iDetail?.value || 'Not configured';

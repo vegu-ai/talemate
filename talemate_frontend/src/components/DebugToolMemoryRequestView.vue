@@ -35,7 +35,7 @@
                     <tbody>
                         <tr v-for="(result, index) in memory_request.results" :key="index">
                             <td>
-                                <div :class="result.distance <= memory_request.max_distance ? '' : 'text-grey'">
+                                <div :class="result.distance <= memory_request.max_distance ? '' : 'text-medium-emphasis'">
                                     {{ truncateText(result.doc) }}
                                 </div>
                                 <div>

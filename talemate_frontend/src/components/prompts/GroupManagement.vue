@@ -1,6 +1,6 @@
 <template>
     <v-card elevation="2" class="group-management pa-3">
-        <div class="text-subtitle-2 text-grey mb-2">
+        <div class="text-subtitle-2 text-medium-emphasis mb-2">
             <v-icon size="small" class="mr-1">mdi-sort-variant</v-icon>
             Active Groups
             <span class="text-caption">(drag to reorder priority)</span>
@@ -8,7 +8,7 @@
 
         <div class="groups-container d-flex flex-wrap ga-2">
             <!-- Empty state when no active groups -->
-            <div v-if="activeGroups.length === 0" class="text-caption text-grey-darken-1 d-flex align-center">
+            <div v-if="activeGroups.length === 0" class="text-caption text-medium-emphasis d-flex align-center">
                 <v-icon size="small" class="mr-1">mdi-information-outline</v-icon>
                 No custom groups active. Add a group to customize template priority.
             </div>
@@ -72,7 +72,7 @@
         </div>
 
         <!-- Fixed groups info -->
-        <div class="mt-3 text-caption text-grey">
+        <div class="mt-3 text-caption text-medium-emphasis">
             <v-icon size="x-small" class="mr-1">mdi-information-outline</v-icon>
             <span v-if="sceneLoaded">
                 <strong>scene</strong> always has highest priority.

@@ -1,6 +1,6 @@
 <template>
   <div class="audio-queue text-caption">
-    <span class="text-grey mr-1">{{ queue.length }} sound(s) queued</span>
+    <span class="text-medium-emphasis mr-1">{{ queue.length }} sound(s) queued</span>
     
     <v-btn
       icon

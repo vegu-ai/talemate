@@ -410,10 +410,6 @@ export default {
   --content: "*";
 }
 
-.character-message {
-  text-shadow: 2px 2px 4px #000000;
-}
-
 .character-name-chip {
   float: left;
   margin-right: 10px;
@@ -426,7 +422,7 @@ export default {
 }
 
 .character-text {
-  color: #E0E0E0;
+  color: rgba(var(--v-theme-on-surface), 0.87);
 }
 
 .character-text :deep(.scene-paragraph) {
@@ -472,11 +468,11 @@ export default {
 
 .close-button {
   opacity: 0.4;
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: rgba(var(--v-theme-on-surface), 0.6) !important;
   transition: opacity 0.2s ease;
 }
 
 .close-button:hover {
   opacity: 1;
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: rgba(var(--v-theme-on-surface), 0.9) !important;
 }</style>

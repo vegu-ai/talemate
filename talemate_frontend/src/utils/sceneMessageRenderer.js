@@ -314,7 +314,7 @@ export class SceneTextParser {
 
             // Custom renderer for horizontal rules (---) to match v-divider styling
             hr: () => {
-                return '<hr class="scene-hr" style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.12); margin: 16px 0; width: 100%;" />';
+                return '<hr class="scene-hr" style="border: none; border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity)); margin: 16px 0; width: 100%;" />';
             },
 
             // Disable markdown images

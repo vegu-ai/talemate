@@ -67,15 +67,15 @@
                                 {{ path }}
                             </div>
 
-                            <div v-if="Array.isArray(getValueAtPath(path))" class="text-caption text-grey">
+                            <div v-if="Array.isArray(getValueAtPath(path))" class="text-caption text-medium-emphasis">
                                 List with {{ getValueAtPath(path).length }} items (read-only)
                             </div>
 
-                            <div v-else-if="typeof getValueAtPath(path) === 'object' && getValueAtPath(path) !== null" class="text-caption text-grey">
+                            <div v-else-if="typeof getValueAtPath(path) === 'object' && getValueAtPath(path) !== null" class="text-caption text-medium-emphasis">
                                 Object with {{ Object.keys(getValueAtPath(path)).length }} keys (read-only)
                             </div>
 
-                            <div v-else class="text-caption text-grey">
+                            <div v-else class="text-caption text-medium-emphasis">
                                 {{ typeof getValueAtPath(path) }} (read-only)
                             </div>
                         </template>

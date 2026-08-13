@@ -10,7 +10,7 @@
                 </span>
             </v-card-title>
             <v-card-text>
-                <v-alert v-if="description" density="compact" variant="text" color="grey" icon="mdi-information-outline" class="mb-2">
+                <v-alert v-if="description" density="compact" variant="text" icon="mdi-information-outline" class="mb-2 text-medium-emphasis">
                     {{ description }}
                 </v-alert>
                 <v-text-field

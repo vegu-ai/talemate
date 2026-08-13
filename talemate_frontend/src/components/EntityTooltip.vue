@@ -128,7 +128,7 @@ export default {
 <style scoped>
 .entity-tooltip-card {
     background-color: rgb(var(--v-theme-surface));
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
 .entity-tooltip-name {

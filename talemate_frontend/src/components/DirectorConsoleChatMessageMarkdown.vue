@@ -208,12 +208,12 @@ export default {
     padding: 1px 4px;
     border-radius: 4px;
     color: rgba(var(--v-theme-mutedheader), 1);
-    background-color: rgba(0,0,0, 1);
+    background-color: rgb(var(--v-theme-mutedbg));
 }
 
 /* Block code styling */
 .markdown-body :deep(pre) {
-    background-color: rgba(0,0,0, 1);
+    background-color: rgb(var(--v-theme-mutedbg));
     color: rgba(var(--v-theme-mutedheader), 1);
     border-left: 4px solid rgba(var(--v-theme-director), 0.6);
     padding: 10px 12px;
@@ -232,14 +232,14 @@ export default {
 
 /* Diff block styling */
 .markdown-body :deep(pre.diff-block) {
-    background-color: rgba(0,0,0, 1);
+    background-color: rgb(var(--v-theme-mutedbg));
     color: rgba(var(--v-theme-mutedheader), 1);
     border-left: 4px solid rgba(var(--v-theme-director), 0.6);
 }
 
 /* Scene block styling */
 .markdown-body :deep(pre.scene-block) {
-    background-color: rgba(0,0,0, 1);
+    background-color: rgb(var(--v-theme-mutedbg));
     color: rgba(var(--v-theme-mutedheader), 1);
     border-left: 4px solid rgba(var(--v-theme-director), 0.6);
 }
@@ -259,11 +259,11 @@ export default {
 }
 
 .markdown-body :deep(th) {
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: rgb(var(--v-theme-mutedbg));
 }
 
 .markdown-body :deep(tbody tr:nth-child(even)) {
-    background-color: rgba(0, 0, 0, 0.12);
+    background-color: rgba(var(--v-theme-on-surface), 0.05);
 }
 
 /* Diff markers styling */

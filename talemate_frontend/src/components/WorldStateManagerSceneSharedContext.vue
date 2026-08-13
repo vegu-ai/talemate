@@ -14,7 +14,7 @@
                         color="primary"
                         density="compact"
                     >
-                        <v-list-subheader color="grey">Available</v-list-subheader>
+                        <v-list-subheader>Available</v-list-subheader>
                         <v-list-item
                             v-for="item in items"
                             :key="item.filepath"
@@ -42,8 +42,8 @@
                                 />
                             </template>
                         </v-list-item>
-                        <v-list-item v-if="!items.length" disabled>
-                            <v-list-item-title class="text-grey">No shared context files found</v-list-item-title>
+                        <v-list-item v-if="!items.length">
+                            <v-list-item-title class="text-medium-emphasis">No shared context files found</v-list-item-title>
                         </v-list-item>
                     </v-list>
                     <v-card-actions class="pa-0 mt-2">
@@ -57,7 +57,7 @@
             <!-- Right Column: Shared Context Details -->
             <v-col cols="12" md="8">
                 <v-card-text class="pa-4">
-                    <v-alert density="compact" variant="outlined" color="grey-darken-2" class="mb-4">
+                    <v-alert density="compact" variant="outlined" color="muted" class="mb-4">
                         <div class="text-muted">
                             Share specific characters, world entries and history across connected <span class="font-weight-bold text-primary">{{ scene.data.project_name }}</span> scenes.
                         </div>

@@ -42,7 +42,7 @@
       <v-spacer></v-spacer>
       <AudioQueue ref="audioQueue" @message-audio-played="onMessageAudioPlayed" />
       <v-divider class="ml-2 mr-2" vertical></v-divider>
-      <span v-if="version !== null" class="text-grey text-caption">v{{ version }}</span>
+      <span v-if="version !== null" class="text-medium-emphasis text-caption">v{{ version }}</span>
       <span v-if="!ready">
         <v-icon icon="mdi-application-cog"></v-icon>
         <span class="ml-1">Configuration required</span>

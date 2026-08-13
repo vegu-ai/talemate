@@ -1,6 +1,6 @@
 <template>
     <div>
-        <v-alert v-if="readonly" variant="text" color="grey" icon="mdi-lock">
+        <v-alert v-if="readonly" variant="text" class="text-medium-emphasis" icon="mdi-lock">
             This pin is controlled by game state. It cannot be manually toggled and does not decay.
         </v-alert>
 
@@ -10,7 +10,7 @@
                     Add condition group
                 </v-btn>
                 <v-spacer></v-spacer>
-                <div class="text-caption text-grey" v-if="groups.length > 0">
+                <div class="text-caption text-medium-emphasis" v-if="groups.length > 0">
                     A pin matches if any group matches. Inside a group, conditions combine with the group operator.
                 </div>
             </v-card-actions>
@@ -60,7 +60,7 @@
                     <v-divider></v-divider>
 
                     <v-card-text>
-                        <v-alert v-if="!group.conditions || group.conditions.length === 0" variant="text" color="grey" icon="mdi-alert-circle-outline">
+                        <v-alert v-if="!group.conditions || group.conditions.length === 0" variant="text" class="text-medium-emphasis" icon="mdi-alert-circle-outline">
                             Empty groups never match. Add at least one condition.
                         </v-alert>
 
@@ -126,7 +126,7 @@
                     </v-card-text>
                 </v-card>
                 <div v-if="groupIdx < groups.length - 1" class="text-center my-2">
-                    <span class="text-subtitle-1 font-weight-bold text-grey">OR</span>
+                    <span class="text-subtitle-1 font-weight-bold text-medium-emphasis">OR</span>
                 </div>
             </div>
         </v-card>

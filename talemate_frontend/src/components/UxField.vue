@@ -192,11 +192,11 @@
     :messages="field.description"
     density="compact"
     color="primary"
-    class="mt-3"
+    class="mt-3 described-setting"
   >
     <template v-if="$slots.prepend" v-slot:prepend><slot name="prepend" /></template>
     <template v-slot:message="{ message }">
-      <span class="text-caption text-grey">{{ message }}</span>
+      <span class="text-caption text-medium-emphasis">{{ message }}</span>
       <span v-if="field.expensive" class="text-warning mt-2 text-caption">
         <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
         Potential for many additional prompts.
@@ -422,6 +422,12 @@ export default {
 </script>
 
 <style scoped>
+/* v-messages already mutes at --v-medium-emphasis-opacity, so the emphasis
+   class on the description multiplies with it and lands at 2.5:1 on light */
+.described-setting :deep(.v-messages) {
+  opacity: 1;
+}
+
 /* Vuetify applies pointer-events: none on disabled/readonly v-inputs, which
    also blocks the override toggle in the prepend slot. Re-enable so the
    toggle stays clickable. */

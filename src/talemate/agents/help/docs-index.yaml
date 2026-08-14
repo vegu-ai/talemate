@@ -483,7 +483,7 @@
 - path: user-guide/clients/types/google.md
   title: Google Client
   summary: Adding a Google (Gemini) client and its Google Cloud credentials via SETUP GOOGLE API CREDENTIALS, plus Client
-    Name, Model (defaults to gemini-3.5-flash), Context Length, and Disable Safety Settings for harmful-content response validation.
+    Name, Model (defaults to gemini-3.7-flash), Context Length, and Disable Safety Settings for harmful-content response validation.
 - path: user-guide/clients/types/groq.md
   title: Groq Client
   summary: 'Adding a Groq client from Settings -> Connections -> Clients, setting the shared Groq API key via SET API KEY,

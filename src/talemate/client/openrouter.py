@@ -52,7 +52,7 @@ AVAILABLE_MODELS = []
 # Available providers will be populated dynamically from OpenRouter API once a valid API key is set
 AVAILABLE_PROVIDERS = []
 
-DEFAULT_MODEL = "google/gemini-3.6-flash"
+DEFAULT_MODEL = "google/gemini-3.7-flash"
 
 # Sampler parameters whose inclusion in the request payload is user-toggleable.
 # Some OpenRouter providers hard-error when these are sent for certain models

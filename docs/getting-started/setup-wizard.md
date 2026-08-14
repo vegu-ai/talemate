@@ -40,7 +40,7 @@ Select your preferred client from the dropdown. The essential settings for that 
 Once the client has been created, the wizard will automatically advance to the next step.
 
 !!! info "Reasoning Models"
-    If you are using a reasoning model (like DeepSeek R1 or GLM), you will need to enable reasoning in the client settings after setup. For OpenRouter users, new clients have reasoning enabled by default with a budget of 2048 reasoning tokens, so the default model selected during the wizard (Gemini 3.6 Flash) and other reasoning models work out of the box. If you switch to a model that does not reason, you can turn reasoning off in the client settings.
+    If you are using a reasoning model (like DeepSeek R1 or GLM), you will need to enable reasoning in the client settings after setup. For OpenRouter users, new clients have reasoning enabled by default with a budget of 2048 reasoning tokens, so the default model selected during the wizard (Gemini 3.7 Flash) and other reasoning models work out of the box. If you switch to a model that does not reason, you can turn reasoning off in the client settings.
 
 ## Step 3: Configure Long-term Memory
 

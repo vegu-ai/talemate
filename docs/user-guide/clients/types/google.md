@@ -32,7 +32,7 @@ A unique name for the client that makes sense to you.
 
 ##### Model
 
-Which model to use. Currently defaults to `gemini-3.5-flash`.
+Which model to use. Currently defaults to `gemini-3.7-flash`.
 
 !!! note "Talemate lags behind Google"
     When Google adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.

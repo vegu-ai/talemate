@@ -105,6 +105,11 @@ const THEME_VARIABLE_OVERRIDES = {
   dark: {},
 };
 
+export function stockThemeVariables(dark) {
+  const mode = dark ? 'dark' : 'light';
+  return { ...STOCK_THEME_VARIABLES[mode], ...THEME_VARIABLE_OVERRIDES[mode] };
+}
+
 export function flattenThemeColors(resolvedTheme) {
   const colors = resolvedTheme?.colors;
   if (!colors || typeof colors !== 'object') {
@@ -145,12 +150,7 @@ export function applyTheme(resolvedTheme, themeInstance = vuetify.theme) {
 
   if (typeof resolvedTheme.dark === 'boolean' && resolvedTheme.dark !== definition.dark) {
     definition.dark = resolvedTheme.dark;
-    const mode = resolvedTheme.dark ? 'dark' : 'light';
-    Object.assign(
-      definition.variables,
-      STOCK_THEME_VARIABLES[mode],
-      THEME_VARIABLE_OVERRIDES[mode],
-    );
+    Object.assign(definition.variables, stockThemeVariables(resolvedTheme.dark));
   }
   return flat;
 }

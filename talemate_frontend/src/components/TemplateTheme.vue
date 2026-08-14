@@ -64,6 +64,13 @@
         </v-col>
     </v-row>
 
+    <TemplateThemePreview
+        v-if="template"
+        :template="template"
+        @set-color="setColor"
+        @save="saveTemplate"
+    />
+
     <v-expansion-panels v-model="openPanels" variant="accordion" multiple>
 
         <v-expansion-panel v-for="group in colorGroups" :key="group.key" :value="group.key">
@@ -173,6 +180,7 @@
 
 <script>
 import { CODE_EDITOR_THEMES } from '@/utils/codeEditorTheme';
+import TemplateThemePreview from './TemplateThemePreview.vue';
 import {
     THEME_COLOR_GROUPS,
     hydrateThemeTemplate,
@@ -184,6 +192,9 @@ const APPEARANCE_STYLE_FLAGS = ['italic', 'bold', 'show', 'override_color'];
 
 export default {
     name: 'TemplateTheme',
+    components: {
+        TemplateThemePreview,
+    },
     props: {
         immutableTemplate: {
             type: Object,
@@ -199,7 +210,7 @@ export default {
             codeEditorThemes: CODE_EDITOR_THEMES,
         };
     },
-    emits: ['update'],
+    emits: ['update', 'flush'],
     inject: [
         'getWebsocket',
     ],
@@ -225,10 +236,22 @@ export default {
     watch: {
         immutableTemplate: {
             handler: function (val) {
+                // the selection is moving on - persist an unsaved edit (e.g. one
+                // still inside the preview's save debounce) before this copy is
+                // discarded; flush saves without touching the new selection
+                if (this.template && this.dirty) {
+                    this.$emit('flush', this.template);
+                }
+                this.dirty = false;
                 this.template = val ? hydrateThemeTemplate({...val}, this.$vuetify.theme.current.colors, this.$vuetify.theme.current.dark) : null;
             },
             immediate: true,
             deep: true
+        }
+    },
+    beforeUnmount() {
+        if (this.template && this.dirty) {
+            this.$emit('flush', this.template);
         }
     },
     methods: {

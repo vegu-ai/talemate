@@ -207,6 +207,7 @@
                     <TemplateTheme
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
+                        @flush="(template) => saveTemplatePayload(template)"
                     />
                 </div>
 
@@ -568,6 +569,19 @@ export default {
             console.log('applyAndSaveTemplate', template, saveNew);
             this.template = template;
             this.saveTemplate(saveNew);
+        },
+
+        // persist a template without making it the current selection - a flushed
+        // edit belongs to the template the user has already navigated away from
+        saveTemplatePayload(template) {
+            if (!template || !template.uid) {
+                return;
+            }
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'save_template',
+                template: template
+            }));
         },
         
         saveTemplate(saveNew) {

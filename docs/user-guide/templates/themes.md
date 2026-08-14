@@ -36,6 +36,19 @@ Mark the template as a favorite to make it easier to find in the list of templat
 
 The colors are edited in four accordion panels, 51 slots in total. Each slot opens a color picker and shows the color it currently holds; the theme is saved when the picker closes.
 
+#### Preview
+
+The preview above the panels renders the theme being edited — not the theme currently applied — so a light theme looks light while you edit it from a dark app. It shows the theme's real elements: the surfaces, the interface accents and markers, a scene message sample with its text markup, and the director and help chat bubbles, all painted from the theme's own colors, mode and message appearance.
+
+Every element in it is clickable. Clicking one opens the color that paints it in a color picker right at the element, so you pick a color from the thing it colors rather than from a slot name you have to decode. Editing repaints the preview immediately and saves the theme.
+
+Some elements have no color of their own and take one from somewhere else. Clicking one of those says so instead of silently editing something broader than you expect, and offers the color it derives from for editing:
+
+- The text on filled elements (buttons, chat bubbles) is worked out automatically for readability, and the pickers of those elements note this.
+- Your own chat bubbles take the **Actor** color from Messages, so both chats share one decision for the player's voice.
+- Text markup with **Own color** switched off takes the color of the message it appears in.
+- Dividers and outlines are drawn from the theme **Mode**, not a color slot.
+
 | Panel | Slots | What it covers |
 |-------|-------|----------------|
 | **Surfaces** | 6 | The page background and the card surfaces everything else is drawn on. These decide whether the theme reads as light or dark, and Talemate works out readable text colors from them |

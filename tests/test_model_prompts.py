@@ -13,7 +13,10 @@ Covers:
 
 import datetime
 import os
+import re
 import textwrap
+
+import huggingface_hub
 
 import pytest
 from pathlib import Path
@@ -246,6 +249,7 @@ def gguf_thinking_template(tmp_path):
 # - Gemma4: reasoning with spec.set_spec + conditional blocks
 # - Seed: complex reasoning budget logic
 # - Qwen3.5: reasoning suppression via <think> tags
+# - Muse-Glimmer: ATEM channel protocol with reasoning-dependent assistant open
 _REPRESENTATIVE_TEMPLATES = [
     "ChatML.jinja2",
     "Llama3.jinja2",
@@ -253,6 +257,7 @@ _REPRESENTATIVE_TEMPLATES = [
     "Gemma4.jinja2",
     "Seed.jinja2",
     "Qwen3.5.jinja2",
+    "Muse-Glimmer.jinja2",
 ]
 
 
@@ -690,6 +695,12 @@ class TestTemplateIdentifiers:
                 "GPT4 Correct Assistant:",
                 "OpenChat",
             ),
+            (
+                "<|start|>system<|message|>sys<|eot|>"
+                "<|start|>user<|message|>msg<|eot|>"
+                "<|start|>assistant to=self<|message|>think<|eom|>",
+                "Muse-Glimmer",
+            ),
         ],
     )
     def test_identifier_detection(self, content, expected_template):
@@ -703,6 +714,16 @@ class TestTemplateIdentifiers:
         assert matched == expected_template, (
             f"Expected {expected_template}, got {matched}"
         )
+
+    def test_no_false_positive_on_harmony(self):
+        """Harmony-style content (<|start|>/<|message|> without <|eot|>/<|eom|>) matches nothing."""
+        harmony = (
+            "<|start|>system<|message|>sys<|end|>"
+            "<|start|>user<|message|>msg<|end|>"
+            "<|start|>assistant<|channel|>final<|message|>"
+        )
+        for cls in TEMPLATE_IDENTIFIERS:
+            assert not cls()(harmony)
 
     def test_no_false_positives_on_empty(self):
         """No identifier matches empty content."""
@@ -782,3 +803,162 @@ class TestPromptSpec:
         assert spec.reasoning_pattern is not None
         assert "final" in spec.reasoning_pattern
         assert "message" in spec.reasoning_pattern
+
+
+# ---------------------------------------------------------------------------
+# Muse-Glimmer template tests (ATEM channel protocol)
+# ---------------------------------------------------------------------------
+
+
+class TestMuseGlimmerTemplate:
+    """Muse-Glimmer template renders the ATEM channel protocol correctly."""
+
+    def _render(
+        self,
+        model_prompt_with_std,
+        prompt="Write the next scene.",
+        reasoning_tokens=0,
+        spec=None,
+    ):
+        mp, _ = model_prompt_with_std
+        return mp(
+            model_name="__muse_glimmer_test__",
+            system_message="You are a helpful storytelling assistant.",
+            prompt=prompt,
+            default_template="Muse-Glimmer.jinja2",
+            reasoning_tokens=reasoning_tokens,
+            spec=spec,
+        )[0]
+
+    def test_assistant_channel_prefilled_without_reasoning(self, model_prompt_with_std):
+        """Without reasoning the user channel is prefilled so the response is clean."""
+        rendered = self._render(model_prompt_with_std)
+        assert rendered.startswith("<|start|>system<|message|>")
+        assert '# Valid recipients: "self", "user".<|eot|>' in rendered
+        assert rendered.endswith("<|start|>assistant to=user<|message|>")
+
+    def test_assistant_open_with_reasoning(self, model_prompt_with_std):
+        """With reasoning the assistant turn is left open for the reasoning channel."""
+        spec = PromptSpec()
+        rendered = self._render(model_prompt_with_std, reasoning_tokens=1024, spec=spec)
+        assert rendered.endswith("<|start|>assistant")
+        assert spec.reasoning_pattern is not None
+        assert "to=user" in spec.reasoning_pattern
+        assert spec.reasoning_validation_pattern is not None
+
+    def test_no_spec_patterns_without_reasoning(self, model_prompt_with_std):
+        spec = PromptSpec()
+        self._render(model_prompt_with_std, spec=spec)
+        assert spec.reasoning_pattern is None
+        assert spec.reasoning_validation_pattern is None
+
+    def test_coercion_in_user_channel(self, model_prompt_with_std):
+        rendered = self._render(
+            model_prompt_with_std, prompt="Write the next scene.<|BOT|>Sure, here is"
+        )
+        assert rendered.endswith("<|start|>assistant to=user<|message|>Sure, here is")
+
+    def test_reasoning_pattern_strips_both_response_shapes(self, model_prompt_with_std):
+        """The strip pattern cleans reasoned and direct ATEM responses alike."""
+        spec = PromptSpec()
+        self._render(model_prompt_with_std, reasoning_tokens=1024, spec=spec)
+        reasoned = (
+            " to=self<|message|>thinking<|eom|>"
+            "<|start|>assistant to=user<|message|>The answer."
+        )
+        direct = " to=user<|message|>The answer."
+        for response in (reasoned, direct):
+            match = re.search(spec.reasoning_pattern, response, re.DOTALL)
+            assert match is not None
+            assert response.replace(match.group(0), "") == "The answer."
+            assert re.search(spec.reasoning_validation_pattern, response, re.DOTALL)
+
+    def test_truncated_reasoning_hits_error_path(self, model_prompt_with_std):
+        """Mid-reasoning truncation validates as reasoned but fails the strip,
+        surfacing ReasoningResponseError instead of leaking raw reasoning."""
+        spec = PromptSpec()
+        self._render(model_prompt_with_std, reasoning_tokens=1024, spec=spec)
+        truncated = " to=self<|message|>thinking cut off mid"
+        assert re.search(spec.reasoning_validation_pattern, truncated, re.DOTALL)
+        assert not re.search(spec.reasoning_pattern, truncated, re.DOTALL)
+
+    def test_reasoning_baseline(self, model_prompt_with_std, baseline_checker):
+        """Reasoning render without coercion leaves the assistant turn open."""
+        rendered = self._render(model_prompt_with_std, reasoning_tokens=1024)
+        baseline_checker(rendered, "std__Muse-Glimmer__reasoning")
+
+    @pytest.mark.parametrize(
+        "reasoning_tokens,strength",
+        [(0, "low"), (1024, "low"), (2048, "medium"), (8192, "high")],
+    )
+    def test_reasoning_strength_buckets(
+        self, model_prompt_with_std, reasoning_tokens, strength
+    ):
+        rendered = self._render(
+            model_prompt_with_std, reasoning_tokens=reasoning_tokens
+        )
+        assert f"Reasoning strength: {strength}." in rendered
+
+
+# ---------------------------------------------------------------------------
+# HF template suggestion file-priority tests
+# ---------------------------------------------------------------------------
+
+
+class TestQueryHFTemplateSuggestion:
+    """query_hf_for_prompt_template_suggestion checks files in priority order."""
+
+    ATEM_CONTENT = (
+        "<|start|>system<|message|>sys<|eot|>"
+        "<|start|>user<|message|>msg<|eot|>"
+        "<|start|>assistant to=self<|message|>think<|eom|>"
+    )
+
+    def _stub_hf(self, model_prompt, monkeypatch, downloads):
+        class _FakeModel:
+            id = "some-org/some-model"
+
+        monkeypatch.setattr(
+            huggingface_hub.HfApi,
+            "list_models",
+            lambda *args, **kwargs: iter([_FakeModel()]),
+        )
+        monkeypatch.setattr(
+            model_prompt,
+            "_download_hf_file",
+            lambda repo_id, filename, revision: downloads.get(filename),
+        )
+
+    def test_jinja_fallback(self, model_prompt, monkeypatch):
+        """chat_template.jinja is checked when chat_template.jinja2 is missing."""
+        self._stub_hf(
+            model_prompt,
+            monkeypatch,
+            {
+                "chat_template.jinja2": None,
+                "chat_template.jinja": self.ATEM_CONTENT,
+                "README.md": None,
+                "tokenizer_config.json": None,
+            },
+        )
+        assert (
+            model_prompt.query_hf_for_prompt_template_suggestion("some-model")
+            == "Muse-Glimmer.jinja2"
+        )
+
+    def test_jinja2_takes_priority(self, model_prompt, monkeypatch):
+        """chat_template.jinja2 wins over chat_template.jinja when both exist."""
+        self._stub_hf(
+            model_prompt,
+            monkeypatch,
+            {
+                "chat_template.jinja2": "<|im_start|>system\n{{ sys }}<|im_end|>",
+                "chat_template.jinja": self.ATEM_CONTENT,
+                "README.md": None,
+                "tokenizer_config.json": None,
+            },
+        )
+        assert (
+            model_prompt.query_hf_for_prompt_template_suggestion("some-model")
+            == "ChatML.jinja2"
+        )

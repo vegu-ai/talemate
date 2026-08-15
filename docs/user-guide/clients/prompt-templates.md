@@ -24,7 +24,7 @@ Click the two cogwheels to the right of the triangle to go to the client's edito
 
 ![Client editor with an unknown prompt template](/talemate/img/0.40.0/client-unknown-prompt-template-editor.png)
 
-You can first try by clicking the `DETERMINE VIA HUGGINGFACE` button. This doesn't always work, it requires either the model's `README.md` to contain an example or for the template to be set in the tokenizer_config.json file.
+You can first try by clicking the `DETERMINE VIA HUGGINGFACE` button. This doesn't always work — it probes the model repository for a template in this order: a `chat_template.jinja2` or `chat_template.jinja` file, an example in the model's `README.md`, or the template set in the `tokenizer_config.json` file.
 
 If that doesn't work, you can manually select the prompt template from the dropdown. 
 

@@ -390,7 +390,7 @@ class ModelPrompt:
         repo_id = f"{model.id}"
 
         # Files are checked in priority order; the first matching identifier wins.
-        for filename in ("chat_template.jinja2", "README.md"):
+        for filename in ("chat_template.jinja2", "chat_template.jinja", "README.md"):
             content = self._download_hf_file(repo_id, filename, branch_name)
             if content:
                 match = self._match_template_identifier(content)
@@ -650,4 +650,17 @@ class GLMIdentifier(TemplateIdentifier):
             and "<|system|>" in content
             and "<|user|>" in content
             and "<|assistant|>" in content
+        )
+
+
+@register_template_identifier
+class MuseGlimmerIdentifier(TemplateIdentifier):
+    template_str = "Muse-Glimmer"
+
+    def __call__(self, content: str):
+        return (
+            "<|start|>" in content
+            and "<|message|>" in content
+            and "<|eot|>" in content
+            and "<|eom|>" in content
         )

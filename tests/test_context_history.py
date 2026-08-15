@@ -2688,6 +2688,158 @@ class TestBestFit:
             f"with budget {budget}"
         )
 
+    def test_best_fit_compute_ranges_clamps_out_of_range_indices(self):
+        """start/end beyond the lower level's length must not leak into ranges.
+
+        Render ranges are used as direct list indices downstream
+        (``level.formatted[i]``); an entry whose start/end points past the
+        level below (drifted or reconstructed summarization indices) must be
+        clamped or skipped, never propagated.
+        """
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryMixin,
+            _BestFitLevel,
+        )
+
+        lower = _BestFitLevel(
+            entries=[{"text": _pad(f"lower-{i}", 100), "ts": i * 60} for i in range(3)],
+            formatted=[_pad(f"lower-{i}", 100) for i in range(3)],
+            tokens=[100] * 3,
+            type="archived",
+        )
+        upper = _BestFitLevel(
+            entries=[
+                {
+                    "text": _pad("upper-0", 50),
+                    "ts_start": 0,
+                    "ts_end": 180,
+                    "start": 5,
+                    "end": 99,
+                }
+            ],
+            formatted=[_pad("upper-0", 50)],
+            tokens=[50],
+            type="layer",
+            layer_idx=0,
+        )
+
+        render_ranges = ContextHistoryMixin._best_fit_compute_ranges(
+            [upper, lower], budget=10000
+        )
+
+        for level, (s, e) in zip([upper, lower], render_ranges):
+            assert 0 <= s <= e <= len(level.entries), (
+                f"render range ({s}, {e}) exceeds level of {len(level.entries)} entries"
+            )
+
+    def test_best_fit_compute_ranges_warns_on_out_of_range_indices(self):
+        """Fully out-of-range entries are skipped, and the skip is logged."""
+        from structlog.testing import capture_logs
+
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryMixin,
+            _BestFitLevel,
+        )
+
+        lower = _BestFitLevel(
+            entries=[{"text": _pad(f"lower-{i}", 100), "ts": i * 60} for i in range(3)],
+            formatted=[_pad(f"lower-{i}", 100) for i in range(3)],
+            tokens=[100] * 3,
+            type="archived",
+        )
+        upper = _BestFitLevel(
+            entries=[
+                {
+                    "text": _pad("upper-0", 50),
+                    "ts_start": 0,
+                    "ts_end": 180,
+                    "start": 5,
+                    "end": 99,
+                }
+            ],
+            formatted=[_pad("upper-0", 50)],
+            tokens=[50],
+            type="layer",
+            layer_idx=0,
+        )
+
+        with capture_logs() as logs:
+            ContextHistoryMixin._best_fit_compute_ranges([upper, lower], budget=10000)
+
+        assert any(
+            log["event"] == "best_fit_ranges_clamped" and log["log_level"] == "warning"
+            for log in logs
+        )
+
+    def test_best_fit_unexpandable_entry_stays_rendered(self):
+        """A drifted entry must not be cut from the render when an older entry expands.
+
+        Expansion walks newest → oldest; an unexpandable (fully out-of-range)
+        entry is a hard boundary. Otherwise the older entry's expansion shrinks
+        the upper range past the drifted entry and its summary renders nowhere.
+        """
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryMixin,
+            _BestFitLevel,
+        )
+
+        lower = _BestFitLevel(
+            entries=[{"text": _pad(f"lower-{i}", 100), "ts": i * 60} for i in range(3)],
+            formatted=[_pad(f"lower-{i}", 100) for i in range(3)],
+            tokens=[100] * 3,
+            type="archived",
+        )
+        upper = _BestFitLevel(
+            entries=[
+                # valid older entry — would expand fine on its own
+                {
+                    "text": _pad("upper-0", 50),
+                    "ts_start": 0,
+                    "ts_end": 60,
+                    "start": 0,
+                    "end": 0,
+                },
+                # drifted newest entry — points past the lower level
+                {
+                    "text": _pad("upper-1", 50),
+                    "ts_start": 60,
+                    "ts_end": 180,
+                    "start": 5,
+                    "end": 99,
+                },
+            ],
+            formatted=[_pad("upper-0", 50), _pad("upper-1", 50)],
+            tokens=[50, 50],
+            type="layer",
+            layer_idx=0,
+        )
+
+        render_ranges = ContextHistoryMixin._best_fit_compute_ranges(
+            [upper, lower], budget=10000
+        )
+
+        # the drifted newest entry stays in the upper render range
+        assert render_ranges[0] == (0, 2)
+
+    def test_best_fit_out_of_range_layer_indices_no_index_error(
+        self, summarizer, test_data
+    ):
+        """End-to-end: a scene whose layered_history indices point past the
+        layer below (as changelog reconstruction can produce) must render
+        without IndexError."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+        # layer 0 has 4 entries; point the second layer-1 entry past the end
+        scene.layered_history[1][1]["start"] = 5
+        scene.layered_history[1][1]["end"] = 99
+
+        # budget small enough that not all dialogue fits, forcing the
+        # level-expansion path that consumes the corrupted indices
+        result = scene.context_history(budget=1500)
+
+        assert isinstance(result, list)
+        assert len(result) > 0
+
     def test_best_fit_prefers_dialogue_over_summaries(self, summarizer, test_data):
         """When budget fits all dialogue, prefer it over summaries."""
         self._enable_best_fit(summarizer)

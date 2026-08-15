@@ -2061,7 +2061,24 @@ class Scene(Emitter):
             # `filename`, which the changelog paths are resolved from.
             temp_path = None
             if use_changelog:
-                from talemate.changelog import reconstruct_scene_data
+                from talemate.changelog import (
+                    ChangelogDivergedError,
+                    check_chain_divergence,
+                    reconstruct_scene_data,
+                )
+
+                # Restoring a diverged reconstruction and then saving commits
+                # diff(latest, lossy_reconstruction), baking the losses into
+                # the chain — refuse instead. The timeline handler catches
+                # this for user-facing messaging; the guard lives here because
+                # this is the operation that performs the rollback.
+                divergent = await check_chain_divergence(self)
+                if divergent:
+                    raise ChangelogDivergedError(
+                        f"Refusing to restore from revision: the changelog chain "
+                        f"has diverged at {len(divergent)} path(s) "
+                        f"(e.g. {divergent[0]})."
+                    )
 
                 target_rev = from_rev
                 # For now, date range selection is not implemented; default to latest if not provided

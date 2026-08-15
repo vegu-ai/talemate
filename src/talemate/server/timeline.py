@@ -28,6 +28,8 @@ import structlog
 
 from talemate.changelog import (
     _get_overall_latest_revision,
+    ChangelogCorruptedError,
+    check_chain_divergence,
     create_pre_rollback_backup,
     fork_scene_at_revision,
     list_revision_entries,
@@ -115,6 +117,19 @@ class TimelinePlugin(Plugin):
         scene = self._target_scene(payload.scene_path)
 
         max_messages = max(1, min(payload.max_messages, MAX_PREVIEW_MESSAGES))
+        try:
+            divergent = await check_chain_divergence(scene)
+        except ChangelogCorruptedError as e:
+            log.warning(
+                "preview_from_unverifiable_chain", rev=payload.rev, detail=str(e)
+            )
+            divergent = None
+        if divergent:
+            log.warning(
+                "preview_from_diverged_chain",
+                rev=payload.rev,
+                paths=divergent[:20],
+            )
         reconstructed = await reconstruct_scene_data(scene, to_rev=payload.rev)
 
         history = reconstructed.get("history") or []
@@ -158,6 +173,20 @@ class TimelinePlugin(Plugin):
             )
             return
 
+        try:
+            divergent = await check_chain_divergence(scene)
+        except ChangelogCorruptedError as e:
+            await self.signal_operation_failed(f"Rollback refused: {e}")
+            return
+        if divergent:
+            await self.signal_operation_failed(
+                "Rollback refused: this scene's history chain has diverged "
+                f"({len(divergent)} path(s), e.g. {divergent[0]}). Rolling "
+                "back would permanently record the reconstruction losses — "
+                "fork from a revision instead."
+            )
+            return
+
         original_filename = scene.filename
         original_path = os.path.join(scene.save_dir, scene.filename)
         backup_path = create_pre_rollback_backup(scene)
@@ -169,7 +198,7 @@ class TimelinePlugin(Plugin):
             # clears the filename and leaves `rev` resolved against the temp
             # name — point both back at the original scene file before saving.
             scene.filename = original_filename
-            scene.rev = _get_overall_latest_revision(scene)
+            scene.rev = _get_overall_latest_revision(scene, strict=False)
 
             await scene.save()
             await scene.emit_history()
@@ -205,11 +234,33 @@ class TimelinePlugin(Plugin):
         payload = ForkPayload(**data)
         scene = self._target_scene(payload.scene_path)
 
+        warning = None
+        try:
+            divergent = await check_chain_divergence(scene)
+        except ChangelogCorruptedError as e:
+            divergent = None
+            warning = (
+                "Fork created, but this scene's history chain could not be "
+                f"verified ({e}) — the fork may be missing or misrepresenting "
+                "data from the original scene."
+            )
+        if divergent:
+            warning = (
+                "Fork created, but this scene's history chain has diverged "
+                f"({len(divergent)} path(s)) — the fork may be missing or "
+                "misrepresenting data from the original scene."
+            )
+
         fork_path = await fork_scene_at_revision(scene, payload.rev, payload.save_name)
 
         log.info("timeline_fork", rev=payload.rev, path=fork_path)
 
-        await self.signal_operation_done(signal_only=True)
+        await self.signal_operation_done(
+            signal_only=True,
+            emit_status_message={"message": warning, "status": "warning"}
+            if warning
+            else None,
+        )
 
         self.websocket_handler.queue_put(
             {

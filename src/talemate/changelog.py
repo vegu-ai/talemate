@@ -132,6 +132,13 @@ _LIST_FIELDS = (
     "game_state_watch_paths",
 )
 
+# Cache for check_chain_divergence verdicts, keyed by (changelog_dir,
+# filename) with a stat fingerprint of the changelog artifacts. Bounded:
+# the check also runs on unloaded scenes from the load screen, so a
+# long-running server could otherwise accumulate entries indefinitely.
+_DIVERGENCE_CHECK_CACHE_MAX = 128
+_DIVERGENCE_CHECK_CACHE: dict[tuple[str, str], tuple[tuple, list[str] | None]] = {}
+
 
 # Helper minimal scene reference compatible with this module's helpers
 class _SceneRef:
@@ -190,22 +197,18 @@ async def save_changelog(scene: "Scene"):
 
     if not os.path.exists(base_path):
         os.makedirs(scene.changelog_dir, exist_ok=True)
-        with open(base_path, "w") as f:
-            try:
-                log.debug(
-                    "Changelog initialized",
-                    scene=str(
-                        Path(scene.save_dir).relative_to(SCENES_DIR)
-                        / Path(scene.filename)
-                    ),
-                )
-            except ValueError:
-                pass
-            json.dump(serialized_scene, f, indent=2, cls=SceneEncoder)
+        try:
+            log.debug(
+                "Changelog initialized",
+                scene=str(
+                    Path(scene.save_dir).relative_to(SCENES_DIR) / Path(scene.filename)
+                ),
+            )
+        except ValueError:
+            pass
+        _write_json(base_path, serialized_scene, cls=SceneEncoder)
         # initialize latest snapshot to base
-        latest_path = _latest_path(scene)
-        with open(latest_path, "w") as f:
-            json.dump(serialized_scene, f, indent=2, cls=SceneEncoder)
+        _write_json(_latest_path(scene), serialized_scene, cls=SceneEncoder)
         return
 
 
@@ -288,21 +291,57 @@ def _read_json_or_default(path: str, default):
         return default
 
 
-def _write_json(path: str, data: dict):
+class ChangelogCorruptedError(Exception):
+    """A changelog artifact exists on disk but cannot be parsed."""
+
+
+def _read_changelog_log_strict(path: str) -> dict | None:
+    """Read a changelog log file.
+
+    Returns None when the file does not exist. Raises
+    ChangelogCorruptedError when it exists but cannot be parsed or does not
+    have the changelog log shape — treating a corrupted log as empty would
+    silently drop every delta it holds.
+    """
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r") as f:
+            content = json.load(f)
+    except Exception as e:
+        raise ChangelogCorruptedError(f"Unreadable changelog file: {path}: {e}") from e
+    if (
+        not isinstance(content, dict)
+        or not isinstance(content.get("deltas"), list)
+        or ("latest_rev" in content and not isinstance(content["latest_rev"], int))
+    ):
+        raise ChangelogCorruptedError(
+            f"Malformed changelog file: {path}: not a changelog log structure"
+        )
+    return content
+
+
+def _write_json(path: str, data: dict, cls=None):
     """
     Write JSON data to file, creating parent directories as needed.
+
+    Writes to a temporary file and atomically renames it into place, so a
+    crash mid-write can never leave a truncated JSON document behind.
 
     Args:
         path: Path to write the JSON file
         data: Dictionary data to write as JSON
+        cls: Optional JSON encoder class (e.g. SceneEncoder)
 
     Returns:
         None
     """
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as f:
-            json.dump(data, f, indent=2)
+        tmp_path = f"{path}.tmp.{os.getpid()}"
+        with open(tmp_path, "w") as f:
+            json.dump(data, f, indent=2, cls=cls)
+        os.replace(tmp_path, path)
     except Exception as e:
         log.error("write_json", error=e, path=path)
 
@@ -371,7 +410,9 @@ def _ensure_log_initialized(scene: "Scene", start_rev: int = 0) -> dict:
         "deltas": [],
         "latest_rev": start_rev,
     }
-    content = _read_json_or_default(log_path, default_content)
+    content = _read_changelog_log_strict(log_path)
+    if content is None:
+        content = default_content
     content.setdefault("version", 1)
     content.setdefault("base", base_filename)
     content.setdefault("start_rev", start_rev)
@@ -416,11 +457,16 @@ def _load_base_scene_data(scene: "Scene") -> dict:
 
     Raises:
         FileNotFoundError: If the base snapshot file doesn't exist
-        json.JSONDecodeError: If the base snapshot file contains invalid JSON
+        ChangelogCorruptedError: If the base snapshot file contains invalid JSON
     """
     base_path = _base_path(scene)
-    with open(base_path, "r") as f:
-        return json.load(f)
+    try:
+        with open(base_path, "r") as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        raise ChangelogCorruptedError(
+            f"Unreadable changelog file: {base_path}: {e}"
+        ) from e
 
 
 def _load_latest_scene_data(scene: "Scene") -> dict | None:
@@ -453,12 +499,15 @@ def _load_latest_scene_data(scene: "Scene") -> dict | None:
         return None
 
 
-def _ensure_latest_initialized(scene: "Scene") -> None:
+async def _ensure_latest_initialized(scene: "Scene") -> None:
     """
-    Ensure the latest snapshot file exists, creating it from base if needed.
+    Ensure the latest snapshot file exists, creating it if needed.
 
-    This function is used to maintain the optimization cache. If the latest
-    snapshot file doesn't exist, it's initialized with the base scene data.
+    With changelog segments present, the snapshot is healed from the
+    reconstructed chain tip — initializing it from the base would make the
+    next append diff against the base, and the resulting catch-up delta
+    double-applies list operations on replay (force-mode application writes
+    unconditionally). Without segments, the base is the only state there is.
 
     Args:
         scene: The scene object
@@ -467,9 +516,13 @@ def _ensure_latest_initialized(scene: "Scene") -> None:
         None
     """
     latest = _latest_path(scene)
-    if not os.path.exists(latest):
-        base_data = _load_base_scene_data(scene)
-        _write_json(latest, base_data)
+    if os.path.exists(latest):
+        return
+    if _get_changelog_files(scene):
+        data = await reconstruct_scene_data(scene)
+    else:
+        data = _load_base_scene_data(scene)
+    _write_json(latest, data)
 
 
 _DELTA_PATH_TOKEN_RE = re.compile(r"\['([^']*)'\]|\[(-?\d+)\]")
@@ -588,6 +641,29 @@ def _compute_delta(prev: dict, curr: dict) -> dict:
     return delta_dict
 
 
+def _delta_reproduces_state(prev: dict, curr: dict, delta_dict: dict) -> bool:
+    """Return True if applying ``delta_dict`` to ``prev`` reproduces ``curr``.
+
+    The comparison uses the same exclusions as delta computation, since
+    excluded paths legitimately differ between the two states. A delta that
+    fails this check would diverge the reconstruction chain if written.
+    """
+    try:
+        applied = prev + deepdiff.Delta(
+            delta_dict, log_errors=False, raise_errors=False, force=True
+        )
+    except Exception:
+        return False
+    return not deepdiff.DeepDiff(
+        applied,
+        curr,
+        ignore_order=False,
+        exclude_paths=EXCLUDE_FROM_DELTAS,
+        exclude_regex_paths=EXCLUDE_FROM_DELTAS_REGEX,
+        ignore_type_in_groups=[(type(None), str, int, float, bool, list, dict)],
+    )
+
+
 def _serialize_scene_plain(scene: "Scene") -> dict:
     """
     Serialize a scene to a plain dictionary suitable for JSON storage.
@@ -633,7 +709,7 @@ async def append_scene_delta(scene: "Scene", meta: dict | None = None) -> int | 
     # Find the latest changelog file and get the overall latest revision
     latest_rev = _get_overall_latest_revision(scene)
 
-    _ensure_latest_initialized(scene)
+    await _ensure_latest_initialized(scene)
     prev_data = _load_latest_scene_data(scene)
     if prev_data is None:
         prev_data = await reconstruct_scene_data(scene, to_rev=latest_rev)
@@ -642,6 +718,16 @@ async def append_scene_delta(scene: "Scene", meta: dict | None = None) -> int | 
 
     delta = _compute_delta(prev_data, curr_data)
     if not delta:
+        return None
+
+    if not _delta_reproduces_state(prev_data, curr_data, delta):
+        # Refusing to write keeps the chain consistent: the latest snapshot
+        # is left unchanged, so the next append retries from the same baseline.
+        log.error(
+            "delta_verification_failed",
+            rev=latest_rev + 1,
+            detail="computed delta does not reproduce the scene state; delta not written",
+        )
         return None
 
     new_rev = latest_rev + 1
@@ -684,24 +770,44 @@ async def append_scene_delta(scene: "Scene", meta: dict | None = None) -> int | 
     return new_rev
 
 
-def _get_overall_latest_revision(scene: "Scene") -> int:
+def _get_overall_latest_revision(scene: "Scene", strict: bool = True) -> int:
     """
     Get the latest revision number across all changelog files.
+
+    Includes the quarantine marker's revision hint, so new revisions
+    continue above a quarantined range instead of reusing its numbers.
+
+    Args:
+        scene: The scene object
+        strict: When False, corrupted changelog files are skipped with an
+                error log instead of raising — for callers like scene load,
+                where the changelog is auxiliary to the scene file itself.
 
     Returns:
         int: The highest revision number found, or 0 if no revisions exist
     """
     files = _get_changelog_files(scene)
+    marker = _read_quarantine_marker(scene)
     if not files:
-        return 0
+        return (marker or {}).get("latest_rev_hint", 0)
 
     latest_rev = 0
     for start_rev, file_path in files:
-        log_data = _read_json_or_default(file_path, {})
+        try:
+            log_data = _read_changelog_log_strict(file_path) or {}
+        except ChangelogCorruptedError:
+            if strict:
+                raise
+            log.error(
+                "skipping_corrupted_changelog_file",
+                path=file_path,
+                detail="revision numbers in this file are not counted",
+            )
+            continue
         file_latest = log_data.get("latest_rev", start_rev)
         latest_rev = max(latest_rev, file_latest)
 
-    return latest_rev
+    return max(latest_rev, (marker or {}).get("latest_rev_hint", 0))
 
 
 def _coerce_forced_list(value) -> tuple[list | None, bool]:
@@ -845,7 +951,7 @@ async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> d
         if start_rev > to_rev:
             break  # Files are sorted by start_rev, so we can stop here
 
-        log_data = _read_json_or_default(file_path, {})
+        log_data = _read_changelog_log_strict(file_path) or {}
         file_deltas = log_data.get("deltas", [])
 
         for entry in file_deltas:
@@ -919,7 +1025,7 @@ def list_revisions(scene: "Scene") -> list[int]:
     files = _get_changelog_files(scene)
 
     for _, file_path in files:
-        log_data = _read_json_or_default(file_path, {})
+        log_data = _read_changelog_log_strict(file_path) or {}
         file_revisions = [d.get("rev", 0) for d in log_data.get("deltas", [])]
         all_revisions.extend(file_revisions)
 
@@ -936,7 +1042,7 @@ def list_revision_entries(scene: "Scene") -> list[dict]:
     entries: list[dict] = []
     files = _get_changelog_files(scene)
     for _, file_path in files:
-        log_data = _read_json_or_default(file_path, {})
+        log_data = _read_changelog_log_strict(file_path) or {}
         for entry in log_data.get("deltas", []):
             rev = entry.get("rev")
             ts = entry.get("ts")
@@ -988,6 +1094,7 @@ def delete_changelog_files(scene: "Scene") -> dict:
         latest_path = _latest_path(scene)
         files.append(base_path)
         files.append(latest_path)
+        files.append(_quarantine_marker_path(scene))
         files.extend([fp for _, fp in _get_changelog_files(scene)])
 
         # Delete files if they exist
@@ -1047,6 +1154,232 @@ def create_pre_rollback_backup(scene: "Scene") -> str | None:
     return backup_path
 
 
+def _changelog_fingerprint(scene: "Scene") -> tuple:
+    """Stat fingerprint of all changelog artifacts, for cache invalidation."""
+    paths = [_base_path(scene), _latest_path(scene)]
+    paths.extend(fp for _, fp in _get_changelog_files(scene))
+    fingerprint = []
+    for path in paths:
+        try:
+            st = os.stat(path)
+            fingerprint.append((path, st.st_mtime_ns, st.st_size))
+        except OSError:
+            fingerprint.append((path, None, None))
+    return tuple(fingerprint)
+
+
+def _diff_paths(diff) -> list[str]:
+    paths: set[str] = set()
+    for val in diff.values():
+        if isinstance(val, dict):
+            paths.update(str(p) for p in val.keys())
+        else:
+            paths.update(str(p) for p in val)
+    return sorted(paths)
+
+
+async def check_chain_divergence(scene: "Scene") -> list[str] | None:
+    """
+    Verify the delta chain by reconstructing the latest revision and
+    comparing it against the latest snapshot.
+
+    Paths in EXCLUDE_FROM_DELTAS diverge by design and are masked, as is
+    ``shared_context`` (reconstruction deliberately disconnects it).
+
+    Results are cached against a stat fingerprint of the changelog files.
+
+    Returns:
+        None: no changelog data to check (treat as healthy)
+        []: chain intact — reconstruction reproduces the latest snapshot
+        list[str]: divergent deepdiff paths — the chain has diverged
+
+    Raises:
+        ChangelogCorruptedError: the chain cannot be verified at all — the
+            latest snapshot is missing or unreadable, or segments were
+            quarantined (end-state comparison cannot prove a lost segment
+            did not matter, since later deltas may rewrite the same paths)
+    """
+    if not os.path.exists(_base_path(scene)):
+        return None
+
+    marker = _read_quarantine_marker(scene)
+    if marker is not None:
+        log.debug("chain_unverifiable_quarantined", marker=marker)
+        raise ChangelogCorruptedError("history segments were quarantined as corrupted")
+    if _has_quarantined_segments(scene):
+        raise ChangelogCorruptedError("history segments were quarantined as corrupted")
+
+    latest_path = _latest_path(scene)
+    if not os.path.exists(latest_path):
+        raise ChangelogCorruptedError("the latest snapshot is missing")
+    latest_data = _load_latest_scene_data(scene)
+    if latest_data is None:
+        raise ChangelogCorruptedError("the latest snapshot is unreadable")
+
+    cache_key = (os.path.abspath(scene.changelog_dir), scene.filename)
+    fingerprint = _changelog_fingerprint(scene)
+    cached = _DIVERGENCE_CHECK_CACHE.get(cache_key)
+    if cached and cached[0] == fingerprint:
+        return cached[1]
+
+    latest_rev = _get_overall_latest_revision(scene)
+    reconstructed = await reconstruct_scene_data(scene, to_rev=latest_rev)
+
+    diff = deepdiff.DeepDiff(
+        reconstructed,
+        latest_data,
+        ignore_order=False,
+        exclude_paths=[*EXCLUDE_FROM_DELTAS, "root['shared_context']"],
+        exclude_regex_paths=EXCLUDE_FROM_DELTAS_REGEX,
+        ignore_type_in_groups=[(type(None), str, int, float, bool, list, dict)],
+    )
+    divergent_paths = _diff_paths(diff) if diff else []
+
+    if divergent_paths:
+        log.warning(
+            "changelog_chain_diverged",
+            rev=latest_rev,
+            paths=divergent_paths[:20],
+            total=len(divergent_paths),
+        )
+
+    while len(_DIVERGENCE_CHECK_CACHE) >= _DIVERGENCE_CHECK_CACHE_MAX:
+        _DIVERGENCE_CHECK_CACHE.pop(next(iter(_DIVERGENCE_CHECK_CACHE)))
+    _DIVERGENCE_CHECK_CACHE[cache_key] = (fingerprint, divergent_paths)
+    return divergent_paths
+
+
+class ChangelogDivergedError(ValueError):
+    """The delta chain no longer reconstructs the latest snapshot."""
+
+
+def _quarantine_marker_path(scene: "Scene") -> str:
+    return os.path.join(scene.changelog_dir, f"{scene.filename}.quarantine.json")
+
+
+def _read_quarantine_marker(scene: "Scene") -> dict | None:
+    """Read the quarantine marker, failing closed.
+
+    Returns None only when no marker file exists. An existing but
+    unparseable (or non-dict) marker still means a quarantine happened —
+    returns an empty dict so callers treat the chain as quarantined.
+    """
+    path = _quarantine_marker_path(scene)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path) as f:
+            marker = json.load(f)
+        return marker if isinstance(marker, dict) else {}
+    except Exception:
+        log.error("quarantine_marker_unreadable", path=path)
+        return {}
+
+
+def _has_quarantined_segments(scene: "Scene") -> bool:
+    """Whether quarantined segment files are present in the changelog dir.
+
+    Backstop for the marker: renames succeed where a marker write can fail
+    (e.g. full disk), so the renamed files themselves are evidence.
+    """
+    return bool(
+        glob.glob(
+            os.path.join(
+                scene.changelog_dir, f"{scene.filename}.changelog.*.json.corrupted"
+            )
+        )
+    )
+
+
+def quarantine_corrupted_changelog_files(scene: "Scene") -> list[str]:
+    """Rename unreadable changelog artifacts aside (``<file>.corrupted``).
+
+    Covers log segments and the latest snapshot (not the base: without it
+    nothing is reconstructable, and every read already fails loudly).
+
+    A corrupted artifact cannot be read, and left in place it makes every
+    strict changelog read fail — including the one in the save path, so the
+    scene loads but can never save again. Quarantining lets the chain
+    continue. When segments were lost, a quarantine marker is written
+    *before* anything is renamed: later deltas can rewrite the lost paths,
+    so end-state comparison cannot prove the gap mattered —
+    ``check_chain_divergence`` treats the marker's presence (or leftover
+    quarantined segment files, if the marker write itself failed) as
+    unverifiable and destructive operations refuse for the life of the
+    chain. The marker also carries a revision hint so new revisions
+    continue above the lost range instead of colliding with it. Files are
+    renamed, never deleted.
+
+    Returns the list of quarantined paths (empty when nothing was corrupted).
+    """
+    # captured before anything is renamed: the highest revision still
+    # readable, plus the start revs of the corrupted segments themselves
+    pre_quarantine_hint = _get_overall_latest_revision(scene, strict=False)
+
+    quarantined: list[str] = []
+    corrupted_segments: list[tuple[int, str]] = []
+
+    for start_rev, file_path in _get_changelog_files(scene):
+        try:
+            _read_changelog_log_strict(file_path)
+        except ChangelogCorruptedError:
+            corrupted_segments.append((start_rev, file_path))
+
+    latest_path = _latest_path(scene)
+    latest_corrupted = False
+    if os.path.exists(latest_path):
+        try:
+            with open(latest_path) as f:
+                json.load(f)
+        except Exception:
+            latest_corrupted = True
+
+    if corrupted_segments:
+        existing = _read_quarantine_marker(scene) or {}
+        hint = max(
+            pre_quarantine_hint,
+            *[start_rev for start_rev, _ in corrupted_segments],
+            existing.get("latest_rev_hint", 0),
+        )
+        marker_path = _quarantine_marker_path(scene)
+        try:
+            os.makedirs(scene.changelog_dir, exist_ok=True)
+            with open(marker_path, "w") as f:
+                json.dump(
+                    {
+                        "ts": _utc_timestamp_now(),
+                        "quarantined": existing.get("quarantined", [])
+                        + [f"{fp}.corrupted" for _, fp in corrupted_segments],
+                        "latest_rev_hint": hint,
+                    },
+                    f,
+                    indent=2,
+                )
+        except Exception as e:
+            # the renamed-aside segments are still detected via
+            # _has_quarantined_segments, so the chain stays fail-closed
+            log.error("quarantine_marker_write_failed", path=marker_path, error=e)
+
+    def _quarantine(file_path: str):
+        quarantine_path = f"{file_path}.corrupted"
+        try:
+            os.replace(file_path, quarantine_path)
+        except OSError as e:
+            log.error("changelog_quarantine_failed", path=file_path, error=e)
+            return
+        quarantined.append(quarantine_path)
+        log.error(
+            "changelog_file_quarantined", path=file_path, quarantined_to=quarantine_path
+        )
+
+    for _, file_path in corrupted_segments:
+        _quarantine(file_path)
+    if latest_corrupted:
+        _quarantine(latest_path)
+
+    return quarantined
+
+
 async def fork_scene_at_revision(scene: "Scene", to_rev: int, save_name: str) -> str:
     """
     Create a new scene file forked from the given revision.
@@ -1058,6 +1391,22 @@ async def fork_scene_at_revision(scene: "Scene", to_rev: int, save_name: str) ->
     Returns:
         str: Path to the written fork file
     """
+    try:
+        divergent = await check_chain_divergence(scene)
+    except ChangelogCorruptedError as e:
+        log.warning(
+            "fork_from_unverifiable_chain",
+            rev=to_rev,
+            detail=str(e),
+        )
+        divergent = None
+    if divergent:
+        log.warning(
+            "fork_from_diverged_chain",
+            rev=to_rev,
+            paths=divergent[:20],
+            detail="reconstruction may be missing or fabricating data",
+        )
     return await write_reconstructed_scene(
         scene,
         to_rev,
@@ -1095,6 +1444,15 @@ async def rollback_scene_to_revision(
     if to_rev < 0 or to_rev > latest_rev:
         raise ValueError(
             f"Invalid revision: {to_rev}. Latest available is {latest_rev}."
+        )
+
+    divergent = await check_chain_divergence(scene)
+    if divergent:
+        # A rollback saves diff(latest, reconstruction) as a new revision,
+        # which would bake reconstruction losses into the chain permanently.
+        raise ChangelogDivergedError(
+            f"Refusing to roll back: the changelog chain has diverged at "
+            f"{len(divergent)} path(s) (e.g. {divergent[0]})."
         )
 
     current_path = os.path.join(scene.save_dir, scene.filename)
@@ -1167,6 +1525,15 @@ class InMemoryChangelog:
         delta = _compute_delta(self.last_state, curr_data)
 
         if not delta:
+            return None
+
+        if not _delta_reproduces_state(self.last_state, curr_data, delta):
+            # last_state is left unchanged so the next append retries from
+            # the same baseline instead of diverging the chain.
+            log.error(
+                "delta_verification_failed",
+                detail="computed delta does not reproduce the scene state; delta not staged",
+            )
             return None
 
         # Calculate the real revision number this delta will have when committed
@@ -1340,7 +1707,7 @@ async def ensure_changelogs_for_all_scenes(root: str | None = None) -> None:
                         await save_changelog(scene_ref)  # creates base and latest
                     else:
                         if not latest_exists:
-                            _ensure_latest_initialized(scene_ref)
+                            await _ensure_latest_initialized(scene_ref)
                 except Exception as e:
                     log.warning(
                         "ensure_scene_changelog_failed", path=str(scene_path), error=e

@@ -234,6 +234,135 @@ async def test_rollback(plugin, scene, temp_dir, monkeypatch):
     assert "error" not in done
 
 
+async def test_rollback_refused_on_diverged_chain(plugin, scene):
+    """A diverged chain refuses rollback with an explanatory error."""
+    latest_path = os.path.join(scene.changelog_dir, f"{scene.filename}.latest.json")
+    with open(latest_path) as f:
+        latest = json.load(f)
+    latest["intro"] = "rewritten outside the chain"
+    with open(latest_path, "w") as f:
+        json.dump(latest, f)
+
+    await plugin.handle_rollback({"rev": 1})
+
+    (done,) = plugin.websocket_handler.by_action("operation_done")
+    assert "diverged" in done["error"]["message"]
+
+
+async def test_rollback_refused_on_unverifiable_chain(plugin, scene):
+    """An unreadable latest snapshot means unverifiable — rollback refuses."""
+    latest_path = os.path.join(scene.changelog_dir, f"{scene.filename}.latest.json")
+    with open(latest_path, "w") as f:
+        f.write("not json")
+
+    await plugin.handle_rollback({"rev": 1})
+
+    (done,) = plugin.websocket_handler.by_action("operation_done")
+    assert "Rollback refused" in done["error"]["message"]
+    assert "unreadable" in done["error"]["message"]
+
+
+async def test_fork_warns_on_unverifiable_chain(plugin, scene, temp_dir, monkeypatch):
+    """Fork proceeds on an unverifiable chain with a warning status."""
+    latest_path = os.path.join(scene.changelog_dir, f"{scene.filename}.latest.json")
+    with open(latest_path, "w") as f:
+        f.write("not json")
+
+    emitted = []
+    monkeypatch.setattr(
+        "talemate.server.websocket_plugin.emit",
+        lambda typ, *args, **kwargs: emitted.append((typ, kwargs)),
+    )
+
+    await plugin.handle_fork({"rev": 2, "save_name": "forked_unverifiable"})
+
+    assert os.path.exists(os.path.join(temp_dir, "forked_unverifiable.json"))
+    (done,) = plugin.websocket_handler.by_action("operation_done")
+    assert "error" not in done
+
+    status_emissions = [kw for typ, kw in emitted if typ == "status"]
+    assert status_emissions
+    assert status_emissions[0]["status"] == "warning"
+    assert "could not be verified" in status_emissions[0]["message"]
+
+
+async def test_fork_warning_names_quarantined_segments(
+    plugin, scene, temp_dir, monkeypatch
+):
+    """With a quarantine marker, the fork warning says why — not 'latest snapshot'."""
+    from talemate.changelog import (
+        _get_latest_changelog_file,
+        quarantine_corrupted_changelog_files,
+    )
+
+    _, log_path = _get_latest_changelog_file(scene)
+    with open(log_path, "w") as f:
+        f.write('{"deltas": [{"rev": 3, "delta": ')
+    quarantine_corrupted_changelog_files(scene)
+
+    emitted = []
+    monkeypatch.setattr(
+        "talemate.server.websocket_plugin.emit",
+        lambda typ, *args, **kwargs: emitted.append((typ, kwargs)),
+    )
+
+    await plugin.handle_fork({"rev": 2, "save_name": "forked_quarantined"})
+
+    assert os.path.exists(os.path.join(temp_dir, "forked_quarantined.json"))
+    status_emissions = [kw for typ, kw in emitted if typ == "status"]
+    assert status_emissions
+    assert status_emissions[0]["status"] == "warning"
+    assert "quarantined" in status_emissions[0]["message"]
+
+
+async def test_fork_warns_on_diverged_chain(plugin, scene, temp_dir, monkeypatch):
+    """Fork proceeds on a diverged chain but emits a warning status."""
+    latest_path = os.path.join(scene.changelog_dir, f"{scene.filename}.latest.json")
+    with open(latest_path) as f:
+        latest = json.load(f)
+    latest["intro"] = "rewritten outside the chain"
+    with open(latest_path, "w") as f:
+        json.dump(latest, f)
+
+    emitted = []
+    monkeypatch.setattr(
+        "talemate.server.websocket_plugin.emit",
+        lambda typ, *args, **kwargs: emitted.append((typ, kwargs)),
+    )
+
+    await plugin.handle_fork({"rev": 2, "save_name": "forked_diverged"})
+
+    # the fork is still written
+    assert os.path.exists(os.path.join(temp_dir, "forked_diverged.json"))
+    (done,) = plugin.websocket_handler.by_action("operation_done")
+    assert "error" not in done
+
+    status_emissions = [kw for typ, kw in emitted if typ == "status"]
+    assert status_emissions
+    assert status_emissions[0]["status"] == "warning"
+    assert "diverged" in status_emissions[0]["message"]
+
+
+async def test_preview_on_diverged_chain_logs_warning(plugin, scene):
+    from structlog.testing import capture_logs
+
+    latest_path = os.path.join(scene.changelog_dir, f"{scene.filename}.latest.json")
+    with open(latest_path) as f:
+        latest = json.load(f)
+    latest["intro"] = "rewritten outside the chain"
+    with open(latest_path, "w") as f:
+        json.dump(latest, f)
+
+    with capture_logs() as logs:
+        await plugin.handle_preview({"rev": 2, "max_messages": 1})
+
+    assert plugin.websocket_handler.by_action("preview")
+    assert any(
+        log["event"] == "preview_from_diverged_chain" and log["log_level"] == "warning"
+        for log in logs
+    )
+
+
 async def test_rollback_rejects_immutable_save(plugin, scene):
     scene.immutable_save = True
 

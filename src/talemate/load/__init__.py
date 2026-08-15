@@ -37,7 +37,10 @@ import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
 from talemate.util.gpu import release_cuda_cache
 from talemate.util.time import migrate_scene_time
-from talemate.changelog import _get_overall_latest_revision
+from talemate.changelog import (
+    _get_overall_latest_revision,
+    quarantine_corrupted_changelog_files,
+)
 from talemate.shared_context import SharedContext
 from talemate.scene_agent_settings import AGENT_SETTINGS_DIRNAME, resolve_link_on_load
 from talemate.load.character_card import CharacterCardImportOptions
@@ -287,6 +290,34 @@ async def load_scene(
             await scene.commit_to_memory()
 
 
+def _quarantine_and_resolve_rev(scene):
+    """Quarantine corrupted changelog artifacts, then resolve ``scene.rev``.
+
+    Order matters: quarantining lost segments writes a marker whose revision
+    hint keeps new revisions above the lost range, so the rev resolution must
+    run after it. Quarantined files are renamed aside (never deleted) and the
+    user is told — the chain is unverifiable from then on, so destructive
+    timeline operations refuse while saves keep working.
+    """
+    quarantined = quarantine_corrupted_changelog_files(scene)
+    if quarantined:
+        from talemate.emit import emit
+
+        log.error("changelog_files_quarantined", paths=quarantined)
+        emit(
+            "status",
+            status="warning",
+            message=(
+                "This scene's history chain had corrupted files, which were "
+                "set aside. The timeline may be incomplete — rollback is "
+                "refused while the chain cannot be verified; forking still "
+                "works."
+            ),
+        )
+
+    scene.rev = _get_overall_latest_revision(scene, strict=False)
+
+
 async def load_scene_from_data(
     scene,
     scene_data,
@@ -433,7 +464,7 @@ async def load_scene_from_data(
     scene.voice_library = await voice_library.load_scene_voice_library(scene)
     log.debug("scene voice library", voice_library=scene.voice_library)
 
-    scene.rev = _get_overall_latest_revision(scene)
+    _quarantine_and_resolve_rev(scene)
     log.debug("Loaded scene", rev=scene.rev)
 
     # Initialize intro and title for new scenes

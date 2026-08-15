@@ -25,7 +25,12 @@ from talemate.changelog import (
     _ensure_latest_initialized,
     _apply_delta,
     _compute_delta,
+    _delta_reproduces_state,
     _serialize_scene_plain,
+    check_chain_divergence,
+    ChangelogDivergedError,
+    ChangelogCorruptedError,
+    _read_changelog_log_strict,
     _get_changelog_files,
     _get_latest_changelog_file,
     _get_overall_latest_revision,
@@ -139,6 +144,531 @@ def test_write_json(temp_dir):
     assert result == test_data
 
 
+def test_write_json_leaves_no_tmp_files(temp_dir):
+    """The atomic write cleans up after itself."""
+    test_file = os.path.join(temp_dir, "test.json")
+
+    _write_json(test_file, {"a": 1})
+
+    assert os.listdir(temp_dir) == ["test.json"]
+
+
+def test_write_json_failed_replace_keeps_original(temp_dir, monkeypatch):
+    """A failed atomic replace leaves the pre-existing file intact."""
+    test_file = os.path.join(temp_dir, "test.json")
+    with open(test_file, "w") as f:
+        json.dump({"original": True}, f)
+
+    def _failing_replace(src, dst):
+        raise OSError("simulated replace failure")
+
+    monkeypatch.setattr("talemate.changelog.os.replace", _failing_replace)
+    _write_json(test_file, {"corrupted": True})
+
+    with open(test_file) as f:
+        assert json.load(f) == {"original": True}
+
+
+def test_read_changelog_log_strict_missing(temp_dir):
+    """A missing changelog log reads as None (not an error)."""
+    assert _read_changelog_log_strict(os.path.join(temp_dir, "missing.json")) is None
+
+
+def test_read_changelog_log_strict_corrupted_raises(temp_dir):
+    """A corrupted changelog log raises instead of reading as empty."""
+    test_file = os.path.join(temp_dir, "scene.json.changelog.0.json")
+    with open(test_file, "w") as f:
+        f.write('{"deltas": [{"rev": 1, "delta": ')
+
+    with pytest.raises(ChangelogCorruptedError, match="Unreadable changelog file"):
+        _read_changelog_log_strict(test_file)
+
+
+def test_read_changelog_log_strict_wrong_shape_raises(temp_dir):
+    """Valid JSON that is not a changelog log shape raises as malformed."""
+    for content in (
+        "[]",
+        "null",
+        '{"deltas": "invalid"}',
+        '{"deltas": [], "latest_rev": "three"}',
+    ):
+        test_file = os.path.join(temp_dir, "scene.json.changelog.0.json")
+        with open(test_file, "w") as f:
+            f.write(content)
+
+        with pytest.raises(ChangelogCorruptedError, match="Malformed changelog file"):
+            _read_changelog_log_strict(test_file)
+
+
+def test_load_base_scene_data_corrupted_raises_changelog_error(mock_scene):
+    """A corrupted base snapshot raises ChangelogCorruptedError, not JSONDecodeError."""
+    os.makedirs(mock_scene.changelog_dir, exist_ok=True)
+    with open(_base_path(mock_scene), "w") as f:
+        f.write('{"history": [')
+
+    with pytest.raises(ChangelogCorruptedError, match="Unreadable changelog file"):
+        _load_base_scene_data(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_check_chain_divergence_missing_latest_raises(mock_scene):
+    """A chain without a latest snapshot cannot be verified — must not read healthy."""
+    await save_changelog(mock_scene)
+    os.remove(_latest_path(mock_scene))
+
+    with pytest.raises(ChangelogCorruptedError, match="latest snapshot is missing"):
+        await check_chain_divergence(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_check_chain_divergence_unreadable_latest_raises(mock_scene):
+    """An unreadable latest snapshot cannot be verified — must not read healthy."""
+    await save_changelog(mock_scene)
+    with open(_latest_path(mock_scene), "w") as f:
+        f.write("not json")
+
+    with pytest.raises(ChangelogCorruptedError, match="latest snapshot is unreadable"):
+        await check_chain_divergence(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_restore_refused_on_diverged_chain(mock_scene):
+    """Scene.restore(from_rev=...) — the live rollback path — refuses divergence."""
+    await save_changelog(mock_scene)
+
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    with open(_latest_path(mock_scene)) as f:
+        latest = json.load(f)
+    latest["characters"][0]["name"] = "Bob"
+    with open(_latest_path(mock_scene), "w") as f:
+        json.dump(latest, f)
+
+    with pytest.raises(ChangelogDivergedError, match="Refusing to restore"):
+        await mock_scene.restore(from_rev=1)
+
+
+@pytest.mark.asyncio
+async def test_quarantine_corrupted_changelog_files(mock_scene):
+    """A corrupted segment is renamed aside and the save path recovers."""
+    from talemate.changelog import quarantine_corrupted_changelog_files
+
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    _, log_path = _get_latest_changelog_file(mock_scene)
+    with open(log_path, "w") as f:
+        f.write('{"deltas": [{"rev": 1, "delta": ')
+
+    quarantined = quarantine_corrupted_changelog_files(mock_scene)
+
+    assert quarantined == [f"{log_path}.corrupted"]
+    assert not os.path.exists(log_path)
+    assert os.path.exists(f"{log_path}.corrupted")
+    assert _get_changelog_files(mock_scene) == []
+
+    # the marker records the loss: the chain is unverifiable from now on
+    marker_path = os.path.join(
+        mock_scene.changelog_dir, f"{mock_scene.filename}.quarantine.json"
+    )
+    assert os.path.exists(marker_path)
+    with pytest.raises(ChangelogCorruptedError, match="quarantined"):
+        await check_chain_divergence(mock_scene)
+
+    # the save path works again: the strict read no longer trips, and the
+    # append starts a fresh segment
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": ["new"],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+
+@pytest.mark.asyncio
+async def test_quarantine_leaves_healthy_chain_alone(mock_scene):
+    from talemate.changelog import quarantine_corrupted_changelog_files
+
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    assert quarantine_corrupted_changelog_files(mock_scene) == []
+    assert list_revisions(mock_scene) == [1]
+
+
+@pytest.mark.asyncio
+async def test_quarantine_corrupted_latest_snapshot(mock_scene):
+    """A corrupted latest snapshot is renamed aside; no marker (no deltas lost)."""
+    from talemate.changelog import quarantine_corrupted_changelog_files
+
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    latest_path = _latest_path(mock_scene)
+    with open(latest_path, "w") as f:
+        f.write("not json")
+
+    quarantined = quarantine_corrupted_changelog_files(mock_scene)
+
+    assert quarantined == [f"{latest_path}.corrupted"]
+    assert not os.path.exists(latest_path)
+
+    # no segments were lost, so no marker — but until the next append
+    # rewrites the latest snapshot, the chain cannot be verified
+    marker_path = os.path.join(
+        mock_scene.changelog_dir, f"{mock_scene.filename}.quarantine.json"
+    )
+    assert not os.path.exists(marker_path)
+    with pytest.raises(ChangelogCorruptedError, match="latest snapshot is missing"):
+        await check_chain_divergence(mock_scene)
+
+    # the next append recovers: latest is reinitialized and the delta written
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": ["new"],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 2
+
+
+@pytest.mark.asyncio
+async def test_quarantine_marker_makes_gap_unverifiable(mock_scene):
+    """End-state agreement cannot prove a quarantined segment did not matter.
+
+    base {x:0,y:0}; rev 1 (x:0→1) in its own segment, corrupted and
+    quarantined; surviving revs 2 (y:0→1) and 3 (x:1→2). Reconstruction
+    without rev 1 still yields {x:2,y:1} == latest (delta application
+    writes new_value unconditionally), so only the quarantine marker stands
+    between this chain and a false "healthy" verdict.
+    """
+    from talemate.changelog import quarantine_corrupted_changelog_files
+
+    os.makedirs(mock_scene.changelog_dir, exist_ok=True)
+    with open(_base_path(mock_scene), "w") as f:
+        json.dump({"x": 0, "y": 0}, f)
+    with open(_latest_path(mock_scene), "w") as f:
+        json.dump({"x": 2, "y": 1}, f)
+
+    def _segment(start_rev, deltas, latest_rev):
+        return {
+            "version": 1,
+            "base": "test_scene.json.base.json",
+            "start_rev": start_rev,
+            "deltas": deltas,
+            "latest_rev": latest_rev,
+        }
+
+    seg0 = _changelog_log_path(mock_scene, 0)
+    with open(seg0, "w") as f:
+        json.dump(
+            _segment(
+                0,
+                [
+                    {
+                        "rev": 1,
+                        "ts": 1,
+                        "delta": {"values_changed": {"root['x']": {"new_value": 1}}},
+                        "meta": {},
+                    }
+                ],
+                1,
+            ),
+            f,
+        )
+    seg2 = _changelog_log_path(mock_scene, 2)
+    with open(seg2, "w") as f:
+        json.dump(
+            _segment(
+                2,
+                [
+                    {
+                        "rev": 2,
+                        "ts": 2,
+                        "delta": {"values_changed": {"root['y']": {"new_value": 1}}},
+                        "meta": {},
+                    },
+                    {
+                        "rev": 3,
+                        "ts": 3,
+                        "delta": {"values_changed": {"root['x']": {"new_value": 2}}},
+                        "meta": {},
+                    },
+                ],
+                3,
+            ),
+            f,
+        )
+
+    # complete chain verifies healthy
+    assert await check_chain_divergence(mock_scene) == []
+
+    with open(seg0, "w") as f:
+        f.write('{"deltas": [{"rev": 1, "delta": ')
+
+    quarantined = quarantine_corrupted_changelog_files(mock_scene)
+    assert quarantined == [f"{seg0}.corrupted"]
+
+    # the counterexample: the end state still matches the latest snapshot…
+    reconstructed = await reconstruct_scene_data(mock_scene)
+    assert (reconstructed["x"], reconstructed["y"]) == (2, 1)
+
+    # …but the marker makes the chain unverifiable instead of "healthy"
+    with pytest.raises(ChangelogCorruptedError, match="quarantined"):
+        await check_chain_divergence(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_quarantine_continues_revision_namespace(mock_scene):
+    """New revisions continue above the quarantined range, not from 0."""
+    from talemate.changelog import quarantine_corrupted_changelog_files
+
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    # a later segment (start_rev 5) that is corrupted
+    seg5 = _changelog_log_path(mock_scene, 5)
+    with open(seg5, "w") as f:
+        f.write('{"deltas": [{"rev": 5, "delta": ')
+
+    quarantined = quarantine_corrupted_changelog_files(mock_scene)
+    assert f"{seg5}.corrupted" in quarantined
+
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": ["new"],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 6
+
+
+@pytest.mark.asyncio
+async def test_quarantine_rev_hint_reaches_in_memory_changelog(mock_scene):
+    """The production save path numbers new revisions above the lost range.
+
+    Drives the same helper scene load uses, so the pin covers the actual
+    order (quarantine writes the marker BEFORE scene.rev is resolved from
+    it), then the InMemoryChangelog numbering the game loop saves through.
+    """
+    from talemate.load import _quarantine_and_resolve_rev
+
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    # a later segment (start_rev 5), corrupted
+    seg5 = _changelog_log_path(mock_scene, 5)
+    with open(seg5, "w") as f:
+        f.write('{"deltas": [{"rev": 5, "delta": ')
+
+    _quarantine_and_resolve_rev(mock_scene)
+    assert mock_scene.rev == 5
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        mock_scene.serialize = {
+            "characters": [{"name": "Alice"}],
+            "entries": ["new"],
+            "metadata": {"version": "1.0"},
+        }
+        rev = await changelog.append_delta({"action": "post-quarantine"})
+
+    assert rev == 6
+
+
+@pytest.mark.asyncio
+async def test_quarantine_non_utf8_latest_snapshot(mock_scene):
+    """A non-UTF-8 latest snapshot is quarantined, not fatal to the pass."""
+    from talemate.changelog import quarantine_corrupted_changelog_files
+
+    await save_changelog(mock_scene)
+    latest_path = _latest_path(mock_scene)
+    with open(latest_path, "wb") as f:
+        f.write(b'\xff\xfe{"broken": "}')
+
+    quarantined = quarantine_corrupted_changelog_files(mock_scene)
+    assert quarantined == [f"{latest_path}.corrupted"]
+
+
+@pytest.mark.asyncio
+async def test_unreadable_marker_fails_closed(mock_scene):
+    """An existing-but-unparseable marker still means 'quarantined'."""
+    await save_changelog(mock_scene)
+
+    marker_path = os.path.join(
+        mock_scene.changelog_dir, f"{mock_scene.filename}.quarantine.json"
+    )
+    with open(marker_path, "w") as f:
+        f.write("not json")
+
+    with pytest.raises(ChangelogCorruptedError, match="quarantined"):
+        await check_chain_divergence(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_orphan_quarantined_segment_fails_closed(mock_scene):
+    """Quarantined segment files without a marker still fail closed.
+
+    Backstop for a failed marker write: the renamed files themselves are
+    treated as evidence of quarantine.
+    """
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    _, log_path = _get_latest_changelog_file(mock_scene)
+    os.replace(log_path, f"{log_path}.corrupted")
+
+    with pytest.raises(ChangelogCorruptedError, match="quarantined"):
+        await check_chain_divergence(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_quarantine_survives_marker_write_failure(mock_scene):
+    """A failed marker write still quarantines, and the chain stays refused."""
+    from talemate.changelog import quarantine_corrupted_changelog_files
+
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    _, log_path = _get_latest_changelog_file(mock_scene)
+    with open(log_path, "w") as f:
+        f.write('{"deltas": [{"rev": 1, "delta": ')
+
+    # a directory where the marker file belongs makes the write fail
+    marker_path = os.path.join(
+        mock_scene.changelog_dir, f"{mock_scene.filename}.quarantine.json"
+    )
+    os.makedirs(marker_path)
+
+    quarantined = quarantine_corrupted_changelog_files(mock_scene)
+    assert quarantined == [f"{log_path}.corrupted"]
+
+    with pytest.raises(ChangelogCorruptedError, match="quarantined"):
+        await check_chain_divergence(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_latest_only_quarantine_heals_healthy(mock_scene):
+    """After a latest-only quarantine the next append leaves a healthy chain.
+
+    Pins the heal-from-reconstruction fix: a base-baselines catch-up delta
+    would double-apply the list append on replay and report diverged forever.
+    """
+    from talemate.changelog import quarantine_corrupted_changelog_files
+
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {
+        "characters": [],
+        "entries": ["a", "b"],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    with open(_latest_path(mock_scene), "w") as f:
+        f.write("not json")
+    quarantine_corrupted_changelog_files(mock_scene)
+
+    mock_scene.serialize = {
+        "characters": [],
+        "entries": ["a", "b", "c"],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 2
+
+    reconstructed = await reconstruct_scene_data(mock_scene)
+    assert reconstructed["entries"] == ["a", "b", "c"]
+    assert await check_chain_divergence(mock_scene) == []
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_raises_on_corrupted_changelog_log(mock_scene):
+    """Reconstruction must fail loudly rather than drop a corrupted file's deltas."""
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    _, log_path = _get_latest_changelog_file(mock_scene)
+    with open(log_path, "w") as f:
+        f.write('{"deltas": [{"rev": 1, "delta": ')
+
+    with pytest.raises(ChangelogCorruptedError):
+        await reconstruct_scene_data(mock_scene)
+    with pytest.raises(ChangelogCorruptedError):
+        list_revisions(mock_scene)
+    with pytest.raises(ChangelogCorruptedError):
+        await append_scene_delta(mock_scene, {"action": "retry"})
+
+
+def test_load_latest_scene_data_corrupted_returns_none(mock_scene):
+    """The latest snapshot stays tolerant: unreadable -> None (callers rebuild it)."""
+    os.makedirs(mock_scene.changelog_dir, exist_ok=True)
+    with open(_latest_path(mock_scene), "w") as f:
+        f.write("not json")
+
+    assert _load_latest_scene_data(mock_scene) is None
+
+
+@pytest.mark.asyncio
+async def test_get_overall_latest_revision_non_strict_skips_corrupted(mock_scene):
+    """Scene load stays alive on a corrupted changelog file (strict=False)."""
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    _, log_path = _get_latest_changelog_file(mock_scene)
+    with open(log_path, "w") as f:
+        f.write('{"deltas": [{"rev": 1, "delta": ')
+
+    with pytest.raises(ChangelogCorruptedError):
+        _get_overall_latest_revision(mock_scene)
+    assert _get_overall_latest_revision(mock_scene, strict=False) == 0
+
+
 def test_ensure_log_initialized_new_log(mock_scene):
     """Test initializing a new changelog log."""
     result = _ensure_log_initialized(mock_scene, 0)
@@ -213,8 +743,9 @@ def test_load_latest_scene_data_missing(mock_scene):
     assert result is None
 
 
-def test_ensure_latest_initialized_creates_file(mock_scene):
-    """Test that ensure_latest_initialized creates latest file from base."""
+@pytest.mark.asyncio
+async def test_ensure_latest_initialized_creates_file(mock_scene):
+    """With no segments, the latest snapshot is initialized from the base."""
     base_data = {"test": "base_data"}
     base_path = _base_path(mock_scene)
     latest_path = _latest_path(mock_scene)
@@ -223,12 +754,33 @@ def test_ensure_latest_initialized_creates_file(mock_scene):
     with open(base_path, "w") as f:
         json.dump(base_data, f)
 
-    _ensure_latest_initialized(mock_scene)
+    await _ensure_latest_initialized(mock_scene)
 
     assert os.path.exists(latest_path)
     with open(latest_path, "r") as f:
         result = json.load(f)
     assert result == base_data
+
+
+@pytest.mark.asyncio
+async def test_ensure_latest_initialized_heals_from_reconstruction(mock_scene):
+    """With segments present, the latest snapshot heals from the chain tip —
+    initializing from base would make the next append double-apply list ops."""
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": ["one"],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    os.remove(_latest_path(mock_scene))
+    await _ensure_latest_initialized(mock_scene)
+
+    with open(_latest_path(mock_scene)) as f:
+        healed = json.load(f)
+    assert healed["entries"] == ["one"]
+    assert healed["characters"] == [{"name": "Alice"}]
 
 
 def test_compute_delta_no_change():
@@ -354,6 +906,100 @@ async def test_append_scene_delta_with_change(mock_scene):
     assert log_data["deltas"][0]["meta"] == {"action": "add_character"}
 
 
+def test_delta_reproduces_state():
+    """A real computed delta reproduces its target state; a bogus one doesn't."""
+    prev = {"a": 1, "history": ["x"]}
+    curr = {"a": 2, "history": ["x", "y"]}
+
+    assert _delta_reproduces_state(prev, curr, _compute_delta(prev, curr))
+
+    bogus = {"values_changed": {"root['a']": {"new_value": 999}}}
+    assert not _delta_reproduces_state(prev, curr, bogus)
+
+
+def test_delta_reproduces_state_ignores_excluded_paths():
+    """Excluded subtrees legitimately differ and must not fail verification."""
+    prev = {"a": 1, "world_state": {"characters": {"Alice": {"emotion": "calm"}}}}
+    curr = {"a": 2, "world_state": {"characters": {"Alice": {"emotion": "angry"}}}}
+
+    delta = _compute_delta(prev, curr)
+    assert _delta_reproduces_state(prev, curr, delta)
+
+
+@pytest.mark.asyncio
+async def test_append_scene_delta_verification_failure_skips_write(
+    mock_scene, monkeypatch
+):
+    """A delta that does not reproduce the scene state must not be written.
+
+    The latest snapshot stays at the previous state so the next append
+    retries from the same baseline instead of diverging the chain.
+    """
+    from structlog.testing import capture_logs
+
+    await save_changelog(mock_scene)
+
+    bogus_delta = {"values_changed": {"root['a']": {"new_value": 999}}}
+    monkeypatch.setattr("talemate.changelog._compute_delta", lambda p, c: bogus_delta)
+
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+
+    with capture_logs() as logs:
+        result = await append_scene_delta(mock_scene, {"action": "add_character"})
+
+    assert result is None
+    assert any(
+        log["event"] == "delta_verification_failed" and log["log_level"] == "error"
+        for log in logs
+    )
+
+    # nothing written: no revisions, latest snapshot still the base state
+    assert list_revisions(mock_scene) == []
+    with open(_latest_path(mock_scene)) as f:
+        assert json.load(f) == {
+            "characters": [],
+            "entries": [],
+            "metadata": {"version": "1.0"},
+        }
+
+
+@pytest.mark.asyncio
+async def test_in_memory_append_delta_verification_failure(mock_scene, monkeypatch):
+    """InMemoryChangelog refuses a delta that does not reproduce the state."""
+    from structlog.testing import capture_logs
+
+    await save_changelog(mock_scene)
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        last_state_before = changelog.last_state
+
+        bogus_delta = {"values_changed": {"root['a']": {"new_value": 999}}}
+        monkeypatch.setattr(
+            "talemate.changelog._compute_delta", lambda p, c: bogus_delta
+        )
+
+        mock_scene.serialize = {
+            "characters": [{"name": "Alice"}],
+            "entries": [],
+            "metadata": {"version": "1.0"},
+        }
+
+        with capture_logs() as logs:
+            result = await changelog.append_delta({"action": "add_character"})
+
+        assert result is None
+        assert changelog.pending_count == 0
+        assert changelog.last_state is last_state_before
+        assert any(
+            log["event"] == "delta_verification_failed" and log["log_level"] == "error"
+            for log in logs
+        )
+
+
 @pytest.mark.asyncio
 async def test_reconstruct_scene_data_base_only(mock_scene):
     """Test reconstructing scene data at revision 0."""
@@ -471,6 +1117,117 @@ def test_list_revisions_with_deltas(mock_scene):
 
 
 @pytest.mark.asyncio
+async def test_check_chain_divergence_no_changelog(mock_scene):
+    """No changelog artifacts → nothing to check (None)."""
+    assert await check_chain_divergence(mock_scene) is None
+
+
+@pytest.mark.asyncio
+async def test_check_chain_divergence_healthy(mock_scene):
+    """A chain that reconstructs the latest snapshot reports no divergence."""
+    await save_changelog(mock_scene)
+
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": ["one"],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    assert await check_chain_divergence(mock_scene) == []
+
+
+@pytest.mark.asyncio
+async def test_check_chain_divergence_masks_excluded_paths(mock_scene):
+    """Excluded subtrees (world_state) diverge by design and must be masked."""
+    await save_changelog(mock_scene)
+
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+        "world_state": {"characters": {"Alice": {"emotion": "calm"}}},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    # excluded subtrees are never captured by deltas, so the latest snapshot
+    # legitimately carries newer values than reconstruction can produce
+    with open(_latest_path(mock_scene)) as f:
+        latest = json.load(f)
+    latest["world_state"]["characters"]["Alice"]["emotion"] = "angry"
+    with open(_latest_path(mock_scene), "w") as f:
+        json.dump(latest, f)
+
+    assert await check_chain_divergence(mock_scene) == []
+
+
+@pytest.mark.asyncio
+async def test_check_chain_divergence_detects_divergence(mock_scene):
+    """A latest snapshot the chain cannot reproduce is reported as diverged."""
+    await save_changelog(mock_scene)
+
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    # simulate chain/latest drift: a tracked value the deltas never recorded
+    with open(_latest_path(mock_scene)) as f:
+        latest = json.load(f)
+    latest["characters"][0]["name"] = "Bob"
+    with open(_latest_path(mock_scene), "w") as f:
+        json.dump(latest, f)
+
+    divergent = await check_chain_divergence(mock_scene)
+    assert divergent
+    assert any("characters" in path for path in divergent)
+
+
+@pytest.mark.asyncio
+async def test_check_chain_divergence_caches_result(mock_scene, monkeypatch):
+    """Repeat checks against unchanged files reuse the cached verdict."""
+    await save_changelog(mock_scene)
+
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+    assert await check_chain_divergence(mock_scene) == []
+
+    async def _boom(*args, **kwargs):
+        raise AssertionError("reconstruction ran despite unchanged fingerprint")
+
+    monkeypatch.setattr("talemate.changelog.reconstruct_scene_data", _boom)
+    assert await check_chain_divergence(mock_scene) == []
+
+
+@pytest.mark.asyncio
+async def test_rollback_refused_on_diverged_chain(mock_scene):
+    """Rollback on a diverged chain raises instead of baking losses in."""
+    await save_changelog(mock_scene)
+
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+    assert await append_scene_delta(mock_scene) == 1
+
+    with open(_latest_path(mock_scene)) as f:
+        latest = json.load(f)
+    latest["characters"][0]["name"] = "Bob"
+    with open(_latest_path(mock_scene), "w") as f:
+        json.dump(latest, f)
+
+    with pytest.raises(ChangelogDivergedError, match="Refusing to roll back"):
+        await rollback_scene_to_revision(mock_scene, 0)
+
+
+@pytest.mark.asyncio
 async def test_rollback_scene_to_revision_invalid_rev(mock_scene):
     """Test rollback with invalid revision number."""
     # Setup some revisions
@@ -503,6 +1260,9 @@ async def test_rollback_scene_to_revision_with_backup(mock_scene):
     base_path = _base_path(mock_scene)
     os.makedirs(os.path.dirname(base_path), exist_ok=True)
     with open(base_path, "w") as f:
+        json.dump(base_data, f)
+    # a healthy chain always has a latest snapshot beside the base
+    with open(_latest_path(mock_scene), "w") as f:
         json.dump(base_data, f)
 
     # Setup current scene file
@@ -537,6 +1297,9 @@ async def test_rollback_scene_to_revision_no_backup(mock_scene):
     base_path = _base_path(mock_scene)
     os.makedirs(os.path.dirname(base_path), exist_ok=True)
     with open(base_path, "w") as f:
+        json.dump(base_data, f)
+    # a healthy chain always has a latest snapshot beside the base
+    with open(_latest_path(mock_scene), "w") as f:
         json.dump(base_data, f)
 
     # Setup current scene file
@@ -1509,15 +2272,16 @@ async def test_warn_on_orphan_delta_ops(monkeypatch):
 @pytest.mark.asyncio
 async def test_in_memory_changelog_with_save_changelog_bug(mock_scene):
     """
-    Test that reproduces the bug where save_changelog() is called while
+    Regression test for the bug where save_changelog() is called while
     InMemoryChangelog has pending changes, causing duplication.
 
     This simulates:
     1. Scene starts with InMemoryChangelog context
     2. Messages are added (pending in memory)
-    3. save_changelog() is called (creates base with pending changes baked in)
-    4. InMemoryChangelog.commit() is called (writes same changes as deltas)
-    5. Reconstruction duplicates messages
+    3. save_changelog() is called — it must base the snapshot on the
+       changelog's initial_state, not the live scene with pending changes
+    4. InMemoryChangelog.commit() is called (writes the changes as deltas)
+    5. Reconstruction must not duplicate messages
     """
     # Start with a scene that has history
     initial_history = [
@@ -1547,21 +2311,16 @@ async def test_in_memory_changelog_with_save_changelog_bug(mock_scene):
         await changelog.append_delta({"action": "add_message_4"})
 
         # Now save_changelog() is called (e.g., during a fork operation)
-        # This saves the base with ALL 4 messages already in it
         await save_changelog(mock_scene)
 
         # Commit the pending deltas
-        # This writes deltas that try to add messages 3 and 4 again
         await changelog.commit()
 
     # Now reconstruct to revision 4
     reconstructed = await reconstruct_scene_data(mock_scene, to_rev=4)
 
-    # BUG: The reconstructed history will have duplicates
-    # Base has 4 messages + deltas add 2 more = 6 messages (with duplicates)
     history = reconstructed.get("history", [])
 
-    # This assertion SHOULD pass (4 messages) but currently FAILS (6 messages due to bug)
     assert len(history) == 4, (
         f"Expected 4 messages, got {len(history)}: {[m['message'] for m in history]}"
     )

@@ -1080,6 +1080,7 @@ class ContextHistoryMixin:
         remaining = max(budget - skeleton_tokens, 0)
 
         # Expand level by level (top → bottom)
+        clamped = False
         for level_idx in range(len(levels) - 1):
             upper = levels[level_idx]
             lower = levels[level_idx + 1]
@@ -1090,6 +1091,22 @@ class ContextHistoryMixin:
                 entry = upper.entries[entry_idx]
                 entry_start = entry.get("start", 0)
                 entry_end = entry.get("end", 0)
+
+                # start/end come from scene data and can point past the level
+                # below (drifted or reconstructed summarization indices); the
+                # render ranges written here are used as direct list indices.
+                # An unexpandable entry is a hard boundary: expanding an older
+                # entry past it would cut it out of the upper render too, and
+                # its summary would render nowhere.
+                n_lower = len(lower.entries)
+                clamped_start = min(max(entry_start, 0), n_lower)
+                clamped_end = min(entry_end, n_lower - 1)
+                if clamped_end < clamped_start:
+                    clamped = True
+                    break
+                if (clamped_start, clamped_end) != (entry_start, entry_end):
+                    clamped = True
+                    entry_start, entry_end = clamped_start, clamped_end
 
                 # Token delta: cost of expanding this entry
                 upper_tokens = upper.tokens[entry_idx]
@@ -1113,6 +1130,12 @@ class ContextHistoryMixin:
                         render_ranges[level_idx + 1] = (entry_start, lower_end)
                 else:
                     break
+
+        if clamped:
+            log.warning(
+                "best_fit_ranges_clamped",
+                detail="summarization start/end indices exceeded the level below; clamped or left unexpanded",
+            )
 
         # --- Post-expansion budget enforcement ---
         # Gaps in start/end mappings between layers can cause the merged

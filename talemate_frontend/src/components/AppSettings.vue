@@ -36,6 +36,9 @@
                 <v-window-item value="sound">
                     <AppSettingsSound :config="app_config" />
                 </v-window-item>
+                <v-window-item value="appearance-theme">
+                    <AppConfigAppearanceTheme ref="appearance-theme" :immutableConfig="app_config" :worldStateTemplates="worldStateTemplates" :saveWouldOverwrite="configDirty"></AppConfigAppearanceTheme>
+                </v-window-item>
                 <v-window-item value="appearance-messages">
                     <AppConfigAppearanceScene ref="appearance-messages" :immutableConfig="app_config" :sceneActive="sceneActive" @changed="onAppearanceChanged" @restore-from-theme="onAppearanceRestoredFromTheme"></AppConfigAppearanceScene>
                 </v-window-item>
@@ -114,6 +117,7 @@ import AppSettingsClients from './AppSettingsClients.vue';
 import AppSettingsEnvVariables from './AppSettingsEnvVariables.vue';
 import AppSettingsStringList from './AppSettingsStringList.vue';
 import AppConfigAppearanceScene from './AppConfigAppearanceScene.vue';
+import AppConfigAppearanceTheme from './AppConfigAppearanceTheme.vue';
 import AppConfigAppearanceAssets from './AppConfigAppearanceAssets.vue';
 import AppConfigPresetsInference from './AppConfigPresetsInference.vue';
 import AppConfigPresetsEmbeddings from './AppConfigPresetsEmbeddings.vue';
@@ -133,6 +137,7 @@ export default {
         AppSettingsEnvVariables,
         AppSettingsStringList,
         AppConfigAppearanceScene,
+        AppConfigAppearanceTheme,
         AppConfigAppearanceAssets,
         AppConfigPresetsInference,
         AppConfigPresetsEmbeddings,
@@ -143,6 +148,7 @@ export default {
         sceneActive: Boolean,
         clientStatus: Object,
         visible: Boolean,
+        worldStateTemplates: Object,
     },
     emits: [
         'appearance-preview',
@@ -353,17 +359,33 @@ export default {
         // The resolved theme is server-derived and no part of the draft (the
         // backend drops it on save), so unsaved edits must not hold a theme
         // change back — editing a theme and restoring the appearance from it is
-        // one workflow. The baseline moves with it, so a theme that changed on
-        // its own is neither an unsaved edit nor an external change.
-        adoptTheme(theme) {
-            if (theme === undefined) {
+        // one workflow. `appearance.theme` (the id) rides along for the same
+        // reason: no settings page edits it — applying a theme writes it
+        // server-side — so it moves with the baseline too. Held back, the
+        // picker's Active chip goes stale and a later save of the stale draft
+        // silently reverts the applied theme. The baseline moves with both, so
+        // a theme that changed on its own is neither an unsaved edit nor an
+        // external change.
+        adoptTheme(theme, themeId) {
+            if (theme === undefined && themeId === undefined) {
                 return;
             }
             const baseline = JSON.parse(this.snapshot);
-            baseline.theme = theme;
+            if (theme !== undefined) {
+                baseline.theme = theme;
+            }
+            if (themeId !== undefined) {
+                baseline.appearance.theme = themeId;
+            }
             this.snapshot = JSON.stringify(baseline);
             // through the snapshot, for the aliasing reason adoptConfig copies for
-            this.app_config.theme = JSON.parse(this.snapshot).theme;
+            const adopted = JSON.parse(this.snapshot);
+            if (theme !== undefined) {
+                this.app_config.theme = adopted.theme;
+            }
+            if (themeId !== undefined) {
+                this.app_config.appearance.theme = adopted.appearance.theme;
+            }
         },
 
         // The apply-failure decoration belongs to one message only — every
@@ -467,7 +489,7 @@ export default {
                     // only flag an external change when the content actually
                     // differs from the baseline we're editing against.
                     this.pendingConfig = message.data;
-                    this.adoptTheme(message.data.theme);
+                    this.adoptTheme(message.data.theme, message.data.appearance?.theme);
                     const incoming = JSON.stringify(this.normalizedPayload(message.data, this.app_config));
                     if (!this.saving && incoming !== this.snapshot) {
                         this.externalChange = true;

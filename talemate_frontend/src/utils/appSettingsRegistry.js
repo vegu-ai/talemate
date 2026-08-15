@@ -218,6 +218,17 @@ export const SETTINGS_GROUPS = [
         icon: 'mdi-palette-outline',
         pages: [
             {
+                id: 'appearance-theme',
+                title: 'Theme',
+                icon: 'mdi-palette-swatch',
+                description: 'Pick the theme that paints the app. Applying one confirms first, because it replaces the message styling on the Messages page with the theme\'s.',
+                entries: [
+                    { label: 'Apply a theme', anchor: 'apply-theme', keywords: ['theme', 'apply', 'colors', 'dark', 'light', 'repaint'] },
+                    { label: 'Manage a theme', anchor: 'manage-theme', keywords: ['theme', 'edit', 'templates'] },
+                    { label: 'Add a new theme', anchor: 'new-theme-info', keywords: ['theme', 'new', 'create', 'templates'] },
+                ],
+            },
+            {
                 id: 'appearance-messages',
                 title: 'Messages',
                 icon: 'mdi-script-text',

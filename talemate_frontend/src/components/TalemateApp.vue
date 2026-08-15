@@ -374,6 +374,7 @@
             :scene-active="sceneActive"
             :client-status="clientStatus"
             :visible="tab === 'settings'"
+            :world-state-templates="worldStateTemplates"
             @appearance-preview="onAppearancePreview"
             @appearance-preview-clear="onAppearancePreviewClear"
             @page-changed="(page) => appSettingsPage = page"
@@ -676,6 +677,7 @@ export default {
       showSceneView: true,
       templatesSelectedGroups: [],
       templatesSelected: null,
+      pendingTemplateSelection: null,
       mainTabScrollPosition: null,
       // Scene assets requester (initialized when websocket is available)
       _sceneAssetsRequester: null,
@@ -736,6 +738,14 @@ export default {
           return;
         }
         this.committedTab = newTab;
+
+        // a template navigation that was stashed while the guard held the view
+        // on settings flushes once the templates tab has actually rendered
+        if(newTab === 'templates') {
+          this.$nextTick(() => {
+            this.flushPendingTemplateSelection();
+          });
+        }
 
         // Save scroll position when leaving main tab
         if(oldTab === 'main' && this.sceneActive) {
@@ -1738,15 +1748,22 @@ export default {
       this.tab = 'package_manager';
     },
     onNavigateTemplate(templateIndex) {
+      // stashed, not fired directly: when leaving dirty settings the guard
+      // vetoes the tab switch and the $nextTick below finds no templates ref —
+      // the tab watcher re-flushes once the templates tab actually renders
+      this.pendingTemplateSelection = templateIndex || null;
       this.tab = 'templates';
       this.$nextTick(() => {
-        if(this.$refs.templates && templateIndex) {
-          // If templateIndex is a template type (like 'agent_persona'), we can't directly select it
-          // but we can navigate to templates tab - filtering could be added later if needed
-          // For now, if it's not a valid template index format, just navigate to templates
-          this.$refs.templates.selectTemplate(templateIndex);
-        }
+        this.flushPendingTemplateSelection();
       });
+    },
+    flushPendingTemplateSelection() {
+      if(this.pendingTemplateSelection === null || !this.$refs.templates) {
+        return;
+      }
+      const index = this.pendingTemplateSelection;
+      this.pendingTemplateSelection = null;
+      this.$refs.templates.selectTemplate(index);
     },
     onNavigatePromptTemplate(template) {
       this.$nextTick(() => {

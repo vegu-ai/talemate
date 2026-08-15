@@ -50,10 +50,10 @@ function theme(primary) {
 
 // a config payload as the backend dumps it: the theme id belongs to the config
 // (and so to the draft), the resolved theme rides along outside of it
-function payload(resolved) {
+function payload(resolved, themeId = "group__theme") {
     const config = {
         appearance: {
-            theme: "group__theme",
+            theme: themeId,
             scene: { narrator_messages: { color: "#111111", italic: false } },
         },
         game: { default_player_character: { name: "Player" } },
@@ -186,6 +186,50 @@ describe("a stashed app_config still hands over its theme", () => {
         stub.handleMessage({ type: "app_config", data: payload() });
 
         expect(JSON.stringify(stub.app_config)).toBe(before);
+    });
+});
+
+// applying a theme commits the new id server-side while a dirty settings view
+// holds the broadcast back - the id must still reach the draft and the
+// baseline, or the picker's Active chip goes stale and a later save reverts it
+describe("a stashed app_config still hands over its theme id", () => {
+    it("adopts the applied theme id over unsaved edits", () => {
+        const stub = dirtyStub();
+
+        stub.handleMessage({ type: "app_config", data: payload(theme("#654321"), "group__other") });
+
+        expect(stub.app_config.appearance.theme).toBe("group__other");
+        expect(JSON.parse(stub.snapshot).appearance.theme).toBe("group__other");
+        // the edits themselves are still held back
+        expect(stub.app_config.appearance.scene.narrator_messages.color).toBe("#999999");
+        expect(stub.configDirty).toBe(true);
+    });
+
+    it("does not flag an applied theme as an external change", () => {
+        const stub = dirtyStub();
+
+        stub.handleMessage({ type: "app_config", data: payload(theme("#654321"), "group__other") });
+
+        expect(stub.externalChange).toBe(false);
+    });
+
+    it("saves the applied id, not the stale one", () => {
+        const stub = dirtyStub();
+        stub.handleMessage({ type: "app_config", data: payload(theme("#654321"), "group__other") });
+
+        // what sendConfigSave would put on the wire
+        expect(stub.app_config.appearance.theme).toBe("group__other");
+    });
+
+    it("adopts an id-only change without touching the resolved theme", () => {
+        const stub = dirtyStub();
+        const resolvedBefore = stub.app_config.theme;
+
+        stub.handleMessage({ type: "app_config", data: payload(undefined, "group__other") });
+
+        expect(stub.app_config.appearance.theme).toBe("group__other");
+        expect(stub.app_config.theme).toBe(resolvedBefore);
+        expect(stub.configDirty).toBe(true);
     });
 });
 

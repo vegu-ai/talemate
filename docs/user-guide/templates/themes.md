@@ -4,6 +4,8 @@ Theme templates hold a complete set of colors for the interface surfaces, the ap
 
 A theme is a world state template like any other — it lives in a template group, is edited in the Templates tab, and is shared as a file.
 
+Choosing which theme paints the app happens in the settings, on the [Appearance → Theme](/talemate/user-guide/app-settings/appearance/#theme) page: it lists every theme from every group with **Apply** and **Manage** actions, so picking a theme needs no template knowledge. The Templates tab remains where themes are authored and edited.
+
 !!! info "Shipped themes: Talemate Dark and Talemate Light"
     Talemate ships two themes, both in a group called **Themes**:
 

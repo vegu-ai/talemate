@@ -1,8 +1,24 @@
 # :material-palette-outline: Appearance
 
-The Appearance settings let you customize how messages and visuals are displayed in your scene. The **Appearance** group in the settings sidebar holds two pages: **Messages** and **Visuals**.
+The Appearance settings let you customize how messages and visuals are displayed in your scene. The **Appearance** group in the settings sidebar holds three pages: **Theme**, **Messages** and **Visuals**.
 
-While you edit appearance settings, the scene view previews your changes live; they only become permanent when you save.
+While you edit appearance settings on the Messages and Visuals pages, the scene view previews your changes live; they only become permanent when you save. Applying a theme on the Theme page is the exception — it takes effect immediately.
+
+## :material-palette-swatch: Theme
+
+![App settings - Appearance - Theme](/talemate/img/0.40.0/app-settings-appearance-theme.png)
+
+The Theme page is where you pick the [theme](/talemate/user-guide/templates/themes) that paints the app. Every theme template is listed under the template group it comes from — the shipped **Themes** group first — with a few of its colors shown as swatches, so you can tell the themes apart at a glance.
+
+Each theme has two actions:
+
+- **Apply** repaints the app with the theme's colors and copies its message styling — italic, bold, visibility and own color — and backdrop legibility into your appearance settings, replacing yours. It asks for confirmation first because of that replacement; a color you set yourself is kept and keeps overriding the theme. Applying takes effect immediately and does not wait for **Save**.
+- **Manage** opens the theme's template in the Templates tab, which is where themes are edited.
+
+The applied theme is marked with an **Active** chip and its **Apply** is disabled — re-copying its styling over your own edits is what **Restore from theme** on the Messages page is for.
+
+!!! info "Adding a theme"
+    New themes are added as templates in the Templates tab — the note at the top of the page links there. See [Themes](/talemate/user-guide/templates/themes) for creating your own.
 
 ## :material-script: Messages
 

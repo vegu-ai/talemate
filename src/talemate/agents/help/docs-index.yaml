@@ -362,11 +362,11 @@
     -> API Keys -> OpenRouter and save to reach any model OpenRouter exposes.
 - path: user-guide/app-settings/appearance.md
   title: Appearance
-  summary: Appearance settings, split into Messages and Visuals. Messages covers per-type italic/bold/show/color for narrator,
-    actor, director and time messages plus markup styling for quotes, brackets and entity highlights. The colors come from
-    the active theme; a color set here overrides it, Reset hands one color back, and Restore from theme drops all color
-    overrides and re-copies the theme's styling in one step, leaving the message asset settings alone - it is also how an
-    edit made to a theme after it was applied reaches the app. Visuals covers render cadence, display size and Auto Backdrop.
+  summary: Appearance settings, split into Theme, Messages and Visuals. Theme lists every theme template under its group
+    with color swatches - Apply repaints the app and copies the theme's message styling into the appearance settings after
+    a confirmation (colors the user set are kept and keep overriding), Manage opens the theme's template. Messages covers
+    per-type italic/bold/show/color and markup styling, with Reset and Restore from theme (re-copies the theme's styling
+    and drops all color overrides). Visuals covers render cadence, display size and Auto Backdrop.
 - path: user-guide/app-settings/application.md
   title: Connections
   summary: The Connections settings group - Clients, Agents and the API Keys page holding all third-party credentials, including
@@ -1038,12 +1038,11 @@
     Direction section.
 - path: user-guide/templates/themes.md
   title: Themes
-  summary: 'Creating a Theme template for Talemate''s colors - 51 slots in Surfaces, App, Messages and Chats panels,
-    with a table of what each paints. The editor Preview renders the theme being edited (a light theme stays light
-    in a dark app); every element is clickable to edit the color that paints it, and elements whose color is derived
-    name the slot they derive from. Plus message styling, Light/Dark mode and a code editor theme. Applying reads
-    colors live but copies styling into Appearance settings once. Shipped Talemate Dark/Light, sharing via the
-    group file, node editor canvas keeps its own colors.'
+  summary: 'Theme templates for Talemate''s colors - 51 slots in Surfaces, App, Messages and Chats panels - plus message
+    styling, Light/Dark mode and a code editor theme. Choosing the active theme happens in Settings -> Appearance ->
+    Theme; this page covers authoring in the Templates tab, where the editor Preview renders the theme being edited and
+    every element is clickable to edit the color that paints it. Applying reads colors live but copies styling into
+    Appearance settings once. Shipped Talemate Dark/Light, sharing via the group file.'
 - path: user-guide/templates/spice.md
   title: Spice Collection
   summary: 'Creating a Spice collection template that injects randomness into attribute and detail generation: description,

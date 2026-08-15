@@ -1,10 +1,14 @@
 <template>
+    <v-alert v-if="locked" density="compact" variant="tonal" color="muted" icon="mdi-lock" class="mb-3">
+        This theme is locked in its template file and cannot be edited or deleted. Create your own theme to build on it.
+    </v-alert>
     <v-row>
         <v-col cols="12" sm="8" xxl="5">
             <v-textarea
                 v-model="template.instructions"
                 label="Notes"
                 :color="dirty ? 'dirty' : ''"
+                :disabled="locked"
                 @update:model-value="dirty=true;"
                 @blur="saveTemplate"
                 auto-grow rows="2"
@@ -19,6 +23,7 @@
                 variant="outlined"
                 divided
                 mandatory
+                :disabled="locked"
                 color="primary">
                 <v-btn value="light" prepend-icon="mdi-white-balance-sunny">Light</v-btn>
                 <v-btn value="dark" prepend-icon="mdi-weather-night">Dark</v-btn>
@@ -31,6 +36,7 @@
                 label="Code editor theme"
                 density="compact"
                 class="mt-4"
+                :disabled="locked"
                 @update:model-value="saveTemplate"
                 messages="Syntax colors for the in-app code editors.">
                 <template v-slot:item="{ props, item }">
@@ -45,6 +51,7 @@
             <v-checkbox
                 v-model="template.favorite"
                 label="Favorite"
+                :disabled="locked"
                 @update:model-value="saveTemplate"
                 messages="Favorited themes will appear on the top of the list.">
             </v-checkbox>
@@ -61,12 +68,25 @@
             </v-btn>
             <div v-if="!template.uid" class="text-caption text-muted">The template has to be created before its theme can be applied.</div>
             <div v-else class="text-caption text-muted">Repaints the app with these colors.</div>
+
+            <v-btn
+                rounded="sm"
+                prepend-icon="mdi-backup-restore"
+                color="warning"
+                variant="text"
+                class="mt-4"
+                :disabled="locked"
+                @click.stop="resetDialog = true">
+                Reset to template
+            </v-btn>
+            <div class="text-caption text-muted">Takes another theme's colors, styling, mode and code editor theme as the starting point. The name, notes and favorite stay.</div>
         </v-col>
     </v-row>
 
     <TemplateThemePreview
         v-if="template"
         :template="template"
+        :readonly="locked"
         @set-color="setColor"
         @save="saveTemplate"
     />
@@ -83,7 +103,7 @@
                 <v-row dense>
                     <v-col v-for="slot in group.slots" :key="slot" cols="12" sm="6" md="4" xxl="3">
                         <div class="d-flex align-center">
-                            <v-menu :close-on-content-click="false" @update:model-value="onPickerToggle">
+                            <v-menu :close-on-content-click="false" :disabled="locked" @update:model-value="onPickerToggle">
                                 <template v-slot:activator="{ props }">
                                     <v-chip
                                         v-bind="props"
@@ -132,19 +152,19 @@
                             </td>
                             <td style="padding: 4px 12px;">
                                 <v-checkbox color="primary" density="compact" hide-details class="ma-0"
-                                    v-model="row.style.italic" @update:model-value="saveTemplate"></v-checkbox>
+                                    v-model="row.style.italic" :disabled="locked" @update:model-value="saveTemplate"></v-checkbox>
                             </td>
                             <td style="padding: 4px 12px;">
                                 <v-checkbox color="primary" density="compact" hide-details class="ma-0"
-                                    v-model="row.style.bold" @update:model-value="saveTemplate"></v-checkbox>
+                                    v-model="row.style.bold" :disabled="locked" @update:model-value="saveTemplate"></v-checkbox>
                             </td>
                             <td style="padding: 4px 12px;">
                                 <v-checkbox v-if="'show' in row.style" color="primary" density="compact" hide-details class="ma-0"
-                                    v-model="row.style.show" @update:model-value="saveTemplate"></v-checkbox>
+                                    v-model="row.style.show" :disabled="locked" @update:model-value="saveTemplate"></v-checkbox>
                             </td>
                             <td style="padding: 4px 12px;">
                                 <v-checkbox v-if="'override_color' in row.style" color="primary" density="compact" hide-details class="ma-0"
-                                    v-model="row.style.override_color" @update:model-value="saveTemplate"></v-checkbox>
+                                    v-model="row.style.override_color" :disabled="locked" @update:model-value="saveTemplate"></v-checkbox>
                             </td>
                         </tr>
                     </tbody>
@@ -158,6 +178,7 @@
                             :min="0" :max="1" :step="0.05"
                             thumb-label
                             density="compact"
+                            :disabled="locked"
                             @update:model-value="dirty=true;"
                             @end="saveTemplate">
                         </v-slider>
@@ -167,6 +188,7 @@
                             v-model="template.appearance.backdrop_text_shadow"
                             label="Backdrop text shadow"
                             density="compact"
+                            :disabled="locked"
                             @update:model-value="saveTemplate"
                             messages="Drop shadow on message text rendered over the scene backdrop.">
                         </v-checkbox>
@@ -176,11 +198,46 @@
         </v-expansion-panel>
 
     </v-expansion-panels>
+
+    <v-dialog v-model="resetDialog" max-width="480">
+        <v-card>
+            <v-card-title class="headline">
+                <v-icon class="mr-2" size="x-small" color="warning">mdi-backup-restore</v-icon>
+                Reset to template
+            </v-card-title>
+            <v-card-text>
+                <div class="text-caption text-muted mb-2">Pick the theme to take as the starting point — its colors, message styling, mode and code editor theme replace this one's. The name, notes and favorite stay.</div>
+                <div v-for="group in resetChoices" :key="group.uid">
+                    <div class="text-caption text-muted mb-1">
+                        <v-icon size="small" class="mr-1">mdi-group</v-icon>{{ group.name }}
+                    </div>
+                    <v-list density="compact" class="pa-0 mb-2" bg-color="transparent">
+                        <v-list-item v-for="theme in group.themes" :key="theme.uid" @click="promptReset(theme)">
+                            <template v-slot:prepend>
+                                <span class="d-flex align-center mr-1">
+                                    <span v-for="(color, index) in swatchColors(theme)" :key="index" class="reset-swatch" :style="{ backgroundColor: color }"></span>
+                                </span>
+                            </template>
+                            <v-list-item-title>{{ theme.name }}</v-list-item-title>
+                        </v-list-item>
+                    </v-list>
+                </div>
+                <div v-if="!resetChoices.length" class="text-caption text-muted">No other themes to take as a starting point.</div>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="muted" text @click="resetDialog = false">Cancel</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
+
+    <ConfirmActionPrompt ref="confirmResetToTemplate" @confirm="resetToTemplate" actionLabel="Reset to template" icon="mdi-backup-restore" color="warning" confirmText="Reset" cancelText="Cancel" :maxWidth="420" description="Reset this theme to {name}? Its colors, message styling, mode and code editor theme replace the current ones - the current edit is discarded. The name, notes and favorite stay." />
 </template>
 
 <script>
 import { CODE_EDITOR_THEMES } from '@/utils/codeEditorTheme';
 import TemplateThemePreview from './TemplateThemePreview.vue';
+import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import {
     THEME_COLOR_GROUPS,
     hydrateThemeTemplate,
@@ -194,11 +251,16 @@ export default {
     name: 'TemplateTheme',
     components: {
         TemplateThemePreview,
+        ConfirmActionPrompt,
     },
     props: {
         immutableTemplate: {
             type: Object,
             required: true
+        },
+        themeTemplates: {
+            type: Array,
+            default: () => []
         }
     },
     data() {
@@ -208,6 +270,7 @@ export default {
             openPanels: ['app'],
             colorGroups: THEME_COLOR_GROUPS,
             codeEditorThemes: CODE_EDITOR_THEMES,
+            resetDialog: false,
         };
     },
     emits: ['update', 'flush'],
@@ -215,6 +278,26 @@ export default {
         'getWebsocket',
     ],
     computed: {
+        locked() {
+            return !!(this.template && this.template.locked);
+        },
+
+        resetChoices() {
+            // uids are only unique per group - a copied theme keeps its uid,
+            // so excluding by uid alone would hide the original it was copied
+            // from in the other group
+            const currentUid = this.template && this.template.uid;
+            const currentGroup = this.template && this.template.group;
+            return this.themeTemplates
+                .map((group) => ({
+                    ...group,
+                    themes: (group.themes || []).filter(
+                        (theme) => !(theme.uid === currentUid && group.uid === currentGroup),
+                    ),
+                }))
+                .filter((group) => group.themes.length > 0);
+        },
+
         mode: {
             get() {
                 return this.template && this.template.dark === false ? 'light' : 'dark';
@@ -279,8 +362,42 @@ export default {
         },
 
         saveTemplate() {
+            if (this.locked) {
+                return;
+            }
             this.dirty = false;
             this.$emit('update', this.template);
+        },
+
+        swatchColors(theme) {
+            const colors = (theme && theme.colors) || {};
+            return [
+                colors.surfaces && colors.surfaces.background,
+                colors.surfaces && colors.surfaces.surface,
+                colors.app && colors.app.primary,
+                colors.app && colors.app.secondary,
+            ].filter(Boolean);
+        },
+
+        promptReset(theme) {
+            this.$refs.confirmResetToTemplate.initiateAction({ name: theme.name, theme });
+        },
+
+        // takes everything the picked theme owns; the identity of the template
+        // being edited (name, notes, favorite, group, uid) is kept
+        resetToTemplate(params) {
+            const theme = params && params.theme;
+            if (!theme) {
+                return;
+            }
+            this.template.colors = JSON.parse(JSON.stringify(theme.colors || {}));
+            this.template.appearance = JSON.parse(JSON.stringify(theme.appearance || {}));
+            this.template.dark = theme.dark !== false;
+            if (theme.code_editor) {
+                this.template.code_editor = theme.code_editor;
+            }
+            this.resetDialog = false;
+            this.saveTemplate();
         },
 
         applyTheme() {
@@ -296,3 +413,14 @@ export default {
     }
 };
 </script>
+
+<style scoped>
+.reset-swatch {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 4px;
+    border: 1px solid rgba(128, 128, 128, 0.4);
+}
+</style>

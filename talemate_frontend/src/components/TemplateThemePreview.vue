@@ -359,6 +359,7 @@ export default {
             type: Object,
             required: true,
         },
+        readonly: Boolean,
     },
     emits: ['set-color', 'save'],
     data() {
@@ -509,6 +510,9 @@ export default {
         },
 
         selectElement(event, id) {
+            if (this.readonly) {
+                return;
+            }
             event.stopPropagation();
             const descriptor = THEME_PREVIEW_ELEMENTS[id];
             const selection = descriptor
@@ -518,6 +522,9 @@ export default {
         },
 
         onMarkupClick(event, messageType) {
+            if (this.readonly) {
+                return;
+            }
             const span = event.target.closest('span[class*="scene-"]');
             if (!span) {
                 return;

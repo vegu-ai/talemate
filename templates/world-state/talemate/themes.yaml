@@ -112,6 +112,7 @@ templates:
     favorite: false
     group: themes
     instructions: null
+    locked: true
     name: Talemate Dark
     priority: 1
     template_type: theme
@@ -226,6 +227,7 @@ templates:
     favorite: false
     group: themes
     instructions: null
+    locked: true
     name: Talemate Light
     priority: 1
     template_type: theme

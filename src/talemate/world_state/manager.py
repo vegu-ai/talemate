@@ -841,6 +841,10 @@ class WorldStateManager:
         # an unknown group derives its file from its name - taking the inbound
         # path would let it name (and overwrite) another group's file
         group.path = None
+        # the lock is only ever authority from a file already on disk, so a
+        # new group must not arrive carrying one
+        for template in group.templates.values():
+            template.locked = False
         target = group.derived_path(world_state_templates.TEMPLATE_PATH)
 
         if os.path.exists(target):
@@ -852,13 +856,42 @@ class WorldStateManager:
         group.save(world_state_templates.TEMPLATE_PATH)
         world_state_templates.invalidate_theme_cache()
 
+    @staticmethod
+    def _disk_locks(group: world_state_templates.Group | None) -> dict[str, bool]:
+        """
+        The lock state of a group's templates as the file on disk has it.
+
+        The lock is managed by hand-editing the YAML, so the cached collection
+        - loaded once per scene - cannot be authority over it: a save writing
+        the cached group back over the file must not wipe a lock set after the
+        load. An unreadable or missing file reports no locks rather than
+        blocking every save of the group.
+        """
+        if group is None or not group.path or not os.path.exists(group.path):
+            return {}
+        try:
+            on_disk = world_state_templates.Group.load(group.path)
+        except Exception as exc:
+            log.warning(
+                "template group file unreadable for lock check",
+                path=group.path,
+                error=str(exc),
+            )
+            return {}
+        return {uid: template.locked for uid, template in on_disk.templates.items()}
+
     async def remove_template_group(self, group: world_state_templates.Group):
         """
         Removes a template group from the scene configuration.
 
-        Arguments:
-            group: The Group object to be removed.
+        Refused while the group file on disk holds a locked template - the
+        delete would destroy it.
         """
+        existing = self.template_collection.find(group.uid)
+        if any(self._disk_locks(existing).values()):
+            raise ValueError(
+                f"Template group '{existing.name}' contains locked templates and cannot be deleted"
+            )
         self.template_collection.remove(group)
         world_state_templates.invalidate_theme_cache()
 
@@ -866,10 +899,26 @@ class WorldStateManager:
         """
         Saves a state reinforcement template to the scene configuration.
 
+        A template locked in the group file on disk cannot be overwritten, and
+        the lock itself is only ever taken from that file - the inbound
+        payload can neither set nor clear it.
+
         Note:
             If the template is set to auto-create, it will be applied immediately.
         """
         group = self.template_collection.find(template.group)
+        disk_locks = self._disk_locks(group)
+        if disk_locks.get(template.uid):
+            raise ValueError(
+                f"Template '{template.name}' is locked and cannot be edited"
+            )
+        template.locked = bool(disk_locks.get(template.uid, False))
+        # saving rewrites the whole group file from the cached mirror - carry
+        # the locks the file holds, or saving a sibling wipes a hand-set lock
+        for uid, locked in disk_locks.items():
+            sibling = group.find(uid) if group else None
+            if sibling is not None:
+                sibling.locked = locked
         group.update_template(template)
         world_state_templates.invalidate_theme_cache()
         if getattr(template, "auto_create", False):
@@ -880,6 +929,10 @@ class WorldStateManager:
         Removes a specific state reinforcement template from scene configuration.
         """
         group = self.template_collection.find(template.group)
+        if self._disk_locks(group).get(template.uid):
+            raise ValueError(
+                f"Template '{template.name}' is locked and cannot be deleted"
+            )
         group.delete_template(template)
         world_state_templates.invalidate_theme_cache()
 

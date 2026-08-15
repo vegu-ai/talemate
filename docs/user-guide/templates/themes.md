@@ -14,7 +14,7 @@ Choosing which theme paints the app happens in the settings, on the [Appearance 
     | **Talemate Dark** | The application's standard look |
     | **Talemate Light** | The same palette worked out for a light page |
 
-    Both are ordinary templates, so they can be edited — but the edits are written back to the file that ships with Talemate and an update can overwrite them. Build your own theme in your own group for changes that should stick.
+    Both are **locked** — they ship with Talemate and cannot be edited or deleted from the app. To build on one, create your own theme in your own group and use [Reset to template](#reset-to-template) to take a shipped theme as the starting point.
 
 ## Creating a theme
 
@@ -37,6 +37,8 @@ Mark the template as a favorite to make it easier to find in the list of templat
 ### Colors
 
 The colors are edited in four accordion panels, 51 slots in total. Each slot opens a color picker and shows the color it currently holds; the theme is saved when the picker closes.
+
+The picker carries an eyedropper where the browser supports it (Chromium, over a secure context) — pick any color on screen, including straight from the preview, which is the quickest way to take a neighboring element's color.
 
 #### Preview
 
@@ -176,7 +178,17 @@ The file carries every theme in the group, not just the one you meant to pass on
 
 To edit an existing template, select it from the list of templates in the left sidebar and adjust the fields — updates are applied automatically.
 
-To delete a template, select it and click **Remove template**, then confirm. If the deleted theme was the active one, Talemate falls back to its built-in default colors rather than rendering unstyled — the same thing happens when the active theme cannot be loaded for any other reason.
+### Reset to template
+
+**Reset to template** takes another theme as the starting point for the theme being edited: the picked theme's colors, message styling, mode and code editor theme replace the current ones after a confirmation. The theme's identity — its name, notes, favorite marker and the group it lives in — always stays. The theme being edited is not in the list; the reset is for taking off from *another* theme, for example one of the shipped ones.
+
+### Locked templates
+
+A template can be locked by writing `locked: true` into its group file — the lock exists only there, the app offers no way to set or clear it. Enforcement is generic and covers every template type: a locked template cannot be saved over or deleted, and a group that holds locked templates cannot be removed. The read-only editor treatment — inputs disabled with a note saying so, **Remove template** hidden, the group marked unremovable — currently applies to theme templates; for other types a locked template still opens in its editor, but every save and delete is refused by the backend. **Apply theme** keeps working on a locked theme — locking prevents changes, not use.
+
+Talemate locks its own shipped themes this way. The mechanism is generic and applies to any template type; for now only the shipped themes use it.
+
+To delete an unlocked template, select it and click **Remove template**, then confirm. If the deleted theme was the active one, Talemate falls back to its built-in default colors rather than rendering unstyled — the same thing happens when the active theme cannot be loaded for any other reason.
 
 ## Limitations
 

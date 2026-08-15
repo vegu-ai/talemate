@@ -60,8 +60,10 @@
             <ConfirmActionInline
                 :actionLabel="'Remove group'"
                 :confirmLabel="'Confirm removal'"
+                :disabled="groupHasLocked"
                 @confirm="removeTemplateGroup"
             />
+            <div v-if="groupHasLocked" class="text-caption text-muted ml-2">The group holds locked templates and cannot be removed.</div>
         </v-card-actions>
     </v-card>
 
@@ -206,6 +208,7 @@
                 <div v-else-if="template.template_type === 'theme'">
                     <TemplateTheme
                         :immutableTemplate="template"
+                        :themeTemplates="themeTemplateChoices"
                         @update="(template) => applyAndSaveTemplate(template)"
                         @flush="(template) => saveTemplatePayload(template)"
                     />
@@ -214,14 +217,14 @@
             </v-form>
 
         </v-card-text>
-        <v-card-actions v-if="template.uid">
+        <v-card-actions v-if="template.uid && !template.locked">
             <ConfirmActionInline
                 :actionLabel="'Remove template'"
                 :confirmLabel="'Confirm removal'"
                 @confirm="removeTemplate"
             />
         </v-card-actions>
-        <v-card-actions v-else-if="template.template_type !== null && template.name !== null">
+        <v-card-actions v-else-if="!template.uid && template.template_type !== null && template.name !== null">
             <v-btn rounded="sm" prepend-icon="mdi-cube-scan" color="primary" @click.stop="saveTemplate(true)" >
                 Create template
             </v-btn>
@@ -355,6 +358,21 @@ export default {
             
             // Only show guidance if there are groups and they're all defaults
             return groups.length > 0 && allGroupsAreDefault;
+        },
+        groupHasLocked() {
+            return Object.values((this.group && this.group.templates) || {})
+                .some((template) => template.locked);
+        },
+        themeTemplateChoices() {
+            const groups = this.templates?.managed?.groups || [];
+            return groups
+                .map((group) => ({
+                    uid: group.uid,
+                    name: group.name || group.uid,
+                    themes: Object.values(group.templates || {})
+                        .filter((template) => template.template_type === 'theme'),
+                }))
+                .filter((group) => group.themes.length > 0);
         },
         sortedHelpMessages() {
             if (!this.helpMessages) return [];

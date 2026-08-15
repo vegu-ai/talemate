@@ -47,6 +47,10 @@
                     }}</v-chip>
                     <v-chip v-if="template.favorite" label size="x-small" color="warning" variant="outlined"
                         class="mr-1">Favorite</v-chip>
+                    <v-chip v-if="template.locked" label size="x-small" color="muted" variant="outlined"
+                        class="mr-1" prepend-icon="mdi-lock">Locked
+                        <v-tooltip activator="parent" location="top">Locked in the template file — it cannot be edited or deleted.</v-tooltip>
+                    </v-chip>
                 </v-list-item-subtitle>
             </v-list-item>
         </v-list>

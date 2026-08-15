@@ -88,6 +88,9 @@ class Template(pydantic.BaseModel):
     instructions: str | None = None
     group: str | None = None
     favorite: bool = False
+    # ships immutable when set - only ever written by hand into a template
+    # file; the websocket save path preserves the on-disk value instead
+    locked: bool = False
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     # priority: Priority = Priority.low
     # Weird behavior during yaml dump with IntEnum

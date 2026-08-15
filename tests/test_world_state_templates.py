@@ -656,3 +656,172 @@ class TestGroupFilename:
     def test_filename_simple(self):
         group = make_group(name="default")
         assert group.filename == "default.yaml"
+
+
+class TestTemplateLock:
+    """`locked` is only ever authority from the YAML on disk: a locked
+    template cannot be overwritten or deleted, a group holding one cannot be
+    deleted, and a client payload can neither set nor clear the flag."""
+
+    @pytest.fixture
+    def manager(self, monkeypatch, template_dir) -> WorldStateManager:
+        monkeypatch.setattr(
+            "talemate.world_state.templates.TEMPLATE_PATH", template_dir
+        )
+        manager = WorldStateManager(MockScene())
+        manager.scene._world_state_templates = Collection.load(template_dir)
+        return manager
+
+    @pytest.fixture
+    def locked_group(self, manager, template_dir) -> Group:
+        locked = StateReinforcement(**make_template(name="Locked", locked=True))
+        free = StateReinforcement(**make_template(name="Free"))
+        group = make_group(templates=[locked, free])
+        group.save(template_dir)
+        manager.scene._world_state_templates = Collection.load(template_dir)
+        return group
+
+    def test_lock_survives_the_yaml_roundtrip(self, locked_group):
+        loaded = Group.load(locked_group.path)
+        assert (
+            loaded.templates[
+                next(uid for uid, t in locked_group.templates.items() if t.locked)
+            ].locked
+            is True
+        )
+
+    async def test_save_refuses_a_locked_template(self, manager, locked_group):
+        locked = next(t for t in locked_group.templates.values() if t.locked)
+        replacement = StateReinforcement(
+            **make_template(name="Renamed", uid=locked.uid, group=locked_group.uid)
+        )
+
+        with pytest.raises(ValueError, match="locked and cannot be edited"):
+            await manager.save_template(replacement)
+
+        assert Group.load(locked_group.path).templates[locked.uid].name == "Locked"
+
+    async def test_save_preserves_the_disk_lock_against_the_payload(
+        self, manager, locked_group
+    ):
+        free = next(t for t in locked_group.templates.values() if not t.locked)
+        # a crafted payload trying to lock an unlocked template
+        crafted = StateReinforcement(
+            **make_template(
+                name="Free", uid=free.uid, group=locked_group.uid, locked=True
+            )
+        )
+
+        await manager.save_template(crafted)
+
+        assert Group.load(locked_group.path).templates[free.uid].locked is False
+
+    async def test_save_a_new_template_cannot_arrive_locked(
+        self, manager, locked_group
+    ):
+        crafted = StateReinforcement(
+            **make_template(name="Fresh", group=locked_group.uid, locked=True)
+        )
+
+        await manager.save_template(crafted)
+
+        assert Group.load(locked_group.path).templates[crafted.uid].locked is False
+
+    async def test_remove_refuses_a_locked_template(self, manager, locked_group):
+        locked = next(t for t in locked_group.templates.values() if t.locked)
+
+        with pytest.raises(ValueError, match="locked and cannot be deleted"):
+            await manager.remove_template(locked)
+
+        assert locked.uid in Group.load(locked_group.path).templates
+
+    async def test_remove_allows_an_unlocked_template(self, manager, locked_group):
+        free = next(t for t in locked_group.templates.values() if not t.locked)
+
+        await manager.remove_template(free)
+
+        assert free.uid not in Group.load(locked_group.path).templates
+
+    async def test_remove_group_refused_while_it_holds_a_locked_template(
+        self, manager, locked_group
+    ):
+        with pytest.raises(ValueError, match="locked templates"):
+            await manager.remove_template_group(locked_group)
+
+        assert os.path.exists(locked_group.path)
+
+    async def test_remove_group_allowed_once_nothing_is_locked(
+        self, manager, locked_group, template_dir
+    ):
+        unlocked_only = make_group(name="Unlocked")
+        unlocked_only.save(template_dir)
+        manager.scene._world_state_templates = Collection.load(template_dir)
+
+        await manager.remove_template_group(unlocked_only)
+
+        assert not os.path.exists(unlocked_only.path)
+
+    async def test_new_group_cannot_arrive_with_locked_templates(
+        self, manager, template_dir
+    ):
+        crafted = make_group(
+            name="Crafted",
+            templates=[StateReinforcement(**make_template(name="Trojan", locked=True))],
+        )
+
+        await manager.save_template_group(crafted)
+
+        on_disk = Group.load(os.path.join(template_dir, "crafted.yaml"))
+        assert all(not t.locked for t in on_disk.templates.values())
+
+    def lock_on_disk(self, group: Group, template) -> None:
+        """Hand-edit the group file the way the docs invite: lock one template
+        after the collection has already been loaded."""
+        data = yaml.safe_load(open(group.path))
+        data["templates"][template.uid]["locked"] = True
+        yaml.safe_dump(data, open(group.path, "w"))
+
+    async def test_a_lock_handwritten_after_load_is_enforced(
+        self, manager, locked_group
+    ):
+        # the cached collection still shows the template as editable - only
+        # the file knows about the lock
+        free = next(t for t in locked_group.templates.values() if not t.locked)
+        assert free.locked is False
+        self.lock_on_disk(locked_group, free)
+
+        with pytest.raises(ValueError, match="locked and cannot be edited"):
+            await manager.save_template(free)
+        with pytest.raises(ValueError, match="locked and cannot be deleted"):
+            await manager.remove_template(free)
+        with pytest.raises(ValueError, match="locked templates"):
+            await manager.remove_template_group(locked_group)
+
+    async def test_saving_a_sibling_preserves_the_lock(self, manager, locked_group):
+        # a save rewrites the whole group file from the cached mirror - the
+        # lock on one template must survive the save of another
+        locked = next(t for t in locked_group.templates.values() if t.locked)
+        free = next(t for t in locked_group.templates.values() if not t.locked)
+
+        await manager.save_template(free)
+
+        assert Group.load(locked_group.path).templates[locked.uid].locked is True
+
+    async def test_a_handwritten_unlock_wins_over_the_stale_cache(
+        self, manager, locked_group
+    ):
+        # disk is authority in both directions: a lock REMOVED by hand lets
+        # the template be saved even though the cached mirror still holds it
+        locked = next(t for t in locked_group.templates.values() if t.locked)
+        free = next(t for t in locked_group.templates.values() if not t.locked)
+        data = yaml.safe_load(open(locked_group.path))
+        data["templates"][free.uid]["locked"] = True
+        data["templates"][locked.uid]["locked"] = False
+        yaml.safe_dump(data, open(locked_group.path, "w"))
+
+        await manager.save_template(locked)
+
+        on_disk = Group.load(locked_group.path)
+        assert on_disk.templates[locked.uid].locked is False
+        # and the handwritten lock on the sibling survived the rewrite
+        assert on_disk.templates[free.uid].locked is True

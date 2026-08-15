@@ -1038,11 +1038,12 @@
     Direction section.
 - path: user-guide/templates/themes.md
   title: Themes
-  summary: 'Theme templates for Talemate''s colors - 51 slots in Surfaces, App, Messages and Chats panels - plus message
-    styling, Light/Dark mode and a code editor theme. Choosing the active theme happens in Settings -> Appearance ->
-    Theme; this page covers authoring in the Templates tab, where the editor Preview renders the theme being edited and
-    every element is clickable to edit the color that paints it. Applying reads colors live but copies styling into
-    Appearance settings once. Shipped Talemate Dark/Light, sharing via the group file.'
+  summary: 'Theme templates for Talemate''s colors - 51 slots in Surfaces, App, Messages and Chats panels, plus
+    styling, Light/Dark mode and a code editor theme. Picked in Settings -> Appearance -> Theme; this page covers
+    authoring: Preview elements are click-to-edit (derived colors name their source), picker eyedropper grabs
+    on-screen colors, Reset to template takes another theme as start point, locked: true in the group file makes
+    a template read-only and undeletable. Applying reads colors live but copies styling into Appearance settings
+    once. Shared via the group file; node editor keeps its own colors.'
 - path: user-guide/templates/spice.md
   title: Spice Collection
   summary: 'Creating a Spice collection template that injects randomness into attribute and detail generation: description,

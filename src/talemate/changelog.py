@@ -70,13 +70,14 @@ File Layout:
 ```
 """
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 import copy
 import json
 import os
 import re
 import structlog
 import deepdiff
+from deepdiff.path import parse_path
 from datetime import datetime, timezone
 import shutil
 import glob
@@ -122,6 +123,12 @@ LEGACY_UNTRACKED_WORLD_STATE = [
     "root['world_state']['pins']",
     "root['world_state']['character_name_mappings']",
 ]
+
+# Marker key naming the paths _full_list_opcode_ops rewrote, so replay can
+# verify their old_value (see _check_reordered_lists_appliable). deepdiff
+# reads a delta dict by its own known keys, so the extra key is ignored on
+# apply and needs no stripping.
+REORDERED_LISTS_KEY = "_reordered_lists"
 
 # Agent-derived world-state subtrees excluded from deltas above. They are
 # refreshed by the world-state agent's analysis cycles, so reconstruction
@@ -342,7 +349,7 @@ def _read_changelog_log_strict(path: str) -> dict | None:
     return content
 
 
-def _write_json(path: str, data: dict, cls=None):
+def _write_json_strict(path: str, data: dict, cls=None):
     """
     Write JSON data to file, creating parent directories as needed.
 
@@ -356,13 +363,38 @@ def _write_json(path: str, data: dict, cls=None):
 
     Returns:
         None
+
+    Raises:
+        Exception: any failure to serialize or write the file
     """
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp_path = f"{path}.tmp.{os.getpid()}"
     try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        tmp_path = f"{path}.tmp.{os.getpid()}"
         with open(tmp_path, "w") as f:
             json.dump(data, f, indent=2, cls=cls)
         os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
+def _write_json(path: str, data: dict, cls=None):
+    """
+    Write JSON data to file, logging instead of raising on failure.
+
+    Args:
+        path: Path to write the JSON file
+        data: Dictionary data to write as JSON
+        cls: Optional JSON encoder class (e.g. SceneEncoder)
+
+    Returns:
+        None
+    """
+    try:
+        _write_json_strict(path, data, cls=cls)
     except Exception as e:
         log.error("write_json", error=e, path=path)
 
@@ -546,23 +578,20 @@ async def _ensure_latest_initialized(scene: "Scene") -> None:
     _write_json(latest, data)
 
 
-_DELTA_PATH_TOKEN_RE = re.compile(r"\['([^']*)'\]|\[(-?\d+)\]")
-
-
 def _parse_delta_path(path: str) -> list[str | int]:
     """Parse a deepdiff path like ``root['a'][3]['b']`` into ``['a', 3, 'b']``.
+
+    Delegates to deepdiff's own parser, which also handles the double-quoted
+    form deepdiff emits for keys containing an apostrophe.
 
     Returns an empty list for unrecognized formats so callers can short-circuit.
     """
     if not isinstance(path, str) or not path.startswith("root"):
         return []
-    parts: list[str | int] = []
-    for m in _DELTA_PATH_TOKEN_RE.finditer(path[len("root") :]):
-        if m.group(1) is not None:
-            parts.append(m.group(1))
-        else:
-            parts.append(int(m.group(2)))
-    return parts
+    try:
+        return parse_path(path)
+    except Exception:
+        return []
 
 
 def _path_parent_exists(data: dict, path: str) -> bool:
@@ -598,12 +627,138 @@ def _warn_on_orphan_delta_ops(prev: dict, delta_dict: dict) -> None:
                 )
 
 
+def _resolve_delta_parent(data: dict, path: str) -> tuple:
+    """Resolve a delta path's parent container and final key in ``data``.
+
+    Raises ChangelogDivergedError when any segment of the path does not
+    exist — the delta was computed against a state this reconstruction no
+    longer matches.
+    """
+    parts = _parse_delta_path(path)
+    if not parts:
+        raise ChangelogDivergedError(f"unparseable delta path: {path!r}")
+    obj = data
+    for key in parts[:-1]:
+        if isinstance(obj, list) and isinstance(key, int) and 0 <= key < len(obj):
+            obj = obj[key]
+        elif isinstance(obj, dict) and key in obj:
+            obj = obj[key]
+        else:
+            raise ChangelogDivergedError(f"{path}: {key!r} does not exist")
+    return obj, parts[-1]
+
+
+def _resolve_delta_value(data: dict, path: str):
+    """Resolve the value a delta path points at, or None if it does not exist."""
+    parts = _parse_delta_path(path)
+    if not parts:
+        return None
+    obj = data
+    for key in parts:
+        if isinstance(obj, list) and isinstance(key, int) and 0 <= key < len(obj):
+            obj = obj[key]
+        elif isinstance(obj, dict) and key in obj:
+            obj = obj[key]
+        else:
+            return None
+    return obj
+
+
+def _check_iterable_ops_appliable(data: dict, delta_obj: dict) -> None:
+    """Raise ChangelogDivergedError on iterable ops ``data`` cannot take.
+
+    deepdiff verifies a removal's stored value against the list and silently
+    skips (or relocates to a nearby matching element) on mismatch even with
+    raise_errors=True, so iterable strictness is checked here rather than
+    delegated. Ops are checked in deepdiff's own application order (removals
+    by descending index, then additions by ascending index), simulating each
+    affected list so multi-op deltas see the shifted indexes.
+    """
+    removed = delta_obj.get("iterable_item_removed") or {}
+    added = delta_obj.get("iterable_item_added") or {}
+    moved = delta_obj.get("iterable_item_moved") or {}
+    if not removed and not added and not moved:
+        return
+
+    def _index(path: str) -> int:
+        parts = _parse_delta_path(path)
+        if not parts or not isinstance(parts[-1], int):
+            raise ChangelogDivergedError(f"unparseable iterable op path: {path!r}")
+        return parts[-1]
+
+    simulated: dict[str, list] = {}
+
+    def _simulated_list(path: str) -> list:
+        parent_key = path[: path.rfind("[")]
+        if parent_key not in simulated:
+            parent, _ = _resolve_delta_parent(data, path)
+            if not isinstance(parent, list):
+                raise ChangelogDivergedError(f"{path}: parent is not a list")
+            simulated[parent_key] = list(parent)
+        return simulated[parent_key]
+
+    # deepdiff replays a move as a removal at the old path plus an insertion
+    # at the new one, so both sides join the same checks
+    removed_items = list(removed.items()) + [
+        (path, (moved_op or {}).get("value")) for path, moved_op in moved.items()
+    ]
+    added_paths = list(added) + [
+        (moved_op or {}).get("new_path") for moved_op in moved.values()
+    ]
+
+    for path, expected in sorted(
+        removed_items, key=lambda kv: _index(kv[0]), reverse=True
+    ):
+        sim = _simulated_list(path)
+        key = _index(path)
+        if key < 0 or key >= len(sim):
+            raise ChangelogDivergedError(f"{path}: no such list item")
+        if sim[key] != expected:
+            raise ChangelogDivergedError(
+                f"{path}: stored value does not match the reconstruction"
+            )
+        del sim[key]
+
+    for path in sorted(added_paths, key=_index):
+        sim = _simulated_list(path)
+        key = _index(path)
+        if key < 0 or key > len(sim):
+            raise ChangelogDivergedError(f"{path}: index out of range")
+        sim.insert(key, None)
+
+
+def _check_reordered_lists_appliable(data: dict, delta_obj: dict) -> None:
+    """Raise ChangelogDivergedError on a rewritten reorder whose recorded
+    ``old_value`` is not what the reconstruction holds.
+
+    deepdiff applies ``values_changed`` blind — it never compares
+    ``old_value``, even with raise_errors=True — so a full-list op would
+    overwrite an already diverged list with the recorded post-state and hide
+    the loss from the divergence check. Only the ops _full_list_opcode_ops
+    marked are verified: full-subtree world-state ops deliberately carry an
+    ``old_value`` that predates the base snapshot. A marked path whose op is
+    gone (rewritten by _full_subtree_world_state_ops) has nothing to check.
+    """
+    changed = delta_obj.get("values_changed") or {}
+    for path in delta_obj.get(REORDERED_LISTS_KEY) or []:
+        op = changed.get(path)
+        if not isinstance(op, dict):
+            continue
+        if _resolve_delta_value(data, path) != op.get("old_value"):
+            raise ChangelogDivergedError(
+                f"{path}: stored list does not match the reconstruction"
+            )
+
+
 def _apply_delta(data: dict, delta_obj: dict) -> dict:
     """
     Apply a delta (set of changes) to scene data.
 
-    Uses DeepDiff's Delta class to apply the stored changes to reconstruct
-    a scene state at a specific revision.
+    Replays strictly: an op the reconstructed state cannot take (missing
+    parent, out-of-range or value-mismatched list op) means the chain has
+    diverged from the state the delta was computed against, and raises
+    ChangelogDivergedError instead of silently dropping the op or
+    fabricating a stub. Recovery is a rebase (rebase_changelog_chain).
 
     Args:
         data: The base scene data to apply the delta to
@@ -613,21 +768,48 @@ def _apply_delta(data: dict, delta_obj: dict) -> dict:
         dict: The scene data with the delta applied
 
     Raises:
-        Exception: If the delta cannot be applied (re-raised from deepdiff)
+        ChangelogDivergedError: If the delta cannot be applied strictly
     """
+    _check_iterable_ops_appliable(data, delta_obj)
+    _check_reordered_lists_appliable(data, delta_obj)
     try:
-        # force=True: Treat values_changed operations on non-existent paths as additions
-        #             This handles cases where the delta was computed from a state that had
-        #             the key (e.g., shared=false) but the base doesn't have it at all
-        # log_errors=False: Suppress "Unable to get the item at root..." warnings
-        # raise_errors=False: Don't raise exceptions for missing paths, allow additions
-        delta = deepdiff.Delta(
-            delta_obj, log_errors=False, raise_errors=False, force=True
-        )
-        return data + delta
+        return data + deepdiff.Delta(delta_obj, raise_errors=True)
     except Exception as e:
         log.error("apply_delta_failed", error=e)
-        raise
+        raise ChangelogDivergedError(
+            f"delta does not apply to the reconstructed state: {e}"
+        ) from e
+
+
+def _full_list_opcode_ops(delta_dict: dict, prev: dict, curr: dict) -> None:
+    """Replace ``_iterable_opcodes`` ops with full-list ``values_changed`` ops.
+
+    deepdiff represents list reorders as opcode namedtuples, which do not
+    survive the JSON round-trip the chain goes through on disk: the delta
+    applies in memory but raises on replay. Rewriting the affected lists
+    wholesale keeps the delta replayable in its serialized form. An op whose
+    path cannot be resolved is dropped, leaving the delta unreproducible so
+    the verification refuses it.
+
+    The rewritten paths are recorded under REORDERED_LISTS_KEY: a full-list
+    op replaces the list outright, so replay has to verify its ``old_value``
+    against the reconstruction or a diverged list would be silently papered
+    over (_check_reordered_lists_appliable).
+    """
+    opcodes = delta_dict.pop("_iterable_opcodes", None) or {}
+    rewritten = []
+    for path in opcodes:
+        prev_list = _resolve_delta_value(prev, path)
+        curr_list = _resolve_delta_value(curr, path)
+        if not isinstance(prev_list, list) or not isinstance(curr_list, list):
+            continue
+        delta_dict.setdefault("values_changed", {})[path] = {
+            "new_value": copy.deepcopy(curr_list),
+            "old_value": copy.deepcopy(prev_list),
+        }
+        rewritten.append(path)
+    if rewritten:
+        delta_dict[REORDERED_LISTS_KEY] = rewritten
 
 
 def _full_subtree_world_state_ops(delta_dict: dict, prev: dict, curr: dict) -> None:
@@ -698,6 +880,7 @@ def _compute_delta(prev: dict, curr: dict) -> dict:
         return {}
 
     delta_dict = diff._to_delta_dict()
+    _full_list_opcode_ops(delta_dict, prev, curr)
     _full_subtree_world_state_ops(delta_dict, prev, curr)
     _warn_on_orphan_delta_ops(prev, delta_dict)
     return delta_dict
@@ -709,11 +892,15 @@ def _delta_reproduces_state(prev: dict, curr: dict, delta_dict: dict) -> bool:
     The comparison uses the same exclusions as delta computation, since
     excluded paths legitimately differ between the two states. A delta that
     fails this check would diverge the reconstruction chain if written.
+
+    Applies strictly: the end-state comparison catches anything a lenient
+    application would have skipped, and applying strictly additionally
+    guarantees the delta replays under _apply_delta's strict rules.
     """
     try:
-        applied = prev + deepdiff.Delta(
-            delta_dict, log_errors=False, raise_errors=False, force=True
-        )
+        # replay the serialized form, since that is what reconstruction reads
+        # back from disk — some deepdiff representations only apply in memory
+        applied = _apply_delta(prev, json.loads(json.dumps(delta_dict)))
     except Exception:
         return False
     return not deepdiff.DeepDiff(
@@ -771,10 +958,17 @@ async def append_scene_delta(scene: "Scene", meta: dict | None = None) -> int | 
     # Find the latest changelog file and get the overall latest revision
     latest_rev = _get_overall_latest_revision(scene)
 
-    await _ensure_latest_initialized(scene)
-    prev_data = _load_latest_scene_data(scene)
-    if prev_data is None:
-        prev_data = await reconstruct_scene_data(scene, to_rev=latest_rev)
+    try:
+        await _ensure_latest_initialized(scene)
+        prev_data = _load_latest_scene_data(scene)
+        if prev_data is None:
+            prev_data = await reconstruct_scene_data(scene, to_rev=latest_rev)
+    except ChangelogDivergedError as e:
+        # The chain no longer replays onto its own snapshots, so no honest
+        # baseline exists to diff against. Skip the append and leave the
+        # chain intact for repair (rebase_changelog_chain).
+        log.error("append_skipped_diverged_chain", detail=str(e))
+        return None
 
     curr_data = _serialize_scene_plain(scene)
 
@@ -1049,7 +1243,10 @@ async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> d
     for entry in all_deltas:
         delta_obj = entry.get("delta") or {}
         if delta_obj:
-            data = _apply_delta(data, delta_obj)
+            try:
+                data = _apply_delta(data, delta_obj)
+            except ChangelogDivergedError as e:
+                raise ChangelogDivergedError(f"rev {entry.get('rev')}: {e}") from e
 
     _overlay_derived_world_state(data, latest_data)
     data = await reconstruct_cleanup(data)
@@ -1311,7 +1508,8 @@ async def check_chain_divergence(scene: "Scene") -> list[str] | None:
     Returns:
         None: no changelog data to check (treat as healthy)
         []: chain intact — reconstruction reproduces the latest snapshot
-        list[str]: divergent deepdiff paths — the chain has diverged
+        list[str]: divergent deepdiff paths, or the strict replay failure —
+            the chain has diverged
 
     Raises:
         ChangelogCorruptedError: the chain cannot be verified at all — the
@@ -1343,7 +1541,18 @@ async def check_chain_divergence(scene: "Scene") -> list[str] | None:
         return cached[1]
 
     latest_rev = _get_overall_latest_revision(scene)
-    reconstructed = await reconstruct_scene_data(scene, to_rev=latest_rev)
+    try:
+        reconstructed = await reconstruct_scene_data(scene, to_rev=latest_rev)
+    except ChangelogDivergedError as e:
+        # Strict replay failing mid-chain is divergence even when an
+        # end-state comparison would have passed (later deltas may rewrite
+        # the paths an earlier revision lost).
+        divergent_paths = [str(e)]
+        log.warning("changelog_chain_diverged", rev=latest_rev, detail=str(e))
+        while len(_DIVERGENCE_CHECK_CACHE) >= _DIVERGENCE_CHECK_CACHE_MAX:
+            _DIVERGENCE_CHECK_CACHE.pop(next(iter(_DIVERGENCE_CHECK_CACHE)))
+        _DIVERGENCE_CHECK_CACHE[cache_key] = (fingerprint, divergent_paths)
+        return divergent_paths
 
     exclude_paths = [*EXCLUDE_FROM_DELTAS, "root['shared_context']"]
     if not _chain_records_world_state(scene):
@@ -1374,7 +1583,9 @@ async def check_chain_divergence(scene: "Scene") -> list[str] | None:
 
 
 class ChangelogDivergedError(ValueError):
-    """The delta chain no longer reconstructs the latest snapshot."""
+    """The delta chain no longer reconstructs its snapshots — an op failed
+    strict replay, or the reconstructed tip no longer matches the latest
+    snapshot."""
 
 
 def _quarantine_marker_path(scene: "Scene") -> str:
@@ -1508,6 +1719,292 @@ class ForkTargetMissingError(ValueError):
     """The reconstructed history does not contain the fork target message."""
 
 
+def _rebase_marker_path(scene: "Scene") -> str:
+    return os.path.join(scene.changelog_dir, f"{scene.filename}.rebase.json")
+
+
+def read_rebase_marker(scene: "Scene") -> dict | None:
+    """Read the rebase marker, if a rebase ever happened.
+
+    The marker records each rebase so the timeline UI can explain why
+    pre-rebase revisions are gone. Tolerant read: an unreadable marker
+    reports as never-rebased rather than breaking the timeline.
+    """
+    path = _rebase_marker_path(scene)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path) as f:
+            marker = json.load(f)
+        return marker if isinstance(marker, dict) else None
+    except Exception:
+        log.error("rebase_marker_unreadable", path=path)
+        return None
+
+
+def _snapshot_changelog_flush(scene: "Scene") -> Callable[[], None]:
+    """Capture the on-disk state a commit can touch, returning a restore callable.
+
+    A commit appends to the current segment (or splits off a new one) and
+    rewrites the latest snapshot — the returned callable puts all three back,
+    so a flush can be undone by a caller whose own work failed afterwards.
+
+    Raises:
+        OSError: an existing file could not be read — the transaction refuses
+            before writing anything rather than promise a restore it cannot make
+    """
+    _, log_path = _get_latest_changelog_file(scene)
+    segment_pattern = os.path.join(
+        scene.changelog_dir, f"{scene.filename}.changelog.*.json"
+    )
+    contents: dict[str, bytes | None] = {}
+    for path in (log_path, _latest_path(scene)):
+        # only absence may read as None — restore() deletes those paths again.
+        # Any other read failure propagates: nothing has been written yet, and
+        # a file that cannot be read cannot be promised back byte-for-byte.
+        try:
+            with open(path, "rb") as f:
+                contents[path] = f.read()
+        except FileNotFoundError:
+            contents[path] = None
+    existing = set(glob.glob(segment_pattern))
+
+    def restore() -> None:
+        for path, data in contents.items():
+            try:
+                if data is None:
+                    if os.path.exists(path):
+                        os.remove(path)
+                else:
+                    with open(path, "wb") as f:
+                        f.write(data)
+            except OSError as e:
+                log.error("changelog_flush_rollback_failed", path=path, error=e)
+        for path in set(glob.glob(segment_pattern)) - existing:
+            try:
+                os.remove(path)
+            except OSError as e:
+                log.error("changelog_flush_rollback_failed", path=path, error=e)
+
+    return restore
+
+
+async def rebase_changelog_chain(scene: "Scene") -> dict:
+    """Rebase the changelog chain onto the latest snapshot.
+
+    Recovery for a diverged (or unverifiable) chain: the current
+    ``latest.json`` becomes the new base snapshot at revision 0 and the
+    chain starts fresh — reconstruction from this point is exact again.
+    The old chain (base, segments, latest snapshot, quarantine artifacts) is
+    moved to ``changelog/rebased-<UTCts>/`` for forensics, and a rebase
+    marker is written so the timeline can explain where pre-rebase history
+    went. Pre-rebase history stays exactly as lossy as it was — it is
+    preserved, not repaired.
+
+    A live scene is carried onto the fresh chain too: once the chain is known
+    repairable, staged deltas are committed to the old chain (so they are
+    preserved with it rather than renumbered into the new namespace), and
+    afterwards the scene's revision, its message rev stamps and its in-memory
+    changelog baseline are reset to the rebased state.
+
+    Fails atomically: any error leaves the chain exactly as it was — including
+    a still-staged in-memory changelog — since a half-rebased chain (no base,
+    but a latest snapshot) reads as a healthy empty history, and a flushed but
+    unrebased chain would have swallowed work the scene never saved. A refusal
+    writes nothing at all.
+
+    Args:
+        scene: The scene whose chain to rebase
+
+    Returns:
+        dict: {"rebased_from_rev": int, "preserved_to": str (dirname)}
+
+    Raises:
+        ValueError: no changelog to rebase, or the chain is healthy
+        ChangelogCorruptedError: the latest snapshot is missing or
+            unreadable — there is no sound state to rebase onto
+        Exception: any filesystem failure, after the chain was restored
+    """
+    base_path = _base_path(scene)
+    if not os.path.exists(base_path):
+        raise ValueError("No changelog exists for this scene — nothing to rebase")
+
+    # Eligibility is decided before anything is written: staged deltas are
+    # not on disk yet, so they cannot change the verdict, and a refusal must
+    # leave the chain (and the staged work) exactly as it found it.
+    try:
+        divergent = await check_chain_divergence(scene)
+        eligible = bool(divergent)
+    except ChangelogCorruptedError:
+        # unverifiable (e.g. quarantined segments) is eligible too
+        eligible = True
+    if not eligible:
+        raise ValueError("The history chain is healthy — nothing to repair")
+
+    changelog = getattr(scene, "_changelog", None)
+    rollback_flush: Callable[[], None] | None = None
+    if changelog is not None and changelog.pending_deltas:
+        # Staged deltas were computed against the chain that is about to be
+        # archived: committing them keeps their per-delta meta with it and
+        # makes the latest snapshot the freshest state to rebase onto.
+        restore_files = _snapshot_changelog_flush(scene)
+        staged_deltas = list(changelog.pending_deltas)
+        staged_rev = scene.rev
+
+        def _undo_flush() -> None:
+            restore_files()
+            changelog.pending_deltas[:] = staged_deltas
+            scene.rev = staged_rev
+
+        rollback_flush = _undo_flush
+        try:
+            await changelog.commit(strict=True)
+        except Exception:
+            rollback_flush()
+            raise
+
+    try:
+        return await _rebase_onto_latest(scene, changelog)
+    except Exception:
+        if rollback_flush is not None:
+            rollback_flush()
+        raise
+
+
+async def _rebase_onto_latest(
+    scene: "Scene", changelog: "InMemoryChangelog | None"
+) -> dict:
+    """Install the latest snapshot as a fresh chain, archiving the old one.
+
+    The write half of rebase_changelog_chain: eligibility and any staged-delta
+    flush are the caller's, so a failure here only has to restore the files
+    this function touches (the caller undoes the flush around it).
+    """
+    base_path = _base_path(scene)
+    latest_data = _load_latest_scene_data(scene)
+    if latest_data is None:
+        raise ChangelogCorruptedError(
+            "the latest snapshot is missing or unreadable — "
+            "there is no sound state to rebase onto"
+        )
+
+    old_latest_rev = _get_overall_latest_revision(scene, strict=False)
+
+    # Message revs name revisions of the chain being archived, and rev 0
+    # already means "in the base, forks shallowly". Base and latest are
+    # normalized together: normalizing only one would make the fresh
+    # chain's very first divergence check report the rev stamps as drift.
+    rebased_data = copy.deepcopy(latest_data)
+    for entry in rebased_data.get("history") or []:
+        if isinstance(entry, dict):
+            entry["rev"] = 0
+
+    # stage the new snapshots before anything moves, so an unwritable
+    # directory fails while the chain is still untouched
+    latest_path = _latest_path(scene)
+    staged_base = f"{base_path}.rebasing.{os.getpid()}"
+    staged_latest = f"{latest_path}.rebasing.{os.getpid()}"
+    _write_json_strict(staged_base, rebased_data)
+    _write_json_strict(staged_latest, rebased_data)
+
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    attempt = 1
+    while True:
+        suffix = "" if attempt == 1 else f"-{attempt}"
+        preserved_dirname = f"rebased-{ts}{suffix}"
+        preserved_dir = os.path.join(scene.changelog_dir, preserved_dirname)
+        try:
+            os.makedirs(preserved_dir)
+            break
+        except FileExistsError:
+            attempt += 1
+
+    patterns = [
+        f"{scene.filename}.base.json",
+        f"{scene.filename}.latest.json",
+        f"{scene.filename}.changelog.*.json",
+        f"{scene.filename}.changelog.*.json.corrupted",
+        f"{scene.filename}.quarantine.json",
+        f"{scene.filename}.latest.json.corrupted",
+    ]
+    moved: list[tuple[str, str]] = []
+    installed: list[str] = []
+    try:
+        for pattern in patterns:
+            for path in glob.glob(os.path.join(scene.changelog_dir, pattern)):
+                dst = os.path.join(preserved_dir, os.path.basename(path))
+                os.replace(path, dst)
+                moved.append((path, dst))
+
+        os.replace(staged_base, base_path)
+        installed.append(base_path)
+        os.replace(staged_latest, latest_path)
+        installed.append(latest_path)
+
+        marker = read_rebase_marker(scene) or {}
+        rebases = marker.get("rebases", [])
+        rebases.append(
+            {
+                "ts": _utc_timestamp_now(),
+                "rebased_from_rev": old_latest_rev,
+                "preserved_to": preserved_dirname,
+            }
+        )
+        _write_json_strict(_rebase_marker_path(scene), {"rebases": rebases})
+    except Exception as e:
+        log.error("changelog_rebase_failed", error=e, preserved_to=preserved_dirname)
+        for path in installed:
+            try:
+                os.remove(path)
+            except OSError as rollback_error:
+                log.error(
+                    "changelog_rebase_rollback_failed",
+                    path=path,
+                    error=rollback_error,
+                )
+        for src, dst in reversed(moved):
+            try:
+                os.replace(dst, src)
+            except OSError as rollback_error:
+                log.error(
+                    "changelog_rebase_rollback_failed", path=dst, error=rollback_error
+                )
+        for staged in (staged_base, staged_latest):
+            try:
+                if os.path.exists(staged):
+                    os.remove(staged)
+            except OSError:
+                pass
+        try:
+            os.rmdir(preserved_dir)
+        except OSError:
+            pass
+        raise
+
+    _DIVERGENCE_CHECK_CACHE.pop(
+        (os.path.abspath(scene.changelog_dir), scene.filename), None
+    )
+
+    # A load-screen scaffold has no live state to reconcile; a loaded scene
+    # does, and leaving it on the archived namespace would number its next
+    # delta above the revisions the fresh chain does not have.
+    if not isinstance(scene, _SceneRef):
+        for message in scene.history:
+            message.rev = 0
+        scene.rev = 0
+        if changelog is not None:
+            changelog.last_state = copy.deepcopy(rebased_data)
+            changelog.initial_state = copy.deepcopy(rebased_data)
+
+    log.info(
+        "changelog_rebased",
+        rebased_from_rev=old_latest_rev,
+        preserved_to=preserved_dirname,
+        preserved=[os.path.basename(src) for src, _ in moved],
+    )
+    return {"rebased_from_rev": old_latest_rev, "preserved_to": preserved_dirname}
+
+
 async def fork_scene_at_revision(
     scene: "Scene",
     to_rev: int,
@@ -1543,6 +2040,8 @@ async def fork_scene_at_revision(
             never materialized cannot reconstruct "at the message"). The
             beyond-latest guard does not apply when the chain is unverifiable
             (quarantined/corrupted) — that path already warns and proceeds.
+        ChangelogDivergedError: the chain does not replay strictly — the
+            fork would carry silently lost or fabricated data
     """
     corrupted = False
     try:
@@ -1770,16 +2269,29 @@ class InMemoryChangelog:
 
         return next_real_rev
 
-    async def commit(self) -> list[int]:
+    async def commit(self, strict: bool = False) -> list[int]:
         """
         Commit all pending deltas to the persistent changelog files.
         After committing, the changelog can continue to accumulate new deltas.
 
+        Args:
+            strict: raise on any write failure instead of logging it, leaving
+                the staged deltas and ``scene.rev`` untouched so the caller
+                can roll the partial writes back (rebase_changelog_chain).
+                No message revs are emitted in this mode: the caller's
+                transaction either discards the flush again or renumbers the
+                whole chain, so any rev announced here is about to vanish.
+
         Returns:
             list[int]: List of committed revision numbers
+
+        Raises:
+            Exception: in strict mode, any failure to write a changelog file
         """
         if not self.pending_deltas:
             return []
+
+        write_json = _write_json_strict if strict else _write_json
 
         # Ensure base changelog is initialized
         if not os.path.exists(_base_path(self.scene)):
@@ -1820,13 +2332,13 @@ class InMemoryChangelog:
             log_data["latest_rev"] = entry_rev
 
             # Write the updated log data
-            _write_json(log_path, log_data)
+            write_json(log_path, log_data)
 
             committed_revs.append(entry_rev)
             log.debug("committed_in_memory_delta", rev=entry_rev)
 
         # Update the latest snapshot file with the final scene state
-        _write_json(_latest_path(self.scene), self.last_state)
+        write_json(_latest_path(self.scene), self.last_state)
 
         # Clear pending deltas but don't mark as committed so we can continue accumulating
         self.pending_deltas.clear()
@@ -1835,6 +2347,7 @@ class InMemoryChangelog:
         if committed_revs:
             self.scene.rev = max(committed_revs)
 
+        if committed_revs and not strict:
             # Revs are emitted only once they exist on disk: with auto_save
             # off, appends stage deltas without committing, and the UI must
             # not learn a rev that the committed chain cannot reconstruct.

@@ -1,10 +1,13 @@
 import os
 import json
+import glob
 import tempfile
 import shutil
 import pytest
+from datetime import datetime, timezone
 
 from _changelog_test_helpers import make_changelog_scene
+from talemate.scene_message import NarratorMessage
 from talemate.changelog import (
     save_changelog,
     append_scene_delta,
@@ -25,6 +28,7 @@ from talemate.changelog import (
     _ensure_latest_initialized,
     _apply_delta,
     _compute_delta,
+    _parse_delta_path,
     _delta_reproduces_state,
     _serialize_scene_plain,
     check_chain_divergence,
@@ -38,6 +42,10 @@ from talemate.changelog import (
     _SceneRef,
     MAX_CHANGELOG_FILE_SIZE,
     InMemoryChangelog,
+    rebase_changelog_chain,
+    read_rebase_marker,
+    _rebase_marker_path,
+    REORDERED_LISTS_KEY,
 )
 
 
@@ -2136,10 +2144,11 @@ async def test_reconstruct_cleanup_leaves_legit_dicts_and_lists_alone():
 
 
 @pytest.mark.asyncio
-async def test_reconstruct_scene_data_repairs_forced_dict_history(mock_scene):
-    """End-to-end issue #81 repro: an iterable_item_added delta targeting a
-    missing history parent makes Delta(force=True) build history as an
-    int-keyed dict — reconstruction must still return a sliceable list."""
+async def test_reconstruct_refuses_missing_history_parent(mock_scene):
+    """Issue #81 family, new policy (#295): an iterable_item_added delta
+    targeting a missing history parent means the chain has diverged — strict
+    replay refuses loudly instead of force-fabricating an int-keyed dict and
+    repairing it into a loadable-but-wrong list."""
     base_data = {"characters": [], "entries": []}  # no history at all
     base_path = _base_path(mock_scene)
     os.makedirs(os.path.dirname(base_path), exist_ok=True)
@@ -2173,19 +2182,15 @@ async def test_reconstruct_scene_data_repairs_forced_dict_history(mock_scene):
     with open(log_path, "w") as f:
         json.dump(log_data, f)
 
-    result = await reconstruct_scene_data(mock_scene, to_rev=1)
-
-    history = result["history"]
-    assert isinstance(history, list)
-    assert len(history) == 1
-    assert history[0]["message"] == "hello"
-    # the timeline preview slice that crashed in issue #81
-    assert history[-20:] == history
+    with pytest.raises(ChangelogDivergedError, match="rev 1"):
+        await reconstruct_scene_data(mock_scene, to_rev=1)
 
 
 @pytest.mark.asyncio
-async def test_reconstruct_scene_data_repairs_force_true_corruption(mock_scene):
-    """End-to-end: orphan dict-add on a non-existent history index reconstructs to a loadable entry."""
+async def test_reconstruct_refuses_orphan_dict_add(mock_scene):
+    """Issue #81 family, new policy (#295): a dict-add on a non-existent
+    history index means the chain has diverged — strict replay refuses
+    loudly instead of force-inflating the list and backfilling the gap."""
     base_data = {
         "history": [
             {"message": "hello", "typ": "narrator", "source": "ai", "flags": 0},
@@ -2219,17 +2224,8 @@ async def test_reconstruct_scene_data_repairs_force_true_corruption(mock_scene):
     with open(log_path, "w") as f:
         json.dump(log_data, f)
 
-    result = await reconstruct_scene_data(mock_scene, to_rev=1)
-
-    history = result["history"]
-    # force=True inflates history to length 2; repair keeps that length so
-    # subsequent revs that reference fixed positions stay aligned.
-    assert len(history) == 2
-    for i, entry in enumerate(history):
-        assert "message" in entry, f"history[{i}] missing message after repair"
-        assert "typ" in entry, f"history[{i}] missing typ after repair"
-    assert history[1]["asset_id"] == "abc123"
-    assert history[1]["asset_type"] == "scene_illustration"
+    with pytest.raises(ChangelogDivergedError, match="rev 1"):
+        await reconstruct_scene_data(mock_scene, to_rev=1)
 
 
 @pytest.mark.asyncio
@@ -2396,3 +2392,832 @@ async def test_delete_changelog_files_with_wrong_scene_reference(temp_dir):
     assert len(result.get("deleted", [])) >= 2, (
         "Should have deleted at least base and latest"
     )
+
+
+# --- Strict replay (issue #295) -------------------------------------------
+
+
+def _write_segment(scene, start_rev, deltas, latest_rev):
+    path = _changelog_log_path(scene, start_rev)
+    with open(path, "w") as f:
+        json.dump(
+            {
+                "version": 1,
+                "base": f"{scene.filename}.base.json",
+                "start_rev": start_rev,
+                "deltas": deltas,
+                "latest_rev": latest_rev,
+            },
+            f,
+        )
+    return path
+
+
+def test_apply_delta_strict_iterable_item_added_past_end_raises():
+    """An addition past the end of the baseline list was silently dropped."""
+    data = {"history": [{"id": 0}]}
+    delta = {"iterable_item_added": {"root['history'][2]": {"id": 1}}}
+    with pytest.raises(ChangelogDivergedError, match="out of range"):
+        _apply_delta(data, delta)
+
+
+def test_apply_delta_strict_iterable_item_removed_value_mismatch_raises():
+    """deepdiff skips value-mismatched removals even with raise_errors=True —
+    the pre-check is what makes them loud."""
+    data = {"history": [{"id": 0}]}
+    delta = {"iterable_item_removed": {"root['history'][0]": {"id": 99}}}
+    with pytest.raises(ChangelogDivergedError, match="does not match"):
+        _apply_delta(data, delta)
+
+
+def test_apply_delta_strict_iterable_item_removed_out_of_range_raises():
+    data = {"history": [{"id": 0}]}
+    delta = {"iterable_item_removed": {"root['history'][3]": {"id": 0}}}
+    with pytest.raises(ChangelogDivergedError, match="no such list item"):
+        _apply_delta(data, delta)
+
+
+def test_apply_delta_strict_values_changed_missing_parent_raises():
+    """The #291 stub fabrication: values_changed under a missing parent."""
+    data = {"character": None}
+    delta = {
+        "values_changed": {
+            "root['character']['details']['x']": {"new_value": 1, "old_value": 2}
+        }
+    }
+    with pytest.raises(ChangelogDivergedError):
+        _apply_delta(data, delta)
+
+
+def test_apply_delta_healthy_ops_apply():
+    data = {"history": [{"id": 0}], "x": 1}
+    delta = {
+        "iterable_item_added": {"root['history'][1]": {"id": 1}},
+        "values_changed": {"root['x']": {"new_value": 2, "old_value": 1}},
+        "dictionary_item_added": {"root['y']": 3},
+    }
+    result = _apply_delta(data, delta)
+    assert result == {"history": [{"id": 0}, {"id": 1}], "x": 2, "y": 3}
+
+
+def test_delta_reproduces_state_refuses_force_only_delta():
+    """A delta that only applies under force mode must not be written."""
+    prev = {"x": 1}
+    curr = {"x": 1, "a": {"b": 2}}
+    delta = {"values_changed": {"root['a']['b']": {"new_value": 2}}}
+    assert not _delta_reproduces_state(prev, curr, delta)
+
+
+def test_compute_delta_rewrites_iterable_opcodes_as_full_list():
+    """deepdiff represents a reorder as opcode namedtuples, which do not
+    survive the JSON round-trip the chain goes through on disk."""
+    prev = {"entries": ["a", "b", "c", "d", "e"]}
+    curr = {"entries": ["c", "d", "e", "a", "b"]}
+
+    delta = _compute_delta(prev, curr)
+
+    assert "_iterable_opcodes" not in delta
+    assert delta["values_changed"]["root['entries']"] == {
+        "new_value": ["c", "d", "e", "a", "b"],
+        "old_value": ["a", "b", "c", "d", "e"],
+    }
+    assert delta[REORDERED_LISTS_KEY] == ["root['entries']"]
+    assert _delta_reproduces_state(prev, curr, delta)
+
+
+def test_apply_delta_reordered_list_value_mismatch_raises():
+    """deepdiff applies values_changed blind, so a full-list op would restore
+    the recorded post-state over a diverged list — the marker is what makes
+    the mismatch loud."""
+    data = {"entries": ["a", "b", "c"]}
+    delta = {
+        "values_changed": {
+            "root['entries']": {
+                "new_value": ["d", "c", "b", "a"],
+                "old_value": ["a", "b", "c", "d"],
+            }
+        },
+        REORDERED_LISTS_KEY: ["root['entries']"],
+    }
+    with pytest.raises(ChangelogDivergedError, match="does not match"):
+        _apply_delta(data, delta)
+
+
+def test_apply_delta_reordered_list_matching_value_applies():
+    data = {"entries": ["a", "b", "c"], "x": 1}
+    delta = {
+        "values_changed": {
+            "root['entries']": {
+                "new_value": ["c", "b", "a"],
+                "old_value": ["a", "b", "c"],
+            }
+        },
+        REORDERED_LISTS_KEY: ["root['entries']"],
+    }
+    assert _apply_delta(data, delta) == {"entries": ["c", "b", "a"], "x": 1}
+
+
+def test_apply_delta_unmarked_values_changed_is_not_verified():
+    """Full-subtree world-state ops carry an old_value that predates the base
+    snapshot — validating every values_changed would break their unmask path."""
+    data = {"world_state": {"pins": {"a": 1}}}
+    delta = {
+        "values_changed": {
+            "root['world_state']['pins']": {"new_value": {"b": 2}, "old_value": None}
+        }
+    }
+    assert _apply_delta(data, delta) == {"world_state": {"pins": {"b": 2}}}
+
+
+def test_delta_reproduces_state_refuses_unserializable_delta():
+    """Applying in memory is not enough — reconstruction replays the delta as
+    it was written to disk."""
+    prev = {"x": None}
+    curr = {"x": {1, 2}}
+    delta = {"values_changed": {"root['x']": {"new_value": {1, 2}, "old_value": None}}}
+    assert not _delta_reproduces_state(prev, curr, delta)
+
+
+@pytest.mark.asyncio
+async def test_list_reorder_delta_replays_from_disk(mock_scene):
+    mock_scene.serialize = {"entries": ["a", "b", "c", "d", "e"], "metadata": {}}
+    await save_changelog(mock_scene)
+
+    reordered = {"entries": ["c", "d", "e", "a", "b"], "metadata": {}}
+    mock_scene.serialize = reordered
+
+    assert await append_scene_delta(mock_scene) == 1
+    assert await reconstruct_scene_data(mock_scene, to_rev=1) == reordered
+    assert await check_chain_divergence(mock_scene) == []
+
+
+def test_parse_delta_path_double_quoted_key():
+    """deepdiff quotes with double quotes when the key holds an apostrophe."""
+    assert _parse_delta_path("root[\"O'Brien\"]['tags'][1]") == ["O'Brien", "tags", 1]
+    assert _parse_delta_path("root['a'][3]['b']") == ["a", 3, "b"]
+    assert _parse_delta_path("no root prefix") == []
+
+
+@pytest.mark.asyncio
+async def test_apostrophe_key_delta_replays_from_disk(mock_scene):
+    """A key like ``O'Brien`` over a list value must not read as divergence."""
+    mock_scene.serialize = {"characters": {"O'Brien": {"tags": ["stern"]}}}
+    await save_changelog(mock_scene)
+
+    appended = {"characters": {"O'Brien": {"tags": ["stern", "tired"]}}}
+    mock_scene.serialize = appended
+    assert await append_scene_delta(mock_scene) == 1
+
+    changed = {"characters": {"O'Brien": {"tags": ["stern", "weary"]}}}
+    mock_scene.serialize = changed
+    assert await append_scene_delta(mock_scene) == 2
+
+    assert await reconstruct_scene_data(mock_scene, to_rev=1) == appended
+    assert await reconstruct_scene_data(mock_scene, to_rev=2) == changed
+    assert await check_chain_divergence(mock_scene) == []
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_strict_failure_names_revision(mock_scene):
+    os.makedirs(mock_scene.changelog_dir, exist_ok=True)
+    with open(_base_path(mock_scene), "w") as f:
+        json.dump({"history": [], "x": 0}, f)
+    _write_segment(
+        mock_scene,
+        0,
+        [
+            {
+                "rev": 1,
+                "ts": 1,
+                "delta": {"values_changed": {"root['x']": {"new_value": 1}}},
+                "meta": {},
+            },
+            {
+                "rev": 2,
+                "ts": 2,
+                "delta": {"iterable_item_added": {"root['history'][7]": {"id": 1}}},
+                "meta": {},
+            },
+        ],
+        2,
+    )
+
+    with pytest.raises(ChangelogDivergedError, match="rev 2"):
+        await reconstruct_scene_data(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_check_chain_divergence_detects_masked_midchain_loss(mock_scene):
+    """End-state agreement masks the lost op; strict replay does not.
+
+    rev 2's addition is lost on replay, and the latest snapshot reflects the
+    state *without* it, so end-state comparison passes — only strict replay
+    flags the chain.
+    """
+    os.makedirs(mock_scene.changelog_dir, exist_ok=True)
+    with open(_base_path(mock_scene), "w") as f:
+        json.dump({"history": [{"id": 0}], "x": 1}, f)
+    with open(_latest_path(mock_scene), "w") as f:
+        json.dump({"history": [{"id": 0}], "x": 2}, f)
+    _write_segment(
+        mock_scene,
+        0,
+        [
+            {
+                "rev": 1,
+                "ts": 1,
+                "delta": {"values_changed": {"root['x']": {"new_value": 2}}},
+                "meta": {},
+            },
+            {
+                "rev": 2,
+                "ts": 2,
+                "delta": {"iterable_item_added": {"root['history'][5]": {"id": 1}}},
+                "meta": {},
+            },
+        ],
+        2,
+    )
+
+    divergent = await check_chain_divergence(mock_scene)
+    assert divergent and "rev 2" in divergent[0]
+
+
+@pytest.mark.asyncio
+async def test_check_chain_divergence_detects_masked_reorder_loss(mock_scene):
+    """A reorder recorded against a list the reconstruction no longer holds.
+
+    The base is short of ``d`` (an earlier loss), yet rev 2 replaces the whole
+    list with its recorded post-state, so the reconstruction ends up matching
+    the latest snapshot exactly — end-state comparison sees a healthy chain.
+    """
+    os.makedirs(mock_scene.changelog_dir, exist_ok=True)
+    with open(_base_path(mock_scene), "w") as f:
+        json.dump({"history": [_full_message(0)], "entries": ["a", "b", "c"]}, f)
+    with open(_latest_path(mock_scene), "w") as f:
+        json.dump({"history": [_full_message(0)], "entries": ["d", "c", "b", "a"]}, f)
+    _write_segment(
+        mock_scene,
+        0,
+        [
+            {
+                "rev": 1,
+                "ts": 1,
+                "delta": {"values_changed": {"root['entries'][0]": {"new_value": "a"}}},
+                "meta": {},
+            },
+            {
+                "rev": 2,
+                "ts": 2,
+                "delta": {
+                    "values_changed": {
+                        "root['entries']": {
+                            "new_value": ["d", "c", "b", "a"],
+                            "old_value": ["a", "b", "c", "d"],
+                        }
+                    },
+                    REORDERED_LISTS_KEY: ["root['entries']"],
+                },
+                "meta": {},
+            },
+        ],
+        2,
+    )
+
+    with pytest.raises(ChangelogDivergedError, match="rev 2"):
+        await reconstruct_scene_data(mock_scene)
+
+    divergent = await check_chain_divergence(mock_scene)
+    assert divergent and "rev 2" in divergent[0]
+
+
+@pytest.mark.asyncio
+async def test_append_skips_delta_on_broken_chain(mock_scene):
+    """No honest baseline, no append: the chain is left intact for repair."""
+    os.makedirs(mock_scene.changelog_dir, exist_ok=True)
+    with open(_base_path(mock_scene), "w") as f:
+        json.dump({"history": [], "x": 0}, f)
+    _write_segment(
+        mock_scene,
+        0,
+        [
+            {
+                "rev": 1,
+                "ts": 1,
+                "delta": {"iterable_item_added": {"root['history'][9]": {"id": 1}}},
+                "meta": {},
+            }
+        ],
+        1,
+    )
+    # no latest snapshot: the append path must heal it from the chain, and
+    # strict replay refuses
+    mock_scene.serialize = {"history": [], "x": 1}
+
+    assert await append_scene_delta(mock_scene) is None
+    assert list_revisions(mock_scene) == [1]
+    assert not os.path.exists(_latest_path(mock_scene))
+
+
+# --- Rebase repair (issue #295) -------------------------------------------
+
+
+def _full_message(idx: int) -> dict:
+    # full SceneMessage shape — a bare fragment would trip _repair_history in
+    # reconstruct_cleanup and read as divergence against the latest snapshot
+    return {
+        "id": idx,
+        "message": f"message {idx}",
+        "typ": "narrator",
+        "source": "ai",
+        "flags": 0,
+    }
+
+
+def _make_diverged_chain(scene):
+    """A chain whose rev 2 op no longer applies, with a latest snapshot that
+    masks the loss under end-state comparison."""
+    os.makedirs(scene.changelog_dir, exist_ok=True)
+    with open(_base_path(scene), "w") as f:
+        json.dump({"history": [_full_message(0)], "x": 1}, f)
+    with open(_latest_path(scene), "w") as f:
+        json.dump({"history": [_full_message(0)], "x": 2}, f)
+    _write_segment(
+        scene,
+        0,
+        [
+            {
+                "rev": 1,
+                "ts": 1,
+                "delta": {"values_changed": {"root['x']": {"new_value": 2}}},
+                "meta": {},
+            },
+            {
+                "rev": 2,
+                "ts": 2,
+                "delta": {
+                    "iterable_item_added": {"root['history'][5]": _full_message(1)}
+                },
+                "meta": {},
+            },
+        ],
+        2,
+    )
+
+
+@pytest.mark.asyncio
+async def test_rebase_diverged_chain(mock_scene):
+    """The latest snapshot becomes the new base; the old chain is preserved."""
+    _make_diverged_chain(mock_scene)
+    assert await check_chain_divergence(mock_scene)
+
+    result = await rebase_changelog_chain(mock_scene)
+
+    assert result["rebased_from_rev"] == 2
+    preserved_dir = os.path.join(mock_scene.changelog_dir, result["preserved_to"])
+    assert os.path.isdir(preserved_dir)
+    preserved = os.listdir(preserved_dir)
+    assert f"{mock_scene.filename}.base.json" in preserved
+    assert f"{mock_scene.filename}.changelog.0.json" in preserved
+
+    # the new base is the old latest snapshot, with message revs zeroed into
+    # the fresh namespace; the latest snapshot is normalized the same way
+    rebased = {"history": [{**_full_message(0), "rev": 0}], "x": 2}
+    with open(_base_path(mock_scene)) as f:
+        assert json.load(f) == rebased
+    with open(_latest_path(mock_scene)) as f:
+        assert json.load(f) == rebased
+    # the pre-rebase latest snapshot is preserved with the old chain
+    assert f"{mock_scene.filename}.latest.json" in preserved
+
+    # the fresh chain verifies clean and restarts the revision namespace
+    assert await check_chain_divergence(mock_scene) == []
+    assert list_revisions(mock_scene) == []
+
+    marker = read_rebase_marker(mock_scene)
+    assert marker["rebases"][0]["rebased_from_rev"] == 2
+    assert marker["rebases"][0]["preserved_to"] == result["preserved_to"]
+
+    # appends continue from revision 1 against the rebased state
+    mock_scene.serialize = {"history": [_full_message(0)], "x": 3}
+    assert await append_scene_delta(mock_scene) == 1
+    assert await check_chain_divergence(mock_scene) == []
+
+
+@pytest.mark.asyncio
+async def test_rebase_refuses_healthy_chain(mock_scene):
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {"characters": [], "entries": ["a"], "metadata": {}}
+    assert await append_scene_delta(mock_scene) == 1
+
+    with pytest.raises(ValueError, match="healthy"):
+        await rebase_changelog_chain(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_rebase_no_changelog_raises(mock_scene):
+    with pytest.raises(ValueError, match="nothing to rebase"):
+        await rebase_changelog_chain(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_rebase_missing_latest_refuses(mock_scene):
+    """No sound state to rebase onto."""
+    _make_diverged_chain(mock_scene)
+    os.remove(_latest_path(mock_scene))
+
+    with pytest.raises(ChangelogCorruptedError, match="no sound state"):
+        await rebase_changelog_chain(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_rebase_unverifiable_quarantined_chain(mock_scene):
+    """A quarantined chain (unverifiable) is eligible for rebase; the
+    quarantine artifacts are preserved with the old chain."""
+    from talemate.changelog import quarantine_corrupted_changelog_files
+
+    _make_diverged_chain(mock_scene)
+    _, log_path = _get_latest_changelog_file(mock_scene)
+    with open(log_path, "w") as f:
+        f.write('{"deltas": [{"rev": 1, "delta": ')
+    quarantined = quarantine_corrupted_changelog_files(mock_scene)
+    assert quarantined
+
+    result = await rebase_changelog_chain(mock_scene)
+
+    preserved_dir = os.path.join(mock_scene.changelog_dir, result["preserved_to"])
+    preserved = os.listdir(preserved_dir)
+    assert f"{mock_scene.filename}.changelog.0.json.corrupted" in preserved
+    assert f"{mock_scene.filename}.quarantine.json" in preserved
+    assert await check_chain_divergence(mock_scene) == []
+
+
+def _changelog_dir_contents(scene) -> dict:
+    contents = {}
+    for name in os.listdir(scene.changelog_dir):
+        path = os.path.join(scene.changelog_dir, name)
+        if os.path.isfile(path):
+            with open(path) as f:
+                contents[name] = f.read()
+    return contents
+
+
+@pytest.mark.asyncio
+async def test_rebase_failure_restores_the_chain(mock_scene, monkeypatch):
+    """A failed rebase must not leave the scene without a base: with a latest
+    snapshot and no base the chain reads as healthy and empty."""
+    _make_diverged_chain(mock_scene)
+    before = _changelog_dir_contents(mock_scene)
+
+    base_path = _base_path(mock_scene)
+    real_replace = os.replace
+    failed = []
+
+    def failing_replace(src, dst, **kwargs):
+        # only the install fails — the rollback restores the old base the
+        # same way and has to be able to run
+        if dst == base_path and not failed:
+            failed.append(dst)
+            raise OSError("no space left on device")
+        return real_replace(src, dst, **kwargs)
+
+    monkeypatch.setattr(os, "replace", failing_replace)
+
+    with pytest.raises(OSError, match="no space left"):
+        await rebase_changelog_chain(mock_scene)
+
+    monkeypatch.undo()
+
+    assert _changelog_dir_contents(mock_scene) == before
+    assert not os.path.exists(_rebase_marker_path(mock_scene))
+    assert glob.glob(os.path.join(mock_scene.changelog_dir, "rebased-*")) == []
+    assert await check_chain_divergence(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_rebase_failure_after_base_install_restores_the_chain(
+    mock_scene, monkeypatch
+):
+    """The latest snapshot joins the atomic sequence: a failure after the new
+    base is installed still restores both snapshots."""
+    _make_diverged_chain(mock_scene)
+    before = _changelog_dir_contents(mock_scene)
+
+    latest_path = _latest_path(mock_scene)
+    real_replace = os.replace
+    failed = []
+
+    def failing_replace(src, dst, **kwargs):
+        if dst == latest_path and not failed:
+            failed.append(dst)
+            raise OSError("no space left on device")
+        return real_replace(src, dst, **kwargs)
+
+    monkeypatch.setattr(os, "replace", failing_replace)
+
+    with pytest.raises(OSError, match="no space left"):
+        await rebase_changelog_chain(mock_scene)
+
+    monkeypatch.undo()
+
+    assert _changelog_dir_contents(mock_scene) == before
+    assert not os.path.exists(_rebase_marker_path(mock_scene))
+    assert glob.glob(os.path.join(mock_scene.changelog_dir, "rebased-*")) == []
+    assert await check_chain_divergence(mock_scene)
+
+
+def _make_diverged_chain_with_stamps(scene):
+    """A diverged chain whose snapshots carry message rev stamps from its own
+    revision namespace."""
+    _make_diverged_chain(scene)
+    for path in (_base_path(scene), _latest_path(scene)):
+        with open(path) as f:
+            data = json.load(f)
+        data["history"] = [{**_full_message(0), "rev": 1}]
+        with open(path, "w") as f:
+            json.dump(data, f)
+
+
+@pytest.mark.asyncio
+async def test_rebase_flushes_staged_deltas_and_restarts_numbering(mock_scene):
+    """Issue #295 follow-up: a repair with deltas staged in memory must not
+    leave the fresh chain interleaving revisions from both namespaces."""
+    _make_diverged_chain(mock_scene)
+    mock_scene.serialize = {"history": [_full_message(0)], "x": 2}
+    mock_scene.rev = 2
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        mock_scene._changelog = changelog
+
+        mock_scene.serialize = {"history": [_full_message(0)], "x": 3}
+        assert await changelog.append_delta({"action": "staged_a"}) == 3
+        mock_scene.serialize = {"history": [_full_message(0)], "x": 4}
+        assert await changelog.append_delta({"action": "staged_b"}) == 4
+
+        result = await rebase_changelog_chain(mock_scene)
+
+        # the staged deltas went to the chain that was archived, meta intact
+        assert changelog.pending_deltas == []
+        with open(
+            os.path.join(
+                mock_scene.changelog_dir,
+                result["preserved_to"],
+                f"{mock_scene.filename}.changelog.0.json",
+            )
+        ) as f:
+            preserved = json.load(f)
+        assert [entry["rev"] for entry in preserved["deltas"]] == [1, 2, 3, 4]
+        assert [entry["meta"] for entry in preserved["deltas"][2:]] == [
+            {"action": "staged_a"},
+            {"action": "staged_b"},
+        ]
+
+        # the fresh chain starts empty and numbers from 1 again
+        assert mock_scene.rev == 0
+        assert list_revisions(mock_scene) == []
+
+        mock_scene.serialize = {"history": [_full_message(0)], "x": 5}
+        assert await changelog.append_delta({"action": "after_repair"}) == 1
+        assert await changelog.commit() == [1]
+
+    assert list_revisions(mock_scene) == [1]
+    assert await check_chain_divergence(mock_scene) == []
+    reconstructed = await reconstruct_scene_data(mock_scene)
+    assert reconstructed["x"] == 5
+
+
+@pytest.mark.asyncio
+async def test_rebase_refusal_leaves_staged_deltas_uncommitted(mock_scene):
+    """A refused repair must not commit the work auto-save was holding back."""
+    await save_changelog(mock_scene)
+    mock_scene.serialize = {"characters": [], "entries": ["a"], "metadata": {}}
+    assert await append_scene_delta(mock_scene) == 1
+    mock_scene.rev = 1
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        mock_scene._changelog = changelog
+        mock_scene.serialize = {"characters": [], "entries": ["a", "b"], "metadata": {}}
+        assert await changelog.append_delta({"action": "staged"}) == 2
+
+        before = _changelog_dir_contents(mock_scene)
+        rev_before = mock_scene.rev
+
+        with pytest.raises(ValueError, match="healthy"):
+            await rebase_changelog_chain(mock_scene)
+
+        assert _changelog_dir_contents(mock_scene) == before
+        assert [entry["meta"] for entry in changelog.pending_deltas] == [
+            {"action": "staged"}
+        ]
+        assert mock_scene.rev == rev_before
+
+
+@pytest.mark.asyncio
+async def test_rebase_flush_emits_no_message_revs(mock_scene, monkeypatch):
+    """The flushed revs are zeroed moments later — announcing them would leave
+    the UI holding revisions the fresh chain does not have."""
+    import talemate.emit
+
+    _make_diverged_chain(mock_scene)
+    mock_scene.serialize = {"history": [_full_message(0)], "x": 2}
+    mock_scene.rev = 2
+    # the rev the staged delta commits at
+    message = NarratorMessage("message 0", id=0, rev=3)
+    mock_scene.history = [message]
+
+    emitted = []
+    monkeypatch.setattr(
+        talemate.emit, "emit", lambda typ, *args, **kwargs: emitted.append(typ)
+    )
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        mock_scene._changelog = changelog
+        mock_scene.serialize = {"history": [_full_message(0)], "x": 3}
+        assert await changelog.append_delta({"action": "staged"}) == 3
+        await rebase_changelog_chain(mock_scene)
+
+    assert "message_revs" not in emitted
+    assert message.rev == 0
+
+
+@pytest.mark.asyncio
+async def test_rebase_flush_failure_restores_staged_deltas(mock_scene, monkeypatch):
+    """A failed flush must not swallow the staged deltas it was writing."""
+    from talemate import changelog as changelog_mod
+
+    _make_diverged_chain(mock_scene)
+    mock_scene.serialize = {"history": [_full_message(0)], "x": 2}
+    mock_scene.rev = 2
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        mock_scene._changelog = changelog
+        mock_scene.serialize = {"history": [_full_message(0)], "x": 3}
+        assert await changelog.append_delta({"action": "staged"}) == 3
+
+        before = _changelog_dir_contents(mock_scene)
+        real_write = changelog_mod._write_json_strict
+
+        def failing_write(path, data, cls=None):
+            if ".changelog." in os.path.basename(path):
+                raise OSError("no space left on device")
+            return real_write(path, data, cls=cls)
+
+        monkeypatch.setattr(changelog_mod, "_write_json_strict", failing_write)
+
+        with pytest.raises(OSError, match="no space left"):
+            await rebase_changelog_chain(mock_scene)
+
+        monkeypatch.undo()
+
+        assert _changelog_dir_contents(mock_scene) == before
+        assert glob.glob(os.path.join(mock_scene.changelog_dir, "rebased-*")) == []
+        assert [entry["meta"] for entry in changelog.pending_deltas] == [
+            {"action": "staged"}
+        ]
+        assert mock_scene.rev == 2
+
+
+@pytest.mark.asyncio
+async def test_rebase_failure_after_flush_restores_staged_deltas(
+    mock_scene, monkeypatch
+):
+    """The flush joins the atomic sequence: a failure after it un-commits the
+    staged deltas rather than leaving them on an unrebased chain."""
+    from talemate import changelog as changelog_mod
+
+    _make_diverged_chain(mock_scene)
+    mock_scene.serialize = {"history": [_full_message(0)], "x": 2}
+    mock_scene.rev = 2
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        mock_scene._changelog = changelog
+        mock_scene.serialize = {"history": [_full_message(0)], "x": 3}
+        assert await changelog.append_delta({"action": "staged"}) == 3
+
+        before = _changelog_dir_contents(mock_scene)
+        marker_path = _rebase_marker_path(mock_scene)
+        real_write = changelog_mod._write_json_strict
+
+        def failing_write(path, data, cls=None):
+            if path == marker_path:
+                raise OSError("no space left on device")
+            return real_write(path, data, cls=cls)
+
+        monkeypatch.setattr(changelog_mod, "_write_json_strict", failing_write)
+
+        with pytest.raises(OSError, match="no space left"):
+            await rebase_changelog_chain(mock_scene)
+
+        monkeypatch.undo()
+
+        assert _changelog_dir_contents(mock_scene) == before
+        assert not os.path.exists(marker_path)
+        assert glob.glob(os.path.join(mock_scene.changelog_dir, "rebased-*")) == []
+        assert [entry["meta"] for entry in changelog.pending_deltas] == [
+            {"action": "staged"}
+        ]
+        assert mock_scene.rev == 2
+        assert await check_chain_divergence(mock_scene)
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(os.geteuid() == 0, reason="root reads through mode 0o000")
+async def test_rebase_unreadable_segment_refuses_without_deleting_it(mock_scene):
+    """An unreadable segment makes the chain unverifiable — hence eligible for
+    repair — but the flush snapshot cannot promise to restore a file it could
+    not read, so the repair refuses instead of rolling back over it."""
+    _make_diverged_chain(mock_scene)
+    mock_scene.serialize = {"history": [_full_message(0)], "x": 2}
+    mock_scene.rev = 2
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        mock_scene._changelog = changelog
+        mock_scene.serialize = {"history": [_full_message(0)], "x": 3}
+        assert await changelog.append_delta({"action": "staged"}) == 3
+
+        _, log_path = _get_latest_changelog_file(mock_scene)
+        with open(log_path, "rb") as f:
+            segment_before = f.read()
+
+        os.chmod(log_path, 0o000)
+        try:
+            with pytest.raises(PermissionError):
+                await rebase_changelog_chain(mock_scene)
+
+            assert os.path.exists(log_path)
+        finally:
+            if os.path.exists(log_path):
+                os.chmod(log_path, 0o644)
+
+        with open(log_path, "rb") as f:
+            assert f.read() == segment_before
+        assert [entry["meta"] for entry in changelog.pending_deltas] == [
+            {"action": "staged"}
+        ]
+        assert mock_scene.rev == 2
+
+
+@pytest.mark.asyncio
+async def test_rebase_zeroes_message_revs(mock_scene):
+    """Live messages and both snapshots land in the fresh namespace, and the
+    next scene-loop context does not restore the archived stamps."""
+    _make_diverged_chain_with_stamps(mock_scene)
+    mock_scene.serialize = {"history": [{**_full_message(0), "rev": 1}], "x": 2}
+    mock_scene.rev = 2
+    message = NarratorMessage("message 0", id=0, rev=1)
+    mock_scene.history = [message]
+
+    await rebase_changelog_chain(mock_scene)
+
+    assert message.rev == 0
+    assert mock_scene.rev == 0
+    for path in (_base_path(mock_scene), _latest_path(mock_scene)):
+        with open(path) as f:
+            assert [entry["rev"] for entry in json.load(f)["history"]] == [0]
+
+    assert await check_chain_divergence(mock_scene) == []
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        # _backfill_message_revs reads the snapshot's revs — zeroed, so there
+        # is nothing to re-stamp
+        assert message.rev == 0
+        assert [entry["rev"] for entry in changelog.last_state["history"]] == [0]
+
+
+@pytest.mark.asyncio
+async def test_rebase_twice_in_the_same_second_preserves_both(mock_scene, monkeypatch):
+    """Two repairs within the same second get distinct preserved dirs."""
+    from talemate import changelog as changelog_mod
+
+    class _FrozenClock:
+        @staticmethod
+        def now(tz=None):
+            return datetime(2026, 1, 1, tzinfo=tz or timezone.utc)
+
+    monkeypatch.setattr(changelog_mod, "datetime", _FrozenClock)
+
+    _make_diverged_chain(mock_scene)
+    first = await rebase_changelog_chain(mock_scene)
+    first_base = os.path.join(
+        mock_scene.changelog_dir,
+        first["preserved_to"],
+        f"{mock_scene.filename}.base.json",
+    )
+    with open(first_base, "w") as f:
+        json.dump({"sentinel": True}, f)
+
+    _make_diverged_chain(mock_scene)
+    second = await rebase_changelog_chain(mock_scene)
+
+    assert second["preserved_to"] != first["preserved_to"]
+    with open(first_base) as f:
+        assert json.load(f) == {"sentinel": True}
+    assert f"{mock_scene.filename}.base.json" in os.listdir(
+        os.path.join(mock_scene.changelog_dir, second["preserved_to"])
+    )
+
+    marker = read_rebase_marker(mock_scene)
+    assert [entry["preserved_to"] for entry in marker["rebases"]] == [
+        first["preserved_to"],
+        second["preserved_to"],
+    ]

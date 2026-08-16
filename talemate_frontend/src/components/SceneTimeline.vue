@@ -80,6 +80,29 @@
                         </template>
                     </v-sheet>
 
+                    <v-alert v-if="chainNeedsRepair" color="warning" icon="mdi-source-branch-sync" density="compact" variant="tonal" class="text-caption mt-3">
+                        <div v-if="chain?.status === 'diverged'">
+                            This scene's history is out of sync with the scene itself. Rollback is disabled, and previews or forks may show incorrect data.
+                        </div>
+                        <div v-else>
+                            This scene's history could not be verified. Rollback is disabled, and previews or forks may show incorrect data.
+                        </div>
+                        <div v-if="chain?.detail" class="text-medium-emphasis mt-1">{{ chain.detail }}</div>
+                        <template v-slot:append>
+                            <v-tooltip text="Start the scene's history fresh from its current state. Everything recorded before disappears from this timeline, but the old history files are kept in the scene's changelog folder." max-width="350" location="top">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn v-bind="props" color="warning" variant="text" size="small" prepend-icon="mdi-broom" :loading="applying && applyAction === 'repair'" :disabled="applying" @click="repairPrompt">
+                                        Repair
+                                    </v-btn>
+                                </template>
+                            </v-tooltip>
+                        </template>
+                    </v-alert>
+
+                    <v-alert v-else-if="rebaseNote" color="information" icon="mdi-source-branch-check" density="compact" variant="tonal" class="text-caption mt-3">
+                        {{ rebaseNote }}
+                    </v-alert>
+
                     <v-alert v-if="sharedContextWarning" color="warning" icon="mdi-earth-off" density="compact" variant="tonal" class="text-caption mt-3">
                         Forking or rolling back disconnects the scene from its shared world context, since shared context cannot be reconstructed to a specific revision.
                     </v-alert>
@@ -124,6 +147,15 @@
         :description="`The scene will be rolled back to revision ${selectedRevision?.rev}. A backup of the current state is saved to the scene's backups folder, and the rollback itself is recorded on the timeline — you can scrub forward to return.`"
     />
 
+    <ConfirmActionPrompt
+        ref="confirmRepair"
+        @confirm="repair"
+        actionLabel="Repair timeline"
+        icon="mdi-broom"
+        color="warning"
+        description="The scene's history will start fresh from the scene as it is now. Everything recorded before this point disappears from the timeline and can no longer be previewed, forked, or rolled back to. The old history files are kept in the scene's changelog folder for reference."
+    />
+
     <RequestInput
         ref="requestForkName"
         title="Save Forked Scene As"
@@ -140,6 +172,14 @@ import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import RequestInput from './RequestInput.vue';
 import { parseCharacterMessage } from '@/utils/characterMessage.js';
 import { getMessageColor } from '@/utils/messageColors.js';
+import {
+    chainNeedsRepair as isChainUnhealthy,
+    operationDoneOutcome,
+    rebaseNote as buildRebaseNote,
+    repairBrowseState,
+    revisionsUpdate,
+    rollbackDisabledReason as readRollbackDisabledReason,
+} from '@/utils/sceneTimelineChain';
 
 const MESSAGE_FLAG_HIDDEN = 1;
 
@@ -171,6 +211,8 @@ export default {
             sceneName: null,
             initialRev: null,
             revisions: [],
+            chain: null,
+            rebase: null,
             sliderIndex: 0,
             preview: null,
             loadingRevisions: false,
@@ -195,14 +237,17 @@ export default {
         sharedContextWarning() {
             return !this.isHeadless && !!this.scene?.data?.shared_context;
         },
+        chainNeedsRepair() {
+            return isChainUnhealthy(this.chain);
+        },
+        rebaseNote() {
+            return buildRebaseNote(this.rebase, this.formatTimestamp);
+        },
         rollbackDisabledReason() {
-            if (this.scene?.data?.immutable_save) {
-                return 'This save is immutable and cannot be rolled back in place — fork instead.';
-            }
-            if (!this.scene?.data?.filename) {
-                return 'The scene must be saved before it can be rolled back.';
-            }
-            return null;
+            return readRollbackDisabledReason({
+                needsRepair: this.chainNeedsRepair,
+                sceneData: this.scene?.data,
+            });
         },
     },
     watch: {
@@ -220,6 +265,8 @@ export default {
             this.sceneName = sceneName;
             this.initialRev = initialRev;
             this.revisions = [];
+            this.chain = null;
+            this.rebase = null;
             this.preview = null;
             this.sliderIndex = 0;
             this.applying = false;
@@ -315,6 +362,19 @@ export default {
             }));
         },
 
+        repairPrompt() {
+            this.$refs.confirmRepair.initiateAction();
+        },
+
+        repair() {
+            Object.assign(this, repairBrowseState());
+            this.getWebsocket().send(JSON.stringify({
+                type: 'timeline',
+                action: 'repair',
+                scene_path: this.scenePath,
+            }));
+        },
+
         scrollPreviewToBottom() {
             this.$nextTick(() => {
                 const panel = this.$refs.previewPanel?.$el;
@@ -330,27 +390,23 @@ export default {
             }
 
             if (data.action === 'revisions') {
-                if ((data.data.scene_path || null) !== this.scenePath) {
+                const update = revisionsUpdate(data.data, {
+                    scenePath: this.scenePath,
+                    initialRev: this.initialRev,
+                    sliderIndex: this.sliderIndex,
+                });
+                if (!update) {
                     return;
                 }
-                this.revisions = data.data.revisions || [];
-                this.loadingRevisions = false;
-                if (this.revisions.length === 0) {
-                    return;
-                }
-                let index = this.revisions.length - 1;
-                if (this.initialRev !== null) {
-                    const exact = this.revisions.findIndex((entry) => entry.rev === this.initialRev);
-                    if (exact !== -1) {
-                        index = exact;
-                    }
-                }
-                // assigning the same index won't trigger the watcher — request directly
-                if (index === this.sliderIndex) {
+                this.revisions = update.revisions;
+                this.chain = update.chain;
+                this.rebase = update.rebase;
+                this.loadingRevisions = update.loadingRevisions;
+                if (update.requestPreview) {
                     this.loadingPreview = true;
                     this.requestPreview();
                 } else {
-                    this.sliderIndex = index;
+                    this.sliderIndex = update.sliderIndex;
                 }
             } else if (data.action === 'preview') {
                 if ((data.data.scene_path || null) !== this.scenePath) {
@@ -364,17 +420,19 @@ export default {
                 this.loadingPreview = false;
                 this.scrollPreviewToBottom();
             } else if (data.action === 'operation_done') {
-                if (data.error) {
-                    // failed list/preview requests also land here
+                const outcome = operationDoneOutcome(data, {
+                    applying: this.applying,
+                    applyAction: this.applyAction,
+                });
+                if (outcome.clearLoading) {
                     this.loadingRevisions = false;
                     this.loadingPreview = false;
                 }
-                if (!this.applying) {
-                    return;
+                if (outcome.clearApplying) {
+                    this.applying = false;
+                    this.applyAction = null;
                 }
-                this.applying = false;
-                this.applyAction = null;
-                if (!data.error) {
+                if (outcome.close) {
                     this.close();
                 }
             }

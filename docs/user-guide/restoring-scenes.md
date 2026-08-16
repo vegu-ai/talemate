@@ -34,6 +34,12 @@ Once you've found the point you want to return to, you have the following option
 !!! warning
     Scenes connected to a shared world context are disconnected from it when rolled back or forked, since shared context cannot be reconstructed to a specific revision.
 
+### Chain health and repair
+
+Reconstructing a revision replays the recorded deltas onto the scene's first revision. If a scene's chain has diverged — recorded changes that no longer match the state they were made against, for example because of a bug in an older version — Talemate now refuses to guess: the timeline shows a warning, and rollback stays unavailable, because applying a diverged reconstruction would permanently record its losses into the chain.
+
+The **Repair** action on that warning starts a fresh history chain from the scene's current state, after a confirmation. The old chain files are moved to a `rebased-<date>` folder inside the scene's [changelog directory](/talemate/user-guide/scene-directory#changelog) and kept for reference. Revisions recorded before the repair leave the timeline and can no longer be previewed, forked, or rolled back to — they stay exactly as lossy as they were — but everything recorded from the repair onward reconstructs exactly, and rollback and fork work again.
+
 ### World state at a past revision
 
 The world state is reconstructed in two parts:

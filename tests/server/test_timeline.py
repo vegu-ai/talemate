@@ -24,6 +24,7 @@ from talemate.changelog import (
     append_scene_delta,
     save_changelog,
 )
+from talemate.scene_message import NarratorMessage
 from talemate.server.timeline import TimelinePlugin
 
 
@@ -246,7 +247,7 @@ async def test_rollback_refused_on_diverged_chain(plugin, scene):
     await plugin.handle_rollback({"rev": 1})
 
     (done,) = plugin.websocket_handler.by_action("operation_done")
-    assert "diverged" in done["error"]["message"]
+    assert "out of sync" in done["error"]["message"]
 
 
 async def test_rollback_refused_on_unverifiable_chain(plugin, scene):
@@ -379,3 +380,158 @@ async def test_rollback_requires_saved_scene(plugin, scene):
 
     (done,) = plugin.websocket_handler.by_action("operation_done")
     assert "saved" in done["error"]["message"]
+
+
+def _emit_history_spy(scene):
+    """Stand-in for ``Scene.emit_history``, which needs a full agent stack.
+
+    Records ``scene.rev`` at call time so ordering against the reset is
+    observable.
+    """
+    calls: list[int] = []
+
+    async def emit_history():
+        calls.append(scene.rev)
+
+    emit_history.calls = calls
+    return emit_history
+
+
+def _diverge_chain(scene):
+    """Rewrite the latest snapshot outside the chain (end-state divergence)."""
+    latest_path = os.path.join(scene.changelog_dir, f"{scene.filename}.latest.json")
+    with open(latest_path) as f:
+        latest = json.load(f)
+    latest["intro"] = "rewritten outside the chain"
+    with open(latest_path, "w") as f:
+        json.dump(latest, f)
+
+
+async def test_list_revisions_reports_chain_ok(plugin):
+    await plugin.handle_list_revisions({})
+
+    (response,) = plugin.websocket_handler.by_action("revisions")
+    assert response["data"]["chain"] == {"status": "ok", "detail": None}
+    assert response["data"]["rebase"] is None
+
+
+async def test_list_revisions_reports_diverged_chain(plugin, scene):
+    _diverge_chain(scene)
+
+    await plugin.handle_list_revisions({})
+
+    (response,) = plugin.websocket_handler.by_action("revisions")
+    assert response["data"]["chain"]["status"] == "diverged"
+
+
+async def test_repair_rebases_diverged_chain(plugin, scene, monkeypatch):
+    _diverge_chain(scene)
+    emit_history = _emit_history_spy(scene)
+    monkeypatch.setattr(scene, "emit_history", emit_history)
+
+    await plugin.handle_repair({})
+
+    # the frontend is re-fed the history: its fork targets named revisions of
+    # the chain that was just archived
+    assert emit_history.calls == [0]
+
+    (done,) = plugin.websocket_handler.by_action("operation_done")
+    assert "error" not in done
+
+    # the active scene restarts the revision namespace
+    assert scene.rev == 0
+
+    # the handler pushes a refreshed revisions list: only the base remains,
+    # the chain reports healthy, and the rebase marker explains the gap
+    (revisions_msg,) = plugin.websocket_handler.by_action("revisions")
+    data = revisions_msg["data"]
+    assert [entry["rev"] for entry in data["revisions"]] == [0]
+    assert data["chain"]["status"] == "ok"
+    assert data["rebase"]["rebases"][0]["rebased_from_rev"] == 3
+
+    # the old chain is preserved under changelog/rebased-*/
+    preserved = [d for d in os.listdir(scene.changelog_dir) if d.startswith("rebased-")]
+    assert len(preserved) == 1
+    assert os.listdir(os.path.join(scene.changelog_dir, preserved[0]))
+
+    # rollback is usable again
+    from talemate.changelog import check_chain_divergence
+
+    assert await check_chain_divergence(scene) == []
+
+
+async def test_repair_refuses_healthy_chain(plugin):
+    await plugin.handle_repair({})
+
+    (done,) = plugin.websocket_handler.by_action("operation_done")
+    assert "Nothing to repair" in done["error"]["message"]
+
+
+async def test_repair_headless(scene, temp_dir):
+    """Repair works from the load screen via scene_path (no active scene)."""
+    _diverge_chain(scene)
+    plugin = TimelinePlugin(_MockWebsocketHandler(None))
+    scene_path = os.path.join(temp_dir, scene.filename)
+
+    await plugin.handle_repair({"scene_path": scene_path})
+
+    (done,) = plugin.websocket_handler.by_action("operation_done")
+    assert "error" not in done
+    (revisions_msg,) = plugin.websocket_handler.by_action("revisions")
+    assert revisions_msg["data"]["scene_path"] == scene_path
+    assert revisions_msg["data"]["chain"]["status"] == "ok"
+    # the active scene's rev is untouched (there is none)
+    assert scene.rev == 3
+
+
+async def test_repair_by_path_syncs_the_loaded_scene(
+    plugin, scene, temp_dir, monkeypatch
+):
+    """A scene_path naming the scene that is loaded right now must repair the
+    live scene, not a disk-only scaffold that leaves it on the old namespace."""
+    _diverge_chain(scene)
+    emit_history = _emit_history_spy(scene)
+    monkeypatch.setattr(scene, "emit_history", emit_history)
+    message = NarratorMessage("Narrator line 3", id=3, rev=3)
+    scene.history = [message]
+    scene_path = os.path.join(temp_dir, scene.filename)
+
+    await plugin.handle_repair({"scene_path": scene_path})
+
+    (done,) = plugin.websocket_handler.by_action("operation_done")
+    assert "error" not in done
+    assert scene.rev == 0
+    assert message.rev == 0
+    assert emit_history.calls == [0]
+
+    (revisions_msg,) = plugin.websocket_handler.by_action("revisions")
+    assert revisions_msg["data"]["scene_path"] == scene_path
+    assert revisions_msg["data"]["chain"]["status"] == "ok"
+
+
+async def test_repair_reports_write_failure(plugin, scene, monkeypatch):
+    """A filesystem failure during the rebase is reported, not raised out of
+    the handler — the chain was restored, so the session stays usable."""
+    _diverge_chain(scene)
+
+    base_path = os.path.join(scene.changelog_dir, f"{scene.filename}.base.json")
+    real_replace = os.replace
+    failed = []
+
+    def failing_replace(src, dst, **kwargs):
+        if dst == base_path and not failed:
+            failed.append(dst)
+            raise OSError("no space left on device")
+        return real_replace(src, dst, **kwargs)
+
+    monkeypatch.setattr(os, "replace", failing_replace)
+
+    await plugin.handle_repair({})
+
+    monkeypatch.undo()
+
+    (done,) = plugin.websocket_handler.by_action("operation_done")
+    assert "Repair failed" in done["error"]["message"]
+    assert "no space left" in done["error"]["message"]
+    assert not plugin.websocket_handler.by_action("revisions")
+    assert scene.rev == 3

@@ -121,9 +121,10 @@ class Backend(backends.Backend):
                 )
             return backends.BackendStatus(type=backends.BackendStatusType.OK)
         except Exception as e:
-            log.error("google.test_connection.error", error=str(e))
+            message = backends.describe_error(e)
+            log.error("google.test_connection.error", error=message)
             return backends.BackendStatus(
-                type=backends.BackendStatusType.ERROR, message=str(e)
+                type=backends.BackendStatusType.ERROR, message=message
             )
 
     async def _generate_text(

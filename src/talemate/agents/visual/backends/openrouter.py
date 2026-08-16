@@ -1,9 +1,10 @@
 import base64
+import hashlib
 import io
 import pydantic
 import structlog
 import httpx
-from typing import Literal
+from typing import Literal, ClassVar
 from PIL import Image
 
 from openai import AsyncOpenAI
@@ -57,7 +58,7 @@ class Backend(backends.Backend):
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 
-    _test_conn_cache_maxage: int = 60
+    _test_conn_cache_maxage: ClassVar[int] = 60
 
     @property
     def instance_label(self) -> str:
@@ -78,11 +79,14 @@ class Backend(backends.Backend):
     @property
     def status_cache_key(self) -> str:
         config = get_config()
-        return (
-            f"{self.name}-{config.openrouter.api_key[:10]}"
-            if config.openrouter.api_key
-            else self.name
-        )
+        api_key = config.openrouter.api_key
+        if not api_key:
+            return self.name
+        # full-key digest: openrouter keys share the fixed sk-or-v1- prefix,
+        # so a raw prefix would collide across distinct keys and reuse a
+        # stale cached status after a key change
+        digest = hashlib.sha256(api_key.encode()).hexdigest()[:16]
+        return f"{self.name}-{digest}"
 
     async def ready(self) -> backends.BackendStatus:
         try:
@@ -93,7 +97,7 @@ class Backend(backends.Backend):
             )
         return self.status
 
-    async def test_connection(self, timeout: int = 2) -> backends.BackendStatus:
+    async def test_connection(self, timeout: int = 5) -> backends.BackendStatus:
         api_key = get_config().openrouter.api_key
         if not api_key:
             return backends.BackendStatus(
@@ -116,9 +120,10 @@ class Backend(backends.Backend):
                         message=f"API returned status {response.status_code}",
                     )
         except Exception as e:
-            log.error("openrouter.test_connection.error", error=str(e))
+            message = backends.describe_error(e)
+            log.error("openrouter.test_connection.error", error=message)
             return backends.BackendStatus(
-                type=backends.BackendStatusType.ERROR, message=str(e)
+                type=backends.BackendStatusType.ERROR, message=message
             )
 
     def _make_client(self) -> AsyncOpenAI:

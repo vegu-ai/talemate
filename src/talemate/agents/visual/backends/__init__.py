@@ -21,11 +21,20 @@ __all__ = [
     "Backend",
     "BackendStatus",
     "BackendStatusType",
+    "describe_error",
     "register",
     "NONE_BACKEND",
 ]
 
 log = structlog.get_logger("talemate.agents.visual.backends")
+
+
+def describe_error(e: Exception) -> str:
+    # httpx/httpcore timeout and connection exceptions carry an empty str()
+    if message := str(e):
+        return message
+    return type(e).__name__
+
 
 BACKENDS = {}
 
@@ -103,11 +112,10 @@ class Backend(BackendBase):
         except Exception as e:
             self.status = BackendStatus(
                 type=BackendStatusType.ERROR,
-                message=str(e),
+                message=describe_error(e),
             )
         else:
             self.status = result
-        self._test_conn_cache[self.status_cache_key] = self.status
 
         if current_status and current_status != self.status:
             asyncio.create_task(self.on_status_change())
@@ -147,23 +155,37 @@ class Backend(BackendBase):
         # sleep random
         await asyncio.sleep(random.uniform(0.2, 0.5))
 
-        cache = self._test_conn_cache.get(self.status_cache_key)
+        cache_key = self.status_cache_key
+
+        cache = self._test_conn_cache.get(cache_key)
         if cache and time.time() - cache.timestamp < self._test_conn_cache_maxage:
             # log.debug("Using cached test connection status", backend=self.name, instance_label=self.instance_label)
             # Apply any cached data
-            cached_data = self._test_conn_cache_data.get(self.status_cache_key)
+            cached_data = self._test_conn_cache_data.get(cache_key)
             if cached_data:
                 self._apply_cache_data(cached_data)
             return cache
 
         # log.debug("Testing connection to backend", backend=self.name, instance_label=self.instance_label)
-        status = await self.test_connection()
+        try:
+            status = await self.test_connection()
+        except Exception as e:
+            status = BackendStatus(
+                type=BackendStatusType.ERROR, message=describe_error(e)
+            )
+
+        # cache from here rather than from the done callback: nothing suspends
+        # between reading cache_key above and test_connection reading its
+        # credentials, so the verdict is filed against the credentials it
+        # actually tested. The callback runs a probe timeout later, by which
+        # point a config change may have replaced them.
+        self._test_conn_cache[cache_key] = status
 
         # Store cache data if test_connection was successful
         if status.type == BackendStatusType.OK:
             cache_data = self._get_cache_data()
             if cache_data:
-                self._test_conn_cache_data[self.status_cache_key] = cache_data
+                self._test_conn_cache_data[cache_key] = cache_data
 
         return status
 

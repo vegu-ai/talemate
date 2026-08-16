@@ -71,6 +71,7 @@ File Layout:
 """
 
 from typing import TYPE_CHECKING
+import copy
 import json
 import os
 import re
@@ -103,15 +104,35 @@ EXCLUDE_FROM_DELTAS = [
     "root['world_state']['characters']",
     "root['world_state']['items']",
     "root['world_state']['location']",
-    "root['world_state']['reinforce']",
-    "root['world_state']['pins']",
-    "root['world_state']['character_name_mappings']",
     # TODO move these to agent modules
     "root['agent_state']['director']['cached_guidance']",
     "root['agent_state']['summarizer']['cached_analysis_conversation']",
     "root['agent_state']['summarizer']['cached_analysis_narration']",
     "root['agent_state']['summarizer']['scene_analysis']",
 ]
+
+# User-authored world-state subtrees that deltas track now but that chains
+# written before then never recorded. Deltas carry these as full-subtree
+# ops, all three together whenever any one changes (see
+# _full_subtree_world_state_ops), so replay never depends on the base
+# snapshot's values for them, and check_chain_divergence masks them only
+# on chains whose deltas never record them.
+LEGACY_UNTRACKED_WORLD_STATE = [
+    "root['world_state']['reinforce']",
+    "root['world_state']['pins']",
+    "root['world_state']['character_name_mappings']",
+]
+
+# Agent-derived world-state subtrees excluded from deltas above. They are
+# refreshed by the world-state agent's analysis cycles, so reconstruction
+# overlays them from the latest snapshot: a fork or rollback gets the
+# current derived state instead of the base snapshot's. Derived from
+# EXCLUDE_FROM_DELTAS so the two cannot drift apart.
+OVERLAY_FROM_LATEST = tuple(
+    path.removeprefix("root['world_state']['").removesuffix("']")
+    for path in EXCLUDE_FROM_DELTAS
+    if path.startswith("root['world_state']")
+)
 
 # Regex patterns for wildcard exclusions (e.g., array indices)
 
@@ -609,6 +630,46 @@ def _apply_delta(data: dict, delta_obj: dict) -> dict:
         raise
 
 
+def _full_subtree_world_state_ops(delta_dict: dict, prev: dict, curr: dict) -> None:
+    """Replace incremental ops under the LEGACY_UNTRACKED_WORLD_STATE
+    subtrees with full-subtree ``values_changed`` ops.
+
+    Chains written before these subtrees were tracked replay onto a base
+    snapshot whose values predate any recording, so an increment computed
+    against the latest snapshot silently drops everything the base never
+    had. Full-subtree ops make the delta self-sufficient, and they are
+    written for all three subtrees whenever any one of them changes: the
+    first post-upgrade touch records the whole set, including drift that
+    only ever lived in the latest snapshot — which keeps the divergence
+    check's all-or-nothing unmask (_chain_records_world_state) correct.
+    """
+    curr_ws = curr.get("world_state")
+    if not isinstance(curr_ws, dict):
+        return
+    touched = False
+    for path in LEGACY_UNTRACKED_WORLD_STATE:
+        for ops in delta_dict.values():
+            if not isinstance(ops, dict):
+                continue
+            for op_path in [
+                p for p in ops if isinstance(p, str) and p.startswith(path)
+            ]:
+                del ops[op_path]
+                touched = True
+    if not touched:
+        return
+    prev_ws = prev.get("world_state")
+    for path in LEGACY_UNTRACKED_WORLD_STATE:
+        key = _parse_delta_path(path)[-1]
+        if key not in curr_ws:
+            continue
+        prev_value = prev_ws.get(key) if isinstance(prev_ws, dict) else None
+        delta_dict.setdefault("values_changed", {})[path] = {
+            "new_value": copy.deepcopy(curr_ws[key]),
+            "old_value": copy.deepcopy(prev_value),
+        }
+
+
 def _compute_delta(prev: dict, curr: dict) -> dict:
     """
     Compute the delta (difference) between two scene states.
@@ -637,6 +698,7 @@ def _compute_delta(prev: dict, curr: dict) -> dict:
         return {}
 
     delta_dict = diff._to_delta_dict()
+    _full_subtree_world_state_ops(delta_dict, prev, curr)
     _warn_on_orphan_delta_ops(prev, delta_dict)
     return delta_dict
 
@@ -919,13 +981,31 @@ async def reconstruct_cleanup(data: dict) -> dict:
     return data
 
 
+def _overlay_derived_world_state(data: dict, latest: dict | None) -> None:
+    """Overlay the derived world-state subtrees from the latest snapshot.
+
+    The subtrees in OVERLAY_FROM_LATEST are excluded from deltas, so without
+    this a reconstruction — at any revision — would carry the base
+    snapshot's values. The latest snapshot's values are the freshest known
+    and the ones a fork or rollback should start from.
+    """
+    world_state = data.get("world_state")
+    latest_world_state = (latest or {}).get("world_state")
+    if not isinstance(world_state, dict) or not isinstance(latest_world_state, dict):
+        return
+    for key in OVERLAY_FROM_LATEST:
+        if key in latest_world_state:
+            world_state[key] = copy.deepcopy(latest_world_state[key])
+
+
 async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> dict:
     """
     Reconstruct scene data at a specific revision by applying deltas.
 
     Starts from the base scene data (revision 0) and sequentially applies
     all deltas up to the target revision to reconstruct the scene state.
-    Reads from all changelog files as needed.
+    Reads from all changelog files as needed. The derived world-state
+    subtrees (OVERLAY_FROM_LATEST) are taken from the latest snapshot.
 
     Args:
         scene: The scene object to reconstruct
@@ -938,8 +1018,10 @@ async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> d
         to_rev = _get_overall_latest_revision(scene)
 
     data = _load_base_scene_data(scene)
+    latest_data = _load_latest_scene_data(scene)
 
     if to_rev <= 0:
+        _overlay_derived_world_state(data, latest_data)
         data = await reconstruct_cleanup(data)
         return data
 
@@ -969,6 +1051,7 @@ async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> d
         if delta_obj:
             data = _apply_delta(data, delta_obj)
 
+    _overlay_derived_world_state(data, latest_data)
     data = await reconstruct_cleanup(data)
 
     return data
@@ -1193,13 +1276,35 @@ def _diff_paths(diff) -> list[str]:
     return sorted(paths)
 
 
+def _chain_records_world_state(scene: "Scene") -> bool:
+    """Whether any delta in the chain touches the LEGACY_UNTRACKED_WORLD_STATE subtrees."""
+    for _, file_path in _get_changelog_files(scene):
+        log_data = _read_changelog_log_strict(file_path) or {}
+        for entry in log_data.get("deltas", []):
+            for ops in (entry.get("delta") or {}).values():
+                if not isinstance(ops, dict):
+                    continue
+                if any(
+                    isinstance(p, str)
+                    and p.startswith(tuple(LEGACY_UNTRACKED_WORLD_STATE))
+                    for p in ops
+                ):
+                    return True
+    return False
+
+
 async def check_chain_divergence(scene: "Scene") -> list[str] | None:
     """
     Verify the delta chain by reconstructing the latest revision and
     comparing it against the latest snapshot.
 
     Paths in EXCLUDE_FROM_DELTAS diverge by design and are masked, as is
-    ``shared_context`` (reconstruction deliberately disconnects it).
+    ``shared_context`` (reconstruction deliberately disconnects it). The
+    LEGACY_UNTRACKED_WORLD_STATE paths are masked only when no delta in the
+    chain records them: such chains predate their tracking, so drift
+    between the base snapshot and the latest snapshot there is expected.
+    Once a delta records them (as a full-subtree op), reconstruction must
+    reproduce the latest snapshot at those paths too.
 
     Results are cached against a stat fingerprint of the changelog files.
 
@@ -1240,11 +1345,15 @@ async def check_chain_divergence(scene: "Scene") -> list[str] | None:
     latest_rev = _get_overall_latest_revision(scene)
     reconstructed = await reconstruct_scene_data(scene, to_rev=latest_rev)
 
+    exclude_paths = [*EXCLUDE_FROM_DELTAS, "root['shared_context']"]
+    if not _chain_records_world_state(scene):
+        exclude_paths += LEGACY_UNTRACKED_WORLD_STATE
+
     diff = deepdiff.DeepDiff(
         reconstructed,
         latest_data,
         ignore_order=False,
-        exclude_paths=[*EXCLUDE_FROM_DELTAS, "root['shared_context']"],
+        exclude_paths=exclude_paths,
         exclude_regex_paths=EXCLUDE_FROM_DELTAS_REGEX,
         ignore_type_in_groups=[(type(None), str, int, float, bool, list, dict)],
     )

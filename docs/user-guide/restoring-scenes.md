@@ -34,6 +34,13 @@ Once you've found the point you want to return to, you have the following option
 !!! warning
     Scenes connected to a shared world context are disconnected from it when rolled back or forked, since shared context cannot be reconstructed to a specific revision.
 
+### World state at a past revision
+
+The world state is reconstructed in two parts:
+
+- **Pins, reinforcements and character name mappings** are recorded in the changelog and come back exactly as they were at the selected revision. Saves written before this tracking was introduced have no recorded history for them, so revisions from before then still show the values from the scene's first revision.
+- **Character and item snapshots and the location description** are maintained by the world state agent and are not recorded per revision — a reconstruction starts from the scene's *current* values for these, and the agent refreshes them on its next analysis cycle.
+
 ## Restore from restore point
 
 If you've configured a restore point in the [scene settings](/talemate/user-guide/world-editor/scene/settings#restoration-settings), you can reset the scene to that baseline state using the **:material-backup-restore: Restore Scene** button. This is useful for scenes you want to replay from a fixed starting point, such as testing a scene during development.

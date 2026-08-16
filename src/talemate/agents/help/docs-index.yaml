@@ -976,7 +976,9 @@
   title: Restoring Scenes
   summary: The Timeline built from the scene's changelog deltas, opened from the Save menu, a message's Fork button, a Quick
     load card menu or a Scene Library save row, with Roll back, Open at this revision and Fork to new save; plus Restore Scene
-    from a restore point.
+    from a restore point. Covers what world state a past revision restores — pins, reinforcements and character name mappings
+    return as they were at that revision, while character/item snapshots and the location description start from the scene's
+    current values.
 - path: user-guide/saving.md
   title: Saving
   summary: How scene saves work - .json files in the scene project directory with an automatic changelog version history.

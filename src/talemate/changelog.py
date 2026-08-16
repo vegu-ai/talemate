@@ -45,11 +45,10 @@ Usage Example:
 # Initialize changelog for a scene
 await save_changelog(scene)
 
-# Append changes when scene is modified
-rev = await append_scene_delta(scene, {"action": "character_added"})
-
-# Volatile fields are automatically excluded via EXCLUDE_FROM_DELTAS and EXCLUDE_FROM_DELTAS_REGEX
-rev = await append_scene_delta(scene, {"action": "edit"})
+# Stage and commit changes when a scene is modified
+async with InMemoryChangelog(scene) as changelog:
+    rev = await changelog.append_delta({"action": "character_added"})
+    await changelog.commit()
 
 # Reconstruct scene at specific revision
 scene_data = await reconstruct_scene_data(scene, to_rev=5)
@@ -349,7 +348,7 @@ def _read_changelog_log_strict(path: str) -> dict | None:
     return content
 
 
-def _write_json_strict(path: str, data: dict, cls=None):
+def _write_json(path: str, data: dict, cls=None):
     """
     Write JSON data to file, creating parent directories as needed.
 
@@ -379,24 +378,6 @@ def _write_json_strict(path: str, data: dict, cls=None):
         except OSError:
             pass
         raise
-
-
-def _write_json(path: str, data: dict, cls=None):
-    """
-    Write JSON data to file, logging instead of raising on failure.
-
-    Args:
-        path: Path to write the JSON file
-        data: Dictionary data to write as JSON
-        cls: Optional JSON encoder class (e.g. SceneEncoder)
-
-    Returns:
-        None
-    """
-    try:
-        _write_json_strict(path, data, cls=cls)
-    except Exception as e:
-        log.error("write_json", error=e, path=path)
 
 
 def _get_changelog_files(scene: "Scene") -> list[tuple[int, str]]:
@@ -932,98 +913,6 @@ def _serialize_scene_plain(scene: "Scene") -> dict:
     except Exception as e:
         log.error("serialize_scene_plain_failed", error=e)
         return scene.serialize
-
-
-async def append_scene_delta(scene: "Scene", meta: dict | None = None) -> int | None:
-    """
-    Append a new delta to the changelog if the scene has changed.
-
-    Computes the difference between the latest snapshot and current scene state.
-    If changes are found, creates a new revision entry in the changelog with
-    the delta and metadata. Updates the latest snapshot for future comparisons.
-    Automatically excludes paths listed in EXCLUDE_FROM_DELTAS.
-
-    When a changelog file exceeds MAX_CHANGELOG_FILE_SIZE, a new file is created.
-
-    Args:
-        scene: The scene object to create a delta for
-        meta: Optional metadata to store with this revision
-
-    Returns:
-        int | None: The new revision number if changes were found, None if unchanged
-    """
-    if not os.path.exists(_base_path(scene)):
-        await save_changelog(scene)
-
-    # Find the latest changelog file and get the overall latest revision
-    latest_rev = _get_overall_latest_revision(scene)
-
-    try:
-        await _ensure_latest_initialized(scene)
-        prev_data = _load_latest_scene_data(scene)
-        if prev_data is None:
-            prev_data = await reconstruct_scene_data(scene, to_rev=latest_rev)
-    except ChangelogDivergedError as e:
-        # The chain no longer replays onto its own snapshots, so no honest
-        # baseline exists to diff against. Skip the append and leave the
-        # chain intact for repair (rebase_changelog_chain).
-        log.error("append_skipped_diverged_chain", detail=str(e))
-        return None
-
-    curr_data = _serialize_scene_plain(scene)
-
-    delta = _compute_delta(prev_data, curr_data)
-    if not delta:
-        return None
-
-    if not _delta_reproduces_state(prev_data, curr_data, delta):
-        # Refusing to write keeps the chain consistent: the latest snapshot
-        # is left unchanged, so the next append retries from the same baseline.
-        log.error(
-            "delta_verification_failed",
-            rev=latest_rev + 1,
-            detail="computed delta does not reproduce the scene state; delta not written",
-        )
-        return None
-
-    new_rev = latest_rev + 1
-
-    # Find the appropriate file to append to
-    start_rev, log_path = _get_latest_changelog_file(scene)
-    log_data = _ensure_log_initialized(scene, start_rev)
-
-    # Check if current file would exceed size limit after adding this delta
-    new_delta_entry = {
-        "rev": new_rev,
-        "ts": _utc_timestamp_now(),
-        "delta": delta,
-        "meta": meta or {},
-    }
-
-    # Estimate size of new entry (rough approximation)
-    estimated_entry_size = len(json.dumps(new_delta_entry))
-    current_file_size = _get_file_size(log_path)
-
-    if (
-        current_file_size > 0
-        and (current_file_size + estimated_entry_size) > MAX_CHANGELOG_FILE_SIZE
-    ):
-        # Create a new changelog file starting with this revision
-        start_rev = new_rev
-        log_path = _changelog_log_path(scene, start_rev)
-        log_data = _ensure_log_initialized(scene, start_rev)
-        log.debug("changelog_file_split", new_file=log_path, start_rev=start_rev)
-
-    # Append to the appropriate file
-    deltas = log_data.get("deltas", [])
-    deltas.append(new_delta_entry)
-    log_data["deltas"] = deltas
-    log_data["latest_rev"] = new_rev
-
-    _write_json(log_path, log_data)
-    log.debug("append_scene_delta", rev=new_rev, file=log_path)
-    _write_json(_latest_path(scene), curr_data)
-    return new_rev
 
 
 def _get_overall_latest_revision(scene: "Scene", strict: bool = True) -> int:
@@ -1745,12 +1634,12 @@ def read_rebase_marker(scene: "Scene") -> dict | None:
 def _snapshot_changelog_flush(scene: "Scene") -> Callable[[], None]:
     """Capture the on-disk state a commit can touch, returning a restore callable.
 
-    A commit appends to the current segment (or splits off a new one) and
-    rewrites the latest snapshot — the returned callable puts all three back,
-    so a flush can be undone by a caller whose own work failed afterwards.
+    A commit can initialize the base, append to the current segment (or split
+    off a new one), and rewrite the latest snapshot. The returned callable
+    restores every touched file.
 
     Raises:
-        OSError: an existing file could not be read — the transaction refuses
+        Exception: an existing file could not be read — the transaction refuses
             before writing anything rather than promise a restore it cannot make
     """
     _, log_path = _get_latest_changelog_file(scene)
@@ -1758,10 +1647,7 @@ def _snapshot_changelog_flush(scene: "Scene") -> Callable[[], None]:
         scene.changelog_dir, f"{scene.filename}.changelog.*.json"
     )
     contents: dict[str, bytes | None] = {}
-    for path in (log_path, _latest_path(scene)):
-        # only absence may read as None — restore() deletes those paths again.
-        # Any other read failure propagates: nothing has been written yet, and
-        # a file that cannot be read cannot be promised back byte-for-byte.
+    for path in (_base_path(scene), log_path, _latest_path(scene)):
         try:
             with open(path, "rb") as f:
                 contents[path] = f.read()
@@ -1770,21 +1656,41 @@ def _snapshot_changelog_flush(scene: "Scene") -> Callable[[], None]:
     existing = set(glob.glob(segment_pattern))
 
     def restore() -> None:
+        errors: list[str] = []
         for path, data in contents.items():
             try:
                 if data is None:
                     if os.path.exists(path):
                         os.remove(path)
                 else:
-                    with open(path, "wb") as f:
-                        f.write(data)
-            except OSError as e:
+                    try:
+                        with open(path, "rb") as f:
+                            if f.read() == data:
+                                continue
+                    except FileNotFoundError:
+                        pass
+                    tmp_path = f"{path}.rollback.tmp.{os.getpid()}.{uuid.uuid4().hex}"
+                    try:
+                        with open(tmp_path, "wb") as f:
+                            f.write(data)
+                        os.replace(tmp_path, path)
+                    except Exception:
+                        try:
+                            os.remove(tmp_path)
+                        except OSError:
+                            pass
+                        raise
+            except Exception as e:
                 log.error("changelog_flush_rollback_failed", path=path, error=e)
+                errors.append(f"{path}: {e}")
         for path in set(glob.glob(segment_pattern)) - existing:
             try:
                 os.remove(path)
-            except OSError as e:
+            except Exception as e:
                 log.error("changelog_flush_rollback_failed", path=path, error=e)
+                errors.append(f"{path}: {e}")
+        if errors:
+            raise OSError("Changelog rollback failed: " + "; ".join(errors))
 
     return restore
 
@@ -1858,7 +1764,7 @@ async def rebase_changelog_chain(scene: "Scene") -> dict:
 
         rollback_flush = _undo_flush
         try:
-            await changelog.commit(strict=True)
+            await changelog.commit(emit_message_revs=False)
         except Exception:
             rollback_flush()
             raise
@@ -1904,8 +1810,8 @@ async def _rebase_onto_latest(
     latest_path = _latest_path(scene)
     staged_base = f"{base_path}.rebasing.{os.getpid()}"
     staged_latest = f"{latest_path}.rebasing.{os.getpid()}"
-    _write_json_strict(staged_base, rebased_data)
-    _write_json_strict(staged_latest, rebased_data)
+    _write_json(staged_base, rebased_data)
+    _write_json(staged_latest, rebased_data)
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     attempt = 1
@@ -1950,7 +1856,7 @@ async def _rebase_onto_latest(
                 "preserved_to": preserved_dirname,
             }
         )
-        _write_json_strict(_rebase_marker_path(scene), {"rebases": rebases})
+        _write_json(_rebase_marker_path(scene), {"rebases": rebases})
     except Exception as e:
         log.error("changelog_rebase_failed", error=e, preserved_to=preserved_dirname)
         for path in installed:
@@ -2165,6 +2071,14 @@ class InMemoryChangelog:
         self.last_state: dict | None = None
         self.initial_state: dict | None = None  # State before any pending changes
         self.committed = False
+        self._rollback_failed = False
+
+    def _raise_if_rollback_failed(self) -> None:
+        if self._rollback_failed:
+            raise RuntimeError(
+                "This changelog cannot continue after an incomplete rollback; "
+                "reload the scene before saving again"
+            )
 
     async def __aenter__(self):
         """Initialize the in-memory changelog context."""
@@ -2214,6 +2128,7 @@ class InMemoryChangelog:
         Returns:
             int | None: The actual revision number this delta will have when committed, None if unchanged
         """
+        self._raise_if_rollback_failed()
         next_real_rev = self.scene.rev + len(self.pending_deltas) + 1
 
         known_ids = {
@@ -2269,85 +2184,78 @@ class InMemoryChangelog:
 
         return next_real_rev
 
-    async def commit(self, strict: bool = False) -> list[int]:
+    async def commit(self, emit_message_revs: bool = True) -> list[int]:
         """
         Commit all pending deltas to the persistent changelog files.
         After committing, the changelog can continue to accumulate new deltas.
 
         Args:
-            strict: raise on any write failure instead of logging it, leaving
-                the staged deltas and ``scene.rev`` untouched so the caller
-                can roll the partial writes back (rebase_changelog_chain).
-                No message revs are emitted in this mode: the caller's
-                transaction either discards the flush again or renumbers the
-                whole chain, so any rev announced here is about to vanish.
+            emit_message_revs: announce committed message revisions. Rebase
+                flushes disable this because those revisions are renumbered.
 
         Returns:
             list[int]: List of committed revision numbers
 
         Raises:
-            Exception: in strict mode, any failure to write a changelog file
+            Exception: any failure to persist or restore changelog files
         """
+        self._raise_if_rollback_failed()
         if not self.pending_deltas:
             return []
 
-        write_json = _write_json_strict if strict else _write_json
-
-        # Ensure base changelog is initialized
-        if not os.path.exists(_base_path(self.scene)):
-            await save_changelog(self.scene)
-
+        restore_files = _snapshot_changelog_flush(self.scene)
         committed_revs = []
+        try:
+            if not os.path.exists(_base_path(self.scene)):
+                await save_changelog(self.scene)
 
-        # Write each delta directly to the changelog files
-        # Use the revision numbers that were already calculated and stored
-        for entry in self.pending_deltas:
-            # Delta entry already has the correct revision number
-            real_delta_entry = entry
-
-            # Find the appropriate changelog file to append to
-            start_rev, log_path = _get_latest_changelog_file(self.scene)
-            log_data = _ensure_log_initialized(self.scene, start_rev)
-
-            # Check if we need to create a new file due to size limits
-            log.debug("commit_in_memory_deltas", real_delta_entry=real_delta_entry)
-            estimated_size = len(json.dumps(real_delta_entry))
-            current_size = _get_file_size(log_path)
-
-            entry_rev = real_delta_entry["rev"]
-            if (
-                current_size > 0
-                and (current_size + estimated_size) > MAX_CHANGELOG_FILE_SIZE
-            ):
-                # Create a new changelog file starting with this revision
-                start_rev = entry_rev
-                log_path = _changelog_log_path(self.scene, start_rev)
+            for entry in self.pending_deltas:
+                start_rev, log_path = _get_latest_changelog_file(self.scene)
                 log_data = _ensure_log_initialized(self.scene, start_rev)
-                log.debug(
-                    "changelog_file_split", new_file=log_path, start_rev=start_rev
-                )
 
-            # Append the delta to the file
-            log_data["deltas"].append(real_delta_entry)
-            log_data["latest_rev"] = entry_rev
+                log.debug("commit_in_memory_deltas", real_delta_entry=entry)
+                estimated_size = len(json.dumps(entry))
+                current_size = _get_file_size(log_path)
+                entry_rev = entry["rev"]
+                if (
+                    current_size > 0
+                    and (current_size + estimated_size) > MAX_CHANGELOG_FILE_SIZE
+                ):
+                    start_rev = entry_rev
+                    log_path = _changelog_log_path(self.scene, start_rev)
+                    log_data = _ensure_log_initialized(self.scene, start_rev)
+                    log.debug(
+                        "changelog_file_split", new_file=log_path, start_rev=start_rev
+                    )
 
-            # Write the updated log data
-            write_json(log_path, log_data)
+                log_data["deltas"].append(entry)
+                log_data["latest_rev"] = entry_rev
+                _write_json(log_path, log_data)
 
-            committed_revs.append(entry_rev)
-            log.debug("committed_in_memory_delta", rev=entry_rev)
+                committed_revs.append(entry_rev)
+                log.debug("committed_in_memory_delta", rev=entry_rev)
 
-        # Update the latest snapshot file with the final scene state
-        write_json(_latest_path(self.scene), self.last_state)
+            _write_json(_latest_path(self.scene), self.last_state)
+        except Exception as write_error:
+            try:
+                restore_files()
+            except Exception as rollback_error:
+                # The disk may already contain some pending entries. Retrying
+                # this instance could append them twice, so only a scene reload
+                # may establish a trustworthy in-memory baseline again.
+                self._rollback_failed = True
+                raise ExceptionGroup(
+                    "Changelog commit failed and its rollback also failed",
+                    [write_error, rollback_error],
+                ) from write_error
+            raise
 
-        # Clear pending deltas but don't mark as committed so we can continue accumulating
         self.pending_deltas.clear()
 
-        # Update scene.rev to the highest committed revision
         if committed_revs:
             self.scene.rev = max(committed_revs)
 
-        if committed_revs and not strict:
+        if committed_revs and emit_message_revs:
             # Revs are emitted only once they exist on disk: with auto_save
             # off, appends stage deltas without committing, and the UI must
             # not learn a rev that the committed chain cannot reconstruct.

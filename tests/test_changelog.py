@@ -6,11 +6,10 @@ import shutil
 import pytest
 from datetime import datetime, timezone
 
-from _changelog_test_helpers import make_changelog_scene
+from _changelog_test_helpers import persist_test_mutation, make_changelog_scene
 from talemate.scene_message import NarratorMessage
 from talemate.changelog import (
     save_changelog,
-    append_scene_delta,
     reconstruct_scene_data,
     reconstruct_cleanup,
     write_reconstructed_scene,
@@ -171,7 +170,8 @@ def test_write_json_failed_replace_keeps_original(temp_dir, monkeypatch):
         raise OSError("simulated replace failure")
 
     monkeypatch.setattr("talemate.changelog.os.replace", _failing_replace)
-    _write_json(test_file, {"corrupted": True})
+    with pytest.raises(OSError, match="simulated replace failure"):
+        _write_json(test_file, {"corrupted": True})
 
     with open(test_file) as f:
         assert json.load(f) == {"original": True}
@@ -249,7 +249,7 @@ async def test_restore_refused_on_diverged_chain(mock_scene):
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     with open(_latest_path(mock_scene)) as f:
         latest = json.load(f)
@@ -272,7 +272,7 @@ async def test_quarantine_corrupted_changelog_files(mock_scene):
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     _, log_path = _get_latest_changelog_file(mock_scene)
     with open(log_path, "w") as f:
@@ -293,14 +293,13 @@ async def test_quarantine_corrupted_changelog_files(mock_scene):
     with pytest.raises(ChangelogCorruptedError, match="quarantined"):
         await check_chain_divergence(mock_scene)
 
-    # the save path works again: the strict read no longer trips, and the
-    # append starts a fresh segment
+    # the save path works again and continues above the live scene revision
     mock_scene.serialize = {
         "characters": [{"name": "Alice"}],
         "entries": ["new"],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 2
 
 
 @pytest.mark.asyncio
@@ -313,7 +312,7 @@ async def test_quarantine_leaves_healthy_chain_alone(mock_scene):
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     assert quarantine_corrupted_changelog_files(mock_scene) == []
     assert list_revisions(mock_scene) == [1]
@@ -330,7 +329,7 @@ async def test_quarantine_corrupted_latest_snapshot(mock_scene):
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     latest_path = _latest_path(mock_scene)
     with open(latest_path, "w") as f:
@@ -356,7 +355,7 @@ async def test_quarantine_corrupted_latest_snapshot(mock_scene):
         "entries": ["new"],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 2
+    assert await persist_test_mutation(mock_scene) == 2
 
 
 @pytest.mark.asyncio
@@ -456,7 +455,7 @@ async def test_quarantine_continues_revision_namespace(mock_scene):
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     # a later segment (start_rev 5) that is corrupted
     seg5 = _changelog_log_path(mock_scene, 5)
@@ -471,7 +470,7 @@ async def test_quarantine_continues_revision_namespace(mock_scene):
         "entries": ["new"],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 6
+    assert await persist_test_mutation(mock_scene) == 6
 
 
 @pytest.mark.asyncio
@@ -490,7 +489,7 @@ async def test_quarantine_rev_hint_reaches_in_memory_changelog(mock_scene):
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     # a later segment (start_rev 5), corrupted
     seg5 = _changelog_log_path(mock_scene, 5)
@@ -553,7 +552,7 @@ async def test_orphan_quarantined_segment_fails_closed(mock_scene):
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     _, log_path = _get_latest_changelog_file(mock_scene)
     os.replace(log_path, f"{log_path}.corrupted")
@@ -573,7 +572,7 @@ async def test_quarantine_survives_marker_write_failure(mock_scene):
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     _, log_path = _get_latest_changelog_file(mock_scene)
     with open(log_path, "w") as f:
@@ -607,7 +606,7 @@ async def test_latest_only_quarantine_heals_healthy(mock_scene):
         "entries": ["a", "b"],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     with open(_latest_path(mock_scene), "w") as f:
         f.write("not json")
@@ -618,7 +617,7 @@ async def test_latest_only_quarantine_heals_healthy(mock_scene):
         "entries": ["a", "b", "c"],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 2
+    assert await persist_test_mutation(mock_scene) == 2
 
     reconstructed = await reconstruct_scene_data(mock_scene)
     assert reconstructed["entries"] == ["a", "b", "c"]
@@ -634,7 +633,7 @@ async def test_reconstruct_raises_on_corrupted_changelog_log(mock_scene):
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     _, log_path = _get_latest_changelog_file(mock_scene)
     with open(log_path, "w") as f:
@@ -645,7 +644,7 @@ async def test_reconstruct_raises_on_corrupted_changelog_log(mock_scene):
     with pytest.raises(ChangelogCorruptedError):
         list_revisions(mock_scene)
     with pytest.raises(ChangelogCorruptedError):
-        await append_scene_delta(mock_scene, {"action": "retry"})
+        await persist_test_mutation(mock_scene, {"action": "retry"})
 
 
 def test_load_latest_scene_data_corrupted_returns_none(mock_scene):
@@ -666,7 +665,7 @@ async def test_get_overall_latest_revision_non_strict_skips_corrupted(mock_scene
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     _, log_path = _get_latest_changelog_file(mock_scene)
     with open(log_path, "w") as f:
@@ -780,7 +779,7 @@ async def test_ensure_latest_initialized_heals_from_reconstruction(mock_scene):
         "entries": ["one"],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     os.remove(_latest_path(mock_scene))
     await _ensure_latest_initialized(mock_scene)
@@ -873,20 +872,20 @@ async def test_save_changelog_existing_scene(mock_scene):
 
 
 @pytest.mark.asyncio
-async def test_append_scene_delta_no_change(mock_scene):
+async def test_in_memory_changelog_unchanged_state_writes_no_delta(mock_scene):
     """Test appending delta when scene hasn't changed."""
     # Initialize scene
     await save_changelog(mock_scene)
 
     # Try to append delta with same data
-    result = await append_scene_delta(mock_scene, {"action": "test"})
+    result = await persist_test_mutation(mock_scene, {"action": "test"})
 
     # Should return None (no change)
     assert result is None
 
 
 @pytest.mark.asyncio
-async def test_append_scene_delta_with_change(mock_scene):
+async def test_in_memory_changelog_persists_delta(mock_scene):
     """Test appending delta when scene has changed."""
     # Initialize scene
     await save_changelog(mock_scene)
@@ -898,7 +897,7 @@ async def test_append_scene_delta_with_change(mock_scene):
         "metadata": {"version": "1.0"},
     }
 
-    result = await append_scene_delta(mock_scene, {"action": "add_character"})
+    result = await persist_test_mutation(mock_scene, {"action": "add_character"})
 
     # Should return revision 1
     assert result == 1
@@ -935,7 +934,7 @@ def test_delta_reproduces_state_ignores_excluded_paths():
 
 
 @pytest.mark.asyncio
-async def test_append_scene_delta_verification_failure_skips_write(
+async def test_in_memory_changelog_verification_failure_skips_write(
     mock_scene, monkeypatch
 ):
     """A delta that does not reproduce the scene state must not be written.
@@ -957,7 +956,7 @@ async def test_append_scene_delta_verification_failure_skips_write(
     }
 
     with capture_logs() as logs:
-        result = await append_scene_delta(mock_scene, {"action": "add_character"})
+        result = await persist_test_mutation(mock_scene, {"action": "add_character"})
 
     assert result is None
     assert any(
@@ -1140,7 +1139,7 @@ async def test_check_chain_divergence_healthy(mock_scene):
         "entries": ["one"],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     assert await check_chain_divergence(mock_scene) == []
 
@@ -1156,7 +1155,7 @@ async def test_check_chain_divergence_masks_excluded_paths(mock_scene):
         "metadata": {"version": "1.0"},
         "world_state": {"characters": {"Alice": {"emotion": "calm"}}},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     # excluded subtrees are never captured by deltas, so the latest snapshot
     # legitimately carries newer values than reconstruction can produce
@@ -1179,7 +1178,7 @@ async def test_check_chain_divergence_detects_divergence(mock_scene):
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     # simulate chain/latest drift: a tracked value the deltas never recorded
     with open(_latest_path(mock_scene)) as f:
@@ -1203,7 +1202,7 @@ async def test_check_chain_divergence_caches_result(mock_scene, monkeypatch):
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
     assert await check_chain_divergence(mock_scene) == []
 
     async def _boom(*args, **kwargs):
@@ -1223,7 +1222,7 @@ async def test_rollback_refused_on_diverged_chain(mock_scene):
         "entries": [],
         "metadata": {"version": "1.0"},
     }
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     with open(_latest_path(mock_scene)) as f:
         latest = json.load(f)
@@ -1324,7 +1323,7 @@ async def test_rollback_scene_to_revision_no_backup(mock_scene):
 
 
 @pytest.mark.asyncio
-async def test_append_scene_delta_with_exclusions(mock_scene):
+async def test_changelog_excludes_volatile_fields(mock_scene):
     """Test that paths in EXCLUDE_FROM_DELTAS are not included in deltas."""
     # Initialize scene
     await save_changelog(mock_scene)
@@ -1338,7 +1337,7 @@ async def test_append_scene_delta_with_exclusions(mock_scene):
     }
 
     # Append delta (exclusions happen automatically)
-    rev = await append_scene_delta(mock_scene, {"action": "test"})
+    rev = await persist_test_mutation(mock_scene, {"action": "test"})
 
     # Should create a revision since characters changed
     assert rev == 1
@@ -1370,7 +1369,7 @@ async def test_append_scene_delta_with_exclusions(mock_scene):
 
 
 @pytest.mark.asyncio
-async def test_append_scene_delta_with_regex_exclusions(mock_scene):
+async def test_changelog_excludes_regex_fields(mock_scene):
     """Test that regex patterns in EXCLUDE_FROM_DELTAS_REGEX work correctly."""
     # Initialize scene with world_state containing reinforce array
     mock_scene.serialize = {
@@ -1401,7 +1400,7 @@ async def test_append_scene_delta_with_regex_exclusions(mock_scene):
         },
     }
 
-    rev = await append_scene_delta(mock_scene, {"action": "test_regex"})
+    rev = await persist_test_mutation(mock_scene, {"action": "test_regex"})
 
     # Should create revision for both character and due field changes
     assert rev == 1
@@ -1442,7 +1441,7 @@ async def test_full_workflow(mock_scene):
 
     # First change
     mock_scene.serialize = {"characters": [{"name": "Alice"}], "version": "1.0"}
-    rev1 = await append_scene_delta(mock_scene, {"action": "add_alice"})
+    rev1 = await persist_test_mutation(mock_scene, {"action": "add_alice"})
     assert rev1 == 1
 
     # Second change
@@ -1450,7 +1449,7 @@ async def test_full_workflow(mock_scene):
         "characters": [{"name": "Alice"}, {"name": "Bob"}],
         "version": "1.0",
     }
-    rev2 = await append_scene_delta(mock_scene, {"action": "add_bob"})
+    rev2 = await persist_test_mutation(mock_scene, {"action": "add_bob"})
     assert rev2 == 2
 
     # List revisions
@@ -1582,7 +1581,7 @@ def test_get_file_size_missing(temp_dir):
 
 
 @pytest.mark.asyncio
-async def test_append_scene_delta_creates_new_file_when_size_exceeded(mock_scene):
+async def test_in_memory_commit_creates_new_file_when_size_exceeded(mock_scene):
     """Test that a new changelog file is created when size limit is exceeded."""
     # Initialize scene
     await save_changelog(mock_scene)
@@ -1609,7 +1608,7 @@ async def test_append_scene_delta_creates_new_file_when_size_exceeded(mock_scene
         }
 
         # This should create a new file because current file "exceeds" size limit
-        rev = await append_scene_delta(mock_scene, {"action": "test"})
+        rev = await persist_test_mutation(mock_scene, {"action": "test"})
         assert rev == 1
 
         # Should have created a new file starting at revision 1
@@ -1848,7 +1847,7 @@ async def test_in_memory_changelog_integration_with_existing_revisions(mock_scen
     await save_changelog(mock_scene)
 
     mock_scene.serialize = {"characters": [{"name": "Existing"}], "entries": []}
-    await append_scene_delta(mock_scene, {"action": "existing_change"})
+    await persist_test_mutation(mock_scene, {"action": "existing_change"})
 
     # Verify we have revision 1 and update mock_scene.rev to match
     assert _get_overall_latest_revision(mock_scene) == 1
@@ -1888,7 +1887,7 @@ async def test_in_memory_changelog_baselines_on_committed_snapshot(mock_scene):
 
     items = [{"id": idx} for idx in range(1, 4)]
     mock_scene.serialize = {"history": list(items)}
-    await append_scene_delta(mock_scene)
+    await persist_test_mutation(mock_scene)
     mock_scene.rev = 1
 
     # mutate the scene BEFORE the in-memory changelog is entered
@@ -2546,7 +2545,7 @@ async def test_list_reorder_delta_replays_from_disk(mock_scene):
     reordered = {"entries": ["c", "d", "e", "a", "b"], "metadata": {}}
     mock_scene.serialize = reordered
 
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
     assert await reconstruct_scene_data(mock_scene, to_rev=1) == reordered
     assert await check_chain_divergence(mock_scene) == []
 
@@ -2566,11 +2565,11 @@ async def test_apostrophe_key_delta_replays_from_disk(mock_scene):
 
     appended = {"characters": {"O'Brien": {"tags": ["stern", "tired"]}}}
     mock_scene.serialize = appended
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     changed = {"characters": {"O'Brien": {"tags": ["stern", "weary"]}}}
     mock_scene.serialize = changed
-    assert await append_scene_delta(mock_scene) == 2
+    assert await persist_test_mutation(mock_scene) == 2
 
     assert await reconstruct_scene_data(mock_scene, to_rev=1) == appended
     assert await reconstruct_scene_data(mock_scene, to_rev=2) == changed
@@ -2691,34 +2690,6 @@ async def test_check_chain_divergence_detects_masked_reorder_loss(mock_scene):
     assert divergent and "rev 2" in divergent[0]
 
 
-@pytest.mark.asyncio
-async def test_append_skips_delta_on_broken_chain(mock_scene):
-    """No honest baseline, no append: the chain is left intact for repair."""
-    os.makedirs(mock_scene.changelog_dir, exist_ok=True)
-    with open(_base_path(mock_scene), "w") as f:
-        json.dump({"history": [], "x": 0}, f)
-    _write_segment(
-        mock_scene,
-        0,
-        [
-            {
-                "rev": 1,
-                "ts": 1,
-                "delta": {"iterable_item_added": {"root['history'][9]": {"id": 1}}},
-                "meta": {},
-            }
-        ],
-        1,
-    )
-    # no latest snapshot: the append path must heal it from the chain, and
-    # strict replay refuses
-    mock_scene.serialize = {"history": [], "x": 1}
-
-    assert await append_scene_delta(mock_scene) is None
-    assert list_revisions(mock_scene) == [1]
-    assert not os.path.exists(_latest_path(mock_scene))
-
-
 # --- Rebase repair (issue #295) -------------------------------------------
 
 
@@ -2800,7 +2771,7 @@ async def test_rebase_diverged_chain(mock_scene):
 
     # appends continue from revision 1 against the rebased state
     mock_scene.serialize = {"history": [_full_message(0)], "x": 3}
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
     assert await check_chain_divergence(mock_scene) == []
 
 
@@ -2808,7 +2779,7 @@ async def test_rebase_diverged_chain(mock_scene):
 async def test_rebase_refuses_healthy_chain(mock_scene):
     await save_changelog(mock_scene)
     mock_scene.serialize = {"characters": [], "entries": ["a"], "metadata": {}}
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
 
     with pytest.raises(ValueError, match="healthy"):
         await rebase_changelog_chain(mock_scene)
@@ -2991,7 +2962,7 @@ async def test_rebase_refusal_leaves_staged_deltas_uncommitted(mock_scene):
     """A refused repair must not commit the work auto-save was holding back."""
     await save_changelog(mock_scene)
     mock_scene.serialize = {"characters": [], "entries": ["a"], "metadata": {}}
-    assert await append_scene_delta(mock_scene) == 1
+    assert await persist_test_mutation(mock_scene) == 1
     mock_scene.rev = 1
 
     async with InMemoryChangelog(mock_scene) as changelog:
@@ -3055,14 +3026,14 @@ async def test_rebase_flush_failure_restores_staged_deltas(mock_scene, monkeypat
         assert await changelog.append_delta({"action": "staged"}) == 3
 
         before = _changelog_dir_contents(mock_scene)
-        real_write = changelog_mod._write_json_strict
+        real_write = changelog_mod._write_json
 
         def failing_write(path, data, cls=None):
             if ".changelog." in os.path.basename(path):
                 raise OSError("no space left on device")
             return real_write(path, data, cls=cls)
 
-        monkeypatch.setattr(changelog_mod, "_write_json_strict", failing_write)
+        monkeypatch.setattr(changelog_mod, "_write_json", failing_write)
 
         with pytest.raises(OSError, match="no space left"):
             await rebase_changelog_chain(mock_scene)
@@ -3096,14 +3067,14 @@ async def test_rebase_failure_after_flush_restores_staged_deltas(
 
         before = _changelog_dir_contents(mock_scene)
         marker_path = _rebase_marker_path(mock_scene)
-        real_write = changelog_mod._write_json_strict
+        real_write = changelog_mod._write_json
 
         def failing_write(path, data, cls=None):
             if path == marker_path:
                 raise OSError("no space left on device")
             return real_write(path, data, cls=cls)
 
-        monkeypatch.setattr(changelog_mod, "_write_json_strict", failing_write)
+        monkeypatch.setattr(changelog_mod, "_write_json", failing_write)
 
         with pytest.raises(OSError, match="no space left"):
             await rebase_changelog_chain(mock_scene)

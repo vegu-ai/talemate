@@ -15,6 +15,14 @@ from __future__ import annotations
 
 import os
 
+from talemate.changelog import (
+    InMemoryChangelog,
+    _base_path,
+    _ensure_latest_initialized,
+    _get_overall_latest_revision,
+    _latest_path,
+    save_changelog,
+)
 from talemate.tale_mate import Scene
 
 
@@ -78,3 +86,22 @@ def make_changelog_scene(
     )
     os.makedirs(tmp_dir, exist_ok=True)
     return scene
+
+
+async def persist_test_mutation(scene: ChangelogScene, meta: dict | None = None):
+    if not os.path.exists(_base_path(scene)):
+        await save_changelog(scene)
+    elif not os.path.exists(_latest_path(scene)):
+        await _ensure_latest_initialized(scene)
+    scene.rev = max(scene.rev, _get_overall_latest_revision(scene))
+
+    previous_changelog = scene._changelog
+    async with InMemoryChangelog(scene) as changelog:
+        scene._changelog = changelog
+        try:
+            rev = await changelog.append_delta(meta)
+            if rev is not None:
+                await changelog.commit()
+            return rev
+        finally:
+            scene._changelog = previous_changelog

@@ -22,7 +22,7 @@ import pytest
 
 import talemate.agents.tts.voice_library as voice_library
 import talemate.instance as instance
-from _changelog_test_helpers import make_changelog_scene
+from _changelog_test_helpers import persist_test_mutation, make_changelog_scene
 from conftest import MockScene, bootstrap_scene
 from talemate.changelog import (
     InMemoryChangelog,
@@ -30,7 +30,6 @@ from talemate.changelog import (
     _compute_delta,
     _latest_path,
     _load_latest_scene_data,
-    append_scene_delta,
     fork_scene_at_revision,
     reconstruct_cleanup,
     reconstruct_scene_data,
@@ -528,7 +527,7 @@ async def test_delta_written_after_migration_reconstructs(changelog_scene):
     scene_data["ts"] = 3 * MONTH + 25 * HOUR + DAY
     changelog_scene.serialize = scene_data
 
-    assert await append_scene_delta(changelog_scene, {"action": "time_passage"}) == 2
+    assert await persist_test_mutation(changelog_scene, {"action": "time_passage"}) == 2
 
     latest = await reconstruct_scene_data(changelog_scene)
     assert latest["ts"] == 3 * MONTH + 25 * HOUR + DAY

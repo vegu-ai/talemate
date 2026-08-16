@@ -19,11 +19,10 @@ import tempfile
 
 import pytest
 
-from _changelog_test_helpers import make_changelog_scene
+from _changelog_test_helpers import persist_test_mutation, make_changelog_scene
 from talemate.changelog import (
     _get_latest_changelog_file,
     _latest_path,
-    append_scene_delta,
     check_chain_divergence,
     fork_scene_at_revision,
     reconstruct_scene_data,
@@ -90,7 +89,7 @@ async def test_long_lived_world_state_tracked_in_deltas(temp_dir):
         reinforce=[{"id": 1, "question": "q", "answer": "a"}],
         name_mappings={"alice": ["al"]},
     )
-    rev = await append_scene_delta(scene, {"action": "ws_change"})
+    rev = await persist_test_mutation(scene, {"action": "ws_change"})
     assert rev == 1
 
     _, log_path = _get_latest_changelog_file(scene)
@@ -110,13 +109,13 @@ async def test_long_lived_world_state_reconstructs_per_revision(temp_dir):
     await save_changelog(scene)
 
     scene.serialize = _serialize(pins={"pin-1": {"text": "v1", "active": True}})
-    assert await append_scene_delta(scene) == 1
+    assert await persist_test_mutation(scene) == 1
 
     scene.serialize = _serialize(
         pins={"pin-1": {"text": "v2", "active": True}},
         reinforce=[{"id": 1, "question": "q", "answer": "a"}],
     )
-    assert await append_scene_delta(scene) == 2
+    assert await persist_test_mutation(scene) == 2
 
     rev2 = await reconstruct_scene_data(scene, to_rev=2)
     assert rev2["world_state"]["pins"] == {"pin-1": {"text": "v2", "active": True}}
@@ -153,7 +152,7 @@ async def test_derived_world_state_overlaid_from_latest_snapshot(temp_dir):
         location="loc1",
         intro="intro v1",
     )
-    assert await append_scene_delta(scene) == 1
+    assert await persist_test_mutation(scene) == 1
 
     _, log_path = _get_latest_changelog_file(scene)
     with open(log_path) as f:
@@ -203,7 +202,7 @@ async def test_legacy_chain_does_not_report_divergence(temp_dir):
 
     # rev 1 records a tracked change only (as a pre-tracking chain would)
     scene.serialize = _serialize(intro="intro v1")
-    assert await append_scene_delta(scene) == 1
+    assert await persist_test_mutation(scene) == 1
 
     # pins change without entering the chain: rewrite the latest snapshot
     with open(_latest_path(scene)) as f:
@@ -252,7 +251,7 @@ async def test_mixed_legacy_chain_reconstructs_full_subtrees(temp_dir):
             "new": {"text": "fresh", "active": True},
         }
     )
-    assert await append_scene_delta(scene) == 1
+    assert await persist_test_mutation(scene) == 1
 
     # the delta carries the full subtree, not just the increment
     _, log_path = _get_latest_changelog_file(scene)
@@ -302,7 +301,7 @@ async def test_partially_upgraded_legacy_chain_records_all_subtrees(temp_dir):
         reinforce=[{"id": 1, "question": "legacy q", "answer": "legacy a"}],
         name_mappings={"alice": ["al"]},
     )
-    assert await append_scene_delta(scene) == 1
+    assert await persist_test_mutation(scene) == 1
 
     _, log_path = _get_latest_changelog_file(scene)
     with open(log_path) as f:
@@ -338,7 +337,7 @@ async def test_divergence_detected_once_chain_records_world_state(temp_dir):
     await save_changelog(scene)
 
     scene.serialize = _serialize(pins={"pin-1": {"text": "v1", "active": True}})
-    assert await append_scene_delta(scene) == 1
+    assert await persist_test_mutation(scene) == 1
     assert await check_chain_divergence(scene) == []
 
     with open(_latest_path(scene)) as f:
@@ -373,13 +372,13 @@ async def test_fork_carries_rev_n_long_lived_and_current_derived_state(temp_dir)
         characters={"Alice": {"snapshot": "s0"}},
         pins={"pin-1": {"text": "v1", "active": True}},
     )
-    assert await append_scene_delta(scene) == 1
+    assert await persist_test_mutation(scene) == 1
 
     scene.serialize = _serialize(
         characters={"Alice": {"snapshot": "s2"}},
         pins={"pin-1": {"text": "v2", "active": True}},
     )
-    assert await append_scene_delta(scene) == 2
+    assert await persist_test_mutation(scene) == 2
 
     fork_path = await fork_scene_at_revision(scene, 1, "fork-scene")
     with open(fork_path) as f:

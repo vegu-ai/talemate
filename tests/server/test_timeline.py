@@ -19,11 +19,8 @@ import os
 
 import pytest
 
-from _changelog_test_helpers import make_changelog_scene
-from talemate.changelog import (
-    append_scene_delta,
-    save_changelog,
-)
+from _changelog_test_helpers import persist_test_mutation, make_changelog_scene
+from talemate.changelog import save_changelog
 from talemate.scene_message import NarratorMessage
 from talemate.server.timeline import TimelinePlugin
 
@@ -77,7 +74,7 @@ async def scene(temp_dir):
             "history": [_message(idx) for idx in range(1, rev + 1)],
             "intro": "Once upon a time",
         }
-        assert await append_scene_delta(scene) == rev
+        assert await persist_test_mutation(scene) == rev
 
     scene.rev = 3
 

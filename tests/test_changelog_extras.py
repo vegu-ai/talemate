@@ -21,7 +21,12 @@ from unittest import mock
 
 import pytest
 
-from _changelog_test_helpers import ChangelogScene, make_changelog_scene
+from _changelog_test_helpers import (
+    ChangelogScene,
+    make_changelog_scene,
+    persist_test_mutation,
+)
+from talemate import changelog as changelog_mod
 from talemate.agents.creator.assistant import AssistantMixin
 from talemate.changelog import (
     ForkTargetMissingError,
@@ -31,7 +36,6 @@ from talemate.changelog import (
     _changelog_log_path,
     _latest_path,
     _SceneRef,
-    append_scene_delta,
     delete_changelog_files,
     ensure_changelogs_for_all_scenes,
     fork_scene_at_revision,
@@ -177,7 +181,7 @@ class TestDeleteChangelogFiles:
         await save_changelog(mock_scene)
         # Modify and append to create a delta file
         mock_scene.serialize = {"history": [], "characters": [{"name": "A"}]}
-        await append_scene_delta(mock_scene, {})
+        await persist_test_mutation(mock_scene, {})
 
         # Sanity: base, latest, and a segment all exist
         assert os.path.exists(_base_path(mock_scene))
@@ -380,7 +384,7 @@ class TestReconstructionEdgeCases:
     async def test_reconstruct_with_to_rev_none_uses_overall_latest(self, mock_scene):
         await save_changelog(mock_scene)
         mock_scene.serialize = {"history": [], "characters": [{"name": "A"}]}
-        await append_scene_delta(mock_scene, {})
+        await persist_test_mutation(mock_scene, {})
 
         # to_rev=None → should reconstruct at overall latest revision
         result = await reconstruct_scene_data(mock_scene, to_rev=None)
@@ -394,14 +398,14 @@ class TestReconstructionEdgeCases:
         await save_changelog(mock_scene)
 
         mock_scene.serialize = {"history": [], "characters": [{"name": "A"}]}
-        rev1 = await append_scene_delta(mock_scene, {})
+        rev1 = await persist_test_mutation(mock_scene, {})
         assert rev1 == 1
 
         mock_scene.serialize = {
             "history": [],
             "characters": [{"name": "A"}, {"name": "B"}],
         }
-        rev2 = await append_scene_delta(mock_scene, {})
+        rev2 = await persist_test_mutation(mock_scene, {})
         assert rev2 == 2
 
         # Reconstruct at rev=1 — only A should be present.
@@ -412,7 +416,7 @@ class TestReconstructionEdgeCases:
     async def test_reconstruct_returns_base_when_to_rev_zero(self, mock_scene):
         await save_changelog(mock_scene)
         mock_scene.serialize = {"history": [], "characters": [{"name": "A"}]}
-        await append_scene_delta(mock_scene, {})
+        await persist_test_mutation(mock_scene, {})
 
         result = await reconstruct_scene_data(mock_scene, to_rev=0)
         # No deltas applied → base data only
@@ -792,6 +796,225 @@ class TestAppendDeltaRevStampRobustness:
             data = json.load(f)
         assert data["history"][0]["rev"] == 1
         assert data["history"][0]["id"] == msg.id
+
+
+def _changelog_artifacts(scene) -> dict[str, bytes]:
+    if not os.path.isdir(scene.changelog_dir):
+        return {}
+    artifacts = {}
+    for name in os.listdir(scene.changelog_dir):
+        path = os.path.join(scene.changelog_dir, name)
+        if os.path.isfile(path):
+            with open(path, "rb") as f:
+                artifacts[name] = f.read()
+    return artifacts
+
+
+class TestCommitTransaction:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("failure_target", ["segment", "latest"])
+    async def test_failed_commit_restores_disk_and_retries_once(
+        self, temp_dir, monkeypatch, failure_target
+    ):
+        scene = _history_scene(temp_dir)
+        await save_changelog(scene)
+        before = _changelog_artifacts(scene)
+        message = SceneMessage(message="hello")
+        scene.history.append(message)
+        emitted = []
+
+        def capture(emission, **kwargs):
+            emitted.append(emission)
+
+        handlers["message_revs"].connect(capture)
+        try:
+            async with InMemoryChangelog(scene) as changelog:
+                assert await changelog.append_delta() == 1
+                real_write = changelog_mod._write_json
+                failed = []
+
+                def failing_write(path, data, cls=None):
+                    is_target = (
+                        ".changelog." in os.path.basename(path)
+                        if failure_target == "segment"
+                        else path == _latest_path(scene)
+                    )
+                    if is_target and not failed:
+                        failed.append(path)
+                        raise OSError(f"simulated {failure_target} failure")
+                    return real_write(path, data, cls=cls)
+
+                monkeypatch.setattr(changelog_mod, "_write_json", failing_write)
+                with pytest.raises(OSError, match=f"simulated {failure_target}"):
+                    await changelog.commit()
+
+                assert _changelog_artifacts(scene) == before
+                assert changelog.pending_count == 1
+                assert scene.rev == 0
+                assert message.rev == 1
+                assert emitted == []
+
+                monkeypatch.setattr(changelog_mod, "_write_json", real_write)
+                assert await changelog.commit() == [1]
+
+                assert changelog.pending_count == 0
+                assert scene.rev == 1
+        finally:
+            handlers["message_revs"].disconnect(capture)
+
+        assert [entry["rev"] for entry in list_revision_entries(scene)] == [1]
+        assert len(emitted) == 1
+
+    @pytest.mark.asyncio
+    async def test_failed_base_initialization_leaves_no_artifacts(
+        self, temp_dir, monkeypatch
+    ):
+        scene = _history_scene(temp_dir)
+        message = SceneMessage(message="hello")
+
+        async with InMemoryChangelog(scene) as changelog:
+            scene._changelog = changelog
+            scene.history.append(message)
+            assert await changelog.append_delta() == 1
+            real_write = changelog_mod._write_json
+
+            def failing_write(path, data, cls=None):
+                if path == _base_path(scene):
+                    raise OSError("simulated base failure")
+                return real_write(path, data, cls=cls)
+
+            monkeypatch.setattr(changelog_mod, "_write_json", failing_write)
+            with pytest.raises(OSError, match="simulated base failure"):
+                await changelog.commit()
+
+            assert _changelog_artifacts(scene) == {}
+            assert changelog.pending_count == 1
+            assert scene.rev == 0
+            assert message.rev == 1
+
+    @pytest.mark.asyncio
+    async def test_failed_split_segment_removes_new_file(self, temp_dir, monkeypatch):
+        scene = _history_scene(temp_dir)
+        await save_changelog(scene)
+        async with InMemoryChangelog(scene) as changelog:
+            scene.history.append(SceneMessage(message="one"))
+            assert await changelog.append_delta() == 1
+            assert await changelog.commit() == [1]
+
+            scene.history.append(SceneMessage(message="two"))
+            assert await changelog.append_delta() == 2
+            before = _changelog_artifacts(scene)
+            real_write = changelog_mod._write_json
+            split_calls = []
+
+            def failing_write(path, data, cls=None):
+                if path.endswith(".changelog.2.json"):
+                    split_calls.append(path)
+                    if len(split_calls) == 2:
+                        raise OSError("simulated split failure")
+                return real_write(path, data, cls=cls)
+
+            monkeypatch.setattr(changelog_mod, "MAX_CHANGELOG_FILE_SIZE", 1)
+            monkeypatch.setattr(changelog_mod, "_write_json", failing_write)
+            with pytest.raises(OSError, match="simulated split failure"):
+                await changelog.commit()
+
+            assert _changelog_artifacts(scene) == before
+            assert changelog.pending_count == 1
+            assert scene.rev == 1
+
+            monkeypatch.setattr(changelog_mod, "_write_json", real_write)
+            assert await changelog.commit() == [2]
+
+        assert [entry["rev"] for entry in list_revision_entries(scene)] == [2, 1]
+
+    @pytest.mark.asyncio
+    async def test_failed_replace_restores_existing_segment_bytes(
+        self, temp_dir, monkeypatch
+    ):
+        scene = _history_scene(temp_dir)
+        await save_changelog(scene)
+
+        async with InMemoryChangelog(scene) as changelog:
+            scene.history.append(SceneMessage(message="one"))
+            assert await changelog.append_delta() == 1
+            assert await changelog.commit() == [1]
+
+            scene.history.append(SceneMessage(message="two"))
+            assert await changelog.append_delta() == 2
+            before = _changelog_artifacts(scene)
+            log_path = _changelog_log_path(scene, 0)
+            latest_path = _latest_path(scene)
+            real_replace = changelog_mod.os.replace
+            failed = []
+            rollback_replacements = []
+
+            def failing_replace(src, dst):
+                if ".rollback.tmp." in os.fspath(src):
+                    rollback_replacements.append(os.fspath(dst))
+                if os.fspath(dst) == latest_path and not failed:
+                    failed.append(os.fspath(dst))
+                    raise OSError("simulated atomic replace failure")
+                return real_replace(src, dst)
+
+            monkeypatch.setattr(changelog_mod.os, "replace", failing_replace)
+            with pytest.raises(OSError, match="simulated atomic replace failure"):
+                await changelog.commit()
+
+            assert _changelog_artifacts(scene) == before
+            assert rollback_replacements == [log_path]
+            assert changelog.pending_count == 1
+            assert scene.rev == 1
+
+            monkeypatch.setattr(changelog_mod.os, "replace", real_replace)
+            assert await changelog.commit() == [2]
+
+        assert [entry["rev"] for entry in list_revision_entries(scene)] == [2, 1]
+
+    @pytest.mark.asyncio
+    async def test_failed_rollback_poisoned_instance_cannot_duplicate_revision(
+        self, temp_dir, monkeypatch
+    ):
+        scene = _history_scene(temp_dir)
+        await save_changelog(scene)
+        log_path = _changelog_log_path(scene, 0)
+
+        async with InMemoryChangelog(scene) as changelog:
+            scene.history.append(SceneMessage(message="one"))
+            assert await changelog.append_delta() == 1
+            real_write = changelog_mod._write_json
+            real_remove = changelog_mod.os.remove
+
+            def failing_write(path, data, cls=None):
+                if path == _latest_path(scene):
+                    raise OSError("simulated latest failure")
+                return real_write(path, data, cls=cls)
+
+            def failing_remove(path):
+                if os.fspath(path) == log_path:
+                    raise PermissionError("simulated rollback failure")
+                return real_remove(path)
+
+            monkeypatch.setattr(changelog_mod, "_write_json", failing_write)
+            monkeypatch.setattr(changelog_mod.os, "remove", failing_remove)
+            with pytest.raises(
+                ExceptionGroup,
+                match="Changelog commit failed and its rollback also failed",
+            ):
+                await changelog.commit()
+
+            monkeypatch.setattr(changelog_mod, "_write_json", real_write)
+            monkeypatch.setattr(changelog_mod.os, "remove", real_remove)
+            assert [entry["rev"] for entry in list_revision_entries(scene)] == [1]
+            assert changelog.pending_count == 1
+            assert scene.rev == 0
+
+            with pytest.raises(RuntimeError, match="reload the scene"):
+                await changelog.commit()
+            with pytest.raises(RuntimeError, match="reload the scene"):
+                await changelog.append_delta()
+
+        assert [entry["rev"] for entry in list_revision_entries(scene)] == [1]
 
 
 # ---------------------------------------------------------------------------

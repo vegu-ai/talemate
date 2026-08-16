@@ -245,7 +245,10 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
 
                         temp_name = f"{scene.filename.replace('.json', '')}-{str(uuid.uuid4())[:10]}.json"
                         temp_path = await write_reconstructed_scene(
-                            scene, to_rev=rev, output_filename=temp_name
+                            scene,
+                            to_rev=rev,
+                            output_filename=temp_name,
+                            zero_message_revs=True,
                         )
                         scene = self.init_scene()
                         scene.active = True

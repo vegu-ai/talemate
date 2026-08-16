@@ -61,6 +61,14 @@ def reset_message_id():
     _message_id = 0
 
 
+def advance_message_id(value: int):
+    """Raise the id counter floor so future messages cannot collide with a
+    preserved id (e.g. one loaded from a scene file)."""
+    global _message_id
+    if _message_id < value:
+        _message_id = value
+
+
 class Flags(enum.IntFlag):
     """
     Flags for messages

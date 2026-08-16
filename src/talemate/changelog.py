@@ -979,6 +979,8 @@ async def write_reconstructed_scene(
     to_rev: int,
     output_filename: str | None = None,
     overrides: dict | None = None,
+    precomputed_data: dict | None = None,
+    zero_message_revs: bool = False,
 ) -> str:
     """
     Write a reconstructed scene at a specific revision to a file.
@@ -991,11 +993,24 @@ async def write_reconstructed_scene(
         to_rev: The revision number to reconstruct
         output_filename: Custom filename, or None to auto-generate
         overrides: Optional overrides to apply to the reconstructed scene
+        precomputed_data: Already-reconstructed scene data; skips the
+            reconstruction entirely (to_rev then only names the output file)
+        zero_message_revs: Zero all history message revs in the written file —
+            for outputs that become a new scene with its own chain, where the
+            source chain's revs are meaningless
 
     Returns:
         str: Path to the written file
     """
-    reconstructed = await reconstruct_scene_data(scene, to_rev=to_rev)
+    reconstructed = (
+        precomputed_data
+        if precomputed_data is not None
+        else await reconstruct_scene_data(scene, to_rev=to_rev)
+    )
+
+    if zero_message_revs:
+        for entry in reconstructed.get("history", []):
+            entry["rev"] = 0
 
     if overrides:
         reconstructed.update(overrides)
@@ -1380,7 +1395,16 @@ def quarantine_corrupted_changelog_files(scene: "Scene") -> list[str]:
     return quarantined
 
 
-async def fork_scene_at_revision(scene: "Scene", to_rev: int, save_name: str) -> str:
+class ForkTargetMissingError(ValueError):
+    """The reconstructed history does not contain the fork target message."""
+
+
+async def fork_scene_at_revision(
+    scene: "Scene",
+    to_rev: int,
+    save_name: str,
+    expect_message_id: int | None = None,
+) -> str:
     """
     Create a new scene file forked from the given revision.
 
@@ -1388,9 +1412,30 @@ async def fork_scene_at_revision(scene: "Scene", to_rev: int, save_name: str) ->
     scene's save directory, cleared for independent use (mutable, fresh
     memory id).
 
+    Message revs in the written fork are zeroed: a fork starts its own
+    changelog chain at rev 0, so revs naming revisions of the source scene's
+    chain would be meaningless in it.
+
+    Args:
+        scene: The scene object to fork
+        to_rev: The revision to reconstruct and fork from
+        save_name: Base name for the fork file
+        expect_message_id: When given, the reconstructed history must contain
+            a message with this id — raises ForkTargetMissingError otherwise,
+            so a stale or never-materialized rev cannot silently produce a
+            fork short of the message the user pointed at
+
     Returns:
         str: Path to the written fork file
+
+    Raises:
+        ForkTargetMissingError: expect_message_id not in the reconstructed
+            history, or to_rev beyond the chain's latest revision (a rev that
+            never materialized cannot reconstruct "at the message"). The
+            beyond-latest guard does not apply when the chain is unverifiable
+            (quarantined/corrupted) — that path already warns and proceeds.
     """
+    corrupted = False
     try:
         divergent = await check_chain_divergence(scene)
     except ChangelogCorruptedError as e:
@@ -1400,6 +1445,7 @@ async def fork_scene_at_revision(scene: "Scene", to_rev: int, save_name: str) ->
             detail=str(e),
         )
         divergent = None
+        corrupted = True
     if divergent:
         log.warning(
             "fork_from_diverged_chain",
@@ -1407,6 +1453,24 @@ async def fork_scene_at_revision(scene: "Scene", to_rev: int, save_name: str) ->
             paths=divergent[:20],
             detail="reconstruction may be missing or fabricating data",
         )
+
+    latest_rev = _get_overall_latest_revision(scene, strict=False)
+    if not corrupted and to_rev > latest_rev:
+        raise ForkTargetMissingError(
+            f"Revision {to_rev} does not exist (latest is {latest_rev})."
+        )
+
+    reconstructed = await reconstruct_scene_data(scene, to_rev=to_rev)
+
+    if expect_message_id is not None and not any(
+        entry.get("id") == expect_message_id
+        for entry in reconstructed.get("history", [])
+    ):
+        raise ForkTargetMissingError(
+            f"Reconstruction at rev {to_rev} does not contain message "
+            f"{expect_message_id}."
+        )
+
     return await write_reconstructed_scene(
         scene,
         to_rev,
@@ -1415,6 +1479,8 @@ async def fork_scene_at_revision(scene: "Scene", to_rev: int, save_name: str) ->
             "immutable_save": False,
             "memory_id": str(uuid.uuid4())[:10],
         },
+        precomputed_data=reconstructed,
+        zero_message_revs=True,
     )
 
 
@@ -1506,7 +1572,20 @@ class InMemoryChangelog:
         self.initial_state = (
             self.last_state.copy()
         )  # Keep initial state for base snapshots
+        self._backfill_message_revs()
         return self
+
+    def _backfill_message_revs(self):
+        # The scene file can lag the chain (a crash between commit and file
+        # write, or a scene saved before the file carried revs); the latest
+        # snapshot is the record of which revision a message entered at.
+        snapshot_revs = {
+            entry.get("id"): entry.get("rev")
+            for entry in (self.last_state or {}).get("history", [])
+        }
+        for message in self.scene.history:
+            if not message.rev and snapshot_revs.get(message.id):
+                message.rev = snapshot_revs[message.id]
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
@@ -1515,30 +1594,53 @@ class InMemoryChangelog:
         """
         Append a delta for the current scene state to the in-memory list.
 
+        History messages new to the chain are stamped with this delta's
+        revision before serialization, so the stamp is part of the delta; the
+        stamps are rolled back if the delta is not staged. Messages already
+        recorded in the chain without a rev keep ``rev == 0`` and fork
+        shallowly.
+
         Args:
             meta: Optional metadata to store with this revision
 
         Returns:
             int | None: The actual revision number this delta will have when committed, None if unchanged
         """
-        curr_data = _serialize_scene_plain(self.scene)
-        delta = _compute_delta(self.last_state, curr_data)
-
-        if not delta:
-            return None
-
-        if not _delta_reproduces_state(self.last_state, curr_data, delta):
-            # last_state is left unchanged so the next append retries from
-            # the same baseline instead of diverging the chain.
-            log.error(
-                "delta_verification_failed",
-                detail="computed delta does not reproduce the scene state; delta not staged",
-            )
-            return None
-
-        # Calculate the real revision number this delta will have when committed
-        # Use scene.rev as baseline (no file I/O needed)
         next_real_rev = self.scene.rev + len(self.pending_deltas) + 1
+
+        known_ids = {
+            entry.get("id") for entry in (self.last_state or {}).get("history", [])
+        }
+        stamped = [
+            message
+            for message in self.scene.history
+            if not message.rev and message.id not in known_ids
+        ]
+        for message in stamped:
+            message.rev = next_real_rev
+
+        try:
+            curr_data = _serialize_scene_plain(self.scene)
+            delta = _compute_delta(self.last_state, curr_data)
+            staged = bool(delta) and _delta_reproduces_state(
+                self.last_state, curr_data, delta
+            )
+        except Exception:
+            for message in stamped:
+                message.rev = 0
+            raise
+
+        if not staged:
+            for message in stamped:
+                message.rev = 0
+            if delta:
+                # last_state is left unchanged so the next append retries from
+                # the same baseline instead of diverging the chain.
+                log.error(
+                    "delta_verification_failed",
+                    detail="computed delta does not reproduce the scene state; delta not staged",
+                )
+            return None
 
         # Store the actual revision number that will be used when committing
         delta_entry = {
@@ -1556,6 +1658,7 @@ class InMemoryChangelog:
             next_real_rev=next_real_rev,
             total_pending=len(self.pending_deltas),
         )
+
         return next_real_rev
 
     async def commit(self) -> list[int]:
@@ -1622,6 +1725,23 @@ class InMemoryChangelog:
         # Update scene.rev to the highest committed revision
         if committed_revs:
             self.scene.rev = max(committed_revs)
+
+            # Revs are emitted only once they exist on disk: with auto_save
+            # off, appends stage deltas without committing, and the UI must
+            # not learn a rev that the committed chain cannot reconstruct.
+            committed_set = set(committed_revs)
+            stamped = [
+                m for m in self.scene.history if m.rev and m.rev in committed_set
+            ]
+            if stamped:
+                # lazy import: changelog sits below the emit stack
+                from talemate.emit import emit
+
+                emit(
+                    "message_revs",
+                    data={"revs": [{"id": m.id, "rev": m.rev} for m in stamped]},
+                    websocket_passthrough=True,
+                )
 
         log.debug("commit_in_memory_deltas", committed_revs=committed_revs)
         return committed_revs

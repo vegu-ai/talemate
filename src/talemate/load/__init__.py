@@ -25,6 +25,7 @@ from talemate.scene_message import (
     NarratorMessage,
     ReinforcementMessage,
     SceneMessage,
+    advance_message_id,
     reset_message_id,
 )
 from talemate.status import LoadingStatus, set_loading
@@ -887,6 +888,22 @@ def default_player_character() -> Player | None:
 
 
 def _load_history(history):
+    # Two passes: move the allocator past every persisted id first, so an
+    # entry without an id (legacy/corrupt file) cannot take a counter id that
+    # a later entry preserves.
+    max_persisted_id = max(
+        (
+            entry["id"]
+            for entry in history
+            if isinstance(entry, dict)
+            and isinstance(entry.get("id"), int)
+            and not isinstance(entry.get("id"), bool)
+        ),
+        default=0,
+    )
+    if max_persisted_id:
+        advance_message_id(max_persisted_id)
+
     _history = []
 
     for text in history:
@@ -901,7 +918,14 @@ def _load_history(history):
 
 def _prepare_history(entry):
     typ = entry.pop("typ", "scene_message")
-    entry.pop("id", None)
+    persisted_id = entry.pop("id", None)
+
+    # Message ids are message identity across save/load (the changelog chain
+    # refers to them), so a persisted id is kept and the allocator moved past
+    # it; anything else gets a fresh id from the counter.
+    if isinstance(persisted_id, int) and not isinstance(persisted_id, bool):
+        advance_message_id(persisted_id)
+        entry["id"] = persisted_id
 
     if entry.get("source") == "":
         entry.pop("source")

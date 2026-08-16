@@ -465,7 +465,7 @@ async def test_load_frame_exit_deactivates_its_scene_with_rev(wired, monkeypatch
         scene.filename = "a.json"
         return scene
 
-    async def fake_reconstruct(scene, to_rev, output_filename):
+    async def fake_reconstruct(scene, to_rev, output_filename, **kwargs):
         return "/tmp/nonexistent-rev.json"
 
     monkeypatch.setattr(Scene, "start", fake_start)

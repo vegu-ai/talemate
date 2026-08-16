@@ -38,7 +38,7 @@ from talemate.changelog import (
 )
 from talemate.load import load_scene_from_data
 from talemate.util.time import migrate_scene_time
-from talemate.scene_message import TimePassageMessage
+from talemate.scene_message import SceneMessage, TimePassageMessage
 from talemate.shared_context import SharedContext
 from talemate.tale_mate import Scene
 
@@ -295,6 +295,60 @@ async def test_load_scene_leaves_fixture_files_untouched(load_env):
     before = _digests(FIXTURE_DIR)
     await load_scene_from_data(load_env, _read_fixture(), name=SCENE_FILE)
     assert _digests(FIXTURE_DIR) == before
+
+
+# ---------------------------------------------------------------------------
+# Message id stability across save/load
+# ---------------------------------------------------------------------------
+
+
+def _fixture_with_gapped_ids() -> dict:
+    """Scene data whose persisted history ids have holes (deleted messages)."""
+    scene_data = _read_fixture()
+    for idx, entry in enumerate(scene_data["history"]):
+        entry["id"] = (idx + 1) * 10
+    return scene_data
+
+
+@pytest.mark.asyncio
+async def test_load_preserves_history_message_ids(load_env):
+    scene_data = _fixture_with_gapped_ids()
+    scene = await load_scene_from_data(load_env, scene_data, name=SCENE_FILE)
+
+    # Message ids are message identity for the changelog chain; a reload must
+    # not renumber them.
+    assert [m.id for m in scene.history] == [
+        (idx + 1) * 10 for idx in range(len(scene_data["history"]))
+    ]
+
+
+@pytest.mark.asyncio
+async def test_new_message_id_after_load_cannot_collide(load_env):
+    scene_data = _fixture_with_gapped_ids()
+    max_id = len(scene_data["history"]) * 10
+    await load_scene_from_data(load_env, scene_data, name=SCENE_FILE)
+
+    new_message = SceneMessage(message="brand new")
+    assert new_message.id > max_id
+
+
+@pytest.mark.asyncio
+async def test_load_mixed_id_entries_do_not_collide(load_env):
+    # A hand-edited or partially migrated file can mix id-bearing and idless
+    # entries: an idless entry must not take a counter id that a later entry
+    # preserves.
+    scene_data = _read_fixture()
+    history = scene_data["history"]
+    assert len(history) >= 3
+    for entry in history:
+        entry.pop("id", None)
+    history[-1]["id"] = 2
+
+    scene = await load_scene_from_data(load_env, scene_data, name=SCENE_FILE)
+
+    ids = [m.id for m in scene.history]
+    assert len(ids) == len(set(ids)), f"duplicate ids: {ids}"
+    assert 2 in ids
 
 
 # ---------------------------------------------------------------------------

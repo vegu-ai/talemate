@@ -619,6 +619,11 @@ class Scene(Emitter):
     async def push_history(self, messages: list[SceneMessage]):
         """
         Adds one or more messages to the scene history
+
+        Messages are not stamped with a revision here: ``message.rev`` must
+        name a revision of this scene's own changelog chain whose
+        reconstruction contains the message, so stamping happens in
+        ``InMemoryChangelog.append_delta`` when the revision actually exists.
         """
 
         if isinstance(messages, SceneMessage):
@@ -632,9 +637,6 @@ class Scene(Emitter):
         valid_messages = []
 
         for message in messages:
-            if not message.rev and self._changelog:
-                message.rev = self._changelog.next_revision
-
             if isinstance(message, DirectorMessage):
                 # Ignore empty director messages
                 if not message.message or not message.message.strip():
@@ -1913,6 +1915,15 @@ class Scene(Emitter):
         # Generate filename with date and normalized character name
         filepath = os.path.join(saves_dir, self.filename)
 
+        # Update the changelog before serializing: append_delta stamps new
+        # history messages with their revision, and the scene file must carry
+        # the same revs as the chain's latest snapshot.
+        if self._changelog:
+            await self._changelog.append_delta()
+            if self.shared_context:
+                await self.shared_context.commit_changes(self)
+            await self._changelog.commit()
+
         # Create a dictionary to store the scene data
         scene_data = self.serialize
 
@@ -1931,13 +1942,6 @@ class Scene(Emitter):
 
         # add this scene to recent scenes in config
         await self.add_to_recent_scenes()
-
-        # update changelog
-        if self._changelog:
-            await self._changelog.append_delta()
-            if self.shared_context:
-                await self.shared_context.commit_changes(self)
-            await self._changelog.commit()
 
     async def save_restore(self, filename: str):
         """

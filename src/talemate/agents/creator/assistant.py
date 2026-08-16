@@ -20,7 +20,7 @@ from talemate.world_state.templates import (
     Spices,
     WritingStyle,
 )
-from talemate.changelog import fork_scene_at_revision
+from talemate.changelog import ForkTargetMissingError, fork_scene_at_revision
 from talemate.save import SceneEncoder
 import os
 from talemate.agents.base import (
@@ -831,18 +831,27 @@ class AssistantMixin:
                 )
                 emit("status", "Creating reconstructive fork...", status="busy")
 
-                # Create fork file with reconstructed scene data (shared_context will be disconnected)
-                fork_file_path = await fork_scene_at_revision(
-                    self.scene, message.rev, save_name
-                )
-
-                log.info(
-                    "Reconstructive fork created",
-                    save_name=save_name,
-                    rev=message.rev,
-                    path=fork_file_path,
-                )
-            else:
+                try:
+                    # Create fork file with reconstructed scene data (shared_context will be disconnected)
+                    fork_file_path = await fork_scene_at_revision(
+                        self.scene, message.rev, save_name, expect_message_id=message_id
+                    )
+                except ForkTargetMissingError as e:
+                    log.warning(
+                        "Reconstructive fork target missing, falling back to shallow fork",
+                        message_id=message_id,
+                        rev=message.rev,
+                        detail=str(e),
+                    )
+                    use_reconstructive_fork = False
+                else:
+                    log.info(
+                        "Reconstructive fork created",
+                        save_name=save_name,
+                        rev=message.rev,
+                        path=fork_file_path,
+                    )
+            if not use_reconstructive_fork:
                 log.info("Creating shallow fork", message_id=message_id)
                 emit("status", "Creating shallow fork...", status="busy")
 
@@ -854,11 +863,14 @@ class AssistantMixin:
 
                 # Truncate history to the fork point
                 index = self.scene.message_index(message_id)
-                if index is None:
+                if index < 0:
                     raise ValueError(f"Message with id {message_id} not found.")
 
-                # Truncate history (keeping index as the last element)
-                scene_data["history"] = self.scene.history[: index + 1]
+                # zero revs on copies; the live scene's messages must not be mutated
+                scene_data["history"] = [
+                    msg.model_copy(update={"rev": 0})
+                    for msg in self.scene.history[: index + 1]
+                ]
 
                 # Truncate archived_history (keeping elements where 'end' < index)
                 scene_data["archived_history"] = [

@@ -17,11 +17,14 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
-from _changelog_test_helpers import make_changelog_scene
+from _changelog_test_helpers import ChangelogScene, make_changelog_scene
+from talemate.agents.creator.assistant import AssistantMixin
 from talemate.changelog import (
+    ForkTargetMissingError,
     InMemoryChangelog,
     _apply_delta,
     _base_path,
@@ -31,12 +34,15 @@ from talemate.changelog import (
     append_scene_delta,
     delete_changelog_files,
     ensure_changelogs_for_all_scenes,
+    fork_scene_at_revision,
     latest_revision_at,
     list_revision_entries,
     reconstruct_scene_data,
     save_changelog,
     write_reconstructed_scene,
 )
+from talemate.emit.signals import handlers
+from talemate.scene_message import SceneMessage
 
 
 # ---------------------------------------------------------------------------
@@ -411,3 +417,415 @@ class TestReconstructionEdgeCases:
         result = await reconstruct_scene_data(mock_scene, to_rev=0)
         # No deltas applied → base data only
         assert result["characters"] == []
+
+
+# ---------------------------------------------------------------------------
+# Append-time rev stamping (issue #297)
+# ---------------------------------------------------------------------------
+
+
+class _DynamicHistoryScene(ChangelogScene):
+    """``serialize`` derived live from ``history``, so rev stamps applied to
+    message objects flow into the delta that ``append_delta`` computes."""
+
+    @property
+    def serialize(self):  # type: ignore[override]
+        return {
+            "history": [m.to_dict() for m in self.history],
+            "characters": [],
+        }
+
+    @serialize.setter
+    def serialize(self, value):
+        pass
+
+
+def _history_scene(tmp_dir: str) -> _DynamicHistoryScene:
+    os.makedirs(tmp_dir, exist_ok=True)
+    return _DynamicHistoryScene(save_dir=tmp_dir)
+
+
+class TestAppendDeltaRevStamp:
+    @pytest.mark.asyncio
+    async def test_rev_stamp_recorded_with_appended_rev(self, temp_dir):
+        scene = _history_scene(temp_dir)
+        await save_changelog(scene)
+
+        msg = SceneMessage(message="hello")
+        assert msg.rev == 0
+        scene.history.append(msg)
+
+        async with InMemoryChangelog(scene) as changelog:
+            rev = await changelog.append_delta()
+            assert rev == 1
+            assert msg.rev == 1
+            assert await changelog.commit() == [1]
+
+        # The stamp is part of the delta: the reconstruction at the stamped
+        # rev contains the message, carrying that rev.
+        reconstructed = await reconstruct_scene_data(scene, to_rev=1)
+        entry = next(e for e in reconstructed["history"] if e["id"] == msg.id)
+        assert entry["rev"] == 1
+
+    @pytest.mark.asyncio
+    async def test_rev_stamp_sequences_with_pending_deltas(self, temp_dir):
+        scene = _history_scene(temp_dir)
+        await save_changelog(scene)
+
+        async with InMemoryChangelog(scene) as changelog:
+            m1 = SceneMessage(message="one")
+            scene.history.append(m1)
+            assert await changelog.append_delta() == 1
+
+            m2 = SceneMessage(message="two")
+            scene.history.append(m2)
+            assert await changelog.append_delta() == 2
+
+            assert (m1.rev, m2.rev) == (1, 2)
+            await changelog.commit()
+
+        # Reconstruction at rev 1 contains m1 but not yet m2.
+        reconstructed = await reconstruct_scene_data(scene, to_rev=1)
+        ids = [e["id"] for e in reconstructed["history"]]
+        assert m1.id in ids
+        assert m2.id not in ids
+
+    @pytest.mark.asyncio
+    async def test_rev_stamp_rolls_back_when_delta_refused(self, temp_dir):
+        scene = _history_scene(temp_dir)
+        await save_changelog(scene)
+
+        msg = SceneMessage(message="hello")
+        scene.history.append(msg)
+
+        with mock.patch(
+            "talemate.changelog._delta_reproduces_state", return_value=False
+        ):
+            async with InMemoryChangelog(scene) as changelog:
+                assert await changelog.append_delta() is None
+                # The refusal means the stamped rev never exists — the
+                # message must not keep it.
+                assert msg.rev == 0
+                assert changelog.pending_count == 0
+
+        # The next append retries from the same baseline and re-stamps.
+        async with InMemoryChangelog(scene) as changelog:
+            assert await changelog.append_delta() == 1
+            assert msg.rev == 1
+
+    @pytest.mark.asyncio
+    async def test_rev_stamp_skips_messages_already_in_chain(self, temp_dir):
+        # A message already recorded in the chain without a rev (legacy
+        # scene, or history inherited by a fork) keeps rev 0: no revision of
+        # this chain has it as its tip, so re-stamping it would point at a
+        # reconstruction that also contains everything after it.
+        scene = _history_scene(temp_dir)
+        legacy = SceneMessage(message="old")
+        scene.history.append(legacy)
+        await save_changelog(scene)
+
+        async with InMemoryChangelog(scene) as changelog:
+            new = SceneMessage(message="new")
+            scene.history.append(new)
+            assert await changelog.append_delta() == 1
+
+            assert legacy.rev == 0
+            assert new.rev == 1
+
+
+# ---------------------------------------------------------------------------
+# Fork containment validation and rev zeroing (issue #297)
+# ---------------------------------------------------------------------------
+
+
+async def _scene_with_two_revs(tmp_dir: str):
+    """Scene on disk with rev 1 (message id 1) and rev 2 (messages 1+2)."""
+    m1 = {"id": 1, "message": "one", "typ": "narrator", "source": "ai", "flags": 0}
+    m2 = {"id": 2, "message": "two", "typ": "narrator", "source": "ai", "flags": 0}
+
+    scene = make_changelog_scene(tmp_dir)
+    await save_changelog(scene)
+
+    async with InMemoryChangelog(scene) as changelog:
+        scene.serialize = {"history": [{**m1, "rev": 1}], "characters": []}
+        assert await changelog.append_delta() == 1
+        scene.serialize = {
+            "history": [{**m1, "rev": 1}, {**m2, "rev": 2}],
+            "characters": [],
+        }
+        assert await changelog.append_delta() == 2
+        await changelog.commit()
+    return scene
+
+
+class TestForkContainment:
+    @pytest.mark.asyncio
+    async def test_fork_containment_raises_for_missing_message(self, temp_dir):
+        scene = await _scene_with_two_revs(temp_dir)
+
+        # Message 2 only exists at rev 2 — expecting it at rev 1 must refuse.
+        with pytest.raises(ForkTargetMissingError):
+            await fork_scene_at_revision(scene, 1, "forked", expect_message_id=2)
+
+    @pytest.mark.asyncio
+    async def test_fork_containment_passes_for_present_message(self, temp_dir):
+        scene = await _scene_with_two_revs(temp_dir)
+
+        out_path = await fork_scene_at_revision(scene, 1, "forked", expect_message_id=1)
+        with open(out_path) as f:
+            data = json.load(f)
+        assert [e["id"] for e in data["history"]] == [1]
+
+    @pytest.mark.asyncio
+    async def test_fork_without_expectation_is_unchanged(self, temp_dir):
+        scene = await _scene_with_two_revs(temp_dir)
+
+        # The timeline-revision fork passes no message expectation.
+        out_path = await fork_scene_at_revision(scene, 2, "forked")
+        with open(out_path) as f:
+            data = json.load(f)
+        assert [e["id"] for e in data["history"]] == [1, 2]
+
+
+class TestForkRevZero:
+    @pytest.mark.asyncio
+    async def test_fork_rev_zero_reconstructive(self, temp_dir):
+        scene = await _scene_with_two_revs(temp_dir)
+
+        out_path = await fork_scene_at_revision(scene, 2, "forked")
+        with open(out_path) as f:
+            data = json.load(f)
+
+        # A fork starts its own chain at rev 0 — the source chain's revs are
+        # meaningless in it and must not survive.
+        assert [e["rev"] for e in data["history"]] == [0, 0]
+
+
+class TestCreatorForkScene:
+    """CreatorAgent.fork_scene: containment fallback and shallow rev zeroing.
+
+    Calls ``fork_scene.__wrapped__`` to bypass the ``@set_processing``
+    decorator (status emission is not under test).
+    """
+
+    def _scene_with_messages(self, tmp_dir, revs):
+        scene = make_changelog_scene(tmp_dir)
+        messages = []
+        for i, rev in enumerate(revs):
+            msg = SceneMessage(message=f"message {i}")
+            msg.rev = rev
+            messages.append(msg)
+        scene.history = messages
+        scene.serialize = {
+            "history": [m.to_dict() for m in messages],
+            "characters": [],
+        }
+        return scene, messages
+
+    @pytest.mark.asyncio
+    async def test_fork_scene_passes_expect_message_id(self, temp_dir):
+        scene, messages = self._scene_with_messages(temp_dir, [5, 6])
+        agent = mock.Mock()
+        agent.scene = scene
+
+        with (
+            mock.patch("talemate.agents.creator.assistant.emit"),
+            mock.patch(
+                "talemate.agents.creator.assistant.fork_scene_at_revision",
+                new=mock.AsyncMock(return_value="/tmp/fork.json"),
+            ) as fork_mock,
+        ):
+            out_path = await AssistantMixin.fork_scene.__wrapped__(
+                agent, message_id=messages[1].id, save_name="recon"
+            )
+
+        assert out_path == "/tmp/fork.json"
+        fork_mock.assert_awaited_once()
+        assert fork_mock.await_args.args[:3] == (scene, 6, "recon")
+        assert fork_mock.await_args.kwargs["expect_message_id"] == messages[1].id
+
+    @pytest.mark.asyncio
+    async def test_fork_scene_falls_back_to_shallow_when_target_missing(self, temp_dir):
+        scene, messages = self._scene_with_messages(temp_dir, [5, 6])
+        agent = mock.Mock()
+        agent.scene = scene
+
+        with (
+            mock.patch("talemate.agents.creator.assistant.emit"),
+            mock.patch(
+                "talemate.agents.creator.assistant.fork_scene_at_revision",
+                new=mock.AsyncMock(side_effect=ForkTargetMissingError("gone")),
+            ) as fork_mock,
+        ):
+            out_path = await AssistantMixin.fork_scene.__wrapped__(
+                agent, message_id=messages[1].id, save_name="fallback-fork"
+            )
+
+        fork_mock.assert_awaited_once()
+        with open(out_path) as f:
+            data = json.load(f)
+        assert [e["id"] for e in data["history"]] == [m.id for m in messages]
+        assert [e["rev"] for e in data["history"]] == [0, 0]
+
+    @pytest.mark.asyncio
+    async def test_fork_rev_zero_shallow_preserves_live_scene(self, temp_dir):
+        # Fork target has rev 0 → shallow fork; inherited revs on earlier
+        # messages are zeroed in the fork but not on the live scene.
+        scene, messages = self._scene_with_messages(temp_dir, [5, 0, 7])
+        agent = mock.Mock()
+        agent.scene = scene
+
+        with mock.patch("talemate.agents.creator.assistant.emit"):
+            out_path = await AssistantMixin.fork_scene.__wrapped__(
+                agent, message_id=messages[1].id, save_name="shallow-fork"
+            )
+
+        with open(out_path) as f:
+            data = json.load(f)
+        assert [e["id"] for e in data["history"]] == [messages[0].id, messages[1].id]
+        assert [e["rev"] for e in data["history"]] == [0, 0]
+        assert [m.rev for m in messages] == [5, 0, 7]
+
+
+# ---------------------------------------------------------------------------
+# Rev-stamp robustness: ghost-rev windows, emission, backfill, save ordering
+# ---------------------------------------------------------------------------
+
+
+class TestAppendDeltaRevStampRobustness:
+    @pytest.mark.asyncio
+    async def test_rev_stamp_rolls_back_on_exception(self, temp_dir):
+        scene = _history_scene(temp_dir)
+        await save_changelog(scene)
+
+        msg = SceneMessage(message="hello")
+        scene.history.append(msg)
+
+        with mock.patch(
+            "talemate.changelog._compute_delta",
+            side_effect=RuntimeError("boom"),
+        ):
+            async with InMemoryChangelog(scene) as changelog:
+                with pytest.raises(RuntimeError):
+                    await changelog.append_delta()
+
+        # No ghost rev left on the live message.
+        assert msg.rev == 0
+
+    @pytest.mark.asyncio
+    async def test_rev_stamp_emits_message_revs_on_commit(self, temp_dir):
+        scene = _history_scene(temp_dir)
+        await save_changelog(scene)
+
+        captured = []
+
+        def _capture(emission, **kwargs):
+            captured.append(emission)
+
+        handlers["message_revs"].connect(_capture)
+        try:
+            msg = SceneMessage(message="hello")
+            scene.history.append(msg)
+            async with InMemoryChangelog(scene) as changelog:
+                await changelog.append_delta()
+                # Staging alone emits nothing: with auto_save off a staged rev
+                # exists only in pending_deltas, and the UI must not learn a
+                # rev the committed chain cannot reconstruct.
+                assert captured == []
+                await changelog.commit()
+        finally:
+            handlers["message_revs"].disconnect(_capture)
+
+        assert len(captured) == 1
+        emission = captured[0]
+        assert emission.typ == "message_revs"
+        assert emission.websocket_passthrough is True
+        assert emission.data == {"revs": [{"id": msg.id, "rev": 1}]}
+
+    @pytest.mark.asyncio
+    async def test_backfill_message_revs_from_latest_snapshot(self, temp_dir):
+        scene = _history_scene(temp_dir)
+        await save_changelog(scene)
+
+        msg = SceneMessage(message="hello")
+        scene.history.append(msg)
+        async with InMemoryChangelog(scene) as changelog:
+            assert await changelog.append_delta() == 1
+            await changelog.commit()
+
+        # A scene file can lag the chain (crash between commit and file
+        # write): the message comes back with rev 0 while the chain's latest
+        # snapshot knows its rev.
+        msg.rev = 0
+
+        async with InMemoryChangelog(scene) as changelog:
+            # Backfilled from the snapshot on enter...
+            assert msg.rev == 1
+
+            # ...and treated as known by the next append, not re-stamped.
+            msg2 = SceneMessage(message="two")
+            scene.history.append(msg2)
+            assert await changelog.append_delta() == 2
+            assert msg.rev == 1
+            assert msg2.rev == 2
+
+    @pytest.mark.asyncio
+    async def test_save_writes_stamped_revs(self, temp_dir):
+        # save() must append/commit the changelog before serializing the
+        # scene file, or the file lags the chain by one save and a reload
+        # loses the last turn's revs.
+        scene = _history_scene(temp_dir)
+        scene.name = "rev-stamp-save-test"
+        await save_changelog(scene)
+
+        msg = SceneMessage(message="hello")
+        scene.history.append(msg)
+
+        with mock.patch(
+            "talemate.tale_mate.Scene.add_to_recent_scenes", new=mock.AsyncMock()
+        ):
+            async with InMemoryChangelog(scene) as changelog:
+                scene._changelog = changelog
+                await scene.save(auto=True)
+
+        with open(os.path.join(temp_dir, scene.filename)) as f:
+            data = json.load(f)
+        assert data["history"][0]["rev"] == 1
+        assert data["history"][0]["id"] == msg.id
+
+
+# ---------------------------------------------------------------------------
+# Fork guards: beyond-latest revision, writer zeroing
+# ---------------------------------------------------------------------------
+
+
+class TestForkGuards:
+    @pytest.mark.asyncio
+    async def test_fork_beyond_latest_rev_raises(self, temp_dir):
+        scene = await _scene_with_two_revs(temp_dir)
+
+        # A rev that never materialized cannot reconstruct "at the message".
+        with pytest.raises(ForkTargetMissingError):
+            await fork_scene_at_revision(scene, 99, "forked")
+        with pytest.raises(ForkTargetMissingError):
+            await fork_scene_at_revision(scene, 99, "forked", expect_message_id=2)
+
+    @pytest.mark.asyncio
+    async def test_write_reconstructed_scene_zero_message_revs(self, temp_dir):
+        scene = await _scene_with_two_revs(temp_dir)
+
+        out_path = await write_reconstructed_scene(
+            scene, 2, "zeroed.json", zero_message_revs=True
+        )
+        with open(out_path) as f:
+            data = json.load(f)
+        assert [e["rev"] for e in data["history"]] == [0, 0]
+
+    @pytest.mark.asyncio
+    async def test_write_reconstructed_scene_default_keeps_revs(self, temp_dir):
+        scene = await _scene_with_two_revs(temp_dir)
+
+        out_path = await write_reconstructed_scene(scene, 2, "kept.json")
+        with open(out_path) as f:
+            data = json.load(f)
+        assert [e["rev"] for e in data["history"]] == [1, 2]

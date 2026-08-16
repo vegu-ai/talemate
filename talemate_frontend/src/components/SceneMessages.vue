@@ -1960,6 +1960,21 @@ export default {
                 return;
             }
 
+            if (data.type == "message_revs") {
+                // The backend emits message revs when the changelog deltas
+                // are committed; patch them in by id.
+                const revs = (data.data && data.data.revs) || [];
+                for (const r of revs) {
+                    for (i = 0; i < this.messages.length; i++) {
+                        if (this.messages[i].id == r.id) {
+                            this.messages[i].rev = r.rev;
+                            break;
+                        }
+                    }
+                }
+                return;
+            }
+
             if (data.type == "message_edited") {
 
                 // find the message by id and update the text + mirror

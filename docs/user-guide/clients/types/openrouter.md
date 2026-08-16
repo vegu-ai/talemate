@@ -47,6 +47,12 @@ Choose any model available via your OpenRouter account. Talemate dynamically fet
 
 Maximum context length (in tokens) that OpenRouter should consider. If you are not sure leave the default value.
 
+##### Concurrent Inference
+
+Found in the **Concurrency** section of the client editor. When enabled, batch operations that need several queries can send multiple requests to OpenRouter in parallel instead of one at a time, which can speed those operations up.
+
+This is **on by default**. See the [Concurrent Requests](/talemate/user-guide/clients/concurrent-requests/) page for more detail.
+
 !!! note "Available models are fetched automatically"
     Talemate fetches the list of available OpenRouter models when you save the configuration (if a valid API key is present). If you add or remove models to your account later, simply click **Save** in the application settings again to refresh the list. 
 

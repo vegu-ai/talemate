@@ -41,6 +41,12 @@ Which model to use. Currently defaults to `gemini-3.7-flash`.
 
 Maximum context length (in tokens) for generations sent to Google. If you are not sure, leave the default value.
 
+##### Concurrent Inference
+
+Found in the **Concurrency** section of the client editor. When enabled, batch operations that need several queries can send multiple requests to the Google API in parallel instead of one at a time, which can speed those operations up.
+
+This is **on by default**. See the [Concurrent Requests](/talemate/user-guide/clients/concurrent-requests/) page for more detail.
+
 ##### Disable Safety Settings
 
 Will turn off the google reponse validation for what they consider harmful content. Use at your own risk.

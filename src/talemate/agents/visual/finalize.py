@@ -1,3 +1,4 @@
+import asyncio
 import re
 
 import pydantic
@@ -422,11 +423,41 @@ class PromptFinalizationMixin:
         negative = emission.negative_prompt
 
         for finalizer in emission.finalizers:
-            if positive and finalizer.applies_to(vis_type, True):
+            apply_positive = bool(positive) and finalizer.applies_to(vis_type, True)
+            apply_negative = bool(negative) and finalizer.applies_to(vis_type, False)
+
+            # the positive and negative prompts don't feed each other, so an
+            # AI finalizer's two LLM calls can run concurrently
+            if (
+                apply_positive
+                and apply_negative
+                and finalizer.mode == FINALIZER_MODE.AI
+                and self.client
+                and self.client.supports_concurrent_inference
+            ):
+                # return_exceptions + raise-after-settle: a failing call must
+                # not orphan the sibling task (plain gather propagates the
+                # first exception while the other keeps running)
+                results = await asyncio.gather(
+                    self.apply_prompt_finalizer(
+                        finalizer, positive, vis_type, character_name
+                    ),
+                    self.apply_prompt_finalizer(
+                        finalizer, negative, vis_type, character_name
+                    ),
+                    return_exceptions=True,
+                )
+                for result in results:
+                    if isinstance(result, BaseException):
+                        raise result
+                positive, negative = results
+                continue
+
+            if apply_positive:
                 positive = await self.apply_prompt_finalizer(
                     finalizer, positive, vis_type, character_name
                 )
-            if negative and finalizer.applies_to(vis_type, False):
+            if apply_negative:
                 negative = await self.apply_prompt_finalizer(
                     finalizer, negative, vis_type, character_name
                 )

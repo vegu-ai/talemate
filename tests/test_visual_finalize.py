@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 import yaml
 
@@ -347,6 +349,99 @@ class TestFinalizePromptRequest:
         request = GenerationRequest(prompt="a woman")
         await agent.finalize_prompt_request(request)
         assert request.prompt == "a woman"
+
+    async def test_ai_finalizer_pair_runs_concurrently(self, agent, monkeypatch):
+        set_finalizers(agent, [{"mode": "AI", "replace": "Rewrite.", "target": "BOTH"}])
+
+        in_flight = 0
+        max_in_flight = 0
+
+        async def fake_request(uid, client, kind, vars=None, **kwargs):
+            nonlocal in_flight, max_in_flight
+            in_flight += 1
+            max_in_flight = max(max_in_flight, in_flight)
+            await asyncio.sleep(0.01)
+            in_flight -= 1
+            text = vars["prompt_text"]
+            return (f"<FINALIZED_PROMPT>{text} [done]</FINALIZED_PROMPT>", {})
+
+        monkeypatch.setattr(finalize.Prompt, "request", fake_request)
+
+        class FakeClient:
+            max_token_length = 8192
+            supports_concurrent_inference = True
+
+        agent.client = FakeClient()
+
+        request = GenerationRequest(prompt="pos", negative_prompt="neg")
+        await agent.finalize_prompt_request(request)
+
+        assert request.prompt == "pos [done]"
+        assert request.negative_prompt == "neg [done]"
+        assert max_in_flight == 2
+
+    async def test_ai_finalizer_pair_sequential_without_support(
+        self, agent, monkeypatch
+    ):
+        set_finalizers(agent, [{"mode": "AI", "replace": "Rewrite.", "target": "BOTH"}])
+
+        in_flight = 0
+        max_in_flight = 0
+
+        async def fake_request(uid, client, kind, vars=None, **kwargs):
+            nonlocal in_flight, max_in_flight
+            in_flight += 1
+            max_in_flight = max(max_in_flight, in_flight)
+            await asyncio.sleep(0.01)
+            in_flight -= 1
+            text = vars["prompt_text"]
+            return (f"<FINALIZED_PROMPT>{text} [done]</FINALIZED_PROMPT>", {})
+
+        monkeypatch.setattr(finalize.Prompt, "request", fake_request)
+
+        class FakeClient:
+            max_token_length = 8192
+            supports_concurrent_inference = False
+
+        agent.client = FakeClient()
+
+        request = GenerationRequest(prompt="pos", negative_prompt="neg")
+        await agent.finalize_prompt_request(request)
+
+        assert request.prompt == "pos [done]"
+        assert request.negative_prompt == "neg [done]"
+        assert max_in_flight == 1
+
+    async def test_ai_finalizer_pair_failure_propagates_after_sibling_settles(
+        self, agent, monkeypatch
+    ):
+        set_finalizers(agent, [{"mode": "AI", "replace": "Rewrite.", "target": "BOTH"}])
+
+        completed = []
+
+        async def fake_request(uid, client, kind, vars=None, **kwargs):
+            text = vars["prompt_text"]
+            if text == "pos":
+                await asyncio.sleep(0.01)
+                raise RuntimeError("boom")
+            await asyncio.sleep(0.05)
+            completed.append(text)
+            return (f"<FINALIZED_PROMPT>{text}</FINALIZED_PROMPT>", {})
+
+        monkeypatch.setattr(finalize.Prompt, "request", fake_request)
+
+        class FakeClient:
+            max_token_length = 8192
+            supports_concurrent_inference = True
+
+        agent.client = FakeClient()
+
+        request = GenerationRequest(prompt="pos", negative_prompt="neg")
+        with pytest.raises(RuntimeError, match="boom"):
+            await agent.finalize_prompt_request(request)
+
+        # the failing call raised only after the sibling settled - no orphan
+        assert completed == ["neg"]
 
 
 @pytest.fixture

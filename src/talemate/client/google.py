@@ -69,6 +69,7 @@ class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
 
 
 class ClientConfig(ConcurrentInference, EndpointOverride, BaseClientConfig):
+    concurrent_inference_enabled: bool = True
     disable_safety_settings: bool = False
 
 

@@ -122,4 +122,4 @@ def test_openrouter_concurrent_inference_is_the_known_case():
     assert "concurrent_inference_enabled" not in (meta.get("defaults") or {})
 
     config = Config(clients={"test-client": add_client_payload("openrouter")})
-    assert config.clients["test-client"].concurrent_inference_enabled is False
+    assert config.clients["test-client"].concurrent_inference_enabled is True

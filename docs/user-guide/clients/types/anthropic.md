@@ -40,4 +40,10 @@ Which model to use. Currently defaults to `claude-haiku-4-5`.
 ##### Context Length
 
 Maximum context length (in tokens) for generations sent to Anthropic. If you are not sure, leave the default value.
+
+##### Concurrent Inference
+
+Found in the **Concurrency** section of the client editor. When enabled, batch operations that need several queries can send multiple requests to the Anthropic API in parallel instead of one at a time, which can speed those operations up.
+
+This is **on by default**. See the [Concurrent Requests](/talemate/user-guide/clients/concurrent-requests/) page for more detail.
 --8<-- "docs/snippets/common.md:client-response-length"

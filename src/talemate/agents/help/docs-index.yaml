@@ -410,9 +410,10 @@
     Add client type menu, Assign to all agents, the General/Coercion/Advanced/Reasoning/System Prompts sections, and the Save/Discard
     toolbar.'
 - path: user-guide/clients/concurrent-requests.md
-  title: Concurrent Requests (Experimental)
-  summary: 'Experimental per-client toggle in the Concurrency section that runs batch LLM queries in parallel: visual prompts,
-    function calling, world state updates. Supported by Anthropic, OpenAI, Google, MistralAI, OpenRouter, Pi Bridge and llama.cpp.'
+  title: Concurrent Requests
+  summary: 'Per-client toggle in the Concurrency section that runs batch LLM queries in parallel: visual prompts, function
+    calling, world state updates. On by default for Anthropic, OpenAI, Google, MistralAI and OpenRouter; opt-in for Pi
+    Bridge and llama.cpp.'
 - path: user-guide/clients/endpoint-override.md
   title: Endpoint Override
   summary: The Endpoint Override section on remote clients, pointing a client at a proxy gateway such as LiteLLM via a Base
@@ -470,7 +471,8 @@
 - path: user-guide/clients/types/anthropic.md
   title: Anthropic Client
   summary: 'Adding an Anthropic client from Settings -> Connections -> Clients, setting the shared Anthropic API key via SET
-    API KEY, and its settings: Client Name, Model (defaults to claude-haiku-4-5) and Context Length.'
+    API KEY, and its settings: Client Name, Model (defaults to claude-haiku-4-5), Context Length, and Concurrent Inference
+    in the Concurrency section (on by default).'
 - path: user-guide/clients/types/cohere.md
   title: Cohere Client
   summary: 'Adding a Cohere client from Settings -> Connections -> Clients, setting the shared Cohere API key via SET API
@@ -483,7 +485,8 @@
 - path: user-guide/clients/types/google.md
   title: Google Client
   summary: Adding a Google (Gemini) client and its Google Cloud credentials via SETUP GOOGLE API CREDENTIALS, plus Client
-    Name, Model (defaults to gemini-3.7-flash), Context Length, and Disable Safety Settings for harmful-content response validation.
+    Name, Model (defaults to gemini-3.7-flash), Context Length, Disable Safety Settings for harmful-content response validation,
+    and Concurrent Inference in the Concurrency section (on by default).
 - path: user-guide/clients/types/groq.md
   title: Groq Client
   summary: 'Adding a Groq client from Settings -> Connections -> Clients, setting the shared Groq API key via SET API KEY,
@@ -505,8 +508,8 @@
 - path: user-guide/clients/types/mistral.md
   title: Mistral.ai Client
   summary: 'Adding a MistralAI client and its API key, plus its settings: Client Name, Model (defaults to open-mixtral-8x22b),
-    Context Length, and Concurrent Inference in the Concurrency section, whose parallelism depends on your account''s rate
-    limits.'
+    Context Length, and Concurrent Inference in the Concurrency section (on by default), whose parallelism depends on your
+    account''s rate limits.'
 - path: user-guide/clients/types/ollama.md
   title: Ollama Client
   summary: 'Setting up an Ollama client: API URL (default http://localhost:11434), Model picked from the list Talemate fetches
@@ -519,14 +522,14 @@
     sampler parameters.'
 - path: user-guide/clients/types/openai.md
   title: OpenAI Client
-  summary: Adding an OpenAI client and its API key, plus Client Name, Model (defaults to gpt-4o) and Context Length. The o1,
-    o3 and gpt-5 reasoning families need the client's Reasoning option enabled with 512-1024 Reasoning Tokens or you get empty
-    output.
+  summary: Adding an OpenAI client and its API key, plus Client Name, Model (defaults to gpt-4o), Context Length, and Concurrent
+    Inference in the Concurrency section (on by default). The o1, o3 and gpt-5 reasoning families need the client's Reasoning
+    option enabled with 512-1024 Reasoning Tokens or you get empty output.
 - path: user-guide/clients/types/openrouter.md
   title: OpenRouter Client
   summary: Adding an OpenRouter client, entering the key on the API Keys page or the OpenRouter API Key card in the client
     editor, and picking a model from the list Talemate fetches on save. Documents the Parameters toggles for providers that
-    reject sampler parameters.
+    reject sampler parameters, and Concurrent Inference in the Concurrency section (on by default).
 - path: user-guide/clients/types/pi-bridge.md
   title: Pi Bridge Client
   summary: Client that routes generations through the pi coding agent in headless RPC mode, so pi handles provider auth and

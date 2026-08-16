@@ -90,6 +90,7 @@ class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
 
 
 class ClientConfig(ConcurrentInference, EndpointOverride, BaseClientConfig):
+    concurrent_inference_enabled: bool = True
     effort_level: Literal["low", "medium", "high", "xhigh", "max"] = "high"
     thinking_mode: Literal["budget", "adaptive"] = "budget"
 

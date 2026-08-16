@@ -93,4 +93,43 @@ def test_per_type_fields_are_covered():
     """Per-type fields the mirror could not reach ship as well."""
     model_defaults = client_model_defaults("openrouter")
 
-    assert model_defaults["concurrent_inference_enabled"] is False
+    assert model_defaults["concurrent_inference_enabled"] is True
+
+
+CONCURRENT_INFERENCE_DEFAULTS = {
+    "openrouter": True,
+    "google": True,
+    "anthropic": True,
+    "mistral": True,
+    "openai": True,
+    # local / bridged clients stay opt-in: whether parallel requests help
+    # depends on the user's setup
+    "llamacpp": False,
+    "pi_bridge": False,
+}
+
+
+@pytest.mark.parametrize(
+    "client_type,expected", sorted(CONCURRENT_INFERENCE_DEFAULTS.items())
+)
+def test_concurrent_inference_default(client_type: str, expected: bool):
+    """The shipped default of `concurrent_inference_enabled` per client type."""
+    assert (
+        client_model_defaults(client_type)["concurrent_inference_enabled"] is expected
+    )
+
+
+@pytest.mark.parametrize("client_type", sorted(CONCURRENT_INFERENCE_DEFAULTS))
+def test_concurrent_inference_explicit_choice_kept(client_type: str):
+    """An explicitly stored value wins over the shipped default, both ways."""
+    explicit = not CONCURRENT_INFERENCE_DEFAULTS[client_type]
+    config = Config(
+        clients={
+            "c": {
+                "type": client_type,
+                "name": "c",
+                "concurrent_inference_enabled": explicit,
+            }
+        }
+    )
+    assert config.clients["c"].concurrent_inference_enabled is explicit

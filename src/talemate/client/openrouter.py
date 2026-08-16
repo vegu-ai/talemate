@@ -220,6 +220,7 @@ class Defaults(ToggleableParametersConfig, CommonDefaults, pydantic.BaseModel):
 
 
 class ClientConfig(ToggleableParametersConfig, ConcurrentInference, BaseClientConfig):
+    concurrent_inference_enabled: bool = True
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 

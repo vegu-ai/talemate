@@ -45,5 +45,5 @@ Maximum context length (in tokens) for generations sent to Mistral.ai. If you ar
 
 Found in the **Concurrency** section of the client editor. When enabled, batch operations that need several queries (currently visual prompt generation for image generation) can send multiple requests to the Mistral.ai API in parallel instead of one at a time, which can speed those operations up.
 
-This is **off by default**. Whether concurrent requests actually complete in parallel depends on your Mistral.ai account's rate limits. See the [Concurrent Requests](/talemate/user-guide/clients/concurrent-requests/) page for more detail.
+This is **on by default**. Whether concurrent requests actually complete in parallel depends on your Mistral.ai account's rate limits. See the [Concurrent Requests](/talemate/user-guide/clients/concurrent-requests/) page for more detail.
 --8<-- "docs/snippets/common.md:client-response-length"

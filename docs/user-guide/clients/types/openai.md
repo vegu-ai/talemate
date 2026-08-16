@@ -41,6 +41,12 @@ Which model to use. Currently defaults to `gpt-4o`.
 
 Maximum context length (in tokens) for generations sent to OpenAI. If you are not sure, leave the default value.
 
+##### Concurrent Inference
+
+Found in the **Concurrency** section of the client editor. When enabled, batch operations that need several queries can send multiple requests to the OpenAI API in parallel instead of one at a time, which can speed those operations up.
+
+This is **on by default**. See the [Concurrent Requests](/talemate/user-guide/clients/concurrent-requests/) page for more detail.
+
 ##### Reasoning models (o1, o3, gpt-5)
 
 !!! important "Enable reasoning and allocate tokens"

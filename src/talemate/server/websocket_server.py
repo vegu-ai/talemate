@@ -150,7 +150,6 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         reset=False,
         callback=None,
         file_name=None,
-        rev: int | None = None,
         scene_initialization: dict | None = None,
     ):
         try:
@@ -173,34 +172,14 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 try:
                     # Use input path directly
                     scene_path = path_or_data
-                    add_to_recent = rev is None
                     scene = await load_scene(
                         scene,
                         scene_path,
                         reset=reset,
-                        add_to_recent=add_to_recent,
                         scene_initialization=SceneInitialization(**scene_initialization)
                         if scene_initialization
                         else None,
                     )
-                    # If a revision is requested, reconstruct and load it
-                    if rev is not None:
-                        from talemate.changelog import write_reconstructed_scene
-
-                        temp_name = f"{scene.filename.replace('.json', '')}-{str(uuid.uuid4())[:10]}.json"
-                        temp_path = await write_reconstructed_scene(
-                            scene, to_rev=rev, output_filename=temp_name
-                        )
-                        scene = self.init_scene()
-                        scene.active = True
-                        scene._memory_never_persisted = True
-                        scene = await load_scene(
-                            scene,
-                            temp_path,
-                            add_to_recent=False,
-                        )
-                        scene.filename = ""
-                        os.remove(temp_path)
                 except Exception as e:
                     self.scene = self.init_scene()
                     return await self.load_scene_failure(e)

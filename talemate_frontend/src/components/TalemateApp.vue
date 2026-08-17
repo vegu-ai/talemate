@@ -434,7 +434,6 @@
     ref="sceneTimeline"
     :scene="scene"
     :appearance-config="effectiveAppearanceConfig"
-    @load-at-revision="(target) => { resetViews(); $refs.sceneLanding.loadJsonSceneFromPath(target.path, false, target.rev); }"
   />
   <VersionMismatchAlert ref="versionMismatchAlert" />
   <OnboardingWizard

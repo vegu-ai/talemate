@@ -2,12 +2,15 @@
 
 Talemate provides two ways to return a scene to a previous state:
 
-- **Timeline** — use the automatic version history to browse every previous revision and roll back or fork from any point (covered on this page)
+- **Timeline** — use the automatic version history to browse every previous revision and fork from any point (covered on this page)
 - **Restore from Restore Point** — reset to a specific save file you've designated as a baseline in the [scene settings](/talemate/user-guide/world-editor/scene/settings#restoration-settings)
+
+!!! warning "The timeline only forks in this version"
+    Rolling a scene back in place and opening a revision directly are both disabled while they are being reworked, and will return in a future version. Forking a revision into a new save is the one action the timeline applies — it writes a new save alongside the scene and leaves every existing save untouched.
 
 ## The timeline
 
-Every time you save, Talemate records the changes as a delta in the scene's [changelog directory](/talemate/user-guide/scene-directory#changelog). The timeline lets you browse this version history: drag the slider to any revision to preview the scene's messages as they were at that point, then decide what to do with it.
+Every time you save, Talemate records the changes as a delta in the scene's [changelog directory](/talemate/user-guide/scene-directory#changelog). The timeline lets you browse this version history: drag the slider to any revision to preview the scene's messages as they were at that point, then fork that revision into a new save. Browsing and previewing change nothing on disk.
 
 ![Timeline dialog](/talemate/img/0.39.0/timeline-dialog.png)
 
@@ -20,19 +23,15 @@ The timeline can be opened from four places:
 - **From the main screen** — click the three-dot menu (⋯) beneath a scene card in the **Quick load** section and select :material-history: **Timeline**
 - **From the Scene Library** — click the three-dot menu (⋮) on any save file row and select :material-history: **Timeline**
 
-### Applying a revision
+### Forking a revision
 
-Once you've found the point you want to return to, you have the following options:
-
-- **Roll back** *(while playing a scene)* — rolls the current scene back to the selected revision, in place. A backup of the current state is saved to the scene's [backups directory](/talemate/user-guide/scene-directory) first, and the rollback itself is recorded on the timeline — so you can open the timeline again and scrub forward to where you were.
-- **Open at this revision** *(from the main screen)* — opens the revision as a new, unsaved scene. The original scene file is not modified; save it manually if you want to keep it.
-- **Fork to new save** — creates a new save file in the same project directory from the selected revision. The current scene is not modified.
+Once you've found the point you want to return to, click **Fork to new save**. It creates a new save file in the same project directory from the selected revision, and asks for a name. The scene you are playing is not modified, and a name an existing save already uses is refused rather than written over.
 
 !!! info
-    Rolling back never destroys your version history. Because every revision is kept, a rollback simply becomes the next entry on the timeline — you can always scrub forward again to the state you rolled back from.
+    Forking never destroys your version history. Every revision is kept, so you can open the timeline again and scrub to any other point.
 
 !!! warning
-    Scenes connected to a shared world context are disconnected from it when rolled back or forked, since shared context cannot be reconstructed to a specific revision.
+    Scenes connected to a shared world context are disconnected from it when forked, since shared context cannot be reconstructed to a specific revision.
 
 ## Restore from restore point
 

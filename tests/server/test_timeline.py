@@ -1,14 +1,13 @@
 """
 Unit tests for the timeline websocket plugin.
 
-The plugin exposes the scene timeline / rollback UX:
+The plugin exposes the scene timeline UX:
 
 - ``list_revisions`` → changelog revision entries (plus the base snapshot)
 - ``preview`` → message-history tail of the scene reconstructed at a revision
 - ``fork`` → new scene file written from a revision
-- ``rollback`` → in-place rollback of the active scene (backup, restore,
-  save) — exercised here with the scene-side effects spied, since the real
-  ``Scene.restore``/``Scene.save`` need a full agent stack.
+
+In-place rollback is not exposed — see ``test_rollback_route_is_gone``.
 
 Both the active-scene path and the headless ``scene_path`` scaffold path
 (used from the load screen) are covered.
@@ -80,7 +79,6 @@ async def scene(temp_dir):
 
     scene.rev = 3
 
-    # the scene file itself, for pre-rollback backups
     with open(os.path.join(temp_dir, scene.filename), "w") as f:
         json.dump(scene.serialize, f)
 
@@ -199,54 +197,46 @@ async def test_fork_headless(scene, temp_dir):
     assert [msg["id"] for msg in fork_data["history"]] == [1]
 
 
-async def test_rollback(plugin, scene, temp_dir, monkeypatch):
-    order: list[tuple] = []
+async def test_fork_refuses_to_overwrite_an_existing_save(plugin, scene, temp_dir):
+    """Forking onto the live scene's own name leaves that file untouched."""
+    scene_path = os.path.join(temp_dir, scene.filename)
+    with open(scene_path) as f:
+        before = f.read()
 
-    async def _spy_restore(from_rev=None, **kwargs):
-        order.append(("restore", from_rev))
-        # the real restore() loads via a temp file, which clears the
-        # filename and leaves rev resolved against the temp name
-        scene.filename = None
-        scene.rev = 0
+    await plugin.handle_fork({"rev": 1, "save_name": "test_scene"})
 
-    async def _spy_save(**kwargs):
-        order.append(("save", scene.filename, scene.rev))
-
-    async def _spy_emit_history():
-        order.append(("emit_history",))
-
-    monkeypatch.setattr(scene, "restore", _spy_restore)
-    monkeypatch.setattr(scene, "save", _spy_save)
-    monkeypatch.setattr(scene, "emit_history", _spy_emit_history)
-    scene.immutable_save = False
-
-    await plugin.handle_rollback({"rev": 1})
-
-    # filename and rev were pointed back at the original scene file before saving
-    assert order == [("restore", 1), ("save", "test_scene.json", 3), ("emit_history",)]
-
-    # a pre-rollback backup of the scene file was written
-    backups = os.listdir(scene.backups_dir)
-    assert len(backups) == 1
-    assert backups[0].startswith("test_scene_pre_rollback_")
+    with open(scene_path) as f:
+        assert f.read() == before
 
     (done,) = plugin.websocket_handler.by_action("operation_done")
-    assert "error" not in done
+    assert "already exists" in done["error"]["message"]
+    assert not [
+        m
+        for m in plugin.websocket_handler.messages
+        if m.get("id") == "load_scene_request"
+    ]
 
 
-async def test_rollback_rejects_immutable_save(plugin, scene):
-    scene.immutable_save = True
+async def test_fork_refuses_a_name_that_escapes_the_save_dir(plugin, scene, tmp_path):
+    outside = tmp_path.parent / "escaped.json"
 
-    await plugin.handle_rollback({"rev": 1})
+    await plugin.handle_fork({"rev": 1, "save_name": f"../{outside.stem}"})
 
+    assert not outside.exists()
     (done,) = plugin.websocket_handler.by_action("operation_done")
-    assert "immutable" in done["error"]["message"]
+    assert "not a valid save name" in done["error"]["message"]
 
 
-async def test_rollback_requires_saved_scene(plugin, scene):
-    scene.filename = ""
+async def test_rollback_route_is_gone(plugin, scene, temp_dir):
+    """No timeline action may overwrite an existing scene file."""
+    scene_path = os.path.join(temp_dir, scene.filename)
+    with open(scene_path) as f:
+        before = f.read()
 
-    await plugin.handle_rollback({"rev": 1})
+    await plugin.handle({"action": "rollback", "rev": 1})
 
-    (done,) = plugin.websocket_handler.by_action("operation_done")
-    assert "saved" in done["error"]["message"]
+    with open(scene_path) as f:
+        assert f.read() == before
+
+    assert plugin.websocket_handler.messages == []
+    assert not os.path.exists(scene.backups_dir)

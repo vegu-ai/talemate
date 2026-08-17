@@ -10,9 +10,11 @@ A new Help agent answers questions about Talemate itself — settings, agents, c
 
 Chats can be made scene-aware, and each question carries a small snapshot of what you are looking at in the interface. When asked, the help agent can also read your configuration and change agent and application settings, recording exactly what changed — it never exposes API keys and cannot change scene content.
 
-### Timeline Rollback
+### Timeline
 
-A new timeline dialog gives scene restoration a single home, replacing the old Restore from Backup dialog. Drag a slider across the scene's automatic version history to preview the message history at any revision, then either roll the active scene back in place or fork the revision into a new save. A backup is written before a rollback, and the rollback itself is recorded as a new revision — the timeline is never destroyed, so you can always scrub forward again.
+A new timeline dialog gives scene history a single home, replacing the old Restore from Backup dialog. Drag a slider across the scene's automatic version history to preview the message history at any revision, then fork that revision into a new save — the scene you are playing is never modified, and browsing the history changes nothing on disk.
+
+Forking is the only action the timeline applies in this version. Rolling a scene back in place and opening a revision directly are disabled while they are being reworked, and will return in a future version.
 
 ### Pi Bridge Client
 

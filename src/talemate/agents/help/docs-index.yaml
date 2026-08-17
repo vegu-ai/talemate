@@ -995,9 +995,11 @@
 - path: user-guide/restoring-scenes.md
   title: Restoring Scenes
   summary: Two ways to return a scene to a previous state, the timeline (drag a slider across the automatic changelog version
-    history to preview any revision, then roll the active scene back in place with an automatic backup, fork it to a new save,
-    or open it as a new unsaved scene from the Quick Load card menu) and restore from a designated restore point save file.
-    Opened from the scene tools Save menu, a message's Fork button, or the scene card's three-dot menu.
+    history to preview any revision, then fork that revision into a new save; browsing and previewing write nothing to disk,
+    and a save name an existing save already uses is refused) and restore from a designated restore point save file. Opened
+    from the scene tools Save menu, a message's Fork button, or the scene card's three-dot menu. Forking is the timeline's
+    only action in this version — rolling a scene back in place and opening a revision directly are both disabled while they
+    are being reworked.
 - path: user-guide/saving.md
   title: Saving
   summary: How scene saving works, .json save files in the project directory, automatic changelog version history, restore

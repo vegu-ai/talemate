@@ -17,7 +17,7 @@ The **Quick load** row shows your most recently saved scenes as cards. Click a c
 
 Each card has a three-dot menu (⋯) beneath it with additional actions:
 
-- :material-history: **Timeline** — browse and restore the scene's version history, see [Restoring Scenes](/talemate/user-guide/restoring-scenes)
+- :material-history: **Timeline** — browse and fork from the scene's version history, see [Restoring Scenes](/talemate/user-guide/restoring-scenes)
 - **Remove from Quick Load** — remove the card without deleting any files
 - **Delete** — delete the scene file itself (refused for the currently loaded scene — load a different scene first)
 

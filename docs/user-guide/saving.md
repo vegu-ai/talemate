@@ -47,4 +47,4 @@ These additional save files can be set as [restore points](/talemate/user-guide/
 
 You can create a new copy of a scene from any message in the scene by clicking the :material-source-fork: **Fork** button underneath the message.
 
-This opens the [timeline](/talemate/user-guide/restoring-scenes) positioned at that message's revision, where you can preview the scene state and either fork it to a new save or roll the scene back.
+This opens the [timeline](/talemate/user-guide/restoring-scenes) positioned at that message's revision, where you can preview the scene state and fork it to a new save.

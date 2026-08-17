@@ -29,7 +29,7 @@
             </v-list-item>
             <v-list-item @click="openSceneTimeline()" prepend-icon="mdi-history" :disabled="!canUseTimeline">
                 <v-list-item-title>Timeline</v-list-item-title>
-                <v-list-item-subtitle>Browse the scene's history and roll back or fork from any point</v-list-item-subtitle>
+                <v-list-item-subtitle>Browse the scene's history and fork from any point</v-list-item-subtitle>
             </v-list-item>
             <v-divider />
             <v-list-item @click="openSceneStateReset" prepend-icon="mdi-refresh">

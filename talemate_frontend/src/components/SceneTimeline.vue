@@ -81,7 +81,11 @@
                     </v-sheet>
 
                     <v-alert v-if="sharedContextWarning" color="warning" icon="mdi-earth-off" density="compact" variant="tonal" class="text-caption mt-3">
-                        Forking or rolling back disconnects the scene from its shared world context, since shared context cannot be reconstructed to a specific revision.
+                        Forking disconnects the scene from its shared world context, since shared context cannot be reconstructed to a specific revision.
+                    </v-alert>
+
+                    <v-alert color="muted" icon="mdi-history" density="compact" variant="tonal" class="text-caption mt-3">
+                        Rolling a scene back in place and opening a revision directly are disabled in this version while they are being reworked, and will return in a future version. Fork the revision into a new save instead — it is written alongside the scene and leaves every existing save untouched.
                     </v-alert>
                 </template>
             </v-card-text>
@@ -90,19 +94,6 @@
                 <v-btn variant="text" @click="close" prepend-icon="mdi-close" color="cancel">Cancel</v-btn>
                 <v-spacer></v-spacer>
                 <template v-if="revisions.length > 0">
-                    <!-- headless (load screen): open the revision as a new, unsaved scene -->
-                    <v-btn v-if="isHeadless" color="primary" variant="text" prepend-icon="mdi-book-open-page-variant" :disabled="applying" @click="openAtRevision">
-                        Open at this revision
-                    </v-btn>
-                    <v-tooltip v-else :text="rollbackDisabledReason || `Roll the scene back to revision ${selectedRevision?.rev}. A backup is saved first and the rollback is recorded on the timeline, so you can come back forward.`" max-width="350" location="top">
-                        <template v-slot:activator="{ props }">
-                            <span v-bind="props">
-                                <v-btn color="warning" variant="text" prepend-icon="mdi-history" :disabled="applying || !!rollbackDisabledReason" :loading="applying && applyAction === 'rollback'" @click="rollbackPrompt">
-                                    Roll back
-                                </v-btn>
-                            </span>
-                        </template>
-                    </v-tooltip>
                     <v-tooltip text="Create a new scene save from this revision. The current scene is not modified." max-width="350" location="top">
                         <template v-slot:activator="{ props }">
                             <v-btn v-bind="props" color="primary" variant="text" prepend-icon="mdi-source-fork" class="ml-2" :disabled="applying" :loading="applying && applyAction === 'fork'" @click="forkPrompt">
@@ -114,15 +105,6 @@
             </v-card-actions>
         </v-card>
     </v-dialog>
-
-    <ConfirmActionPrompt
-        ref="confirmRollback"
-        @confirm="rollback"
-        actionLabel="Roll back"
-        icon="mdi-history"
-        color="warning"
-        :description="`The scene will be rolled back to revision ${selectedRevision?.rev}. A backup of the current state is saved to the scene's backups folder, and the rollback itself is recorded on the timeline — you can scrub forward to return.`"
-    />
 
     <RequestInput
         ref="requestForkName"
@@ -136,7 +118,6 @@
 <script>
 import { debounce } from 'lodash';
 
-import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import RequestInput from './RequestInput.vue';
 import { parseCharacterMessage } from '@/utils/characterMessage.js';
 import { getMessageColor } from '@/utils/messageColors.js';
@@ -152,7 +133,6 @@ const COLOR_KEYS = {
 export default {
     name: 'SceneTimeline',
     components: {
-        ConfirmActionPrompt,
         RequestInput,
     },
     props: {
@@ -160,7 +140,6 @@ export default {
         appearanceConfig: Object,
     },
     inject: ['getWebsocket', 'registerMessageHandler'],
-    emits: ['load-at-revision'],
     data() {
         return {
             dialog: false,
@@ -193,15 +172,6 @@ export default {
         },
         sharedContextWarning() {
             return !this.isHeadless && !!this.scene?.data?.shared_context;
-        },
-        rollbackDisabledReason() {
-            if (this.scene?.data?.immutable_save) {
-                return 'This save is immutable and cannot be rolled back in place — fork instead.';
-            }
-            if (!this.scene?.data?.filename) {
-                return 'The scene must be saved before it can be rolled back.';
-            }
-            return null;
         },
     },
     watch: {
@@ -273,28 +243,6 @@ export default {
                 rev: revision.rev,
                 scene_path: this.scenePath,
                 max_messages: 30,
-            }));
-        },
-
-        openAtRevision() {
-            this.$emit('load-at-revision', {
-                path: this.scenePath,
-                rev: this.selectedRevision.rev,
-            });
-            this.close();
-        },
-
-        rollbackPrompt() {
-            this.$refs.confirmRollback.initiateAction();
-        },
-
-        rollback() {
-            this.applying = true;
-            this.applyAction = 'rollback';
-            this.getWebsocket().send(JSON.stringify({
-                type: 'timeline',
-                action: 'rollback',
-                rev: this.selectedRevision.rev,
             }));
         },
 

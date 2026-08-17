@@ -8,6 +8,9 @@
                 <v-tab value="illustration" class="text-caption" prepend-icon="mdi-image-filter-hdr">
                     Scene Illustration
                 </v-tab>
+                <v-tab value="card" class="text-caption" prepend-icon="mdi-image-frame">
+                    Scene Card
+                </v-tab>
                 <v-tab value="finalizers" class="text-caption" prepend-icon="mdi-auto-fix">
                     Prompt Finalization
                 </v-tab>
@@ -27,6 +30,15 @@
                 v-else-if="tab === 'illustration'"
                 ref="illustration"
                 :vis-type="VIS_TYPE.SCENE_ILLUSTRATION"
+                :scene="scene"
+                :visual-agent-ready="visualAgentReady"
+                :image-edit-available="imageEditAvailable"
+                :image-create-available="imageCreateAvailable"
+            />
+            <WorldStateManagerSceneVisualsAssets
+                v-else-if="tab === 'card'"
+                ref="card"
+                :vis-type="VIS_TYPE.SCENE_CARD"
                 :scene="scene"
                 :visual-agent-ready="visualAgentReady"
                 :image-edit-available="imageEditAvailable"

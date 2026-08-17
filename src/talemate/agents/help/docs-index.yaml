@@ -1194,9 +1194,9 @@
     new scenes from an episode.
 - path: user-guide/world-editor/scene/visuals.md
   title: Scene Visuals
-  summary: 'World Editor Scene Visuals tab: manage background illustrations and scene illustrations (upload, Generate New,
-    Generate Variation with batch prompts), set the scene cover image, set/unset the scene backdrop with the Render backdrop
-    switch, and edit the visualizer agent''s per-scene Prompt Finalization overrides.'
+  summary: 'World Editor Scene Visuals tab: manage background illustrations, scene illustrations and scene cards (upload,
+    Generate New, Generate Variation with batch prompts), set the scene cover image, set/unset the scene backdrop with the
+    Render backdrop switch, and edit the visualizer agent''s per-scene Prompt Finalization overrides.'
 - path: user-guide/world-editor/suggestions.md
   title: Suggestions
   summary: The Suggestions view where agent-proposed world changes (currently character changes only) accumulate for review,

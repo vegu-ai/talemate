@@ -7,7 +7,7 @@
         </div>
 
         <v-alert
-            v-if="backdropAssetId"
+            v-if="typeConfig.offersSetBackdrop && backdropAssetId"
             icon="mdi-image-area"
             density="compact"
             variant="tonal"
@@ -44,7 +44,7 @@
 
         <VisualAssetGrid
             :assets="assets"
-            aspect="landscape"
+            :aspect="typeConfig.aspect"
             :drop-label="`Add ${typeConfig.label}`"
             :is-dragging="isDragging"
             :get-src="getAssetSrc"
@@ -74,7 +74,7 @@
                     <v-list-item-title>Set as Scene Cover Image</v-list-item-title>
                 </v-list-item>
                 <v-list-item
-                    v-if="backdropAssetId !== asset.id"
+                    v-if="typeConfig.offersSetBackdrop && backdropAssetId !== asset.id"
                     @click="setBackdrop({ assetId: asset.id })"
                 >
                     <template v-slot:prepend>
@@ -83,7 +83,7 @@
                     <v-list-item-title>Set as Scene Backdrop</v-list-item-title>
                 </v-list-item>
                 <v-list-item
-                    v-else
+                    v-else-if="backdropAssetId === asset.id"
                     @click="setBackdrop({ clear: true })"
                 >
                     <template v-slot:prepend>
@@ -151,7 +151,7 @@
             :reference-asset-ids="referenceAssetIds"
             :assets-map="assetsMap"
             :base64-by-id="base64ById"
-            aspect="landscape"
+            :aspect="typeConfig.aspect"
             :is-generating="isGenerating"
             :can-generate="canGenerate"
             no-references-text="No reference images available for this scene."
@@ -218,14 +218,23 @@ import VisualAssetGenerateDialog from './VisualAssetGenerateDialog.vue';
 import VisualAssetGenerateNewDialog from './VisualAssetGenerateNewDialog.vue';
 import { VIS_TYPE, FORMAT_TYPE, GEN_TYPE } from '@/constants/visual';
 
-// Per-vis-type copy and naming. Both scene illustration types share the
-// same landscape-oriented management UX; only the wording differs.
+// VisualAssetGrid's aspect keys are a lowercase alias of FORMAT_TYPE; deriving
+// one from the other keeps a type's grid and its generation format in step.
+const FORMAT_TO_ASPECT = {
+    [FORMAT_TYPE.LANDSCAPE]: 'landscape',
+    [FORMAT_TYPE.PORTRAIT]: 'portrait',
+    [FORMAT_TYPE.SQUARE]: 'square',
+};
+
+// Per-vis-type copy, layout and naming for the scene image sub-tabs.
 const TYPE_CONFIG = {
     [VIS_TYPE.SCENE_BACKGROUND]: {
         label: 'background illustration',
         pluralLabel: 'background illustrations',
         namePrefix: 'background',
         icon: 'mdi-image-area',
+        format: FORMAT_TYPE.LANDSCAPE,
+        offersSetBackdrop: true,
         description: 'Background illustrations are purely environmental images of the scene\'s location — no characters. They work well as the scene backdrop rendered behind the scene text.',
         generateHint: 'Describe the environment, e.g., a moonlit forest clearing with ancient stones',
     },
@@ -234,8 +243,22 @@ const TYPE_CONFIG = {
         pluralLabel: 'scene illustrations',
         namePrefix: 'illustration',
         icon: 'mdi-image-filter-hdr',
+        format: FORMAT_TYPE.LANDSCAPE,
+        offersSetBackdrop: true,
         description: 'Scene illustrations depict the current moment of the scene and may include characters. They are ideal for illustrating key story beats.',
         generateHint: 'Describe the moment, e.g., the party gathered around the campfire at dusk',
+    },
+    [VIS_TYPE.SCENE_CARD]: {
+        label: 'scene card',
+        pluralLabel: 'scene cards',
+        namePrefix: 'card',
+        icon: 'mdi-image-frame',
+        format: FORMAT_TYPE.PORTRAIT,
+        // a UI choice, not a backend rule — an asset of any type can be made
+        // the backdrop elsewhere, which is why Unset below stays un-gated
+        offersSetBackdrop: false,
+        description: 'Scene cards are portrait-oriented images representing the story as a whole — the kind of image that works as the scene\'s cover image, shown on its card in the scene library.',
+        generateHint: 'Describe the cover image, e.g., a lone airship drifting over a storm-lit mountain range',
     },
 };
 
@@ -270,7 +293,8 @@ export default {
     },
     computed: {
         typeConfig() {
-            return TYPE_CONFIG[this.visType];
+            const config = TYPE_CONFIG[this.visType];
+            return { ...config, aspect: FORMAT_TO_ASPECT[config.format] };
         },
         sceneTitle() {
             return this.scene?.title || this.scene?.name || 'the scene';
@@ -280,14 +304,10 @@ export default {
                 .filter(([, asset]) => asset?.meta?.vis_type === this.visType)
                 .map(([id, asset]) => ({ id, ...asset }));
         },
-        // Same-type assets first, then the other scene-level vis types, so a
+        // Same-type assets first, then the other types managed here, so a
         // variation can be started even before any image of this type exists.
         referenceAssetIds() {
-            const sceneVisTypes = [
-                VIS_TYPE.SCENE_BACKGROUND,
-                VIS_TYPE.SCENE_ILLUSTRATION,
-                VIS_TYPE.SCENE_CARD,
-            ].filter(v => v !== this.visType);
+            const sceneVisTypes = Object.keys(TYPE_CONFIG).filter(v => v !== this.visType);
             const sameType = this.assets.map(a => a.id);
             const otherTypes = Object.entries(this.assetsMap)
                 .filter(([, asset]) => sceneVisTypes.includes(asset?.meta?.vis_type))
@@ -352,7 +372,7 @@ export default {
         },
 
         openGenerateDialog() {
-            if (this.backdropAssetId && this.referenceAssetIds.includes(this.backdropAssetId)) {
+            if (this.typeConfig.offersSetBackdrop && this.backdropAssetId && this.referenceAssetIds.includes(this.backdropAssetId)) {
                 this.selectedReferenceAssetId = this.backdropAssetId;
             } else {
                 this.selectedReferenceAssetId = this.referenceAssetIds[0] || null;
@@ -387,7 +407,7 @@ export default {
                 negative_prompt: null,
                 vis_type: this.visType,
                 gen_type: GEN_TYPE.IMAGE_EDIT,
-                format: FORMAT_TYPE.LANDSCAPE,
+                format: this.typeConfig.format,
                 reference_assets: [this.selectedReferenceAssetId],
                 inline_reference: null,
             };

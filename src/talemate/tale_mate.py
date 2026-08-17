@@ -380,10 +380,6 @@ class Scene(Emitter):
         return os.path.join(self.save_dir, "info")
 
     @property
-    def backups_dir(self):
-        return os.path.join(self.save_dir, "backups")
-
-    @property
     def changelog_dir(self):
         return os.path.join(self.save_dir, "changelog")
 
@@ -2033,81 +2029,28 @@ class Scene(Emitter):
 
         self.set_new_memory_session_id()
 
-    async def restore(
-        self,
-        save_as: str | None = None,
-        from_rev: int | None = None,
-        from_date: str | None = None,
-        to_date: str | None = None,
-    ):
+    async def restore(self, save_as: str | None = None):
         try:
-            self.log.info(
-                "Restoring",
-                source=self.restore_from,
-                from_rev=from_rev,
-                from_date=from_date,
-                to_date=to_date,
-            )
+            self.log.info("Restoring", source=self.restore_from)
 
             restore_from = self.restore_from
-            use_changelog = (
-                from_rev is not None or from_date is not None or to_date is not None
-            )
 
-            if not self.restore_from and not use_changelog:
+            if not self.restore_from:
                 self.log.warning("restore: no save file specified to restore from")
                 return
 
             from talemate.load import load_scene
 
-            # If a changelog rev/date-range is provided, reconstruct first.
-            # Reconstruction must happen before reset() since reset() clears
-            # `filename`, which the changelog paths are resolved from.
-            temp_path = None
-            if use_changelog:
-                from talemate.changelog import (
-                    ChangelogDivergedError,
-                    check_chain_divergence,
-                    reconstruct_scene_data,
-                )
-
-                # Restoring a diverged reconstruction and then saving commits
-                # diff(latest, lossy_reconstruction), baking the losses into
-                # the chain — refuse instead. The timeline handler catches
-                # this for user-facing messaging; the guard lives here because
-                # this is the operation that performs the rollback.
-                divergent = await check_chain_divergence(self)
-                if divergent:
-                    raise ChangelogDivergedError(
-                        f"Refusing to restore from revision: the changelog chain "
-                        f"has diverged at {len(divergent)} path(s) "
-                        f"(e.g. {divergent[0]})."
-                    )
-
-                target_rev = from_rev
-                # For now, date range selection is not implemented; default to latest if not provided
-                reconstructed = await reconstruct_scene_data(self, to_rev=target_rev)
-                temp_name = f"{os.path.splitext(self.filename or 'scene.json')[0]}-restored.json"
-                temp_path = os.path.join(self.save_dir, temp_name)
-                with open(temp_path, "w") as f:
-                    f.write(save.scene_data_dumps(reconstructed))
-
             self.reset()
             self.active_characters = []
             await self.remove_all_actors()
 
-            if use_changelog:
-                try:
-                    await load_scene(self, temp_path, add_to_recent=False)
-                finally:
-                    os.remove(temp_path)
-            else:
-                await load_scene(
-                    self,
-                    os.path.join(self.save_dir, self.restore_from),
-                )
-                if not self.restore_from:
-                    self.restore_from = restore_from
+            await load_scene(
+                self,
+                os.path.join(self.save_dir, self.restore_from),
+            )
+            if not self.restore_from:
+                self.restore_from = restore_from
 
             await self.reset_memory()
 

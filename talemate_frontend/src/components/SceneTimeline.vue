@@ -82,10 +82,10 @@
 
                     <v-alert v-if="chainNeedsRepair" color="warning" icon="mdi-source-branch-sync" density="compact" variant="tonal" class="text-caption mt-3">
                         <div v-if="chain?.status === 'diverged'">
-                            This scene's history is out of sync with the scene itself. Rollback is disabled, and previews or forks may show incorrect data.
+                            This scene's history is out of sync with the scene itself, so previews or forks may show incorrect data.
                         </div>
                         <div v-else>
-                            This scene's history could not be verified. Rollback is disabled, and previews or forks may show incorrect data.
+                            This scene's history could not be verified, so previews or forks may show incorrect data.
                         </div>
                         <div v-if="chain?.detail" class="text-medium-emphasis mt-1">{{ chain.detail }}</div>
                         <template v-slot:append>
@@ -104,7 +104,7 @@
                     </v-alert>
 
                     <v-alert v-if="sharedContextWarning" color="warning" icon="mdi-earth-off" density="compact" variant="tonal" class="text-caption mt-3">
-                        Forking or rolling back disconnects the scene from its shared world context, since shared context cannot be reconstructed to a specific revision.
+                        Forking disconnects the scene from its shared world context, since shared context cannot be reconstructed to a specific revision.
                     </v-alert>
                 </template>
             </v-card-text>
@@ -113,19 +113,6 @@
                 <v-btn variant="text" @click="close" prepend-icon="mdi-close" color="cancel">Cancel</v-btn>
                 <v-spacer></v-spacer>
                 <template v-if="revisions.length > 0">
-                    <!-- headless (load screen): open the revision as a new, unsaved scene -->
-                    <v-btn v-if="isHeadless" color="primary" variant="text" prepend-icon="mdi-book-open-page-variant" :disabled="applying" @click="openAtRevision">
-                        Open at this revision
-                    </v-btn>
-                    <v-tooltip v-else :text="rollbackDisabledReason || `Roll the scene back to revision ${selectedRevision?.rev}. A backup is saved first and the rollback is recorded on the timeline, so you can come back forward.`" max-width="350" location="top">
-                        <template v-slot:activator="{ props }">
-                            <span v-bind="props">
-                                <v-btn color="warning" variant="text" prepend-icon="mdi-history" :disabled="applying || !!rollbackDisabledReason" :loading="applying && applyAction === 'rollback'" @click="rollbackPrompt">
-                                    Roll back
-                                </v-btn>
-                            </span>
-                        </template>
-                    </v-tooltip>
                     <v-tooltip text="Create a new scene save from this revision. The current scene is not modified." max-width="350" location="top">
                         <template v-slot:activator="{ props }">
                             <v-btn v-bind="props" color="primary" variant="text" prepend-icon="mdi-source-fork" class="ml-2" :disabled="applying" :loading="applying && applyAction === 'fork'" @click="forkPrompt">
@@ -139,21 +126,12 @@
     </v-dialog>
 
     <ConfirmActionPrompt
-        ref="confirmRollback"
-        @confirm="rollback"
-        actionLabel="Roll back"
-        icon="mdi-history"
-        color="warning"
-        :description="`The scene will be rolled back to revision ${selectedRevision?.rev}. A backup of the current state is saved to the scene's backups folder, and the rollback itself is recorded on the timeline — you can scrub forward to return.`"
-    />
-
-    <ConfirmActionPrompt
         ref="confirmRepair"
         @confirm="repair"
         actionLabel="Repair timeline"
         icon="mdi-broom"
         color="warning"
-        description="The scene's history will start fresh from the scene as it is now. Everything recorded before this point disappears from the timeline and can no longer be previewed, forked, or rolled back to. The old history files are kept in the scene's changelog folder for reference."
+        description="The scene's history will start fresh from the scene as it is now. Everything recorded before this point disappears from the timeline and can no longer be previewed or forked. The old history files are kept in the scene's changelog folder for reference."
     />
 
     <RequestInput
@@ -178,7 +156,6 @@ import {
     rebaseNote as buildRebaseNote,
     repairBrowseState,
     revisionsUpdate,
-    rollbackDisabledReason as readRollbackDisabledReason,
 } from '@/utils/sceneTimelineChain';
 
 const MESSAGE_FLAG_HIDDEN = 1;
@@ -201,7 +178,6 @@ export default {
         themeColors: Object,
     },
     inject: ['getWebsocket', 'registerMessageHandler'],
-    emits: ['load-at-revision'],
     data() {
         return {
             dialog: false,
@@ -242,12 +218,6 @@ export default {
         },
         rebaseNote() {
             return buildRebaseNote(this.rebase, this.formatTimestamp);
-        },
-        rollbackDisabledReason() {
-            return readRollbackDisabledReason({
-                needsRepair: this.chainNeedsRepair,
-                sceneData: this.scene?.data,
-            });
         },
     },
     watch: {
@@ -321,28 +291,6 @@ export default {
                 rev: revision.rev,
                 scene_path: this.scenePath,
                 max_messages: 30,
-            }));
-        },
-
-        openAtRevision() {
-            this.$emit('load-at-revision', {
-                path: this.scenePath,
-                rev: this.selectedRevision.rev,
-            });
-            this.close();
-        },
-
-        rollbackPrompt() {
-            this.$refs.confirmRollback.initiateAction();
-        },
-
-        rollback() {
-            this.applying = true;
-            this.applyAction = 'rollback';
-            this.getWebsocket().send(JSON.stringify({
-                type: 'timeline',
-                action: 'rollback',
-                rev: this.selectedRevision.rev,
             }));
         },
 

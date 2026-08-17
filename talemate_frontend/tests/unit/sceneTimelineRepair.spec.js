@@ -5,7 +5,6 @@ import {
     rebaseNote,
     repairBrowseState,
     revisionsUpdate,
-    rollbackDisabledReason,
 } from "@/utils/sceneTimelineChain";
 
 describe("chainNeedsRepair", () => {
@@ -121,15 +120,15 @@ describe("operationDoneOutcome", () => {
         expect(outcome.clearApplying).toBe(true);
     });
 
-    it("closes the dialog after a successful rollback", () => {
-        const outcome = operationDoneOutcome({}, { applying: true, applyAction: "rollback" });
+    it("closes the dialog after a successful fork", () => {
+        const outcome = operationDoneOutcome({}, { applying: true, applyAction: "fork" });
 
         expect(outcome.close).toBe(true);
         expect(outcome.clearApplying).toBe(true);
     });
 
     it("keeps the dialog open when the operation failed", () => {
-        const outcome = operationDoneOutcome({ error: "no" }, { applying: true, applyAction: "rollback" });
+        const outcome = operationDoneOutcome({ error: "no" }, { applying: true, applyAction: "fork" });
 
         expect(outcome.close).toBe(false);
         expect(outcome.clearApplying).toBe(true);
@@ -148,40 +147,6 @@ describe("operationDoneOutcome", () => {
         const outcome = operationDoneOutcome({}, { applying: false, applyAction: null });
 
         expect(outcome).toEqual({ clearLoading: false, clearApplying: false, close: false });
-    });
-});
-
-describe("rollbackDisabledReason", () => {
-    const saved = { filename: "scene.json" };
-
-    it("names the repair when the chain needs it", () => {
-        const reason = rollbackDisabledReason({ needsRepair: true, sceneData: saved });
-
-        expect(reason).toContain("repaired");
-    });
-
-    it("reports the broken chain before anything else", () => {
-        const reason = rollbackDisabledReason({ needsRepair: true, sceneData: { immutable_save: true } });
-
-        expect(reason).toContain("repaired");
-    });
-
-    it("refuses an immutable save", () => {
-        const reason = rollbackDisabledReason({
-            needsRepair: false,
-            sceneData: { ...saved, immutable_save: true },
-        });
-
-        expect(reason).toContain("immutable");
-    });
-
-    it("refuses a scene that was never saved", () => {
-        expect(rollbackDisabledReason({ needsRepair: false, sceneData: {} })).toContain("saved");
-        expect(rollbackDisabledReason({ needsRepair: false, sceneData: undefined })).toContain("saved");
-    });
-
-    it("has no reason to refuse a saved scene with a healthy chain", () => {
-        expect(rollbackDisabledReason({ needsRepair: false, sceneData: saved })).toBeNull();
     });
 });
 

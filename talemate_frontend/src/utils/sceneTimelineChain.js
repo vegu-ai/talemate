@@ -28,25 +28,6 @@ export function rebaseNote(rebase, formatTimestamp) {
 }
 
 /**
- * Why the scene cannot be rolled back to the selected revision, or null when it
- * can. A broken chain is reported first: the recorded revisions no longer match
- * the state they were made from, so rolling back to one would restore something
- * the timeline is misrepresenting.
- */
-export function rollbackDisabledReason({ needsRepair, sceneData }) {
-    if (needsRepair) {
-        return "The scene's history needs to be repaired before rollback is available.";
-    }
-    if (sceneData?.immutable_save) {
-        return 'This save is immutable and cannot be rolled back in place — fork instead.';
-    }
-    if (!sceneData?.filename) {
-        return 'The scene must be saved before it can be rolled back.';
-    }
-    return null;
-}
-
-/**
  * The browse state a repair starts from. The revision the dialog was asked to
  * open at is forgotten: a repair starts a fresh chain, so the refreshed list
  * carries different revisions and the one that was pinned is gone from it.

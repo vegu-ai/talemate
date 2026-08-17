@@ -1,24 +1,22 @@
 """
-Websocket plugin for the scene timeline / rollback UX.
+Websocket plugin for the scene timeline UX.
 
 Lets the frontend browse a scene's changelog revisions, preview the message
-history at any revision, and apply a restoration:
+history at any revision, and fork from one:
 
 - ``list_revisions``: timeline points — every changelog revision with its
   timestamp, plus the base snapshot (revision 0).
 - ``preview``: reconstructs the scene at a revision and returns the tail of
   its message history for display.
-- ``rollback``: rolls the *active* scene back to a revision in place. A
-  pre-rollback backup of the scene file is written to the scene's backups
-  directory first, and the rollback itself is saved as a new changelog
-  revision — so the timeline is never destroyed and the user can scrub
-  forward again.
 - ``fork``: writes a new scene file forked from a revision and asks the
   frontend to load it.
 
-All actions except ``rollback`` also work without a loaded scene by passing
-``scene_path`` (used from the load screen), operating on a lightweight
-scene scaffold.
+Forking is the only action that writes: the timeline never modifies the scene
+it browses, and ``fork`` refuses a save name that already exists, so no
+timeline action can overwrite an existing scene file.
+
+All actions also work without a loaded scene by passing ``scene_path`` (used
+from the load screen), operating on a lightweight scene scaffold.
 """
 
 import os
@@ -27,12 +25,12 @@ import pydantic
 import structlog
 
 from talemate.changelog import (
-    _get_overall_latest_revision,
     ChangelogCorruptedError,
     ChangelogDivergedError,
+    ForkSaveNameError,
     check_chain_divergence,
-    create_pre_rollback_backup,
     fork_scene_at_revision,
+    resolve_fork_save_name,
     list_revision_entries,
     read_rebase_marker,
     rebase_changelog_chain,
@@ -56,10 +54,6 @@ class PreviewPayload(pydantic.BaseModel):
     rev: int
     scene_path: str | None = None
     max_messages: int = 20
-
-
-class RollbackPayload(pydantic.BaseModel):
-    rev: int
 
 
 class ForkPayload(pydantic.BaseModel):
@@ -156,7 +150,7 @@ class TimelinePlugin(Plugin):
 
         User-confirmed from the timeline UI: the old chain is preserved
         under ``changelog/rebased-<ts>/`` and a fresh chain starts from the
-        current scene state, making rollback and fork usable again.
+        current scene state, so previews and forks reconstruct exactly again.
         """
         payload = RepairPayload(**data)
         scene = self._target_scene(payload.scene_path)
@@ -257,99 +251,23 @@ class TimelinePlugin(Plugin):
             }
         )
 
-    async def handle_rollback(self, data: dict):
-        """
-        Roll the active scene back to a revision in place.
-
-        Writes a pre-rollback backup of the current scene file, restores the
-        scene state from the changelog, then saves — which records the
-        rollback as a new changelog revision, keeping the full timeline
-        intact.
-        """
-        payload = RollbackPayload(**data)
-        scene = self.scene
-
-        if not scene or not scene.filename:
-            await self.signal_operation_failed(
-                "Scene must be saved before it can be rolled back"
-            )
-            return
-
-        if scene.immutable_save:
-            await self.signal_operation_failed(
-                "This save is immutable and cannot be rolled back in place — fork instead"
-            )
-            return
-
-        try:
-            divergent = await check_chain_divergence(scene)
-        except ChangelogCorruptedError as e:
-            await self.signal_operation_failed(f"Rollback refused: {e}")
-            return
-        if divergent:
-            log.warning("timeline_rollback_refused", paths=divergent[:20])
-            await self.signal_operation_failed(
-                "Rollback refused: this scene's history is out of sync with "
-                "the scene itself, so rolling back could lose data. Use "
-                "Repair on the timeline to fix it."
-            )
-            return
-
-        original_filename = scene.filename
-        original_path = os.path.join(scene.save_dir, scene.filename)
-        backup_path = create_pre_rollback_backup(scene)
-
-        try:
-            await scene.restore(from_rev=payload.rev)
-
-            # restore() loads the reconstructed state via a temp file, which
-            # clears the filename and leaves `rev` resolved against the temp
-            # name — point both back at the original scene file before saving.
-            scene.filename = original_filename
-            scene.rev = _get_overall_latest_revision(scene, strict=False)
-
-            await scene.save()
-            await scene.emit_history()
-        except ChangelogDivergedError as e:
-            # restore() reconstructs before touching the scene, so the
-            # active scene is still intact here.
-            log.warning("timeline_rollback_refused", detail=str(e))
-            await self.signal_operation_failed(
-                "Rollback refused: this scene's history is out of sync with "
-                "the scene itself. Use Repair on the timeline to fix it."
-            )
-            return
-        except Exception:
-            # recover the session by reloading the scene file from disk
-            # instead of leaving a half-reset scene in memory
-            self.websocket_handler.queue_put(
-                {
-                    "type": "system",
-                    "id": "load_scene_request",
-                    "data": {"path": original_path},
-                }
-            )
-            raise
-
-        log.info(
-            "timeline_rollback",
-            rev=payload.rev,
-            filename=original_filename,
-            backup=backup_path,
-        )
-
-        await self.signal_operation_done(
-            signal_only=True,
-            emit_status_message=f"Scene rolled back to revision {payload.rev}",
-        )
-
     async def handle_fork(self, data: dict):
         """
         Create a new scene file forked from a revision and ask the frontend
         to load it.
+
+        The fork always writes a save of its own: a name that would land on an
+        existing file is refused rather than overwriting it with older,
+        reconstructed data.
         """
         payload = ForkPayload(**data)
         scene = self._target_scene(payload.scene_path)
+
+        try:
+            save_name = resolve_fork_save_name(scene, payload.save_name)
+        except ForkSaveNameError as e:
+            await self.signal_operation_failed(str(e))
+            return
 
         warning = None
         try:
@@ -369,9 +287,7 @@ class TimelinePlugin(Plugin):
             )
 
         try:
-            fork_path = await fork_scene_at_revision(
-                scene, payload.rev, payload.save_name
-            )
+            fork_path = await fork_scene_at_revision(scene, payload.rev, save_name)
         except ChangelogDivergedError as e:
             log.warning("timeline_fork_refused", rev=payload.rev, detail=str(e))
             await self.signal_operation_failed(

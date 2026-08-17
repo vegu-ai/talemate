@@ -6,7 +6,6 @@ all changes over time using delta compression. It provides functionality to:
 
 - Store incremental changes (deltas) between scene revisions
 - Reconstruct any previous scene state by applying deltas
-- Roll back scenes to previous revisions with optional backups
 - Optimize performance using base + latest snapshot caching
 
 Architecture:
@@ -52,9 +51,6 @@ async with InMemoryChangelog(scene) as changelog:
 
 # Reconstruct scene at specific revision
 scene_data = await reconstruct_scene_data(scene, to_rev=5)
-
-# Roll back to previous state
-await rollback_scene_to_revision(scene, to_rev=3, create_backup=True)
 ```
 
 File Layout:
@@ -78,13 +74,13 @@ import structlog
 import deepdiff
 from deepdiff.path import parse_path
 from datetime import datetime, timezone
-import shutil
 import glob
 import uuid
 
 from talemate.save import SceneEncoder
 from talemate.path import SCENES_DIR
 from talemate.util.time import migrate_scene_time
+from talemate.util.path import is_safe_relative_filename
 from pathlib import Path
 
 if TYPE_CHECKING:
@@ -131,8 +127,8 @@ REORDERED_LISTS_KEY = "_reordered_lists"
 
 # Agent-derived world-state subtrees excluded from deltas above. They are
 # refreshed by the world-state agent's analysis cycles, so reconstruction
-# overlays them from the latest snapshot: a fork or rollback gets the
-# current derived state instead of the base snapshot's. Derived from
+# overlays them from the latest snapshot: a fork gets the current derived
+# state instead of the base snapshot's. Derived from
 # EXCLUDE_FROM_DELTAS so the two cannot drift apart.
 OVERLAY_FROM_LATEST = tuple(
     path.removeprefix("root['world_state']['").removesuffix("']")
@@ -173,7 +169,6 @@ class _SceneRef:
         self.filename = filename
         self.save_dir = save_dir
         self.changelog_dir = os.path.join(save_dir, "changelog")
-        self.backups_dir = os.path.join(save_dir, "backups")
         self.serialize = data
 
 
@@ -1070,7 +1065,7 @@ def _overlay_derived_world_state(data: dict, latest: dict | None) -> None:
     The subtrees in OVERLAY_FROM_LATEST are excluded from deltas, so without
     this a reconstruction — at any revision — would carry the base
     snapshot's values. The latest snapshot's values are the freshest known
-    and the ones a fork or rollback should start from.
+    and the ones a fork should start from.
     """
     world_state = data.get("world_state")
     latest_world_state = (latest or {}).get("world_state")
@@ -1311,33 +1306,6 @@ def delete_changelog_files(scene: "Scene") -> dict:
         return {"deleted": deleted, "dir_removed": None}
 
 
-def create_pre_rollback_backup(scene: "Scene") -> str | None:
-    """
-    Copy the scene's current file to a timestamped backup in its backups
-    directory before a rollback overwrites or replaces its state.
-
-    Returns:
-        str | None: Path to the backup file, or None if the scene file does
-        not exist or the copy failed.
-    """
-    current_path = os.path.join(scene.save_dir, scene.filename)
-    if not os.path.exists(current_path):
-        return None
-
-    os.makedirs(scene.backups_dir, exist_ok=True)
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    base_name = os.path.splitext(scene.filename)[0]
-    backup_name = f"{base_name}_pre_rollback_{ts}.json"
-    backup_path = os.path.join(scene.backups_dir, backup_name)
-    try:
-        shutil.copy2(current_path, backup_path)
-        log.debug("rollback_backup_created", backup_path=backup_path)
-    except Exception as e:
-        log.error("rollback_backup_failed", error=e, path=current_path)
-        return None
-    return backup_path
-
-
 def _changelog_fingerprint(scene: "Scene") -> tuple:
     """Stat fingerprint of all changelog artifacts, for cache invalidation."""
     paths = [_base_path(scene), _latest_path(scene)]
@@ -1529,8 +1497,8 @@ def quarantine_corrupted_changelog_files(scene: "Scene") -> list[str]:
     so end-state comparison cannot prove the gap mattered —
     ``check_chain_divergence`` treats the marker's presence (or leftover
     quarantined segment files, if the marker write itself failed) as
-    unverifiable and destructive operations refuse for the life of the
-    chain. The marker also carries a revision hint so new revisions
+    unverifiable, so previews and forks warn that they may be missing data
+    for the life of the chain. The marker also carries a revision hint so new revisions
     continue above the lost range instead of colliding with it. Files are
     renamed, never deleted.
 
@@ -1606,6 +1574,36 @@ def quarantine_corrupted_changelog_files(scene: "Scene") -> list[str]:
 
 class ForkTargetMissingError(ValueError):
     """The reconstructed history does not contain the fork target message."""
+
+
+class ForkSaveNameError(ValueError):
+    """A fork's save name cannot be used. The message is user-facing."""
+
+
+def resolve_fork_save_name(scene: "Scene", save_name: str | None) -> str:
+    """
+    The name a fork may be written under, stripped of surrounding whitespace.
+
+    Both fork entry points — the timeline and the fork button under a message —
+    write ``<save_name>.json`` into the scene's save directory, so both resolve
+    the name here: a fork must never write over an existing save or outside the
+    save directory.
+
+    Raises:
+        ForkSaveNameError: the name is unusable, with the reason to show the user.
+    """
+    name = (save_name or "").strip()
+    filename = f"{name}.json"
+
+    if not name or not is_safe_relative_filename(filename, suffix=".json"):
+        raise ForkSaveNameError(f"'{save_name}' is not a valid save name")
+
+    if os.path.exists(os.path.join(scene.save_dir, filename)):
+        raise ForkSaveNameError(
+            f"A save named '{name}' already exists — pick a different name"
+        )
+
+    return name
 
 
 def _rebase_marker_path(scene: "Scene") -> str:
@@ -1996,57 +1994,6 @@ async def fork_scene_at_revision(
         precomputed_data=reconstructed,
         zero_message_revs=True,
     )
-
-
-async def rollback_scene_to_revision(
-    scene: "Scene", to_rev: int, create_backup: bool = True
-) -> str:
-    """
-    Roll back a scene to a previous revision, optionally creating a backup.
-
-    Reconstructs the scene data at the target revision and overwrites the
-    current scene file. Can optionally create a timestamped backup of the
-    current scene file before rollback.
-
-    Args:
-        scene: The scene object to roll back
-        to_rev: The revision number to roll back to
-        create_backup: Whether to create a backup of the current scene file
-
-    Returns:
-        str: Path to the updated scene file
-
-    Raises:
-        ValueError: If the target revision is invalid (negative or beyond latest)
-    """
-    revisions = list_revisions(scene)
-    latest_rev = max(revisions) if revisions else 0
-    if to_rev < 0 or to_rev > latest_rev:
-        raise ValueError(
-            f"Invalid revision: {to_rev}. Latest available is {latest_rev}."
-        )
-
-    divergent = await check_chain_divergence(scene)
-    if divergent:
-        # A rollback saves diff(latest, reconstruction) as a new revision,
-        # which would bake reconstruction losses into the chain permanently.
-        raise ChangelogDivergedError(
-            f"Refusing to roll back: the changelog chain has diverged at "
-            f"{len(divergent)} path(s) (e.g. {divergent[0]})."
-        )
-
-    current_path = os.path.join(scene.save_dir, scene.filename)
-
-    backup_path = None
-    if create_backup:
-        backup_path = create_pre_rollback_backup(scene)
-
-    reconstructed = await reconstruct_scene_data(scene, to_rev=to_rev)
-    with open(current_path, "w") as f:
-        json.dump(reconstructed, f, indent=2, cls=SceneEncoder)
-    log.info("rollback_applied", path=current_path, rev=to_rev, backup=backup_path)
-
-    return current_path
 
 
 class InMemoryChangelog:

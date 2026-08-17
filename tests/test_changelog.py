@@ -14,7 +14,6 @@ from talemate.changelog import (
     reconstruct_cleanup,
     write_reconstructed_scene,
     list_revisions,
-    rollback_scene_to_revision,
     delete_changelog_files,
     _changelog_log_path,
     _base_path,
@@ -237,28 +236,6 @@ async def test_check_chain_divergence_unreadable_latest_raises(mock_scene):
 
     with pytest.raises(ChangelogCorruptedError, match="latest snapshot is unreadable"):
         await check_chain_divergence(mock_scene)
-
-
-@pytest.mark.asyncio
-async def test_restore_refused_on_diverged_chain(mock_scene):
-    """Scene.restore(from_rev=...) — the live rollback path — refuses divergence."""
-    await save_changelog(mock_scene)
-
-    mock_scene.serialize = {
-        "characters": [{"name": "Alice"}],
-        "entries": [],
-        "metadata": {"version": "1.0"},
-    }
-    assert await persist_test_mutation(mock_scene) == 1
-
-    with open(_latest_path(mock_scene)) as f:
-        latest = json.load(f)
-    latest["characters"][0]["name"] = "Bob"
-    with open(_latest_path(mock_scene), "w") as f:
-        json.dump(latest, f)
-
-    with pytest.raises(ChangelogDivergedError, match="Refusing to restore"):
-        await mock_scene.restore(from_rev=1)
 
 
 @pytest.mark.asyncio
@@ -1213,116 +1190,6 @@ async def test_check_chain_divergence_caches_result(mock_scene, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_rollback_refused_on_diverged_chain(mock_scene):
-    """Rollback on a diverged chain raises instead of baking losses in."""
-    await save_changelog(mock_scene)
-
-    mock_scene.serialize = {
-        "characters": [{"name": "Alice"}],
-        "entries": [],
-        "metadata": {"version": "1.0"},
-    }
-    assert await persist_test_mutation(mock_scene) == 1
-
-    with open(_latest_path(mock_scene)) as f:
-        latest = json.load(f)
-    latest["characters"][0]["name"] = "Bob"
-    with open(_latest_path(mock_scene), "w") as f:
-        json.dump(latest, f)
-
-    with pytest.raises(ChangelogDivergedError, match="Refusing to roll back"):
-        await rollback_scene_to_revision(mock_scene, 0)
-
-
-@pytest.mark.asyncio
-async def test_rollback_scene_to_revision_invalid_rev(mock_scene):
-    """Test rollback with invalid revision number."""
-    # Setup some revisions
-    log_data = {
-        "version": 1,
-        "base": "test_scene.json.base.json",
-        "deltas": [{"rev": 1}, {"rev": 2}],
-        "latest_rev": 2,
-    }
-
-    log_path = _changelog_log_path(mock_scene, 0)
-    os.makedirs(os.path.dirname(log_path), exist_ok=True)
-    with open(log_path, "w") as f:
-        json.dump(log_data, f)
-
-    with pytest.raises(ValueError, match="Invalid revision: 5. Latest available is 2."):
-        await rollback_scene_to_revision(mock_scene, 5)
-
-    with pytest.raises(
-        ValueError, match="Invalid revision: -1. Latest available is 2."
-    ):
-        await rollback_scene_to_revision(mock_scene, -1)
-
-
-@pytest.mark.asyncio
-async def test_rollback_scene_to_revision_with_backup(mock_scene):
-    """Test rollback creates backup and updates scene file."""
-    # Setup base data
-    base_data = {"version": "base"}
-    base_path = _base_path(mock_scene)
-    os.makedirs(os.path.dirname(base_path), exist_ok=True)
-    with open(base_path, "w") as f:
-        json.dump(base_data, f)
-    # a healthy chain always has a latest snapshot beside the base
-    with open(_latest_path(mock_scene), "w") as f:
-        json.dump(base_data, f)
-
-    # Setup current scene file
-    current_data = {"version": "current"}
-    current_path = os.path.join(mock_scene.save_dir, mock_scene.filename)
-    with open(current_path, "w") as f:
-        json.dump(current_data, f)
-
-    # Setup log with revision 1
-    _ensure_log_initialized(mock_scene, 0)
-
-    result_path = await rollback_scene_to_revision(mock_scene, 0, create_backup=True)
-
-    # Check that current file was updated to base data
-    assert result_path == current_path
-    with open(current_path, "r") as f:
-        result = json.load(f)
-    assert result == base_data
-
-    # Check that backup was created
-    assert os.path.exists(mock_scene.backups_dir)
-    backup_files = os.listdir(mock_scene.backups_dir)
-    assert len(backup_files) == 1
-    assert backup_files[0].startswith("test_scene_pre_rollback_")
-
-
-@pytest.mark.asyncio
-async def test_rollback_scene_to_revision_no_backup(mock_scene):
-    """Test rollback without creating backup."""
-    # Setup base data
-    base_data = {"version": "base"}
-    base_path = _base_path(mock_scene)
-    os.makedirs(os.path.dirname(base_path), exist_ok=True)
-    with open(base_path, "w") as f:
-        json.dump(base_data, f)
-    # a healthy chain always has a latest snapshot beside the base
-    with open(_latest_path(mock_scene), "w") as f:
-        json.dump(base_data, f)
-
-    # Setup current scene file
-    current_path = os.path.join(mock_scene.save_dir, mock_scene.filename)
-    with open(current_path, "w") as f:
-        json.dump({"version": "current"}, f)
-
-    _ensure_log_initialized(mock_scene, 0)
-
-    await rollback_scene_to_revision(mock_scene, 0, create_backup=False)
-
-    # Should not create backup directory
-    assert not os.path.exists(mock_scene.backups_dir)
-
-
-@pytest.mark.asyncio
 async def test_changelog_excludes_volatile_fields(mock_scene):
     """Test that paths in EXCLUDE_FROM_DELTAS are not included in deltas."""
     # Initialize scene
@@ -1433,7 +1300,7 @@ async def test_changelog_excludes_regex_fields(mock_scene):
 
 @pytest.mark.asyncio
 async def test_full_workflow(mock_scene):
-    """Test complete workflow: save -> append -> reconstruct -> rollback."""
+    """Test complete workflow: save -> append -> reconstruct -> fork."""
     # Initial save
     initial_data = {"characters": [], "version": "1.0"}
     mock_scene.serialize = initial_data
@@ -1471,18 +1338,10 @@ async def test_full_workflow(mock_scene):
     output_path = await write_reconstructed_scene(mock_scene, 1)
     assert os.path.exists(output_path)
 
-    # Create current scene file for rollback test
-    current_path = os.path.join(mock_scene.save_dir, mock_scene.filename)
-    with open(current_path, "w") as f:
-        json.dump({"current": "state"}, f)
-
-    # Rollback to revision 1
-    await rollback_scene_to_revision(mock_scene, 1)
-
-    with open(current_path, "r") as f:
-        rolled_back = json.load(f)
-    assert len(rolled_back["characters"]) == 1
-    assert rolled_back["characters"][0]["name"] == "Alice"
+    with open(output_path, "r") as f:
+        reconstructed = json.load(f)
+    assert len(reconstructed["characters"]) == 1
+    assert reconstructed["characters"][0]["name"] == "Alice"
 
 
 def test_get_changelog_files_empty(mock_scene):
@@ -1896,7 +1755,7 @@ async def test_in_memory_changelog_baselines_on_committed_snapshot(mock_scene):
     mock_scene.serialize = {"history": list(items)}
 
     async with InMemoryChangelog(mock_scene) as changelog:
-        # remove the last two items (mirrors a rollback truncating history)
+        # remove the last two items (mirrors history being truncated)
         mock_scene.serialize = {"history": [items[0]]}
         await changelog.append_delta()
         await changelog.commit()

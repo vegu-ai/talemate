@@ -451,30 +451,3 @@ async def test_load_frame_exit_deactivates_its_scene(wired, monkeypatch):
     await handler.load_scene("a.json")
 
     assert handler.scene.active is False
-
-
-async def test_load_frame_exit_deactivates_its_scene_with_rev(wired, monkeypatch):
-    """The rev path rebinds the local scene mid-frame while self.scene stays
-    the release placeholder - the placeholder is what must end inactive."""
-    handler, scene, agent, memory = wired
-
-    async def fake_start(self):
-        return
-
-    async def fake_load(scene, *args, **kwargs):
-        scene.filename = "a.json"
-        return scene
-
-    async def fake_reconstruct(scene, to_rev, output_filename, **kwargs):
-        return "/tmp/nonexistent-rev.json"
-
-    monkeypatch.setattr(Scene, "start", fake_start)
-    monkeypatch.setattr(websocket_server, "load_scene", fake_load)
-    monkeypatch.setattr(
-        "talemate.changelog.write_reconstructed_scene", fake_reconstruct
-    )
-    monkeypatch.setattr(websocket_server.os, "remove", lambda path: None)
-
-    await handler.load_scene("a.json", rev=3)
-
-    assert handler.scene.active is False

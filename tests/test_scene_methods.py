@@ -528,7 +528,6 @@ class TestPathProperties:
         assert isolated_scene.template_dir == os.path.join(save_dir, "templates")
         assert isolated_scene.nodes_dir == os.path.join(save_dir, "nodes")
         assert isolated_scene.info_dir == os.path.join(save_dir, "info")
-        assert isolated_scene.backups_dir == os.path.join(save_dir, "backups")
         assert isolated_scene.changelog_dir == os.path.join(save_dir, "changelog")
         assert isolated_scene.shared_context_dir == os.path.join(
             save_dir, "shared-context"

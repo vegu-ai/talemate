@@ -978,10 +978,11 @@
 - path: user-guide/restoring-scenes.md
   title: Restoring Scenes
   summary: The Timeline built from the scene's changelog deltas, opened from the Save menu, a message's Fork button, a Quick
-    load card menu or a Scene Library save row, with Roll back, Open at this revision and Fork to new save; plus Restore Scene
-    from a restore point. Covers chain health and repair — a diverged chain shows a warning and disables rollback, and Repair
-    starts a fresh chain from the current state, preserving the old one in a rebased-<date> folder — and what world state a
-    past revision restores (pins, reinforcements and name mappings exactly; snapshots and location from current values).
+    load card menu or a Scene Library save row. Browsing and previewing write nothing and Fork to new save is its only action —
+    the scene being played is never modified — plus Restore Scene from a restore point. Covers chain health and repair — a
+    diverged chain shows a warning that previews and forks may be wrong, and Repair starts a fresh chain from the current state,
+    preserving the old one in a rebased-<date> folder — and what world state a past revision restores (pins, reinforcements and
+    name mappings exactly; snapshots and location from current values).
 - path: user-guide/saving.md
   title: Saving
   summary: How scene saves work - .json files in the scene project directory with an automatic changelog version history.
@@ -1004,7 +1005,7 @@
 - path: user-guide/scene-directory.md
   title: Scene Directory Structure
   summary: What lives in a scene's project directory under scenes/ - the .json save files plus assets/ (images and TTS audio),
-    changelog/ (snapshots and deltas powering the Timeline), backups/, nodes/ (node editor graphs), templates/, shared-context/
+    changelog/ (snapshots and deltas powering the Timeline), nodes/ (node editor graphs), templates/, shared-context/
     and info/.
 - path: user-guide/scene-state-reset.md
   title: Reset Scene State

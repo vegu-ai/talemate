@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Tuple
 import traceback
 import uuid
@@ -20,7 +21,12 @@ from talemate.world_state.templates import (
     Spices,
     WritingStyle,
 )
-from talemate.changelog import ForkTargetMissingError, fork_scene_at_revision
+from talemate.changelog import (
+    ForkSaveNameError,
+    ForkTargetMissingError,
+    fork_scene_at_revision,
+    resolve_fork_save_name,
+)
 from talemate.save import SceneEncoder
 import os
 from talemate.agents.base import (
@@ -808,12 +814,32 @@ class AssistantMixin:
 
         This properly creates a new scene file without modifying the current scene,
         then signals the frontend to load the new scene.
+
+        The fork always writes a save of its own: a name that is unsafe as a
+        filename, or that would land on an existing file, is refused rather
+        than escaping the save directory or overwriting a save. Without a
+        name it writes a timestamped one beside the scene, slugged so the
+        generated name cannot be the thing that gets refused.
         """
         try:
             emit("status", "Preparing to fork scene...", status="busy")
 
             if not save_name:
-                save_name = self.scene.generate_name()
+                # new scenes before their first save and restored scenes have
+                # no filename
+                base = (
+                    os.path.splitext(self.scene.filename)[0]
+                    if self.scene.filename
+                    else self.scene.project_name
+                )
+                stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                save_name = f"{util.slugify(base) or 'scene'}_fork_{stamp}"
+
+            try:
+                save_name = resolve_fork_save_name(self.scene, save_name)
+            except ForkSaveNameError as e:
+                emit("status", str(e), status="error")
+                return
 
             # Find the message to fork from
             message = self.scene.get_message(message_id)

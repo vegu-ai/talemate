@@ -4,7 +4,7 @@
 
 Scenes are saved as `.json` files inside the scene's [project directory](/talemate/user-guide/scene-directory). All saves for a scene are grouped together in this directory, so a single scene project might contain several save files representing different states or branches.
 
-When you save a scene, Talemate also records the changes in an automatic version history (changelog). This means you can [restore a scene to any previous revision](/talemate/user-guide/restoring-scenes) at any time.
+When you save a scene, Talemate also records the changes in an automatic version history (changelog). This means you can [preview any previous revision and fork it into a new save](/talemate/user-guide/restoring-scenes) at any time.
 
 Saves can also serve as **restore points**. By designating one save file as the restoration source in the [scene settings](/talemate/user-guide/world-editor/scene/settings), you can quickly reset a scene back to that state whenever needed — useful for testing or creating repeatable starting points.
 
@@ -47,4 +47,4 @@ These additional save files can be set as [restore points](/talemate/user-guide/
 
 You can create a new copy of a scene from any message in the scene by clicking the :material-source-fork: **Fork** button underneath the message.
 
-This opens the [timeline](/talemate/user-guide/restoring-scenes) positioned at that message's revision, where you can preview the scene state and either fork it to a new save or roll the scene back.
+This opens the [timeline](/talemate/user-guide/restoring-scenes) positioned at that message's revision, where you can preview the scene state and fork it to a new save.

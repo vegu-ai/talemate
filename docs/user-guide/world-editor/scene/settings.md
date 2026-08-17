@@ -34,7 +34,7 @@ Restoring creates a **new, unsaved scene** based on the restore point. Your curr
 !!! tip
     This is especially useful for scene creators who want to test their scenes repeatedly, or for creating replayable scenarios where players always start from the same point. Combine this with a [locked save file](#locked-save-file) to prevent accidental overwrites of your baseline.
 
-See also: [Restoring Scenes from Backups](/talemate/user-guide/restoring-scenes) for restoring to any previous revision using the automatic backup history.
+See also: [Restoring Scenes](/talemate/user-guide/restoring-scenes) for previewing and forking any previous revision from the automatic version history.
 
 ### Agent settings file
 

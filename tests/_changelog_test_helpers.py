@@ -40,8 +40,8 @@ class ChangelogScene(Scene):
 
     Overriding both with plain class attributes (``None`` here so subclass
     instances initialize them in ``__init__``) shadows the parent's
-    ``@property`` descriptors. ``changelog_dir``/``backups_dir`` are still
-    real ``@property`` on the parent and cascade off ``save_dir`` correctly.
+    ``@property`` descriptors. ``changelog_dir`` is still a real ``@property``
+    on the parent and cascades off ``save_dir`` correctly.
     """
 
     # Shadow the parent's @property descriptors with plain class attrs.
@@ -76,8 +76,8 @@ def make_changelog_scene(
 ) -> ChangelogScene:
     """Build a ``ChangelogScene`` whose ``save_dir`` is ``tmp_dir`` directly.
 
-    ``changelog_dir`` and ``backups_dir`` cascade off ``save_dir`` via the
-    real properties on ``Scene``.
+    ``changelog_dir`` cascades off ``save_dir`` via the real property on
+    ``Scene``.
     """
     scene = ChangelogScene(
         save_dir=tmp_dir,

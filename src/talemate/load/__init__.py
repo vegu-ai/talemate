@@ -297,8 +297,8 @@ def _quarantine_and_resolve_rev(scene):
     Order matters: quarantining lost segments writes a marker whose revision
     hint keeps new revisions above the lost range, so the rev resolution must
     run after it. Quarantined files are renamed aside (never deleted) and the
-    user is told — the chain is unverifiable from then on, so destructive
-    timeline operations refuse while saves keep working.
+    user is told — the chain is unverifiable from then on, so previews and forks
+    warn that they may be missing data while saves keep working.
     """
     quarantined = quarantine_corrupted_changelog_files(scene)
     if quarantined:
@@ -310,9 +310,8 @@ def _quarantine_and_resolve_rev(scene):
             status="warning",
             message=(
                 "This scene's history chain had corrupted files, which were "
-                "set aside. The timeline may be incomplete — rollback is "
-                "refused while the chain cannot be verified; forking still "
-                "works."
+                "set aside. The timeline may be incomplete — previews and "
+                "forks from it may be missing data."
             ),
         )
 

@@ -33,7 +33,6 @@ from talemate.changelog import (
     fork_scene_at_revision,
     reconstruct_cleanup,
     reconstruct_scene_data,
-    rollback_scene_to_revision,
 )
 from talemate.load import load_scene_from_data
 from talemate.util.time import migrate_scene_time
@@ -460,25 +459,6 @@ async def test_fork_writes_migrated_scene(changelog_scene):
 
 
 @pytest.mark.asyncio
-async def test_rollback_writes_migrated_scene(changelog_scene):
-    changelog_before = _digests(changelog_scene.changelog_dir)
-
-    scene_path = await rollback_scene_to_revision(
-        changelog_scene, 0, create_backup=True
-    )
-
-    with open(scene_path, "r") as f:
-        rolled_back = json.load(f)
-
-    assert rolled_back["ts"] == 3 * MONTH + HOUR
-    assert [m["ts"] for m in rolled_back["history"] if m["typ"] == "time"] == [HOUR]
-
-    # Rollback rewrites the scene file only; the changelog artifacts it read
-    # from stay exactly as they were.
-    assert _digests(changelog_scene.changelog_dir) == changelog_before
-
-
-@pytest.mark.asyncio
 async def test_legacy_latest_snapshot_does_not_diff_against_migrated_scene(
     changelog_scene,
 ):
@@ -548,8 +528,8 @@ async def test_reconstruct_cleanup_repairs_damaged_scene_time():
     """Reconstruction repairs damaged time values instead of aborting.
 
     Deltas are applied with `force=True`, so a reconstructed revision can carry
-    values no parser accepts. Rollback / fork / preview have no way to recover
-    from an exception here, so the migration repairs alongside the other
+    values no parser accepts. Fork and preview have no way to recover from an
+    exception here, so the migration repairs alongside the other
     reconstruction repairs.
     """
     data = _read_fixture()
@@ -577,11 +557,11 @@ async def test_reconstruct_cleanup_repairs_damaged_scene_time():
 
 @pytest.mark.asyncio
 async def test_repaired_reconstruction_loads_and_commits(load_env, monkeypatch):
-    """A repaired revision has to survive the load that follows a rollback.
+    """A repaired revision has to survive the load that follows a fork.
 
-    Rollback writes the reconstructed data to the scene file, and the load
+    A fork writes the reconstructed data to a new scene file, and the load
     that follows commits it to memory. `ArchiveEntry.ts` is not nullable, so
-    an entry repaired to null would make the rolled back scene unloadable.
+    an entry repaired to null would make the forked scene unloadable.
     """
     data = _read_fixture()
     data["archived_history"][0]["ts"] = ""

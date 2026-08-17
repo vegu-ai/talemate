@@ -5792,7 +5792,7 @@ wheels = [
 
 [[package]]
 name = "talemate"
-version = "0.39.0.dev3"
+version = "0.39.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import structlog
 
@@ -9,13 +9,20 @@ from talemate.events import GameLoopEvent
 from talemate.prompts import Prompt
 from talemate.prompts.response import AnchorExtractor, ResponseSpec
 from talemate.scene_message import ReinforcementMessage
+from talemate.util.async_tools import bounded_gather_apply
 
 from talemate.agents.base import AgentAction, set_processing
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
+    from talemate.world_state import Reinforcement
 
 log = structlog.get_logger("talemate.agents.world_state")
+
+
+class PreparedReinforcement(NamedTuple):
+    reinforcement: "Reinforcement"
+    message: ReinforcementMessage
 
 
 class WorldStateReinforcementsMixin:
@@ -75,7 +82,15 @@ class WorldStateReinforcementsMixin:
     async def update_reinforcements(self, force: bool = False, reset: bool = False):
         """
         Queries due worldstate re-inforcements
+
+        When the client supports concurrent inference, the LLM queries for all
+        due reinforcements run concurrently against the same scene snapshot
+        and their results apply sequentially in list order afterwards (history
+        pushes and state writes stay ordered); otherwise each reinforcement is
+        queried and applied one at a time.
         """
+
+        due = []
 
         for reinforcement in self.scene.world_state.reinforce:
             # Skip character reinforcements if require_active is True and character is not active
@@ -87,11 +102,49 @@ class WorldStateReinforcementsMixin:
                 continue
 
             if reinforcement.due <= 0 or force:
+                due.append(reinforcement)
+            else:
+                reinforcement.due -= 1
+
+        supports_concurrent = bool(
+            self.client and self.client.supports_concurrent_inference
+        )
+
+        # reset pops each item's prior history in _prepare_reinforcement,
+        # before any answer exists - run it one item at a time so a
+        # mid-batch failure cannot have wiped history it never replaced
+        if not supports_concurrent or reset or len(due) < 2:
+            for reinforcement in due:
                 await self.update_reinforcement(
                     reinforcement.question, reinforcement.character, reset=reset
                 )
-            else:
-                reinforcement.due -= 1
+            return
+
+        prepared = [
+            PreparedReinforcement(
+                reinforcement, self._prepare_reinforcement(reinforcement, reset)
+            )
+            for reinforcement in due
+        ]
+
+        async def generate(item: PreparedReinforcement) -> str:
+            return await self._generate_reinforcement(item.reinforcement, reset)
+
+        async def apply(item: PreparedReinforcement, answer: str):
+            await self._apply_reinforcement(
+                item.reinforcement, item.message, answer, reset
+            )
+
+        def on_error(item: PreparedReinforcement, error: BaseException):
+            log.error(
+                "update_reinforcements",
+                question=item.reinforcement.question,
+                character=item.reinforcement.character,
+                error=str(error),
+                exc_info=error,
+            )
+
+        await bounded_gather_apply(prepared, generate, apply, on_error=on_error)
 
     @set_processing
     async def update_reinforcement(
@@ -115,12 +168,19 @@ class WorldStateReinforcementsMixin:
             )
             return
 
+        message = self._prepare_reinforcement(reinforcement, reset)
+        answer = await self._generate_reinforcement(reinforcement, reset)
+        return await self._apply_reinforcement(reinforcement, message, answer, reset)
+
+    def _prepare_reinforcement(
+        self, reinforcement: "Reinforcement", reset: bool
+    ) -> ReinforcementMessage:
         message = ReinforcementMessage(message="")
         message.set_source(
             "world_state",
             "update_reinforcement",
-            question=question,
-            character=character,
+            question=reinforcement.question,
+            character=reinforcement.character,
         )
 
         if reset and reinforcement.insert == "sequential":
@@ -128,6 +188,11 @@ class WorldStateReinforcementsMixin:
                 typ="reinforcement", meta_hash=message.meta_hash, all=True
             )
 
+        return message
+
+    async def _generate_reinforcement(
+        self, reinforcement: "Reinforcement", reset: bool
+    ) -> str:
         if reinforcement.insert == "sequential":
             kind = "analyze_freeform_medium_short"
         else:
@@ -161,8 +226,15 @@ class WorldStateReinforcementsMixin:
             ),
         )
 
-        answer = extracted["response"]
+        return extracted["response"]
 
+    async def _apply_reinforcement(
+        self,
+        reinforcement: "Reinforcement",
+        message: ReinforcementMessage,
+        answer: str,
+        reset: bool,
+    ) -> ReinforcementMessage:
         reinforcement.answer = answer
         reinforcement.due = reinforcement.interval
 

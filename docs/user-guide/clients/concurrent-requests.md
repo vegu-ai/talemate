@@ -9,9 +9,12 @@ When enabled, operations that require multiple LLM queries will execute those qu
 Operations that take advantage of this include:
 
 - Visual/image prompt generation
+- Image analysis batches run by the Analyze Images node, when analysis goes through a Talemate client
 - Function-calling batches, where an AI response requests several tool calls at once (for example director chat query actions or help agent documentation lookups)
 - Multi-query world state updates
 - World state snapshots, which only run as true background tasks when the client can handle a concurrent request
+- Tracked state reinforcement updates, when several are due in the same round
+- Character progression checks across multiple characters — this one requires concurrent requests on **both** the World State agent's client and the Creator agent's client, since the proposed changes are generated through the Creator
 
 Regular conversation and narration tasks are single generations and are unaffected.
 

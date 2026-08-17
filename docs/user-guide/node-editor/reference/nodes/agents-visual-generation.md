@@ -21,7 +21,9 @@ _7 nodes._
 
 `agents/visual/AnalyzeImages`
 
-Analyzes images in batches using asyncio.Semaphore to limit concurrent requests.
+Analyzes images in batches, limiting concurrency to what the analysis
+backend supports (sequential when the backend does not support concurrent
+analysis).
 
 **Inputs**
 

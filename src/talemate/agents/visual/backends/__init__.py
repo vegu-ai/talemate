@@ -75,6 +75,17 @@ class Backend(BackendBase):
         return 0
 
     @property
+    def supports_concurrent_analysis(self) -> bool:
+        """
+        Whether analyze() calls may run concurrently against this backend.
+        The default is only right for hosted APIs - backends that route
+        through a talemate client must defer to that client's
+        `supports_concurrent_inference`, and backends pointing at a
+        user-supplied endpoint must make concurrency opt-in.
+        """
+        return True
+
+    @property
     def status_description(self) -> str:
         if self.status.type == BackendStatusType.ERROR:
             return self.status.message

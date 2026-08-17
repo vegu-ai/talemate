@@ -32,8 +32,15 @@ class Backend(backends.Backend):
     base_url: str = ""
     api_key: str = ""
     model: str = ""
+    concurrent_requests: bool = False
 
     _test_conn_cache_maxage: ClassVar[int] = 10
+
+    @property
+    def supports_concurrent_analysis(self) -> bool:
+        # user-supplied endpoints are commonly single-slot local vision
+        # servers, so concurrency is opt-in here unlike the hosted backends
+        return self.concurrent_requests
 
     @property
     def instance_label(self) -> str:
@@ -181,6 +188,18 @@ class OpenAICompatibleMixin:
                     ),
                     scene_overridable=False,
                 ),
+                "concurrent_requests": AgentActionConfig(
+                    type="bool",
+                    value=False,
+                    label="Concurrent requests",
+                    description=(
+                        "Allow multiple image analyses to run against this "
+                        "endpoint at the same time. Only enable if the server "
+                        "can handle concurrent requests - local single-slot "
+                        "vision servers usually cannot."
+                    ),
+                    scene_overridable=False,
+                ),
             },
         )
 
@@ -193,15 +212,22 @@ class OpenAICompatibleMixin:
         base_url = action_config["base_url"].value or ""
         api_key = action_config["api_key"].value or ""
         model = action_config["model"].value or ""
+        concurrent_requests = bool(action_config["concurrent_requests"].value)
 
         _reinit = force or not backend_instance_exists
 
         if _reinit:
-            return Backend(base_url=base_url, api_key=api_key, model=model)
+            return Backend(
+                base_url=base_url,
+                api_key=api_key,
+                model=model,
+                concurrent_requests=concurrent_requests,
+            )
 
         backend.base_url = base_url
         backend.api_key = api_key
         backend.model = model
+        backend.concurrent_requests = concurrent_requests
         return backend
 
     async def openai_compatible_prepare_analysis(

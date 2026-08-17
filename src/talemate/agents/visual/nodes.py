@@ -1,4 +1,5 @@
 import asyncio
+
 import structlog
 from typing import ClassVar
 from talemate.game.engine.nodes.core import (
@@ -27,6 +28,8 @@ from talemate.agents.visual.schema import (
     AnalysisRequest,
 )
 from talemate.context import active_scene
+from talemate.exceptions import ControlFlowException, GenerationCancelled
+from talemate.util.async_tools import bounded_gather
 
 __all__ = [
     "VisualSettings",
@@ -976,7 +979,9 @@ class UnpackGenerationResponse(AgentNode):
 @register("agents/visual/AnalyzeImages")
 class AnalyzeImages(AgentNode):
     """
-    Analyzes images in batches using asyncio.Semaphore to limit concurrent requests.
+    Analyzes images in batches, limiting concurrency to what the analysis
+    backend supports (sequential when the backend does not support concurrent
+    analysis).
 
     Inputs:
     - state: graph state (required)
@@ -1072,33 +1077,45 @@ class AnalyzeImages(AgentNode):
             else:
                 assets_to_analyze.append(asset_id)
 
-        # Analyze in batches using semaphore (max 3 concurrent)
-        semaphore = asyncio.Semaphore(3)
+        backend = self.agent.backend_image_analyzation
+        max_concurrent = 3 if backend.supports_concurrent_analysis else 1
+
         analyzed_ids = []
         failed_ids = []
 
         async def analyze_asset(asset_id: str):
-            async with semaphore:
-                try:
-                    log.debug("analyze_images_analyzing", asset_id=asset_id)
-                    request = AnalysisRequest(
-                        prompt=prompt,
-                        asset_id=asset_id,
-                        save=save,
-                    )
-                    await self.agent.analyze(request)
-                    analyzed_ids.append(asset_id)
-                    log.info("analyze_images_success", asset_id=asset_id)
-                except Exception as e:
-                    log.error("analyze_images_failed", asset_id=asset_id, error=str(e))
-                    failed_ids.append(asset_id)
+            try:
+                log.debug("analyze_images_analyzing", asset_id=asset_id)
+                request = AnalysisRequest(
+                    prompt=prompt,
+                    asset_id=asset_id,
+                    save=save,
+                )
+                await self.agent.analyze(request, await_completion=True)
+                analyzed_ids.append(asset_id)
+                log.info("analyze_images_success", asset_id=asset_id)
+            except ControlFlowException:
+                # a user interrupt is batch-fatal, not a per-asset failure -
+                # analyze() consumes the cancel latch on entry, so swallowing
+                # it here would let every queued asset run post-cancel
+                raise
+            except Exception as e:
+                log.error("analyze_images_failed", asset_id=asset_id, error=str(e))
+                failed_ids.append(asset_id)
 
-        # Create tasks for all assets
-        tasks = [analyze_asset(asset_id) for asset_id in assets_to_analyze]
-
-        # Wait for all tasks to complete
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
+        try:
+            await bounded_gather(
+                [analyze_asset(asset_id) for asset_id in assets_to_analyze],
+                max_concurrent=max_concurrent,
+            )
+        except asyncio.CancelledError:
+            # an outer cancel (scene unload, module test-stop) must propagate
+            # or the scene loop zombifies - only a cancel that originated
+            # below (cancel_analysis cancelling the backend tasks) is
+            # translated to the interrupt the graph engine passes through
+            if asyncio.current_task().cancelling() > 0:
+                raise
+            raise GenerationCancelled("Image analysis cancelled")
 
         log.info(
             "analyze_images_complete",

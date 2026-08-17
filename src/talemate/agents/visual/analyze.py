@@ -1,6 +1,6 @@
 import asyncio
 import structlog
-from typing import Callable
+from typing import Awaitable, Callable
 
 from talemate.agents.base import (
     set_processing,
@@ -38,7 +38,9 @@ class AnalysisMixin:
         emit("status", "Image analysis failed.", status="error")
 
     @set_processing
-    async def analyze(self, request: AnalysisRequest) -> AnalysisResponse:
+    async def analyze(
+        self, request: AnalysisRequest, await_completion: bool = False
+    ) -> AnalysisResponse:
         response = AnalysisResponse(
             request=request,
             id=request.id,
@@ -72,7 +74,7 @@ class AnalysisMixin:
                 data=response.model_dump(),
             )
 
-        await self.analyze_image(request, response, on_done)
+        await self.analyze_image(request, response, on_done, await_completion)
 
         return response
 
@@ -102,8 +104,17 @@ class AnalysisMixin:
         self,
         request: AnalysisRequest,
         response: AnalysisResponse,
-        on_done: Callable[[AnalysisResponse], None],
+        on_done: Callable[["asyncio.Future[AnalysisResponse]"], Awaitable[None]],
+        await_completion: bool = False,
     ):
+        """
+        Runs the analysis as a tracked background task. With
+        `await_completion=True` the task and its `on_done` handling are
+        awaited before returning, and the caller owns failures entirely:
+        exceptions propagate instead of reaching the background error
+        handler, so no `image_analysis_failed` emission or error status is
+        raised. Otherwise the call returns once the task is launched.
+        """
         if not self.can_analyze_images:
             raise ImageAnalysisNotAvailableError("Image analysis is not available")
 
@@ -118,12 +129,16 @@ class AnalysisMixin:
         response.backend_name = backend.name
 
         task = asyncio.create_task(backend.analyze(request, response))
-        task.add_done_callback(lambda fut: asyncio.create_task(on_done(fut)))
 
         # Track task for cancellation support
         self._track_analysis_task(task, backend)
 
-        await self.set_background_processing(task, self.on_image_analysis_error)
+        if await_completion:
+            await task
+            await on_done(task)
+        else:
+            task.add_done_callback(lambda fut: asyncio.create_task(on_done(fut)))
+            await self.set_background_processing(task, self.on_image_analysis_error)
 
     async def cancel_analysis(self):
         """

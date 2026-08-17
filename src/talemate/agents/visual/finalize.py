@@ -1,4 +1,3 @@
-import asyncio
 import re
 
 import pydantic
@@ -20,6 +19,7 @@ from talemate.agents.base import (
     AgentEmission,
 )
 from talemate.prompts import Prompt
+from talemate.util.async_tools import bounded_gather
 from talemate.ux.schema import Column, Condition, DynamicLabel, DynamicSpan
 
 __all__ = [
@@ -438,13 +438,16 @@ class PromptFinalizationMixin:
                 # return_exceptions + raise-after-settle: a failing call must
                 # not orphan the sibling task (plain gather propagates the
                 # first exception while the other keeps running)
-                results = await asyncio.gather(
-                    self.apply_prompt_finalizer(
-                        finalizer, positive, vis_type, character_name
-                    ),
-                    self.apply_prompt_finalizer(
-                        finalizer, negative, vis_type, character_name
-                    ),
+                results = await bounded_gather(
+                    [
+                        self.apply_prompt_finalizer(
+                            finalizer, positive, vis_type, character_name
+                        ),
+                        self.apply_prompt_finalizer(
+                            finalizer, negative, vis_type, character_name
+                        ),
+                    ],
+                    max_concurrent=2,
                     return_exceptions=True,
                 )
                 for result in results:

@@ -49,6 +49,16 @@ class Backend(backends.Backend):
     def status_cache_key(self) -> str:
         return f"{self.name}-{self.client_name or 'none'}"
 
+    @property
+    def supports_concurrent_analysis(self) -> bool:
+        if not self.client_name:
+            return False
+        try:
+            client = instance.get_client(self.client_name)
+        except KeyError:
+            return False
+        return client.supports_concurrent_inference
+
     def _get_vision_client(self):
         """Retrieve the configured Talemate client and validate vision support."""
         if not self.client_name:

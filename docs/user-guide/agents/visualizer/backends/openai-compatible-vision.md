@@ -34,6 +34,10 @@ Optional API key for authentication. Leave empty if your endpoint does not requi
 
 The model name to use for vision analysis. This may be optional depending on the API endpoint -- some single-model servers do not require it, while multi-model servers need it to route requests correctly.
 
+##### Concurrent requests
+
+Allows batch image analysis (for example the Analyze Images node) to send multiple requests to this endpoint at the same time. Off by default -- only enable it if the endpoint genuinely serves concurrent requests. Local single-slot vision servers usually do not; they queue the extra requests at best, and with the toggle off Talemate analyzes one image at a time instead.
+
 ## Usage
 
 Once configured, the backend is used automatically whenever image analysis is requested through the Visualizer agent. This includes:

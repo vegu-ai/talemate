@@ -998,8 +998,7 @@
     history to preview any revision, then fork that revision into a new save; browsing and previewing write nothing to disk,
     and a save name an existing save already uses is refused) and restore from a designated restore point save file. Opened
     from the scene tools Save menu, a message's Fork button, or the scene card's three-dot menu. Forking is the timeline's
-    only action in this version — rolling a scene back in place and opening a revision directly are both disabled while they
-    are being reworked.
+    only action in this version — rolling a scene back in place and opening a revision directly are both disabled.
 - path: user-guide/saving.md
   title: Saving
   summary: How scene saving works, .json save files in the project directory, automatic changelog version history, restore

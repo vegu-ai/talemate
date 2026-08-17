@@ -410,6 +410,7 @@ import { isVisualAgentReady, VIS_TYPE } from '@/constants/visual';
 import { isKnownSceneCharacter } from '@/utils/entityActions';
 import { parseCharacterMessage } from '@/utils/characterMessage.js';
 import { primaryModifierLabel } from '@/utils/keyboardModifiers';
+import { base64ToObjectUrl } from '@/utils/objectUrl.js';
 import {
     getMessageColor as resolveMessageColor,
     getMessageStyle as resolveMessageStyle,
@@ -616,6 +617,7 @@ export default {
             // cache (the asset may still be in flight when the dialog opens)
             assetViewShow: false,
             assetViewAssetId: null,
+            sceneBackdropObjectUrl: null,
         }
     },
     computed: {
@@ -651,8 +653,9 @@ export default {
         sceneBackdropAssetId() {
             return this.sceneBackdrop?.assetId || null;
         },
-        sceneBackdropSrc() {
-            return this.assetDataUrl(this.sceneBackdropAssetId);
+        sceneBackdropAsset() {
+            const assetId = this.sceneBackdropAssetId;
+            return assetId ? this.assetCache[assetId] || null : null;
         },
         // Most recent message-attached scene background the scene-tools
         // "Immersive" chip could promote to a backdrop when none is set yet
@@ -1334,6 +1337,26 @@ export default {
         assetDataUrl(assetId) {
             const cached = assetId ? this.assetCache[assetId] : null;
             return cached ? `data:${cached.mediaType};base64,${cached.base64}` : null;
+        },
+
+        requestSceneBackdropAsset() {
+            const assetId = this.sceneBackdropAssetId;
+            if (assetId && this.requestSceneAssets && !this.assetCache[assetId]) {
+                this.requestSceneAssets([assetId]);
+            }
+        },
+
+        /**
+         * Swap in the backdrop's object URL, revoking the one it replaces.
+         * The backdrop reaches the DOM as a CSS custom property, and chromium
+         * silently drops custom property values over 2 MiB — which a scene
+         * image as a base64 data URL almost always exceeds.
+         */
+        setSceneBackdropObjectUrl(url) {
+            if (this.sceneBackdropObjectUrl) {
+                URL.revokeObjectURL(this.sceneBackdropObjectUrl);
+            }
+            this.sceneBackdropObjectUrl = url;
         },
 
         showAssetMenu(event, context) {
@@ -2170,14 +2193,29 @@ export default {
             },
             deep: true,
         },
-        sceneBackdropAssetId(assetId) {
-            if (assetId && this.requestSceneAssets && !this.assetCache[assetId]) {
-                this.requestSceneAssets([assetId]);
-            }
+        sceneBackdropAssetId: {
+            immediate: true,
+            handler() {
+                this.requestSceneBackdropAsset();
+            },
+        },
+        // Scene load empties the asset cache without changing the backdrop id,
+        // so the id watcher alone would leave a reloaded scene without its
+        // backdrop image.
+        sceneBackdropAsset: {
+            immediate: true,
+            handler(asset) {
+                this.setSceneBackdropObjectUrl(
+                    asset ? base64ToObjectUrl(asset.base64, asset.mediaType) : null
+                );
+                if (!asset) {
+                    this.requestSceneBackdropAsset();
+                }
+            },
         },
         // The backdrop is painted by TalemateApp behind the whole scene
         // column, so hand the resolved image up
-        sceneBackdropSrc: {
+        sceneBackdropObjectUrl: {
             immediate: true,
             handler(src) {
                 this.$emit('scene-backdrop', src);
@@ -2201,6 +2239,7 @@ export default {
             clearTimeout(this._reapplyDebounceTimer);
             this._reapplyDebounceTimer = null;
         }
+        this.setSceneBackdropObjectUrl(null);
     },
 }
 

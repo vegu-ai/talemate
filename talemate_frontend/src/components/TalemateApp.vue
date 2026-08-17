@@ -531,7 +531,7 @@ export default {
   data() {
     return {
       appearancePreview: null, // Preview config while editing settings (null = use saved config)
-      // data-url of the scene illustration acting as the scene backdrop
+      // object URL of the scene illustration acting as the scene backdrop
       // (scene.assets.backdrop), reported up by SceneMessages which owns
       // the asset cache
       sceneBackdropSrc: null,

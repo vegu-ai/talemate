@@ -1,5 +1,6 @@
 import json
 import re
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Tuple
 import traceback
 import uuid
@@ -12,6 +13,7 @@ from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.prompts import Prompt
 from talemate.prompts.base import StripMode
+from talemate.util.path import is_safe_relative_filename
 from talemate.util.response import extract_list
 from talemate.scene_message import CharacterMessage
 from talemate.world_state.templates import (
@@ -808,12 +810,44 @@ class AssistantMixin:
 
         This properly creates a new scene file without modifying the current scene,
         then signals the frontend to load the new scene.
+
+        The fork always writes a save of its own: a name that is unsafe as a
+        filename, or that would land on an existing file, is refused rather
+        than escaping the save directory or overwriting a save. Without a
+        name it writes a timestamped one beside the scene, slugged so the
+        generated name cannot be the thing that gets refused.
         """
         try:
             emit("status", "Preparing to fork scene...", status="busy")
 
             if not save_name:
-                save_name = self.scene.generate_name()
+                # new scenes before their first save and restored scenes have
+                # no filename
+                base = (
+                    os.path.splitext(self.scene.filename)[0]
+                    if self.scene.filename
+                    else self.scene.project_name
+                )
+                stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                save_name = f"{util.slugify(base) or 'scene'}_fork_{stamp}"
+
+            fork_filename = f"{save_name}.json"
+
+            if not is_safe_relative_filename(fork_filename, suffix=".json"):
+                emit(
+                    "status",
+                    f"'{save_name}' is not a valid save name",
+                    status="error",
+                )
+                return
+
+            if os.path.exists(os.path.join(self.scene.save_dir, fork_filename)):
+                emit(
+                    "status",
+                    f"A save named '{save_name}' already exists — pick a different name",
+                    status="error",
+                )
+                return
 
             # Find the message to fork from
             message = self.scene.get_message(message_id)
@@ -889,7 +923,7 @@ class AssistantMixin:
                     scene_data["shared_context"] = ""
 
                 # Write the fork file
-                fork_file_path = os.path.join(self.scene.save_dir, f"{save_name}.json")
+                fork_file_path = os.path.join(self.scene.save_dir, fork_filename)
                 with open(fork_file_path, "w") as f:
                     json.dump(scene_data, f, indent=2, cls=SceneEncoder)
 

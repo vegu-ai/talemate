@@ -14,7 +14,7 @@ Chats can be made scene-aware, and each question carries a small snapshot of wha
 
 A new timeline dialog gives scene history a single home, replacing the old Restore from Backup dialog. Drag a slider across the scene's automatic version history to preview the message history at any revision, then fork that revision into a new save — the scene you are playing is never modified, and browsing the history changes nothing on disk.
 
-Forking is the only action the timeline applies in this version. Rolling a scene back in place and opening a revision directly are disabled while they are being reworked, and will return in a future version.
+Forking is the only action the timeline applies. Rolling a scene back in place and opening a revision directly are disabled in this version.
 
 ### Pi Bridge Client
 

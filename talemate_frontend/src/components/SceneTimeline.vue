@@ -85,7 +85,7 @@
                     </v-alert>
 
                     <v-alert color="muted" icon="mdi-history" density="compact" variant="tonal" class="text-caption mt-3">
-                        Rolling a scene back in place and opening a revision directly are disabled in this version while they are being reworked, and will return in a future version. Fork the revision into a new save instead — it is written alongside the scene and leaves every existing save untouched.
+                        Rolling a scene back in place and opening a revision directly are disabled in this version. Fork the revision into a new save instead — it is written alongside the scene and leaves every existing save untouched.
                     </v-alert>
                 </template>
             </v-card-text>

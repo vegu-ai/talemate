@@ -6,7 +6,7 @@ Talemate provides two ways to return a scene to a previous state:
 - **Restore from Restore Point** — reset to a specific save file you've designated as a baseline in the [scene settings](/talemate/user-guide/world-editor/scene/settings#restoration-settings)
 
 !!! warning "The timeline only forks in this version"
-    Rolling a scene back in place and opening a revision directly are both disabled while they are being reworked, and will return in a future version. Forking a revision into a new save is the one action the timeline applies — it writes a new save alongside the scene and leaves every existing save untouched.
+    Rolling a scene back in place and opening a revision directly are both disabled in this version. Forking a revision into a new save is the one action the timeline applies — it writes a new save alongside the scene and leaves every existing save untouched.
 
 ## The timeline
 

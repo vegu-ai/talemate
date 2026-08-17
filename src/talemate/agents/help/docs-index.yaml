@@ -1208,9 +1208,9 @@
     items as Shared to World Context.'
 - path: user-guide/world-editor/scene/visuals.md
   title: Scene Visuals
-  summary: 'The Scene tab''s Visuals sub-tabs: Background Illustration and Scene Illustration with drag-and-drop upload, Generate
-    Variation, Generate New, Cover and Backdrop badges and the Render backdrop switch, plus per-scene Prompt Finalization
-    overrides for the Visualizer agent.'
+  summary: 'World Editor Scene Visuals tab: manage background illustrations, scene illustrations and scene cards (upload,
+    Generate New, Generate Variation with batch prompts), set the scene cover image, set/unset the scene backdrop with the
+    Render backdrop switch, and edit the visualizer agent''s per-scene Prompt Finalization overrides.'
 - path: user-guide/world-editor/suggestions.md
   title: Suggestions
   summary: The Suggestions view where agents collect proposed world changes (currently only character changes). Covers requesting

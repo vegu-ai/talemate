@@ -48,7 +48,7 @@ An optional Auto Backdrop setting promotes newly generated scene backgrounds and
 
 ### Scene Visual Manager
 
-World Editor → Scene gains a Visuals tab mirroring the character visual manager: browse, upload, generate (single or batch, new or as variations of a reference image), and delete the scene's background and scene illustrations, set the scene cover image, and set or fully unset the scene backdrop. A Prompt Finalization sub-tab edits the Visualizer agent's per-scene prompt finalization overrides.
+World Editor → Scene gains a Visuals tab mirroring the character visual manager: browse, upload, generate (single or batch, new or as variations of a reference image), and delete the scene's background illustrations, scene illustrations and scene cards, set the scene cover image, and set or fully unset the scene backdrop (the Scene Card sub-tab is portrait and offers no set-backdrop action). A Prompt Finalization sub-tab edits the Visualizer agent's per-scene prompt finalization overrides.
 
 ### Visual Prompt Finalization
 

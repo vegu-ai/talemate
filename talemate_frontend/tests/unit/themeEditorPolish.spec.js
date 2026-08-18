@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { fileURLToPath, URL } from "node:url";
-import { APPEARANCE_STYLE_FLAGS } from "@/utils/templateMappings";
+import {
+    APPEARANCE_STYLE_FLAGS,
+    HIDEABLE_APPEARANCE_TYPES,
+    THEME_APPEARANCE_MAP,
+    offersStyleFlag,
+} from "@/utils/templateMappings";
 import { inheritedMarkupDerivation } from "@/utils/themePreview";
 import { constant, lift, readSource } from "./helpers/liftMethod";
 
@@ -11,9 +16,11 @@ function read(path) {
 const TEMPLATES = read("../../src/components/Templates.vue");
 const THEME = read("../../src/components/TemplateTheme.vue");
 const PREVIEW = read("../../src/components/TemplateThemePreview.vue");
+const APPEARANCE_SCENE = read("../../src/components/AppConfigAppearanceScene.vue");
 
 const TEMPLATE_THEME = "TemplateTheme.vue";
 const PREVIEW_VUE = "TemplateThemePreview.vue";
+const APPEARANCE_SCENE_VUE = "AppConfigAppearanceScene.vue";
 
 const MARKUP_CLASS_TO_SLOT = constant(PREVIEW, "MARKUP_CLASS_TO_SLOT", PREVIEW_VUE);
 const MARKUP_SLOT_TO_CLASS = Object.fromEntries(
@@ -25,8 +32,12 @@ function appearance() {
     return {
         narrator: { italic: false, bold: false },
         director: { italic: false, bold: false, show: true },
+        context_investigation: { italic: false, bold: false, show: true },
         quotes: { italic: false, bold: false, override_color: true, show: true },
         parentheses: { italic: false, bold: false, override_color: false, show: true },
+        brackets: { italic: false, bold: false, override_color: true, show: true },
+        emphasis: { italic: false, bold: false, override_color: true, show: false },
+        entities: { italic: false, bold: false, override_color: true, show: true },
         backdrop_panel_opacity: 0.8,
         backdrop_text_shadow: true,
     };
@@ -78,13 +89,15 @@ describe("theme preview picker popup", () => {
 
 describe("styling from the preview popup", () => {
     it("offers exactly the flags the clicked slot carries", () => {
-        const styleFlags = lift(PREVIEW, "styleFlags", PREVIEW_VUE, { APPEARANCE_STYLE_FLAGS });
+        const styleFlags = lift(PREVIEW, "styleFlags", PREVIEW_VUE, { APPEARANCE_STYLE_FLAGS, offersStyleFlag });
 
         const flagsFor = (selection) => styleFlags.call(previewContext(selection)).map((flag) => flag.key);
 
         expect(flagsFor({ type: "slot", group: "messages", slot: "narrator" })).toEqual(["italic", "bold"]);
         expect(flagsFor({ type: "slot", group: "messages", slot: "director" })).toEqual(["italic", "bold", "show"]);
-        expect(flagsFor({ type: "slot", group: "messages", slot: "quotes" })).toEqual(["italic", "bold", "show", "override_color"]);
+        expect(flagsFor({ type: "slot", group: "messages", slot: "context_investigation" })).toEqual(["italic", "bold", "show"]);
+        expect(flagsFor({ type: "slot", group: "messages", slot: "quotes" })).toEqual(["italic", "bold", "override_color"]);
+        expect(flagsFor({ type: "slot", group: "messages", slot: "emphasis" })).toEqual(["italic", "bold", "override_color"]);
         // colour-only slots and the derived elements have no styling to offer
         expect(flagsFor({ type: "slot", group: "messages", slot: "border" })).toEqual([]);
         expect(flagsFor({ type: "slot", group: "app", slot: "primary" })).toEqual([]);
@@ -92,11 +105,21 @@ describe("styling from the preview popup", () => {
     });
 
     it("carries each flag's current value and a label", () => {
-        const styleFlags = lift(PREVIEW, "styleFlags", PREVIEW_VUE, { APPEARANCE_STYLE_FLAGS });
+        const styleFlags = lift(PREVIEW, "styleFlags", PREVIEW_VUE, { APPEARANCE_STYLE_FLAGS, offersStyleFlag });
         const flags = styleFlags.call(previewContext({ type: "slot", group: "messages", slot: "parentheses" }));
 
         expect(flags.find((flag) => flag.key === "override_color")).toMatchObject({ label: "Own color", value: false });
         expect(flags.find((flag) => flag.key === "show")).toMatchObject({ label: "Show", value: true });
+    });
+
+    it("keeps Show for every hideable markup type", () => {
+        const styleFlags = lift(PREVIEW, "styleFlags", PREVIEW_VUE, { APPEARANCE_STYLE_FLAGS, offersStyleFlag });
+        for (const slot of ["parentheses", "brackets", "entities"]) {
+            expect(
+                styleFlags.call(previewContext({ type: "slot", group: "messages", slot })).map((flag) => flag.key),
+                slot,
+            ).toContain("show");
+        }
     });
 
     it("reports a flag change to the editor as a boolean, then checks its anchor", () => {
@@ -367,6 +390,67 @@ describe("the styling flags have one home", () => {
         expect(THEME).toContain('<th v-for="flag in styleFlags"');
         expect(THEME).toContain('v-model="row.style[flag.key]"');
         expect(THEME).not.toContain("<th class=\"text-left\" style=\"padding: 8px 12px;\">Italic</th>");
+    });
+
+    it("records exactly the renderer-supported hideable types", () => {
+        expect(HIDEABLE_APPEARANCE_TYPES).toEqual([
+            "director",
+            "context_investigation",
+            "parentheses",
+            "brackets",
+            "entities",
+        ]);
+    });
+
+    it("the appearance table executes the shared predicate", () => {
+        const offersFlag = lift(THEME, "offersFlag", TEMPLATE_THEME, { offersStyleFlag });
+        const styles = appearance();
+
+        expect(THEME).toContain('v-if="offersFlag(row, flag)"');
+        for (const type of ["quotes", "emphasis"]) {
+            expect(offersFlag({ key: type, style: styles[type] }, { key: "show" }), type).toBe(false);
+        }
+        for (const type of HIDEABLE_APPEARANCE_TYPES) {
+            expect(offersFlag({ key: type, style: styles[type] }, { key: "show" }), type).toBe(true);
+        }
+        expect(offersFlag({ key: "quotes", style: styles.quotes }, { key: "override_color" })).toBe(true);
+    });
+
+    it("the scene appearance page executes the shared mapping", () => {
+        const data = lift(APPEARANCE_SCENE, "data", APPEARANCE_SCENE_VUE, {
+            HIDEABLE_APPEARANCE_TYPES,
+            THEME_APPEARANCE_MAP,
+        });
+        expect(data().canSetShowOn).toEqual({
+            director_messages: true,
+            context_investigation_messages: true,
+            parentheses: true,
+            brackets: true,
+            entities: true,
+        });
+    });
+
+    it("the scene appearance hydration derives Show from the shared list", () => {
+        const hydrateMarkupStyle = lift(APPEARANCE_SCENE, "hydrateMarkupStyle", APPEARANCE_SCENE_VUE, {
+            HIDEABLE_APPEARANCE_TYPES,
+        });
+        for (const type of ["quotes", "parentheses", "brackets", "emphasis", "entities"]) {
+            const sceneConfig = {};
+            hydrateMarkupStyle(sceneConfig, type);
+            expect(Object.hasOwn(sceneConfig[type], "show"), type).toBe(
+                HIDEABLE_APPEARANCE_TYPES.includes(type),
+            );
+        }
+    });
+
+    it("the shared list maps to exactly the scene page's existing Show rows", () => {
+        expect(HIDEABLE_APPEARANCE_TYPES.map((typ) => THEME_APPEARANCE_MAP[typ])).toEqual([
+            "director_messages",
+            "context_investigation_messages",
+            "parentheses",
+            "brackets",
+            "entities",
+        ]);
     });
 
     it("names the control the same way in both places", () => {

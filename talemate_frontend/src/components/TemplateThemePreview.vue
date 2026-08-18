@@ -322,7 +322,7 @@
 
 <script>
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
-import { APPEARANCE_STYLE_FLAGS, labelForThemeSlot, vuetifySlotName } from '@/utils/templateMappings';
+import { APPEARANCE_STYLE_FLAGS, labelForThemeSlot, offersStyleFlag, vuetifySlotName } from '@/utils/templateMappings';
 import {
     PREVIEW_THEME_NAME,
     THEME_PREVIEW_DERIVED_ELEMENTS,
@@ -438,7 +438,7 @@ export default {
             }
             const appearance = this.appearanceOf(this.selection.slot);
             return APPEARANCE_STYLE_FLAGS
-                .filter((flag) => flag.key in appearance)
+                .filter((flag) => offersStyleFlag(this.selection.slot, appearance, flag.key))
                 .map((flag) => ({ ...flag, value: appearance[flag.key] }));
         },
         selectedMarkup() {

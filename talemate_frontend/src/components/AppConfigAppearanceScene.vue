@@ -134,6 +134,7 @@ import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
 import { getMessageColor } from '@/utils/messageColors.js';
 import { restoreAppearanceFromTheme } from '@/utils/appearanceTheme';
+import { HIDEABLE_APPEARANCE_TYPES, THEME_APPEARANCE_MAP } from '@/utils/templateMappings';
 
 export default {
     name: 'AppConfigAppearanceScene',
@@ -168,10 +169,10 @@ export default {
                 }
                 // Ensure new styling fields exist with defaults if missing
                 this.hydrateMarkupStyle(sceneConfig, 'quotes');
-                this.hydrateMarkupStyle(sceneConfig, 'parentheses', { italic: true, withShow: true });
-                this.hydrateMarkupStyle(sceneConfig, 'brackets', { italic: true, withShow: true });
+                this.hydrateMarkupStyle(sceneConfig, 'parentheses', { italic: true });
+                this.hydrateMarkupStyle(sceneConfig, 'brackets', { italic: true });
                 this.hydrateMarkupStyle(sceneConfig, 'emphasis', { italic: true });
-                this.hydrateMarkupStyle(sceneConfig, 'entities', { withShow: true });
+                this.hydrateMarkupStyle(sceneConfig, 'entities');
                 this.config = sceneConfig;
                 
                 // Re-enable changed events after hydration completes
@@ -331,13 +332,9 @@ export default {
                 "emphasis": true,
                 "entities": true,
             },
-            canSetShowOn: {
-                "director_messages": true,
-                "context_investigation_messages": true,
-                "parentheses": true,
-                "brackets": true,
-                "entities": true,
-            },
+            canSetShowOn: Object.fromEntries(
+                HIDEABLE_APPEARANCE_TYPES.map((typ) => [THEME_APPEARANCE_MAP[typ], true]),
+            ),
         }
     },
     methods: {
@@ -345,7 +342,8 @@ export default {
         // config. Used by the immutableConfig watcher to migrate older configs
         // that pre-date newer fields (override_color, show) and to seed a
         // fresh entry when the markup type isn't present at all.
-        hydrateMarkupStyle(sceneConfig, key, { italic = false, bold = false, withShow = false } = {}) {
+        hydrateMarkupStyle(sceneConfig, key, { italic = false, bold = false } = {}) {
+            const withShow = HIDEABLE_APPEARANCE_TYPES.includes(key);
             if (!sceneConfig[key]) {
                 const fresh = {
                     // no stored color — resolution falls through to the theme

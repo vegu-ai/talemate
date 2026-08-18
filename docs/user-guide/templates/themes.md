@@ -46,7 +46,7 @@ The preview above the panels renders the theme being edited — not the theme cu
 
 Every element in it is clickable. Clicking one opens the color that paints it in a color picker right at the element, so you pick a color from the thing it colors rather than from a slot name you have to decode. Editing repaints the preview immediately and saves the theme.
 
-Message and markup elements also carry their styling in the same popup, above the picker — the flags that type has, so a message type offers **Italic** and **Bold** (plus **Show** where it can be hidden) and a markup type adds **Show** and **Own color**. They are the same settings as in the [Message appearance](#message-appearance) panel, editable from the thing they style.
+Message and markup elements also carry their styling in the same popup, above the picker — the flags that type has, so a message type offers **Italic** and **Bold** (plus **Show** where it can be hidden) and a markup type adds **Own color**, plus **Show** when the renderer can hide it. Quotes and emphasis have no **Show** to switch. They are the same settings as in the [Message appearance](#message-appearance) panel, editable from the thing they style.
 
 Some elements have no color of their own and take one from somewhere else. Clicking one of those says so instead of silently editing something broader than you expect, and offers the color it derives from for editing:
 
@@ -55,7 +55,7 @@ Some elements have no color of their own and take one from somewhere else. Click
 - Text markup with **Own color** switched off takes the color of the message it appears in. Its popup shows the note in place of the picker and keeps the **Own color** toggle, so the markup can be given a color of its own right there — tick it and the picker appears. Markup picked where no message encloses it — from its own row while hidden, or from the entities row outside the highlighted entity itself — shows the note without a source to edit, since there is no one message type it inherits from.
 - Dividers and outlines are drawn from the theme **Mode**, not a color slot.
 
-Switching **Show** off reaches the sample differently per type. **Parentheses** and **Brackets** leave it, so the popup closes and the type moves to a row of its own, from where it can be switched back on. **Entities** stops being highlighted — a popup opened on the highlight closes with it, and the entities row stays where it is. **Quotes** and **Emphasis** carry the checkbox too, and the scene renderer does not act on it for those two — they keep rendering either way.
+Switching **Show** off reaches the sample differently per type. **Parentheses** and **Brackets** leave it, so the popup closes and the type moves to a row of its own, from where it can be switched back on. **Entities** stops being highlighted — a popup opened on the highlight closes with it, and the entities row stays where it is. Quotes and emphasis have no **Show** to switch because they keep rendering either way.
 
 | Panel | Slots | What it covers |
 |-------|-------|----------------|

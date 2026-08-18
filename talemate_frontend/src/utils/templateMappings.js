@@ -103,12 +103,25 @@ const THEME_APPEARANCE_TYPES = {
     time: {},
     context_investigation: { show: true },
     information: {},
-    quotes: { override_color: true, show: true },
+    quotes: { override_color: true },
     parentheses: { italic: false, override_color: true, show: true },
     brackets: { italic: false, override_color: true, show: true },
-    emphasis: { italic: false, override_color: true, show: true },
+    emphasis: { italic: false, override_color: true },
     entities: { override_color: true, show: true },
 };
+
+// Must match markup handling in sceneMessageRenderer.js and message visibility in SceneMessages.vue.
+export const HIDEABLE_APPEARANCE_TYPES = [
+    'director',
+    'context_investigation',
+    'parentheses',
+    'brackets',
+    'entities',
+];
+
+export function offersStyleFlag(type, style, flagKey) {
+    return flagKey in style && (flagKey !== 'show' || HIDEABLE_APPEARANCE_TYPES.includes(type));
+}
 
 /**
  * The styling flags an appearance entry can carry, with the name each is shown
@@ -328,4 +341,3 @@ export function hydrateThemeTemplate(template, themeColors, themeDark, themeCode
     template.appearance = appearance;
     return template;
 }
-

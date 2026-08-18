@@ -246,4 +246,19 @@ describe("hydrateThemeTemplate appearance seed", () => {
             show: false,
         });
     });
+
+    it("does not seed inert Show flags but preserves stored values", () => {
+        const fresh = hydrateThemeTemplate({}, {}).appearance;
+        expect(fresh.quotes).not.toHaveProperty("show");
+        expect(fresh.emphasis).not.toHaveProperty("show");
+
+        const stored = hydrateThemeTemplate({
+            appearance: {
+                quotes: { show: false },
+                emphasis: { show: false },
+            },
+        }, {}).appearance;
+        expect(stored.quotes.show).toBe(false);
+        expect(stored.emphasis.show).toBe(false);
+    });
 });

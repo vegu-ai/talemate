@@ -149,7 +149,7 @@
                                 <div class="text-caption font-weight-medium">{{ row.label }}</div>
                             </td>
                             <td v-for="flag in styleFlags" :key="flag.key" style="padding: 4px 12px;">
-                                <v-checkbox v-if="flag.key in row.style" color="primary" density="compact" hide-details class="ma-0"
+                                <v-checkbox v-if="offersFlag(row, flag)" color="primary" density="compact" hide-details class="ma-0"
                                     v-model="row.style[flag.key]" :disabled="locked" @update:model-value="saveTemplate"></v-checkbox>
                             </td>
                         </tr>
@@ -230,6 +230,7 @@ import {
     hydrateThemeTemplate,
     labelForThemeSlot,
     normalizeHexColor,
+    offersStyleFlag,
 } from '@/utils/templateMappings';
 
 export default {
@@ -325,6 +326,10 @@ export default {
     },
     methods: {
         labelForThemeSlot,
+
+        offersFlag(row, flag) {
+            return offersStyleFlag(row.key, row.style, flag.key);
+        },
 
         colorOf(groupKey, slot) {
             return (this.template.colors[groupKey] || {})[slot];

@@ -63,6 +63,7 @@ For each markup type, you can set:
 
 - **Italic** - Render the marked text in italics
 - **Bold** - Render the marked text in bold
+- **Show** - Render the markup at all. Switch it off and Parentheses and Brackets are removed from the message along with their markers, while Entity Highlights stop being highlighted and keep their text. Available for Parentheses, Brackets and Entity Highlights; quotes and emphasis always render.
 - **Color** - Enable or disable color override. When enabled, the markup uses its own configured color. When disabled, it inherits the color from the surrounding message type.
 
 !!! tip "Color Override"

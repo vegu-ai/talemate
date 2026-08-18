@@ -624,7 +624,9 @@ class HidableHistoryMessageStyle(HistoryMessageStyle):
 class MarkupMessageStyle(HistoryMessageStyle):
     # When False, use the underlying message default color instead of the markup color
     override_color: bool = True
-    # When False, hide the markup content entirely (including markers)
+    # When False, parentheses and brackets are removed from the message along with
+    # their markers, and entities lose their highlight but keep their text.
+    # Quotes and emphasis render regardless.
     show: bool = True
 
 

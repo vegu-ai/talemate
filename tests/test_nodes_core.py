@@ -20,6 +20,7 @@ No domain agents/scenes are required — every test instantiates real Node
 subclasses and runs them through real Graph/Loop primitives.
 """
 
+import asyncio
 import json
 from typing import Any, ClassVar
 
@@ -1620,6 +1621,77 @@ async def test_loop_exit_terminates_immediately_without_callbacks_after_break():
     await cleanup_pending_tasks()
     assert runs == ["exit"]
     # finally-block runs callbacks
+    assert cb_called == [True]
+
+
+@pytest.mark.asyncio
+async def test_loop_cancellation_skips_callbacks():
+    """A cancelled loop never completed, so its callbacks must not fire -
+    the node editor registers `test_done` as one of them (issue #270)."""
+
+    class SleepNode(Node):
+        def setup(self):
+            self.add_input("trigger")
+
+        async def run(self, state):
+            await asyncio.sleep(0.05)
+
+    entry = Entry()
+    sleeper = SleepNode(title="sleeper")
+    loop = Loop()
+    loop.add_node(entry)
+    loop.add_node(sleeper)
+    loop.connect(entry.outputs[0], sleeper.inputs[0])
+
+    cb_called = []
+
+    async def cb(state):
+        cb_called.append(True)
+
+    loop.callbacks.append(cb)
+
+    task = asyncio.create_task(loop.execute(GraphState()))
+    await asyncio.sleep(0.1)
+    task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    await cleanup_pending_tasks()
+    assert task.cancelled() is True
+    assert cb_called == []
+
+
+@pytest.mark.asyncio
+async def test_loop_stop_module_still_runs_callbacks():
+    """Only cancellation skips the callbacks - a loop torn down by a control
+    exception still reports completion."""
+
+    class StopNode(Node):
+        def setup(self):
+            self.add_input("trigger")
+
+        async def run(self, state):
+            raise StopModule()
+
+    entry = Entry()
+    loop = Loop()
+    loop.add_node(entry)
+    stop_node = StopNode(title="stop")
+    loop.add_node(stop_node)
+    loop.connect(entry.outputs[0], stop_node.inputs[0])
+
+    cb_called = []
+
+    async def cb(state):
+        cb_called.append(True)
+
+    loop.callbacks.append(cb)
+
+    with pytest.raises(StopModule):
+        await loop.execute(GraphState())
+
+    await cleanup_pending_tasks()
     assert cb_called == [True]
 
 

@@ -2244,6 +2244,8 @@ class Loop(Graph):
             if state_values:
                 state.data.update(state_values)
 
+            cancelled = False
+
             try:
                 # Separate into weakly connected components (isolated chains)
                 chains = list(nx.weakly_connected_components(graph))
@@ -2396,12 +2398,15 @@ class Loop(Graph):
                     # LOOP END
 
                     await self.on_loop_end(state)
-            # except Exception as e:
-            #    log.error("Error in loop", exc=e, traceback=traceback.format_exc())
-            #    raise
+            except asyncio.CancelledError:
+                # the callbacks signal completion - a cancelled loop never
+                # completed and must not fire them
+                cancelled = True
+                raise
             finally:
-                for callback in self.callbacks:
-                    await callback(state)
+                if not cancelled:
+                    for callback in self.callbacks:
+                        await callback(state)
 
 
 @base_node_type("core/Event")

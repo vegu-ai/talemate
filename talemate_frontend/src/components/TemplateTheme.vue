@@ -88,6 +88,7 @@
         :template="template"
         :readonly="locked"
         @set-color="setColor"
+        @set-appearance="setAppearance"
         @save="saveTemplate"
     />
 
@@ -139,10 +140,7 @@
                     <thead>
                         <tr>
                             <th class="text-left" style="padding: 8px 12px;">Style</th>
-                            <th class="text-left" style="padding: 8px 12px;">Italic</th>
-                            <th class="text-left" style="padding: 8px 12px;">Bold</th>
-                            <th class="text-left" style="padding: 8px 12px;">Show</th>
-                            <th class="text-left" style="padding: 8px 12px;">Own color</th>
+                            <th v-for="flag in styleFlags" :key="flag.key" class="text-left" style="padding: 8px 12px;">{{ flag.label }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -150,21 +148,9 @@
                             <td style="padding: 4px 12px;">
                                 <div class="text-caption font-weight-medium">{{ row.label }}</div>
                             </td>
-                            <td style="padding: 4px 12px;">
-                                <v-checkbox color="primary" density="compact" hide-details class="ma-0"
-                                    v-model="row.style.italic" :disabled="locked" @update:model-value="saveTemplate"></v-checkbox>
-                            </td>
-                            <td style="padding: 4px 12px;">
-                                <v-checkbox color="primary" density="compact" hide-details class="ma-0"
-                                    v-model="row.style.bold" :disabled="locked" @update:model-value="saveTemplate"></v-checkbox>
-                            </td>
-                            <td style="padding: 4px 12px;">
-                                <v-checkbox v-if="'show' in row.style" color="primary" density="compact" hide-details class="ma-0"
-                                    v-model="row.style.show" :disabled="locked" @update:model-value="saveTemplate"></v-checkbox>
-                            </td>
-                            <td style="padding: 4px 12px;">
-                                <v-checkbox v-if="'override_color' in row.style" color="primary" density="compact" hide-details class="ma-0"
-                                    v-model="row.style.override_color" :disabled="locked" @update:model-value="saveTemplate"></v-checkbox>
+                            <td v-for="flag in styleFlags" :key="flag.key" style="padding: 4px 12px;">
+                                <v-checkbox v-if="flag.key in row.style" color="primary" density="compact" hide-details class="ma-0"
+                                    v-model="row.style[flag.key]" :disabled="locked" @update:model-value="saveTemplate"></v-checkbox>
                             </td>
                         </tr>
                     </tbody>
@@ -239,13 +225,12 @@ import { CODE_EDITOR_THEMES } from '@/utils/codeEditorTheme';
 import TemplateThemePreview from './TemplateThemePreview.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import {
+    APPEARANCE_STYLE_FLAGS,
     THEME_COLOR_GROUPS,
     hydrateThemeTemplate,
     labelForThemeSlot,
     normalizeHexColor,
 } from '@/utils/templateMappings';
-
-const APPEARANCE_STYLE_FLAGS = ['italic', 'bold', 'show', 'override_color'];
 
 export default {
     name: 'TemplateTheme',
@@ -267,7 +252,8 @@ export default {
         return {
             template: null,
             dirty: false,
-            openPanels: ['app'],
+            openPanels: [],
+            styleFlags: APPEARANCE_STYLE_FLAGS,
             colorGroups: THEME_COLOR_GROUPS,
             codeEditorThemes: CODE_EDITOR_THEMES,
             resetDialog: false,
@@ -312,7 +298,7 @@ export default {
             const appearance = (this.template && this.template.appearance) || {};
             return Object.entries(appearance)
                 .filter(([, style]) => style && typeof style === 'object' && !Array.isArray(style))
-                .filter(([, style]) => APPEARANCE_STYLE_FLAGS.some(flag => flag in style))
+                .filter(([, style]) => APPEARANCE_STYLE_FLAGS.some(flag => flag.key in style))
                 .map(([key, style]) => ({ key, label: labelForThemeSlot(key), style }));
         },
     },
@@ -351,6 +337,20 @@ export default {
             }
             this.template.colors[groupKey][slot] = hex;
             this.dirty = true;
+        },
+
+        // the appearance table binds these same objects, so the mutation is in
+        // place by design
+        setAppearance(slot, flag, value) {
+            if (this.locked) {
+                return;
+            }
+            const style = (this.template.appearance || {})[slot];
+            if (!style || style[flag] === value) {
+                return;
+            }
+            style[flag] = value;
+            this.saveTemplate();
         },
 
         onPickerToggle(open) {

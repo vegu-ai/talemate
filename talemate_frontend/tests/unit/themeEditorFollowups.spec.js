@@ -209,11 +209,10 @@ describe("locked theme read-only treatment", () => {
         expect(favorite, "the favorite checkbox carries no locked binding").not.toBeNull();
         expect(favorite[1]).toContain(':disabled="locked"');
         expect(THEME).toContain('<v-menu :close-on-content-click="false" :disabled="locked"');
-        for (const model of ["row.style.italic", "row.style.bold", "row.style.show", "row.style.override_color"]) {
-            const checkbox = THEME.match(new RegExp(`v-model="${model.replace(".", "\\.")}"([\\s\\S]*?)>`));
-            expect(checkbox, `${model} checkbox not found`).not.toBeNull();
-            expect(checkbox[1]).toContain(':disabled="locked"');
-        }
+        // the appearance table renders one templated checkbox per styling flag
+        const styleFlag = THEME.match(/v-model="row\.style\[flag\.key\]"([\s\S]*?)>/);
+        expect(styleFlag, "the appearance table checkbox not found").not.toBeNull();
+        expect(styleFlag[1]).toContain(':disabled="locked"');
         expect(THEME).toMatch(/<v-slider[\s\S]*?:disabled="locked"/);
         const shadow = THEME.match(/v-model="template.appearance.backdrop_text_shadow"([\s\S]*?)>/);
         expect(shadow).not.toBeNull();

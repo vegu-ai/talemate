@@ -93,10 +93,10 @@ describe("THEME_PREVIEW_DERIVED_ELEMENTS", () => {
         }
     });
 
-    it("routes markup with Own colour off to the enclosing message type", () => {
+    it("routes markup with Own color off to the enclosing message type", () => {
         const derivation = inheritedMarkupDerivation("quotes", "actor");
         expect(derivation.derivedFrom).toEqual({ group: "messages", slot: "actor" });
-        expect(derivation.note).toContain("Own colour");
+        expect(derivation.note).toContain("Own color");
         expect(inheritedMarkupDerivation("brackets", "narrator").derivedFrom.slot).toBe("narrator");
     });
 });

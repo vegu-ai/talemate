@@ -1046,7 +1046,8 @@
   title: Themes
   summary: 'Theme templates for Talemate''s colors - 51 slots in Surfaces, App, Messages and Chats panels, plus
     styling, Light/Dark mode and a code editor theme. Picked in Settings -> Appearance -> Theme; this page covers
-    authoring: Preview elements are click-to-edit (derived colors name their source), picker eyedropper grabs
+    authoring: Preview elements are click-to-edit for color AND styling (italic/bold/show/own color on message and
+    markup elements; derived colors name their source), color panels start collapsed, picker eyedropper grabs
     on-screen colors, Reset to template takes another theme as start point, locked: true in the group file makes
     a template read-only and undeletable. Applying reads colors live but copies styling into Appearance settings
     once. Shared via the group file; node editor keeps its own colors.'

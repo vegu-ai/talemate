@@ -111,6 +111,19 @@ const THEME_APPEARANCE_TYPES = {
 };
 
 /**
+ * The styling flags an appearance entry can carry, with the name each is shown
+ * under. Every surface that offers them - the theme editor's appearance table
+ * and the preview's element popup - reads this, so a flag added here appears in
+ * both under one name.
+ */
+export const APPEARANCE_STYLE_FLAGS = [
+    { key: 'italic', label: 'Italic' },
+    { key: 'bold', label: 'Bold' },
+    { key: 'show', label: 'Show' },
+    { key: 'override_color', label: 'Own color' },
+];
+
+/**
  * Theme appearance key -> scene appearance key, mirroring the backend's
  * `THEME_APPEARANCE_MAP`.
  */

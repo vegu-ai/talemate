@@ -277,28 +277,43 @@
             :open-on-hover="false"
             :open-on-focus="false"
             max-width="330"
-            @update:model-value="onMenuToggle">
+            min-width="0">
             <v-sheet class="pa-3" rounded>
-                <template v-if="selection && selection.type === 'derived'">
-                    <div class="text-caption mb-2">{{ selection.note }}</div>
-                    <v-btn
-                        v-if="selection.derivedFrom"
-                        size="small"
-                        color="primary"
-                        variant="tonal"
-                        prepend-icon="mdi-palette"
-                        @click="editDerivedSource">
-                        Edit {{ derivedSourceLabel }}
-                    </v-btn>
-                </template>
-                <template v-else-if="selection">
-                    <div class="text-caption mb-1">{{ labelForThemeSlot(selection.slot) }}</div>
-                    <div v-if="onColorDerived" class="text-caption text-muted mb-1">Text on it is derived automatically.</div>
-                    <v-color-picker
-                        mode="hex"
-                        :model-value="selectionColor"
-                        @update:model-value="updateSelectionColor">
-                    </v-color-picker>
+                <template v-if="selection">
+                    <div v-if="selection.slot" class="text-caption mb-1">{{ labelForThemeSlot(selection.slot) }}</div>
+                    <div v-if="styleFlags.length" class="d-flex flex-wrap ga-3 mb-1">
+                        <v-checkbox
+                            v-for="flag in styleFlags"
+                            :key="flag.key"
+                            :label="flag.label"
+                            :model-value="flag.value"
+                            color="primary"
+                            density="compact"
+                            hide-details
+                            class="ma-0"
+                            @update:model-value="(value) => setAppearanceFlag(flag.key, value)">
+                        </v-checkbox>
+                    </div>
+                    <template v-if="colorDerivation">
+                        <div class="text-caption mb-2">{{ colorDerivation.note }}</div>
+                        <v-btn
+                            v-if="colorDerivation.derivedFrom"
+                            size="small"
+                            color="primary"
+                            variant="tonal"
+                            prepend-icon="mdi-palette"
+                            @click="editDerivedSource">
+                            Edit {{ derivedSourceLabel }}
+                        </v-btn>
+                    </template>
+                    <template v-else>
+                        <div v-if="onColorDerived" class="text-caption text-muted mb-1">Text on it is derived automatically.</div>
+                        <v-color-picker
+                            mode="hex"
+                            :model-value="selectionColor"
+                            @update:model-value="updateSelectionColor">
+                        </v-color-picker>
+                    </template>
                 </template>
             </v-sheet>
         </v-menu>
@@ -307,7 +322,7 @@
 
 <script>
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
-import { labelForThemeSlot, vuetifySlotName } from '@/utils/templateMappings';
+import { APPEARANCE_STYLE_FLAGS, labelForThemeSlot, vuetifySlotName } from '@/utils/templateMappings';
 import {
     PREVIEW_THEME_NAME,
     THEME_PREVIEW_DERIVED_ELEMENTS,
@@ -324,6 +339,10 @@ const MARKUP_CLASS_TO_SLOT = {
     'scene-emphasis': 'emphasis',
     'scene-entity': 'entities',
 };
+
+const MARKUP_SLOT_TO_CLASS = Object.fromEntries(
+    Object.entries(MARKUP_CLASS_TO_SLOT).map(([cls, slot]) => [slot, cls]),
+);
 
 const APP_BUTTONS = ['app.primary', 'app.secondary', 'app.delete', 'app.cancel'];
 const APP_MARKERS = ['app.unsaved', 'app.dirty', 'app.favorite', 'app.persona'];
@@ -361,7 +380,7 @@ export default {
         },
         readonly: Boolean,
     },
-    emits: ['set-color', 'save'],
+    emits: ['set-color', 'set-appearance', 'save'],
     data() {
         return {
             PREVIEW_THEME_NAME,
@@ -392,9 +411,35 @@ export default {
         onColorDerived() {
             return this.selection && THEME_PREVIEW_ELEMENTS[this.selection.id]?.onColorDerived === true;
         },
+        // markup that has given up its own colour derives it like the elements
+        // that never had one
+        colorDerivation() {
+            if (!this.selection) {
+                return null;
+            }
+            if (this.selection.type === 'derived') {
+                return this.selection;
+            }
+            if (this.selection.group !== 'messages') {
+                return null;
+            }
+            if (this.appearanceOf(this.selection.slot).override_color === false) {
+                return inheritedMarkupDerivation(this.selection.slot, this.selection.messageType);
+            }
+            return null;
+        },
         derivedSourceLabel() {
-            const derivedFrom = this.selection && this.selection.derivedFrom;
+            const derivedFrom = this.colorDerivation && this.colorDerivation.derivedFrom;
             return derivedFrom ? labelForThemeSlot(derivedFrom.slot) : '';
+        },
+        styleFlags() {
+            if (!this.selection || this.selection.group !== 'messages') {
+                return [];
+            }
+            const appearance = this.appearanceOf(this.selection.slot);
+            return APPEARANCE_STYLE_FLAGS
+                .filter((flag) => flag.key in appearance)
+                .map((flag) => ({ ...flag, value: appearance[flag.key] }));
         },
         selectedMarkup() {
             return this.selectedId && this.selectedId.startsWith('messages.')
@@ -416,6 +461,13 @@ export default {
         },
     },
     watch: {
+        // watched rather than handled on the menu's event, so a close the
+        // component decides on drops the selection ring too
+        menuOpen(open) {
+            if (!open) {
+                this.selectedId = null;
+            }
+        },
         template: {
             handler(template) {
                 if (!template) {
@@ -534,11 +586,9 @@ export default {
                 return;
             }
             event.stopPropagation();
-            if (this.appearanceOf(slot).override_color === false) {
-                this.openFor(span, { type: 'derived', id: `messages.${slot}`, ...inheritedMarkupDerivation(slot, messageType) });
-            } else {
-                this.openFor(span, { type: 'slot', id: `messages.${slot}`, group: 'messages', slot });
-            }
+            // the host is kept so the popup can find the span again: any styling
+            // edit re-renders the parsed sample and detaches this one
+            this.openFor(span, { type: 'slot', id: `messages.${slot}`, group: 'messages', slot, messageType, markupHost: event.currentTarget });
         },
 
         openFor(element, selection) {
@@ -555,17 +605,39 @@ export default {
             });
         },
 
-        onMenuToggle(open) {
-            if (!open) {
-                this.selectedId = null;
-            }
+        editDerivedSource() {
+            const { group, slot } = this.colorDerivation.derivedFrom;
+            const id = `${group}.${slot}`;
+            // the popup keeps hanging in the markup sample, so it has to keep
+            // the host that lets it find an anchor there again
+            this.selection = { type: 'slot', id, group, slot, markupHost: this.selection.markupHost };
+            this.selectedId = id;
         },
 
-        editDerivedSource() {
-            const { group, slot } = this.selection.derivedFrom;
-            const id = `${group}.${slot}`;
-            this.selection = { type: 'slot', id, group, slot };
-            this.selectedId = id;
+        setAppearanceFlag(flag, value) {
+            this.$emit('set-appearance', this.selection.slot, flag, !!value);
+            this.$nextTick(() => this.reanchorActivator());
+        },
+
+        // A styling edit re-renders what drew the selected element - a parsed
+        // sample replaces its spans, a markup type that can be hidden gains or
+        // loses its row - which leaves the popup on a node the document no
+        // longer holds. Re-point it at whatever replaced the anchor, and close
+        // when nothing did.
+        reanchorActivator() {
+            if (document.contains(this.activatorEl)) {
+                return;
+            }
+            const host = this.selection.markupHost;
+            const markupClass = MARKUP_SLOT_TO_CLASS[this.selection.slot];
+            // a message type has no span of its own in the sample - the host it
+            // was reached through is stable across the rebuild, so it anchors
+            const replacement = host && (markupClass ? host.querySelector(`.${markupClass}`) : host);
+            if (replacement && document.contains(replacement)) {
+                this.activatorEl = replacement;
+            } else {
+                this.menuOpen = false;
+            }
         },
 
         updateSelectionColor(color) {

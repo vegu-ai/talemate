@@ -36,7 +36,7 @@ Mark the template as a favorite to make it easier to find in the list of templat
 
 ### Colors
 
-The colors are edited in four accordion panels, 51 slots in total. Each slot opens a color picker and shows the color it currently holds; the theme is saved when the picker closes.
+The colors are edited in four accordion panels, 51 slots in total. They start collapsed — clicking the element you want to recolor in the preview is the shorter way in. Each slot opens a color picker and shows the color it currently holds; the theme is saved when the picker closes.
 
 The picker carries an eyedropper where the browser supports it (Chromium, over a secure context) — pick any color on screen, including straight from the preview, which is the quickest way to take a neighboring element's color.
 
@@ -46,12 +46,16 @@ The preview above the panels renders the theme being edited — not the theme cu
 
 Every element in it is clickable. Clicking one opens the color that paints it in a color picker right at the element, so you pick a color from the thing it colors rather than from a slot name you have to decode. Editing repaints the preview immediately and saves the theme.
 
+Message and markup elements also carry their styling in the same popup, above the picker — the flags that type has, so a message type offers **Italic** and **Bold** (plus **Show** where it can be hidden) and a markup type adds **Show** and **Own color**. They are the same settings as in the [Message appearance](#message-appearance) panel, editable from the thing they style.
+
 Some elements have no color of their own and take one from somewhere else. Clicking one of those says so instead of silently editing something broader than you expect, and offers the color it derives from for editing:
 
 - The text on filled elements (buttons, chat bubbles) is worked out automatically for readability, and the pickers of those elements note this.
 - Your own chat bubbles take the **Actor** color from Messages, so both chats share one decision for the player's voice.
-- Text markup with **Own color** switched off takes the color of the message it appears in.
+- Text markup with **Own color** switched off takes the color of the message it appears in. Its popup shows the note in place of the picker and keeps the **Own color** toggle, so the markup can be given a color of its own right there — tick it and the picker appears. Markup picked where no message encloses it — from its own row while hidden, or from the entities row outside the highlighted entity itself — shows the note without a source to edit, since there is no one message type it inherits from.
 - Dividers and outlines are drawn from the theme **Mode**, not a color slot.
+
+Switching **Show** off reaches the sample differently per type. **Parentheses** and **Brackets** leave it, so the popup closes and the type moves to a row of its own, from where it can be switched back on. **Entities** stops being highlighted — a popup opened on the highlight closes with it, and the entities row stays where it is. **Quotes** and **Emphasis** carry the checkbox too, and the scene renderer does not act on it for those two — they keep rendering either way.
 
 | Panel | Slots | What it covers |
 |-------|-------|----------------|
@@ -141,11 +145,11 @@ Mode does not decide this: a dark theme is free to use a light editor theme and 
 
 ### Message appearance
 
-The **Message appearance** panel sets how message text is written, independent of its color:
+The **Message appearance** panel is the table view of the same styling the [preview](#preview) offers per element, and sets how message text is written, independent of its color:
 
 - **Italic** and **Bold**, for each message type (narrator, actor, director, time, context investigation, information) and each markup type (quotes, parentheses, brackets, emphasis, entities)
 - **Show**, for the types that can be hidden
-- **Own color**, for the markup types — whether the markup uses its own color or inherits the color of the message it appears in
+- **Own color**, for the markup types — whether the markup uses its own color or inherits the color of the message it appears in. This one is also reachable from the [preview](#preview), on the markup itself
 - **Backdrop panel opacity** and **Backdrop text shadow**, which control the legibility of message text rendered over a [scene backdrop](/talemate/user-guide/inline-visuals/#scene-backdrop)
 
 These are the same settings as on the [Appearance settings](/talemate/user-guide/app-settings/appearance/#messages) page — a theme carries a set of them so it can be handed out complete.

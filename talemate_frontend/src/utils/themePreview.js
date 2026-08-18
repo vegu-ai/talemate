@@ -127,11 +127,12 @@ export const THEME_PREVIEW_DERIVED_ELEMENTS = {
 };
 
 // Markup with its `override_color` off paints in the colour of the message it
-// appears in, so the derivation offers that message type's slot.
+// appears in, so the derivation offers that message type's slot - unless the
+// markup was picked outside a message, where there is no one type to offer.
 export function inheritedMarkupDerivation(markupSlot, messageType) {
     return {
-        note: `${labelForThemeSlot(markupSlot)} takes the colour of the message it appears in, because Own colour is off.`,
-        derivedFrom: { group: 'messages', slot: messageType },
+        note: `${labelForThemeSlot(markupSlot)} takes the colour of the message it appears in, because Own color is off.`,
+        derivedFrom: messageType ? { group: 'messages', slot: messageType } : null,
     };
 }
 

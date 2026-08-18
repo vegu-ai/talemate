@@ -1,7 +1,8 @@
 <template>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <!-- edit template -->
 
-        
+
     <!-- group -->
     <v-card v-if="group !== null && template === null">
         <v-card-title>
@@ -277,6 +278,7 @@
             </v-col>
         </v-row>
     </div>
+    </div>
 
 </template>
 
@@ -299,6 +301,7 @@ import { iconForTemplate, colorForTemplate, hydrateThemeTemplate } from '../util
 import { getActiveCodeEditorTheme } from '../utils/codeEditorTheme.js';
 import { validateGroupName } from '../utils/sceneToolShortcuts.js';
 import { adoptedTemplateUid } from '../utils/templateSaveEcho.js';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 export default {
     name: 'Templates',
@@ -383,6 +386,7 @@ export default {
     },
     data() {
         return {
+            MAX_CONTENT_WIDTH,
             filter: null,
             newName: null,
             newType: 'state_reinforcement',

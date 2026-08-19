@@ -114,7 +114,7 @@ class WorldStateAgent(
         return True
 
     async def advance_time(
-        self, duration: int | str, narrative: str = None
+        self, duration: int | str, narrative: str = None, title: str = None
     ) -> TimePassageMessage:
         """
         Emit a time passage message
@@ -125,7 +125,7 @@ class WorldStateAgent(
 
         duration = util.coerce_ts(duration)
         human_duration = util.duration_to_human(duration, suffix=" later")
-        message = TimePassageMessage(ts=duration, message=human_duration)
+        message = TimePassageMessage(ts=duration, message=human_duration, title=title)
 
         log.debug("world_state.advance_time", message=message)
         await self.scene.push_history(message)

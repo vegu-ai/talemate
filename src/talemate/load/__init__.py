@@ -388,6 +388,7 @@ async def load_scene_from_data(
 
     if not reset:
         scene.id = scene_data.get("id", scene.id)
+        scene.playthrough_progress = scene_data.get("playthrough_progress")
         scene.memory_id = scene_data.get("memory_id", scene.memory_id)
         scene.saved_memory_session_id = scene_data.get("saved_memory_session_id", None)
         scene.memory_session_id = scene_data.get("memory_session_id", None)

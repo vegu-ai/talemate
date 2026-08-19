@@ -504,6 +504,7 @@ class AdvanceTime(AgentNode):
     - duration: The duration to advance in seconds (e.g. 3600 for an hour)
     - narration_instructions: Instructions for narrating the time passage
       (optional)
+    - chapter_title: Names the chapter this time passage opens (optional)
 
     Outputs:
 
@@ -530,6 +531,12 @@ class AdvanceTime(AgentNode):
             type="str",
             default="",
         )
+        chapter_title = PropertyField(
+            name="chapter_title",
+            description="Names the chapter this time passage opens",
+            type="str",
+            default="",
+        )
 
     def __init__(self, title="Advance Time", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -538,8 +545,10 @@ class AdvanceTime(AgentNode):
         self.add_input("state")
         self.add_input("duration", socket_type="int")
         self.add_input("narration_instructions", socket_type="str", optional=True)
+        self.add_input("chapter_title", socket_type="str", optional=True)
 
         self.set_property("narration_instructions", "")
+        self.set_property("chapter_title", "")
         self.set_property("duration", 1)
 
         self.add_output("state")
@@ -553,7 +562,10 @@ class AdvanceTime(AgentNode):
         narration_instructions: str = self.normalized_input_value(
             "narration_instructions"
         )
-        message = await self.agent.advance_time(duration, narration_instructions)
+        chapter_title: str = self.normalized_input_value("chapter_title")
+        message = await self.agent.advance_time(
+            duration, narration_instructions, chapter_title or None
+        )
         self.set_output_values(
             {
                 "state": state,

@@ -46,7 +46,7 @@ So if you want to define something that happened 10 months ago (from the current
 
 ## Time Passage Entries
 
-The history view displays time passage entries with editable duration fields. You can double-click a time passage entry to edit its duration (amount and unit), or delete it entirely.
+The history view displays time passage entries with editable duration and chapter title fields. You can double-click a time passage entry to edit its duration (amount and unit) and the chapter title that names it in [Playthrough Mode](/talemate/user-guide/playthrough/#moving-around), or delete it entirely. A time passage inserted before a summarized entry can only be edited here — it sits further back than the scene view loads.
 
 For more details on managing time passages, see the [Time Passage Management](/talemate/user-guide/time-passage/) documentation.
 

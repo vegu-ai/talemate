@@ -945,6 +945,12 @@
   summary: 'Copy-paste jinja2 prompt snippets: scene history via scene.context_history(budget=...), memory via agent_action("narrator",
     "rag_build"), character context with filtered_sheet and query_memory, the scene-context / memory-context / character-context
     / extra-context templates, token-budget conditionals, and bot_token / set_prepared_response scaffolding.'
+- path: user-guide/playthrough.md
+  title: Playthrough Mode
+  summary: Replaying a scene from the beginning one message at a time - starting it from the Playthrough quick-settings chip,
+    advancing by click, space or the Advance button, the scrubber, the chapter menu built from time passages, the narration
+    and auto-advance toggles, which surfaces the mode puts away while it runs, and how a playthrough resumes where it was
+    left off.
 - path: user-guide/prompts/context-history-review.md
   title: Scene Context History Review
   summary: The Prompt Manager's Scene Context tab, rendering scene history as color-coded Layered History / Archived / Dialogue
@@ -991,7 +997,7 @@
 - path: user-guide/scenario-tools.md
   title: Scene Tools
   summary: 'Reference for the tool bar above the input box: the agent activity bar, the quick-settings chips (Auto Save, Auto
-    Progress, Immersive) and the Regenerate, Actor, Director, Narrator, Advance time, World state, Creative tools, Custom
+    Progress, Immersive, Playthrough) and the Regenerate, Actor, Director, Narrator, Advance time, World state, Creative tools, Custom
     Commands, Visualizer and Saving menus. Also covers user-defined shortcuts - custom entries with a label, icon and standing
     instructions added to the Actor, Director, Narrator and Visualizer menus via Add shortcut, stored in the application
     configuration, shared as scene tool shortcut templates via Save as template and installed again through the Add from
@@ -1073,9 +1079,9 @@
     actions.'
 - path: user-guide/time-passage.md
   title: Time Passage Management
-  summary: Time passage markers - inserting them from the Advance Time menu presets or Custom dialog, editing them in the
-    scene view or the World State Manager history, deleting them, and how they drive separate summarization and clear actor
-    directions.
+  summary: Time passage markers - inserting them from the Advance Time menu presets or Custom dialog, giving them an optional
+    chapter title, editing the duration and title in the scene view or the World State Manager history, deleting them, and
+    how they drive separate summarization and clear actor directions.
 - path: user-guide/tracking-a-state.md
   title: Tracked states
   summary: 'What tracked states are - periodic re-inforcement of a character''s or the world''s state kept in the AI context
@@ -1167,7 +1173,8 @@
   title: History
   summary: 'The World Editor''s History tab: the three entry types (static archived, summary archived, layered), editing entries
     by double-click, deleting, regenerating and inspecting them, adding static entries with Entry Text plus Unit and Amount
-    duration, and Regenerate All History.'
+    duration, time passage entries with their duration and playthrough chapter title (the only surface that reaches a passage
+    inserted before a summarized entry), and Regenerate All History.'
 - path: user-guide/world-editor/history/layered-history.md
   title: Layered History
   summary: 'Conceptual explanation of layered history: base layer static and summary entries, higher layers compressing further

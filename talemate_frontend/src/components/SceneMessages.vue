@@ -278,6 +278,9 @@
                     <v-select v-model="insertTimePassageUnit" :items="insertTimePassageUnits" label="Unit"
                         style="max-width: 180px" hide-details="auto" class="ml-2" />
                 </div>
+                <v-text-field v-model="insertTimePassageTitle" label="Chapter title (optional)"
+                    hide-details="auto" class="mt-3" density="compact"
+                    hint="Names the chapter this passage opens in playthrough mode." persistent-hint />
             </v-card-text>
             <v-card-actions>
                 <v-spacer />
@@ -290,8 +293,8 @@
     <!-- Fallback image viewer for the shared asset menu (see handleViewImage) -->
     <AssetView v-model="assetViewShow" :image-src="assetViewSrc" />
 
-    <div class="message-container mb-8" ref="messageContainer" :class="{ 'no-text-shadow': !sceneBackdropTextShadow }" :style="{ '--scene-backdrop-panel-opacity': sceneBackdropPanelOpacity }" style="flex-grow: 1; overflow-y: auto;" @click="onMessageContainerClick">
-        <div v-for="(message, index) in messages" :key="message.id != null ? `${message.type}-${message.id}` : `idx-${index}`" class="message-wrapper">
+    <div class="message-container mb-8" ref="messageContainer" :class="{ 'no-text-shadow': !sceneBackdropTextShadow }" :style="{ '--scene-backdrop-panel-opacity': sceneBackdropPanelOpacity }" style="flex-grow: 1; overflow-y: auto;" @click="onSceneAreaClick">
+        <div v-for="(message, index) in visibleMessages" :key="message.id != null ? `${message.type}-${message.id}` : `idx-${index}`" class="message-wrapper">
             <!-- marks the message whose illustration is the active backdrop -->
             <v-tooltip v-if="sceneBackdrop && message.id != null && message.id === sceneBackdrop.messageId" text="This image is the current scene background" location="left">
                 <template v-slot:activator="{ props }">
@@ -301,7 +304,7 @@
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === visibleMessages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -338,27 +341,27 @@
             </div>
             <div v-else-if="message.type === 'status'" :class="`message ${message.type}`">
                 <div class="narrator-message">
-                    <StatusMessage :text="message.text" :status="message.status" :isLastMessage="index === messages.length - 1" />
+                    <StatusMessage :text="message.text" :status="message.status" :isLastMessage="index === visibleMessages.length - 1" />
                 </div>
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`">
-                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === visibleMessages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="director-message"  :id="`message-${message.id}`">
-                    <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action" :subtype="message.subtype" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1"/>
+                    <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action" :subtype="message.subtype" :uxLocked="uxLocked" :isLastMessage="index === visibleMessages.length - 1"/>
                 </div>
             </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
                 <div class="time-message"  :id="`message-${message.id}`">
-                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === messages.length - 1" />
+                    <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :title="message.title" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === visibleMessages.length - 1" />
                 </div>
             </div>
             <div v-else-if="message.type === 'player_choice'" :class="`message ${message.type}`">
                 <div class="player-choice-message"  :id="`message-player-choice`">
-                    <PlayerChoiceMessage :choices="message.data.choices" :character="message.data.character" @close="closePlayerChoice" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" />
+                    <PlayerChoiceMessage :choices="message.data.choices" :character="message.data.character" @close="closePlayerChoice" :uxLocked="uxLocked" :isLastMessage="index === visibleMessages.length - 1" />
                 </div>
             </div>
             <div v-else-if="message.type === 'ux'" :class="`message ${message.type}`">
@@ -368,7 +371,7 @@
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="context-investigation-message"  :id="`message-${message.id}`">
-                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
+                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === visibleMessages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
 
@@ -411,6 +414,7 @@ import { isKnownSceneCharacter } from '@/utils/entityActions';
 import { parseCharacterMessage } from '@/utils/characterMessage.js';
 import { primaryModifierLabel } from '@/utils/keyboardModifiers';
 import { base64ToObjectUrl } from '@/utils/objectUrl.js';
+import { chapterBoundaries, visibleMessages } from '@/utils/playthrough.js';
 import {
     getMessageColor as resolveMessageColor,
     getMessageStyle as resolveMessageStyle,
@@ -532,7 +536,13 @@ export default {
         },
         scene: {
             type: Object,
-        }
+        },
+        // playthrough reveals the history one message at a time; null renders
+        // the whole list
+        revealCount: {
+            type: Number,
+            default: null,
+        },
     },
     components: {
         CharacterMessage,
@@ -549,7 +559,7 @@ export default {
         ConfirmActionPrompt,
         AssetView,
     },
-    emits: ['cancel-audio-queue', 'configure-entity-highlights', 'scene-backdrop', 'scene-backdrop-candidate'],
+    emits: ['cancel-audio-queue', 'configure-entity-highlights', 'scene-backdrop', 'scene-backdrop-candidate', 'messages-changed', 'playthrough-advance'],
     data() {
         return {
             primaryModifierLabel,
@@ -611,6 +621,7 @@ export default {
             insertTimePassageMessageId: null,
             insertTimePassageAmount: 1,
             insertTimePassageUnit: 'hours',
+            insertTimePassageTitle: '',
             insertTimePassageUnits: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
             // id of the message awaiting an editor revision (its spinner is
             // cleared on the editor `operation_done` envelope, which has no id)
@@ -625,6 +636,9 @@ export default {
         }
     },
     computed: {
+        visibleMessages() {
+            return visibleMessages(this.messages, this.revealCount);
+        },
         messageAssetsConfig() {
             return this.appearanceConfig?.scene?.message_assets || null;
         },
@@ -769,6 +783,35 @@ export default {
 
         getMessageStyle(typ) {
             return resolveMessageStyle(this.appearanceConfig, typ, this.themeColors);
+        },
+
+        onSceneAreaClick(event) {
+            this.onMessageContainerClick(event);
+            if (this.revealCount === null) {
+                return;
+            }
+            if (event.target.closest?.('.scene-entity, button, a, input, textarea, .v-overlay')) {
+                return;
+            }
+            this.$emit('playthrough-advance');
+        },
+
+        scrollRevealIntoView() {
+            const container = this.$refs.messageContainer;
+            const revealed = container?.lastElementChild;
+            if (!container || !revealed) {
+                return;
+            }
+            if (revealed.offsetHeight > container.clientHeight) {
+                // too tall to show whole - start reading it at its top
+                revealed.scrollIntoView({ block: 'start' });
+            } else {
+                container.scrollTop = container.scrollHeight;
+            }
+        },
+
+        messageAt(index) {
+            return this.messages[index] || null;
         },
 
         clear() {
@@ -1330,7 +1373,9 @@ export default {
                 message_id: this.insertTimePassageMessageId,
                 amount: this.insertTimePassageAmount,
                 unit: this.insertTimePassageUnit,
+                title: this.insertTimePassageTitle || null,
             }));
+            this.insertTimePassageTitle = '';
             this.insertTimePassageDialog = false;
         },
 
@@ -2155,6 +2200,7 @@ export default {
                         character: data.character,
                         status: data.status,
                         ts: data.ts,
+                        title: data.title || null,
                         meta: data.meta,
                         rev: data.rev || 0,
                         asset_id: data.asset_id || null,
@@ -2195,6 +2241,24 @@ export default {
         }
     },
     watch: {
+        revealCount(next, previous) {
+            // Stepping back shrinks the list and the browser clamps the scroll
+            // for us; stepping forward grows it, and the message just revealed
+            // lands below the fold unless we follow it.
+            if (next !== null && previous !== null && next > previous) {
+                this.$nextTick(this.scrollRevealIntoView);
+            }
+        },
+        // playthrough's reveal cursor is driven from here, where the messages live
+        'messages.length': {
+            immediate: true,
+            handler() {
+                this.$emit('messages-changed', {
+                    count: this.messages.length,
+                    chapters: chapterBoundaries(this.messages),
+                });
+            },
+        },
         // Watch for changes to message asset cadence config only (not all appearance changes)
         messageAssetsConfig: {
             handler: function(newVal) {

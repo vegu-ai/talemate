@@ -55,13 +55,13 @@
                         <!-- ACTIONS: LOOK AT, PERSIST, MANAGE -->
 
                         <div class="text-center mt-1">
-                            <v-tooltip :text="'Look at '+name">
+                            <v-tooltip v-if="!isPlaythroughActive()" :text="'Look at '+name">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="lookAtCharacter(name)" icon="mdi-eye"></v-btn>
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-if="character.snapshot && !characterIsKnown(name)" :text="'Add detail to '+name">
+                            <v-tooltip v-if="character.snapshot && !characterIsKnown(name) && !isPlaythroughActive()" :text="'Add detail to '+name">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="examineCharacter(name, character.snapshot)" icon="mdi-plus"></v-btn>
 
@@ -132,13 +132,13 @@
                     <v-expansion-panel-text class="text-body-2">
                         {{ obj.snapshot }}
                         <div class="text-center mt-1">
-                            <v-tooltip text="Look at">
+                            <v-tooltip v-if="!isPlaythroughActive()" text="Look at">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="lookAtItem(name)" icon="mdi-eye"></v-btn>
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-if="obj.snapshot" :text="'Add detail to '+name">
+                            <v-tooltip v-if="obj.snapshot && !isPlaythroughActive()" :text="'Add detail to '+name">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="examineItem(name, obj.snapshot)" icon="mdi-plus"></v-btn>
 
@@ -270,6 +270,7 @@ export default {
         'formatWorldStateTemplateString',
         'scene',
         'requestSceneAssets',
+        'isPlaythroughActive',
     ],
 
     emits: [

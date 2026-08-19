@@ -51,6 +51,8 @@
                 style="max-width: 160px" hide-details="auto" density="compact" />
             <v-select v-model="insertUnit" :items="insertUnits" label="Unit"
                 style="max-width: 160px" hide-details="auto" density="compact" class="ml-2" />
+            <v-text-field v-model="insertTitle" label="Chapter title (optional)"
+                style="max-width: 260px" hide-details="auto" density="compact" class="ml-2" />
             <v-btn class="ml-2" color="success" variant="text" size="small"
                 prepend-icon="mdi-clock-plus-outline" @click="submitInsertTimePassage" :disabled="locked">Insert</v-btn>
             <v-btn class="ml-1" color="cancel" variant="text" size="small"
@@ -114,6 +116,7 @@ export default {
             insertingTimePassage: false,
             insertAmount: 1,
             insertUnit: 'hours',
+            insertTitle: '',
             insertUnits: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
             MAX_CONTENT_WIDTH,
         }
@@ -223,8 +226,10 @@ export default {
                 archive_index: this.entry.index,
                 amount: this.insertAmount,
                 unit: this.insertUnit,
+                title: this.insertTitle || null,
             }));
             this.insertingTimePassage = false;
+            this.insertTitle = '';
         },
     },
     components: {

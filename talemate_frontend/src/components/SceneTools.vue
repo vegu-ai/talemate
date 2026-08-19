@@ -394,6 +394,7 @@ export default {
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
                 {"value": "toggleImmersive", "title": "Immersive", "icon": "mdi-image-area", "description": "Render the scene backdrop image behind the scene", "condition": () => { return !!(this.sceneBackdropAssetId || this.sceneBackdropCandidate) }, "status": () => { return this.immersiveActive }},
+                {"value": "togglePlaythrough", "title": "Playthrough", "icon": "mdi-play-box-outline", "description": "Replay the scene from the beginning, one message at a time.", "status": () => { return this.isPlaythroughActive() }},
             ],
         }
     },
@@ -409,6 +410,8 @@ export default {
         'getPlayerCharacterName',
         'formatWorldStateTemplateString',
         'openAppConfig',
+        'isPlaythroughActive',
+        'startPlaythrough',
         // Provided by SceneMessages; flags the last regen-eligible
         // message as `regenerating` so its pager spinner shows up
         // before the in-place edit lands.
@@ -437,6 +440,8 @@ export default {
                 this.getWebsocket().send(JSON.stringify({ type: 'quick_settings', action: 'set', setting: 'auto_progress', value: this.autoProgress }));
             } else if (setting == "toggleImmersive") {
                 this.toggleImmersive();
+            } else if (setting == "togglePlaythrough") {
+                this.startPlaythrough();
             }
         },
 

@@ -66,6 +66,7 @@
 
 <script>
 import { createSoundControl } from '@/utils/soundControl';
+import { chunkIsAbandoned } from '@/utils/playthrough';
 
 export default {
   name: 'AudioQueue',
@@ -76,6 +77,9 @@ export default {
       gainNode: null,
       isPlaying: false,
       isPaused: false,
+      // message whose generation the backend has reported finished; it is
+      // only *done* once whatever it queued has also played out
+      pendingCompletion: null,
       currentSource: null,
       currentBuffer: null,
       currentAudioItem: null,
@@ -91,7 +95,18 @@ export default {
       })
     };
   },
-  emits: ['message-audio-played'],
+  props: {
+    // messages whose narration was superseded before it finished generating.
+    // Their chunks are still in flight and would narrate a message the reader
+    // has already stepped past. Scoped to those ids on purpose: this is the
+    // application-wide queue, so anything else - a voice test, a message played
+    // by hand - has to keep playing.
+    staleMessageIds: {
+      type: Array,
+      default: () => [],
+    },
+  },
+  emits: ['message-audio-played', 'message-audio-finished'],
   inject: ['getWebsocket', 'registerMessageHandler', 'appConfig', 'saveAppConfig'],
   computed: {
     soundConfig() {
@@ -144,10 +159,35 @@ export default {
     },
     handleMessage(data) {
       if (data.type === 'audio_queue') {
+        if (data.data.generation_complete) {
+          this.pendingCompletion = data.data.message_id;
+          this.emitFinishedIfDone();
+          return;
+        }
         this.addToQueue(data.data.audio_data, data.data.message_id);
       }
     },
+
+    // A gap between two chunks of the same message empties the queue without
+    // the message being over, so an empty queue only means "finished" once
+    // the backend has said it is done generating for that message.
+    emitFinishedIfDone() {
+      if (this.pendingCompletion === null) {
+        return;
+      }
+      if (this.isPlaying || this.isPaused || this.queue.length) {
+        return;
+      }
+      const messageId = this.pendingCompletion;
+      this.pendingCompletion = null;
+      this.$emit('message-audio-finished', messageId);
+    },
     addToQueue(base64Sound, messageId = null) {
+      if (chunkIsAbandoned(messageId, this.staleMessageIds)) {
+        // audio for a message that has already been stepped past; playing it
+        // would narrate one message while another is on screen
+        return;
+      }
       const soundBuffer = this.base64ToArrayBuffer(base64Sound);
       this.queue.push({
         buffer: soundBuffer,
@@ -182,6 +222,9 @@ export default {
         this.isPlaying = false;
         this.currentAudioItem = null;
         this.playNextSound();
+        // a failed decode on the last chunk would otherwise strand whoever is
+        // waiting for the message to finish
+        this.emitFinishedIfDone();
       });
     },
     playBuffer(offset) {
@@ -197,6 +240,7 @@ export default {
           this.pausedAt = 0;
           this.$emit('message-audio-played', undefined);
           this.playNextSound();
+          this.emitFinishedIfDone();
         }
       };
       this.startedAt = this.audioContext.currentTime - offset;
@@ -277,6 +321,9 @@ export default {
       this.currentAudioItem = null;
       this.pausedAt = 0;
       this.startedAt = 0;
+      // a stop is not a message finishing - whoever was waiting on it was
+      // told to stop waiting by the same action that stopped playback
+      this.pendingCompletion = null;
     }
   }
 };

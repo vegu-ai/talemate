@@ -40,7 +40,7 @@
 
       <v-divider class="mr-1" vertical></v-divider>
       <v-spacer></v-spacer>
-      <AudioQueue ref="audioQueue" @message-audio-played="onMessageAudioPlayed" />
+      <AudioQueue ref="audioQueue" :stale-message-ids="playthroughStaleMessageIds" @message-audio-played="onMessageAudioPlayed" @message-audio-finished="onPlaythroughMessageSpoken" />
       <v-divider class="ml-2 mr-2" vertical></v-divider>
       <span v-if="version !== null" class="text-medium-emphasis text-caption">v{{ version }}</span>
       <span v-if="!ready">
@@ -250,7 +250,7 @@
                   >
                   </NodeEditor>  
               </v-col>
-              <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': true, 'd-none': creativeMode && !showSceneView, 'scene-backdrop-active': !!sceneBackdropSrc }" :style="sceneBackdropStyle">
+              <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': true, 'd-none': creativeMode && !showSceneView, 'scene-backdrop-active': !!sceneBackdropSrc, 'playthrough-active': playthroughActive }" :style="sceneBackdropStyle">
                 <div class="scene-column" style="display: flex; flex-direction: column; height: 100%">
 
                   <div class="scene-container">
@@ -275,6 +275,9 @@
                         :agent-status="agentStatus"
                         :audio-played-for-message-id="audioPlayedForMessageId"
                         :scene="scene"
+                        :reveal-count="playthroughActive ? playthroughRevealCount : null"
+                        @messages-changed="onSceneMessagesChanged"
+                        @playthrough-advance="advancePlaythrough"
                         @cancel-audio-queue="onCancelAudioQueue"
                         @configure-entity-highlights="onConfigureEntityHighlights"
                         @scene-backdrop="sceneBackdropSrc = $event"
@@ -284,6 +287,21 @@
 
                     <div ref="sceneToolsContainer" class="scene-controls" :class="{ 'scene-controls--locked': uxInteractionActive }">
                       <AgentActivityBar v-if="appConfig?.game?.general?.show_agent_activity_bar !== false" :agent-status="agentStatus" />
+                      <PlaythroughTools
+                        v-if="playthroughActive"
+                        :message-count="playthroughMessageCount"
+                        :reveal-count="playthroughRevealCount"
+                        :chapters="playthroughChapters"
+                        :auto-advance="playthroughAutoAdvance"
+                        :narration="playthroughNarration"
+                        :busy="busy"
+                        @advance="advancePlaythrough"
+                        @toggle-narration="togglePlaythroughNarration"
+                        @jump="jumpPlaythrough"
+                        @restart="restartPlaythrough"
+                        @toggle-auto-advance="togglePlaythroughAutoAdvance"
+                        @exit="stopPlaythrough" />
+                      <template v-else>
                       <SceneTools 
                         @open-world-state-manager="onOpenWorldStateManager"
                         @open-agent-messages="onOpenAgentMessages"
@@ -320,6 +338,7 @@
                         @send="onInputSend"
                         @autocomplete-start="onAutocompleteStart"
                         @autocomplete-end="onAutocompleteEnd" />
+                      </template>
                     </div>
                   </div>
 
@@ -455,6 +474,7 @@ import SceneLanding from './SceneLanding.vue';
 import SceneTools from './SceneTools.vue';
 import SceneMessages from './SceneMessages.vue';
 import SceneMessageInput from './SceneMessageInput.vue';
+import PlaythroughTools from './PlaythroughTools.vue';
 import WorldState from './WorldState.vue';
 import CoverImage from './CoverImage.vue';
 import AppSettings from './AppSettings.vue';
@@ -489,6 +509,7 @@ import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '@/constants/visual';
 import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 import AutocompleteMixin from './AutocompleteMixin.js';
+import PlaythroughMixin from './PlaythroughMixin.js';
 import { SETTINGS_PAGES } from '../utils/appSettingsRegistry.js';
 import { createConfigSaveQueue } from '../utils/configSaveQueue.js';
 import { applyAppConfigTheme } from '../utils/appTheme.js';
@@ -504,6 +525,7 @@ export default {
     SceneTools,
     SceneMessages,
     SceneMessageInput,
+    PlaythroughTools,
     WorldState,
     CoverImage,
     AppSettings,
@@ -533,7 +555,7 @@ export default {
     PromptsMenu,
   },
   name: 'TalemateApp',
-  mixins: [AutocompleteMixin],
+  mixins: [AutocompleteMixin, PlaythroughMixin],
   data() {
     return {
       appearancePreview: null, // Preview config while editing settings (null = use saved config)
@@ -882,6 +904,12 @@ export default {
         return false;
       }
 
+      // a replay is read along, not acted on: the message surfaces carry no
+      // actions while it runs
+      if(this.playthroughActive) {
+        return true;
+      }
+
       // if loading, ux is locked
       if(this.loading) {
         return true;
@@ -983,6 +1011,9 @@ export default {
       isWaitingForInput: () => this.waitingForInput,
       setWaitingForInput: (waiting) => this.waitingForInput = waiting,
       isConnected: () => this.connected,
+      isPlaythroughActive: () => this.playthroughActive,
+      startPlaythrough: () => this.startPlaythrough(),
+      stopPlaythrough: () => this.stopPlaythrough(),
       scene: () => this.scene,
       getClients: () => this.getClients(),
       getAgents: () => this.getAgents(),
@@ -1153,6 +1184,7 @@ export default {
         this.configReceivedThisConnection = false;
         this.connecting = false;
         this.sceneActive = false;
+        this.setPlaythroughActive(false);
         this.scene = {};
         this.loading = false;
         if (this.reconnect) {
@@ -1180,6 +1212,10 @@ export default {
 
     handleMessage(event) {
       const data = JSON.parse(event.data);
+
+      if (this.handlePlaythroughMessage(data)) {
+        return;
+      }
 
       this.messageHandlers.forEach(handler => handler(data));
 
@@ -1904,6 +1940,7 @@ export default {
     sceneStartedLoading() {
       this.loading = true;
       this.sceneActive = false;
+      this.setPlaythroughActive(false);
       this.mainTabScrollPosition = null; // Reset scroll position memory when starting to load a new scene
 
       if(this.$refs.sceneMessages)
@@ -1924,6 +1961,10 @@ export default {
       // client status: a background agent operation — e.g. the world state
       // snapshot — keeps the shared client busy but must not lock the input.
       if (this.busy) {
+        return true;
+      }
+
+      if (this.playthroughActive) {
         return true;
       }
 
@@ -2098,6 +2139,15 @@ export default {
   background-attachment: fixed;
 }
 
+/* the playthrough toolbar is a single strip of small controls over whatever
+   the backdrop is showing - it needs a surface of its own to stay readable */
+.scene-backdrop-active .scene-controls :deep(.playthrough-tools) {
+  background-color: rgba(var(--v-theme-surface), 0.85);
+  backdrop-filter: blur(6px);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
 /* the message input, control chips (auto save, auto progress, agent
    activity, ...) and the input's send/autocomplete buttons get solid
    backgrounds so they don't fight the backdrop (they are otherwise
@@ -2124,6 +2174,31 @@ export default {
 }
 
 .scene-backdrop-active .scene-view {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* playthrough reveals messages one at a time, so the message list grows and
+   shrinks constantly. Fill the column the way a backdrop does, or the toolbar
+   rides up and down with it - and the scrubber moves out from under the
+   cursor mid-drag. */
+.playthrough-active .scene-column {
+  min-height: calc(100dvh - var(--v-layout-top, 64px) - 32px);
+  max-height: calc(100dvh - var(--v-layout-top, 64px) - 32px);
+}
+
+.playthrough-active .scene-container {
+  /* the base rule sets flex-shrink: 0, which would let a long message list
+     push the column past the height capped above and take the toolbar with it */
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.playthrough-active .scene-view {
   flex-grow: 1;
   display: flex;
   flex-direction: column;

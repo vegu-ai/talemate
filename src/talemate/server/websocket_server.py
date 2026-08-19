@@ -34,6 +34,7 @@ from talemate.server import (
     world_state_manager,
     node_editor,
     package_manager,
+    playthrough,
     prompts,
     scene_assets as scene_assets_plugin,
     scene_commands,
@@ -92,6 +93,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 self
             ),
             timeline.TimelinePlugin.router: timeline.TimelinePlugin(self),
+            playthrough.PlaythroughPlugin.router: playthrough.PlaythroughPlugin(self),
         }
 
         # unconveniently named function, this `connect` method is called
@@ -434,6 +436,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 "message": emission.message,
                 "id": emission.id,
                 "ts": emission.message_object.ts,
+                "title": emission.message_object.title,
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),

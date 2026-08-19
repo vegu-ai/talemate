@@ -46,7 +46,7 @@
             <v-card-actions class="pb-0 my-0 justify-space-between ga-1 flex-wrap">
                 <div class="d-flex ga-1 flex-wrap">
                     <v-btn
-                        v-if="entity"
+                        v-if="entity && !isPlaythroughActive()"
                         size="small"
                         variant="tonal"
                         color="primary"
@@ -57,7 +57,7 @@
                         Look at
                     </v-btn>
                     <v-btn
-                        v-if="entity?.snapshot && !(entity?.kind === 'character' && entity?.isKnownCharacter)"
+                        v-if="entity?.snapshot && !(entity?.kind === 'character' && entity?.isKnownCharacter) && !isPlaythroughActive()"
                         size="small"
                         variant="tonal"
                         color="primary"
@@ -92,6 +92,9 @@ const KIND_META = {
 
 export default {
     name: 'EntityTooltip',
+    inject: {
+        isPlaythroughActive: { default: () => () => false },
+    },
     props: {
         modelValue: { type: Boolean, default: false },
         activator: { type: [Object, String, null], default: null },

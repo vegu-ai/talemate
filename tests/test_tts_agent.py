@@ -22,6 +22,7 @@ import pydantic
 import pytest
 import pytest_asyncio
 
+import talemate.agents.tts as tts_module
 import talemate.agents.tts.pocket_tts as pocket_tts_module
 import talemate.agents.tts.voice_library as voice_library
 import talemate.emit.async_signals as async_signals
@@ -1116,6 +1117,43 @@ class TestQueueLifecycle:
         block.set()
 
     @pytest.mark.asyncio
+    async def test_cancellation_reports_each_message_exactly_once(self, generate_agent):
+        """A listener waiting for a message to finish being generated (the
+        playthrough pacing does) needs one report per queued message: none and
+        it waits forever, two and it counts a message it never saw."""
+        generate_agent.actions["_config"].config["speaker_separation"].value = "none"
+
+        reported: list = []
+        generate_agent.signal_generation_complete = reported.append
+
+        block = asyncio.Event()
+        started = asyncio.Event()
+
+        async def _slow_chunk(chunk, ctx):
+            started.set()
+            await block.wait()
+
+        generate_agent._generate_chunk = _slow_chunk
+
+        # message 1 has a chunk in flight and another still queued behind it -
+        # the in-flight one has already left the deque, so it is only visible
+        # to the queue task's own cleanup
+        await generate_agent.generate("first", message_id=1)
+        await generate_agent.generate("second", message_id=1)
+        await generate_agent.generate("third", message_id=2)
+        await asyncio.wait_for(started.wait(), timeout=1)
+        task = generate_agent._queue_task
+
+        await generate_agent.stop_and_clear_queue()
+        block.set()
+        try:
+            await asyncio.wait_for(task, timeout=1)
+        except asyncio.CancelledError:
+            pass
+
+        assert sorted(reported) == [1, 2]
+
+    @pytest.mark.asyncio
     async def test_queue_drains_naturally_resets_state(self, generate_agent):
         generate_agent.actions["_config"].config["speaker_separation"].value = "none"
         # default _generate_chunk is an AsyncMock that returns immediately
@@ -1125,6 +1163,46 @@ class TestQueueLifecycle:
         # after natural drain, queue state is reset
         assert generate_agent._queue_id is None
         assert len(generate_agent._generation_queue) == 0
+
+
+# ---------------------------------------------------------------------------
+# generation-complete signalling
+# ---------------------------------------------------------------------------
+
+
+class TestGenerationCompleteSignal:
+    """Playthrough's auto-advance waits for a message to finish being spoken.
+    A slow backend leaves gaps between a message's chunks during which the
+    player's queue is empty, so only the agent can say when a message is done.
+    """
+
+    def test_completion_is_emitted_for_a_message(self, generate_agent):
+        generate_agent.signal_generation_complete(42)
+
+        (call,) = tts_module.emit.call_args_list
+        assert call.args[0] == "audio_queue"
+        assert call.kwargs["data"] == {"message_id": 42, "generation_complete": True}
+
+    def test_the_intro_sentinel_is_carried_through(self, generate_agent):
+        generate_agent.signal_generation_complete("intro")
+
+        assert tts_module.emit.call_args.kwargs["data"]["message_id"] == "intro"
+
+    def test_nothing_is_emitted_without_a_message(self, generate_agent):
+        generate_agent.signal_generation_complete(None)
+
+        tts_module.emit.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_a_disabled_agent_still_reports_completion(self, generate_agent):
+        # otherwise a caller waiting for the narration to finish waits forever
+        generate_agent.is_enabled = False
+        reported: list = []
+        generate_agent.signal_generation_complete = reported.append
+
+        await generate_agent.generate("some text", message_id=42)
+
+        assert reported == [42]
 
 
 # ---------------------------------------------------------------------------

@@ -257,6 +257,10 @@ class TTSAgent(
         self._queue_id: str | None = None
         self._queue_task: asyncio.Task | None = None
         self._queue_lock = asyncio.Lock()
+        # the message whose chunk the queue task is generating right now. It has
+        # already left the deque, so a cancellation from outside can only tell
+        # who still owes a completion by looking here.
+        self._in_flight_message_id: int | str | None = None
 
     @contextlib.contextmanager
     def suppress_auto_generation(self):
@@ -968,7 +972,13 @@ class TTSAgent(
         new request to it; if not, we create a new queue (with its own unique
         id) and start processing.
         """
+        # Priority: explicit message_id parameter > message.id > None
+        resolved_message_id = (
+            message_id if message_id is not None else (message.id if message else None)
+        )
+
         if not self.enabled or not self.ready or not text:
+            self.signal_generation_complete(resolved_message_id)
             return
 
         # Apply appearance config filtering for hidden markers
@@ -982,15 +992,10 @@ class TTSAgent(
         # After filtering, check if there's still text to generate
         if not text:
             log.debug("tts skipped - no text after filtering hidden markers")
+            self.signal_generation_complete(resolved_message_id)
             return
 
         self.playback_done_event.set()
-
-        # Determine the message_id to use for this generation
-        # Priority: explicit message_id parameter > message.id > None
-        resolved_message_id = (
-            message_id if message_id is not None else (message.id if message else None)
-        )
 
         summarizer: "SummarizeAgent" = instance.get_agent("summarizer")
 
@@ -1169,6 +1174,7 @@ class TTSAgent(
                         break
 
                     context, chunk = self._generation_queue.popleft()
+                    self._in_flight_message_id = chunk.message_id
 
                     log.debug(
                         "tts queue dequeue",
@@ -1179,6 +1185,15 @@ class TTSAgent(
 
                 # Process outside lock so other coroutines can enqueue
                 await self._generate_chunk(chunk, context)
+
+                async with self._queue_lock:
+                    more_coming = any(
+                        queued.message_id == chunk.message_id
+                        for _, queued in self._generation_queue
+                    )
+                if not more_coming:
+                    self._in_flight_message_id = None
+                    self.signal_generation_complete(chunk.message_id)
         except Exception as e:
             log.error(
                 "Error processing queue", error=e, traceback=traceback.format_exc()
@@ -1186,10 +1201,23 @@ class TTSAgent(
         finally:
             # Clean up queue state after finishing (or on cancellation)
             async with self._queue_lock:
+                abandoned = {queued.message_id for _, queued in self._generation_queue}
+                in_flight = self._in_flight_message_id
+                self._in_flight_message_id = None
                 if queue_id == self._queue_id:
                     self._queue_id = None
                     self._queue_task = None
                     self._generation_queue.clear()
+            # the chunk being generated has already left the deque, so a
+            # cancellation here would otherwise report every queued message
+            # except the one actually interrupted. This task owns that report -
+            # stop_and_clear_queue leaves it out for exactly that reason.
+            if in_flight is not None:
+                abandoned.add(in_flight)
+            # every message that was queued reports exactly once, or a caller
+            # waiting for one to finish waits forever
+            for message_id in abandoned:
+                self.signal_generation_complete(message_id)
 
     # Public helper so external code (e.g. later cancellation UI) can find the current queue id
     def current_queue_id(self) -> str | None:
@@ -1255,6 +1283,23 @@ class TTSAgent(
         for chunk in context.chunks:
             await self._generate_chunk(chunk, context)
 
+    def signal_generation_complete(self, message_id: int | str | None):
+        """
+        Report that no further audio is coming for `message_id`.
+
+        Playback finishing is not the same as generation finishing: a slow
+        backend leaves gaps between a message's chunks, during which the
+        player's queue is empty and looks done. A listener that has to wait
+        for a whole message needs this to tell the gaps apart from the end.
+        """
+        if message_id is None:
+            return
+
+        emit(
+            "audio_queue",
+            data={"message_id": message_id, "generation_complete": True},
+        )
+
     def play_audio(self, audio_data, message_id: int | str | None = None):
         # play audio through the websocket (browser)
 
@@ -1275,7 +1320,15 @@ class TTSAgent(
         running) and clears all queued items in a thread-safe manner.
         """
         async with self._queue_lock:
-            # Clear all queued items
+            # Clear all queued items - reporting them, since the queue task's
+            # own cleanup will find nothing left to account for
+            abandoned = {queued.message_id for _, queued in self._generation_queue}
+            # ... except the chunk already in flight: it left the deque before
+            # we looked, and the cancelled task's own cleanup reports it. Doing
+            # it here as well would tell a listener the same message finished
+            # twice.
+            if self._in_flight_message_id is not None:
+                abandoned.discard(self._in_flight_message_id)
             self._generation_queue.clear()
 
             # Cancel the background task if it is still running
@@ -1285,6 +1338,9 @@ class TTSAgent(
             # Reset queue identifiers/state
             self._queue_id = None
             self._queue_task = None
+
+        for message_id in abandoned:
+            self.signal_generation_complete(message_id)
 
         # Ensure downstream components know playback is finished
         self.playback_done_event.set()

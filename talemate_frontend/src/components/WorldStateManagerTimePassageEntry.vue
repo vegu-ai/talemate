@@ -9,6 +9,7 @@
                  @dblclick="setEditing(true)"
                  @mouseenter="hovered = true"
                  @mouseleave="hovered = false">
+                <span v-if="passage.title" class="text-body-1 text-time mr-2">{{ passage.title }}</span>
                 <span class="text-body-1">{{ passage.human }}</span>
                 <span v-if="hovered" class="text-caption text-muted ml-2">
                     <v-icon size="small">mdi-pencil</v-icon> double-click to edit
@@ -29,6 +30,8 @@
                     style="max-width: 160px" hide-details="auto" density="compact" />
                 <v-select v-model="editUnit" :items="units" label="Unit"
                     style="max-width: 160px" hide-details="auto" density="compact" class="ml-2" />
+                <v-text-field v-model="editTitle" label="Chapter title" style="max-width: 260px"
+                    hide-details="auto" density="compact" class="ml-2" />
                 <v-btn class="ml-2" color="success" variant="text" size="small"
                     prepend-icon="mdi-content-save" @click="save" :disabled="locked">Save</v-btn>
                 <v-btn class="ml-1" color="cancel" variant="text" size="small"
@@ -60,6 +63,7 @@ export default {
             hovered: false,
             editAmount: this.passage.amount,
             editUnit: this.passage.unit,
+            editTitle: this.passage.title || '',
             units: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
         };
     },
@@ -75,6 +79,9 @@ export default {
             if (val) {
                 this.editAmount = this.passage.amount;
                 this.editUnit = this.passage.unit;
+                // seeded from the current value: the handler writes whatever
+                // is sent, so an unseeded field would clear the title on save
+                this.editTitle = this.passage.title || '';
             }
         },
         save() {
@@ -84,6 +91,7 @@ export default {
                 history_index: this.passage.history_index,
                 amount: this.editAmount,
                 unit: this.editUnit,
+                title: this.editTitle || null,
             }));
             this.editing = false;
         },

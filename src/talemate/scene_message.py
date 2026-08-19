@@ -550,10 +550,13 @@ class TimePassageMessage(SceneMessage):
     ts: int = 0
     source: str = "manual"
     typ: str = "time"
+    # names the chapter this passage opens, for playthrough's chapter menu
+    title: str | None = None
 
     def to_dict(self) -> dict:
         rv = super().to_dict()
         rv["ts"] = self.ts
+        rv["title"] = self.title
         return rv
 
 

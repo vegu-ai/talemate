@@ -515,7 +515,9 @@ class TTSWebsocketHandler(Plugin):
         try:
             payload = GenerateForSceneMessagePayload(**data)
         except pydantic.ValidationError as e:
-            await self.signal_operation_failed(str(e))
+            await self.signal_operation_failed(
+                str(e), request_id=data.get("request_id")
+            )
             return
 
         log.debug("Payload", payload=payload)
@@ -530,12 +532,15 @@ class TTSWebsocketHandler(Plugin):
             message = scene.get_message(payload.message_id)
 
             if not message:
-                await self.signal_operation_failed("Message not found")
+                await self.signal_operation_failed(
+                    "Message not found", request_id=data.get("request_id")
+                )
                 return
 
             if message.typ not in ["character", "narrator", "context_investigation"]:
                 await self.signal_operation_failed(
-                    "Message is not a character, narrator, or context investigation message"
+                    "Message is not a character, narrator, or context investigation message",
+                    request_id=data.get("request_id"),
                 )
                 return
 
@@ -545,7 +550,9 @@ class TTSWebsocketHandler(Plugin):
                 character = scene.get_character(message.character_name)
 
                 if not character:
-                    await self.signal_operation_failed("Character not found")
+                    await self.signal_operation_failed(
+                        "Character not found", request_id=data.get("request_id")
+                    )
                     return
 
                 text = message.without_name
@@ -555,14 +562,19 @@ class TTSWebsocketHandler(Plugin):
                 text = message.message
 
         if not text:
-            await self.signal_operation_failed("No text to generate speech for.")
+            await self.signal_operation_failed(
+                "No text to generate speech for.", request_id=data.get("request_id")
+            )
             return
 
         await tts_agent.generate(
             text, character, message=message, message_id=payload.message_id
         )
 
-        await self.signal_operation_done()
+        # speaking a message is not a scene change - never let it auto-save
+        await self.signal_operation_done(
+            signal_only=True, request_id=data.get("request_id")
+        )
 
     async def handle_character_voice_config(self, data: dict):
         """Return voice configuration for all characters (active + inactive)."""
@@ -642,7 +654,10 @@ class TTSWebsocketHandler(Plugin):
 
         try:
             await tts_agent.stop_and_clear_queue()
-            await self.signal_operation_done()
+            # stopping playback is not a scene change - never let it auto-save
+            # or mark the scene unsaved. A playthrough sends this on every step
+            # and would otherwise dirty a scene it never touched.
+            await self.signal_operation_done(signal_only=True)
         except Exception as e:
             log.error("Failed to stop and clear TTS queue", error=e)
             await self.signal_operation_failed(str(e))

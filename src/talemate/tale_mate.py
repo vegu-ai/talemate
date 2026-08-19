@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import re
 import traceback
@@ -176,6 +177,9 @@ class Scene(Emitter):
         # if immutable_save is True, save will always
         # happen as save-as and not overwrite the original
         self.immutable_save = False
+
+        # id of the message a playthrough of this scene was last left on
+        self.playthrough_progress: int | str | None = None
 
         self.context = ""
         self.perspectives = ScenePerspectives()
@@ -1433,6 +1437,7 @@ class Scene(Emitter):
                 "agent_settings_opted_out": self._agent_settings_opted_out,
                 "agent_settings_files": self.agent_settings_files,
                 "game_state_watch_paths": self.game_state_watch_paths,
+                "playthrough_progress": self.playthrough_progress,
             },
         )
 
@@ -1692,7 +1697,7 @@ class Scene(Emitter):
         if not memory.db:
             await memory.set_db()
 
-    async def emit_history(self):
+    async def emit_history(self, uncapped: bool = False):
         emit("clear_screen", "")
         # this is mostly to support character cards
         # we introduce the main character to all such characters, replacing
@@ -1706,7 +1711,8 @@ class Scene(Emitter):
         self.narrator_message(intro)
 
         # emit history
-        for message in self.history[-self.max_backscroll :]:
+        history = self.history if uncapped else self.history[-self.max_backscroll :]
+        for message in history:
             if isinstance(message, CharacterMessage):
                 character = self.get_character(message.character_name)
             else:
@@ -1849,6 +1855,34 @@ class Scene(Emitter):
             memory_session_id=self.memory_session_id,
         )
         self.emit_status()
+
+    def write_playthrough_progress(self, message_id: int | str | None):
+        """
+        Record where a playthrough was left off, in the scene's own file.
+
+        Deliberately not a save: it patches the one field into the file on
+        disk and leaves everything else — the rest of the file, the changelog,
+        the scene's saved flag — exactly as it was, so walking through a scene
+        never writes out whatever the session happens to hold in memory.
+        """
+        if self.immutable_save:
+            raise TalemateError(
+                "This scene is read-only, playthrough progress cannot be saved to it"
+            )
+
+        self.playthrough_progress = message_id
+
+        path = self.full_path
+        if not path or not os.path.exists(path):
+            raise TalemateError("Scene has not been saved yet")
+
+        with open(path, "r") as f:
+            scene_data = json.load(f)
+
+        scene_data["playthrough_progress"] = message_id
+
+        with open(path, "w") as f:
+            f.write(save.scene_data_dumps(scene_data))
 
     async def attempt_auto_save(self):
         """
@@ -2119,6 +2153,7 @@ class Scene(Emitter):
             "agent_settings_file": scene.agent_settings_link,
             "agent_settings_opted_out": scene._agent_settings_opted_out,
             "game_state_watch_paths": scene.game_state_watch_paths,
+            "playthrough_progress": scene.playthrough_progress,
         }
 
     @property

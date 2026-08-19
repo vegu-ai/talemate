@@ -39,6 +39,7 @@ narrate the time passage using the narration instructions).
 | `state` | `any` | The graph state |
 | `duration` | `int` | The duration to advance in seconds (e.g. 3600 for an hour) |
 | `narration_instructions` | `str` | Instructions for narrating the time passage (optional) |
+| `chapter_title` | `str` | Names the chapter this time passage opens (optional) |
 
 **Outputs**
 
@@ -54,6 +55,7 @@ narrate the time passage using the narration instructions).
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | `narration_instructions` | `str` | `""` | The instructions for the narration |
+| `chapter_title` | `str` | `""` | Names the chapter this time passage opens |
 | `duration` | `int` | `1` | The duration to advance, in seconds. Min: 0. |
 
 ## Character Progression

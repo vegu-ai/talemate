@@ -50,12 +50,14 @@ class UpdateTimePassagePayload(pydantic.BaseModel):
     history_index: int
     amount: int
     unit: str
+    title: str | None = None
 
 
 class InsertTimePassagePayload(pydantic.BaseModel):
     archive_index: int
     amount: int
     unit: str
+    title: str | None = None
 
 
 class DeleteTimePassagePayload(pydantic.BaseModel):
@@ -264,6 +266,7 @@ class HistoryMixin:
 
         message.ts = duration
         message.message = duration_to_human(duration, suffix=" later")
+        message.title = payload.title
 
         self.scene.fix_time()
         self.scene.emit_status()
@@ -288,6 +291,7 @@ class HistoryMixin:
                 payload.archive_index,
                 payload.amount,
                 payload.unit,
+                payload.title,
             )
         except (ValueError, IndexError) as e:
             await self.signal_operation_failed(str(e))

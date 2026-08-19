@@ -8,7 +8,10 @@
           <v-icon>mdi-close</v-icon>
         </v-btn>
       </template>
-      <span v-if="!editing">{{ text }}</span>
+      <span v-if="!editing">
+        <span v-if="title" class="time-title mr-2">{{ title }}</span>
+        {{ text }}
+      </span>
       <v-chip v-if="hovered && !editing" size="x-small" color="mutedheader" variant="text" class="ml-2">
         <v-icon>mdi-pencil</v-icon>
         {{ uxLocked || appBusy ? 'Editing locked' : 'Double-click to edit.' }}
@@ -18,6 +21,8 @@
             style="max-width: 140px" hide-details="auto" density="compact" />
         <v-select v-model="editUnit" :items="units" label="Unit"
             style="max-width: 140px" hide-details="auto" density="compact" class="ml-2" />
+        <v-text-field v-model="editTitle" label="Chapter title" style="max-width: 260px"
+            hide-details="auto" density="compact" class="ml-2" />
         <v-btn class="ml-2" color="success" variant="text" size="small"
             prepend-icon="mdi-content-save" @click="saveEdit" :disabled="uxLocked || appBusy">Save</v-btn>
         <v-btn class="ml-1" color="cancel" variant="text" size="small"
@@ -42,6 +47,7 @@ export default {
       editing: false,
       editAmount: 1,
       editUnit: 'hours',
+      editTitle: '',
       units: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
     }
   },
@@ -56,6 +62,10 @@ export default {
     ts: {
       type: Number,
       required: true
+    },
+    title: {
+      type: String,
+      default: null
     },
     uxLocked: {
       type: Boolean,
@@ -87,6 +97,7 @@ export default {
       const parsed = secondsToAmountUnit(this.ts);
       this.editAmount = parsed.amount;
       this.editUnit = parsed.unit;
+      this.editTitle = this.title || '';
       this.editing = true;
     },
     saveEdit() {
@@ -96,6 +107,7 @@ export default {
         message_id: this.message_id,
         amount: this.editAmount,
         unit: this.editUnit,
+        title: this.editTitle || null,
       }));
       this.editing = false;
     },
@@ -107,6 +119,10 @@ export default {
 </script>
 
 <style scoped>
+.time-title {
+  font-weight: 600;
+}
+
 .close-button {
   opacity: 0.4;
   color: rgba(var(--v-theme-on-surface), 0.6) !important;

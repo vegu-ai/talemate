@@ -112,6 +112,7 @@ class TimePassageEntry(pydantic.BaseModel):
     amount: int
     unit: str
     human: str
+    title: str | None = None
 
 
 async def emit_archive_add(scene: "Scene", entry: ArchiveEntry):
@@ -419,6 +420,7 @@ def collect_time_passages(scene: "Scene") -> list[dict]:
                     amount=amount,
                     unit=unit,
                     human=duration_to_human(message.ts, suffix=" later"),
+                    title=message.title,
                 ).model_dump()
             )
     return passages
@@ -429,6 +431,7 @@ def insert_time_passage(
     archive_index: int,
     amount: int,
     unit: str,
+    title: str | None = None,
 ) -> TimePassageMessage:
     """
     Insert a TimePassageMessage into scene.history just before the source
@@ -454,7 +457,7 @@ def insert_time_passage(
 
     duration = amount_unit_to_seconds(amount, unit)
     human = duration_to_human(duration, suffix=" later")
-    tp_message = TimePassageMessage(ts=duration, message=human)
+    tp_message = TimePassageMessage(ts=duration, message=human, title=title)
 
     scene.history.insert(insertion_index, tp_message)
 
@@ -510,6 +513,7 @@ def insert_time_passage_after_message(
     message_id: int,
     amount: int,
     unit: str,
+    title: str | None = None,
 ) -> TimePassageMessage:
     """
     Insert a TimePassageMessage into scene.history right after the message
@@ -525,7 +529,7 @@ def insert_time_passage_after_message(
 
     duration = amount_unit_to_seconds(amount, unit)
     human = duration_to_human(duration, suffix=" later")
-    tp_message = TimePassageMessage(ts=duration, message=human)
+    tp_message = TimePassageMessage(ts=duration, message=human, title=title)
 
     scene.history.insert(insertion_index, tp_message)
 
@@ -561,10 +565,11 @@ def update_time_passage_by_id(
     message_id: int,
     amount: int,
     unit: str,
+    title: str | None = None,
 ) -> None:
     """
-    Update the duration of a TimePassageMessage in scene.history by its
-    message id. Calls fix_time() to recalculate timestamps.
+    Update the duration and title of a TimePassageMessage in scene.history by
+    its message id. Calls fix_time() to recalculate timestamps.
     """
 
     history_index = scene.message_index(message_id)
@@ -579,6 +584,7 @@ def update_time_passage_by_id(
     duration = amount_unit_to_seconds(amount, unit)
     message.ts = duration
     message.message = duration_to_human(duration, suffix=" later")
+    message.title = title
 
     scene.fix_time()
 

@@ -20,8 +20,14 @@ To insert a time passage after a specific message:
 1. Hover over the message in the scene view after which you want time to pass
 2. Click the **Time passage** button that appears underneath the message
 3. Specify the duration (amount and unit)
+4. Optionally give it a **chapter title**
 
 Available time units: minutes, hours, days, weeks, months, years.
+
+The chapter title is optional and names the stretch of scene the passage opens.
+It is shown on the time passage marker and is what the chapter menu in
+[Playthrough Mode](playthrough.md#moving-around) lists; without one, a chapter
+is listed by its duration instead.
 
 !!! note "Months and Years"
     Scene time is tracked as elapsed seconds, so months and years use fixed lengths: a month is 30 days and a year is 365 days. This applies both to advancing time and to how elapsed time is displayed.
@@ -38,11 +44,12 @@ Time passage markers in the scene view can be edited by double-clicking them. Th
 
 1. **Double-click** the time passage message to enter edit mode
 2. Adjust the **Amount** (numeric value) and **Unit** (minutes, hours, days, etc.)
-3. Click **Save** to apply the changes, or **Cancel** to discard them
+3. Add or change the **Chapter title**, or clear it to remove the title
+4. Click **Save** to apply the changes, or **Cancel** to discard them
 
 ### In the World State Manager
 
-The World State Manager's history view also displays time passage entries with editable duration fields. This provides an alternative interface for managing time passages, especially useful when reviewing the full history timeline.
+The World State Manager's history view also displays time passage entries with editable duration and chapter title fields. This provides an alternative interface for managing time passages, especially useful when reviewing the full history timeline — and it is the only one that reaches a passage inserted before a summarized entry, which sits too far back for the scene view to show.
 
 ![Time passage entry in the World State Manager history view](../img/0.36.0/time-passage-wsm-entry.png)
 
@@ -52,7 +59,7 @@ To edit a time passage in the World State Manager:
 2. Navigate to the **History** view
 3. Locate the time passage entry
 4. **Double-click** the entry to open inline editing
-5. Adjust the amount and unit, then click **Save**
+5. Adjust the amount, unit and chapter title, then click **Save**
 
 ## Deleting Time Passages
 

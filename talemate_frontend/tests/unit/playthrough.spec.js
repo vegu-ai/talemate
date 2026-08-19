@@ -63,16 +63,67 @@ describe("clampReveal", () => {
 describe("chapterBoundaries", () => {
     it("opens with the scene start and adds every time passage", () => {
         expect(chapterBoundaries(messages)).toEqual([
-            { index: 0, title: null, text: null },
-            { index: 2, title: "The Reckoning", text: "a day later" },
-            { index: 4, title: null, text: "an hour later" },
+            { index: 0, reveal: 1, title: null, text: null },
+            { index: 2, reveal: 4, title: "The Reckoning", text: "a day later" },
+            { index: 4, reveal: 6, title: null, text: "an hour later" },
         ]);
     });
 
     it("is just the scene start when nothing marks time", () => {
         expect(chapterBoundaries([{ id: 1, type: "narrator" }])).toEqual([
-            { index: 0, title: null, text: null },
+            { index: 0, reveal: 1, title: null, text: null },
         ]);
+    });
+
+    it("opens a chapter on the message after its time passage", () => {
+        const chapters = chapterBoundaries(messages);
+        expect(visibleMessages(messages, chapters[1].reveal).at(-1).id).toBe(4);
+        expect(visibleMessages(messages, chapters[2].reveal).at(-1).id).toBe(6);
+    });
+
+    it("starts the opening chapter on the first message", () => {
+        expect(visibleMessages(messages, chapterBoundaries(messages)[0].reveal)).toHaveLength(1);
+    });
+
+    it("stops at the end for a scene that ends on a time passage", () => {
+        const ending = messages.slice(0, 5);
+        const last = chapterBoundaries(ending).at(-1);
+        expect(clampReveal(last.reveal, ending.length)).toBe(5);
+    });
+
+    it("opens an empty chapter on its own divider when another follows straight after", () => {
+        const backToBack = [
+            { id: 1, type: "narrator", text: "intro" },
+            { id: 2, type: "time", text: "a day later" },
+            { id: 3, type: "time", text: "an hour later" },
+            { id: 4, type: "character", text: "at last" },
+        ];
+        const chapters = chapterBoundaries(backToBack);
+        expect(visibleMessages(backToBack, chapters[1].reveal).at(-1).id).toBe(2);
+        expect(visibleMessages(backToBack, chapters[2].reveal).at(-1).id).toBe(4);
+    });
+});
+
+describe("jumping to a chapter", () => {
+    // the menu marks the chapter the cursor is in, so a jump has to land in the
+    // chapter it was made from
+    const landsInItsOwnChapter = (list) => {
+        const chapters = chapterBoundaries(list);
+        return chapters.map(
+            (chapter) => currentChapter(chapters, clampReveal(chapter.reveal, list.length)));
+    };
+
+    it("leaves the chapter that was picked the current one", () => {
+        expect(landsInItsOwnChapter(messages)).toEqual([0, 1, 2]);
+    });
+
+    it("does the same for chapters that follow each other straight away", () => {
+        expect(landsInItsOwnChapter([
+            { id: 1, type: "narrator", text: "intro" },
+            { id: 2, type: "time", text: "a day later" },
+            { id: 3, type: "time", text: "an hour later" },
+            { id: 4, type: "character", text: "at last" },
+        ])).toEqual([0, 1, 2]);
     });
 });
 

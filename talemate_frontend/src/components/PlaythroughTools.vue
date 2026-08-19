@@ -10,7 +10,7 @@
                 Advance
             </v-btn>
 
-            <v-tooltip :text="narration ? 'Narration on - revealed messages are spoken' : 'Narration off'" location="top">
+            <v-tooltip v-if="ttsAvailable" :text="narration ? 'Narration on - revealed messages are spoken' : 'Narration off'" location="top">
                 <template v-slot:activator="{ props }">
                     <v-btn v-bind="props" class="ml-2" size="small" variant="text" icon
                         :color="narration ? 'success' : ''" @click="$emit('toggle-narration')">
@@ -19,7 +19,7 @@
                 </template>
             </v-tooltip>
 
-            <v-tooltip text="Advance on its own - after the narration when it is on, on a timer otherwise" location="top">
+            <v-tooltip :text="autoAdvanceHint" location="top">
                 <template v-slot:activator="{ props }">
                     <v-btn v-bind="props" class="ml-1" size="small" variant="text" icon
                         :color="autoAdvance ? 'success' : ''" @click="$emit('toggle-auto-advance')">
@@ -38,7 +38,7 @@
                 <v-list density="compact" max-height="400">
                     <v-list-subheader>Chapters</v-list-subheader>
                     <v-list-item v-for="(chapter, index) in chapters" :key="index"
-                        :active="index === activeChapter" @click="$emit('jump', chapter.index + 1)">
+                        :active="index === activeChapter" @click="$emit('jump', chapter.reveal)">
                         <v-list-item-title>{{ chapterLabel(chapter, index + 1) }}</v-list-item-title>
                     </v-list-item>
                 </v-list>
@@ -94,6 +94,10 @@ export default {
             type: Boolean,
             default: false,
         },
+        ttsAvailable: {
+            type: Boolean,
+            default: false,
+        },
     },
     inject: ['getWebsocket'],
     emits: ['advance', 'jump', 'restart', 'exit', 'toggle-auto-advance', 'toggle-narration'],
@@ -103,6 +107,11 @@ export default {
         },
         activeChapter() {
             return currentChapter(this.chapters, this.revealCount);
+        },
+        autoAdvanceHint() {
+            return this.ttsAvailable
+                ? 'Advance on its own - after the narration when it is on, on a timer otherwise'
+                : 'Advance on its own on a timer';
         },
     },
     mounted() {

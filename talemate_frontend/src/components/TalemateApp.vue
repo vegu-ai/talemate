@@ -218,7 +218,7 @@
 
       <v-container fluid style="height: 100%;">
 
-        <v-tabs-window v-model="tab" style="height: 100%;">
+        <v-tabs-window v-model="tab" style="height: 100%;" :class="{ 'playthrough-scrollport': playthroughActive && tab === 'main' }">
           <!-- HOME -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
             <SceneLanding
@@ -294,6 +294,7 @@
                         :chapters="playthroughChapters"
                         :auto-advance="playthroughAutoAdvance"
                         :narration="playthroughNarration"
+                        :tts-available="playthroughTtsReady"
                         :busy="busy"
                         @advance="advancePlaythrough"
                         @toggle-narration="togglePlaythroughNarration"
@@ -2139,15 +2140,6 @@ export default {
   background-attachment: fixed;
 }
 
-/* the playthrough toolbar is a single strip of small controls over whatever
-   the backdrop is showing - it needs a surface of its own to stay readable */
-.scene-backdrop-active .scene-controls :deep(.playthrough-tools) {
-  background-color: rgba(var(--v-theme-surface), 0.85);
-  backdrop-filter: blur(6px);
-  border-radius: 6px;
-  padding: 4px 8px;
-}
-
 /* the message input, control chips (auto save, auto progress, agent
    activity, ...) and the input's send/autocomplete buttons get solid
    backgrounds so they don't fight the backdrop (they are otherwise
@@ -2158,51 +2150,58 @@ export default {
   background-color: rgb(var(--v-theme-surface));
 }
 
-/* with a backdrop, stretch the scene column to at least the visible
-   main-area height so a short scene doesn't crop the image; the message
+/* Both a backdrop and a playthrough stretch the scene column to at least the
+   visible main-area height: with a backdrop so a short scene doesn't crop the
+   image, in a playthrough because it reveals messages one at a time and a short
+   reveal would otherwise leave the toolbar halfway up the column. The message
    list grows and the tools/input hug the bottom of the screen.
    --v-layout-top is set by vuetify on v-main (app bar offset); the 32px
    accounts for the v-container's vertical padding. */
-.scene-backdrop-active .scene-column {
-  min-height: calc(100dvh - var(--v-layout-top, 64px) - 32px);
-}
-
-.scene-backdrop-active .scene-container {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.scene-backdrop-active .scene-view {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-/* playthrough reveals messages one at a time, so the message list grows and
-   shrinks constantly. Fill the column the way a backdrop does, or the toolbar
-   rides up and down with it - and the scrubber moves out from under the
-   cursor mid-drag. */
+.scene-backdrop-active .scene-column,
 .playthrough-active .scene-column {
   min-height: calc(100dvh - var(--v-layout-top, 64px) - 32px);
-  max-height: calc(100dvh - var(--v-layout-top, 64px) - 32px);
 }
 
+.scene-backdrop-active .scene-container,
 .playthrough-active .scene-container {
-  /* the base rule sets flex-shrink: 0, which would let a long message list
-     push the column past the height capped above and take the toolbar with it */
-  flex: 1 1 auto;
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
+.scene-backdrop-active .scene-view,
 .playthrough-active .scene-view {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* A sticky toolbar sticks inside the nearest scrolling ancestor, and these two
+   are scroll containers that never scroll - so it would not stick to the screen
+   at all. The base .scene-container rule sets overflow-x, which alone makes an
+   element a scrollport; the tabs window (vuetify's .v-window root) clips for
+   tab transitions, which are turned off here. */
+.playthrough-active .scene-container,
+.playthrough-scrollport {
+  overflow: visible;
+}
+
+/* the page scrolls in playthrough as it does in normal mode; the toolbar stays
+   at the foot of the screen so the scrubber does not walk out from under the
+   cursor mid-drag */
+.playthrough-active .scene-controls {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  /* the whole strip, not just the tools: the agent activity bar above them is
+     transparent, and the message list now passes behind all of it */
+  background-color: rgb(var(--v-theme-background));
+}
+
+.playthrough-active.scene-backdrop-active .scene-controls {
+  background-color: rgba(var(--v-theme-background), 0.85);
+  backdrop-filter: blur(6px);
 }
 
 .scene-controls--locked {

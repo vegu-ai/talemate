@@ -36,9 +36,10 @@ The reveal counter next to the scrubber shows where you are — `7 / 106`.
 
 - **Scrubber** — drag it to jump anywhere in the scene.
 - **:material-format-list-bulleted: Chapters** — jump to the start of the scene
-  or to any [time passage](time-passage.md) in it. Give a time passage a
-  **chapter title** and it is listed under that name; otherwise it is listed by
-  its duration.
+  or to any [time passage](time-passage.md) in it, landing on the first message
+  after the passage — or on the passage itself when another follows it straight
+  away and the chapter is empty. Give a time passage a **chapter title** and it
+  is listed under that name; otherwise it is listed by its duration.
 - **Restart** — back to the first message.
 
 Jumping backwards hides the messages after the new position again.
@@ -48,7 +49,8 @@ Jumping backwards hides the messages after the new position again.
 - **:material-volume-high: Narration** — when on, each message the cursor lands
   on is spoken by the [Voice agent](agents/voice/index.md), however you got there,
   including stepping by hand. Stepping quickly does not queue up every message
-  you pass — only the one you settle on is narrated.
+  you pass — only the one you settle on is narrated. The toggle is only there
+  when the Voice agent is enabled.
 - **:material-play-circle-outline: Auto-advance** — when on, the playthrough
   moves on by itself: after the current message has finished being narrated, or
   on a short delay when narration is off or no voice agent is available.

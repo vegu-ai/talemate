@@ -92,16 +92,27 @@ export function clampReveal(revealCount, total) {
 }
 
 /**
+ * Where the reveal cursor goes when the chapter a time passage opens is picked:
+ * the message after the divider — unless that is another divider, which leaves
+ * the chapter empty and its own divider the only thing in it to land on.
+ */
+function chapterReveal(messages, index) {
+    const opening = messages[index + 1];
+    return opening && opening.type !== 'time' ? index + 2 : index + 1;
+}
+
+/**
  * Chapter boundaries: the scene start plus every time passage. `index` is the
- * message index the chapter opens at; a jump reveals up to and including it
- * (`index + 1`).
+ * message index the chapter is marked by; `reveal` is the cursor a jump to it
+ * sets.
  */
 export function chapterBoundaries(messages) {
-    const chapters = [{ index: 0, title: null, text: null }];
+    const chapters = [{ index: 0, reveal: 1, title: null, text: null }];
     messages.forEach((message, index) => {
         if (message.type === 'time') {
             chapters.push({
                 index,
+                reveal: chapterReveal(messages, index),
                 title: message.title || null,
                 text: message.text || null,
             });

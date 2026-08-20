@@ -3,6 +3,14 @@ services:
     extends:
       file: docker-compose.cpu.yml
       service: talemate
+    # Uncomment this block to enable NVIDIA GPU access for standalone manual builds.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
     image: talemate:local
     pull_policy: build
     build:

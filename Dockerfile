@@ -80,20 +80,22 @@ RUN mkdir -p /app/pi
 # Copy virtual environment from backend-build stage
 COPY --from=backend-build /app/.venv /app/.venv
 
-# Download and install FFmpeg 8.0 with shared libraries into .venv (matching Windows installer approach)
-# Using BtbN FFmpeg builds which provide shared libraries - verified to work
-# Note: We tried using jrottenberg/ffmpeg:8.0-ubuntu image but copying libraries from it didn't work properly,
-#       so we use the direct download approach which is more reliable and matches the Windows installer
+# FFmpeg shared libraries for torchcodec, which loads FFmpeg 4 to 8 only.
+# The BtbN master asset now ships FFmpeg 9, so this tracks the 8.1 release branch.
+ARG FFMPEG_BUILD=ffmpeg-n8.1-latest-linux64-gpl-shared-8.1
 RUN cd /tmp && \
-    wget -q https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl-shared.tar.xz -O ffmpeg.tar.xz && \
+    wget -q https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/${FFMPEG_BUILD}.tar.xz -O ffmpeg.tar.xz && \
     tar -xf ffmpeg.tar.xz && \
-    cp -a ffmpeg-master-latest-linux64-gpl-shared/bin/* /app/.venv/bin/ && \
-    cp -a ffmpeg-master-latest-linux64-gpl-shared/lib/* /app/.venv/lib/ && \
-    rm -rf ffmpeg-master-latest-linux64-gpl-shared ffmpeg.tar.xz && \
+    cp -a ${FFMPEG_BUILD}/bin/* /app/.venv/bin/ && \
+    cp -a ${FFMPEG_BUILD}/lib/* /app/.venv/lib/ && \
+    rm -rf ${FFMPEG_BUILD} ffmpeg.tar.xz && \
     LD_LIBRARY_PATH=/app/.venv/lib /app/.venv/bin/ffmpeg -version | head -n 1
 
 # Set LD_LIBRARY_PATH so torchcodec can find ffmpeg libraries at runtime
 ENV LD_LIBRARY_PATH=/app/.venv/lib:${LD_LIBRARY_PATH}
+
+# Fail the build, instead of scene loading at runtime, when the two no longer match.
+RUN /app/.venv/bin/python -B -c "import torchcodec.decoders"
 
 # Copy Python source code
 COPY --from=backend-build /app/src /app/src

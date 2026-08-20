@@ -81,6 +81,7 @@
   - "Story Introduction: Setting the introduction through the director or through the Set Introduction node now updates the scene view and the World Editor right away instead of only after a scene reload."
   - "Drawer Widths: The director console and help chat drawers no longer stay locked to the window size measured when the page was loaded — they now follow the current window size."
   - "Dependencies: Excluded nltk 3.10.1 from the accepted version range — that release ships a CWD-import security hook that breaks Talemate's standard install layout (virtualenv inside the project directory), crashing startup on any install not using the committed lock. The lock now resolves nltk 3.10.2, where the hook was removed upstream."
+  - "Docker: Loading a scene no longer fails with a Memory Agent database error. The image installed an FFmpeg build that had moved past the versions torchcodec supports, so the embedding model could not be imported. The FFmpeg version is now pinned, and a mismatch fails the image build instead of shipping."
 
 0.38.0:
   features:

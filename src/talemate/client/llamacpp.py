@@ -14,6 +14,7 @@ from talemate.client.base import (
     CommonDefaults,
     ParameterReroute,
 )
+from talemate.client.model_probe import OpenAIModelListProbeMixin
 from talemate.client.registry import register
 from talemate.client.remote import (
     ConcurrentInference,
@@ -44,6 +45,7 @@ class LlamaCppClient(
     ApiHandlesPromptTemplateMixin,
     ConcurrentInferenceMixin,
     OpenAIVisionMixin,
+    OpenAIModelListProbeMixin,
     ClientBase,
 ):
     """
@@ -151,18 +153,7 @@ class LlamaCppClient(
         if not self.api_url:
             return None
 
-        client = self.make_client()
-        models = await client.models.list(timeout=self.status_request_timeout)
-        try:
-            model_name = models.data[0].id
-        except IndexError:
-            return None
-
-        # model id can be a file path; normalize to basename (windows or linux)
-        if model_name:
-            model_name = model_name.replace("\\", "/").split("/")[-1]
-
-        return model_name
+        return await self.probe_model_name()
 
     async def apply_remote_template(self, prompt: str, kind: str) -> str:
         """

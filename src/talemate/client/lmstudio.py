@@ -6,6 +6,7 @@ from talemate.client.base import (
     ParameterReroute,
     CommonDefaults,
 )
+from talemate.client.model_probe import OpenAIModelListProbeMixin
 from talemate.client.registry import register
 
 # LMStudio defers parameter semantics to the OpenAI API reference, which
@@ -19,7 +20,7 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
 
 
 @register()
-class LMStudioClient(ClientBase):
+class LMStudioClient(OpenAIModelListProbeMixin, ClientBase):
     auto_determine_prompt_template: bool = True
     client_type = "lmstudio"
     remote_model_locked: bool = True
@@ -63,20 +64,7 @@ class LMStudioClient(ClientBase):
         return AsyncOpenAI(base_url=self.api_url + "/v1", api_key=self.api_key)
 
     async def get_model_name(self):
-        client = self.make_client()
-        models = await client.models.list(timeout=self.status_request_timeout)
-        try:
-            model_name = models.data[0].id
-        except IndexError:
-            return None
-
-        # model name comes back as a file path, so we need to extract the model name
-        # the path could be windows or linux so it needs to handle both backslash and forward slash
-
-        if model_name:
-            model_name = model_name.replace("\\", "/").split("/")[-1]
-
-        return model_name
+        return await self.probe_model_name()
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """

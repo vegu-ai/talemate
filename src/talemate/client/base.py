@@ -322,6 +322,11 @@ class ClientBase:
     client_type = "base"
     request_information: RequestInformation | None = None
     status_request_timeout: int = 2
+    # last resort bound on one status probe, applied by the status sweep in
+    # talemate.instance and set well above every client's own request timeout:
+    # a probe that hangs outside the HTTP client's control would otherwise
+    # wedge this client's status slot for good
+    status_probe_timeout: int = 30
     status_failure_threshold: int = 2
     rate_limit_counter: CounterRateLimiter = None
 
@@ -681,7 +686,9 @@ class ClientBase:
         self.emit_status()
 
         await self.config.set_dirty()
-        await self.status()
+        # bounded: the websocket handler awaits this toggle inline, so a probe
+        # that hangs here would stop every later message on that connection
+        await instance.bounded_client_status(self)
         await async_signals.get("client.enabled").send(
             ClientStatus(client=self, enabled=True)
         )

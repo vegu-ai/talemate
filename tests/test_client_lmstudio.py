@@ -16,15 +16,6 @@ TRUNCATION_EVENT = "too many stopping strings, truncating"
 
 
 @pytest.fixture
-def cfg_isolation():
-    """Snapshot/restore the client config section these tests mutate."""
-    saved_clients = dict(config_state.CONFIG.clients)
-    yield
-    config_state.CONFIG.clients.clear()
-    config_state.CONFIG.clients.update(saved_clients)
-
-
-@pytest.fixture
 def preset_isolation():
     """Snapshot/restore the inference presets, yielding the live ones."""
     saved = config_state.CONFIG.presets.inference.model_copy(deep=True)

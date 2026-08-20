@@ -9,13 +9,17 @@ bootstrap fixtures and require a fully-wired environment.
 import asyncio
 
 import pytest
+from structlog.testing import capture_logs
 
 import talemate.agents as agents_module
 import talemate.client as clients_module
 import talemate.config.state as config_state
 import talemate.instance as instance
+from talemate.client.base import ClientBase
 from talemate.client.registry import CLIENT_CLASSES
 from talemate.config.schema import Client as ClientConfig
+
+from talemate.emit.signals import handlers as emit_handlers
 
 from conftest import MockClient, bootstrap_engine
 
@@ -39,9 +43,11 @@ def _isolated_registries():
     saved_agents = dict(instance.AGENTS)
     saved_clients = dict(instance.CLIENTS)
     saved_status_tasks = dict(instance.CLIENT_STATUS_TASKS)
+    saved_ready_errors = dict(instance.AGENT_READY_CHECK_ERRORS)
     instance.AGENTS.clear()
     instance.CLIENTS.clear()
     instance.CLIENT_STATUS_TASKS.clear()
+    instance.AGENT_READY_CHECK_ERRORS.clear()
     yield
     instance.AGENTS.clear()
     instance.AGENTS.update(saved_agents)
@@ -49,6 +55,8 @@ def _isolated_registries():
     instance.CLIENTS.update(saved_clients)
     instance.CLIENT_STATUS_TASKS.clear()
     instance.CLIENT_STATUS_TASKS.update(saved_status_tasks)
+    instance.AGENT_READY_CHECK_ERRORS.clear()
+    instance.AGENT_READY_CHECK_ERRORS.update(saved_ready_errors)
 
 
 # ---------------------------------------------------------------------------
@@ -498,6 +506,199 @@ class TestClientStatusCoalescing:
 
 
 # ---------------------------------------------------------------------------
+# the sweep reports the last known status without waiting for a probe, and
+# bounds a probe that hangs (issue #338)
+# ---------------------------------------------------------------------------
+
+
+class _HangingStatusClient(MockClient):
+    """Its status() never returns, like a probe against an endpoint that
+    accepted the connection and then went silent."""
+
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.emits = 0
+        self.status_calls = 0
+
+    def emit_status(self, processing: bool = None):
+        self.emits += 1
+
+    async def status(self):
+        self.status_calls += 1
+        await asyncio.sleep(3600)
+
+
+class TestSweepEmitsLastKnownStatus:
+    @pytest.mark.asyncio
+    async def test_sweep_emits_before_the_probe_returns(self):
+        client = _HangingStatusClient("alpha")
+        instance.CLIENTS["alpha"] = client
+
+        await instance.emit_clients_status()
+
+        assert client.emits == 1
+        instance.CLIENT_STATUS_TASKS["alpha"].cancel()
+
+    @pytest.mark.asyncio
+    async def test_every_sweep_reports_while_a_probe_hangs(self):
+        client = _HangingStatusClient("alpha")
+        instance.CLIENTS["alpha"] = client
+
+        await instance.emit_clients_status()
+        await asyncio.sleep(0)
+        await instance.emit_clients_status()
+        await instance.emit_clients_status()
+
+        assert client.emits == 3
+        # the three sweeps coalesced onto the one hanging probe
+        assert client.status_calls == 1
+        instance.CLIENT_STATUS_TASKS["alpha"].cancel()
+
+    @pytest.mark.asyncio
+    async def test_frame_carries_the_client_name_and_error_state(self, cfg_isolation):
+        """The frontend builds its client list from these frames alone, so a
+        sweep has to put a real, named frame on the wire while a probe is
+        outstanding - not merely call emit_status()."""
+        frames = []
+
+        def on_client_status(emission):
+            frames.append(emission)
+
+        emit_handlers["client_status"].connect(on_client_status)
+
+        config_state.CONFIG.clients["alpha"] = ClientConfig(
+            type="stub", name="alpha", model="some-model"
+        )
+        client = _FailingProbeClient("alpha")
+        instance.CLIENTS["alpha"] = client
+
+        await instance.emit_clients_status(wait_for_status=True)
+
+        assert [f.id for f in frames] == ["alpha", "alpha"]
+        assert [f.status for f in frames] == ["error", "error"]
+
+
+class _FailingProbeClient(ClientBase):
+    """A real ClientBase status path whose probe raises, so the client ends up
+    disconnected and emits an error frame."""
+
+    client_type = "stub"
+
+    @property
+    def supported_parameters(self):
+        return ["temperature", "max_tokens"]
+
+    async def get_model_name(self):
+        raise ConnectionError("endpoint is down")
+
+
+class _HangingProbeClient(ClientBase):
+    """A real ClientBase whose probe never returns."""
+
+    client_type = "stub"
+
+    @property
+    def supported_parameters(self):
+        return ["temperature", "max_tokens"]
+
+    async def get_model_name(self):
+        await asyncio.sleep(3600)
+
+
+class _SlowStatusClient(MockClient):
+    """Its status() outlives the probe bound."""
+
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.status_probe_timeout = 0.01
+        self.status_calls = 0
+        self.connected = True
+
+    def emit_status(self, processing: bool = None):
+        pass
+
+    async def status(self):
+        self.status_calls += 1
+        await asyncio.sleep(3600)
+
+
+async def _sweep(timeout: float = 5.0):
+    """One sweep, awaited under a bound.
+
+    These clients never return from status(), so a regression of the probe
+    bound would hang an xdist worker instead of failing the test.
+    """
+    await asyncio.wait_for(
+        instance.emit_clients_status(wait_for_status=True), timeout=timeout
+    )
+
+
+class TestStatusProbeBound:
+    @pytest.mark.asyncio
+    async def test_a_hung_probe_frees_the_slot_and_marks_the_client_down(self):
+        client = _SlowStatusClient("alpha")
+        instance.CLIENTS["alpha"] = client
+
+        await _sweep()
+
+        assert client.connected is False
+        assert instance.CLIENT_STATUS_TASKS["alpha"].done()
+
+    @pytest.mark.asyncio
+    async def test_a_later_sweep_probes_again_after_a_hung_probe(self):
+        client = _SlowStatusClient("alpha")
+        instance.CLIENTS["alpha"] = client
+
+        await _sweep()
+        await _sweep()
+
+        assert client.status_calls == 2
+
+    @pytest.mark.asyncio
+    async def test_a_hung_probe_drops_the_last_known_model_name(self):
+        client = _SlowStatusClient("alpha")
+        client.remote_model_name = "some-model.gguf"
+        instance.CLIENTS["alpha"] = client
+
+        await _sweep()
+
+        # llamacpp and LMStudio lock their model to remote_model_name, so a
+        # stale one would keep showing in the error frame's details
+        assert client.remote_model_name is None
+
+    @pytest.mark.asyncio
+    async def test_enable_runs_its_probe_under_the_bound(self, cfg_isolation):
+        """The websocket handler awaits the client toggle inline, so an
+        unbounded probe there stops every later message on that connection."""
+        config_state.CONFIG.clients["alpha"] = ClientConfig(
+            type="stub", name="alpha", enabled=False
+        )
+        client = _HangingProbeClient(name="alpha")
+        client.status_probe_timeout = 0.01
+
+        await asyncio.wait_for(client.enable(), timeout=5)
+
+        assert client.connected is False
+
+    @pytest.mark.asyncio
+    async def test_the_bound_covers_a_client_that_overrides_status(self):
+        """ollama and pi_bridge do their own I/O in status() before the base
+        method runs, so the bound cannot live in ClientBase.status()."""
+
+        class _OverridingClient(_SlowStatusClient):
+            async def status(self):
+                self.status_calls += 1
+                await asyncio.sleep(3600)  # never reaches super().status()
+
+        client = _OverridingClient("alpha")
+        instance.CLIENTS["alpha"] = client
+
+        await _sweep()
+
+        assert client.connected is False
+
+
+# ---------------------------------------------------------------------------
 # purge_clients (uses live config but only iterates the registry)
 # ---------------------------------------------------------------------------
 
@@ -556,6 +757,93 @@ class TestAgentReadyChecks:
 
         assert ready_called == ["enabled-one"]
         assert sorted(setup_called) == ["disabled-one", "enabled-one"]
+
+    @pytest.mark.asyncio
+    async def test_one_agent_failing_does_not_stop_the_agents_after_it(self):
+        checked = []
+
+        class _Agent:
+            def __init__(self, agent_type, raises=False):
+                self.agent_type = agent_type
+                self.enabled = True
+                self.raises = raises
+
+            async def ready_check(self):
+                if self.raises:
+                    raise RuntimeError(f"{self.agent_type} is broken")
+                checked.append(self.agent_type)
+
+            async def setup_check(self):
+                return False
+
+        instance.AGENTS["broken"] = _Agent("broken", raises=True)
+        instance.AGENTS["healthy"] = _Agent("healthy")
+
+        await instance.agent_ready_checks()
+
+        assert checked == ["healthy"]
+
+    @pytest.mark.asyncio
+    async def test_an_agent_that_keeps_failing_is_reported_once(self):
+        """The failure is swallowed here, so the status loop's own dedup never
+        sees it - without this one an agent would log a traceback every 3s."""
+
+        class _Agent:
+            agent_type = "broken"
+            enabled = True
+
+            async def ready_check(self):
+                raise RuntimeError("still broken")
+
+            async def setup_check(self):
+                return False
+
+        instance.AGENTS["broken"] = _Agent()
+
+        with capture_logs() as logs:
+            for _ in range(4):
+                await instance.agent_ready_checks()
+
+        errors = [
+            entry
+            for entry in logs
+            if entry.get("log_level") == "error"
+            and entry.get("event") == "agent ready check failed"
+        ]
+        assert len(errors) == 1
+        assert errors[0]["agent"] == "broken"
+
+    @pytest.mark.asyncio
+    async def test_an_agent_that_recovers_reports_again_when_it_fails_later(self):
+        class _Agent:
+            agent_type = "flaky"
+            enabled = True
+            fail = True
+
+            async def ready_check(self):
+                if self.fail:
+                    raise RuntimeError("broken")
+
+            async def setup_check(self):
+                return False
+
+        agent = _Agent()
+        instance.AGENTS["flaky"] = agent
+
+        with capture_logs() as logs:
+            await instance.agent_ready_checks()
+            agent.fail = False
+            await instance.agent_ready_checks()
+            agent.fail = True
+            await instance.agent_ready_checks()
+
+        errors = [
+            entry
+            for entry in logs
+            if entry.get("log_level") == "error"
+            and entry.get("event") == "agent ready check failed"
+        ]
+        assert len(errors) == 2
 
 
 # ---------------------------------------------------------------------------

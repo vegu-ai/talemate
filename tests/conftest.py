@@ -274,6 +274,15 @@ def isolate_signals():
         sig.receivers.extend(receivers)
 
 
+@pytest.fixture
+def cfg_isolation():
+    """Snapshot/restore the client config section a test mutates."""
+    saved_clients = dict(config_state.CONFIG.clients)
+    yield
+    config_state.CONFIG.clients.clear()
+    config_state.CONFIG.clients.update(saved_clients)
+
+
 def connect_recorder(signal) -> list:
     """Connect a recording handler to a signal and return the list that
     received payloads are appended to."""

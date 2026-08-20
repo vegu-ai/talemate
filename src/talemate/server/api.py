@@ -34,6 +34,30 @@ def get_active_frontend_handler():
     return _active_frontend_websocket_handler
 
 
+async def client_status_loop(interval: float = 3.0):
+    """Emit client and agent status while a frontend is connected."""
+    steps = (instance.emit_clients_status, instance.agent_ready_checks, commit_config)
+    # a step that keeps failing must neither end the loop - this connection
+    # would get no further client or agent status until the page is reloaded -
+    # nor starve the steps after it, since commit_config() runs last and a
+    # settings change that never reaches disk is lost without a trace
+    last_errors: dict[str, str] = {}
+    while True:
+        for step in steps:
+            try:
+                await step()
+            except Exception:
+                error = traceback.format_exc()
+                if last_errors.get(step.__name__) == error:
+                    log.debug("client status loop", step=step.__name__)
+                else:
+                    last_errors[step.__name__] = error
+                    log.error("client status loop", step=step.__name__, error=error)
+            else:
+                last_errors.pop(step.__name__, None)
+        await asyncio.sleep(interval)
+
+
 async def websocket_endpoint(websocket):
     global _active_frontend_websocket
     global _active_frontend_websocket_handler
@@ -101,14 +125,6 @@ async def websocket_endpoint(websocket):
 
             message = await message_queue.get()
             await websocket.send(json.dumps(message, cls=JSONEncoder))
-
-    # Create a task to send regular client status updates
-    async def send_status():
-        while True:
-            await instance.emit_clients_status()
-            await instance.agent_ready_checks()
-            await commit_config()
-            await asyncio.sleep(3)
 
     # task to test connection
     async def test_connection():
@@ -300,7 +316,7 @@ async def websocket_endpoint(websocket):
 
     main_task = asyncio.create_task(handle_messages())
     send_messages_task = asyncio.create_task(send_messages())
-    send_status_task = asyncio.create_task(send_status())
+    send_status_task = asyncio.create_task(client_status_loop())
     test_connection_task = asyncio.create_task(test_connection())
 
     await asyncio.gather(

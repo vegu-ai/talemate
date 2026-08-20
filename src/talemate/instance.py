@@ -3,6 +3,7 @@ Keep track of clients and agents
 """
 
 import asyncio
+import traceback
 
 import structlog
 
@@ -22,6 +23,10 @@ CLIENTS = {}
 # in-flight client.status() tasks keyed by client name - lets overlapping
 # status sweeps share one remote round-trip per client instead of stacking them
 CLIENT_STATUS_TASKS = {}
+
+# last reported ready-check failure per agent type, so an agent that fails on
+# every sweep is reported once rather than every 3 seconds
+AGENT_READY_CHECK_ERRORS = {}
 
 
 def get_agent(typ: str):
@@ -85,6 +90,35 @@ def emit_agent_status_by_client(client):
         emit_agent_status(agent.__class__, agent)
 
 
+async def bounded_client_status(client):
+    """Run one status probe, bounded by the client's probe timeout.
+
+    The bound lives here rather than in `ClientBase.status()` because a client
+    type that overrides `status()` (ollama, pi_bridge) does its own I/O before
+    the base method runs. A probe that never returns would keep this client's
+    CLIENT_STATUS_TASKS slot occupied for the life of the process, and no
+    later sweep would ever probe it again.
+    """
+    # asyncio.timeout, not wait_for: it tells its own deadline apart from a
+    # cancellation arriving from outside (the wait_for_status gather path), and
+    # on 3.11 it also avoids the extra task hop that would delay the probe by
+    # an event-loop turn
+    try:
+        async with asyncio.timeout(client.status_probe_timeout):
+            await client.status()
+    except asyncio.TimeoutError:
+        log.warning(
+            "client status probe timed out",
+            client=client.name,
+            timeout=client.status_probe_timeout,
+        )
+        # remote_model_name goes too: a locked-model client would keep
+        # reporting the last known model in its error frame otherwise
+        client.remote_model_name = None
+        client.connected = False
+        client.emit_status()
+
+
 async def emit_clients_status(wait_for_status: bool = False):
     """
     Will emit status of all clients
@@ -94,9 +128,20 @@ async def emit_clients_status(wait_for_status: bool = False):
     for name, client in list(CLIENTS.items()):
         if not client:
             continue
+        # the frontend builds its client list from these emissions alone, so
+        # every sweep reports the last known state at once - a client behind a
+        # slow or dead endpoint must not wait for its probe to appear in the UI
+        try:
+            client.emit_status()
+        except Exception:
+            log.error(
+                "client status emit failed",
+                name=name,
+                error=traceback.format_exc(),
+            )
         task = CLIENT_STATUS_TASKS.get(name)
         if not task or task.done():
-            task = asyncio.create_task(client.status())
+            task = asyncio.create_task(bounded_client_status(client))
             CLIENT_STATUS_TASKS[name] = task
         tasks.append(task)
 
@@ -150,12 +195,31 @@ async def agent_ready_checks():
     for agent in AGENTS.values():
         if not agent:
             continue
-        if agent.enabled:
-            await agent.ready_check()
-        # setup_check runs unconditionally so agents with auto-setup enabled
-        # can flip themselves on (or sync their state) without first needing
-        # the user to manually enable them.
-        await agent.setup_check()
+        # one agent's failure must not stop the agents after it, nor the
+        # steps that run after this sweep in the status loop. It is swallowed
+        # here, so the status loop's own dedup never sees it - an agent that
+        # fails every sweep would report a traceback every 3 seconds without
+        # the dedup below.
+        try:
+            if agent.enabled:
+                await agent.ready_check()
+            # setup_check runs unconditionally so agents with auto-setup enabled
+            # can flip themselves on (or sync their state) without first needing
+            # the user to manually enable them.
+            await agent.setup_check()
+        except Exception:
+            error = traceback.format_exc()
+            if AGENT_READY_CHECK_ERRORS.get(agent.agent_type) == error:
+                log.debug("agent ready check failed", agent=agent.agent_type)
+            else:
+                AGENT_READY_CHECK_ERRORS[agent.agent_type] = error
+                log.error(
+                    "agent ready check failed",
+                    agent=agent.agent_type,
+                    error=error,
+                )
+        else:
+            AGENT_READY_CHECK_ERRORS.pop(agent.agent_type, None)
 
 
 def get_active_client():

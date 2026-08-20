@@ -1,3 +1,7 @@
+# The backend-build stage creates the virtual environment and the final stage
+# runs it, so both must install the same uv.
+ARG UV_VERSION=0.12.5
+
 # Stage 1: Frontend build
 FROM node:22-slim AS frontend-build
 
@@ -5,7 +9,11 @@ WORKDIR /app
 
 # Enable pnpm via corepack (version pinned by package.json "packageManager").
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-RUN npm install -g corepack@latest && corepack enable
+# pnpm asks before it purges a modules directory, and aborts when no TTY can
+# answer. https://pnpm.io/settings#confirmmodulespurge
+ENV CI=true
+ARG COREPACK_VERSION=0.35.0
+RUN npm install -g corepack@${COREPACK_VERSION} && corepack enable
 
 # Copy frontend manifest, lockfile and pnpm settings
 COPY talemate_frontend/package.json talemate_frontend/pnpm-lock.yaml talemate_frontend/pnpm-workspace.yaml ./
@@ -31,7 +39,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
-RUN pip install uv
+ARG UV_VERSION
+RUN pip install uv==${UV_VERSION}
 
 # Copy installation files
 COPY pyproject.toml uv.lock /app/
@@ -41,6 +50,13 @@ COPY ./src /app/src
 
 # Create virtual environment and install dependencies (includes CUDA support via pyproject.toml)
 RUN uv sync
+
+# The help agent reads the bundled documentation from TALEMATE_ROOT/docs, and it
+# reads nothing but markdown. Dropping the rest here keeps 36 MB of screenshots
+# out of the final image instead of deleting them in a layer that still ships.
+COPY docs /app/docs
+RUN find /app/docs -type f ! -name "*.md" -delete && \
+    find /app/docs -depth -type d -empty -delete
 
 # Stage 3: Final image
 FROM python:3.11-slim
@@ -57,7 +73,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv in the final stage
-RUN pip install uv
+ARG UV_VERSION
+RUN pip install uv==${UV_VERSION}
 
 # Node.js runtime for the pi coding agent (Pi Bridge client), reused from the
 # frontend build stage so the final image needs no extra apt source
@@ -99,6 +116,8 @@ RUN /app/.venv/bin/python -B -c "import torchcodec.decoders"
 
 # Copy Python source code
 COPY --from=backend-build /app/src /app/src
+
+COPY --from=backend-build /app/docs /app/docs
 
 # Copy Node.js build artifacts from frontend-build stage
 COPY --from=frontend-build /app/dist /app/talemate_frontend/dist

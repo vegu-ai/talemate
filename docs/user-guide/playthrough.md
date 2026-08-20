@@ -2,8 +2,8 @@
 
 Playthrough mode replays a scene from its beginning, one message at a time. It is
 for re-reading a story you have already played — on your own, or with someone
-watching — rather than for continuing it, so the mode offers no way to take the
-story any further.
+watching. Nothing is added to the story while it runs, so the way onward is to
+[fork](#forking-from-where-you-are) it into a scene of your own.
 
 ![A scene being replayed in playthrough mode](/talemate/img/0.40.0/playthrough-view.png)
 
@@ -41,6 +41,8 @@ The reveal counter next to the scrubber shows where you are — `7 / 106`.
   away and the chapter is empty. Give a time passage a **chapter title** and it
   is listed under that name; otherwise it is listed by its duration.
 - **Restart** — back to the first message.
+- **:material-source-fork: Fork from here** — leave the replay and carry the
+  story on in a scene of your own, described [below](#forking-from-where-you-are).
 
 Jumping backwards hides the messages after the new position again.
 
@@ -62,7 +64,39 @@ off every time and is switched off again when the playthrough ends.
 If narration is taking too long, the Advance button becomes a **Cancel** button
 that aborts it.
 
-## What the mode offers
+## Forking from where you are
+
+**:material-source-fork: Fork from here** takes the message you are on and makes
+a new scene of the story up to that point. Name the save and the new scene opens
+in the normal scene view, ready to be played on from there.
+
+The scene you were replaying is left as it was, apart from remembering where you
+had got to, and the fork is a save of its own — an existing save is never
+written over, so pick a name that is not taken. A name that is already in use is
+refused, and by then the playthrough has ended: the refusal arrives as an error
+in the normal view, and forking again means starting the playthrough over, which
+resumes at the message you forked from — unless the scene is read-only, which
+records no position at all (see [below](#leaving-and-picking-up-where-you-left-off)).
+
+What the fork contains is restored from the scene's
+[revision history](restoring-scenes.md): the story, the world state and the
+characters as they were at the message you forked from. The history is recorded
+in steps rather than per message, so a fork can carry a message or two that were
+recorded in the same step as the one you picked. A message the scene
+recorded no revision for — anything played before Talemate kept a history — is
+forked by copying the scene and cutting its story at that message instead, which
+may leave world state and character details that belong to a later point in the
+story.
+
+The story forks at the messages the scene view offers a **Fork** on — what a
+character said and what the narrator wrote. On anything else the cursor can land
+on, the scene intro and time passages among them, the action is unavailable, as
+it is on a message whose revision the scene has not saved yet: with
+[Auto Save](scenario-tools.md#quick-settings) off, leave the playthrough and save
+the scene to fork from those. Forking a scene that draws on a shared world
+context disconnects it from that context.
+
+## What else the mode offers
 
 A playthrough is a walkthrough of a story that is already written, so the
 surfaces that would add to it are put away while it runs: the message input and
@@ -78,8 +112,9 @@ template browsing, the world editor and image generation.
 Leave with **Exit** or by pressing :material-keyboard-esc: **Escape**. The full
 history comes back, along with the normal tools.
 
-Your position is remembered in the scene, so starting a playthrough of the same
-scene again resumes at the message you left off on. **Restart** followed by
+Your position is remembered in the scene — on the way out, and when you fork —
+so starting a playthrough of the same scene again resumes at the message you
+left off on. **Restart** followed by
 **Exit** clears it, and the next playthrough starts at the beginning.
 
 !!! note "Read-only scenes"

@@ -31,6 +31,7 @@ import {
     anchorForReveal,
     AUTO_ADVANCE_DELAY_MS,
     clampReveal,
+    FORKABLE_MESSAGE_TYPES,
     NARRATION_DEBOUNCE_MS,
     revealForAnchor,
     speakRequest,
@@ -64,6 +65,8 @@ export default {
             // where to put the cursor back when a replay was not the player's idea
             playthroughResumeAnchor: null,
             playthroughAdvanceTimer: null,
+            // the cursor is held still while a dialog of the mode's own is open
+            playthroughPaused: false,
         };
     },
 
@@ -91,6 +94,7 @@ export default {
             this.playthroughReplaysInFlight = 0;
             this.playthroughResumeAnchor = null;
             this.playthroughAutoAdvance = false;
+            this.playthroughPaused = false;
             this.playthroughRevealCount = 1;
             this.$nextTick(() => this.scrollInputIntoView());
           }
@@ -132,6 +136,63 @@ export default {
           this.setPlaythroughActive(false);
         },
 
+        // The message the cursor is on, when it is one a fork can be taken at:
+        // the scene intro carries no id and is not part of the history, and the
+        // types the scene view offers no Fork on are not forked from here
+        // either - a context investigation is not even sent with a revision, so
+        // the revision gate cannot see that its fork would be a shallow one.
+        playthroughForkTarget() {
+          const message = this.$refs.sceneMessages?.messageAt(this.playthroughRevealCount - 1);
+          if (message?.id == null || !FORKABLE_MESSAGE_TYPES.includes(message.type)) {
+            return null;
+          }
+          return message;
+        },
+
+        // Hold the cursor still while the fork dialog is up, so the reader does
+        // not watch the story move on past what the fork will contain. Only the
+        // cursor: the narration of the message they are on keeps playing, since
+        // stopping it would cut the audio mid-sentence and - on cancel - ask the
+        // voice agent to generate it a second time.
+        pausePlaythroughPacing() {
+          this.playthroughPaused = true;
+          clearTimeout(this.playthroughAdvanceTimer);
+          this.playthroughAdvanceTimer = null;
+        },
+
+        resumePlaythroughPacing() {
+          if (!this.playthroughPaused) {
+            return;
+          }
+          this.playthroughPaused = false;
+          // a narration still running paces the next step itself when it ends;
+          // this puts the timer back for the step that has nothing to wait for,
+          // including a narration that finished while the dialog was open
+          if (!this.playthroughSpeakSent && !this.playthroughSpeakTimer) {
+            this.armPlaythroughAdvanceTimer();
+          }
+        },
+
+        // `messageId` is the message the toolbar asked for the name at, rather
+        // than whatever the cursor holds now - see PlaythroughTools.promptFork.
+        //
+        // Leaving the mode before the fork is answered is deliberate: success
+        // arrives as a scene load, and a refused save name as an error status
+        // and nothing else, which there would be no way to stop waiting for.
+        forkPlaythrough(saveName, messageId) {
+          if (messageId == null) {
+            return;
+          }
+          this.rememberPlaythroughPosition(messageId);
+          this.setPlaythroughActive(false);
+          this.websocket.send(JSON.stringify({
+            type: 'assistant',
+            action: 'fork_new_scene',
+            message_id: messageId,
+            save_name: saveName,
+          }));
+        },
+
         savedPlaythroughAnchor() {
           return this.scene?.data?.playthrough_progress ?? null;
         },
@@ -162,13 +223,15 @@ export default {
           }
         },
 
-        rememberPlaythroughPosition() {
+        // `at` records a position other than the cursor's - the fork records the
+        // message it was taken at, which is where the reader left the story.
+        rememberPlaythroughPosition(at = null) {
           // a read-only scene has nowhere to record progress, and asking anyway
           // would answer every exit with an error
           if (this.scene?.data?.immutable_save) {
             return;
           }
-          const anchor = anchorForReveal(
+          const anchor = at ?? anchorForReveal(
             this.$refs.sceneMessages?.messages || [], this.playthroughRevealCount,
           );
           if (anchor === null || anchor === this.savedPlaythroughAnchor()) {
@@ -259,13 +322,20 @@ export default {
             return;
           }
 
-          if (this.playthroughAutoAdvance
-              && this.playthroughRevealCount < this.playthroughMessageCount) {
-            this.playthroughAdvanceTimer = setTimeout(() => {
-              this.playthroughAdvanceTimer = null;
-              this.advancePlaythrough();
-            }, AUTO_ADVANCE_DELAY_MS);
+          this.armPlaythroughAdvanceTimer();
+        },
+
+        armPlaythroughAdvanceTimer() {
+          if (this.playthroughPaused
+              || !this.playthroughActive
+              || !this.playthroughAutoAdvance
+              || this.playthroughRevealCount >= this.playthroughMessageCount) {
+            return;
           }
+          this.playthroughAdvanceTimer = setTimeout(() => {
+            this.playthroughAdvanceTimer = null;
+            this.advancePlaythrough();
+          }, AUTO_ADVANCE_DELAY_MS);
         },
 
         onPlaythroughMessageSpoken(messageId) {
@@ -275,7 +345,10 @@ export default {
           }
           this.playthroughSpeakSent = false;
           this.playthroughAwaitedMessageId = null;
-          if (this.playthroughActive && this.playthroughAutoAdvance) {
+          // a narration that ends while the fork dialog is up must not step the
+          // cursor; resuming picks the pacing back up
+          if (this.playthroughActive && this.playthroughAutoAdvance
+              && !this.playthroughPaused) {
             this.advancePlaythrough();
           }
         },

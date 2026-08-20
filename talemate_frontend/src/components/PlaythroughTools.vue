@@ -52,6 +52,17 @@
 
             <span class="progress-readout text-caption text-medium-emphasis mr-2">{{ revealCount }} / {{ messageCount }}</span>
 
+            <v-tooltip :text="forkHint" location="top" max-width="350">
+                <template v-slot:activator="{ props }">
+                    <div v-bind="props">
+                        <v-btn size="small" variant="text" color="primary" prepend-icon="mdi-source-fork"
+                            :disabled="!canFork || busy" @click="promptFork">
+                            Fork from here
+                        </v-btn>
+                    </div>
+                </template>
+            </v-tooltip>
+
             <v-btn size="small" variant="text" prepend-icon="mdi-restart" @click="$emit('restart')">
                 Restart
             </v-btn>
@@ -62,13 +73,26 @@
             </v-btn>
         </div>
     </div>
+
+    <RequestInput
+        ref="requestForkName"
+        title="Save Forked Scene As"
+        :instructions="forkInstructions"
+        icon="mdi-source-fork"
+        @continue="(saveName, params) => $emit('fork', saveName, params.message_id)"
+        @cancel="$emit('fork-cancelled')"
+    />
 </template>
 
 <script>
+import RequestInput from './RequestInput.vue';
 import { chapterLabel, currentChapter } from '@/utils/playthrough';
 
 export default {
     name: 'PlaythroughTools',
+    components: {
+        RequestInput,
+    },
     props: {
         messageCount: {
             type: Number,
@@ -98,15 +122,57 @@ export default {
             type: Boolean,
             default: false,
         },
+        // the message the reveal cursor is on, or null when it is on the scene
+        // intro, which is not a message in the history
+        forkTarget: {
+            type: Object,
+            default: null,
+        },
+        sceneRev: {
+            type: Number,
+            default: 0,
+        },
+        sharedContext: {
+            type: Boolean,
+            default: false,
+        },
     },
     inject: ['getWebsocket'],
-    emits: ['advance', 'jump', 'restart', 'exit', 'toggle-auto-advance', 'toggle-narration'],
+    emits: ['advance', 'fork', 'fork-cancelled', 'fork-prompt', 'jump', 'restart', 'exit',
+        'toggle-auto-advance', 'toggle-narration'],
     computed: {
         atEnd() {
             return this.revealCount >= this.messageCount;
         },
         activeChapter() {
             return currentChapter(this.chapters, this.revealCount);
+        },
+        // A fork reconstructs the message's revision out of the scene's saved
+        // history, which a revision the scene has not saved yet is not in -
+        // the same gate the Fork chip under a message carries.
+        forkTargetSaved() {
+            return (this.forkTarget?.rev || 0) <= this.sceneRev;
+        },
+        canFork() {
+            return !!this.forkTarget && this.forkTargetSaved;
+        },
+        forkHint() {
+            if (!this.forkTarget) {
+                return 'The story forks at a character or narrator message - move to one to fork from here';
+            }
+            if (!this.forkTargetSaved) {
+                return 'This message has not been saved yet - leave the playthrough and save the scene to fork from it';
+            }
+            return 'Continue the story from here in a new scene of your own';
+        },
+        forkInstructions() {
+            const instructions = 'A new scene is created from the message you are on, '
+                + 'and opens ready to play. The scene you are replaying is not changed.';
+            if (!this.sharedContext) {
+                return instructions;
+            }
+            return `${instructions}\n\nForking disconnects the scene from its shared world `
+                + 'context, since shared context cannot be reconstructed to a specific revision.';
         },
         autoAdvanceHint() {
             return this.ttsAvailable
@@ -123,12 +189,29 @@ export default {
     methods: {
         chapterLabel,
 
+        // The fork is taken at the message the cursor was on when the name was
+        // asked for, not the one it is on when the name arrives: narration and
+        // auto-advance would otherwise walk the cursor on behind the dialog and
+        // fork somewhere the reader never picked.
+        promptFork() {
+            this.$emit('fork-prompt');
+            this.$refs.requestForkName.openDialog({ message_id: this.forkTarget.id });
+        },
+
         cancelAction() {
             this.getWebsocket().send(JSON.stringify({ type: 'interrupt' }));
         },
 
         onKeydown(event) {
             if (event.target && ['INPUT', 'TEXTAREA'].includes(event.target.tagName)) {
+                return;
+            }
+            // an open menu or dialog takes the key for itself: Escape closes it
+            // rather than leaving the mode, and Space must not step the cursor
+            // on behind it. Named rather than excluded, because everything else
+            // Vuetify renders through an overlay - a tooltip under the cursor, a
+            // status snackbar - takes no keys and must not swallow these
+            if (document.querySelector('.v-overlay--active.v-dialog, .v-overlay--active.v-menu')) {
                 return;
             }
             if (event.code === 'Space') {
@@ -140,14 +223,6 @@ export default {
                 event.preventDefault();
                 this.$emit('advance');
             } else if (event.key === 'Escape') {
-                // an open menu or dialog takes the Escape for itself; leaving
-                // the mode as well would close both at once. Tooltips render
-                // through the same overlay and carry the same active class, so
-                // they have to be excluded - this toolbar is all tooltips, and
-                // hovering a button would otherwise swallow the Escape
-                if (document.querySelector('.v-overlay--active:not(.v-tooltip)')) {
-                    return;
-                }
                 this.$emit('exit');
             }
         },

@@ -27,6 +27,8 @@ The timeline can be opened from four places:
 
 Once you've found the point you want to continue from, click **Fork to new save**. It creates a new save file in the same project directory from the selected revision, and asks for a name. The scene you are playing is not modified, and a name an existing save already uses is refused rather than written over.
 
+A [playthrough](/talemate/user-guide/playthrough#forking-from-where-you-are) forks the same way from the message it is on, without opening the timeline.
+
 !!! info
     Forking never destroys your version history. Every revision is kept, so you can open the timeline again and scrub to any other point.
 

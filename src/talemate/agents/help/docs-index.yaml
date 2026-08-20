@@ -969,8 +969,8 @@
   title: Playthrough Mode
   summary: Replaying a scene from the beginning one message at a time - starting it from the Playthrough quick-settings chip,
     advancing by click, space or the Advance button, the scrubber, the chapter menu built from time passages, the narration
-    and auto-advance toggles, which surfaces the mode puts away while it runs, and how a playthrough resumes where it was
-    left off.
+    and auto-advance toggles, forking the story from the revealed message into a new scene, which surfaces the mode puts
+    away while it runs, and how a playthrough resumes where it was left off.
 - path: user-guide/prompts/context-history-review.md
   title: Scene Context History Review
   summary: The Prompt Manager's Scene Context tab, rendering scene history as color-coded Layered History / Archived / Dialogue

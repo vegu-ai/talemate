@@ -17,6 +17,13 @@ export const INTRO_ANCHOR = 'intro';
 /** Message types the TTS agent can speak. */
 export const SPOKEN_MESSAGE_TYPES = ['character', 'narrator', 'context_investigation'];
 
+/**
+ * Message types a fork can be taken at: the ones the scene view offers a Fork
+ * chip on, which is where `MessageToolbar` is mounted without `show-fork`
+ * turned off. The others carry no revision of their own to reconstruct from.
+ */
+export const FORKABLE_MESSAGE_TYPES = ['character', 'narrator'];
+
 /** Messages the reveal cursor exposes; `null` means "not in playthrough". */
 export function visibleMessages(messages, revealCount) {
     if (revealCount === null || revealCount === undefined) {

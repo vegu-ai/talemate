@@ -886,6 +886,7 @@ class AssistantMixin:
 
                 scene_data["immutable_save"] = False
                 scene_data["memory_id"] = str(uuid.uuid4())[:10]
+                scene_data["playthrough_progress"] = None
 
                 # Truncate history to the fork point
                 index = self.scene.message_index(message_id)

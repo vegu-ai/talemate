@@ -42,6 +42,75 @@ describe("narration control", () => {
     });
 });
 
+describe("the fork action", () => {
+    it("is offered only for a message whose revision the scene has saved", () => {
+        const canFork = lift(toolbar, "canFork", "PlaythroughTools.vue");
+        const saved = lift(toolbar, "forkTargetSaved", "PlaythroughTools.vue");
+        const host = (forkTarget, sceneRev) => ({
+            forkTarget,
+            sceneRev,
+            get forkTargetSaved() { return saved.call(this); },
+        });
+
+        // the scene intro reveals first and is not a message in the history
+        expect(canFork.call(host(null, 4))).toBe(false);
+        expect(canFork.call(host({ id: 7, rev: 3 }, 4))).toBe(true);
+        // the scene's own revision is saved, so it forks
+        expect(canFork.call(host({ id: 7, rev: 4 }, 4))).toBe(true);
+        // a message stamped with a revision the on-disk chain does not carry
+        // yet - the same gate the Fork chip under a message applies
+        expect(canFork.call(host({ id: 7, rev: 5 }, 4))).toBe(false);
+    });
+
+    it("is unavailable while an agent is working, as the Fork chip is", () => {
+        expect(toolbar).toContain(':disabled="!canFork || busy"');
+    });
+
+    it("gives up the keys to a dialog or a menu, but not to a snackbar", () => {
+        // every Vuetify overlay carries v-overlay--active, and a status
+        // snackbar is one; matching them all left Space dead for as long as a
+        // notification was up
+        expect(toolbar).toContain(
+            ".v-overlay--active.v-dialog, .v-overlay--active.v-menu");
+    });
+
+    it("says which of the two reasons it is unavailable for", () => {
+        const hint = lift(toolbar, "forkHint", "PlaythroughTools.vue");
+        expect(hint.call({ forkTarget: null, forkTargetSaved: true }))
+            .toContain("character or narrator message");
+        expect(hint.call({ forkTarget: { id: 7 }, forkTargetSaved: false }))
+            .toContain("not been saved");
+        expect(hint.call({ forkTarget: { id: 7 }, forkTargetSaved: true }))
+            .toContain("new scene of your own");
+    });
+
+    it("warns that a fork loses the shared world context, and only then", () => {
+        const instructions = lift(toolbar, "forkInstructions", "PlaythroughTools.vue");
+        expect(instructions.call({ sharedContext: true })).toContain("shared world");
+        expect(instructions.call({ sharedContext: false })).not.toContain("shared world");
+        expect(instructions.call({ sharedContext: false })).toContain("not changed");
+    });
+
+    it("submits the message the name was asked for, not the one the cursor reaches", () => {
+        // pacing keeps moving the cursor while the dialog is open, so the id
+        // travels with the dialog rather than being read back off the cursor
+        expect(toolbar).toContain("openDialog({ message_id: this.forkTarget.id })");
+        expect(toolbar).toContain("$emit('fork', saveName, params.message_id)");
+    });
+
+    it("tells the host to stop pacing while the name is asked for", () => {
+        expect(toolbar).toContain("$emit('fork-prompt')");
+        expect(app).toContain('@fork-prompt="pausePlaythroughPacing"');
+        expect(app).toContain('@fork-cancelled="resumePlaythroughPacing"');
+    });
+
+    it("is handed the cursor's message and the scene's revision", () => {
+        expect(app).toContain(':fork-target="playthroughForkTarget()"');
+        expect(app).toContain(':scene-rev="scene.data?.rev || 0"');
+        expect(app).toContain(':shared-context="!!scene.data?.shared_context"');
+    });
+});
+
 describe("chapter menu", () => {
     it("jumps to where the chapter opens rather than to its divider", () => {
         expect(toolbar).toContain("$emit('jump', chapter.reveal)");

@@ -605,6 +605,68 @@ class TestForkRevZero:
         assert [e["rev"] for e in data["history"]] == [0, 0]
 
 
+class TestForkPlaythroughProgress:
+    async def _scene_with_progress(self, tmp_dir: str):
+        """Scene whose committed state was left mid-playthrough."""
+        message = {
+            "id": 1,
+            "message": "one",
+            "typ": "narrator",
+            "source": "ai",
+            "flags": 0,
+        }
+        scene = make_changelog_scene(tmp_dir)
+        scene.serialize = {
+            "history": [],
+            "characters": [],
+            "playthrough_progress": None,
+        }
+        await save_changelog(scene)
+
+        async with InMemoryChangelog(scene) as changelog:
+            scene.serialize = {
+                "history": [{**message, "rev": 1}],
+                "characters": [],
+                "playthrough_progress": 1,
+            }
+            assert await changelog.append_delta() == 1
+            await changelog.commit()
+        return scene
+
+    @pytest.mark.asyncio
+    async def test_reconstructive_fork_clears_playthrough_progress(self, temp_dir):
+        scene = await self._scene_with_progress(temp_dir)
+
+        out_path = await fork_scene_at_revision(scene, 1, "forked")
+        with open(out_path) as f:
+            data = json.load(f)
+
+        assert data["playthrough_progress"] is None
+
+    @pytest.mark.asyncio
+    async def test_shallow_fork_clears_playthrough_progress(self, temp_dir):
+        scene = make_changelog_scene(temp_dir)
+        message = SceneMessage(message="one")
+        scene.history = [message]
+        scene.serialize = {
+            "history": [message.to_dict()],
+            "characters": [],
+            "playthrough_progress": message.id,
+        }
+        agent = mock.Mock()
+        agent.scene = scene
+
+        with mock.patch("talemate.agents.creator.assistant.emit"):
+            out_path = await AssistantMixin.fork_scene.__wrapped__(
+                agent, message_id=message.id, save_name="shallow"
+            )
+
+        with open(out_path) as f:
+            data = json.load(f)
+
+        assert data["playthrough_progress"] is None
+
+
 class TestCreatorForkScene:
     """CreatorAgent.fork_scene: containment fallback and shallow rev zeroing.
 

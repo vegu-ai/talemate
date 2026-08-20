@@ -21,9 +21,9 @@
     Google AI, Groq, KoboldCpp, LMStudio, Mistral, OpenAI, TabbyAPI, and Text-Generation-WebUI.'
 - path: getting-started/advanced/change-host-and-port.md
   title: Changing host and port
-  summary: How to change the backend (default localhost:5050) and frontend (default localhost:8082) host/port via TALEMATE_BACKEND_/FRONTEND_HOST/PORT
-    env vars or --host/--port CLI flags, point the frontend at a new backend with VITE_TALEMATE_BACKEND_WEBSOCKET_URL, plus
-    Docker runtime configuration and 0.36.x-to-0.37.0 upgrade notes (frontend port 8080-to-8082, renamed compose variables).
+  summary: Changing the backend (localhost:5050) and frontend (localhost:8082) bind addresses via TALEMATE_BACKEND_HOST/PORT
+    and TALEMATE_FRONTEND_HOST/PORT or the --host/--port CLI flags, rebuilding the frontend with VITE_TALEMATE_BACKEND_WEBSOCKET_URL,
+    Docker Compose runtime overrides with CUDA/CPU file selection, and the 0.37.0 rename notes.
 - path: getting-started/advanced/debug-logging.md
   title: Debug Logging
   summary: Enable verbose DEBUG-level logging with TALEMATE_DEBUG=1 on Linux and Windows; errors then also go to a rotating
@@ -45,8 +45,9 @@
     Text-Generation-WebUI, LMStudio, TabbyAPI), and assigning the client to all agents.'
 - path: getting-started/installation/docker.md
   title: Docker
-  summary: 'Docker install: clone the repo, copy config.example.yaml to config.yaml, run docker compose up, and open http://localhost:8082.
-    Notes on pre-built CUDA images vs manual build and using host.docker.internal to reach local APIs on the host machine.'
+  summary: 'Docker installation and GPU/CPU launch paths: clone and copy config.yaml, then use docker compose up for NVIDIA
+    CUDA or docker compose -f docker-compose.cpu.yml up on CPU-only hosts. Covers local builds with docker-compose.manual.yml,
+    CUDA verification with nvidia-smi/PyTorch, host.docker.internal, and Pi Bridge config.'
 - path: getting-started/installation/linux.md
   title: Linux
   summary: 'Linux install: python and uv prerequisites, running install.sh (which downloads portable Node.js 22 and offers
@@ -54,9 +55,9 @@
     frontend (corepack pnpm serve).'
 - path: getting-started/installation/troubleshoot.md
   title: Common issues
-  summary: 'Installation troubleshooting: Windows frontend failures caused by special characters in the path, Docker creating
-    a config.yaml directory when the example config was not copied, configuring VITE_TALEMATE_BACKEND_WEBSOCKET_URL at container
-    runtime, and running behind a reverse proxy with SSL/nginx WebSocket upgrades.'
+  summary: Troubleshooting Windows install paths, Docker CUDA startup failures, and reverse-proxy WebSockets. Shows the CPU
+    opt-out command, NVIDIA Container Toolkit smoke test, in-container nvidia-smi/PyTorch checks, the config.yaml mount pitfall,
+    VITE WebSocket URL, and nginx upgrade headers.
 - path: getting-started/installation/windows.md
   title: Windows
   summary: 'Windows install: download the release ZIP and double-click start.bat, which auto-downloads portable Python 3 and

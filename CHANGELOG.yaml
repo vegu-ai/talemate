@@ -38,6 +38,7 @@
   - "OpenRouter Client: The default model for newly created OpenRouter clients is now google/gemini-3.6-flash."
   - "OpenRouter Client: New OpenRouter clients now have reasoning enabled by default, with a budget of 2048 reasoning tokens, so the default model works out of the box. With reasoning off Talemate pre-fills the start of the response to steer it, and some providers — Google and Anthropic among them — reject requests that do that."
   fixes:
+  - "Docker: `docker compose up` now requires an NVIDIA GPU and the NVIDIA Container Toolkit and exposes all host NVIDIA GPUs to Talemate, restoring CUDA detection for PyTorch. Hosts without an NVIDIA GPU must use `docker compose -f docker-compose.cpu.yml up`; the standalone manual-build command remains a complete CPU configuration."
   - "Scene Forking: Forking from a message now refuses a save name that is not a valid filename or that an existing save already uses, instead of writing over that save or outside the scene directory. The timeline fork already refused both."
   - "Prompt Finalization: The fuzzy match threshold slider's always-visible value bubble no longer overlaps the note above it."
   - "Frontend: A backend websocket URL configured with the host 0.0.0.0 now connects — the URL was used literally, which most browsers refuse, so the app stayed on 'backend not connected'. The host is resolved to the hostname the UI itself was loaded from."

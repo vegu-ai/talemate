@@ -51,6 +51,7 @@ def test_docs_index_loads_and_paths_exist():
     for entry in index:
         assert entry.keys() >= {"path", "title", "summary"}
         assert (docs.DOCS_DIR / entry["path"]).is_file(), entry["path"]
+        assert not entry["title"].startswith(":material-"), entry["path"]
 
 
 def test_search_docs_returns_matches():

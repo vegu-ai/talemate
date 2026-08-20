@@ -27,7 +27,7 @@
   title: Changing host and port
   summary: Changing the backend (localhost:5050) and frontend (localhost:8082) bind addresses via TALEMATE_BACKEND_HOST/PORT
     and TALEMATE_FRONTEND_HOST/PORT or the --host/--port CLI flags, rebuilding the frontend with VITE_TALEMATE_BACKEND_WEBSOCKET_URL,
-    Docker Compose, and the 0.37.0 rename notes.
+    Docker Compose runtime overrides with CUDA/CPU file selection, and the 0.37.0 rename notes.
 - path: getting-started/advanced/debug-logging.md
   title: Debug Logging
   summary: Set TALEMATE_DEBUG=1 before starting the server to switch from INFO to DEBUG logging and write errors to logs/errors.log
@@ -48,9 +48,9 @@
     OpenRouter, Pi Bridge, KoboldCpp, llama.cpp, Ollama, Text-Generation-WebUI, LMStudio, TabbyAPI.'
 - path: getting-started/installation/docker.md
   title: Docker
-  summary: 'Quick Docker install: clone the repo, copy config.example.yaml to config.yaml, ''docker compose up'', then browse
-    to http://localhost:8082. Notes the prebuilt CUDA-enabled GHCR images, docker-compose.manual.yml for local builds, host.docker.internal
-    for local APIs, and the pi agent.'
+  summary: 'Docker installation and GPU/CPU launch paths: clone and copy config.yaml, then use docker compose up for NVIDIA
+    CUDA or docker compose -f docker-compose.cpu.yml up on CPU-only hosts. Covers local builds with docker-compose.manual.yml,
+    CUDA verification with nvidia-smi/PyTorch, host.docker.internal, and Pi Bridge config.'
 - path: getting-started/installation/linux.md
   title: Linux
   summary: 'Linux install: python plus uv, then clone, ''source install.sh'' (optionally with CUDA pytorch) and ''source start.sh'';
@@ -58,9 +58,9 @@
     and corepack pnpm.'
 - path: getting-started/installation/troubleshoot.md
   title: Common issues
-  summary: 'Install troubleshooting: Windows frontend failures from special characters in the path, Docker creating a config.yaml
-    directory when the example config was not copied, setting VITE_TALEMATE_BACKEND_WEBSOCKET_URL for the container, and nginx
-    WebSocket upgrade for SSL proxies.'
+  summary: Troubleshooting Windows install paths, Docker CUDA startup failures, and reverse-proxy WebSockets. Shows the CPU
+    opt-out command, NVIDIA Container Toolkit smoke test, in-container nvidia-smi/PyTorch checks, the config.yaml mount pitfall,
+    VITE WebSocket URL, and nginx upgrade headers.
 - path: getting-started/installation/windows.md
   title: Windows
   summary: 'Windows install: extract the release ZIP and double-click start.bat, which downloads portable Python 3 and Node.js
@@ -81,247 +81,260 @@
     pages and the first-steps pages (Setup Wizard, Connect a client, Load a scene, Interact with the scene).
 - path: user-guide/agents/conversation/index.md
   title: Overview
-  summary: Overview of the Conversation agent, also called the Actor agent, which generates character-driven dialogue and
-    actions. Requires a text-generation client configured and assigned.
+  summary: Introduces the Conversation agent, also called Actor, as the component that generates character-driven dialogue
+    and actions. Notes that it requires an assigned text-generation client.
 - path: user-guide/agents/conversation/settings.md
   title: Settings
-  summary: 'Conversation agent settings: Client, Optimize for Prompt Caching; Generation Format (Narrative, Screenplay, Chat
-    legacy, AI Aware), Generation Length, Jiggle, Task Instructions, Actor Instructions; Use Scene Intent, Use Writing Style,
-    Long Term Memory.'
+  summary: Documents the Conversation agent's client, caching, dialogue format, generation length, jiggle, task/actor instructions,
+    instruction offset, and stop-token controls. Also covers scene-intent, writing-style, and long-term-memory context choices.
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
-  summary: 'Creator agent autocomplete: continue partially typed text with ctrl+Enter, steer it with a trailing curly-brace
-    hint block, and the Redo and Undo chips. Supported fields include the main input, message edits, character attributes,
-    scene intro and dialogue examples.'
+  summary: Explains AI continuation of supported text fields via Ctrl/Cmd+Enter, optional trailing brace hints, and the Redo/Undo
+    workflow. Enumerates supported scene and character fields and points to Creator settings for per-field generation lengths
+    and hint control.
 - path: user-guide/agents/creator/index.md
   title: Overview
-  summary: Overview of the Creator agent, used for creative tasks that produce new context. Its main documented feature is
-    Autocomplete, triggered with ctrl+Enter and steered with curly-brace hints.
+  summary: Introduces the Creator agent as Talemate's general creative-context generator. Highlights Autocomplete for continuing
+    partially entered text with keyboard shortcuts, optional hints, and reversible suggestions.
 - path: user-guide/agents/creator/settings.md
   title: Settings
-  summary: 'Creator agent settings: Character Creation options Fast Character Generation, Consolidate, One-shot token budget
-    and Fill in misses; Long Term Memory; and Autocomplete suggestion length per field type plus Enable Hints.'
+  summary: Documents fast consolidated character generation, selectable aspects and attribute templates, shared token budget,
+    and fill-in-missing behavior. Also covers Creator long-term-memory options and Autocomplete length budgets for each field
+    type plus trailing-hint handling.
 - path: user-guide/agents/director/chat.md
   title: Director Chat
-  summary: 'The experimental Director Console chat: what you can ask the director to do, the Normal / Decisive / No Spoilers
-    modes, write-action confirmation with its countdown timeout, enabling actions per group, locked actions, director personas,
-    and multiple concurrent chats.'
+  summary: Comprehensive guide to the experimental Director Console chat for querying and modifying a scene, including modes,
+    action confirmation and timeout, action permissions, personas, and multiple chats. Covers action transparency, visual
+    generation, persistence, and concurrent read queries.
 - path: user-guide/agents/director/index.md
   title: Overview
-  summary: Overview of the Director agent as game master, listing Autonomous Scene Direction, Director Chat, Director Planning
-    for multi-beat arc generation, Dynamic Actions and Guide Scene.
+  summary: Introduces the Director agent as Talemate's game-master layer and surveys autonomous scene direction, interactive
+    chat, multi-beat planning, dynamic player choices, and analysis-based scene guidance. Links each major workflow to its
+    detailed documentation.
 - path: user-guide/agents/director/planning.md
   title: Director Planning
-  summary: 'Director Planning (0.37.0): the autonomous manage_plan todo list versus the Generate long progress dialog that
-    plans a multi-beat arc. Covers Number of turns, Dialogue ratio, Expand vs Turn by turn, Close the arc, Outline critique,
-    the Plan banner and Arc Generation settings.'
+  summary: Distinguishes autonomous chat todo plans from Generate Long Progress arcs that execute planned beats. Documents
+    dialog controls, Expand versus turn-by-turn modes, critiques, plan statuses, settings, preflight warnings, and troubleshooting
+    malformed, repetitive, or poorly closed arcs.
 - path: user-guide/agents/director/scene-direction.md
   title: Autonomous Scene Direction
-  summary: 'Autonomous Scene Direction: requirements, enabling it, nudging the director from the main input with # and ##
-    prefixes, the manual Scene direction turn button, turn balance, settings Enable Analysis Step, Response Token Budget,
-    Max Actions Per Turn, Scene Context Ratio and Stale History Share, and the Direction tab.'
+  summary: Explains requirements, setup, operation, settings, action controls, direction history, custom actions, and troubleshooting
+    for autonomous scene progression. Covers
 - path: user-guide/agents/director/settings.md
   title: Settings
-  summary: 'Director agent settings: General (Client, Optimize for Prompt Caching, Character Direction Style, Direction Stickiness),
-    Long Term Memory, Dynamic Actions, Guide Scene, Scene Direction, Character Management, Director Chat budgets and Arc Generation.'
+  summary: Reference for Director client/caching and character-direction persistence, dynamic choices, scene guidance, autonomous
+    direction, character creation, voice/visual persistence, chat, and arc-generation controls. Includes context ratios, timeouts,
+    action iteration limits, critiques, and model guidance.
 - path: user-guide/agents/editor/index.md
   title: Overview
-  summary: Short overview of the experimental Editor agent, which post-processes generated content to add detail to dialogue
-    and fix exposition markers.
+  summary: Introduces the experimental Editor agent as post-processing for generated content. Summarizes its roles in adding
+    dialogue detail and correcting exposition or markup problems.
 - path: user-guide/agents/editor/revisions.md
   title: Revisions
-  summary: 'Editor revisions (0.30.0) for detecting and fixing repetition and unwanted prose: the automatic revision status
-    indicators, the Agent Messages dialog, Automatic Revision Targets, and manual revision via the Revise chip with its version
-    paginator.'
+  summary: Explains automatic and manual Editor revision workflows for repetition and unwanted prose across character, narrator,
+    and optional context-investigation messages. Covers status/history UI, revision targets, non-destructive message versions,
+    no-change outcomes, failures, and cancellation.
 - path: user-guide/agents/editor/settings.md
   title: Settings
-  summary: 'Editor agent settings: General (Client, Optimize for Prompt Caching, Cleanup content, Fix narrator messages, Fix
-    user input, Allow incomplete sentences, Add detail) and Revision - Enable Revision, Automatic Revision, Revision Method
-    (Dedupe, Unslop, Targeted Rewrite), similarity threshold and unwanted prose detection.'
+  summary: Documents Editor cleanup, detail expansion, long-term memory, and the revision pipeline. Compares Dedupe, Unslop,
+    and Targeted Rewrite; defines automatic targets, repetition algorithms and thresholds, AI-assisted replacement behavior,
+    and unwanted-prose controls.
 - path: user-guide/agents/help/index.md
   title: Overview
-  summary: 'Overview of the Help agent''s interactive help chat, opened from the app bar: how it grounds answers in the bundled
-    documentation, what settings it can read and change, what stays off-limits such as API keys and clients, and the Scene
-    Aware toggle.'
+  summary: Describes the always-available Help chat, grounded documentation lookup, scene/UI awareness, persistent multi-turn
+    chats, and background operation. Defines which application and agent settings it can inspect or change, safeguards around
+    secrets and unsaved edits, and scene limitations.
 - path: user-guide/agents/help/settings.md
   title: Settings
-  summary: 'Help agent settings: Response token budget, Tool call rounds for documentation lookups and settings reads before
-    it must answer, Tool calls per round, and Custom instructions.'
+  summary: Reference for configuring Help agent response length, maximum tool-call rounds, calls allowed per round, and custom
+    instructions. Notes that read-only calls can run concurrently when the assigned client supports it, while settings mutations
+    remain sequential.
 - path: user-guide/agents/index.md
   title: Overview
-  summary: One-paragraph descriptions of every Talemate agent - Conversation, Creator, Director, Editor, Help, Long-term Memory,
-    Narrator, Summarizer, Visualizer, Voice and World State - plus a pointer to per-scene agent overrides.
+  summary: Provides a compact catalog of Talemate's Conversation, Creator, Director, Editor, Help, Memory, Narrator, Summarizer,
+    Visualizer, Voice, and World State agents and their responsibilities. Points to per-scene overrides for selectively replacing
+    global agent settings.
 - path: user-guide/agents/memory/embeddings.md
   title: Embeddings
-  summary: 'Embedding presets under Settings, Presets, Embeddings: the bundled all-MiniLM-L6-v2, gte-base-en-v1.5 and OpenAI
-    text-embedding-3-small, adding sentence-transformer models from Huggingface, and the properties Trust Remote Code, Device,
-    Distance and Distance Function.'
+  summary: Covers built-in and custom embedding presets, adding sentence-transformer models, download behavior, and the removal
+    of INSTRUCTOR embeddings. Defines device switching, remote-code trust risk, distance cutoff/modifier/function controls,
+    and organizational tags.
 - path: user-guide/agents/memory/index.md
   title: Overview
-  summary: Very short overview of the Memory agent, which manages long term memory via embeddings and currently supports only
-    ChromaDB as a backend.
+  summary: Introduces the Memory agent as Talemate's long-term semantic-memory layer backed by embeddings. Notes that ChromaDB
+    is currently the only supported storage backend.
 - path: user-guide/agents/memory/koboldcpp.md
   title: KoboldCpp Embeddings
-  summary: 'Using an embeddings model already loaded in KoboldCpp: start it with the --embeddingsmodel flag and the Memory
-    agent auto-detects it, switching the embedding to Client API. Also how to revert to a local embedding.'
+  summary: Shows how to start KoboldCpp with an embedding model and let Talemate detect it automatically through the configured
+    client. Explains the automatic switch to Client API embeddings, status indicators, and returning to a local embedding
+    preset.
 - path: user-guide/agents/memory/settings.md
   title: Settings
-  summary: 'Memory agent settings: the Embeddings picker, with presets managed under Embedding presets and OpenAI needing
-    an API key, and the Device setting for cpu or cuda, which since 0.37.0 no longer requires a restart.'
+  summary: Documents selecting the Memory agent's embedding preset and overriding its execution device between CPU and CUDA.
+    Explains the OpenAI-key prerequisite and live device switching that clears ChromaDB cache, frees GPU memory, and reimports
+    the active scene database.
 - path: user-guide/agents/memory/testing.md
   title: Testing Embeddings
-  summary: 'Evaluating embedding accuracy with the debug tools Memory tab: watch memory requests during normal play, open
-    a request to inspect its results, and read the distance colour coding to decide whether to tweak embedding settings.'
+  summary: Explains evaluating Memory retrieval through Debug Tools while using a scene normally. Shows how to inspect a memory
+    request's ranked results, interpret accepted versus rejected distance colors, and tune embedding settings when relevant
+    context is missed.
 - path: user-guide/agents/narrator/auto-narration.md
   title: Auto Narration
-  summary: 'Auto Narration (0.37.0), the probability-gated replacement for Narrate after Dialogue: the per-turn gates, the
-    Chance slider, the auto-rebalancing Action Weights for Progress Story, Narrate Scene and Narrate Environment, and Disable
-    during scene direction.'
+  summary: Documents the probability-gated Narrator dispatcher that can progress the story, narrate the scene, or describe
+    the environment after actor turns. Explains master chance, auto-balancing action weights, scene-direction suppression,
+    length budgets, debug logging, and troubleshooting.
 - path: user-guide/agents/narrator/index.md
   title: Overview
-  summary: 'Overview of the Narrator agent: how it uses story intention, scene type and scene phase intention from the World
-    Editor, how a writing style template influences narration, and a pointer to Auto Narration.'
+  summary: Introduces the Narrator agent's story progression, scene description, exposition, and query roles. Explains awareness
+    of overall and phase intentions, writing-style application, and the weighted Auto Narration system that replaced fixed
+    post-dialogue narration.
 - path: user-guide/agents/narrator/settings.md
   title: Settings
-  summary: 'Narrator agent settings: General (Client, Optimize for Prompt Caching, Jiggle, Instructions, Generation Length
-    Per Narration Type), Use Scene Intent, Use Writing Style, Narrate time passage, the Auto Narration section with Chance
-    and Action Weights, and Long Term Memory.'
+  summary: Reference for Narrator client, caching, jiggle, instructions, and separate token budgets for each narration type.
+    Covers scene intent and style context, guided time passage, Auto Narration chance/weights/direction gating, and long-term
+    memory.
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
-  summary: 'Per-scene agent overrides: how sparse per-field overrides work, the Global / Scene switch on the Agents settings
-    page, activating a field via the link icon, settings that can never be overridden, gated settings, quick-toggle chips,
-    and the agent-settings JSON file.'
+  summary: Explains sparse per-scene overrides, the Global/Scene settings switch, inherited versus active fields, gated settings,
+    quick-toggle behavior, and Save/Discard semantics. Documents project-level agent-settings JSON files, export behavior,
+    auto-linking, explicit selection, and opt-out.
 - path: user-guide/agents/summarizer/index.md
   title: Overview
-  summary: 'Overview of the Summarizer agent: dialogue summarization, layered history that re-summarizes at decreasing detail,
-    scene analysis shared with other agents, and the experimental context investigation.'
+  summary: Introduces dialogue summarization, layered history, scene analysis, and deep context investigation. Explains how
+    older history is progressively compressed and warns that experimental investigation can add many prompts or surface irrelevant
+    context.
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
-  summary: 'Summarizer settings: General (Client, Token Threshold, Summarization Method, Custom instructions), Layered History
-    (token threshold, max layers, chunk size, analysation), Long term memory, Scene Analysis with deep analysis, and Scene
-    History budget controls (Best Fit Mode, dialogue/summary ratios, summary boundary).'
+  summary: Comprehensive reference for summary triggers and formats, layered-history compaction, chunking/analysis, long-term
+    memory, scene analysis, and caching. Details scene-history budget allocation, best-fit limits, manual ratios, and summary-boundary
+    enforcement.
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
-  summary: 'The deprecated AUTOMATIC1111 text-to-image backend, superseded by SD.Next: prerequisites, API URL, Steps, Sampling
-    Method, Schedule Type, CFG Scale, Prompt Type and resolutions, its limitations, and automatic setup via KoboldCpp.'
+  summary: Documents the deprecated AUTOMATIC1111 text-to-image backend, including API prerequisites, sampling, CFG, prompt
+    style, resolution, status, and KoboldCpp auto-setup. Explains its lack of editing, authentication, model selection, and
+    active maintenance and recommends SD.Next.
 - path: user-guide/agents/visualizer/backends/comfyui.md
   title: ComfyUI
-  summary: 'Setting up the ComfyUI visualizer backend: starting ComfyUI with --port and --listen, configuring API URL, Workflow,
-    Model, Prompt Type and resolutions, and custom workflows using the node titles Talemate Positive Prompt, Talemate Negative
-    Prompt, Talemate Resolution and Talemate Reference, exported with Export (API).'
+  summary: Configures ComfyUI for generation and editing, including URLs, workflow/model selection, prompt styles, resolutions,
+    and reference limits. Gives detailed custom-workflow requirements for Talemate-named prompt, resolution, loader, and reference
+    nodes plus API export and hot reload.
 - path: user-guide/agents/visualizer/backends/google.md
   title: Google
-  summary: 'The Google visualizer backend using Gemini image models: a Google AI Studio API key, text-to-image with gemini-2.5-flash-image
-    and gemini-3-pro-image-preview, image editing with Max References, image analysis with vision-capable Gemini models, and
-    aspect-ratio handling.'
+  summary: Setup guide for Google image generation, reference-based editing, and vision analysis using an AI Studio API key.
+    Documents model choices, aspect ratios, reference limits, operation-specific configuration, status indicators, recommendations,
+    and descriptive prompts.
 - path: user-guide/agents/visualizer/backends/openai-compatible-vision.md
   title: OpenAI Compatible (Vision)
-  summary: 'Using any OpenAI-compatible multimodal endpoint such as llama.cpp, Ollama or vLLM as the visualizer''s image analysis
-    backend: the Base URL, optional API Key and Model settings, and troubleshooting connection, empty-response and model-not-found
-    errors.'
+  summary: Configures image analysis through any multimodal OpenAI-compatible chat endpoint, including local llama.cpp, Ollama,
+    or vLLM servers. Covers base URL normalization, optional authentication/model, concurrency, supported Visualizer use cases,
+    and common connection or model errors.
 - path: user-guide/agents/visualizer/backends/openai.md
   title: OpenAI
-  summary: 'The OpenAI visualizer backend: setting the API key, text-to-image models dall-e-3, gpt-image-1 and gpt-image-1-mini
-    with fixed resolutions, image editing with gpt-image models only, image analysis with gpt-4.1-mini or gpt-4o-mini, and
-    organization verification caveats.'
+  summary: Setup guide for OpenAI text-to-image, GPT-Image editing, and GPT vision analysis with a shared API key. Compares
+    available models, resolutions, single-reference limits, organization-verification caveats, status indicators, recommendations,
+    and descriptive prompting.
 - path: user-guide/agents/visualizer/backends/openrouter.md
   title: OpenRouter
-  summary: 'The OpenRouter visualizer backend: the API key and configuring text-to-image, image editing with Max References
-    and image analysis, each with an unfiltered model dropdown. Also provider filtering with Only use these providers and
-    Ignore these providers.'
+  summary: Configures OpenRouter for image generation, reference editing, and vision analysis with dynamically listed models
+    and provider include/exclude filters. Covers aspect ratios, reference counts, unfiltered-capability warnings, status,
+    model suggestions, and descriptive prompting.
 - path: user-guide/agents/visualizer/backends/sdnext.md
   title: SD.Next
-  summary: 'The SD.Next visualizer backend for text-to-image and img2img editing: API URL, authentication with None, Basic
-    or Bearer API key, Steps, Sampling Method, CFG Scale, Model, Prompt Type and resolutions, plus dynamic model and sampler
-    fetching.'
+  summary: Setup guide for SD.Next generation and single-reference img2img editing, with API URL, basic or bearer authentication,
+    model/sampler discovery, steps, CFG, prompt format, and resolutions. Includes remote-access security guidance and operation/status
+    details.
 - path: user-guide/agents/visualizer/backends/talemate-client.md
   title: Talemate Client (Vision)
-  summary: 'Reusing an existing Talemate LLM client for image analysis: the Enable Vision toggle in client settings, supported
-    on KoboldCpp, llama.cpp and text-generation-webui, selecting the client under Backend (image analysis), and troubleshooting
-    empty dropdowns.'
+  summary: Shows how to reuse a configured vision-capable KoboldCpp, llama.cpp, or Text-Generation-WebUI client for Visualizer
+    image analysis. Covers enabling vision, selecting eligible clients, configuration reuse advantages, dynamic availability,
+    and model/connection troubleshooting.
 - path: user-guide/agents/visualizer/index.md
   title: Overview
-  summary: 'Overview of the Visualizer agent: text-to-image, image editing and image analysis, the supported backends ComfyUI,
-    Google, OpenAI, OpenRouter, SD.Next and AUTOMATIC1111, style templates, inline visuals, the Visual Library, and the Visualize
-    Scene / Character / Moment shortcuts.'
+  summary: Introduces the Visualizer agent's text-to-image, image editing, and image analysis operations, multiple backends,
+    styles, automatic generation, and Visual Library integration. Summarizes access through the library, scenario-tool shortcuts,
+    inline visuals, and Director Chat.
 - path: user-guide/agents/visualizer/settings.md
   title: Settings
-  summary: 'Visualizer agent settings: General (Client, separate backends for text to image, image editing and image analysis,
-    Image Generation Timeout, Automatic Setup, Automatic Generation), Prompt Generation with Fallback Prompt Type and Automatic
-    Analysis of References, the Styles pickers, Prompt Finalization and resolution presets.'
+  summary: Reference for selecting operation-specific backends, timeouts, automatic setup/generation, prompt generation and
+    reference analysis, visual styles, and resolution presets. Fully documents prompt-finalization presets and exact, fuzzy,
+    regex, or AI transformation actions.
 - path: user-guide/agents/visualizer/visual-library.md
   title: Visual Library
-  summary: 'The Visual Library: generating images in Prompt or Instruct mode, the visual types character card, portrait, scene
-    background and illustration, formats, reference images, saving to Scene Assets, queue management, asset actions such as
-    set cover and set backdrop, tags and Sync from Analysis.'
+  summary: End-to-end guide to generating, regenerating, editing, iterating, saving, uploading, and organizing scene imagery
+    in the queue and shared asset library. Covers visual types, prompt/instruct modes, references, metadata, cover crops,
+    AI analysis, tags, and backend requirements.
 - path: user-guide/agents/voice/chatterbox.md
   title: Chatterbox
-  summary: 'The Chatterbox local zero-shot voice cloning backend: Device and Chunk size settings, .wav reference audio requirements,
-    creating a voice in the Voice Library with Label, Voice ID, Speed and Tags, plus Exaggeration Level and CFG / Pace.'
+  summary: Configures local Chatterbox zero-shot voice cloning, including device selection, chunk size, WAV reference requirements,
+    labels, speed, and tags. Explains per-voice exaggeration and CFG/pace controls for balancing expressiveness, stability,
+    and speaking speed.
 - path: user-guide/agents/voice/elevenlabs.md
   title: ElevenLabs
-  summary: 'The ElevenLabs TTS backend: API key setup, Model, Chunk size and the Jinja2 Audio tag format template, the subscription
-    voice-limit warning, and copying an ElevenLabs voice ID to register it as a voice in Talemate.'
+  summary: Setup guide for ElevenLabs professional synthesis and cloning through a shared API key. Covers model and chunk
+    settings, audio-tag formatting, subscription voice-slot behavior, obtaining provider voice IDs, and registering tagged
+    ElevenLabs voices in Talemate.
 - path: user-guide/agents/voice/f5tts.md
   title: F5-TTS
-  summary: 'The F5-TTS local voice cloning backend: Device, Model (F5TTS_v1_Base, F5TTS_Base, E2TTS_Base), NFE Step, Chunk
-    size, Replace exclamation marks, reference audio requirements, and creating a voice with Reference Text, Speed, Tags and
-    CFG Strength.'
+  summary: Configures local F5-TTS voice cloning with device, model, diffusion steps, chunking, and punctuation controls.
+    Defines reference-audio and transcript requirements, voice-library creation, speed and CFG parameters, and practical sample-length
+    guidance.
 - path: user-guide/agents/voice/google.md
   title: Google Gemini-TTS
-  summary: 'The Google Gemini-TTS backend: obtaining a Google Cloud API key and setting it here or under Connections, API
-    Keys, plus the Model and Chunk size settings.'
+  summary: Setup guide for Google's Gemini text-to-speech backend using the shared Google API key. Documents selecting a TTS
+    model and tuning chunk size to trade responsiveness against cross-chunk speech context and inflection.
 - path: user-guide/agents/voice/index.md
   title: Overview
-  summary: 'Overview of the refactored Voice (TTS) agent: per-character voice assignment, speaker separation, the voice library
-    and director integration. Lists the local APIs Kokoro, F5-TTS, Chatterbox and Pocket TTS and the remote APIs ElevenLabs,
-    Google Gemini-TTS, OpenAI and OpenAI Compatible.'
+  summary: Introduces Talemate's multi-provider TTS system, per-character assignments, speaker separation, centralized voice
+    library, and automatic Director integration. Catalogs local and remote backends, enablement, narrator fallback behavior,
+    and links to setup and troubleshooting.
 - path: user-guide/agents/voice/kokoro.md
   title: Kokoro
-  summary: 'The Kokoro TTS backend: its predefined voice models, and creating mixed voices in the Voice Library through the
-    Mixer option by combining 2-4 base voices with weights that sum to 1.0.'
+  summary: Explains using Kokoro's built-in voices and creating reusable mixed voices in the Voice Library. Covers selecting
+    two to four sources, balancing weights to 1.0, tagging and saving the mix, and assigning it to characters or narration.
 - path: user-guide/agents/voice/openai-compatible.md
   title: OpenAI Compatible
-  summary: 'The OpenAI Compatible TTS registry (0.37.0): adding, renaming and removing backends, each with its API Base URL,
-    API Key, Model, Voices endpoint and Chunk size, plus Refresh voices and auto-managed backends registered by clients like
-    KoboldCpp.'
+  summary: Comprehensive guide to the registry of OpenAI-style TTS backends, each with independent URL, key, model, chunking,
+    and voice discovery. Covers lifecycle, enablement, voice endpoint probing/manual registration, auto-managed client backends,
+    and troubleshooting.
 - path: user-guide/agents/voice/openai.md
   title: OpenAI
-  summary: 'The OpenAI TTS backend: setting the OpenAI API key, choosing the Model (GPT-4o Mini TTS, TTS 1, TTS 1 HD) and
-    the Chunk size setting.'
+  summary: Configures the Voice agent's OpenAI backend using the shared OpenAI API key. Lists supported GPT-4o Mini TTS, TTS-1,
+    and TTS-1-HD models and explains chunk-size tradeoffs between responsiveness and retained context or inflection.
 - path: user-guide/agents/voice/pocket-tts.md
   title: Pocket TTS
-  summary: 'The CPU-based Pocket TTS backend from Kyutai on pocket-tts v2: first-time model download, gated voice-cloning
-    terms, the HuggingFace Token setting, the Language / Model dropdown, Temperature, LSD Decode Steps, Noise Clamp, EOS Threshold,
-    Quantize (int8) and Chunk Size.'
+  summary: Full guide to local CPU-oriented Pocket TTS v2, multilingual model choice, optional int8 quantization, decoding
+    controls, gated cloning downloads, built-in and custom voices, and Hugging Face catalog paths. Includes v1 migration and
+    download/quality troubleshooting.
 - path: user-guide/agents/voice/settings.md
   title: Settings
-  summary: 'Voice agent settings: Enabled APIs (Kokoro, F5-TTS, Chatterbox, Pocket TTS, ElevenLabs, Google Gemini-TTS, OpenAI,
-    OpenAI Compatible), Narrator Voice, Speaker Separation modes No separation, Simple, Mixed and AI assisted, the auto-generate
-    toggles, Automatic Setup and Audio tags.'
+  summary: Reference for enabling multiple TTS APIs, choosing narrator fallback, separating dialogue from exposition, and
+    auto-generating audio by message type. Covers automatic client-backed registration, AI audio tags, per-provider advanced
+    settings, and voice-list refresh behavior.
 - path: user-guide/agents/voice/text-manipulation.md
   title: Text Manipulation
-  summary: 'Rewriting TTS text with a node module before audio is generated: listen for agent.tts.generate.before, wire Event
-    to Unpack Generation Emission and Set Chunk Text, replace text with the Replace node (fix mispronounced names) or prepend/append
-    with Jinja2 Format, and why rewrites belong on generate.before rather than prepare.before.'
+  summary: Shows how a node-editor event module can rewrite TTS chunk text without changing scene messages, using pronunciation
+    replacement and conditional gates as examples. Covers event timing, emission fields, cleanup behavior, empty text, and
+    Jinja-based prefixing.
 - path: user-guide/agents/voice/troubleshooting.md
   title: TTS Troubleshooting
-  summary: 'Common TTS problems, focused on missing FFmpeg required by Chatterbox and F5-TTS: the libtorchcodec error symptoms,
-    running install-ffmpeg.bat on Windows or a package manager on Linux/macOS, and restarting Talemate.'
+  summary: Diagnoses FFmpeg and TorchCodec loading errors affecting local TTS providers. Gives the Windows installer-script
+    and Linux/macOS package-manager remedies, supported FFmpeg versions, a verification command, and the requirement to restart
+    Talemate.
 - path: user-guide/agents/voice/voice-library.md
   title: Voice Library
-  summary: 'The Voice Library: opening it from the app bar, the Global / Scene / Characters scope tabs, the API status colours,
-    adding voices with Label, Provider ID, Tags and provider parameters, scene-scoped voices, character voice assignment,
-    and tagging with search.'
+  summary: Guide to global and scene voice collections, API status, adding provider-specific voices, free-form tags and filtering,
+    and character assignments. Explains automatic Director matching, manual selection, narrator fallback, scene persistence,
+    and provider-specific cloning or mixing inputs.
 - path: user-guide/agents/world-state/index.md
   title: Overview
-  summary: 'Overview of the World State agent: generating the world state snapshot of location, time of day, weather and character
-    states, reinforcing tracked states, and character progression that updates a character''s description and attributes.'
+  summary: Introduces the World State agent's current-world snapshot, tracked-state reinforcement, and character progression
+    checks. Notes the text-generation client requirement and the ability to propose character description or attribute changes
+    as the story evolves.
 - path: user-guide/agents/world-state/settings.md
   title: Settings
-  summary: 'World State agent settings: Update World State (initial snapshot, Turns, Lines in the moment, Include Look at,
-    Add Detail, Custom instructions, Pin to context, Durable snapshot with Max items tracked), state reinforcement, Character
-    Progression, Character Portraits and Long Term Memory.'
+  summary: Reference for snapshot refresh cadence, current-moment highlighting, durable accumulation and eviction, prompt
+    pinning, tracked-state/context-pin updates, and character progression. Also covers automatic portrait selection and generation
+    prerequisites plus snapshot memory retrieval.
 - path: user-guide/api-key-encryption.md
   title: API Key Encryption
   summary: Since 0.36.0 all api_key and override_api_key fields are Fernet-encrypted in config.yaml with an 'ENC:' prefix.
@@ -362,11 +375,11 @@
     -> API Keys -> OpenRouter and save to reach any model OpenRouter exposes.
 - path: user-guide/app-settings/appearance.md
   title: Appearance
-  summary: Appearance settings, split into Theme, Messages and Visuals. Theme lists every theme template under its group
-    with color swatches - Apply repaints the app and copies the theme's message styling into the appearance settings after
-    a confirmation (colors the user set are kept and keep overriding), Manage opens the theme's template. Messages covers
-    per-type italic/bold/show/color and markup styling, with Reset and Restore from theme (re-copies the theme's styling
-    and drops all color overrides). Visuals covers render cadence, display size and Auto Backdrop.
+  summary: Appearance settings, split into Theme, Messages and Visuals. Theme lists every theme template under its group with
+    color swatches - Apply repaints the app and copies the theme's message styling into the appearance settings after a confirmation
+    (colors the user set are kept and keep overriding), Manage opens the theme's template. Messages covers per-type italic/bold/show/color
+    and markup styling, with Reset and Restore from theme (re-copies the theme's styling and drops all color overrides). Visuals
+    covers render cadence, display size and Auto Backdrop.
 - path: user-guide/app-settings/application.md
   title: Connections
   summary: The Connections settings group - Clients, Agents and the API Keys page holding all third-party credentials, including
@@ -380,9 +393,8 @@
 - path: user-guide/app-settings/game.md
   title: Game
   summary: 'The Game settings group: Auto save, Auto progress, Max backscroll, Show agent activity bar, Release GPU cache
-    on scene load, the default Player Character, and the Sound page (persisted playback volume and mute, also controlled
-    from the status bar). Also how the Settings tab works - sidebar groups, search, and the unsaved changes indicator with
-    Save/Discard.'
+    on scene load, the default Player Character, and the Sound page (persisted playback volume and mute, also controlled from
+    the status bar). Also how the Settings tab works - sidebar groups, search, and the unsaved changes indicator with Save/Discard.'
 - path: user-guide/app-settings/presets.md
   title: Presets
   summary: The Presets settings group with three pages - Inference (per-action generation parameter presets such as Analytical
@@ -402,148 +414,157 @@
     greetings, shared context setup, writing style template, player character setup, and troubleshooting failed analysis.
 - path: user-guide/clients/auto-retry.md
   title: Auto Retry
-  summary: 'Per-client sliders (0-5) that silently retry before the generation error dialog appears: Empty Response and Rate
-    Limited (HTTP 429, backing off up to 30s) in the Advanced section, and Missing Reasoning in the Reasoning section.'
+  summary: Configures per-client automatic retries for empty responses, HTTP 429 rate limits, and missing reasoning patterns
+    before Talemate displays its normal error dialog. Explains retry timing, attempt notifications, aborting, and the distinction
+    from client-side request rate limiting.
 - path: user-guide/clients/client-configuration.md
   title: Client Configuration
-  summary: 'Configuring clients on Settings -> Connections -> Clients: the client list with status dots and Unsaved chips,
-    Add client type menu, Assign to all agents, the General/Coercion/Advanced/Reasoning/System Prompts sections, and the Save/Discard
-    toolbar.'
+  summary: Walks through the Connections → Clients settings page, including adding, selecting, renaming, assigning, disabling,
+    and removing clients. Details editor sections, shared API keys, validation, and the Save/Discard working-copy workflow
+    introduced in 0.40.0.
 - path: user-guide/clients/concurrent-requests.md
   title: Concurrent Requests
-  summary: 'Per-client toggle in the Concurrency section that runs batch LLM queries in parallel: visual prompts, function
-    calling, world state updates. On by default for Anthropic, OpenAI, Google, MistralAI and OpenRouter; opt-in for Pi
-    Bridge and llama.cpp.'
+  summary: Explains which hosted and local clients can process parallel LLM requests and which batch operations benefit, including
+    visual prompts, tool calls, world-state work, and progression checks. Covers defaults, llama.cpp/Pi Bridge requirements,
+    rate-limit interactions, and when to disable concurrency.
 - path: user-guide/clients/endpoint-override.md
   title: Endpoint Override
-  summary: The Endpoint Override section on remote clients, pointing a client at a proxy gateway such as LiteLLM via a Base
-    URL plus a separate API Key that is the proxy's key, not your real provider key. Warns against untrusted endpoints.
+  summary: Shows how supported remote clients can target a trusted proxy or gateway such as LiteLLM instead of the provider's
+    default API endpoint. Defines the separate base URL and proxy API-key fields and warns against sending official provider
+    credentials to untrusted endpoints.
 - path: user-guide/clients/hibernate.md
   title: Hibernation
-  summary: 'Hibernating a client with the :material-power: button on its entry to shrink its presence in the client list instead
-    of deleting and re-creating it; the same button re-enables it.'
+  summary: Describes hiding an unused configured client without deleting and later recreating it. Shows how the client-row
+    power control hibernates the client to reduce UI clutter and how the same control restores it.
 - path: user-guide/clients/index.md
   title: Overview
-  summary: 'Landing page for LLM clients: using different models for management vs. creative tasks, the Model Testing Harness
-    for qualifying one, and the supported types - remote (OpenAI, Anthropic, mistral.ai, Cohere, Groq, Gemini) and local (KoboldCpp,
-    llama.cpp, LMStudio).'
+  summary: Introduces Talemate clients as connections to local and hosted text-generation APIs and explains why different
+    agents can use different models. Links the model testing harness and catalogs officially supported remote/local APIs plus
+    services usable through the OpenAI-compatible client.
 - path: user-guide/clients/model-testing-harness.md
   title: Model Testing Harness
-  summary: 'The bundled model-testing-harness scene that auto-runs six minimum-viability tests against the clients assigned
-    to your agents: Basic Instruction Following, Data Response, Conversation Generation, Narrative Generation, Function Calling
-    (FOCAL) and Problem Solving.'
+  summary: Explains how to load and run the bundled six-test scene for qualifying configured LLM clients. Maps each test to
+    its agent and requirement—literal instructions, structured data, conversation, narration, FOCAL calls, and multi-step
+    problem solving—and interprets failures.
 - path: user-guide/clients/presets.md
   title: Inference Configuration
-  summary: 'The Settings -> Presets -> Inference editor: preset categories picked per agent action (Analytical, Conversation,
-    Creative, Deterministic, Scene Direction, Summarization), the parameters (temperature, top-p, top-k, min-p, penalties,
-    XTC, DRY, extra stopping strings and which clients apply them natively vs by trimming), and preset groups.'
+  summary: Documents inference preset categories, sampler parameters, extra stop strings, advanced XTC/DRY/smoothing/adaptive
+    controls, and backend support differences. Covers editing, applying or resetting presets, creating groups, assigning a
+    group to a client, and saving changes.
 - path: user-guide/clients/prompt-templates.md
   title: Prompt Templates
-  summary: Why the correct prompt template matters for clients where Talemate builds the prompt (KoboldCpp, llama.cpp, Text-Generation-WebUI,
-    LMStudio, TabbyAPI), the warning for an unset template falling back to Alpaca, and the DETERMINE VIA HUGGINGFACE button.
+  summary: Explains why local clients that render their own prompts need the correct model-specific template and how Talemate
+    attempts Hugging Face metadata detection. Covers manual selection, template locking, the template manager, and durable
+    user templates stored under templates/llm-prompt/std/user.
 - path: user-guide/clients/rate-limiting.md
   title: Rate Limiting
-  summary: Talemate's own client-side requests-per-minute cap, the Rate Limit slider in the Advanced section. Hitting the
-    cap opens a popup to wait or abort the generation; distinct from the Auto Retry Rate Limited slider that reacts to API
-    429s.
+  summary: Describes Talemate's per-client requests-per-minute cap and the notification shown when the limit is reached. Explains
+    waiting for reset versus aborting the generation and distinguishes this local throttle from automatic retries for provider
+    HTTP 429 responses.
 - path: user-guide/clients/reasoning.md
   title: Reasoning Model Support
-  summary: 'The client Reasoning section: Enable Reasoning, Reasoning Tokens budgets, Strip pattern presets (Default, gpt-oss,
-    gemma-4, thinking-arrow), the Validation pattern, Pattern Not Found Behavior and Reason Prefill, plus per-agent-action
-    reasoning overrides.'
+  summary: Covers enabling reasoning, allocating reasoning tokens, stripping and validating thinking patterns, prefills, missing-pattern
+    behavior, and model compatibility. Also explains per-agent-action overrides that disable reasoning selectively and how
+    to manage or troubleshoot them.
 - path: user-guide/clients/recommended-models.md
   title: Recommended Local Models
-  summary: Talemate no longer maintains a recommended-model list; points at the oobabooga benchmark leaderboard, advises against
-    going below 7B (unquantized for 7B/8B), and suggests running the Model Testing Harness on a candidate.
+  summary: States that Talemate no longer maintains a fixed recommended-model list, points to an external benchmark, and advises
+    against models below 7B. Recommends the bundled Model Testing Harness for checking a candidate model's formats and function-calling
+    ability.
 - path: user-guide/clients/response-length.md
   title: Response Length Enforcement
-  summary: 'The Advanced-section dropdown choosing how response length is enforced: Limit tokens and send instructions (default),
-    Limit tokens, Send instructions, or Uncapped, plus the token-budget-to-instruction mapping used when templates lack them.'
+  summary: Explains how Talemate combines API token caps with prompt-level human-readable length instructions. Defines the
+    token-to-instruction mapping, all four enforcement modes, the uncapped warning, defaults, and where to save the per-client
+    setting.
 - path: user-guide/clients/section-format.md
   title: Section Format
-  summary: 'Per-client Advanced setting controlling how prompt section boundaries are rendered: Talemate decides (default,
-    same as Markdown), Markdown (## Characters headings), or XML (paired uppercase tags). Non-default choices show as a tag
-    on the sidebar row.'
+  summary: Documents the per-client choice between Markdown headings and paired uppercase XML tags for named prompt sections.
+    Clarifies what formatting changes and what remains untouched, then shows where to set and save the option in Advanced
+    client settings.
 - path: user-guide/clients/template-locking.md
   title: Template Locking
-  summary: The Lock Template checkbox that stops a client's prompt template from auto-updating when the model changes, useful
-    for pinning reasoning vs. non-reasoning variants. Covers checking the box, picking the template to lock, saving, and unlocking.
+  summary: Explains how locking prevents a client's prompt template from changing when its model changes, including the reasoning/non-reasoning
+    variant use case. Walks through selecting, saving, verifying, and later removing a lock to restore automatic Hugging Face-based
+    detection.
 - path: user-guide/clients/types/anthropic.md
   title: Anthropic Client
-  summary: 'Adding an Anthropic client from Settings -> Connections -> Clients, setting the shared Anthropic API key via SET
-    API KEY, and its settings: Client Name, Model (defaults to claude-haiku-4-5), Context Length, and Concurrent Inference
-    in the Concurrency section (on by default).'
+  summary: Setup guide for adding an Anthropic client, configuring the shared API key, choosing or manually entering a model,
+    and setting context length. Notes the default Claude model and that concurrent inference is enabled by default for supported
+    batch operations.
 - path: user-guide/clients/types/cohere.md
   title: Cohere Client
-  summary: 'Adding a Cohere client from Settings -> Connections -> Clients, setting the shared Cohere API key via SET API
-    KEY, and its settings: Client Name, Model (defaults to command-r-plus) and Context Length.'
+  summary: Setup guide for adding a Cohere client, supplying the shared Cohere API key, saving it to a ready state, and configuring
+    its name, model, and context length. Notes that exact model identifiers can be entered before Talemate's built-in list
+    is updated.
 - path: user-guide/clients/types/deepseek.md
   title: DeepSeek Client
-  summary: Adding a DeepSeek client and its API key from platform.deepseek.com, plus Client Name, Model (deepseek-chat or
-    deepseek-reasoner) and Context Length. deepseek-reasoner needs Reasoning enabled with 512-1024 Reasoning Tokens or it
-    returns empty content.
+  summary: Setup guide for DeepSeek authentication, model selection, and context length, with available chat and reasoner
+    model choices. Gives the reasoning-specific requirement to enable reasoning and reserve enough tokens so internal thinking
+    does not consume the visible-response budget.
 - path: user-guide/clients/types/google.md
   title: Google Client
-  summary: Adding a Google (Gemini) client and its Google Cloud credentials via SETUP GOOGLE API CREDENTIALS, plus Client
-    Name, Model (defaults to gemini-3.7-flash), Context Length, Disable Safety Settings for harmful-content response validation,
-    and Concurrent Inference in the Concurrency section (on by default).
+  summary: Setup guide for the Google client using shared Google Cloud credentials, model and context settings, and the provider
+    safety-setting override. Notes that concurrent inference is enabled by default and that unlisted new model identifiers
+    may be entered manually.
 - path: user-guide/clients/types/groq.md
   title: Groq Client
-  summary: 'Adding a Groq client from Settings -> Connections -> Clients, setting the shared Groq API key via SET API KEY,
-    and its settings: Client Name, Model (defaults to moonshotai/kimi-k2-instruct) and Context Length.'
+  summary: Setup guide for adding and authenticating a Groq client, selecting a model, setting context length, and confirming
+    ready status. Notes the current default model and the ability to enter exact identifiers that Talemate has not yet added
+    to its model list.
 - path: user-guide/clients/types/koboldcpp.md
   title: KoboldCpp Client
-  summary: 'Setting up a KoboldCpp client: API Url (append /v1 for the OpenAI abstraction), API Key, Context Length, and the
-    inference-preset parameters the United API supports (min-p, XTC, DRY, Smoothing). Also Visual and Voice agent auto-setup.'
+  summary: Configures a local KoboldCpp client for United or OpenAI-compatible API mode, authentication, context, prompt templates,
+    and supported generation parameters. Also details automatic Visualizer/TTS integration, TTS capability detection and lifecycle,
+    opting out, and connection troubleshooting.
 - path: user-guide/clients/types/llamacpp.md
   title: llama.cpp Client
-  summary: 'Setting up a client against llama-server: API URL (default http://localhost:8080), API Key, Context Length, the
-    off-by-default ''API handles prompt template'' option using the server''s /apply-template endpoint, and Concurrent Inference
-    needing parallel slots.'
+  summary: Configures Talemate against a local llama-server, including URL, optional authentication, context size, prompt-template
+    ownership, reasoning behavior, and optional concurrency. Provides startup and connectivity troubleshooting and explains
+    the parallel-slot requirement for real concurrent inference.
 - path: user-guide/clients/types/lmstudio.md
   title: LMStudio Client
-  summary: 'Setting up an LMStudio client: Client Name, API Url (default http://localhost:1234), API Key and Context Length
-    (8192), plus troubleshooting - assign the correct prompt template, and start the server from inside LMStudio, not just
-    the app.'
+  summary: Setup guide for connecting Talemate to an LMStudio local server with URL, optional API key, context length, and
+    prompt-template selection. Emphasizes that launching LMStudio alone is insufficient—the embedded server must also be started—and
+    lists common connectivity causes.
 - path: user-guide/clients/types/mistral.md
   title: Mistral.ai Client
-  summary: 'Adding a MistralAI client and its API key, plus its settings: Client Name, Model (defaults to open-mixtral-8x22b),
-    Context Length, and Concurrent Inference in the Concurrency section (on by default), whose parallelism depends on your
-    account''s rate limits.'
+  summary: Setup guide for adding a MistralAI client, configuring its shared API key, model identifier, and context length.
+    Notes that concurrent inference is on by default for supported batch work but actual parallelism remains subject to the
+    account's rate limits.
 - path: user-guide/clients/types/ollama.md
   title: Ollama Client
-  summary: 'Setting up an Ollama client: API URL (default http://localhost:11434), Model picked from the list Talemate fetches
-    from your local instance, ''API handles prompt template'' (leave off) and ''Allow thinking''. Covers the offline and no-model-loaded
-    warnings.'
+  summary: Configures Talemate for a local Ollama server, including reachability, installed model selection, context, server-side
+    prompt templates, and thinking support. Explains refreshing the model list through Save and diagnoses offline, unloaded-model,
+    and wrong-template behavior.
 - path: user-guide/clients/types/openai-compatible.md
   title: OpenAI Compatible Client
-  summary: 'Generic client for services exposing an OpenAI-like API, illustrated with DeepInfra: API Url, API Key, ''API handles
-    prompt template'' (recommended off), free-form model name and Context Length, plus the Parameters toggles for unsupported
-    sampler parameters.'
+  summary: Shows how to connect unsupported services such as DeepInfra through an OpenAI-like endpoint, with URL, key, model,
+    context, and prompt-template ownership. Documents per-parameter send toggles for services that reject unsupported sampler
+    fields and recommends official clients when available.
 - path: user-guide/clients/types/openai.md
   title: OpenAI Client
-  summary: Adding an OpenAI client and its API key, plus Client Name, Model (defaults to gpt-4o), Context Length, and Concurrent
-    Inference in the Concurrency section (on by default). The o1, o3 and gpt-5 reasoning families need the client's Reasoning
-    option enabled with 512-1024 Reasoning Tokens or you get empty output.
+  summary: Setup guide for OpenAI authentication, model and context selection, and default-on concurrent inference. Gives
+    special guidance for o1, o3, and GPT-5 reasoning families, including enabling reasoning and allocating enough tokens to
+    avoid empty visible responses.
 - path: user-guide/clients/types/openrouter.md
   title: OpenRouter Client
-  summary: Adding an OpenRouter client, entering the key on the API Keys page or the OpenRouter API Key card in the client
-    editor, and picking a model from the list Talemate fetches on save. Documents the Parameters toggles for providers that
-    reject sampler parameters, and Concurrent Inference in the Concurrency section (on by default).
+  summary: Covers OpenRouter key setup, dynamically fetched model choices, context length, default-on concurrency, and refreshing
+    the catalog. Documents toggles that omit individual sampler parameters when a selected downstream provider rejects them.
 - path: user-guide/clients/types/pi-bridge.md
   title: Pi Bridge Client
-  summary: Client that routes generations through the pi coding agent in headless RPC mode, so pi handles provider auth and
-    model resolution. Covers installing the pi binary, credential sources, the encrypted Environment Variables store, and
-    the Thinking Level setting.
+  summary: Explains how Talemate launches isolated pi coding-agent RPC processes as an LLM bridge while disabling coding tools
+    and project context. Covers installation, pi-owned credentials and custom providers, encrypted environment variables,
+    model/thinking/concurrency settings, Docker persistence, and stream tracing.
 - path: user-guide/clients/types/tabbyapi.md
   title: TabbyAPI Client
-  summary: 'Setting up a TabbyAPI client: Client Name, API Url (e.g. http://localhost:5000/v1), API Key, the discouraged ''API
-    handles prompt template'' option that switches to chat/completions, and Context Length (8192), plus connection troubleshooting.'
+  summary: Setup guide for a local TabbyAPI server, including URL, optional authentication, context length, and choosing whether
+    the server owns prompt rendering. Recommends Talemate-side templates by default and lists server, URL, key, firewall,
+    and template causes for failures.
 - path: user-guide/clients/types/text-generation-webui.md
   title: Text-Generation-WebUI Client
-  summary: 'Setting up an ooba Text-Generation-WebUI client: API Url, API Key, Context Length (8192), and the off-by-default
-    ''API handles prompt template (chat/completions)'' option, under which Talemate''s template selection is ignored and thinking
-    is separated remotely.'
+  summary: Configures Talemate for a local Text-Generation-WebUI server with URL, optional key, context, and optional chat/completions
+    prompt handling. Explains coercion and reasoning behavior in server-template mode and troubleshoots unloaded models, connection
+    failures, and wrong templates.
 - path: user-guide/debug-tools.md
   title: Debug Tools
   summary: 'The bug-icon Debug Tools panel with its Prompts, Memory and Vars tabs: inspecting sent prompts (and forcing reasoning
@@ -636,8 +657,8 @@
   title: Command Modules
   summary: 'Command node modules let players type "!name:arg_0;arg_1" in the scene: the module''s name/icon/menu properties,
     Argument nodes, and an !instruct_actor example. A menu id exposes the command in the scene tools custom commands menu,
-    with a dialog that prompts for declared arguments. Command modules load automatically with the scene, no scene-loop
-    placement needed.'
+    with a dialog that prompts for declared arguments. Command modules load automatically with the scene, no scene-loop placement
+    needed.'
 - path: user-guide/node-editor/core-concepts/error-handling.md
   title: Error Handling
   summary: Catching uncaught graph exceptions with the Error Handler node (core/ErrorHandler) and a handler function taking
@@ -918,8 +939,7 @@
 - path: user-guide/node-editor/reference/nodes/util.md
   title: Utility Nodes
   summary: 'Utility nodes: Counter (increments a key in a dict), Diff (plain text or inline HTML), Extract List (numbered
-    or bulleted lists from LLM text), Duration (amount and unit to a number of seconds) and Module Style (title colour,
-    icon).'
+    or bulleted lists from LLM text), Duration (amount and unit to a number of seconds) and Module Style (title colour, icon).'
 - path: user-guide/node-editor/reference/nodes/ux.md
   title: UX Nodes
   summary: 'UX element nodes: Build Choice Element (choices, multi_select, timeout_seconds, closable), Build Text Input Element
@@ -983,12 +1003,9 @@
     Includes when not to enable it.
 - path: user-guide/restoring-scenes.md
   title: Restoring Scenes
-  summary: The Timeline built from the scene's changelog deltas, opened from the Save menu, a message's Fork button, a Quick
-    load card menu or a Scene Library save row. Browsing and previewing write nothing and Fork to new save is its only action —
-    the scene being played is never modified — plus Restore Scene from a restore point. Covers chain health and repair — a
-    diverged chain shows a warning that previews and forks may be wrong, and Repair starts a fresh chain from the current state,
-    preserving the old one in a rebased-<date> folder — and what world state a past revision restores (pins, reinforcements and
-    name mappings exactly; snapshots and location from current values).
+  summary: Restoring scenes with the non-destructive Timeline or a configured restore point. Covers previewing and forking
+    changelog revisions, chain-health warnings and repair, reconstruction limits for world state, and resetting to a baseline
+    save without overwriting the current scene or restore-point file.
 - path: user-guide/saving.md
   title: Saving
   summary: How scene saves work - .json files in the scene project directory with an automatic changelog version history.
@@ -996,13 +1013,9 @@
     restore points, and forking.
 - path: user-guide/scenario-tools.md
   title: Scene Tools
-  summary: 'Reference for the tool bar above the input box: the agent activity bar, the quick-settings chips (Auto Save, Auto
-    Progress, Immersive, Playthrough) and the Regenerate, Actor, Director, Narrator, Advance time, World state, Creative tools, Custom
-    Commands, Visualizer and Saving menus. Also covers user-defined shortcuts - custom entries with a label, icon and standing
-    instructions added to the Actor, Director, Narrator and Visualizer menus via Add shortcut, stored in the application
-    configuration, shared as scene tool shortcut templates via Save as template and installed again through the Add from
-    template submenu - and the Custom Commands menu that runs scene command modules (grouped by menu id, with an argument
-    prompt dialog).'
+  summary: 'Reference for the scene toolbar and quick settings: agent activity, auto-save/progress, immersive backdrop, playthrough,
+    regenerate/nuke, actor/director/narrator actions, time passage, tracked world states, character activation and creation,
+    custom commands, visual generation, saving, and reusable action shortcuts.'
 - path: user-guide/scene-browser.md
   title: Home Screen & Scene Library
   summary: Tour of the Home screen - Quick load cards with their Timeline / Remove / Delete menu, the Scene Library tree of
@@ -1011,8 +1024,8 @@
 - path: user-guide/scene-directory.md
   title: Scene Directory Structure
   summary: What lives in a scene's project directory under scenes/ - the .json save files plus assets/ (images and TTS audio),
-    changelog/ (snapshots and deltas powering the Timeline), nodes/ (node editor graphs), templates/, shared-context/
-    and info/.
+    changelog/ (snapshots and deltas powering the Timeline), nodes/ (node editor graphs), templates/, shared-context/ and
+    info/.
 - path: user-guide/scene-state-reset.md
   title: Reset Scene State
   summary: The Reset Scene State dialog for selectively clearing scene internals without touching character or world definitions
@@ -1035,28 +1048,18 @@
 - path: user-guide/templates/index.md
   title: Templates
   summary: 'Overview of the Templates tab and the template types available: Character Attribute, Character Detail, Spices,
-    Writing Style, State Reinforcement, Scene Type, Visual Style, Visual Prompt Finalizer, Agent Persona, Scene Tool
-    Shortcut and Theme. Templates live in groups shared across scenes.'
+    Writing Style, State Reinforcement, Scene Type, Visual Style, Visual Prompt Finalizer, Agent Persona, Scene Tool Shortcut
+    and Theme. Templates live in groups shared across scenes.'
 - path: user-guide/templates/scene-tool-shortcut.md
   title: Scene Tool Shortcuts
-  summary: 'Creating a Scene tool shortcut template that packages a scene tool action with a label, an icon and canned
-    instructions: the Action, Label, Instructions and Icon fields, installing it into the scene tools menu with Install
-    shortcut (duplicates are skipped, templates whose action no longer exists are blocked), and sharing it by passing on
-    the group file in templates/world-state.'
+  summary: 'Creating a Scene tool shortcut template that packages a scene tool action with a label, an icon and canned instructions:
+    the Action, Label, Instructions and Icon fields, installing it into the scene tools menu with Install shortcut (duplicates
+    are skipped, templates whose action no longer exists are blocked), and sharing it by passing on the group file in templates/world-state.'
 - path: user-guide/templates/scene_type.md
   title: Scene Types
   summary: Creating a Scene type template - name, type, description, and the scene type instructions that govern the director's
     actions when that scene type is played, plus Favorite. Warns it is early WIP and consumed by the World Editor's Scene
     Direction section.
-- path: user-guide/templates/themes.md
-  title: Themes
-  summary: 'Theme templates for Talemate''s colors - 51 slots in Surfaces, App, Messages and Chats panels, plus
-    styling, Light/Dark mode and a code editor theme. Picked in Settings -> Appearance -> Theme; this page covers
-    authoring: Preview elements are click-to-edit for color AND styling (italic/bold/show/own color on message and
-    markup elements; derived colors name their source), color panels start collapsed, picker eyedropper grabs
-    on-screen colors, Reset to template takes another theme as start point, locked: true in the group file makes
-    a template read-only and undeletable. Applying reads colors live but copies styling into Appearance settings
-    once. Shared via the group file; node editor keeps its own colors.'
 - path: user-guide/templates/spice.md
   title: Spice Collection
   summary: 'Creating a Spice collection template that injects randomness into attribute and detail generation: description,
@@ -1067,6 +1070,12 @@
   summary: 'Creating a state reinforcement template for automatically tracked character and world states: the question or
     attribute name, description, State Type (All Characters, Player Character, World), Context Attachment Method, and update
     every N turns.'
+- path: user-guide/templates/themes.md
+  title: Themes
+  summary: Theme templates define 51 color slots across Surfaces, App, Messages and Chats, plus message/markup styling, Light/Dark
+    mode and a code-editor palette. Covers authoring with the click-to-edit preview and eyedropper, applying themes (colors
+    read live; styling copied), Reset to template, locked shipped themes, Appearance overrides, group-file sharing, and the
+    node-editor canvas limitation.
 - path: user-guide/templates/visual-finalizer.md
   title: Visual Prompt Finalizer
   summary: Creating a Visual prompt finalizer template - a reusable table of post-processing actions (exact, fuzzy or regex

@@ -177,6 +177,8 @@ start_custom.bat
 
 For Docker deployments, you can configure the frontend port, backend port, and the WebSocket URL at container startup without rebuilding the image.
 
+The commands below use the default CUDA configuration and require an NVIDIA GPU and the NVIDIA Container Toolkit. On a host without an NVIDIA GPU, add `-f docker-compose.cpu.yml` to every command; for example, `TALEMATE_FRONTEND_PORT=9090 docker compose -f docker-compose.cpu.yml up`.
+
 ### Changing the frontend port
 
 Set `TALEMATE_FRONTEND_PORT` before running `docker compose up`:

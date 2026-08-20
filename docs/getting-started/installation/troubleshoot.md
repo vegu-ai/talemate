@@ -8,6 +8,43 @@
 
 ## Docker
 
+### Docker cannot start with the NVIDIA device request
+
+The default configuration requires both an NVIDIA GPU and a working NVIDIA Container Toolkit. If either is missing, Docker reports an error similar to:
+
+```text
+could not select device driver "nvidia" with capabilities: [[gpu]]
+```
+
+On a host without an NVIDIA GPU, start the CPU-only configuration instead:
+
+```bash
+docker compose -f docker-compose.cpu.yml up
+```
+
+If the host has an NVIDIA GPU, confirm `nvidia-smi` works on the host, then install or repair the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). Verify the Toolkit before retrying Talemate:
+
+```bash
+docker run --rm --gpus all ubuntu nvidia-smi
+```
+
+### CUDA is not available in a running container
+
+If the Toolkit probe succeeds and Talemate starts, check the running container:
+
+```bash
+docker compose exec talemate nvidia-smi
+docker compose exec talemate /app/.venv/bin/python -B -c "import torch; print(torch.__version__, torch.version.cuda, torch.cuda.is_available())"
+```
+
+If `nvidia-smi` works inside Talemate but the Python command reports `False`, update the host NVIDIA driver to one compatible with the image's locked CUDA 12.8 build, then recreate the container.
+
+To run without CUDA instead, use:
+
+```bash
+docker compose -f docker-compose.cpu.yml up
+```
+
 ### Docker has created `config.yaml` directory
 
 If you do not copy the example config to `config.yaml` before running `docker compose up` docker will create a `config` directory in the root of the project. This will cause the backend to fail to start.

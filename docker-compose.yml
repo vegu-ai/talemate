@@ -1,22 +1,12 @@
-version: '3.8'
-
 services:
   talemate:
-    image: ghcr.io/vegu-ai/talemate:latest
-    ports:
-      - "${TALEMATE_FRONTEND_PORT:-8082}:${TALEMATE_FRONTEND_PORT:-8082}"
-      - "${TALEMATE_BACKEND_PORT:-5050}:${TALEMATE_BACKEND_PORT:-5050}"
-    volumes:
-      - ./config.yaml:/app/config.yaml
-      - ./secrets:/app/secrets
-      - ./pi:/app/pi
-      - ./scenes:/app/scenes
-      - ./templates:/app/templates
-      - ./chroma:/app/chroma
-      - ./tts:/app/tts
-    environment:
-      - PYTHONUNBUFFERED=1
-      - PYTHONPATH=/app/src:$PYTHONPATH
-      - VITE_TALEMATE_BACKEND_WEBSOCKET_URL=${VITE_TALEMATE_BACKEND_WEBSOCKET_URL:-}
-      - TALEMATE_FRONTEND_PORT=${TALEMATE_FRONTEND_PORT:-8082}
-      - TALEMATE_BACKEND_PORT=${TALEMATE_BACKEND_PORT:-5050}
+    extends:
+      file: docker-compose.cpu.yml
+      service: talemate
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

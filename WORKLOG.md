@@ -1,5 +1,11 @@
 # Worklog
 
+## 2026-08-20 — Docker fixes port for 0.40
+
+- Pinned the Docker image's uv, corepack, and FFmpeg inputs so toolchain drift cannot break later builds.
+- Kept host frontend dependencies and local runtime state out of the Docker build context.
+- Added an image-build guard for torchcodec and shipped the Markdown documentation required by the Help agent.
+
 ## 2026-08-16 — Transactional changelog commits
 
 - Made `InMemoryChangelog.commit()` fail-fast and restore changelog artifacts when a required write fails.

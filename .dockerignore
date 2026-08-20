@@ -1,0 +1,36 @@
+# Build context excludes. Every path the Dockerfile COPYs from the context must
+# stay out of this list: talemate_frontend/, src/, docs/, scenes/, templates/,
+# tts/, chroma*, pyproject.toml, uv.lock, frontend_wsgi.py, config.example.yaml
+# and docker-entrypoint.sh.
+
+.git
+.github
+tests
+
+# docs/ is NOT excluded. The help agent reads TALEMATE_ROOT/docs at runtime, so
+# the backend-build stage copies it and keeps the markdown.
+
+# A host node_modules lands on top of the one the image installed. pnpm then
+# reads the host's own paths out of it, decides the dependencies are stale, and
+# reinstalls mid-build - which aborts when no TTY can confirm the purge.
+**/node_modules
+talemate_frontend/dist
+
+.venv
+talemate_env
+embedded_python
+embedded_node
+**/__pycache__
+**/*.pyc
+*.egg-info
+.pytest_cache
+.ruff_cache
+.coverage
+
+# Runtime state and credentials. docker-compose mounts these as volumes, so an
+# image layer never needs them.
+config.yaml
+secrets
+pi
+logs
+chats

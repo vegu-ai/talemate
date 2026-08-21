@@ -52,6 +52,18 @@ UX_SNAPSHOT = {
     },
     "app_ready": True,
     "waiting_for_input": False,
+    "playthrough_active": False,
+}
+
+# The same view with a replay running: the mode's own section renders and the
+# director console links drop out of the rules and the navigation list.
+UX_SNAPSHOT_PLAYTHROUGH = {
+    **UX_SNAPSHOT,
+    "active_tab": "main",
+    "scene_active": True,
+    "scene_environment": "scene",
+    "app_settings_modal": None,
+    "playthrough_active": True,
 }
 
 READ_DOC_CALL = (
@@ -176,6 +188,26 @@ class TestHelpBaselines:
         baseline_checker(
             capture_all_prompts(help_agent), AGENT, "chat_send__doc_lookup_final_round"
         )
+
+    @pytest.mark.asyncio
+    async def test_chat_send__playthrough_active(
+        self, help_agent, agent_registry, baseline_checker
+    ):
+        """A replay is running - the playthrough section renders and no
+        `talemate://director-console` link is offered anywhere in the prompt."""
+        chat = help_agent.chat_create()
+        help_agent.client.send_prompt = AsyncMock(return_value="Here is your answer.")
+        with patch.object(help_agent, "_chat_has_enough_for_title", return_value=False):
+            await help_agent.chat_send(
+                chat.id,
+                "How do I open the director chat?",
+                ux_snapshot=UX_SNAPSHOT_PLAYTHROUGH,
+            )
+        prompt = capture_prompt(help_agent)
+        # sectioning sentence-cases the heading it renders
+        assert "Playthrough mode is running" in prompt
+        assert "talemate://director-console" not in prompt
+        baseline_checker(prompt, AGENT, "chat_send__playthrough_active")
 
     @pytest.mark.asyncio
     async def test_chat_generate_title(

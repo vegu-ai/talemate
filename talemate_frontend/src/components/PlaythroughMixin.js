@@ -132,6 +132,12 @@ export default {
         },
 
         stopPlaythrough() {
+          // a cursor that is not on anything still resolves to the first
+          // message, so leaving a mode that is not running would record a
+          // position the reader never reached
+          if (!this.playthroughActive) {
+            return;
+          }
           this.rememberPlaythroughPosition();
           this.setPlaythroughActive(false);
         },

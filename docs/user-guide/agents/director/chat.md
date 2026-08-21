@@ -20,6 +20,8 @@ As part of the chat session the director can query for information as well as ma
 
 Once a scene is loaded click the **:material-bullhorn:** director console icon in the top right corner of the screen.
 
+The icon is not there while a [playthrough](../../playthrough.md) is running — that mode replays the scene and adds nothing to it, so the console is put away until you leave it.
+
 ![Director Console](/talemate/img/0.33.0/open-director-console.png)
 
 ![Director Console](/talemate/img/0.33.0/director-console-chat.png)

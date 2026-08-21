@@ -99,22 +99,34 @@ context disconnects it from that context.
 ## What else the mode offers
 
 A playthrough is a walkthrough of a story that is already written, so the
-surfaces that would add to it are put away while it runs: the message input and
-the scene tools are gone, per-message actions (edit, delete, regenerate,
-revisions) are disabled, and the entity actions that ask the narrator for new
-text are hidden.
+surfaces that would add to it are put away while it runs:
+
+- The message input and the scene tools are replaced by the playthrough toolbar.
+- Per-message actions — edit, delete, regenerate, revisions — are disabled, and
+  the entity actions that ask the narrator for new text are hidden.
+- The **:material-bullhorn: Director console** and its chat are gone, along with
+  the activity chip that announces what the director is doing.
+- The **:material-chart-timeline-variant-shimmer: node editor** and the **Mods**
+  tab are gone.
+- The world panel in the sidebar no longer offers to update the world state, or
+  to make one of its characters real.
 
 Everything else keeps working normally — application and agent settings,
-template browsing, the world editor and image generation.
+template browsing, the world editor and image generation. All of it comes back
+when the playthrough ends.
+
+The [Help assistant](agents/help/index.md) knows when a playthrough is running,
+so it explains that the mode has put a surface away rather than walking you
+through opening it.
 
 ## Leaving, and picking up where you left off
 
 Leave with **Exit** or by pressing :material-keyboard-esc: **Escape**. The full
 history comes back, along with the normal tools.
 
-Your position is remembered in the scene — on the way out, and when you fork —
-so starting a playthrough of the same scene again resumes at the message you
-left off on. **Restart** followed by
+Your position is remembered in the scene — on the way out, when you load another
+scene, and when you fork — so starting a playthrough of the same scene again
+resumes at the message you left off on. **Restart** followed by
 **Exit** clears it, and the next playthrough starts at the beginning.
 
 !!! note "Read-only scenes"

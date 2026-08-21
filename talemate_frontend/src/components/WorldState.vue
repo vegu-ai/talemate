@@ -10,7 +10,7 @@
                 </template>
             </v-tooltip>
         </template>
-        <v-tooltip v-else :text="refreshTooltip">
+        <v-tooltip v-else-if="!isPlaythroughActive()" :text="refreshTooltip">
             <template v-slot:activator="{ props }">
                 <v-btn :disabled="busy"  size="x-small" icon="mdi-refresh" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh($event)"></v-btn>
             </template>
@@ -67,7 +67,7 @@
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-if="!characterExists(name)" text="Make this character real, adding it to the scene as an actor.">
+                            <v-tooltip v-if="!characterExists(name) && !isPlaythroughActive()" text="Make this character real, adding it to the scene as an actor.">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(name)" icon="mdi-human-greeting"></v-btn>
 

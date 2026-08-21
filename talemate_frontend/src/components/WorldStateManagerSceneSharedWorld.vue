@@ -192,6 +192,7 @@ export default {
         'getWebsocket',
         'registerMessageHandler',
         'unregisterMessageHandler',
+        'stopPlaythrough',
     ],
     components: {
         WorldStateManagerSceneEpisodes,
@@ -324,6 +325,11 @@ export default {
                 assets: currentScene.assets || null,
                 intent_state: currentScene.story_intent ? { intent: currentScene.story_intent } : null,
             };
+
+            // this replaces the loaded scene, so the reader's playthrough
+            // position has to be recorded while that scene is still the one the
+            // backend holds
+            this.stopPlaythrough();
 
             // Create new scene with scene_initialization parameters
             this.getWebsocket().send(JSON.stringify({

@@ -45,6 +45,7 @@ app_settings_modal:
   tab: settings
 open_drawers:
 - scene
+playthrough_active: false
 scene_active: false
 scene_environment: null
 waiting_for_input: false

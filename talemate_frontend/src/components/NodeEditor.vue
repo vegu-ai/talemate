@@ -231,15 +231,18 @@
                     </v-card>
                 </v-dialog>
 
-                <ConfirmActionPrompt 
-                    ref="confirmExitCreative" 
+                <!-- contained only while the editor is on screen: a playthrough
+                     hides this column, and a dialog contained in a hidden
+                     element would leave the exit action doing nothing -->
+                <ConfirmActionPrompt
+                    ref="confirmExitCreative"
                     action-label="Exit node editor"
                     :description="exitConfirmDescription"
                     confirm-text="Exit"
                     cancel-text="Cancel"
                     icon="mdi-exit-to-app"
                     color="delete"
-                    :contained="true"
+                    :contained="isVisible"
                     :max-width="400"
                     @confirm="exitCreativeMode"
                 />

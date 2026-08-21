@@ -58,7 +58,7 @@
         <v-icon v-else>mdi-arrow-collapse-right</v-icon>
       </v-app-bar-nav-icon>
 
-      <v-app-bar-nav-icon v-if="sceneActive && scene.environment === 'scene'" @click="setEnvCreative(); tab = 'main'" color="highlight6" icon>
+      <v-app-bar-nav-icon v-if="sceneActive && scene.environment === 'scene' && !playthroughActive" @click="setEnvCreative(); tab = 'main'" color="highlight6" icon>
         <v-tooltip activator="parent" location="top">Change to node editor</v-tooltip>
         <v-icon>mdi-chart-timeline-variant-shimmer</v-icon>
       </v-app-bar-nav-icon>
@@ -80,7 +80,7 @@
   
       <v-spacer></v-spacer>
 
-      <DirectorConsoleWidget :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
+      <DirectorConsoleWidget v-if="!playthroughActive" :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
 
       <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" v-if="agentStatus.tts?.available"/>
 
@@ -517,6 +517,7 @@ import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from
 import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 import AutocompleteMixin from './AutocompleteMixin.js';
 import PlaythroughMixin from './PlaythroughMixin.js';
+import { playthroughBlocksNavigation } from '../utils/playthrough.js';
 import { SETTINGS_PAGES } from '../utils/appSettingsRegistry.js';
 import { createConfigSaveQueue } from '../utils/configSaveQueue.js';
 import { applyAppConfigTheme } from '../utils/appTheme.js';
@@ -602,7 +603,7 @@ export default {
         },
         {
           title: () => { return 'Mods' },
-          condition: () => { return this.sceneActive },
+          condition: () => { return this.sceneActive && !this.playthroughActive },
           icon: () => { return 'mdi-package-variant' },
           click: () => {
             this.$nextTick(() => {
@@ -750,6 +751,13 @@ export default {
         this.helpDrawer = false;
       }
     },
+    playthroughActive(active) {
+      // the console's own toggle goes away with the mode, so a drawer left open
+      // would have nothing to close it
+      if(active) {
+        this.directorConsoleDrawer = false;
+      }
+    },
     availableTabs(tabs) {
       // check if tab still exists
       // in tabs
@@ -880,7 +888,11 @@ export default {
       return { '--scene-backdrop-image': `url(${this.sceneBackdropSrc})` };
     },
     creativeMode() {
-      return this.tab === 'main' && this.sceneActive && this.scene.environment === 'creative';
+      // a replay is read, not authored: the graph column collapses and the
+      // scene column takes the full width, whichever environment the
+      // playthrough was started from
+      return this.tab === 'main' && this.sceneActive
+        && this.scene.environment === 'creative' && !this.playthroughActive;
     },
     leftDrawerWidth() {
       // Wider drawer for the prompts tab's denser listing
@@ -1249,6 +1261,9 @@ export default {
         if (data.id === 'scene.loaded') {
           this.loading = false;
           this.sceneActive = true;
+          // a replay belongs to the scene it was started on: whatever the
+          // sender did or did not do, the mode cannot outlive the scene change
+          this.setPlaythroughActive(false);
           this.actAs = null;
           this.showSceneView = true;
           this.mainTabScrollPosition = null; // Reset scroll position memory for new scene
@@ -1650,6 +1665,8 @@ export default {
         this.drawer = true;
     },
     toggleNavigation(navigation, open) {
+      if (playthroughBlocksNavigation(navigation, this.playthroughActive))
+        return;
       if (navigation == "game")
         this.sceneDrawer = open || !this.sceneDrawer;
       else if (navigation == "settings")
@@ -1673,6 +1690,7 @@ export default {
         ],
         scene_active: this.sceneActive,
         scene_environment: this.sceneActive ? this.scene?.environment : null,
+        playthrough_active: this.playthroughActive,
         // client and agent configuration live on the settings tab — the
         // settings snapshot reports which page (and which client / agent on
         // it) the user is looking at
@@ -1947,7 +1965,12 @@ export default {
     sceneStartedLoading() {
       this.loading = true;
       this.sceneActive = false;
-      this.setPlaythroughActive(false);
+      // Requirement on every sender of `load_scene`: leave the playthrough
+      // before you send, from here or by calling the provided stopPlaythrough.
+      // The position can only be written while the backend still holds the
+      // scene it belongs to; a sender that forgets loses it, and `scene.loaded`
+      // then ends the mode without one.
+      this.stopPlaythrough();
       this.mainTabScrollPosition = null; // Reset scroll position memory when starting to load a new scene
 
       if(this.$refs.sceneMessages)

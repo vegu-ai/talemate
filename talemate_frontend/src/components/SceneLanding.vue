@@ -156,6 +156,7 @@ export default {
 
         createNewScene(payload) {
             this.loading = true;
+            this.$emit("loading", true);
             this.pendingAssistWithSetup = payload.assistWithSetup;
             this.getWebsocket().send(JSON.stringify({
                 type: 'load_scene',

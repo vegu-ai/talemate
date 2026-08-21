@@ -24,6 +24,21 @@ export const SPOKEN_MESSAGE_TYPES = ['character', 'narrator', 'context_investiga
  */
 export const FORKABLE_MESSAGE_TYPES = ['character', 'narrator'];
 
+/**
+ * Drawers the mode puts away, by the name `toggleNavigation` knows them under.
+ * The director console acts on the scene, which a replay does not.
+ */
+const HIDDEN_DRAWERS = ['directorConsole'];
+
+/**
+ * Whether a replay refuses to open a drawer. The button is gone while the mode
+ * runs, but a `talemate://` link the help agent wrote earlier still points at
+ * one.
+ */
+export function playthroughBlocksNavigation(navigation, playthroughActive) {
+    return !!playthroughActive && HIDDEN_DRAWERS.includes(navigation);
+}
+
 /** Messages the reveal cursor exposes; `null` means "not in playthrough". */
 export function visibleMessages(messages, revealCount) {
     if (revealCount === null || revealCount === undefined) {

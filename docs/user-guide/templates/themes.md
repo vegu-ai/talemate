@@ -154,6 +154,24 @@ The **Message appearance** panel is the table view of the same styling the [prev
 
 These are the same settings as on the [Appearance settings](/talemate/user-guide/app-settings/appearance/#messages) page — a theme carries a set of them so it can be handed out complete.
 
+## Asking the help chat for a theme
+
+The [help agent](/talemate/user-guide/agents/help/) can build and change themes for you. Ask it for what you want — "create a solarized dark theme", "make the narrator text a bit greener", "copy Talemate Dark into my own group and warm the background up" — and it writes a real theme template that shows up in the Templates tab and on the Appearance → Theme page like any other.
+
+What it does with such a request:
+
+- It creates the theme in a template group you name. An unknown name creates the group; if you have no preference it uses one called **My Themes**. The shipped **Themes** group is left alone — it holds Talemate's own themes.
+- A new theme starts as a complete copy of another one — the theme you are running unless you name a different one — and only the colors you asked about are changed. There are no half-filled themes.
+- It can change the colors, the message styling, the mode and the code editor theme of a theme you own, and it can apply a theme for you.
+- Shipped themes are refused, with an offer to copy the theme into a group of your own instead.
+- It cannot delete a theme. Deleting stays in the Templates tab, where you select the theme and click **Remove template**.
+- It works from numbers rather than from looking: it knows what each slot paints, roughly what color it holds, and the WCAG contrast of that color against the worst of the theme's own fills that part of the theme is drawn on — with the slots whose real surface it cannot know reported as unmeasured rather than guessed. It names what falls under the reference after every change — see [How it judges colors](/talemate/user-guide/agents/help/#how-it-judges-colors).
+
+!!! note "Unsaved edits in the Templates tab"
+    While the Templates tab holds an unsaved theme edit — a color picker still open, a notes field you have not left — the help agent refuses to write a theme and asks you to let that edit save first. The tab saves the whole template it is on, so its save would push your copy back over whatever the agent had written.
+
+    The refusal is decided from what the tab reported when you sent the message, so a write can still land while you are typing. If it does, the editor shows a warning above the form saying the template was changed elsewhere — your unsaved edits win when they save, so redo the change you asked for if you still want it.
+
 ## Applying a theme
 
 The **:material-palette-swatch: Apply theme** button makes the theme the active one. The template has to be created first — for a new template, click **Create template**.

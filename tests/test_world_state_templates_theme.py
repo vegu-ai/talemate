@@ -29,6 +29,7 @@ from talemate.config.schema import Config, SceneAppearance
 from talemate.emit.signals import handlers as emit_handlers
 from talemate.server.websocket_server import WebsocketHandler
 from talemate.server.world_state_manager import WorldStateManagerPlugin
+from talemate.util.colors import contrast_ratio
 from talemate.world_state.manager import (
     THEME_APPEARANCE_MAP,
     WorldStateManager,
@@ -470,19 +471,6 @@ class TestThemeColorValidation:
 # ---------------------------------------------------------------------------
 # shipped group
 # ---------------------------------------------------------------------------
-
-
-def _relative_luminance(color: str) -> float:
-    channels = [int(color[i : i + 2], 16) / 255 for i in (1, 3, 5)]
-    linear = [
-        c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels
-    ]
-    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
-
-
-def contrast_ratio(a: str, b: str) -> float:
-    luminances = sorted((_relative_luminance(a), _relative_luminance(b)))
-    return (luminances[1] + 0.05) / (luminances[0] + 0.05)
 
 
 class TestShippedThemeContrast:

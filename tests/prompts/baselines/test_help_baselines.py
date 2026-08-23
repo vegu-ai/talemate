@@ -50,6 +50,12 @@ UX_SNAPSHOT = {
         "agent": "editor",
         "mode": "global",
     },
+    "templates_view": {
+        "tab": "templates",
+        "dirty": False,
+        "selected": None,
+        "template_type": None,
+    },
     "app_ready": True,
     "waiting_for_input": False,
     "playthrough_active": False,

@@ -18,6 +18,7 @@
                         label="Group name" 
                         :rules="[v => !!v || 'Name is required', v => validateGroupName(v)]"
                         required
+                        @update:model-value="groupDirty = true"
                         @blur="saveTemplateGroup"
                         hint="Invalid characters: &lt; &gt; : / \\ | ? *" 
                         >
@@ -27,6 +28,7 @@
                         <v-text-field 
                         v-model="group.author" 
                         label="Author" 
+                        @update:model-value="groupDirty = true"
                         @blur="saveTemplateGroup"
                         :rules="[v => !!v || 'Author is required']"
                         required
@@ -42,6 +44,7 @@
                         <v-textarea 
                         v-model="group.description"
                         label="Description"
+                        @update:model-value="groupDirty = true"
                         @blur="saveTemplateGroup"
                         hint="A short description of what this group is for."
                         auto-grow
@@ -91,6 +94,9 @@
             </v-chip>
         </v-card-title>
         <v-card-text>
+            <v-alert v-if="externalChange" density="compact" variant="tonal" color="warning" icon="mdi-alert-circle-outline" class="mb-3">
+                This template was changed elsewhere - by the help chat or another window - while you have unsaved edits here. Your edits overwrite that change when they save.
+            </v-alert>
             <v-form ref="form" v-model="formValid">
                 <div v-if="!template.uid">
                     <v-row>
@@ -124,6 +130,7 @@
                 <!-- State Reinforcement Template -->
                 <div v-if="template.template_type === 'state_reinforcement'">
                     <TemplateStateReinforcement 
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -133,6 +140,7 @@
                 <!-- Character Attribute Template -->
                 <div v-else-if="template.template_type === 'character_attribute'">
                     <TemplateCharacterAttribute 
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -141,6 +149,7 @@
                 <!-- Character Detail Template -->
                 <div v-else-if="template.template_type === 'character_detail'">
                     <TemplateCharacterDetail 
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -149,6 +158,7 @@
                 <!-- Spice Collection Template -->
                 <div v-else-if="template.template_type === 'spices'">
                     <TemplateSpices
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         :templates="templates"
                         :scene-active="sceneActive"
@@ -159,6 +169,7 @@
                 <!-- Writing Style Template -->
                 <div v-else-if="template.template_type === 'writing_style'">
                     <TemplateWritingStyle
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         :scene-active="sceneActive"
                         @update="(template) => applyAndSaveTemplate(template)"
@@ -168,6 +179,7 @@
                 <!-- Visual Style Template -->
                 <div v-else-if="template.template_type === 'visual_style'">
                     <TemplateVisualStyle
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -176,6 +188,7 @@
                 <!-- Visual Prompt Finalizer Template -->
                 <div v-else-if="template.template_type === 'visual_finalizer'">
                     <TemplateVisualFinalizer
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -184,6 +197,7 @@
                 <!-- Agent Persona Template -->
                 <div v-else-if="template.template_type === 'agent_persona'">
                     <TemplateAgentPersona 
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -192,6 +206,7 @@
                 <!-- Scene Type Template -->
                 <div v-else-if="template.template_type === 'scene_type'">
                     <TemplateSceneType
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -200,6 +215,7 @@
                 <!-- Scene Tool Shortcut Template -->
                 <div v-else-if="template.template_type === 'scene_tool_shortcut'">
                     <TemplateSceneToolShortcut
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -208,6 +224,7 @@
                 <!-- Theme Template -->
                 <div v-else-if="template.template_type === 'theme'">
                     <TemplateTheme
+                        ref="templateEditor"
                         :immutableTemplate="template"
                         :themeTemplates="themeTemplateChoices"
                         @update="(template) => applyAndSaveTemplate(template)"
@@ -332,15 +349,8 @@ export default {
     ],
     watch: {
         immutableTemplates: {
-            handler: function (val) {
-                this.templates = val ? {...val} : null;
-
-                if(this.deferredSelect) {
-                    let index = this.deferredSelect;
-                    this.deferredSelect = null;
-                    this.selectTemplate(index);
-                }
-                
+            handler(val) {
+                this.onTemplatesPushed(val);
             },
             immediate: true
         }
@@ -395,6 +405,9 @@ export default {
             groupFormValid: false,
             formValid: false,
             dirty: false,
+            groupDirty: false,
+            externalChange: false,
+            adoptedSnapshot: null,
             templates: null,
             templateTypes: [
                 { "title": 'State reinforcement', "value": 'state_reinforcement' },
@@ -437,6 +450,89 @@ export default {
         'toLabel',
     ],
     methods: {
+        onTemplatesPushed(val) {
+            this.templates = val ? {...val} : null;
+
+            if(this.deferredSelect) {
+                let index = this.deferredSelect;
+                this.deferredSelect = null;
+                this.selectTemplate(index);
+                return;
+            }
+
+            this.adoptSelection();
+        },
+
+        // the editor keeps the template object it was handed on selection, so a
+        // push has to hand it the fresh one - otherwise its next save writes the
+        // pre-push values back over whatever wrote them (the help chat, another
+        // window). Unsaved edits here belong to the user: those are flagged
+        // rather than discarded.
+        adoptSelection() {
+            const groups = this.templates?.managed?.groups || [];
+            const group = (this.group && this.group.uid)
+                ? groups.find((candidate) => candidate.uid === this.group.uid)
+                : null;
+
+            if (!group) {
+                return;
+            }
+
+            const incoming = (this.template && this.template.uid)
+                ? (group.templates || {})[this.template.uid] || null
+                : null;
+
+            if (this.editorDirty()) {
+                // the push echoing this view's own save carries what it just
+                // wrote - only a differing payload came from somewhere else
+                if (incoming && JSON.stringify(incoming) !== this.adoptedSnapshot) {
+                    this.externalChange = true;
+                }
+            } else if (incoming) {
+                this.template = incoming;
+                this.rememberAdopted();
+            }
+
+            // the group form binds straight onto this object and saves on blur,
+            // so half-typed text lives here and nowhere else
+            if (!this.groupDirty) {
+                this.group = group;
+            }
+        },
+
+        // baseline for telling a push that echoes this view's own save from one
+        // carrying somebody else's write
+        rememberAdopted() {
+            this.adoptedSnapshot = this.template ? JSON.stringify(this.template) : null;
+            this.externalChange = false;
+        },
+
+        // every template editor keeps its own copy and its own pending edit -
+        // keystrokes since the last blur, an open color picker - and saves
+        // through this component. One ref covers them all: only the editor for
+        // the selected template type is rendered.
+        editorDirty() {
+            const editor = this.$refs.templateEditor;
+            return this.dirty || !!(editor && editor.dirty);
+        },
+
+        uxSnapshot() {
+            // what the templates tab shows, for the help agent's UX snapshot.
+            // `dirty` gates the help agent's theme writes backend-side: the tab
+            // saves the whole template it is on, so an unsaved edit here would
+            // push the pre-change template back over an agent write.
+            //
+            // Reported off-screen too - an edit survives leaving the tab, and so
+            // must the refusal it gates. The theme editor keeps its own dirty
+            // flag (an open color picker, an unblurred notes field), which is
+            // where a pending theme edit lives.
+            return {
+                tab: 'templates',
+                dirty: this.editorDirty(),
+                selected: (this.selected && this.selected[0]) || null,
+                template_type: (this.template && this.template.template_type) || null,
+            };
+        },
         iconForTemplate,
         colorForTemplate,
         onTemplateTypeChange() {
@@ -475,6 +571,8 @@ export default {
                 this.template = null;
                 this.selectedGroups = [];
                 this.selected = null;
+                this.dirty = false;
+                this.groupDirty = false;
                 return;
             } else if (index === '$CREATE_GROUP') {
                 this.group = {
@@ -483,6 +581,7 @@ export default {
                     description: '',
                     templates: {},
                 }
+                this.groupDirty = false;
                 this.template = null;
                 this.selectedGroups = [];
                 this.selected = null;
@@ -504,6 +603,7 @@ export default {
                 return;
             }
             this.group = group;
+            this.groupDirty = false;
 
             // Update selected groups
             const groupIndex = safeGroups.findIndex(g => g.uid === group_id);
@@ -532,11 +632,13 @@ export default {
             } else if (template_id && (!this.template || this.template.uid !== template_id)) {
                 template = group.templates[template_id] || null;
                 this.selected = [`${group_id}__${template_id}`];
+                this.dirty = false;
             } else if (template_id && this.template && this.template.uid === template_id) {
                 template = this.template;
             }
 
             this.template = template;
+            this.rememberAdopted();
             
             // Emit update for parent component to sync with menu
             if(template_id) {
@@ -615,6 +717,9 @@ export default {
             this.$refs.form.validate()
 
             if(!this.formValid) {
+                // the editor cleared its own flag before emitting, so nothing
+                // else records that the typed value never reached the backend
+                this.dirty = true;
                 return;
             }
 
@@ -623,6 +728,10 @@ export default {
                 action: 'save_template',
                 template: this.template
             }));
+            // what was just sent is what the echo will carry - without this the
+            // baseline stays on the pre-save values and the view's own echo
+            // reads as somebody else's write
+            this.rememberAdopted();
         },
 
         saveTemplateGroup(saveNew) {
@@ -688,6 +797,7 @@ export default {
                 this.requestTemplates();
             } else if (message.action == 'template_group_saved') {
                 this.dirty = false;
+                this.groupDirty = false;
                 if(this.group && !this.group.uid) {
                     this.group = message.data.group;
                 }

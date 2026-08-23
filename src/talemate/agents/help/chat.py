@@ -18,6 +18,7 @@ from talemate.game.focal.util import strip_call_blocks
 
 from . import docs
 from . import settings
+from . import themes
 from .schema import (
     HelpChat,
     HelpChatDocResultMessage,
@@ -41,6 +42,7 @@ OnUpdate = Callable[
     [str, list[HelpChatMessage | HelpChatDocResultMessage]], Awaitable[None]
 ]
 OnDone = Callable[[str], Awaitable[None]]
+OnTemplatesChanged = Callable[[str], Awaitable[None]]
 OnTitleGenerated = Callable[[str, str], Awaitable[None]]
 
 async_signals.register(
@@ -82,7 +84,7 @@ class HelpChatMixin:
                 "doc_lookup_iterations": AgentActionConfig(
                     type="number",
                     label="Tool call rounds",
-                    description="How many rounds of tool calls (documentation lookups, settings reads and updates) the help agent may perform before it must answer.",
+                    description="How many rounds of tool calls (documentation lookups, settings and theme reads and updates) the help agent may perform before it must answer.",
                     value=3,
                     step=1,
                     min=1,
@@ -395,6 +397,124 @@ class HelpChatMixin:
             ),
         ]
 
+    def _chat_theme_callbacks(
+        self,
+        ux_snapshot: dict | None = None,
+        on_templates_changed: OnTemplatesChanged | None = None,
+    ) -> list[focal.Callback]:
+        snapshot = ux_snapshot or {}
+        # the Templates tab saves the whole template it is on; applying a theme
+        # writes the appearance settings, which the settings view saves whole
+        templates_dirty = bool((snapshot.get("templates_view") or {}).get("dirty"))
+        app_settings_dirty = bool(
+            (snapshot.get("app_settings_modal") or {}).get("dirty")
+        )
+
+        async def _notify(result):
+            if on_templates_changed and isinstance(result, dict):
+                await on_templates_changed(result["theme_id"])
+            return result
+
+        async def list_themes():
+            return themes.list_themes(self.scene)
+
+        async def read_theme(theme_id: str):
+            return themes.read_theme(self.scene, theme_id)
+
+        async def create_theme(
+            name: str,
+            group: str,
+            base_theme: str | None = None,
+            colors: dict | None = None,
+            appearance: dict | None = None,
+            dark: bool | None = None,
+            code_editor: str | None = None,
+        ):
+            return await _notify(
+                await themes.create_theme(
+                    self.scene,
+                    name,
+                    group,
+                    base_theme=base_theme,
+                    colors=colors,
+                    appearance=appearance,
+                    dark=dark,
+                    code_editor=code_editor,
+                    templates_dirty=templates_dirty,
+                )
+            )
+
+        async def update_theme(
+            theme_id: str,
+            colors: dict | None = None,
+            appearance: dict | None = None,
+            dark: bool | None = None,
+            code_editor: str | None = None,
+        ):
+            return await _notify(
+                await themes.update_theme(
+                    self.scene,
+                    theme_id,
+                    colors=colors,
+                    appearance=appearance,
+                    dark=dark,
+                    code_editor=code_editor,
+                    templates_dirty=templates_dirty,
+                )
+            )
+
+        async def apply_theme(theme_id: str):
+            return await themes.apply_theme(
+                self.scene,
+                theme_id,
+                templates_dirty=templates_dirty,
+                app_settings_dirty=app_settings_dirty,
+            )
+
+        return [
+            focal.Callback(
+                name="list_themes",
+                arguments=[],
+                fn=list_themes,
+                concurrent=True,
+            ),
+            focal.Callback(
+                name="read_theme",
+                arguments=[focal.Argument(name="theme_id", type="str")],
+                fn=read_theme,
+                concurrent=True,
+            ),
+            focal.Callback(
+                name="create_theme",
+                arguments=[
+                    focal.Argument(name="name", type="str"),
+                    focal.Argument(name="group", type="str"),
+                    focal.Argument(name="base_theme", type="str"),
+                    focal.Argument(name="colors", type="dict"),
+                    focal.Argument(name="appearance", type="dict"),
+                    focal.Argument(name="dark", type="bool"),
+                    focal.Argument(name="code_editor", type="str"),
+                ],
+                fn=create_theme,
+            ),
+            focal.Callback(
+                name="update_theme",
+                arguments=[
+                    focal.Argument(name="theme_id", type="str"),
+                    focal.Argument(name="colors", type="dict"),
+                    focal.Argument(name="appearance", type="dict"),
+                    focal.Argument(name="dark", type="bool"),
+                    focal.Argument(name="code_editor", type="str"),
+                ],
+                fn=update_theme,
+            ),
+            focal.Callback(
+                name="apply_theme",
+                arguments=[focal.Argument(name="theme_id", type="str")],
+                fn=apply_theme,
+            ),
+        ]
+
     # === Generation ===
 
     async def chat_generate_next(
@@ -404,6 +524,7 @@ class HelpChatMixin:
         on_update: OnUpdate | None = None,
         on_done: OnDone | None = None,
         on_title_generated: OnTitleGenerated | None = None,
+        on_templates_changed: OnTemplatesChanged | None = None,
     ) -> HelpChat | None:
         """
         Generate the next help response. Documentation lookups append their
@@ -429,7 +550,8 @@ class HelpChatMixin:
                 focal_handler = focal.Focal(
                     self.client,
                     callbacks=self._chat_doc_callbacks()
-                    + self._chat_settings_callbacks(ux_snapshot),
+                    + self._chat_settings_callbacks(ux_snapshot)
+                    + self._chat_theme_callbacks(ux_snapshot, on_templates_changed),
                     max_calls=self.chat_max_doc_lookups,
                     max_concurrent=self.chat_max_doc_lookups,
                     retries=0,
@@ -441,6 +563,7 @@ class HelpChatMixin:
                     docs_available=docs.docs_available(),
                     docs_site_url=docs.DOCS_SITE_URL,
                     agent_types=sorted(instance.AGENTS.keys()),
+                    theme_slots=themes.slot_reference(),
                     ux_snapshot=ux_snapshot,
                     scene_context=scene_context,
                     custom_instructions=self.chat_custom_instructions,
@@ -516,6 +639,7 @@ class HelpChatMixin:
         on_update: OnUpdate | None = None,
         on_done: OnDone | None = None,
         on_title_generated: OnTitleGenerated | None = None,
+        on_templates_changed: OnTemplatesChanged | None = None,
     ) -> HelpChat | None:
         """Append a user message and generate a help response."""
         await self.chat_append_message(
@@ -527,6 +651,7 @@ class HelpChatMixin:
             on_update=on_update,
             on_done=on_done,
             on_title_generated=on_title_generated,
+            on_templates_changed=on_templates_changed,
         )
 
     @set_processing
@@ -537,6 +662,7 @@ class HelpChatMixin:
         on_update: OnUpdate | None = None,
         on_done: OnDone | None = None,
         on_title_generated: OnTitleGenerated | None = None,
+        on_templates_changed: OnTemplatesChanged | None = None,
     ) -> HelpChat | None:
         """Remove the most recent help text message and generate a new one."""
         chat = self.chat_get(chat_id)
@@ -558,6 +684,7 @@ class HelpChatMixin:
             on_update=on_update,
             on_done=on_done,
             on_title_generated=on_title_generated,
+            on_templates_changed=on_templates_changed,
         )
 
     # === Title generation ===

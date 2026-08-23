@@ -220,6 +220,26 @@ class SuggestionPayload(pydantic.BaseModel):
     proposal_uid: str | None = None
 
 
+async def templates_message(world_state_manager: WorldStateManager) -> dict:
+    """The `templates` push, built the same way `handle_get_templates` builds it.
+
+    The frontend keeps its whole template state from this one payload, so a
+    write that reaches it any other way (the help agent's theme tools) has to
+    send the same shape.
+    """
+
+    templates = await world_state_manager.get_templates()
+
+    return {
+        "type": "world_state_manager",
+        "action": "templates",
+        "data": {
+            "by_type": templates.model_dump()["templates"],
+            "managed": world_state_manager.template_collection.model_dump(),
+        },
+    }
+
+
 class WorldStateManagerPlugin(
     SceneIntentMixin,
     HistoryMixin,
@@ -309,16 +329,8 @@ class WorldStateManagerPlugin(
         )
 
     async def handle_get_templates(self, data):
-        templates = await self.world_state_manager.get_templates()
         self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": "templates",
-                "data": {
-                    "by_type": templates.model_dump()["templates"],
-                    "managed": self.world_state_manager.template_collection.model_dump(),
-                },
-            }
+            await templates_message(self.world_state_manager)
         )
 
     async def handle_update_character_color(self, data):

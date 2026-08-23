@@ -2,6 +2,7 @@ import pydantic
 import structlog
 
 import talemate.util as util
+from talemate.config import get_config
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
 
@@ -113,7 +114,31 @@ class HelpWebsocketHandler(Plugin):
             except Exception as e:
                 log.error("help.chat.websocket.on_title_generated.error", error=e)
 
-        return _on_update, _on_done, _on_title_generated
+        async def _on_templates_changed(theme_id: str):
+            """Push what the agent's theme write changed.
+
+            The template list is per-connection state that only a `templates`
+            payload refreshes. Writing the ACTIVE theme changes what the app is
+            painted with as well, and the colors ride on `app_config` - the same
+            two pushes `handle_save_template` makes for a save from the
+            Templates tab.
+            """
+            # imported here: both modules import `talemate` itself, which is
+            # still initializing while the agent package loads
+            from talemate.server.config import app_config_message
+            from talemate.server.world_state_manager import templates_message
+
+            try:
+                self.websocket_handler.queue_put(
+                    await templates_message(self.scene.world_state_manager)
+                )
+                config = get_config()
+                if config.appearance.theme == theme_id:
+                    self.websocket_handler.queue_put(app_config_message(config))
+            except Exception as e:
+                log.error("help.chat.websocket.on_templates_changed.error", error=e)
+
+        return _on_update, _on_done, _on_title_generated, _on_templates_changed
 
     def _make_error_handler(self, chat_id: str):
         async def _on_error(exc):
@@ -169,7 +194,12 @@ class HelpWebsocketHandler(Plugin):
         payload = ChatSendPayload(**data)
         agent = self.help_agent
 
-        _on_update, _on_done, _on_title_generated = self._make_generation_callbacks()
+        (
+            _on_update,
+            _on_done,
+            _on_title_generated,
+            _on_templates_changed,
+        ) = self._make_generation_callbacks()
 
         task = await agent.run_tracked_task(
             f"help_chat_{payload.chat_id}",
@@ -180,6 +210,7 @@ class HelpWebsocketHandler(Plugin):
                 on_update=_on_update,
                 on_done=_on_done,
                 on_title_generated=_on_title_generated,
+                on_templates_changed=_on_templates_changed,
             ),
             background=True,
             error_handler=self._make_error_handler(payload.chat_id),
@@ -191,7 +222,12 @@ class HelpWebsocketHandler(Plugin):
         payload = ChatRegeneratePayload(**data)
         agent = self.help_agent
 
-        _on_update, _on_done, _on_title_generated = self._make_generation_callbacks()
+        (
+            _on_update,
+            _on_done,
+            _on_title_generated,
+            _on_templates_changed,
+        ) = self._make_generation_callbacks()
 
         task = await agent.run_tracked_task(
             f"help_chat_{payload.chat_id}",
@@ -201,6 +237,7 @@ class HelpWebsocketHandler(Plugin):
                 on_update=_on_update,
                 on_done=_on_done,
                 on_title_generated=_on_title_generated,
+                on_templates_changed=_on_templates_changed,
             ),
             background=True,
             error_handler=self._make_error_handler(payload.chat_id),

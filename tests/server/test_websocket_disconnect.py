@@ -56,6 +56,7 @@ class _ReleaseHandler:
     """
 
     init_scene = WebsocketHandler.init_scene
+    bind_agents = WebsocketHandler.bind_agents
     release_scene = WebsocketHandler.release_scene
     load_scene = WebsocketHandler.load_scene
     _stop_scene_test_module = WebsocketHandler._stop_scene_test_module
@@ -232,6 +233,23 @@ def test_a_failing_batching_cleanup_cannot_strand_the_plugin_receivers(
 
     assert plugin.on_app_config_change_followup not in follow.receivers
     assert agent.scene is real_handler.scene
+
+
+def test_connect_binds_the_agents_to_the_connections_scene(
+    wired, monkeypatch, config_signals
+):
+    """A scene reaches the agents on a load or a release only, which leaves the
+    first connection of a process without one - and every scene-free flow with
+    nothing to read the world state from."""
+    handler, scene, agent, memory = wired
+    agent.scene = None
+
+    real_handler = _bare_handler(scene, {}, monkeypatch)
+    real_handler.connect()
+    try:
+        assert agent.scene is scene
+    finally:
+        real_handler.disconnect()
 
 
 def test_disconnect_removes_the_config_changed_receiver(

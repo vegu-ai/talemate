@@ -314,6 +314,10 @@ export default {
             this.save();
         },
         startEdit(index) {
+            // an open row edit writes back by index - a push that rebuilds the
+            // array under it would land the write on a different phrase, so the
+            // parent must not adopt one while a row is open
+            this.dirty = true;
             this.editIndex = index;
             this.editPhrase = {
                 phrase: this.template.phrases[index].phrase,
@@ -340,6 +344,7 @@ export default {
         },
         cancelEdit() {
             this.editIndex = -1;
+            this.dirty = false;
         },
         onGenerateInstructions(content) {
             this.template.instructions = content;

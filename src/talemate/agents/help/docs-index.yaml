@@ -142,13 +142,14 @@
 - path: user-guide/agents/help/index.md
   title: Overview
   summary: Describes the always-available Help chat, grounded documentation lookup, scene/UI awareness, persistent multi-turn
-    chats, and background operation. Defines which application and agent settings it can inspect or change, safeguards around
-    secrets and unsaved edits, and scene limitations.
+    chats, and background operation. Defines which application and agent settings it can inspect or change, how it creates,
+    edits and applies theme templates and judges their colors by slot usage, color name and WCAG contrast, safeguards
+    around secrets and unsaved edits, and scene limitations.
 - path: user-guide/agents/help/settings.md
   title: Settings
   summary: Reference for configuring Help agent response length, maximum tool-call rounds, calls allowed per round, and custom
-    instructions. Notes that read-only calls can run concurrently when the assigned client supports it, while settings mutations
-    remain sequential.
+    instructions. Notes that read-only calls can run concurrently when the assigned client supports it, while settings and theme
+    changes always run one at a time.
 - path: user-guide/agents/index.md
   title: Overview
   summary: Provides a compact catalog of Talemate's Conversation, Creator, Director, Editor, Help, Memory, Narrator, Summarizer,
@@ -1074,8 +1075,8 @@
   title: Themes
   summary: Theme templates define 51 color slots across Surfaces, App, Messages and Chats, plus message/markup styling, Light/Dark
     mode and a code-editor palette. Covers authoring with the click-to-edit preview and eyedropper, applying themes (colors
-    read live; styling copied), Reset to template, locked shipped themes, Appearance overrides, group-file sharing, and the
-    node-editor canvas limitation.
+    read live; styling copied), asking the help chat to create or change a theme, Reset to template, locked shipped themes,
+    Appearance overrides, group-file sharing, and the node-editor canvas limitation.
 - path: user-guide/templates/visual-finalizer.md
   title: Visual Prompt Finalizer
   summary: Creating a Visual prompt finalizer template - a reusable table of post-processing actions (exact, fuzzy or regex

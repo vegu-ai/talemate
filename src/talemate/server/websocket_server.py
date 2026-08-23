@@ -150,13 +150,22 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
 
     def connect(self):
         super().connect()
+        self.bind_agents(self.scene)
         async_signals.get("config.changed").connect(self.on_config_changed)
 
     def init_scene(self):
-        # Setup scene
         scene = Scene()
+        self.bind_agents(scene)
+        return scene
 
-        # Init helper agents
+    def bind_agents(self, scene: Scene):
+        """Point the global agents at `scene`.
+
+        A scene is otherwise only handed to them when one is loaded or
+        released, which leaves them without one until the first scene load of
+        the process - and scene-free flows (the help chat's template tools)
+        have nothing to read the world state templates from.
+        """
         for agent_typ in instance.agent_types():
             agent = instance.get_agent(agent_typ)
             agent.connect(scene)
@@ -164,8 +173,6 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             if agent_typ == "memory":
                 continue
             log.debug("init agent", agent_typ=agent_typ)
-
-        return scene
 
     def release_scene(self) -> Scene:
         """Tear down the current scene and detach it from the global agents.

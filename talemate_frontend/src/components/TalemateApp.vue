@@ -1695,6 +1695,9 @@ export default {
         // settings snapshot reports which page (and which client / agent on
         // it) the user is looking at
         app_settings_modal: this.$refs.appSettings?.uxSnapshot() || null,
+        // themes are edited on the templates tab — the help agent's theme
+        // writes are gated on its unsaved edits
+        templates_view: this.$refs.templates?.uxSnapshot() || null,
         app_ready: this.ready,
         waiting_for_input: this.waitingForInput,
       };

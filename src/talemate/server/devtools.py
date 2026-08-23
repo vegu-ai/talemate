@@ -3,11 +3,16 @@ from typing import Any, Literal
 
 import pydantic
 import structlog
+from talemate.agents.base import suppress_agent_busy_status
 from talemate.client.base import ClientBase
 from talemate.emit import emit
 from talemate.instance import get_client
 from talemate.path import LOGS_DIR
-from talemate.scene.schema import SceneState
+from talemate.scene.schema import (
+    GameStatePathSettings,
+    SceneState,
+    prune_game_state_path_settings,
+)
 from talemate.scene.state_editor import SceneStateEditor
 from talemate.server.websocket_plugin import Plugin
 from talemate.util.path import get_path_parent, split_state_path
@@ -43,12 +48,14 @@ class GameStatePathTargetPayload(pydantic.BaseModel):
     path: str
     target: Literal["debug", "knob"]
     enabled: bool
-    label: str | None = None
+    settings: GameStatePathSettings | None = None
 
 
-class GameStatePathLabelPayload(pydantic.BaseModel):
+class GameStatePathSettingsPayload(pydantic.BaseModel):
     path: str
-    label: str | None = None
+    settings: GameStatePathSettings = pydantic.Field(
+        default_factory=GameStatePathSettings
+    )
 
 
 class DumpPromptLogPayload(pydantic.BaseModel):
@@ -73,13 +80,54 @@ def ensure_number(v):
 class DevToolsPlugin(Plugin):
     router = "devtools"
 
-    def _set_game_state_path_label(self, path: str, label: str | None) -> str:
-        label = (label or "").strip()
-        if label:
-            self.scene.game_state_path_labels[path] = label
+    def _merge_game_state_path_settings(
+        self, path: str, settings: GameStatePathSettings
+    ) -> dict:
+        """
+        Apply only the fields this payload carried, so a caller that names one
+        setting — the label typed while pinning a path — does not silently drop
+        the ones it never mentioned.
+        """
+        existing = self.scene.game_state_path_settings.get(path)
+        if existing:
+            settings = GameStatePathSettings(
+                **{
+                    **existing.model_dump(),
+                    **settings.model_dump(exclude_unset=True),
+                }
+            )
+        return self._set_game_state_path_settings(path, settings)
+
+    def _set_game_state_path_settings(
+        self, path: str, settings: GameStatePathSettings
+    ) -> dict:
+        if settings.is_default:
+            self.scene.game_state_path_settings.pop(path, None)
         else:
-            self.scene.game_state_path_labels.pop(path, None)
-        return label
+            self.scene.game_state_path_settings[path] = settings
+        return settings.model_dump(exclude_defaults=True)
+
+    def _constrained_game_state_value(self, path: str, value: Any) -> Any:
+        if self.scene.game_state_path_is_read_only(path):
+            raise ValueError(f"Game state path is read only: {path}")
+
+        settings = self.scene.game_state_path_settings.get(path)
+        if not settings:
+            return value
+
+        if settings.choices:
+            if not isinstance(value, str) or value not in settings.choices:
+                raise ValueError(
+                    f"Value is not one of the choices for {path}: {value!r}"
+                )
+            return value
+
+        if settings.constrains_numbers:
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"Value must be a number for {path}: {value!r}")
+            return settings.constrain(value)
+
+        return value
 
     async def handle_test_prompt(self, data):
         payload = TestPromptPayload(**data)
@@ -176,7 +224,8 @@ class DevToolsPlugin(Plugin):
         scene.game_state.variables = payload.variables or {}
 
         # Re-evaluate gamestate-controlled pins
-        await scene.load_active_pins()
+        with suppress_agent_busy_status():
+            await scene.load_active_pins()
         await scene.attempt_auto_save()
         scene.emit_status()
 
@@ -201,17 +250,20 @@ class DevToolsPlugin(Plugin):
         try:
             payload = GameStateVariablePayload(**data)
             parts = split_state_path(payload.path)
+            normalized_path = "/".join(parts)
             parent, leaf_key = get_path_parent(
                 scene.game_state.variables, parts, create=False
             )
             if parent is None:
                 raise ValueError(f"Game state path does not exist: {payload.path}")
+            value = self._constrained_game_state_value(normalized_path, payload.value)
         except Exception as exc:
             await self.signal_operation_failed(str(exc))
             return
 
-        parent[leaf_key] = payload.value
-        await scene.load_active_pins()
+        parent[leaf_key] = value
+        with suppress_agent_busy_status():
+            await scene.load_active_pins()
         await scene.attempt_auto_save()
         scene.emit_status()
 
@@ -220,7 +272,7 @@ class DevToolsPlugin(Plugin):
             {
                 "type": "devtools",
                 "action": "game_state_variable_updated",
-                "data": {"path": payload.path, "value": payload.value},
+                "data": {"path": normalized_path, "value": value},
             }
         )
         await self.signal_operation_done(signal_only=True)
@@ -260,11 +312,9 @@ class DevToolsPlugin(Plugin):
 
         sanitized_paths = sorted(set(filter(None, payload.paths)))
         setattr(scene, attribute, sanitized_paths)
-        scene.game_state_path_labels = {
-            path: label
-            for path, label in scene.game_state_path_labels.items()
-            if path in scene.pinned_game_state_paths
-        }
+        scene.game_state_path_settings = prune_game_state_path_settings(
+            scene.game_state_path_settings, scene.pinned_game_state_paths
+        )
         await scene.attempt_auto_save()
         scene.emit_status()
 
@@ -329,8 +379,8 @@ class DevToolsPlugin(Plugin):
         else:
             paths.discard(normalized_path)
 
-        if "label" in payload.model_fields_set:
-            self._set_game_state_path_label(normalized_path, payload.label)
+        if payload.settings is not None:
+            self._merge_game_state_path_settings(normalized_path, payload.settings)
 
         await self._set_game_state_paths(
             {"paths": list(paths)},
@@ -339,14 +389,14 @@ class DevToolsPlugin(Plugin):
             status_message=status_message,
         )
 
-    async def handle_set_game_state_path_label(self, data):
+    async def handle_set_game_state_path_settings(self, data):
         scene = self.scene
         if not scene:
             await self.signal_operation_failed("No active scene")
             return
 
         try:
-            payload = GameStatePathLabelPayload(**data)
+            payload = GameStatePathSettingsPayload(**data)
             normalized_path = "/".join(split_state_path(payload.path))
             if normalized_path not in scene.pinned_game_state_paths:
                 raise ValueError(f"Game state path is not pinned: {normalized_path}")
@@ -354,16 +404,16 @@ class DevToolsPlugin(Plugin):
             await self.signal_operation_failed(str(exc))
             return
 
-        label = self._set_game_state_path_label(normalized_path, payload.label)
+        settings = self._set_game_state_path_settings(normalized_path, payload.settings)
 
         await scene.attempt_auto_save()
         scene.emit_status()
-        emit("status", message="Game state path label updated", status="success")
+        emit("status", message="Game state path settings updated", status="success")
         self.websocket_handler.queue_put(
             {
                 "type": "devtools",
-                "action": "game_state_path_label_updated",
-                "data": {"path": normalized_path, "label": label or None},
+                "action": "game_state_path_settings_updated",
+                "data": {"path": normalized_path, "settings": settings},
             }
         )
         await self.signal_operation_done(signal_only=True)

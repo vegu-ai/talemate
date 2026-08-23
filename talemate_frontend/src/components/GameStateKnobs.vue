@@ -1,8 +1,16 @@
 <template>
     <v-sheet v-if="displayPaths.length" class="game-state-knobs mb-2" rounded="lg" border>
-        <v-tooltip text="Scene gamestate controls" location="top">
+        <v-tooltip text="Edit these controls in the game state editor" location="top">
             <template v-slot:activator="{ props }">
-                <v-icon v-bind="props" color="primary" size="small">mdi-tune-variant</v-icon>
+                <v-btn
+                    v-bind="props"
+                    icon="mdi-tune-variant"
+                    color="primary"
+                    size="small"
+                    variant="text"
+                    aria-label="Edit these controls in the game state editor"
+                    @click="openGameStateEditor"
+                />
             </template>
         </v-tooltip>
         <GameStateValueInput
@@ -10,7 +18,9 @@
             :key="path"
             class="game-state-knob"
             :path="path"
-            :label="getGameStatePathLabel(scene, knobPaths, path)"
+            :settings="getSettingsForPath(path)"
+            :answer="answers[path] || null"
+            :refusals="refusals"
             :value="getValueAtPath(path)"
             :disabled="disabled"
             @update-value="updateValueAtPath(path, $event)"
@@ -22,8 +32,9 @@
 import GameStateValueInput from './GameStateValueInput.vue';
 import {
     expandGameStatePaths,
-    getGameStatePathLabel,
     getGameStateValue,
+    resolveGameStatePathSettings,
+    sortGameStatePathsByOrder,
 } from '@/utils/gameStatePaths.js';
 
 export default {
@@ -31,13 +42,24 @@ export default {
     components: {
         GameStateValueInput,
     },
-    inject: ['getWebsocket'],
+    inject: [
+        'getWebsocket',
+        'openWorldStateManager',
+        'registerMessageHandler',
+        'unregisterMessageHandler',
+    ],
     props: {
         scene: {
             type: Object,
             default: () => ({}),
         },
         disabled: Boolean,
+    },
+    data() {
+        return {
+            answers: {},
+            refusals: 0,
+        };
     },
     computed: {
         knobPaths() {
@@ -47,11 +69,31 @@ export default {
             return this.scene?.data?.game_state?.variables || {};
         },
         displayPaths() {
-            return expandGameStatePaths(this.knobPaths, this.gameStateVariables);
+            return sortGameStatePathsByOrder(
+                this.scene,
+                expandGameStatePaths(this.knobPaths, this.gameStateVariables),
+            );
         },
     },
     methods: {
-        getGameStatePathLabel,
+        handleMessage(message) {
+            if (message.type !== 'devtools') return;
+
+            if (message.action === 'game_state_variable_updated') {
+                const { path, value } = message.data || {};
+                // a fresh object per answer, so an unchanged value still notifies
+                if (path) this.answers = { ...this.answers, [path]: { value } };
+            } else if (message.error) {
+                // a refused write echoes no value, so release every held edit
+                this.refusals += 1;
+            }
+        },
+        openGameStateEditor() {
+            this.openWorldStateManager('scene', 'gamestate');
+        },
+        getSettingsForPath(path) {
+            return resolveGameStatePathSettings(this.scene, path);
+        },
         getValueAtPath(path) {
             return getGameStateValue(this.gameStateVariables, path);
         },
@@ -63,6 +105,12 @@ export default {
                 value: newValue,
             }));
         },
+    },
+    mounted() {
+        this.registerMessageHandler(this.handleMessage);
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
     },
 };
 </script>

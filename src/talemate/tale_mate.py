@@ -50,7 +50,7 @@ from talemate.game.engine.nodes.core import GraphState
 from talemate.game.engine.nodes.layout import load_graph
 from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
-from talemate.scene.schema import ScenePerspectives
+from talemate.scene.schema import GameStatePathSettings, ScenePerspectives
 from talemate.history import emit_archive_add, ArchiveEntry
 from talemate.character import Character
 from talemate.agents.tts.schema import VoiceLibrary
@@ -205,7 +205,7 @@ class Scene(Emitter):
 
         self.game_state_watch_paths: list[str] = []
         self.game_state_knob_paths: list[str] = []
-        self.game_state_path_labels: dict[str, str] = {}
+        self.game_state_path_settings: dict[str, GameStatePathSettings] = {}
 
         # if the user has requested to cancel the current action
         # or series of agent actions this will be true
@@ -244,6 +244,27 @@ class Scene(Emitter):
     @property
     def pinned_game_state_paths(self) -> set[str]:
         return set(self.game_state_watch_paths) | set(self.game_state_knob_paths)
+
+    @property
+    def serialized_game_state_path_settings(self) -> dict[str, dict]:
+        return {
+            path: settings.model_dump(exclude_defaults=True)
+            for path, settings in self.game_state_path_settings.items()
+        }
+
+    def game_state_path_is_read_only(self, path: str) -> bool:
+        """
+        Whether `path` itself, or a pinned container it expands out of, is
+        marked read-only.
+        """
+        own = self.game_state_path_settings.get(path)
+        if own and own.read_only:
+            return True
+        return any(
+            settings.read_only
+            for ancestor, settings in self.game_state_path_settings.items()
+            if path.startswith(f"{ancestor}/")
+        )
 
     @property
     def main_character(self) -> Actor | None:
@@ -1443,7 +1464,7 @@ class Scene(Emitter):
                 "agent_settings_files": self.agent_settings_files,
                 "game_state_watch_paths": self.game_state_watch_paths,
                 "game_state_knob_paths": self.game_state_knob_paths,
-                "game_state_path_labels": self.game_state_path_labels,
+                "game_state_path_settings": self.serialized_game_state_path_settings,
                 "playthrough_progress": self.playthrough_progress,
             },
         )
@@ -2161,7 +2182,7 @@ class Scene(Emitter):
             "agent_settings_opted_out": scene._agent_settings_opted_out,
             "game_state_watch_paths": scene.game_state_watch_paths,
             "game_state_knob_paths": scene.game_state_knob_paths,
-            "game_state_path_labels": scene.game_state_path_labels,
+            "game_state_path_settings": scene.serialized_game_state_path_settings,
             "playthrough_progress": scene.playthrough_progress,
         }
 

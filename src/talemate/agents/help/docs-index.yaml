@@ -570,8 +570,10 @@
   title: Debug Tools
   summary: 'The bug-icon Debug Tools panel with its Prompts, Memory and Vars tabs: inspecting sent prompts (and forcing reasoning
     off per action), watching memory retrieval, and editing game state variables. Covers the Pinned Variables manager''s independent
-    Debug Vars and Scene toolbar targets, optional shared labels with Debug Vars path subtitles, type-matched toolbar knobs,
-    slash-separated paths, and the full state JSON editor.'
+    Debug Vars and Scene toolbar targets, shared per-path control settings (label, description shown as a tooltip on the
+    control, order, read-only, number bounds and slider, string choices) and the limits they place on every edit, Debug Vars
+    path subtitles, type-matched toolbar knobs, slash-separated paths, the three ways to open the Game State Editor including
+    the tune button at the left end of the knob toolbar, and the full state JSON editor.'
 - path: user-guide/howto/create-a-new-scene/create-empty-scene.md
   title: Create an empty scene
   summary: Walkthrough for starting a blank scene from the Home screen's Create new scene card and the New scene setup dialog
@@ -1209,8 +1211,11 @@
   title: Game State
   summary: 'The Scene tab''s Game State editor: a JSON editor for the scene''s persisted game state variables, saved when
     you click outside and rejected if invalid, plus a Pinned Variables manager with independent Debug Vars and Scene toolbar
-    targets, optional shared labels, an Add action, and per-row label and target controls. These variables are the node editor''s
-    game scope.'
+    targets, optional shared labels, an Add action, and per-row label and target controls. Documents the per-path control
+    settings dialog - label, description shown as a tooltip on the knob or Debug Vars control, order, read-only, number
+    minimum, maximum, step and slider, string choices - which settings are enforced limits, which of them expanded children
+    inherit (label, description, order and read-only, but never the value limits), and that the JSON editor and SetState stay
+    unlimited. These variables are the node editor''s game scope.'
 - path: user-guide/world-editor/scene/outline.md
   title: Outline
   summary: 'The Scene tab''s Outline panel: Title, Content Classification, the four perspective-and-tense fields (scene default

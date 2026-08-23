@@ -105,22 +105,66 @@ export function expandGameStatePaths(paths, variables) {
     return expanded;
 }
 
-export function getGameStatePathLabel(scene, pinnedPaths, displayPath) {
-    const labels = scene?.data?.game_state_path_labels || {};
-    const configuredPaths = pinnedPaths || [];
+export function resolveGameStatePathSettings(scene, displayPath) {
+    const configured = scene?.data?.game_state_path_settings || {};
+    const own = configured[displayPath] || {};
 
-    if (configuredPaths.includes(displayPath) && labels[displayPath]) {
-        return labels[displayPath];
+    // the settings map is shared by both pin targets and the backend resolves
+    // read-only over the whole of it, so inheritance is keyed on the map
+    // itself rather than on the pin list of the target being drawn
+    const ancestors = Object.keys(configured)
+        .filter((path) => displayPath.startsWith(`${path}/`))
+        .sort((left, right) => right.length - left.length);
+
+    let label = own.label || '';
+    if (!label) {
+        const labeled = ancestors.find((path) => configured[path].label);
+        if (labeled) {
+            const childPath = displayPath.slice(labeled.length + 1)
+                .split('/')
+                .join(' / ');
+            label = `${configured[labeled].label} / ${childPath}`;
+        }
     }
 
-    const labeledParent = configuredPaths
-        .filter((path) => labels[path] && displayPath.startsWith(`${path}/`))
-        .sort((left, right) => right.length - left.length)[0];
+    // a container's description describes the group, so it passes down as
+    // written rather than composed the way the label is
+    let description = own.description || '';
+    if (!description) {
+        const described = ancestors.find((path) => configured[path].description);
+        description = described ? configured[described].description : '';
+    }
 
-    if (!labeledParent) return '';
+    let order = own.order ?? null;
+    if (order === null) {
+        const ordered = ancestors.find((path) => (configured[path].order ?? null) !== null);
+        order = ordered ? configured[ordered].order : null;
+    }
 
-    const childPath = displayPath.slice(labeledParent.length + 1)
-        .split('/')
-        .join(' / ');
-    return `${labels[labeledParent]} / ${childPath}`;
+    return {
+        label,
+        description,
+        minimum: own.minimum ?? null,
+        maximum: own.maximum ?? null,
+        step: own.step ?? null,
+        slider: Boolean(own.slider),
+        choices: own.choices || [],
+        read_only: Boolean(own.read_only)
+            || ancestors.some((path) => configured[path].read_only),
+        order,
+    };
+}
+
+export function sortGameStatePathsByOrder(scene, displayPaths) {
+    return displayPaths
+        .map((path, index) => ({
+            path,
+            index,
+            order: resolveGameStatePathSettings(scene, path).order,
+        }))
+        .sort((left, right) => (
+            (left.order ?? Number.MAX_SAFE_INTEGER) - (right.order ?? Number.MAX_SAFE_INTEGER)
+            || left.index - right.index
+        ))
+        .map((entry) => entry.path);
 }

@@ -51,8 +51,9 @@
                     <tr>
                         <th class="text-left path-column">Path</th>
                         <th class="text-left label-column">Label</th>
-                        <th class="text-center target-column">Debug Vars</th>
-                        <th class="text-center target-column">Scene toolbar</th>
+                        <th class="text-center target-column">Debug</th>
+                        <th class="text-center target-column">Scene</th>
+                        <th class="text-center settings-column"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -60,7 +61,7 @@
                         <td class="text-caption pin-path" :title="path">{{ path }}</td>
                         <td>
                             <v-text-field
-                                :model-value="pathLabels[path] || ''"
+                                :model-value="pathSettings[path]?.label || ''"
                                 @blur="setLabel(path, $event.target.value)"
                                 placeholder="Optional"
                                 density="compact"
@@ -87,6 +88,16 @@
                                 :aria-label="`Show ${path} in the scene toolbar`"
                             />
                         </td>
+                        <td class="text-center">
+                            <v-btn
+                                icon="mdi-tune"
+                                size="small"
+                                variant="text"
+                                color="primary"
+                                :aria-label="`Control settings for ${path}`"
+                                @click="openSettings(path)"
+                            />
+                        </td>
                     </tr>
                 </tbody>
             </v-table>
@@ -94,13 +105,27 @@
             <v-alert v-else color="muted" density="compact" variant="text" class="mt-2">
                 No pinned paths. Add a path to Debug Vars, the scene toolbar, or both.
             </v-alert>
+
+            <GameStatePathSettingsDialog
+                v-model="settingsDialog"
+                :path="settingsPath"
+                :settings="pathSettings[settingsPath] || {}"
+                :value="settingsValue"
+                @save="$emit('set-settings', $event)"
+            />
         </v-card-text>
     </v-card>
 </template>
 
 <script>
+import GameStatePathSettingsDialog from './GameStatePathSettingsDialog.vue';
+import { getGameStateValue } from '@/utils/gameStatePaths.js';
+
 export default {
     name: 'GameStateWatchedPaths',
+    components: {
+        GameStatePathSettingsDialog,
+    },
     props: {
         watchedPaths: {
             type: Array,
@@ -110,7 +135,11 @@ export default {
             type: Array,
             default: () => [],
         },
-        pathLabels: {
+        pathSettings: {
+            type: Object,
+            default: () => ({}),
+        },
+        variables: {
             type: Object,
             default: () => ({}),
         },
@@ -119,17 +148,22 @@ export default {
             default: () => [],
         },
     },
-    emits: ['set-target', 'set-label', 'debug-path-added'],
+    emits: ['set-target', 'set-settings', 'debug-path-added'],
     data() {
         return {
             selectedPath: null,
             selectedLabel: '',
             selectedTargets: ['debug'],
+            settingsDialog: false,
+            settingsPath: '',
         };
     },
     computed: {
         managedPaths() {
             return [...new Set([...this.watchedPaths, ...this.knobPaths])].sort();
+        },
+        settingsValue() {
+            return getGameStateValue(this.variables, this.settingsPath);
         },
     },
     methods: {
@@ -142,7 +176,7 @@ export default {
                 path,
                 target,
                 enabled: true,
-                ...(label ? { label } : {}),
+                ...(label ? { settings: { label } } : {}),
             });
             if (this.selectedTargets.includes('debug')) {
                 this.$emit('set-target', targetChange('debug'));
@@ -161,8 +195,16 @@ export default {
         },
         setLabel(path, value) {
             const label = (value || '').trim();
-            if (label === (this.pathLabels[path] || '')) return;
-            this.$emit('set-label', { path, label: label || null });
+            const settings = this.pathSettings[path] || {};
+            if (label === (settings.label || '')) return;
+            this.$emit('set-settings', {
+                path,
+                settings: { ...settings, label: label || null },
+            });
+        },
+        openSettings(path) {
+            this.settingsPath = path;
+            this.settingsDialog = true;
         },
     },
 };
@@ -174,16 +216,20 @@ export default {
 }
 
 .path-column {
-    width: 34%;
+    width: 28%;
 }
 
 .label-column {
-    width: 30%;
+    width: 26%;
 }
 
 .target-column {
     width: 18%;
-    white-space: normal;
+    white-space: nowrap;
+}
+
+.settings-column {
+    width: 10%;
 }
 
 .pin-path {

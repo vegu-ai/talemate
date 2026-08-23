@@ -32,7 +32,7 @@ from talemate.status import LoadingStatus, set_loading
 from talemate.world_state import WorldState
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
-from talemate.scene.schema import ScenePerspectives
+from talemate.scene.schema import ScenePerspectives, load_game_state_path_settings
 from talemate.history import validate_history
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
@@ -397,17 +397,9 @@ async def load_scene_from_data(
         scene.agent_state = scene_data.get("agent_state", {})
         scene.game_state_watch_paths = scene_data.get("game_state_watch_paths", [])
         scene.game_state_knob_paths = scene_data.get("game_state_knob_paths", [])
-        path_labels = scene_data.get("game_state_path_labels", {})
-        scene.game_state_path_labels = (
-            {
-                path: label.strip()
-                for path, label in path_labels.items()
-                if path in scene.pinned_game_state_paths
-                and isinstance(label, str)
-                and label.strip()
-            }
-            if isinstance(path_labels, dict)
-            else {}
+        scene.game_state_path_settings = load_game_state_path_settings(
+            scene_data.get("game_state_path_settings", {}),
+            scene.pinned_game_state_paths,
         )
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"

@@ -334,6 +334,20 @@ background_processing: contextvars.ContextVar[bool] = contextvars.ContextVar(
 )
 
 
+@contextlib.contextmanager
+def suppress_agent_busy_status():
+    """
+    Silence the @set_processing work awaited inside this block. Nothing reports
+    "busy_bg" in place of the suppressed emit — that status belongs to
+    set_background_processing(), which owns a task.
+    """
+    token = background_processing.set(True)
+    try:
+        yield
+    finally:
+        background_processing.reset(token)
+
+
 def set_processing(fn):
     """
     decorator that emits the agent status as processing while the function

@@ -30,11 +30,12 @@
                         <GameStateWatchedPaths
                             :watched-paths="watchedPaths"
                             :knob-paths="knobPaths"
-                            :path-labels="pathLabels"
+                            :path-settings="pathSettings"
+                            :variables="gameStateVariables"
                             :available-paths="gameStatePaths"
                             @debug-path-added="onPathAdded"
                             @set-target="onTargetChanged"
-                            @set-label="onLabelChanged"
+                            @set-settings="onSettingsChanged"
                         />
                     </v-col>
                 </v-row>
@@ -88,8 +89,11 @@ export default {
         knobPaths() {
             return this.scene?.data?.game_state_knob_paths || [];
         },
-        pathLabels() {
-            return this.scene?.data?.game_state_path_labels || {};
+        pathSettings() {
+            return this.scene?.data?.game_state_path_settings || {};
+        },
+        gameStateVariables() {
+            return this.scene?.data?.game_state?.variables || {};
         },
     },
     watch: {
@@ -168,7 +172,7 @@ export default {
                 }
             }
         },
-        onTargetChanged({ path, target, enabled, label }) {
+        onTargetChanged({ path, target, enabled, settings }) {
             const payload = {
                 type: 'devtools',
                 action: 'set_game_state_path_target',
@@ -176,18 +180,18 @@ export default {
                 target,
                 enabled,
             };
-            if (label !== undefined) payload.label = label;
+            if (settings !== undefined) payload.settings = settings;
             this.getWebsocket().send(
                 JSON.stringify(payload)
             );
         },
-        onLabelChanged({ path, label }) {
+        onSettingsChanged({ path, settings }) {
             this.getWebsocket().send(
                 JSON.stringify({
                     type: 'devtools',
-                    action: 'set_game_state_path_label',
+                    action: 'set_game_state_path_settings',
                     path,
-                    label,
+                    settings,
                 })
             );
         },

@@ -42,10 +42,12 @@ Paths that don't exist in the game state will show an error message indicating t
 
 You can edit variable values directly in the Vars tab:
 
-- **String values**: Appear as text fields. Type a new value and click away (or press Tab) to save.
-- **Number values**: Appear as number input fields. Enter a new value and click away to save.
+- **String values**: Appear as text fields. Type a new value and click away (or press Tab) to save. A path that carries a list of choices appears as a dropdown instead.
+- **Number values**: Appear as number input fields. Enter a new value and click away to save. A path with a minimum, a maximum and a step can be shown as a slider instead, which saves when you release it.
 - **Boolean values**: Appear as checkboxes. Click to toggle the value.
 - **Objects and arrays**: Displayed as read-only. To edit these, use the Game State Editor.
+- **Paths marked read-only**: Show their value as text with no control.
+- **Values of the wrong type for their settings**: Show their value as text with a note saying so, rather than a control whose every write would be refused.
 
 ![Debug Tools Edit Variable](/talemate/img/0.35.0/debug-tools-edit-variable.png)
 
@@ -57,7 +59,7 @@ Game state variables that act as gameplay controls can be pinned to a compact to
 
 The toolbar appears only while it has pinned paths. It is hidden during playthrough mode, where the playthrough controls replace the normal scene tools.
 
-A path's Debug Vars and Scene toolbar targets are independent. You can pin a variable to either location or to both. An optional label is shared by both targets; the toolbar uses it instead of the path, while an unlabeled control continues to show its path.
+A path's Debug Vars and Scene toolbar targets are independent. You can pin a variable to either location or to both. The control settings are shared by both targets: the toolbar uses the label instead of the path, while an unlabeled control continues to show its path. The order you set positions a control in the toolbar and in Debug Vars alike, and paths without an order come last in alphabetical order.
 
 ![Scene toolbar knobs](/talemate/img/0.40.0/gamestate-knob-toolbar.png)
 
@@ -67,10 +69,11 @@ Add Debug Vars and scene-toolbar pins through the Game State Editor.
 
 ### Accessing the Game State Editor
 
-There are two ways to open the Game State Editor:
+There are three ways to open the Game State Editor:
 
 1. **From Debug Tools**: Click the **Edit Game State** button in the Vars tab.
 2. **From World Editor**: Navigate to **:material-earth-box: World Editor** > **Scene** tab > **Game State** tab.
+3. **From the scene toolbar**: Click the :material-tune-variant: button at the left end of the knob toolbar. (The :material-tune: button on a row of the Pinned Variables table is a different control — it opens that path's control settings.)
 
 ![World Editor Game State Tab](/talemate/img/0.40.0/world-editor-gamestate-tab.png)
 
@@ -102,7 +105,13 @@ Paths use forward slashes to separate nested keys. For example:
 
 ### Changing or Removing Targets
 
-Edit the optional label directly in the pinned-path table. Clearing it restores the path-only display. Use the checkboxes to turn each target on or off independently. A path and its label are removed from the table when neither target is selected.
+Edit the optional label directly in the pinned-path table. Clearing it restores the path-only display. Use the checkboxes to turn each target on or off independently. A path and its settings are removed from the table when neither target is selected.
+
+### Control Settings
+
+The :material-tune: button in a pinned path's row opens its control settings. See [Game State](/talemate/user-guide/world-editor/scene/game-state/#control-settings) in the World Editor documentation for what each setting does.
+
+The minimum, maximum, step, read-only and choices settings are limits, not just decoration. Talemate applies them to every edit made in the toolbar and in Debug Vars: a number outside its range is clamped into it and snapped onto its step, a value outside the choices is refused, a value of the wrong type for the setting is refused, and a read-only path refuses the write. The JSON editor in the Game State Editor is not limited, so it stays available for setting a value the controls will not.
 
 ### Editing the Full Game State
 

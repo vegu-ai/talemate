@@ -69,7 +69,6 @@ from typing import TYPE_CHECKING, Callable
 import copy
 import json
 import os
-import re
 import structlog
 import deepdiff
 from deepdiff.path import parse_path
@@ -79,6 +78,7 @@ import uuid
 
 from talemate.save import SceneEncoder
 from talemate.path import SCENES_DIR
+from talemate.util.data import coerce_forced_list
 from talemate.util.time import migrate_scene_time
 from talemate.util.path import is_safe_relative_filename
 from pathlib import Path
@@ -951,32 +951,6 @@ def _get_overall_latest_revision(scene: "Scene", strict: bool = True) -> int:
     return max(latest_rev, (marker or {}).get("latest_rev_hint", 0))
 
 
-def _coerce_forced_list(value) -> tuple[list | None, bool]:
-    """Convert a force-mode artifact — an int-keyed dict where a list is
-    expected — back into a list ordered by index.
-
-    Returns ``(converted_list, True)`` when the value was such an artifact,
-    ``(None, False)`` otherwise. Dicts with any non-index key are left alone.
-    """
-    if not isinstance(value, dict):
-        return None, False
-
-    indexed: list[tuple[int, object]] = []
-    for key, item in value.items():
-        if isinstance(key, bool):
-            return None, False
-        if isinstance(key, int):
-            indexed.append((key, item))
-        elif isinstance(key, str) and re.fullmatch(r"-?\d+", key):
-            # int keys become strings when the data round-trips through JSON
-            indexed.append((int(key), item))
-        else:
-            return None, False
-
-    indexed.sort(key=lambda pair: pair[0])
-    return [item for _, item in indexed], True
-
-
 def _repair_forced_list_fields(data: dict) -> int:
     """Restore list fields that force-mode delta application turned into
     int-keyed dicts (see ``_LIST_FIELDS``), including the nested layers of
@@ -987,7 +961,7 @@ def _repair_forced_list_fields(data: dict) -> int:
     repaired: list[str] = []
 
     for field in _LIST_FIELDS:
-        converted, was_forced = _coerce_forced_list(data.get(field))
+        converted, was_forced = coerce_forced_list(data.get(field))
         if was_forced:
             data[field] = converted
             repaired.append(field)
@@ -995,7 +969,7 @@ def _repair_forced_list_fields(data: dict) -> int:
     layered = data.get("layered_history")
     if isinstance(layered, list):
         for i, layer in enumerate(layered):
-            converted, was_forced = _coerce_forced_list(layer)
+            converted, was_forced = coerce_forced_list(layer)
             if was_forced:
                 layered[i] = converted
                 repaired.append(f"layered_history[{i}]")

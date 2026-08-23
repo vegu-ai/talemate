@@ -6,7 +6,12 @@ import pytest
 
 from conftest import MockScene, bootstrap_scene
 
+from talemate.agents.base import background_processing
 from talemate.changelog import reconstruct_cleanup
+from talemate.scene.schema import (
+    GameStatePathSettings,
+    load_game_state_path_settings,
+)
 from talemate.server.devtools import DevToolsPlugin
 
 
@@ -74,9 +79,9 @@ async def test_game_state_paths_are_sanitized_and_persisted(
 async def test_path_scoped_targets_do_not_restore_a_previous_toggle(scene):
     scene.game_state_watch_paths = ["player/health", "quest/active"]
     scene.game_state_knob_paths = ["player/health", "quest/active"]
-    scene.game_state_path_labels = {
-        "player/health": "Health",
-        "quest/active": "Quest active",
+    scene.game_state_path_settings = {
+        "player/health": GameStatePathSettings(label="Health"),
+        "quest/active": GameStatePathSettings(label="Quest active"),
     }
     plugin = _plugin(scene)
 
@@ -90,9 +95,9 @@ async def test_path_scoped_targets_do_not_restore_a_previous_toggle(scene):
 
     assert scene.game_state_watch_paths == ["quest/active"]
     assert scene.game_state_knob_paths == ["player/health"]
-    assert scene.game_state_path_labels == {
-        "player/health": "Health",
-        "quest/active": "Quest active",
+    assert scene.serialized_game_state_path_settings == {
+        "player/health": {"label": "Health"},
+        "quest/active": {"label": "Quest active"},
     }
     assert scene.attempt_auto_save.await_count == 2
     assert emit_status.call_count == 2
@@ -102,7 +107,7 @@ async def test_path_scoped_targets_do_not_restore_a_previous_toggle(scene):
     ]
 
 
-async def test_path_target_label_is_trimmed_preserved_and_cleaned_up(scene):
+async def test_path_target_settings_are_trimmed_preserved_and_cleaned_up(scene):
     plugin = _plugin(scene)
 
     await plugin.handle_set_game_state_path_target(
@@ -110,58 +115,115 @@ async def test_path_target_label_is_trimmed_preserved_and_cleaned_up(scene):
             "path": "player/health",
             "target": "debug",
             "enabled": True,
-            "label": "  Health  ",
+            "settings": {"label": "  Health  ", "minimum": 0, "maximum": 10},
         }
     )
     await plugin.handle_set_game_state_path_target(
         {"path": "player/health", "target": "knob", "enabled": True}
     )
 
-    assert scene.game_state_path_labels == {"player/health": "Health"}
+    assert scene.serialized_game_state_path_settings == {
+        "player/health": {"label": "Health", "minimum": 0, "maximum": 10}
+    }
 
     await plugin.handle_set_game_state_path_target(
         {"path": "player/health", "target": "debug", "enabled": False}
     )
-    assert scene.game_state_path_labels == {"player/health": "Health"}
+    assert "player/health" in scene.game_state_path_settings
 
     await plugin.handle_set_game_state_path_target(
         {"path": "player/health", "target": "knob", "enabled": False}
     )
-    assert scene.game_state_path_labels == {}
+    assert scene.game_state_path_settings == {}
 
 
-async def test_path_label_can_be_changed_and_cleared(scene):
+async def test_path_settings_can_be_changed_and_cleared(scene):
     scene.game_state_knob_paths = ["player/health"]
     plugin = _plugin(scene)
 
     with patch.object(type(scene), "emit_status", autospec=True) as emit_status:
-        await plugin.handle_set_game_state_path_label(
-            {"path": "player/health", "label": "  Hit points  "}
+        await plugin.handle_set_game_state_path_settings(
+            {
+                "path": "player/health",
+                "settings": {
+                    "label": "  Hit points  ",
+                    "description": "  How much punishment Ari can take  ",
+                    "minimum": 0,
+                    "maximum": 10,
+                    "step": 1,
+                    "slider": True,
+                    "order": 2,
+                },
+            }
         )
 
-    assert scene.game_state_path_labels == {"player/health": "Hit points"}
+    assert scene.serialized_game_state_path_settings == {
+        "player/health": {
+            "label": "Hit points",
+            "description": "How much punishment Ari can take",
+            "minimum": 0,
+            "maximum": 10,
+            "step": 1,
+            "slider": True,
+            "order": 2,
+        }
+    }
     scene.attempt_auto_save.assert_awaited_once()
     emit_status.assert_called_once_with(scene)
     plugin.websocket_handler.queue_put.assert_called_once_with(
         {
             "type": "devtools",
-            "action": "game_state_path_label_updated",
-            "data": {"path": "player/health", "label": "Hit points"},
+            "action": "game_state_path_settings_updated",
+            "data": {
+                "path": "player/health",
+                "settings": {
+                    "label": "Hit points",
+                    "description": "How much punishment Ari can take",
+                    "minimum": 0,
+                    "maximum": 10,
+                    "step": 1,
+                    "slider": True,
+                    "order": 2,
+                },
+            },
         }
     )
 
-    await plugin.handle_set_game_state_path_label(
-        {"path": "player/health", "label": ""}
-    )
-    assert scene.game_state_path_labels == {}
+    await plugin.handle_set_game_state_path_settings({"path": "player/health"})
+    assert scene.game_state_path_settings == {}
 
 
-def test_knob_paths_and_labels_are_saved_and_reported_in_scene_status(scene):
+@pytest.mark.parametrize(
+    "settings",
+    [
+        {"minimum": 10, "maximum": 1},
+        {"step": 0},
+        {"step": -1},
+    ],
+)
+async def test_unusable_path_settings_are_refused(scene, settings):
     scene.game_state_knob_paths = ["player/health"]
-    scene.game_state_path_labels = {"player/health": "Health"}
+    plugin = _plugin(scene)
+    plugin.signal_operation_failed = AsyncMock()
+
+    await plugin.handle_set_game_state_path_settings(
+        {"path": "player/health", "settings": settings}
+    )
+
+    plugin.signal_operation_failed.assert_awaited_once()
+    assert scene.game_state_path_settings == {}
+    scene.attempt_auto_save.assert_not_awaited()
+
+
+def test_knob_paths_and_settings_are_saved_and_reported_in_scene_status(scene):
+    scene.game_state_knob_paths = ["player/health"]
+    scene.game_state_path_settings = {
+        "player/health": GameStatePathSettings(label="Health", minimum=0, maximum=10)
+    }
+    expected = {"player/health": {"label": "Health", "minimum": 0, "maximum": 10}}
 
     assert scene.serialize["game_state_knob_paths"] == ["player/health"]
-    assert scene.serialize["game_state_path_labels"] == {"player/health": "Health"}
+    assert scene.serialize["game_state_path_settings"] == expected
 
     scene.active = True
     with patch("talemate.tale_mate.emit") as emit:
@@ -169,21 +231,19 @@ def test_knob_paths_and_labels_are_saved_and_reported_in_scene_status(scene):
 
     (status,) = [call for call in emit.call_args_list if call.args[0] == "scene_status"]
     assert status.kwargs["data"]["game_state_knob_paths"] == ["player/health"]
-    assert status.kwargs["data"]["game_state_path_labels"] == {
-        "player/health": "Health"
-    }
+    assert status.kwargs["data"]["game_state_path_settings"] == expected
 
 
 async def test_changelog_cleanup_keeps_knob_paths_as_a_list():
     result = await reconstruct_cleanup(
         {
             "game_state_knob_paths": {0: "player/health", 1: "quest/active"},
-            "game_state_path_labels": {"player/health": "Health"},
+            "game_state_path_settings": {"player/health": {"label": "Health"}},
         }
     )
 
     assert result["game_state_knob_paths"] == ["player/health", "quest/active"]
-    assert result["game_state_path_labels"] == {"player/health": "Health"}
+    assert result["game_state_path_settings"] == {"player/health": {"label": "Health"}}
 
 
 async def test_full_game_state_updates_are_persisted(scene):
@@ -251,3 +311,205 @@ async def test_unsaved_autosave_still_emits_updated_paths(scene):
         call for call in scene_emit.call_args_list if call.args[0] == "scene_status"
     ]
     assert status.kwargs["data"]["game_state_knob_paths"] == ["player/health"]
+
+
+async def test_a_target_change_carrying_a_label_keeps_the_other_settings(scene):
+    scene.game_state_knob_paths = ["player/health"]
+    scene.game_state_path_settings = {
+        "player/health": GameStatePathSettings(
+            minimum=0, maximum=10, step=1, slider=True, order=1
+        )
+    }
+    plugin = _plugin(scene)
+
+    await plugin.handle_set_game_state_path_target(
+        {
+            "path": "player/health",
+            "target": "debug",
+            "enabled": True,
+            "settings": {"label": "Hit points"},
+        }
+    )
+
+    assert scene.serialized_game_state_path_settings == {
+        "player/health": {
+            "label": "Hit points",
+            "minimum": 0,
+            "maximum": 10,
+            "step": 1,
+            "slider": True,
+            "order": 1,
+        }
+    }
+
+
+async def test_values_are_clamped_to_the_configured_bounds(scene):
+    scene.game_state.variables = {"player": {"health": 8}}
+    scene.game_state_knob_paths = ["player/health"]
+    scene.game_state_path_settings = {
+        "player/health": GameStatePathSettings(minimum=0, maximum=10)
+    }
+    scene.load_active_pins = AsyncMock()
+    plugin = _plugin(scene)
+
+    await plugin.handle_set_game_state_variable({"path": "player/health", "value": 42})
+
+    assert scene.game_state.variables == {"player": {"health": 10}}
+    assert plugin.websocket_handler.queue_put.call_args_list[-1].args[0] == {
+        "type": "devtools",
+        "action": "game_state_variable_updated",
+        "data": {"path": "player/health", "value": 10},
+    }
+
+
+async def test_a_value_outside_the_choices_is_refused(scene):
+    scene.game_state.variables = {"weather": "rain"}
+    scene.game_state_knob_paths = ["weather"]
+    scene.game_state_path_settings = {
+        "weather": GameStatePathSettings(choices=["rain", "sun"])
+    }
+    scene.load_active_pins = AsyncMock()
+    plugin = _plugin(scene)
+    plugin.signal_operation_failed = AsyncMock()
+
+    await plugin.handle_set_game_state_variable({"path": "weather", "value": "snow"})
+
+    plugin.signal_operation_failed.assert_awaited_once()
+    assert scene.game_state.variables == {"weather": "rain"}
+
+    await plugin.handle_set_game_state_variable({"path": "weather", "value": "sun"})
+    assert scene.game_state.variables == {"weather": "sun"}
+
+
+@pytest.mark.parametrize(
+    ("pinned_path", "written_path"),
+    [
+        ("player/health", "player/health"),
+        ("player", "player/health"),
+    ],
+)
+async def test_a_read_only_path_refuses_writes(scene, pinned_path, written_path):
+    scene.game_state.variables = {"player": {"health": 8}}
+    scene.game_state_knob_paths = [pinned_path]
+    scene.game_state_path_settings = {
+        pinned_path: GameStatePathSettings(read_only=True)
+    }
+    scene.load_active_pins = AsyncMock()
+    plugin = _plugin(scene)
+    plugin.signal_operation_failed = AsyncMock()
+
+    await plugin.handle_set_game_state_variable({"path": written_path, "value": 3})
+
+    plugin.signal_operation_failed.assert_awaited_once()
+    assert scene.game_state.variables == {"player": {"health": 8}}
+    scene.attempt_auto_save.assert_not_awaited()
+
+
+async def test_a_knob_change_suppresses_busy_for_the_pin_reload_only(scene):
+    scene.game_state.variables = {"player": {"health": 8}}
+    reloaded = []
+    saved = []
+
+    scene.load_active_pins = AsyncMock(
+        side_effect=lambda: reloaded.append(background_processing.get())
+    )
+    scene.attempt_auto_save = AsyncMock(
+        side_effect=lambda: saved.append(background_processing.get())
+    )
+    plugin = _plugin(scene)
+
+    await plugin.handle_set_game_state_variable({"path": "player/health", "value": 9})
+
+    assert reloaded == [True]
+    # the autosave can reach a re-embed through config.changed, which this
+    # handler cannot claim is fast enough to hide
+    assert saved == [False]
+    assert background_processing.get() is False
+
+
+def test_persisted_path_settings_are_loaded_pruned_and_validated():
+    settings = load_game_state_path_settings(
+        {
+            "player/health": {"label": "Health", "minimum": 0, "maximum": 10},
+            "player/name": {},
+            "quest/active": {"label": "Quest"},
+            "weather": {"minimum": 10, "maximum": 1},
+            "score": "not a mapping",
+        },
+        {"player/health", "player/name", "weather", "score"},
+    )
+
+    assert settings == {
+        "player/health": GameStatePathSettings(label="Health", minimum=0, maximum=10)
+    }
+
+
+async def test_values_are_snapped_onto_the_configured_step(scene):
+    scene.game_state.variables = {"player": {"health": 8}}
+    scene.game_state_knob_paths = ["player/health"]
+    scene.game_state_path_settings = {
+        "player/health": GameStatePathSettings(minimum=0, maximum=10, step=1)
+    }
+    scene.load_active_pins = AsyncMock()
+    plugin = _plugin(scene)
+
+    await plugin.handle_set_game_state_variable(
+        {"path": "player/health", "value": 6.4732142857142856}
+    )
+
+    assert scene.game_state.variables == {"player": {"health": 6}}
+
+
+@pytest.mark.parametrize("value", [7, True, ["snow"], None])
+async def test_a_choices_path_refuses_a_value_that_is_not_one_of_them(scene, value):
+    scene.game_state.variables = {"weather": "rain"}
+    scene.game_state_knob_paths = ["weather"]
+    scene.game_state_path_settings = {
+        "weather": GameStatePathSettings(choices=["rain", "sun"])
+    }
+    scene.load_active_pins = AsyncMock()
+    plugin = _plugin(scene)
+    plugin.signal_operation_failed = AsyncMock()
+
+    await plugin.handle_set_game_state_variable({"path": "weather", "value": value})
+
+    plugin.signal_operation_failed.assert_awaited_once()
+    assert scene.game_state.variables == {"weather": "rain"}
+
+
+@pytest.mark.parametrize("value", ["99", True, None, ["9"]])
+async def test_a_bounded_path_refuses_a_value_that_is_not_a_number(scene, value):
+    scene.game_state.variables = {"score": 3}
+    scene.game_state_knob_paths = ["score"]
+    scene.game_state_path_settings = {
+        "score": GameStatePathSettings(minimum=0, maximum=10)
+    }
+    scene.load_active_pins = AsyncMock()
+    plugin = _plugin(scene)
+    plugin.signal_operation_failed = AsyncMock()
+
+    await plugin.handle_set_game_state_variable({"path": "score", "value": value})
+
+    plugin.signal_operation_failed.assert_awaited_once()
+    assert scene.game_state.variables == {"score": 3}
+
+
+def test_choices_survive_a_forced_list_delta():
+    settings = load_game_state_path_settings(
+        {"weather": {"label": "Weather", "choices": {"1": "sun", "0": "rain"}}},
+        {"weather"},
+    )
+
+    assert settings == {
+        "weather": GameStatePathSettings(label="Weather", choices=["rain", "sun"])
+    }
+
+
+def test_the_constrained_value_type_follows_the_grid():
+    integral = GameStatePathSettings(minimum=0, maximum=10, step=1)
+    assert integral.constrain(3.7) == 4
+    assert isinstance(integral.constrain(3.7), int)
+
+    fractional = GameStatePathSettings(minimum=0.5, maximum=2.5, step=0.25)
+    assert fractional.constrain(1.31) == 1.25
+    assert isinstance(fractional.constrain(1.31), float)

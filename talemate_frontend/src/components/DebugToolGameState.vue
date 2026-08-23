@@ -15,8 +15,10 @@
                         v-for="path in displayPaths"
                         :key="path"
                         :path="path"
-                        :label="getGameStatePathLabel(scene, watchedPaths, path)"
-                        :show-path-subtitle="Boolean(getGameStatePathLabel(scene, watchedPaths, path))"
+                        :settings="getSettingsForPath(path)"
+                        :answer="answers[path] || null"
+                        :refusals="refusals"
+                        :show-path-subtitle="Boolean(getSettingsForPath(path).label)"
                         :value="getValueAtPath(path)"
                         @update-value="updateValueAtPath(path, $event)"
                     />
@@ -30,8 +32,9 @@
 import GameStateValueInput from './GameStateValueInput.vue';
 import {
     expandGameStatePaths,
-    getGameStatePathLabel,
     getGameStateValue,
+    resolveGameStatePathSettings,
+    sortGameStatePathsByOrder,
 } from '@/utils/gameStatePaths.js';
 
 export default {
@@ -41,6 +44,8 @@ export default {
     },
     inject: [
         'getWebsocket',
+        'registerMessageHandler',
+        'unregisterMessageHandler',
         'openWorldStateManager',
     ],
     props: {
@@ -48,6 +53,12 @@ export default {
             type: Object,
             default: () => ({}),
         },
+    },
+    data() {
+        return {
+            answers: {},
+            refusals: 0,
+        };
     },
     computed: {
         watchedPaths() {
@@ -57,11 +68,28 @@ export default {
             return this.scene?.data?.game_state?.variables || {};
         },
         displayPaths() {
-            return expandGameStatePaths(this.watchedPaths, this.gameStateVariables);
+            return sortGameStatePathsByOrder(
+                this.scene,
+                expandGameStatePaths(this.watchedPaths, this.gameStateVariables),
+            );
         },
     },
     methods: {
-        getGameStatePathLabel,
+        handleMessage(message) {
+            if (message.type !== 'devtools') return;
+
+            if (message.action === 'game_state_variable_updated') {
+                const { path, value } = message.data || {};
+                // a fresh object per answer, so an unchanged value still notifies
+                if (path) this.answers = { ...this.answers, [path]: { value } };
+            } else if (message.error) {
+                // a refused write echoes no value, so release every held edit
+                this.refusals += 1;
+            }
+        },
+        getSettingsForPath(path) {
+            return resolveGameStatePathSettings(this.scene, path);
+        },
         getValueAtPath(path) {
             return getGameStateValue(this.gameStateVariables, path);
         },
@@ -78,6 +106,12 @@ export default {
                 this.openWorldStateManager('scene', 'gamestate');
             }
         },
+    },
+    mounted() {
+        this.registerMessageHandler(this.handleMessage);
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
     },
 };
 </script>

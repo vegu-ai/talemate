@@ -34,6 +34,8 @@ Game state variables are persistent values stored with your scene that can be us
 
 When you have watched paths set up, the Vars tab displays their current values. If a watched path points to an object (dictionary), its keys are automatically expanded so you can see individual values.
 
+Pinned paths can have an optional label. Debug Vars shows that label as the value control's title and keeps the full game state path underneath as a subtitle. When a labeled container expands into child controls, each title combines the label with the child key (for example, `Hero / health`). Without a label, the path remains the control title as before.
+
 Paths that don't exist in the game state will show an error message indicating the path was not found.
 
 ### Editing Variables
@@ -49,9 +51,19 @@ You can edit variable values directly in the Vars tab:
 
 Changes are saved immediately when you finish editing.
 
-## Setting Up Watched Paths
+## Scene Toolbar Knobs
 
-To watch specific variables in the Vars tab, you need to add them through the Game State Editor.
+Game state variables that act as gameplay controls can be pinned to a compact toolbar above the scene tools. The toolbar uses the same type-matched controls as Debug Vars, so strings, numbers, and booleans can be changed without opening the Debug Tools drawer.
+
+The toolbar appears only while it has pinned paths. It is hidden during playthrough mode, where the playthrough controls replace the normal scene tools.
+
+A path's Debug Vars and Scene toolbar targets are independent. You can pin a variable to either location or to both. An optional label is shared by both targets; the toolbar uses it instead of the path, while an unlabeled control continues to show its path.
+
+![Scene toolbar knobs](/talemate/img/0.40.0/gamestate-knob-toolbar.png)
+
+## Setting Up Pinned Paths
+
+Add Debug Vars and scene-toolbar pins through the Game State Editor.
 
 ### Accessing the Game State Editor
 
@@ -60,23 +72,25 @@ There are two ways to open the Game State Editor:
 1. **From Debug Tools**: Click the **Edit Game State** button in the Vars tab.
 2. **From World Editor**: Navigate to **:material-earth-box: World Editor** > **Scene** tab > **Game State** tab.
 
-![World Editor Game State Tab](/talemate/img/0.35.0/world-editor-gamestate-tab.png)
+![World Editor Game State Tab](/talemate/img/0.40.0/world-editor-gamestate-tab.png)
 
-### Adding Watched Paths
+### Adding Pinned Paths
 
 The Game State Editor shows two panels:
 
 - **Left panel**: A JSON editor displaying all game state variables
-- **Right panel**: The Watched Variables manager
+- **Right panel**: The Pinned Variables manager
 
-To add a path to watch:
+To pin a path:
 
-1. Use the dropdown in the **Watched Variables** panel to select from available paths
-2. Click the :material-plus: button or select a path to add it
+1. Select a path in the **Pinned Variables** panel.
+2. Optionally enter a short label for the control.
+3. Select **Debug Vars**, **Scene toolbar**, or both target chips.
+4. Click **Add**.
 
 The dropdown automatically lists all paths found in your current game state, including both individual values and container paths (objects).
 
-![Add Watched Path](/talemate/img/0.35.0/gamestate-add-watch.png)
+![Add Pinned Path](/talemate/img/0.40.0/gamestate-add-watch.png)
 
 ### Path Format
 
@@ -86,9 +100,9 @@ Paths use forward slashes to separate nested keys. For example:
 - `quest/active` - The "active" key inside the "quest" object
 - `player/stats/health` - Deeply nested value
 
-### Removing Watched Paths
+### Changing or Removing Targets
 
-To remove a path from being watched, click the :material-close-circle-outline: button next to it in the Watched Variables table.
+Edit the optional label directly in the pinned-path table. Clearing it restores the path-only display. Use the checkboxes to turn each target on or off independently. A path and its label are removed from the table when neither target is selected.
 
 ### Editing the Full Game State
 

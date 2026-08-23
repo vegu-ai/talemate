@@ -569,8 +569,9 @@
 - path: user-guide/debug-tools.md
   title: Debug Tools
   summary: 'The bug-icon Debug Tools panel with its Prompts, Memory and Vars tabs: inspecting sent prompts (and forcing reasoning
-    off per action), watching memory retrieval, editing watched game state variables, and the Game State Editor for slash-separated
-    paths and the full state JSON.'
+    off per action), watching memory retrieval, and editing game state variables. Covers the Pinned Variables manager''s independent
+    Debug Vars and Scene toolbar targets, optional shared labels with Debug Vars path subtitles, type-matched toolbar knobs,
+    slash-separated paths, and the full state JSON editor.'
 - path: user-guide/howto/create-a-new-scene/create-empty-scene.md
   title: Create an empty scene
   summary: Walkthrough for starting a blank scene from the Home screen's Create new scene card and the New scene setup dialog
@@ -1207,8 +1208,9 @@
 - path: user-guide/world-editor/scene/game-state.md
   title: Game State
   summary: 'The Scene tab''s Game State editor: a JSON editor for the scene''s persisted game state variables, saved when
-    you click outside and rejected if invalid, plus a Watched Variables panel that feeds the Debug Tools Vars panel. These
-    variables are the node editor''s game scope.'
+    you click outside and rejected if invalid, plus a Pinned Variables manager with independent Debug Vars and Scene toolbar
+    targets, optional shared labels, an Add action, and per-row label and target controls. These variables are the node editor''s
+    game scope.'
 - path: user-guide/world-editor/scene/outline.md
   title: Outline
   summary: 'The Scene tab''s Outline panel: Title, Content Classification, the four perspective-and-tense fields (scene default

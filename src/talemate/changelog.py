@@ -153,6 +153,7 @@ _LIST_FIELDS = (
     "layered_history",
     "active_characters",
     "game_state_watch_paths",
+    "game_state_knob_paths",
 )
 
 # Cache for check_chain_divergence verdicts, keyed by (changelog_dir,

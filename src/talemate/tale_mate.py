@@ -203,8 +203,9 @@ class Scene(Emitter):
         # Add an attribute to store the most recent AI Actor
         self.most_recent_ai_actor = None
 
-        # List of game state paths to watch in debug tools
         self.game_state_watch_paths: list[str] = []
+        self.game_state_knob_paths: list[str] = []
+        self.game_state_path_labels: dict[str, str] = {}
 
         # if the user has requested to cancel the current action
         # or series of agent actions this will be true
@@ -239,6 +240,10 @@ class Scene(Emitter):
     @property
     def config(self) -> Config:
         return get_config()
+
+    @property
+    def pinned_game_state_paths(self) -> set[str]:
+        return set(self.game_state_watch_paths) | set(self.game_state_knob_paths)
 
     @property
     def main_character(self) -> Actor | None:
@@ -1437,6 +1442,8 @@ class Scene(Emitter):
                 "agent_settings_opted_out": self._agent_settings_opted_out,
                 "agent_settings_files": self.agent_settings_files,
                 "game_state_watch_paths": self.game_state_watch_paths,
+                "game_state_knob_paths": self.game_state_knob_paths,
+                "game_state_path_labels": self.game_state_path_labels,
                 "playthrough_progress": self.playthrough_progress,
             },
         )
@@ -2153,6 +2160,8 @@ class Scene(Emitter):
             "agent_settings_file": scene.agent_settings_link,
             "agent_settings_opted_out": scene._agent_settings_opted_out,
             "game_state_watch_paths": scene.game_state_watch_paths,
+            "game_state_knob_paths": scene.game_state_knob_paths,
+            "game_state_path_labels": scene.game_state_path_labels,
             "playthrough_progress": scene.playthrough_progress,
         }
 

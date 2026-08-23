@@ -1,15 +1,16 @@
 import json
+from typing import Any, Literal
 
 import pydantic
 import structlog
-from talemate.instance import get_client
 from talemate.client.base import ClientBase
-from talemate.path import LOGS_DIR
-from talemate.scene.state_editor import SceneStateEditor
-from talemate.scene.schema import SceneState
-from talemate.server.websocket_plugin import Plugin
 from talemate.emit import emit
-from typing import Any
+from talemate.instance import get_client
+from talemate.path import LOGS_DIR
+from talemate.scene.schema import SceneState
+from talemate.scene.state_editor import SceneStateEditor
+from talemate.server.websocket_plugin import Plugin
+from talemate.util.path import get_path_parent, split_state_path
 
 log = structlog.get_logger("talemate.server.devtools")
 
@@ -26,11 +27,28 @@ class SetSceneStatePayload(pydantic.BaseModel):
 
 
 class GameStateVariablesPayload(pydantic.BaseModel):
-    variables: dict[str, Any] = {}
+    variables: dict[str, Any] = pydantic.Field(default_factory=dict)
 
 
-class GameStateWatchPathsPayload(pydantic.BaseModel):
-    paths: list[str] = []
+class GameStateVariablePayload(pydantic.BaseModel):
+    path: str
+    value: Any
+
+
+class GameStatePathsPayload(pydantic.BaseModel):
+    paths: list[str] = pydantic.Field(default_factory=list)
+
+
+class GameStatePathTargetPayload(pydantic.BaseModel):
+    path: str
+    target: Literal["debug", "knob"]
+    enabled: bool
+    label: str | None = None
+
+
+class GameStatePathLabelPayload(pydantic.BaseModel):
+    path: str
+    label: str | None = None
 
 
 class DumpPromptLogPayload(pydantic.BaseModel):
@@ -54,6 +72,14 @@ def ensure_number(v):
 
 class DevToolsPlugin(Plugin):
     router = "devtools"
+
+    def _set_game_state_path_label(self, path: str, label: str | None) -> str:
+        label = (label or "").strip()
+        if label:
+            self.scene.game_state_path_labels[path] = label
+        else:
+            self.scene.game_state_path_labels.pop(path, None)
+        return label
 
     async def handle_test_prompt(self, data):
         payload = TestPromptPayload(**data)
@@ -151,6 +177,8 @@ class DevToolsPlugin(Plugin):
 
         # Re-evaluate gamestate-controlled pins
         await scene.load_active_pins()
+        await scene.attempt_auto_save()
+        scene.emit_status()
 
         emit("status", message="Game state updated", status="success")
 
@@ -162,7 +190,40 @@ class DevToolsPlugin(Plugin):
             }
         )
 
-        await self.signal_operation_done()
+        await self.signal_operation_done(signal_only=True)
+
+    async def handle_set_game_state_variable(self, data):
+        scene = self.scene
+        if not scene:
+            await self.signal_operation_failed("No active scene")
+            return
+
+        try:
+            payload = GameStateVariablePayload(**data)
+            parts = split_state_path(payload.path)
+            parent, leaf_key = get_path_parent(
+                scene.game_state.variables, parts, create=False
+            )
+            if parent is None:
+                raise ValueError(f"Game state path does not exist: {payload.path}")
+        except Exception as exc:
+            await self.signal_operation_failed(str(exc))
+            return
+
+        parent[leaf_key] = payload.value
+        await scene.load_active_pins()
+        await scene.attempt_auto_save()
+        scene.emit_status()
+
+        emit("status", message="Game state variable updated", status="success")
+        self.websocket_handler.queue_put(
+            {
+                "type": "devtools",
+                "action": "game_state_variable_updated",
+                "data": {"path": payload.path, "value": payload.value},
+            }
+        )
+        await self.signal_operation_done(signal_only=True)
 
     async def handle_get_game_state_watch_paths(self, data):
         scene = self.scene
@@ -178,37 +239,134 @@ class DevToolsPlugin(Plugin):
             }
         )
 
-    async def handle_set_game_state_watch_paths(self, data):
+    async def _set_game_state_paths(
+        self,
+        data,
+        *,
+        attribute: str,
+        action: str,
+        status_message: str,
+    ):
         scene = self.scene
         if not scene:
             await self.signal_operation_failed("No active scene")
             return
 
         try:
-            payload = GameStateWatchPathsPayload(**data)
+            payload = GameStatePathsPayload(**data)
         except Exception as exc:
             await self.signal_operation_failed(str(exc))
             return
 
-        # Sanitize: remove duplicates and empty strings, keep unique sorted list
-        sanitized_paths = sorted(list(set(filter(None, payload.paths))))
-
-        scene.game_state_watch_paths = sanitized_paths
-
-        # Emit scene status so TalemateApp.vue gets the updated watch paths
+        sanitized_paths = sorted(set(filter(None, payload.paths)))
+        setattr(scene, attribute, sanitized_paths)
+        scene.game_state_path_labels = {
+            path: label
+            for path, label in scene.game_state_path_labels.items()
+            if path in scene.pinned_game_state_paths
+        }
+        await scene.attempt_auto_save()
         scene.emit_status()
 
-        emit("status", message="Game state watch paths updated", status="success")
+        emit("status", message=status_message, status="success")
 
         self.websocket_handler.queue_put(
             {
                 "type": "devtools",
-                "action": "game_state_watch_paths_updated",
-                "data": {"paths": scene.game_state_watch_paths},
+                "action": action,
+                "data": {"paths": getattr(scene, attribute)},
             }
         )
 
-        await self.signal_operation_done()
+        await self.signal_operation_done(signal_only=True)
+
+    async def handle_set_game_state_watch_paths(self, data):
+        await self._set_game_state_paths(
+            data,
+            attribute="game_state_watch_paths",
+            action="game_state_watch_paths_updated",
+            status_message="Game state watch paths updated",
+        )
+
+    async def handle_set_game_state_knob_paths(self, data):
+        await self._set_game_state_paths(
+            data,
+            attribute="game_state_knob_paths",
+            action="game_state_knob_paths_updated",
+            status_message="Game state knob paths updated",
+        )
+
+    async def handle_set_game_state_path_target(self, data):
+        scene = self.scene
+        if not scene:
+            await self.signal_operation_failed("No active scene")
+            return
+
+        try:
+            payload = GameStatePathTargetPayload(**data)
+            parts = split_state_path(payload.path)
+        except Exception as exc:
+            await self.signal_operation_failed(str(exc))
+            return
+
+        target = {
+            "debug": (
+                "game_state_watch_paths",
+                "game_state_watch_paths_updated",
+                "Game state watch paths updated",
+            ),
+            "knob": (
+                "game_state_knob_paths",
+                "game_state_knob_paths_updated",
+                "Game state knob paths updated",
+            ),
+        }[payload.target]
+        attribute, action, status_message = target
+        paths = set(getattr(scene, attribute))
+        normalized_path = "/".join(parts)
+        if payload.enabled:
+            paths.add(normalized_path)
+        else:
+            paths.discard(normalized_path)
+
+        if "label" in payload.model_fields_set:
+            self._set_game_state_path_label(normalized_path, payload.label)
+
+        await self._set_game_state_paths(
+            {"paths": list(paths)},
+            attribute=attribute,
+            action=action,
+            status_message=status_message,
+        )
+
+    async def handle_set_game_state_path_label(self, data):
+        scene = self.scene
+        if not scene:
+            await self.signal_operation_failed("No active scene")
+            return
+
+        try:
+            payload = GameStatePathLabelPayload(**data)
+            normalized_path = "/".join(split_state_path(payload.path))
+            if normalized_path not in scene.pinned_game_state_paths:
+                raise ValueError(f"Game state path is not pinned: {normalized_path}")
+        except Exception as exc:
+            await self.signal_operation_failed(str(exc))
+            return
+
+        label = self._set_game_state_path_label(normalized_path, payload.label)
+
+        await scene.attempt_auto_save()
+        scene.emit_status()
+        emit("status", message="Game state path label updated", status="success")
+        self.websocket_handler.queue_put(
+            {
+                "type": "devtools",
+                "action": "game_state_path_label_updated",
+                "data": {"path": normalized_path, "label": label or None},
+            }
+        )
+        await self.signal_operation_done(signal_only=True)
 
     async def handle_dump_prompt_log(self, data):
         try:

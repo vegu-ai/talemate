@@ -396,6 +396,19 @@ async def load_scene_from_data(
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
         scene.game_state_watch_paths = scene_data.get("game_state_watch_paths", [])
+        scene.game_state_knob_paths = scene_data.get("game_state_knob_paths", [])
+        path_labels = scene_data.get("game_state_path_labels", {})
+        scene.game_state_path_labels = (
+            {
+                path: label.strip()
+                for path, label in path_labels.items()
+                if path in scene.pinned_game_state_paths
+                and isinstance(label, str)
+                and label.strip()
+            }
+            if isinstance(path_labels, dict)
+            else {}
+        )
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"
         )

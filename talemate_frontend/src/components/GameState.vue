@@ -12,7 +12,7 @@
                 <v-alert v-if="!loaded" color="muted" density="compact" variant="text">No game state loaded.</v-alert>
 
                 <v-row v-else>
-                    <v-col cols="12" md="8">
+                    <v-col cols="12" md="7">
                         <div class="codemirror-container">
                             <v-alert v-if="validationError" type="error" density="compact" variant="tonal" class="mb-2">
                                 {{ validationError }}
@@ -26,12 +26,15 @@
                         </div>
                     </v-col>
 
-                    <v-col cols="12" md="4">
+                    <v-col cols="12" md="5">
                         <GameStateWatchedPaths
-                            v-model:watched-paths="watchedPaths"
+                            :watched-paths="watchedPaths"
+                            :knob-paths="knobPaths"
+                            :path-labels="pathLabels"
                             :available-paths="gameStatePaths"
-                            @path-added="onPathAdded"
-                            @update:watched-paths="onWatchedPathsChanged"
+                            @debug-path-added="onPathAdded"
+                            @set-target="onTargetChanged"
+                            @set-label="onLabelChanged"
                         />
                     </v-col>
                 </v-row>
@@ -79,14 +82,14 @@ export default {
         };
     },
     computed: {
-        watchedPaths: {
-            get() {
-                return this.scene?.data?.game_state_watch_paths || [];
-            },
-            set(value) {
-                // This setter is for v-model compatibility in GameStateWatchedPaths
-                // The actual update happens through onWatchedPathsChanged
-            }
+        watchedPaths() {
+            return this.scene?.data?.game_state_watch_paths || [];
+        },
+        knobPaths() {
+            return this.scene?.data?.game_state_knob_paths || [];
+        },
+        pathLabels() {
+            return this.scene?.data?.game_state_path_labels || {};
         },
     },
     watch: {
@@ -165,18 +168,30 @@ export default {
                 }
             }
         },
-        onWatchedPathsChanged(newPaths) {
-            // Persist the updated watch paths
+        onTargetChanged({ path, target, enabled, label }) {
+            const payload = {
+                type: 'devtools',
+                action: 'set_game_state_path_target',
+                path,
+                target,
+                enabled,
+            };
+            if (label !== undefined) payload.label = label;
+            this.getWebsocket().send(
+                JSON.stringify(payload)
+            );
+        },
+        onLabelChanged({ path, label }) {
             this.getWebsocket().send(
                 JSON.stringify({
                     type: 'devtools',
-                    action: 'set_game_state_watch_paths',
-                    paths: newPaths,
+                    action: 'set_game_state_path_label',
+                    path,
+                    label,
                 })
             );
         },
         onPathAdded(path) {
-            // When a new path is added, open DebugTools and select gamestate tab
             if (this.openDebugTools) {
                 this.$nextTick(() => {
                     this.openDebugTools('gamestate');
@@ -257,5 +272,3 @@ export default {
     width: 100%;
 }
 </style>
-
-

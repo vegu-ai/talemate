@@ -23,6 +23,7 @@
     "@fsegurai/codemirror-theme-bundle": "6.4.2",
     "@mdi/font": "7.4.47",
     "core-js": "^3.37.1",
+    "dompurify": "^3.4.13",
     "dot-prop": "^9.0.0",
     "litegraph.js": "^0.7.18",
     "lodash": "^4.17.21",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.0",
     "eslint": "^10.8.0",
+    "jsdom": "^30.0.1",
     "postcss": "^8.5.3",
     "vite": "^7.3.5",
     "vite-plugin-runtime-env": "^1.0.0",

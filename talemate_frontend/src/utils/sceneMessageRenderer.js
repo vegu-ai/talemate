@@ -54,7 +54,7 @@ function escapeHtmlAttr(s) {
 }
 
 // Escape a string for safe embedding as HTML text content.
-function escapeHtmlText(s) {
+export function escapeHtmlText(s) {
     return String(s)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')

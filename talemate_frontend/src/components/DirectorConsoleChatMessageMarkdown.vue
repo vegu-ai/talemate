@@ -4,8 +4,7 @@
 </template>
 
 <script>
-import { marked } from 'marked';
-import { parseSceneText } from '../utils/sceneMessageRenderer.js';
+import { renderChatMarkdown } from '../utils/chatMarkdownRenderer.js';
 
 export default {
     name: 'DirectorConsoleChatMessageMarkdown',
@@ -22,19 +21,7 @@ export default {
     },
     computed: {
         safeHtml() {
-            try {
-                let html = marked.parse(this.text || '');
-                // Process diff code blocks
-                html = this.processDiffCodeBlocks(html);
-                // Process scene code blocks
-                html = this.processSceneCodeBlocks(html);
-                // Open links in a new tab so they don't navigate the app away
-                // (talemate:// links are handled in-app by onLinkClick instead)
-                html = html.replace(/<a href="(?!talemate:\/\/)/g, '<a target="_blank" rel="noopener" href="');
-                return html;
-            } catch (e) {
-                return this.text || '';
-            }
+            return renderChatMarkdown(this.text);
         }
     },
     methods: {
@@ -60,35 +47,6 @@ export default {
             } catch (err) {
                 console.warn('talemate:// link navigation failed', href, err);
             }
-        },
-        processDiffCodeBlocks(html) {
-            // Find code blocks with language="diff"
-            return html.replace(
-                /<pre><code class="language-diff">([\s\S]*?)<\/code><\/pre>/g,
-                (match, content) => {
-                    // Process the diff content to add colored spans
-                    const processedContent = content
-                        .replace(/\[--([^\]]*?)--\]/g, '<span class="diff-delete">$1</span>')
-                        .replace(/\[\+\+([^\]]*?)\+\+\]/g, '<span class="diff-insert">$1</span>')
-                        .replace(/\[-([^\]]*?)-\]/g, '<span class="diff-delete">$1</span>')
-                        .replace(/\[\+([^\]]*?)\+\]/g, '<span class="diff-insert">$1</span>');
-                    
-                    return `<pre class="diff-block"><code>${processedContent}</code></pre>`;
-                }
-            );
-        },
-        processSceneCodeBlocks(html) {
-            // Find code blocks with language="scene"
-            return html.replace(
-                /<pre><code class="language-scene">([\s\S]*?)<\/code><\/pre>/g,
-                (match, content) => {
-                    const textarea = document.createElement('textarea');
-                    textarea.innerHTML = content;
-                    const decoded = textarea.value;
-                    const rendered = parseSceneText(decoded);
-                    return `<pre class="scene-block"><code>${rendered}</code></pre>`;
-                }
-            );
         }
     }
 }
@@ -281,5 +239,4 @@ export default {
     border-radius: 2px;
 }
 </style>
-
 

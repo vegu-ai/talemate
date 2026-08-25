@@ -544,7 +544,8 @@
   title: OpenAI Compatible Client
   summary: Shows how to connect unsupported services such as DeepInfra through an OpenAI-like endpoint, with URL, key, model,
     context, and prompt-template ownership. Documents per-parameter send toggles for services that reject unsupported sampler
-    fields and recommends official clients when available.
+    fields and recommends official clients when available. Explains that a 'Could not connect' error on this client means the
+    API URL field is empty, and that a wrong-but-present URL fails at generation time instead.
 - path: user-guide/clients/types/openai.md
   title: OpenAI Client
   summary: Setup guide for OpenAI authentication, model and context selection, and default-on concurrent inference. Gives

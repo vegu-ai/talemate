@@ -133,27 +133,13 @@ class LlamaCppClient(
         return headers
 
     def _base_url(self) -> str:
-        return self.api_url.strip().rstrip("/")
-
-    def _base_url_v1(self) -> str | None:
-        if not self.api_url:
-            return None
-        base = self._base_url()
-        if base.endswith("/v1"):
-            return base
-        return base + "/v1"
+        return self.require_api_url().rstrip("/")
 
     def make_client(self) -> AsyncOpenAI:
         # OpenAI SDK requires an api_key. llama.cpp may ignore auth; if the user
         # didn't configure a key, use a dummy value (same idea as LMStudioClient).
         api_key = self.api_key or "sk-1234"
-        return AsyncOpenAI(base_url=self._base_url_v1(), api_key=api_key)
-
-    async def get_model_name(self):
-        if not self.api_url:
-            return None
-
-        return await self.probe_model_name()
+        return AsyncOpenAI(base_url=self.require_api_url_v1(), api_key=api_key)
 
     async def apply_remote_template(self, prompt: str, kind: str) -> str:
         """

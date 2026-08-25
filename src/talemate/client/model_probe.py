@@ -8,6 +8,9 @@ class OpenAIModelListProbeMixin:
     listing. Expects `make_client()` to return an `AsyncOpenAI` for the
     endpoint."""
 
+    async def get_model_name(self) -> str | None:
+        return await self.probe_model_name()
+
     async def probe_model_name(self) -> str | None:
         # single attempt: the status sweep repeats every 3s, and the SDK's two
         # extra retries would stretch one probe of a dead endpoint to ~7s

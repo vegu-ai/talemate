@@ -397,6 +397,18 @@ class ClientBase:
     def api_url(self) -> str | None:
         return self.client_config.api_url
 
+    def require_api_url(self) -> str:
+        # a blank url must never reach the OpenAI SDK: it falls back to
+        # https://api.openai.com/v1/ and sends the payload to OpenAI
+        url = (self.api_url or "").strip()
+        if not url:
+            raise ValueError(f"Client '{self.name}' has no API URL configured")
+        return url
+
+    def require_api_url_v1(self) -> str:
+        base = self.require_api_url().rstrip("/")
+        return base if base.endswith("/v1") else base + "/v1"
+
     @property
     def max_token_length(self) -> int:
         return self.client_config.max_token_length

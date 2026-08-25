@@ -61,10 +61,7 @@ class LMStudioClient(OpenAIModelListProbeMixin, ClientBase):
         return "sk-1234"
 
     def make_client(self):
-        return AsyncOpenAI(base_url=self.api_url + "/v1", api_key=self.api_key)
-
-    async def get_model_name(self):
-        return await self.probe_model_name()
+        return AsyncOpenAI(base_url=self.require_api_url_v1(), api_key=self.api_key)
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """

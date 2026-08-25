@@ -107,6 +107,7 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
         KoboldCpp always serves an OpenAI-compatible API at /v1 regardless
         of which API mode is used for text generation.
         """
+        self.require_api_url()
         api_key = self.api_key or "sk-1234"
         return AsyncOpenAI(base_url=f"{self.url}/v1", api_key=api_key)
 
@@ -250,7 +251,7 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
         return "/v1" in self.api_url
 
     def ensure_api_endpoint_specified(self):
-        if not self.api_url:
+        if not (self.api_url or "").strip():
             return
 
         if not self.api_endpoint_specified(self.api_url):
@@ -322,9 +323,7 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
 
     async def get_model_name(self):
         self.ensure_api_endpoint_specified()
-
-        if not self.api_url:
-            return None
+        self.require_api_url()
 
         try:
             async with httpx.AsyncClient() as client:

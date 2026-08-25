@@ -83,4 +83,10 @@ Once it is added, the client should appear in the clients list and should displa
 #### Generations are weird / bad
 
 Make sure the [correct prompt template is assigned](/talemate/user-guide/clients/prompt-templates/).
+
+#### Could not connect
+
+The API URL field is empty. This client reports `Could not connect` when it has no URL to send requests to.
+
+A URL that is present but wrong does not produce this error — this client takes the model name from the field you filled in rather than asking the service for it, so it keeps reporting as connected and the problem shows up as a failed generation instead.
 --8<-- "docs/snippets/common.md:client-response-length"

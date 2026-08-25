@@ -78,14 +78,18 @@ class OpenAICompatibleClient(
         return not self.reason_enabled
 
     async def get_model_name(self):
+        self.require_api_url()
         return self.model
+
+    def make_client(self) -> AsyncOpenAI:
+        return AsyncOpenAI(base_url=self.require_api_url(), api_key=self.api_key)
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
         """
 
-        client = AsyncOpenAI(base_url=self.api_url, api_key=self.api_key)
+        client = self.make_client()
 
         if self.api_handles_prompt_template:
             # OpenAI API handles prompt template

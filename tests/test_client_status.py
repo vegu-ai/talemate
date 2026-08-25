@@ -127,15 +127,11 @@ class TestProbeUsesOneClosedAttempt:
         assert await client.get_model_name() == "some-model.gguf"
 
     @pytest.mark.asyncio
-    async def test_no_api_url_skips_the_probe(self, cfg_isolation):
+    async def test_no_api_url_fails_the_probe(self, cfg_isolation):
         config_state.CONFIG.clients["probe5"] = ClientConfig(
             type="llamacpp", name="probe5", api_url=""
         )
         client = LlamaCppClient(name="probe5")
 
-        def _unreachable():
-            raise AssertionError("the probe must not build a client")
-
-        client.make_client = _unreachable
-
-        assert await client.get_model_name() is None
+        with pytest.raises(ValueError):
+            await client.get_model_name()

@@ -67,10 +67,7 @@ class TextGeneratorWebuiClient(
 
     def make_client(self) -> AsyncOpenAI:
         api_key = self.api_key or "sk-1234"
-        base = self.api_url.rstrip("/")
-        if not base.endswith("/v1"):
-            base += "/v1"
-        return AsyncOpenAI(base_url=base, api_key=api_key)
+        return AsyncOpenAI(base_url=self.require_api_url_v1(), api_key=api_key)
 
     @property
     def request_headers(self):
@@ -171,7 +168,7 @@ class TextGeneratorWebuiClient(
     async def get_model_name(self):
         async with httpx.AsyncClient() as client:
             response = await client.get(
-                f"{self.api_url}/v1/internal/model/info",
+                f"{self.require_api_url()}/v1/internal/model/info",
                 timeout=self.status_request_timeout,
                 headers=self.request_headers,
             )

@@ -9,6 +9,7 @@ the baselines don't churn whenever the real documentation changes.
 """
 
 import json
+import re
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -149,6 +150,45 @@ class TestHelpBaselines:
         baseline_checker(capture_prompt(help_agent), AGENT, "chat_send")
 
     @pytest.mark.asyncio
+    async def test_chat_send__settings_only(
+        self, help_agent, agent_registry, baseline_checker
+    ):
+        """Settings granted, templates withheld - the mixed cell where a tool
+        can be registered without its schema, or documented without existing."""
+        help_agent.actions["permissions"].config["allow_settings_changes"].value = True
+
+        chat = help_agent.chat_create()
+        help_agent.client.send_prompt = AsyncMock(return_value="Here is your answer.")
+        with patch.object(help_agent, "_chat_has_enough_for_title", return_value=False):
+            await help_agent.chat_send(
+                chat.id,
+                "Turn off auto save for me.",
+                ux_snapshot=UX_SNAPSHOT,
+            )
+        baseline_checker(capture_prompt(help_agent), AGENT, "chat_send__settings_only")
+
+    @pytest.mark.asyncio
+    async def test_chat_send__permissions_granted(
+        self, help_agent, agent_registry, baseline_checker
+    ):
+        """Both permissions on - the write tools and the theme slot reference
+        render, which the default-off cases above never show."""
+        for key in ("allow_settings_changes", "allow_template_changes"):
+            help_agent.actions["permissions"].config[key].value = True
+
+        chat = help_agent.chat_create()
+        help_agent.client.send_prompt = AsyncMock(return_value="Here is your answer.")
+        with patch.object(help_agent, "_chat_has_enough_for_title", return_value=False):
+            await help_agent.chat_send(
+                chat.id,
+                "Turn off auto save for me.",
+                ux_snapshot=UX_SNAPSHOT,
+            )
+        baseline_checker(
+            capture_prompt(help_agent), AGENT, "chat_send__permissions_granted"
+        )
+
+    @pytest.mark.asyncio
     async def test_chat_send__scene_aware(
         self,
         help_agent,
@@ -231,3 +271,43 @@ class TestHelpBaselines:
         )
         await help_agent.chat_generate_title(chat.id)
         baseline_checker(capture_prompt(help_agent), AGENT, "chat_generate_title")
+
+
+PERMISSION_CELLS = [
+    (False, False),
+    (True, False),
+    (False, True),
+    (True, True),
+]
+
+
+@pytest.mark.parametrize("settings_on,templates_on", PERMISSION_CELLS)
+@pytest.mark.asyncio
+async def test_every_registered_tool_is_documented_and_no_other(
+    help_agent, agent_registry, settings_on, templates_on
+):
+    """The prompt and the callback list have to agree in both directions: a
+    tool the agent holds but was never told about is unusable, and one it was
+    told about but does not hold wastes a round or is claimed as done."""
+    config = help_agent.actions["permissions"].config
+    config["allow_settings_changes"].value = settings_on
+    config["allow_template_changes"].value = templates_on
+
+    chat = help_agent.chat_create()
+    help_agent.client.send_prompt = AsyncMock(return_value="Here is your answer.")
+    with patch.object(help_agent, "_chat_has_enough_for_title", return_value=False):
+        await help_agent.chat_send(chat.id, "What can you do?", ux_snapshot=UX_SNAPSHOT)
+
+    prompt = capture_prompt(help_agent)
+    documented = set(re.findall(r'"function": "([a-z_]+)"', prompt))
+    registered = {
+        callback.name
+        for callback in (
+            help_agent._chat_doc_callbacks()
+            + help_agent._chat_settings_callbacks()
+            + help_agent._chat_theme_callbacks()
+            + help_agent._chat_template_callbacks()
+        )
+    }
+
+    assert documented == registered

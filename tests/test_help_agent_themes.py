@@ -24,6 +24,7 @@ import pytest
 import talemate
 
 import talemate.agents.help.storage as help_storage
+import talemate.agents.help.templates as help_templates
 import talemate.agents.help.themes as help_themes
 import talemate.config.state as config_state
 import talemate.world_state.templates as world_state_templates
@@ -110,7 +111,7 @@ def config(monkeypatch, tmp_path, template_dir, shipped_dir, isolate_signals) ->
     config_state.CONFIG = cfg
     monkeypatch.setattr(config_state, "CONFIG_FILE", tmp_path / "config.yaml")
     monkeypatch.setattr(world_state_templates, "TEMPLATE_PATH", template_dir)
-    monkeypatch.setattr(help_themes, "TEMPLATE_PATH_TALEMATE", shipped_dir)
+    monkeypatch.setattr(help_templates, "TEMPLATE_PATH_TALEMATE", shipped_dir)
     invalidate_theme_cache()
 
     yield cfg
@@ -156,6 +157,8 @@ def help_agent(tmp_path, monkeypatch, scene) -> HelpAgent:
     monkeypatch.setattr(help_storage, "HELP_CHATS_DIR", tmp_path)
     monkeypatch.setattr(help_storage, "HELP_CHATS_FILE", tmp_path / "help.json")
     agent = HelpAgent(client=MockClient("test_client"))
+    # these suites drive the write tools; the permission is off by default
+    agent.actions["permissions"].config["allow_template_changes"].value = True
     agent.scene = scene
     return agent
 
@@ -463,7 +466,7 @@ class TestUnsavedEditRefusals:
             scene, "Aurora", USER_GROUP, templates_dirty=True
         )
 
-        assert "Templates tab has an unsaved theme edit" in result
+        assert "Templates tab has an unsaved template edit" in result
         assert len(scene._world_state_templates.groups) == 2
 
     async def test_update_is_refused_while_the_templates_tab_is_dirty(
@@ -476,7 +479,7 @@ class TestUnsavedEditRefusals:
             templates_dirty=True,
         )
 
-        assert "Templates tab has an unsaved theme edit" in result
+        assert "Templates tab has an unsaved template edit" in result
         assert user_theme.colors.app.primary == "#123456"
 
     async def test_apply_is_refused_while_the_templates_tab_is_dirty(
@@ -486,7 +489,7 @@ class TestUnsavedEditRefusals:
             scene, theme_id(user_theme), templates_dirty=True
         )
 
-        assert "Templates tab has an unsaved theme edit" in result
+        assert "Templates tab has an unsaved template edit" in result
         assert config.appearance.theme != theme_id(user_theme)
 
     async def test_apply_is_refused_while_the_settings_view_is_dirty(
@@ -568,7 +571,7 @@ class TestChatIntegration:
             for message in help_agent.chat_get(chat.id).messages
             if message.type == "doc_result"
         ]
-        assert "unsaved theme edit" in results[0].result
+        assert "unsaved template edit" in results[0].result
 
     async def test_the_active_theme_write_pushes_templates_and_app_config(
         self, scene, config, user_theme

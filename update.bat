@@ -27,6 +27,7 @@ git remote add origin https://github.com/vegu-ai/talemate
 
 REM pull the latest changes from git repository
 git pull
+IF ERRORLEVEL 1 CALL :die "git pull failed - the update was NOT applied. A local change to a tracked file (a shipped template you edited, for example) blocks the merge. Restore or stash it, then run this again: git checkout -- <path>  or  git stash"
 
 REM Check if .venv exists
 IF NOT EXIST ".venv" (

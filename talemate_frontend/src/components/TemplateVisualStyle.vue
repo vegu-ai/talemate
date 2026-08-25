@@ -139,6 +139,7 @@ export default {
                 { title: 'Scene Card', value: VIS_TYPE.SCENE_CARD },
                 { title: 'Scene Background', value: VIS_TYPE.SCENE_BACKGROUND },
                 { title: 'Scene Illustration', value: VIS_TYPE.SCENE_ILLUSTRATION },
+                { title: 'Object Illustration', value: VIS_TYPE.OBJECT_ILLUSTRATION },
             ],
         }
     },

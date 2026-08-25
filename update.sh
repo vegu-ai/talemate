@@ -7,7 +7,14 @@ if [ ! -d ".git" ]; then
 fi
 
 # Pull latest changes
-git pull
+if ! git pull; then
+    echo ""
+    echo "git pull failed - the update was NOT applied."
+    echo "A local change to a tracked file (a shipped template you edited, for"
+    echo "example) blocks the merge. Restore or stash it, then run this again:"
+    echo "  git checkout -- <path>   or   git stash"
+    exit 1
+fi
 
 # Install dependencies with uv
 echo "Updating virtual environment..."

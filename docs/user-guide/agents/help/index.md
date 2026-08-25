@@ -6,15 +6,33 @@ It grounds its answers in the documentation that ships with Talemate: it knows t
 
 Open the help chat via the :material-help-circle-outline: icon in the app bar. No scene needs to be loaded. The icon is only there while the Help agent is enabled - if you don't see it, enable the agent under **Settings → Connections → Agents → Help**.
 
-![Help chat answering a question about dialogue styling](/talemate/img/0.39.0/help-agent-chat.png)
+![Help chat answering a question about dialogue styling](/talemate/img/0.40.0/help-agent-chat.png)
 
 ## What it can and cannot do
 
 - It answers questions and points you to the relevant documentation pages.
 - Its answers can include links that navigate you inside the application - to an agent's settings, a world editor tab, or the director console.
-- It can read your configuration and, when you ask it to, change settings for you - see [Reading and changing settings](#reading-and-changing-settings) below.
+- It can read your configuration, and - once you grant the [permission](#permissions) - change settings for you; see [Reading and changing settings](#reading-and-changing-settings) below.
 - It can build and change [themes](#themes) for you - see Themes below.
+- It can build and change your other [world state templates](#world-state-templates) too.
 - It **cannot** change anything in your scene itself - its story, characters or world state. If you want to make changes to a scene through chat, use the [director's chat](/talemate/user-guide/agents/director/chat) instead. For questions about your scene's content the director chat is also the better place - the help agent only sees a shallow snapshot of the scene, the director has the full context.
+
+## Permissions
+
+Everything the help agent can *read* is available to it out of the box. Everything it can **change** is off until you turn it on, under **Settings → Connections → Agents → Help → Permissions**:
+
+| Permission | What it hands over | Default |
+|---|---|---|
+| **Allow changes to settings** | Changing your application and agent settings from the chat | Off |
+| **Allow changes to templates** | Creating and changing world state templates and themes | Off |
+| **Both together** | Applying a theme — it writes the message styling and the active theme into your appearance settings as well as reading a template, so it answers to both | Off |
+
+!!! warning "Use a strong agentic reasoning model"
+    These permissions let an LLM write real changes to your configuration and templates on its own. A strong agentic reasoning model is highly recommended before you turn one on — weaker models misread what you asked for and make destructive or unwanted changes. Leave them off if the help agent runs on a small or non-reasoning client.
+
+The help chat carries the same two switches: a **May change** row above the conversation shows a chip per permission, green with a checkmark when it is granted and muted when it is not, and clicking one grants or revokes it on the spot. While either is granted, a single line under the chips repeats the recommendation below.
+
+With a permission off, the matching tools are not merely refused when called — they are never handed to the agent at all, so there is nothing for it to misuse and nothing about them in its prompt. Ask it for a change anyway and it reads the current value, tells you where to make it yourself, and points you at the permission that would let it do the work. It cannot turn its own permissions on: that stays yours.
 
 ## Reading and changing settings
 
@@ -24,7 +42,7 @@ The help agent can see what you currently have configured, so instead of answeri
 - Application settings - the game (general), appearance, creator, inference/embeddings presets, and prompt template group sections of your config.
 - Your configured clients - type, model, context length and status.
 
-When you ask it to, it can also **change** settings:
+When the **Allow changes to settings** permission is on, it can also **change** settings:
 
 - Agent settings, either globally or as a [per-scene override](/talemate/user-guide/agents/scene-overrides) for the currently loaded scene - it can also remove a scene override so the setting falls back to the global value again.
 - Application settings in the game, appearance, and creator sections.
@@ -42,9 +60,35 @@ Some things are intentionally out of reach:
 
     Unsaved edits stay pending when you switch to another main tab, and so does the refusal. Save or discard them, then ask again.
 
+## World state templates
+
+With the **Allow changes to templates** permission on, the help agent can work on [world state templates](/talemate/user-guide/templates) - character attributes and details, spice collections, writing styles, state reinforcements, scene types, scene tool shortcuts, visual styles, visual prompt finalizers and agent personas. Ask for one in the chat and you get a real template that shows up in the Templates tab:
+
+- "Make me a character attribute template for a character's fighting style"
+- "Add a state reinforcement that tracks where everyone is, checked every five turns"
+- "Copy the shipped Physical Traits attribute into my own group and make it shorter"
+
+It can list your templates, describe what a type of template carries before it writes one, read one in full, create one, and change the fields of one you own. A template it creates goes into a template group you name, creating the group if it does not exist yet.
+
+Before it writes a type it has not touched in that chat, it asks the application what that type carries: the field names, their types, their defaults and their valid values come from the same models the save path validates against, so what it writes is what the Templates tab would have written. A field it does not set keeps the default it would have had there.
+
+What it will not do:
+
+- **Apply or install a template.** Applying a character attribute, a character detail or a state reinforcement writes into your scene, and the help agent does not change scenes. Applying stays yours, in the Templates tab and the world editor.
+- **Delete a template.** That stays in the Templates tab too - select the template and click **Remove template**.
+- **Edit a template that ships with Talemate.** The groups Talemate ships are read-only to the agent, and so is any template marked locked; it offers to copy one into a group of your own instead.
+- **Write a state reinforcement with auto-create on while a scene is loaded.** Saving such a template applies it to the characters of the loaded scene right away, which is a change to your scene — and it happens on *every* save, so a template that already has auto-create on cannot be changed through the chat while a scene is loaded either: re-applying it would blank the answers it has collected. The agent says so and sends you to the Templates tab, or offers to make the change with no scene loaded. Turning auto-create off is always allowed, and a state reinforcement whose state type is **World** is never affected, since it applies to no character.
+
+!!! note "Unsaved edits in the Templates tab"
+    The same rule as for settings and themes applies: while the Templates tab holds an unsaved template edit, the agent refuses to write and asks you to let that edit save first. The tab saves the whole template it is on, so its save would overwrite what the agent wrote.
+
+    The refusal is decided from what the tab reported when you sent the message, so a write can still land while you are typing. If it does, the editor shows a warning above the form saying the template was changed elsewhere — your unsaved edits win when they save, so redo the change you asked for if you still want it.
+
+Themes are templates too, but they have their own tools - see below.
+
 ## Themes
 
-The help agent can also work on [themes](/talemate/user-guide/templates/themes) — the templates that hold Talemate's colors. Ask for a theme in the chat and you get a real theme template you can apply from **Appearance → Theme**:
+The same permission covers [themes](/talemate/user-guide/templates/themes), the templates that hold Talemate's colors. Applying one additionally needs **Allow changes to settings**, since it writes the theme's message styling and the active theme into your appearance settings. Ask for a theme in the chat and you get a real theme template you can apply from **Appearance → Theme**:
 
 - "Create a solarized dark theme for me"
 - "Make the narrator text in my theme a bit greener"

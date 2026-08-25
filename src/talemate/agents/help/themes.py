@@ -14,17 +14,24 @@ belongs in a group of the user's own.
 """
 
 import math
-import os
-import re
 import uuid
 from typing import TYPE_CHECKING, Any
 
 import pydantic
 
+from talemate.agents.help.templates import (
+    GROUP_NAME_INVALID_RE,
+    NEW_GROUP_AUTHOR,
+    NEW_GROUP_DESCRIPTION,
+    TEMPLATE_NAME_RE,
+    find_group,
+    is_shipped,
+    template_collection,
+    templates_dirty_conflict,
+)
 from talemate.config import get_config
 from talemate.util.colors import contrast_ratio, describe_color
 from talemate.world_state.templates.base import (
-    TEMPLATE_PATH_TALEMATE,
     Collection,
     Group,
 )
@@ -57,14 +64,6 @@ COLOR_GROUPS = {
     "messages": MessageColors,
     "chats": ChatColors,
 }
-
-# the same rules the Templates tab validates against, so a theme created here
-# can be edited and saved there afterwards
-TEMPLATE_NAME_RE = re.compile(r"^[a-zA-Z0-9_ ]+$")
-GROUP_NAME_INVALID_RE = re.compile(r'[<>:"/\\|?*]')
-
-NEW_GROUP_AUTHOR = "Help chat"
-NEW_GROUP_DESCRIPTION = "Templates created through the help chat."
 
 # the active theme's colors, mode and code editor scheme are resolved live on
 # every render, but its message styling is not - the app reads that from the
@@ -295,10 +294,6 @@ def slot_reference() -> dict:
 # ---------------------------------------------------------------------------
 
 
-def _collection(scene: "Scene") -> Collection:
-    return scene.world_state_manager.template_collection
-
-
 def _themes(collection: Collection) -> list[tuple[Group, Theme]]:
     return [
         (group, template)
@@ -343,21 +338,6 @@ def _resolve_theme(collection: Collection, ref: str) -> tuple[Group, Theme]:
     raise ValueError(f"No theme '{ref}'. Known themes: {known or '(none)'}")
 
 
-def _find_group(collection: Collection, name: str) -> Group | None:
-    name = (name or "").strip().lower()
-    for group in collection.groups:
-        if group.name.strip().lower() == name:
-            return group
-    return None
-
-
-def _is_shipped(group: Group) -> bool:
-    if not group.path:
-        return False
-    shipped = os.path.realpath(TEMPLATE_PATH_TALEMATE)
-    return os.path.realpath(group.path).startswith(shipped + os.sep)
-
-
 # ---------------------------------------------------------------------------
 # payloads
 # ---------------------------------------------------------------------------
@@ -383,28 +363,6 @@ def _theme_entry(group: Group, template: Theme, active_theme_id: str | None) -> 
 # ---------------------------------------------------------------------------
 # guards
 # ---------------------------------------------------------------------------
-
-
-def _templates_dirty_conflict(templates_dirty: bool) -> str | None:
-    """Refusal message while the Templates tab holds an unsaved template edit.
-
-    The theme editor saves the template it is on as a whole - a color picker
-    still open, a notes field not yet left, or a preview edit inside its save
-    debounce all end in a save of the copy the tab holds, which predates
-    anything written here.
-
-    Best-effort by construction: the flag rides on the UX snapshot taken when
-    the message was sent, so edits made while the agent is answering are not
-    seen.
-    """
-    if not templates_dirty:
-        return None
-    return (
-        "The Templates tab has an unsaved theme edit - it saves the whole template "
-        "it is on, which would overwrite this change. Ask the user to finish that "
-        "edit (close the color picker, leave the field) so it saves, then apply the "
-        "change again."
-    )
 
 
 def _app_settings_dirty_conflict(app_settings_dirty: bool) -> str | None:
@@ -645,7 +603,7 @@ def analyze_theme(template: Theme) -> dict:
 
 def list_themes(scene: "Scene") -> list[dict] | str:
     """List every theme template with its group, mode and lock state."""
-    collection = _collection(scene)
+    collection = template_collection(scene)
     active = get_config().appearance.theme
     themes = _themes(collection)
 
@@ -657,7 +615,7 @@ def list_themes(scene: "Scene") -> list[dict] | str:
 
 def read_theme(scene: "Scene", theme_id: str) -> dict | str:
     """Return one theme in full - every color slot, styling, mode and scheme."""
-    collection = _collection(scene)
+    collection = template_collection(scene)
     try:
         group, template = _resolve_theme(collection, theme_id)
     except ValueError as exc:
@@ -726,7 +684,7 @@ async def create_theme(
     unless another is named), so the result is always a complete theme rather
     than a handful of colors on top of the built-in defaults.
     """
-    conflict = _templates_dirty_conflict(templates_dirty)
+    conflict = templates_dirty_conflict(templates_dirty)
     if conflict:
         return conflict
 
@@ -747,7 +705,7 @@ async def create_theme(
         return f"'{group_name}' is not a valid template group name."
 
     manager = scene.world_state_manager
-    collection = _collection(scene)
+    collection = template_collection(scene)
 
     base_ref = base_theme or get_config().appearance.theme
     if base_ref:
@@ -758,8 +716,8 @@ async def create_theme(
     else:
         base = Theme(name=name)
 
-    target = _find_group(collection, group_name)
-    if target and _is_shipped(target):
+    target = find_group(collection, group_name)
+    if target and is_shipped(target):
         return (
             f"'{target.name}' is a group that ships with Talemate and does not take "
             "new templates. Name a group of the user's own instead - an unknown name "
@@ -824,11 +782,11 @@ async def update_theme(
     templates_dirty: bool = False,
 ) -> dict | str:
     """Change the named slots of an existing theme, leaving the rest alone."""
-    conflict = _templates_dirty_conflict(templates_dirty)
+    conflict = templates_dirty_conflict(templates_dirty)
     if conflict:
         return conflict
 
-    collection = _collection(scene)
+    collection = template_collection(scene)
     try:
         group, template = _resolve_theme(collection, theme_id)
     except ValueError as exc:
@@ -838,7 +796,7 @@ async def update_theme(
     if locked:
         return locked
 
-    if _is_shipped(group):
+    if is_shipped(group):
         return (
             f"'{template.name}' lives in '{group.name}', a group that ships with "
             "Talemate. Copy it into a group of the user's own with create_theme "
@@ -879,13 +837,13 @@ async def apply_theme(
     app_settings_dirty: bool = False,
 ) -> dict | str:
     """Make a theme the active one and repaint the application with it."""
-    conflict = _templates_dirty_conflict(
+    conflict = templates_dirty_conflict(
         templates_dirty
     ) or _app_settings_dirty_conflict(app_settings_dirty)
     if conflict:
         return conflict
 
-    collection = _collection(scene)
+    collection = template_collection(scene)
     try:
         _group, template = _resolve_theme(collection, theme_id)
     except ValueError as exc:

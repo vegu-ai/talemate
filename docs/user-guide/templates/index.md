@@ -42,3 +42,15 @@ Scene tool shortcut templates package a [scene tool shortcut](/talemate/user-gui
 
 ### :material-palette-swatch: Theme
 Theme templates define Talemate's colors — the interface surfaces, the general interface, the scene messages and the chats — together with the message text styling, which color scheme the in-app code editors use and whether the theme is light or dark. Applying one makes it the active theme. See [Themes](/talemate/user-guide/templates/themes).
+
+## Asking the help chat for a template
+
+The [help agent](/talemate/user-guide/agents/help/) can build and change templates for you, once you grant it the **Allow changes to templates** [permission](/talemate/user-guide/agents/help/#permissions) — it starts off, and until it is on the agent reads your templates and walks you through the change instead. With it on, ask for what you want — "make me a character attribute template for a fighting style", "add a state reinforcement that tracks where everyone is, checked every five turns" — and it writes a real template into a template group you name, creating the group if it does not exist yet. It can also read a template of yours and change individual fields of it.
+
+Applying a template, installing a scene tool shortcut and deleting a template stay yours: applying writes into your scene, which the help agent does not touch. The groups Talemate ships are read-only to the agent, and so is any template marked locked; it offers to copy one into a group of your own instead of editing it. See [what the help agent can do with templates](/talemate/user-guide/agents/help/#world-state-templates).
+
+!!! note "Unsaved edits in the Templates tab"
+    While this tab holds an unsaved template edit, the help agent refuses to write and asks you to let that edit save first. The tab saves the whole template it is on, so its save would push your copy back over whatever the agent had written.
+
+    The refusal is decided from what the tab reported when you sent the message, so a write can still land while you are typing. If it does, the editor shows a warning above the form saying the template was changed elsewhere — your unsaved edits win when they save, so redo the change you asked for if you still want it.
+

@@ -1192,6 +1192,7 @@ def test_read_clients_empty(settings_env):
 async def test_chat_send_with_setting_update(help_agent, settings_env):
     """A settings write requested through the chat loop is applied and
     recorded as a tool-result message."""
+    allow_settings_changes(help_agent)
     chat = help_agent.chat_create()
 
     call_block = json.dumps(
@@ -1274,10 +1275,16 @@ async def test_update_agent_setting_refused_while_app_settings_dirty(
 
 
 @pytest.mark.asyncio
+def allow_settings_changes(agent):
+    """The permission is off by default; these two drive the write tools."""
+    agent.actions["permissions"].config["allow_settings_changes"].value = True
+
+
 async def test_chat_send_setting_update_refused_while_app_settings_dirty(
     help_agent, settings_env
 ):
     """The ux snapshot's dirty settings view reaches the settings tools."""
+    allow_settings_changes(help_agent)
     chat = help_agent.chat_create()
 
     call_block = json.dumps(

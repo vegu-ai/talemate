@@ -78,6 +78,44 @@
         </v-tooltip>
     </v-toolbar>
 
+    <div class="d-flex align-center flex-wrap px-4 pt-1">
+        <span class="text-caption text-muted mr-2">May change:</span>
+        <v-tooltip
+            v-for="permission in permissionChips"
+            :key="permission.key"
+            :text="permission.tooltip"
+            location="bottom"
+            max-width="300"
+        >
+            <template v-slot:activator="{ props }">
+                <v-chip
+                    v-bind="props"
+                    size="x-small"
+                    class="mr-1"
+                    :color="permission.granted ? 'success' : 'muted'"
+                    label
+                    clickable
+                    variant="tonal"
+                    @click="togglePermission(permission.key)"
+                >
+                    <v-icon start>{{ permission.icon }}</v-icon>
+                    {{ permission.label }}
+                    <v-icon class="ml-1" size="x-small">{{ permission.granted ? 'mdi-check-circle-outline' : 'mdi-circle-outline' }}</v-icon>
+                </v-chip>
+            </template>
+        </v-tooltip>
+        <span v-if="permissionError" class="text-caption text-error ml-1">{{ permissionError }}</span>
+    </div>
+
+    <v-tooltip v-if="permissionWarning" :text="permissionWarning" location="bottom" max-width="400">
+        <template v-slot:activator="{ props }">
+            <div v-bind="props" class="text-caption text-warning px-4 pb-1">
+                <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
+                The help agent can write changes on its own - a strong agentic reasoning model is recommended.
+            </div>
+        </template>
+    </v-tooltip>
+
     <v-divider class="mb-2"></v-divider>
 
     <v-alert v-if="!helpAvailable" type="warning" variant="tonal" density="compact" class="ma-2 help-unavailable-alert">
@@ -164,6 +202,12 @@ import DirectorConsoleChatMessageMarkdown from './DirectorConsoleChatMessageMark
 
 const usageCheatSheet = "Ask anything about how to use Talemate - settings, agents, clients, the world editor and more.\n\nAnswers are grounded in the bundled documentation.\n\nThe help chat cannot change your scene; ask the director chat for that."
 
+// short chip labels; everything else about a permission is read off the agent
+const PERMISSION_CHIPS = [
+    { key: 'allow_settings_changes', label: 'Settings', icon: 'mdi-cog-outline' },
+    { key: 'allow_template_changes', label: 'Templates', icon: 'mdi-cube-scan' },
+];
+
 export default {
     name: 'HelpChat',
     components: {
@@ -177,6 +221,7 @@ export default {
         'getWebsocket',
         'registerMessageHandler',
         'unregisterMessageHandler',
+        'saveAppConfig',
     ],
     props: {
         sceneActive: {
@@ -202,6 +247,11 @@ export default {
             tokenTotal: null,
             sceneAware: false,
             usageCheatSheet: usageCheatSheet,
+            // what a click asked for, until the agent's status frame carries
+            // it - the frame is a round trip away, and a second click in that
+            // window would otherwise re-send the first one's value
+            pendingPermissions: {},
+            permissionError: null,
         }
     },
     computed: {
@@ -213,6 +263,34 @@ export default {
                 return 'The Help agent is disabled. Enable it in the agent settings to use the help chat.';
             }
             return 'The Help agent needs a configured client. Check the agent settings.';
+        },
+        permissionConfig() {
+            // TalemateApp flattens an agent_status frame, so the actions sit
+            // directly on the entry rather than under its `data`
+            return this.agentStatus?.help?.actions?.permissions?.config || {};
+        },
+        permissionChips() {
+            // the tooltip text comes from the agent's own action config; the
+            // chip's own label is the short one defined here
+            return PERMISSION_CHIPS.map(chip => {
+                const field = this.permissionConfig[chip.key] || {};
+                const granted = this.permissionGranted(chip.key);
+                return {
+                    key: chip.key,
+                    label: chip.label,
+                    icon: chip.icon,
+                    granted: granted,
+                    tooltip: `${field.label || chip.label}: ${granted ? 'allowed' : 'not allowed'}. `
+                        + `${field.description || ''} Click to ${granted ? 'revoke' : 'grant'}.`,
+                };
+            });
+        },
+        permissionWarning() {
+            // one note for the section, shown while anything is granted - the
+            // full text is the agent's own, the line in the chat is the short one
+            const granted = this.permissionChips.some(chip => chip.granted);
+            if(!granted) return null;
+            return this.agentStatus?.help?.actions?.permissions?.warning || null;
         },
         chatSelectItems() {
             return this.chats.map(chat => {
@@ -229,7 +307,61 @@ export default {
             return !!(last && last.source === 'help' && (last.type === undefined || last.type === 'text') && !last.loading);
         },
     },
+    watch: {
+        permissionConfig: {
+            handler(config) {
+                this.adoptPermissionState(config);
+            },
+            deep: true,
+        },
+    },
     methods: {
+        permissionGranted(key) {
+            if(key in this.pendingPermissions) {
+                return this.pendingPermissions[key];
+            }
+            return this.permissionConfig[key]?.value === true;
+        },
+        togglePermission(key) {
+            const next = !this.permissionGranted(key);
+            this.pendingPermissions = { ...this.pendingPermissions, [key]: next };
+            this.permissionError = null;
+
+            const requestId = this.saveAppConfig((config) => {
+                const agents = config.agents || (config.agents = {});
+                const help = agents.help || (agents.help = {});
+                const actions = help.actions || (help.actions = {});
+                const permissions = actions.permissions || (actions.permissions = {});
+                const fields = permissions.config || (permissions.config = {});
+                const field = fields[key] || (fields[key] = {});
+                field.value = next;
+            }, {
+                label: 'help agent permissions',
+                onError: () => this.clearPendingPermission(key),
+            });
+
+            if(!requestId) {
+                // the queue has no config to build a save from yet, and says so
+                // to the console only - a click that did nothing has to show
+                this.clearPendingPermission(key);
+                this.permissionError = 'Permissions are not ready yet - try again in a moment.';
+            }
+        },
+        clearPendingPermission(key) {
+            if(!(key in this.pendingPermissions)) return;
+            const pending = { ...this.pendingPermissions };
+            delete pending[key];
+            this.pendingPermissions = pending;
+        },
+        adoptPermissionState(config) {
+            // drop a pending value once the agent reports it, so the chip goes
+            // back to rendering what the backend holds
+            for(const [key, value] of Object.entries(this.pendingPermissions)) {
+                if((config[key]?.value === true) === value) {
+                    this.clearPendingPermission(key);
+                }
+            }
+        },
         getMessageColor(m) {
             if(m && m.source === 'user') return 'actor';
             if(m && m.type === 'doc_result') return 'hchat_msg_doc_result';

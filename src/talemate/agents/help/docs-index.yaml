@@ -143,13 +143,16 @@
   title: Overview
   summary: Describes the always-available Help chat, grounded documentation lookup, scene/UI awareness, persistent multi-turn
     chats, and background operation. Defines which application and agent settings it can inspect or change, how it creates,
-    edits and applies theme templates and judges their colors by slot usage, color name and WCAG contrast, safeguards
-    around secrets and unsaved edits, and scene limitations.
+    edits and applies theme templates and judges their colors by slot usage, color name and WCAG contrast, how it creates and
+    edits every other world state template type while applying, installing and deleting stay in the Templates tab, the two
+    permissions that gate every change it may make (both off by default, with the write tools absent rather than refused while
+    off), safeguards around secrets and unsaved edits, and scene limitations.
 - path: user-guide/agents/help/settings.md
   title: Settings
   summary: Reference for configuring Help agent response length, maximum tool-call rounds, calls allowed per round, and custom
-    instructions. Notes that read-only calls can run concurrently when the assigned client supports it, while settings and theme
-    changes always run one at a time.
+    instructions. Notes that read-only calls can run concurrently when the assigned client supports it, while settings, theme and
+    template changes always run one at a time. Documents the Permissions section - allow changes to settings, allow changes to
+    templates - both off by default, and the recommendation to use a strong agentic reasoning model before enabling them.
 - path: user-guide/agents/index.md
   title: Overview
   summary: Provides a compact catalog of Talemate's Conversation, Creator, Director, Editor, Help, Memory, Narrator, Summarizer,
@@ -1053,7 +1056,8 @@
   title: Templates
   summary: 'Overview of the Templates tab and the template types available: Character Attribute, Character Detail, Spices,
     Writing Style, State Reinforcement, Scene Type, Visual Style, Visual Prompt Finalizer, Agent Persona, Scene Tool Shortcut
-    and Theme. Templates live in groups shared across scenes.'
+    and Theme. Templates live in groups shared across scenes. Also covers asking the help chat to create or change a template,
+    and what stays in the tab: applying, installing and deleting.'
 - path: user-guide/templates/scene-tool-shortcut.md
   title: Scene Tool Shortcuts
   summary: 'Creating a Scene tool shortcut template that packages a scene tool action with a label, an icon and canned instructions:

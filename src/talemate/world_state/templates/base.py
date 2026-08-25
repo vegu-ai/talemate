@@ -421,7 +421,11 @@ class Collection(pydantic.BaseModel):
 
             converted_templates = []
             for template in templates.values():
-                _template = MODELS[template_type](**template)
+                # read the way a group file is read: a choice this version
+                # does not know is repaired rather than raised on
+                _template = MODELS[template_type].model_validate(
+                    template, context=REPAIR_CONTEXT
+                )
                 _template.uid = f"{name_to_id(_template.name)}"
                 converted_templates.append(_template)
 

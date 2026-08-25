@@ -18,6 +18,7 @@ from talemate.game.focal.util import strip_call_blocks
 
 from . import docs
 from . import settings
+from . import templates
 from . import themes
 from .schema import (
     HelpChat,
@@ -32,23 +33,54 @@ __all__ = ["HelpChatMixin", "HelpChatEmission"]
 
 log = structlog.get_logger("talemate.agents.help.chat")
 
+# the recommendation is the same for both switches, so it belongs to the
+# section rather than to either of them
+PERMISSION_WARNING = (
+    "Use a strong agentic reasoning model before granting these. They let the "
+    "help agent write real changes on its own, and weaker models misread what "
+    "you asked for and make destructive or unwanted changes. Leave them off if "
+    "the help agent runs on a small or non-reasoning client."
+)
+
 INITIAL_MESSAGE = (
     "Hi! I can help you with anything Talemate - settings, agents, clients, "
-    "the world editor and more. I can also look up your current settings and "
-    "change them for you if you ask. What would you like to know?"
+    "the world editor and more. I can look up your current settings, and change "
+    "them or your templates for you once you grant me permission to. What would "
+    "you like to know?"
 )
 
 OnUpdate = Callable[
     [str, list[HelpChatMessage | HelpChatDocResultMessage]], Awaitable[None]
 ]
 OnDone = Callable[[str], Awaitable[None]]
-OnTemplatesChanged = Callable[[str], Awaitable[None]]
+# the theme id a write landed in, or None when the write was not a theme
+OnTemplatesChanged = Callable[[str | None], Awaitable[None]]
 OnTitleGenerated = Callable[[str, str], Awaitable[None]]
 
 async_signals.register(
     "agent.help.chat.before",
     "agent.help.chat.after",
 )
+
+
+PERMISSION_REVOKED = (
+    "The '{label}' permission was turned off while you were answering, so this "
+    "change was not made. Tell the user it is off and that they can turn it back "
+    "on under Settings > Connections > Agents > Help > Permissions."
+)
+
+SETTINGS_PERMISSION = "Allow changes to settings"
+TEMPLATE_PERMISSION = "Allow changes to templates"
+
+
+def revoked(allowed: bool, label: str) -> str | None:
+    """The refusal for a permission taken away mid-round.
+
+    The callbacks are built once per round and stay callable for the whole
+    client request, so a revocation in that window has to reach the call rather
+    than only the next round.
+    """
+    return None if allowed else PERMISSION_REVOKED.format(label=label)
 
 
 class HelpChatEmission(AgentEmission):
@@ -84,7 +116,7 @@ class HelpChatMixin:
                 "doc_lookup_iterations": AgentActionConfig(
                     type="number",
                     label="Tool call rounds",
-                    description="How many rounds of tool calls (documentation lookups, settings and theme reads and updates) the help agent may perform before it must answer.",
+                    description="How many rounds of tool calls (documentation lookups, settings, theme and template reads and updates) the help agent may perform before it must answer.",
                     value=3,
                     step=1,
                     min=1,
@@ -108,6 +140,32 @@ class HelpChatMixin:
             },
         )
 
+        actions["permissions"] = AgentAction(
+            enabled=True,
+            container=True,
+            can_be_disabled=False,
+            label="Permissions",
+            icon="mdi-shield-key",
+            description="What the help chat may change for you. Reading is always allowed; both permissions start off. They can also be toggled from the help chat itself.",
+            warning=PERMISSION_WARNING,
+            config={
+                "allow_settings_changes": AgentActionConfig(
+                    type="bool",
+                    label="Allow changes to settings",
+                    description="Lets the help chat change your application and agent settings when you ask it to. With this off it can still read them and walk you through the change yourself.",
+                    value=False,
+                    scene_overridable=False,
+                ),
+                "allow_template_changes": AgentActionConfig(
+                    type="bool",
+                    label="Allow changes to templates",
+                    description="Lets the help chat create and change world state templates, themes included. With this off it can still read them. Applying a theme needs 'Allow changes to settings' as well, since it writes the theme's message styling and the active theme into your appearance settings.",
+                    value=False,
+                    scene_overridable=False,
+                ),
+            },
+        )
+
     # === Config property helpers ===
 
     @property
@@ -125,6 +183,22 @@ class HelpChatMixin:
     @property
     def chat_custom_instructions(self) -> str:
         return self.resolve_config("chat", "custom_instructions")
+
+    # `is True` rather than a truthy cast: a permission gate is the place for a
+    # config value of the wrong type to read as withheld
+    @property
+    def allow_settings_changes(self) -> bool:
+        return self.resolve_config("permissions", "allow_settings_changes") is True
+
+    @property
+    def allow_template_changes(self) -> bool:
+        return self.resolve_config("permissions", "allow_template_changes") is True
+
+    @property
+    def allow_theme_apply(self) -> bool:
+        """Applying a theme writes a template's styling into `config.appearance`,
+        so it takes both permissions rather than the template one alone."""
+        return self.allow_template_changes and self.allow_settings_changes
 
     # === Store access ===
 
@@ -315,6 +389,9 @@ class HelpChatMixin:
         async def update_agent_setting(
             agent: str, action: str, setting: str, value, scope: str = "global"
         ):
+            gone = revoked(self.allow_settings_changes, SETTINGS_PERMISSION)
+            if gone:
+                return gone
             return await settings.update_agent_setting(
                 agent,
                 action,
@@ -327,6 +404,9 @@ class HelpChatMixin:
         async def clear_agent_setting_scene_override(
             agent: str, action: str, setting: str
         ):
+            gone = revoked(self.allow_settings_changes, SETTINGS_PERMISSION)
+            if gone:
+                return gone
             return await settings.clear_agent_setting_scene_override(
                 agent, action, setting, app_settings_dirty=app_settings_dirty
             )
@@ -335,6 +415,9 @@ class HelpChatMixin:
             return settings.read_app_config(section)
 
         async def update_app_config(path: str, value):
+            gone = revoked(self.allow_settings_changes, SETTINGS_PERMISSION)
+            if gone:
+                return gone
             return await settings.update_app_config(
                 path, value, app_settings_dirty=app_settings_dirty
             )
@@ -344,13 +427,31 @@ class HelpChatMixin:
 
         # reads may run concurrently; writes stay sequential so config
         # mutations never race each other
-        return [
+        callbacks = [
             focal.Callback(
                 name="read_agent_settings",
                 arguments=[focal.Argument(name="agent", type="str")],
                 fn=read_agent_settings,
                 concurrent=True,
             ),
+            focal.Callback(
+                name="read_app_config",
+                arguments=[focal.Argument(name="section", type="str")],
+                fn=read_app_config,
+                concurrent=True,
+            ),
+            focal.Callback(
+                name="read_clients",
+                arguments=[],
+                fn=read_clients,
+                concurrent=True,
+            ),
+        ]
+
+        if not self.allow_settings_changes:
+            return callbacks
+
+        return callbacks + [
             focal.Callback(
                 name="update_agent_setting",
                 arguments=[
@@ -374,12 +475,6 @@ class HelpChatMixin:
                 fn=clear_agent_setting_scene_override,
             ),
             focal.Callback(
-                name="read_app_config",
-                arguments=[focal.Argument(name="section", type="str")],
-                fn=read_app_config,
-                concurrent=True,
-            ),
-            focal.Callback(
                 name="update_app_config",
                 arguments=[
                     focal.Argument(name="path", type="str"),
@@ -388,12 +483,6 @@ class HelpChatMixin:
                     ),
                 ],
                 fn=update_app_config,
-            ),
-            focal.Callback(
-                name="read_clients",
-                arguments=[],
-                fn=read_clients,
-                concurrent=True,
             ),
         ]
 
@@ -430,6 +519,9 @@ class HelpChatMixin:
             dark: bool | None = None,
             code_editor: str | None = None,
         ):
+            gone = revoked(self.allow_template_changes, TEMPLATE_PERMISSION)
+            if gone:
+                return gone
             return await _notify(
                 await themes.create_theme(
                     self.scene,
@@ -451,6 +543,9 @@ class HelpChatMixin:
             dark: bool | None = None,
             code_editor: str | None = None,
         ):
+            gone = revoked(self.allow_template_changes, TEMPLATE_PERMISSION)
+            if gone:
+                return gone
             return await _notify(
                 await themes.update_theme(
                     self.scene,
@@ -464,6 +559,13 @@ class HelpChatMixin:
             )
 
         async def apply_theme(theme_id: str):
+            # applying writes the appearance settings as well as reading a
+            # template, so it answers to both permissions
+            gone = revoked(self.allow_template_changes, TEMPLATE_PERMISSION) or revoked(
+                self.allow_settings_changes, SETTINGS_PERMISSION
+            )
+            if gone:
+                return gone
             return await themes.apply_theme(
                 self.scene,
                 theme_id,
@@ -471,7 +573,7 @@ class HelpChatMixin:
                 app_settings_dirty=app_settings_dirty,
             )
 
-        return [
+        callbacks = [
             focal.Callback(
                 name="list_themes",
                 arguments=[],
@@ -484,6 +586,12 @@ class HelpChatMixin:
                 fn=read_theme,
                 concurrent=True,
             ),
+        ]
+
+        if not self.allow_template_changes:
+            return callbacks
+
+        callbacks = callbacks + [
             focal.Callback(
                 name="create_theme",
                 arguments=[
@@ -508,10 +616,119 @@ class HelpChatMixin:
                 ],
                 fn=update_theme,
             ),
+        ]
+
+        if not self.allow_theme_apply:
+            return callbacks
+
+        return callbacks + [
             focal.Callback(
                 name="apply_theme",
                 arguments=[focal.Argument(name="theme_id", type="str")],
                 fn=apply_theme,
+            ),
+        ]
+
+    def _chat_template_callbacks(
+        self,
+        ux_snapshot: dict | None = None,
+        on_templates_changed: OnTemplatesChanged | None = None,
+    ) -> list[focal.Callback]:
+        templates_dirty = bool(
+            ((ux_snapshot or {}).get("templates_view") or {}).get("dirty")
+        )
+
+        async def _notify(result):
+            if on_templates_changed and isinstance(result, dict):
+                await on_templates_changed(None)
+            return result
+
+        async def list_templates(template_type: str | None = None):
+            return templates.list_templates(self.scene, template_type)
+
+        async def describe_template_type(template_type: str):
+            return templates.describe_template_type(template_type)
+
+        async def read_template(template_id: str):
+            return templates.read_template(self.scene, template_id)
+
+        async def create_template(
+            template_type: str,
+            name: str,
+            group: str,
+            fields: dict | None = None,
+        ):
+            gone = revoked(self.allow_template_changes, TEMPLATE_PERMISSION)
+            if gone:
+                return gone
+            return await _notify(
+                await templates.create_template(
+                    self.scene,
+                    template_type,
+                    name,
+                    group,
+                    fields=fields,
+                    templates_dirty=templates_dirty,
+                    scene_loaded=self.scene_loaded,
+                )
+            )
+
+        async def update_template(template_id: str, fields: dict):
+            gone = revoked(self.allow_template_changes, TEMPLATE_PERMISSION)
+            if gone:
+                return gone
+            return await _notify(
+                await templates.update_template(
+                    self.scene,
+                    template_id,
+                    fields,
+                    templates_dirty=templates_dirty,
+                    scene_loaded=self.scene_loaded,
+                )
+            )
+
+        callbacks = [
+            focal.Callback(
+                name="list_templates",
+                arguments=[focal.Argument(name="template_type", type="str")],
+                fn=list_templates,
+                concurrent=True,
+            ),
+            focal.Callback(
+                name="describe_template_type",
+                arguments=[focal.Argument(name="template_type", type="str")],
+                fn=describe_template_type,
+                concurrent=True,
+            ),
+            focal.Callback(
+                name="read_template",
+                arguments=[focal.Argument(name="template_id", type="str")],
+                fn=read_template,
+                concurrent=True,
+            ),
+        ]
+
+        if not self.allow_template_changes:
+            return callbacks
+
+        return callbacks + [
+            focal.Callback(
+                name="create_template",
+                arguments=[
+                    focal.Argument(name="template_type", type="str"),
+                    focal.Argument(name="name", type="str"),
+                    focal.Argument(name="group", type="str"),
+                    focal.Argument(name="fields", type="dict"),
+                ],
+                fn=create_template,
+            ),
+            focal.Callback(
+                name="update_template",
+                arguments=[
+                    focal.Argument(name="template_id", type="str"),
+                    focal.Argument(name="fields", type="dict"),
+                ],
+                fn=update_template,
             ),
         ]
 
@@ -551,7 +768,8 @@ class HelpChatMixin:
                     self.client,
                     callbacks=self._chat_doc_callbacks()
                     + self._chat_settings_callbacks(ux_snapshot)
-                    + self._chat_theme_callbacks(ux_snapshot, on_templates_changed),
+                    + self._chat_theme_callbacks(ux_snapshot, on_templates_changed)
+                    + self._chat_template_callbacks(ux_snapshot, on_templates_changed),
                     max_calls=self.chat_max_doc_lookups,
                     max_concurrent=self.chat_max_doc_lookups,
                     retries=0,
@@ -564,6 +782,10 @@ class HelpChatMixin:
                     docs_site_url=docs.DOCS_SITE_URL,
                     agent_types=sorted(instance.AGENTS.keys()),
                     theme_slots=themes.slot_reference(),
+                    template_types=templates.type_reference(),
+                    allow_settings_changes=self.allow_settings_changes,
+                    allow_template_changes=self.allow_template_changes,
+                    allow_theme_apply=self.allow_theme_apply,
                     ux_snapshot=ux_snapshot,
                     scene_context=scene_context,
                     custom_instructions=self.chat_custom_instructions,

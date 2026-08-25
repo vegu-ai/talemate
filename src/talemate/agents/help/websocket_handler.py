@@ -114,14 +114,15 @@ class HelpWebsocketHandler(Plugin):
             except Exception as e:
                 log.error("help.chat.websocket.on_title_generated.error", error=e)
 
-        async def _on_templates_changed(theme_id: str):
-            """Push what the agent's theme write changed.
+        async def _on_templates_changed(theme_id: str | None):
+            """Push what the agent's template write changed.
 
             The template list is per-connection state that only a `templates`
             payload refreshes. Writing the ACTIVE theme changes what the app is
             painted with as well, and the colors ride on `app_config` - the same
             two pushes `handle_save_template` makes for a save from the
-            Templates tab.
+            Templates tab. A write that is not a theme carries no `theme_id` and
+            needs no second push.
             """
             # imported here: both modules import `talemate` itself, which is
             # still initializing while the agent package loads
@@ -133,7 +134,7 @@ class HelpWebsocketHandler(Plugin):
                     await templates_message(self.scene.world_state_manager)
                 )
                 config = get_config()
-                if config.appearance.theme == theme_id:
+                if theme_id and config.appearance.theme == theme_id:
                     self.websocket_handler.queue_put(app_config_message(config))
             except Exception as e:
                 log.error("help.chat.websocket.on_templates_changed.error", error=e)

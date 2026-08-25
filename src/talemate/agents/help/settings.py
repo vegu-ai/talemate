@@ -54,6 +54,11 @@ WRITABLE_FIELD_TYPES = ("bool", "number", "text", "autocomplete", "blob", "flags
 READABLE_CONFIG_SECTIONS = ("game", "appearance", "creator", "presets", "prompts")
 WRITABLE_CONFIG_SECTIONS = ("game", "appearance", "creator")
 
+# the permissions that decide what this agent may write are not writable by it:
+# a settings permission that could grant the template permission (or re-grant
+# itself after the user revoked it) is not a permission
+OWN_PERMISSIONS = ("help", "permissions")
+
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -361,6 +366,16 @@ async def _persist_agent_config(agent: "Agent") -> None:
     await agent.emit_status()
 
 
+def _own_permission_conflict(agent_type: str, action_key: str) -> str | None:
+    if (agent_type, action_key) != OWN_PERMISSIONS:
+        return None
+    return (
+        "The help agent's own permissions are not yours to change - they are what "
+        "decides what you may write. The user changes them under Settings > "
+        "Connections > Agents > Help > Permissions."
+    )
+
+
 async def update_agent_setting(
     agent_type: str,
     action_key: str,
@@ -377,6 +392,10 @@ async def update_agent_setting(
     """
     if scope not in ("global", "scene"):
         return f"Invalid scope '{scope}'. Use 'global' or 'scene'."
+
+    own = _own_permission_conflict(agent_type, action_key)
+    if own:
+        return own
 
     resolved = _resolve_setting(agent_type, action_key, setting_key)
     if isinstance(resolved, str):
@@ -481,6 +500,10 @@ async def clear_agent_setting_scene_override(
     app_settings_dirty: bool = False,
 ) -> dict | str:
     """Remove a per-scene override so the setting falls back to its global value."""
+    own = _own_permission_conflict(agent_type, action_key)
+    if own:
+        return own
+
     resolved = _resolve_setting(agent_type, action_key, setting_key)
     if isinstance(resolved, str):
         return resolved

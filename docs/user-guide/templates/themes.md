@@ -156,7 +156,7 @@ These are the same settings as on the [Appearance settings](/talemate/user-guide
 
 ## Asking the help chat for a theme
 
-The [help agent](/talemate/user-guide/agents/help/) can build and change themes for you. Ask it for what you want — "create a solarized dark theme", "make the narrator text a bit greener", "copy Talemate Dark into my own group and warm the background up" — and it writes a real theme template that shows up in the Templates tab and on the Appearance → Theme page like any other.
+The [help agent](/talemate/user-guide/agents/help/) can build and change themes for you, once you grant it the **Allow changes to templates** [permission](/talemate/user-guide/agents/help/#permissions) — it starts off. Applying a theme takes the **Allow changes to settings** permission as well, since it writes the theme's message styling and the active theme into your appearance settings. With the permission on, ask for what you want — "create a solarized dark theme", "make the narrator text a bit greener", "copy Talemate Dark into my own group and warm the background up" — and it writes a real theme template that shows up in the Templates tab and on the Appearance → Theme page like any other.
 
 What it does with such a request:
 

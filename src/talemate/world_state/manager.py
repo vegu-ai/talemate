@@ -1001,7 +1001,8 @@ class WorldStateManager:
         elif template.state_type == "character":
             characters = [character.name for character in self.scene.get_characters()]
         elif template.state_type == "player":
-            characters = [self.scene.get_player_character().name]
+            player = self.scene.get_player_character()
+            characters = [player.name] if player else []
 
         for character_name in characters:
             await self.apply_template_state_reinforcement(template, character_name)

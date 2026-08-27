@@ -112,6 +112,42 @@ describe("saveAppConfig", () => {
         expect(requestId).toBe(send.mock.calls[0][0].request_id);
     });
 
+    it("sends nothing when the mutation refuses the payload", () => {
+        const { queue, send } = makeQueue({ game: {} });
+
+        const requestId = queue.saveAppConfig(() => false);
+
+        expect(requestId).toBe(null);
+        expect(send).not.toHaveBeenCalled();
+    });
+
+    it("sends a mutation that returns anything else", () => {
+        const { queue, send } = makeQueue({ game: {} });
+
+        queue.saveAppConfig(() => undefined);
+        queue.saveAppConfig(() => 0);
+        queue.saveAppConfig(() => '');
+
+        expect(send).toHaveBeenCalledTimes(3);
+    });
+
+    it("leaves the stacking base alone when the mutation refuses", () => {
+        const { queue, send, getConfig } = makeQueue({ game: {} });
+
+        queue.saveAppConfig(config => {
+            config.first = true;
+        });
+        queue.saveAppConfig(() => false);
+        queue.saveAppConfig(config => {
+            config.second = true;
+        });
+
+        // the refused save neither sent nor became the base the third stacks on
+        expect(send).toHaveBeenCalledTimes(2);
+        expect(sentConfig(send, 1)).toEqual({ game: {}, first: true, second: true });
+        expect(getConfig).toHaveBeenCalledTimes(1);
+    });
+
     it("does not mutate the stored config", () => {
         const stored = { game: { general: { auto_save: true } } };
         const { queue } = makeQueue(stored);

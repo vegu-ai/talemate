@@ -165,10 +165,34 @@ Once you have adjusted the presets to your liking you can save the group by clic
 
 ### Setting the group for the client
 
-In the client listing find the :material-tune: selected preset and click it to expand the meny containing the groups.
+In the client listing find the :material-tune: chip that names the group the client uses and click it. The menu it opens carries the group actions for that client.
 
-![select group](/talemate/img/0.30.0/inference-preset-group-apply.png)
+![select group](/talemate/img/0.40.0/client-inference-param-panel-menu.png)
 
-![select group](/talemate/img/0.30.0/inference-preset-group-applied.png)
+- **Assign group** lists every group. A check marks the one the client uses. Click another one to assign it.
+- **New group from current** creates a group from the parameters the client uses right now and assigns it to the client. Type the name and press `Enter`.
+- **Open in settings** opens the group in the inference preset editor described above.
 
 You can also pick the preset group from the **Inference Presets** dropdown in the **Advanced** section of the [client editor](client-configuration.md).
+
+## The inference parameter panel
+
+The preset editor in the settings is the full workbench. For tuning while you play, a client's parameters can be pinned to a panel that sits beside the client list, so a value is changed without leaving the scene.
+
+The panel is off until you turn it on. Open the **Settings** tab, select :material-network-outline: **Clients** under :material-connection: **Connections**, and turn on **Inference parameter panel**.
+
+![inference parameter panel setting](/talemate/img/0.40.0/client-inference-param-panel-setting.png)
+
+Then open the client listing, click the client's :material-tune: chip and choose **Pin parameters**. The panel appears next to the list.
+
+![inference parameter panel](/talemate/img/0.40.0/client-inference-param-panel.png)
+
+The panel edits one preset of the client's group at a time — pick it in the **Preset** selector. It offers the same parameters as the settings editor, with the advanced samplers behind **Advanced sampling**. Every change is saved by itself a moment after you make it; there is no save button.
+
+Because the panel belongs to one client, the note under its title matters here: a parameter the pinned client does not support is stored with the group and never sent. [Client Support](#client-support) lists which client sends what.
+
+!!! note "One client at a time"
+    Only one client's parameters are pinned. Pinning another client replaces the current one, and :material-pin-off: in the panel's header unpins it. The pinned client is remembered, so the panel comes back where you left it.
+
+!!! warning "The Default group is not edited here"
+    A client without a group uses the Default parameters, which every other client without a group uses as well. Rather than change those for everyone, the panel asks for a group name and creates a group from the Default parameters for this client.

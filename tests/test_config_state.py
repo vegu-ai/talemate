@@ -6,7 +6,8 @@ Covers:
 - `get_config` (lazy initialization).
 - `update_config` (partial via dict).
 - `save_config` (round-trip + cleanup of inference defaults / unchanged
-  presets / unified_api_key configs / dangling preset_groups).
+  presets / unified_api_key configs / dangling preset_groups / a dangling
+  inference param panel client).
 - `cleanup_removed_clients`, `cleanup_removed_agents`,
   `cleanup_removed_recent_scenes`, `cleanup_instructor_embeddings`.
 - `commit_config` (no-op when not dirty, otherwise saves and clears flag).
@@ -268,6 +269,29 @@ class TestSaveConfig:
         config_state.save_config()
         data = _read_back(tmp_path / "config.yaml")
         assert data["clients"]["c1"]["preset_group"] == ""
+
+    def test_clears_dangling_inference_param_panel_client(
+        self, isolated_config, tmp_path
+    ):
+        isolated_config.clients = {"c1": Client(type="openai", name="c1")}
+        isolated_config.presets.inference_param_panel.enabled = True
+        isolated_config.presets.inference_param_panel.client = "gone"
+
+        config_state.save_config()
+        data = _read_back(tmp_path / "config.yaml")
+        assert data["presets"]["inference_param_panel"]["client"] is None
+        assert data["presets"]["inference_param_panel"]["enabled"] is True
+        # the broadcasts are built from the live model, not from the file
+        assert config_state.get_config().presets.inference_param_panel.client is None
+
+    def test_keeps_valid_inference_param_panel_client(self, isolated_config, tmp_path):
+        isolated_config.clients = {"c1": Client(type="openai", name="c1")}
+        isolated_config.presets.inference_param_panel.enabled = True
+        isolated_config.presets.inference_param_panel.client = "c1"
+
+        config_state.save_config()
+        data = _read_back(tmp_path / "config.yaml")
+        assert data["presets"]["inference_param_panel"]["client"] == "c1"
 
     def test_keeps_valid_preset_group_reference(self, isolated_config, tmp_path):
         # Group exists, with a changed preset to keep it alive on save

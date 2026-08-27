@@ -459,6 +459,11 @@ class InferencePresetGroup(pydantic.BaseModel):
     presets: InferencePresets
 
 
+class InferenceParamPanel(pydantic.BaseModel):
+    enabled: bool = False
+    client: str | None = None
+
+
 class Presets(pydantic.BaseModel):
     inference_defaults: InferencePresets = InferencePresets()
     inference: InferencePresets = InferencePresets()
@@ -473,6 +478,8 @@ class Presets(pydantic.BaseModel):
     embeddings: dict[str, EmbeddingFunctionPreset] = pydantic.Field(
         default_factory=generate_chromadb_presets
     )
+
+    inference_param_panel: InferenceParamPanel = InferenceParamPanel()
 
 
 def gnerate_intro_scenes():

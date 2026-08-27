@@ -66,6 +66,12 @@ export function createConfigSaveQueue({ send, getConfig, notifyError, resetPendi
      * The payload must be complete: the backend validates the whole Config
      * model and applies deletion-by-omission, so anything left out is reset.
      * Build on the stored config, never on a settings page's working copy.
+     *
+     * A `mutate` that returns exactly `false` refuses the save: nothing is
+     * sent and null comes back. Only the mutation sees the payload it is
+     * applied to — which is the last one SENT, not the last one received — so
+     * a caller that checked the stored config beforehand cannot tell whether
+     * its target survived the saves still in flight.
      */
     function saveAppConfig(mutate, options = {}) {
         // The stored config only catches up on the broadcast that follows a
@@ -77,7 +83,9 @@ export function createConfigSaveQueue({ send, getConfig, notifyError, resetPendi
             return null;
         }
         const config = JSON.parse(JSON.stringify(base));
-        mutate(config);
+        if (mutate(config) === false) {
+            return null;
+        }
         return sendConfigSave(config, options);
     }
 

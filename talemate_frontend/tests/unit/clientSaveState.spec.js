@@ -224,6 +224,31 @@ describe("echoResolves", () => {
         expect(client.dirty).toBe(true);
     });
 
+    // the drawer writes preset_group on the row when a group is created from
+    // the preset menu, and the status the backend emits until that save is
+    // applied carries the group the client had before it
+    it("ignores a stale preset_group echo inside the grace window", () => {
+        const state = createClientSaveState();
+        const client = makeClient("A", { preset_group: "fast" });
+
+        state.recordSent(client);
+        const resolved = state.echoResolves(client, statusEcho({ preset_group: "" }));
+
+        expect(resolved).toBe(false);
+        expect(client.dirty).toBe(true);
+    });
+
+    it("resolves once the echo carries the new preset_group", () => {
+        const state = createClientSaveState();
+        const client = makeClient("A", { preset_group: "fast" });
+
+        state.recordSent(client);
+        const resolved = state.echoResolves(client, statusEcho({ preset_group: "fast" }));
+
+        expect(resolved).toBe(true);
+        expect(client.dirty).toBe(false);
+    });
+
     it("resolves a mismatched echo once the grace window expires", () => {
         const state = createClientSaveState();
         const client = makeClient("A", { api_url: "http://edited" });

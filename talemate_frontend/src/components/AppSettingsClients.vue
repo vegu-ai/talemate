@@ -36,6 +36,13 @@
                     </v-list-item>
                 </v-list>
             </v-menu>
+
+            <v-divider class="mt-4 mb-2"></v-divider>
+
+            <v-switch v-model="paramPanelEnabled" density="compact" color="primary" hide-details
+                data-setting-anchor="inference-param-panel" label="Inference parameter panel">
+                <v-tooltip activator="parent" location="bottom" max-width="400">Lets a client's inference parameters be pinned to a panel beside the client list, where they are edited during play. Pick the client in the preset menu on its entry in that list.</v-tooltip>
+            </v-switch>
         </v-col>
 
         <v-col cols="8">
@@ -74,6 +81,7 @@ import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import { buildClientFromDefaults } from '@/utils/clientPresets';
 import { agentsRequiringClient } from '@/utils/agentAssignments';
 import { cloneNameKeyedMap, hasOwnName, isReservedName } from '@/utils/nameKeyedMap';
+import { movePinnedPanelClient, panelSettings } from '@/utils/inferencePresets';
 
 // Clients page — master / detail management of `config.clients` in the app
 // settings working copy.
@@ -104,6 +112,14 @@ export default {
         }
     },
     computed: {
+        paramPanelEnabled: {
+            get() {
+                return panelSettings(this.config?.presets).enabled;
+            },
+            set(value) {
+                this.config.presets.inference_param_panel.enabled = value;
+            },
+        },
         clientNames() {
             return Object.keys(this.config?.clients || {}).sort((a, b) => a.localeCompare(b));
         },
@@ -291,6 +307,7 @@ export default {
         deleteClient(params) {
             delete this.config.clients[params.client];
             this.reassignAgents(params.client, null);
+            movePinnedPanelClient(this.config.presets, params.client, null);
         },
 
         // the client map is keyed by name, so a rename rebuilds the map (and
@@ -311,6 +328,7 @@ export default {
             }
             this.config.clients = rebuilt;
             this.reassignAgents(oldName, newName);
+            movePinnedPanelClient(this.config.presets, oldName, newName);
             this.selected = [newName];
         },
 

@@ -146,6 +146,18 @@ def save_config():
             )
             client["preset_group"] = ""
 
+    # the inference param panel is pinned to one client by name, which a
+    # client removal or rename leaves pointing at nothing. Cleared on the live
+    # model too: every status broadcast is built from that, so a name only
+    # dropped from the file would keep reaching the frontend until a restart
+    panel = config["presets"]["inference_param_panel"]
+    if panel.get("client") and panel["client"] not in config["clients"]:
+        log.warning(
+            f"Inference param panel references non-existent client {panel['client']}, clearing it"
+        )
+        panel["client"] = None
+        get_config().presets.inference_param_panel.client = None
+
     _strip_unified_api_key_configs(config)
 
     encrypt_sensitive_values(config)

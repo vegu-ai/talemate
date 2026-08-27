@@ -191,11 +191,16 @@
         </v-alert>
 
         <v-list>
-          <AIClient ref="aiClient" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" :immutable-config="appConfig" :app-config="appConfig"></AIClient>
+          <AIClient ref="aiClient" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" @pin-inference-params="pinInferenceParams" :immutable-config="appConfig" :app-config="appConfig"></AIClient>
           <v-divider></v-divider>
           <AIAgent ref="aiAgent" @agents-updated="saveAgents" :agentState="agentState" :app-config="appConfig" :scene="scene"></AIAgent>
           <!-- More sections can be added here -->
         </v-list>
+      </v-navigation-drawer>
+
+      <!-- inference parameter panel, beside the clients drawer -->
+      <v-navigation-drawer v-if="inferenceParamsClient" :model-value="drawer" app location="right" width="360" disable-resize-watcher>
+        <ClientInferenceParamsPanel :immutable-config="appConfig" :client-name="inferenceParamsClient" @unpin="pinInferenceParams(null)" />
       </v-navigation-drawer>
 
       <!-- director console navigation drawer -->
@@ -475,6 +480,7 @@
   
 <script>
 import AIClient from './AIClient.vue';
+import ClientInferenceParamsPanel from './ClientInferenceParamsPanel.vue';
 import AIAgent from './AIAgent.vue';
 import AgentActivityBar from './AgentActivityBar.vue';
 import AgentActionOverrides from './AgentActionOverrides.vue';
@@ -523,11 +529,13 @@ import { playthroughBlocksNavigation } from '../utils/playthrough.js';
 import { SETTINGS_PAGES } from '../utils/appSettingsRegistry.js';
 import { createConfigSaveQueue } from '../utils/configSaveQueue.js';
 import { applyAppConfigTheme } from '../utils/appTheme.js';
-import { buildNameKeyedPayload } from '../utils/nameKeyedMap.js';
+import { buildNameKeyedPayload, hasOwnName } from '../utils/nameKeyedMap.js';
+import { panelSettings } from '../utils/inferencePresets.js';
 
 export default {
   components: {
     AIClient,
+    ClientInferenceParamsPanel,
     AIAgent,
     AgentActivityBar,
     AgentActionOverrides,
@@ -877,6 +885,15 @@ export default {
     },
   },
   computed: {
+    inferenceParamsClient() {
+      const panel = panelSettings(this.appConfig?.presets);
+      if (!panel.enabled || !panel.client) {
+        return null;
+      }
+      // a removed client keeps its name in the config until the next save, and
+      // a client name may be any string, `toString` included
+      return hasOwnName(this.appConfig?.clients, panel.client) ? panel.client : null;
+    },
     // The help chat is the help agent's only surface, so a disabled agent
     // takes its app bar toggle with it. Only an explicit `disabled` status
     // hides it — an agent that is merely uninitialized still opens, since the
@@ -1051,6 +1068,7 @@ export default {
       saveAppConfig: (mutate, options) => this.saveAppConfig(mutate, options),
       sendConfigSave: (config, options) => this.sendConfigSave(config, options),
       openAppConfig: this.openAppConfig,
+      notifyError: (error) => this.uxErrorHandler(error),
       openAgentActionOverrides: () => this.$refs.agentActionOverrides?.open(),
       openSceneTimeline: (options) => this.$refs.sceneTimeline.open(options),
       configurationRequired: () => this.configurationRequired(),
@@ -1618,6 +1636,11 @@ export default {
     },
     saveAppConfig(mutate, options = {}) {
       return this.configSaveQueue.saveAppConfig(mutate, options);
+    },
+    pinInferenceParams(clientName) {
+      this.saveAppConfig((config) => {
+        config.presets.inference_param_panel.client = clientName;
+      }, { label: 'inference presets' });
     },
     saveClients(clients) {
       this.saveAppConfig((config) => {

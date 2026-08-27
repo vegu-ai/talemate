@@ -78,19 +78,45 @@
                 </v-tooltip>
 
                 <!-- preset group -->
-                <v-menu density="compact">
+                <v-menu density="compact" :close-on-content-click="false" v-model="presetMenus[client.name]">
                   <template v-slot:activator="{ props }">
                     <v-chip v-bind="props" label size="x-small" color="highlight1" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-tune">{{ client.preset_group || "Default" }}</v-chip>
                   </template>
 
-                  <v-list density="compact">
-                    <v-list-subheader>Inference Preset</v-list-subheader>
-                    <v-list-item prepend-icon="mdi-pencil" @click="openAppConfig('presets', 'inference', client.preset_group)">
-                      <v-list-item-title>Edit {{ client.preset_group || "Default" }} Parameters</v-list-item-title>
+                  <v-list density="compact" min-width="260">
+                    <v-list-subheader>Inference group: {{ client.preset_group || "Default" }}</v-list-subheader>
+
+                    <v-list-item v-if="paramPanelEnabled" :prepend-icon="isPinned(client) ? 'mdi-pin-off' : 'mdi-pin'" @click="togglePinnedParams(client)">
+                      <v-list-item-title>{{ isPinned(client) ? 'Unpin parameters' : 'Pin parameters' }}</v-list-item-title>
+                      <v-list-item-subtitle>{{ isPinned(client) ? 'Close the parameter panel' : 'Tune this group beside the client list' }}</v-list-item-subtitle>
                     </v-list-item>
-                    <v-list-item prepend-icon="mdi-tune" v-for="preset in availablePresets" :key="preset.value" @click="client.preset_group = preset.value; saveClientDelayed(client)">
+
+                    <v-divider v-if="paramPanelEnabled"></v-divider>
+
+                    <v-list-subheader>Assign group</v-list-subheader>
+
+                    <v-list-item v-for="preset in availablePresets" :key="preset.value" :prepend-icon="preset.value === (client.preset_group || '') ? 'mdi-check' : 'mdi-tune'" @click="assignPresetGroup(client, preset.value)">
                       <v-list-item-title>{{ preset.title }}</v-list-item-title>
-                      <v-list-item-subtitle>Assign this preset</v-list-item-subtitle>
+                    </v-list-item>
+
+                    <v-divider></v-divider>
+
+                    <v-list-item prepend-icon="mdi-plus-box">
+                      <v-text-field
+                        v-model="newGroupNames[client.name]"
+                        density="compact"
+                        variant="underlined"
+                        :hide-details="!newGroupErrors[client.name]"
+                        :error-messages="newGroupErrors[client.name] ? [newGroupErrors[client.name]] : []"
+                        label="New group from current"
+                        @keydown.enter.stop.prevent="createGroupForClient(client)"
+                        @update:model-value="newGroupErrors[client.name] = null"
+                        @click.stop
+                      ></v-text-field>
+                    </v-list-item>
+
+                    <v-list-item prepend-icon="mdi-cog" @click="closePresetMenu(client); openAppConfig('presets', 'inference', client.preset_group)">
+                      <v-list-item-title>Open in settings</v-list-item-title>
                     </v-list-item>
                   </v-list>
                 </v-menu>
@@ -259,6 +285,7 @@
 import AIClientRequestInformation from './AIClientRequestInformation.vue';
 import GraduatedSlider from './GraduatedSlider.vue';
 import { TOKEN_GRADUATIONS } from '@/utils/clientPresets';
+import { createPresetGroupForClient, groupNameError, panelSettings, presetGroupItems } from '@/utils/inferencePresets';
 import { agentsRequiringClient } from '@/utils/agentAssignments';
 import { createClientSaveState } from '@/utils/clientSaveState';
 
@@ -276,6 +303,13 @@ export default {
       clientStatusCheck: null,
       hideDisabled: true,
       tokenGraduations: TOKEN_GRADUATIONS,
+      // keyed by client name, which may be any string (`toString` included),
+      // so an inherited member is never read as an entry
+      newGroupNames: Object.create(null),
+      newGroupErrors: Object.create(null),
+      // the menu keeps its content clickable for the name field, so the
+      // actions close it
+      presetMenus: Object.create(null),
       state: {
         clients: [],
       }
@@ -283,26 +317,13 @@ export default {
   },
   computed: {
     availablePresets() {
-      let items = [{ title: 'Default', value: '' }]
-      if(!this.immutableConfig || !this.immutableConfig.presets) {
-        return items;
-      }
-      const inferenceGroups = this.immutableConfig.presets.inference_groups;
-      if(!inferenceGroups || !Object.keys(inferenceGroups).length) {
-        return items;
-      }
-      
-      for (const [key, value] of Object.entries(inferenceGroups)) {
-        items.push({
-          title: value.name,
-          value: key,
-        });
-      }
-
-      // sort by name
-      items.sort((a, b) => a.title.localeCompare(b.title));
-
-      return items;
+      return presetGroupItems(this.immutableConfig?.presets);
+    },
+    paramPanelEnabled() {
+      return panelSettings(this.immutableConfig?.presets).enabled;
+    },
+    pinnedParamsClient() {
+      return panelSettings(this.immutableConfig?.presets).client;
     },
     visibleClients: function() {
       return this.state.clients.filter(client => !this.hideDisabled || client.status !== 'disabled');
@@ -329,13 +350,65 @@ export default {
     'getAgents',
     'openAppConfig',
     'openClientSettings',
+    'saveAppConfig',
   ],
   emits: [
     'clients-updated',
     'client-assigned',
     'open-app-config',
+    'pin-inference-params',
   ],
   methods: {
+
+    isPinned(client) {
+      return this.pinnedParamsClient === client.name;
+    },
+
+    closePresetMenu(client) {
+      this.presetMenus[client.name] = false;
+      this.newGroupErrors[client.name] = null;
+    },
+
+    togglePinnedParams(client) {
+      this.closePresetMenu(client);
+      this.$emit('pin-inference-params', this.isPinned(client) ? null : client.name);
+    },
+
+    assignPresetGroup(client, groupKey) {
+      this.closePresetMenu(client);
+      client.preset_group = groupKey;
+      this.saveClientDelayed(client);
+    },
+
+    createGroupForClient(client) {
+      const groupName = this.newGroupNames[client.name];
+      const error = groupNameError(this.immutableConfig?.presets, groupName);
+      this.newGroupErrors[client.name] = error;
+      if(error) {
+        return;
+      }
+
+      // `mutate` runs against the payload of the last save SENT, which may
+      // already carry a group of this name that no broadcast has reported yet
+      let created = null;
+      this.saveAppConfig((config) => {
+        created = createPresetGroupForClient(config, { clientName: client.name, groupName });
+        return created !== null;
+      }, { label: 'inference presets' });
+
+      if(!created) {
+        this.newGroupErrors[client.name] = 'That group already exists';
+        return;
+      }
+
+      this.newGroupNames[client.name] = '';
+      this.closePresetMenu(client);
+      // the row carries the assignment straight away, the way assigning an
+      // existing group does, and recordSent arms the dirty flag so the status
+      // the backend emits with the pre-save group cannot write it back
+      client.preset_group = created;
+      this.saveState.recordSent(client);
+    },
 
     callErrorAction(client, action) {
       if(action.action_name === 'openAppConfig') {

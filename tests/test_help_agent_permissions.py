@@ -9,6 +9,7 @@ import pytest
 import talemate
 import talemate.agents.help.settings as help_settings
 import talemate.agents.help.storage as help_storage
+import talemate.config.state as config_state
 from conftest import MockClient, bootstrap_engine
 from talemate.agents.help import HelpAgent
 
@@ -232,11 +233,13 @@ class TestTheAgentCannotGrantItself:
         assert "not yours to change" in result
 
     async def test_another_agent_action_is_untouched_by_the_guard(self, help_agent):
+        config_state.CONFIG_FILE.unlink(missing_ok=True)
         result = await help_settings.update_agent_setting(
             "help", "chat", "response_length", 2048
         )
 
         assert result["applied"] is True
+        assert config_state.CONFIG_FILE.is_file()
 
 
 class TestThePromptSaysWhichPermissionToEnable:

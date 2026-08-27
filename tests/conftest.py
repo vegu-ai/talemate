@@ -5,8 +5,11 @@ Provides MockClient, MockScene, and bootstrap functions used across
 multiple test modules (test_graphs, test_layered_history, etc.).
 """
 
+import builtins
 import contextvars
+import io
 import os
+import tempfile
 from collections import deque
 from pathlib import Path
 
@@ -25,6 +28,26 @@ from talemate.tale_mate import Scene
 
 # Root of the repository (where config.example.yaml lives)
 _REPO_ROOT = Path(__file__).resolve().parent.parent
+_REAL_CONFIG_FILE = _REPO_ROOT / "config.yaml"
+_TEST_CONFIG_DIR = tempfile.TemporaryDirectory(prefix="talemate-pytest-config-")
+config_state.CONFIG_FILE = Path(_TEST_CONFIG_DIR.name) / "config.yaml"
+
+
+def _guard_config_writes(open_file):
+    def guarded_open(file, mode="r", *args, **kwargs):
+        try:
+            path = Path(os.fsdecode(file)).resolve()
+        except TypeError:
+            pass
+        else:
+            if path == _REAL_CONFIG_FILE.resolve() and any(
+                flag in mode for flag in "wax+"
+            ):
+                pytest.fail(f"test attempted to write the real config file: {path}")
+        return open_file(file, mode, *args, **kwargs)
+
+    return guarded_open
+
 
 # ---------------------------------------------------------------------------
 # Parallel execution (pytest-xdist)
@@ -145,6 +168,12 @@ def _use_example_config():
     config_state.CONFIG = test_config
     yield
     config_state.CONFIG = original
+
+
+@pytest.fixture(autouse=True)
+def _prevent_real_config_writes(monkeypatch):
+    monkeypatch.setattr(builtins, "open", _guard_config_writes(builtins.open))
+    monkeypatch.setattr(io, "open", _guard_config_writes(io.open))
 
 
 # ---------------------------------------------------------------------------

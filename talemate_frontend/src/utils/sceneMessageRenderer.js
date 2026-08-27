@@ -1,5 +1,12 @@
 import { marked, Marked } from 'marked';
+import { escapeHtmlText, sanitizeHtml } from './htmlSanitizer.js';
 import { DEFAULT_APPEARANCE_COLORS, themeMessageColor } from './messageColors.js';
+
+// Stands in for the character-name prefix while marked runs, so the prefix span
+// is not fed through the parser as raw HTML — which the html renderer escapes on
+// purpose. Control characters only: a word here would be matched by an
+// entity-mention phrase and replaced before the prefix is substituted back.
+const PREFIX_PLACEHOLDER = '\x00\x01\x00';
 
 const DEFAULTS = {
     quotes: {
@@ -53,12 +60,14 @@ function escapeHtmlAttr(s) {
         .replace(/>/g, '&gt;');
 }
 
-// Escape a string for safe embedding as HTML text content.
-export function escapeHtmlText(s) {
-    return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+// Escape the characters that could open markup, leaving a valid character
+// reference intact — the rule marked applies to the text around it, so an
+// entity renders the same inside emphasis as outside it.
+const MARKUP_CHARS = /[<>]|&(?!(#\d{1,7}|#[Xx][a-fA-F0-9]{1,6}|\w+);)/g;
+const MARKUP_CHAR_ENTITIES = { '<': '&lt;', '>': '&gt;', '&': '&amp;' };
+
+function escapeMarkupChars(s) {
+    return String(s).replace(MARKUP_CHARS, (c) => MARKUP_CHAR_ENTITIES[c]);
 }
 
 // Compile an entity-mentions list into the lookup structures used by the
@@ -291,13 +300,17 @@ export class SceneTextParser {
         
         // Custom renderer for emphasis (*)
         const renderer = {
-            em: ({ text }) => {
+            // Emphasis renders its own source as text rather than parsing it:
+            // markup nested in emphasis keeps the emphasis styling, and a
+            // deeply nested run costs linear rather than quadratic time.
+            em: (token) => {
                 const styles = this.config.emphasis;
-                return this.buildSpan('emphasis', text, styles);
+                return this.buildSpan('emphasis', escapeMarkupChars(token.text), styles);
             },
             
             // Optionally override other elements
-            strong: ({ text }) => {
+            strong: (token) => {
+                const text = escapeMarkupChars(token.text);
                 if (this.config.strong) {
                     return this.buildElement('strong', text, this.config.strong);
                 }
@@ -321,6 +334,8 @@ export class SceneTextParser {
             image: () => {
                 return '';
             },
+
+            html: ({ text }) => escapeHtmlText(text),
         };
         
         // Apply extensions and renderer
@@ -427,11 +442,11 @@ export class SceneTextParser {
         // Detect "Character Name: " prefix at start of message
         const prefixRegex = /^([^:\n]{1,50}):\s*/; // up to 50 chars before first colon
         const m = md.match(prefixRegex);
+        let prefixHtml = null;
         if (m) {
-            const prefixStr = m[1] + ':';
-            const rest      = md.slice(m[0].length);
-            const styled    = this.buildSpan('prefix', prefixStr, this.config.prefix);
-            md = styled + ' ' + rest;
+            const prefixStr = escapeHtmlText(m[1] + ':');
+            prefixHtml = this.buildSpan('prefix', prefixStr, this.config.prefix);
+            md = PREFIX_PLACEHOLDER + ' ' + md.slice(m[0].length);
         }
 
         // Stash the compiled mention regex so the entity tokenizer extension
@@ -445,7 +460,10 @@ export class SceneTextParser {
             // Restore protected newlines as <br> tags
             // eslint-disable-next-line no-control-regex
             result = result.replace(/\x00BR\x00/g, '<br>');
-            return result;
+            if (prefixHtml) {
+                result = result.replace(PREFIX_PLACEHOLDER, () => prefixHtml);
+            }
+            return sanitizeHtml(result);
         } finally {
             this._entityMentions = null;
             this._entitiesSeenInParse = null;
@@ -453,7 +471,7 @@ export class SceneTextParser {
     }
     
     parseInline(text) {
-        return this.marked.parseInline(text);
+        return sanitizeHtml(this.marked.parseInline(text));
     }
     
     // Update configuration

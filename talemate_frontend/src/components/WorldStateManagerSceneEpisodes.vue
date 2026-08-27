@@ -186,6 +186,7 @@
 
 <script>
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
+import { escapeHtmlText } from '@/utils/htmlSanitizer.js';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
 
@@ -250,7 +251,7 @@ export default {
                 return this.parser.parse(episode.intro);
             } catch (e) {
                 console.error('Error rendering episode intro:', e);
-                return episode.intro;
+                return escapeHtmlText(episode.intro);
             }
         },
     },

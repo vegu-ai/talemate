@@ -24,7 +24,7 @@
                             <v-list-item v-for="(section, key) in message.message" :key="key">
                                 <v-list-item-subtitle>{{ section.subtitle }}</v-list-item-subtitle>
                                 <div v-if="typeof section.content === 'string'">
-                                    <div v-if="section.process === 'diff'" v-html="section.content" class="text-muted text-caption agent-message-text"></div>
+                                    <div v-if="section.process === 'diff'" v-html="sanitizeHtml(section.content)" class="text-muted text-caption agent-message-text"></div>
                                     <div v-else class="text-muted text-caption agent-message-text">
                                         {{ section.content }}
                                     </div>  
@@ -50,6 +50,8 @@
     </v-dialog>
 </template>
 <script>
+
+import { sanitizeHtml } from '@/utils/htmlSanitizer.js';
 
 export default {
     name: "AgentMessages",
@@ -96,6 +98,7 @@ export default {
         }
     },
     methods: {
+        sanitizeHtml,
         openDialog() {
             this.dialog = true
         },

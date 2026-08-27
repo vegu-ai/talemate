@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { describe, it, expect, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";

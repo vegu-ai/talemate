@@ -8,7 +8,7 @@
     </v-alert>
 </template>
 <script>
-import { marked } from 'marked';
+import { renderChatMarkdown } from '@/utils/chatMarkdownRenderer.js';
 
 export default {
     name: 'SystemMessage',
@@ -49,7 +49,7 @@ export default {
     emits: ['close'],
     computed: {
         renderedMarkdown() {
-            return marked.parse(this.message);
+            return renderChatMarkdown(this.message);
         },
     },
     methods: {

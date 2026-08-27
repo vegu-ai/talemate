@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "vue";
 import DirectorConsoleChatMessageMarkdown from "@/components/DirectorConsoleChatMessageMarkdown.vue";
-import { sanitizeChatHtml } from "@/utils/chatMarkdownRenderer.js";
+import { sanitizeHtml } from "@/utils/htmlSanitizer.js";
 
 const mountedApps = [];
 
@@ -51,7 +51,7 @@ describe("director console chat Markdown", () => {
     });
 
     it("sanitizes dangerous elements and attributes from generated HTML", () => {
-        const sanitized = sanitizeChatHtml(
+        const sanitized = sanitizeHtml(
             '<p onclick="alert(1)">safe</p><script>alert(2)</script><img src="x" onerror="alert(3)">'
         );
         const host = document.createElement("div");

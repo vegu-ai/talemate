@@ -1,8 +1,7 @@
-import DOMPurify from "dompurify";
 import { marked, Renderer } from "marked";
-import { escapeHtmlText, parseSceneText } from "./sceneMessageRenderer.js";
+import { escapeHtmlText, sanitizeHtml } from "./htmlSanitizer.js";
+import { parseSceneText } from "./sceneMessageRenderer.js";
 
-const SAFE_URI_PATTERN = /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix|talemate):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i;
 const markdownRenderer = new Renderer();
 
 markdownRenderer.html = ({ text }) => escapeHtmlText(text);
@@ -41,14 +40,6 @@ function configureExternalLinks(html) {
     );
 }
 
-export function sanitizeChatHtml(html) {
-    return DOMPurify.sanitize(html, {
-        USE_PROFILES: { html: true },
-        ALLOWED_URI_REGEXP: SAFE_URI_PATTERN,
-        ADD_ATTR: ["target"],
-    });
-}
-
 export function renderChatMarkdown(text) {
     const source = text || "";
     try {
@@ -56,7 +47,7 @@ export function renderChatMarkdown(text) {
         html = processDiffCodeBlocks(html);
         html = processSceneCodeBlocks(html);
         html = configureExternalLinks(html);
-        return sanitizeChatHtml(html);
+        return sanitizeHtml(html);
     } catch {
         return escapeHtmlText(source);
     }

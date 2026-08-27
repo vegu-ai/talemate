@@ -367,7 +367,7 @@
 
 <script>
 
-import { marked } from 'marked';
+import { renderChatMarkdown } from '@/utils/chatMarkdownRenderer.js';
 import VoiceMixer from './VoiceMixer.vue';
 import ConfigWidgetField from './ConfigWidgetField.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
@@ -636,7 +636,7 @@ export default {
   },
   methods: {
     renderMessage(msg) {
-      return marked.parse(msg.text);
+      return renderChatMarkdown(msg.text);
     },
     defaultValueForParam(param) {
       if (param) {

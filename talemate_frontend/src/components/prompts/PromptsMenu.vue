@@ -19,7 +19,7 @@
         <v-tabs-window-item value="prompts">
             <v-list density="compact" slim>
                 <v-card variant="text" class="mb-2">
-                    <v-card-text class="text-caption text-muted pa-2">
+                    <v-card-text class="text-body-small text-muted pa-2">
                         Recent prompts sent to the LLM. Click to view prompt details.
                     </v-card-text>
                 </v-card>
@@ -40,7 +40,7 @@
                 />
 
                 <v-list-item v-if="prompts.length === 0">
-                    <v-list-item-subtitle class="text-caption">No recent prompts</v-list-item-subtitle>
+                    <v-list-item-subtitle class="text-body-small">No recent prompts</v-list-item-subtitle>
                 </v-list-item>
             </v-list>
         </v-tabs-window-item>
@@ -49,7 +49,7 @@
         <v-tabs-window-item value="templates">
             <v-list density="compact" slim>
                 <v-card variant="text" class="mb-2">
-                    <v-card-text class="text-caption text-muted pa-2">
+                    <v-card-text class="text-body-small text-muted pa-2">
                         Templates that recently generated prompts to the LLM. Click to navigate to the template source for editing.
                         <v-divider class="my-2"></v-divider>
                         Default templates are read-only. To override, create a copy in the <strong>user</strong> group or a custom group.
@@ -61,14 +61,14 @@
                     :key="template.uid"
                     @click="navigateToTemplate(template)"
                 >
-                    <v-list-item-title class="text-caption">{{ template.uid }}</v-list-item-title>
+                    <v-list-item-title class="text-body-small">{{ template.uid }}</v-list-item-title>
                     <v-list-item-subtitle>
                         <v-chip size="x-small" label variant="tonal" :color="getSourceColor(template.source_group)">{{ template.source_group }}</v-chip>
                     </v-list-item-subtitle>
                 </v-list-item>
 
                 <v-list-item v-if="recentTemplates.length === 0">
-                    <v-list-item-subtitle class="text-caption">No recent templates</v-list-item-subtitle>
+                    <v-list-item-subtitle class="text-body-small">No recent templates</v-list-item-subtitle>
                 </v-list-item>
             </v-list>
         </v-tabs-window-item>

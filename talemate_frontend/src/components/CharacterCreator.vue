@@ -49,7 +49,7 @@
 
                             <v-divider class="mb-2"></v-divider>
 
-                            <span class="mt-2 mb-2 text-subtitle-2" prepend-icon="mdi-memory">Generated Attributes</span>
+                            <span class="mt-2 mb-2 text-title-small" prepend-icon="mdi-memory">Generated Attributes</span>
 
                             <!-- generated attributes -->
 

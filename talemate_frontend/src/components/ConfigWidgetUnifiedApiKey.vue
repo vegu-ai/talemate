@@ -1,7 +1,7 @@
 <template>
   <div v-if="configPath && appConfig" class="mb-4">
     <v-card variant="outlined" color="primary">
-      <v-card-title class="text-subtitle-1 d-flex align-center">
+      <v-card-title class="text-body-large d-flex align-center">
         <v-icon class="mr-2">mdi-key-variant</v-icon>
         {{ title }}
         <v-chip v-if="apiKey" color="success" size="small" class="ml-2">Configured</v-chip>
@@ -24,7 +24,7 @@
             v-model="apiKey"
             density="comfortable"
           ></v-text-field>
-          <div class="text-caption text-medium-emphasis mt-2">
+          <div class="text-body-small text-medium-emphasis mt-2">
             {{ description }}
           </div>
         </v-card-text>

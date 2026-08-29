@@ -5,7 +5,7 @@
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
-    <v-alert-title v-if="title !== ''" class="muted-title text-caption">{{ title }}</v-alert-title>
+    <v-alert-title v-if="title !== ''" class="muted-title text-body-small">{{ title }}</v-alert-title>
     
     <!-- Scene illustration (big) renders above message -->
     <MessageAssetImage 

@@ -1,6 +1,6 @@
 <template>
     <v-card v-if="client" elevation="0" density="compact">
-        <v-card-title class="text-subtitle-2 d-flex align-center">
+        <v-card-title class="text-title-small d-flex align-center">
             <v-icon color="highlight1" size="small" class="mr-1">mdi-tune</v-icon>
             <span class="flex-grow-1 text-truncate">{{ client.name }}</span>
             <v-tooltip text="Unpin these parameters">
@@ -10,19 +10,19 @@
             </v-tooltip>
         </v-card-title>
 
-        <v-card-subtitle class="text-caption pb-2">
+        <v-card-subtitle class="text-body-small pb-2">
             <span v-if="groupKey">Inference group {{ groupKey }}</span>
             <span v-else>No inference group</span>
         </v-card-subtitle>
 
         <!-- a card subtitle is a single clipped line, so this hint is a plain
              block with the card's own horizontal padding -->
-        <div v-if="groupKey" class="text-caption text-medium-emphasis px-4 pb-2">
+        <div v-if="groupKey" class="text-body-small text-medium-emphasis px-4 pb-2">
             Client support varies by parameter — a parameter this client does not support is stored with the group but never sent.
         </div>
 
         <v-card-text v-if="!groupKey">
-            <v-alert density="compact" variant="text" type="info" class="text-caption">
+            <v-alert density="compact" variant="text" type="info" class="text-body-small">
                 This client uses the Default parameters, which every client without a group shares. Name a group to tune the parameters for this client alone.
             </v-alert>
             <v-text-field
@@ -39,7 +39,7 @@
         </v-card-text>
 
         <v-card-text v-else-if="!draft">
-            <v-alert density="compact" variant="text" type="warning" class="text-caption">
+            <v-alert density="compact" variant="text" type="warning" class="text-body-small">
                 The group {{ groupKey }} is gone. Pick another one from the client's preset menu.
             </v-alert>
         </v-card-text>

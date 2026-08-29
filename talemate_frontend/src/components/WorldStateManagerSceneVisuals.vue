@@ -2,16 +2,16 @@
     <v-row>
         <v-col cols="3">
             <v-tabs color="secondary" direction="vertical" v-model="tab">
-                <v-tab value="background" class="text-caption" prepend-icon="mdi-image-area">
+                <v-tab value="background" class="text-body-small" prepend-icon="mdi-image-area">
                     Background Illustration
                 </v-tab>
-                <v-tab value="illustration" class="text-caption" prepend-icon="mdi-image-filter-hdr">
+                <v-tab value="illustration" class="text-body-small" prepend-icon="mdi-image-filter-hdr">
                     Scene Illustration
                 </v-tab>
-                <v-tab value="card" class="text-caption" prepend-icon="mdi-image-frame">
+                <v-tab value="card" class="text-body-small" prepend-icon="mdi-image-frame">
                     Scene Card
                 </v-tab>
-                <v-tab value="finalizers" class="text-caption" prepend-icon="mdi-auto-fix">
+                <v-tab value="finalizers" class="text-body-small" prepend-icon="mdi-auto-fix">
                     Prompt Finalization
                 </v-tab>
             </v-tabs>

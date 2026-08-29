@@ -50,7 +50,7 @@
                     @update:modelValue="(value) => $emit('jump', value)" />
             </div>
 
-            <span class="progress-readout text-caption text-medium-emphasis mr-2">{{ revealCount }} / {{ messageCount }}</span>
+            <span class="progress-readout text-body-small text-medium-emphasis mr-2">{{ revealCount }} / {{ messageCount }}</span>
 
             <v-tooltip :text="forkHint" location="top" max-width="350">
                 <template v-slot:activator="{ props }">

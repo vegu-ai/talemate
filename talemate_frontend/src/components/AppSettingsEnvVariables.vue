@@ -1,10 +1,10 @@
 <template>
     <v-card variant="tonal">
         <v-card-text>
-            <div v-if="envVariableNames.length === 0" class="text-medium-emphasis text-body-2 mb-4">
+            <div v-if="envVariableNames.length === 0" class="text-medium-emphasis text-body-medium mb-4">
                 No environment variables defined yet — add one below.
             </div>
-            <v-row v-for="name in envVariableNames" :key="name" dense>
+            <v-row v-for="name in envVariableNames" :key="name" density="compact">
                 <v-col cols="5">
                     <v-text-field :model-value="name" label="Name" readonly density="compact" hide-details></v-text-field>
                 </v-col>
@@ -16,7 +16,7 @@
                 </v-col>
             </v-row>
             <v-divider v-if="envVariableNames.length > 0" class="my-4"></v-divider>
-            <v-row dense>
+            <v-row density="compact">
                 <v-col cols="5">
                     <v-text-field v-model="env_variable_name_input" label="Name" density="compact"
                         :rules="[validateEnvVariableName]" placeholder="MY_API_KEY"

@@ -4,14 +4,14 @@
             <div class="d-flex align-center justify-space-between">
                 <div class="d-flex align-center">
                     <v-icon size="small" class="mr-1">mdi-clipboard-list-outline</v-icon>
-                    <span class="text-caption font-weight-medium">Plan</span>
+                    <span class="text-body-small font-weight-medium">Plan</span>
                     <v-chip
                         size="x-small"
                         label
                         :color="planStatusColor"
                         class="ml-2"
                     >{{ plan.status }}</v-chip>
-                    <span class="text-caption text-muted ml-2">{{ completedCount }}/{{ plan.tasks.length }}</span>
+                    <span class="text-body-small text-muted ml-2">{{ completedCount }}/{{ plan.tasks.length }}</span>
                 </div>
                 <v-btn
                     size="x-small"
@@ -26,7 +26,7 @@
             <v-expand-transition>
                 <div v-show="!collapsed" class="mt-2">
                     <!-- Completed summary -->
-                    <div v-if="hiddenBeforeCount > 0" class="d-flex align-center text-caption text-muted completed-summary" @click="showAll = !showAll">
+                    <div v-if="hiddenBeforeCount > 0" class="d-flex align-center text-body-small text-muted completed-summary" @click="showAll = !showAll">
                         <v-icon size="x-small" class="mr-1" color="success">mdi-check-circle</v-icon>
                         <span>{{ hiddenBeforeCount }} completed task{{ hiddenBeforeCount > 1 ? 's' : '' }}</span>
                         <v-icon size="x-small" class="ml-1">{{ showAll ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
@@ -42,7 +42,7 @@
                             :color="taskIconColor(task)"
                             class="mr-1"
                         >{{ taskIcon(task) }}</v-icon>
-                        <span class="text-caption task-description" :class="{ 'text-muted': task.status === 'completed' || task.status === 'skipped' }">{{ task.description }}</span>
+                        <span class="text-body-small task-description" :class="{ 'text-muted': task.status === 'completed' || task.status === 'skipped' }">{{ task.description }}</span>
                         <v-spacer />
                         <v-chip
                             size="x-small"
@@ -52,13 +52,13 @@
                         >{{ task.status }}</v-chip>
                     </div>
                     <!-- Hidden after summary -->
-                    <div v-if="hiddenAfterCount > 0" class="d-flex align-center text-caption text-muted completed-summary" @click="showAll = !showAll">
+                    <div v-if="hiddenAfterCount > 0" class="d-flex align-center text-body-small text-muted completed-summary" @click="showAll = !showAll">
                         <v-icon size="x-small" class="mr-1">mdi-circle-outline</v-icon>
                         <span>{{ hiddenAfterCount }} more pending task{{ hiddenAfterCount > 1 ? 's' : '' }}</span>
                         <v-icon size="x-small" class="ml-1">mdi-chevron-down</v-icon>
                     </div>
                     <!-- Show less -->
-                    <div v-if="showAll && isWindowable" class="d-flex align-center text-caption text-muted completed-summary" @click="showAll = false">
+                    <div v-if="showAll && isWindowable" class="d-flex align-center text-body-small text-muted completed-summary" @click="showAll = false">
                         <v-icon size="x-small" class="mr-1">mdi-unfold-less-horizontal</v-icon>
                         <span>Show less</span>
                     </div>

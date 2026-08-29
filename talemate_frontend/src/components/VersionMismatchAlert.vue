@@ -19,10 +19,10 @@
                     This usually happens when you updated Talemate but forgot to rebuild the frontend, or your browser is serving a cached version.
                 </p>
                 <v-divider class="my-4"></v-divider>
-                <p class="text-body-2">
+                <p class="text-body-medium">
                     <strong>To fix this:</strong>
                 </p>
-                <ul class="text-body-2 ml-4">
+                <ul class="text-body-medium ml-4">
                     <li><strong>Browser cache:</strong> Hard refresh this page (<code class="bg-grey-darken-3 px-1">Ctrl+Shift+R</code> or <code class="bg-grey-darken-3 px-1">Cmd+Shift+R</code>)</li>
                     <li><strong>Git users:</strong> Run <code class="bg-grey-darken-3 px-1">update.bat</code> (Windows) or <code class="bg-grey-darken-3 px-1">update.sh</code> (Linux/Mac)</li>
                     <li><strong>Others:</strong> Do a fresh install</li>

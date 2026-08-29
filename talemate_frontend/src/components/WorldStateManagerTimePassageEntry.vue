@@ -1,6 +1,6 @@
 <template>
-    <v-card elevation="7" class="my-4" density="compact">
-        <v-card-title class="text-body-2 text-time">
+    <v-card elevation="3" class="my-4" density="compact">
+        <v-card-title class="text-body-medium text-time">
             <v-icon class="mr-2" size="small">mdi-clock-fast</v-icon>
             Time Passage
         </v-card-title>
@@ -9,9 +9,9 @@
                  @dblclick="setEditing(true)"
                  @mouseenter="hovered = true"
                  @mouseleave="hovered = false">
-                <span v-if="passage.title" class="text-body-1 text-time mr-2">{{ passage.title }}</span>
-                <span class="text-body-1">{{ passage.human }}</span>
-                <span v-if="hovered" class="text-caption text-muted ml-2">
+                <span v-if="passage.title" class="text-body-large text-time mr-2">{{ passage.title }}</span>
+                <span class="text-body-large">{{ passage.human }}</span>
+                <span v-if="hovered" class="text-body-small text-muted ml-2">
                     <v-icon size="small">mdi-pencil</v-icon> double-click to edit
                 </span>
                 <v-spacer />

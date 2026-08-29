@@ -2,7 +2,7 @@
   <v-sheet color="transparent" density="compact" v-if="hasAnyOverridable">
     <div v-if="actionSchema.description" class="text-muted mt-2">
       {{ actionSchema.description }}
-      <p v-if="actionSchema.warning" class="text-warning mt-2 text-caption">
+      <p v-if="actionSchema.warning" class="text-warning mt-2 text-body-small">
         <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
         {{ actionSchema.warning }}
       </p>
@@ -57,13 +57,13 @@
   <v-sheet color="transparent" v-else-if="actionConditionMet" density="compact">
     <div v-if="actionSchema.description" class="text-muted mt-2 mb-3">
       {{ actionSchema.description }}
-      <p v-if="actionSchema.warning" class="text-warning mt-2 text-caption">
+      <p v-if="actionSchema.warning" class="text-warning mt-2 text-body-small">
         <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
         {{ actionSchema.warning }}
       </p>
     </div>
     <v-alert density="compact" variant="text" color="muted">
-      <span class="text-caption">This section has no scene-overridable fields.</span>
+      <span class="text-body-small">This section has no scene-overridable fields.</span>
     </v-alert>
   </v-sheet>
 </template>

@@ -1,6 +1,6 @@
 <template>
   <div class="dynamic-agent-registry">
-    <p class="text-caption text-muted mt-2 mb-3" v-if="description">{{ description }}</p>
+    <p class="text-body-small text-muted mt-2 mb-3" v-if="description">{{ description }}</p>
 
     <div class="d-flex align-center mb-2">
       <v-text-field
@@ -21,13 +21,13 @@
       >{{ addLabel }}</v-btn>
     </div>
 
-    <p v-if="slugPreview" class="text-caption text-muted mb-2">
+    <p v-if="slugPreview" class="text-body-small text-muted mb-2">
       Will be added as <code>{{ slugPreview }}</code>
     </p>
 
     <v-divider class="my-3" />
 
-    <p class="text-caption text-muted mb-2" v-if="children.length === 0">
+    <p class="text-body-small text-muted mb-2" v-if="children.length === 0">
       No entries yet. Add one above — it will appear as its own section below.
     </p>
 
@@ -43,7 +43,7 @@
         </template>
         <v-list-item-title>{{ child.label }}</v-list-item-title>
         <v-list-item-subtitle>
-          <code class="text-caption">{{ child.slug }}</code>
+          <code class="text-body-small">{{ child.slug }}</code>
         </v-list-item-subtitle>
         <template v-slot:append>
           <!-- Specializing wrappers can inject per-child buttons here
@@ -81,7 +81,7 @@
             autofocus
             @keydown.enter.prevent="confirmRename"
           />
-          <p class="text-caption text-muted">
+          <p class="text-body-small text-muted">
             Slug stays as <code>{{ renameTarget?.slug }}</code>.
           </p>
         </v-card-text>

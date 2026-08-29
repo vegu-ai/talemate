@@ -1,6 +1,6 @@
 <template>
     <v-card>
-        <v-card-title class="text-subtitle-1">Pinned Variables</v-card-title>
+        <v-card-title class="text-body-large">Pinned Variables</v-card-title>
         <v-card-text>
             <v-autocomplete
                 v-model="selectedPath"
@@ -22,7 +22,7 @@
             />
 
             <div class="d-flex flex-wrap align-center mt-2" style="gap: 6px;">
-                <span class="text-caption text-medium-emphasis mr-1">Pin to</span>
+                <span class="text-body-small text-medium-emphasis mr-1">Pin to</span>
                 <v-chip-group v-model="selectedTargets" multiple filter>
                     <v-chip value="debug" size="small" color="primary" variant="outlined">
                         <v-icon start>mdi-bug-outline</v-icon>
@@ -58,7 +58,7 @@
                 </thead>
                 <tbody>
                     <tr v-for="path in managedPaths" :key="path">
-                        <td class="text-caption pin-path" :title="path">{{ path }}</td>
+                        <td class="text-body-small pin-path" :title="path">{{ path }}</td>
                         <td>
                             <v-text-field
                                 :model-value="pathSettings[path]?.label || ''"

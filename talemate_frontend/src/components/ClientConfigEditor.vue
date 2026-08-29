@@ -79,12 +79,12 @@
                 :model-value="templateInfo.template_file" @update:model-value="setPromptTemplate" :items="promptTemplates"></v-autocomplete>
               <v-card elevation="3" :color="(templateInfo.has_prompt_template ? 'primary' : 'warning')" variant="tonal">
                 <v-card-text v-if="!waitingForTemplateSelection">
-                  <div class="text-caption" v-if="!templateInfo.has_prompt_template">No matching LLM prompt template found. Using default.</div>
+                  <div class="text-body-small" v-if="!templateInfo.has_prompt_template">No matching LLM prompt template found. Using default.</div>
                   <div class="prompt-template-preview">{{ templateInfo.prompt_template_example }}</div>
                 </v-card-text>
                 <v-card-text v-else>
-                  <div class="text-caption" v-if="!values.lock_template">Please select a prompt template to use for this client.</div>
-                  <div class="text-caption" v-else>Please select a prompt template to lock for this client.</div>
+                  <div class="text-body-small" v-if="!values.lock_template">Please select a prompt template to use for this client.</div>
+                  <div class="text-body-small" v-else>Please select a prompt template to lock for this client.</div>
                 </v-card-text>
                 <v-card-actions v-if="!waitingForTemplateSelection">
                   <v-btn @click.stop="determineBestTemplate" prepend-icon="mdi-web-box">Determine via HuggingFace</v-btn>
@@ -151,11 +151,11 @@
             <v-col cols="6">
               <v-select v-model="values.enforce_response_length" label="Response Length Enforcement" :items="enforceResponseLengthChoices"
                 item-title="label" item-value="value" hint="Controls whether token limits and/or length instructions are sent with prompts." persistent-hint>
-                <template v-slot:item="{ props, item }">
+                <template v-slot:item="{ props, internalItem: item }">
                   <v-list-item v-bind="props" :title="item.raw.label" :subtitle="item.raw.help"></v-list-item>
                 </template>
               </v-select>
-              <v-alert v-if="values.enforce_response_length === 'uncapped'" color="warning" variant="text" density="compact" class="mt-1 text-caption" icon="mdi-alert">
+              <v-alert v-if="values.enforce_response_length === 'uncapped'" color="warning" variant="text" density="compact" class="mt-1 text-body-small" icon="mdi-alert">
                 Not recommended. Any generation length settings will be ignored when this is selected.
               </v-alert>
             </v-col>
@@ -203,7 +203,7 @@
             <v-col cols="12">
               <v-checkbox v-model="values.reason_enabled" label="Enable Reasoning" hide-details :disabled="reasonLocked"></v-checkbox>
               <v-card v-if="reasonLocked" variant="outlined" color="primary" class="mt-2">
-                <v-card-text class="text-caption text-muted pa-2">
+                <v-card-text class="text-body-small text-muted pa-2">
                   <div v-if="values.model && values.model !== modelName">
                     Reasoning is always enabled for the model <strong>{{ modelName }}</strong>. You have selected a different model (<strong>{{ values.model }}</strong>). Please save the client configuration and return to this screen to see if reasoning is required for the new model.
                   </div>
@@ -215,7 +215,7 @@
             </v-col>
             <v-col cols="12" v-if="values.reason_enabled">
               <GraduatedSlider v-model="values.reason_tokens" label="Reasoning Tokens" :min="minReasonTokens" :max="128000" :graduations="tokenGraduations" :persistent-hint="true" thumb-label="always" hint="Tokens to spend on reasoning." />
-              <v-alert color="muted" variant="text" class="text-caption">
+              <v-alert color="muted" variant="text" class="text-body-small">
                 <p>The behavior of this depends on the provider and model.</p>
                 <p class="mt-2">For APIs that provide a way to specify the reasoning tokens, this will be the amount of tokens to spend on reasoning.</p>
                 <p class="mt-2">For APIs that do <span class="text-warning">NOT</span> provide a way to specify the reasoning tokens, this will simply add extra allowance for response tokens to ALL requests.</p>
@@ -225,7 +225,7 @@
               </v-alert>
             </v-col>
             <v-col cols="12" v-if="values.reason_enabled && requiresReasoningPattern">
-              <v-sheet color="transparent" class="text-caption text-right">
+              <v-sheet color="transparent" class="text-body-small text-right">
                 <!-- each preset sets BOTH the strip and validation patterns for that model -->
                 <v-btn @click.stop="applyReasoningPreset('', '')" size="small" color="primary" variant="text">{{ 'Default' }}</v-btn>
                 <v-btn @click.stop="applyReasoningPreset('.*?final<\\|message\\|>', '<\\|channel\\|>analysis')" size="small" color="primary" variant="text">{{ 'gpt-oss' }}</v-btn>
@@ -273,7 +273,7 @@
           <v-row v-if="values.reason_enabled && requiresReasoningPattern">
             <v-col cols="12">
               <v-text-field v-model="values.reason_prefill" label="Reason Prefill"></v-text-field>
-              <v-alert color="muted" variant="text" class="text-caption">
+              <v-alert color="muted" variant="text" class="text-body-small">
                 This is mostly for base models that don't have reasoning built in, but were fine-tuned for reasoning. For example add <code class="text-primary">&lt;think&gt;</code> here to force the model to reason. Assuming <code class="text-primary">&lt;think&gt;</code> is the actual start of the thinking process, this may vary depending on the model.
               </v-alert>
             </v-col>

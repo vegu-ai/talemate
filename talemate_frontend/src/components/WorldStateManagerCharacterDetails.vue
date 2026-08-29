@@ -47,7 +47,7 @@
                     :active="selected === detail"
                     @click="selected = detail"
                 >
-                    <v-list-item-title class="text-caption">{{ detail }}
+                    <v-list-item-title class="text-body-small">{{ detail }}
                         <v-icon v-if="character.shared_details.includes(detail)" color="highlight6" class="ml-1">mdi-earth</v-icon>
                     </v-list-item-title>
                 </v-list-item>

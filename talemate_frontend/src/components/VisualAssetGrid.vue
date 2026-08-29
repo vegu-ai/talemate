@@ -18,10 +18,10 @@
                     <div class="asset-image-container">
                         <div class="dropzone-content">
                             <v-icon size="32" color="muted">mdi-tray-arrow-down</v-icon>
-                            <span class="text-caption mt-2">Drop image</span>
+                            <span class="text-body-small mt-2">Drop image</span>
                         </div>
                     </div>
-                    <v-card-text class="pa-2 text-caption text-truncate">
+                    <v-card-text class="pa-2 text-body-small text-truncate">
                         {{ dropLabel }}
                     </v-card-text>
                 </v-card>
@@ -48,7 +48,7 @@
                                 </v-img>
                                 <slot name="badges" :asset="asset"></slot>
                             </div>
-                            <v-card-text class="pa-2 text-caption text-truncate">
+                            <v-card-text class="pa-2 text-body-small text-truncate">
                                 {{ asset.meta?.name || asset.id.slice(0, 10) }}
                             </v-card-text>
                             <slot name="card-overlay" :asset="asset"></slot>

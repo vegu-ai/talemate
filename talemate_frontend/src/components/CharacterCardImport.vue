@@ -58,15 +58,15 @@
                 alt="Character Card"
                 style="width: 100%; max-width: 100%; max-height: 500px; height: auto; object-fit: contain; border-radius: 4px;"
               />
-              <div v-else-if="fileData && !isImageFile" class="text-caption text-medium-emphasis pa-4">
+              <div v-else-if="fileData && !isImageFile" class="text-body-small text-medium-emphasis pa-4">
                 <v-icon size="large" color="muted">mdi-file-document-outline</v-icon>
                 <div class="mt-2">JSON Character Card</div>
-                <div class="text-caption mt-1">{{ filename || 'Character card file' }}</div>
+                <div class="text-body-small mt-1">{{ filename || 'Character card file' }}</div>
               </div>
-              <div v-else-if="filePath" class="text-caption text-medium-emphasis pa-4">
+              <div v-else-if="filePath" class="text-body-small text-medium-emphasis pa-4">
                 Image preview not available for file path
               </div>
-              <div v-else class="text-caption text-medium-emphasis pa-4">
+              <div v-else class="text-body-small text-medium-emphasis pa-4">
                 No image available
               </div>
             </v-card-text>
@@ -76,7 +76,7 @@
           <v-row>
             <v-col cols="12" md="4">
               <v-card elevation="0">
-                <v-card-title v-if="analysis.card_name" class="text-subtitle-1">
+                <v-card-title v-if="analysis.card_name" class="text-body-large">
                   <v-icon class="mr-2" size="small">mdi-card-text</v-icon>
                   {{ analysis.card_name }}
                 </v-card-title>
@@ -93,15 +93,15 @@
                     alt="Character Card Icon"
                     style="width: 100%; max-width: 100%; max-height: 800px; height: auto; object-fit: contain; border-radius: 4px;"
                   />
-                  <div v-else-if="fileData && !isImageFile" class="text-caption text-medium-emphasis pa-4">
+                  <div v-else-if="fileData && !isImageFile" class="text-body-small text-medium-emphasis pa-4">
                     <v-icon size="large" color="muted">mdi-file-document-outline</v-icon>
                     <div class="mt-2">JSON Character Card</div>
-                    <div class="text-caption mt-1">{{ filename || 'Character card file' }}</div>
+                    <div class="text-body-small mt-1">{{ filename || 'Character card file' }}</div>
                   </div>
-                  <div v-else-if="filePath" class="text-caption text-medium-emphasis pa-4">
+                  <div v-else-if="filePath" class="text-body-small text-medium-emphasis pa-4">
                     Image preview not available for file path
                   </div>
-                  <div v-else class="text-caption text-medium-emphasis pa-4">
+                  <div v-else class="text-body-small text-medium-emphasis pa-4">
                     No image available
                   </div>
                 </v-card-text>
@@ -109,13 +109,13 @@
             </v-col>
             <v-col cols="12" md="4">
               <v-card elevation="0">
-                <v-card-title class="text-subtitle-1">
+                <v-card-title class="text-body-large">
                   <v-icon class="mr-2" size="small">mdi-account-multiple</v-icon>
                   Select Characters to Import
                 </v-card-title>
                 <v-card-text>
                   <div class="d-flex justify-space-between align-center mb-2">
-                    <span class="text-caption">Detected {{ detectedCharacterNames.length }} character(s)</span>
+                    <span class="text-body-small">Detected {{ detectedCharacterNames.length }} character(s)</span>
                     <v-btn
                       size="small"
                       variant="text"
@@ -170,7 +170,7 @@
             </v-col>
             <v-col cols="12" md="4">
               <v-card elevation="0">
-                <v-card-title class="text-subtitle-1">
+                <v-card-title class="text-body-large">
                   <v-icon class="mr-2" size="small">mdi-cog</v-icon>
                   Import Options
                 </v-card-title>
@@ -262,7 +262,7 @@
                     class="d-flex align-center justify-space-between mb-1 generation-header"
                     @click="showGenerationOptions = !showGenerationOptions"
                   >
-                    <span class="text-subtitle-2">
+                    <span class="text-title-small">
                       <v-icon class="mr-1" size="small">mdi-creation</v-icon>
                       AI Generation
                       <v-icon size="small" class="ml-1">{{ showGenerationOptions ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
@@ -289,7 +289,7 @@
                   </div>
                   <v-expand-transition>
                   <div v-show="showGenerationOptions">
-                  <div class="text-caption text-medium-emphasis mb-2">
+                  <div class="text-body-small text-medium-emphasis mb-2">
                     Disabled steps fall back to the card's original data, significantly speeding up the import.
                   </div>
                   <v-tooltip text="If enabled, AI determines the content context (genre and tone) for the scene." max-width="300">
@@ -390,7 +390,7 @@
           <v-row>
             <v-col cols="12">
               <v-card elevation="0">
-                <v-card-title class="text-subtitle-1">
+                <v-card-title class="text-body-large">
                   <v-icon class="mr-2" size="small">mdi-account-circle</v-icon>
                   Player Character Setup
                 </v-card-title>

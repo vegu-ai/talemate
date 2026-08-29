@@ -185,7 +185,7 @@
                         
                                     <div v-else class="mt-2">
                                         <v-list-item-subtitle>Confirm Deletion</v-list-item-subtitle>
-                                        <p class="text-medium-emphasis text-caption">
+                                        <p class="text-medium-emphasis text-body-small">
                                             Confirm that you want to delete <span class="text-primary">{{ character.name }}</span>, by
                                             typing the character name and clicking <span class="text-delete">Delete</span> once more.
                                             This cannot be undone.

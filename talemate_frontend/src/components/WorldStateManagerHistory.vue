@@ -21,7 +21,7 @@
                     <v-divider v-else class="mt-2"></v-divider>
 
                     <v-card v-if="summaryEntriesExist" variant="tonal" color="muted" density="compact" class="mt-4 mb-2" style="min-height: 52px;">
-                        <v-card-text class="text-caption">
+                        <v-card-text class="text-body-small">
                             <div v-if="layerStats[0]" class="d-flex flex-wrap ga-4">
                                 <div>
                                     <span class="text-muted">Compression:</span>
@@ -43,7 +43,7 @@
                         </v-card-text>
                     </v-card>
 
-                    <v-sheet color="transparent" class="ma-4 text-caption">
+                    <v-sheet color="transparent" class="ma-4 text-body-small">
                         <span class="text-muted">Total time passed:</span> {{ scene?.data?.scene_time || '?' }}
                     </v-sheet>
 
@@ -95,7 +95,7 @@
                 <v-card-text>
 
                     <v-card variant="tonal" color="muted" density="compact" class="mb-4" style="min-height: 52px;">
-                        <v-card-text class="text-caption">
+                        <v-card-text class="text-body-small">
                             <div v-if="layerStats[index + 1]" class="d-flex flex-wrap ga-4">
                                 <div>
                                     <span class="text-muted">Compression:</span>

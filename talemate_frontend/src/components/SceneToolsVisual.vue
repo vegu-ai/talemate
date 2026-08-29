@@ -29,7 +29,7 @@
             <v-divider></v-divider>
             <!-- visual agent not ready -->
             <div v-if="!visualAgentReady">
-                <v-alert type="warning" density="compact" variant="text" class="mb-3 text-caption">Visual agent is not ready for image generation, will output prompt instead.</v-alert>
+                <v-alert type="warning" density="compact" variant="text" class="mb-3 text-body-small">Visual agent is not ready for image generation, will output prompt instead.</v-alert>
             </div>
             <!-- environment -->
             <v-list-item @click="(event) => handleVisualize(null, event, VIS_TYPE.SCENE_CARD)" prepend-icon="mdi-image-filter-hdr">

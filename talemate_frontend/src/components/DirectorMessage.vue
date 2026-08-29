@@ -2,7 +2,7 @@
   <div v-if="subtype === 'user_direction'">
     <!-- player-authored direction (# / ## input) -->
     <v-alert class="clickable user-direction mb-8 ml-8" variant="text" elevation="0" density="compact" :style="getMessageStyle('information')" @click:close="deleteMessage()" closable :disabled="uxLocked">
-      <div class="text-caption" :style="getMessageStyle('director')">Message to the director</div>
+      <div class="text-body-small" :style="getMessageStyle('director')">Message to the director</div>
       <div v-html="renderedText"></div>
     </v-alert>
   </div>
@@ -35,7 +35,7 @@
     elevation="0" density="compact" >
 
       <div v-html="renderedText"></div>
-      <div class="text-medium-emphasis text-caption">{{ action }}</div>
+      <div class="text-medium-emphasis text-body-small">{{ action }}</div>
     </v-alert>
   </div>
 

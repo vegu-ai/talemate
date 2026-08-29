@@ -2,7 +2,7 @@
   <div>
     <div v-if="loading && !preview" class="text-center py-8">
       <v-progress-circular indeterminate color="primary" />
-      <div class="text-caption mt-2">Building context preview...</div>
+      <div class="text-body-small mt-2">Building context preview...</div>
     </div>
 
     <div v-else-if="error" class="py-4">
@@ -12,7 +12,7 @@
     <div v-else-if="!preview" class="text-center pa-8 text-medium-emphasis">
       <v-icon size="64" class="mb-4">mdi-view-split-horizontal</v-icon>
       <p>No context preview loaded.</p>
-      <p class="text-caption">Click Refresh to build a context preview.</p>
+      <p class="text-body-small">Click Refresh to build a context preview.</p>
       <v-btn
         variant="tonal"
         color="primary"
@@ -26,7 +26,7 @@
     </div>
 
     <template v-else>
-      <v-card variant="text" class="text-caption text-muted mb-4 px-2">
+      <v-card variant="text" class="text-body-small text-muted mb-4 px-2">
         This is a preview of how the scene history will be rendered into context for AI prompts. Adjust the settings below to change how the context budget is distributed, then click Refresh to see the effect.
       </v-card>
 
@@ -48,7 +48,7 @@
                 hide-details
                 color="primary"
               />
-              <div class="note-block text-caption text-muted mt-1" v-if="bestFitNote">
+              <div class="note-block text-body-small text-muted mt-1" v-if="bestFitNote">
                 <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
                 {{ bestFitNote }}
               </div>
@@ -66,7 +66,7 @@
                 color="primary"
               >
                 <template #append>
-                  <span class="text-caption text-muted">{{ overrides.best_fit_min_dialogue }}</span>
+                  <span class="text-body-small text-muted">{{ overrides.best_fit_min_dialogue }}</span>
                 </template>
               </v-slider>
             </div>
@@ -83,10 +83,10 @@
                 color="primary"
               >
                 <template #append>
-                  <span class="text-caption text-muted">{{ overrides.best_fit_max_dialogue }}</span>
+                  <span class="text-body-small text-muted">{{ overrides.best_fit_max_dialogue }}</span>
                 </template>
               </v-slider>
-              <div class="note-block text-caption text-muted mt-1" v-if="maxDialogueNote">
+              <div class="note-block text-body-small text-muted mt-1" v-if="maxDialogueNote">
                 <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
                 {{ maxDialogueNote }}
               </div>
@@ -104,7 +104,7 @@
                 color="primary"
               >
                 <template #append>
-                  <span class="text-caption text-muted">{{ overrides.dialogue_ratio }}%</span>
+                  <span class="text-body-small text-muted">{{ overrides.dialogue_ratio }}%</span>
                 </template>
               </v-slider>
             </div>
@@ -121,7 +121,7 @@
                 color="primary"
               >
                 <template #append>
-                  <span class="text-caption text-muted">{{ overrides.summary_detail_ratio }}%</span>
+                  <span class="text-body-small text-muted">{{ overrides.summary_detail_ratio }}%</span>
                 </template>
               </v-slider>
             </div>
@@ -138,7 +138,7 @@
                 suffix="tokens"
                 control-variant="stacked"
               />
-              <div class="note-block text-caption text-muted mt-2" v-if="overrides.max_budget === 0">
+              <div class="note-block text-body-small text-muted mt-2" v-if="overrides.max_budget === 0">
                 <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
                 Preview uses 8192 tokens as default budget when set to 0.
               </div>
@@ -153,7 +153,7 @@
                 hide-details
                 color="primary"
               />
-              <div class="note-block text-caption text-muted mt-1" v-if="enforceBoundaryNote">
+              <div class="note-block text-body-small text-muted mt-1" v-if="enforceBoundaryNote">
                 <v-icon size="x-small" :color="overrides.enforce_boundary ? 'warning' : 'primary'" class="mr-1">
                   {{ overrides.enforce_boundary ? 'mdi-alert-circle-outline' : 'mdi-information-outline' }}
                 </v-icon>
@@ -162,7 +162,7 @@
             </div>
 
             <!-- Incomplete warning -->
-            <div class="note-block text-caption text-warning mb-4" v-if="contextIncomplete">
+            <div class="note-block text-body-small text-warning mb-4" v-if="contextIncomplete">
               <v-icon size="x-small" color="warning" class="mr-1">mdi-alert-outline</v-icon>
               Context history is incomplete in this configuration. Reduce the detail ratio or increase the budget to fit all history.
             </div>
@@ -206,7 +206,7 @@
               <div class="section-boundary" :style="{ borderColor: sectionColor(section) }">
                 <div class="d-flex align-center px-4 py-2">
                   <v-icon size="small" :color="sectionColor(section)" class="mr-2">{{ sectionIcon(section) }}</v-icon>
-                  <span class="text-caption font-weight-bold" :style="{ color: sectionColor(section) }">
+                  <span class="text-body-small font-weight-bold" :style="{ color: sectionColor(section) }">
                     {{ section.label }}
                   </span>
                   <v-chip size="x-small" variant="tonal" :color="sectionColor(section)" class="ml-2" label>

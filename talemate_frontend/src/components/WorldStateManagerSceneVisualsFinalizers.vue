@@ -22,13 +22,13 @@
 
     <div v-else-if="actionSchema">
         <v-alert density="compact" variant="tonal" color="primary" class="mt-4 mb-3" icon="mdi-movie-open-cog-outline">
-            <div class="text-caption">
+            <div class="text-body-small">
                 These are the Visualizer agent's scene overrides for Prompt Finalization, stored in
                 <code v-if="sceneProjectName">{{ sceneProjectName }}/{{ sceneSettingsDirname }}/{{ effectiveFilename }}</code>
                 <code v-else>{{ sceneSettingsDirname }}/{{ effectiveFilename }}</code>
             </div>
         </v-alert>
-        <div class="text-caption text-muted mb-3">
+        <div class="text-body-small text-muted mb-3">
             <v-icon size="x-small" class="mr-1">mdi-gesture-tap-button</v-icon>
             Click <v-icon size="x-small" class="mx-1">mdi-link-variant-off</v-icon> next to a field to activate an override for this scene.
         </div>

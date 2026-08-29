@@ -8,7 +8,7 @@
             <v-list-item v-for="prop, name in editableProperties" :key="name">
                 <v-checkbox v-if="prop.type === 'bool'" v-model="properties[name]" :label="prop.description" @update:model-value="updateProperty(name, properties[name])" color="primary" density="compact"></v-checkbox>
                 <div v-else-if="prop.type === 'icon'">
-                    <div class="text-caption text-muted mb-1">{{ prop.description }}</div>
+                    <div class="text-body-small text-muted mb-1">{{ prop.description }}</div>
                     <IconPicker :model-value="iconValue(name)" @update:model-value="updateIcon(name, $event)" @update:valid="iconValid[name] = $event" />
                 </div>
                 <v-textarea v-else-if="prop.type === 'text'" v-model="properties[name]" :label="prop.description" @blur="updateProperty(name, properties[name])" color="primary" rows="3" auto-grow></v-textarea>

@@ -2,7 +2,7 @@
     <v-container fluid class="pa-0">
         <!-- Header with prompt metadata -->
         <div class="d-flex align-center flex-wrap mb-2">
-            <span class="text-h6 mr-2">#{{ prompt.num }}</span>
+            <span class="text-title-large mr-2">#{{ prompt.num }}</span>
             <v-chip color="mutedheader" variant="text">{{ prompt.agent_name }}</v-chip>
             <v-chip size="small" label class="mr-1" color="primary" variant="tonal">
                 <strong class="mr-1">action</strong>{{ prompt.agent_action }}
@@ -86,7 +86,7 @@
                         <v-list-item-subtitle opacity="1" class="text-high-emphasis">
                             {{ agentParts(agent).name }}
                         </v-list-item-subtitle>
-                        <v-list-item-subtitle opacity="1" class="text-medium-emphasis text-caption">
+                        <v-list-item-subtitle opacity="1" class="text-medium-emphasis text-body-small">
                             {{ agentParts(agent).action }}
                         </v-list-item-subtitle>
                     </v-list-item>
@@ -152,7 +152,7 @@
                 </v-tabs>
                 <v-window v-model="responseTab">
                     <v-window-item value="response">
-                        <v-card elevation="10" color="surface-light" style="overflow-y:auto; max-height: calc(80vh - 200px);">
+                        <v-card elevation="3" color="surface-light" style="overflow-y:auto; max-height: calc(80vh - 200px);">
                             <v-card-title>
                                 Response
                                 <v-progress-circular
@@ -177,7 +177,7 @@
                         </v-card>
                     </v-window-item>
                     <v-window-item value="reasoning">
-                        <v-card elevation="10" color="surface-light" style="overflow-y:auto; max-height: calc(80vh - 200px);">
+                        <v-card elevation="3" color="surface-light" style="overflow-y:auto; max-height: calc(80vh - 200px);">
                             <v-card-title>Reasoning</v-card-title>
                             <v-card-text>
                                 <div class="prompt-view">{{ localPrompt.reasoning }}</div>
@@ -204,7 +204,7 @@
                 >Test Changes</v-btn>
             </template>
         </v-tooltip>
-        <span v-if="reasoningOverrideActive" class="text-caption text-muted ml-2">
+        <span v-if="reasoningOverrideActive" class="text-body-small text-muted ml-2">
             Test Changes runs with the client's default reasoning setting — the per-action override does not apply.
         </span>
     </v-container>

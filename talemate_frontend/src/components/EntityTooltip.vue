@@ -13,7 +13,7 @@
         <v-card density="compact" class="entity-tooltip-card">
             <v-card-item class="pb-1">
                 <div class="d-flex align-center flex-wrap ga-2">
-                    <span class="text-subtitle-2 entity-tooltip-name">{{ entity?.name }}</span>
+                    <span class="text-title-small entity-tooltip-name">{{ entity?.name }}</span>
                     <v-chip
                         v-if="entity?.kind"
                         size="x-small"
@@ -21,7 +21,7 @@
                         variant="tonal"
                         :color="kindColor"
                         :prepend-icon="kindIcon"
-                        class="text-caption"
+                        class="text-body-small"
                     >
                         {{ entity.kind }}
                     </v-chip>
@@ -31,16 +31,16 @@
                         label
                         variant="outlined"
                         color="mutedheader"
-                        class="text-caption"
+                        class="text-body-small"
                     >
                         {{ entity.emotion }}
                     </v-chip>
                 </div>
             </v-card-item>
-            <v-card-text v-if="entity?.snapshot" class="text-body-2 entity-tooltip-snapshot">
+            <v-card-text v-if="entity?.snapshot" class="text-body-medium entity-tooltip-snapshot">
                 {{ entity.snapshot }}
             </v-card-text>
-            <v-card-text v-else class="text-caption text-muted">
+            <v-card-text v-else class="text-body-small text-muted">
                 No description available.
             </v-card-text>
             <v-card-actions class="pb-0 my-0 justify-space-between ga-1 flex-wrap">

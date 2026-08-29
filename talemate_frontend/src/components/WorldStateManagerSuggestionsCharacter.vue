@@ -3,13 +3,13 @@
         {{ suggestionState.name }}
     </v-card-title>
     <v-card-text>
-        <v-card v-for="proposal, idx in suggestionState.proposals" :key="idx" class="mb-2" elevation="7">
+        <v-card v-for="proposal, idx in suggestionState.proposals" :key="idx" class="mb-2" elevation="3">
             <v-card-text>
                 <div v-if="proposal.name === 'add_attribute' || proposal.name === 'update_attribute'">
-                    <v-alert color="muted" density="compact" elevation="7" variant="outlined" class="mb-2" icon="mdi-script">
+                    <v-alert color="muted" density="compact" elevation="3" variant="outlined" class="mb-2" icon="mdi-script">
                         {{ proposal.arguments.instructions }}
                     </v-alert>
-                    <v-alert color="mutedheader" density="compact" elevation="7" variant="outlined" class="mb-2">
+                    <v-alert color="mutedheader" density="compact" elevation="3" variant="outlined" class="mb-2">
                         <template v-slot:prepend>
                             <v-icon v-if="proposal.called">mdi-format-list-bulleted-type</v-icon>
                             <v-progress-circular size="24" v-else indeterminate="disable-shrink"
@@ -22,18 +22,18 @@
                     </v-alert>
                 </div>
                 <div v-else-if="proposal.name === 'remove_attribute'">
-                    <v-alert color="muted" density="compact" elevation="7" variant="outlined" class="mb-2" icon="mdi-script">
-                        <div class="text-caption">{{ proposal.arguments.reason }}</div>
+                    <v-alert color="muted" density="compact" elevation="3" variant="outlined" class="mb-2" icon="mdi-script">
+                        <div class="text-body-small">{{ proposal.arguments.reason }}</div>
                     </v-alert>
-                    <v-alert color="highlight4" density="compact" elevation="7" variant="outlined" class="mb-2" icon="mdi-format-list-bulleted-type">
+                    <v-alert color="highlight4" density="compact" elevation="3" variant="outlined" class="mb-2" icon="mdi-format-list-bulleted-type">
                         <v-alert-title>Remove Attribute <v-chip class="ml-4" label size="small" color="primary" variant="tonal">{{ proposal.arguments.name }}</v-chip></v-alert-title>
                     </v-alert>
                 </div>
                 <div v-else-if="proposal.name === 'update_description'">
-                    <v-alert color="muted" density="compact" elevation="7" variant="outlined" class="mb-2" icon="mdi-script">
+                    <v-alert color="muted" density="compact" elevation="3" variant="outlined" class="mb-2" icon="mdi-script">
                         {{ proposal.arguments.instructions }}
                     </v-alert>
-                    <v-alert color="mutedheader" density="compact" elevation="7" variant="outlined" class="mb-2">
+                    <v-alert color="mutedheader" density="compact" elevation="3" variant="outlined" class="mb-2">
                         <template v-slot:prepend>
                             <v-icon v-if="proposal.called">mdi-text-account</v-icon>
                             <v-progress-circular size="24" v-else indeterminate="disable-shrink"

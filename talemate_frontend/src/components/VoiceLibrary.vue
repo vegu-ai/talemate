@@ -132,7 +132,7 @@
             <v-window v-model="activeTab" class="mt-2">
               <!-- Details Tab -->
               <v-window-item value="details">
-                <v-card elevation="7" density="compact">
+                <v-card elevation="3" density="compact">
                   <v-card-text>
                     <v-select
                       v-model="editVoice.provider"

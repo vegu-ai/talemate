@@ -11,14 +11,14 @@
       <v-divider />
 
       <v-card-text style="max-height: 60vh">
-        <div v-if="rows.length" class="d-flex align-center px-4 py-1 text-caption text-uppercase text-muted">
+        <div v-if="rows.length" class="d-flex align-center px-4 py-1 text-body-small text-uppercase text-muted">
           <span>Action</span>
           <v-spacer />
           <span>Disable reasoning</span>
         </div>
         <v-list density="compact" v-if="rows.length">
           <v-list-item v-for="row in rows" :key="row.key">
-            <v-list-item-title class="text-body-2">
+            <v-list-item-title class="text-body-medium">
               <span class="text-primary">{{ row.agentLabel }}</span>
               <span class="text-medium-emphasis">.</span>
               <span>{{ row.action }}</span>

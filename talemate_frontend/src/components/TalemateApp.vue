@@ -42,7 +42,7 @@
       <v-spacer></v-spacer>
       <AudioQueue ref="audioQueue" :stale-message-ids="playthroughStaleMessageIds" @message-audio-played="onMessageAudioPlayed" @message-audio-finished="onPlaythroughMessageSpoken" />
       <v-divider class="ml-2 mr-2" vertical></v-divider>
-      <span v-if="version !== null" class="text-medium-emphasis text-caption">v{{ version }}</span>
+      <span v-if="version !== null" class="text-medium-emphasis text-body-small">v{{ version }}</span>
       <span v-if="!ready">
         <v-icon icon="mdi-application-cog"></v-icon>
         <span class="ml-1">Configuration required</span>
@@ -124,7 +124,7 @@
       <v-navigation-drawer :model-value="sceneDrawer && tab !== 'home'" @update:model-value="sceneDrawer = $event" app :width="leftDrawerWidth">
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
-          <p class="text-body-2">
+          <p class="text-body-medium">
             Make sure the backend process is running.
           </p>
         </v-alert>
@@ -184,7 +184,7 @@
       <v-navigation-drawer v-model="drawer" app location="right" width="350" disable-resize-watcher>
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
-          <p class="text-body-2">
+          <p class="text-body-medium">
             Make sure the backend process is running.
           </p>
         </v-alert>
@@ -446,7 +446,7 @@
         </v-card-title>
         <v-card-text>
           You have unsaved changes in Settings. Save them, discard them, or leave them pending and return to Settings later.
-          <p v-if="appSettingsSaveState.externalChange" class="text-warning mt-2 text-caption">
+          <p v-if="appSettingsSaveState.externalChange" class="text-warning mt-2 text-body-small">
             The configuration was changed outside this view while you have unsaved edits — saving overwrites it.
           </p>
         </v-card-text>

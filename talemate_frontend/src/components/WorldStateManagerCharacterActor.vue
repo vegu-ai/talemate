@@ -3,13 +3,13 @@
     <v-row>
         <v-col cols="3">
             <v-tabs color="secondary" direction="vertical" v-model="tab">
-                <v-tab value="instructions" class="text-caption" prepend-icon="mdi-pencil">
+                <v-tab value="instructions" class="text-body-small" prepend-icon="mdi-pencil">
                     Dialogue Instructions
                 </v-tab>
-                <v-tab value="examples" class="text-caption" prepend-icon="mdi-format-quote-close">
+                <v-tab value="examples" class="text-body-small" prepend-icon="mdi-format-quote-close">
                     Dialogue Examples
                 </v-tab>
-                <v-tab value="voice" class="text-caption" prepend-icon="mdi-account-voice">
+                <v-tab value="voice" class="text-body-small" prepend-icon="mdi-account-voice">
                     Voice
                 </v-tab>
             </v-tabs>
@@ -92,7 +92,7 @@
                         :key="index"
                         class="mb-3"
                         variant="text"
-                        elevation="6"
+                        elevation="2"
                     >
                         <v-card-text class="py-2">
                             <div class="d-flex justify-space-between align-start">

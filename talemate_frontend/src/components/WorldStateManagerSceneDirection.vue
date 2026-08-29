@@ -13,7 +13,7 @@
                         <v-alert color="warning" variant="outlined" density="compact" icon="mdi-flask" v-if="sceneIntent?.direction?.always_on">
                             A strong LLM (100B+), preferably with reasoning capabilities, is HIGHLY recommended for this to work in any meaningful way.
                         </v-alert>
-                        <v-row dense class="mb-2">
+                        <v-row density="compact" class="mb-2">
                             <v-col cols="12" sm="6">
                                 <v-checkbox
                                     v-if="sceneIntent.direction"
@@ -77,7 +77,7 @@
                     <v-icon color="primary" size="small" class="mr-2">mdi-compass</v-icon>
                     Overall Intention
                 </v-card-title>
-                <v-alert color="muted" variant="text" class="text-caption">
+                <v-alert color="muted" variant="text" class="text-body-small">
                     The overall intention of the story. Lays out expectations for the experience, the general direction and any special rules or constraints.
                 </v-alert>
                 
@@ -108,7 +108,7 @@
                         <v-icon color="primary" size="small" class="mr-2">mdi-flag-variant</v-icon>
                         Current Phase
                     </v-card-title>
-                    <v-alert color="muted" variant="text" class="text-caption">
+                    <v-alert color="muted" variant="text" class="text-body-small">
                         <p>The current phase of the story. This will determine the type of scene that is currently
                         active. Different scene types have different rules and constraints.</p>
                         <p>
@@ -180,7 +180,7 @@
                     <v-icon color="primary" size="small" class="mr-2">mdi-movie-open</v-icon>
                     Manage Scene Types
                 </v-card-title>
-                <v-alert color="muted" variant="text" class="text-caption">
+                <v-alert color="muted" variant="text" class="text-body-small">
                     <p>Manage the scene types that are available for the experience. Scene types are the different
                     types of scenes that can be played. Each scene type has different rules and constraints.</p>
                 </v-alert>
@@ -225,7 +225,7 @@
                             <div v-if="sceneType.instructions || sceneType.instruction_template">
                                 <div v-if="sceneType.instructions && sceneType.instructions.trim()" class="d-flex align-center mb-1">
                                     <v-icon size="small" color="primary" class="mr-1">mdi-text-box-outline</v-icon>
-                                    <span class="text-caption">Text</span>
+                                    <span class="text-body-small">Text</span>
                                 </div>
                                 <div v-if="sceneType.instruction_template" class="d-flex align-center">
                                     <v-icon
@@ -235,10 +235,10 @@
                                     >
                                         {{ sceneTemplateFiles.includes(sceneType.instruction_template) ? 'mdi-file-code' : 'mdi-file-alert' }}
                                     </v-icon>
-                                    <span class="text-caption">{{ sceneType.instruction_template }}</span>
+                                    <span class="text-body-small">{{ sceneType.instruction_template }}</span>
                                 </div>
                             </div>
-                            <span v-else class="text-muted text-caption">—</span>
+                            <span v-else class="text-muted text-body-small">—</span>
                         </td>
                         <td class="actions-column text-right">
                             <div class="action-buttons">

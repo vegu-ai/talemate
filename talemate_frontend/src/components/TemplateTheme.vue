@@ -16,7 +16,7 @@
             </v-textarea>
         </v-col>
         <v-col cols="12" sm="4" xxl="7">
-            <div class="text-caption text-muted">Mode</div>
+            <div class="text-body-small text-muted">Mode</div>
             <v-btn-toggle
                 v-model="mode"
                 density="compact"
@@ -28,7 +28,7 @@
                 <v-btn value="light" prepend-icon="mdi-white-balance-sunny">Light</v-btn>
                 <v-btn value="dark" prepend-icon="mdi-weather-night">Dark</v-btn>
             </v-btn-toggle>
-            <div class="text-caption text-muted mt-1">How text and overlays are drawn on top of the theme - set it to match the Surfaces panel.</div>
+            <div class="text-body-small text-muted mt-1">How text and overlays are drawn on top of the theme - set it to match the Surfaces panel.</div>
 
             <v-select
                 v-model="template.code_editor"
@@ -39,7 +39,7 @@
                 :disabled="locked"
                 @update:model-value="saveTemplate"
                 messages="Syntax colors for the in-app code editors.">
-                <template v-slot:item="{ props, item }">
+                <template v-slot:item="{ props, internalItem: item }">
                     <v-list-item
                         v-bind="props"
                         :subtitle="item.raw.dark ? 'Dark' : 'Light'"
@@ -66,8 +66,8 @@
                 @click.stop="applyTheme">
                 Apply theme
             </v-btn>
-            <div v-if="!template.uid" class="text-caption text-muted">The template has to be created before its theme can be applied.</div>
-            <div v-else class="text-caption text-muted">Repaints the app with these colors.</div>
+            <div v-if="!template.uid" class="text-body-small text-muted">The template has to be created before its theme can be applied.</div>
+            <div v-else class="text-body-small text-muted">Repaints the app with these colors.</div>
 
             <v-btn
                 rounded="sm"
@@ -79,7 +79,7 @@
                 @click.stop="resetDialog = true">
                 Reset to template
             </v-btn>
-            <div class="text-caption text-muted">Takes another theme's colors, styling, mode and code editor theme as the starting point. The name, notes and favorite stay.</div>
+            <div class="text-body-small text-muted">Takes another theme's colors, styling, mode and code editor theme as the starting point. The name, notes and favorite stay.</div>
         </v-col>
     </v-row>
 
@@ -101,7 +101,7 @@
                 <v-chip label size="x-small" color="muted" class="ml-2">{{ group.slots.length }}</v-chip>
             </v-expansion-panel-title>
             <v-expansion-panel-text>
-                <v-row dense>
+                <v-row density="compact">
                     <v-col v-for="slot in group.slots" :key="slot" cols="12" sm="6" md="4" xxl="3">
                         <div class="d-flex align-center">
                             <v-menu :close-on-content-click="false" :disabled="locked" @update:model-value="onPickerToggle">
@@ -123,7 +123,7 @@
                                     @update:model-value="(color) => setColor(group.key, slot, color)">
                                 </v-color-picker>
                             </v-menu>
-                            <div class="text-caption">{{ labelForThemeSlot(slot) }}</div>
+                            <div class="text-body-small">{{ labelForThemeSlot(slot) }}</div>
                         </div>
                     </v-col>
                 </v-row>
@@ -146,7 +146,7 @@
                     <tbody>
                         <tr v-for="row in appearanceStyles" :key="row.key">
                             <td style="padding: 4px 12px;">
-                                <div class="text-caption font-weight-medium">{{ row.label }}</div>
+                                <div class="text-body-small font-weight-medium">{{ row.label }}</div>
                             </td>
                             <td v-for="flag in styleFlags" :key="flag.key" style="padding: 4px 12px;">
                                 <v-checkbox v-if="offersFlag(row, flag)" color="primary" density="compact" hide-details class="ma-0"
@@ -192,9 +192,9 @@
                 Reset to template
             </v-card-title>
             <v-card-text>
-                <div class="text-caption text-muted mb-2">Pick the theme to take as the starting point — its colors, message styling, mode and code editor theme replace this one's. The name, notes and favorite stay.</div>
+                <div class="text-body-small text-muted mb-2">Pick the theme to take as the starting point — its colors, message styling, mode and code editor theme replace this one's. The name, notes and favorite stay.</div>
                 <div v-for="group in resetChoices" :key="group.uid">
-                    <div class="text-caption text-muted mb-1">
+                    <div class="text-body-small text-muted mb-1">
                         <v-icon size="small" class="mr-1">mdi-group</v-icon>{{ group.name }}
                     </div>
                     <v-list density="compact" class="pa-0 mb-2" bg-color="transparent">
@@ -208,7 +208,7 @@
                         </v-list-item>
                     </v-list>
                 </div>
-                <div v-if="!resetChoices.length" class="text-caption text-muted">No other themes to take as a starting point.</div>
+                <div v-if="!resetChoices.length" class="text-body-small text-muted">No other themes to take as a starting point.</div>
             </v-card-text>
             <v-card-actions>
                 <v-spacer></v-spacer>

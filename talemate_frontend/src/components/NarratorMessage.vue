@@ -83,7 +83,7 @@
         </MessageToolbar>
       </div>
       <div v-else>
-        <span class="text-muted text-caption">To edit the intro message open the <v-btn size="x-small" variant="text" color="primary" @click="openWorldStateManager('scene')"><v-icon>mdi-script</v-icon>Scene Editor</v-btn></span>
+        <span class="text-muted text-body-small">To edit the intro message open the <v-btn size="x-small" variant="text" color="primary" @click="openWorldStateManager('scene')"><v-icon>mdi-script</v-icon>Scene Editor</v-btn></span>
         <!-- generate tts -->
         <v-chip size="x-small" class="ml-2" label color="secondary" v-if="!editing && hovered && ttsAvailable" variant="tonal" @click="generateTTS('intro')" :disabled="uxLocked || appBusy || ttsBusy">
           <v-icon class="mr-1">mdi-account-voice</v-icon>

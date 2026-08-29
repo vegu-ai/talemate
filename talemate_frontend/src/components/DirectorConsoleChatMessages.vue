@@ -29,7 +29,7 @@
                     :asset-id="m.asset_id"
                     :message="m.message"
                 />
-                <div v-else-if="m.type === 'user_interaction'" class="text-body-2">
+                <div v-else-if="m.type === 'user_interaction'" class="text-body-medium">
                     <v-chip size="x-small" label color="primary" class="mr-2">{{ m.is_direction ? 'instruction' : 'user' }}</v-chip>
                     <span v-if="m.is_direction">{{ m.user_input }}</span>
                     <span v-else-if="m.user_input && m.user_input.trim()">User interacted: {{ m.preview || m.user_input }}</span>
@@ -68,7 +68,7 @@
                 </v-btn>
             </div>
         </div>
-        <div v-if="messages.length === 0" class="text-caption text-muted pa-2">
+        <div v-if="messages.length === 0" class="text-body-small text-muted pa-2">
             <slot name="empty">No messages yet</slot>
         </div>
     </div>

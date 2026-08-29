@@ -66,8 +66,8 @@
                 @click.stop="installShortcut">
                 Install shortcut
             </v-btn>
-            <div v-if="!canInstall" class="text-caption text-muted">{{ installHint }}</div>
-            <div v-else class="text-caption text-muted">Adds this shortcut to your scene tools menu.</div>
+            <div v-if="!canInstall" class="text-body-small text-muted">{{ installHint }}</div>
+            <div v-else class="text-body-small text-muted">Adds this shortcut to your scene tools menu.</div>
         </v-col>
     </v-row>
 </template>

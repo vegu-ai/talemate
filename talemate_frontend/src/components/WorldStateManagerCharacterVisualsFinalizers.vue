@@ -25,11 +25,11 @@
             <div class="d-flex align-start">
                 <v-icon class="mr-3 mt-1" color="primary">mdi-information-outline</v-icon>
                 <div class="text-muted">
-                    <div class="text-primary text-subtitle-2 font-weight-bold mb-1">About Prompt Finalization</div>
-                    <p class="text-body-2 mb-2">
+                    <div class="text-primary text-title-small font-weight-bold mb-1">About Prompt Finalization</div>
+                    <p class="text-body-medium mb-2">
                         Each action rewrites the generated image prompt right before it is sent to the image generation backend, whenever this character is the subject.
                     </p>
-                    <p class="text-body-2 mb-0">
+                    <p class="text-body-medium mb-0">
                         <strong>Examples:</strong> exact-replace "red hair" with "crimson hair", fuzzy-remove a keyword the model keeps producing, or run an AI instruction over the whole prompt.
                     </p>
                 </div>

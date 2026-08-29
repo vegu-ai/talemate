@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="mb-4">
-            <div class="text-subtitle-2 text-medium-emphasis">
+            <div class="text-title-small text-medium-emphasis">
                 Select a cover image for <span class="text-primary">{{ character.name }}</span>
             </div>
         </div>
@@ -21,7 +21,7 @@
         >
             <template #empty>
                 <p class="mt-2">No cover images found for {{ character.name }}</p>
-                <p class="text-caption">Generate a CHARACTER_CARD image in the Visual Library to add cover images.</p>
+                <p class="text-body-small">Generate a CHARACTER_CARD image in the Visual Library to add cover images.</p>
             </template>
             <template #badges="{ asset }">
                 <VisualAssetBadge v-if="currentCoverImageId === asset.id" icon="mdi-check" label="Current" />

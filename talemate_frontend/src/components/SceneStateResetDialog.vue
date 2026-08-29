@@ -8,10 +8,10 @@
             <v-card-text>
                 <!-- Intro explanation -->
                 <v-alert type="warning" variant="tonal" density="compact" class="mb-4">
-                    <div class="text-body-2">
+                    <div class="text-body-medium">
                         This is a technical tool for managing scene state. Use it to reset scene progress without affecting character data or world entries.
                     </div>
-                    <div class="text-caption mt-1 text-muted">
+                    <div class="text-body-small mt-1 text-muted">
                         Useful when you encounter unexpected content in your prompts and want to clear cached or accumulated state data.
                     </div>
                 </v-alert>
@@ -29,7 +29,7 @@
                         hide-details
                         color="primary"
                     />
-                    <div class="text-caption text-muted ml-8 mb-2">
+                    <div class="text-body-small text-muted ml-8 mb-2">
                         The semantic memory database used for context retrieval. Resets and reimports all entries from the scene file.
                     </div>
 
@@ -44,12 +44,12 @@
                     >
                         <template #label>
                             Wipe History
-                            <span v-if="stateInfo.historyCount > 0" class="text-caption text-muted ml-2">
+                            <span v-if="stateInfo.historyCount > 0" class="text-body-small text-muted ml-2">
                                 ({{ stateInfo.historyCount }} messages, {{ stateInfo.archivedHistoryCount }} archived, {{ stateInfo.layeredHistoryCount }} layered)
                             </span>
                         </template>
                     </v-checkbox>
-                    <div class="text-caption text-muted ml-8 mb-1">
+                    <div class="text-body-small text-muted ml-8 mb-1">
                         Scene messages, archived summaries, and layered history. This is the conversation and narrative progression.
                     </div>
                     <div v-if="options.wipeHistory" class="ml-8">
@@ -61,12 +61,12 @@
                         >
                             <template #label>
                                 Include static history entries
-                                <span v-if="stateInfo.staticHistoryCount > 0" class="text-caption text-muted ml-2">
+                                <span v-if="stateInfo.staticHistoryCount > 0" class="text-body-small text-muted ml-2">
                                     ({{ stateInfo.staticHistoryCount }} static entries)
                                 </span>
                             </template>
                         </v-checkbox>
-                        <div class="text-caption text-muted ml-8">
+                        <div class="text-body-small text-muted ml-8">
                             Static entries are pre-established backstory not tied to scene progression.
                         </div>
                     </div>
@@ -81,7 +81,7 @@
                         hide-details
                         color="primary"
                     />
-                    <div class="text-caption text-muted ml-8 mb-2">
+                    <div class="text-body-small text-muted ml-8 mb-2">
                         Scene phase and direction tracking. Controls automatic scene progression behavior.
                     </div>
 
@@ -98,10 +98,10 @@
                     >
                         <template #label>
                             Reset Agent States
-                            <span v-if="!hasAgentStates" class="text-caption text-muted ml-2">(no agent states)</span>
+                            <span v-if="!hasAgentStates" class="text-body-small text-muted ml-2">(no agent states)</span>
                         </template>
                     </v-checkbox>
-                    <div class="text-caption text-muted ml-8 mb-1">
+                    <div class="text-body-small text-muted ml-8 mb-1">
                         Cached data and internal state stored by AI agents (director guidance, scene analysis, etc.).
                     </div>
                     <div v-if="hasAgentStates && agentStatesEnabled" class="ml-6 mt-2">
@@ -142,10 +142,10 @@
                     >
                         <template #label>
                             Wipe Reinforcements
-                            <span v-if="!hasReinforcements" class="text-caption text-muted ml-2">(no reinforcements)</span>
+                            <span v-if="!hasReinforcements" class="text-body-small text-muted ml-2">(no reinforcements)</span>
                         </template>
                     </v-checkbox>
-                    <div class="text-caption text-muted ml-8 mb-1">
+                    <div class="text-body-small text-muted ml-8 mb-1">
                         Periodic state updates that refresh character or world information at regular intervals.
                     </div>
                     <div v-if="hasReinforcements && reinforcementsEnabled" class="ml-6 mt-2">
@@ -161,7 +161,7 @@
                                 <v-chip size="x-small" :color="r.character ? 'secondary' : 'primary'" variant="tonal" class="mr-2">
                                     {{ r.character || 'Global' }}
                                 </v-chip>
-                                <span class="text-caption">{{ truncate(r.question, 50) }}</span>
+                                <span class="text-body-small">{{ truncate(r.question, 50) }}</span>
                             </template>
                         </v-checkbox>
                     </div>

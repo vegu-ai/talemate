@@ -1,8 +1,8 @@
 <template>
     <v-dialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" max-width="560">
         <v-card>
-            <v-card-title class="text-subtitle-1">Control settings</v-card-title>
-            <v-card-subtitle class="text-caption">{{ path }}</v-card-subtitle>
+            <v-card-title class="text-body-large">Control settings</v-card-title>
+            <v-card-subtitle class="text-body-small">{{ path }}</v-card-subtitle>
             <v-card-text>
                 <v-text-field
                     v-model="draft.label"
@@ -44,7 +44,7 @@
 
                 <template v-if="showNumberOptions">
                     <v-divider class="my-3" />
-                    <div class="text-caption text-medium-emphasis mb-2">Number</div>
+                    <div class="text-body-small text-medium-emphasis mb-2">Number</div>
                     <div class="d-flex align-center" style="gap: 12px;">
                         <v-text-field
                             v-model="draft.minimum"
@@ -84,7 +84,7 @@
 
                 <template v-if="showChoiceOptions">
                     <v-divider class="my-3" />
-                    <div class="text-caption text-medium-emphasis mb-2">Text</div>
+                    <div class="text-body-small text-medium-emphasis mb-2">Text</div>
                     <v-combobox
                         v-model="draft.choices"
                         label="Choices"

@@ -54,9 +54,8 @@ export default {
 
 <style scoped>
 
-/* Vuetify's reset zeroes padding and margin on every element, so all block
-   spacing below has to be restated - including the list padding the markers
-   live in. */
+/* The compatibility reset zeroes the block margins and list padding used here,
+   so this renderer restates its own spacing, including the marker gutter. */
 
 .markdown-body :deep(p),
 .markdown-body :deep(ul),
@@ -239,4 +238,3 @@ export default {
     border-radius: 2px;
 }
 </style>
-

@@ -12,7 +12,7 @@
         />
         
         <!-- Voice Selection -->
-        <div class="text-h6 mb-2">Select Voices to Mix</div>
+        <div class="text-title-large mb-2">Select Voices to Mix</div>
         <v-alert
           v-if="availableVoices.length === 0"
           type="warning"

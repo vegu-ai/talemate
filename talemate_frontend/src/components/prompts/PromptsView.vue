@@ -124,7 +124,7 @@
                     <div v-if="openPrompts.length === 0" class="text-center pa-8 text-medium-emphasis">
                         <v-icon size="64" class="mb-4">mdi-message-text-outline</v-icon>
                         <p>No prompts open.</p>
-                        <p class="text-caption">Click on a prompt in the sidebar to view its details here.</p>
+                        <p class="text-body-small">Click on a prompt in the sidebar to view its details here.</p>
                     </div>
 
                     <template v-else>
@@ -135,7 +135,7 @@
                                 :value="index"
                             >
                                 <span class="mr-2">#{{ prompt.num }}</span>
-                                <span class="text-caption text-truncate" style="max-width: 150px;">{{ prompt.agent_action }}</span>
+                                <span class="text-body-small text-truncate" style="max-width: 150px;">{{ prompt.agent_action }}</span>
                                 <v-btn
                                     icon
                                     size="x-small"

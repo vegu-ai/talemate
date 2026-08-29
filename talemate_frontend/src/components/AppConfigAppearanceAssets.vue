@@ -28,7 +28,7 @@
                     <td style="padding: 4px 12px;">
                         <div class="d-flex align-center">
                             <v-icon class="mr-2">mdi-account-circle</v-icon>
-                            <div class="text-caption font-weight-medium">Portrait</div>
+                            <div class="text-body-small font-weight-medium">Portrait</div>
                         </div>
                     </td>
                     <td style="padding: 4px 12px;">
@@ -57,7 +57,7 @@
                     <td style="padding: 4px 12px;">
                         <div class="d-flex align-center">
                             <v-icon class="mr-2">mdi-card-account-details</v-icon>
-                            <div class="text-caption font-weight-medium">Card</div>
+                            <div class="text-body-small font-weight-medium">Card</div>
                         </div>
                     </td>
                     <td style="padding: 4px 12px;">
@@ -86,7 +86,7 @@
                     <td style="padding: 4px 12px;">
                         <div class="d-flex align-center">
                             <v-icon class="mr-2">mdi-image-area</v-icon>
-                            <div class="text-caption font-weight-medium">Scene Illustration</div>
+                            <div class="text-body-small font-weight-medium">Scene Illustration</div>
                         </div>
                     </td>
                     <td style="padding: 4px 12px;">
@@ -122,7 +122,7 @@
                     <td style="padding: 4px 12px;">
                         <div class="d-flex align-center">
                             <v-icon class="mr-2">mdi-image-filter-hdr</v-icon>
-                            <div class="text-caption font-weight-medium">Scene Background</div>
+                            <div class="text-body-small font-weight-medium">Scene Background</div>
                         </div>
                     </td>
                     <td style="padding: 4px 12px;">
@@ -184,7 +184,7 @@
 
         <v-card color="muted" variant="text" class="mt-3">
             <v-card-text class="text-muted">
-                <div class="text-caption">
+                <div class="text-body-small">
                     <strong>Always:</strong> Show visual on every message<br>
                     <strong>Never:</strong> Never show visual inline with messages<br>
                     <strong>On change:</strong> Only show when visual changes (portraits: tracked per character)<br><br>

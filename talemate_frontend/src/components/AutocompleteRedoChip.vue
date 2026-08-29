@@ -4,9 +4,9 @@
        user clicks the chip. The click still fires normally. -->
   <v-chip v-if="applied"
     class="autocomplete-redo-chip"
-    elevation="7"
+    elevation="3"
     size="small" variant="flat" color="mutedbg" label>
-    <span class="text-caption text-muted mr-2">{{ label }}</span>
+    <span class="text-body-small text-muted mr-2">{{ label }}</span>
     <v-btn @click="$emit('redo')"
       @mousedown.prevent
       size="small" variant="plain" icon

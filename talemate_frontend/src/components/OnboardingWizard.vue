@@ -8,7 +8,7 @@
         color="muted"
         @click="dismissWizard"
       />
-      <v-card-title class="text-h5 text-center mb-6">
+      <v-card-title class="text-headline-small text-center mb-6">
         <v-icon icon="mdi-book-open-page-variant-outline" size="small" class="mr-2" color="primary"></v-icon>
         Welcome to Talemate
       </v-card-title>
@@ -18,25 +18,25 @@
         <!-- Step 1: Choose Client Type -->
         <v-window-item :value="1">
           <v-card-text>
-            <div class="text-body-1 text-center mb-8">
+            <div class="text-body-large text-center mb-8">
               Talemate relies on an AI model to write the story with you.
               <br class="hidden-sm-and-down">First, we need to get you connected to one.
             </div>
 
-            <v-row justify="center" class="mb-4">
+            <v-row class="justify-center mb-4">
               <v-col cols="12" md="5">
                 <v-card variant="outlined" class="h-100 cursor-pointer hover-card pa-4" @click="selectClientType('local')">
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-desktop-tower-monitor" size="small" class="mr-1" color="secondary"></v-icon>
                       Self-hosted
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     KoboldCPP, Text-Generation-WebUI, llama.cpp, LMStudio, TabbyAPI
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
-                    <div class="text-caption text-medium-emphasis">
+                    <div class="text-body-small text-medium-emphasis">
                       You're running your own inference service on your PC or a server you control 
                     </div>
                   </v-card-text>
@@ -46,16 +46,16 @@
               <v-col cols="12" md="5">
                 <v-card variant="outlined" class="h-100 cursor-pointer hover-card pa-4" @click="selectClientType('remote')">
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-cloud-outline" size="small" class="mr-1" color="primary"></v-icon>
                       Hosted API
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Connect to OpenRouter, Google, Anthropic, etc.
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
-                    <div class="text-caption text-medium-emphasis">
+                    <div class="text-body-small text-medium-emphasis">
                       Requires an API key to the provider.
                     </div>
                   </v-card-text>
@@ -81,12 +81,12 @@
         <!-- Step 2: Add Client -->
         <v-window-item :value="2">
           <v-card-text class="text-center py-8">
-            <div class="text-h5 mb-3">Configure {{ clientType === 'remote' ? 'Hosted API' : 'Self-hosted' }} Client</div>
-            <div class="text-body-1 mb-6">
+            <div class="text-headline-small mb-3">Configure {{ clientType === 'remote' ? 'Hosted API' : 'Self-hosted' }} Client</div>
+            <div class="text-body-large mb-6">
               Choose which client type you want to set up:
             </div>
 
-            <v-row justify="center" class="mb-6">
+            <v-row class="justify-center mb-6">
               <v-col cols="12" md="8">
                 <v-select
                   v-model="selectedClientPreset"
@@ -101,7 +101,7 @@
               </v-col>
             </v-row>
 
-            <v-row v-if="selectedClientPreset === 'openrouter'" justify="center" class="mb-6">
+            <v-row v-if="selectedClientPreset === 'openrouter'" class="justify-center mb-6">
               <v-col cols="12" md="8">
                 <v-alert
                   density="comfortable"
@@ -111,14 +111,14 @@
                   <template v-slot:prepend>
                     <v-icon icon="mdi-brain" size="small" class="mr-1" color="primary"></v-icon>
                   </template>
-                  <div class="text-body-2">
+                  <div class="text-body-medium">
                     Google's Gemini 3.7 Flash model will be selected by default. Since it's a reasoning model, reasoning will be enabled automatically. If you change to a non-reasoning model in the next  setup step (or at a later point), you should turn reasoning off in the client settings.
                   </div>
                 </v-alert>
               </v-col>
             </v-row>
 
-            <v-row v-if="clientType !== 'remote'" justify="center" class="mb-6">
+            <v-row v-if="clientType !== 'remote'" class="justify-center mb-6">
               <v-col cols="12" md="8">
                 <v-alert
                   density="comfortable"
@@ -128,7 +128,7 @@
                   <template v-slot:prepend>
                     <v-icon icon="mdi-brain" size="small" class="mr-1" color="primary"></v-icon>
                   </template>
-                  <div class="text-body-2">
+                  <div class="text-body-medium">
                     <strong>Reasoning models:</strong> If you load a reasoning model (like DeepSeek R1, GLM, etc.) in your self-hosted service, you'll need to enable reasoning in Talemate's client settings. You can do this by clicking the <v-icon icon="mdi-brain" size="x-small" class="mx-1" /> brain icon in the client card or in the advanced client setup view.
                   </div>
                 </v-alert>
@@ -138,7 +138,7 @@
             <!-- the same editor the settings Clients page uses, in its
                  reduced (simple) field set — bound to a local draft client
                  that is written on Add Client -->
-            <v-row v-if="draftClient" justify="center" class="mb-2">
+            <v-row v-if="draftClient" class="justify-center mb-2">
               <v-col cols="12" md="8" class="text-left">
                 <ClientConfigEditor
                   ref="clientEditor"
@@ -163,10 +163,10 @@
               Add Client
             </v-btn>
 
-            <v-row v-if="saveError" justify="center" class="mt-4">
+            <v-row v-if="saveError" class="justify-center mt-4">
               <v-col cols="12" md="8">
                 <v-alert type="error" variant="tonal" density="compact" icon="mdi-alert-circle-outline">
-                  <div class="text-body-2">{{ saveErrorText('client') }}</div>
+                  <div class="text-body-medium">{{ saveErrorText('client') }}</div>
                 </v-alert>
               </v-col>
             </v-row>
@@ -176,16 +176,16 @@
         <!-- Step 3: Long term memory -->
         <v-window-item :value="3">
           <v-card-text class="py-6 text-center">
-            <div class="text-h5 mb-3">
+            <div class="text-headline-small mb-3">
               <v-icon icon="mdi-brain" size="small" class="mr-1" color="highlight2"></v-icon>
               Long term memory
             </div>
-            <div class="text-body-1 text-medium-emphasis mb-8">
+            <div class="text-body-large text-medium-emphasis mb-8">
               Talemate uses embeddings to store and retrieve story details over time (names, relationships, places, facts, and other context that shouldn’t get lost as the chat grows).
               <br class="hidden-sm-and-down">A more capable embeddings model generally improves recall quality and reduces “forgotten details”.
             </div>
 
-            <v-row justify="center">
+            <v-row class="justify-center">
               <v-col cols="12" md="5">
                 <v-card
                   variant="outlined"
@@ -204,16 +204,16 @@
                     Selected
                   </v-chip>
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-lightning-bolt-outline" size="small" class="mr-1" color="primary"></v-icon>
                       Better (Recommended)
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Uses <code>Alibaba-NLP/gte-base-en-v1.5</code>.
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
-                    <div class="text-caption text-medium-emphasis">
+                    <div class="text-body-small text-medium-emphasis">
                       More capable and recommended for best recall. Talemate will download/load this model when a scene is loaded (first use). Model weights are ~550MB; on CUDA plan ~1GB+ free VRAM.
                     </div>
                   </v-card-text>
@@ -238,16 +238,16 @@
                     Selected
                   </v-chip>
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-cpu-64-bit" size="small" class="mr-1" color="muted"></v-icon>
                       Standard
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Smaller and less capable.
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
-                    <div class="text-caption text-medium-emphasis">
+                    <div class="text-body-small text-medium-emphasis">
                       Recommended only if you can't spare ~1GB+ free VRAM for the better model.
                     </div>
                   </v-card-text>
@@ -257,8 +257,8 @@
 
             <v-divider class="my-6" />
 
-            <div class="text-subtitle-1 mb-2">Device</div>
-            <div class="text-body-2 text-medium-emphasis mb-4">
+            <div class="text-body-large mb-2">Device</div>
+            <div class="text-body-medium text-medium-emphasis mb-4">
               CUDA can be used with either model, but it helps most with the recommended model.
             </div>
 
@@ -269,7 +269,7 @@
                 :color="cudaAvailable ? 'success' : 'warning'"
                 icon="mdi-information-outline"
               >
-                <div class="text-body-2">
+                <div class="text-body-medium">
                   <strong>Detected:</strong>
                   <span v-if="cudaAvailable">
                     CUDA available
@@ -282,12 +282,12 @@
                 </div>
               </v-alert>
             </div>
-            <div v-else-if="systemCapabilitiesLoading" class="text-caption text-medium-emphasis mb-4">
+            <div v-else-if="systemCapabilitiesLoading" class="text-body-small text-medium-emphasis mb-4">
               <v-progress-circular indeterminate size="18" color="primary" class="mr-2"></v-progress-circular>
               Checking CUDA / VRAM…
             </div>
 
-            <v-row justify="center">
+            <v-row class="justify-center">
               <v-col cols="12" md="5">
                 <v-card
                   variant="outlined"
@@ -306,19 +306,19 @@
                     Selected
                   </v-chip>
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-expansion-card-variant" size="small" class="mr-1" color="primary"></v-icon>
                       CUDA
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Faster on supported NVIDIA GPUs.
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
-                    <div class="text-caption text-medium-emphasis">
+                    <div class="text-body-small text-medium-emphasis">
                       Highly recommended if you have an NVIDIA GPU with ~1GB+ free VRAM (especially for the better model).
                     </div>
-                    <div v-if="systemCapabilities" class="text-caption text-medium-emphasis mt-1">
+                    <div v-if="systemCapabilities" class="text-body-small text-medium-emphasis mt-1">
                       <span v-if="cudaAvailable">
                         Detected: available
                         <span v-if="cudaPrimaryVramText"> — {{ cudaPrimaryVramText }}</span>
@@ -349,12 +349,12 @@
                     Selected
                   </v-chip>
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-cpu-64-bit" size="small" class="mr-1" color="muted"></v-icon>
                       CPU
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Works anywhere.
                   </v-card-text>
                 </v-card>
@@ -367,15 +367,15 @@
               </v-btn>
             </div>
 
-            <v-row v-if="saveError" justify="center" class="mt-4">
+            <v-row v-if="saveError" class="justify-center mt-4">
               <v-col cols="12" md="8">
                 <v-alert type="error" variant="tonal" density="compact" icon="mdi-alert-circle-outline">
-                  <div class="text-body-2">{{ saveErrorText('agent settings') }}</div>
+                  <div class="text-body-medium">{{ saveErrorText('agent settings') }}</div>
                 </v-alert>
               </v-col>
             </v-row>
 
-            <div class="text-caption text-medium-emphasis mt-4">
+            <div class="text-body-small text-medium-emphasis mt-4">
               You can change these settings any time in <strong>Agents → Memory</strong>.
             </div>
           </v-card-text>
@@ -384,20 +384,20 @@
         <!-- Step 4: Visual Agent -->
         <v-window-item :value="4">
           <v-card-text class="py-6 text-center">
-            <div class="text-h5 mb-3">
+            <div class="text-headline-small mb-3">
               <v-icon icon="mdi-image-multiple-outline" size="small" class="mr-1" color="secondary"></v-icon>
               Visual Agent
             </div>
-            <div class="text-body-1 text-medium-emphasis mb-8">
+            <div class="text-body-large text-medium-emphasis mb-8">
               Since you chose <strong>{{ visualAgentProviderName }}</strong>, you can also use it for image generation, editing, and analysis
               <span v-if="selectedClientPreset === 'openrouter'" class="text-primary font-weight-bold">
                 (via Google's gemini visual models)
               </span>.
               <br class="hidden-sm-and-down">This will configure the Visual Agent to use {{ visualAgentProviderName }} for all image operations.
-              <br class="hidden-sm-and-down"><span class="text-caption text-medium-emphasis mt-2 d-block">Note: Talemate may send existing images as references during visual editing.</span>
+              <br class="hidden-sm-and-down"><span class="text-body-small text-medium-emphasis mt-2 d-block">Note: Talemate may send existing images as references during visual editing.</span>
             </div>
 
-            <v-row justify="center">
+            <v-row class="justify-center">
               <v-col cols="12" md="5">
                 <v-card
                   variant="outlined"
@@ -416,12 +416,12 @@
                     Selected
                   </v-chip>
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-check-circle-outline" size="small" class="mr-1" color="primary"></v-icon>
                       Enable
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Automatically configure {{ visualAgentProviderName }} for creating, editing, and analyzing images.
                   </v-card-text>
                 </v-card>
@@ -445,12 +445,12 @@
                     Selected
                   </v-chip>
                   <v-card-item class="pb-2">
-                    <v-card-title class="text-center text-h6">
+                    <v-card-title class="text-center text-title-large">
                       <v-icon icon="mdi-skip-next-outline" size="small" class="mr-1" color="muted"></v-icon>
                       Skip
                     </v-card-title>
                   </v-card-item>
-                  <v-card-text class="text-center text-body-2">
+                  <v-card-text class="text-center text-body-medium">
                     Don't change visual settings. You can configure them later.
                   </v-card-text>
                 </v-card>
@@ -463,10 +463,10 @@
               </v-btn>
             </div>
 
-            <v-row v-if="saveError" justify="center" class="mt-4">
+            <v-row v-if="saveError" class="justify-center mt-4">
               <v-col cols="12" md="8">
                 <v-alert type="error" variant="tonal" density="compact" icon="mdi-alert-circle-outline">
-                  <div class="text-body-2">{{ saveErrorText('agent settings') }}</div>
+                  <div class="text-body-medium">{{ saveErrorText('agent settings') }}</div>
                 </v-alert>
               </v-col>
             </v-row>
@@ -1069,4 +1069,3 @@ export default {
   background-color: rgba(var(--v-theme-primary), 0.05);
 }
 </style>
-

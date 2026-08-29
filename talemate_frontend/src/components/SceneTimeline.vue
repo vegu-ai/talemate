@@ -17,7 +17,7 @@
                 <div v-else-if="revisions.length === 0" class="text-center text-medium-emphasis my-8">
                     <v-icon size="48" class="mb-2">mdi-timeline-remove-outline</v-icon>
                     <p>No timeline revisions recorded for this scene yet.</p>
-                    <p class="text-caption">Revisions are recorded as you play, once the scene has been saved.</p>
+                    <p class="text-body-small">Revisions are recorded as you play, once the scene has been saved.</p>
                 </div>
 
                 <template v-else>
@@ -63,11 +63,11 @@
                     <v-sheet color="transparent" rounded class="preview-panel pa-3" ref="previewPanel">
                         <v-progress-linear v-if="loadingPreview" indeterminate color="primary" class="mb-2"></v-progress-linear>
                         <template v-if="preview">
-                            <p class="text-caption text-medium-emphasis mb-2" v-if="preview.total_messages > preview.messages.length">
+                            <p class="text-body-small text-medium-emphasis mb-2" v-if="preview.total_messages > preview.messages.length">
                                 Showing the last {{ preview.messages.length }} of {{ preview.total_messages }} messages
                             </p>
                             <div v-if="preview.messages.length === 0" class="preview-message text-medium-emphasis">
-                                <p class="text-caption text-medium-emphasis mb-1"><v-icon size="x-small" class="mr-1">mdi-script-text-outline</v-icon>No messages yet — scene intro:</p>
+                                <p class="text-body-small text-medium-emphasis mb-1"><v-icon size="x-small" class="mr-1">mdi-script-text-outline</v-icon>No messages yet — scene intro:</p>
                                 <span class="preview-text">{{ preview.intro }}</span>
                             </div>
                             <div v-for="message in preview.messages" :key="message.id" class="preview-message" :class="{ 'preview-hidden': isHidden(message) }">
@@ -80,7 +80,7 @@
                         </template>
                     </v-sheet>
 
-                    <v-alert v-if="chainNeedsRepair" color="warning" icon="mdi-source-branch-sync" density="compact" variant="tonal" class="text-caption mt-3">
+                    <v-alert v-if="chainNeedsRepair" color="warning" icon="mdi-source-branch-sync" density="compact" variant="tonal" class="text-body-small mt-3">
                         <div v-if="chain?.status === 'diverged'">
                             This scene's history is out of sync with the scene itself, so previews or forks may show incorrect data.
                         </div>
@@ -99,11 +99,11 @@
                         </template>
                     </v-alert>
 
-                    <v-alert v-else-if="rebaseNote" color="information" icon="mdi-source-branch-check" density="compact" variant="tonal" class="text-caption mt-3">
+                    <v-alert v-else-if="rebaseNote" color="information" icon="mdi-source-branch-check" density="compact" variant="tonal" class="text-body-small mt-3">
                         {{ rebaseNote }}
                     </v-alert>
 
-                    <v-alert v-if="sharedContextWarning" color="warning" icon="mdi-earth-off" density="compact" variant="tonal" class="text-caption mt-3">
+                    <v-alert v-if="sharedContextWarning" color="warning" icon="mdi-earth-off" density="compact" variant="tonal" class="text-body-small mt-3">
                         Forking disconnects the scene from its shared world context, since shared context cannot be reconstructed to a specific revision.
                     </v-alert>
                 </template>

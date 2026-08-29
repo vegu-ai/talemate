@@ -1,5 +1,5 @@
 <template>
-  <v-card elevation="7" density="compact">
+  <v-card elevation="3" density="compact">
     <v-toolbar density="compact" color="mutedbg">
       <v-btn rounded="sm" color="delete" @click="requestDiscardAll" prepend-icon="mdi-close-box-outline">
         <v-tooltip activator="parent" location="top">Discard all images in the queue.</v-tooltip>
@@ -12,7 +12,7 @@
         <v-tooltip activator="parent" location="top">Generate a new image.</v-tooltip>
         Generate</v-btn>
       <v-divider vertical class="ml-2 mr-2"></v-divider>
-      <v-chip v-if="newImages" color="info" class="text-caption" label>New Images</v-chip>
+      <v-chip v-if="newImages" color="info" class="text-body-small" label>New Images</v-chip>
       <v-spacer></v-spacer>
       <span v-if="selectedItem">
         <v-btn

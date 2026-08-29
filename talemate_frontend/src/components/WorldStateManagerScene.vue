@@ -3,7 +3,7 @@
         <v-card>
             <v-card-title>
                 {{ title }}
-                <div class="text-muted text-caption">
+                <div class="text-muted text-body-small">
                     {{ scene.data.context }}
                 </div>
             </v-card-title>

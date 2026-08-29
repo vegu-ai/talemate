@@ -1,12 +1,12 @@
 <template>
   <v-dialog :model-value="modelValue" max-width="640" @update:model-value="$emit('update:modelValue', $event)">
     <v-card>
-      <v-card-title class="text-h6">
+      <v-card-title class="text-title-large">
         <v-icon class="mr-2">mdi-script</v-icon>
         Create New Story
       </v-card-title>
       <v-card-text>
-        <div class="text-body-2 mb-4">
+        <div class="text-body-medium mb-4">
           Name your story and optionally choose a writing style and director persona. You can change these later in the World Editor.
         </div>
 
@@ -34,7 +34,7 @@
               persistent-hint
               clearable
             />
-            <div class="text-caption text-muted mt-1">
+            <div class="text-body-small text-muted mt-1">
               <template v-if="!hasWritingStyles">
                 No writing styles yet. <v-btn size="x-small" variant="text" color="primary" prepend-icon="mdi-cube-scan" @click="openTemplatesManager">Manage templates</v-btn>
               </template>
@@ -55,7 +55,7 @@
               persistent-hint
               clearable
             />
-            <div class="text-caption text-muted mt-1">
+            <div class="text-body-small text-muted mt-1">
               <template v-if="!hasDirectorPersonas">
                 No personas yet. <v-btn size="x-small" variant="text" color="primary" prepend-icon="mdi-cube-scan" @click="openTemplatesManager">Manage templates</v-btn>
               </template>

@@ -31,17 +31,17 @@
           </v-list-item-title>
           <div v-if="client.enabled">
   
-            <v-list-item-subtitle class="text-caption" v-if="client.data.error_action != null">
+            <v-list-item-subtitle class="text-body-small" v-if="client.data.error_action != null">
               <v-btn class="mt-1 mb-1" variant="tonal" :prepend-icon="client.data.error_action.icon" size="x-small" color="warning" @click.stop="callErrorAction(client, client.data.error_action)">
                 {{ client.data.error_action.title }}
               </v-btn>
             </v-list-item-subtitle> 
 
-            <v-list-item-subtitle class="text-caption mb-2 mt-2">
+            <v-list-item-subtitle class="text-body-small mb-2 mt-2">
               <v-chip v-if="client.error_message" label size="small" color="error" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-alert">{{ client.error_message }}</v-chip>
               <span v-else>{{ client.model_name }}</span>
             </v-list-item-subtitle>
-            <v-list-item-title class="text-caption">
+            <v-list-item-title class="text-body-small">
               <div class="d-flex flex-wrap align-center">
                 <!-- client type -->
                 <v-chip label size="x-small" color="muted" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-server-outline">{{ client.type }}</v-chip>

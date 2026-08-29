@@ -21,7 +21,7 @@
 
         <!-- empty (no characters or objects) -->
 
-        <v-card elevation="7" v-if="Object.keys(characters).length === 0 && Object.keys(items).length === 0" class="text-center text-caption mx-3" density="compact" variant="tonal" color="muted">
+        <v-card elevation="3" v-if="Object.keys(characters).length === 0 && Object.keys(items).length === 0" class="text-center text-body-small mx-3" density="compact" variant="tonal" color="muted">
             World state has not been updated yet.
         </v-card>
 
@@ -34,10 +34,10 @@
 
                     <!-- TITLE: CHARACTER NAME -->
 
-                    <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
+                    <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         {{ name }}
                         <!-- <v-chip v-if="character.emotion !== null && character.emotion !== ''" label size="x-small" variant="outlined" class="ml-1">{{ character.emotion }}</v-chip> -->
-                        <span class="text-caption ml-1 text-muted">{{ character.emotion }}</span>
+                        <span class="text-body-small ml-1 text-muted">{{ character.emotion }}</span>
                         <template v-slot:actions>
                             <v-icon v-if="characterSuggestions(name)" color="highlight5" class="mr-1">mdi-lightbulb-on</v-icon>
                             <div v-else-if="getCharacterAvatar(name)" class="character-avatar-square mr-1">
@@ -49,7 +49,7 @@
 
                     <!-- SNAPSHOT: CHARACTER -->
                             
-                    <v-expansion-panel-text class="text-body-2">
+                    <v-expansion-panel-text class="text-body-medium">
                         {{ character.snapshot }}
 
                         <!-- ACTIONS: LOOK AT, PERSIST, MANAGE -->
@@ -122,14 +122,14 @@
 
             <v-expansion-panels density="compact" v-for="(obj,name) in items" :key="name">
                 <v-expansion-panel rounded="0" density="compact">
-                    <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
+                    <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         {{ name}}
                         <template v-slot:actions>
                             <v-icon icon="mdi-cube"></v-icon>
                         </template>
                     </v-expansion-panel-title>
                             
-                    <v-expansion-panel-text class="text-body-2">
+                    <v-expansion-panel-text class="text-body-medium">
                         {{ obj.snapshot }}
                         <div class="text-center mt-1">
                             <v-tooltip v-if="!isPlaythroughActive()" text="Look at">
@@ -157,14 +157,14 @@
             <v-expansion-panels density="compact">
                 <!-- active pin container-->
                 <v-expansion-panel rounded="0" density="compact"  v-if="activePins.length > 0">
-                    <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
+                    <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         Active Pins ({{ activePins.length }})
                         <template v-slot:actions>
                             <v-icon icon="mdi-pin"></v-icon>
                         </template>
                     </v-expansion-panel-title>
                     <v-expansion-panel-text>
-                        <div class="mt-1 text-caption" v-for="(pin,index) in activePins" :key="index">
+                        <div class="mt-1 text-body-small" v-for="(pin,index) in activePins" :key="index">
                             {{ truncatedPinText(pin) }}
                             <v-btn rounded="sm" variant="text" size="x-small" class="ml-1"  @click.stop="openWorldStateManager('pins', pin.pin.entry_id)" icon="mdi-book-open-page-variant"></v-btn>
                             <v-divider></v-divider>
@@ -182,7 +182,7 @@
                 
                 <!-- tracked states -->
                 <v-expansion-panel rounded="0" density="compact" v-if="hasAnyWorldState">
-                    <v-expansion-panel-title class="text-subtitle-2" diable-icon-rotate>
+                    <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         World
                         <template v-slot:actions>
                             <v-icon icon="mdi-earth"></v-icon>

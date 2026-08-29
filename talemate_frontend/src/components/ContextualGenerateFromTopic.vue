@@ -6,7 +6,7 @@
                 <span v-if="busy">
                     <v-progress-circular class="ml-1 mr-3" size="14" indeterminate="disable-shrink" color="primary">
                     </v-progress-circular>
-                    <span class="text-caption text-primary">Generating...</span>
+                    <span class="text-body-small text-primary">Generating...</span>
                 </span>
             </v-card-title>
             <v-card-text>

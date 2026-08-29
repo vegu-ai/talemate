@@ -6,12 +6,12 @@
         </v-list-subheader>
         <v-list-item :disabled="newCharacter !== null" prepend-icon="mdi-account-plus" @click.stop="openCharacterCreator(true)">
             <v-list-item-title>Create Character</v-list-item-title>
-            <v-list-item-subtitle class="text-caption">Add a new character to the scene.</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-body-small">Add a new character to the scene.</v-list-item-subtitle>
         </v-list-item>
 
         <v-list-item prepend-icon="mdi-account-arrow-right" @click.stop="openCharacterImporter">
             <v-list-item-title>Import Character</v-list-item-title>
-            <v-list-item-subtitle class="text-caption">Import from another scene.</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-body-small">Import from another scene.</v-list-item-subtitle>
         </v-list-item>
     </v-list>
     <v-list density="compact" slim selectable color="primary" v-model:selected="selected" :opened="openedFolders" @update:opened="onOpenedChange" open-strategy="multiple">
@@ -24,7 +24,7 @@
                 {{ newCharacter.name || "New character" }}
             </v-list-item-title>
             <v-list-item-subtitle>
-                <div class="text-caption">
+                <div class="text-body-small">
                     <v-chip v-if="!newCharacter.is_player" label size="x-small" color="warning">AI</v-chip>
                     <v-chip v-else label size="x-small" color="info">Player</v-chip>
                 </div>
@@ -96,7 +96,7 @@
                     density="compact"
                     :maxlength="folderNameMaxLength"
                 />
-                <p class="text-caption text-muted">
+                <p class="text-body-small text-muted">
                     Renaming "<span class="text-primary">{{ renameDialog.oldName }}</span>" will update every character currently assigned to it.
                 </p>
             </v-card-text>

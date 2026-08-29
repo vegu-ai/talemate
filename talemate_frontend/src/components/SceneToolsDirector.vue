@@ -144,25 +144,25 @@
                         v-if="scenePlanMode === 'generate_arc_expand'"
                     ></v-checkbox>
                 </div>
-                <div class="text-caption text-muted mb-1" v-if="scenePlanMode === 'generate_arc'">Each beat is executed individually through narrator and conversation agents. Slower, but the director can adjust strategy between beats.</div>
-                <div class="text-caption text-muted mb-1" v-else>Beats are expanded into prose in chunks. Much faster, with automatic chunking and arc-aware pacing.</div>
-                <div class="text-caption text-muted mb-4">
+                <div class="text-body-small text-muted mb-1" v-if="scenePlanMode === 'generate_arc'">Each beat is executed individually through narrator and conversation agents. Slower, but the director can adjust strategy between beats.</div>
+                <div class="text-body-small text-muted mb-1" v-else>Beats are expanded into prose in chunks. Much faster, with automatic chunking and arc-aware pacing.</div>
+                <div class="text-body-small text-muted mb-4">
                     <v-icon size="x-small" class="mr-1">mdi-information-outline</v-icon>
                     <span v-if="scenePlanCloseArc">Closed arc: lands a full resolution. Use when writing a self-contained short story.</span>
                     <span v-else>Continuation: ends on a handoff moment so you can keep playing from where the arc leaves off.</span>
                 </div>
 
                 <!-- Warnings - compact format -->
-                <div v-if="narratorProgressStoryLength < minRecommendedNarratorLength" class="text-caption text-warning mb-1">
+                <div v-if="narratorProgressStoryLength < minRecommendedNarratorLength" class="text-body-small text-warning mb-1">
                     <v-icon size="x-small" color="warning" class="mr-1">mdi-alert</v-icon>
                     Narrator Progress Story length ({{ narratorProgressStoryLength }} tokens) is below recommended {{ minRecommendedNarratorLength }}.
                     <v-btn size="x-small" variant="text" color="warning" @click="openAgentSettings('narrator', 'generation_override')">Fix</v-btn>
                 </div>
-                <div v-if="charactersMissingActingInstructions.length > 0" class="text-caption text-warning mb-1">
+                <div v-if="charactersMissingActingInstructions.length > 0" class="text-body-small text-warning mb-1">
                     <v-icon size="x-small" color="warning" class="mr-1">mdi-alert</v-icon>
                     Missing acting instructions: <strong>{{ charactersMissingActingInstructions.join(', ') }}</strong>
                 </div>
-                <div class="text-caption text-muted mb-1">
+                <div class="text-body-small text-muted mb-1">
                     <v-icon size="x-small" class="mr-1">mdi-information-outline</v-icon>
                     May generate actions and dialogue for player controlled characters. Requires a strong LLM (100B+ parameters).
                 </div>

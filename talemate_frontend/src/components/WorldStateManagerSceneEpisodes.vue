@@ -32,15 +32,15 @@
                         :key="index"
                         :value="index"
                     >
-                        <v-list-item-title class="text-wrap text-caption">
+                        <v-list-item-title class="text-wrap text-body-small">
                             {{ episode.title || getPreviewText(episode.intro) }}
                         </v-list-item-title>
-                        <v-list-item-subtitle v-if="episode.title" class="text-wrap text-caption">
+                        <v-list-item-subtitle v-if="episode.title" class="text-wrap text-body-small">
                             {{ getPreviewText(episode.intro, 40) }}
                         </v-list-item-subtitle>
                     </v-list-item>
                     <v-list-item v-if="episodes.length === 0" disabled>
-                        <v-list-item-title class="text-wrap text-caption text-muted">
+                        <v-list-item-title class="text-wrap text-body-small text-muted">
                             No episodes available. Create one to get started.
                         </v-list-item-title>
                     </v-list-item>
@@ -56,10 +56,10 @@
                         </v-alert>
                     </v-card-text>
                 </v-card>
-                <v-card v-else class="ma-4" elevation="7" color="muted" variant="tonal">
+                <v-card v-else class="ma-4" elevation="3" color="muted" variant="tonal">
                     <v-card-text>
-                        <div v-if="selectedEpisode?.title" class="text-h6 mb-2">{{ selectedEpisode.title }}</div>
-                        <div v-if="selectedEpisode?.description" class="text-body-2 text-muted mb-2">{{ selectedEpisode.description }}</div>
+                        <div v-if="selectedEpisode?.title" class="text-title-large mb-2">{{ selectedEpisode.title }}</div>
+                        <div v-if="selectedEpisode?.description" class="text-body-medium text-muted mb-2">{{ selectedEpisode.description }}</div>
                         <div class="intro-preview-text" v-html="renderedIntro"></div>
                     </v-card-text>
                 </v-card>

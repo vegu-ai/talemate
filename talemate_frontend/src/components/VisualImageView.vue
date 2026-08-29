@@ -1,7 +1,7 @@
 <template>
   <v-row>
     <v-col cols="7">
-        <v-card elevation="7" color="surface-light" variant="outlined">
+        <v-card elevation="3" color="surface-light" variant="outlined">
           <v-card-text>
             <CoverBBoxEditor
               v-if="editable && activeTab === 'cover_crop'"
@@ -58,20 +58,20 @@
                 </v-list-item>
               </v-list>
               
-              <v-card elevation="7" class="mt-2" color="muted" variant="tonal" v-if="meta.instructions">
+              <v-card elevation="3" class="mt-2" color="muted" variant="tonal" v-if="meta.instructions">
                 <v-card-title class="text-primary">Instructions</v-card-title>
                 <v-card-text class="pre-wrap">{{ meta.instructions }}</v-card-text>
               </v-card>
-              <v-card elevation="7" class="mt-2" color="muted" variant="tonal" v-if="meta.prompt">
+              <v-card elevation="3" class="mt-2" color="muted" variant="tonal" v-if="meta.prompt">
                 <v-card-title class="text-success">Prompt</v-card-title>
                 <v-card-text class="pre-wrap">{{ meta.prompt }}</v-card-text>
               </v-card>
-              <v-card elevation="7" class="mt-2" color="muted" variant="tonal" v-if="meta.negative_prompt">
+              <v-card elevation="3" class="mt-2" color="muted" variant="tonal" v-if="meta.negative_prompt">
                 <v-card-title class="text-delete">Negative Prompt</v-card-title>
                 <v-card-text class="pre-wrap">{{ meta.negative_prompt }}</v-card-text>
               </v-card>
             </div>
-            <div v-else class="text-medium-emphasis text-caption">No metadata</div>
+            <div v-else class="text-medium-emphasis text-body-small">No metadata</div>
             <VisualReferenceImages 
               :reference-assets="meta?.reference_assets || []" 
               :editable="editable"
@@ -93,7 +93,7 @@
                 <v-textarea v-model="form.negative_prompt" label="Negative Prompt" rows="2" auto-grow class="mb-2" />
                 <v-select v-if="isCharacterVisType" v-model="form.character_name" :items="characterItems" label="Character" density="compact" class="mb-2" :disabled="characterItems.length === 0" />
                 <div class="mt-4">
-                  <div class="text-caption mb-2 text-medium-emphasis">Reference images used</div>
+                  <div class="text-body-small mb-2 text-medium-emphasis">Reference images used</div>
                   <VisualReferenceImages 
                     :reference-assets="form.reference_assets || []" 
                     :editable="true"
@@ -172,10 +172,10 @@
               <v-window-item value="cover_crop">
                 <v-alert density="compact" variant="tonal" color="primary" icon="mdi-crop" class="mb-2">
                   <div>Drag on the image to draw the crop. Drag inside the box to move it. Drag the corners to resize.</div>
-                  <div class="text-caption text-medium-emphasis mt-1">Resizing is unconstrained (only clamped to image borders).</div>
+                  <div class="text-body-small text-medium-emphasis mt-1">Resizing is unconstrained (only clamped to image borders).</div>
                 </v-alert>
                 <v-card color="muted" variant="text" class="mb-2">
-                  <v-card-text class="text-caption text-medium-emphasis text-muted">
+                  <v-card-text class="text-body-small text-medium-emphasis text-muted">
                     <div class="mb-2"><strong>When is this crop applied?</strong></div>
                     <div>This crop is automatically applied when this image is used as a cover image. Cover images appear at the top of scenes or as character cards, and the crop ensures the most important part of your image is visible in those displays.</div>
                   </v-card-text>
@@ -185,7 +185,7 @@
           </div>
         </v-card-text>
       </v-card>
-      <div v-if="assetId" class="text-caption my-2 text-muted">Asset ID: {{ assetId }}</div>
+      <div v-if="assetId" class="text-body-small my-2 text-muted">Asset ID: {{ assetId }}</div>
     </v-col>
   </v-row>
   

@@ -38,7 +38,7 @@
     </v-toolbar>
 
     <v-toolbar density="compact" flat color="mutedbg">
-        <v-toolbar-title class="text-subtitle-2 text-muted d-flex align-center" style="overflow: visible;">
+        <v-toolbar-title class="text-title-small text-muted d-flex align-center" style="overflow: visible;">
 
             <v-tooltip v-if="activeChatId" text="Select chat mode" location="top">
                 <template v-slot:activator="{ props: tooltipProps }">

@@ -5,7 +5,7 @@
                 <v-icon>mdi-close</v-icon>
             </v-btn>
         </template>
-        <v-card-title class="text-subtitle-1">
+        <v-card-title class="text-body-large">
             The
             <span class="text-director text-secondary"><v-icon size="small">mdi-bullhorn</v-icon> Director</span> 
             suggests some actions for <span class="text-primary">{{ character }}</span>

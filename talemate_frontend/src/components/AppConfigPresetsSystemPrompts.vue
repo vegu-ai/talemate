@@ -37,14 +37,14 @@
                         @blur="$emit('update', {system_prompts: config})"
                         :label="labelFromValue(selected[0], tab === 'decensor')"
                     ></v-textarea>
-                    <p class="text-caption text-medium-emphasis mt-1">
+                    <p class="text-body-small text-medium-emphasis mt-1">
                         <v-icon size="x-small" class="mr-1">mdi-information-outline</v-icon>Use <code class="text-primary">{<!-- -->{ system_prompt }}</code> to include the default system prompt in your override.
                     </p>
                 </v-card-text>
 
                 
                 <v-alert v-if="tab == 'decensor'" density="compact" color="primary" variant="text">
-                    <p class="text-caption text-medium-emphasis mt-4">
+                    <p class="text-body-small text-medium-emphasis mt-4">
                         <v-icon color="warning" class="mr-2">mdi-alert</v-icon>Only local API clients will currently make use of the <span class="text-primary">uncensored</span> prompts. A toggle will be added for more control of this in the future.
                     </p>
                 </v-alert>
@@ -56,10 +56,10 @@
                 <p>
                     Client specific override for the various system prompts based on action type.
                 </p>
-                <p class="text-caption text-medium-emphasis">
+                <p class="text-body-small text-medium-emphasis">
                     These system prompts will only be used by this client.
                 </p>
-                <p class="text-caption text-medium-emphasis">
+                <p class="text-body-small text-medium-emphasis">
                     You can specify global overrides in the <span class="text-primary"><v-icon>mdi-cog</v-icon> Settings</span> tab under <span class="text-primary">Presets → System Prompts</span>.
                 </p>
             </v-alert>

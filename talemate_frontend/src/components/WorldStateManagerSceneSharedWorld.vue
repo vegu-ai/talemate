@@ -124,7 +124,7 @@
                     </template>
                     <div class="text-muted">
                         <strong>Selected Episode:</strong> {{ selectedEpisode.title || 'Untitled Episode' }}
-                        <div v-if="selectedEpisode.description" class="mt-1 text-caption">{{ selectedEpisode.description }}</div>
+                        <div v-if="selectedEpisode.description" class="mt-1 text-body-small">{{ selectedEpisode.description }}</div>
                     </div>
                 </v-alert>
 

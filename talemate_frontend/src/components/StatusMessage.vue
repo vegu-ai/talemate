@@ -2,7 +2,7 @@
     <v-alert 
         variant="text" 
         :color="notificationColor()" 
-        class="text-center text-caption">
+        class="text-center text-body-small">
         {{ text }}
         <p v-if="status == 'busy'">
             <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>

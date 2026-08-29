@@ -83,7 +83,7 @@
     density="compact"
     class="mt-3"
   >
-    <template v-slot:item="{ props: itemProps, item }">
+    <template v-slot:item="{ props: itemProps, internalItem: item }">
       <v-list-item v-bind="itemProps" :title="item.raw.label" :subtitle="item.raw.subtitle"></v-list-item>
     </template>
     <template v-if="$slots.prepend" v-slot:prepend><slot name="prepend" /></template>
@@ -196,8 +196,8 @@
   >
     <template v-if="$slots.prepend" v-slot:prepend><slot name="prepend" /></template>
     <template v-slot:message="{ message }">
-      <span class="text-caption text-medium-emphasis">{{ message }}</span>
-      <span v-if="field.expensive" class="text-warning mt-2 text-caption">
+      <span class="text-body-small text-medium-emphasis">{{ message }}</span>
+      <span v-if="field.expensive" class="text-warning mt-2 text-body-small">
         <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
         Potential for many additional prompts.
       </span>
@@ -208,7 +208,7 @@
   <v-row v-else-if="field.type === 'vector2'" class="mt-3">
     <v-col cols="12" class="d-flex align-center">
       <slot v-if="$slots.prepend" name="prepend" />
-      <div class="text-caption text-muted text-uppercase">{{ field.label }}</div>
+      <div class="text-body-small text-muted text-uppercase">{{ field.label }}</div>
     </v-col>
     <v-col :cols="field.choices ? 5 : 6">
       <v-number-input
@@ -295,7 +295,7 @@
 
   <!-- fallback -->
   <v-alert v-else density="compact" variant="text" color="muted" class="mt-3">
-    <span class="text-caption">Widget type "{{ field.type }}" ({{ field.label }}) is not supported.</span>
+    <span class="text-body-small">Widget type "{{ field.type }}" ({{ field.label }}) is not supported.</span>
   </v-alert>
 
   <!-- Field notes — `note_on_value` matches against the current modelValue,
@@ -304,17 +304,17 @@
     <!-- mb-4: the next field's slider renders its thumb label always, which
          would otherwise overlap the note -->
     <v-alert variant="outlined" density="compact" :color="field.note.color || 'muted'" class="mb-4" :icon="field.note.icon">
-      <div class="text-caption text-mutedheader">{{ field.note.title || field.label }}</div>
-      <span class="text-muted text-caption">{{ field.note.text }}</span>
+      <div class="text-body-small text-mutedheader">{{ field.note.title || field.label }}</div>
+      <span class="text-muted text-body-small">{{ field.note.text }}</span>
     </v-alert>
   </template>
   <template v-else-if="field.note_on_value != null">
     <template v-for="(note, noteKey) in field.note_on_value" :key="noteKey">
       <v-alert v-if="modelValue == noteKey || String(modelValue) == noteKey" variant="outlined" density="compact" :color="note.color || 'muted'" class="mt-2 mb-4" :icon="note.icon">
-        <span class="text-caption text-uppercase mr-2">
+        <span class="text-body-small text-uppercase mr-2">
           {{ noteKey.toLowerCase() === 'true' ? 'ENABLED' : noteKey.replace(/_/g, ' ') }}
         </span>
-        <span class="text-muted text-caption">{{ note.text }}</span>
+        <span class="text-muted text-body-small">{{ note.text }}</span>
       </v-alert>
     </template>
   </template>

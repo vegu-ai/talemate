@@ -4,11 +4,11 @@
             <div class="pa-4">
                 <div class="d-flex align-center mb-1">
                     <v-icon class="mr-2" size="small" color="primary">mdi-eye-outline</v-icon>
-                    <span class="text-subtitle-2">Preview</span>
-                    <span class="text-caption text-muted ml-2">The theme being edited, not the applied one - click an element to edit the colour that paints it.</span>
+                    <span class="text-title-small">Preview</span>
+                    <span class="text-body-small text-muted ml-2">The theme being edited, not the applied one - click an element to edit the colour that paints it.</span>
                 </div>
 
-                <div class="text-caption text-muted mt-3 mb-1">Surfaces</div>
+                <div class="text-body-small text-muted mt-3 mb-1">Surfaces</div>
                 <div class="d-flex flex-wrap ga-2 align-stretch">
                     <div
                         v-for="id in surfaceSwatches"
@@ -38,7 +38,7 @@
                     :class="{ 'preview-el-selected': selectedId === 'surfaces.divider' }"
                     @click="selectElement($event, 'surfaces.divider')" />
 
-                <div class="text-caption text-muted mt-4 mb-1">App</div>
+                <div class="text-body-small text-muted mt-4 mb-1">App</div>
                 <div class="d-flex flex-wrap ga-2 align-center">
                     <v-btn
                         v-for="id in appButtons"
@@ -85,7 +85,7 @@
                         class="preview-el"
                         :class="{ 'preview-el-selected': selectedId === 'app.mutedheader' || selectedId === 'app.muted' }">
                         <div
-                            class="preview-el text-caption text-uppercase"
+                            class="preview-el text-body-small text-uppercase"
                             :class="{ 'preview-el-selected': selectedId === 'app.mutedheader' }"
                             :style="{ color: colorOf('app', 'mutedheader') }"
                             @click.stop="selectElement($event, 'app.mutedheader')">
@@ -111,14 +111,14 @@
                         :style="{ backgroundColor: 'rgb(var(--v-theme-mutedbg))' }"
                         @click="selectElement($event, 'app.mutedbg')">
                         <v-icon size="small" class="mr-1">mdi-menu</v-icon>
-                        <span class="text-caption">{{ el('app.mutedbg').label }}</span>
+                        <span class="text-body-small">{{ el('app.mutedbg').label }}</span>
                     </div>
                     <div
                         class="preview-el d-flex align-center"
                         :class="{ 'preview-el-selected': selectedId === 'app.inactive' }"
                         @click="selectElement($event, 'app.inactive')">
                         <v-icon size="small" class="mr-1" :color="colorOf('app', 'inactive')">{{ el('app.inactive').icon }}</v-icon>
-                        <span class="text-caption" :style="{ color: colorOf('app', 'inactive') }">{{ el('app.inactive').label }}</span>
+                        <span class="text-body-small" :style="{ color: colorOf('app', 'inactive') }">{{ el('app.inactive').label }}</span>
                     </div>
                     <div
                         v-for="id in appTiles"
@@ -128,7 +128,7 @@
                         :style="{ borderColor: colorOf('app', el(id).slot) }"
                         @click="selectElement($event, id)">
                         <v-icon size="small">{{ el(id).icon }}</v-icon>
-                        <div class="text-caption">{{ el(id).label }}</div>
+                        <div class="text-body-small">{{ el(id).label }}</div>
                     </div>
                 </div>
                 <div class="d-flex flex-wrap ga-2 mt-3">
@@ -146,7 +146,7 @@
                     </v-alert>
                 </div>
 
-                <div class="text-caption text-muted mt-4 mb-1">Messages</div>
+                <div class="text-body-small text-muted mt-4 mb-1">Messages</div>
                 <v-card color="background" variant="flat" class="pa-3">
                     <div
                         v-for="id in messageLines"
@@ -163,7 +163,7 @@
                             v-html="parserHtml[el(id).slot]">
                         </span>
                         <span v-else :style="messageStyle(el(id).slot)">{{ sampleText(el(id).slot) }}</span>
-                        <span v-if="isHiddenType(el(id).slot)" class="text-caption text-muted ml-2">(hidden in scenes)</span>
+                        <span v-if="isHiddenType(el(id).slot)" class="text-body-small text-muted ml-2">(hidden in scenes)</span>
                     </div>
                     <div
                         class="preview-el preview-message d-flex align-center mb-2"
@@ -185,7 +185,7 @@
                         @click="selectElement($event, `messages.${slot}`)">
                         <v-icon class="mr-2" size="small" :color="colorOf('messages', slot)">mdi-eye-off-outline</v-icon>
                         <span class="preview-hidden-type" :style="messageStyle(slot)">{{ labelForThemeSlot(slot) }}</span>
-                        <span class="text-caption text-muted ml-2">(hidden in scenes)</span>
+                        <span class="text-body-small text-muted ml-2">(hidden in scenes)</span>
                     </div>
                     <div class="d-flex align-center flex-wrap ga-3 mt-3">
                         <div
@@ -193,7 +193,7 @@
                             :class="{ 'preview-el-selected': selectedId === 'messages.play_audio' }"
                             @click="selectElement($event, 'messages.play_audio')">
                             <v-icon size="small" class="mr-1" :color="colorOf('messages', 'play_audio')">{{ el('messages.play_audio').icon }}</v-icon>
-                            <span class="text-caption">{{ el('messages.play_audio').label }}</span>
+                            <span class="text-body-small">{{ el('messages.play_audio').label }}</span>
                         </div>
                         <div
                             class="preview-el"
@@ -208,16 +208,16 @@
                             :class="{ 'preview-el-selected': selectedId === 'messages.defaultBadge' }"
                             :style="{ borderColor: colorOf('messages', 'defaultBadge') }"
                             @click="selectElement($event, 'messages.defaultBadge')">
-                            <span class="text-caption">{{ el('messages.defaultBadge').label }}</span>
+                            <span class="text-body-small">{{ el('messages.defaultBadge').label }}</span>
                         </div>
                     </div>
                 </v-card>
 
-                <div class="text-caption text-muted mt-4 mb-1">Chats</div>
-                <v-row dense>
+                <div class="text-body-small text-muted mt-4 mb-1">Chats</div>
+                <v-row density="compact">
                     <v-col cols="12" md="6">
                         <div class="preview-chat pa-2">
-                            <div class="text-caption text-muted mb-1">Director chat</div>
+                            <div class="text-body-small text-muted mb-1">Director chat</div>
                             <v-card
                                 v-for="id in dchatBubbles"
                                 :key="id"
@@ -242,7 +242,7 @@
                     </v-col>
                     <v-col cols="12" md="6">
                         <div class="preview-chat pa-2">
-                            <div class="text-caption text-muted mb-1">Help chat</div>
+                            <div class="text-body-small text-muted mb-1">Help chat</div>
                             <v-card
                                 v-for="id in hchatBubbles"
                                 :key="id"
@@ -280,7 +280,7 @@
             min-width="0">
             <v-sheet class="pa-3" rounded>
                 <template v-if="selection">
-                    <div v-if="selection.slot" class="text-caption mb-1">{{ labelForThemeSlot(selection.slot) }}</div>
+                    <div v-if="selection.slot" class="text-body-small mb-1">{{ labelForThemeSlot(selection.slot) }}</div>
                     <div v-if="styleFlags.length" class="d-flex flex-wrap ga-3 mb-1">
                         <v-checkbox
                             v-for="flag in styleFlags"
@@ -295,7 +295,7 @@
                         </v-checkbox>
                     </div>
                     <template v-if="colorDerivation">
-                        <div class="text-caption mb-2">{{ colorDerivation.note }}</div>
+                        <div class="text-body-small mb-2">{{ colorDerivation.note }}</div>
                         <v-btn
                             v-if="colorDerivation.derivedFrom"
                             size="small"
@@ -307,7 +307,7 @@
                         </v-btn>
                     </template>
                     <template v-else>
-                        <div v-if="onColorDerived" class="text-caption text-muted mb-1">Text on it is derived automatically.</div>
+                        <div v-if="onColorDerived" class="text-body-small text-muted mb-1">Text on it is derived automatically.</div>
                         <v-color-picker
                             mode="hex"
                             :model-value="selectionColor"

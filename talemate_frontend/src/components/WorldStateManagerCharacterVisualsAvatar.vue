@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="mb-4">
-            <div class="text-subtitle-2 text-medium-emphasis">
+            <div class="text-title-small text-medium-emphasis">
                 Select a portrait for <span class="text-primary">{{ character.name }}</span>
             </div>
         </div>
@@ -22,7 +22,7 @@
         >
             <template #empty>
                 <p class="mt-2">No portraits found for {{ character.name }}</p>
-                <p class="text-caption">Generate a CHARACTER_PORTRAIT image in the Visual Library to add portraits.</p>
+                <p class="text-body-small">Generate a CHARACTER_PORTRAIT image in the Visual Library to add portraits.</p>
             </template>
             <template #badges="{ asset }">
                 <VisualAssetBadge v-if="defaultAvatarId === asset.id" icon="mdi-check" label="Default" />
@@ -179,14 +179,14 @@
                 <div class="d-flex align-start">
                     <v-icon class="mr-3 mt-1" color="primary">mdi-image-auto-adjust</v-icon>
                     <div class="text-muted">
-                        <div class="text-primary text-subtitle-2 font-weight-bold mb-1">Automatic Portrait Selection</div>
-                        <p class="text-body-2 mb-0">
+                        <div class="text-primary text-title-small font-weight-bold mb-1">Automatic Portrait Selection</div>
+                        <p class="text-body-medium mb-0">
                             Once you have at least 2 portraits, the World State Agent can automatically select the most appropriate portrait for the character based on the current moment in the scene. The agent <strong class="text-primary">checks the tags</strong> stored with each image to decide the best portrait.
                         </p>
-                        <p class="text-body-2 mt-2 mb-0">
+                        <p class="text-body-medium mt-2 mb-0">
                             <strong>Update tags:</strong> Open a portrait in the Visual Library to edit its tags.
                         </p>
-                        <p class="text-body-2 mt-2 mb-0">
+                        <p class="text-body-medium mt-2 mb-0">
                             <strong>Configure feature:</strong> Enable and adjust portrait selection frequency in
                             <a href="#" @click.prevent="openWorldStateAgentSettings" class="text-primary text-decoration-underline">World State Agent settings</a>.
                         </p>

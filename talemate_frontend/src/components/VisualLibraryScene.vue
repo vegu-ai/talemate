@@ -107,7 +107,7 @@
           @set-scene-cover-image="onSetSceneCoverImage"
         />
       </div>
-      <div v-else class="text-medium-emphasis text-caption">Select an asset to view</div>
+      <div v-else class="text-medium-emphasis text-body-small">Select an asset to view</div>
     </v-col>
   </v-row>
   <ConfirmActionPrompt

@@ -26,7 +26,7 @@
         <v-row no-gutters class="content-split">
             <!-- Tree Panel -->
             <v-col cols="auto" class="tree-panel pa-2">
-                <div class="text-subtitle-2 text-medium-emphasis mb-2">
+                <div class="text-title-small text-medium-emphasis mb-2">
                     <v-icon size="small" class="mr-1">mdi-file-tree</v-icon>
                     Resolved Templates
                     <v-progress-circular
@@ -42,8 +42,8 @@
                     <!-- Empty state when no templates exist -->
                     <div v-if="resolvedTemplates.length === 0 && !loading" class="text-center text-medium-emphasis pa-4">
                         <v-icon size="48" color="muted">mdi-file-outline</v-icon>
-                        <div class="mt-2 text-body-2">No templates available</div>
-                        <div class="text-caption">Templates will appear here once loaded</div>
+                        <div class="mt-2 text-body-medium">No templates available</div>
+                        <div class="text-body-small">Templates will appear here once loaded</div>
                     </div>
                     <TemplateTree
                         v-else
@@ -78,7 +78,7 @@
 
             <!-- Preview Panel -->
             <v-col class="editor-panel pa-2">
-                <div class="text-subtitle-2 text-medium-emphasis mb-2">
+                <div class="text-title-small text-medium-emphasis mb-2">
                     <v-icon size="small" class="mr-1">mdi-eye</v-icon>
                     Preview
                     <v-chip

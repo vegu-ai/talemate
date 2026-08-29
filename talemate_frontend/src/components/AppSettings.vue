@@ -2,10 +2,10 @@
     <v-card variant="text" v-if="app_config !== null">
         <v-toolbar rounded="md" density="compact" color="mutedbg" class="pl-2 mb-1 app-settings-toolbar">
             <v-icon class="mr-2" color="primary">{{ currentPage?.icon || 'mdi-cog' }}</v-icon>
-            <span class="text-subtitle-2 mr-4">{{ currentPage?.group }} <span class="text-muted">/</span> {{ currentPage?.title }}</span>
+            <span class="text-title-small mr-4">{{ currentPage?.group }} <span class="text-muted">/</span> {{ currentPage?.title }}</span>
             <v-btn color="primary" variant="text" prepend-icon="mdi-check-circle-outline" :disabled="!canSave" @click="saveConfig">Save</v-btn>
             <v-btn v-if="dirty" color="muted" variant="text" prepend-icon="mdi-undo" @click="discard">Discard</v-btn>
-            <span v-if="dirty" class="text-muted text-caption mr-2">Unsaved changes.</span>
+            <span v-if="dirty" class="text-muted text-body-small mr-2">Unsaved changes.</span>
             <v-chip v-if="saveError" size="small" label color="error" variant="text" prepend-icon="mdi-alert-circle-outline" class="mr-2">
                 {{ saveErrorText }}
                 <v-tooltip v-if="saveErrorIsApplyFailure" activator="parent" location="bottom" max-width="400">The settings were stored, but the running clients and agents are still the old ones. Saving again re-applies the stored configuration — no further edits are needed.</v-tooltip>

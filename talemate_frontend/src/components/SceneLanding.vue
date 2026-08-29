@@ -49,8 +49,8 @@
                                 @change="onFilePicked"
                             />
                             <v-icon size="48" color="primary" class="mb-2">mdi-tray-arrow-down</v-icon>
-                            <div class="text-body-2">Drop a file here or click to browse</div>
-                            <div class="text-caption text-medium-emphasis mt-1">
+                            <div class="text-body-medium">Drop a file here or click to browse</div>
+                            <div class="text-body-small text-medium-emphasis mt-1">
                                 Talemate scenes (.json, .zip) and character cards (.png, .webp, .json)
                             </div>
                         </div>
@@ -63,7 +63,7 @@
                         Create new scene
                     </v-card-title>
                     <v-card-text>
-                        <p class="text-caption text-medium-emphasis mb-3">Start a blank scene and build it out in the world editor.</p>
+                        <p class="text-body-small text-medium-emphasis mb-3">Start a blank scene and build it out in the world editor.</p>
                         <v-btn
                             variant="tonal"
                             block

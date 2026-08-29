@@ -32,7 +32,7 @@
     <!-- Custom Time Dialog -->
     <v-dialog v-model="customTimeDialog" max-width="400">
         <v-card>
-            <v-card-title class="text-body-1">Advance Time</v-card-title>
+            <v-card-title class="text-body-large">Advance Time</v-card-title>
             <v-card-text>
                 <div class="d-flex align-center">
                     <v-number-input v-model="customTimeAmount" :min="1" label="Amount"

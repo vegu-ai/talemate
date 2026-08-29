@@ -67,11 +67,11 @@
                                                     <span class="item-text">{{ subitem }}</span>
                                                 </div>
                                             </div>
-                                            <p class="text-muted text-caption mt-1" v-if="feature.default_state">This feature is <span :class="'text-' + feature.default_state">{{ feature.default_state }}</span> by default.</p>
+                                            <p class="text-muted text-body-small mt-1" v-if="feature.default_state">This feature is <span :class="'text-' + feature.default_state">{{ feature.default_state }}</span> by default.</p>
                                             <div class="feature-actions mt-2" v-if="feature.link || feature.changelog">
                                                 <v-btn variant="text" size="small" color="primary"
                                                     @click="followLink(feature.link)" v-if="feature.link">Learn more</v-btn>
-                                                <a :href="feature.changelog" target="_blank" v-if="feature.changelog" class="text-caption"><v-icon size="x-small" class="mr-1">mdi-open-in-new</v-icon>Changelog</a>
+                                                <a :href="feature.changelog" target="_blank" v-if="feature.changelog" class="text-body-small"><v-icon size="x-small" class="mr-1">mdi-open-in-new</v-icon>Changelog</a>
                                             </div>
                                         </v-card-text>
                                     </v-card>

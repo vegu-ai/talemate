@@ -57,7 +57,7 @@
                                     >{{ overrideCount }} set</v-chip>
                                 </v-expansion-panel-title>
                                 <v-expansion-panel-text>
-                                    <div class="text-caption text-medium-emphasis mb-3">
+                                    <div class="text-body-small text-medium-emphasis mb-3">
                                         Each override replaces the default perspective for that speaker. Empty fields fall back to the default.
                                     </div>
                                     <v-combobox

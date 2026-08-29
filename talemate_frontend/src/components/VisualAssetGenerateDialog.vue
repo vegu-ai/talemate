@@ -5,7 +5,7 @@
                 <slot name="title"></slot>
             </v-card-title>
             <v-card-text>
-                <p class="text-caption mb-4">
+                <p class="text-body-small mb-4">
                     <slot name="caption"></slot>
                 </p>
 
@@ -51,8 +51,8 @@
                         <div class="d-flex align-start">
                             <v-icon class="mr-2 mt-1" color="primary" size="small">mdi-information-outline</v-icon>
                             <div>
-                                <div class="text-caption font-weight-bold mb-1 text-muted">Why this reference was chosen:</div>
-                                <div class="text-caption text-muted">
+                                <div class="text-body-small font-weight-bold mb-1 text-muted">Why this reference was chosen:</div>
+                                <div class="text-body-small text-muted">
                                     {{ selectionReason }}
                                 </div>
                             </div>
@@ -95,7 +95,7 @@
                                 <div class="d-flex align-start">
                                     <v-icon class="mr-2 mt-1" color="primary" size="small">mdi-information-outline</v-icon>
                                     <div>
-                                        <div class="text-caption text-muted">
+                                        <div class="text-body-small text-muted">
                                             {{ batchInfoText }}
                                         </div>
                                     </div>

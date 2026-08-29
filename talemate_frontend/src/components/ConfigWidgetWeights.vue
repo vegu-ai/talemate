@@ -1,9 +1,9 @@
 <template>
     <div class="mt-3">
-        <div class="text-caption text-muted" v-if="label">
+        <div class="text-body-small text-muted" v-if="label">
             <strong>{{ label }}</strong>
         </div>
-        <div class="text-caption text-medium-emphasis mb-2 d-flex align-center" v-if="description || choices.length > 1">
+        <div class="text-body-small text-medium-emphasis mb-2 d-flex align-center" v-if="description || choices.length > 1">
             <span v-if="description">{{ description }}</span>
             <v-btn
                 v-if="choices.length > 1"
@@ -16,7 +16,7 @@
             >Equalize</v-btn>
         </div>
         <div v-for="choice in choices" :key="choice.value" class="d-flex align-center">
-            <div class="weight-label text-caption" :class="{ 'text-medium-emphasis': isDisabled(choice.value) }">
+            <div class="weight-label text-body-small" :class="{ 'text-medium-emphasis': isDisabled(choice.value) }">
                 {{ choice.label }}
                 <v-icon
                     v-if="isLockedAtFull(choice.value)"

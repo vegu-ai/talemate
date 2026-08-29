@@ -18,7 +18,7 @@
             Results
         </v-list-subheader>
         <v-list-item v-if="searchResults.length === 0">
-            <v-list-item-subtitle class="text-caption">No settings match "{{ search }}"</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-body-small">No settings match "{{ search }}"</v-list-item-subtitle>
         </v-list-item>
         <v-list-item v-for="(result, index) in searchResults" :key="index"
             :active="false"
@@ -27,7 +27,7 @@
                 <v-icon>{{ result.page.icon }}</v-icon>
             </template>
             <v-list-item-title>{{ result.entry ? result.entry.label : result.page.title }}</v-list-item-title>
-            <v-list-item-subtitle class="text-caption">{{ result.page.group }} · {{ result.page.title }}</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-body-small">{{ result.page.group }} · {{ result.page.title }}</v-list-item-subtitle>
         </v-list-item>
     </v-list>
 

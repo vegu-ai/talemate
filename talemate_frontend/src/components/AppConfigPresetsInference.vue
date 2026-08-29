@@ -4,7 +4,7 @@
         <p>
             This interface is a work in progress and provides basic parameter preset editing.
         </p>
-        <p class="text-caption text-medium-emphasis">
+        <p class="text-body-small text-medium-emphasis">
             Client support varies by parameter. <span class="text-primary">All presets are active</span> based on agent actions. Default values recommended unless you understand the parameters.
         </p>
     </v-alert>

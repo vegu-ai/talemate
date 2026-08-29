@@ -23,7 +23,7 @@
           :color="resolvedColor || alertColor"
           class="mr-2 ux-element-compact-icon"
         >{{ alertIcon }}</v-icon>
-        <div class="text-body-2 ux-element-compact-content">
+        <div class="text-body-medium ux-element-compact-content">
           <span
             v-if="element?.title"
             :class="['font-weight-bold', colorClass]"
@@ -52,7 +52,7 @@
         <v-icon v-if="alertIcon" :color="resolvedColor || alertColor" class="mr-2">{{ alertIcon }}</v-icon>
         <span
           v-if="element?.title"
-          :class="['text-subtitle-1', 'font-weight-bold', colorClass]"
+          :class="['text-body-large', 'font-weight-bold', colorClass]"
           :style="colorStyle"
         >
           {{ element.title }}
@@ -62,13 +62,13 @@
       <v-card-text class="pa-0">
         <div
           v-if="!compact && element?.body && applySceneColors"
-          class="text-body-2 mb-2 ux-element-body"
+          class="text-body-medium mb-2 ux-element-body"
           :style="colorStyle"
           v-html="renderedBody"
         ></div>
         <div
           v-else-if="!compact && element?.body"
-          :class="['text-body-2', 'mb-2', 'ux-element-body-plain', colorClass]"
+          :class="['text-body-medium', 'mb-2', 'ux-element-body-plain', colorClass]"
           :style="colorStyle"
           v-html="renderedPlainBody"
         ></div>
@@ -103,7 +103,7 @@
 
         <!-- 'notice' has no child component: the container chrome above (title, body, icon, timeout bar) is the full render. -->
 
-        <div v-else-if="!isKnownKind" class="text-body-2">
+        <div v-else-if="!isKnownKind" class="text-body-medium">
           Unsupported UX element kind: {{ element?.kind }}
         </div>
       </v-card-text>

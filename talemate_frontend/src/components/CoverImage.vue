@@ -1,5 +1,5 @@
 <template>
-    <v-sheet v-if="expanded" elevation="10">
+    <v-sheet v-if="expanded" elevation="3">
         <div class="portrait-image-container" v-if="asset_id !== null" v-on:drop="onDrop" v-on:dragover.prevent>
             <v-img cover @click="toggle()" :src="displaySrc" class="portrait-image"></v-img>
         </div>
@@ -7,10 +7,10 @@
             <v-img src="@/assets/logo-13.1-backdrop.png" cover height="100%" class="portrait-image"></v-img>
             <v-card-text v-if="allowUpdate" class="drop-hint text-center">
                 <v-icon size="48" color="primary">mdi-upload</v-icon>
-                <div class="text-caption text-medium-emphasis" v-if="type === 'character' && target">
+                <div class="text-body-small text-medium-emphasis" v-if="type === 'character' && target">
                     Drag and drop an image to update <span class="text-primary">{{ target.name }}</span>'s main image.
                 </div>
-                <div class="text-caption text-medium-emphasis" v-else>
+                <div class="text-body-small text-medium-emphasis" v-else>
                     Drag and drop an image to update <span class="text-primary">the scene's</span> cover image.
                 </div>
             </v-card-text>

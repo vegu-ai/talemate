@@ -1,6 +1,7 @@
 <template>
-    <v-snackbar color="mutedbg" location="top" v-model="spiceApplied" :timeout="5000" max-width="400" multi-line>
-        <div class="text-caption text-highlight4">
+    <!-- 68px reproduces Vuetify 3's $snackbar-multi-line-wrapper-min-height. -->
+    <v-snackbar color="mutedbg" location="top" v-model="spiceApplied" :timeout="5000" max-width="400" min-height="68">
+        <div class="text-body-small text-highlight4">
             <v-icon color="highlight4">mdi-chili-mild</v-icon>
             Spice applied!
         </div>

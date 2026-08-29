@@ -1,7 +1,7 @@
 <template>
     <div>
         <div class="mb-4">
-            <div class="text-subtitle-2 text-medium-emphasis">
+            <div class="text-title-small text-medium-emphasis">
                 Manage {{ typeConfig.pluralLabel }} for <span class="text-primary">{{ sceneTitle }}</span>
             </div>
         </div>
@@ -15,7 +15,7 @@
             class="mb-4"
         >
             <div class="d-flex align-center flex-wrap">
-                <span class="text-caption mr-4">
+                <span class="text-body-small mr-4">
                     Scene backdrop: <strong>{{ backdropAssetName }}</strong>
                 </span>
                 <v-switch
@@ -57,7 +57,7 @@
         >
             <template #empty>
                 <p class="mt-2">No {{ typeConfig.pluralLabel }} found for this scene</p>
-                <p class="text-caption">Generate one below, or drop an image onto the upload card.</p>
+                <p class="text-body-small">Generate one below, or drop an image onto the upload card.</p>
             </template>
             <template #badges="{ asset }">
                 <VisualAssetBadge v-if="backdropAssetId === asset.id" icon="mdi-image-area" label="Backdrop" position="bottom-left" />

@@ -267,9 +267,9 @@
     <!-- Insert Time Passage Dialog -->
     <v-dialog v-model="insertTimePassageDialog" max-width="400">
         <v-card>
-            <v-card-title class="text-body-1">Insert Time Passage</v-card-title>
+            <v-card-title class="text-body-large">Insert Time Passage</v-card-title>
             <v-card-text>
-                <p class="text-caption text-medium-emphasis mb-3">
+                <p class="text-body-small text-medium-emphasis mb-3">
                     Will be inserted after the selected message.
                 </p>
                 <div class="d-flex align-center">

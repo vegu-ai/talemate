@@ -1,8 +1,8 @@
 <template>
 
     <div>
-        <div class="text-subtitle-2 text-mutedheader" v-if="label">{{ label }}</div>
-        <div class="text-body-2 text-muted mb-3" :class="{ 'mt-1': label }" v-if="description">{{ description }}</div>
+        <div class="text-title-small text-mutedheader" v-if="label">{{ label }}</div>
+        <div class="text-body-medium text-muted mb-3" :class="{ 'mt-1': label }" v-if="description">{{ description }}</div>
 
         <!-- Preset insert: appends editable copies of the selected preset's rows -->
         <div v-if="allow_add && presets && presets.length" class="d-flex align-center mb-4" style="max-width: 480px;">
@@ -22,7 +22,7 @@
             </v-btn>
         </div>
 
-        <div v-if="!values.length" class="text-caption text-muted mb-3">{{ emptyHint }}</div>
+        <div v-if="!values.length" class="text-body-small text-muted mb-3">{{ emptyHint }}</div>
 
         <!-- Each row renders as a stacked card so wide column sets don't get
              squished into table cells (this widget lives inside modals and
@@ -34,8 +34,8 @@
                  the right, so controls don't cost a full row of vertical space
                  and the fields grid gets the full card width -->
             <div class="d-flex align-center px-4 pt-2">
-                <span class="text-caption text-muted mr-2">#{{ index + 1 }}</span>
-                <span class="text-caption text-mutedheader">{{ rowSummary(values[index]) }}</span>
+                <span class="text-body-small text-muted mr-2">#{{ index + 1 }}</span>
+                <span class="text-body-small text-mutedheader">{{ rowSummary(values[index]) }}</span>
                 <v-spacer></v-spacer>
                 <div v-for="column in railColumns(values[index])" :key="column.name" class="d-flex align-center">
                     <v-checkbox-btn
@@ -63,7 +63,7 @@
                 </v-btn>
             </div>
             <v-card-text class="pt-1 pb-2" :class="{ 'row-fields--disabled': rowDisabled(values[index]) }">
-                <v-row dense>
+                <v-row density="compact">
                     <v-col v-for="column in visibleColumns(values[index])" :key="column.name" cols="12" :sm="columnSpan(column, values[index]) >= 12 ? 12 : 6" :md="columnSpan(column, values[index])">
                         <ConfigWidgetField
                             v-model="values[index][column.name]"

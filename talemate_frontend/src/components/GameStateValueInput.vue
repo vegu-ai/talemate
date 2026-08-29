@@ -9,32 +9,32 @@
         />
 
         <template v-if="value === undefined">
-            <div class="text-caption mb-1">
+            <div class="text-body-small mb-1">
                 <v-icon size="small" class="mr-1" color="primary">mdi-variable</v-icon>
                 {{ displayLabel }}
             </div>
-            <div class="text-caption text-error">Path not found in game state</div>
+            <div class="text-body-small text-error">Path not found in game state</div>
         </template>
 
         <template v-else-if="settings.read_only">
-            <div class="text-caption mb-1">
+            <div class="text-body-small mb-1">
                 <v-icon size="small" class="mr-1" color="primary">mdi-lock-outline</v-icon>
                 {{ displayLabel }}
             </div>
-            <div class="text-body-2">{{ readOnlyValue }}</div>
+            <div class="text-body-medium">{{ readOnlyValue }}</div>
         </template>
 
         <template v-else-if="settingsTypeMismatch">
-            <div class="text-caption mb-1">
+            <div class="text-body-small mb-1">
                 <v-icon size="small" class="mr-1" color="warning">mdi-alert-outline</v-icon>
                 {{ displayLabel }}
             </div>
-            <div class="text-body-2">{{ readOnlyValue }}</div>
-            <div class="text-caption text-warning">{{ settingsTypeMismatch }}</div>
+            <div class="text-body-medium">{{ readOnlyValue }}</div>
+            <div class="text-body-small text-warning">{{ settingsTypeMismatch }}</div>
         </template>
 
         <template v-else-if="showSlider">
-            <div class="d-flex align-center ga-2 text-caption">
+            <div class="d-flex align-center ga-2 text-body-small">
                 <span class="text-truncate">{{ displayLabel }}</span>
                 <v-spacer />
                 <span class="font-weight-medium">{{ draftFor(value) }}</span>
@@ -124,24 +124,24 @@
         />
 
         <template v-else>
-            <div class="text-caption mb-1">
+            <div class="text-body-small mb-1">
                 <v-icon size="small" class="mr-1" color="primary">mdi-variable</v-icon>
                 {{ displayLabel }}
             </div>
-            <div v-if="Array.isArray(value)" class="text-caption text-medium-emphasis">
+            <div v-if="Array.isArray(value)" class="text-body-small text-medium-emphasis">
                 List with {{ value.length }} items (read-only)
             </div>
-            <div v-else-if="typeof value === 'object' && value !== null" class="text-caption text-medium-emphasis">
+            <div v-else-if="typeof value === 'object' && value !== null" class="text-body-small text-medium-emphasis">
                 Object with {{ Object.keys(value).length }} keys (read-only)
             </div>
-            <div v-else class="text-caption text-medium-emphasis">
+            <div v-else class="text-body-small text-medium-emphasis">
                 {{ typeof value }} (read-only)
             </div>
         </template>
 
         <div
             v-if="showPathSubtitle && settings.label"
-            class="text-caption text-medium-emphasis mt-1 game-state-path-subtitle"
+            class="text-body-small text-medium-emphasis mt-1 game-state-path-subtitle"
         >
             {{ path }}
         </div>

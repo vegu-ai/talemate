@@ -1,6 +1,6 @@
 <template>
     <v-list-item density="compact" @click="$emit('click', prompt)">
-        <v-list-item-title class="text-caption">
+        <v-list-item-title class="text-body-small">
             <v-row>
                 <v-col cols="2" class="text-info">#{{ prompt.num }}</v-col>
                 <v-col cols="10" class="text-right">
@@ -47,7 +47,7 @@
                 </v-col>
             </v-row>
         </v-list-item-title>
-        <v-list-item-subtitle class="text-caption">
+        <v-list-item-subtitle class="text-body-small">
             <v-chip
                 v-if="prompt.agent_name"
                 size="x-small"

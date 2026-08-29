@@ -11,12 +11,12 @@
         class="described-setting"
         @update:modelValue="(v) => $emit('update:enabled', !!v)">
         <template v-slot:message="{ message }">
-          <div class="text-caption text-medium-emphasis mb-8">{{ message }}</div>
+          <div class="text-body-small text-medium-emphasis mb-8">{{ message }}</div>
         </template>
       </v-checkbox>
       <div v-else-if="schema.container" class="text-muted mt-2">
         {{ schema.description }}
-        <p v-if="schema.warning" class="text-warning mt-2 text-caption">
+        <p v-if="schema.warning" class="text-warning mt-2 text-body-small">
           <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
           {{ schema.warning }}
         </p>
@@ -43,7 +43,7 @@
       <div v-for="(field, configKey) in schema.config" :key="configKey">
         <div v-if="configKey !== 'dynamic_children' && (values.enabled || alwaysVisible) && testConfigConditional(field)">
           <div v-if="field.title">
-            <div class="text-caption text-muted text-uppercase">{{ field.title }}</div>
+            <div class="text-body-small text-muted text-uppercase">{{ field.title }}</div>
             <v-divider class="mb-2"></v-divider>
           </div>
 

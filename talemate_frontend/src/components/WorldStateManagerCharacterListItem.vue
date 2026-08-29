@@ -8,7 +8,7 @@
         </template>
         <v-list-item-title>{{ character.name }}</v-list-item-title>
         <v-list-item-subtitle>
-            <div class="text-caption">
+            <div class="text-body-small">
                 <v-chip v-if="character.is_player === true" label size="x-small"
                     :variant="selectedName === character.name ? 'flat' : 'tonal'" color="info">Player</v-chip>
                 <v-chip v-else-if="character.is_player === false" label size="x-small"

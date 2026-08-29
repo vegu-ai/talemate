@@ -67,7 +67,7 @@
                 :disabled="groupHasLocked"
                 @confirm="removeTemplateGroup"
             />
-            <div v-if="groupHasLocked" class="text-caption text-muted ml-2">The group holds locked templates and cannot be removed.</div>
+            <div v-if="groupHasLocked" class="text-body-small text-muted ml-2">The group holds locked templates and cannot be removed.</div>
         </v-card-actions>
     </v-card>
 
@@ -283,7 +283,7 @@
                     </v-card-actions>
                 </v-card>
 
-                <v-card elevation="7" density="compact" class="mt-2" v-for="[templateType, helpMessage] in sortedHelpMessages" :key="templateType">
+                <v-card elevation="3" density="compact" class="mt-2" v-for="[templateType, helpMessage] in sortedHelpMessages" :key="templateType">
                     <v-card-title>
                         <v-icon size="small" class="mr-2" :color="colorForTemplate({template_type: templateType})">{{ iconForTemplate({template_type: templateType}) }}</v-icon>
                         {{ toLabel(templateType) }}

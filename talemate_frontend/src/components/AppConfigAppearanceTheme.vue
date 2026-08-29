@@ -2,24 +2,24 @@
     <div class="ma-3">
         <v-alert color="info" variant="tonal" density="compact" class="mb-4" data-setting-anchor="new-theme-info">
             <div class="d-flex align-center flex-wrap">
-                <span class="text-caption">New themes are added as templates in the Templates tab.</span>
+                <span class="text-body-small">New themes are added as templates in the Templates tab.</span>
                 <v-spacer></v-spacer>
                 <v-btn size="small" variant="text" color="info" prepend-icon="mdi-group" @click="openTemplates">Open Templates</v-btn>
             </div>
         </v-alert>
 
-        <div v-if="groups === null" class="text-caption text-muted">Loading themes &hellip;</div>
-        <div v-else-if="!groups.length" class="text-caption text-muted">No theme templates found.</div>
+        <div v-if="groups === null" class="text-body-small text-muted">Loading themes &hellip;</div>
+        <div v-else-if="!groups.length" class="text-body-small text-muted">No theme templates found.</div>
 
         <div v-for="group in groups" :key="group.uid" class="mb-3">
-            <div class="text-caption text-muted mb-1">
+            <div class="text-body-small text-muted mb-1">
                 <v-icon size="small" class="mr-1">mdi-group</v-icon>{{ group.name }}
             </div>
             <v-card v-for="theme in group.themes" :key="theme.id" variant="outlined" class="mb-2">
                 <div class="d-flex align-center flex-wrap pa-2">
                     <ThemeSwatches :theme="theme" labels class="mr-3" />
                     <div class="d-flex align-center">
-                        <span class="text-body-2">{{ theme.name }}</span>
+                        <span class="text-body-medium">{{ theme.name }}</span>
                         <v-icon v-if="theme.favorite" size="x-small" color="favorite" class="ml-1">mdi-star
                             <v-tooltip activator="parent" location="top">Favorite</v-tooltip>
                         </v-icon>

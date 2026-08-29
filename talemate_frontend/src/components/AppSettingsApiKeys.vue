@@ -1,23 +1,23 @@
 <template>
     <v-card v-for="provider in providers" :key="provider.id" class="mb-3" variant="tonal" :data-setting-anchor="provider.id">
-        <v-card-title class="text-subtitle-1">
+        <v-card-title class="text-body-large">
             <v-icon start size="small">{{ provider.icon || 'mdi-api' }}</v-icon>
             {{ provider.title }}
         </v-card-title>
         <v-card-text>
-            <div class="text-medium-emphasis text-body-2 mb-2">
+            <div class="text-medium-emphasis text-body-medium mb-2">
                 <p v-if="provider.description" class="mb-1">{{ provider.description }}</p>
                 <template v-if="provider.id === 'google_api'">
                     <p class="mb-2"><strong>Option&nbsp;1 – API&nbsp;Key&nbsp;(recommended)</strong></p>
                     <p class="mb-1">Create a Google API key at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> and paste it in the field below. This is the quickest way to start using Gemini models.</p>
                     <p class="mb-2 mt-3"><strong>Option&nbsp;2 – Vertex&nbsp;AI service&nbsp;account&nbsp;(advanced)</strong></p>
                     <p class="mb-0">If you prefer using a full Google Cloud project, follow the setup guide <a href="https://cloud.google.com/vertex-ai/docs/start/client-libraries" target="_blank">here</a> to generate a service-account JSON credential file, then complete the legacy fields below.</p>
-                    <p class="text-caption mt-1 text-muted">
+                    <p class="text-body-small mt-1 text-muted">
                         If both are setup, the API key will be used.
                     </p>
                 </template>
                 <template v-else>
-                    Get your key from <a :href="provider.url" target="_blank">{{ provider.urlLabel || provider.url }}</a> <span v-if="provider.urlNote" class="text-caption">{{ provider.urlNote }}</span>
+                    Get your key from <a :href="provider.url" target="_blank">{{ provider.urlLabel || provider.url }}</a> <span v-if="provider.urlNote" class="text-body-small">{{ provider.urlNote }}</span>
                 </template>
             </div>
             <v-text-field type="password" v-model="config[provider.section].api_key"

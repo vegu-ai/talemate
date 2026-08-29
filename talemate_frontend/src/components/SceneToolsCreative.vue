@@ -73,7 +73,7 @@
 
                 <v-row>
                     <v-col cols="5">
-                        <div class="text-caption text-uppercase text-muted"><v-icon>mdi-cube-scan</v-icon> Templates ({{ introduceCharacterTemplateCount }})</div>
+                        <div class="text-body-small text-uppercase text-muted"><v-icon>mdi-cube-scan</v-icon> Templates ({{ introduceCharacterTemplateCount }})</div>
                         <WorldStateManagerTemplateApplicator
                             ref="templateApplicator"
                             :validateTemplate="validateTemplate"
@@ -85,7 +85,7 @@
 
                     </v-col>
                     <v-col cols="7">
-                        <div class="text-caption text-uppercase text-muted"><v-icon>mdi-cog</v-icon> Options</div>
+                        <div class="text-body-small text-uppercase text-muted"><v-icon>mdi-cog</v-icon> Options</div>
                         <v-row>
                             <v-col cols="4">
                                 <v-checkbox v-model="newIntroduction.determine_name" label="Determine name" color="primary" hint="Try to determine an explicit name for the character."></v-checkbox>

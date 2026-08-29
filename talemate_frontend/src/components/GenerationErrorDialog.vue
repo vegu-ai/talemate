@@ -10,7 +10,7 @@
                     {{ errorMessage }}
                     <span v-if="statusCode" class="text-muted"> (HTTP {{ statusCode }})</span>
                 </v-alert>
-                <p v-if="queue.length" class="text-muted text-caption mb-0">
+                <p v-if="queue.length" class="text-muted text-body-small mb-0">
                     <v-icon icon="mdi-layers" size="x-small" class="mr-1"></v-icon>
                     {{ queue.length }} more error{{ queue.length > 1 ? 's' : '' }} pending
                 </p>

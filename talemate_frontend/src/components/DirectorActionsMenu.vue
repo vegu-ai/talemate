@@ -22,7 +22,7 @@
                     </v-chip>
                 </template>
                 <v-list density="compact">
-                    <v-list-subheader class="text-caption">
+                    <v-list-subheader class="text-body-small">
                         <v-icon size="small" class="mr-1">mdi-information-outline</v-icon>
                         Disable actions to prevent the director from using them
                     </v-list-subheader>
@@ -43,12 +43,12 @@
                                 hide-details
                             ></v-checkbox-btn>
                         </template>
-                        <v-list-item-title class="text-caption">
+                        <v-list-item-title class="text-body-small">
                             {{ choice.label }}
-                            <span v-if="lockedActionIds.has(choice.value)" class="text-caption text-muted ml-1">(locked)</span>
+                            <span v-if="lockedActionIds.has(choice.value)" class="text-body-small text-muted ml-1">(locked)</span>
                         </v-list-item-title>
                     </v-list-item>
-                    <v-list-item v-if="actionChoices.length === 0" class="text-caption text-muted">
+                    <v-list-item v-if="actionChoices.length === 0" class="text-body-small text-muted">
                         No actions available
                     </v-list-item>
                 </v-list>

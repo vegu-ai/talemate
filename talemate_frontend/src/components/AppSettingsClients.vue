@@ -11,7 +11,7 @@
                         <v-icon v-else :color="statusColor(name)" size="14" class="mr-3">mdi-checkbox-blank-circle</v-icon>
                     </template>
                     <v-list-item-title>{{ name }}</v-list-item-title>
-                    <v-list-item-subtitle class="text-caption">
+                    <v-list-item-subtitle class="text-body-small">
                         {{ typeTitle(config.clients[name].type) }}
                         <span v-if="modelHint(name)" class="text-muted"> — {{ modelHint(name) }}</span>
                     </v-list-item-subtitle>
@@ -42,7 +42,7 @@
             <div v-if="selectedClient">
                 <div class="d-flex align-center mb-2">
                     <v-icon class="mr-2" color="primary">mdi-network-outline</v-icon>
-                    <span class="text-subtitle-1">{{ selectedName }}</span>
+                    <span class="text-body-large">{{ selectedName }}</span>
                     <v-spacer></v-spacer>
                     <v-btn variant="text" size="small" color="primary" :prepend-icon="paramsPinned ? 'mdi-pin-off' : 'mdi-pin'"
                         data-setting-anchor="inference-param-panel" @click="togglePinnedParams">{{ paramsPinned ? 'Unpin parameters' : 'Pin parameters' }}

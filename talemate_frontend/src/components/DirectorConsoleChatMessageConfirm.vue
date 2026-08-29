@@ -3,16 +3,16 @@
         <template v-if="!decision">
             <div class="d-flex align-center ga-2">
                 <v-icon color="warning">mdi-alert</v-icon>
-                <div class="text-caption font-weight-medium">Confirm action: {{ name || 'Unknown' }}</div>
+                <div class="text-body-small font-weight-medium">Confirm action: {{ name || 'Unknown' }}</div>
                 <v-spacer />
-                <div class="text-caption" :class="{ 'text-error': timeLeft <= 30 }" v-if="timeLeft > 0">
+                <div class="text-body-small" :class="{ 'text-error': timeLeft <= 30 }" v-if="timeLeft > 0">
                     {{ formattedTime }}
                 </div>
             </div>
             <div class="mt-1" v-if="description">
                 <DirectorConsoleChatMessageMarkdown :text="description" />
             </div>
-            <div class="text-caption mt-2" v-else>A write action requires your confirmation to proceed.</div>
+            <div class="text-body-small mt-2" v-else>A write action requires your confirmation to proceed.</div>
             <div class="d-flex ga-2 mt-2">
                 <v-btn size="x-small" color="primary" :loading="confirming" @click="decide('confirm')">Confirm</v-btn>
                 <v-btn size="x-small" color="delete" variant="text" :loading="confirming" @click="decide('reject')">Reject</v-btn>
@@ -21,7 +21,7 @@
         <template v-else>
             <div class="d-flex align-center ga-2">
                 <v-icon :color="decision === 'confirm' ? 'success' : 'delete'">{{ decision === 'confirm' ? 'mdi-check-circle' : 'mdi-close-circle' }}</v-icon>
-                <div class="text-caption font-weight-medium">action {{ name || 'Unknown' }} {{ decision === 'confirm' ? 'APPROVED' : 'REJECTED' }}</div>
+                <div class="text-body-small font-weight-medium">action {{ name || 'Unknown' }} {{ decision === 'confirm' ? 'APPROVED' : 'REJECTED' }}</div>
             </div>
         </template>
     </div>

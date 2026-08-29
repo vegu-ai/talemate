@@ -43,7 +43,7 @@
                     instructions-placeholder="Describe the writing style you want instructions generated for."
                     @generate="onGenerateInstructions"
                 />
-                <div v-if="!sceneActive" class="text-caption text-muted text-right">Requires an active scene to generate.</div>
+                <div v-if="!sceneActive" class="text-body-small text-muted text-right">Requires an active scene to generate.</div>
             </v-col>
             <v-col cols="12" sm="4" xxl="7">
                 <v-checkbox 
@@ -64,12 +64,12 @@
                 </v-chip>
             </v-card-title>
             <v-card-text>
-                <p class="text-caption mb-4">
+                <p class="text-body-small mb-4">
                     Add phrases that should be detected in the generated content. 
                     When these phrases are found, the AI may apply the specified instructions.
                 </p>
 
-                <v-alert v-if="hasAnyWithSemanticSimilarity" class="text-caption mb-4 text-muted" variant="text" icon="mdi-information-outline">
+                <v-alert v-if="hasAnyWithSemanticSimilarity" class="text-body-small mb-4 text-muted" variant="text" icon="mdi-information-outline">
                     <p class="text-uppercase">
                         <strong class="text-warning">Some phrases are using semantic similarity.</strong> 
                     </p>

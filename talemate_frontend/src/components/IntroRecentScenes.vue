@@ -18,7 +18,7 @@
         <v-card-text v-if="config != null">
             <div class="tiles">
                 <div class="tile" v-for="(scene, index) in recentScenes()" :key="index">
-                    <v-card :disabled="!sceneLoadingAvailable || sceneIsLoading" density="compact" elevation="7"  @click="loadScene(scene)" color="surface-light" variant="outlined">
+                    <v-card :disabled="!sceneLoadingAvailable || sceneIsLoading" density="compact" elevation="3"  @click="loadScene(scene)" color="surface-light" variant="outlined">
                         <v-card-title class="text-primary">
                             {{ filenameToTitle(scene.filename) }}
                         </v-card-title>
@@ -29,7 +29,7 @@
                             <div class="cover-image-placeholder">
                                 <v-img cover v-if="scene.cover_image != null && coverImages[scene.cover_image.id] != null" :src="getCoverImageSrc(scene.cover_image.id)" class="portrait-image"></v-img>
                             </div>
-                            <p class="text-caption text-center text-medium-emphasis">{{ prettyDate(scene.date) }}</p>
+                            <p class="text-body-small text-center text-medium-emphasis">{{ prettyDate(scene.date) }}</p>
                         </v-card-text>
                     </v-card>
                     <div class="text-center">

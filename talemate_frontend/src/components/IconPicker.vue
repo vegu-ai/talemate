@@ -28,7 +28,7 @@
             </template>
         </v-text-field>
 
-        <div class="text-caption mt-1">
+        <div class="text-body-small mt-1">
             <a :href="mdiListingUrl" target="_blank" rel="noopener" class="text-muted">Browse all Material Design Icons</a>
         </div>
     </div>

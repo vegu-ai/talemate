@@ -88,7 +88,7 @@
 
         <v-tabs-window-item value="actions">
             <v-toolbar density="compact" flat color="mutedbg">
-                <v-toolbar-title class="text-subtitle-2 text-muted"><v-icon class="mr-1">mdi-brain</v-icon> Actions</v-toolbar-title>
+                <v-toolbar-title class="text-title-small text-muted"><v-icon class="mr-1">mdi-brain</v-icon> Actions</v-toolbar-title>
                 <v-chip size="x-small" color="primary" class="ml-2">Max. {{ max_messages }}</v-chip>
                 <v-spacer></v-spacer>
                 <v-btn color="delete" variant="text" size="small" @click="clearMessages" prepend-icon="mdi-close">Clear</v-btn>
@@ -101,7 +101,7 @@
                     :key="message.id" 
                     :message="message" 
                 />
-                <div v-if="regularMessages.length === 0" class="text-caption text-muted pa-2">
+                <div v-if="regularMessages.length === 0" class="text-body-small text-muted pa-2">
                     No director messages yet
                 </div>
             </div>
@@ -109,7 +109,7 @@
         
         <v-tabs-window-item value="function_calls">
             <v-toolbar density="compact" flat color="mutedbg">
-                <v-toolbar-title class="text-subtitle-2 text-muted"><v-icon class="mr-1">mdi-function</v-icon> Function Calls</v-toolbar-title>
+                <v-toolbar-title class="text-title-small text-muted"><v-icon class="mr-1">mdi-function</v-icon> Function Calls</v-toolbar-title>
                 <v-spacer></v-spacer>
             </v-toolbar>
             <v-divider class="mb-2"></v-divider>
@@ -119,7 +119,7 @@
                     :key="message.id" 
                     :message="message" 
                 />
-                <div v-if="functionCallMessages.length === 0" class="text-caption text-muted pa-2">
+                <div v-if="functionCallMessages.length === 0" class="text-body-small text-muted pa-2">
                     No function calls yet
                 </div>
             </div>

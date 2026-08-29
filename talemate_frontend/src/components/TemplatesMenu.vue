@@ -6,7 +6,7 @@
         </v-list-subheader>
         <v-list-item prepend-icon="mdi-plus" @click.stop="$emit('navigate-template', '$CREATE_GROUP')">
             <v-list-item-title>Create Group</v-list-item-title>
-            <v-list-item-subtitle class="text-caption">Create a new template group.</v-list-item-subtitle>
+            <v-list-item-subtitle class="text-body-small">Create a new template group.</v-list-item-subtitle>
         </v-list-item>
     </v-list>
     <v-list v-for="(group, index) in safeGroups" :key="index" density="compact" slim color="primary" selectable  @update:selected="onSelectGroup" :selected="selectedGroups">
@@ -19,7 +19,7 @@
             {{ toLabel(group.name) }}
         </v-list-item>
         <v-card v-if="groupIsOpen(index)">
-            <v-card-text class="text-medium-emphasis text-caption">
+            <v-card-text class="text-medium-emphasis text-body-small">
                 <p><span class="text-high-emphasis">Author</span> <span>{{ group.author }}</span></p>
                 {{ group.description }}
             </v-card-text>
@@ -30,7 +30,7 @@
             <!-- create template -->
             <v-list-item prepend-icon="mdi-plus" color="primary" :value="`${group.uid}__$CREATE`">
                 <v-list-item-title>Create Template</v-list-item-title>
-                <v-list-item-subtitle class="text-caption">Create a new template in this group.</v-list-item-subtitle>
+                <v-list-item-subtitle class="text-body-small">Create a new template in this group.</v-list-item-subtitle>
             </v-list-item>
 
             <!-- templates -->
@@ -39,7 +39,7 @@
                     <v-icon :color="colorForTemplate(template)">{{ iconForTemplate(template) }}</v-icon>
                 </template>
                 <v-list-item-title>{{ template.name }}</v-list-item-title>
-                <v-list-item-subtitle class="text-caption">
+                <v-list-item-subtitle class="text-body-small">
                     {{ toLabel(template.template_type) }}
                 </v-list-item-subtitle>
                 <v-list-item-subtitle>

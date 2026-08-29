@@ -5,7 +5,7 @@
                 <span class="headline">Scene State Editor</span>
             </v-card-title>
             <v-card-text>
-                <v-alert type="warning" class="text-caption" variant="tonal">
+                <v-alert type="warning" class="text-body-small" variant="tonal">
                     Editing the scene state through this editor can ABSOLUTELY brick your game. Be careful. However as long as you do not save the scene afterwards, you can always reload the game to get back to the original state.
                 </v-alert>
                 <Codemirror

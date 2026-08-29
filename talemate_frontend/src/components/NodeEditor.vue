@@ -24,7 +24,7 @@
                 <v-toolbar-title><v-icon class="mr-2" color="highlight6">mdi-chart-timeline-variant-shimmer</v-icon>Nodes
                 </v-toolbar-title>
                 
-                <span class="text-caption" :class="editingNodeIsScene ? 'text-primary' : 'text-muted'">
+                <span class="text-body-small" :class="editingNodeIsScene ? 'text-primary' : 'text-muted'">
                     <v-icon size="small" class="mr-1">mdi-file</v-icon>
                     {{ editingNodeDisplayLabel }}
                 </span>
@@ -221,7 +221,7 @@
                                 @ready="onPropertyEditorCodeReady"
                                 @keydown.capture="onPropertyEditorKeydown"
                             ></Codemirror>
-                            <span class="text-caption text-muted">({{ primaryModifierLabel }}+Enter to submit changes)</span>
+                            <span class="text-body-small text-muted">({{ primaryModifierLabel }}+Enter to submit changes)</span>
                         </v-card-text>
                         <v-card-actions v-if="propertyEditorType === 'color'">
                             <v-spacer></v-spacer>
@@ -249,11 +249,11 @@
             </div>
 
             <v-sheet v-if="editingLockedModule" class="transparent-background">
-                <p v-if="scene.env === 'creative'" class="ma-2 text-muted text-caption">
+                <p v-if="scene.env === 'creative'" class="ma-2 text-muted text-body-small">
                     <v-icon size="small" class="mr-1">mdi-lock</v-icon>
                     The node editor is locked in this environment. Switch to <v-btn size="x-small" variant="text" @click="setEnvCreative" class="text-primary" prepend-icon="mdi-palette">creative mode</v-btn> to edit nodes.
                 </p>
-                <p class="ma-2 text-muted text-caption">
+                <p class="ma-2 text-muted text-body-small">
                     <v-icon size="small" class="mr-1">mdi-lock</v-icon>
                     This module is locked and cannot be directly edited.
                     <span v-if="editingOriginalSceneLoop">

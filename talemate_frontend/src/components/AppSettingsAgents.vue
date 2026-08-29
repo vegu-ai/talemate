@@ -18,7 +18,7 @@
                             </template>
                         </v-tooltip>
                     </v-list-item-title>
-                    <v-list-item-subtitle class="text-caption">
+                    <v-list-item-subtitle class="text-body-small">
                         <span v-if="clientHint(agent)">{{ clientHint(agent) }}</span>
                         <span v-else-if="!agent.data.requires_llm_client" class="text-muted">No LLM client needed</span>
                         <span v-else class="text-muted">No client assigned</span>
@@ -38,7 +38,7 @@
             <div v-if="selectedAgent">
                 <div class="d-flex align-center mb-2">
                     <v-icon class="mr-2" color="primary">mdi-transit-connection-variant</v-icon>
-                    <span class="text-subtitle-1">{{ selectedAgent.label || selectedAgent.name }}</span>
+                    <span class="text-body-large">{{ selectedAgent.label || selectedAgent.name }}</span>
                     <v-spacer></v-spacer>
                     <v-btn-toggle v-if="hasAnyOverridable" :model-value="mode" @update:modelValue="(v) => v && setMode(v)"
                         mandatory density="compact" variant="outlined" color="primary" divided class="mr-4">
@@ -55,7 +55,7 @@
 
                 <template v-if="mode === 'scene'">
                     <v-alert density="compact" variant="tonal" color="primary" class="mb-2" icon="mdi-movie-open-cog-outline">
-                        <div class="text-caption">
+                        <div class="text-body-small">
                             <template v-if="sceneSettingsFile">
                                 Scene overrides stored in
                                 <code v-if="sceneProjectName">{{ sceneProjectName }}/{{ sceneSettingsDirname }}/{{ sceneSettingsFile }}</code>
@@ -66,7 +66,7 @@
                             </template>
                         </div>
                     </v-alert>
-                    <div class="text-caption text-muted mb-3">
+                    <div class="text-body-small text-muted mb-3">
                         <v-icon size="x-small" class="mr-1">mdi-gesture-tap-button</v-icon>
                         Click <v-icon size="x-small" class="mx-1">mdi-link-variant-off</v-icon> next to a field to activate an override for this scene.
                         Overrides are applied when you save.
@@ -74,7 +74,7 @@
                 </template>
 
                 <v-alert v-if="selectedAgent.data.experimental" type="warning" variant="text" density="compact" icon="mdi-flask-outline" class="mb-2">
-                    <span class="text-caption">
+                    <span class="text-body-small">
                         This agent is currently experimental and may significantly decrease performance and / or require
                         strong LLMs to function properly.
                     </span>

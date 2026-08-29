@@ -11,7 +11,7 @@
     hide-details
     style="max-width: 640px"
   >
-    <template #item="{ props, item }">
+    <template #item="{ props, internalItem: item }">
       <!-- Override default title/subtitle to prevent duplicates -->
       <v-list-item
         v-bind="props"
@@ -130,4 +130,4 @@ export default {
 .voice-unready {
   opacity: 0.4;
 }
-</style> 
+</style>

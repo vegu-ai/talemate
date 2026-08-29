@@ -25,7 +25,7 @@
                     <tr v-if="typ.endsWith('_messages') || ['quotes', 'parentheses', 'brackets', 'emphasis', 'entities'].includes(typ)" :style="colorPickerTarget === typ ? 'background-color: rgba(128, 128, 128, 0.1);' : ''">
                         <td style="padding: 4px 12px;">
                             <div class="d-flex align-center">
-                                <div class="text-caption font-weight-medium">{{ typLabelMap[typ] || typ }}</div>
+                                <div class="text-body-small font-weight-medium">{{ typLabelMap[typ] || typ }}</div>
                                 <v-chip v-if="typ === 'quotes'" size="x-small" variant="text" class="ml-1">" "</v-chip>
                                 <v-chip v-if="typ === 'parentheses'" size="x-small" variant="text" class="ml-1">( )</v-chip>
                                 <v-chip v-if="typ === 'brackets'" size="x-small" variant="text" class="ml-1">[ ]</v-chip>

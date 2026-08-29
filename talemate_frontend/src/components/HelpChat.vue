@@ -42,7 +42,7 @@
     </v-toolbar>
 
     <v-toolbar density="compact" flat color="mutedbg">
-        <v-toolbar-title class="text-subtitle-2 text-muted d-flex align-center" style="overflow: visible;">
+        <v-toolbar-title class="text-title-small text-muted d-flex align-center" style="overflow: visible;">
             <v-tooltip v-if="activeChatId" :text="sceneAware ? 'The help chat can see your loaded scene. Click to make it unaware.' : 'The help chat cannot see your loaded scene. Click to make it aware.'" location="top" max-width="300">
                 <template v-slot:activator="{ props }">
                     <v-chip
@@ -79,7 +79,7 @@
     </v-toolbar>
 
     <div class="d-flex align-center flex-wrap px-4 pt-1">
-        <span class="text-caption text-muted mr-2">May change:</span>
+        <span class="text-body-small text-muted mr-2">May change:</span>
         <v-tooltip
             v-for="permission in permissionChips"
             :key="permission.key"
@@ -104,12 +104,12 @@
                 </v-chip>
             </template>
         </v-tooltip>
-        <span v-if="permissionError" class="text-caption text-error ml-1">{{ permissionError }}</span>
+        <span v-if="permissionError" class="text-body-small text-error ml-1">{{ permissionError }}</span>
     </div>
 
     <v-tooltip v-if="permissionWarning" :text="permissionWarning" location="bottom" max-width="400">
         <template v-slot:activator="{ props }">
-            <div v-bind="props" class="text-caption text-warning px-4 pb-1">
+            <div v-bind="props" class="text-body-small text-warning px-4 pb-1">
                 <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
                 The help agent can write changes on its own - a strong agentic reasoning model is recommended.
             </div>
@@ -160,7 +160,7 @@
                         </v-btn>
                     </div>
                 </div>
-                <div v-if="chatMessages.length === 0" class="text-caption text-muted pa-2">
+                <div v-if="chatMessages.length === 0" class="text-body-small text-muted pa-2">
                     {{ activeChatId ? 'No messages yet' : 'Click + to begin' }}
                 </div>
             </div>

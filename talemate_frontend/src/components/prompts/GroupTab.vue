@@ -3,11 +3,11 @@
         <!-- Header with New File button -->
         <div class="header d-flex align-center pa-3">
             <div>
-                <span class="text-subtitle-1 font-weight-medium">
+                <span class="text-body-large font-weight-medium">
                     <v-icon start size="small">mdi-folder-edit-outline</v-icon>
                     {{ group }}
                 </span>
-                <span v-if="isScene" class="text-caption text-medium-emphasis ml-2">
+                <span v-if="isScene" class="text-body-small text-medium-emphasis ml-2">
                     (scene-specific templates)
                 </span>
             </div>
@@ -41,17 +41,17 @@
         <v-row no-gutters class="content-split">
             <!-- Tree Panel -->
             <v-col cols="auto" class="tree-panel pa-2">
-                <div class="text-subtitle-2 text-medium-emphasis mb-2">
+                <div class="text-title-small text-medium-emphasis mb-2">
                     <v-icon size="small" class="mr-1">mdi-file-tree</v-icon>
                     Templates
-                    <span class="text-caption">(muted = not overridden)</span>
+                    <span class="text-body-small">(muted = not overridden)</span>
                 </div>
                 <div class="tree-container">
                     <!-- Empty state when no templates exist -->
                     <div v-if="groupTemplates.length === 0 && !loading" class="text-center text-medium-emphasis pa-4">
                         <v-icon size="48" color="muted">mdi-file-outline</v-icon>
-                        <div class="mt-2 text-body-2">No templates available</div>
-                        <div class="text-caption">Templates will appear here once loaded</div>
+                        <div class="mt-2 text-body-medium">No templates available</div>
+                        <div class="text-body-small">Templates will appear here once loaded</div>
                     </div>
                     <TemplateTree
                         v-else
@@ -68,7 +68,7 @@
 
             <!-- Editor Panel -->
             <v-col class="editor-panel pa-2">
-                <div class="text-subtitle-2 text-medium-emphasis mb-2">
+                <div class="text-title-small text-medium-emphasis mb-2">
                     <v-icon size="small" class="mr-1">mdi-code-braces</v-icon>
                     Editor
                 </div>
@@ -141,8 +141,8 @@
                             variant="tonal"
                             class="w-100"
                         >
-                            <div class="text-caption">Syntax errors:</div>
-                            <ul class="text-caption">
+                            <div class="text-body-small">Syntax errors:</div>
+                            <ul class="text-body-small">
                                 <li v-for="(error, idx) in syntaxErrors" :key="idx">
                                     {{ error }}
                                 </li>
@@ -155,7 +155,7 @@
                     <v-card-text class="text-center text-medium-emphasis">
                         <v-icon size="64" color="muted">mdi-file-document-edit-outline</v-icon>
                         <div class="mt-2">Select a template to edit</div>
-                        <div class="text-caption">Click a muted template to create an override</div>
+                        <div class="text-body-small">Click a muted template to create an override</div>
                     </v-card-text>
                 </v-card>
             </v-col>

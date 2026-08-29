@@ -3,11 +3,11 @@
         <!-- Header -->
         <div class="header d-flex align-center pa-3">
             <div>
-                <span class="text-subtitle-1 font-weight-medium">
+                <span class="text-body-large font-weight-medium">
                     <v-icon start size="small">mdi-code-braces</v-icon>
                     LLM Prompt Templates
                 </span>
-                <span class="text-caption text-medium-emphasis ml-2">
+                <span class="text-body-small text-medium-emphasis ml-2">
                     Base chat formatting templates for local LLM inference
                 </span>
             </div>
@@ -35,10 +35,10 @@
                 </div>
                 <template v-else>
                     <!-- User Templates -->
-                    <div class="text-subtitle-2 text-medium-emphasis mb-1">
+                    <div class="text-title-small text-medium-emphasis mb-1">
                         <v-icon size="small" class="mr-1">mdi-account-edit</v-icon>
                         User Templates
-                        <span class="text-caption">(editable)</span>
+                        <span class="text-body-small">(editable)</span>
                     </div>
                     <v-list density="compact" class="mb-3" v-if="userTemplates.length > 0">
                         <v-list-item
@@ -51,20 +51,20 @@
                             <template v-slot:prepend>
                                 <v-icon size="small" color="primary">mdi-file-document-edit-outline</v-icon>
                             </template>
-                            <v-list-item-title class="text-body-2">user/{{ tmpl.name }}</v-list-item-title>
+                            <v-list-item-title class="text-body-medium">user/{{ tmpl.name }}</v-list-item-title>
                         </v-list-item>
                     </v-list>
-                    <div v-else class="text-caption text-medium-emphasis pa-2 mb-3">
+                    <div v-else class="text-body-small text-medium-emphasis pa-2 mb-3">
                         No user templates yet. Click "New Template" or copy a built-in template.
                     </div>
 
                     <v-divider class="mb-2"></v-divider>
 
                     <!-- Built-in Templates -->
-                    <div class="text-subtitle-2 text-medium-emphasis mb-1">
+                    <div class="text-title-small text-medium-emphasis mb-1">
                         <v-icon size="small" class="mr-1">mdi-lock-outline</v-icon>
                         Built-in Templates
-                        <span class="text-caption">(read-only)</span>
+                        <span class="text-body-small">(read-only)</span>
                     </div>
                     <v-list density="compact">
                         <v-list-item
@@ -77,7 +77,7 @@
                             <template v-slot:prepend>
                                 <v-icon size="small" color="muted">mdi-file-document-outline</v-icon>
                             </template>
-                            <v-list-item-title class="text-body-2">{{ tmpl.name }}</v-list-item-title>
+                            <v-list-item-title class="text-body-medium">{{ tmpl.name }}</v-list-item-title>
                         </v-list-item>
                     </v-list>
                 </template>
@@ -85,7 +85,7 @@
 
             <!-- Editor Panel -->
             <v-col class="editor-panel pa-2">
-                <div class="text-subtitle-2 text-medium-emphasis mb-2">
+                <div class="text-title-small text-medium-emphasis mb-2">
                     <v-icon size="small" class="mr-1">mdi-code-braces</v-icon>
                     {{ selectedSource === 'builtin' ? 'Preview' : 'Editor' }}
                 </div>
@@ -165,7 +165,7 @@
                     <v-card-text class="text-center text-medium-emphasis">
                         <v-icon size="64" color="muted">mdi-file-document-edit-outline</v-icon>
                         <div class="mt-2">Select a template to view or edit</div>
-                        <div class="text-caption">User templates are fully editable. Built-in templates are read-only but can be copied.</div>
+                        <div class="text-body-small">User templates are fully editable. Built-in templates are read-only but can be copied.</div>
                     </v-card-text>
                 </v-card>
             </v-col>

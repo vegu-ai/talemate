@@ -6,7 +6,7 @@ import {
     createPresetGroupForClient,
     groupNameError,
     movePinnedPanelClient,
-    panelSettings,
+    pinnedPanelClient,
     presetGroupItems,
     presetKeys,
     presetLabel,
@@ -34,7 +34,7 @@ function makeConfig() {
                     },
                 },
             },
-            inference_param_panel: { enabled: true, client: "kobold" },
+            inference_param_panel: { client: "kobold" },
         },
     };
 }
@@ -348,15 +348,18 @@ describe("changedValues", () => {
     });
 });
 
-describe("panelSettings", () => {
-    it("reads the stored settings", () => {
-        expect(panelSettings(makeConfig().presets)).toEqual({
-            enabled: true,
-            client: "kobold",
-        });
+describe("pinnedPanelClient", () => {
+    it("reads the pinned client", () => {
+        expect(pinnedPanelClient(makeConfig().presets)).toBe("kobold");
     });
 
-    it("falls back to off while the config is still empty", () => {
-        expect(panelSettings(null)).toEqual({ enabled: false, client: null });
+    it("reads null while the config is still empty", () => {
+        expect(pinnedPanelClient(null)).toBeNull();
+    });
+
+    it("reads null when no client is pinned", () => {
+        const presets = makeConfig().presets;
+        presets.inference_param_panel.client = null;
+        expect(pinnedPanelClient(presets)).toBeNull();
     });
 });

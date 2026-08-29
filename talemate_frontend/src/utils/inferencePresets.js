@@ -126,8 +126,8 @@ export function changedValues(draft, baseline) {
     return changed;
 }
 
-export function panelSettings(presets) {
-    return presets?.inference_param_panel || { enabled: false, client: null };
+export function pinnedPanelClient(presets) {
+    return presets?.inference_param_panel?.client || null;
 }
 
 // Carries the pinned client through a rename (`newName`) or a removal

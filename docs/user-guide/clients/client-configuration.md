@@ -26,8 +26,9 @@ A client marked with an **Unsaved** chip has no running counterpart yet — you 
 
 ## The client editor
 
-The header above the editor carries the name of the selected client and two actions:
+The header above the editor carries the name of the selected client and three actions:
 
+- **:material-pin: Pin parameters** — pins this client's inference parameters to a panel beside the client list, where they are tuned during play. One client is pinned at a time, and the button reads **:material-pin-off: Unpin parameters** while this one is the pinned client. Like everything else on this page it is applied when you save. See [The inference parameter panel](presets.md#the-inference-parameter-panel).
 - **:material-transit-connection-variant: Assign to all agents** — makes every agent that generates with an LLM client use this client. Like everything else on this page it is applied when you save. The button is disabled while the client itself is disabled; enable the client first with the :material-power-standby: button on its row in the sidebar.
 - **:material-close-circle-outline: Remove** — asks for confirmation, then drops the client. It is disconnected and purged when you save.
 

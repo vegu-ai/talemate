@@ -36,13 +36,6 @@
                     </v-list-item>
                 </v-list>
             </v-menu>
-
-            <v-divider class="mt-4 mb-2"></v-divider>
-
-            <v-switch v-model="paramPanelEnabled" density="compact" color="primary" hide-details
-                data-setting-anchor="inference-param-panel" label="Inference parameter panel">
-                <v-tooltip activator="parent" location="bottom" max-width="400">Lets a client's inference parameters be pinned to a panel beside the client list, where they are edited during play. Pick the client in the preset menu on its entry in that list.</v-tooltip>
-            </v-switch>
         </v-col>
 
         <v-col cols="8">
@@ -51,6 +44,12 @@
                     <v-icon class="mr-2" color="primary">mdi-network-outline</v-icon>
                     <span class="text-subtitle-1">{{ selectedName }}</span>
                     <v-spacer></v-spacer>
+                    <v-btn variant="text" size="small" color="primary" :prepend-icon="paramsPinned ? 'mdi-pin-off' : 'mdi-pin'"
+                        data-setting-anchor="inference-param-panel" @click="togglePinnedParams">{{ paramsPinned ? 'Unpin parameters' : 'Pin parameters' }}
+                        <v-tooltip activator="parent" location="bottom" max-width="400">{{ paramsPinned
+                            ? 'Take this client\'s parameters off the panel beside the client list. Applied when you save.'
+                            : 'Pin this client\'s inference parameters to a panel beside the client list, where they are edited during play. One client is pinned at a time. Applied when you save.' }}</v-tooltip>
+                    </v-btn>
                     <v-btn variant="text" size="small" color="primary" prepend-icon="mdi-transit-connection-variant"
                         :disabled="selectedClient.enabled === false"
                         data-setting-anchor="assign-to-all-agents" @click="assignToAllAgents">Assign to all agents
@@ -81,16 +80,17 @@ import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import { buildClientFromDefaults } from '@/utils/clientPresets';
 import { agentsRequiringClient } from '@/utils/agentAssignments';
 import { cloneNameKeyedMap, hasOwnName, isReservedName } from '@/utils/nameKeyedMap';
-import { movePinnedPanelClient, panelSettings } from '@/utils/inferencePresets';
+import { movePinnedPanelClient, pinnedPanelClient } from '@/utils/inferencePresets';
 
 // Clients page — master / detail management of `config.clients` in the app
 // settings working copy.
 //
 // Everything on this page is working-copy state: adding, removing and editing
-// clients only mutate `config.clients` (a name -> client map) and reach the
-// backend through the settings toolbar's Save, where deletion-by-omission
-// applies. Live client status is read-only decoration (status dot, model
-// hint) and never feeds back into the working copy.
+// clients (a name -> client map) and pinning one to the inference parameter
+// panel only mutate the working copy and reach the backend through the settings
+// toolbar's Save, where deletion-by-omission applies. Live client status is
+// read-only decoration (status dot, model hint) and never feeds back into the
+// working copy.
 export default {
     name: 'AppSettingsClients',
     components: {
@@ -112,13 +112,8 @@ export default {
         }
     },
     computed: {
-        paramPanelEnabled: {
-            get() {
-                return panelSettings(this.config?.presets).enabled;
-            },
-            set(value) {
-                this.config.presets.inference_param_panel.enabled = value;
-            },
+        paramsPinned() {
+            return !!this.selectedName && pinnedPanelClient(this.config?.presets) === this.selectedName;
         },
         clientNames() {
             return Object.keys(this.config?.clients || {}).sort((a, b) => a.localeCompare(b));
@@ -168,6 +163,10 @@ export default {
         },
     },
     methods: {
+        togglePinnedParams() {
+            this.config.presets.inference_param_panel.client = this.paramsPinned ? null : this.selectedName;
+        },
+
         hasClient(name) {
             return hasOwnName(this.config?.clients, name);
         },

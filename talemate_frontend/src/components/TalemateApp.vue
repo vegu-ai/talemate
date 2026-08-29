@@ -530,7 +530,7 @@ import { SETTINGS_PAGES } from '../utils/appSettingsRegistry.js';
 import { createConfigSaveQueue } from '../utils/configSaveQueue.js';
 import { applyAppConfigTheme } from '../utils/appTheme.js';
 import { buildNameKeyedPayload, hasOwnName } from '../utils/nameKeyedMap.js';
-import { panelSettings } from '../utils/inferencePresets.js';
+import { pinnedPanelClient } from '../utils/inferencePresets.js';
 
 export default {
   components: {
@@ -886,13 +886,13 @@ export default {
   },
   computed: {
     inferenceParamsClient() {
-      const panel = panelSettings(this.appConfig?.presets);
-      if (!panel.enabled || !panel.client) {
+      const pinned = pinnedPanelClient(this.appConfig?.presets);
+      if (!pinned) {
         return null;
       }
       // a removed client keeps its name in the config until the next save, and
       // a client name may be any string, `toString` included
-      return hasOwnName(this.appConfig?.clients, panel.client) ? panel.client : null;
+      return hasOwnName(this.appConfig?.clients, pinned) ? pinned : null;
     },
     // The help chat is the help agent's only surface, so a disabled agent
     // takes its app bar toggle with it. Only an explicit `disabled` status

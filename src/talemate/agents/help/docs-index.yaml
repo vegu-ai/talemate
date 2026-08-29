@@ -454,8 +454,9 @@
   title: Inference Configuration
   summary: Documents inference preset categories, sampler parameters, extra stop strings, advanced XTC/DRY/smoothing/adaptive
     controls, and backend support differences. Covers editing, applying or resetting presets, creating groups, assigning a
-    group to a client, and saving changes. Also covers the optional inference parameter panel pinned beside the client list,
-    its switch on the Clients settings page and the group actions in a client's preset menu.
+    group to a client, and saving changes. Also covers the inference parameter panel pinned beside the client list, the two
+    ways to pin a client to it — the Pin parameters option in the client's preset menu and the Pin parameters button on the
+    Clients settings page — and the group actions in that menu.
 - path: user-guide/clients/prompt-templates.md
   title: Prompt Templates
   summary: Explains why local clients that render their own prompts need the correct model-specific template and how Talemate

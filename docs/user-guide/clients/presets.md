@@ -179,13 +179,13 @@ You can also pick the preset group from the **Inference Presets** dropdown in th
 
 The preset editor in the settings is the full workbench. For tuning while you play, a client's parameters can be pinned to a panel that sits beside the client list, so a value is changed without leaving the scene.
 
-The panel is off until you turn it on. Open the **Settings** tab, select :material-network-outline: **Clients** under :material-connection: **Connections**, and turn on **Inference parameter panel**.
-
-![inference parameter panel setting](/talemate/img/0.40.0/client-inference-param-panel-setting.png)
-
-Then open the client listing, click the client's :material-tune: chip and choose **Pin parameters**. The panel appears next to the list.
+Open the client listing, click the client's :material-tune: chip and choose **Pin parameters**. The panel appears next to the list.
 
 ![inference parameter panel](/talemate/img/0.40.0/client-inference-param-panel.png)
+
+The settings page pins the same panel. Open the **Settings** tab, select :material-network-outline: **Clients** under :material-connection: **Connections**, select the client and click :material-pin: **Pin parameters**. This one applies when you save, the way the rest of the page does. Both controls pin and unpin the same client, so each shows what the other did — while the settings page holds unsaved edits it keeps showing its own copy, and saving it writes the pin that copy carries.
+
+![pin parameters on the clients settings page](/talemate/img/0.40.0/client-inference-param-panel-setting.png)
 
 The panel edits one preset of the client's group at a time — pick it in the **Preset** selector. It offers the same parameters as the settings editor, with the advanced samplers behind **Advanced sampling**. Every change is saved by itself a moment after you make it; there is no save button.
 

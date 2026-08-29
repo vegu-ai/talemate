@@ -86,12 +86,12 @@
                   <v-list density="compact" min-width="260">
                     <v-list-subheader>Inference group: {{ client.preset_group || "Default" }}</v-list-subheader>
 
-                    <v-list-item v-if="paramPanelEnabled" :prepend-icon="isPinned(client) ? 'mdi-pin-off' : 'mdi-pin'" @click="togglePinnedParams(client)">
+                    <v-list-item :prepend-icon="isPinned(client) ? 'mdi-pin-off' : 'mdi-pin'" @click="togglePinnedParams(client)">
                       <v-list-item-title>{{ isPinned(client) ? 'Unpin parameters' : 'Pin parameters' }}</v-list-item-title>
                       <v-list-item-subtitle>{{ isPinned(client) ? 'Close the parameter panel' : 'Tune this group beside the client list' }}</v-list-item-subtitle>
                     </v-list-item>
 
-                    <v-divider v-if="paramPanelEnabled"></v-divider>
+                    <v-divider></v-divider>
 
                     <v-list-subheader>Assign group</v-list-subheader>
 
@@ -285,7 +285,7 @@
 import AIClientRequestInformation from './AIClientRequestInformation.vue';
 import GraduatedSlider from './GraduatedSlider.vue';
 import { TOKEN_GRADUATIONS } from '@/utils/clientPresets';
-import { createPresetGroupForClient, groupNameError, panelSettings, presetGroupItems } from '@/utils/inferencePresets';
+import { createPresetGroupForClient, groupNameError, pinnedPanelClient, presetGroupItems } from '@/utils/inferencePresets';
 import { agentsRequiringClient } from '@/utils/agentAssignments';
 import { createClientSaveState } from '@/utils/clientSaveState';
 
@@ -319,11 +319,8 @@ export default {
     availablePresets() {
       return presetGroupItems(this.immutableConfig?.presets);
     },
-    paramPanelEnabled() {
-      return panelSettings(this.immutableConfig?.presets).enabled;
-    },
     pinnedParamsClient() {
-      return panelSettings(this.immutableConfig?.presets).client;
+      return pinnedPanelClient(this.immutableConfig?.presets);
     },
     visibleClients: function() {
       return this.state.clients.filter(client => !this.hideDisabled || client.status !== 'disabled');

@@ -124,7 +124,7 @@ export const SETTINGS_GROUPS = [
                     { label: 'Reasoning', anchor: 'reasoning', keywords: ['thinking', 'reason tokens', 'strip pattern'] },
                     { label: 'Rate limit and retries', anchor: 'advanced', keywords: ['requests per minute', 'throttle', 'retry', 'inference preset', 'prompt caching'] },
                     { label: 'Client system prompts', anchor: 'system_prompts', keywords: ['prompt', 'override', 'decensor'] },
-                    { label: 'Inference parameter panel', anchor: 'inference-param-panel', keywords: ['pin', 'panel', 'inference', 'parameters', 'presets', 'temperature', 'on the fly'] },
+                    { label: 'Pin parameters', anchor: 'inference-param-panel', keywords: ['pin', 'unpin', 'panel', 'inference parameter panel', 'inference', 'parameters', 'presets', 'temperature', 'on the fly'] },
                 ],
             },
             {

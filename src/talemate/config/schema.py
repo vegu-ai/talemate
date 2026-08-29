@@ -460,7 +460,6 @@ class InferencePresetGroup(pydantic.BaseModel):
 
 
 class InferenceParamPanel(pydantic.BaseModel):
-    enabled: bool = False
     client: str | None = None
 
 

@@ -123,3 +123,4 @@ Every tag MUST be closed. Do not write anything outside the tag pairs.
 {# COMBINED TEMPLATE #}
 {{ limit_tokens(dynamic_instructions_text, max_tokens-count_tokens(required_instructions)) }}
 {{ required_instructions }}
+{% if prefill_tag %}{{ set_prepared_response(prefill_tag) }}{% endif %}

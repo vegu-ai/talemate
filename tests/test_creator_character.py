@@ -7,6 +7,8 @@ client_responses queue): real templates render, real extraction/parsing
 runs, and routing is asserted via MockClient.prompt_history. The response
 queue is order-coupled by design — aspect order is behavior."""
 
+import re
+
 import pytest
 import pydantic
 from unittest.mock import patch
@@ -101,6 +103,14 @@ def _titles_section(prompt_text: str, title: str) -> str:
     start = prompt_text.index(marker) + len(marker)
     end = prompt_text.find("\n## ", start)
     return prompt_text[start:] if end == -1 else prompt_text[start:end]
+
+
+def _response_format_first_tag(prompt_text: str) -> str:
+    """The first aspect tag listed in a rendered RESPONSE FORMAT section."""
+    section = _titles_section(prompt_text, "Response format")
+    match = re.search(r"<[A-Z_]+>", section)
+    assert match, "no aspect tag found in the RESPONSE FORMAT section"
+    return match.group(0)
 
 
 @pytest.mark.asyncio
@@ -451,6 +461,108 @@ async def test_generate_character_unified_prompt_asks_only_requested_aspects(cre
     assert "<ATTRIBUTES>" not in prompt
     assert "<EXAMPLE_DIALOGUE>" not in prompt
     assert result.extracted_aspects() == {"description", "dialogue_instructions"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "aspects,expected_tag",
+    [
+        (ALL_ASPECTS, "<NAME>"),
+        (["description", "attributes"], "<DESCRIPTION>"),
+        (["attributes"], "<ATTRIBUTES>"),
+        (["dialogue_instructions"], "<DIALOGUE_INSTRUCTIONS>"),
+        (["example_dialogue"], "<EXAMPLE_DIALOGUE>"),
+        # the remaining adjacent pairs - a singleton renders one tag, so only
+        # a pair pins which of the two the format section lists first
+        (["attributes", "dialogue_instructions"], "<ATTRIBUTES>"),
+        (["dialogue_instructions", "example_dialogue"], "<DIALOGUE_INSTRUCTIONS>"),
+    ],
+)
+async def test_generate_character_unified_prefills_the_first_aspect_tag(
+    creator, aspects, expected_tag
+):
+    # the prefilled tag must be the one the RESPONSE FORMAT section asks for
+    # first - the two orders (CHARACTER_GENERATION_ASPECTS and the template's
+    # if-blocks) are pinned against each other here
+    async with MockClientContext():
+        client_responses.get().append(_FULL_RESPONSE)
+        await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=aspects,
+                name="the tall woman",
+                content="A healer arrives.",
+            )
+        )
+
+    prompt = str(creator.client.prompt_history[-1]["prompt"])
+    assert prompt.endswith(f"<|BOT|>{expected_tag}")
+    assert _response_format_first_tag(prompt) == expected_tag
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "aspects,continuation",
+    [
+        (
+            ["name", "description"],
+            "Elena</NAME>\n<DESCRIPTION>Elena is a skilled healer.</DESCRIPTION>",
+        ),
+        (["description"], "Elena is a skilled healer.</DESCRIPTION>"),
+    ],
+)
+async def test_generate_character_unified_parses_a_continued_prefill(
+    creator, aspects, continuation
+):
+    # a client that consumes the prefilled tag returns only what follows it -
+    # Prompt.send puts the tag back, so extraction sees the same complete
+    # block as for a client that repeats it
+    async with MockClientContext():
+        client_responses.get().append(continuation)
+        result = await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=aspects,
+                name="the tall woman",
+                content="A healer arrives.",
+            )
+        )
+
+    assert result.description == "Elena is a skilled healer."
+    if "name" in aspects:
+        assert result.name == "Elena"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "response",
+    [
+        # the model dropped the opening <NAME> and wrote the sections out of
+        # order: the prefilled tag pairs with the closing tag past the
+        # description block, so the name would otherwise be that whole block
+        "<DESCRIPTION>A healer.</DESCRIPTION>\nElena</NAME>",
+        # the model wrote its own opening tag malformed, so the prefilled tag
+        # pairs with the closing one and the name would carry the bad tag
+        "< NAME >Elena</NAME>\n<DESCRIPTION>A healer.</DESCRIPTION>",
+    ],
+)
+async def test_generate_character_unified_swallowed_tag_reads_as_missed(
+    creator, response
+):
+    # a section that carries an aspect opening tag swallowed something that is
+    # not its own content - it reads as a miss for the fill-misses policy,
+    # never as a value
+    async with MockClientContext():
+        client_responses.get().append(response)
+        result = await creator.generate_character_unified(
+            CharacterGenerationRequest(
+                aspects=["name", "description"],
+                name="the tall woman",
+                content="A healer arrives.",
+            )
+        )
+
+    assert result.name is None
+    assert result.description == "A healer."
+    assert result.extracted_aspects() == {"description"}
 
 
 @pytest.mark.asyncio

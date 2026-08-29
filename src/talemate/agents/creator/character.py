@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Callable, Literal, get_args
 
 import pydantic
@@ -97,6 +98,35 @@ def one_shot_effective_response_budget(configured_budget: int, max_tokens: int) 
             max_tokens - ONE_SHOT_MIN_HISTORY_TOKENS - ONE_SHOT_CONTEXT_OVERHEAD_TOKENS,
         ),
     )
+
+
+def one_shot_prefill_tag(aspects: list[CharacterGenerationAspect]) -> str:
+    """Opening tag the consolidated one-shot prefills its response with: the
+    first requested aspect, in the order the prompt's RESPONSE FORMAT section
+    lists them."""
+    for aspect in CHARACTER_GENERATION_ASPECTS:
+        if aspect in aspects:
+            return f"<{aspect.upper()}>"
+    return ""
+
+
+_ASPECT_TAG_PATTERNS = [
+    re.compile(rf"<\s*{aspect}\s*>", re.IGNORECASE)
+    for aspect in CHARACTER_GENERATION_ASPECTS
+]
+
+
+def one_shot_section_carries_a_tag(text: str) -> bool:
+    """Whether an extracted one-shot section carries an aspect opening tag.
+
+    The response prefill makes `Prompt.send` glue the first aspect's opening
+    tag onto a response that does not repeat it, and the extractor then pairs
+    that tag with the first unmatched closing tag - which can sit past the
+    sections that follow, or past a malformed opening tag the model wrote
+    itself. A section holding an opening tag swallowed something that is not
+    its own content, so it reads as a miss instead of as a value.
+    """
+    return any(pattern.search(text) for pattern in _ASPECT_TAG_PATTERNS)
 
 
 class AttributeInstructionSpec(TypedDict):
@@ -749,6 +779,7 @@ class CharacterCreatorMixin:
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "aspects": aspects,
+                "prefill_tag": one_shot_prefill_tag(aspects),
                 "character_name": request.effective_name,
                 "content": request.content,
                 "description": request.description,
@@ -798,10 +829,16 @@ class CharacterCreatorMixin:
         """Normalize the extracted sections into a CharacterGenerationResult.
 
         Aspects whose section could not be extracted (missing or unclosed
-        tags - see StrictAnchorExtractor) are left empty for the caller's
+        tags - see StrictAnchorExtractor), or whose section swallowed a tag
+        (see one_shot_section_carries_a_tag), are left empty for the caller's
         fill-misses policy.
         """
         result = CharacterGenerationResult()
+        extracted = {
+            aspect: value
+            for aspect, value in extracted.items()
+            if not (isinstance(value, str) and one_shot_section_carries_a_tag(value))
+        }
 
         if "name" in aspects:
             raw_name = (extracted.get("name") or "").strip().strip('"').strip()

@@ -18,4 +18,6 @@ Every tag MUST be closed. Do not write anything outside the tag pairs.
 ## Writing style
 Write in terse, Hemingway-esque prose.
 
+
 The length of your response must fit within 4 paragraphs.
+<|BOT|><DESCRIPTION>

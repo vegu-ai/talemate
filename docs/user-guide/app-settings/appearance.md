@@ -17,6 +17,14 @@ Each theme has two actions:
 
 The applied theme is marked with an **Active** chip and its **Apply** is disabled — re-copying its styling over your own edits is what **Restore from theme** on the Messages page is for.
 
+### Switching theme from the app bar
+
+![App bar - theme switcher](/talemate/img/0.40.0/app-bar-theme-switcher.png)
+
+The :material-palette-swatch: button in the app bar, beside the settings cog, is a shortcut to the same list. It carries the same groups, the same order and the same swatches as this page, and marks the active theme with a checkmark.
+
+Picking a theme there applies it immediately, without the confirmation this page asks for — the switcher is the fast way to try a theme on. It replaces your message styling exactly as **Apply** does, so a color you set yourself is kept and keeps overriding the theme. **Theme settings** at the bottom of the menu opens this page.
+
 !!! info "Adding a theme"
     New themes are added as templates in the Templates tab — the note at the top of the page links there. See [Themes](/talemate/user-guide/templates/themes) for creating your own.
 

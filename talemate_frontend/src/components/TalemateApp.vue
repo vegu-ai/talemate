@@ -99,6 +99,8 @@
         </template>
       </v-tooltip>
 
+      <ThemeSwitcher :immutable-config="appConfig" :world-state-templates="worldStateTemplates" />
+
       <v-tooltip text="Settings" location="top">
         <template v-slot:activator="{ props }">
           <v-app-bar-nav-icon @click="openAppConfig()" v-bind="props"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
@@ -518,6 +520,7 @@ import TemplatesMenu from './TemplatesMenu.vue';
 import OnboardingWizard from './OnboardingWizard.vue';
 import PromptsView from './prompts/PromptsView.vue';
 import PromptsMenu from './prompts/PromptsMenu.vue';
+import ThemeSwitcher from './ThemeSwitcher.vue';
 // import debounce
 import { debounce } from 'lodash';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
@@ -572,6 +575,7 @@ export default {
     OnboardingWizard,
     PromptsView,
     PromptsMenu,
+    ThemeSwitcher,
   },
   name: 'TalemateApp',
   mixins: [AutocompleteMixin, PlaythroughMixin],

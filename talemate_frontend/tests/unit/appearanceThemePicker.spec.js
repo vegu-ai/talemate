@@ -3,6 +3,9 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 import {
     THEME_PICKER_SWATCH_SLOTS,
+    applyThemeTemplateMessage,
+    isActiveTheme,
+    themeIdFromConfig,
     themePickerGroups,
     themePickerSwatches,
 } from "@/utils/themePicker";
@@ -12,6 +15,8 @@ function read(path) {
 }
 
 const PICKER = read("../../src/components/AppConfigAppearanceTheme.vue");
+const SWITCHER = read("../../src/components/ThemeSwitcher.vue");
+const TEMPLATE_THEME = read("../../src/components/TemplateTheme.vue");
 const APP_SETTINGS = read("../../src/components/AppSettings.vue");
 const TALEMATE_APP = read("../../src/components/TalemateApp.vue");
 const REGISTRY = read("../../src/utils/appSettingsRegistry.js");
@@ -131,6 +136,60 @@ describe("themePickerGroups", () => {
     });
 });
 
+describe("applyThemeTemplateMessage", () => {
+    it("is the apply_template envelope, with the picker's own id stripped", () => {
+        const t = { id: "themes__dark", uid: "dark", name: "Talemate Dark", template_type: "theme" };
+        expect(applyThemeTemplateMessage(t)).toEqual({
+            type: "world_state_manager",
+            action: "apply_template",
+            template: { uid: "dark", name: "Talemate Dark", template_type: "theme" },
+            character_name: null,
+            run_immediately: false,
+        });
+    });
+
+    it("leaves the caller's theme alone", () => {
+        const t = { id: "themes__dark", uid: "dark" };
+        applyThemeTemplateMessage(t);
+        expect(t.id).toBe("themes__dark");
+    });
+
+    it("tolerates a template that never carried an id", () => {
+        // the theme editor sends the template it is editing, which has no id
+        expect(applyThemeTemplateMessage({ uid: "dark" }).template).toEqual({ uid: "dark" });
+    });
+});
+
+describe("one apply path for every theme sender", () => {
+    // three components send this message; a second inline copy of the envelope
+    // drifts from the others with no test failure
+    const senders = [
+        ["AppConfigAppearanceTheme.vue", PICKER],
+        ["ThemeSwitcher.vue", SWITCHER],
+        ["TemplateTheme.vue", TEMPLATE_THEME],
+    ];
+
+    it.each(senders)("%s applies through the shared message", (name, source) => {
+        expect(source, `${name} does not use applyThemeTemplateMessage`).toContain("applyThemeTemplateMessage(");
+        expect(source, `${name} still builds the envelope inline`).not.toContain("action: 'apply_template'");
+    });
+});
+
+describe("themeIdFromConfig and isActiveTheme", () => {
+    it("themeIdFromConfig reads the applied theme, null when there is none", () => {
+        expect(themeIdFromConfig({ appearance: { theme: "themes__light" } })).toBe("themes__light");
+        expect(themeIdFromConfig({ appearance: {} })).toBeNull();
+        expect(themeIdFromConfig({})).toBeNull();
+        expect(themeIdFromConfig(null)).toBeNull();
+    });
+
+    it("isActiveTheme matches on the applied id only", () => {
+        expect(isActiveTheme({ id: "themes__dark" }, "themes__dark")).toBe(true);
+        expect(isActiveTheme({ id: "themes__light" }, "themes__dark")).toBe(false);
+        expect(isActiveTheme({ id: "themes__dark" }, null)).toBe(false);
+    });
+});
+
 describe("themePickerSwatches", () => {
     it("returns the identifying colors in slot order with labels", () => {
         const swatches = themePickerSwatches(theme());
@@ -215,7 +274,7 @@ describe("AppConfigAppearanceTheme methods", () => {
     }
 
     it("isActive matches on the applied theme id only", () => {
-        const isActive = lift(PICKER, "isActive", label);
+        const isActive = lift(PICKER, "isActive", label, { isActiveTheme });
         const c = ctx({ activeThemeId: "themes__dark" });
         expect(isActive.call(c, { id: "themes__dark" })).toBe(true);
         expect(isActive.call(c, { id: "themes__light" })).toBe(false);
@@ -231,24 +290,17 @@ describe("AppConfigAppearanceTheme methods", () => {
         expect(initiated).toEqual([{ name: "Talemate Dark", theme: t }]);
     });
 
-    it("applyTheme sends the existing apply_template message with the bare template", () => {
-        const applyTheme = lift(PICKER, "applyTheme", label);
+    it("applyTheme sends the shared apply message for the confirmed theme", () => {
+        const applyTheme = lift(PICKER, "applyTheme", label, { applyThemeTemplateMessage });
         const sent = [];
         const c = ctx({ getWebsocket: () => ({ send: (msg) => sent.push(JSON.parse(msg)) }) });
         const t = { id: "themes__dark", uid: "dark", name: "Talemate Dark", template_type: "theme" };
         applyTheme.call(c, { name: "Talemate Dark", theme: t });
-        expect(sent).toHaveLength(1);
-        expect(sent[0]).toEqual({
-            type: "world_state_manager",
-            action: "apply_template",
-            template: { uid: "dark", name: "Talemate Dark", template_type: "theme" },
-            character_name: null,
-            run_immediately: false,
-        });
+        expect(sent).toEqual([applyThemeTemplateMessage(t)]);
     });
 
     it("applyTheme ignores a confirmation without a theme", () => {
-        const applyTheme = lift(PICKER, "applyTheme", label);
+        const applyTheme = lift(PICKER, "applyTheme", label, { applyThemeTemplateMessage });
         const sent = [];
         const c = ctx({ getWebsocket: () => ({ send: (msg) => sent.push(msg) }) });
         applyTheme.call(c, null);
@@ -281,7 +333,7 @@ describe("AppConfigAppearanceTheme methods", () => {
     });
 
     it("the apply tooltip explains the disabled state on the active theme", () => {
-        const isActive = lift(PICKER, "isActive", label);
+        const isActive = lift(PICKER, "isActive", label, { isActiveTheme });
         const applyTooltip = lift(PICKER, "applyTooltip", label);
         const c = ctx({ activeThemeId: "themes__dark" });
         c.isActive = (theme) => isActive.call(c, theme);

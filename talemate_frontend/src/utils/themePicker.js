@@ -54,6 +54,36 @@ export function themePickerGroups(worldStateTemplates) {
 }
 
 /**
+ * The active theme's `group__uid` id, as `config.appearance.theme` stores it.
+ */
+export function themeIdFromConfig(config) {
+    return config?.appearance?.theme || null;
+}
+
+export function isActiveTheme(theme, activeThemeId) {
+    return !!activeThemeId && theme.id === activeThemeId;
+}
+
+/**
+ * The `world_state_manager` message that makes a theme template the active
+ * theme. Every sender goes through this — the settings page, the app bar
+ * switcher and the theme editor — so a theme applies the same way from all
+ * three.
+ */
+export function applyThemeTemplateMessage(theme) {
+    const template = { ...theme };
+    // `id` is the picker's own addition, not part of the template
+    delete template.id;
+    return {
+        type: 'world_state_manager',
+        action: 'apply_template',
+        template,
+        character_name: null,
+        run_immediately: false,
+    };
+}
+
+/**
  * Swatches for one theme row, with the slot label for the tooltip.
  */
 export function themePickerSwatches(template) {

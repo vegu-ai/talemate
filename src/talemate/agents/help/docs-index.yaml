@@ -381,7 +381,8 @@
   title: Appearance
   summary: Appearance settings, split into Theme, Messages and Visuals. Theme lists every theme template under its group with
     color swatches - Apply repaints the app and copies the theme's message styling into the appearance settings after a confirmation
-    (colors the user set are kept and keep overriding), Manage opens the theme's template. Messages covers per-type italic/bold/show/color
+    (colors the user set are kept and keep overriding), Manage opens the theme's template. An app bar theme switcher beside the
+    settings cog carries the same theme list and switches theme without the confirmation. Messages covers per-type italic/bold/show/color
     and markup styling, with Reset and Restore from theme (re-copies the theme's styling and drops all color overrides). Visuals
     covers render cadence, display size and Auto Backdrop.
 - path: user-guide/app-settings/application.md

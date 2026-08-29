@@ -17,11 +17,7 @@
             </div>
             <v-card v-for="theme in group.themes" :key="theme.id" variant="outlined" class="mb-2">
                 <div class="d-flex align-center flex-wrap pa-2">
-                    <div class="d-flex align-center mr-3">
-                        <span v-for="swatch in swatchesOf(theme)" :key="swatch.key" class="theme-swatch" :style="{ backgroundColor: swatch.color }">
-                            <v-tooltip activator="parent" location="top">{{ swatch.label }} &middot; {{ swatch.color }}</v-tooltip>
-                        </span>
-                    </div>
+                    <ThemeSwatches :theme="theme" labels class="mr-3" />
                     <div class="d-flex align-center">
                         <span class="text-body-2">{{ theme.name }}</span>
                         <v-icon v-if="theme.favorite" size="x-small" color="favorite" class="ml-1">mdi-star
@@ -52,12 +48,19 @@
 
 <script>
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
-import { themePickerGroups, themePickerSwatches } from '@/utils/themePicker';
+import ThemeSwatches from './ThemeSwatches.vue';
+import {
+    applyThemeTemplateMessage,
+    isActiveTheme,
+    themeIdFromConfig,
+    themePickerGroups,
+} from '@/utils/themePicker';
 
 export default {
     name: 'AppConfigAppearanceTheme',
     components: {
         ConfirmActionPrompt,
+        ThemeSwatches,
     },
     props: {
         immutableConfig: Object,
@@ -78,7 +81,7 @@ export default {
             return themePickerGroups(this.worldStateTemplates);
         },
         activeThemeId() {
-            return this.immutableConfig?.appearance?.theme || null;
+            return themeIdFromConfig(this.immutableConfig);
         },
         applyDescription() {
             // unlike Restore from theme, apply keeps the user's own color overrides (colors resolve live from the theme) — the wording must not claim otherwise
@@ -90,11 +93,8 @@ export default {
         },
     },
     methods: {
-        swatchesOf(theme) {
-            return themePickerSwatches(theme);
-        },
         isActive(theme) {
-            return !!this.activeThemeId && theme.id === this.activeThemeId;
+            return isActiveTheme(theme, this.activeThemeId);
         },
         applyTooltip(theme) {
             if (this.isActive(theme)) {
@@ -110,16 +110,7 @@ export default {
             if (!theme) {
                 return;
             }
-            // `id` is the picker's own addition, not part of the template
-            const template = { ...theme };
-            delete template.id;
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'apply_template',
-                template,
-                character_name: null,
-                run_immediately: false,
-            }));
+            this.getWebsocket().send(JSON.stringify(applyThemeTemplateMessage(theme)));
         },
         manageTheme(theme) {
             this.openWorldStateManager('templates', theme.id);
@@ -130,14 +121,3 @@ export default {
     },
 }
 </script>
-
-<style scoped>
-.theme-swatch {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    margin-right: 4px;
-    border: 1px solid rgba(128, 128, 128, 0.4);
-}
-</style>

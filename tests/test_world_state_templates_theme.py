@@ -44,6 +44,7 @@ from talemate.world_state.templates.base import (
     Group,
 )
 from talemate.world_state.templates.shortcut import SceneToolShortcutTemplate
+from talemate.world_state.templates.visual import VisualStyle
 from talemate.world_state.templates.theme import (
     CODE_EDITOR_THEMES,
     AppColors,
@@ -1285,6 +1286,72 @@ class TestApplyTemplateHandler:
         assert applied["result"]["theme_id"] == f"{group.uid}__{template.uid}"
         assert "templates_applied" in plugin.websocket_handler.actions
         assert [e.message for e in status_messages if e.status == "error"] == []
+
+
+class TestApplyingAThemeLeavesTheSceneAlone:
+    """
+    A theme writes the application config and nothing else, so the completion
+    of an apply must not reach the scene. The switcher in the app bar makes it
+    a single unconfirmed click, so an auto-save on every theme pick would write
+    the scene file behind the user's back.
+    """
+
+    @pytest.fixture
+    def scene_writes(self, plugin, monkeypatch) -> list:
+        """
+        Records `Scene.save` calls. The call is what is asserted on, not what
+        save does: an unsaved scene has no filename and save returns early, so
+        watching the file would pass with the fix reverted.
+        """
+        calls = []
+
+        async def record(*args, **kwargs):
+            calls.append(kwargs)
+
+        monkeypatch.setattr(plugin.scene, "save", record)
+        monkeypatch.setattr(plugin.scene, "emit_status", lambda *a, **kw: None)
+        return calls
+
+    async def test_a_theme_apply_does_not_auto_save_the_scene(
+        self, plugin, config, template_dir, scene_writes
+    ):
+        config.game.general.auto_save = True
+        plugin.scene.saved = True
+        template = make_template()
+        install_group(plugin, template_dir, [template])
+
+        task = await plugin.handle_apply_template({"template": template.model_dump()})
+        await task
+
+        assert scene_writes == []
+        assert plugin.scene.saved is True
+
+    async def test_a_theme_apply_does_not_mark_the_scene_unsaved(
+        self, plugin, config, template_dir, scene_writes
+    ):
+        config.game.general.auto_save = False
+        plugin.scene.saved = True
+        template = make_template()
+        install_group(plugin, template_dir, [template])
+
+        task = await plugin.handle_apply_template({"template": template.model_dump()})
+        await task
+
+        assert plugin.scene.saved is True
+
+    async def test_a_template_that_is_not_a_theme_still_reaches_the_scene(
+        self, plugin, config, template_dir, scene_writes
+    ):
+        """The exception is theme-shaped - every other type still completes the
+        way it always has."""
+        config.game.general.auto_save = False
+        plugin.scene.saved = True
+        template = VisualStyle(name="Painterly")
+
+        task = await plugin.handle_apply_template({"template": template.model_dump()})
+        await task
+
+        assert plugin.scene.saved is False
 
 
 class TestSaveTemplateHandler:

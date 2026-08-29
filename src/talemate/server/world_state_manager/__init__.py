@@ -857,7 +857,12 @@ class WorldStateManagerPlugin(
 
         await self.handle_get_world({})
         await self.handle_get_templates({})
-        await self.signal_operation_done()
+        # a theme writes the application config, never scene state - letting the
+        # completion fall through would auto-save the scene, or mark a scene
+        # nobody edited as unsaved
+        await self.signal_operation_done(
+            signal_only=payload.template.template_type == "theme"
+        )
 
     async def handle_save_template(self, data):
         payload = SaveWorldStateTemplatePayload(**data)

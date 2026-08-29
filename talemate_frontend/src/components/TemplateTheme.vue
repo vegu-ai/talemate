@@ -222,6 +222,7 @@
 
 <script>
 import { CODE_EDITOR_THEMES } from '@/utils/codeEditorTheme';
+import { applyThemeTemplateMessage } from '@/utils/themePicker';
 import TemplateThemePreview from './TemplateThemePreview.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import {
@@ -407,13 +408,7 @@ export default {
 
         applyTheme() {
             this.saveTemplate();
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'apply_template',
-                template: this.template,
-                character_name: null,
-                run_immediately: false,
-            }));
+            this.getWebsocket().send(JSON.stringify(applyThemeTemplateMessage(this.template)));
         },
     }
 };

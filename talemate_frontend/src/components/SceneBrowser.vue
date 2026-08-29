@@ -68,6 +68,11 @@
                     <div v-else class="browser-row">
                         <span :class="item.type === 'project' ? 'text-primary' : ''">{{ item.title }}</span>
                         <span v-if="item.subtitle" class="text-caption text-medium-emphasis ml-2">{{ item.subtitle }}</span>
+                        <v-tooltip v-if="item.deprecated" text="This scene is no longer offered for new stories. Your own saves in the project stay available." location="top" max-width="300">
+                            <template v-slot:activator="{ props }">
+                                <v-chip v-bind="props" size="x-small" label color="warning" variant="tonal" class="ml-2">deprecated</v-chip>
+                            </template>
+                        </v-tooltip>
                     </div>
                 </template>
                 <template #append="{ item }">
@@ -213,6 +218,7 @@ export default {
                     filename: file.filename,
                     modified: file.modified,
                     size: file.size,
+                    deprecated: file.deprecated,
                 }));
 
                 if (filter && !projectMatches && files.length === 0) {

@@ -1030,7 +1030,9 @@
   title: Home Screen & Scene Library
   summary: Tour of the Home screen - Quick load cards with their Timeline / Remove / Delete menu, the Scene Library tree of
     scene projects and save files with filtering and character cards, the Import dropzone for .json/.zip scenes and .png/.webp
-    cards, and Create new scene.
+    cards, and Create new scene. Also covers hidden and deprecated scenes - why a retired shipped scene such as the original
+    Simulation Suite no longer appears in the library or in Quick load, and how a save of your own brings its project back
+    with a deprecated chip on the retired save.
 - path: user-guide/scene-directory.md
   title: Scene Directory Structure
   summary: What lives in a scene's project directory under scenes/ - the .json save files plus assets/ (images and TTS audio),

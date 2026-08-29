@@ -885,6 +885,8 @@ class AssistantMixin:
                 scene_data = self.scene.serialize
 
                 scene_data["immutable_save"] = False
+                scene_data["hidden"] = False
+                scene_data["deprecated"] = False
                 scene_data["memory_id"] = str(uuid.uuid4())[:10]
                 scene_data["playthrough_progress"] = None
 

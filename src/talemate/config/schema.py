@@ -540,6 +540,11 @@ class RecentScenes(pydantic.BaseModel):
         if not scene.full_path:
             return
 
+        # a hidden scene never enters quick load; a save-as clears the flag
+        # first, so a user's own save is not affected
+        if scene.hidden:
+            return
+
         now = datetime.datetime.now()
 
         # remove any existing entries for this scene

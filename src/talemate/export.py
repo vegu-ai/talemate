@@ -60,6 +60,10 @@ def scene_export_json(scene: Scene, options: ExportOptions) -> str:
     """
     data = scene.serialize
 
+    # the browser flags belong to the exported file, not to the recipient's copy
+    data["hidden"] = False
+    data["deprecated"] = False
+
     if options.reset_progress:
         data["history"] = []
         data["archived_history"] = [

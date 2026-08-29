@@ -2,6 +2,7 @@ import datetime
 import fnmatch
 import json
 import os
+from typing import NamedTuple
 
 from talemate.path import SCENES_DIR
 
@@ -9,7 +10,14 @@ from talemate.path import SCENES_DIR
 RESERVED_SCENES_DIRS = {"assets", "characters"}
 
 # directories inside a scene project that never contain loadable saves
-EXCLUDED_PROJECT_SUBDIRS = {"nodes", "changelog", "assets", "info"}
+EXCLUDED_PROJECT_SUBDIRS = {
+    "nodes",
+    "changelog",
+    "assets",
+    "info",
+    "agent-settings",
+    "shared-context",
+}
 
 MEDIA_TYPES = {
     "png": "image/png",
@@ -21,8 +29,16 @@ MEDIA_TYPES = {
 
 CHARACTER_CARD_SPECS = {"chara_card_v1", "chara_card_v2", "chara_card_v3"}
 
-# scene save file metadata cache: path -> (mtime, scene_name, cover_asset_id)
-_SCENE_META_CACHE: dict[str, tuple[float, str | None, str | None]] = {}
+
+class SceneFileMeta(NamedTuple):
+    scene_name: str | None = None
+    cover_asset_id: str | None = None
+    hidden: bool = False
+    deprecated: bool = False
+
+
+# scene save file metadata cache: path -> (mtime, meta)
+_SCENE_META_CACHE: dict[str, tuple[float, SceneFileMeta]] = {}
 
 
 def list_scenes_directory(path: str = ".", list_images: bool = True) -> list:
@@ -113,8 +129,13 @@ def list_scenes_tree() -> dict:
         if entry in RESERVED_SCENES_DIRS:
             continue
         project = _scene_project_entry(full_path)
-        if project["files"]:
-            projects.append(project)
+        if not project["files"]:
+            continue
+        # hidden saves stay listed; they only drop the project when there is
+        # nothing else in it
+        if all(file["hidden"] for file in project["files"]):
+            continue
+        projects.append(project)
 
     projects.sort(key=lambda project: project["modified"], reverse=True)
 
@@ -225,29 +246,43 @@ def _resolve_cover_image(
     return None
 
 
-def _scene_file_meta(file_path: str) -> tuple[str | None, str | None]:
+def _scene_file_meta(file_path: str) -> SceneFileMeta:
     """
-    Scene name and cover asset id for a save file, cached by mtime so large
-    projects don't re-parse every save on each tree request.
+    Browser metadata for a save file, cached by mtime so large projects don't
+    re-parse every save on each tree request.
     """
     mtime = os.stat(file_path).st_mtime
     cached = _SCENE_META_CACHE.get(file_path)
     if cached and cached[0] == mtime:
-        return cached[1], cached[2]
+        return cached[1]
 
-    scene_name = None
-    cover_asset_id = None
+    meta = SceneFileMeta()
     try:
         with open(file_path) as file:
             scene_data = json.load(file)
         if isinstance(scene_data, dict):
-            scene_name = scene_data.get("name")
-            cover_asset_id = (scene_data.get("assets") or {}).get("cover_image")
+            meta = SceneFileMeta(
+                scene_name=scene_data.get("name"),
+                cover_asset_id=(scene_data.get("assets") or {}).get("cover_image"),
+                hidden=bool(scene_data.get("hidden")),
+                deprecated=bool(scene_data.get("deprecated")),
+            )
     except (OSError, ValueError):
         pass
 
-    _SCENE_META_CACHE[file_path] = (mtime, scene_name, cover_asset_id)
-    return scene_name, cover_asset_id
+    _SCENE_META_CACHE[file_path] = (mtime, meta)
+    return meta
+
+
+def scene_file_hidden(file_path: str) -> bool:
+    """
+    Whether the save file at the given path is hidden from the scene browser.
+    A file that cannot be read is not hidden.
+    """
+    try:
+        return _scene_file_meta(file_path).hidden
+    except OSError:
+        return False
 
 
 def _count_project_assets(project_dir: str) -> int:
@@ -284,10 +319,12 @@ def _scene_project_entry(project_dir: str) -> dict:
             file_path = os.path.join(dirpath, filename)
             entry = _file_entry(file_path, project_dir)
 
-            scene_name, cover_asset_id = _scene_file_meta(file_path)
-            entry["scene_name"] = scene_name
+            meta = _scene_file_meta(file_path)
+            entry["scene_name"] = meta.scene_name
+            entry["hidden"] = meta.hidden
+            entry["deprecated"] = meta.deprecated
             entry["cover_image"] = _resolve_cover_image(
-                project_dir, cover_asset_id, library
+                project_dir, meta.cover_asset_id, library
             )
             files.append(entry)
 

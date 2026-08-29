@@ -7,6 +7,7 @@ would land on an existing save, rather than escaping the save directory or
 overwriting a save with forked data.
 """
 
+import json
 import os
 import re
 
@@ -151,3 +152,18 @@ async def test_fork_refuses_an_existing_save(creator, message_id, tmp_path, emit
     assert_refused(
         emitted, "A save named 'taken' already exists — pick a different name"
     )
+
+
+async def test_shallow_fork_writes_a_visible_scene(creator, message_id, tmp_path):
+    # the fork is built from Scene.serialize, which carries the browser flags;
+    # the copy belongs to the user, not to the retired file it came from
+    creator.scene.hidden = True
+    creator.scene.deprecated = True
+
+    fork_path = await creator.fork_scene(message_id, save_name="forked")
+
+    with open(fork_path) as file:
+        forked = json.load(file)
+
+    assert forked["hidden"] is False
+    assert forked["deprecated"] is False

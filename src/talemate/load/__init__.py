@@ -342,6 +342,8 @@ async def load_scene_from_data(
     scene.filename = None
     scene.immutable_save = scene_data.get("immutable_save", False)
     scene.experimental = scene_data.get("experimental", False)
+    scene.hidden = scene_data.get("hidden", False)
+    scene.deprecated = scene_data.get("deprecated", False)
     scene.help = scene_data.get("help", "")
     scene.restore_from = scene_data.get("restore_from", "")
     scene.title = scene_data.get("title", "")

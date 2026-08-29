@@ -1894,8 +1894,8 @@ async def fork_scene_at_revision(
     Create a new scene file forked from the given revision.
 
     Writes the reconstructed scene state to ``<save_name>.json`` in the
-    scene's save directory, cleared for independent use (mutable, fresh
-    memory id, no playthrough position).
+    scene's save directory, cleared for independent use (mutable, visible in
+    the scene browser, fresh memory id, no playthrough position).
 
     Message revs in the written fork are zeroed: a fork starts its own
     changelog chain at rev 0, so revs naming revisions of the source scene's
@@ -1964,6 +1964,8 @@ async def fork_scene_at_revision(
         f"{save_name}.json",
         overrides={
             "immutable_save": False,
+            "hidden": False,
+            "deprecated": False,
             "memory_id": str(uuid.uuid4())[:10],
             "playthrough_progress": None,
         },

@@ -5,6 +5,7 @@ from talemate.path import CONFIG_FILE
 import talemate.emit.async_signals as async_signals
 from talemate.agents.registry import get_agent_class
 from talemate.client.registry import get_client_class
+from talemate.files import scene_file_hidden
 from talemate.util.encryption import decrypt_sensitive_values, encrypt_sensitive_values
 
 from .schema import Config
@@ -197,7 +198,8 @@ def cleanup_removed_agents(config: Config):
 
 def cleanup_removed_recent_scenes(config: Config):
     """
-    Will remove any recent scenes that are no longer present
+    Will remove any recent scenes that are no longer present or that are
+    hidden from the scene browser
     """
 
     if not config:
@@ -206,6 +208,9 @@ def cleanup_removed_recent_scenes(config: Config):
     for recent_scene in list(config.recent_scenes.scenes):
         if not os.path.exists(recent_scene.path):
             log.debug("recent scene path no longer exists", scene=recent_scene.path)
+            config.recent_scenes.scenes.remove(recent_scene)
+        elif scene_file_hidden(recent_scene.path):
+            log.debug("recent scene is hidden", scene=recent_scene.path)
             config.recent_scenes.scenes.remove(recent_scene)
 
 

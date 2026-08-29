@@ -55,6 +55,9 @@ def _progress_payload(name: str) -> dict:
     and a populated world state snapshot."""
     return {
         "name": name,
+        # Scene.serialize always emits the browser flags
+        "hidden": False,
+        "deprecated": False,
         "history": [{"typ": "character", "text": "hello"}],
         "archived_history": [
             {"text": "pre-established", "end": None},
@@ -458,6 +461,22 @@ class TestSceneExportJsonRealScene:
         assert scene.world_state.anchor_message_ids == [1]
         assert scene.name == "real-scene"
         assert scene.filename == "real-scene.json"
+
+    def test_export_clears_the_browser_flags(self):
+        # Scene.serialize carries the browser flags; the recipient's copy is a
+        # new scene and must not inherit the retirement of the file it came from
+        scene = self._make_scene()
+        scene.hidden = True
+        scene.deprecated = True
+
+        exported = json.loads(scene_export_json(scene, ExportOptions(name="x")))
+
+        assert exported["hidden"] is False
+        assert exported["deprecated"] is False
+
+        # the live scene is untouched
+        assert scene.hidden is True
+        assert scene.deprecated is True
 
     def test_scene_reset_clears_layered_history(self):
         scene = self._make_scene()

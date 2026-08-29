@@ -158,6 +158,9 @@ class Scene(Emitter):
         self.rev = 0
 
         self.experimental = False
+        self.hidden = False
+        self.deprecated = False
+
         self.help = ""
 
         self.name = ""
@@ -1959,6 +1962,8 @@ class Scene(Emitter):
 
         if save_as:
             self.immutable_save = False
+            self.hidden = False
+            self.deprecated = False
             memory_agent = get_agent("memory")
             memory_agent.close_db(self)
             self.memory_id = str(uuid.uuid4())[:10]
@@ -2166,6 +2171,8 @@ class Scene(Emitter):
             "memory_session_id": scene.memory_session_id,
             "saved_memory_session_id": scene.saved_memory_session_id,
             "immutable_save": scene.immutable_save,
+            "hidden": scene.hidden,
+            "deprecated": scene.deprecated,
             "ts": scene.ts,
             "help": scene.help,
             "experimental": scene.experimental,

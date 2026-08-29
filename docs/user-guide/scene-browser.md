@@ -2,7 +2,7 @@
 
 The :material-home: **Home** screen is Talemate's landing page. It is where you load, import, create, and manage your scenes.
 
-![Home screen](/talemate/img/0.39.0/getting-started-load-screen.png)
+![Home screen](/talemate/img/0.40.0/getting-started-load-screen.png)
 
 It is made up of four areas:
 
@@ -25,7 +25,7 @@ Each card has a three-dot menu (⋯) beneath it with additional actions:
 
 The **Scene Library** lists every scene project found in your `scenes/` directory as an expandable tree. Each project row shows its cover image, the number of save files it contains, and when it was last saved.
 
-![Scene library](/talemate/img/0.39.0/scene-browser-library.png)
+![Scene library](/talemate/img/0.40.0/scene-browser-library.png)
 
 Expanding a project reveals:
 
@@ -38,6 +38,22 @@ Click a save file to load it. Each save file row also has a three-dot menu (⋮)
     The **Filter scenes** field narrows the tree to matching projects, save files, and character cards. Matching projects expand automatically so you can see the hits.
 
 Projects with many save files show only the ten most recent — click **Show all N saves** to expand the rest.
+
+### Hidden and deprecated scenes
+
+A scene that ships with Talemate can be retired. Such a scene is not offered for new
+stories: it is left out of the Scene Library and out of Quick load, and the project it
+lives in disappears with it.
+
+Your own saves are never hidden. As soon as a project holds one save of your own, the
+project comes back into the library with all of its saves listed — the retired one
+included, marked with a **deprecated** chip. You can load it and fork from it as before.
+
+The **Simulation Suite** ships this way. **Simulation Suite V2** replaces it. The Scene
+Library screenshot above shows a project in that state: `simulation-suite` is listed
+because it holds a save of the user's own, and the retired save beside it carries the
+chip. The Home screenshot at the top of this page shows a default install, where the
+project is absent.
 
 ### Character cards
 

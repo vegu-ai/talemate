@@ -31,6 +31,7 @@ This variable is read by Vite at build time and re-read at container start in th
 |----------|---------|---------|
 | `TALEMATE_DEBUG` | _unset_ | Set to `1` to enable `DEBUG`-level logging and write errors to a separate error log file. See [Debug logging](debug-logging.md). |
 | `TALEMATE_LOG_PROMPTS` | _unset_ | Set to any non-empty value to write full prompt + response data to `logs/prompt_log.jsonl`. See [Prompt logging](prompt-logging.md). |
+| `TALEMATE_PI_BRIDGE_TRACE` | _unset_ | Set to `1` to log the [Pi Bridge client's](../../user-guide/clients/types/pi-bridge.md) pi event stream as it is consumed (per-event sizes and types plus a heartbeat warning while the stream is silent). Diagnostic aid for generations that stream but never finish. |
 
 `start-backend.sh` and `start-backend.bat` set `TALEMATE_DEBUG=1` automatically; the production `start.sh` / `start.bat` do not.
 
@@ -47,7 +48,7 @@ See [API key encryption](../../user-guide/api-key-encryption.md) for the full ke
 
 ## Docker Compose passthroughs
 
-The values below are not consumed by Talemate's Python code directly — they're consumed by `docker-compose.yml` so that the same variable controls both the published host port and the value passed into the container as `TALEMATE_BACKEND_PORT` / `TALEMATE_FRONTEND_PORT`:
+The values below are not consumed by Talemate's Python code directly — they're consumed by the default and CPU-only Compose configurations so that the same variable controls both the published host port and the value passed into the container as `TALEMATE_BACKEND_PORT` / `TALEMATE_FRONTEND_PORT`:
 
 - `TALEMATE_BACKEND_PORT`
 - `TALEMATE_FRONTEND_PORT`

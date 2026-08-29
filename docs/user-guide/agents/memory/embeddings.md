@@ -2,9 +2,7 @@
 
 You can manage your available embeddings through the application settings.
 
-![Open settings](/talemate/img/0.26.0/open-settings.png)
-
-In the settings dialogue go to **:material-tune: Presets** and then **:material-cube-unfolded: Embeddings**.
+Open the **:material-cog: Settings** tab in the top navigation and select **:material-cube-unfolded: Embeddings** under the **Presets** group.
 
 !!! warning "INSTRUCTOR Embeddings Removed (0.35.0)"
     INSTRUCTOR embeddings are no longer supported. If you were using INSTRUCTOR embeddings, your configuration has been automatically reset to use the default embedding model (all-MiniLM-L6-v2).
@@ -41,7 +39,7 @@ You can add new embeddings by clicking the **:material-plus: Add new** button.
 
 Select the embedding type and then enter the model name. When using sentence-transformer, make sure the modelname matches the name of the model repository on Huggingface, so for example `Alibaba-NLP/gte-base-en-v1.5`.
 
-![Add new embedding](/talemate/img/0.27.0/embedding-settings-new-1.png)
+![Add new embedding](/talemate/img/0.39.0/embedding-settings-new-1.png)
 
 !!! warning "New embeddings require a download"
     When you add a new embedding model and use it for the first time in the Memory agent, Talemate will download the model from Huggingface. This can take a while, depending on the size of the model and your internet connection.
@@ -50,7 +48,7 @@ Select the embedding type and then enter the model name. When using sentence-tra
 
 ## Editing an Embedding
 
-![Edit embedding](/talemate/img/0.27.0/embedding-settings-edit.png)
+![Edit embedding](/talemate/img/0.39.0/embedding-settings-edit.png)
 
 Select the existing embedding from the left side bar and you may change the following properties:
 

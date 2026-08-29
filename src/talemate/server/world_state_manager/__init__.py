@@ -159,16 +159,6 @@ class SelectiveCharacterPayload(pydantic.BaseModel):
     name: str
 
 
-class CreateCharacterPayload(pydantic.BaseModel):
-    generate: bool = True
-    instructions: str | None = None
-    name: str | None = None
-    description: str | None = None
-    is_player: bool = False
-    generate_attributes: bool = False
-    generation_options: world_state_templates.GenerationOptions | None = None
-
-
 class SceneOutlinePayload(pydantic.BaseModel):
     title: str
     description: str | None = None
@@ -1067,42 +1057,6 @@ class WorldStateManagerPlugin(
         )
 
         await self.signal_operation_done()
-        self.scene.emit_status()
-
-    async def handle_create_character(self, data):
-        payload = CreateCharacterPayload(**data)
-
-        try:
-            character = await self.world_state_manager.create_character(
-                generate=payload.generate,
-                instructions=payload.instructions,
-                name=payload.name,
-                description=payload.description,
-                is_player=payload.is_player,
-                generate_attributes=payload.generate_attributes,
-                generation_options=payload.generation_options,
-                active=payload.is_player or not self.scene.has_active_npcs,
-            )
-        except Exception as e:
-            log.error("Error creating character", error=e)
-            await self.signal_operation_failed("Error creating character")
-            return
-
-        self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": "character_created",
-                "data": {
-                    "name": character.name,
-                    "description": character.description,
-                },
-            }
-        )
-
-        await self.handle_get_character_list({})
-        await self.handle_get_character_details({"name": character.name})
-        await self.signal_operation_done()
-
         self.scene.emit_status()
 
     async def handle_update_scene_outline(self, data):

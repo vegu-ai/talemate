@@ -373,8 +373,11 @@ async def load_scene_from_data(
         scene.layered_history = []
         scene.intent_state.reset()
 
-    scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
-    scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
+    asset_data = scene_data.get("assets", {})
+    scene.assets.cover_image = asset_data.get("cover_image", None)
+    scene.assets.backdrop = asset_data.get("backdrop", None)
+    scene.assets.backdrop_enabled = asset_data.get("backdrop_enabled", True)
+    scene.assets.load_assets(asset_data.get("assets", {}))
 
     # Clean up cover images and message avatars that reference non-existent assets
     scene.assets.cleanup_cover_images()

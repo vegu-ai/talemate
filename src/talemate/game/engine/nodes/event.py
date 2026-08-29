@@ -293,8 +293,17 @@ class EmitSystemMessage(EmitStatus):
     Inputs:
 
     - state: The graph state
+    - message_title: The title of the message (optional)
     - message: The message text to emit
 
+    Properties:
+
+    - message_title: The title of the message
+    - message: The message text to emit
+    - font_color: The color of the message
+    - icon: The icon of the message
+    - display: The display style of the message (text, tonal or flat)
+    - as_markdown: Whether to render the message as markdown
 
     Outputs:
 
@@ -387,6 +396,10 @@ class EmitStatusConditional(EmitStatus):
     """
     Emits a status message if a condition is met
 
+    Unlike EmitStatus, the `state` input is required, so the message is
+    only emitted when the state input actually receives a value -
+    connect it through a conditional branch to gate the emission.
+
     Inputs:
 
     - state: The graph state
@@ -429,7 +442,7 @@ class EmitSceneStatus(Node):
 
     Outputs:
 
-    - state: The scene status object
+    - state: The state input, passed through
     """
 
     def __init__(self, title="Emit Scene Status", **kwargs):
@@ -480,40 +493,21 @@ class EmitWorldEditorSync(Node):
 @register("event/EmitAgentMessage")
 class EmitAgentMessage(Node):
     """
-    Emits an agent message
-
-    EXAMPLE
-            emit("agent_message",
-                message=message,
-                data={
-                    "uuid": str(uuid.uuid4()),
-                    "agent": "editor",
-                    "header": "Removed repetition",
-                    "color": "highlight4",
-                },
-                meta={
-                    "action": "revision_dedupe",
-                    "similarity": dedupe['similarity'],
-                    "threshold": self.revision_repetition_threshold,
-                    "range": self.revision_repetition_range,
-                },
-                websocket_passthrough=True
-            )
-
+    Emits an agent message to the UX
 
     Inputs:
 
     - state: The graph state
     - message: The message text to emit
-    - agent: The agent
+    - agent: The agent (agent object or agent name)
     - header: The header of the message
-    - color: The color of the message
+    - message_color: The color of the message
     - meta: The meta data of the message
 
     Outputs:
 
+    - state: The state input, passed through
     - emitted: Whether the message was emitted (True) or not (False)
-
     """
 
     class Fields:
@@ -528,7 +522,7 @@ class EmitAgentMessage(Node):
             name="agent",
             type="str",
             default="",
-            description="The name of the agent to get the client for",
+            description="The agent the message is attributed to",
             choices=[],
             generate_choices=lambda: get_agent_types(),
         )
@@ -573,6 +567,7 @@ class EmitAgentMessage(Node):
         self.set_property("message_color", "grey")
         self.set_property("meta", {})
 
+        self.add_output("state")
         self.add_output("emitted", socket_type="bool")
 
     async def run(self, state: GraphState):
@@ -604,6 +599,7 @@ class EmitAgentMessage(Node):
 
         self.set_output_values(
             {
+                "state": self.get_input_value("state"),
                 "emitted": True,
             }
         )

@@ -17,6 +17,7 @@ from talemate.character import (
 )
 from talemate.instance import get_agent
 from talemate.emit import emit
+from talemate.util import replace_smart_quotes
 from talemate.world_state import (
     ContextPin,
     ManualContext,
@@ -26,11 +27,12 @@ from talemate.world_state import (
 from talemate.game.schema import ConditionGroup, condition_groups_match
 from talemate.game.engine.context_id.base import ContextIDItem
 from talemate.agents.tts.schema import Voice
+from talemate.agents.visual.schema import PromptFinalizer
 from talemate.game.engine.context_id import ContextID
 from talemate.scene.schema import ScenePerspectives
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Character, Scene
+    from talemate.tale_mate import Scene
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -74,6 +76,7 @@ class CharacterDetails(pydantic.BaseModel):
     avatar: Union[str, None] = None  # default avatar
     current_avatar: Union[str, None] = None  # current avatar
     visual_rules: Union[str, None] = None
+    visual_finalizers: list[PromptFinalizer] = pydantic.Field(default_factory=list)
     color: Union[str, None] = None
     voice: Union[Voice, None] = None
     shared: bool = False
@@ -205,6 +208,7 @@ class WorldStateManager:
             avatar=character.avatar,
             current_avatar=character.current_avatar,
             visual_rules=character.visual_rules,
+            visual_finalizers=character.visual_finalizers,
             color=character.color,
             voice=character.voice,
             shared=character.shared,
@@ -453,6 +457,25 @@ class WorldStateManager:
         character.visual_rules = visual_rules or None
         character.memory_dirty = True
 
+    async def update_character_visual_finalizers(
+        self, character_name: str, visual_finalizers: list[dict]
+    ):
+        """
+        Updates the visual prompt finalizers for a character.
+
+        Arguments:
+            character_name: The name of the character to be updated.
+            visual_finalizers: The new list of finalizer rows for the character.
+        """
+        character = self.scene.get_character(character_name)
+        if not character:
+            log.error("character not found", character_name=character_name)
+            return
+
+        character.visual_finalizers = [
+            PromptFinalizer(**row) for row in visual_finalizers or []
+        ]
+
     async def update_character_actor(
         self,
         character_name: str,
@@ -480,8 +503,10 @@ class WorldStateManager:
 
         if example_dialogue:
             for idx, example in enumerate(example_dialogue):
+                example = replace_smart_quotes(example)
                 if not example.startswith(f"{character_name}:"):
-                    example_dialogue[idx] = f"{character_name}: {example}"
+                    example = f"{character_name}: {example}"
+                example_dialogue[idx] = example
 
         character.example_dialogue = example_dialogue
 
@@ -1009,105 +1034,6 @@ class WorldStateManager:
         contract.
         """
         await set_character_is_player(self.scene, character_name, is_player)
-
-    async def create_character(
-        self,
-        generate: bool = True,
-        instructions: str = None,
-        name: str = None,
-        is_player: bool = False,
-        description: str = "",
-        active: bool = False,
-        generate_attributes: bool = True,
-        generation_options: world_state_templates.GenerationOptions | None = None,
-    ) -> "Character":
-        """
-        Creates a new character in the scene.
-
-        DEPRECATED: Use the director agent's persist_character method instead.
-
-        Arguments:
-            generate: Whether to generate name and description if they are not specified; defaults to True.
-            instructions: Optional instructions for the character creation.
-            name: Optional name for the new character.
-            is_player: Whether the new character is a player character; defaults to False.
-            description: Optional description for the new character.
-
-        Returns:
-            The name of the newly created character.
-        """
-
-        if not name and not generate:
-            raise ValueError("You need to specify a name for the character.")
-
-        creator = get_agent("creator")
-        world_state = get_agent("world_state")
-
-        if not generation_options:
-            generation_options = world_state_templates.GenerationOptions()
-
-        if not name and generate:
-            tries = 2
-            while not name and tries > 0:
-                name = await creator.contextual_generate_from_args(
-                    context="character attribute:name",
-                    instructions=f"You are creating: {instructions if instructions else 'A new character'}. Only respond with the character's name.",
-                    length=25,
-                    uid="wsm.create_character",
-                    character="the character",
-                )
-                tries -= 1
-
-        if not name:
-            raise ValueError("Failed to generate a name for the character.")
-
-        if name in self.scene.all_character_names:
-            raise ValueError(f'Name "{name}" already exists.')
-
-        if not description and generate:
-            description = await creator.contextual_generate_from_args(
-                context="character detail:description",
-                instructions=instructions,
-                length=100,
-                uid="wsm.create_character",
-                character=name,
-                **generation_options.model_dump(),
-            )
-
-        # create character instance
-        character: "Character" = self.scene.Character(
-            name=name,
-            description=description,
-            base_attributes={},
-            is_player=is_player,
-        )
-
-        # set random color for their name
-        character.set_color()
-
-        if is_player:
-            ActorCls = self.scene.Player
-        else:
-            ActorCls = self.scene.Actor
-
-        actor = ActorCls(character, get_agent("conversation"))
-
-        await self.scene.add_actor(actor)
-
-        try:
-            if generate_attributes:
-                base_attributes = await world_state.extract_character_sheet(
-                    name=name, text=description
-                )
-                character.update(base_attributes=base_attributes)
-
-            if active:
-                await activate_character(self.scene, name)
-        except Exception as e:
-            await self.scene.remove_actor(actor)
-            raise e
-
-        return character
 
     async def update_scene_outline(
         self,

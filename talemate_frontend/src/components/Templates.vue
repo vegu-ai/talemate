@@ -164,7 +164,15 @@
 
                 <!-- Visual Style Template -->
                 <div v-else-if="template.template_type === 'visual_style'">
-                    <TemplateVisualStyle 
+                    <TemplateVisualStyle
+                        :immutableTemplate="template"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                    />
+                </div>
+
+                <!-- Visual Prompt Finalizer Template -->
+                <div v-else-if="template.template_type === 'visual_finalizer'">
+                    <TemplateVisualFinalizer
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -258,6 +266,7 @@ import ConfirmActionInline from './ConfirmActionInline.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
 import TemplateWritingStyle from './TemplateWritingStyle.vue';
 import TemplateVisualStyle from './TemplateVisualStyle.vue';
+import TemplateVisualFinalizer from './TemplateVisualFinalizer.vue';
 import TemplateAgentPersona from './TemplateAgentPersona.vue';
 import TemplateStateReinforcement from './TemplateStateReinforcement.vue';
 import TemplateCharacterAttribute from './TemplateCharacterAttribute.vue';
@@ -273,6 +282,7 @@ export default {
         ContextualGenerate,
         TemplateWritingStyle,
         TemplateVisualStyle,
+        TemplateVisualFinalizer,
         TemplateAgentPersona,
         TemplateStateReinforcement,
         TemplateCharacterAttribute,
@@ -347,6 +357,7 @@ export default {
                 { "title": "Spice collection", "value": 'spices'},
                 { "title": "Writing style", "value": 'writing_style'},
                 { "title": "Visual style", "value": 'visual_style'},
+                { "title": "Visual prompt finalizer", "value": 'visual_finalizer'},
                 { "title": "Agent persona", "value": 'agent_persona'},
                 { "title": "Scene type", "value": 'scene_type'},
             ],
@@ -362,6 +373,7 @@ export default {
                 spices: "Spice collections are used to define a set of instructions that can be applied during the generation of character attributes or details. They can be used to add a bit of randomness or unexpectedness. A template must explicitly support spice to be able to use a spice collection.",
                 writing_style: "Writing style templates are used to define a writing style that can be applied to the generated content. They can be used to add a specific flavor or tone. A template must explicitly support writing styles to be able to use a writing style template.",
                 visual_style: "Visual style templates define how image prompts are constructed (positive/negative prefixes and suffixes) and the prompting type (keywords vs descriptive).",
+                visual_finalizer: "Visual prompt finalizer templates define a reusable set of post-processing actions (exact, fuzzy or regex match and replace, or AI processing) applied to image generation prompts. Select one as the preset in the visualizer agent's Prompt Finalization settings.",
                 agent_persona: "Agent personas define how an agent should present and behave in prompts (tone, perspective, style). Assign a persona per agent in Scene Settings. (Currently director only)",
                 scene_type: "Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene.",
             }

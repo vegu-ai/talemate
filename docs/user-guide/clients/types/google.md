@@ -2,7 +2,7 @@
 
 If you want to add an Google client, change the `Client Type` to `Google`.
 
-![Client Google](/talemate/img/0.26.0/client-google.png)
+![Client Google](/talemate/img/0.39.0/client-google.png)
 
 Click `Save` to add the client.
 
@@ -12,11 +12,11 @@ The client should appear in the clients list. If you haven't setup Google before
 
 ![Client google no api key](/talemate/img/0.26.0/client-google-creds-missing.png)
 
-Click the `SETUP GOOGLE API CREDENTIALS` button. This will open the api settings window where you can add your Google API credentials.
+Click the `SETUP GOOGLE API CREDENTIALS` button. This will open the application settings on the API Keys page where you can add your Google API credentials.
 
 For additional instructions on obtaining and setting your Google API credentials, see [Google API instructions](/talemate/user-guide/apis/google/).
 
-![Google settings](/talemate/img/0.26.0/google-settings.png)
+![Google settings](/talemate/img/0.39.0/api-keys-google.png)
 
 Click `Save` and after a moment the client should have a green dot next to it, indicating that it is ready to go.
 
@@ -37,6 +37,9 @@ Which model to use. Currently defaults to `gemini-1.0`.
 !!! note "Talemate lags behind Google"
     When Google adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.
 
+##### Context Length
+
+Maximum context length (in tokens) for generations sent to Google. If you are not sure, leave the default value.
 
 ##### Disable Safety Settings
 

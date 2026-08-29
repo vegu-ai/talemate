@@ -38,10 +38,14 @@
             <!-- SCENE -->
 
             <v-window-item value="scene">
-                <WorldStateManagerScene ref="scene" 
+                <WorldStateManagerScene ref="scene"
                 :templates="templates"
                 :app-config="appConfig"
                 :generation-options="generationOptions"
+                :agent-status="agentStatus"
+                :visual-agent-ready="visualAgentReady"
+                :image-edit-available="imageEditAvailable"
+                :image-create-available="imageCreateAvailable"
                 :scene="scene ? scene : null" />
             </v-window-item>
 

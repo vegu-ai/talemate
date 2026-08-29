@@ -3,6 +3,11 @@
     :model-value="localDialog"
     @update:model-value="onDialogModelUpdate"
     max-width="1200px"
+    :scrim="!helpChatIsOpen"
+    :retain-focus="!helpChatIsOpen"
+    :persistent="helpChatIsOpen"
+    :no-click-animation="helpChatIsOpen"
+    :content-class="helpChatIsOpen ? 'yield-to-help-drawer' : ''"
   >
     <v-card>
       <v-card-title>
@@ -35,9 +40,17 @@
               </v-btn>
             </v-btn-toggle>
           </v-col>
-          <v-col cols="4" class="text-right checkbox-right">
+          <v-col cols="4" class="text-right checkbox-right align-center">
+            <v-btn icon variant="text" size="small" color="muted" @click="openHelpChat()">
+              <v-icon>mdi-help-circle-outline</v-icon>
+              <v-tooltip activator="parent" location="top">Ask the help agent about these settings</v-tooltip>
+            </v-btn>
             <v-checkbox :label="enabledLabel()" hide-details density="compact" color="green" v-model="agent.enabled"
               v-if="agent.data.has_toggle && mode === 'global'" @update:modelValue="save(false)"></v-checkbox>
+            <v-btn icon variant="text" size="small" class="ml-1" @click="onDialogModelUpdate(false)">
+              <v-icon>mdi-close</v-icon>
+              <v-tooltip activator="parent" location="top">Close</v-tooltip>
+            </v-btn>
           </v-col>
         </v-row>
       </v-card-title>
@@ -106,6 +119,8 @@
                     :action-schema="agent.data.actions[key]"
                     :app-config="appConfig"
                     :templates="templates"
+                    :agent-actions="agent.actions"
+                    :overlay="sceneOverrides"
                     :overrides="sceneOverrides.actions[key] || {}"
                     @update:overrides="(v) => updateActionOverrides(key, v)"
                     @change="dirtyScene = true"
@@ -145,6 +160,7 @@
 
 <script>
 import {getProperty} from 'dot-prop';
+import { conditionMet } from '@/utils/uxConditions';
 import AgentGlobalSettings from './AgentGlobalSettings.vue';
 import AgentSceneSettings from './AgentSceneSettings.vue';
 import DynamicAgentRegistry from './DynamicAgentRegistry.vue';
@@ -156,6 +172,8 @@ import {
   SCENE_AGENT_SETTINGS_FILENAME_RULES,
   actionHasOverridable,
   countSceneOverrides,
+  effectiveConditionMet,
+  setActionOverrideSlice,
 } from '@/constants/sceneAgentSettings';
 
 // Mapping from `AgentAction.dynamic_registry_component` (declared by the
@@ -184,7 +202,7 @@ export default {
     RequestInput,
     TTSOpenAICompatibleBackends,
   },
-  inject: ['state', 'getWebsocket', 'callAgentTool'],
+  inject: ['state', 'getWebsocket', 'callAgentTool', 'helpChatOpen', 'openHelpChat'],
   emits: ['save', 'update:dialog'],
   data() {
     return {
@@ -201,12 +219,20 @@ export default {
       // Gates the scene-overrides websocket save on dialog close; only sent
       // when something actually changed in Scene mode.
       dirtyScene: false,
+      // Serialized save payload taken when the agent is loaded; gates the
+      // global save on dialog close so an untouched dialog doesn't push its
+      // (possibly stale) copy back and overwrite changes made elsewhere
+      // while it was open (e.g. by the help agent).
+      globalBaseline: null,
       // Default filename for the agent-settings JSON file when the scene
       // has none linked yet. Editable inline in Scene mode.
       pendingFilename: DEFAULT_SCENE_AGENT_SETTINGS_FILENAME,
     };
   },
   computed: {
+    helpChatIsOpen() {
+      return this.helpChatOpen();
+    },
     tabs() {
       // Always start with the General (_config) tab in Global mode. In Scene
       // mode, only show it when at least one non-container action (the
@@ -289,7 +315,7 @@ export default {
       if (!this.sceneActive) return false;
       const actions = this.agent?.data?.actions || {};
       for (const key in actions) {
-        if (actionHasOverridable(actions[key])) return true;
+        if (actionHasOverridable(actions[key], this.sceneConditionCtx(key))) return true;
       }
       return false;
     },
@@ -302,7 +328,7 @@ export default {
       for (const key in actions) {
         const schema = actions[key];
         if (schema?.container) continue;
-        if (actionHasOverridable(schema)) return true;
+        if (actionHasOverridable(schema, this.sceneConditionCtx(key))) return true;
       }
       return false;
     },
@@ -371,6 +397,7 @@ export default {
           actions: seed.actions ? JSON.parse(JSON.stringify(seed.actions)) : {},
         };
         this.dirtyScene = false;
+        this.globalBaseline = this.globalSavePayload();
         this.pendingFilename = this.sceneSettingsFile || DEFAULT_SCENE_AGENT_SETTINGS_FILENAME;
         // If we're in scene mode but the new agent has nothing to override,
         // bounce back to global so the user isn't staring at an empty pane.
@@ -383,6 +410,13 @@ export default {
       // whenever the dialog closes, persist changes
       if (!newVal) this.finalizeSave();
       this.$emit('update:dialog', newVal);
+    },
+    tabs(newTabs) {
+      // A condition flipping — e.g. toggling an override that gates another
+      // action — can drop the tab that is currently open; snap to a valid one
+      // instead of leaving the pane blank.
+      const valid = newTabs.map(t => t.name);
+      if (valid.length && !valid.includes(this.tab)) this.tab = valid[0];
     }
   },
   methods: {
@@ -398,24 +432,32 @@ export default {
       if (valid.length && !valid.includes(this.tab)) this.tab = valid[0];
     },
 
+    sceneConditionCtx(actionKey) {
+      return {
+        actions: this.agent?.actions,
+        overlay: this.sceneOverrides,
+        overrides: this.sceneOverrides.actions[actionKey],
+      };
+    },
+
     containerHasOverridable(actionKey) {
       const schema = this.agent?.data?.actions?.[actionKey];
-      return !!schema?.container && actionHasOverridable(schema);
+      return !!schema?.container && actionHasOverridable(schema, this.sceneConditionCtx(actionKey));
     },
 
     actionHasOverridableSchema(actionKey) {
       const schema = this.agent?.data?.actions?.[actionKey];
-      return actionHasOverridable(schema);
+      return actionHasOverridable(schema, this.sceneConditionCtx(actionKey));
     },
 
     testActionConditional(action) {
       if (action.condition == null) return true;
-      if (typeof(this.agent.client) !== 'object') return true;
-      let value = getProperty(this.agent.actions, action.condition.attribute + ".value");
-      if (Array.isArray(action.condition.value)) {
-        return action.condition.value.some(v => v == value);
+      if (this.mode === 'scene') {
+        return effectiveConditionMet(action.condition, this.agent.actions, this.sceneOverrides);
       }
-      return value == action.condition.value;
+      if (typeof(this.agent.client) !== 'object') return true;
+      const value = getProperty(this.agent.actions, action.condition.attribute + ".value");
+      return conditionMet(action.condition, value);
     },
 
     close() {
@@ -438,9 +480,23 @@ export default {
       }
     },
 
+    // The subset of the modal's agent state that saveAgents actually sends.
+    // Deliberately excludes `data` — backend-owned schema (choices, dynamic
+    // children) that live status updates may refresh while the dialog is open.
+    globalSavePayload() {
+      return JSON.stringify({
+        enabled: this.agent?.enabled,
+        client: this.agent?.client,
+        actions: this.agent?.actions,
+      });
+    },
+
     finalizeSave() {
       this.save();
-      this.$emit('save', this.agent);
+      if (this.globalSavePayload() !== this.globalBaseline) {
+        this.$emit('save', this.agent);
+        this.globalBaseline = this.globalSavePayload();
+      }
       if (this.dirtyScene && this.sceneSettingsFile) {
         // File already linked; push the overrides into the existing file.
         // The unlinked-and-dirty case is handled before the modal closes
@@ -481,19 +537,9 @@ export default {
     // ----------------------------------------------------------------
 
     updateActionOverrides(actionKey, perActionOverride) {
-      // Replace this action's slice. Drop it entirely if empty so the
-      // overlay stays sparse.
-      const next = { actions: { ...this.sceneOverrides.actions } };
-      const isEmpty =
-        !perActionOverride ||
-        ((perActionOverride.enabled === undefined || perActionOverride.enabled === null) &&
-          (!perActionOverride.config || Object.keys(perActionOverride.config).length === 0));
-      if (isEmpty) {
-        delete next.actions[actionKey];
-      } else {
-        next.actions[actionKey] = perActionOverride;
-      }
-      this.sceneOverrides = next;
+      this.sceneOverrides = {
+        actions: setActionOverrideSlice(this.sceneOverrides.actions, actionKey, perActionOverride),
+      };
     },
 
     saveSceneOverrides() {

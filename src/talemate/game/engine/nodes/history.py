@@ -40,9 +40,9 @@ class PushHistory(Node):
     """
     Push a message to the scene history at the lowest (e.g., dialogue) layer
 
-    This will emit the message to the the sreen as part of the ongoing scene
+    This will emit the message to the screen as part of the ongoing scene
 
-     Inputs:
+    Inputs:
 
     - message: The message to push
 
@@ -166,6 +166,13 @@ class PopHistory(Node):
 class HasHistory(Node):
     """
     Check if the scene has history
+
+    Looks for a character, narrator or context_investigation message within
+    the most recent 100 history entries.
+
+    Outputs:
+
+    - has_history: True if such a message was found
     """
 
     def __init__(self, title="Scene Has History", **kwargs):
@@ -286,7 +293,29 @@ class LastMessageOfType(Node):
 @register("scene/history/UnpackArchiveEntry")
 class UnpackArchiveEntry(Node):
     """
-    Unpack an archive entry
+    Unpack an archive (summarized history) entry into its individual fields and
+    build a context ID for it.
+
+    Inputs:
+
+    - entry: The archive entry to unpack
+
+    Outputs:
+
+    - entry: The entry, passed through
+    - id: The id of the entry
+    - text: The text of the entry
+    - index: The index of the entry within its history layer
+    - layer: The history layer the entry belongs to
+    - start: Index of the first source entry covered by the entry (None for static entries)
+    - end: Index of the last source entry covered by the entry (None for static entries)
+    - ts_start: Starting timestamp of the covered range (ISO 8601 duration)
+    - ts_end: Ending timestamp of the covered range (ISO 8601 duration)
+    - ts: Timestamp of the entry (ISO 8601 duration)
+    - time: Human readable time relative to the current scene time
+    - time_start: Human readable starting time of the covered range
+    - time_end: Human readable ending time of the covered range
+    - context_id: Context ID for the entry (static or dynamic depending on the entry type)
     """
 
     def __init__(self, title="Unpack Archive Entry", **kwargs):
@@ -326,6 +355,15 @@ class UnpackArchiveEntry(Node):
 class StaticArchiveEntries(Node):
     """
     Get the static scene history entries
+
+    Static entries are manually written archive entries that predate the
+    summarized history. Collection stops at the first summarized
+    (dynamic) entry. Entries are annotated with a human readable time
+    relative to the current scene time.
+
+    Outputs:
+
+    - entries: The list of static archive entries
     """
 
     def __init__(self, title="Static Archive Entries", **kwargs):
@@ -355,7 +393,28 @@ class StaticArchiveEntries(Node):
 @register("scene/history/CreateStaticArchiveEntry")
 class CreateStaticArchiveEntry(Node):
     """
-    Create a static archive entry
+    Create a static (manually written) archive entry in the scene's base history,
+    dated a given amount of time before the current scene time.
+
+    The time amount and unit are converted to an ISO 8601 duration offset. The
+    entry must predate the summarized history.
+
+    Inputs:
+
+    - state: The graph state
+    - time_unit: The unit of time for the offset (minute, hour, day, week, month, year)
+    - time_amount: The amount of time for the offset
+    - text: The text of the entry
+
+    Outputs:
+
+    - state: The state input, passed through
+    - entry: The created archive entry
+    - offset: The ISO 8601 duration offset that was applied
+    - context_id: Context ID for the created entry
+    - time_unit: The time unit input, passed through
+    - time_amount: The time amount input, passed through
+    - text: The text input, passed through
     """
 
     class Fields:
@@ -430,6 +489,22 @@ class CreateStaticArchiveEntry(Node):
 class RemoveStaticArchiveEntry(Node):
     """
     Remove a static archive entry
+
+    The entry can be specified either directly or via a context ID item -
+    at least one of the two is required. Raises an error if the resolved
+    entry is not a static history entry.
+
+    Inputs:
+
+    - state: The graph state
+    - entry: The archive entry to remove
+    - context_id_item: A context ID item referencing a static history entry
+
+    Outputs:
+
+    - state: The graph state
+    - entry: The removed entry
+    - context_id_item: The context ID item input, passed through
     """
 
     def __init__(self, title="Remove Static Archive Entry", **kwargs):
@@ -487,9 +562,9 @@ class ContextHistory(Node):
 
     Properties:
 
-    - keep_direcctor_messages: Whether to keep director messages
+    - keep_director_messages: Whether to keep director messages
     - keep_investigation_messages: Whether to keep investigation messages
-    - keep_reinforcment_messages: Whether to keep reinforcement messages
+    - keep_reinforcement_messages: Whether to keep reinforcement messages
     - show_hidden: Whether to show hidden messages
     - min_dialogue_length: The minimum length of dialogue to keep, this will ensure that there are always N dialogue messages in the history regardless of whether they are covered by summarization. (default 5)
     - label_chapters: Whether to label chapters in the summarized history
@@ -522,14 +597,14 @@ class ContextHistory(Node):
             name="keep_investigation_messages",
             description="Whether to keep investigation messages",
             type="bool",
-            default=True,
+            default=False,
         )
 
         keep_reinforcement_messages = PropertyField(
             name="keep_reinforcement_messages",
             description="Whether to keep reinforcement messages",
             type="bool",
-            default=True,
+            default=False,
         )
 
         show_hidden = PropertyField(

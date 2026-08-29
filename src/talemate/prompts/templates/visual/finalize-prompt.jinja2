@@ -1,0 +1,15 @@
+<|SECTION:PROMPT|>
+{{ prompt_text }}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+The PROMPT above is an image generation prompt{% if vis_type and vis_type != "UNSPECIFIED" %} for a {{ vis_type.replace("_", " ").lower() }}{% endif %}{% if character_name %} involving the character "{{ character_name }}"{% endif %}.
+
+Rewrite the PROMPT by applying the following instruction to it:
+
+{{ instruction }}
+
+Apply the instruction faithfully. Unless the instruction says otherwise, preserve the meaning, subjects and composition of the original prompt - only transform it as instructed. Do not add commentary or explanations.
+
+Output the rewritten prompt between <FINALIZED_PROMPT></FINALIZED_PROMPT> tags.
+<|CLOSE_SECTION|>

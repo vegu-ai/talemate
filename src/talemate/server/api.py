@@ -8,7 +8,10 @@ import websockets
 
 import talemate.instance as instance
 from talemate import VERSION
-from talemate.client.base import resolve_generation_error
+from talemate.client.base import (
+    resolve_all_generation_errors,
+    resolve_generation_error,
+)
 from talemate.config import get_config, Config, commit_config, update_config
 from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.server.websocket_server import WebsocketHandler
@@ -73,6 +76,9 @@ async def websocket_endpoint(websocket):
         send_messages_task.cancel()
         send_status_task.cancel()
         test_connection_task.cancel()
+        # no user response can arrive anymore - terminate any coroutine still
+        # waiting on a generation error dialog
+        resolve_all_generation_errors("cancel")
         handler.disconnect()
         if handler.scene:
             handler.scene.active = False
@@ -130,11 +136,14 @@ async def websocket_endpoint(websocket):
                         handler.scene.continue_scene = False
                         scene_task.cancel()
 
+                    # pending error dialogs belong to the outgoing scene's
+                    # generations - cancel them so their coroutines don't hang
+                    resolve_all_generation_errors("cancel")
+
                     file_path = data.get("file_path")
                     scene_data = data.get("scene_data")
                     filename = data.get("filename")
                     reset = data.get("reset", False)
-                    rev = data.get("rev")
                     scene_initialization = data.get("scene_initialization")
 
                     await message_queue.put(
@@ -172,7 +181,6 @@ async def websocket_endpoint(websocket):
                             file_path,
                             reset=reset,
                             callback=scene_loading_done,
-                            rev=rev,
                             scene_initialization=scene_initialization,
                         )
                     )
@@ -188,6 +196,8 @@ async def websocket_endpoint(websocket):
                     query = data.get("query", "")
                     list_images = data.get("list_images", True)
                     handler.request_scenes_list(query, list_images)
+                elif action_type == "request_scenes_tree":
+                    handler.request_scenes_tree()
                 elif action_type == "configure_clients":
                     await update_config({"clients": data.get("clients")})
                     await instance.instantiate_clients()
@@ -230,6 +240,21 @@ async def websocket_endpoint(websocket):
                     if handler.scene.loading:
                         scene_task.cancel()
                         scene_task = None
+                elif action_type == "auto_retry_abort":
+                    client_name = data.get("client")
+                    generation_id = data.get("generation_id")
+                    log.info(
+                        "auto_retry_abort",
+                        client=client_name,
+                        generation_id=generation_id,
+                    )
+                    if generation_id:
+                        try:
+                            instance.get_client(client_name).request_auto_retry_abort(
+                                generation_id
+                            )
+                        except KeyError:
+                            pass
                 elif action_type == "request_app_config":
                     log.info("request_app_config")
 

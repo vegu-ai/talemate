@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from talemate.world_state.templates.base import Template, register
 
 if TYPE_CHECKING:
+    from talemate.scene.schema import SceneType as IntentSceneType
     from talemate.tale_mate import Scene
 
 __all__ = ["SceneType"]
@@ -33,15 +34,21 @@ class SceneType(Template):
             "instructions": self.instructions,
         }
 
-    def apply_to_scene(self, scene: "Scene") -> dict:
+    def apply_to_scene(self, scene: "Scene") -> "IntentSceneType":
         """
-        Apply this template to create a scene type in the scene
+        Apply this template to create a scene type in the scene,
+        registering it on the scene's intent state.
 
-        Returns the created scene type dict
+        Returns the created scene type
         """
-        scene_type = self.to_scene_type_dict()
+        # deferred: any talemate.* import runs talemate/__init__ -> tale_mate,
+        # which imports world_state.templates - a top-level import here
+        # re-enters this package mid-init
+        from talemate.scene.schema import SceneType as IntentSceneType
 
-        if scene and hasattr(scene, "scene_intent") and scene.scene_intent:
-            scene.scene_intent.scene_types[scene_type["id"]] = scene_type
+        scene_type = IntentSceneType(**self.to_scene_type_dict())
+
+        if scene and getattr(scene, "intent_state", None):
+            scene.intent_state.scene_types[scene_type.id] = scene_type
 
         return scene_type

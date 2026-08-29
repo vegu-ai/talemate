@@ -18,6 +18,10 @@ Will eventually become a Game Master type agent. Right now used for some very ru
 
 Will try to correct markup and optionally revise text to fix repetition and unwanted prose.
 
+### Help
+
+Interactive help chat that answers questions about Talemate itself, grounded in the bundled documentation and your actual configuration - it can also change settings for you on request. Available from the app bar at any time, with or without a scene.
+
 ### Long-term Memory
 
 Attempts to select and add relevant information to the current context window.

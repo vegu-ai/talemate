@@ -318,6 +318,73 @@ class TestDictWalking:
 
 
 # ---------------------------------------------------------------------------
+# Env variable store (sensitive map sections)
+# ---------------------------------------------------------------------------
+
+
+class TestEnvVariableStore:
+    def test_all_values_encrypted(self, fresh_fernet):
+        """Every value in the env store is sensitive, regardless of its name."""
+        data = {"env": {"KIMI_API_KEY": "sk-kimi-123", "SOME_TOKEN": "tok-456"}}
+        encrypt_sensitive_values(data)
+        assert data["env"]["KIMI_API_KEY"].startswith(ENC_PREFIX)
+        assert data["env"]["SOME_TOKEN"].startswith(ENC_PREFIX)
+
+        decrypt_sensitive_values(data)
+        assert data["env"]["KIMI_API_KEY"] == "sk-kimi-123"
+        assert data["env"]["SOME_TOKEN"] == "tok-456"
+
+    def test_plaintext_passthrough_on_decrypt(self, fresh_fernet):
+        """Hand-edited plaintext env values load without migration."""
+        data = {"env": {"MY_KEY": "plain-value"}}
+        decrypt_sensitive_values(data)
+        assert data["env"]["MY_KEY"] == "plain-value"
+
+    def test_name_colliding_with_sensitive_field_name(self, fresh_fernet):
+        """A var literally named api_key round-trips despite the walk also
+        matching it by field name."""
+        data = {"env": {"api_key": "sk-collide"}}
+        encrypt_sensitive_values(data)
+        assert data["env"]["api_key"].startswith(ENC_PREFIX)
+        # not double-encrypted
+        assert decrypt_value(data["env"]["api_key"]) == "sk-collide"
+
+        decrypt_sensitive_values(data)
+        assert data["env"]["api_key"] == "sk-collide"
+
+    def test_missing_or_empty_section(self, fresh_fernet):
+        encrypt_sensitive_values({})
+        data = {"env": {}}
+        encrypt_sensitive_values(data)
+        assert data["env"] == {}
+
+    def test_lost_key_drops_entries(self, fresh_fernet):
+        """Undecryptable env values are dropped instead of surviving as None
+        (the schema requires string values)."""
+        data = {"env": {"MY_KEY": "sk-secret", "PLAIN": "still-here"}}
+        encrypt_sensitive_values(data)
+        # PLAIN got encrypted too; keep a plaintext entry alongside
+        data["env"]["PLAIN"] = "still-here"
+
+        fresh_fernet.write_bytes(Fernet.generate_key())
+        reset_fernet()
+
+        decrypt_sensitive_values(data)
+        assert "MY_KEY" not in data["env"]
+        assert data["env"]["PLAIN"] == "still-here"
+
+    def test_yaml_round_trip(self, fresh_fernet):
+        data = {"env": {"KIMI_API_KEY": "sk-kimi-secret"}}
+        encrypt_sensitive_values(data)
+        yaml_str = yaml.dump(data)
+        assert "sk-kimi-secret" not in yaml_str
+
+        loaded = yaml.safe_load(yaml_str)
+        decrypt_sensitive_values(loaded)
+        assert loaded["env"]["KIMI_API_KEY"] == "sk-kimi-secret"
+
+
+# ---------------------------------------------------------------------------
 # YAML round-trip (simulates save / load cycle)
 # ---------------------------------------------------------------------------
 

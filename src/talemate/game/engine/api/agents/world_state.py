@@ -166,7 +166,9 @@ def create(scene: "Scene") -> "ScopedAPI":
 
             Returns:
 
-            - dict - The extracted character sheet where each key is an attribute name and the value is the attribute value
+            - dict - The extracted character sheet where each key is an attribute
+              name and the value is the attribute value, or an empty dict when the
+              model produced nothing
             """
 
             class Arguments(pydantic.BaseModel):

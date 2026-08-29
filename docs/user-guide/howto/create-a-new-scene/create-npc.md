@@ -19,7 +19,7 @@ Then in the `AI Generation Instructions` field type in something like
 !!! tip
     Make sure you include intructions for everything that is important for the character, LLMs are not great at generating something interesting by themselves, they will often go down tropes and cliches. So be specific and detailed, but not long winded.
 
-Then leave everything else as is and click the **Create Character** button.
+Then leave everything else as is and click the **Create Character** button. (Since 0.39.0 the form also offers a **Generate example dialogue** option with its own guidance field — it is off by default and can stay off for this walkthrough; see [Creating a character](/talemate/user-guide/world-editor/characters/create/) for details.)
 
 ![world-editor-create-npc-1](/talemate/img/0.26.0/world-editor-create-npc-1.png)
 

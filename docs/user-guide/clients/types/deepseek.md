@@ -2,7 +2,7 @@
 
 If you want to add a DeepSeek client, change the `Client Type` to `DeepSeek`.
 
-![Client DeepSeek](/talemate/img/0.35.0/client-deepseek.png)
+![Client DeepSeek](/talemate/img/0.39.0/client-deepseek.png)
 
 Click `Save` to add the client.
 
@@ -12,7 +12,7 @@ The client should appear in the clients list. If you haven't set up DeepSeek bef
 
 ![Client deepseek no api key](/talemate/img/0.35.0/client-deepseek-no-api-key.png)
 
-Click the `SET API KEY` button. This will open the API settings window where you can add your DeepSeek API key.
+Click the `SET API KEY` button. This will open the application settings on the API Keys page where you can add your DeepSeek API key.
 
 You can obtain an API key from the [DeepSeek Platform](https://platform.deepseek.com/).
 
@@ -39,6 +39,10 @@ Which model to use. Available models include:
 
 !!! note "Talemate lags behind DeepSeek"
     When DeepSeek adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.
+
+##### Context Length
+
+Maximum context length (in tokens) for generations sent to DeepSeek. If you are not sure, leave the default value.
 
 ##### Using deepseek-reasoner
 

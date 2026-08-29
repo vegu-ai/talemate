@@ -1,0 +1,13 @@
+## Conversation
+help: Hi! I can help you with anything Talemate - settings, agents, clients, the world editor and more. I can also look up your current settings and change them for you if you ask. What would you like to know?
+user: What do the editor revision methods do?
+
+## Task
+Generate a very short title (3-8 words) for this conversation between a user and the Talemate help assistant. The title should capture the main topic or purpose of the discussion.
+
+Provide your title in a <TITLE>...</TITLE> section.
+
+Your title MUST NOT include any markup.
+
+The length of your response must fit within 4 paragraphs.
+<|BOT|><TITLE>

@@ -5,7 +5,25 @@ Kept framework-agnostic at the import boundary: torch is imported lazily so the
 rest of the application keeps working on installs without a CUDA-enabled torch.
 """
 
-__all__ = ["release_cuda_cache"]
+import functools
+
+__all__ = ["cuda_available", "release_cuda_cache"]
+
+
+@functools.cache
+def cuda_available() -> bool:
+    """
+    Whether torch reports a usable CUDA device.
+
+    Importing torch costs ~1.2s and ~470MB, hence the deferred import. False
+    when torch is absent or unusable, matching the rest of this module.
+    """
+    try:
+        import torch
+    except ImportError:
+        return False
+
+    return torch.cuda.is_available()
 
 
 def release_cuda_cache() -> bool:
@@ -22,13 +40,10 @@ def release_cuda_cache() -> bool:
     Returns True if a CUDA cache flush was performed, False otherwise (no torch,
     or no CUDA device).
     """
-    try:
-        import torch
-    except ImportError:
+    if not cuda_available():
         return False
 
-    if not torch.cuda.is_available():
-        return False
+    import torch
 
     torch.cuda.empty_cache()
     return True

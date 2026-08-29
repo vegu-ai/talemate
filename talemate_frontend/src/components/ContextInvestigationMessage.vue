@@ -20,8 +20,8 @@
     
     <div class="context-message">
       <!-- Avatar/card/scene_illustration (small/medium) renders inline -->
-      <MessageAssetImage 
-        v-if="messageAsset && !isSceneIllustrationAbove"
+      <MessageAssetImage
+        v-if="messageAsset && !isSceneIllustrationAbove && !isSceneIllustrationBackground"
         :asset_id="messageAsset"
         :asset_type="message.asset_type || 'avatar'"
         :display_size="messageAssetDisplaySize"
@@ -70,6 +70,8 @@
         :show-time-passage="false"
         :show-visualize="showVisualize"
         :visualize-busy="visualizeBusy"
+        :show-illustration-menu="illustrationMenuAvailable"
+        @open-illustration-menu="openIllustrationMenu"
       />
     </v-sheet>
     <div v-else style="height:24px">

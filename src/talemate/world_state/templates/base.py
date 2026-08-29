@@ -105,7 +105,24 @@ class Template(pydantic.BaseModel):
             **vars,
         )
 
-        return value.format(**kwargs)
+        # user-authored template text may contain literal braces (JSON
+        # examples, {unknown} placeholders) - render it raw rather than
+        # crash the generation that includes it. AttributeError/TypeError
+        # cover compound fields ({character_name.first}, {player_name[0]}):
+        # once the first component resolves, str.format raises those instead
+        # of KeyError - and player_name is None in scenes without a player
+        try:
+            return value.format(**kwargs)
+        except (KeyError, IndexError, ValueError, AttributeError, TypeError) as e:
+            log.warning(
+                "template.formatted: instructions contain braces that are "
+                "not valid placeholders - using the raw text",
+                template=self.name,
+                template_type=self.template_type,
+                prop_name=prop_name,
+                error=str(e),
+            )
+            return value
 
 
 TemplateType = TypeVar("TemplateType", bound=Template)
@@ -435,6 +452,19 @@ class Collection(pydantic.BaseModel):
         if group:
             return group.find(template_uid)
         return None
+
+    def find_template_by_id(self, template_id: str) -> Template | None:
+        """Resolve a `group_uid__template_uid` id to a template.
+
+        Returns None for empty/malformed ids or when no template matches.
+        """
+        if not template_id:
+            return None
+        try:
+            group_uid, template_uid = template_id.split("__", 1)
+        except ValueError:
+            return None
+        return self.find_template(group_uid, template_uid)
 
     def remove(self, group: Group, save: bool = True):
         existing = self.find(group.uid)

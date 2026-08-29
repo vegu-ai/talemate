@@ -4,4 +4,5 @@ nav:
     - Game State: game-state.md
     - Settings: settings.md
     - Shared World: shared-context.md
+    - Visuals: visuals.md
     - Export: export.md

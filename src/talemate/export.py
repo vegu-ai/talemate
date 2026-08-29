@@ -14,6 +14,7 @@ from typing import Union
 import pydantic
 import structlog
 
+import talemate.save as save
 from talemate.scene_agent_settings import AGENT_SETTINGS_DIRNAME
 from talemate.tale_mate import Scene
 
@@ -25,6 +26,7 @@ __all__ = [
     "export",
     "export_talemate",
     "export_talemate_complete",
+    "scene_export_json",
 ]
 
 
@@ -48,6 +50,33 @@ class ExportOptions(pydantic.BaseModel):
     include_agent_settings: bool = True
 
 
+def scene_export_json(scene: Scene, options: ExportOptions) -> str:
+    """
+    Serialize the scene for export.
+
+    When reset_progress is set, the reset is applied to the serialized copy
+    only — the live scene must never be mutated by an export.
+    Mirrors Scene.reset() / WorldState.reset(), plus layered history.
+    """
+    data = scene.serialize
+
+    if options.reset_progress:
+        data["history"] = []
+        data["archived_history"] = [
+            ah for ah in data["archived_history"] if ah.get("end") is None
+        ]
+        data["layered_history"] = []
+        data["world_state"].update(
+            characters={},
+            items={},
+            places={},
+            location=None,
+            anchor_message_ids=[],
+        )
+
+    return save.scene_data_dumps(data)
+
+
 async def export(scene: Scene, options: ExportOptions) -> Union[str, bytes]:
     """
     Export a scene
@@ -65,14 +94,9 @@ async def export_talemate(scene: Scene, options: ExportOptions) -> str:
     """
     Export a scene in talemate format (JSON only, legacy format)
     """
-    # Reset progress
-    if options.reset_progress:
-        scene.reset()
-
-    # Export scene
 
     # json string
-    scene_json = scene.json
+    scene_json = scene_export_json(scene, options)
 
     # encode base64
     scene_base64 = base64.b64encode(scene_json.encode()).decode()
@@ -84,10 +108,6 @@ async def export_talemate_complete(scene: Scene, options: ExportOptions) -> byte
     """
     Export a complete scene in ZIP format including all assets, nodes, info, and templates
     """
-    # Reset progress
-    if options.reset_progress:
-        scene.reset()
-
     log.info(
         "Starting complete scene export",
         scene_name=scene.name,
@@ -101,7 +121,7 @@ async def export_talemate_complete(scene: Scene, options: ExportOptions) -> byte
         # Export main scene JSON
         scene_json_path = temp_path / "scene.json"
         with open(scene_json_path, "w", encoding="utf-8") as f:
-            f.write(scene.json)
+            f.write(scene_export_json(scene, options))
 
         log.debug("Exported scene JSON", path=scene_json_path)
 

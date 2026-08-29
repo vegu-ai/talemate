@@ -1,6 +1,6 @@
 <template>
     <div class="d-flex align-center ga-2 px-4 w-100">
-        <v-tooltip location="top" text="Interrupt the current generation(s)" max-width="300px">
+        <v-tooltip v-if="showInterrupt" location="top" text="Interrupt the current generation(s)" max-width="300px">
             <template v-slot:activator="{ props }">
                 <v-btn v-bind="props" @click="$emit('interrupt')" :disabled="!processing" color="primary" icon>
                     <v-icon>mdi-stop-circle-outline</v-icon>
@@ -10,7 +10,7 @@
         <v-textarea
             :model-value="modelValue"
             @update:model-value="$emit('update:modelValue', $event)"
-            label="Message the Director"
+            :label="label"
             :placeholder="active ? '' : 'Click Start Chat to begin'"
             hide-details
             class="flex-grow-1"
@@ -45,6 +45,14 @@ export default {
             default: false,
         },
         appReady: {
+            type: Boolean,
+            default: true,
+        },
+        label: {
+            type: String,
+            default: 'Message the Director',
+        },
+        showInterrupt: {
             type: Boolean,
             default: true,
         },

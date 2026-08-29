@@ -21,6 +21,8 @@ ReceiveInput = signal("receive_input")
 ClientStatus = signal("client_status")
 RateLimited = signal("rate_limited")
 RateLimitReset = signal("rate_limit_reset")
+AutoRetry = signal("auto_retry")
+AutoRetryDone = signal("auto_retry_done")
 GenerationError = signal("generation_error")
 GenerationErrorResponse = signal("generation_error_response")
 RequestClientStatus = signal("request_client_status")
@@ -79,6 +81,8 @@ handlers = {
     "client_status": ClientStatus,
     "rate_limited": RateLimited,
     "rate_limit_reset": RateLimitReset,
+    "auto_retry": AutoRetry,
+    "auto_retry_done": AutoRetryDone,
     "generation_error": GenerationError,
     "generation_error_response": GenerationErrorResponse,
     "request_client_status": RequestClientStatus,

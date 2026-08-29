@@ -1112,6 +1112,69 @@ class TestEmitStatus:
         assert client.current_status == "busy"
 
 
+class TestStatusFailureDebounce:
+    """A single failed status check on an established connection must not
+    flap the client to error (issue #93); only consecutive failures
+    reaching status_failure_threshold disconnect it."""
+
+    def _failing_client(self, name: str) -> _StubClient:
+        _register_client_config(name, model="some-model")
+        client = _StubClient(name=name)
+        client.connected = True
+        client.remote_model_name = "some-model"
+
+        async def _fail():
+            raise Exception("ConnectTimeout")
+
+        client.get_model_name = _fail
+        return client
+
+    @pytest.mark.asyncio
+    async def test_single_failure_tolerated_when_connected(self, cfg_isolation):
+        client = self._failing_client("deb1")
+        await client.status()
+        assert client.connected is True
+        assert client.current_status == "idle"
+        assert client.remote_model_name == "some-model"
+
+    @pytest.mark.asyncio
+    async def test_consecutive_failures_disconnect(self, cfg_isolation):
+        client = self._failing_client("deb2")
+        await client.status()
+        await client.status()
+        assert client.connected is False
+        assert client.current_status == "error"
+        assert client.remote_model_name is None
+
+    @pytest.mark.asyncio
+    async def test_success_resets_failure_counter(self, cfg_isolation):
+        client = self._failing_client("deb3")
+        await client.status()
+        assert client.connected is True
+
+        async def _ok():
+            return "some-model"
+
+        client.get_model_name = _ok
+        await client.status()
+        assert client._status_failures == 0
+
+        async def _fail():
+            raise Exception("ConnectTimeout")
+
+        client.get_model_name = _fail
+        await client.status()
+        assert client.connected is True
+
+    @pytest.mark.asyncio
+    async def test_no_grace_when_not_connected(self, cfg_isolation):
+        client = self._failing_client("deb4")
+        client.connected = False
+        await client.status()
+        assert client.connected is False
+        assert client.current_status == "error"
+
+
 class TestSetEmbeddings:
     @pytest.mark.asyncio
     async def test_no_op_when_supports_embeddings_false(self, cfg_isolation):
@@ -1302,7 +1365,9 @@ class TestGenerateWithErrorHandling:
 
         with ClientContext(requires_active_scene=False):
             set_client_context_attribute("requires_active_scene", False)
-            out = await client._generate_with_error_handling("p", {}, "conversation")
+            out = await client._generate_with_error_handling(
+                "p", {}, "conversation", "gid"
+            )
         assert out == "great"
 
     @pytest.mark.asyncio
@@ -1323,14 +1388,18 @@ class TestGenerateWithErrorHandling:
         # Patch the user-prompt helper to return "retry" then "ignore" if needed.
         responses = iter(["retry"])
 
-        async def fake_prompt(self, error_message, status_code=None):
+        async def fake_prompt(
+            self, error_message, status_code=None, generation_id=None
+        ):
             return next(responses)
 
         monkeypatch.setattr(ClientBase, "_prompt_generation_error", fake_prompt)
 
         with ClientContext(requires_active_scene=False):
             set_client_context_attribute("requires_active_scene", False)
-            out = await client._generate_with_error_handling("p", {}, "conversation")
+            out = await client._generate_with_error_handling(
+                "p", {}, "conversation", "gid"
+            )
         assert out == "second-time"
         assert attempts["n"] == 2
 
@@ -1346,14 +1415,18 @@ class TestGenerateWithErrorHandling:
 
         client = _AlwaysFails(name="gc3")
 
-        async def fake_prompt(self, error_message, status_code=None):
+        async def fake_prompt(
+            self, error_message, status_code=None, generation_id=None
+        ):
             return "ignore"
 
         monkeypatch.setattr(ClientBase, "_prompt_generation_error", fake_prompt)
 
         with ClientContext(requires_active_scene=False):
             set_client_context_attribute("requires_active_scene", False)
-            out = await client._generate_with_error_handling("p", {}, "conversation")
+            out = await client._generate_with_error_handling(
+                "p", {}, "conversation", "gid"
+            )
         assert out == ""
 
     @pytest.mark.asyncio
@@ -1370,7 +1443,9 @@ class TestGenerateWithErrorHandling:
 
         client = _EmptyThenGood(name="gc4")
 
-        async def fake_prompt(self, error_message, status_code=None):
+        async def fake_prompt(
+            self, error_message, status_code=None, generation_id=None
+        ):
             assert error_message == EMPTY_RESPONSE_MESSAGE
             return "retry"
 
@@ -1378,7 +1453,9 @@ class TestGenerateWithErrorHandling:
 
         with ClientContext(requires_active_scene=False):
             set_client_context_attribute("requires_active_scene", False)
-            out = await client._generate_with_error_handling("p", {}, "conversation")
+            out = await client._generate_with_error_handling(
+                "p", {}, "conversation", "gid"
+            )
         assert out == "good"
         assert attempts["n"] == 2
 
@@ -1394,7 +1471,9 @@ class TestGenerateWithErrorHandling:
 
         client = _Fails(name="gc5")
 
-        async def fake_prompt(self, error_message, status_code=None):
+        async def fake_prompt(
+            self, error_message, status_code=None, generation_id=None
+        ):
             return "cancel"
 
         monkeypatch.setattr(ClientBase, "_prompt_generation_error", fake_prompt)
@@ -1402,7 +1481,9 @@ class TestGenerateWithErrorHandling:
         with ClientContext(requires_active_scene=False):
             set_client_context_attribute("requires_active_scene", False)
             with pytest.raises(GenerationCancelled):
-                await client._generate_with_error_handling("p", {}, "conversation")
+                await client._generate_with_error_handling(
+                    "p", {}, "conversation", "gid"
+                )
 
 
 # ---------------------------------------------------------------------------

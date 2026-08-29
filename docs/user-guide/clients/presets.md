@@ -6,11 +6,9 @@
 
 If you wish to alter the inference parameters sent with the generation requests for text-generation you can do in the settings interface.
 
-![open settings](/talemate/img/0.26.0/open-settings.png)
+Open the **Settings** tab in the top navigation, then select :material-matrix: **Inference** under the :material-tune: **Presets** group in the sidebar.
 
-Navigate to the :material-tune: **Presets** tab then select the :material-matrix: **Inference** tab.
-
-![selected preset](/talemate/img/0.38.0/inference-presets-1.png)
+![selected preset](/talemate/img/0.39.0/inference-presets-1.png)
 
 !!! warning
     Not all clients support all parameters, and generally it is assumed that the client implementation handles the parameters in a sane way, especially if values are passed for all of them. All presets are used and will be selected depending on the action the agent is performing. If you don't know what these mean, it is recommended to leave them as they are.
@@ -139,7 +137,7 @@ Because this overwrites the values of all the other presets in the group, you wi
 
 The **Reset** action restores the currently selected preset back to its default values. As of version 0.38.0 this action also asks for confirmation before resetting, so an accidental click no longer discards your changes.
 
-Both actions only change the values in the editor. Remember to save the settings with the **Save** button at the bottom of the dialog for them to take effect.
+Both actions only change the values in the editor. Remember to save the settings with the **Save** button in the settings toolbar for them to take effect.
 
 ## Preset Groups
 
@@ -147,12 +145,12 @@ Initially there is a `Default` group in which the presets are edited, but if you
 
 To add a new group, type the title in to the **New Group Name** field in the upper right and press `Enter`.
 
-![new group](/talemate/img/0.30.0/inference-presets-custom-group-1.png)
+![new group](/talemate/img/0.39.0/inference-presets-custom-group-1.png)
 
 
 The new group will be added and automatically selected for editing.
 
-![new group](/talemate/img/0.30.0/inference-presets-custom-group-2.png)
+![new group](/talemate/img/0.39.0/inference-presets-custom-group-2.png)
 
 Once you have adjusted the presets to your liking you can save the group by clicking the :material-content-save: **Save** button.
 

@@ -52,7 +52,7 @@
 
     <!-- app bar -->
     <v-app-bar app density="compact">
-      <v-app-bar-nav-icon size="small" @click="toggleNavigation('game')">
+      <v-app-bar-nav-icon v-if="tab !== 'home'" size="small" @click="toggleNavigation('game')">
         <v-tooltip activator="parent" location="top">Toggle sidebar</v-tooltip>
         <v-icon v-if="sceneDrawer">mdi-arrow-collapse-left</v-icon>
         <v-icon v-else>mdi-arrow-collapse-right</v-icon>
@@ -68,10 +68,13 @@
       </v-app-bar-nav-icon>
       
       <v-tabs v-model="tab" color="primary">
-        <v-tab v-for="tab in availableTabs" :key="tab" :value="tab.value" @click.stop="tab.click">
+        <v-tab v-for="tab in availableTabs" :key="tab" :value="tab.value" @click.stop="onTabClick(tab)">
           <v-icon class="mr-1">{{ tab.icon() }}</v-icon>
           {{ tab.title() }}
-          <v-icon v-if="tab.alert && tab.alert()" size="x-small" color="warning" class="ml-1">mdi-alert</v-icon>
+          <span v-if="tab.alert && tab.alert()" class="ml-1 d-inline-flex">
+            <v-tooltip v-if="tab.alertTooltip" activator="parent" location="top">{{ tab.alertTooltip() }}</v-tooltip>
+            <v-icon size="x-small" color="warning">mdi-alert</v-icon>
+          </span>
         </v-tab>
       </v-tabs>
   
@@ -83,6 +86,12 @@
 
       <VisualLibrary ref="visualLibrary" :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
 
+
+      <v-tooltip text="Help" location="top">
+        <template v-slot:activator="{ props }">
+          <v-app-bar-nav-icon @click="toggleNavigation('help')" v-bind="props"><v-icon>mdi-help-circle-outline</v-icon></v-app-bar-nav-icon>
+        </template>
+      </v-tooltip>
 
       <v-tooltip text="Debug Tools" location="top">
         <template v-slot:activator="{ props }">
@@ -110,7 +119,7 @@
     <v-main style="height: 100%; display: flex; flex-direction: column;">
 
       <!-- left side navigation drawer -->
-      <v-navigation-drawer v-model="sceneDrawer" app :width="leftDrawerWidth">
+      <v-navigation-drawer :model-value="sceneDrawer && tab !== 'home'" @update:model-value="sceneDrawer = $event" app :width="leftDrawerWidth">
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
           <p class="text-body-2" color="white">
@@ -119,14 +128,6 @@
         </v-alert>
         <v-alert type="warning" variant="tonal" v-if="!ready && connected">There are some outstanding configuration issues, please ensure that all enabled agents are configured correctly.</v-alert>
         <v-tabs-window v-model="tab">
-          <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
-            <LoadScene
-            ref="loadScene"
-            :scene-loading-available="ready && connected"
-            :world-state-templates="worldStateTemplates"
-            @loading="sceneStartedLoading"
-            @open-director="openDirectorWithChat" />
-          </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
             <CoverImage v-if="sceneActive" ref="coverImage" type="scene" :target="scene" />
             <WorldState v-if="sceneActive" ref="worldState" :busy="busy" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
@@ -171,6 +172,9 @@
               @clear-prompts="onClearPrompts"
             />
           </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="settings">
+            <AppSettingsMenu :page="appSettingsPage" @navigate="onAppSettingsNavigate" />
+          </v-tabs-window-item>
         </v-tabs-window>
 
       </v-navigation-drawer>
@@ -195,8 +199,13 @@
       </v-navigation-drawer>
 
       <!-- director console navigation drawer -->
-      <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
+      <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="rightToolsDrawerWidth" disable-resize-watcher>
         <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :app-ready="ready" :open="directorConsoleDrawer" />
+      </v-navigation-drawer>
+
+      <!-- help chat navigation drawer -->
+      <v-navigation-drawer v-model="helpDrawer" app location="right" :width="rightToolsDrawerWidth" disable-resize-watcher>
+        <HelpChat v-if="helpDrawer && connected" :scene-active="sceneActive" :agent-status="agentStatus" :ux-snapshot="buildUxSnapshot" />
       </v-navigation-drawer>
 
       <!-- debug tools navigation drawer -->
@@ -212,13 +221,16 @@
         <v-tabs-window v-model="tab" style="height: 100%;">
           <!-- HOME -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
-            <IntroView
-            ref="introView"
-            @request-scene-load="(path) => {  resetViews(); $refs.loadScene.loadJsonSceneFromPath(path); }"
-            @request-backup-restore="(restoreInfo) => { resetViews(); $refs.loadScene.loadJsonSceneFromPath(restoreInfo.scenePath, false, restoreInfo.backupPath, restoreInfo.rev); }"
-            :version="version" 
+            <SceneLanding
+            ref="sceneLanding"
+            @request-scene-load="(path) => {  resetViews(); $refs.sceneLanding.loadJsonSceneFromPath(path); }"
+            @loading="sceneStartedLoading"
+            @open-director="openDirectorWithChat"
+            :connected="connected"
             :scene-loading-available="ready && connected"
             :scene-is-loading="loading"
+            :visible="tab === 'home'"
+            :world-state-templates="worldStateTemplates"
             :config="appConfig" />
           </v-tabs-window-item>
           <!-- SCENE -->
@@ -238,8 +250,8 @@
                   >
                   </NodeEditor>  
               </v-col>
-              <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': true, 'd-none': creativeMode && !showSceneView }">
-                <div style="display: flex; flex-direction: column; height: 100%">
+              <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': true, 'd-none': creativeMode && !showSceneView, 'scene-backdrop-active': !!sceneBackdropSrc }" :style="sceneBackdropStyle">
+                <div class="scene-column" style="display: flex; flex-direction: column; height: 100%">
 
                   <div class="scene-container">
 
@@ -253,7 +265,7 @@
                       </v-alert>
                     </div>
 
-                    <div v-show="showSceneView">
+                    <div v-show="showSceneView" class="scene-view">
                       <SceneMessages
                         ref="sceneMessages"
                         :appearance-config="effectiveAppearanceConfig"
@@ -264,10 +276,12 @@
                         :scene="scene"
                         @cancel-audio-queue="onCancelAudioQueue"
                         @configure-entity-highlights="onConfigureEntityHighlights"
+                        @scene-backdrop="sceneBackdropSrc = $event"
+                        @scene-backdrop-candidate="sceneBackdropCandidate = $event"
                       />
                     </div>
 
-                    <div ref="sceneToolsContainer" :class="{ 'scene-controls--locked': uxInteractionActive }">
+                    <div ref="sceneToolsContainer" class="scene-controls" :class="{ 'scene-controls--locked': uxInteractionActive }">
                       <AgentActivityBar v-if="appConfig?.game?.general?.show_agent_activity_bar !== false" :agent-status="agentStatus" />
                       <SceneTools 
                         @open-world-state-manager="onOpenWorldStateManager"
@@ -284,6 +298,7 @@
                         :scene="scene"
                         :activeCharacters="activeCharacters"
                         :visual-agent-ready="visualAgentReady"
+                        :scene-backdrop-candidate="sceneBackdropCandidate"
                         :audioPlayedForMessageId="audioPlayedForMessageId" />
                       <SceneMessageInput
                         ref="sceneMessageInput"
@@ -350,21 +365,76 @@
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
             <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" :app-config="appConfig" ref="promptsView" v-model:main-tab="promptsMainTab" @clear-prompts="onClearPrompts" />
           </v-tabs-window-item>
+          <!-- SETTINGS -->
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="settings">
+            <AppSettings
+            ref="appSettings"
+            :agent-status="agentStatus"
+            :scene-active="sceneActive"
+            :client-status="clientStatus"
+            :visible="tab === 'settings'"
+            @appearance-preview="onAppearancePreview"
+            @appearance-preview-clear="onAppearancePreviewClear"
+            @page-changed="(page) => appSettingsPage = page"
+            @dirty-changed="(dirty) => appSettingsDirty = dirty"
+            @save-state-changed="(state) => appSettingsSaveState = state" />
+          </v-tabs-window-item>
 
         </v-tabs-window>
 
       </v-container>
     </v-main>
 
-    <AppConfig ref="appConfig" :agentStatus="agentStatus" :sceneActive="sceneActive" :clientStatus="clientStatus" @appearance-preview="onAppearancePreview" @appearance-preview-clear="onAppearancePreviewClear" />
     <AgentActionOverrides ref="agentActionOverrides" :app-config="appConfig" :agent-status="agentStatus" />
+
+    <v-dialog v-model="worldEditorUnavailable" max-width="420">
+      <v-card>
+        <v-card-title>
+          <v-icon start color="warning">mdi-earth-box-off</v-icon>
+          World editor unavailable
+        </v-card-title>
+        <v-card-text>
+          The world editor requires a loaded scene. Load or create a scene first.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" variant="text" @click="worldEditorUnavailable = false">OK</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-dialog v-model="unsavedSettingsPrompt" max-width="480" persistent>
+      <v-card>
+        <v-card-title>
+          <v-icon start color="warning">mdi-content-save-alert-outline</v-icon>
+          You have unsaved settings
+        </v-card-title>
+        <v-card-text>
+          You have unsaved changes in Settings. Save them, discard them, or leave them pending and return to Settings later.
+          <p v-if="appSettingsSaveState.externalChange" class="text-warning mt-2 text-caption">
+            The configuration was changed outside this view while you have unsaved edits — saving overwrites it.
+          </p>
+        </v-card-text>
+        <v-card-actions>
+          <v-btn color="delete" variant="text" prepend-icon="mdi-undo" @click="onUnsavedSettingsDiscard">Discard Changes</v-btn>
+          <v-spacer></v-spacer>
+          <v-btn color="muted" variant="text" @click="onUnsavedSettingsIgnore">Ignore</v-btn>
+          <v-btn color="primary" variant="text" prepend-icon="mdi-check-circle-outline" :disabled="!appSettingsSaveState.canSave" @click="onUnsavedSettingsSave">Save</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
   </v-app>
   <StatusNotification />
   <RateLimitAlert ref="rateLimitAlert" />
+  <AutoRetryAlert ref="autoRetryAlert" />
   <GenerationErrorDialog ref="generationErrorDialog" />
+  <SceneTimeline
+    ref="sceneTimeline"
+    :scene="scene"
+    :appearance-config="effectiveAppearanceConfig"
+  />
   <VersionMismatchAlert ref="versionMismatchAlert" />
   <OnboardingWizard
     v-if="connected && appConfig && appConfig.clients"
@@ -379,28 +449,31 @@ import AIClient from './AIClient.vue';
 import AIAgent from './AIAgent.vue';
 import AgentActivityBar from './AgentActivityBar.vue';
 import AgentActionOverrides from './AgentActionOverrides.vue';
-import LoadScene from './LoadScene.vue';
+import SceneLanding from './SceneLanding.vue';
 import SceneTools from './SceneTools.vue';
 import SceneMessages from './SceneMessages.vue';
 import SceneMessageInput from './SceneMessageInput.vue';
 import WorldState from './WorldState.vue';
 import CoverImage from './CoverImage.vue';
-import AppConfig from './AppConfig.vue';
+import AppSettings from './AppSettings.vue';
+import AppSettingsMenu from './AppSettingsMenu.vue';
 import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
+import AutoRetryAlert from './AutoRetryAlert.vue';
 import GenerationErrorDialog from './GenerationErrorDialog.vue';
+import SceneTimeline from './SceneTimeline.vue';
 import VersionMismatchAlert from './VersionMismatchAlert.vue';
 import { versionsMatch } from '@/constants/version';
 import VisualLibrary from './VisualLibrary.vue';
 import VoiceLibrary from './VoiceLibrary.vue';
 import WorldStateManager from './WorldStateManager.vue';
 import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
-import IntroView from './IntroView.vue';
 import NodeEditor from './NodeEditor.vue';
 import DirectorConsole from './DirectorConsole.vue';
 import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
+import HelpChat from './HelpChat.vue';
 import PackageManager from './PackageManager.vue';
 import PackageManagerMenu from './PackageManagerMenu.vue';
 import Templates from './Templates.vue';
@@ -410,6 +483,7 @@ import PromptsView from './prompts/PromptsView.vue';
 import PromptsMenu from './prompts/PromptsMenu.vue';
 // import debounce
 import { debounce } from 'lodash';
+import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '@/constants/visual';
 import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 import AutocompleteMixin from './AutocompleteMixin.js';
@@ -420,26 +494,29 @@ export default {
     AIAgent,
     AgentActivityBar,
     AgentActionOverrides,
-    LoadScene,
+    SceneLanding,
     SceneTools,
     SceneMessages,
     SceneMessageInput,
     WorldState,
     CoverImage,
-    AppConfig,
+    AppSettings,
+    AppSettingsMenu,
     DebugTools,
     AudioQueue,
     StatusNotification,
-    IntroView,
     VisualLibrary,
     WorldStateManager,
     WorldStateManagerMenu,
     NodeEditor,
     DirectorConsole,
     RateLimitAlert,
+    AutoRetryAlert,
     GenerationErrorDialog,
+    SceneTimeline,
     VersionMismatchAlert,
     DirectorConsoleWidget,
+    HelpChat,
     PackageManager,
     PackageManagerMenu,
     VoiceLibrary,
@@ -454,6 +531,13 @@ export default {
   data() {
     return {
       appearancePreview: null, // Preview config while editing settings (null = use saved config)
+      // object URL of the scene illustration acting as the scene backdrop
+      // (scene.assets.backdrop), reported up by SceneMessages which owns
+      // the asset cache
+      sceneBackdropSrc: null,
+      // asset id of the most recent message-attached background image the
+      // scene-tools "Immersive" chip promotes when no backdrop is set
+      sceneBackdropCandidate: null,
       tab: 'home',
       tabs: [
         {
@@ -512,6 +596,17 @@ export default {
           value: 'prompts'
         },
         {
+          title: () => { return 'Settings' },
+          condition: () => { return true },
+          icon: () => { return 'mdi-cog' },
+          alert: () => { return this.appSettingsDirty },
+          alertTooltip: () => { return 'You have unsaved changes in Settings' },
+          click: () => {
+            // Settings tab clicked
+          },
+          value: 'settings'
+        },
+        {
           title: () => { return 'Home' },
           condition: () => { return true },
           icon: () => { return 'mdi-home' },
@@ -532,6 +627,8 @@ export default {
       sceneDrawer: true,
       debugDrawer: false,
       directorConsoleDrawer: false,
+      helpDrawer: false,
+      worldEditorUnavailable: false,
       websocket: null,
       inputDisabled: false,
       waitingForInput: false,
@@ -582,6 +679,21 @@ export default {
       recentTemplates: [],
       // Synced tab state between PromptsMenu and PromptsView
       promptsMainTab: 'prompts',
+      // Synced page state between AppSettingsMenu and AppSettings
+      appSettingsPage: 'gameplay',
+      appSettingsDirty: false,
+      // Whether AppSettings would accept a save right now, and whether the
+      // configuration changed elsewhere while it holds unsaved edits
+      appSettingsSaveState: { canSave: false, externalChange: false },
+      // Unsaved settings guard: tab the user tried to leave for, held while
+      // the confirmation dialog is open
+      unsavedSettingsPrompt: false,
+      unsavedSettingsTarget: null,
+      suppressUnsavedSettingsPrompt: false,
+      revertingTab: false,
+      // The tab the view is actually on — `tab` transiently holds a target
+      // the unsaved settings guard vetoes
+      committedTab: 'home',
       // Count of outdated prompt template overrides
       promptsOutdatedCount: 0,
       // Flag to ensure new-scene navigation only happens once per scene load
@@ -601,6 +713,11 @@ export default {
     },
     tab: {
       handler(newTab, oldTab) {
+        if(this.guardUnsavedSettings(newTab)) {
+          return;
+        }
+        this.committedTab = newTab;
+
         // Save scroll position when leaving main tab
         if(oldTab === 'main' && this.sceneActive) {
           this.mainTabScrollPosition = window.scrollY;
@@ -692,11 +809,17 @@ export default {
     },
   },
   computed: {
+    sceneBackdropStyle() {
+      if (!this.sceneBackdropSrc) {
+        return {};
+      }
+      return { '--scene-backdrop-image': `url(${this.sceneBackdropSrc})` };
+    },
     creativeMode() {
       return this.tab === 'main' && this.sceneActive && this.scene.environment === 'creative';
     },
     leftDrawerWidth() {
-      // Wider drawer for prompts tab to match debug tools drawer
+      // Wider drawer for the prompts tab's denser listing
       return this.tab === 'prompts' ? 400 : 300;
     },
     promptsViewPrompts() {
@@ -741,9 +864,9 @@ export default {
       // Use preview if available, otherwise fall back to saved config
       return this.appearancePreview ?? (this.appConfig ? this.appConfig.appearance : {});
     },
-    directorConsoleWidth() {
-      // based on the screen width, set the width of the director console
-      const screenWidth = window.innerWidth;
+    rightToolsDrawerWidth() {
+      // based on the current (reactive) window width, set the width of the right hand drawers
+      const screenWidth = this.$vuetify.display.width;
       if(screenWidth <= 1920) {
         return 400;
       } else if(screenWidth <= 2560) {
@@ -769,7 +892,11 @@ export default {
     // state override (`direction.always_on`). Mirrors the backend's
     // `direction_enabled_with_override` property.
     directionAvailable() {
-      const agentEnabled = this.agentStatus?.director?.actions?.scene_direction?.enabled || false;
+      const agentEnabled = effectiveActionEnabled(
+        this.agentStatus?.director?.actions,
+        this.agentStatus?.director?.scene_overrides,
+        'scene_direction',
+      );
       const sceneForced = this.scene?.data?.direction_always_on || false;
       return agentEnabled || sceneForced;
     },
@@ -818,6 +945,7 @@ export default {
       appConfig: () => this.appConfig,
       openAppConfig: this.openAppConfig,
       openAgentActionOverrides: () => this.$refs.agentActionOverrides?.open(),
+      openSceneTimeline: (options) => this.$refs.sceneTimeline.open(options),
       configurationRequired: () => this.configurationRequired(),
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
       getTrackedCharacterStates: (name) => this.$refs.worldState.trackedCharacterStates(name),
@@ -855,6 +983,8 @@ export default {
       },
       callAgentTool: (actionName, args) => this.callAgentTool(actionName, args),
       openDirectorConsole: () => this.toggleNavigation('directorConsole', true),
+      helpChatOpen: () => this.helpDrawer,
+      openHelpChat: () => this.toggleNavigation('help', true),
       navigateToLLMTemplates: () => {
         this.tab = 'prompts';
         this.$nextTick(() => {
@@ -925,6 +1055,17 @@ export default {
         console.log("VITE_TALEMATE_BACKEND_WEBSOCKET_URL is set but not a valid WebSocket URL:", envWebsocketUrl);
       }
       let websocketUrl = isValidUrl ? envWebsocketUrl : `ws://${currentUrl.hostname}:5050/ws`;
+      // 0.0.0.0 is a server bind address, not a reachable client target
+      // (recent Chrome refuses it outright) — resolve it to whatever host
+      // the UI itself was loaded from, which serves both ports.
+      if (isValidUrl) {
+        let wsUrl = new URL(websocketUrl);
+        if (wsUrl.hostname === '0.0.0.0') {
+          wsUrl.hostname = currentUrl.hostname;
+          websocketUrl = wsUrl.toString();
+          console.log("VITE_TALEMATE_BACKEND_WEBSOCKET_URL points at 0.0.0.0, using page hostname:", websocketUrl);
+        }
+      }
 
       console.log("urls", { websocketUrl, currentUrl }, {env : import.meta.env});
 
@@ -1011,6 +1152,7 @@ export default {
           this.newSceneNavigationPending = true; // Allow one-time new-scene navigation on next scene_status
           this.clearUxInteractions(); // Clear any active UX interactions when loading a new scene
           this.clearPrompts(); // Clear prompts when loading a new scene
+          this.$refs.generationErrorDialog.closeAll(); // Backend cancelled the outgoing scene's pending generations
           this.requestAppConfig();
           this.requestWorldStateTemplates();
           this.requestPromptOutdatedCheck();
@@ -1024,10 +1166,11 @@ export default {
           this.actAs = null;
           this.scene = {};
           this.clearUxInteractions(); // Clear any active UX interactions on load failure
+          this.$refs.generationErrorDialog.closeAll(); // Backend cancelled the outgoing scene's pending generations
         } else if (data.id === 'load_scene_request') {
           // Load the requested scene (e.g., after forking)
           this.resetViews();
-          this.$refs.loadScene.loadJsonSceneFromPath(data.data.path);
+          this.$refs.sceneLanding.loadJsonSceneFromPath(data.data.path);
         }
         if(data.status == 'error') {
           this.errorNotification = true;
@@ -1057,7 +1200,19 @@ export default {
         return;
       }
 
+      if(data.type === 'auto_retry') {
+        this.$refs.autoRetryAlert.open(data.data);
+        return;
+      }
+
+      if(data.type === 'auto_retry_done') {
+        this.$refs.autoRetryAlert.close(data.data.generation_id);
+        return;
+      }
+
       if(data.type === 'generation_error') {
+        // retries exhausted - the dialog supersedes the auto-retry snackbar
+        this.$refs.autoRetryAlert.close(data.data.generation_id, true);
         this.$refs.generationErrorDialog.open(data.data);
         return;
       }
@@ -1188,6 +1343,7 @@ export default {
         details: data.client,
         meta: data.meta,
         actions: data.data.actions,
+        scene_overrides: data.data.scene_overrides,
       }
 
       if(recentlyActive && !busy) {
@@ -1391,6 +1547,27 @@ export default {
         this.debugDrawer = open || !this.debugDrawer;
       else if (navigation == "directorConsole")
         this.directorConsoleDrawer = open || !this.directorConsoleDrawer;
+      else if (navigation == "help")
+        this.helpDrawer = open || !this.helpDrawer;
+    },
+    buildUxSnapshot() {
+      // sent with help chat messages so the help agent knows what the user is looking at
+      return {
+        active_tab: this.tab,
+        open_drawers: [
+          ...(this.sceneDrawer && this.tab !== 'home' ? ['scene'] : []),
+          ...(this.drawer ? ['clients_and_agents'] : []),
+          ...(this.debugDrawer ? ['debug_tools'] : []),
+          ...(this.directorConsoleDrawer ? ['director_console'] : []),
+        ],
+        scene_active: this.sceneActive,
+        scene_environment: this.sceneActive ? this.scene?.environment : null,
+        client_settings_modal: this.$refs.aiClient?.uxSnapshot() || null,
+        agent_settings_modal: this.$refs.aiAgent?.uxSnapshot() || null,
+        app_settings_modal: this.$refs.appSettings?.uxSnapshot() || null,
+        app_ready: this.ready,
+        waiting_for_input: this.waitingForInput,
+      };
     },
     openDirectorWithChat() {
       this.toggleNavigation('directorConsole', true);
@@ -1457,13 +1634,21 @@ export default {
     },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
       // If trying to open templates, redirect to templates tab instead
+      // (available without a scene)
       if (tab === 'templates') {
         this.onNavigateTemplate(sub1);
         return;
       }
+      if (!this.sceneActive) {
+        this.worldEditorUnavailable = true;
+        return;
+      }
       this.tab = 'world';
       this.$nextTick(() => {
-        this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
+        // the unsaved settings guard can veto the switch above, leaving the
+        // world window item unrendered — its commit path replays the tab's
+        // click, only this sub-navigation is dropped
+        this.$refs.worldStateManager?.show(tab, sub1, sub2, sub3);
       });
     },
     onOpenAgentMessages(agent_name) {
@@ -1532,7 +1717,91 @@ export default {
       this.openAppConfig('appearance', 'scene');
     },
     openAppConfig(tab, page, item=null) {
-      this.$refs.appConfig.show(tab, page, item);
+      this.tab = 'settings';
+      this.$nextTick(() => {
+        if (tab && this.$refs.appSettings) {
+          this.$refs.appSettings.openLegacy(tab, page, item);
+        }
+      });
+    },
+    onTabClick(tabDef) {
+      // the tab's side effect acts on a view the guard may refuse to switch
+      // to — leaveSettingsTab() replays it once the user commits
+      if(this.settingsNavigationBlocked(tabDef.value)) {
+        return;
+      }
+      tabDef.click();
+    },
+    settingsNavigationBlocked(target) {
+      // leaving settings while edits are pending needs a decision first.
+      // Checked against committedTab, not `tab`: v-tabs updates the model
+      // before the click handler runs, so `tab` may already hold the target
+      return this.committedTab === 'settings'
+        && target !== 'settings'
+        && this.appSettingsDirty
+        && !this.suppressUnsavedSettingsPrompt;
+    },
+    guardUnsavedSettings(newTab) {
+      // Re-entrant call caused by the revert below: the view never left the
+      // settings tab, so no tab change side effect should run
+      if(this.revertingTab) {
+        this.revertingTab = false;
+        return true;
+      }
+      if(!this.settingsNavigationBlocked(newTab)) {
+        return false;
+      }
+      // hold the view on settings and let the user decide what to do with
+      // the edits
+      this.unsavedSettingsTarget = newTab;
+      this.unsavedSettingsPrompt = true;
+      this.revertingTab = true;
+      this.tab = 'settings';
+      return true;
+    },
+    onUnsavedSettingsIgnore() {
+      this.leaveSettingsTab();
+    },
+    onUnsavedSettingsSave() {
+      // fire and forget: the save is a websocket round-trip, the dirty
+      // state clears (and with it the tab badge) when it comes back
+      this.$refs.appSettings.saveConfig();
+      this.leaveSettingsTab();
+    },
+    onUnsavedSettingsDiscard() {
+      this.$refs.appSettings.discard();
+      this.leaveSettingsTab();
+    },
+    leaveSettingsTab() {
+      const target = this.unsavedSettingsTarget;
+      this.unsavedSettingsPrompt = false;
+      this.unsavedSettingsTarget = null;
+      if(!target) {
+        return;
+      }
+      // the target may have disappeared while the prompt was open (a scene
+      // unload removes 'main', 'world', ...) — the availableTabs watcher
+      // won't correct it, it already ran while settings (always available)
+      // was selected
+      const targetTab = this.availableTabs.find(tab => tab.value === target)
+        || this.availableTabs.find(tab => tab.value === 'home');
+      if(!targetTab) {
+        return;
+      }
+      // the edits may still be unsaved (Ignore, or a save whose round-trip
+      // hasn't landed yet) — suppress the guard so completing the navigation
+      // doesn't re-open the dialog
+      this.suppressUnsavedSettingsPrompt = true;
+      this.tab = targetTab.value;
+      this.$nextTick(() => { this.suppressUnsavedSettingsPrompt = false; });
+      // take the same path a real click does — the side effect was skipped
+      // when the guard vetoed the navigation
+      targetTab.click();
+    },
+    onAppSettingsNavigate({ page, anchor }) {
+      if (this.$refs.appSettings) {
+        this.$refs.appSettings.navigate(page, anchor);
+      }
     },
     uxErrorHandler(error) {
       this.errorNotification = true;
@@ -1736,8 +2005,63 @@ export default {
   overflow-x: auto;
 }
 
+/* Scene backdrop: the scene's backdrop image (scene.assets.backdrop) fills
+   the whole scene column (messages, tools and input); SceneMessages gives
+   each message a translucent panel for legibility. */
+.scene-backdrop-active {
+  background-image: var(--scene-backdrop-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* fixed attachment sizes/positions the image against the viewport, not
+     the scene column - otherwise a long message list stretches the column
+     and `cover` scales the image to the full scrollback height */
+  background-attachment: fixed;
+}
+
+/* the message input, control chips (auto save, auto progress, agent
+   activity, ...) and the input's send/autocomplete buttons get solid
+   backgrounds so they don't fight the backdrop (they are otherwise
+   transparent/tonal) */
+.scene-backdrop-active .scene-controls :deep(.v-field),
+.scene-backdrop-active .scene-controls :deep(.v-chip),
+.scene-backdrop-active .scene-controls :deep(.scene-message-input-root .v-btn) {
+  background-color: rgb(var(--v-theme-surface));
+}
+
+/* with a backdrop, stretch the scene column to at least the visible
+   main-area height so a short scene doesn't crop the image; the message
+   list grows and the tools/input hug the bottom of the screen.
+   --v-layout-top is set by vuetify on v-main (app bar offset); the 32px
+   accounts for the v-container's vertical padding. */
+.scene-backdrop-active .scene-column {
+  min-height: calc(100dvh - var(--v-layout-top, 64px) - 32px);
+}
+
+.scene-backdrop-active .scene-container {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.scene-backdrop-active .scene-view {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .scene-controls--locked {
   pointer-events: none;
   opacity: 0.6;
+}
+</style>
+
+<style>
+/* dialogs opt into this while the help chat drawer is open - shifts them
+   left so the drawer stays visible and usable next to them */
+.v-overlay__content.yield-to-help-drawer {
+  margin-right: auto;
+  margin-left: 24px;
 }
 </style>

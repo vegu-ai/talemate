@@ -34,6 +34,11 @@ class SceneEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
+def scene_data_dumps(data: dict) -> str:
+    """Canonical JSON encoding for serialized scene data (saves and exports)."""
+    return json.dumps(data, indent=2, cls=SceneEncoder)
+
+
 async def save_node_module(
     scene: "Scene", graph: "Graph", filename: str = None, set_as_main: bool = False
 ) -> str:

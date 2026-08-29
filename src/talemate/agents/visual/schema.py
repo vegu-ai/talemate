@@ -1,4 +1,4 @@
-from typing import Any, ClassVar, TYPE_CHECKING, Callable
+from typing import Any, ClassVar, Literal, TYPE_CHECKING, Callable
 import pydantic
 import enum
 import base64
@@ -20,6 +20,7 @@ __all__ = [
     "BackendStatusType",
     "VisualPrompt",
     "VisualPromptPart",
+    "PromptFinalizer",
     "SamplerSettings",
     "Resolution",
     "RESOLUTION_MAP",
@@ -27,6 +28,8 @@ __all__ = [
     "GEN_TYPE",
     "PROMPT_TYPE",
     "FORMAT_TYPE",
+    "FINALIZER_MODE",
+    "FINALIZER_TARGET",
     "VIS_TYPE_TO_FORMAT",
     "ENUM_TYPES",
 ]
@@ -78,6 +81,65 @@ class FORMAT_TYPE(ChoiceMixin, enum.StrEnum):
     LANDSCAPE = "LANDSCAPE"
     PORTRAIT = "PORTRAIT"
     SQUARE = "SQUARE"
+
+
+class FINALIZER_MODE(ChoiceMixin, enum.StrEnum):
+    EXACT = "EXACT"
+    FUZZY = "FUZZY"
+    REGEX = "REGEX"
+    AI = "AI"
+
+
+class FINALIZER_TARGET(ChoiceMixin, enum.StrEnum):
+    POSITIVE = "POSITIVE"
+    NEGATIVE = "NEGATIVE"
+    BOTH = "BOTH"
+
+
+class PromptFinalizer(pydantic.BaseModel):
+    """
+    A single prompt post-processing action, applied to the finalized
+    prompt string right before it is sent to image generation.
+    """
+
+    # enum fields are stored as plain values (validate_default so enum
+    # defaults are unwrapped too) so the model survives yaml.dump /
+    # safe_load round-trips in world state template groups
+    model_config = pydantic.ConfigDict(use_enum_values=True, validate_default=True)
+
+    enabled: bool = True
+    mode: FINALIZER_MODE = FINALIZER_MODE.EXACT
+    # search string (EXACT, FUZZY) or pattern (REGEX); unused for AI
+    match: str = ""
+    # replacement text (EXACT, FUZZY, REGEX) or instruction (AI);
+    # an empty replacement removes the match
+    replace: str = ""
+    flags: list[Literal["case_sensitive", "dot_all", "multiline"]] = pydantic.Field(
+        default_factory=list
+    )
+    target: FINALIZER_TARGET = FINALIZER_TARGET.POSITIVE
+    # empty applies to all visual types
+    vis_types: list[str] = pydantic.Field(default_factory=list)
+
+    @pydantic.field_validator("vis_types")
+    @classmethod
+    def validate_vis_types(cls, values: list[str]) -> list[str]:
+        # use_enum_values does not unwrap enums inside lists, so coerce
+        # to plain values here to keep the model yaml-safe
+        return [VIS_TYPE(value).value for value in values]
+
+    @property
+    def case_sensitive(self) -> bool:
+        return "case_sensitive" in self.flags
+
+    def applies_to(self, vis_type: "VIS_TYPE", positive: bool) -> bool:
+        if not self.enabled:
+            return False
+        if self.vis_types and vis_type.value not in self.vis_types:
+            return False
+        if positive:
+            return self.target != FINALIZER_TARGET.NEGATIVE
+        return self.target != FINALIZER_TARGET.POSITIVE
 
 
 class BackendStatusType(enum.Enum):

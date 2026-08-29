@@ -9,6 +9,7 @@ from talemate.game.engine.nodes.core import (
     PropertyField,
     InputValueError,
     NodeStyle,
+    StageExit,
     StopGraphExecution,
     StopModule,
     LoopBreak,
@@ -37,6 +38,10 @@ class ActedAsCharacter(Node):
 
     - state: The current graph state
     - character_name: The name of the character the user acted as
+
+    Outputs:
+
+    - state: The state input, passed through
     """
 
     def __init__(self, title="Acted As Character", **kwargs):
@@ -46,8 +51,14 @@ class ActedAsCharacter(Node):
         self.add_input("state")
         self.add_input("character_name", socket_type="str")
 
+        self.add_output("state")
+
     async def run(self, state: GraphState):
         character_name = self.get_input_value("character_name")
+
+        # this will never be reached, but it's here to make sure
+        # that Stage nodes can be connected to this node
+        self.set_output_values({"state": self.get_input_value("state")})
 
         raise exceptions.ActedAsCharacter(character_name)
 
@@ -55,7 +66,7 @@ class ActedAsCharacter(Node):
 @register("raise/Stop")
 class Stop(Node):
     """
-    Raises the sepcified node / scene loop exception
+    Raises the specified node / scene loop exception
     to stop execution of the current graph
 
     Inputs:
@@ -130,6 +141,8 @@ class Stop(Node):
             raise exceptions.RestartSceneLoop()
         elif exception == "ResetScene":
             raise exceptions.ResetScene()
+        elif exception == "StageExit":
+            raise StageExit()
         else:
             raise InputValueError(self, "exception", f"Unknown exception: {exception}")
 
@@ -144,6 +157,10 @@ class InputValueErrorNode(Node):
     - state: The current state
     - field: The field that caused the error
     - message: The message to raise the exception with
+
+    Outputs:
+
+    - state: The state input, passed through
     """
 
     @pydantic.computed_field(description="Node style")

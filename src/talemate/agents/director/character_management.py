@@ -1,11 +1,18 @@
 from typing import TYPE_CHECKING
 import traceback
+import pydantic
 import structlog
 import talemate.instance as instance
 import talemate.agents.tts.voice_library as voice_library
 from talemate.agents.tts.schema import Voice
-from talemate.util import random_color, chunk_items_by_tokens, remove_substring_names
-from talemate.character import set_voice, activate_character
+from talemate.util import (
+    random_color,
+    chunk_items_by_tokens,
+    remove_substring_names,
+    replace_smart_quotes,
+)
+from talemate.util.data import trim_attributes
+from talemate.character import Character, set_voice, activate_character
 from talemate.status import LoadingStatus
 from talemate.exceptions import GenerationCancelled
 from talemate.agents.base import (
@@ -14,9 +21,18 @@ from talemate.agents.base import (
     set_processing,
     AgentEmission,
 )
+from talemate.agents.creator.character import (
+    CharacterGenerationAspect,
+    CharacterGenerationRequest,
+    CharacterGenerationResult,
+)
 import talemate.game.focal as focal
 from talemate.client.context import ClientContext
 import talemate.emit.async_signals as async_signals
+
+if TYPE_CHECKING:
+    from talemate import Scene
+    from talemate.agents.tts import TTSAgent
 
 async_signals.register(
     "agent.director.character_management.before_persist_character",
@@ -29,17 +45,137 @@ __all__ = [
 
 log = structlog.get_logger()
 
-if TYPE_CHECKING:
-    from talemate import Character, Scene
-    from talemate.agents.tts import TTSAgent
+PERSIST_CHARACTER_EXAMPLE_DIALOGUE_COUNT = 3
+
+NAME_REQUIRED_MESSAGE = (
+    "A character name is required - none was provided or determined."
+)
+
+# per-aspect loading status messages for split-mode generation
+SPLIT_ASPECT_LOADING_MESSAGES: dict[CharacterGenerationAspect, str] = {
+    "name": "Determining character name",
+    "attributes": "Generating character sheet",
+    "description": "Generating character description",
+    "dialogue_instructions": "Generating acting instructions",
+    "example_dialogue": "Generating example dialogue",
+}
+
+
+def _requested_aspects(
+    request: "PersistCharacterRequest",
+    *,
+    description: str,
+    dialogue_instructions: str,
+    example_dialogue: list[str] | None,
+    any_attribute_templates: bool,
+    include_name: bool = False,
+    attributes_first: bool = False,
+) -> list[CharacterGenerationAspect]:
+    """Aspects still needing generation - shared by the fast and split
+    paths. The name aspect only exists before the character is created
+    (fast mode); split mode puts the sheet first so the later prompts
+    render it."""
+    aspects = []
+    if include_name and request.determine_name:
+        aspects.append("name")
+    if not description:
+        aspects.append("description")
+    if (
+        request.generate_attributes
+        and not request.attributes
+        and not any_attribute_templates
+    ):
+        aspects.append("attributes")
+    if not dialogue_instructions:
+        aspects.append("dialogue_instructions")
+    if request.generate_example_dialogue and not example_dialogue:
+        aspects.append("example_dialogue")
+    if attributes_first and "attributes" in aspects:
+        aspects.insert(0, aspects.pop(aspects.index("attributes")))
+    return aspects
+
+
+def _merge_generated(
+    generated: CharacterGenerationResult,
+    *,
+    description: str,
+    dialogue_instructions: str,
+    example_dialogue: list[str] | None,
+) -> tuple[str, str, list[str] | None]:
+    """Fold generated aspects into the caller-supplied values (generated
+    wins) - shared by the fast and split paths."""
+    description = generated.description or description
+    if generated.dialogue_instructions:
+        dialogue_instructions = generated.dialogue_instructions
+    if generated.example_dialogue:
+        example_dialogue = generated.example_dialogue
+    return description, dialogue_instructions, example_dialogue
+
+
+class _FastPreparation(pydantic.BaseModel):
+    """Outcome of the Fast-mode pre-generation step of persist_character."""
+
+    name: str
+    description: str
+    dialogue_instructions: str
+    example_dialogue: list[str] | None
+    generated: CharacterGenerationResult | None
+    collected_templates: dict | None
+
+
+class _SplitPreparation(pydantic.BaseModel):
+    """Outcome of the split-mode aspect-generation step of
+    persist_character."""
+
+    description: str
+    dialogue_instructions: str
+    example_dialogue: list[str] | None
+    generated: CharacterGenerationResult | None
 
 
 class PersistCharacterEmission(AgentEmission):
-    character: "Character"
+    character: Character
 
 
 class VoiceCandidate(Voice):
     used: bool = False
+
+
+class PersistCharacterRequest(pydantic.BaseModel):
+    """Request parameters for persist_character.
+
+    Attributes:
+        generate: Master switch for AI generation. When False, no LLM
+            calls are made at all: the character is created with the given
+            name (required), description and attributes. Voice assignment
+            and entry narration are skipped as well (both are AI features).
+        dialogue_instructions: Pre-generated dialogue instructions (e.g.
+            from the creator GenerateCharacter node) - skips the
+            corresponding generation step.
+        example_dialogue: Pre-generated example dialogue - skips the
+            corresponding generation step.
+    """
+
+    model_config = pydantic.ConfigDict(extra="forbid")
+
+    name: str
+    content: str | None = None
+    attributes: str | None = None
+    determine_name: bool = True
+    templates: list[str] | None = None
+    active: bool = True
+    narrate_entry: bool = False
+    narrate_entry_direction: str = ""
+    augment_attributes: str = ""
+    generate_attributes: bool = True
+    description: str = ""
+    assign_voice: bool = True
+    is_player: bool = False
+    generate_example_dialogue: bool = False
+    example_dialogue_instructions: str = ""
+    generate: bool = True
+    dialogue_instructions: str = ""
+    example_dialogue: list[str] | None = None
 
 
 class CharacterManagementMixin:
@@ -75,7 +211,7 @@ class CharacterManagementMixin:
                 "max_attributes": AgentActionConfig(
                     type="number",
                     label="Limit character attributes",
-                    description="Maximum number of attributes to generate for character sheets. Set to 0 for unlimited (default).",
+                    description="Maximum number of attributes to generate for character sheets, not counting the character's name. Set to 0 for unlimited (default).",
                     value=0,
                     min=0,
                     max=40,
@@ -118,7 +254,7 @@ class CharacterManagementMixin:
     @set_processing
     async def persist_characters_from_worldstate(
         self, exclude: list[str] = None
-    ) -> list["Character"]:
+    ) -> list[Character]:
         created_characters = []
 
         for character_name in self.scene.world_state.characters.keys():
@@ -128,7 +264,9 @@ class CharacterManagementMixin:
             if character_name in self.scene.character_names:
                 continue
 
-            character = await self.persist_character(name=character_name)
+            character = await self.persist_character(
+                PersistCharacterRequest(name=character_name)
+            )
 
             created_characters.append(character)
 
@@ -136,46 +274,283 @@ class CharacterManagementMixin:
 
         return created_characters
 
-    @set_processing
-    async def persist_character(
+    async def _prepare_fast_generation(
         self,
-        name: str,
-        content: str = None,
-        attributes: str = None,
-        determine_name: bool = True,
-        templates: list[str] = None,
-        active: bool = True,
-        narrate_entry: bool = False,
-        narrate_entry_direction: str = "",
-        augment_attributes: str = "",
-        generate_attributes: bool = True,
-        description: str = "",
-        assign_voice: bool = True,
-        is_player: bool = False,
-    ) -> "Character":
+        request: PersistCharacterRequest,
+        *,
+        max_attrs: int | None,
+        loading_status: LoadingStatus,
+    ) -> _FastPreparation:
+        """Fast (consolidated) generation for persist_character.
+
+        Runs before the character exists - the determined name is needed to
+        create it. Also pre-collects generation templates so attribute
+        templates can be folded into the attributes aspect (fold on) or
+        suppress it (fold off).
+        """
+        creator = instance.get_agent("creator")
+        scene: "Scene" = self.scene
+
+        name = request.name
+        description = request.description
+        dialogue_instructions = request.dialogue_instructions
+        example_dialogue = request.example_dialogue
+        content = request.content or ""
+
+        collected_templates = None
+        any_attribute_templates = False
+        if request.templates:
+            collected_templates = (
+                scene.world_state_manager.template_collection.collect_all(
+                    request.templates
+                )
+            )
+            any_attribute_templates = any(
+                template.template_type == "character_attribute"
+                for template in collected_templates.values()
+            )
+
+        # whether the attributes aspect can be consolidated at all (the
+        # template fold below decides whether attribute templates suppress
+        # it or feed it their instructions)
+        can_one_shot_attributes = request.generate_attributes and not request.attributes
+
+        # fold the attribute templates' instructions into the one-shot
+        # instead of one prompt per template - only when the attributes
+        # aspect can actually be consolidated; otherwise the templates apply
+        # per-template as before. placeholders in the template text are
+        # formatted with the input name (or "the character" while the name
+        # is still being determined)
+        attribute_instructions = None
+        if (
+            any_attribute_templates
+            and creator.cc_consolidate_templates
+            and "attributes" in creator.cc_consolidate
+            and can_one_shot_attributes
+        ):
+            any_attribute_templates = False
+            format_name = "the character" if request.determine_name else name
+            attribute_instructions = [
+                {
+                    "attribute": template.formatted("attribute", scene, format_name),
+                    "instructions": template.formatted(
+                        "instructions", scene, format_name
+                    )
+                    or "",
+                }
+                for template in collected_templates.values()
+                if template.template_type == "character_attribute"
+            ]
+            collected_templates = {
+                uid: template
+                for uid, template in collected_templates.items()
+                if template.template_type != "character_attribute"
+            }
+
+        fast_aspects = _requested_aspects(
+            request,
+            description=description,
+            dialogue_instructions=dialogue_instructions,
+            example_dialogue=example_dialogue,
+            any_attribute_templates=any_attribute_templates,
+            include_name=True,
+        )
+
+        generated = None
+        if fast_aspects:
+            loading_status("Generating character")
+            generated = await creator.generate_character_aspects(
+                CharacterGenerationRequest(
+                    aspects=fast_aspects,
+                    name=name,
+                    content=content,
+                    description=description,
+                    example_dialogue_instructions=request.example_dialogue_instructions,
+                    max_examples=PERSIST_CHARACTER_EXAMPLE_DIALOGUE_COUNT,
+                    max_attributes=max_attrs,
+                    attribute_instructions=attribute_instructions,
+                    augment_attributes=request.augment_attributes
+                    if attribute_instructions
+                    else "",
+                )
+            )
+            if request.determine_name and generated.name:
+                name = generated.name
+                log.debug("persist_character", adjusted_name=name)
+            description, dialogue_instructions, example_dialogue = _merge_generated(
+                generated,
+                description=description,
+                dialogue_instructions=dialogue_instructions,
+                example_dialogue=example_dialogue,
+            )
+
+        # a name is existential - if the one-shot missed it, try the
+        # individual request before the caller's name guard rejects it
+        if request.determine_name and not name:
+            loading_status(SPLIT_ASPECT_LOADING_MESSAGES["name"])
+            name = await creator.determine_character_name(name, instructions=content)
+            log.debug("persist_character", adjusted_name=name)
+
+        return _FastPreparation(
+            name=name,
+            description=description,
+            dialogue_instructions=dialogue_instructions,
+            example_dialogue=example_dialogue,
+            generated=generated,
+            collected_templates=collected_templates,
+        )
+
+    async def _determine_split_name(
+        self,
+        request: PersistCharacterRequest,
+        *,
+        loading_status: LoadingStatus,
+    ) -> str:
+        """Split mode: determine the name with its individual request - runs
+        before the character exists, the name is needed to create it."""
+        creator = instance.get_agent("creator")
+        loading_status(SPLIT_ASPECT_LOADING_MESSAGES["name"])
+        result = await creator.generate_character_aspects(
+            CharacterGenerationRequest(
+                aspects=["name"],
+                name=request.name,
+                content=request.content or "",
+                unified=False,
+            )
+        )
+        log.debug("persist_character", adjusted_name=result.name)
+        return result.name
+
+    async def _prepare_split_generation(
+        self,
+        request: PersistCharacterRequest,
+        *,
+        character: Character,
+        any_attribute_templates: bool,
+        max_attrs: int | None,
+        loading_status: LoadingStatus,
+    ) -> _SplitPreparation:
+        """Split (per-aspect) generation for persist_character - runs after
+        the character exists and its sheet was resolved."""
+        creator = instance.get_agent("creator")
+
+        description = request.description
+        dialogue_instructions = request.dialogue_instructions
+        example_dialogue = request.example_dialogue
+
+        aspects = _requested_aspects(
+            request,
+            description=description,
+            dialogue_instructions=dialogue_instructions,
+            example_dialogue=example_dialogue,
+            any_attribute_templates=any_attribute_templates,
+            attributes_first=True,
+        )
+
+        generated = None
+        if aspects:
+            generated = await creator.generate_character_aspects(
+                CharacterGenerationRequest(
+                    aspects=aspects,
+                    name=character.name,
+                    content=request.content or "",
+                    character=character,
+                    unified=False,
+                    example_dialogue_instructions=request.example_dialogue_instructions,
+                    max_examples=PERSIST_CHARACTER_EXAMPLE_DIALOGUE_COUNT,
+                    max_attributes=max_attrs,
+                    on_aspect_start=lambda aspect: loading_status(
+                        SPLIT_ASPECT_LOADING_MESSAGES[aspect]
+                    ),
+                )
+            )
+            description, dialogue_instructions, example_dialogue = _merge_generated(
+                generated,
+                description=description,
+                dialogue_instructions=dialogue_instructions,
+                example_dialogue=example_dialogue,
+            )
+
+        return _SplitPreparation(
+            description=description,
+            dialogue_instructions=dialogue_instructions,
+            example_dialogue=example_dialogue,
+            generated=generated,
+        )
+
+    @set_processing
+    async def persist_character(self, request: PersistCharacterRequest) -> Character:
+        """
+        Persist a character into the scene - the single backend process all
+        character creation paths route through.
+
+        When the creator agent's "Character Creation -> Fast Character
+        Generation" setting is enabled, all applicable generation steps are
+        consolidated into a single prompt (see
+        creator.generate_character_aspects); otherwise each aspect is
+        generated with its individual request via the same orchestrator
+        (unified=False).
+
+        Args:
+            request: The creation request (see PersistCharacterRequest).
+        """
         world_state = instance.get_agent("world_state")
         creator = instance.get_agent("creator")
         narrator = instance.get_agent("narrator")
         memory = instance.get_agent("memory")
         scene: "Scene" = self.scene
-        any_attribute_templates = False
 
         loading_status = LoadingStatus(max_steps=None, cancellable=True)
 
         # Start of character creation
-        log.debug("persist_character", name=name)
+        log.debug("persist_character", name=request.name, generate=request.generate)
 
-        # Determine the character's name (or clarify if it's already set)
-        if determine_name:
-            loading_status("Determining character name")
-            name = await creator.determine_character_name(name, instructions=content)
-            log.debug("persist_character", adjusted_name=name)
+        # a name is existential - fail before any LLM call when no name was
+        # provided and none will be determined
+        if not request.name and not (request.generate and request.determine_name):
+            raise ValueError(NAME_REQUIRED_MESSAGE)
+
+        fast = request.generate and creator.cc_fast
+        max_attrs = self.cm_max_attributes if self.cm_max_attributes > 0 else None
+
+        name = request.name
+        description = request.description
+        dialogue_instructions = request.dialogue_instructions
+        example_dialogue = request.example_dialogue
+
+        generated = None
+        collected_templates = None
+        if fast:
+            preparation = await self._prepare_fast_generation(
+                request,
+                max_attrs=max_attrs,
+                loading_status=loading_status,
+            )
+            name = preparation.name
+            description = preparation.description
+            dialogue_instructions = preparation.dialogue_instructions
+            example_dialogue = preparation.example_dialogue
+            generated = preparation.generated
+            collected_templates = preparation.collected_templates
+        elif request.generate and request.determine_name:
+            name = await self._determine_split_name(
+                request, loading_status=loading_status
+            )
+
+        # a name is existential - regardless of mode and flag combination
+        if not name:
+            raise ValueError(NAME_REQUIRED_MESSAGE)
 
         if name in self.scene.all_character_names:
             raise ValueError(f'Name "{name}" already exists.')
 
         # Create the blank character
-        character: "Character" = self.scene.Character(name=name, is_player=is_player)
+        character: Character = self.scene.Character(
+            name=name, is_player=request.is_player
+        )
+
+        if description:
+            character.description = description
 
         emission = PersistCharacterEmission(
             agent=self,
@@ -188,7 +563,7 @@ class CharacterManagementMixin:
         # Add the character to the scene
         character.color = random_color()
 
-        if is_player:
+        if request.is_player:
             actor = self.scene.Player(
                 character=character, agent=instance.get_agent("conversation")
             )
@@ -200,106 +575,85 @@ class CharacterManagementMixin:
         await self.scene.add_actor(actor)
 
         try:
-            # Apply any character generation templates
-            if templates:
-                loading_status("Applying character generation templates")
-                templates = scene.world_state_manager.template_collection.collect_all(
-                    templates
-                )
-                log.debug("persist_character", applying_templates=templates)
-                await scene.world_state_manager.apply_templates(
-                    templates.values(),
-                    character_name=character.name,
-                    information=content,
-                )
+            any_attribute_templates = await self._apply_generation_templates(
+                character,
+                request,
+                collected_templates=collected_templates,
+                max_attrs=max_attrs,
+                loading_status=loading_status,
+            )
 
-                # if any of the templates are attribute templates, then we no longer need to
-                # generate a character sheet
-                any_attribute_templates = any(
-                    template.template_type == "character_attribute"
-                    for template in templates.values()
-                )
-                log.debug(
-                    "persist_character", any_attribute_templates=any_attribute_templates
-                )
-
-                if (
-                    any_attribute_templates
-                    and augment_attributes
-                    and generate_attributes
-                ):
-                    log.debug(
-                        "persist_character", augmenting_attributes=augment_attributes
-                    )
-                    loading_status("Augmenting character attributes")
-                    max_attrs = (
-                        self.cm_max_attributes if self.cm_max_attributes > 0 else None
-                    )
-                    additional_attributes = await world_state.extract_character_sheet(
-                        name=name,
-                        text=content,
-                        augmentation_instructions=augment_attributes,
-                        max_attributes=max_attrs,
-                    )
-                    character.base_attributes.update(additional_attributes)
-
-            # Generate a character sheet if there are no attribute templates
-            if not any_attribute_templates and generate_attributes:
-                loading_status("Generating character sheet")
-                log.debug("persist_character", extracting_character_sheet=True)
-                max_attrs = (
-                    self.cm_max_attributes if self.cm_max_attributes > 0 else None
-                )
-                if not attributes:
-                    attributes = await world_state.extract_character_sheet(
-                        name=name, text=content, max_attributes=max_attrs
-                    )
-                else:
-                    attributes = world_state._parse_character_sheet(
-                        attributes, max_attributes=max_attrs
-                    )
-
-                log.debug("persist_character", attributes=attributes)
-                character.base_attributes = attributes
-
-            # Enforce max_attributes limit on final base_attributes if configured
+            # caller-provided attributes are resolved onto the character
+            # before aspect generation - the downstream prompts render the
+            # sheet
             if (
-                self.cm_max_attributes > 0
-                and len(character.base_attributes) > self.cm_max_attributes
+                not any_attribute_templates
+                and request.generate_attributes
+                and request.attributes
             ):
-                # Keep only the first N attributes (preserving insertion order)
-                limited_attrs = dict(
-                    list(character.base_attributes.items())[: self.cm_max_attributes]
+                character.base_attributes = world_state._parse_character_sheet(
+                    request.attributes, max_attributes=max_attrs
                 )
-                log.debug(
-                    "persist_character",
-                    limiting_attributes=True,
-                    original_count=len(character.base_attributes),
-                    limited_count=len(limited_attrs),
-                )
-                character.base_attributes = limited_attrs
 
-            # Generate a description for the character
-            if not description:
-                loading_status("Generating character description")
-                description = await creator.determine_character_description(
-                    character, information=content
+            # Enforce max_attributes limit on base_attributes if configured -
+            # before aspect generation, so the downstream prompts render the
+            # truncated sheet. Same budget rule as the generated sheet: the
+            # character's own name does not cost a slot.
+            if max_attrs:
+                limited_attrs = trim_attributes(
+                    character.base_attributes, max_attributes=max_attrs
                 )
+                if len(limited_attrs) < len(character.base_attributes):
+                    log.debug(
+                        "persist_character",
+                        limiting_attributes=True,
+                        original_count=len(character.base_attributes),
+                        limited_count=len(limited_attrs),
+                    )
+                    character.base_attributes = limited_attrs
+
+            if not fast and request.generate:
+                split = await self._prepare_split_generation(
+                    request,
+                    character=character,
+                    any_attribute_templates=any_attribute_templates,
+                    max_attrs=max_attrs,
+                    loading_status=loading_status,
+                )
+                description = split.description
+                dialogue_instructions = split.dialogue_instructions
+                example_dialogue = split.example_dialogue
+                generated = split.generated
+
+            self._apply_base_attributes(
+                character,
+                request,
+                generated=generated,
+                any_attribute_templates=any_attribute_templates,
+            )
+
+            if description:
                 character.description = description
                 log.debug("persist_character", description=description)
 
-            # Generate a dialogue instructions for the character
-            loading_status("Generating acting instructions")
-            dialogue_instructions = (
-                await creator.determine_character_dialogue_instructions(
-                    character, information=content
+            if dialogue_instructions:
+                character.dialogue_instructions = dialogue_instructions
+                log.debug(
+                    "persist_character", dialogue_instructions=dialogue_instructions
                 )
-            )
-            character.dialogue_instructions = dialogue_instructions
-            log.debug("persist_character", dialogue_instructions=dialogue_instructions)
+
+            if example_dialogue:
+                # generated examples arrive already normalized from the
+                # creator; pre-supplied ones (node graph literals, ws payload)
+                # skip generation, so this is where they get cleaned
+                example_dialogue = [
+                    replace_smart_quotes(example) for example in example_dialogue
+                ]
+                character.example_dialogue = example_dialogue
+                log.debug("persist_character", example_dialogue=example_dialogue)
 
             # Narrate the character's entry if the option is selected
-            if active and narrate_entry:
+            if request.generate and request.active and request.narrate_entry:
                 loading_status("Narrating character entry")
                 is_present = await world_state.is_character_present(name)
                 if not is_present:
@@ -307,14 +661,18 @@ class CharacterManagementMixin:
                         "narrate_character_entry",
                         emit_message=True,
                         character=character,
-                        narrative_direction=narrate_entry_direction,
+                        narrative_direction=request.narrate_entry_direction,
                     )
 
-            if assign_voice:
+            if request.generate and request.assign_voice:
                 await self.assign_voice_to_character(character)
 
+            # done() no-ops at step 0 - every mode needs one step to report
+            # a terminal status
+            loading_status("Adding character to scene")
+
             # Deactivate the character if not active
-            if active:
+            if request.active:
                 await activate_character(scene, character)
 
             # Commit the character's details to long term memory
@@ -339,10 +697,89 @@ class CharacterManagementMixin:
             await scene.remove_actor(actor)
             log.error("Error persisting character", error=traceback.format_exc())
 
+    async def _apply_generation_templates(
+        self,
+        character: Character,
+        request: PersistCharacterRequest,
+        *,
+        collected_templates: dict | None,
+        max_attrs: int | None,
+        loading_status: LoadingStatus,
+    ) -> bool:
+        """Apply the request's character generation templates (AI generation
+        only - template values are LLM-generated, so manual mode skips them),
+        augmenting the sheet from the content when instructed.
+
+        Returns whether any attribute templates were applied - those suppress
+        character sheet generation. Fast mode's template fold removes the
+        folded templates from the collection beforehand, so the same
+        computation holds for both modes.
+        """
+        if not (request.templates and request.generate):
+            return False
+
+        world_state = instance.get_agent("world_state")
+        scene: "Scene" = self.scene
+
+        loading_status("Applying character generation templates")
+        if collected_templates is None:
+            collected_templates = (
+                scene.world_state_manager.template_collection.collect_all(
+                    request.templates
+                )
+            )
+        log.debug("persist_character", applying_templates=collected_templates)
+        await scene.world_state_manager.apply_templates(
+            collected_templates.values(),
+            character_name=character.name,
+            information=request.content,
+        )
+
+        # if any of the templates are attribute templates, then we no longer
+        # need to generate a character sheet
+        any_attribute_templates = any(
+            template.template_type == "character_attribute"
+            for template in collected_templates.values()
+        )
+        log.debug("persist_character", any_attribute_templates=any_attribute_templates)
+
+        if (
+            any_attribute_templates
+            and request.augment_attributes
+            and request.generate_attributes
+        ):
+            log.debug(
+                "persist_character", augmenting_attributes=request.augment_attributes
+            )
+            loading_status("Augmenting character attributes")
+            additional_attributes = await world_state.extract_character_sheet(
+                name=character.name,
+                text=request.content,
+                augmentation_instructions=request.augment_attributes,
+                max_attributes=max_attrs,
+            )
+            character.base_attributes.update(additional_attributes)
+
+        return any_attribute_templates
+
+    def _apply_base_attributes(
+        self,
+        character: Character,
+        request: PersistCharacterRequest,
+        *,
+        generated: CharacterGenerationResult | None,
+        any_attribute_templates: bool,
+    ) -> None:
+        """Apply the orchestrator's generated attributes (fast one-shot or
+        split-mode individual request)."""
+        if any_attribute_templates or not request.generate_attributes:
+            return
+
+        if generated and generated.attributes:
+            character.base_attributes = generated.attributes
+
     @set_processing
-    async def assign_voice_to_character(
-        self, character: "Character"
-    ) -> list[focal.Call]:
+    async def assign_voice_to_character(self, character: Character) -> list[focal.Call]:
         tts_agent: "TTSAgent" = instance.get_agent("tts")
         if not self.cm_should_assign_voice:
             log.debug("assign_voice_to_character", skip=True, reason="not enabled")

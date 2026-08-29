@@ -34,7 +34,7 @@ From this menu you can:
 - **Visualize Moment (Illustration)**: Generate an image of the current moment in the story
 
 !!! note "Per-character submenus (0.37.0)"
-    As of version 0.37.0, each character in the scene is grouped into its own submenu instead of appearing as separate top-level entries. Hover a character's name to open their submenu and pick **Card** or **Portrait**. See [Scene Tools — Visualizer](scenario-tools.md#material-image-frame-visualizer) for the full menu reference.
+    As of version 0.37.0, each character in the scene is grouped into its own submenu instead of appearing as separate top-level entries. Hover a character's name to open their submenu and pick **Card** or **Portrait**. See [Scene Tools — Visualizer](scenario-tools.md#visualizer) for the full menu reference.
 
 !!! tip "Keyboard Modifiers"
     - Hold **ALT** to generate only the prompt without creating an image
@@ -100,6 +100,7 @@ Click on any inline visual to open a context menu with options:
 - **Regenerate and Delete**: Replace the current image with a new one (Alt+click shortcut)
 - **Edit Illustration**: Regenerate with custom editing instructions
 - **Select illustration**: Choose from existing scene illustrations
+- **Set as scene backdrop**: Render this image behind the scene text — see [Scene Backdrop](#scene-backdrop)
 - **Clear Image**: Remove the image from this message (keeps the image in your library)
 - **Delete Image**: Permanently remove the image
 
@@ -121,11 +122,36 @@ For character portraits (avatars), you have additional options:
 - **Generate new portrait**: Create a new portrait based on the current scene context
 - **Select portrait**: Choose from existing portraits for this character
 
+## Scene Backdrop
+
+Any scene illustration can be promoted to the **scene backdrop** — instead of rendering inline, the image fills the whole scene view behind the messages. Message text sits on translucent panels with a drop shadow to stay legible; both the panel opacity and the text shadow are [configurable](app-settings/appearance.md#backdrop-legibility).
+
+![Scene backdrop active](/talemate/img/0.39.0/scene-backdrop-active.png)
+
+The backdrop belongs to the scene and is saved with it, so it survives reloads and history edits.
+
+### Setting a backdrop
+
+There are several ways to set the backdrop:
+
+- **From a message** — click an inline scene illustration and choose **Set as scene backdrop** from its image menu
+- **From the Visual Library** — select an asset in the Scene Assets tab and click **Set backdrop**
+- **From the world editor** — use the per-image actions in the [Scene Visual Manager](world-editor/scene/visuals.md) (World Editor → Scene → Visuals), which is also the place to fully **unset** the backdrop (the image stays in the scene assets)
+- **Automatically** — enable **Auto Backdrop** for Scene Illustrations and/or Scene Backgrounds in the [Appearance Settings](app-settings/appearance.md#visuals); newly generated images of that type then become the backdrop as they arrive
+
+### The Immersive toggle
+
+Once a backdrop is set (or a generated background is available to become one), an **:material-image-area: Immersive** chip appears in the scene tools [quick settings](scenario-tools.md#quick-settings). It toggles the backdrop rendering on and off without forgetting the chosen image.
+
+### Finding the backdrop's message
+
+A small :material-image-area: marker icon appears next to the message whose illustration is the current backdrop. Click it to open that image's menu. Because the illustration no longer renders inline while it is the backdrop, the image menu also stays reachable via an **Illustration** chip on the message's hover toolbar.
+
 ## Configuring Display Settings
 
 You can customize how inline visuals appear through the [Appearance Settings](app-settings/appearance.md#visuals).
 
-![Appearance settings - Visuals tab](/talemate/img/0.35.0/app-settings-appearance-visuals.png)
+![Appearance settings - Visuals tab](/talemate/img/0.39.0/app-settings-appearance-visuals.png)
 
 ### Visual Types
 
@@ -133,7 +159,8 @@ Configure settings independently for each type of visual:
 
 - **Portrait**: Character face images
 - **Card**: Character or scene cards
-- **Scene Illustration**: Full scene images
+- **Scene Illustration**: Images of the current moment ("Visualize Moment")
+- **Scene Background**: Purely environmental images ("Visualize Scene (Background)")
 
 ### Render Cadence
 
@@ -157,6 +184,10 @@ Control how large visuals appear:
 | **Small** | Compact display, minimal space usage |
 | **Medium** | Balanced size (default) |
 | **Big** | Large display; scene illustrations appear above messages |
+
+### Auto Backdrop
+
+Scene Illustrations and Scene Backgrounds additionally have an **Auto Backdrop** checkbox. When enabled, newly generated images of that type automatically become the [scene backdrop](#scene-backdrop) instead of only rendering inline.
 
 ### Auto-attach Visuals
 

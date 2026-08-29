@@ -73,7 +73,17 @@ class VisualSettings(AgentSettingsNode):
 @register("agents/visual/EnumValues")
 class EnumValues(Node):
     """
-    Returns the values of an enum
+    Returns the possible values of one of the visual agent's enums
+    (VIS_TYPE, GEN_TYPE, FORMAT_TYPE or PROMPT_TYPE), selected via the
+    enum property.
+
+    Properties:
+
+    - enum: The enum to get the values of
+
+    Outputs:
+
+    - values: The list of the enum's values
     """
 
     class Fields:
@@ -110,7 +120,15 @@ class EnumValues(Node):
 @register("agents/visual/BackendStatus")
 class BackendStatus(AgentNode):
     """
-    Checks the status of the backend
+    Reports the capabilities of the visual agent's currently configured
+    backends.
+
+    Outputs:
+
+    - can_generate_images: Whether an image generation backend is available
+    - can_edit_images: Whether an image editing backend is available
+    - max_references: Maximum number of reference images the image-edit
+      backend supports (0 if none is available)
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -143,7 +161,32 @@ class BackendStatus(AgentNode):
 @register("agents/visual/PromptPart")
 class PromptPart(Node):
     """
-    Creates a visual prompt part instance
+    Creates a visual prompt part from instructions, keyword lists and
+    descriptive text. Prompt parts are combined into a visual prompt (via the
+    Prompt node), which compiles the final positive / negative prompts from
+    them. Keyword inputs given as a single string are split on ", ", and
+    positive keywords prefixed with "no " (e.g. "no glasses") are treated as
+    implied negative keywords.
+
+    Inputs:
+
+    - instructions: Free-form instructions for the prompt part
+    - positive_keywords_raw: Positive keywords as a list or comma-separated string
+    - negative_keywords_raw: Negative keywords as a list or comma-separated string
+    - positive_descriptive: Descriptive (prose) positive prompt text
+    - negative_descriptive: Descriptive (prose) negative prompt text
+
+    Outputs:
+
+    - prompt_part: The created visual prompt part
+    - instructions: The instructions (passed through)
+    - positive_keywords_raw: Raw positive keywords, including any "no ..." entries
+    - negative_keywords_raw: Raw negative keywords (passed through)
+    - implied_negative_keywords: Keywords derived from "no ..." positive keywords
+    - positive_keywords: Positive keywords with "no ..." entries removed
+    - negative_keywords: Raw negative keywords plus the implied negative keywords
+    - positive_descriptive: Descriptive positive text (passed through)
+    - negative_descriptive: Descriptive negative text (passed through)
     """
 
     class Fields:
@@ -245,7 +288,18 @@ class PromptPart(Node):
 @register("agents/visual/Prompt")
 class Prompt(Node):
     """
-    Creates a visual prompt instance
+    Creates a visual prompt from a list of prompt parts. The prompt_type
+    controls how the parts are compiled into the final positive / negative
+    prompt strings (comma-separated keywords or descriptive prose).
+
+    Inputs:
+
+    - prompt_type: The type of prompt to create (KEYWORDS or DESCRIPTIVE)
+    - parts: List of visual prompt parts to combine
+
+    Outputs:
+
+    - prompt: The created visual prompt
     """
 
     class Fields:
@@ -278,7 +332,27 @@ class Prompt(Node):
 @register("agents/visual/UnpackPrompt")
 class UnpackPrompt(Node):
     """
-    Unpacks a visual prompt into a list of prompt parts
+    Unpacks a visual prompt into its parts and the compiled prompt strings.
+    Use this to access the final positive / negative prompts (built according
+    to the prompt's prompt_type) or the keyword-only / descriptive-only
+    variants regardless of the prompt type.
+
+    Inputs:
+
+    - prompt: The visual prompt to unpack
+
+    Outputs:
+
+    - prompt: The visual prompt (passed through)
+    - parts: The prompt's list of prompt parts
+    - prompt_type: The prompt type (KEYWORDS or DESCRIPTIVE)
+    - instructions: Combined instructions from all parts
+    - positive_prompt: Positive prompt compiled according to prompt_type
+    - negative_prompt: Negative prompt compiled according to prompt_type
+    - positive_prompt_keywords: Positive prompt compiled as comma-separated keywords
+    - negative_prompt_keywords: Negative prompt compiled as comma-separated keywords
+    - positive_prompt_descriptive: Positive prompt compiled as descriptive text
+    - negative_prompt_descriptive: Negative prompt compiled as descriptive text
     """
 
     def __init__(self, title="Unpack Visual Prompt", **kwargs):
@@ -319,7 +393,22 @@ class UnpackPrompt(Node):
 @register("agents/visual/ApplyStyles")
 class ApplyStyles(AgentNode):
     """
-    Applies configured styles to a visual prompt
+    Applies the configured style templates to a visual prompt: the active
+    art style plus the subject style matching the given vis_type. Matching
+    styles are inserted at the front of the prompt's part list, modifying
+    the prompt in place.
+
+    Inputs:
+
+    - state: The graph state
+    - prompt: The visual prompt to apply styles to
+    - vis_type: The type of visual to apply styles for (optional)
+
+    Outputs:
+
+    - state: The graph state, passed through
+    - prompt: The prompt with the styles applied
+    - vis_type: The vis_type, passed through
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -341,6 +430,7 @@ class ApplyStyles(AgentNode):
         self.add_input("prompt", socket_type="visual/prompt")
         self.add_input("vis_type", socket_type="str", optional=True)
         self.set_property("vis_type", "UNSPECIFIED")
+        self.add_output("state")
         self.add_output("prompt", socket_type="visual/prompt")
         self.add_output("vis_type", socket_type="str")
 
@@ -357,10 +447,97 @@ class ApplyStyles(AgentNode):
         )
 
 
+@register("agents/visual/FinalizePrompt")
+class FinalizePrompt(AgentNode):
+    """
+    Applies the visualizer's prompt finalization (post-processing actions)
+    to a positive / negative prompt string pair.
+
+    Inputs:
+    - state: graph state (required — wire through any gating switch so the
+      node is skipped when its output would be discarded)
+    - positive_prompt: positive prompt string (required)
+    - negative_prompt: negative prompt string (optional)
+    - vis_type: type of visual the prompts are for (optional)
+    - character_name: character the prompts involve, enables character
+      level finalizers (optional)
+
+    Outputs:
+    - state: graph state (passed through)
+    - positive_prompt: finalized positive prompt
+    - negative_prompt: finalized negative prompt
+    """
+
+    _agent_name: ClassVar[str] = "visual"
+
+    class Fields:
+        vis_type = PropertyField(
+            name="vis_type",
+            type="str",
+            description="The type of visual the prompts are for",
+            default="UNSPECIFIED",
+            choices=VIS_TYPE.choice_values(),
+        )
+
+    def __init__(self, title="Finalize Prompt", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        # state is required so an upstream gate (e.g. a prompt_only switch)
+        # can deactivate this node — finalization may issue AI queries, so
+        # it must not run eagerly on paths whose result is discarded
+        self.add_input("state")
+        self.add_input("positive_prompt", socket_type="str")
+        self.add_input("negative_prompt", socket_type="str", optional=True)
+        self.add_input("vis_type", socket_type="str", optional=True)
+        self.add_input("character_name", socket_type="str", optional=True)
+        self.set_property("vis_type", "UNSPECIFIED")
+        self.add_output("state")
+        self.add_output("positive_prompt", socket_type="str")
+        self.add_output("negative_prompt", socket_type="str")
+
+    async def run(self, state: GraphState):
+        positive = self.normalized_input_value("positive_prompt")
+        negative = self.normalized_input_value("negative_prompt")
+        vis_type = self.normalized_input_value("vis_type") or "UNSPECIFIED"
+        character_name = self.normalized_input_value("character_name")
+
+        positive, negative = await self.agent.finalize_prompts(
+            positive,
+            negative,
+            VIS_TYPE(vis_type),
+            character_name or None,
+        )
+
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "positive_prompt": positive,
+                "negative_prompt": negative,
+            }
+        )
+
+
 @register("agents/visual/ApplyStyle")
 class ApplyStyle(AgentNode):
     """
-    Applies a style to a visual prompt
+    Applies a specific style template (by template id) to a visual prompt,
+    inserting it at the front of the prompt's part list and modifying the
+    prompt in place.
+
+    Inputs:
+
+    - state: The graph state
+    - prompt: The visual prompt to apply the style to
+    - template_id: The id of the style template to apply
+
+    Outputs:
+
+    - state: The graph state, passed through
+    - prompt: The prompt with the style applied
+    - template_id: The template id, passed through
+    - prompt_part: The prompt part created from the style template (None
+      if the template was not found)
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -372,6 +549,7 @@ class ApplyStyle(AgentNode):
         self.add_input("state")
         self.add_input("prompt", socket_type="visual/prompt")
         self.add_input("template_id", socket_type="str")
+        self.add_output("state")
         self.add_output("prompt", socket_type="visual/prompt")
         self.add_output("template_id", socket_type="str")
         self.add_output("prompt_part", socket_type="visual/prompt_part")
@@ -395,7 +573,30 @@ class ApplyStyle(AgentNode):
 @register("agents/visual/SelectBackend")
 class SelectBackend(AgentNode):
     """
-    Selects a backend based on the generation type
+    Determines which visual backend and generation type to use for a request.
+    Selects the image-edit backend (gen_type IMAGE_EDIT) when reference assets
+    are provided and image editing is available, or when image generation is
+    unavailable but editing is; otherwise selects the image generation backend
+    (gen_type TEXT_TO_IMAGE). Also resolves the prompt type the selected
+    backend expects and the image format implied by the visual type.
+
+    Inputs:
+
+    - state: Graph state
+    - vis_type: The type of visual to generate
+    - reference_assets: List of reference asset IDs; when set, steers
+      selection toward the image-edit backend
+
+    Outputs:
+
+    - state: Graph state (passed through)
+    - backend_name: Name of the selected backend (empty if none is available)
+    - gen_type: The selected generation type (TEXT_TO_IMAGE or IMAGE_EDIT)
+    - vis_type: The visual type (passed through)
+    - prompt_type: Prompt type the selected backend expects (falls back to
+      the agent's fallback prompt type when no backend is available)
+    - format: Image format derived from the visual type (e.g. PORTRAIT)
+    - reference_assets: The reference assets list (passed through)
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -478,7 +679,6 @@ class GenerationRequestNode(AgentNode):
     - character_name: name of character for character-specific generation (optional)
     - reference_assets: list of reference asset IDs (optional)
     - callback: callback function to run after generation (optional)
-    - save_asset: whether to save the generated asset to scene (optional)
     - extra_config: additional configuration dict (optional)
     - asset_attachment_context: controls automatic asset attachment behavior (optional)
 
@@ -490,7 +690,6 @@ class GenerationRequestNode(AgentNode):
     - character_name: character name (passed through)
     - reference_assets: reference assets list (passed through)
     - gen_type: generation type (passed through)
-    - save_asset: save asset flag (passed through)
     - extra_config: extra config dict (passed through)
     """
 
@@ -623,7 +822,22 @@ class GenerationRequestNode(AgentNode):
 @register("agents/visual/GenerateImage")
 class GenerateImage(AgentNode):
     """
-    Generates an image
+    Generates an image by submitting a generation request to the visual
+    agent, which routes it to the appropriate backend. The request's
+    callback (if any) is invoked with the response, and depending on the
+    request's asset attachment context the resulting image may be saved
+    to the scene's assets.
+
+    Inputs:
+
+    - state: The graph state
+    - generation_request: The generation request to execute
+
+    Outputs:
+
+    - state: The state input, passed through
+    - generation_request: The generation request, passed through
+    - generation_response: The generation response containing the image
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -655,7 +869,23 @@ class GenerateImage(AgentNode):
 @register("agents/visual/UnpackGenerationRequest")
 class UnpackGenerationRequest(AgentNode):
     """
-    Unpacks a generation request
+    Unpacks a visual generation request into its individual fields.
+
+    Inputs:
+
+    - generation_request: The generation request to unpack
+
+    Outputs:
+
+    - generation_request: The generation request, passed through
+    - prompt: The positive prompt string
+    - vis_type: The visual type
+    - format: The image format
+    - character_name: The character name
+    - reference_assets: The list of reference asset IDs
+    - gen_type: The generation type
+    - extra_config: The extra configuration dict
+    - asset_attachment_context: The asset attachment context
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -697,7 +927,20 @@ class UnpackGenerationRequest(AgentNode):
 @register("agents/visual/UnpackGenerationResponse")
 class UnpackGenerationResponse(AgentNode):
     """
-    Unpacks a generation response
+    Unpacks a visual generation response into its individual fields.
+
+    Inputs:
+
+    - generation_response: The generation response to unpack
+
+    Outputs:
+
+    - generation_response: The generation response, passed through
+    - base64: The generated image as base64 encoded data
+    - image_data: The generated image as a data URI
+    - id: The generation's ID
+    - backend_name: The name of the backend that generated the image
+    - request: The generation request that produced this response
     """
 
     _agent_name: ClassVar[str] = "visual"

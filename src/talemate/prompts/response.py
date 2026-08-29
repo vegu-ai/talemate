@@ -28,6 +28,7 @@ __all__ = [
     "Extractor",
     "AnchorExtractorBase",
     "AnchorExtractor",
+    "StrictAnchorExtractor",
     "ComplexAnchorExtractor",
     "AsIsExtractor",
     "AfterAnchorExtractor",
@@ -242,6 +243,27 @@ class AnchorExtractor(AnchorExtractorBase):
         if self.fallback_to_full:
             return self._apply_trim(text)
 
+        return None
+
+
+class StrictAnchorExtractor(AnchorExtractor):
+    """Anchor extraction that only accepts complete <TAG>...</TAG> blocks.
+
+    The base AnchorExtractor falls back to open-ended (`<TAG>...` to end of
+    text), close-ended, and `fallback_to_full` extraction; this subclass
+    accepts none of them. Callers that require reliable structured output
+    deliberately treat those as failures: a model that does not reliably
+    close its tags is not viable for multi-section responses, and accepting
+    bleeding or truncated sections would mask that. Missing sections read
+    as "not extracted" for the caller's fallback policy.
+    """
+
+    def extract(self, text: str) -> str | None:
+        if not text:
+            return None
+        blocks = self._find_root_level_blocks(text)
+        if blocks:
+            return self._apply_trim(blocks[-1])
         return None
 
 

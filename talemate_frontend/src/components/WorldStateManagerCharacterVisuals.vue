@@ -11,6 +11,9 @@
                 <v-tab value="rules" class="text-caption" prepend-icon="mdi-format-list-bulleted-type">
                     Rules
                 </v-tab>
+                <v-tab value="finalizers" class="text-caption" prepend-icon="mdi-auto-fix">
+                    Prompt Finalization
+                </v-tab>
             </v-tabs>
         </v-col>
         <v-col cols="9">
@@ -34,11 +37,19 @@
                 :image-create-available="imageCreateAvailable"
                 @require-scene-save="$emit('require-scene-save')"
             />
-            <WorldStateManagerCharacterVisualsRules 
+            <WorldStateManagerCharacterVisualsRules
                 v-else-if="tab === 'rules'"
                 ref="rules"
                 :character="character"
                 :scene="scene"
+                @require-scene-save="$emit('require-scene-save')"
+            />
+            <WorldStateManagerCharacterVisualsFinalizers
+                v-else-if="tab === 'finalizers'"
+                ref="finalizers"
+                :character="character"
+                :scene="scene"
+                :agent-status="agentStatus"
                 @require-scene-save="$emit('require-scene-save')"
             />
         </v-col>
@@ -49,6 +60,7 @@
 import WorldStateManagerCharacterVisualsCover from './WorldStateManagerCharacterVisualsCover.vue';
 import WorldStateManagerCharacterVisualsAvatar from './WorldStateManagerCharacterVisualsAvatar.vue';
 import WorldStateManagerCharacterVisualsRules from './WorldStateManagerCharacterVisualsRules.vue';
+import WorldStateManagerCharacterVisualsFinalizers from './WorldStateManagerCharacterVisualsFinalizers.vue';
 
 export default {
     name: 'WorldStateManagerCharacterVisuals',
@@ -56,6 +68,7 @@ export default {
         WorldStateManagerCharacterVisualsCover,
         WorldStateManagerCharacterVisualsAvatar,
         WorldStateManagerCharacterVisualsRules,
+        WorldStateManagerCharacterVisualsFinalizers,
     },
     data() {
         return {
@@ -65,6 +78,7 @@ export default {
     props: {
         character: Object,
         scene: Object,
+        agentStatus: Object,
         visualAgentReady: Boolean,
         imageEditAvailable: Boolean,
         imageCreateAvailable: Boolean,

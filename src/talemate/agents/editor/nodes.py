@@ -28,7 +28,24 @@ class EditorSettings(AgentSettingsNode):
 @register("agents/editor/CleanUpUserInput")
 class CleanUpUserInput(AgentNode):
     """
-    Cleans up user input.
+    Cleans up user input via the editor agent, fixing exposition
+    formatting (quotes for speech, asterisks for narration) according to
+    the editor's formatting settings. Input starting with a command prefix
+    (!, @, /) is never edited, and cleanup is skipped entirely when the
+    editor's fix-user-input setting is disabled - unless force is set.
+
+    Inputs:
+
+    - user_input: The user input text to clean up
+    - as_narration: Whether to treat the input as narration instead of speech
+
+    Properties:
+
+    - force: Clean up even when the editor's fix-user-input setting is disabled
+
+    Outputs:
+
+    - cleaned_user_input: The cleaned up user input
     """
 
     _agent_name: ClassVar[str] = "editor"
@@ -70,7 +87,22 @@ class CleanUpUserInput(AgentNode):
 @register("agents/editor/CleanUpNarration")
 class CleanUpNarration(AgentNode):
     """
-    Cleans up narration.
+    Cleans up narration text via the editor agent, stripping partial
+    sentences and fixing exposition formatting according to the editor's
+    formatting settings (skipped unless the narrator fix-exposition
+    setting is enabled or force is set).
+
+    Inputs:
+
+    - narration: The narration text to clean up
+
+    Properties:
+
+    - force: Clean up even when the editor's fix-exposition setting is disabled
+
+    Outputs:
+
+    - cleaned_narration: The cleaned up narration
     """
 
     _agent_name: ClassVar[str] = "editor"
@@ -95,7 +127,7 @@ class CleanUpNarration(AgentNode):
         editor: "EditorAgent" = self.agent
         narration = self.get_input_value("narration")
         force = self.get_property("force")
-        cleaned_narration = await editor.cleanup_narration(narration, force=force)
+        cleaned_narration = await editor.clean_up_narration(narration, force=force)
         self.set_output_values(
             {
                 "cleaned_narration": cleaned_narration,
@@ -103,10 +135,27 @@ class CleanUpNarration(AgentNode):
         )
 
 
-@register("agents/editor/CleanUoCharacterMessage")
+@register("agents/editor/CleanUpCharacterMessage")
 class CleanUpCharacterMessage(AgentNode):
     """
-    Cleans up character message.
+    Cleans up a character's dialogue text via the editor agent: fixes
+    exposition formatting (per the editor's formatting settings), cleans
+    up stray dialogue from other characters, strips partial sentences and
+    balances quotation marks.
+
+    Inputs:
+
+    - text: The character message text to clean up
+    - character: The character the message belongs to
+
+    Properties:
+
+    - force: Fix exposition even when the editor's fix-exposition setting
+      is disabled or the character is a player character
+
+    Outputs:
+
+    - cleaned_character_message: The cleaned up character message
     """
 
     _agent_name: ClassVar[str] = "editor"

@@ -2,7 +2,7 @@
 
 If you want to add an OpenRouter client, change the `Client Type` to `OpenRouter`.
 
-![Client OpenRouter](/talemate/img/0.31.0/client-openrouter.png)
+![Client OpenRouter](/talemate/img/0.39.0/client-openrouter.png)
 
 Click `Save` to add the client.
 
@@ -12,11 +12,11 @@ The client should appear in the clients list. If you haven't set up OpenRouter b
 
 ![Client openrouter no api key](/talemate/img/0.31.0/client-openrouter-no-api-key.png)
 
-Click the `SET API KEY` button. This will open the API settings window where you can add your OpenRouter API key.
+Click the `SET API KEY` button. This will open the application settings on the API Keys page where you can add your OpenRouter API key.
 
 For additional instructions on obtaining and setting your OpenRouter API key, see [OpenRouter API instructions](/talemate/user-guide/apis/openrouter/).
 
-![OpenRouter settings](/talemate/img/0.31.0/openrouter-settings.png)
+![OpenRouter settings](/talemate/img/0.39.0/api-keys-openrouter.png)
 
 Click `Save` and after a moment the client should have a red dot next to it, saying that there is no model loaded.
 
@@ -40,10 +40,26 @@ A unique name for the client that makes sense to you.
 
 Choose any model available via your OpenRouter account. Talemate dynamically fetches the list of models associated with your API key so new models will show up automatically.
 
-##### Max token length
+##### Context Length
 
 Maximum context length (in tokens) that OpenRouter should consider. If you are not sure leave the default value.
 
 !!! note "Available models are fetched automatically"
     Talemate fetches the list of available OpenRouter models when you save the configuration (if a valid API key is present). If you add or remove models to your account later, simply click **Save** in the application settings again to refresh the list. 
+
+### Parameters
+
+The **Parameters** tab in the client settings lets you control which sampler parameters are sent with each request. Some model providers on OpenRouter reject requests that include parameters they don't support for the selected model, returning an error instead of a generation. If you run into this, you can turn the offending parameter off so it is left out of the request entirely.
+
+Each parameter has its own toggle:
+
+- **Send temperature**
+- **Send top_p**
+- **Send top_k**
+- **Send min_p**
+- **Send frequency_penalty**
+- **Send presence_penalty**
+- **Send repetition_penalty**
+
+All of them are enabled by default. Turning a toggle off omits that parameter from the request completely (it is not sent as a zero value). Leave them enabled unless the provider serving your model errors when it receives one of them — for example, some providers only accept a `frequency_penalty` or `presence_penalty` of exactly `0` for certain models.
 --8<-- "docs/snippets/common.md:client-response-length"

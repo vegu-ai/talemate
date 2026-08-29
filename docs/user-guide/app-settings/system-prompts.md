@@ -18,9 +18,9 @@ If a level is blank it falls through to the next one. An empty textarea counts a
 
 ### App-level overrides
 
-Open **Settings** (the cogwheel in the top navigation), then go to the **Presets** tab and select **System Prompts**.
+Open the **:material-cog: Settings** tab in the top navigation, then select **System Prompts** under the **Presets** group in the sidebar.
 
-![App-wide System Prompt presets with the override list on the left](/talemate/img/0.29.0/app-settings-presets-system-prompts.png)
+![App-wide System Prompt presets with the override list on the left](/talemate/img/0.39.0/app-settings-presets-system-prompts.png)
 
 App-level overrides apply to every client unless that client has its own override for the same prompt kind.
 

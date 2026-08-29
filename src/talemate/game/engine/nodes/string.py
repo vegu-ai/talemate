@@ -96,7 +96,7 @@ class Split(Node):
     Inputs:
 
     - string: The string to split
-    - delimiter: Character(s) to use as the split point (optional)
+    - delimiter: Character(s) to use as the split point (optional; a literal "\\n" is treated as a newline)
 
     Properties:
 
@@ -152,7 +152,7 @@ class Join(Node):
     Inputs:
 
     - strings: List of strings to join
-    - delimiter: Character(s) to insert between each string (optional)
+    - delimiter: Character(s) to insert between each string (optional; a literal "\\n" is treated as a newline)
 
     Properties:
 
@@ -208,6 +208,8 @@ class Replace(Node):
     Properties:
 
     - count: Maximum number of replacements to make (-1 for all occurrences)
+    - old: Default substring to find when not provided via input
+    - new: Default replacement string when not provided via input
 
     Outputs:
 
@@ -290,7 +292,9 @@ class Format(Node):
 @register("data/string/AdvancedFormat")
 class AdvancedFormat(DynamicSocketNodeBase):
     """
-    Python-style string formatting with dynamic inputs.
+    Python-style string formatting with dynamic inputs. Uses Python's
+    .format() syntax - reference variables with single curly braces
+    ({name}); for jinja2 templates ({{ name }}) use the Jinja2 Format node.
 
     Behaves like Format but supports dynamic inputs similar to DictCollector.
     Dynamic inputs can be:
@@ -372,16 +376,36 @@ class AdvancedFormat(DynamicSocketNodeBase):
 @register("prompt/Jinja2Format")
 class Jinja2Format(AdvancedFormat):
     """
-    Formats a string using jinja2 with Prompt's template environment
+    Renders a jinja2 template string using Prompt's template environment,
+    providing access to all Prompt globals, filters, and template features.
+    Reference variables with double curly braces: {{ name }}.
 
-    Uses a Prompt instance to render templates, providing access to all
-    Prompt globals, filters, and template features.
+    Variables come from the connected inputs: every dynamic input becomes a
+    template variable. Connect any node output to a dynamic input slot and
+    the variable name is inferred from the source node's name / key /
+    attribute (falling back to the socket name), or connect a (key, value)
+    tuple from Make Key-Value Pair to name it explicitly. The optional
+    variables dict is merged in first; dynamic inputs extend/override it.
 
     Inputs:
-    - template: The template string to render
-    - variables: Dictionary of variables for the template
+    - template: The jinja2 template string to render
+    - variables: Optional base dictionary of template variables
+      (dynamic inputs extend/override these)
     - scope: Optional agent scope (e.g., "director") for template includes
+
+    Dynamic inputs: item{i} - each connected value becomes a template variable
+
+    Outputs:
+    - result: The rendered string
     """
+
+    class Fields:
+        template = PropertyField(
+            name="template",
+            description='A jinja2 template string (e.g., "Hello, {{ name }}")',
+            type="text",
+            default="",
+        )
 
     def __init__(self, title="Jinja2 Format", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -466,7 +490,7 @@ class Trim(Node):
     Inputs:
 
     - string: The string to trim
-    - chars: Character(s) to remove (optional, defaults to whitespace)
+    - chars: Character(s) to remove (optional, defaults to whitespace; a literal "\\n" is treated as a newline)
 
     Properties:
 
@@ -583,7 +607,9 @@ class Extract(Node):
     Extracts a portion of a string using a left and right anchor
 
     Finds the first valid block between anchors (no nested left_anchor inside).
-    Falls back to everything after the left_anchor if no complete block is found.
+    Falls back to everything after the last left_anchor if no complete block is
+    found. If the left_anchor does not occur at all, the result is an empty
+    string.
 
     Examples:
     - "<TAG>nested<TAG>value</TAG>" -> "value" (first clean block)
@@ -670,7 +696,8 @@ class StringCheck(Node):
     """Checks if a string starts with, ends with, or contains a substring
 
     Tests whether a string starts with, ends with, contains, or exactly equals a substring,
-    with optional case sensitivity.
+    with optional case sensitivity. An empty (or unset) string always yields False,
+    regardless of mode.
 
     Inputs:
 
@@ -750,7 +777,23 @@ class StringCheck(Node):
 @register("data/string/Excerpt")
 class Excerpt(Node):
     """
-    Returns a excerpt of a string based on length.
+    Returns an excerpt of a string based on length
+
+    Takes the first `length` characters of the string. If the string was
+    truncated and add_ellipsis is enabled, "..." is appended.
+
+    Inputs:
+
+    - string: The string to excerpt
+
+    Properties:
+
+    - length: The length of the excerpt
+    - add_ellipsis: Whether to add an ellipsis when the string is truncated
+
+    Outputs:
+
+    - result: The excerpt
     """
 
     class Fields:

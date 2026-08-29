@@ -11,7 +11,6 @@ not exercised by `tests/test_world_state_templates.py`:
 """
 
 import os
-import shutil
 
 import pytest
 import yaml
@@ -26,18 +25,6 @@ from talemate.world_state.templates.base import (
     name_to_id,
 )
 from talemate.world_state.templates.state_reinforcement import StateReinforcement
-
-
-TEMPLATE_TEST_PATH = os.path.join(os.path.dirname(__file__), "data", "templates_base")
-
-
-@pytest.fixture(autouse=True)
-def clean_template_dir():
-    if os.path.exists(TEMPLATE_TEST_PATH):
-        shutil.rmtree(TEMPLATE_TEST_PATH)
-    os.makedirs(TEMPLATE_TEST_PATH, exist_ok=True)
-    yield
-    shutil.rmtree(TEMPLATE_TEST_PATH)
 
 
 def make_state_template(**overrides) -> StateReinforcement:
@@ -114,6 +101,43 @@ class TestTemplateFormatted:
         result = t.formatted("query", scene, "Alice", custom="extra-value")
         assert result == "extra-value"
 
+    def test_literal_braces_fall_back_to_raw_text(self, scene):
+        # user-authored text with braces that aren't placeholders (JSON
+        # examples, unknown fields) must render raw, not raise
+        t = make_state_template(query='Emit JSON like {"mood": "dark"}.')
+        assert (
+            t.formatted("query", scene, "Alice") == 'Emit JSON like {"mood": "dark"}.'
+        )
+
+    def test_unknown_placeholder_falls_back_to_raw_text(self, scene):
+        t = make_state_template(query="Use a {tone} voice for {character_name}.")
+        # one bad field poisons the whole format call - the raw text comes
+        # back, known placeholders included
+        assert (
+            t.formatted("query", scene, "Alice")
+            == "Use a {tone} voice for {character_name}."
+        )
+
+    def test_compound_attribute_field_falls_back_to_raw_text(self, scene):
+        # str.format only raises KeyError when the FIRST field component
+        # misses - {character_name.first} resolves character_name and then
+        # raises AttributeError on the str
+        t = make_state_template(query="Refer to {character_name.first} only.")
+        assert (
+            t.formatted("query", scene, "Alice")
+            == "Refer to {character_name.first} only."
+        )
+
+    def test_compound_index_field_on_none_falls_back_to_raw_text(self, scene):
+        # player_name is None in a scene without a player character - the
+        # same template renders fine in one scene and raised TypeError in
+        # another, by scene state rather than syntax
+        t = make_state_template(query="Use {player_name[0]} as the initial.")
+        assert (
+            t.formatted("query", scene, "Alice")
+            == "Use {player_name[0]} as the initial."
+        )
+
 
 # ---------------------------------------------------------------------------
 # Priority enum + Template.priority field
@@ -185,16 +209,16 @@ class TestSanitizeData:
             yaml.dump(data, f)
         return path
 
-    def test_loads_with_missing_uid_assigns_one(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_with_missing_uid_assigns_one(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path, {"author": "a", "name": "n", "description": "d", "templates": {}}
         )
         g = Group.load(path)
         assert g.uid  # assigned a new uuid
 
-    def test_loads_with_missing_name_assigns_uid_prefix(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_with_missing_name_assigns_uid_prefix(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -208,8 +232,8 @@ class TestSanitizeData:
         g = Group.load(path)
         assert g.name == "abcdefgh"
 
-    def test_loads_with_null_description_and_author(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_with_null_description_and_author(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -223,8 +247,8 @@ class TestSanitizeData:
         assert g.description == ""
         assert g.author == ""
 
-    def test_loads_drops_null_template(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_drops_null_template(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -238,8 +262,8 @@ class TestSanitizeData:
         g = Group.load(path)
         assert g.templates == {}
 
-    def test_loads_assigns_template_uid_from_key(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_assigns_template_uid_from_key(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -263,8 +287,8 @@ class TestSanitizeData:
         # template.group should match the group's uid
         assert g.templates["key1"].group == "g-uid"
 
-    def test_loads_assigns_template_name_from_key(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_assigns_template_name_from_key(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -285,11 +309,11 @@ class TestSanitizeData:
         # name was missing -> set to first 8 chars of template_id
         assert g.templates["abcdefghijkl"].name == "abcdefgh"
 
-    def test_loads_drops_template_with_missing_template_type(self):
+    def test_loads_drops_template_with_missing_template_type(self, template_dir):
         # A template with no `template_type` field should be dropped (the
         # missing-type branch deletes and `continue`s, so it doesn't fall
         # into the invalid-type branch and double-delete).
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -309,8 +333,8 @@ class TestSanitizeData:
         g = Group.load(path)
         assert "tid1" not in g.templates
 
-    def test_loads_drops_template_with_invalid_template_type(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_drops_template_with_invalid_template_type(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {
@@ -330,8 +354,8 @@ class TestSanitizeData:
         g = Group.load(path)
         assert "tid1" not in g.templates
 
-    def test_loads_with_non_int_priority_falls_back_to_one(self):
-        path = os.path.join(TEMPLATE_TEST_PATH, "g.yaml")
+    def test_loads_with_non_int_priority_falls_back_to_one(self, template_dir):
+        path = os.path.join(template_dir, "g.yaml")
         self._write(
             path,
             {

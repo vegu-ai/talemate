@@ -14,7 +14,7 @@ from talemate.config import get_config, Config
 from talemate.context import ActiveScene
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 import talemate.emit.async_signals as async_signals
-from talemate.files import list_scenes_directory
+from talemate.files import list_scenes_directory, list_scenes_tree
 from talemate.load import load_scene, SceneInitialization
 from talemate.scene_assets import Asset, get_media_type_from_file_path, VIS_TYPE
 from talemate.scene_message import versions_payload_for
@@ -27,6 +27,7 @@ from talemate.server import (
     quick_settings,
     scene_message as scene_message_plugin,
     time_passage,
+    timeline,
     ux,
     world_state_manager,
     node_editor,
@@ -83,6 +84,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             scene_message_plugin.SceneMessagePlugin.router: scene_message_plugin.SceneMessagePlugin(
                 self
             ),
+            timeline.TimelinePlugin.router: timeline.TimelinePlugin(self),
         }
 
         # unconveniently named function, this `connect` method is called
@@ -148,7 +150,6 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         reset=False,
         callback=None,
         file_name=None,
-        rev: int | None = None,
         scene_initialization: dict | None = None,
     ):
         try:
@@ -171,34 +172,14 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 try:
                     # Use input path directly
                     scene_path = path_or_data
-                    add_to_recent = rev is None
                     scene = await load_scene(
                         scene,
                         scene_path,
                         reset=reset,
-                        add_to_recent=add_to_recent,
                         scene_initialization=SceneInitialization(**scene_initialization)
                         if scene_initialization
                         else None,
                     )
-                    # If a revision is requested, reconstruct and load it
-                    if rev is not None:
-                        from talemate.changelog import write_reconstructed_scene
-
-                        temp_name = f"{scene.filename.replace('.json', '')}-{str(uuid.uuid4())[:10]}.json"
-                        temp_path = await write_reconstructed_scene(
-                            scene, to_rev=rev, output_filename=temp_name
-                        )
-                        scene = self.init_scene()
-                        scene.active = True
-                        scene._memory_never_persisted = True
-                        scene = await load_scene(
-                            scene,
-                            temp_path,
-                            add_to_recent=False,
-                        )
-                        scene.filename = ""
-                        os.remove(temp_path)
                 except Exception as e:
                     self.scene = self.init_scene()
                     return await self.load_scene_failure(e)
@@ -644,6 +625,14 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                     for scene in filtered_list
                     if not os.path.isdir(scene)
                 ],
+            }
+        )
+
+    def request_scenes_tree(self):
+        self.queue_put(
+            {
+                "type": "scenes_tree",
+                "data": list_scenes_tree(),
             }
         )
 

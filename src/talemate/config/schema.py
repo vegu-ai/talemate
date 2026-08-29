@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union, Literal
 
 import pydantic
@@ -24,6 +25,11 @@ async_signals.register(
     "config.changed.follow",
 )
 
+MESSAGE_ASSET_KINDS = ("avatar", "card", "scene_illustration", "scene_background")
+
+# mirrors the frontend rule for the environment variable store
+ENV_VARIABLE_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
 
 class Client(pydantic.BaseModel):
     """
@@ -44,6 +50,12 @@ class Client(pydantic.BaseModel):
 
     # max requests per minute
     rate_limit: Union[int, None] = None
+
+    # automatic retries before the user is notified of a response issue
+    # (0 = notify immediately)
+    retry_empty_response: int = 0
+    retry_rate_limit: int = 0
+    retry_missing_reasoning: int = 0
 
     # expected data structure format in responses
     data_format: Literal["json", "yaml"] | None = None
@@ -125,6 +137,16 @@ class Client(pydantic.BaseModel):
         if v is None:
             return False
         return v
+
+    # clamp rather than reject so an out-of-range hand-edited config.yaml
+    # doesn't fail to load - an unbounded value here means an unbounded
+    # automatic retry loop against a (usually paid) API
+    @pydantic.field_validator(
+        "retry_empty_response", "retry_rate_limit", "retry_missing_reasoning"
+    )
+    @classmethod
+    def clamp_retry_counts(cls, v: int) -> int:
+        return max(0, min(5, v))
 
     # Generic choice metadata for fields that should render as <v-select> in the
     # frontend.  Keyed by field name; values use {"label": ..., "value": ...} format.
@@ -594,6 +616,17 @@ class MarkupMessageStyle(HistoryMessageStyle):
 class MessageAssetCadenceConfig(pydantic.BaseModel):
     cadence: Literal["always", "never", "on_change"] = "always"
     size: Literal["small", "medium", "big"] = "medium"
+    # automatically promote newly generated assets of this kind to the scene
+    # backdrop (only meaningful for scene_illustration and scene_background)
+    auto_backdrop: bool = False
+
+
+def default_message_asset_config(kind: str) -> MessageAssetCadenceConfig:
+    # scene backgrounds are environmental full-frame images — full width
+    # by default
+    if kind == "scene_background":
+        return MessageAssetCadenceConfig(size="big")
+    return MessageAssetCadenceConfig()
 
 
 class SceneAppearance(pydantic.BaseModel):
@@ -610,15 +643,31 @@ class SceneAppearance(pydantic.BaseModel):
     brackets: MarkupMessageStyle = MarkupMessageStyle()
     emphasis: MarkupMessageStyle = MarkupMessageStyle()
     entities: MarkupMessageStyle = MarkupMessageStyle()
+    # scene_background and scene_illustration assets share the message-level
+    # asset_type "scene_illustration"; separate entries keep their display
+    # individually configurable
     message_assets: Dict[str, MessageAssetCadenceConfig] = pydantic.Field(
         default_factory=lambda: {
-            "avatar": MessageAssetCadenceConfig(),
-            "card": MessageAssetCadenceConfig(),
-            "scene_illustration": MessageAssetCadenceConfig(),
+            kind: default_message_asset_config(kind) for kind in MESSAGE_ASSET_KINDS
         }
     )
 
     auto_attach_assets: bool = True
+
+    # opacity of the message text panels rendered over the scene backdrop
+    backdrop_panel_opacity: float = pydantic.Field(default=0.8, ge=0.0, le=1.0)
+    # drop shadow on message text over the scene backdrop
+    backdrop_text_shadow: bool = True
+
+    @pydantic.field_validator("message_assets", mode="after")
+    @classmethod
+    def ensure_default_message_asset_entries(cls, value):
+        # configs saved before an entry existed (e.g. scene_background) come
+        # in without it — fill the gaps so consumers can rely on all keys
+        for key in MESSAGE_ASSET_KINDS:
+            if key not in value:
+                value[key] = default_message_asset_config(key)
+        return value
 
 
 class Appearance(pydantic.BaseModel):
@@ -678,6 +727,22 @@ class Config(pydantic.BaseModel):
     coqui: CoquiConfig = CoquiConfig()
 
     huggingface: HuggingFaceConfig = HuggingFaceConfig()
+
+    # named environment variables passed to subprocess-based integrations
+    # (currently the pi bridge client); every value is encrypted at rest
+    env: Dict[str, str] = pydantic.Field(default_factory=dict)
+
+    @pydantic.field_validator("env")
+    @classmethod
+    def drop_invalid_env_variable_names(cls, value: Dict[str, str]) -> Dict[str, str]:
+        # an invalid name (e.g. containing '=' from a hand-edited config)
+        # would make subprocess spawns fail far from the cause; drop instead
+        # of raising so a bad entry cannot brick config loading
+        invalid = [name for name in value if not ENV_VARIABLE_NAME_PATTERN.match(name)]
+        for name in invalid:
+            log.warning("dropping invalid env variable name", name=name)
+            del value[name]
+        return value
 
     recent_scenes: RecentScenes = RecentScenes()
 

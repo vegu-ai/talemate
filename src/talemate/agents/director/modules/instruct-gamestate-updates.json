@@ -8,7 +8,7 @@
   "height": 100,
   "collapsed": false,
   "inherited": false,
-  "registry": "agernts/director/chat/instructGamestateUpdates",
+  "registry": "agents/director/chat/instructGamestateUpdates",
   "nodes": {
     "0404af9c-3a1e-4535-b8bc-5e8257f95d20": {
       "title": "true",

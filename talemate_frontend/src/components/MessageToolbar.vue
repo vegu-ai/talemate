@@ -33,6 +33,12 @@
     <!-- type-specific actions (e.g. Continue) -->
     <slot name="extra-actions" />
 
+    <!-- illustration asset menu -->
+    <v-chip v-if="showIllustrationMenu" size="x-small" class="ml-2" label color="primary" variant="tonal" @click="$emit('open-illustration-menu', $event)" :disabled="uxLocked || appBusy">
+      <v-icon class="mr-1">mdi-image-frame</v-icon>
+      Illustration
+    </v-chip>
+
     <!-- visualize -->
     <v-chip v-if="showVisualize" size="x-small" class="ml-2" label color="primary" variant="tonal" @click="visualizeMessage(messageId)" :disabled="uxLocked || appBusy || visualizeBusy">
       <v-icon class="mr-1">mdi-image-plus</v-icon>
@@ -149,7 +155,14 @@ export default {
       type: Boolean,
       default: false,
     },
+    // offer the illustration asset menu (used when the message's image is
+    // the active scene backdrop, where no inline image is rendered to click on)
+    showIllustrationMenu: {
+      type: Boolean,
+      default: false,
+    },
   },
+  emits: ['open-illustration-menu'],
   inject: [
     'createPin',
     'reviseMessage',

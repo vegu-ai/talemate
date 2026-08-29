@@ -1,0 +1,21 @@
+## Content
+A mysterious healer arrives at the forest clearing.
+
+## Task
+You are creating the character `Elena` for Fantasy adventure story.
+
+Generate each of the following aspects for Elena.
+
+DESCRIPTION: The character description: an overview of the character in broad strokes — who they are and what defines them — not a continuation of any current narrative.
+Elena MUST feel like a believable character in the context of the scene, and relatable to the audience.
+
+## Response format
+Respond with each aspect inside its own tag pair — an opening AND a closing tag — in exactly this order and format:
+
+<DESCRIPTION>…</DESCRIPTION>
+Every tag MUST be closed. Do not write anything outside the tag pairs.
+
+## Writing style
+Write in terse, Hemingway-esque prose.
+
+The length of your response must fit within 4 paragraphs.

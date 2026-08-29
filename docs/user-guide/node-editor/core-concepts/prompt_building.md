@@ -86,7 +86,7 @@ A fully assembled prompt with:
 - **`response_length`** (default: `0`): Expected length of the response
 - **`technical`** (default: `false`): Include technical context (IDs, typing information)
 - **`dedupe_enabled`** (default: `true`): Forces line-level deduplication on or off for the rendered prompt, overriding the client-level **Deduplicate Prompts** toggle. See [Prompt Deduplication](../../prompts/deduplication.md) — most users should set this to `false`.
-- **`memory_prompt`** (default: `""`): Semantic query string for memory retrieval. Provide this to guide what memories are retrieved when `include_memory_context` is enabled
+- **`memory_prompt`** (default: `""`): Semantic query string for memory retrieval. Provide this to guide what memories are retrieved when `include_memory_context` is enabled. A non-empty value wired into the `memory_prompt` input socket takes precedence over this property — the property applies when the socket is unconnected or resolves empty. (The same rule applies to the Generate Response node's `action_type` input and property.)
 - **`prefill_prompt`** (default: `""`): Text to prefill the response
 - **`return_prefill_prompt`** (default: `false`): Return the prefill with response
 

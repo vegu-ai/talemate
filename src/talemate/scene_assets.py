@@ -32,14 +32,24 @@ from talemate.agents.visual.schema import (
     Resolution,
     AssetAttachmentContext,
 )
+from talemate.files import MEDIA_TYPES
 from talemate.path import SCENES_DIR
 
-async_signals.register("asset_saved")
+async_signals.register(
+    "asset_saved",
+    "asset_deleted",
+    "scene.backdrop_changed",
+    "scene.cover_image_changed",
+    "character.cover_image_changed",
+)
 
 __all__ = [
     "Asset",
     "AssetTransfer",
     "AssetSavedPayload",
+    "AssetDeletedPayload",
+    "SceneBackdropChangedPayload",
+    "CoverImageChangedPayload",
     "SceneAssets",
     "AssetMeta",
     "AssetSelectionContext",
@@ -61,6 +71,13 @@ VIS_TYPE_TO_ASSET_TYPE = {
     VIS_TYPE.SCENE_ILLUSTRATION: "scene_illustration",
     VIS_TYPE.OBJECT_ILLUSTRATION: "card",
     VIS_TYPE.UNSPECIFIED: None,
+}
+
+# vis_types eligible for the scene backdrop, mapped to their
+# appearance.scene.message_assets config entry
+VIS_TYPE_TO_MESSAGE_ASSET_KIND = {
+    VIS_TYPE.SCENE_BACKGROUND: "scene_background",
+    VIS_TYPE.SCENE_ILLUSTRATION: "scene_illustration",
 }
 
 
@@ -106,21 +123,11 @@ def get_media_type_from_extension(file_extension: str) -> str:
     Raises:
         ValueError: If the file extension is not supported
     """
-    # Normalize extension to lowercase and ensure it starts with a dot
-    ext = file_extension.lower()
-    if not ext.startswith("."):
-        ext = f".{ext}"
-
-    if ext == ".png":
-        return "image/png"
-    elif ext in [".jpg", ".jpeg"]:
-        return "image/jpeg"
-    elif ext == ".webp":
-        return "image/webp"
-    elif ext == ".json":
-        return "application/json"
-    else:
-        raise ValueError(f"Unsupported file extension: {ext}")
+    ext = file_extension.lower().lstrip(".")
+    media_type = MEDIA_TYPES.get(ext)
+    if media_type is None:
+        raise ValueError(f"Unsupported file extension: .{ext}")
+    return media_type
 
 
 def get_media_type_from_file_path(file_path: str) -> str:
@@ -337,6 +344,30 @@ class AssetSavedPayload(pydantic.BaseModel):
     )
 
 
+class AssetDeletedPayload(pydantic.BaseModel):
+    """Payload for the asset_deleted signal."""
+
+    asset: Asset
+
+
+class SceneBackdropChangedPayload(pydantic.BaseModel):
+    """Payload for the scene.backdrop_changed signal."""
+
+    backdrop: str | None
+    enabled: bool
+
+
+class CoverImageChangedPayload(pydantic.BaseModel):
+    """
+    Payload for the scene.cover_image_changed and
+    character.cover_image_changed signals. character_name is only set for
+    the character signal.
+    """
+
+    asset: Asset
+    character_name: str | None = None
+
+
 async def _handle_asset_saved(payload: AssetSavedPayload):
     """
     Module-level handler for the asset_saved signal.
@@ -372,6 +403,16 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
                 delete_old=asset_attachment_context.delete_old,
                 message_ids=asset_attachment_context.message_ids,
             )
+
+    # scene backdrop auto-promotion — a newly generated scene illustration /
+    # background becomes the backdrop when its kind's appearance config opts
+    # in; backdrop_enabled is left untouched so an explicit "Immersive" off
+    # isn't overridden
+
+    if payload.new_asset:
+        kind = VIS_TYPE_TO_MESSAGE_ASSET_KIND.get(asset.meta.vis_type)
+        if kind and config.appearance.scene.message_assets[kind].auto_backdrop:
+            await scene.assets.set_scene_backdrop(asset_id=asset.id)
 
     # cover image (scene and character)
 
@@ -434,6 +475,17 @@ class SceneAssets:
         self.scene = scene
         self._assets_cache = None
         self.cover_image = None
+        # scene backdrop: which asset renders behind the scene text, and
+        # whether it currently renders at all
+        self.backdrop: str | None = None
+        self.backdrop_enabled: bool = True
+
+    def _fire_signal(self, name: str, payload: pydantic.BaseModel):
+        """Fire an async signal from a synchronous context."""
+        try:
+            asyncio.create_task(async_signals.get(name).send(payload))
+        except Exception as e:
+            log.error(f"Failed to fire {name} signal", error=str(e))
 
     def _signal_asset_saved(
         self,
@@ -448,16 +500,13 @@ class SceneAssets:
             asset: The asset that was saved
             new_asset: True if this is a newly created asset, False if it already existed
         """
-        try:
-            payload = AssetSavedPayload(
-                asset=asset,
-                new_asset=new_asset,
-            )
-            if asset_attachment_context:
-                payload.asset_attachment_context = asset_attachment_context
-            asyncio.create_task(async_signals.get("asset_saved").send(payload))
-        except Exception as e:
-            log.error("Failed to fire asset_saved signal", error=str(e))
+        payload = AssetSavedPayload(
+            asset=asset,
+            new_asset=new_asset,
+        )
+        if asset_attachment_context:
+            payload.asset_attachment_context = asset_attachment_context
+        self._fire_signal("asset_saved", payload)
 
     @property
     def asset_directory(self) -> str:
@@ -586,12 +635,16 @@ class SceneAssets:
     def dict(self, *args, **kwargs):
         return {
             "cover_image": self.cover_image,
+            "backdrop": self.backdrop,
+            "backdrop_enabled": self.backdrop_enabled,
             "assets": {asset.id: asset.model_dump() for asset in self.assets.values()},
         }
 
     def scene_info(self) -> dict:
         return {
             "cover_image": self.cover_image,
+            "backdrop": self.backdrop,
+            "backdrop_enabled": self.backdrop_enabled,
         }
 
     def load_assets(self, assets_dict: dict):
@@ -942,12 +995,28 @@ class SceneAssets:
 
     def cleanup_cover_images(self) -> bool:
         """
-        Checks character cover images and the scene cover image and if they
-        no longer exist as assets, unsets them.
+        Checks character cover images, the scene cover image and the scene
+        backdrop and if they no longer exist as assets, unsets them.
 
-        Returns True if any cover images were cleaned up, False otherwise.
+        Returns True if anything was cleaned up, False otherwise.
         """
         cleaned = False
+
+        # Check scene backdrop
+        if self.backdrop and not self.validate_asset_id(self.backdrop):
+            log.debug(
+                "Cleaning up scene backdrop",
+                asset_id=self.backdrop,
+            )
+            self.backdrop = None
+            cleaned = True
+
+            self._fire_signal(
+                "scene.backdrop_changed",
+                SceneBackdropChangedPayload(
+                    backdrop=None, enabled=self.backdrop_enabled
+                ),
+            )
 
         # Check scene cover image
         if self.cover_image and not self.validate_asset_id(self.cover_image):
@@ -1124,6 +1193,8 @@ class SceneAssets:
         self.cleanup_cover_images()
         self.cleanup_character_avatars()
         self.cleanup_message_avatars()
+
+        self._fire_signal("asset_deleted", AssetDeletedPayload(asset=asset))
 
         self.scene.emit_status()
 
@@ -1630,7 +1701,51 @@ class SceneAssets:
             },
         )
 
+        await async_signals.get("scene.cover_image_changed").send(
+            CoverImageChangedPayload(asset=asset)
+        )
+
         return asset_id
+
+    async def set_scene_backdrop(
+        self,
+        asset_id: str | None = None,
+        enabled: bool | None = None,
+        clear: bool = False,
+    ) -> str | None:
+        """
+        Updates the scene backdrop.
+
+        Either argument may be omitted to leave that aspect untouched:
+        asset_id selects which asset renders behind the scene text,
+        enabled toggles whether it renders at all.
+
+        clear removes the backdrop asset entirely (asset_id is ignored).
+        """
+        log.debug("set_scene_backdrop", asset_id=asset_id, enabled=enabled, clear=clear)
+        prior = (self.backdrop, self.backdrop_enabled)
+        if clear:
+            self.backdrop = None
+        elif asset_id is not None:
+            if not self.validate_asset_id(asset_id):
+                log.error("Invalid asset id", asset_id=asset_id)
+                return None
+            self.backdrop = asset_id
+        if enabled is not None:
+            self.backdrop_enabled = enabled
+
+        if (self.backdrop, self.backdrop_enabled) != prior:
+            await async_signals.get("scene.backdrop_changed").send(
+                SceneBackdropChangedPayload(
+                    backdrop=self.backdrop, enabled=self.backdrop_enabled
+                )
+            )
+
+        # scene status carries the backdrop state to the frontend
+        if self.scene.active:
+            self.scene.emit_status()
+
+        return self.backdrop
 
     async def set_character_cover_image_from_bytes(
         self, character: "Character", bytes: bytes, override: bool = False
@@ -1692,6 +1807,10 @@ class SceneAssets:
                 "media_type": asset.media_type,
                 "character": character.name,
             },
+        )
+
+        await async_signals.get("character.cover_image_changed").send(
+            CoverImageChangedPayload(asset=asset, character_name=character.name)
         )
 
         return asset_id

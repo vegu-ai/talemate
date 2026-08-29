@@ -616,6 +616,23 @@ class TTSAgent(
             api_details = self.api_attr(api, "agent_details", None)
             if api_details:
                 details.update(api_details)
+
+        # Unused-but-enabled APIs surface only details flagged
+        # surface_when_unused; everything else (including error details) is
+        # already surfaced by the api status in the voice UI.
+        for api in self.apis:
+            if api in used_apis:
+                continue
+            api_details = self.api_attr(api, "agent_details", None)
+            if not api_details:
+                continue
+            details.update(
+                {
+                    key: detail
+                    for key, detail in api_details.items()
+                    if detail.get("surface_when_unused")
+                }
+            )
         return details
 
     @property

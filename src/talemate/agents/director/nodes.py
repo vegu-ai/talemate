@@ -12,6 +12,7 @@ from talemate.character import Character
 import talemate.agents.director.chat.nodes  # noqa: F401
 import talemate.agents.director.scene_direction.nodes  # noqa: F401
 import talemate.agents.director.plan.nodes  # noqa: F401
+from talemate.agents.director.character_management import PersistCharacterRequest
 
 TYPE_CHOICES.extend(
     [
@@ -39,6 +40,12 @@ class PersistCharacter(AgentNode):
     """
     Persists a character that currently only exists as part of the given context
     as a real character that can actively participate in the scene.
+
+    Pre-generated `description`, `dialogue_instructions` and `example_dialogue`
+    inputs (e.g. from an `agents/creator/GenerateCharacter` node) are used
+    as-is instead of being generated again. When wiring a generated name into
+    `character_name`, disable the `determine_name` property so the name is
+    not determined twice.
     """
 
     _agent_name: ClassVar[str] = "director"
@@ -64,7 +71,10 @@ class PersistCharacter(AgentNode):
         self.add_input("state")
         self.add_input("character_name", socket_type="str", optional=True)
         self.add_input("context", socket_type="str", optional=True)
+        self.add_input("description", socket_type="str", optional=True)
         self.add_input("attributes", socket_type="dict,str", optional=True)
+        self.add_input("dialogue_instructions", socket_type="str", optional=True)
+        self.add_input("example_dialogue", socket_type="list", optional=True)
         self.add_input("is_player", socket_type="bool", optional=True)
 
         self.set_property("determine_name", True)
@@ -75,18 +85,26 @@ class PersistCharacter(AgentNode):
     async def run(self, state: GraphState):
         character_name = self.normalized_input_value("character_name")
         context = self.normalized_input_value("context")
+        description = self.normalized_input_value("description")
         attributes = self.normalized_input_value("attributes")
+        dialogue_instructions = self.normalized_input_value("dialogue_instructions")
+        example_dialogue = self.normalized_input_value("example_dialogue")
         determine_name = self.normalized_input_value("determine_name")
         is_player = self.normalized_input_value("is_player")
 
         character = await self.agent.persist_character(
-            name=character_name,
-            content=context,
-            attributes="\n".join([f"{k}: {v}" for k, v in attributes.items()])
-            if attributes
-            else None,
-            determine_name=determine_name,
-            is_player=is_player,
+            PersistCharacterRequest(
+                name=character_name or "",
+                content=context,
+                description=description or "",
+                attributes="\n".join([f"{k}: {v}" for k, v in attributes.items()])
+                if attributes
+                else None,
+                determine_name=determine_name,
+                is_player=is_player,
+                dialogue_instructions=dialogue_instructions or "",
+                example_dialogue=example_dialogue or None,
+            )
         )
 
         self.set_output_values({"state": state, "character": character})
@@ -95,7 +113,23 @@ class PersistCharacter(AgentNode):
 @register("agents/director/AssignVoice")
 class AssignVoice(AgentNode):
     """
-    Assigns a voice to a character.
+    Has the director automatically pick and assign a fitting TTS voice to
+    a character, choosing from the voices available through the ready TTS
+    APIs (global and scene voice libraries). Does nothing when automatic
+    voice assignment is disabled in the director settings or when no
+    voices are available.
+
+    Inputs:
+
+    - state: The graph state
+    - character: The character to assign a voice to
+
+    Outputs:
+
+    - state: The state input, passed through
+    - character: The character, passed through
+    - voice: The character's voice after assignment (may be unset if
+      assignment was skipped)
     """
 
     _agent_name: ClassVar[str] = "director"
@@ -124,7 +158,21 @@ class AssignVoice(AgentNode):
 @register("agents/director/LogAction")
 class LogAction(AgentNode):
     """
-    Logs an action to the console.
+    Logs a director action by pushing a DirectorMessage to the scene
+    history and emitting it to the UI. When console_only is true the
+    message is flagged as hidden so it is not shown in the scene, but
+    still appears in the debug console.
+
+    Inputs:
+
+    - state: The graph state
+    - action: The name of the action to log
+    - action_description: The description of the action
+    - console_only: Whether to hide the message from the scene (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
     """
 
     _agent_name: ClassVar[str] = "director"

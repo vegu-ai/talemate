@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 import re
 import traceback
@@ -464,14 +463,9 @@ class Scene(Emitter):
         if not self.writing_style_template:
             return None
 
-        try:
-            group_uid, template_uid = self.writing_style_template.split("__", 1)
-            # Ensure template collection is initialized via manager
-            return self.world_state_manager.template_collection.find_template(
-                group_uid, template_uid
-            )
-        except ValueError:
-            return None
+        return self.world_state_manager.template_collection.find_template_by_id(
+            self.writing_style_template
+        )
 
     def agent_persona(self, agent_name: str):
         """
@@ -481,14 +475,7 @@ class Scene(Emitter):
         uid = (self.agent_persona_templates or {}).get(agent_name)
         if not uid:
             return None
-        try:
-            group_uid, template_uid = uid.split("__", 1)
-        except ValueError:
-            return None
-        # Ensure template collection is initialized via manager
-        return self.world_state_manager.template_collection.find_template(
-            group_uid, template_uid
-        )
+        return self.world_state_manager.template_collection.find_template_by_id(uid)
 
     @property
     def agent_persona_names(self) -> dict[str, str]:
@@ -1929,7 +1916,7 @@ class Scene(Emitter):
             emit("status", status="success", message="Saved scene")
 
         with open(filepath, "w") as f:
-            json.dump(scene_data, f, indent=2, cls=save.SceneEncoder)
+            f.write(save.scene_data_dumps(scene_data))
 
         self.saved = True
 
@@ -1963,7 +1950,7 @@ class Scene(Emitter):
         serialized["memory_id"] = str(uuid.uuid4())[:10]
         filepath = os.path.join(self.save_dir, filename)
         with open(filepath, "w") as f:
-            json.dump(serialized, f, indent=2, cls=save.SceneEncoder)
+            f.write(save.scene_data_dumps(serialized))
 
     async def add_to_recent_scenes(self):
         log.debug("add_to_recent_scenes", filename=self.filename)
@@ -2020,6 +2007,8 @@ class Scene(Emitter):
             ah for ah in self.archived_history if ah.get("end") is None
         ]
 
+        self.layered_history = []
+
         self.world_state.reset()
 
         self.filename = ""
@@ -2055,19 +2044,21 @@ class Scene(Emitter):
             )
 
             restore_from = self.restore_from
+            use_changelog = (
+                from_rev is not None or from_date is not None or to_date is not None
+            )
 
-            if not self.restore_from:
-                self.log.error("No save file specified to restore from.")
+            if not self.restore_from and not use_changelog:
+                self.log.warning("restore: no save file specified to restore from")
                 return
-
-            self.reset()
-            self.active_characters = []
-            await self.remove_all_actors()
 
             from talemate.load import load_scene
 
-            # If a changelog rev/date-range is provided, reconstruct first
-            if from_rev is not None or from_date is not None or to_date is not None:
+            # If a changelog rev/date-range is provided, reconstruct first.
+            # Reconstruction must happen before reset() since reset() clears
+            # `filename`, which the changelog paths are resolved from.
+            temp_path = None
+            if use_changelog:
                 from talemate.changelog import reconstruct_scene_data
 
                 target_rev = from_rev
@@ -2076,17 +2067,21 @@ class Scene(Emitter):
                 temp_name = f"{os.path.splitext(self.filename or 'scene.json')[0]}-restored.json"
                 temp_path = os.path.join(self.save_dir, temp_name)
                 with open(temp_path, "w") as f:
-                    json.dump(reconstructed, f, indent=2, cls=save.SceneEncoder)
-                await load_scene(
-                    self,
-                    temp_path,
-                    get_agent("conversation").client,
-                )
+                    f.write(save.scene_data_dumps(reconstructed))
+
+            self.reset()
+            self.active_characters = []
+            await self.remove_all_actors()
+
+            if use_changelog:
+                try:
+                    await load_scene(self, temp_path, add_to_recent=False)
+                finally:
+                    os.remove(temp_path)
             else:
                 await load_scene(
                     self,
                     os.path.join(self.save_dir, self.restore_from),
-                    get_agent("conversation").client,
                 )
                 if not self.restore_from:
                     self.restore_from = restore_from
@@ -2108,6 +2103,7 @@ class Scene(Emitter):
 
         except Exception as e:
             self.log.error("restore", error=e, traceback=traceback.format_exc())
+            raise
 
     def sync_restore(self, *args, **kwargs):
         loop = asyncio.get_event_loop()
@@ -2161,7 +2157,7 @@ class Scene(Emitter):
 
     @property
     def json(self):
-        return json.dumps(self.serialize, indent=2, cls=save.SceneEncoder)
+        return save.scene_data_dumps(self.serialize)
 
     def interrupt(self):
         self.cancel_requested = True

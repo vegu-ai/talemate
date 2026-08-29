@@ -1,10 +1,22 @@
 <template>
-  <v-dialog v-model="localDialog" max-width="1080px">
+  <v-dialog
+    v-model="localDialog"
+    max-width="1080px"
+    :scrim="!helpChatIsOpen"
+    :retain-focus="!helpChatIsOpen"
+    :persistent="helpChatIsOpen"
+    :no-click-animation="helpChatIsOpen"
+    :content-class="helpChatIsOpen ? 'yield-to-help-drawer' : ''"
+  >
     <v-card>
       <v-card-title class="d-flex align-center">
         <v-icon class="mr-2">mdi-network-outline</v-icon>
         <span class="headline">{{ title() }}</span>
         <v-spacer></v-spacer>
+        <v-btn icon variant="text" size="small" color="muted" class="mr-2" @click="openHelpChat()">
+          <v-icon>mdi-help-circle-outline</v-icon>
+          <v-tooltip activator="parent" location="top">Ask the help agent about these settings</v-tooltip>
+        </v-btn>
         <v-switch
           v-model="simpleView"
           label="Simple View"
@@ -77,16 +89,13 @@
                   <template v-if="!simpleView">
                   <v-row v-for="field in generalExtraFields" :key="field.name">
                     <v-col cols="12">
-                      <v-text-field v-model="client[field.name]" v-if="field.type === 'text'" :label="field.label"
-                        :rules="[rules.required]" :hint="field.description"></v-text-field>
-                      <v-checkbox v-else-if="field.type === 'bool'" v-model="client[field.name]"
-                        :label="field.label" :hint="field.description" density="compact"></v-checkbox>
+                      <UxField :field="field" v-model="client[field.name]" :app-config="appConfig" />
                     </v-col>
                   </v-row>
                   <v-row>
                     <v-col cols="4">
-                      <v-number-input v-model="client.max_token_length" v-if="requiresAPIUrl(client)"
-                        label="Context Length" :rules="[rules.required]" :step="64"></v-number-input>
+                      <v-number-input v-model="client.max_token_length"
+                        label="Context Length" :rules="rulesMaxTokenLength" :step="64"></v-number-input>
                     </v-col>
                     <v-col cols="8"
                       v-if="!typeEditable() && client.data && client.data.prompt_template_example !== null && client.model_name && clientMeta().requires_prompt_template && !client.data.api_handles_prompt_template">
@@ -234,7 +243,7 @@
                     </v-col>
                   </v-row>
                   <v-row v-if="client.reason_enabled && client.requires_reasoning_pattern">
-                    <v-col cols="12">
+                    <v-col :cols="client.reason_failure_behavior === 'fail' ? 6 : 12">
                       <v-select
                         v-model="client.reason_failure_behavior"
                         label="Pattern Not Found Behavior"
@@ -245,6 +254,9 @@
                         hint="What to do when the reasoning pattern is not found in the response."
                         persistent-hint
                       ></v-select>
+                    </v-col>
+                    <v-col cols="6" v-if="client.reason_failure_behavior === 'fail'">
+                      <v-slider v-model="client.retry_missing_reasoning" label="Auto Retry" :min="0" :max="5" :step="1" :persistent-hint="true" hint="Automatic retries when the reasoning pattern is missing, before you are notified. (0 = notify immediately)" thumb-label="always"></v-slider>
                     </v-col>
                   </v-row>
                   <v-row v-if="client.reason_enabled && client.requires_reasoning_pattern">
@@ -258,10 +270,7 @@
                   <!-- Extra fields promoted to reasoning tab -->
                   <v-row v-for="field in extraFieldsByTab['reasoning']" :key="field.name">
                     <v-col cols="12">
-                      <v-text-field v-if="field.type === 'text'" v-model="client[field.name]" :label="field.label" :hint="field.description" persistent-hint></v-text-field>
-                      <v-checkbox v-else-if="field.type === 'bool'" v-model="client[field.name]" :label="field.label" :hint="field.description" persistent-hint></v-checkbox>
-                      <v-select v-else-if="field.type === 'select'" v-model="client[field.name]" :label="field.label" :hint="field.description" :items="field.choices" persistent-hint></v-select>
-                      <v-alert v-if="field.note" :color="field.note.color" variant="text" density="compact" :icon="field.note.icon" class="mt-2 pre-wrap text-caption">{{ field.note.text.replace(/{client_type}/g, client.type) }}</v-alert>
+                      <UxField :field="field" v-model="client[field.name]" :app-config="appConfig" />
                     </v-col>
                   </v-row>
                 </v-window-item>
@@ -325,6 +334,18 @@
                       <v-slider v-model="client.rate_limit" label="Rate Limit" :min="0" :max="100" :step="1" :persistent-hint="true" hint="Requests per minute. (0 = no limit)" thumb-label="always"></v-slider>
                     </v-col>
                   </v-row>
+                  <!-- AUTO RETRY -->
+                  <v-alert icon="mdi-refresh" density="compact" color="grey-darken-1" variant="text">
+                    Automatic retries on response issues before you are notified. (0 = notify immediately)
+                  </v-alert>
+                  <v-row>
+                    <v-col cols="6">
+                      <v-slider v-model="client.retry_empty_response" label="Empty Response" :min="0" :max="5" :step="1" :persistent-hint="true" hint="Automatic retries when the model returns an empty response." thumb-label="always"></v-slider>
+                    </v-col>
+                    <v-col cols="6">
+                      <v-slider v-model="client.retry_rate_limit" label="Rate Limited" :min="0" :max="5" :step="1" :persistent-hint="true" hint="Automatic retries when the API reports it is rate limited (HTTP 429), waiting progressively longer between attempts." thumb-label="always"></v-slider>
+                    </v-col>
+                  </v-row>
                 </v-window-item>
                 <!-- SYSTEM PROMPTS -->
                 <v-window-item value="system_prompts">
@@ -342,13 +363,7 @@
                   <v-alert v-if="group.description" color="muted" variant="text" density="compact" :icon="group.icon" class="mb-2 pre-wrap">{{ group.description.replace(/{client_type}/g, client.type) }}</v-alert>
                   <v-row v-for="field in extraFieldsByGroup[group.name]" :key="field.name">
                     <v-col cols="12">
-                      <!-- handle `text`, `bool`, `password` -->
-                      <v-text-field v-if="field.type === 'text'" v-model="client[field.name]" :label="field.label" :hint="field.description"></v-text-field>
-                      <v-checkbox v-else-if="field.type === 'bool'" v-model="client[field.name]" :label="field.label" :hint="field.description"></v-checkbox>
-                      <v-text-field v-else-if="field.type === 'password'" v-model="client[field.name]" :label="field.label" :hint="field.description" type="password"></v-text-field>
-                      <v-select v-else-if="field.type === 'flags'" v-model="client[field.name]" :label="field.label" :hint="field.description" :items="field.choices" multiple chips
-                      ></v-select>
-                      <v-alert v-if="field.note" :color="field.note.color" variant="text" density="compact" :icon="field.note.icon" class="mt-2 pre-wrap text-caption">{{ field.note.text.replace(/{client_type}/g, client.type) }}</v-alert>
+                      <UxField :field="field" v-model="client[field.name]" :app-config="appConfig" />
                     </v-col>
                   </v-row>
                 </v-window-item>
@@ -370,9 +385,11 @@
 
 <script>
 
+import { conditionMet } from '@/utils/uxConditions';
 import AppConfigPresetsSystemPrompts from './AppConfigPresetsSystemPrompts.vue';
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
 import GraduatedSlider from './GraduatedSlider.vue';
+import UxField from './UxField.vue';
 
 export default {
   props: {
@@ -386,12 +403,15 @@ export default {
     AppConfigPresetsSystemPrompts,
     ConfigWidgetUnifiedApiKey,
     GraduatedSlider,
+    UxField,
   },
   inject: [
     'state',
     'getWebsocket',
     'registerMessageHandler',
     'navigateToLLMTemplates',
+    'helpChatOpen',
+    'openHelpChat',
   ],
   data() {
     return {
@@ -462,6 +482,9 @@ export default {
     };
   },
   computed: {
+    helpChatIsOpen() {
+      return this.helpChatOpen();
+    },
     availableTabs() {
       const tabs = Object.values(this.tabs).filter(tab => !tab.condition || tab.condition());
       const extraFields = this.extraFieldGroups.map(group => {
@@ -484,26 +507,27 @@ export default {
       // List of hardcoded tab names that extra fields can be promoted to
       return Object.keys(this.tabs);
     },
+    visibleExtraFields() {
+      // extra fields whose visibility condition is met against the current
+      // client values
+      return Object.values(this.clientMeta().extra_fields || {}).filter(this.extraFieldConditionMet);
+    },
     generalExtraFields() {
       // returns extra fields that have a null group and are to be shown in the general tab
-      if (!this.clientMeta().extra_fields) {
-        return [];
-      }
-      return Object.values(this.clientMeta().extra_fields).filter(field => !field.group);
+      return this.visibleExtraFields
+        .filter(field => !field.group)
+        .map(this.prepareExtraField);
     },
     extraFieldsByTab() {
       // returns an object with the tab name as the key and the fields as the value
       // this allows extra fields to be promoted to hardcoded tabs when group.name matches
       const fieldsByTab = {};
-      if (!this.clientMeta().extra_fields) {
-        return {};
-      }
-      Object.values(this.clientMeta().extra_fields).forEach(field => {
+      this.visibleExtraFields.forEach(field => {
         if (field.group && this.hardcodedTabs.includes(field.group.name)) {
           if (!fieldsByTab[field.group.name]) {
             fieldsByTab[field.group.name] = [];
           }
-          fieldsByTab[field.group.name].push(field);
+          fieldsByTab[field.group.name].push(this.prepareExtraField(field));
         }
       });
       return fieldsByTab;
@@ -512,10 +536,7 @@ export default {
       // returns an array of group objects from the extra fields, carefully only entering each group
       // once based on the group name, excluding groups that match hardcoded tab names
       const groups = {};
-      if (!this.clientMeta().extra_fields) {
-        return [];
-      }
-      Object.values(this.clientMeta().extra_fields).forEach(field => {
+      this.visibleExtraFields.forEach(field => {
         if (field.group && !this.hardcodedTabs.includes(field.group.name)) {
           groups[field.group.name] = field.group;
         }
@@ -526,15 +547,12 @@ export default {
       // returns an object with the group name as the key and the fields as the value
       // excludes fields that belong to hardcoded tabs (those are rendered via extraFieldsByTab)
       const fieldsByGroup = {};
-      if (!this.clientMeta().extra_fields) {
-        return {};
-      }
-      Object.values(this.clientMeta().extra_fields).forEach(field => {
+      this.visibleExtraFields.forEach(field => {
         if (field.group && !this.hardcodedTabs.includes(field.group.name)) {
           if (!fieldsByGroup[field.group.name]) {
             fieldsByGroup[field.group.name] = [];
           }
-          fieldsByGroup[field.group.name].push(field);
+          fieldsByGroup[field.group.name].push(this.prepareExtraField(field));
         }
       });
       return fieldsByGroup;
@@ -600,6 +618,27 @@ export default {
     }
   },
   methods: {
+    prepareExtraField(field) {
+      // Clone the field definition and substitute {client_type} in the
+      // user-facing texts before handing it to the shared UxField renderer.
+      const prepared = JSON.parse(JSON.stringify(field));
+      const sub = (text) => text ? text.replace(/{client_type}/g, this.client.type) : text;
+      prepared.description = sub(prepared.description);
+      if (prepared.note) {
+        prepared.note.text = sub(prepared.note.text);
+      }
+      for (const key in prepared.note_on_value) {
+        prepared.note_on_value[key].text = sub(prepared.note_on_value[key].text);
+      }
+      return prepared;
+    },
+    extraFieldConditionMet(field) {
+      // Conditions on client extra fields resolve against the client's
+      // current field values (mirrors how agent settings resolve conditions
+      // against action config values).
+      const value = field.condition ? this.client[field.condition.attribute] : null;
+      return conditionMet(field.condition, value);
+    },
     setSystemPrompts(systemPrompts) {
       this.client.system_prompts = systemPrompts;
     },
@@ -611,6 +650,9 @@ export default {
         this.client.max_token_length = defaults.max_token_length || 8192;
         this.client.double_coercion = defaults.double_coercion || null;
         this.client.rate_limit = defaults.rate_limit || null;
+        this.client.retry_empty_response = defaults.retry_empty_response || 0;
+        this.client.retry_rate_limit = defaults.retry_rate_limit || 0;
+        this.client.retry_missing_reasoning = defaults.retry_missing_reasoning || 0;
         this.client.data_format = defaults.data_format || null;
         this.client.section_format = defaults.section_format || null;
         this.client.preset_group = defaults.preset_group || '';

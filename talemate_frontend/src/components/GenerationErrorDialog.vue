@@ -10,6 +10,10 @@
                     {{ errorMessage }}
                     <span v-if="statusCode" class="text-muted"> (HTTP {{ statusCode }})</span>
                 </v-alert>
+                <p v-if="queue.length" class="text-muted text-caption mb-0">
+                    <v-icon icon="mdi-layers" size="x-small" class="mr-1"></v-icon>
+                    {{ queue.length }} more error{{ queue.length > 1 ? 's' : '' }} pending
+                </p>
             </v-card-text>
             <v-card-actions>
                 <v-btn :disabled="responding" @click="respond('cancel')" prepend-icon="mdi-cancel" color="delete">Cancel</v-btn>
@@ -31,6 +35,7 @@ export default {
     data() {
         return {
             dialog: false,
+            queue: [],
             requestId: null,
             client: null,
             model: null,
@@ -41,7 +46,18 @@ export default {
     },
     inject: ['getWebsocket'],
     methods: {
+        // Each concurrently failing generation gets its own error dialog and
+        // must be answered individually - queue them so answering one shows
+        // the next instead of orphaning it (its backend coroutine would wait
+        // on a response forever).
         open(data) {
+            if (this.dialog) {
+                this.queue.push(data)
+                return
+            }
+            this.display(data)
+        },
+        display(data) {
             this.requestId = data.request_id
             this.client = data.client
             this.model = data.model
@@ -59,14 +75,35 @@ export default {
             this.errorMessage = null
             this.responding = false
         },
-        respond(action) {
-            this.responding = true
+        // Cancel instead of silently dropping: a generation can fail (and
+        // register its dialog future) after the backend's point-in-time
+        // sweep on scene load, and an unanswered future hangs its coroutine
+        // forever. Answering an already-resolved request is a backend no-op.
+        closeAll() {
+            if (this.requestId) {
+                this.sendResponse(this.requestId, 'cancel')
+            }
+            for (const item of this.queue) {
+                this.sendResponse(item.request_id, 'cancel')
+            }
+            this.queue = []
+            this.close()
+        },
+        sendResponse(requestId, action) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'generation_error_response',
-                request_id: this.requestId,
+                request_id: requestId,
                 action: action,
             }));
-            this.close()
+        },
+        respond(action) {
+            this.responding = true
+            this.sendResponse(this.requestId, action)
+            if (this.queue.length) {
+                this.display(this.queue.shift())
+            } else {
+                this.close()
+            }
         },
     }
 }

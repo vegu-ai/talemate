@@ -21,6 +21,24 @@ log = structlog.get_logger("talemate.game.engine.nodes.core.api")
 class ScopedAPIFunction(Node):
     """
     Executes python code inside the quarantined scoped environment.
+
+    The code has access to the `arguments` dict, a `result` dict to
+    populate, and the `TM` scoped API object.
+
+    Inputs:
+
+    - state: The graph state
+    - agent: The agent whose client the scoped context runs against
+    - arguments: Arguments made available to the executed code
+
+    Properties:
+
+    - code: The python code to execute
+
+    Outputs:
+
+    - state: The state input, passed through
+    - result: The result dict populated by the executed code
     """
 
     class Fields:
@@ -49,6 +67,7 @@ class ScopedAPIFunction(Node):
 
         self.set_property("code", UNRESOLVED)
 
+        self.add_output("state")
         self.add_output("result")
 
     async def run(self, state: GraphState):
@@ -80,4 +99,9 @@ class ScopedAPIFunction(Node):
         with OpenScopedContext(scene, agent.client):
             _module()
 
-        self.set_output_values({"result": result})
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "result": result,
+            }
+        )

@@ -11,11 +11,18 @@ import structlog
 
 import talemate.instance as instance
 from talemate import Character, Player
+from talemate.agents.creator.character import CharacterGenerationRequest
 from talemate.character import activate_character
-from talemate.exceptions import UnknownDataSpec
+from talemate.exceptions import GenerationCancelled, LLMAccuracyError, UnknownDataSpec
+from talemate.files import identify_character_card_spec
 from talemate.status import LoadingStatus
 from talemate.config import get_config
-from talemate.util import extract_metadata, select_best_texts_by_keyword, count_tokens
+from talemate.util import (
+    extract_metadata,
+    select_best_texts_by_keyword,
+    count_tokens,
+    replace_smart_quotes,
+)
 from talemate.util.colors import unique_random_colors
 from talemate.agents.base import DynamicInstruction
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
@@ -152,6 +159,15 @@ class CharacterCardImportOptions(pydantic.BaseModel):
     use_asset_as_reference: bool = True
     selected_character_names: list[str] = pydantic.Field(default_factory=list)
 
+    # AI generation toggles - disabling one skips the corresponding LLM step
+    # during import, falling back to the raw character card data
+    determine_content_context: bool = True
+    extract_description: bool = True
+    extract_attributes: bool = True
+    extract_dialogue_instructions: bool = True
+    extract_dialogue_examples: bool = True
+    generate_story_intent: bool = True
+
     # Player character options (mutually exclusive)
     player_character_template: PlayerCharacterTemplate | None = None
     player_character_existing: str | None = None  # detected character name
@@ -214,65 +230,65 @@ def identify_import_spec(data: dict) -> ImportSpec:
             f"The file may not contain valid character card metadata."
         )
 
-    if data.get("spec") == "chara_card_v3":
-        return ImportSpec.chara_card_v3
-
-    if data.get("spec") == "chara_card_v2":
-        return ImportSpec.chara_card_v2
-
-    if data.get("spec") == "chara_card_v1":
-        return ImportSpec.chara_card_v1
-
-    if "first_mes" in data:
-        # original chara card didnt specify a spec,
-        # if the first_mes key exists, we can assume it's a v0 chara card
-        return ImportSpec.chara_card_v0
-
-    if "first_mes" in data.get("data", {}):
-        # this can also serve as a fallback for future chara card versions
-        # as they are supposed to be backwards compatible
-        return ImportSpec.chara_card_v3
+    spec = identify_character_card_spec(data)
+    if spec is not None:
+        return ImportSpec(spec)
 
     # TODO: probably should actually check for valid talemate scene data
     return ImportSpec.talemate
 
 
 def _setup_loading_status(
+    import_options: "CharacterCardImportOptions",
     num_characters: int = 1,
     has_character_book: bool = False,
     num_episodes: int = 0,
-    generate_episode_titles: bool = False,
 ) -> LoadingStatus:
     """Set up and return loading status tracker.
 
     Args:
+        import_options: Import options determining which generation steps run
         num_characters: Number of characters being imported
         has_character_book: Whether character book entries will be loaded
         num_episodes: Number of episodes that will be added
-        generate_episode_titles: Whether episode titles will be generated
     """
     director = instance.get_agent("director")
+    creator = instance.get_agent("creator")
     # Base steps:
     # 1. Loading character card
     # 2. Initializing long-term memory
     # 3. Loading character book entries (conditional)
-    # 4. Determine character context (first character only)
-    # 5. Determine description (per character)
-    # 6. Determine character attributes (per character)
-    # 7. Determine dialogue examples (per character)
-    # 8. Generating story intent
-    # 9. Generating scene types (if auto_direct)
-    # 10. Setting scene intent (if auto_direct)
-    # 11. Generating episode titles (one per episode if enabled)
-    loading_steps = 4  # Base: card, memory, context, story intent
+    # 4. Determine character context (first character only, if enabled)
+    # 5. Determine description (per character, if enabled)
+    # 6. Determine character attributes (per character, if enabled)
+    # 7. Determine dialogue instructions (per character, if enabled)
+    # 8. Determine dialogue examples (per character, if enabled)
+    # 9. Generating story intent (if enabled)
+    # 10. Generating scene types (if auto_direct and story intent enabled)
+    # 11. Setting scene intent (if auto_direct and story intent enabled)
+    # 12. Generating episode titles (one per episode if enabled)
+    loading_steps = 2  # Base: card, memory
+    if import_options.determine_content_context:
+        loading_steps += 1
     if has_character_book:
         loading_steps += 1
-    loading_steps += (
-        num_characters * 3
-    )  # Description + attributes + dialogue examples per character
-    if director.auto_direct_enabled:
-        loading_steps += 2
-    if generate_episode_titles and num_episodes > 0:
+    per_character_steps = sum(
+        [
+            import_options.extract_description,
+            import_options.extract_attributes,
+            import_options.extract_dialogue_instructions,
+            import_options.extract_dialogue_examples,
+        ]
+    )
+    if creator.cc_fast and per_character_steps > 0:
+        # fast mode consolidates the enabled extractions into one step
+        per_character_steps = 1
+    loading_steps += num_characters * per_character_steps
+    if import_options.generate_story_intent:
+        loading_steps += 1
+        if director.auto_direct_enabled:
+            loading_steps += 2
+    if import_options.generate_episode_titles and num_episodes > 0:
         loading_steps += num_episodes
     loading_status = LoadingStatus(loading_steps, cancellable=True)
     loading_status("Loading character card...")
@@ -448,6 +464,8 @@ async def analyze_character_card(file_path: str) -> CharacterCardAnalysis:
             detected_character_names = await director.detect_characters_from_texts(
                 texts=all_texts
             )
+    except GenerationCancelled:
+        raise
     except Exception as e:
         log.warning("Failed to detect characters from texts", error=str(e))
 
@@ -537,6 +555,8 @@ async def _determine_character_context(
                 character
             )
             log.debug("content_context", content_context=scene.context)
+        except GenerationCancelled:
+            raise
         except Exception as e:
             log.error("determine_content_context_for_character", error=e)
 
@@ -630,6 +650,9 @@ async def _determine_character_description(
     """Determine and set character description."""
     loading_status(f"Determine description for {character.name}...")
 
+    # keep the card's description so a generation miss can restore it
+    original_description = character.description
+
     try:
         creator = instance.get_agent("creator")
         dynamic_instructions = relevant_info.to_dynamic_instructions(scenario=False)
@@ -642,12 +665,20 @@ async def _determine_character_description(
             text=relevant_info.scenario.content if relevant_info.scenario else "",
             dynamic_instructions=dynamic_instructions,
         )
+
+        if not character.description:
+            character.description = original_description
+
         log.debug(
             "character_description",
             character=character.name,
             description=character.description,
         )
+    except GenerationCancelled:
+        character.description = original_description
+        raise
     except Exception as e:
+        character.description = original_description
         log.warning("determine_character_description", error=e)
 
 
@@ -655,21 +686,26 @@ async def _determine_character_attributes(
     character,
     loading_status: LoadingStatus,
     relevant_info: RelevantCharacterInfo,
+    max_attrs: int | None = None,
 ) -> None:
-    """Determine and set character attributes and dialogue instructions."""
+    """Determine and set character attributes."""
     loading_status("Determine character attributes...")
 
     try:
         world_state = instance.get_agent("world_state")
-        creator = instance.get_agent("creator")
-        character.base_attributes = await world_state.extract_character_sheet(
+        generated = await world_state.extract_character_sheet(
             name=character.name,
+            # the imported character has no actor yet - without the explicit
+            # context character the prompt's active-character loop misses it
+            character=character,
             dynamic_instructions=relevant_info.to_dynamic_instructions(scenario=False),
+            max_attributes=max_attrs,
         )
 
-        character.dialogue_instructions = (
-            await creator.determine_character_dialogue_instructions(character)
-        )
+        # an extraction that produced nothing must not replace the card's
+        # own attributes
+        if generated:
+            character.base_attributes = generated
 
         # any values that are lists should be converted to strings joined by ,
         for k, v in character.base_attributes.items():
@@ -677,8 +713,28 @@ async def _determine_character_attributes(
                 character.base_attributes[k] = ",".join(v)
 
         log.debug("base_attributes parsed", base_attributes=character.base_attributes)
+    except GenerationCancelled:
+        raise
     except Exception as e:
         log.warning("determine_character_attributes", error=e)
+
+
+async def _determine_character_dialogue_instructions(
+    character,
+    loading_status: LoadingStatus,
+) -> None:
+    """Determine and set character dialogue instructions."""
+    loading_status(f"Determine dialogue instructions for {character.name}...")
+
+    try:
+        creator = instance.get_agent("creator")
+        character.dialogue_instructions = (
+            await creator.determine_character_dialogue_instructions(character)
+        )
+    except GenerationCancelled:
+        raise
+    except Exception as e:
+        log.warning("determine_character_dialogue_instructions", error=e)
 
 
 async def _determine_character_dialogue_examples(
@@ -699,6 +755,9 @@ async def _determine_character_dialogue_examples(
     """
     loading_status(f"Determine dialogue examples for {character.name}...")
 
+    # keep the card's examples so a generation miss can restore them
+    original_example_dialogue = list(character.example_dialogue)
+
     try:
         creator = instance.get_agent("creator")
 
@@ -707,6 +766,9 @@ async def _determine_character_dialogue_examples(
         text = (
             original_dialogue_examples_text if original_dialogue_examples_text else ""
         )
+
+        # needs to be empty here, so the card's examples don't bias the rewrite
+        character.example_dialogue = []
 
         character.example_dialogue = (
             await creator.determine_character_dialogue_examples(
@@ -719,13 +781,20 @@ async def _determine_character_dialogue_examples(
             )
         )
 
+        if not character.example_dialogue:
+            character.example_dialogue = original_example_dialogue
+
         log.debug(
             "determine_character_dialogue_examples",
             character=character.name,
             count=len(character.example_dialogue),
             examples=character.example_dialogue,
         )
+    except GenerationCancelled:
+        character.example_dialogue = original_example_dialogue
+        raise
     except Exception as e:
+        character.example_dialogue = original_example_dialogue
         log.warning("determine_character_dialogue_examples", error=e)
 
 
@@ -914,6 +983,8 @@ async def _generate_story_intent(scene, loading_status: LoadingStatus) -> None:
             )
             loading_status("Setting scene intent...")
             await director.auto_direct_set_scene_intent(require=True)
+    except GenerationCancelled:
+        raise
     except Exception as e:
         log.error("generate story intent", error=e)
 
@@ -1232,6 +1303,118 @@ def _create_characters_from_names(
     return characters
 
 
+async def _process_character_fast(
+    character: Character,
+    loading_status: LoadingStatus,
+    relevant_info: RelevantCharacterInfo,
+    original_dialogue_examples_text: str,
+    import_options: CharacterCardImportOptions,
+    max_examples: int = 5,
+    max_attrs: int | None = None,
+) -> None:
+    """Fast mode: route the enabled extraction aspects through the creator
+    agent's consolidated generation (one prompt instead of one per aspect).
+
+    Which aspects actually go into the consolidated one-shot is decided by
+    the creator's "Character Creation" settings; the rest are generated with
+    their individual requests by the orchestrator. A completely unparseable
+    consolidated response is a hard error (per the Fast mode contract); any
+    other failure warns and keeps the card's original data, mirroring the
+    split-path helpers.
+
+    Args:
+        character: The character to generate aspects for
+        loading_status: Loading status tracker for progress updates
+        relevant_info: Relevant character information
+        original_dialogue_examples_text: Original dialogue examples text from character card
+        import_options: Import options
+        max_examples: Maximum number of dialogue examples to generate (default: 5)
+        max_attrs: Maximum number of attributes to generate (None for unlimited)
+    """
+    creator = instance.get_agent("creator")
+
+    aspects = []
+    if import_options.extract_description:
+        aspects.append("description")
+    if import_options.extract_attributes:
+        aspects.append("attributes")
+    if import_options.extract_dialogue_instructions:
+        aspects.append("dialogue_instructions")
+    if import_options.extract_dialogue_examples:
+        aspects.append("example_dialogue")
+
+    if not aspects:
+        return
+
+    loading_status(f"Generating {character.name}...")
+
+    content = relevant_info.scenario.content if relevant_info.scenario else ""
+    if import_options.extract_dialogue_examples and original_dialogue_examples_text:
+        content = (
+            f"{content}\n\n{original_dialogue_examples_text}"
+            if content
+            else original_dialogue_examples_text
+        )
+
+    # keep the card's examples so a generation miss can restore them
+    original_example_dialogue = list(character.example_dialogue)
+    if import_options.extract_dialogue_examples:
+        character.example_dialogue = []
+
+    try:
+        result = await creator.generate_character_aspects(
+            CharacterGenerationRequest(
+                aspects=aspects,
+                name=character.name,
+                content=content,
+                character=character,
+                dynamic_instructions=relevant_info.to_dynamic_instructions(
+                    scenario=False
+                ),
+                max_examples=max_examples,
+                max_attributes=max_attrs,
+                content_role="text",
+            )
+        )
+    except LLMAccuracyError:
+        # the unparseable-response hard error contract
+        character.example_dialogue = original_example_dialogue
+        raise
+    except GenerationCancelled:
+        character.example_dialogue = original_example_dialogue
+        raise
+    except Exception as e:
+        character.example_dialogue = original_example_dialogue
+        log.warning("process_character_fast", error=e)
+        return
+
+    if import_options.extract_description and result.description:
+        character.description = result.description
+        log.debug(
+            "character_description",
+            character=character.name,
+            description=character.description,
+        )
+
+    if import_options.extract_attributes and result.attributes:
+        character.base_attributes = result.attributes
+        log.debug("base_attributes parsed", base_attributes=character.base_attributes)
+
+    if import_options.extract_dialogue_instructions and result.dialogue_instructions:
+        character.dialogue_instructions = result.dialogue_instructions
+
+    if import_options.extract_dialogue_examples:
+        if result.example_dialogue:
+            character.example_dialogue = result.example_dialogue
+            log.debug(
+                "determine_character_dialogue_examples",
+                character=character.name,
+                count=len(character.example_dialogue),
+            )
+        else:
+            character.example_dialogue = original_example_dialogue
+
+
 async def _process_characters_for_import(
     scene,
     characters: list[Character],
@@ -1251,6 +1434,10 @@ async def _process_characters_for_import(
         import_options: Import options
     """
     director = instance.get_agent("director")
+    creator = instance.get_agent("creator")
+
+    # 0 means unlimited
+    max_attrs = director.cm_max_attributes or None
 
     for character in characters:
         # Add character to character_data without activating
@@ -1269,23 +1456,43 @@ async def _process_characters_for_import(
             character, character.description, all_greeting_texts, scene
         )
 
-        await _determine_character_description(
-            character,
-            loading_status,
-            relevant_info=relevant_info,
-        )
+        if creator.cc_fast:
+            await _process_character_fast(
+                character,
+                loading_status,
+                relevant_info=relevant_info,
+                original_dialogue_examples_text=original_dialogue_examples_text,
+                import_options=import_options,
+                max_attrs=max_attrs,
+            )
+        else:
+            if import_options.extract_description:
+                await _determine_character_description(
+                    character,
+                    loading_status,
+                    relevant_info=relevant_info,
+                )
 
-        await _determine_character_attributes(
-            character, loading_status, relevant_info=relevant_info
-        )
+            if import_options.extract_attributes:
+                await _determine_character_attributes(
+                    character,
+                    loading_status,
+                    relevant_info=relevant_info,
+                    max_attrs=max_attrs,
+                )
 
-        character.example_dialogue = []
-        await _determine_character_dialogue_examples(
-            character,
-            loading_status,
-            relevant_info=relevant_info,
-            original_dialogue_examples_text=original_dialogue_examples_text,
-        )
+            if import_options.extract_dialogue_instructions:
+                await _determine_character_dialogue_instructions(
+                    character, loading_status
+                )
+
+            if import_options.extract_dialogue_examples:
+                await _determine_character_dialogue_examples(
+                    character,
+                    loading_status,
+                    relevant_info=relevant_info,
+                    original_dialogue_examples_text=original_dialogue_examples_text,
+                )
 
         if character.is_player:
             await activate_character(scene, character)
@@ -1356,7 +1563,8 @@ async def _finalize_character_card_import(
             use_asset_as_reference=import_options.use_asset_as_reference,
         )
 
-    await _generate_story_intent(scene, loading_status)
+    if import_options.generate_story_intent:
+        await _generate_story_intent(scene, loading_status)
     await _process_pending_asset_transfers(scene, import_options)
 
     if import_options.setup_shared_context:
@@ -1429,10 +1637,10 @@ async def load_scene_from_character_card(
     if import_options.import_alternate_greetings and alternate_greetings:
         num_episodes = len(alternate_greetings)
     loading_status = _setup_loading_status(
+        import_options,
         num_characters=len(characters),
         has_character_book=has_character_book,
         num_episodes=num_episodes,
-        generate_episode_titles=import_options.generate_episode_titles,
     )
 
     scene_name = _extract_scene_name_from_spec(raw_data_or_metadata)
@@ -1453,7 +1661,8 @@ async def load_scene_from_character_card(
         import_character_book_meta=import_options.import_character_book_meta,
     )
 
-    await _determine_character_context(scene, first_character, loading_status)
+    if import_options.determine_content_context:
+        await _determine_character_context(scene, first_character, loading_status)
 
     # Handle Player Character Existing Option
 
@@ -1586,8 +1795,10 @@ def character_from_chara_data(data: dict) -> Character:
     if "color" in data:
         character.color = data["color"]
     if "mes_example" in data:
-        new_line_match = "\r\n" if "\r\n" in data["mes_example"] else "\n"
-        for message in data["mes_example"].split("<START>"):
+        # cards are hand-written; typographic quotes are common in them
+        mes_example = replace_smart_quotes(data["mes_example"])
+        new_line_match = "\r\n" if "\r\n" in mes_example else "\n"
+        for message in mes_example.split("<START>"):
             if message.strip(new_line_match):
                 character.example_dialogue.extend(
                     [m for m in message.split(new_line_match) if m]

@@ -31,7 +31,24 @@ log = structlog.get_logger("talemate.game.engine.nodes.context_id")
 @register("context_id/RenderContextIDs")
 class RenderContextIDs(Node):
     """
-    Render a list of context ID items
+    Render a list of context ID items to prompt-ready text using the
+    `common.context_id_items` prompt template.
+
+    A single item may be passed instead of a list and will be wrapped
+    automatically.
+
+    Inputs:
+
+    - items: List of context ID items to render (a single item is also accepted)
+
+    Properties:
+
+    - display_mode: How to format the rendered items (compact, subsection, or normal)
+
+    Outputs:
+
+    - items: The list of items that was rendered
+    - rendered: The rendered text
     """
 
     class Fields:
@@ -72,7 +89,21 @@ class RenderContextIDs(Node):
 @register("context_id/CharacterContextIDs")
 class CharacterContext(Node):
     """
-    A context ID for a character
+    Unpack a character into context ID items for its various context entries
+    (attributes, details, description, acting instructions and example dialogue).
+
+    Inputs:
+
+    - character: The character to get context ID items for
+
+    Outputs:
+
+    - character: The character input, passed through
+    - attributes: List of context ID items for the character's attributes
+    - details: List of context ID items for the character's details
+    - description: Context ID item for the character's description
+    - acting_instructions: Context ID item for the character's acting instructions
+    - example_dialogue: List of context ID items for the character's example dialogue
     """
 
     def __init__(self, title="Character Context IDs", **kwargs):
@@ -109,7 +140,28 @@ class CharacterContext(Node):
 @register("context_id/ScanContextIDs")
 class ScanContextIDs(Node):
     """
-    Scan text for context IDs and return them in various formats
+    Scan text for context ID references, resolve them against the active scene
+    and return the results in various formats.
+
+    Resolved items are rendered through the `common.context_id_items` prompt
+    template and also wrapped in a dynamic instruction that can be injected
+    into agent prompts.
+
+    Inputs:
+
+    - text: The text to scan for context IDs
+
+    Properties:
+
+    - header: The header (title) of the generated dynamic instruction
+    - display_mode: How to format the rendered items (compact, subsection, or normal)
+
+    Outputs:
+
+    - dynamic_instruction: Dynamic instruction containing the rendered context items
+    - rendered: The rendered text of the resolved items
+    - context_id_items: List of resolved context ID items
+    - unresolved: List of context ID references that could not be resolved
     """
 
     class Fields:
@@ -170,7 +222,17 @@ class ScanContextIDs(Node):
 @register("context_id/CompressContextIDPart")
 class CompressContextIDPart(Node):
     """
-    Compress a context ID part
+    Compress a context ID part name into the short hash identifier used inside
+    context IDs (truncated SHA256).
+
+    Inputs:
+
+    - part: The part name to compress
+
+    Outputs:
+
+    - uncompressed: The original part, passed through
+    - compressed: The compressed part
     """
 
     def __init__(self, title="Compress Context ID Part", **kwargs):
@@ -183,14 +245,31 @@ class CompressContextIDPart(Node):
 
     async def run(self, state: GraphState):
         part = self.require_input("part")
-        part = compress_name(part)
-        self.set_output_values({"uncompressed": part, "compressed": part})
+        compressed = compress_name(part)
+        self.set_output_values({"uncompressed": part, "compressed": compressed})
 
 
 @register("context_id/PathToContextID")
 class PathToContextID(Node):
     """
-    Convert a path to a context ID
+    Resolve a context ID path string into a context ID item and retrieve its
+    current value from the active scene.
+
+    Inputs:
+
+    - path: The context ID path to resolve
+
+    Outputs:
+
+    - context_id: The resolved context ID (None if the path could not be resolved)
+    - context_id_item: The resolved context ID item (None if the path could not be resolved)
+    - human_id: Human readable identifier of the resolved item
+    - as_dict: The resolved item as a dictionary (empty if not resolved)
+    - name: The name of the resolved item
+    - value: The current value stored at the context ID
+    - exists: Whether the path resolved to an existing context ID item
+    - context_type: The context type of the resolved item
+    - path: The path input, passed through
     """
 
     class Fields:
@@ -256,7 +335,17 @@ class PathToContextID(Node):
 @register("context_id/ContextIDMetaEntries")
 class ContextIDMetaEntries(Node):
     """
-    Get all defined context ID meta entries
+    Get all defined context ID meta entries for the active scene, sorted by
+    context ID.
+
+    Properties:
+
+    - filter_creative: If true, only include meta entries flagged as creative
+
+    Outputs:
+
+    - meta_entries: List of context ID meta entries
+    - context_id_types: List of unique context ID types found in the entries
     """
 
     class Fields:
@@ -379,7 +468,25 @@ class ContextIDActionBase(Node):
 @register("context_id/ContextIDSetValue")
 class ContextIDSetValue(ContextIDActionBase):
     """
-    Set the value of a context ID
+    Set the value of a context ID entry in the active scene.
+
+    The target entry can be given either as a context ID item or as a path
+    string (one of the two must be set). Raises an error if the entry cannot
+    be resolved.
+
+    Inputs:
+
+    - state: The graph state
+    - context_id_item: The context ID item to set the value for (optional)
+    - path: The context ID path to set the value for (optional)
+    - value: The value to set
+
+    Outputs:
+
+    - state: The state input, passed through
+    - context_id_item: The context ID item that was set
+    - path: The path input, passed through
+    - value: The value that was set
     """
 
     class Fields:
@@ -427,7 +534,29 @@ class ContextIDSetValue(ContextIDActionBase):
 @register("context_id/SetPin")
 class SetPin(ContextIDActionBase):
     """
-    Create or update a pin
+    Create or update a world state pin for a context entry, pinning it into the
+    AI context. The target entry can be given either as a context ID item or as
+    a path (one of the two must be set).
+
+    Inputs:
+
+    - state: The graph state
+    - context_id_item: The context ID item to pin (optional)
+    - path: The context ID path to pin (optional)
+    - condition: AI-evaluated condition that determines whether the pin is active (optional)
+    - condition_state: The current evaluation state of the condition (optional)
+    - active: Whether the pin is active (optional)
+    - decay: Number of cycles the pin remains active once set, 0 for no decay (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - context_id_item: The context ID item that was pinned
+    - path: The path input, passed through
+    - condition: The condition that was set
+    - condition_state: The condition state that was set
+    - active: The active state that was set
+    - decay: The decay that was set
     """
 
     class Fields(ContextIDActionBase.Fields):
@@ -512,7 +641,23 @@ class SetPin(ContextIDActionBase):
 @register("context_id/RemovePin")
 class RemovePin(ContextIDActionBase):
     """
-    Remove a pin
+    Remove the world state pin for a context entry and reload the scene's
+    active pins.
+
+    The target entry can be given either as a context ID item or as a path
+    string (one of the two must be set).
+
+    Inputs:
+
+    - state: The graph state
+    - context_id_item: The context ID item to unpin (optional)
+    - path: The context ID path to unpin (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - context_id_item: The context ID item that was unpinned
+    - path: The path input, passed through
     """
 
     def __init__(self, title="Remove Pin", **kwargs):
@@ -535,7 +680,23 @@ class RemovePin(ContextIDActionBase):
 @register("context_id/IsPinActive")
 class IsPinActive(ContextIDActionBase):
     """
-    Check if a pin is active
+    Check whether the world state pin for a context entry is currently active.
+
+    The target entry can be given either as a context ID item or as a path
+    string (one of the two must be set).
+
+    Inputs:
+
+    - state: The graph state
+    - context_id_item: The context ID item to check (optional)
+    - path: The context ID path to check (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - context_id_item: The context ID item that was checked
+    - path: The path input, passed through
+    - active: Whether the pin is active
     """
 
     def __init__(self, title="Is Pin Active", **kwargs):

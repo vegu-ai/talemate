@@ -1,6 +1,6 @@
 # :material-tune: Presets
 
-Change inference parameters, embedding parameters and global system prompt overrides.
+Change inference parameters, embedding parameters and global system prompt overrides. The **Presets** group in the settings sidebar holds three pages: **Inference**, **Embeddings** and **System Prompts**.
 
 ## :material-matrix: Inference
 
@@ -9,7 +9,7 @@ Change inference parameters, embedding parameters and global system prompt overr
 
     This document will NOT explain what each setting does.
 
-![App settings - Application](/talemate/img/0.29.0/app-settings-presets-inference.png)
+![App settings - Presets - Inference](/talemate/img/0.39.0/app-settings-presets-inference.png)
 
 If you're familiar with editing inference parameters from other similar applications, be aware that there is a significant difference in how TaleMate handles these settings.
 
@@ -27,7 +27,7 @@ These are all experimental and will probably change / get merged in the future.
 
 ## :material-cube-unfolded: Embeddings
 
-![App settings - Application](/talemate/img/0.29.0/app-settings-presets-embeddings.png)
+![App settings - Presets - Embeddings](/talemate/img/0.39.0/app-settings-presets-embeddings.png)
 
 Allows you to add, remove and manage various embedding models for the memory agent to use via chromadb.
 
@@ -35,7 +35,7 @@ Allows you to add, remove and manage various embedding models for the memory age
 
 ## :material-text-box: System Prompts
 
-![App settings - Application](/talemate/img/0.29.0/app-settings-presets-system-prompts.png)
+![App settings - Presets - System Prompts](/talemate/img/0.39.0/app-settings-presets-system-prompts.png)
 
 This panel lets you override the global system prompts for the entire application for each prompt kind (Conversation, Narration, Creation, and so on). Per-client overrides live on the **System Prompts** tab of each client's [configuration dialog](../clients/client-configuration.md).
 

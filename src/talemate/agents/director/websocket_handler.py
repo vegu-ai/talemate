@@ -15,6 +15,7 @@ from talemate.context import interaction, handle_generation_cancelled
 from talemate.status import set_loading
 from talemate.exceptions import GenerationCancelled
 from .scene_direction.schema import UserInteractionMessage
+from .character_management import PersistCharacterRequest
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -54,6 +55,14 @@ class PersistCharacterPayload(pydantic.BaseModel):
     description: str = ""
 
     is_player: bool = False
+
+    generate_example_dialogue: bool = False
+    example_dialogue_instructions: str = ""
+
+    generate: bool = True
+
+    dialogue_instructions: str = ""
+    example_dialogue: list[str] | None = None
 
 
 class AssignVoiceToCharacterPayload(pydantic.BaseModel):
@@ -140,9 +149,16 @@ class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
     async def handle_persist_character(self, data: dict):
         payload = PersistCharacterPayload(**data)
 
+        if not payload.generate:
+            # manual creation - mirror the activation rule of the retired
+            # world_state_manager.create_character path
+            payload.active = payload.is_player or not self.scene.has_active_npcs
+
         # add as asyncio task
         task = asyncio.create_task(
-            self.director.persist_character(**payload.model_dump())
+            self.director.persist_character(
+                PersistCharacterRequest(**payload.model_dump())
+            )
         )
 
         async def handle_task_done(task):

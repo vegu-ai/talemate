@@ -95,8 +95,193 @@ export default {
     data() {
         return {
             dialog: false,
-            selected: "0.38.0",
+            selected: "0.39.0",
             whatsNew: [
+                {
+                    "version": "0.39.0",
+                    "items": [
+                        {
+                            "title": "Help Agent",
+                            "description": "A new Help agent answers questions about Talemate itself — settings, agents, clients, the world editor and more — grounded in the bundled documentation, which it can search and read before answering. Opened via the help icon in the app bar, it works with or without a loaded scene, keeps multiple persistent chats, and runs in the background so it never blocks the main Talemate loop.\n\nChats can be made scene-aware, and each question carries a small snapshot of what you are looking at in the interface. When asked, the help agent can also read your configuration and change agent and application settings, recording exactly what changed — it never exposes API keys and cannot change scene content."
+                        },
+                        {
+                            "title": "Timeline",
+                            "description": "A new timeline dialog gives scene history a single home, replacing the old Restore from Backup dialog. Drag a slider across the scene's automatic version history to preview the message history at any revision, then fork that revision into a new save — the scene you are playing is never modified, and browsing the history changes nothing on disk.\n\nForking is the only action the timeline applies. Rolling a scene back in place and opening a revision directly are disabled in this version."
+                        },
+                        {
+                            "title": "Pi Bridge Client",
+                            "description": "A new Pi Bridge client type drives generations through the pi coding agent's headless RPC mode instead of a direct LLM API. pi owns provider authentication and model resolution — including custom providers and models defined in pi's own configuration — so any model pi can reach becomes usable in Talemate.\n\nProvider and model are free-form fields with suggestions pulled from pi's model catalog, reasoning maps to pi's thinking levels with the thinking output captured for the reasoning display, and concurrent inference runs an isolated pi instance per request. Sampling parameters stay on the pi side by design."
+                        },
+                        {
+                            "title": "Application Settings",
+                            "description": "The application settings move out of their modal into an always-available Settings tab alongside the World Editor and Templates. The nested tabs-within-tabs layout is replaced by a single sidebar grouped by topic — Game, Appearance, Connections, Presets and Storytelling — and a settings search finds any setting by name, including individual API-key providers, and jumps straight to it. All API keys now live on one scrollable page instead of ten per-provider pages.\n\nEdits are tracked against the stored configuration: an unsaved-changes indicator with Save and Discard appears in the toolbar and on the Settings tab, unsaved edits survive switching to other tabs, and configuration changed elsewhere while you are editing is flagged instead of silently overwritten. Existing deep links, such as the Set API key action on a misconfigured client, land on the correct page as before."
+                        },
+                        {
+                            "title": "Scene Library",
+                            "description": "The home screen is rebuilt as a full-page landing view, replacing the sidebar load panel. A file-tree Scene Library lists scene projects with cover thumbnails, save counts and per-save metadata, along with an asset and node-module summary for each expanded project. Long save lists collapse behind a Show all row, the list is filterable, and a click loads the save.\n\nIndividual scene files and character cards can be deleted from the tree, and an entire scene project — saves, assets, nodes and history — can be deleted behind a type-the-name confirmation. Scene and character card import now happens in a prominent drag-and-drop dropzone next to a Create new scene card, with the quick-load recent scene cards kept on top."
+                        },
+                        {
+                            "title": "Fast Character Creation",
+                            "description": "The Creator agent gains a Character Creation section with a Fast mode that generates a character in one request instead of one prompt per aspect. A Consolidate multi-select picks which aspects — name, description, attributes, dialogue instructions, example dialogue — the single prompt covers; unselected aspects keep their individual prompts, and selected attribute templates fold in as per-attribute instructions instead of a prompt each. A token budget slider sizes the shared response, and a Fill in misses toggle re-runs the individual request for anything the consolidated response missed.\n\nEvery AI-assisted character creation path routes through this flow, and the consolidated prompt applies the scene's writing style template when one is configured. The split per-aspect flow remains the default for older or smaller models, and Fast mode is off by default."
+                        },
+                        {
+                            "title": "Scene Backdrop",
+                            "description": "Any scene illustration can now be set as the scene backdrop — an image that fills the whole scene view behind the messages instead of rendering inline. The backdrop belongs to the scene and is saved with it, so it survives reloads and history edits. Message text sits on translucent panels with a drop shadow for legibility — panel opacity and the text shadow are configurable.\n\nAn optional Auto Backdrop setting promotes newly generated scene backgrounds and illustrations automatically, and an Immersive quick-toggle chip in the scene tools turns the backdrop on and off without forgetting the chosen image."
+                        },
+                        {
+                            "title": "Scene Visual Manager",
+                            "description": "World Editor → Scene gains a Visuals tab mirroring the character visual manager: browse, upload, generate (single or batch, new or as variations of a reference image), and delete the scene's background illustrations, scene illustrations and scene cards, set the scene cover image, and set or fully unset the scene backdrop (the Scene Card sub-tab is portrait and offers no set-backdrop action). A Prompt Finalization sub-tab edits the Visualizer agent's per-scene prompt finalization overrides."
+                        },
+                        {
+                            "title": "Visual Prompt Finalization",
+                            "description": "The Visualizer agent gains a Prompt Finalization settings tab defining post-processing actions — exact, fuzzy, or regex match and replace, or a free-form AI instruction — that rewrite image prompts right before they are sent to the image generation backend. Actions can target positive and/or negative prompts, be restricted to specific visual types, and be overridden per scene; characters can define their own actions that run after the agent's.\n\nReusable action sets are managed as a new Visual prompt finalizer template type, including a shipped Ideogram JSON preset, and a new FinalizePrompt node exposes the step to custom node graphs."
+                        },
+                        {
+                            "title": "Notable Improvements",
+                            "groups": [
+                                {
+                                    "title": "Clients & Generation",
+                                    "items": [
+                                        "Client settings now offer the same widget set as agent settings — sliders, autocompletes, rich selects with notes, and conditional visibility.",
+                                        "MistralAI: added a Concurrent Inference toggle so batch operations can dispatch multiple requests in parallel. Off by default.",
+                                        "Text-Generation-WebUI: a new API handles prompt template toggle lets the server apply the model's own chat template; response pre-filling and reasoning capture keep working. Off by default.",
+                                        "llama.cpp: the same API handles prompt template toggle renders prompts through the model's built-in chat template, with reasoning respecting the client's setting. Off by default.",
+                                        "Clients can automatically retry empty responses, rate limiting, and skipped reasoning — separate 0–5 retry sliders per issue, with a progress notification and abort. Off by default.",
+                                        "OpenRouter: a new Parameters tab toggles individual sampler parameters — disabled ones are omitted from the request entirely, for providers that reject parameters they don't support.",
+                                        "Pi Bridge: the Docker image ships with pi preinstalled and mounts pi's configuration directory, so the client works in Docker out of the box.",
+                                        "A new Environment Variables settings page stores named values encrypted at rest and passes them to Talemate's pi instances, so pi's configuration can reference secrets by name."
+                                    ]
+                                },
+                                {
+                                    "title": "Scene & UI",
+                                    "items": [
+                                        "AI-assisted character creation gains a Generate example dialogue option, with a guidance field to steer tone, speech patterns, and quirks. Off by default.",
+                                        "The two Add tracked state actions in the scene tools are now a single Track state action — pick the world or a character in the modal.",
+                                        "Character card import gains per-step AI generation toggles with Full and Minimal presets — disabled steps use the card's original data, so a minimal import needs no text generation.",
+                                        "Per-scene agent overrides now cover the enable toggle of every agent action, not just the settings underneath it.",
+                                        "Agent quick-toggle chips show and toggle the value the loaded scene is running on — its override when one is active, the global setting otherwise.",
+                                        "The Quick Load recent-scene cards are smaller and scale with the viewport, so a full row no longer pushes the Scene Library down.",
+                                        "Quick Load cards and Scene Library saves share one context menu — Timeline, Remove from Quick Load, and Delete."
+                                    ]
+                                },
+                                {
+                                    "title": "Node Editor",
+                                    "items": [
+                                        "New `agent.visual.prompt_finalize.before` / `.after` events fire around visual prompt finalization — prompts are editable, and `.before` can modify the finalizer list — even when the agent setting is off.",
+                                        "New `agent.creator.dialogue_examples.before` / `.after` events wrap example-dialogue generation — inject instructions or rewrite the generated examples.",
+                                        "New `agent.help.chat.before` / `.after` events fire around help chat responses.",
+                                        "Scene assets gain `asset_deleted`, `scene.backdrop_changed`, `scene.cover_image_changed`, and `character.cover_image_changed` events alongside the existing `asset_saved`.",
+                                        "All new events are documented in the node editor's Events reference.",
+                                        "A new Generate Character node generates character data following the creator agent's Character Creation settings; wire its outputs into Persist Character to add the character to the scene.",
+                                        "The Create Character module now builds through that node, gaining `generate_dialogue_instructions` (on) and `generate_example_dialogue` (off) inputs; the simulation suite enables both."
+                                    ]
+                                },
+                                {
+                                    "title": "Documentation & Help",
+                                    "items": [
+                                        "The documentation gained a complete node reference covering 400+ nodes, listing each node's registry path, sockets and properties.",
+                                        "The help agent searches and reads the node reference, so questions about what a node does return grounded answers.",
+                                        "The help chat looks documentation pages up on demand instead of carrying the whole index in every message, so it works with small context windows."
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "title": "Bug Fixes",
+                            "groups": [
+                                {
+                                    "title": "Agents & Settings",
+                                    "items": [
+                                        "Closing an agent's settings dialog without changing anything no longer re-saves its settings, which could silently revert changes made elsewhere while the dialog was open.",
+                                        "The help agent refuses to change settings for an agent whose dialog is open, asking to close it first.",
+                                        "Agent settings in Scene mode now honor each setting's visibility conditions, so gated settings and empty sections no longer show up as scene overrides.",
+                                        "Pocket TTS: pasting a Hugging Face token now enables the gated voice-cloning download without a restart, and the agent warns while cloning is unavailable.",
+                                        "Director chat: images generated from the chat are now inserted into the conversation that requested them.",
+                                        "Agent sections that are always on by design — Summarization, Conversation and Narrator Generation, Character Portraits — are no longer switched off in the background by a stale configuration value.",
+                                        "Agent settings added in a new release now arrive in the state they ship with instead of switched off; settings you switched off yourself stay off."
+                                    ]
+                                },
+                                {
+                                    "title": "Backends",
+                                    "items": [
+                                        "OpenRouter: a failed model and provider list fetch at startup no longer sticks until restart — later config saves and status refreshes retry it.",
+                                        "OpenRouter: setting the API key for the first time during initial setup now triggers the provider fetch."
+                                    ]
+                                },
+                                {
+                                    "title": "Character Creation & Import",
+                                    "items": [
+                                        "Character card import: a failed or cancelled description or example dialogue generation now keeps the card's own text.",
+                                        "Character card import: cancelling an import now aborts it instead of letting it run to completion.",
+                                        "Character card import: attribute extraction now sees the character's description, so imported attributes reflect it.",
+                                        "A description typed into the world editor's character creator is no longer discarded when AI generation is enabled.",
+                                        "The director's Limit character attributes setting now applies to character card import, in both the split and Fast flows.",
+                                        "The director's attribute limit now delivers the number it promises — the character's own name no longer costs one of the allowed slots.",
+                                        "Fast character creation no longer asks for the name as an attribute, so it is neither duplicated nor counted against the limit.",
+                                        "Example dialogue no longer keeps typographic quotes — they are converted to straight quotes on import, manual entry, and generation, so lines render as speech."
+                                    ]
+                                },
+                                {
+                                    "title": "Clients",
+                                    "items": [
+                                        "A single failed status check no longer briefly flaps a connected client to 'Could not connect' — disconnection now requires consecutive failures.",
+                                        "The Context Length input now appears in the edit dialog for every client type, including OpenRouter and the remote API clients.",
+                                        "The context and reasoning sliders in the client list no longer jitter back to previous values after dragging.",
+                                        "Quickly editing two clients back to back no longer drops the first client's pending change."
+                                    ]
+                                },
+                                {
+                                    "title": "Generation Errors",
+                                    "items": [
+                                        "Simultaneous generation failures are now queued and answered one after another, so earlier generations resume and their results are no longer lost.",
+                                        "Pending error dialogs are cancelled cleanly when the scene is unloaded or the frontend disconnects."
+                                    ]
+                                },
+                                {
+                                    "title": "Help & Documentation",
+                                    "items": [
+                                        "Documentation lookups now rank the page a question is about above pages that only mention the topic in passing.",
+                                        "Help and director chat answers render headings, lists, quotes and paragraphs with proper spacing and indentation instead of one solid block."
+                                    ]
+                                },
+                                {
+                                    "title": "Node Editor",
+                                    "items": [
+                                        "The Apply Style node now resolves real style template ids and applies the full template — use Apply Styles for configuration-driven styles.",
+                                        "The Build Prompt node's `memory_prompt` and the Generate Response node's `action_type` input sockets take effect again, with wired values winning over the property.",
+                                        "The Clean Up Narration node and the Stop node's StageExit choice no longer error when they run.",
+                                        "The Compress Context ID Part node emits the original part on `uncompressed`, and As Bool reports an uncastable value properly.",
+                                        "Registry typos fixed for `CleanUpCharacterMessage` and the shipped `instructGamestateUpdates` module; saved graphs keep loading via legacy aliases.",
+                                        "Socket fixes across Generate Response, State Counter, Generate Scene Types, Apply Style(s), State Reinforcement, Focal and Spices.",
+                                        "Property fixes — declared defaults match the effective ones on Context History and As Number, Set Scene Phase defaults to `roleplay`, and Update Message Assets drops an unused property."
+                                    ]
+                                },
+                                {
+                                    "title": "Scenes",
+                                    "items": [
+                                        "Exporting a scene with Reset Progress checked no longer wipes the loaded scene's message history and world state — the reset applies only to the exported file.",
+                                        "Deleting the save file of the currently loaded scene is refused with an error instead of being recreated by the next save.",
+                                        "Applying a scene type template now actually registers the scene type on the scene, so the picked type is no longer lost."
+                                    ]
+                                },
+                                {
+                                    "title": "Timeline",
+                                    "items": [
+                                        "Previewing a revision no longer fails on scenes whose stored version history diverged from its starting snapshot — affected entries are repaired during reconstruction."
+                                    ]
+                                },
+                                {
+                                    "title": "Windows",
+                                    "items": [
+                                        "The `system_time` template function no longer errors on Windows.",
+                                        "Pi Bridge: generations no longer hang at the very end, and cancelling one no longer leaks a background process.",
+                                        "Pi Bridge: the client now launches pi correctly, and a failed launch names the executable that could not be run."
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
                 {
                     "version": "0.38.0",
                     "items": [

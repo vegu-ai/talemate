@@ -9,6 +9,11 @@ import pydantic
 import structlog
 from openai import AsyncOpenAI
 
+from talemate.client.api_handles import (
+    ApiHandlesPromptTemplateConfig,
+    ApiHandlesPromptTemplateMixin,
+    api_handles_prompt_template_extra_fields,
+)
 from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults
 from talemate.client.registry import register
 from talemate.client.vision import VisionConfig, vision_extra_fields, OpenAIVisionMixin
@@ -17,16 +22,18 @@ from talemate.config.schema import Client as BaseClientConfig
 log = structlog.get_logger("talemate.client.textgenwebui")
 
 
-class TextGeneratorWebuiClientDefaults(Defaults):
+class TextGeneratorWebuiClientDefaults(Defaults, ApiHandlesPromptTemplateConfig):
     api_key: str = ""
 
 
-class ClientConfig(VisionConfig, BaseClientConfig):
+class ClientConfig(ApiHandlesPromptTemplateConfig, VisionConfig, BaseClientConfig):
     pass
 
 
 @register()
-class TextGeneratorWebuiClient(OpenAIVisionMixin, ClientBase):
+class TextGeneratorWebuiClient(
+    ApiHandlesPromptTemplateMixin, OpenAIVisionMixin, ClientBase
+):
     auto_determine_prompt_template: bool = True
     remote_model_locked: bool = True
     finalizers: list[str] = [
@@ -44,8 +51,19 @@ class TextGeneratorWebuiClient(OpenAIVisionMixin, ClientBase):
         defaults: TextGeneratorWebuiClientDefaults = TextGeneratorWebuiClientDefaults()
         self_hosted: bool = True
         extra_fields: dict = pydantic.Field(
-            default_factory=lambda: vision_extra_fields()
+            default_factory=lambda: {
+                **api_handles_prompt_template_extra_fields(
+                    description="Requests go to the chat/completions API and text-generation-webui applies the model's prompt template, and the prompt template selection below is ignored. Response pre-filling keeps working. Keep this disabled for full control of the prompt template in Talemate; enable it to trust that the template on the remote end is correct.",
+                ),
+                **vision_extra_fields(),
+            }
         )
+
+    @property
+    def requires_reasoning_pattern(self) -> bool:
+        # in chat mode the API separates reasoning into reasoning_content
+        # deltas, which are captured during streaming
+        return not self.api_handles_prompt_template
 
     def make_client(self) -> AsyncOpenAI:
         api_key = self.api_key or "sk-1234"
@@ -181,9 +199,69 @@ class TextGeneratorWebuiClient(OpenAIVisionMixin, ClientBase):
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         loop = asyncio.get_event_loop()
+        if self.api_handles_prompt_template:
+            # assemble on the event loop - the executor thread cannot see the
+            # active_scene contextvar, which would drop persona instructions
+            messages, coercion_prompt = self.chat_messages_for_coercion(prompt, kind)
+            return await loop.run_in_executor(
+                None, self._generate_chat, messages, coercion_prompt, parameters
+            )
         return await loop.run_in_executor(
             None, self._generate, prompt, parameters, kind
         )
+
+    def _generate_chat(
+        self, messages: list[dict], coercion_prompt: str | None, parameters: dict
+    ):
+        """
+        Generates text via the chat/completions endpoint, letting
+        text-generation-webui apply the model's prompt template. Coercion is
+        passed as a partial assistant message that the API continues via its
+        `continue_` parameter.
+        """
+        if coercion_prompt:
+            parameters["continue_"] = True
+
+        parameters["mode"] = "instruct"
+        parameters["messages"] = messages
+        parameters["stream"] = True
+
+        response = ""
+        reasoning_response = ""
+        stream_response = requests.post(
+            f"{self.api_url}/v1/chat/completions",
+            json=parameters,
+            timeout=None,
+            headers=self.request_headers,
+            stream=True,
+        )
+        stream_response.raise_for_status()
+
+        sse = sseclient.SSEClient(stream_response)
+
+        for event in sse.events():
+            if event.data == "[DONE]":
+                break
+            payload = json.loads(event.data)
+            delta = payload["choices"][0]["delta"]
+            reasoning_chunk = delta.get("reasoning_content") or ""
+            if reasoning_chunk:
+                reasoning_response += reasoning_chunk
+                self.update_request_tokens(self.count_tokens(reasoning_chunk))
+            chunk = delta.get("content") or ""
+            response += chunk
+            self.update_request_tokens(self.count_tokens(chunk))
+
+        if reasoning_response:
+            self._reasoning_response = reasoning_response
+
+        # the API echoes the coercion pre-fill back at the start of the
+        # response - strip it so coerced responses match the completions
+        # endpoint behavior (continuation only)
+        if coercion_prompt and response.startswith(coercion_prompt):
+            response = response[len(coercion_prompt) :]
+
+        return response
 
     def _generate(self, prompt: str, parameters: dict, kind: str):
         """

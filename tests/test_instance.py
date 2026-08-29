@@ -6,6 +6,8 @@ ensure_agent_llm_client). Those flows are tested elsewhere via the
 bootstrap fixtures and require a fully-wired environment.
 """
 
+import asyncio
+
 import pytest
 
 import talemate.agents as agents_module
@@ -25,20 +27,28 @@ from conftest import MockClient, bootstrap_engine
 
 @pytest.fixture(autouse=True)
 def _isolated_registries():
-    """Snapshot and restore AGENTS / CLIENTS so tests can't bleed state.
+    """Snapshot and restore AGENTS / CLIENTS / CLIENT_STATUS_TASKS so tests
+    can't bleed state.
 
     The instance module owns module-level dicts that other tests and
-    fixtures populate. Each test in this file gets a clean slate.
+    fixtures populate. Each test in this file gets a clean slate. The status
+    task registry matters especially: a task left behind by one test belongs
+    to that test's (closed) event loop, and a later test coalescing onto it
+    would await a cross-loop task.
     """
     saved_agents = dict(instance.AGENTS)
     saved_clients = dict(instance.CLIENTS)
+    saved_status_tasks = dict(instance.CLIENT_STATUS_TASKS)
     instance.AGENTS.clear()
     instance.CLIENTS.clear()
+    instance.CLIENT_STATUS_TASKS.clear()
     yield
     instance.AGENTS.clear()
     instance.AGENTS.update(saved_agents)
     instance.CLIENTS.clear()
     instance.CLIENTS.update(saved_clients)
+    instance.CLIENT_STATUS_TASKS.clear()
+    instance.CLIENT_STATUS_TASKS.update(saved_status_tasks)
 
 
 # ---------------------------------------------------------------------------
@@ -373,6 +383,118 @@ class TestEmitClientsStatus:
         await instance.emit_clients_status(wait_for_status=True)
 
         assert called == ["alpha"]
+
+
+# ---------------------------------------------------------------------------
+# client status sweep coalescing (issue #89 - overlapping sweeps must share
+# one in-flight status() round-trip per client)
+# ---------------------------------------------------------------------------
+
+
+class _GatedStatusClient(MockClient):
+    """Counts status() calls; each call blocks until the gate is set."""
+
+    def __init__(self, name: str, gate: asyncio.Event):
+        super().__init__(name)
+        self.status_calls = 0
+        self._gate = gate
+
+    async def status(self):
+        self.status_calls += 1
+        await self._gate.wait()
+
+
+class TestClientStatusCoalescing:
+    @pytest.mark.asyncio
+    async def test_overlapping_status_sweeps_coalesce(self):
+        gate = asyncio.Event()
+        client_a = _GatedStatusClient("alpha", gate)
+        client_b = _GatedStatusClient("beta", gate)
+        instance.CLIENTS.update({"alpha": client_a, "beta": client_b})
+
+        await instance.emit_clients_status()
+        await asyncio.sleep(0)  # let the status tasks start
+        assert client_a.status_calls == 1
+        assert client_b.status_calls == 1
+
+        # second and third sweeps while the first is still in flight join it
+        await instance.emit_clients_status()
+        await asyncio.sleep(0)
+        gate.set()
+        await instance.emit_clients_status(wait_for_status=True)
+
+        assert client_a.status_calls == 1
+        assert client_b.status_calls == 1
+
+    @pytest.mark.asyncio
+    async def test_new_sweep_after_completion_issues_fresh_status_calls(self):
+        gate = asyncio.Event()
+        gate.set()
+        client_a = _GatedStatusClient("alpha", gate)
+        instance.CLIENTS["alpha"] = client_a
+
+        await instance.emit_clients_status(wait_for_status=True)
+        assert client_a.status_calls == 1
+
+        await instance.emit_clients_status(wait_for_status=True)
+        assert client_a.status_calls == 2
+
+    @pytest.mark.asyncio
+    async def test_failed_status_task_is_replaced_on_next_sweep(self):
+        class _ExplodingClient(_GatedStatusClient):
+            async def status(self):
+                self.status_calls += 1
+                if self.status_calls == 1:
+                    raise RuntimeError("probe failed")
+
+        gate = asyncio.Event()
+        gate.set()
+        client_a = _ExplodingClient("alpha", gate)
+        instance.CLIENTS["alpha"] = client_a
+
+        await instance.emit_clients_status()
+        with pytest.raises(RuntimeError):
+            await instance.CLIENT_STATUS_TASKS["alpha"]
+
+        await instance.emit_clients_status(wait_for_status=True)
+        assert client_a.status_calls == 2
+
+    @pytest.mark.asyncio
+    async def test_instantiate_clients_only_emits_for_new_clients(
+        self, patched_config, monkeypatch
+    ):
+        emits = []
+
+        async def fake_emit(wait_for_status=False):
+            emits.append(wait_for_status)
+
+        monkeypatch.setattr(instance, "emit_clients_status", fake_emit)
+
+        # config's client already instantiated - a value-only change must
+        # not trigger a status sweep
+        instance.CLIENTS["my-stub"] = MockClient("my-stub")
+        await instance.instantiate_clients()
+        assert emits == []
+
+        # a genuinely new client still triggers the sweep
+        del instance.CLIENTS["my-stub"]
+        await instance.instantiate_clients()
+        assert emits == [False]
+        assert "my-stub" in instance.CLIENTS
+
+    @pytest.mark.asyncio
+    async def test_destroy_client_clears_status_task(self):
+        gate = asyncio.Event()
+        gate.set()
+        client_a = _GatedStatusClient("alpha", gate)
+        instance.CLIENTS["alpha"] = client_a
+
+        await instance.emit_clients_status(wait_for_status=True)
+        assert "alpha" in instance.CLIENT_STATUS_TASKS
+
+        await instance.destroy_client("alpha")
+        assert "alpha" not in instance.CLIENT_STATUS_TASKS
+        assert "alpha" not in instance.CLIENTS
 
 
 # ---------------------------------------------------------------------------

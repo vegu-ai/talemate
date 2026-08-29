@@ -13,11 +13,10 @@ from talemate.agents.director.action_core.exceptions import (
     UnknownAction,
 )
 
-from talemate.prompts import Prompt
+from talemate.agents.chat_title import generate_chat_title
 from talemate.agents.director.plan.util import get_plan, cleanup_orphaned_plans
 from .context import director_chat_context
 
-from .response_specs import CHAT_TITLE_SPEC
 from .schema import (
     DirectorChat,
     DirectorChatMessage,
@@ -832,23 +831,8 @@ class DirectorChatMixin:
 
         chat_excerpt = "\n".join(excerpt_parts)
 
-        response, extracted = await Prompt.request(
-            "director.chat-title",
-            self.client,
-            "create_92",
-            vars={"chat_excerpt": chat_excerpt},
-            response_spec=CHAT_TITLE_SPEC,
-        )
-
-        title = extracted.get("title")
-        if not title:
-            title = response.strip() if response else None
-
+        title = await generate_chat_title(self.client, chat_excerpt, "an AI director")
         if title:
-            # Clean up and truncate
-            title = title.strip().strip("\"'")
-            if len(title) > 60:
-                title = title[:57] + "..."
             self.chat_update_title(chat_id, title)
 
         return title

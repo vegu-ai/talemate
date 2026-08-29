@@ -25,7 +25,7 @@
                         <v-checkbox
                             v-model="resetProgress"
                             label="Reset Progress"
-                            messages="If checked, the progress of the scene will be reset. Clearing messages, choices and other stateful data."
+                            messages="If checked, the exported scene will have its progress reset - clearing messages, choices and other stateful data. Your current session is not affected."
                         ></v-checkbox>
                     </v-col>
                 </v-row>

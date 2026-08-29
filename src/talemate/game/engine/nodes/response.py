@@ -84,9 +84,13 @@ class AsIsExtractor(ExtractorNodeBase):
     - name: Key name for DictCollector
     - trim: Whether to trim whitespace (default: True)
 
+    Inputs:
+    - name: Optional override for name property
+
     Outputs:
     - name: The extractor name (pass-through)
-    - extractor: The AsIsExtractor instance
+    - value: The AsIsExtractor instance
+    - spec: A ResponseSpec containing just this extractor
     """
 
     class Fields:
@@ -134,9 +138,13 @@ class AnchorExtractor(ExtractorNodeBase):
     - fallback_to_full: Return full response if anchors not found
     - trim: Whether to trim whitespace
 
+    Inputs:
+    - name: Optional override for name property
+
     Outputs:
     - name: The extractor name (pass-through)
-    - extractor: The AnchorExtractor instance
+    - value: The AnchorExtractor instance
+    - spec: A ResponseSpec containing just this extractor
     """
 
     class Fields:
@@ -218,7 +226,8 @@ class ComplexAnchorExtractor(ExtractorNodeBase):
     Outputs:
     - name: The extractor name (pass-through)
     - tracked_tags: The tracked tags list (pass-through)
-    - extractor: The ComplexAnchorExtractor instance
+    - value: The ComplexAnchorExtractor instance
+    - spec: A ResponseSpec containing just this extractor
     """
 
     class Fields:
@@ -320,9 +329,13 @@ class AfterAnchorExtractor(ExtractorNodeBase):
     - fallback_to_full: Return full response if start marker not found
     - trim: Whether to trim whitespace
 
+    Inputs:
+    - name: Optional override for name property
+
     Outputs:
     - name: The extractor name (pass-through)
-    - extractor: The AfterAnchorExtractor instance
+    - value: The AfterAnchorExtractor instance
+    - spec: A ResponseSpec containing just this extractor
     """
 
     class Fields:
@@ -396,9 +409,13 @@ class RegexExtractor(ExtractorNodeBase):
     - all_matches: Return list of all matches instead of first
     - trim: Whether to trim whitespace
 
+    Inputs:
+    - name: Optional override for name property
+
     Outputs:
     - name: The extractor name (pass-through)
-    - extractor: The RegexExtractor instance
+    - value: The RegexExtractor instance
+    - spec: A ResponseSpec containing just this extractor
     """
 
     class Fields:
@@ -478,9 +495,13 @@ class StripPrefixExtractor(ExtractorNodeBase):
     - replacement: Replacement string (default: "")
     - trim: Whether to trim whitespace
 
+    Inputs:
+    - name: Optional override for name property
+
     Outputs:
     - name: The extractor name (pass-through)
-    - extractor: The StripPrefixExtractor instance
+    - value: The StripPrefixExtractor instance
+    - spec: A ResponseSpec containing just this extractor
     """
 
     class Fields:
@@ -545,9 +566,13 @@ class CodeBlockExtractor(ExtractorNodeBase):
     - fallback_to_full: Return full response if anchors not found
     - trim: Whether to trim whitespace
 
+    Inputs:
+    - name: Optional override for name property
+
     Outputs:
     - name: The extractor name (pass-through)
-    - extractor: The CodeBlockExtractor instance
+    - value: The CodeBlockExtractor instance
+    - spec: A ResponseSpec containing just this extractor
     """
 
     class Fields:
@@ -636,7 +661,8 @@ class ComplexCodeBlockExtractor(ExtractorNodeBase):
     Outputs:
     - name: The extractor name (pass-through)
     - tracked_tags: The tracked tags list (pass-through)
-    - extractor: The ComplexCodeBlockExtractor instance
+    - value: The ComplexCodeBlockExtractor instance
+    - spec: A ResponseSpec containing just this extractor
     """
 
     class Fields:

@@ -110,6 +110,12 @@
                         </v-row>
                         <v-row>
                             <v-col cols="12">
+                                <v-checkbox v-model="newIntroduction.generate_example_dialogue" label="Generate example dialogue" color="primary" messages="Generate a few examples of how the character speaks."></v-checkbox>
+                                <v-textarea v-if="newIntroduction.generate_example_dialogue" v-model="newIntroduction.example_dialogue_instructions" label="Example dialogue guidance" class="mt-2" rows="2" auto-grow placeholder="Speaks in short sentences, dry humor ..." hint="Optional guidance for how the example dialogue should be generated."></v-textarea>
+                            </v-col>
+                        </v-row>
+                        <v-row>
+                            <v-col cols="12">
                                 <v-checkbox v-if="newIntroduction.templates.length > 0" v-model="newIntroduction.augment_attributes_enabled" label="Augment attributes" color="primary" messages="If your template selection includes character attributes, then this option will augment the character sheet with some additional attributes that are not already present."></v-checkbox>
                                 <v-textarea v-if="newIntroduction.augment_attributes_enabled" v-model="newIntroduction.augment_attributes" label="Augmentation instructions" class="mt-2" rows="2" auto-grow></v-textarea>
                             </v-col>
@@ -198,6 +204,8 @@ export default {
                 determine_name: true,
                 narrate_entry: true,
                 narrate_entry_direction: "",
+                generate_example_dialogue: false,
+                example_dialogue_instructions: "",
                 augment_attributes_enabled: false,
                 augment_attributes: "Add some additional, interesting attributes that are not already present in the character sheet."
             },

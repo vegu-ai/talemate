@@ -39,14 +39,21 @@ class PromptFromTemplate(Node):
     """
     Loads a talemate template prompt
 
+    Either a template file or raw template text must be provided (but
+    not both).
+
     Inputs:
 
-    - template_file: The template file to load
+    - template_file: The template file to load (optional)
+    - template_text: Raw template text to use instead of a file (optional)
     - variables: The variables to use in the template (optional)
 
     Properties:
 
     - scope: the template scope (choices of agents or scene)
+    - template_file: The template file to load
+    - template_text: The template text to use
+    - dedupe: Enable prompt deduplication
 
     Outputs:
 
@@ -154,6 +161,7 @@ class LoadTemplate(Node):
     Outputs:
 
     - template_content: The raw unrendered template content as a string
+    - scope: The resolved template scope, passed through
     """
 
     @pydantic.computed_field(description="Node style")
@@ -273,7 +281,30 @@ class RenderPrompt(Node):
 @register("prompt/BuildPrompt")
 class BuildPrompt(Node):
     """
-    Builds a prompt based on needs and dynamic instructions
+    Builds a prompt from a jinja2 template, exposing common context building
+    blocks (scene, memory, extra context, dynamic instructions etc.) as
+    template variables that can be toggled through the node's properties.
+
+    Loads the template `{scope}.{template_file}` and renders it against the
+    active scene using the agent's client for token budgeting. Outputs both the
+    Prompt object and the rendered prompt text.
+
+    Inputs:
+
+    - state: The graph state
+    - agent: The agent whose client is used for rendering and token budgeting
+    - instructions: Task instructions made available to the template (optional)
+    - dynamic_context: List of DynamicInstruction objects injected as extra context (optional)
+    - dynamic_instructions: List of DynamicInstruction objects injected as instructions (optional)
+    - memory_prompt: Semantic query / retrieval prompt for the memory context (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - agent: The agent input, passed through
+    - prompt: The built Prompt object
+    - rendered: The rendered prompt text
+    - response_length: The configured response length, passed through
     """
 
     class Fields:
@@ -438,7 +469,9 @@ class BuildPrompt(Node):
         include_scene_context: bool = self.get_property("include_scene_context")
         include_character_context: bool = self.get_property("include_character_context")
         include_gamestate_context: bool = self.get_property("include_gamestate_context")
-        memory_prompt: str = self.get_property("memory_prompt")
+        memory_prompt: str = self.normalized_input_value(
+            "memory_prompt"
+        ) or self.get_property("memory_prompt")
         prefill_prompt: str = self.get_property("prefill_prompt")
         return_prefill_prompt: bool = self.get_property("return_prefill_prompt")
         dedupe_enabled: bool = self.get_property("dedupe_enabled")
@@ -497,7 +530,9 @@ class TemplateVariables(Node):
     Variables:
 
     - scene: The current scene
+    - scene_title: The scene title (falls back to the scene name)
     - max_tokens: The maximum number of tokens in the response
+    - agent: The relevant agent
 
     Inputs:
 
@@ -544,26 +579,39 @@ class GenerateResponse(Node):
     """
     Sends a prompt to the agent and generates a response
 
+    Retries up to `attempts` times on an empty response. When a
+    response_spec is provided its extractors are applied to the
+    response; otherwise, if the template produced a data structure,
+    that is used as the extracted value.
+
     Inputs:
 
+    - state: The graph state
     - agent: The agent to send the prompt to
     - prompt: The prompt to send to the agent
+    - action_type: Classification of the generated response (optional)
+    - response_length: The maximum length of the response (optional)
     - response_spec: Optional ResponseSpec for extracting structured data from response
 
-    Properties
+    Properties:
 
     - data_output: Output the response as data structure
-    - attempts: The number of attempts to attempt (on empty response)
+    - data_multiple: Allow multiple data structures in the response
+    - attempts: The number of attempts (retry on empty response)
+    - response_length: The maximum length of the response
+    - action_type: Classification of the generated response
 
     Outputs:
 
-    - response: The response from the agent
-    - data_obj: The data structure of the response
-    - rendered_prompt: The rendered prompt
+    - state: The state input, passed through
     - agent: The agent that generated the response
+    - prompt: The Prompt object, passed through
+    - response: The response from the agent
+    - data_obj: The data structure of the response (when data_output is enabled)
+    - captured_context: Context captured by the template during rendering
+    - rendered_prompt: The rendered prompt
     - response_spec: Pass-through of the input response spec
     - extracted: Dictionary of extracted values (when response_spec provided)
-
     """
 
     @pydantic.computed_field(description="Node style")
@@ -648,7 +696,6 @@ class GenerateResponse(Node):
         self.add_output("data_obj", socket_type="dict,list")
         self.add_output("captured_context", socket_type="str")
         self.add_output("rendered_prompt", socket_type="str")
-        self.add_output("agent", socket_type="agent")
         self.add_output("response_spec", socket_type="response/spec")
         self.add_output("extracted", socket_type="dict")
 
@@ -656,7 +703,9 @@ class GenerateResponse(Node):
         scene: "Scene" = active_scene.get()
         agent: Agent = self.require_input("agent")
         prompt: Prompt = self.require_input("prompt")
-        action_type = self.get_property("action_type")
+        action_type = self.normalized_input_value("action_type") or self.get_property(
+            "action_type"
+        )
         response_length = self.require_number_input("response_length", types=(int,))
         data_output = self.get_property("data_output")
         data_multiple = self.get_property("data_multiple")

@@ -1,10 +1,14 @@
 import json
 
 import pydantic
-import structlog
 import httpx
 from openai import AsyncOpenAI
 
+from talemate.client.api_handles import (
+    ApiHandlesPromptTemplateConfig,
+    ApiHandlesPromptTemplateMixin,
+    api_handles_prompt_template_extra_fields,
+)
 from talemate.client.base import (
     STOPPING_STRINGS,
     ClientBase,
@@ -21,21 +25,28 @@ from talemate.client.vision import VisionConfig, vision_extra_fields, OpenAIVisi
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.exceptions import GenerationProcessingError
 
-log = structlog.get_logger("talemate.client.llamacpp")
+APPLY_TEMPLATE_TIMEOUT = 30
 
 
-class Defaults(CommonDefaults, pydantic.BaseModel):
+class Defaults(CommonDefaults, ApiHandlesPromptTemplateConfig):
     # llama.cpp `llama-server` defaults to port 8080 (see ggml-org/llama.cpp README)
     api_url: str = "http://localhost:8080"
     max_token_length: int = 8192
 
 
-class ClientConfig(ConcurrentInference, VisionConfig, BaseClientConfig):
+class ClientConfig(
+    ConcurrentInference, ApiHandlesPromptTemplateConfig, VisionConfig, BaseClientConfig
+):
     pass
 
 
 @register()
-class LlamaCppClient(ConcurrentInferenceMixin, OpenAIVisionMixin, ClientBase):
+class LlamaCppClient(
+    ApiHandlesPromptTemplateMixin,
+    ConcurrentInferenceMixin,
+    OpenAIVisionMixin,
+    ClientBase,
+):
     """
     Client for ggml-org/llama.cpp `llama-server`.
 
@@ -59,6 +70,10 @@ class LlamaCppClient(ConcurrentInferenceMixin, OpenAIVisionMixin, ClientBase):
         self_hosted: bool = True
         extra_fields: dict = pydantic.Field(
             default_factory=lambda: {
+                **api_handles_prompt_template_extra_fields(
+                    label="API handles prompt template",
+                    description="The prompt template is rendered by llama.cpp using the model's built-in chat template, and the prompt template selection below is ignored. Response pre-filling keeps working. Keep this disabled for full control of the prompt template in Talemate; enable it to trust that the template on the remote end is correct.",
+                ),
                 **vision_extra_fields(),
                 **concurrent_inference_extra_fields(),
             }
@@ -117,10 +132,13 @@ class LlamaCppClient(ConcurrentInferenceMixin, OpenAIVisionMixin, ClientBase):
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
+    def _base_url(self) -> str:
+        return self.api_url.strip().rstrip("/")
+
     def _base_url_v1(self) -> str | None:
         if not self.api_url:
             return None
-        base = self.api_url.strip().rstrip("/")
+        base = self._base_url()
         if base.endswith("/v1"):
             return base
         return base + "/v1"
@@ -148,12 +166,43 @@ class LlamaCppClient(ConcurrentInferenceMixin, OpenAIVisionMixin, ClientBase):
 
         return model_name
 
+    async def apply_remote_template(self, prompt: str, kind: str) -> str:
+        """
+        Renders the prompt through llama.cpp's POST /apply-template endpoint,
+        which applies the model's built-in chat template server-side and
+        leaves the final assistant turn open when a prefill (coercion)
+        message is included.
+        """
+
+        messages, _ = self.chat_messages_for_coercion(prompt, kind)
+
+        payload = {"messages": messages}
+        if not self.reason_enabled:
+            # best-effort: ask thinking-capable templates (Qwen, GLM, ...)
+            # not to open a think block when reasoning is disabled
+            payload["chat_template_kwargs"] = {"enable_thinking": False}
+
+        async with httpx.AsyncClient(timeout=APPLY_TEMPLATE_TIMEOUT) as http:
+            response = await http.post(
+                f"{self._base_url()}/apply-template",
+                json=payload,
+                headers=self.request_headers,
+            )
+            if response.status_code >= 400:
+                raise GenerationProcessingError(
+                    f"llama.cpp API error ({response.status_code}) while applying prompt template"
+                )
+            return response.json()["prompt"]
+
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generate text using llama.cpp's POST /completion endpoint in streaming
         mode so token usage can be tracked incrementally via
         `update_request_tokens`.
         """
+
+        if self.api_handles_prompt_template:
+            prompt = await self.apply_remote_template(prompt, kind)
 
         self.log.debug(
             "generate",
@@ -180,8 +229,7 @@ class LlamaCppClient(ConcurrentInferenceMixin, OpenAIVisionMixin, ClientBase):
 
         try:
             response = ""
-            base = self.api_url.strip().rstrip("/")
-            url = f"{base}/completion"
+            url = f"{self._base_url()}/completion"
 
             async with httpx.AsyncClient(timeout=None) as http:
                 async with http.stream(

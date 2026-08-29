@@ -111,7 +111,7 @@
                     <v-icon icon="mdi-brain" size="small" class="mr-1" color="primary"></v-icon>
                   </template>
                   <div class="text-body-2">
-                    Google's gemini 3 model will be selected by default. Since it's a reasoning model, reasoning will be enabled automatically. If you change to a non-reasoning model in the next  setup step (or at a later point), you should turn reasoning off in the client settings.
+                    Google's Gemini 3.6 Flash model will be selected by default. Since it's a reasoning model, reasoning will be enabled automatically. If you change to a non-reasoning model in the next  setup step (or at a later point), you should turn reasoning off in the client settings.
                   </div>
                 </v-alert>
               </v-col>
@@ -134,7 +134,7 @@
               </v-col>
             </v-row>
             
-            <v-btn color="primary" variant="tonal" @click="openClientModal" prepend-icon="mdi-plus">
+            <v-btn color="primary" variant="tonal" :disabled="clientTypesLoading || !clientPresetOptions.length" @click="openClientModal" prepend-icon="mdi-plus">
               Add Client
             </v-btn>
             
@@ -750,12 +750,6 @@ export default {
       this.ensureSelectedPreset();
       const preset = this.buildClientPreset(this.selectedClientPreset);
       preset._simpleMode = true;
-      
-      // Default reason_enabled to true for OpenRouter
-      if (this.selectedClientPreset === 'openrouter') {
-        preset.reason_enabled = true;
-      }
-      
       this.$emit('open-client-modal', preset);
     },
     nextOrFinish() {

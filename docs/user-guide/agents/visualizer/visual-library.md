@@ -198,6 +198,7 @@ From the Scene Assets view, you can:
 - **Delete**: Permanently remove an asset from your scene
 - **Analyze**: Use AI to analyze the image and extract information
 - **Set Cover**: Set the asset as a cover image for the scene or a character
+- **Set Backdrop**: Set the asset as the [scene backdrop](/talemate/user-guide/inline-visuals/#scene-backdrop), rendered behind the scene text
 - **Use as Reference**: Open the generation dialog with this asset as a reference
 - **Iterate**: Create a new image based on this asset
 

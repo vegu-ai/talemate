@@ -20,6 +20,17 @@ This feature provides visibility into what's happening behind the scenes without
 
 The agent activity bar can be toggled on or off in [Settings > Game > General](/talemate/user-guide/app-settings/game#show-agent-activity-bar). It is enabled by default.
 
+## Quick Settings
+
+![Quick settings chips](/talemate/img/0.39.0/scene-tools-quick-settings.png)
+
+Above the scene tools sits a row of small toggle chips. Click a chip to toggle it — a green check marks an active toggle.
+
+- **:material-content-save: Auto Save** — Automatically save after each game loop. Requires the scene to have been saved manually once; until then the chip shows a warning explaining why it is unavailable.
+- **:material-robot: Auto Progress** — The AI automatically progresses the scene after your turn.
+- **:material-image-area: Immersive** — Render the [scene backdrop](/talemate/user-guide/inline-visuals/#scene-backdrop) behind the scene text. This chip only appears when the scene has a backdrop image set (or a generated background is available to become one); toggling it off remembers the chosen image, so you can switch back at any time.
+- **:material-cog: Settings** — Not a toggle: opens a shortcut menu to commonly used [application settings](/talemate/user-guide/app-settings/) (Game, Appearance) and the settings of individual agents (Conversation, Narrator, Creator, Director, Visualizer, Text to Speech).
+
 ## Tool Bar
 
 <!--- --8<-- [start:tools-ux] -->
@@ -191,37 +202,51 @@ By default the [:material-script-text: Narrator Agent](/talemate/user-guide/agen
 
 ### :material-earth: World State Actions
 
-##### Automatic State Updates
+The :material-earth: world state menu lets you set up and manage tracked states, apply favorited state templates, and generate or edit world context — all without leaving the scene.
 
-Allows you to quickly set up tracked character and world states. 
+![World State Actions](/talemate/img/0.39.0/scene-tool-world-state-actions.png)
 
 !!! info "What is a tracked state?"
 
     --8<-- "docs/user-guide/tracking-a-state.md:what-is-a-tracked-state"
 
-Please refer to the [World State](/talemate/user-guide/world-state) section for more information on how set up custom states to track.
+    Please refer to the [World State](/talemate/user-guide/world-state) section for more information on how to set up custom states to track.
+
+#### :material-cube-scan: Track state
+
+Opens a dialog to quickly set up a new tracked state — a shortcut for doing the same thing in the world editor. Choose whether to track the **World** or a specific **character**, describe what to track, then set how often it updates and how it attaches to context.
+
+![Track State dialog](/talemate/img/0.39.0/scene-tool-track-state-modal.png)
+
+When a character is the target, an extra **Require character active** option appears so the state only progresses while that character is in the scene. The default context attachment also adapts to the target — `Passive` for the world, `Sequential` for a character.
+
+![Track State dialog for a character](/talemate/img/0.39.0/scene-tool-track-state-modal-character.png)
+
+See [Context Attachment Method](/talemate/user-guide/tracking-a-state/#context-attachment-method) for what each attachment option does. Once created, the state can be viewed and managed in the World State Manager.
+
+#### Quick-apply favorite states
 <!--- --8<-- [start:quick-apply-favorite-state] -->
-Any favorited state will be shown in the :material-earth: world state context menu. *Your list may be different than the one shown here, depending on what you have favorited.*
+Any state template you have favorited appears under its target in the world state menu — the player character, each NPC, and **World** each get a submenu of the favorites relevant to them. *Your list may be different than the one shown here, depending on what you have favorited.*
 
-![World State Actions](/talemate/img/0.26.0/scene-tool-world-state-actions.png)
+![Favorite states submenu](/talemate/img/0.39.0/scene-tool-world-state-submenu.png)
 
-Clicking on any item in `Autoamtic State Updates` will generate the current state and keep it tracked until it is removed.
-
-A tracked state will have a checkmark next to it.
-
-![World State Tracked](/talemate/img/0.26.0/scene-tool-world-state-applied.png)
+Clicking a favorite generates the current state and keeps it tracked until it is removed. A state that is already tracked is marked with a checkmark; clicking it opens the state in the World State Manager instead of creating a duplicate.
 <!--- --8<-- [end:quick-apply-favorite-state] -->
 
-#### :material-book-open-page-variant: Open the world state manager
+#### :material-auto-fix: Generate world context
 
-Will open the world state template editor, where you can view and edit your available world states templates.
+Generates a new world entry from the current scene context — useful for locations, lore, backstory, and other world details.
 
-#### :material-refresh: Update the world state
+#### :material-book-open-page-variant: World context editor / Character context editor
 
-Will cause a regeneration of the world state.
+Open the World State Manager to view and edit world entries and character context, including any tracked states you have set up.
+
+#### :material-refresh: Update world snapshot
+
+Regenerates the world state snapshot shown in the left :material-earth: `World` panel. Hold ++ctrl++ (or ++cmd++) while clicking to wipe the snapshot and start fresh.
 
 !!! info "Does not run state re-inforcement"
-    Currently, this will not re-inforce the state of the world or characters, it will only update the world state context that is displayed in the left panel under the :material-earth: `World` section.
+    This only refreshes the world state snapshot displayed in the left panel under the :material-earth: `World` section; it does not re-inforce the tracked states of the world or characters.
 
 ### :material-puzzle-edit: Creative Tools
 
@@ -257,7 +282,7 @@ If the current narration and scene progress has not yet indicated the character 
 
 Allows you to quickly generate a new, interactive character to add to the scene.
 
-![Introduce new character 1](/talemate/img/0.30.0/scene-tool-intro-char-1.png)
+![Introduce new character 1](/talemate/img/0.39.0/scene-tool-intro-char-1.png)
 
 ##### Determine Name
 
@@ -283,6 +308,16 @@ Write direction on how you want the character to enter the scene.
 
 !!! note "A character already interacting in the scene will not have their entrance narrated"
     If the narrator has already established the character interacting with your characters this "entry narration" will be skipped. The check for this 100% based on an AI prompt so may not always work correctly.
+
+##### Generate example dialogue
+
+If selected, the AI will generate a few example dialogue lines for the character, showcasing how they speak and act.
+
+When checked, an **Example dialogue guidance** field appears where you can optionally steer how the examples are written — tone, speech patterns, quirks (e.g. "Speaks in short sentences, dry humor"). Leave it blank to let the AI infer the voice from the character's description and attributes.
+
+![Introduce new character example dialogue](/talemate/img/0.39.0/scene-tool-intro-char-example-dialogue.png)
+
+The generated examples can be reviewed and edited later under the character's [Actor management](/talemate/user-guide/world-editor/characters/actor) tab in the world editor.
 
 ##### Templates
 
@@ -372,4 +407,4 @@ Generated images can be viewed and managed in the [Visual Library](/talemate/use
 
 ### :material-content-save: Saving
 
-Context menu that will provide you with `Save` and `Save As` options.
+Context menu that will provide you with `Save` and `Save As` options, restoration actions — `Restore` to the configured [restore point](/talemate/user-guide/world-editor/scene/settings#restoration-settings) and the [`Timeline`](/talemate/user-guide/restoring-scenes) for previewing or forking from any revision — and `Reset Scene State`.

@@ -31,6 +31,10 @@
                         Utilities
                     </v-tab>
                     -->
+                    <v-tab value="visuals">
+                        <v-icon size="small" class="mr-1">mdi-image-multiple-outline</v-icon>
+                        Visuals
+                    </v-tab>
                     <v-tab value="settings">
                         <v-icon size="small" class="mr-1">mdi-cogs</v-icon>
                         Settings
@@ -78,6 +82,18 @@
                         </WorldStateManagerSceneSharedWorld>
                     </v-window-item>
 
+                    <v-window-item value="visuals">
+                        <WorldStateManagerSceneVisuals
+                            :scene="scene"
+                            :app-config="appConfig"
+                            :templates="templates"
+                            :agent-status="agentStatus"
+                            :visual-agent-ready="visualAgentReady"
+                            :image-edit-available="imageEditAvailable"
+                            :image-create-available="imageCreateAvailable">
+                        </WorldStateManagerSceneVisuals>
+                    </v-window-item>
+
                     <v-window-item value="settings">
                         <WorldStateManagerSceneSettings 
                             :app-config="appConfig"
@@ -111,6 +127,7 @@ import WorldStateManagerSceneExport from './WorldStateManagerSceneExport.vue';
 import WorldStateManagerSceneDirection from './WorldStateManagerSceneDirection.vue';
 import GameState from './GameState.vue';
 import WorldStateManagerSceneSharedWorld from './WorldStateManagerSceneSharedWorld.vue';
+import WorldStateManagerSceneVisuals from './WorldStateManagerSceneVisuals.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 export default {
@@ -122,12 +139,17 @@ export default {
         WorldStateManagerSceneDirection,
         GameState,
         WorldStateManagerSceneSharedWorld,
+        WorldStateManagerSceneVisuals,
     },
     props: {
         scene: Object,
         appConfig: Object,
         templates: Object,
         generationOptions: Object,
+        agentStatus: Object,
+        visualAgentReady: Boolean,
+        imageEditAvailable: Boolean,
+        imageCreateAvailable: Boolean,
     },
     inject:[
         'getWebsocket',

@@ -97,6 +97,9 @@ class SetState(StateManipulation):
 
     - name: the name to set
     - value: the value to set
+
+    Properties:
+
     - scope: which scope to set the variable in
 
     Outputs:
@@ -149,6 +152,10 @@ class GetState(StateManipulation):
     Inputs:
 
     - name: the name to get
+    - default: value to return if the variable is not set (optional)
+
+    Properties:
+
     - scope: which scope to get the variable from
 
     Outputs:
@@ -202,6 +209,9 @@ class UnsetState(StateManipulation):
     Inputs:
 
     - name: the name to unset
+
+    Properties:
+
     - scope: which scope to unset the variable in
 
     Outputs:
@@ -242,6 +252,9 @@ class HasState(StateManipulation):
     Inputs:
 
     - name: the name to check
+
+    Properties:
+
     - scope: which scope to check the variable in
 
     Outputs:
@@ -271,20 +284,23 @@ class CounterState(StateManipulation):
     Counter node that increments a numeric value in the state and returns the new value.
 
     Inputs:
+    - state: required state input (conditional execution)
     - name: The key to the value to increment
-    - scope: Which scope to use for the counter
     - reset: If true, the value will be reset to 0
+    - reset_cap: If set, the counter resets to 0 once it reaches this value
 
     Properties:
     - increment: The amount to increment the value by
-    - name: The key to the value to increment
     - scope: Which scope to use for the counter
-    - reset: If true, the value will be reset to 0
 
     Outputs:
+    - state: the state that was passed in
     - value: The new value
     - name: The key that was used
     - scope: The scope that was used
+    - reset_cap: The reset cap that was used
+    - reset: Whether the counter was reset
+    - new_cycle: True if the counter was at 0 before this run
     """
 
     class Fields(StateManipulation.Fields):
@@ -308,7 +324,7 @@ class CounterState(StateManipulation):
             name="reset_cap",
             type="number",
             default=0,
-            description="If set, the value will be reset to this value when it exceeds it",
+            description="If set (> 0), the counter resets to 0 once the value reaches this cap",
         )
 
     @pydantic.computed_field(description="Node style")
@@ -334,7 +350,6 @@ class CounterState(StateManipulation):
         self.set_property("reset", False)
         self.set_property("reset_cap", 0)
 
-        self.add_output("value")
         self.add_output("reset_cap", socket_type="number")
         self.add_output("reset", socket_type="bool")
         self.add_output("new_cycle", socket_type="bool")
@@ -460,6 +475,8 @@ class SetStatePath(SetState):
     - state: required state input (conditional execution)
     - name: the path name to set (e.g., 'a/b/c')
     - value: the value to set
+
+    Properties:
     - scope: which scope to set the variable in
 
     Outputs:
@@ -531,8 +548,10 @@ class GetStatePath(GetState):
 
     Inputs:
     - name: the path name to get (e.g., 'a/b/c')
-    - scope: which scope to get the variable from
     - default: default value if path doesn't exist
+
+    Properties:
+    - scope: which scope to get the variable from
 
     Outputs:
     - value: the value that was retrieved
@@ -604,6 +623,8 @@ class UnsetStatePath(UnsetState):
     Inputs:
     - state: required state input (conditional execution)
     - name: the path name to unset (e.g., 'a/b/c')
+
+    Properties:
     - scope: which scope to unset the variable in
 
     Outputs:
@@ -677,6 +698,8 @@ class HasStatePath(HasState):
 
     Inputs:
     - name: the path name to check (e.g., 'a/b/c')
+
+    Properties:
     - scope: which scope to check the variable in
 
     Outputs:
@@ -724,12 +747,12 @@ class CounterStatePath(CounterState):
     Inputs:
     - state: required state input (conditional execution)
     - name: The path key to the value to increment (e.g., 'a/b/c')
-    - scope: Which scope to use for the counter
     - reset: If true, the value will be reset to 0
-    - reset_cap: If set, the value will be reset to 0 when it exceeds this value
+    - reset_cap: If set, the value will be reset to 0 when it reaches this value
 
     Properties:
     - increment: The amount to increment the value by
+    - scope: Which scope to use for the counter
 
     Outputs:
     - state: the state that was passed in
@@ -823,7 +846,11 @@ class CounterStatePath(CounterState):
 @register("state/Gamestate")
 class UnpackGameState(Node):
     """
-    Get and unpack the game state
+    Get the game state variables of the active scene.
+
+    Outputs:
+
+    - variables: Dict of the scene's game state variables
     """
 
     def __init__(self, title="Game State", **kwargs):

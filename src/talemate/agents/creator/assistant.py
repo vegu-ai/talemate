@@ -1,6 +1,6 @@
 import json
 import re
-import random
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Tuple
 import traceback
 import uuid
@@ -13,6 +13,7 @@ from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.prompts import Prompt
 from talemate.prompts.base import StripMode
+from talemate.util.path import is_safe_relative_filename
 from talemate.util.response import extract_list
 from talemate.scene_message import CharacterMessage
 from talemate.world_state.templates import (
@@ -21,7 +22,7 @@ from talemate.world_state.templates import (
     Spices,
     WritingStyle,
 )
-from talemate.changelog import write_reconstructed_scene
+from talemate.changelog import fork_scene_at_revision
 from talemate.save import SceneEncoder
 import os
 from talemate.agents.base import (
@@ -116,25 +117,14 @@ class ContentGenerationContext(pydantic.BaseModel):
 
     @property
     def spice(self) -> str:
-        spice_level = self.generation_options.spice_level
-
         if self.template and not getattr(self.template, "supports_spice", False):
             # template supplied that doesn't support spice
             return ""
 
-        if spice_level == 0:
-            # no spice
-            return ""
+        spice = self.generation_options.render_spice(self.scene, self.character)
 
-        if not self.generation_options.spices:
-            # no spices
+        if not spice:
             return ""
-
-        # randomly determine if we should add spice (0.0 - 1.0)
-        if random.random() > spice_level:
-            return ""
-
-        spice = self.generation_options.spices.render(self.scene, self.character)
 
         log.debug(
             "spice_applied",
@@ -163,11 +153,7 @@ class ContentGenerationContext(pydantic.BaseModel):
             # template supplied that doesn't support style
             return ""
 
-        if not self.generation_options.writing_style:
-            # no writing style
-            return ""
-
-        return self.generation_options.writing_style.render(self.scene, self.character)
+        return self.generation_options.render_writing_style(self.scene, self.character)
 
     def set_state(self, key: str, value: str | int | float | bool):
         self.state[key] = value
@@ -824,12 +810,44 @@ class AssistantMixin:
 
         This properly creates a new scene file without modifying the current scene,
         then signals the frontend to load the new scene.
+
+        The fork always writes a save of its own: a name that is unsafe as a
+        filename, or that would land on an existing file, is refused rather
+        than escaping the save directory or overwriting a save. Without a
+        name it writes a timestamped one beside the scene, slugged so the
+        generated name cannot be the thing that gets refused.
         """
         try:
             emit("status", "Preparing to fork scene...", status="busy")
 
             if not save_name:
-                save_name = self.scene.generate_name()
+                # new scenes before their first save and restored scenes have
+                # no filename
+                base = (
+                    os.path.splitext(self.scene.filename)[0]
+                    if self.scene.filename
+                    else self.scene.project_name
+                )
+                stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                save_name = f"{util.slugify(base) or 'scene'}_fork_{stamp}"
+
+            fork_filename = f"{save_name}.json"
+
+            if not is_safe_relative_filename(fork_filename, suffix=".json"):
+                emit(
+                    "status",
+                    f"'{save_name}' is not a valid save name",
+                    status="error",
+                )
+                return
+
+            if os.path.exists(os.path.join(self.scene.save_dir, fork_filename)):
+                emit(
+                    "status",
+                    f"A save named '{save_name}' already exists — pick a different name",
+                    status="error",
+                )
+                return
 
             # Find the message to fork from
             message = self.scene.get_message(message_id)
@@ -848,14 +866,8 @@ class AssistantMixin:
                 emit("status", "Creating reconstructive fork...", status="busy")
 
                 # Create fork file with reconstructed scene data (shared_context will be disconnected)
-                fork_file_path = await write_reconstructed_scene(
-                    self.scene,
-                    message.rev,
-                    f"{save_name}.json",
-                    overrides={
-                        "immutable_save": False,
-                        "memory_id": str(uuid.uuid4())[:10],
-                    },
+                fork_file_path = await fork_scene_at_revision(
+                    self.scene, message.rev, save_name
                 )
 
                 log.info(
@@ -911,7 +923,7 @@ class AssistantMixin:
                     scene_data["shared_context"] = ""
 
                 # Write the fork file
-                fork_file_path = os.path.join(self.scene.save_dir, f"{save_name}.json")
+                fork_file_path = os.path.join(self.scene.save_dir, fork_filename)
                 with open(fork_file_path, "w") as f:
                     json.dump(scene_data, f, indent=2, cls=SceneEncoder)
 

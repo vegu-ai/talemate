@@ -55,7 +55,7 @@ class ExtractCharacterSheet(AgentNode):
 
     Outputs:
 
-    - character_sheet: The extracted character sheet (dict)
+    - character_sheet: The extracted character sheet (dict, empty if the model produced nothing)
     """
 
     _agent_name: ClassVar[str] = "world_state"
@@ -88,22 +88,30 @@ class ExtractCharacterSheet(AgentNode):
 @register("agents/world_state/StateReinforcement")
 class StateReinforcement(AgentNode):
     """
-    Reinforces the a tracked state of a character or the world in general.
+    Sets up (or updates) a tracked state reinforcement for a character or
+    the world in general. Adds the reinforcement to the scene's world
+    state, then immediately runs an update, producing a reinforcement
+    message.
 
     Inputs:
 
     - state: The current state of the graph
-    - query_or_detail: The query or instruction to reinforce
-    - character: The character to reinforce the state for (optional)
+    - query_or_detail: The question or detail to track
+    - character: The character to track the state for (optional; when
+      omitted the state is tracked for the world in general)
+    - instructions: Additional instructions for the reinforcement (optional)
 
-    Properties
+    Properties:
 
-    - reset: If the state should be reset
+    - interval: How many rounds pass between automatic re-evaluations
+    - insert_method: How the reinforcement is inserted into the context
+    - reset: If the tracked state should be reset
 
     Outputs:
 
     - state: graph state
     - message: state reinforcement message
+    - reinforcement: the reinforcement that was added or updated
     """
 
     _agent_name: ClassVar[str] = "world_state"
@@ -175,7 +183,7 @@ class StateReinforcement(AgentNode):
         instructions = self.normalized_input_value("instructions")
         insert_method = self.get_property("insert_method")
 
-        await scene.world_state.add_reinforcement(
+        reinforcement = await scene.world_state.add_reinforcement(
             question=query_or_detail,
             character=character.name if character else None,
             instructions=instructions,
@@ -187,7 +195,9 @@ class StateReinforcement(AgentNode):
             question=query_or_detail, character=character, reset=reset
         )
 
-        self.set_output_values({"state": state, "message": message})
+        self.set_output_values(
+            {"state": state, "message": message, "reinforcement": reinforcement}
+        )
 
 
 @register("agents/world_state/DeactivateCharacter")
@@ -376,7 +386,16 @@ class RequestWorldState(AgentNode):
 @register("agents/world_state/EmitWorldState")
 class EmitWorldState(AgentNode):
     """
-    Emits the current world state.
+    Re-emits the scene's current world state to the frontend so the world
+    state UI refreshes. Does not regenerate or update the world state.
+
+    Inputs:
+
+    - state: The graph state
+
+    Outputs:
+
+    - state: The state input, passed through
     """
 
     _agent_name: ClassVar[str] = "world_state"
@@ -399,7 +418,28 @@ class EmitWorldState(AgentNode):
 @register("agents/world_state/CharacterProgression")
 class CharacterProgression(AgentNode):
     """
-    Character progression
+    Determines character development (new, updated or removed attributes,
+    description updates) via the world_state agent and processes the
+    resulting proposals. With as_suggestions enabled the proposals are
+    added to the world state manager as suggestions for the user to
+    review; otherwise they are applied to the character directly.
+
+    Inputs:
+
+    - state: The graph state
+    - character: The character to progress
+    - instructions: Instructions guiding the development (required at
+      runtime despite the optional socket)
+
+    Properties:
+
+    - as_suggestions: Whether to store proposals as suggestions instead of
+      applying them directly
+
+    Outputs:
+
+    - state: The state input, passed through
+    - calls: The list of proposal calls that were generated
     """
 
     _agent_name: ClassVar[str] = "world_state"
@@ -452,7 +492,24 @@ class CharacterProgression(AgentNode):
 @register("agents/world_state/AdvanceTime")
 class AdvanceTime(AgentNode):
     """
-    Advances the time of the world state.
+    Advances the scene time by the given ISO 8601 duration. Pushes a
+    TimePassageMessage to the scene history, emits it to the UI and fires
+    the time passage signal (which other agents may react to, e.g. to
+    narrate the time passage using the narration instructions).
+
+    Inputs:
+
+    - state: The graph state
+    - duration: The duration to advance as an ISO 8601 duration (e.g. "PT1H")
+    - narration_instructions: Instructions for narrating the time passage
+      (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - duration: The duration of the emitted message
+    - narration_instructions: The narration instructions, passed through
+    - message: The TimePassageMessage that was added to the history
     """
 
     _agent_name: ClassVar[str] = "world_state"  #

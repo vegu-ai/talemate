@@ -15,7 +15,9 @@ from __future__ import annotations
 
 from talemate.context import ActiveScene
 from talemate.game.engine.nodes.core import (
+    Graph,
     GraphContext,
+    Node,
     NodeVerbosity,
 )
 
@@ -94,3 +96,56 @@ async def run_node(
         with ActiveScene(scene):
             return await _run()
     return await _run()
+
+
+def make_constant(**values):
+    """Node emitting fixed values on identically named outputs."""
+
+    class _Constant(Node):
+        def __init__(self, **kw):
+            super().__init__(title="Constant", **kw)
+
+        def setup(self):
+            for name in values:
+                self.add_output(name)
+
+        async def run(self, state):
+            self.set_output_values(dict(values))
+
+    return _Constant()
+
+
+def make_capture(captured: dict, *keys):
+    """Node mirroring its inputs into the `captured` dict."""
+
+    class _Capture(Node):
+        def __init__(self, **kw):
+            super().__init__(title="Capture", **kw)
+
+        def setup(self):
+            for name in keys:
+                self.add_input(name, optional=True)
+
+        async def run(self, state):
+            for name in keys:
+                captured[name] = self.get_input_value(name)
+
+    return _Capture()
+
+
+def build_graph(*nodes) -> Graph:
+    graph = Graph()
+    for node in nodes:
+        graph.add_node(node)
+    return graph
+
+
+async def execute_graph(scene, graph: Graph):
+    """Execute `graph` with `scene` active, re-raising any node error."""
+
+    def error_handler(state, error: Exception):
+        raise error
+
+    graph.error_handlers.append(error_handler)
+    with ActiveScene(scene):
+        await graph.execute()

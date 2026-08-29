@@ -258,6 +258,121 @@
                     </template>
                   </v-tooltip>
                   <v-divider class="my-3"></v-divider>
+                  <div
+                    class="d-flex align-center justify-space-between mb-1 generation-header"
+                    @click="showGenerationOptions = !showGenerationOptions"
+                  >
+                    <span class="text-subtitle-2">
+                      <v-icon class="mr-1" size="small">mdi-creation</v-icon>
+                      AI Generation
+                      <v-icon size="small" class="ml-1">{{ showGenerationOptions ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+                    </span>
+                    <v-btn-toggle
+                      v-model="generationPreset"
+                      density="compact"
+                      color="primary"
+                      variant="outlined"
+                      divided
+                      @click.stop
+                    >
+                      <v-tooltip text="Run all AI generation steps (including episode titles) for the richest import." max-width="300">
+                        <template v-slot:activator="{ props }">
+                          <v-btn v-bind="props" size="small" value="full">Full</v-btn>
+                        </template>
+                      </v-tooltip>
+                      <v-tooltip text="Skip all AI generation and keep the card's original data - the fastest import." max-width="300">
+                        <template v-slot:activator="{ props }">
+                          <v-btn v-bind="props" size="small" value="minimal">Minimal</v-btn>
+                        </template>
+                      </v-tooltip>
+                    </v-btn-toggle>
+                  </div>
+                  <v-expand-transition>
+                  <div v-show="showGenerationOptions">
+                  <div class="text-caption text-grey mb-2">
+                    Disabled steps fall back to the card's original data, significantly speeding up the import.
+                  </div>
+                  <v-tooltip text="If enabled, AI determines the content context (genre and tone) for the scene." max-width="300">
+                    <template v-slot:activator="{ props }">
+                      <v-checkbox
+                        v-bind="props"
+                        v-model="options.determine_content_context"
+                        label="Determine Content Context"
+                        color="primary"
+                        hide-details
+                        density="compact"
+                        class="mb-2"
+                      ></v-checkbox>
+                    </template>
+                  </v-tooltip>
+                  <v-tooltip text="If enabled, AI rewrites the character description. When disabled, the card's original description is kept as-is." max-width="300">
+                    <template v-slot:activator="{ props }">
+                      <v-checkbox
+                        v-bind="props"
+                        v-model="options.extract_description"
+                        label="Generate Description"
+                        color="primary"
+                        hide-details
+                        density="compact"
+                        class="mb-2"
+                      ></v-checkbox>
+                    </template>
+                  </v-tooltip>
+                  <v-tooltip text="If enabled, AI extracts a structured attribute sheet (age, appearance, personality etc.) from the card." max-width="300">
+                    <template v-slot:activator="{ props }">
+                      <v-checkbox
+                        v-bind="props"
+                        v-model="options.extract_attributes"
+                        label="Extract Attributes"
+                        color="primary"
+                        hide-details
+                        density="compact"
+                        class="mb-2"
+                      ></v-checkbox>
+                    </template>
+                  </v-tooltip>
+                  <v-tooltip text="If enabled, AI generates acting instructions that guide how the character speaks and behaves." max-width="300">
+                    <template v-slot:activator="{ props }">
+                      <v-checkbox
+                        v-bind="props"
+                        v-model="options.extract_dialogue_instructions"
+                        label="Generate Dialogue Instructions"
+                        color="primary"
+                        hide-details
+                        density="compact"
+                        class="mb-2"
+                      ></v-checkbox>
+                    </template>
+                  </v-tooltip>
+                  <v-tooltip text="If enabled, AI generates example dialogue for the character. When disabled, the card's original example dialogue is imported verbatim." max-width="300">
+                    <template v-slot:activator="{ props }">
+                      <v-checkbox
+                        v-bind="props"
+                        v-model="options.extract_dialogue_examples"
+                        label="Generate Example Dialogue"
+                        color="primary"
+                        hide-details
+                        density="compact"
+                        class="mb-2"
+                      ></v-checkbox>
+                    </template>
+                  </v-tooltip>
+                  <v-tooltip text="If enabled, AI generates the overall story intent for the scene. When auto-direct is enabled, this also covers scene type generation and scene intent setup." max-width="300">
+                    <template v-slot:activator="{ props }">
+                      <v-checkbox
+                        v-bind="props"
+                        v-model="options.generate_story_intent"
+                        label="Generate Story Intent"
+                        color="primary"
+                        hide-details
+                        density="compact"
+                        class="mb-2"
+                      ></v-checkbox>
+                    </template>
+                  </v-tooltip>
+                  </div>
+                  </v-expand-transition>
+                  <v-divider class="my-3"></v-divider>
                   <v-select
                     v-model="options.writing_style_template"
                     :items="writingStyleItems"
@@ -391,6 +506,36 @@
 </template>
 
 <script>
+const GENERATION_OPTION_KEYS = [
+  'determine_content_context',
+  'extract_description',
+  'extract_attributes',
+  'extract_dialogue_instructions',
+  'extract_dialogue_examples',
+  'generate_story_intent',
+  'generate_episode_titles',
+];
+
+function defaultOptions() {
+  return {
+    import_all_characters: false,
+    import_character_book: true,
+    import_character_book_meta: true,
+    import_alternate_greetings: true,
+    generate_episode_titles: true,
+    setup_shared_context: false,
+    use_asset_as_reference: true,
+    selected_character_names: [],
+    writing_style_template: null,
+    determine_content_context: true,
+    extract_description: true,
+    extract_attributes: true,
+    extract_dialogue_instructions: true,
+    extract_dialogue_examples: true,
+    generate_story_intent: true,
+  };
+}
+
 export default {
   name: 'CharacterCardImport',
   props: {
@@ -406,17 +551,8 @@ export default {
       detectedCharacterNames: [],
       selectedCharacterNames: [],
       newCharacterName: '',
-      options: {
-        import_all_characters: false,
-        import_character_book: true,
-        import_character_book_meta: true,
-        import_alternate_greetings: true,
-        generate_episode_titles: true,
-        setup_shared_context: false,
-        use_asset_as_reference: true,
-        selected_character_names: [],
-        writing_style_template: null,
-      },
+      options: defaultOptions(),
+      showGenerationOptions: false,
       resolveCallback: null,
       fileData: null,
       filePath: null,
@@ -464,17 +600,8 @@ export default {
   methods: {
     async open(fileData = null, filePath = null, filename = null) {
       // Reset to defaults
-      this.options = {
-        import_all_characters: false,
-        import_character_book: true,
-        import_character_book_meta: true,
-        import_alternate_greetings: true,
-        generate_episode_titles: true,
-        setup_shared_context: false,
-        use_asset_as_reference: true,
-        selected_character_names: [],
-        writing_style_template: null,
-      };
+      this.options = defaultOptions();
+      this.showGenerationOptions = false;
       this.analysis = null;
       this.analysisError = null;
       this.detectedCharacterNames = [];
@@ -678,6 +805,20 @@ export default {
     },
   },
   computed: {
+    generationPreset: {
+      get() {
+        if (GENERATION_OPTION_KEYS.every(key => this.options[key] === true)) return 'full';
+        if (GENERATION_OPTION_KEYS.every(key => this.options[key] === false)) return 'minimal';
+        return null;
+      },
+      set(value) {
+        if (!value) return;
+        const enabled = value === 'full';
+        for (const key of GENERATION_OPTION_KEYS) {
+          this.options[key] = enabled;
+        }
+      },
+    },
     isPlayerCharacterValid() {
       if (this.playerCharacterMode === 'template') {
         return !!this.playerCharacterTemplate.name;
@@ -728,6 +869,8 @@ export default {
 </script>
 
 <style scoped>
-/* Add any specific styles for CharacterCardImport modal here */
+.generation-header {
+  cursor: pointer;
+}
 </style>
 

@@ -15,6 +15,7 @@ __all__ = [
     "COMPLETION_SPEC",
 ]
 
+
 # For <TITLE>...</TITLE> extraction (used in generate_title)
 TITLE_SPEC = ResponseSpec(
     extractors={

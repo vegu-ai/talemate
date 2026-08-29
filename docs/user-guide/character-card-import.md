@@ -22,12 +22,14 @@ Character cards can be provided as:
 
 ## Starting an Import
 
-Character card import is initiated from the **Load Scene** panel in the left sidebar on the home screen:
+Character card import is initiated from the **Import** dropzone on the [home screen](/talemate/user-guide/scene-browser):
 
-![Drag and Drop Upload Area](/talemate/img/0.34.0/character-card-4.png)
+![Drag and Drop Upload Area](/talemate/img/0.39.0/character-card-4.png)
 
-1. Drag and drop a character card file (image or JSON), or click to browse
+1. Drag and drop a character card file (image or JSON) onto the dropzone, or click it to browse
 2. If the file is detected as a character card, the **Character Card Import Options** dialog will automatically open
+
+Cards already stored in your `scenes/characters/` directory can also be imported by clicking them in the **Character Cards** section of the [Scene Library](/talemate/user-guide/scene-browser#character-cards).
 
 ![Character Card Import Dialog](/talemate/img/0.34.0/character-card-1.png)
 
@@ -61,7 +63,7 @@ The middle panel allows you to select which characters from the card should be i
 
 Talemate uses the [Director Agent](/talemate/user-guide/agents/director) to analyze greeting texts and automatically detect multiple characters present in the character card. All detected characters are selected by default.
 
-![Character Selection and Import Options](/talemate/img/0.34.0/character-card-2.png)
+![Character Selection and Import Options](/talemate/img/0.39.0/character-card-2.png)
 
 - Use checkboxes to select/deselect characters
 
@@ -102,6 +104,33 @@ The right panel contains various import configuration options:
 
 !!! info "Default Behavior"
     This option defaults to `true` if alternate greetings are detected, as shared context is particularly useful when working with multiple episodes.
+
+### AI Generation
+
+By default, importing a character card runs several AI generation steps that enrich the imported scene. Each of these can be disabled individually to speed up the import — disabled steps fall back to the card's original data. The individual toggles are collapsed by default — click the **AI Generation** section header to expand them.
+
+- **Determine Content Context**: AI determines the content context (genre and tone) for the scene.
+
+- **Generate Description**: AI rewrites the character description. When disabled, the card's original description is kept as-is.
+
+- **Extract Attributes**: AI extracts a structured attribute sheet (age, appearance, personality, etc.) from the card. The Director's [**Limit character attributes**](/talemate/user-guide/agents/director/settings/#limit-character-attributes) setting caps how many attributes this generates.
+
+- **Generate Dialogue Instructions**: AI generates acting instructions that guide how the character speaks and behaves.
+
+- **Generate Example Dialogue**: AI generates example dialogue for the character. When disabled, the card's original example dialogue is imported as-is, with typographic quotes converted to straight quotes.
+
+- **Generate Story Intent**: AI generates the overall story intent for the scene. When the Director's auto-direct is enabled, this also covers scene type generation and scene intent setup.
+
+!!! info "Failed generations keep the card's data"
+    If the description rewrite, attribute extraction or example dialogue generation
+    fails or comes back empty, the card's own version is kept and the import carries on
+    with the remaining steps. With the Creator agent's [**Fast Character Generation**](/talemate/user-guide/agents/creator/settings)
+    enabled, a consolidated response that cannot be parsed at all still aborts the import.
+
+Use the **Full** / **Minimal** preset buttons to toggle all AI generation steps at once. **Minimal** also disables episode title generation, reducing the import to the bare card data (name, description, greetings, example dialogue) — the fastest possible import.
+
+!!! tip "Simplified Import"
+    If your backend is slow or you just want to get playing quickly, choose the **Minimal** preset. You can always generate attributes, dialogue instructions and other details later from the [Character Editor](/talemate/user-guide/world-editor/characters).
 
 ### Writing Style Template
 
@@ -149,9 +178,9 @@ Import an existing player character from another Talemate scene.
 
 - Character name, description, and greeting text
 
-- Character attributes (determined by AI analysis)
+- Character attributes (determined by AI analysis, if enabled)
 
-- Dialogue examples (generated from character card data)
+- Dialogue examples (generated from character card data, or imported as-is if generation is disabled, with typographic quotes converted to straight quotes)
 
 - Character color (automatically assigned unique colors)
 

@@ -65,7 +65,6 @@ class GetSceneState(Node):
     - characters: A list of characters in the scene
     - active: Whether the scene is active
     - auto_save: Whether auto save is enabled
-    - auto_backup: Whether auto backup is enabled
     - auto_progress: Whether auto progress is enabled
     - scene: The scene instance
     """
@@ -289,13 +288,25 @@ class GetCharacter(Node):
 @register("scene/ListCharacters")
 class ListCharacters(Node):
     """
-    Returns a list of all characters in the scene
+    Returns a list of characters in the scene, filtered by status
+
+    Inputs:
+
+    - character_status: Which characters to include - "active", "inactive" or "all"
+
+    Properties:
+
+    - character_status: Which characters to include - "active", "inactive" or "all"
+
+    Outputs:
+
+    - characters: The list of matching character objects
     """
 
     class Fields:
         character_status = PropertyField(
             name="character_status",
-            description="The status of the character",
+            description="Which characters to list (active, inactive or all)",
             type="str",
             default="all",
             choices=["active", "inactive", "all"],
@@ -420,6 +431,7 @@ class UpdateCharacterData(Node):
     - base_attributes: The base attributes dictionary
     - details: The details dictionary
     - description: The description string
+    - name: A new name for the character (renames the character)
     - color: The color of the character name
 
     Outputs:
@@ -489,7 +501,23 @@ class UpdateCharacterData(Node):
 @register("scene/GetCharacterAttribute")
 class GetCharacterAttribute(Node):
     """
-    Get an attribute from a character
+    Get a base attribute from a character
+
+    Inputs:
+
+    - character: The character object
+    - name: The name of the attribute
+
+    Properties:
+
+    - name: The name of the attribute
+
+    Outputs:
+
+    - character: The character object, passed through
+    - name: The attribute name, passed through
+    - value: The attribute value (None if the attribute does not exist)
+    - context_id: The context ID of the attribute (None if the attribute does not exist)
     """
 
     class Fields:
@@ -584,7 +612,23 @@ class SetCharacterAttribute(Node):
 @register("scene/GetCharacterDetail")
 class GetCharacterDetail(Node):
     """
-    Get the details of a character
+    Get a detail from a character
+
+    Inputs:
+
+    - character: The character object
+    - name: The name of the detail
+
+    Properties:
+
+    - name: The name of the detail
+
+    Outputs:
+
+    - character: The character object, passed through
+    - name: The detail name, passed through
+    - detail: The detail value (None if the detail does not exist)
+    - context_id: The context ID of the detail (None if the detail does not exist)
     """
 
     class Fields:
@@ -799,6 +843,7 @@ class WaitForInput(Node):
 
     Outputs:
 
+    - state: The state input, passed through
     - input: The input message
     - interaction_state: The interaction state
     - character: The character object
@@ -846,6 +891,7 @@ class WaitForInput(Node):
         self.set_property("prefix", "")
         self.set_property("allow_commands", True)
 
+        self.add_output("state")
         self.add_output("input", socket_type="str")
         self.add_output("interaction_state", socket_type="interaction_state")
         self.add_output("character", socket_type="character")
@@ -970,6 +1016,7 @@ class WaitForInput(Node):
 
         self.set_output_values(
             {
+                "state": self.get_input_value("state"),
                 "input": text_message,
                 "interaction_state": interaction_state,
                 "character": player_character,
@@ -1081,9 +1128,18 @@ class TriggerGameLoopActorIter(Trigger):
 
     In a most basic setup you will trigger this everytime an actor has had a turn.
 
+    After the event is sent, a follow-up character iteration event is also
+    fired: game_loop_player_character_iter for player characters, or
+    game_loop_ai_character_iter for AI characters.
+
     Inputs:
 
+    - trigger: Trigger input to activate the node
     - actor: The actor that has had a turn
+
+    Outputs:
+
+    - event: The event object that was sent
     """
 
     class Fields:
@@ -1239,7 +1295,8 @@ class DeactivateCharacter(Node):
 @register("scene/RemoveAllCharacters")
 class RemoveAllCharacters(Node):
     """
-    Remove all characters from the scene
+    Remove all active characters from the scene (inactive characters are
+    not affected)
 
     Inputs:
 
@@ -1334,7 +1391,7 @@ class GetSceneLoopState(Node):
 @register("scene/Restore")
 class RestoreScene(Node):
     """
-    Restore the scene to its resore point
+    Restore the scene to its restore point
 
     Inputs:
 
@@ -1363,6 +1420,12 @@ class RestoreScene(Node):
 class GetTitle(Node):
     """
     Get the title text for the scene
+
+    Falls back to the scene name if no title is set.
+
+    Outputs:
+
+    - title: The scene title (or scene name, or empty string)
     """
 
     def __init__(self, title="Get Story Title", **kwargs):
@@ -1380,6 +1443,19 @@ class GetTitle(Node):
 class SetTitle(Node):
     """
     Set the title text for the scene
+
+    Raises an error if the new title is empty.
+
+    Inputs:
+
+    - state: The graph state
+    - new_title: The new title text
+
+    Outputs:
+
+    - state: The graph state
+    - new_title: The new title text
+    - old_title: The previous title (or scene name if no title was set)
     """
 
     class Fields:
@@ -1486,6 +1562,23 @@ class GetContentClassification(Node):
 class SetContentClassification(Node):
     """
     Set the content classification text for the scene
+
+    Raises an error if the text is longer than max_length characters.
+
+    Inputs:
+
+    - state: The graph state
+    - content_classification: The content classification text
+
+    Properties:
+
+    - content_classification: The content classification text
+    - max_length: The maximum length of the text (characters, NOT tokens)
+
+    Outputs:
+
+    - state: The graph state
+    - content_classification: The content classification text
     """
 
     class Fields:
@@ -1599,6 +1692,7 @@ class SetIntroduction(Node):
         emit_history = self.get_input_value("emit_history")
 
         scene.set_intro(introduction)
+        scene.emit_status()
 
         if emit_history:
             await scene.emit_history()

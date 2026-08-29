@@ -11,6 +11,7 @@ deliberately skipped.
 
 import pytest
 import structlog
+from unittest.mock import AsyncMock, MagicMock
 
 from talemate.character import Character
 from talemate.context import ActiveScene, InteractionState
@@ -987,8 +988,11 @@ async def test_get_introduction_returns_scene_intro(scene):
 
 @pytest.mark.asyncio
 async def test_set_introduction_writes_intro_without_emitting_history(scene):
-    """emit_history=False keeps the test lean (no main_character required)."""
+    """emit_history=False writes the intro and still emits scene status, but
+    must not trigger the history re-emit."""
     scene.intro = "Old"
+    scene.emit_status = MagicMock()
+    scene.emit_history = AsyncMock()
     node = SetIntroduction()
     node.set_property("introduction", "Brand new intro")
     node.set_property("emit_history", False)
@@ -996,6 +1000,21 @@ async def test_set_introduction_writes_intro_without_emitting_history(scene):
 
     assert scene.get_intro() == "Brand new intro"
     assert out["state"] == "STATE"
+    scene.emit_status.assert_called_once()
+    scene.emit_history.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_set_introduction_emits_status_and_history(scene):
+    scene.emit_status = MagicMock()
+    scene.emit_history = AsyncMock()
+    node = SetIntroduction()
+    node.set_property("introduction", "Brand new intro")
+    node.set_property("emit_history", True)
+    await _run_node(node, scene, inputs={"state": "STATE"})
+
+    scene.emit_status.assert_called_once()
+    scene.emit_history.assert_awaited_once()
 
 
 @pytest.mark.asyncio

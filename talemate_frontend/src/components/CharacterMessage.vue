@@ -19,7 +19,7 @@
     <div class="character-message">
       <!-- Avatar/card/scene_illustration (small/medium) renders inline -->
       <MessageAssetImage
-        v-if="messageAsset && !isSceneIllustrationAbove"
+        v-if="messageAsset && !isSceneIllustrationAbove && !isSceneIllustrationBackground"
         :asset_id="messageAsset"
         :asset_type="asset_type || 'avatar'"
         :display_size="messageAssetDisplaySize"
@@ -74,6 +74,8 @@
         :tts-busy="ttsBusy"
         :rev="rev"
         :scene-rev="sceneRev"
+        :show-illustration-menu="illustrationMenuAvailable"
+        @open-illustration-menu="openIllustrationMenu"
       >
         <template #extra-actions>
           <v-chip size="x-small" class="ml-2" label color="primary" v-if="!continuing && isLastMessage" variant="tonal" @click="continueConversation" :disabled="uxLocked || appBusy">

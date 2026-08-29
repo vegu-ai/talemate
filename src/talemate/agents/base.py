@@ -24,7 +24,8 @@ from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
-from talemate.ux.schema import Action, Column, Note
+from talemate.ux.schema import Action, Condition, Note
+from talemate.ux.schema import Field as UxField
 from talemate.config import get_config, Config
 import talemate.config.schema as config_schema
 from talemate.client.context import (
@@ -53,53 +54,21 @@ __all__ = [
 log = structlog.get_logger("talemate.agents.base")
 
 
-class AgentActionConditional(pydantic.BaseModel):
-    attribute: str
-    value: int | float | str | bool | list[int | float | str | bool] | None = None
+# Backwards-compat aliases — the shared UX schema now owns these shapes.
+AgentActionConditional = Condition
+AgentActionNote = Note
 
 
-class AgentActionNote(Note):
-    pass
+class AgentActionConfig(UxField):
+    """
+    Agent setting field — extends the uniform UX field definition
+    (talemate.ux.schema.Field) with agent-specific behavior.
+    """
 
-
-class AgentActionConfig(pydantic.BaseModel):
-    type: Literal[
-        "autocomplete",
-        "blob",
-        "bool",
-        "flags",
-        "number",
-        "text",
-        "vector2",
-        "weights",
-        "wstemplate",
-        "password",
-        "unified_api_key",
-    ]
-    label: str
-    description: str = ""
-    value: int | float | str | bool | list | dict | None = None
-    default_value: int | float | str | bool | None = None
-    max: int | float | None = None
-    min: int | float | None = None
-    step: int | float | None = None
-    graduations: list[dict[str, int | float]] | None = None
-    scope: str = "global"
-    choices: (
-        list[dict[str, str | int | float | bool | list[int | float | bool]]] | None
-    ) = None
-    note: AgentActionNote | None = None
-    expensive: bool = False
+    scope: Literal["global", "scene"] = "global"
     quick_toggle: bool = False
-    condition: AgentActionConditional | None = None
     title: str | None = None
     value_migration: Callable | None = pydantic.Field(default=None, exclude=True)
-    columns: list[Column] | None = None
-
-    note_on_value: dict[str | int | float | bool, AgentActionNote] = pydantic.Field(
-        default_factory=dict
-    )
-    save_on_change: bool = False
     scene_overridable: bool = True
 
     wstemplate_type: (
@@ -110,31 +79,13 @@ class AgentActionConfig(pydantic.BaseModel):
             "spices",
             "writing_style",
             "visual_style",
+            "visual_finalizer",
             "agent_persona",
             "scene_type",
         ]
         | None
     ) = None
     wstemplate_filter: dict[str, str] | None = None
-
-    @pydantic.field_validator("note", mode="before")
-    @classmethod
-    def validate_note(cls, v):
-        if isinstance(v, str):
-            return AgentActionNote(text=v)
-        return v
-
-    @pydantic.model_validator(mode="after")
-    def ensure_note_is_object(self):
-        if isinstance(self.note, str):
-            self.note = AgentActionNote(text=self.note)
-        return self
-
-    @pydantic.field_serializer("note")
-    def serialize_note(self, v):
-        if isinstance(v, str):
-            return AgentActionNote(text=v)
-        return v
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -164,7 +115,25 @@ class AgentAction(pydantic.BaseModel):
     # Only meaningful on actions that are themselves dynamic registries.
     dynamic_registry_component: str | None = None
 
-    enabled_scene_overridable: bool = False
+    # None means "follow can_be_disabled" — every action whose enable flag can be
+    # toggled at all is overridable per scene unless it opts out explicitly.
+    enabled_scene_overridable: bool | None = None
+
+    @pydantic.model_validator(mode="after")
+    def _disabled_requires_can_be_disabled(self):
+        # An action nothing can turn on that ships turned off is unreachable:
+        # the global UI renders no Enable checkbox without can_be_disabled,
+        # and `resolve_enabled` reports it on regardless. Rejecting the
+        # combination at construction keeps the declaration and the resolver
+        # from disagreeing — including for dynamically synthesized children,
+        # which the shipped-action sweep in the tests cannot see.
+        if not self.enabled and not self.can_be_disabled:
+            raise ValueError(
+                f"AgentAction {self.label!r}: enabled=False requires "
+                "can_be_disabled=True — an action that cannot be disabled "
+                "always resolves as enabled"
+            )
+        return self
 
     @pydantic.model_validator(mode="after")
     def _enabled_scene_overridable_requires_can_be_disabled(self):
@@ -172,6 +141,10 @@ class AgentAction(pydantic.BaseModel):
         # flag is itself togglable. Without can_be_disabled the global UI
         # never exposes an Enable checkbox, so a scene-level override has
         # nothing to override.
+        if self.enabled_scene_overridable is None:
+            self.enabled_scene_overridable = self.can_be_disabled
+            return self
+
         if self.enabled_scene_overridable and not self.can_be_disabled:
             raise ValueError(
                 f"AgentAction {self.label!r}: enabled_scene_overridable=True "
@@ -219,12 +192,20 @@ def optimize_prompt_caching_action() -> AgentAction:
     )
 
 
+AgentDetailColor = Literal[
+    "grey", "primary", "muted", "orange", "success", "warning", "error"
+]
+
+
 class AgentDetail(pydantic.BaseModel):
     value: str | None = None
     description: str | None = None
     icon: str | None = None
-    color: str = "grey"
+    color: AgentDetailColor = "grey"
     hidden: bool = False
+    # surface this detail even when the subsystem emitting it is not in use
+    # (e.g. a TTS api no voice currently points at)
+    surface_when_unused: bool = False
 
 
 class DynamicInstruction(pydantic.BaseModel):
@@ -913,10 +894,18 @@ class Agent(ABC):
 
     def resolve_enabled(self, action_key: str) -> bool:
         """Return the effective enabled flag for a container action."""
+        action = self.actions[action_key]
+
+        # The declaration wins: an action without can_be_disabled has no
+        # Enable control anywhere in the UI, so an override that turns it off
+        # (hand-edited or written by an older version) could never be undone.
+        if not action.can_be_disabled:
+            return True
+
         return bool(
             self._resolve(
                 lambda o: o.get_enabled(self.agent_type, action_key),
-                lambda: self.actions[action_key].enabled,
+                lambda: action.enabled,
             )
         )
 
@@ -948,6 +937,18 @@ class Agent(ABC):
 
         Note: this updates an *existing* override; it does not create a new one.
         """
+        # Same rule as resolve_enabled / apply_config: the declaration wins.
+        # Writing the flag here would otherwise persist a value the resolver
+        # ignores, leaving the stored config disagreeing with what runs.
+        if not self.actions[action_key].can_be_disabled:
+            log.warning(
+                "write_enabled refused: action cannot be disabled",
+                agent=self.agent_type,
+                action=action_key,
+                requested=enabled,
+            )
+            return
+
         self._route_write(
             lambda o: o.get_enabled(self.agent_type, action_key) is not UNSET,
             lambda o: o.set_enabled(self.agent_type, action_key, enabled),
@@ -984,9 +985,20 @@ class Agent(ABC):
             if not kwargs.get("actions"):
                 continue
 
-            action.enabled = (
-                kwargs.get("actions", {}).get(action_key, {}).get("enabled", False)
-            )
+            if not action.can_be_disabled:
+                # See resolve_enabled: nothing in the UI can turn these back
+                # on, so a saved `enabled: false` (written by an older version
+                # or hand-edited) is discarded rather than honored.
+                action.enabled = True
+            else:
+                # Falling back to the action's current value rather than False
+                # keeps an action the saved config predates in the state it
+                # ships with, instead of silently disabling it on first load.
+                action.enabled = (
+                    kwargs.get("actions", {})
+                    .get(action_key, {})
+                    .get("enabled", action.enabled)
+                )
 
             if not action.config:
                 continue
@@ -1025,7 +1037,7 @@ class Agent(ABC):
                         config_key: config_schema.AgentActionConfig(
                             value=config_obj.value
                         )
-                        for config_key, config_obj in action.config.items()
+                        for config_key, config_obj in (action.config or {}).items()
                         if config_obj.type != "unified_api_key"
                     },
                 )

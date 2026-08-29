@@ -1,14 +1,20 @@
 import random
 
-import pydantic
-import structlog
 from openai import AsyncOpenAI
 
-from talemate.client.base import ClientBase, ExtraField, FieldGroup
+from talemate.client.api_handles import (
+    ApiHandlesPromptTemplateConfig,
+    ApiHandlesPromptTemplateMixin,
+    api_handles_prompt_template_extra_fields,
+)
+from talemate.client.base import ClientBase, ExtraField
 from talemate.client.registry import register
+from talemate.client.toggleable_parameters import (
+    ToggleableParametersMixin,
+    toggleable_parameters_config,
+    toggleable_parameters_extra_fields,
+)
 from talemate.config.schema import Client as BaseClientConfig
-
-log = structlog.get_logger("talemate.client.openai_compat")
 
 EXPERIMENTAL_DESCRIPTION = """Use this client if you want to connect to a service implementing an OpenAI-compatible API. Success is going to depend on the level of compatibility. Use the actual OpenAI client if you want to connect to OpenAI's API."""
 
@@ -17,58 +23,32 @@ EXPERIMENTAL_DESCRIPTION = """Use this client if you want to connect to a servic
 # so they need to be omitted entirely (not just zeroed out).
 TOGGLEABLE_PARAMETERS = ("temperature", "top_p", "presence_penalty")
 
-
-PARAMETERS_FIELD_GROUP = FieldGroup(
-    name="parameters",
-    label="Parameters",
-    description=(
-        "Toggle individual sampler parameters. When a parameter is disabled it is "
-        "omitted from the request payload entirely. Useful for APIs that hard-error "
-        "when receiving parameters they don't support for the selected model."
-    ),
-    icon="mdi-tune-vertical",
-)
+ToggleableParametersConfig = toggleable_parameters_config(TOGGLEABLE_PARAMETERS)
 
 
-def _send_parameter_field(param: str) -> ExtraField:
-    return ExtraField(
-        name=f"send_{param}",
-        type="bool",
-        label=f"Send {param}",
-        required=False,
-        description=(
-            f"When enabled, `{param}` is included in the request. Disable for "
-            f"models/APIs that reject it."
-        ),
-        group=PARAMETERS_FIELD_GROUP,
-    )
-
-
-class Defaults(pydantic.BaseModel):
+class Defaults(ToggleableParametersConfig, ApiHandlesPromptTemplateConfig):
     api_url: str = "http://localhost:5000"
     api_key: str = ""
     max_token_length: int = 8192
     model: str = ""
-    api_handles_prompt_template: bool = False
     double_coercion: str = None
     rate_limit: int | None = None
-    send_temperature: bool = True
-    send_top_p: bool = True
-    send_presence_penalty: bool = True
 
 
-class ClientConfig(BaseClientConfig):
-    api_handles_prompt_template: bool = False
-    send_temperature: bool = True
-    send_top_p: bool = True
-    send_presence_penalty: bool = True
+class ClientConfig(
+    ToggleableParametersConfig, ApiHandlesPromptTemplateConfig, BaseClientConfig
+):
+    pass
 
 
 @register()
-class OpenAICompatibleClient(ClientBase):
+class OpenAICompatibleClient(
+    ApiHandlesPromptTemplateMixin, ToggleableParametersMixin, ClientBase
+):
     client_type = "openai_compat"
     conversation_retries = 0
     config_cls = ClientConfig
+    toggleable_parameters = TOGGLEABLE_PARAMETERS
 
     class Meta(ClientBase.Meta):
         title: str = "OpenAI Compatible API"
@@ -79,31 +59,11 @@ class OpenAICompatibleClient(ClientBase):
         defaults: Defaults = Defaults()
         self_hosted: bool | None = None
         extra_fields: dict[str, ExtraField] = {
-            "api_handles_prompt_template": ExtraField(
-                name="api_handles_prompt_template",
-                type="bool",
-                label="API handles prompt template (chat/completions)",
-                required=False,
+            **api_handles_prompt_template_extra_fields(
                 description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored. This is not recommended and should only be used if the API does not support the `completions` andpoint or you don't know which prompt template to use.",
             ),
-            **{f"send_{p}": _send_parameter_field(p) for p in TOGGLEABLE_PARAMETERS},
+            **toggleable_parameters_extra_fields(TOGGLEABLE_PARAMETERS),
         }
-
-    @property
-    def api_handles_prompt_template(self) -> bool:
-        return self.client_config.api_handles_prompt_template
-
-    @property
-    def send_temperature(self) -> bool:
-        return self.client_config.send_temperature
-
-    @property
-    def send_top_p(self) -> bool:
-        return self.client_config.send_top_p
-
-    @property
-    def send_presence_penalty(self) -> bool:
-        return self.client_config.send_presence_penalty
 
     @property
     def experimental(self):
@@ -116,19 +76,6 @@ class OpenAICompatibleClient(ClientBase):
         to predefine partial LLM output in the prompt)
         """
         return not self.reason_enabled
-
-    @property
-    def supported_parameters(self):
-        params = ["max_tokens"]
-        for param in TOGGLEABLE_PARAMETERS:
-            if getattr(self.client_config, f"send_{param}"):
-                params.append(param)
-        return params
-
-    def prompt_template(self, system_message: str, prompt: str):
-        if not self.api_handles_prompt_template:
-            return super().prompt_template(system_message, prompt)
-        return prompt
 
     async def get_model_name(self):
         return self.model
@@ -149,25 +96,11 @@ class OpenAICompatibleClient(ClientBase):
                 parameters=parameters,
             )
 
-            if self.can_be_coerced:
-                prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
-            else:
-                coercion_prompt = None
-
-            messages = [
-                {"role": "system", "content": self.get_system_message(kind)},
-                {"role": "user", "content": prompt.strip()},
-            ]
+            messages, coercion_prompt = self.chat_messages_for_coercion(prompt, kind)
 
             if coercion_prompt:
-                log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
-                messages.append(
-                    {
-                        "role": "assistant",
-                        "content": coercion_prompt.strip(),
-                        "prefix": True,
-                    }
-                )
+                # continue the pre-fill via the (non-standard) prefix flag
+                messages[-1]["prefix"] = True
 
             response = await client.chat.completions.create(
                 model=self.model_name,

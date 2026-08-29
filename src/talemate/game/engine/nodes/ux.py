@@ -145,9 +145,14 @@ class BuildChoiceElement(_BuildUxElementMixin, Node):
     """
     Builds a choice UX element payload.
 
+    A random id is generated when none is given. Raises an error if choices is
+    empty. Emit the resulting element with `ux/EmitElement`.
+
     Inputs:
     - state: any
-    - id: str (optional)
+    - id: str (optional; auto-generated when not set)
+    - closable: bool (optional)
+    - timeout_seconds: int (optional; 0 = no timeout)
     - title: str (optional)
     - body: str (optional)
     - choices: list (required)
@@ -156,6 +161,14 @@ class BuildChoiceElement(_BuildUxElementMixin, Node):
 
     Outputs:
     - state: any
+    - id: the element id (resolved)
+    - closable: bool (resolved)
+    - timeout_seconds: int (resolved)
+    - title: str (resolved)
+    - body: str (resolved)
+    - choices: list (passed through)
+    - multi_select: bool (resolved)
+    - default: the resolved default selection
     - ux_id: str
     - ux_element: dict
     """
@@ -256,9 +269,14 @@ class BuildTextInputElement(_BuildUxElementMixin, Node):
     """
     Builds a text input UX element payload.
 
+    A random id is generated when none is given. Emit the resulting element
+    with `ux/EmitElement`.
+
     Inputs:
     - state: any
-    - id: str (optional)
+    - id: str (optional; auto-generated when not set)
+    - closable: bool (optional)
+    - timeout_seconds: int (optional; 0 = no timeout)
     - title: str (optional)
     - body: str (optional)
     - multiline: bool (optional)
@@ -269,6 +287,16 @@ class BuildTextInputElement(_BuildUxElementMixin, Node):
 
     Outputs:
     - state: any
+    - id: the element id (resolved)
+    - closable: bool (resolved)
+    - timeout_seconds: int (resolved)
+    - title: str (resolved)
+    - body: str (resolved)
+    - multiline: bool (resolved)
+    - rows: int (resolved)
+    - placeholder: str (resolved)
+    - default: str (resolved)
+    - trim: bool (resolved)
     - ux_id: str
     - ux_element: dict
     """
@@ -429,7 +457,7 @@ class BuildNoticeElement(_BuildUxElementMixin, Node):
 
     Inputs:
     - state: any
-    - id: str (optional)
+    - id: str (optional; auto-generated when not set)
     - closable: bool (optional)
     - timeout_seconds: int (optional)
     - title: str (optional)
@@ -437,6 +465,11 @@ class BuildNoticeElement(_BuildUxElementMixin, Node):
 
     Outputs:
     - state: any
+    - id: the element id (resolved)
+    - closable: bool (resolved)
+    - timeout_seconds: int (resolved)
+    - title: str (resolved)
+    - body: str (resolved)
     - ux_id: str
     - ux_element: dict
     """
@@ -501,6 +534,8 @@ class StyleElement(Node):
     - ux_element: dict
     - tint: str (optional) - Vuetify color name
     - icon: str (optional) - mdi-* icon name
+    - apply_scene_colors: bool (optional) - render body through the scene-message parser for per-category colors
+    - compact: bool (optional) - render the element in a condensed layout
 
     Outputs:
     - state: any
@@ -611,9 +646,11 @@ class EmitElement(Node):
     """
     Emits a UX element to the frontend (websocket passthrough).
 
-    Choice elements are awaitable by design: emitting a choice element will wait
-    for the user to select/cancel (with optional element-defined timeout),
+    Choice and text input elements are awaitable by design: emitting one will
+    wait for the user to submit/cancel (with optional element-defined timeout),
     then close the UX element and return the captured interaction values.
+    A timeout is reported as both `timed_out` and `cancelled`. Notice elements
+    are fire-and-forget and return immediately.
 
     Inputs:
     - state: any

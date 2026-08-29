@@ -17,9 +17,14 @@ __all__ = [
     "DataParsingError",
     "fix_yaml_colon_in_strings",
     "fix_faulty_yaml",
+    "parse_attribute_lines",
+    "trim_attributes",
 ]
 
 log = structlog.get_logger("talemate.util.dedupe")
+
+# the character's own name is prompt scaffold, not a generated attribute
+UNBUDGETED_ATTRIBUTES = frozenset({"name"})
 
 
 if TYPE_CHECKING:
@@ -50,6 +55,56 @@ class DataParsingError(Exception):
         self.message = message
         self.data = data
         super().__init__(self.message)
+
+
+def trim_attributes(
+    attributes: dict[str, str], max_attributes: int | None = None
+) -> dict[str, str]:
+    """Trim an attributes dict to `max_attributes` attributes, preserving
+    insertion order. A falsy or negative limit means no limit.
+
+    Attributes in `UNBUDGETED_ATTRIBUTES` are kept without costing a slot,
+    wherever they sit in the sheet.
+    """
+    if not max_attributes or max_attributes <= 0:
+        return dict(attributes)
+
+    trimmed = {}
+    budgeted = 0
+    for name, value in attributes.items():
+        if name.strip().lower() in UNBUDGETED_ATTRIBUTES:
+            trimmed[name] = value
+            continue
+
+        if budgeted >= max_attributes:
+            continue
+
+        trimmed[name] = value
+        budgeted += 1
+
+    return trimmed
+
+
+def parse_attribute_lines(
+    text: str, max_attributes: int | None = None
+) -> dict[str, str]:
+    """Parse `Name: value` lines into an attributes dict.
+
+    The shared character-sheet attribute format: one attribute per line,
+    with a colon after the attribute name. Parsing stops at the first
+    non-empty line without a colon. The character's own name does not cost
+    a slot of `max_attributes`.
+    """
+    data = {}
+    for line in text.split("\n"):
+        if not line.strip():
+            continue
+        if ":" not in line:
+            break
+        name, value = line.split(":", 1)
+        data[name.strip()] = value.strip()
+
+    return trim_attributes(data, max_attributes)
 
 
 def fix_faulty_json(data: str) -> str:

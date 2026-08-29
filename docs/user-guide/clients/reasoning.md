@@ -66,6 +66,8 @@ When the configured reasoning pattern is not found in a response, you can contro
 - **Fail** (default) - Raises an error, causing the request to fail. Use this when you expect the model to always include reasoning tokens and want to be alerted if it doesn't.
 - **Ignore** - Returns the response as-is without stripping anything. Use this when the model may sometimes respond without reasoning tokens (e.g., for simple queries).
 
+When set to **Fail**, the **Auto Retry** slider next to it lets the client automatically retry a number of times before you are notified. See [Auto Retry](auto-retry.md).
+
 ## Forcing Reasoning Off for Specific Actions
 
 The **Enable Reasoning** checkbox is a global setting for a client — when it's on, every prompt that client handles uses reasoning. Sometimes that isn't what you want. A reasoning model might do an excellent job writing dialogue but waste time (and tokens) "thinking" before simple, mechanical tasks like summarization or world-state updates.

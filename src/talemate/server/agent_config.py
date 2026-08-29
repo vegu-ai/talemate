@@ -57,10 +57,12 @@ class AgentConfigPlugin(Plugin):
 
     async def _persist_and_broadcast(self, agent) -> None:
         # NOTE: this path runs alongside the bulk ``configure_agents`` save
-        # path. Both write to the same ``Config.agents[agent_type]`` slot.
-        # We rely on the websocket dispatcher serializing inbound messages so
-        # there's no concurrent register-vs-configure overlap on the same
-        # agent. If that assumption changes, add a lock.
+        # path AND the help agent's settings tools (background tasks, NOT
+        # serialized by the websocket dispatcher). Every writer replaces the
+        # ``Config.agents[agent_type]`` slot in one synchronous event-loop
+        # step, so interleaving can't tear the entry — the exposure is
+        # whole-entry last-writer-wins, which the AgentModal's unchanged-save
+        # skip keeps rare. If entry building ever gains awaits, add a lock.
         await agent.save_config()
         await commit_config()
         await agent.emit_status()
@@ -157,6 +159,18 @@ class AgentConfigPlugin(Plugin):
     # Per-scene agent overrides
     # ------------------------------------------------------------------
 
+    async def _refuse_scene_overrides(self, agent, message: str) -> None:
+        """Reject an override save and put the frontend back on the truth.
+
+        Callers (the AgentModal, the agent panel's quick-toggle chips) update
+        their local copy of the overlay optimistically, so a refusal that only
+        raised an error toast would leave a value on screen that was never
+        stored. Re-emitting agent status ships the unchanged overlay back.
+        """
+        if agent:
+            await agent.emit_status()
+        await self.signal_operation_failed(message)
+
     async def handle_save_scene_overrides(self, data: dict):
         """Persist a sparse per-agent override set into the scene's
         agent-settings JSON file.
@@ -176,8 +190,8 @@ class AgentConfigPlugin(Plugin):
 
         scene = getattr(agent, "scene", None)
         if scene is None:
-            await self.signal_operation_failed(
-                f"Agent '{agent_type}' is not connected to a scene"
+            await self._refuse_scene_overrides(
+                agent, f"Agent '{agent_type}' is not connected to a scene"
             )
             return
 
@@ -190,34 +204,70 @@ class AgentConfigPlugin(Plugin):
                 project_name=getattr(scene, "project_name", None),
                 filename=getattr(scene, "filename", None),
             )
-            await self.signal_operation_failed(
-                "Save the scene first before adding per-scene agent overrides."
+            # A scene can hold a live overlay and still have no filename — a
+            # restore re-links the overlay from `project_name` and then clears
+            # the filename — so this is not always a "not saved yet" scene.
+            await self._refuse_scene_overrides(
+                agent,
+                "This scene has no save file, so its agent overrides cannot be "
+                "changed. Save the scene first.",
             )
             return
 
         # Defense against path traversal — filename arrives over the wire
         # and must stay inside ``save_dir``.
         if filename is not None and not is_safe_settings_filename(filename):
-            await self.signal_operation_failed(
-                f"Invalid agent-settings filename: {filename!r}"
+            await self._refuse_scene_overrides(
+                agent, f"Invalid agent-settings filename: {filename!r}"
             )
             return
 
+        # Everything below mutates in-memory state that agents resolve their
+        # settings from; snapshot it so a failed write can be undone instead of
+        # leaving the running scene on values that never reached disk.
+        previous_overlay = scene.agent_overrides
+        previous_settings_file = scene.agent_settings_file
+        # Linking clears the opt-out; leaving it cleared after a failed write
+        # would silently re-arm the load-time auto-link for a scene the user
+        # opted out of.
+        previous_opted_out = scene._agent_settings_opted_out
+        previous_slice = (
+            previous_overlay.agents.get(agent_type) if previous_overlay else None
+        )
+
+        def rollback() -> None:
+            scene.agent_overrides = previous_overlay
+            scene.agent_settings_file = previous_settings_file
+            scene._agent_settings_opted_out = previous_opted_out
+            if previous_overlay is None:
+                return
+            if previous_slice is None:
+                previous_overlay.agents.pop(agent_type, None)
+            else:
+                previous_overlay.agents[agent_type] = previous_slice
+
         # Resolve target file. If the scene already has an overlay we write
         # into it; otherwise the caller MUST supply a filename so we know
-        # what to create.
+        # what to create. Linking a file is the only case that changes the
+        # scene itself (it stores `agent_settings_file`), and so the only one
+        # that needs the scene persisted afterwards.
+        linked_file = False
         if scene.agent_overrides is None:
             if not filename:
-                await self.signal_operation_failed(
-                    "No agent-settings file linked; filename is required"
+                await self._refuse_scene_overrides(
+                    agent, "No agent-settings file linked; filename is required"
                 )
                 return
             target_path = agent_settings_dir(scene.save_dir) / filename
             scene.agent_overrides = SceneAgentSettings(filepath=target_path)
             scene.agent_settings_file = filename
             scene._agent_settings_opted_out = False
+            linked_file = True
         elif filename and filename != scene.agent_overrides.filename:
-            # Caller wants to switch which file we write to. Move the in-memory
+            # Caller wants to switch which file we write to. No current sender
+            # reaches this — they only attach a filename while the scene has
+            # none linked, and the world editor switches files through
+            # ``apply_scene_settings_link`` instead. Move the in-memory
             # overlay's filepath; existing file (if any) at the new name is
             # treated as a fresh start — we overwrite below.
             target_path = agent_settings_dir(scene.save_dir) / filename
@@ -226,6 +276,7 @@ class AgentConfigPlugin(Plugin):
                 agents=scene.agent_overrides.agents,
             )
             scene.agent_settings_file = filename
+            linked_file = True
 
         scene.agent_overrides.replace_agent_overrides(agent_type, override or {})
         try:
@@ -237,15 +288,18 @@ class AgentConfigPlugin(Plugin):
                 filepath=str(scene.agent_overrides.filepath),
                 error=str(exc),
             )
-            await self.signal_operation_failed(
-                f"Failed to write agent-settings file: {exc.strerror or exc}"
+            rollback()
+            await self._refuse_scene_overrides(
+                agent, f"Failed to write agent-settings file: {exc.strerror or exc}"
             )
             return
 
         # Re-emit agent + scene status so the frontend re-renders with the
         # newly-resolved values and the updated linked-file display.
         await agent.emit_status()
-        # signal_operation_done triggers a scene auto-save when enabled, which
-        # persists the `agent_settings_file` reference in the scene JSON so
-        # the link survives reload.
-        await self.signal_operation_done()
+        # Overrides live in their own file, so the scene itself only needs
+        # persisting when this save linked one: the auto-save writes the
+        # `agent_settings_file` reference so the link survives reload. Repeat
+        # saves (modal re-saves, quick-toggle chip flips) skip it — otherwise
+        # every chip click would rewrite the scene JSON or mark it unsaved.
+        await self.signal_operation_done(signal_only=not linked_file)

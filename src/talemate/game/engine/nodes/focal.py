@@ -43,6 +43,19 @@ SOCKET_TYPES.extend(
 class FocalArgument(FunctionArgument):
     """
     Represents an argument to an AI function.
+
+    Extends the function argument with instructions that tell the AI how
+    to fill the argument during AI function calling.
+
+    Properties:
+
+    - typ: The type of the argument
+    - name: The name of the argument
+    - instructions: The instructions for the argument
+
+    Outputs:
+
+    - value: The value of the argument (during function execution)
     """
 
     class Fields(FunctionArgument.Fields):
@@ -66,9 +79,12 @@ class Focal(Node):
     """
     Main node for calling AI functions using the FOCAL system.
 
+    Either a template or a prompt must be provided.
+
     Inputs:
     - state: The current graph state
     - template: The prompt template name; This template will be used to generate the prompt that facilitates the AI function call(s)
+    - prompt: A Prompt instance to use instead of a template
     - callbacks: A list of focal.Callback instances that define the functions to call
     - agent: The agent to use for the AI function call
     - template_vars: A dictionary of variables to use in the template
@@ -77,11 +93,14 @@ class Focal(Node):
     Properties:
     - template: The prompt template name
     - max_calls: The maximum number of calls to make
+    - retries: The number of retries to make
     - response_length: The maximum length of the response
+    - max_concurrent: Maximum number of concurrent callback executions
 
     Outputs:
     - state: The current graph state
-    - calls: The list of calls made
+    - calls: The list of calls made (focal.Call instances)
+    - call_payloads: The payload dictionaries of the calls made
     - response: The raw response from the processed prompt
     """
 
@@ -138,7 +157,7 @@ class Focal(Node):
 
     def setup(self):
         self.add_input("state")
-        self.add_input("template", socket_typoe="str", optional=True)
+        self.add_input("template", socket_type="str", optional=True)
         self.add_input("prompt", socket_type="prompt", optional=True)
         self.add_input("callbacks", socket_type="list")
         self.add_input("agent", socket_type="agent")
@@ -240,6 +259,20 @@ class Metadata(Node):
     Represents metadata within a callback in the focal system.
 
     Allowing to specify instructions and examples for the callback.
+
+    The node does no work when executed - it is discovered inside the
+    function graph when an AI function callback is built, and its
+    instructions and examples are attached to the callback.
+
+    Inputs:
+    - state: Connects the node into the function graph so it can be discovered
+
+    Properties:
+    - instructions: The instructions for the callback
+    - examples: The examples for the callback
+
+    Outputs:
+    - state: Not populated at runtime
     """
 
     class Fields:
@@ -275,11 +308,17 @@ class Callback(Node):
     """
     Defines an AI function callback for use with the FOCAL system.
 
+    Arguments, instructions and examples are collected from the focal
+    Argument and Metadata nodes inside the supplied function graph.
+
     Inputs:
     - fn: The function to call (Returned from an GetFunction node)
+    - name: The name of the callback (optional, overrides the property)
 
     Properties:
     - name: The name of the callback as the AI will see it
+    - allow_multiple_calls: Whether the function can be called multiple times
+    - allow_concurrent: Whether calls to this function can run concurrently
 
     Outputs:
     - callback: The focal.Callback instance
@@ -373,6 +412,19 @@ class Callback(Node):
 class UnpackCall(Node):
     """
     Unpacks a focal.Call instance
+
+    Inputs:
+
+    - call: The focal.Call instance to unpack
+
+    Outputs:
+
+    - name: The name of the call
+    - arguments: The arguments of the call
+    - result: The result of the call
+    - uid: The UID of the call
+    - called: Whether the call was made
+    - error: The error message if the call failed
     """
 
     def __init__(self, title="Unpack AI Function Call", **kwargs):
@@ -467,6 +519,23 @@ class ProcessCall(Node):
 class CollectResults(Node):
     """
     Collects the results of a list of calls
+
+    If a name is provided, only results from calls with that name are
+    collected.
+
+    Inputs:
+
+    - calls: The list of calls (focal.Call instances)
+    - name: Only collect results from calls with this name (optional)
+
+    Properties:
+
+    - name: Only collect results from calls with this name
+
+    Outputs:
+
+    - calls: The calls input, passed through
+    - results: The list of collected call results
     """
 
     class Fields:

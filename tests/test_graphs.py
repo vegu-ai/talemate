@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 import pytest
 import enum
 import pydantic
@@ -44,7 +45,7 @@ def mock_scene():
 
 
 @pytest.fixture
-def mock_scene_with_assets():
+def mock_scene_with_assets(tmp_path):
     scene = MockScene()
     bootstrap_scene(scene)
 
@@ -55,8 +56,13 @@ def mock_scene_with_assets():
     with open(test_scene_path, "r") as f:
         test_scene_data = json.load(f)
 
-    # Override scenes_dir to point to test data directory
-    test_scenes_dir = os.path.join(BASE_DIR, "data", "scenes")
+    # Work against a copy: the fixture writes library.json, and the source tree
+    # copy is git-tracked and shared by every worker.
+    test_scenes_dir = os.path.join(tmp_path, "scenes")
+    shutil.copytree(
+        os.path.join(BASE_DIR, "data", "scenes"),
+        test_scenes_dir,
+    )
     scene.scenes_dir = lambda: test_scenes_dir
     scene.project_name = "talemate-laboratory"
 
@@ -164,10 +170,32 @@ async def test_graph_agents(mock_scene):
 async def test_graph_prompt(mock_scene):
     fn = make_graph_test("test-harness-prompt", False)
 
-    async with MockClientContext() as client_reponses:
-        client_reponses.append("The sum of 1 and 5 is 6.")
-        client_reponses.append('```json\n{\n  "result": 6\n}\n```')
+    async with MockClientContext() as client_responses:
+        client_responses.append("The sum of 1 and 5 is 6.")
+        client_responses.append('```json\n{\n  "result": 6\n}\n```')
         await fn(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_graph_prompt_sockets(mock_scene):
+    """Wired memory_prompt / action_type input sockets win over the node
+    property, and the property still applies when the socket is unconnected
+    (issue #113)."""
+    fn = make_graph_test("test-harness-prompt-sockets", False)
+
+    async with MockClientContext() as client_responses:
+        # both GenerateResponse chains pop the same response so the shared
+        # state stays independent of their execution order
+        client_responses.append("A narrated response.")
+        client_responses.append("A narrated response.")
+        await fn(mock_scene)
+
+    # the action_type wired into the socket ("narrate", overriding the
+    # "scene_direction" property) must reach the client as the prompt kind;
+    # the property-only chain must fall back to "scene_direction" (length 30
+    # disambiguates it from the wired chain)
+    kinds = [entry["kind"] for entry in mock_scene.mock_client.prompt_history]
+    assert sorted(kinds) == ["narrate_20", "scene_direction_30"]
 
 
 @pytest.mark.asyncio

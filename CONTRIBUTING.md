@@ -59,6 +59,28 @@ Ensure all tests pass by running:
 uv run pytest tests/ -p no:warnings
 ```
 
+The test dependencies live in the `dev` extra, which is not installed by
+default — install it once with either of:
+```bash
+uv sync --extra dev
+uv pip install -e ".[dev]"
+```
+Plain `uv sync` does not just skip the extra, it *removes* it: run against a
+working environment it uninstalls `pytest`, `pytest-xdist` and `pytest-asyncio`,
+breaking the command above.
+
+The suite runs distributed across your CPU cores by default (via `pytest-xdist`).
+If your environment predates that — pytest installed, `pytest-xdist` not — pytest
+exits with `error: unrecognized arguments: -n --dist worksteal`; install the `dev`
+extra as above.
+
+Workers discard `-s` / `--capture=no` **stdout** entirely (stderr, including
+`logging`, still comes through but out of order), and failures are reordered.
+Pass `-n0` to run serially while debugging a specific test:
+```bash
+uv run pytest tests/ -n0 -s -x
+```
+
 ## Questions?
 
 If you're unsure whether your contribution would be welcome, please open an issue to discuss it first. This saves everyone time and ensures alignment with the project's direction.

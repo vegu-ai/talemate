@@ -33,7 +33,19 @@ class AutoDirectCandidates(AgentNode):
 @register("agents/director/auto-direct/DetermineSceneIntent")
 class DetermineSceneIntent(AgentNode):
     """
-    Determines the scene intent based on the current scene state.
+    Has the director determine the current scene intent and set it on the
+    scene's intent state (the director may also decide to leave the
+    current intent unchanged).
+
+    Inputs:
+
+    - state: The graph state
+
+    Outputs:
+
+    - state: The state input, passed through
+    - scene_phase: The scene's phase after the determination (None if the
+      director decided not to set one)
     """
 
     _agent_name: ClassVar[str] = "director"
@@ -55,7 +67,19 @@ class DetermineSceneIntent(AgentNode):
 @register("agents/director/auto-direct/GenerateSceneTypes")
 class GenerateSceneTypes(AgentNode):
     """
-    Generates scene types based on the current scene state.
+    Has the director generate scene types (or pick them from the scene
+    type templates) and register them on the scene's intent state.
+
+    Inputs:
+
+    - state: The graph state
+    - instructions: Instructions guiding the scene type generation (optional)
+    - max_scene_types: The maximum number of scene types to generate (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - scene_types: The generated scene types
     """
 
     _agent_name: ClassVar[str] = "director"
@@ -85,6 +109,7 @@ class GenerateSceneTypes(AgentNode):
         self.set_property("instructions", "")
         self.set_property("max_scene_types", 1)
         self.add_output("state")
+        self.add_output("scene_types", socket_type="list")
 
     async def run(self, state: GraphState):
         instructions = self.normalized_input_value("instructions")

@@ -89,34 +89,49 @@
                     <template v-for="(action, action_name) in agent.actions" :key="action_name">
                         <!-- Action chip (if it has quick_toggle) -->
                         <template v-if="action.quick_toggle && agent.enabled">
-                            <v-chip 
-                                size="x-small" 
-                                label
-                                :color="action.enabled ? 'success' : 'grey'"
-                                variant="tonal"
-                                :prepend-icon="action.icon"
-                                @click.stop="toggleAction(agent, action_name, action)"
-                            >
-                                {{ action.label }}
-                                <v-icon class="ml-1" size="small" v-if="action.enabled">mdi-check-circle-outline</v-icon>
-                                <v-icon class="ml-1" size="small" v-else>mdi-circle-outline</v-icon>
-                            </v-chip>
+                            <v-tooltip :text="actionChipTooltip(agent, action_name, action)" density="compact">
+                                <template v-slot:activator="{ props }">
+                                    <v-chip
+                                        v-bind="props"
+                                        size="x-small"
+                                        label
+                                        :color="actionEnabled(agent, action_name) ? 'success' : 'grey'"
+                                        variant="tonal"
+                                        :prepend-icon="action.icon"
+                                        @click.stop="toggleAction(agent, action_name, action)"
+                                    >
+                                        {{ action.label }}
+                                        <v-icon class="ml-1" size="small" v-if="actionEnabled(agent, action_name)">mdi-check-circle-outline</v-icon>
+                                        <v-icon class="ml-1" size="small" v-else>mdi-circle-outline</v-icon>
+                                        <v-icon class="ml-1" size="x-small" color="primary" v-if="isEnabledOverridden(agent, action_name)">mdi-movie-open-cog-outline</v-icon>
+                                    </v-chip>
+                                </template>
+                            </v-tooltip>
                         </template>
                         <!-- Related sub-config chips (if action is enabled) -->
-                        <template v-if="action.enabled && action.config && agent.enabled">
-                            <v-chip 
-                                v-for="(config, config_name) in getQuickToggleSubConfigs(action)" 
+                        <template v-if="actionEnabled(agent, action_name) && action.config && agent.enabled">
+                            <v-tooltip
+                                v-for="(config, config_name) in getQuickToggleSubConfigs(action)"
                                 :key="`${action_name}-${config_name}`"
-                                size="x-small" 
-                                label
-                                :color="config.value ? 'highlight3' : 'grey'"
-                                variant="tonal"
-                                @click.stop="toggleSubConfig(agent, action_name, config_name, config)"
+                                :text="configChipTooltip(agent, action_name, config_name, config)"
+                                density="compact"
                             >
-                                {{ config.label }}
-                                <v-icon class="ml-1" size="x-small" v-if="config.value">mdi-check-circle-outline</v-icon>
-                                <v-icon class="ml-1" size="x-small" v-else>mdi-circle-outline</v-icon>
-                            </v-chip>
+                                <template v-slot:activator="{ props }">
+                                    <v-chip
+                                        v-bind="props"
+                                        size="x-small"
+                                        label
+                                        :color="configValue(agent, action_name, config_name) ? 'highlight3' : 'grey'"
+                                        variant="tonal"
+                                        @click.stop="toggleSubConfig(agent, action_name, config_name, config)"
+                                    >
+                                        {{ config.label }}
+                                        <v-icon class="ml-1" size="x-small" v-if="configValue(agent, action_name, config_name)">mdi-check-circle-outline</v-icon>
+                                        <v-icon class="ml-1" size="x-small" v-else>mdi-circle-outline</v-icon>
+                                        <v-icon class="ml-1" size="x-small" color="primary" v-if="isConfigOverridden(agent, action_name, config_name)">mdi-movie-open-cog-outline</v-icon>
+                                    </v-chip>
+                                </template>
+                            </v-tooltip>
                         </template>
                     </template>
                 </div>
@@ -130,7 +145,14 @@
 import AgentModal from './AgentModal.vue';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
 import AgentMessages from './AgentMessages.vue';
-import { countSceneOverrides } from '@/constants/sceneAgentSettings';
+import {
+    configOverrideActive,
+    countSceneOverrides,
+    effectiveActionEnabled,
+    effectiveConfigValue,
+    enabledOverrideActive,
+    setActionOverrideSlice,
+} from '@/constants/sceneAgentSettings';
 
 export default {
     components: {
@@ -206,6 +228,17 @@ export default {
         };
     },
     methods: {
+        uxSnapshot() {
+            // what the open agent modal shows, for the help agent's UX snapshot
+            if(!this.state.dialog) return null;
+            const tab = this.$refs.modal?.tab || null;
+            return {
+                agent: this.state.currentAgent?.name || null,
+                agent_label: this.state.currentAgent?.label || null,
+                tab: tab === '_config' ? 'general' : tab,
+            };
+        },
+
         sceneOverrideCount(agent) {
             return countSceneOverrides(agent?.data?.scene_overrides);
         },
@@ -281,16 +314,83 @@ export default {
 
             return false;
         },
+        // ------------------------------------------------------------------
+        // Quick-toggle chips — scene-aware reads and writes
+        //
+        // A chip must show what the loaded scene actually runs on: the scene
+        // override when one is active, the global value otherwise. Its click
+        // writes to whichever of the two it is showing, so the chip never
+        // changes a value other than the one displayed.
+        // ------------------------------------------------------------------
+
+        sceneOverlay(agent) {
+            return agent.data.scene_overrides || {};
+        },
+        actionEnabled(agent, action_name) {
+            return effectiveActionEnabled(agent.actions, this.sceneOverlay(agent), action_name);
+        },
+        isEnabledOverridden(agent, action_name) {
+            return enabledOverrideActive(this.sceneOverlay(agent), action_name);
+        },
+        configValue(agent, action_name, config_name) {
+            return effectiveConfigValue(
+                agent.actions,
+                this.sceneOverlay(agent),
+                `${action_name}.config.${config_name}`,
+            );
+        },
+        isConfigOverridden(agent, action_name, config_name) {
+            return configOverrideActive(this.sceneOverlay(agent), action_name, config_name);
+        },
+        actionChipTooltip(agent, action_name, action) {
+            if (this.isEnabledOverridden(agent, action_name)) {
+                return `Scene override — toggles ${action.label} for this scene only (global: ${action.enabled ? 'on' : 'off'})`;
+            }
+            return `Toggles ${action.label} globally`;
+        },
+        configChipTooltip(agent, action_name, config_name, config) {
+            if (this.isConfigOverridden(agent, action_name, config_name)) {
+                // `config` is the global entry the template iterates, so its
+                // value is the one the override masks.
+                return `Scene override — toggles ${config.label} for this scene only (global: ${config.value ? 'on' : 'off'})`;
+            }
+            return `Toggles ${config.label} globally`;
+        },
+        /**
+         * Persist a changed per-action override slice. The server replaces the
+         * whole per-agent slice, so the full overlay goes over the wire.
+         */
+        saveSceneOverrideSlice(agent, action_name, slice) {
+            const overlay = {
+                actions: setActionOverrideSlice(this.sceneOverlay(agent).actions || {}, action_name, slice),
+            };
+            // Keep the local copy in sync so the chip updates immediately
+            // instead of waiting for the agent status echo.
+            agent.data.scene_overrides = overlay;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'agent_config',
+                action: 'save_scene_overrides',
+                agent_type: agent.name,
+                override: overlay,
+            }));
+        },
         toggleAction(agent, action_name, action) {
+            if (this.isEnabledOverridden(agent, action_name)) {
+                const slice = JSON.parse(JSON.stringify(this.sceneOverlay(agent).actions[action_name]));
+                slice.enabled = !slice.enabled;
+                this.saveSceneOverrideSlice(agent, action_name, slice);
+                return;
+            }
+
             // Toggle the action's enabled state
             action.enabled = !action.enabled;
-            
+
             // Update the agent's actions
             agent.actions[action_name].enabled = action.enabled;
-            
+
             // Save the agent to persist the changes
             this.saveAgent(agent);
-            
+
             // Send update to server
             this.getWebsocket().send(JSON.stringify({
                 type: 'agent_action',
@@ -300,15 +400,22 @@ export default {
             }));
         },
         toggleSubConfig(agent, action_name, config_name, config) {
+            if (this.isConfigOverridden(agent, action_name, config_name)) {
+                const slice = JSON.parse(JSON.stringify(this.sceneOverlay(agent).actions[action_name]));
+                slice.config[config_name] = { value: !slice.config[config_name].value };
+                this.saveSceneOverrideSlice(agent, action_name, slice);
+                return;
+            }
+
             // Toggle the config value (assuming it's a boolean)
             config.value = !config.value;
-            
+
             // Update the agent's config
             agent.actions[action_name].config[config_name].value = config.value;
-            
+
             // Save the agent to persist the changes
             this.saveAgent(agent);
-            
+
             // Send update to server using the same type as action toggles
             this.getWebsocket().send(JSON.stringify({
                 type: 'agent_action',

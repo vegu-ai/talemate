@@ -79,6 +79,7 @@ import deepdiff
 from datetime import datetime, timezone
 import shutil
 import glob
+import uuid
 
 from talemate.save import SceneEncoder
 from talemate.path import SCENES_DIR
@@ -118,6 +119,18 @@ EXCLUDE_FROM_DELTAS_REGEX = [
     # re.compile(r"root\['some_array'\]\[\d+\]\['volatile_field'\]"),
 ]
 
+# Scene-data fields that must always be lists. Delta application with
+# force=True can leave an int-keyed dict in their place when an iterable op
+# targets a path whose parent is missing (baseline divergence) — deepdiff
+# creates ``{index: item}`` instead of a list.
+_LIST_FIELDS = (
+    "history",
+    "archived_history",
+    "layered_history",
+    "active_characters",
+    "game_state_watch_paths",
+)
+
 
 # Helper minimal scene reference compatible with this module's helpers
 class _SceneRef:
@@ -125,7 +138,20 @@ class _SceneRef:
         self.filename = filename
         self.save_dir = save_dir
         self.changelog_dir = os.path.join(save_dir, "changelog")
+        self.backups_dir = os.path.join(save_dir, "backups")
         self.serialize = data
+
+
+def scene_ref_from_path(scene_path: str) -> _SceneRef:
+    """
+    Build a minimal scene reference for changelog operations on a scene that
+    is not currently loaded, from the path to its scene file.
+    """
+    return _SceneRef(
+        filename=os.path.basename(scene_path),
+        save_dir=os.path.dirname(scene_path),
+        data={},
+    )
 
 
 async def save_changelog(scene: "Scene"):
@@ -671,6 +697,61 @@ def _get_overall_latest_revision(scene: "Scene") -> int:
     return latest_rev
 
 
+def _coerce_forced_list(value) -> tuple[list | None, bool]:
+    """Convert a force-mode artifact — an int-keyed dict where a list is
+    expected — back into a list ordered by index.
+
+    Returns ``(converted_list, True)`` when the value was such an artifact,
+    ``(None, False)`` otherwise. Dicts with any non-index key are left alone.
+    """
+    if not isinstance(value, dict):
+        return None, False
+
+    indexed: list[tuple[int, object]] = []
+    for key, item in value.items():
+        if isinstance(key, bool):
+            return None, False
+        if isinstance(key, int):
+            indexed.append((key, item))
+        elif isinstance(key, str) and re.fullmatch(r"-?\d+", key):
+            # int keys become strings when the data round-trips through JSON
+            indexed.append((int(key), item))
+        else:
+            return None, False
+
+    indexed.sort(key=lambda pair: pair[0])
+    return [item for _, item in indexed], True
+
+
+def _repair_forced_list_fields(data: dict) -> int:
+    """Restore list fields that force-mode delta application turned into
+    int-keyed dicts (see ``_LIST_FIELDS``), including the nested layers of
+    ``layered_history``.
+
+    Returns the number of fields repaired.
+    """
+    repaired: list[str] = []
+
+    for field in _LIST_FIELDS:
+        converted, was_forced = _coerce_forced_list(data.get(field))
+        if was_forced:
+            data[field] = converted
+            repaired.append(field)
+
+    layered = data.get("layered_history")
+    if isinstance(layered, list):
+        for i, layer in enumerate(layered):
+            converted, was_forced = _coerce_forced_list(layer)
+            if was_forced:
+                layered[i] = converted
+                repaired.append(f"layered_history[{i}]")
+
+    if repaired:
+        log.warning("repaired_forced_list_fields", fields=repaired)
+
+    return len(repaired)
+
+
 def _repair_history(data: dict) -> int:
     """Backfill required SceneMessage fields on bare-fragment history entries.
 
@@ -715,6 +796,7 @@ async def reconstruct_cleanup(data: dict) -> dict:
         )
         data["shared_context"] = ""
 
+    _repair_forced_list_fields(data)
     _repair_history(data)
     return data
 
@@ -926,6 +1008,55 @@ def delete_changelog_files(scene: "Scene") -> dict:
         return {"deleted": deleted, "dir_removed": None}
 
 
+def create_pre_rollback_backup(scene: "Scene") -> str | None:
+    """
+    Copy the scene's current file to a timestamped backup in its backups
+    directory before a rollback overwrites or replaces its state.
+
+    Returns:
+        str | None: Path to the backup file, or None if the scene file does
+        not exist or the copy failed.
+    """
+    current_path = os.path.join(scene.save_dir, scene.filename)
+    if not os.path.exists(current_path):
+        return None
+
+    os.makedirs(scene.backups_dir, exist_ok=True)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    base_name = os.path.splitext(scene.filename)[0]
+    backup_name = f"{base_name}_pre_rollback_{ts}.json"
+    backup_path = os.path.join(scene.backups_dir, backup_name)
+    try:
+        shutil.copy2(current_path, backup_path)
+        log.debug("rollback_backup_created", backup_path=backup_path)
+    except Exception as e:
+        log.error("rollback_backup_failed", error=e, path=current_path)
+        return None
+    return backup_path
+
+
+async def fork_scene_at_revision(scene: "Scene", to_rev: int, save_name: str) -> str:
+    """
+    Create a new scene file forked from the given revision.
+
+    Writes the reconstructed scene state to ``<save_name>.json`` in the
+    scene's save directory, cleared for independent use (mutable, fresh
+    memory id).
+
+    Returns:
+        str: Path to the written fork file
+    """
+    return await write_reconstructed_scene(
+        scene,
+        to_rev,
+        f"{save_name}.json",
+        overrides={
+            "immutable_save": False,
+            "memory_id": str(uuid.uuid4())[:10],
+        },
+    )
+
+
 async def rollback_scene_to_revision(
     scene: "Scene", to_rev: int, create_backup: bool = True
 ) -> str:
@@ -957,17 +1088,8 @@ async def rollback_scene_to_revision(
     current_path = os.path.join(scene.save_dir, scene.filename)
 
     backup_path = None
-    if create_backup and os.path.exists(current_path):
-        os.makedirs(scene.backups_dir, exist_ok=True)
-        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        base_name = os.path.splitext(scene.filename)[0]
-        backup_name = f"{base_name}_pre_rollback_{ts}.json"
-        backup_path = os.path.join(scene.backups_dir, backup_name)
-        try:
-            shutil.copy2(current_path, backup_path)
-            log.debug("rollback_backup_created", backup_path=backup_path)
-        except Exception as e:
-            log.error("rollback_backup_failed", error=e, path=current_path)
+    if create_backup:
+        backup_path = create_pre_rollback_backup(scene)
 
     reconstructed = await reconstruct_scene_data(scene, to_rev=to_rev)
     with open(current_path, "w") as f:
@@ -1002,8 +1124,15 @@ class InMemoryChangelog:
 
     async def __aenter__(self):
         """Initialize the in-memory changelog context."""
-        # Store the current state as our baseline
-        self.last_state = _serialize_scene_plain(self.scene)
+        # Baseline on the last committed snapshot when one exists, so deltas
+        # always transform committed state -> new state and the delta chain
+        # stays consistent with reconstructions. Baselining on the live scene
+        # state instead would silently drop any mutations made since the last
+        # commit (e.g. load-time message meta stamps) from the chain, which
+        # breaks delta value verification during reconstruction.
+        self.last_state = _load_latest_scene_data(self.scene)
+        if self.last_state is None:
+            self.last_state = _serialize_scene_plain(self.scene)
         self.initial_state = (
             self.last_state.copy()
         )  # Keep initial state for base snapshots

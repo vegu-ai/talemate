@@ -3,6 +3,7 @@ import structlog
 import httpx
 import asyncio
 import json
+import time
 
 from talemate.client.base import (
     ClientBase,
@@ -20,6 +21,11 @@ from talemate.config.schema import Client as BaseClientConfig
 from talemate.config import get_config
 
 from talemate.client.registry import register
+from talemate.client.toggleable_parameters import (
+    ToggleableParametersMixin,
+    toggleable_parameters_config,
+    toggleable_parameters_extra_fields,
+)
 from talemate.emit import emit
 from talemate.emit.signals import handlers
 import talemate.emit.async_signals as async_signals
@@ -46,17 +52,43 @@ AVAILABLE_MODELS = []
 # Available providers will be populated dynamically from OpenRouter API once a valid API key is set
 AVAILABLE_PROVIDERS = []
 
-DEFAULT_MODEL = "google/gemini-3-flash-preview"
+DEFAULT_MODEL = "google/gemini-3.6-flash"
+
+# Sampler parameters whose inclusion in the request payload is user-toggleable.
+# Some OpenRouter providers hard-error when these are sent for certain models
+# (e.g. Moonshot rejects non-zero penalties for kimi models), so they need to
+# be omitted entirely (not just zeroed out).
+TOGGLEABLE_PARAMETERS = (
+    "temperature",
+    "top_p",
+    "top_k",
+    "min_p",
+    "frequency_penalty",
+    "presence_penalty",
+    "repetition_penalty",
+)
+
+ToggleableParametersConfig = toggleable_parameters_config(TOGGLEABLE_PARAMETERS)
+
 MODELS_FETCHED = False
 PROVIDERS_FETCHED = False
 
 _MODELS_LOCK = asyncio.Lock()
 _PROVIDERS_LOCK = asyncio.Lock()
 
+# Failed fetches stay unlatched so the retry triggers (config saves, client
+# status refreshes) can recover; the cooldown keeps them from hammering the
+# API while it is unreachable.
+FETCH_RETRY_COOLDOWN = 30.0
+# None = never attempted; time.monotonic() can be < FETCH_RETRY_COOLDOWN on a
+# freshly-booted host, so a 0.0 sentinel would wrongly cool down the first try.
+_models_last_attempt: float | None = None
+_providers_last_attempt: float | None = None
+
 
 async def fetch_available_models(api_key: str = None):
     """Fetch available models from OpenRouter API"""
-    global AVAILABLE_MODELS, DEFAULT_MODEL, MODELS_FETCHED
+    global AVAILABLE_MODELS, MODELS_FETCHED, _models_last_attempt
 
     if MODELS_FETCHED:
         return AVAILABLE_MODELS
@@ -64,6 +96,14 @@ async def fetch_available_models(api_key: str = None):
     async with _MODELS_LOCK:
         if MODELS_FETCHED:
             return AVAILABLE_MODELS
+
+        now = time.monotonic()
+        if (
+            _models_last_attempt is not None
+            and now - _models_last_attempt < FETCH_RETRY_COOLDOWN
+        ):
+            return AVAILABLE_MODELS
+        _models_last_attempt = now
 
         try:
             log.debug("Fetching models from OpenRouter")
@@ -79,6 +119,7 @@ async def fetch_available_models(api_key: str = None):
                         if model_id:
                             models.append(model_id)
                     AVAILABLE_MODELS = sorted(models)
+                    MODELS_FETCHED = True
                     log.debug(f"Fetched {len(AVAILABLE_MODELS)} models from OpenRouter")
                 else:
                     log.warning(
@@ -87,13 +128,12 @@ async def fetch_available_models(api_key: str = None):
         except Exception as e:
             log.error(f"Error fetching models from OpenRouter: {e}")
 
-        MODELS_FETCHED = True
         return AVAILABLE_MODELS
 
 
 async def fetch_available_providers(api_key: str = None):
     """Fetch available providers from OpenRouter API"""
-    global AVAILABLE_PROVIDERS, PROVIDERS_FETCHED
+    global AVAILABLE_PROVIDERS, PROVIDERS_FETCHED, _providers_last_attempt
 
     if PROVIDERS_FETCHED:
         return AVAILABLE_PROVIDERS
@@ -106,9 +146,18 @@ async def fetch_available_providers(api_key: str = None):
             api_key = get_config().openrouter.api_key
 
         if not api_key:
+            # No key yet (e.g. initial setup) — stay unlatched so the fetch
+            # reruns once a key is saved.
             log.warning("No OpenRouter API key available, cannot fetch providers")
-            PROVIDERS_FETCHED = True
             return AVAILABLE_PROVIDERS
+
+        now = time.monotonic()
+        if (
+            _providers_last_attempt is not None
+            and now - _providers_last_attempt < FETCH_RETRY_COOLDOWN
+        ):
+            return AVAILABLE_PROVIDERS
+        _providers_last_attempt = now
 
         try:
             log.debug("Fetching providers from OpenRouter")
@@ -126,6 +175,7 @@ async def fetch_available_providers(api_key: str = None):
                         if provider_name:
                             providers.append(provider_name)
                     AVAILABLE_PROVIDERS = sorted(providers)
+                    PROVIDERS_FETCHED = True
                     log.info(
                         f"Fetched {len(AVAILABLE_PROVIDERS)} providers from OpenRouter"
                     )
@@ -136,7 +186,6 @@ async def fetch_available_providers(api_key: str = None):
         except Exception as e:
             log.error(f"Error fetching providers from OpenRouter: {e}")
 
-        PROVIDERS_FETCHED = True
         return AVAILABLE_PROVIDERS
 
 
@@ -158,14 +207,19 @@ handlers["talemate_started"].connect(on_talemate_started)
 async_signals.get("config.saved").connect(on_config_saved)
 
 
-class Defaults(CommonDefaults, pydantic.BaseModel):
+class Defaults(ToggleableParametersConfig, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = DEFAULT_MODEL
+    # Reasoning on by default: with it off the client is coercible, and several
+    # providers (Google, Anthropic) reject the coercion prefill outright since
+    # the request then ends on a model turn.
+    reason_enabled: bool = True
+    reason_tokens: int = 2048
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 
 
-class ClientConfig(ConcurrentInference, BaseClientConfig):
+class ClientConfig(ToggleableParametersConfig, ConcurrentInference, BaseClientConfig):
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 
@@ -198,7 +252,7 @@ def cache_control_for_model(model_name: str) -> dict | None:
 
 
 @register()
-class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
+class OpenRouterClient(ConcurrentInferenceMixin, ToggleableParametersMixin, ClientBase):
     """
     OpenRouter client for generating text using various models.
     """
@@ -208,6 +262,7 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
     # TODO: make this configurable?
     decensor_enabled = False
     config_cls = ClientConfig
+    toggleable_parameters = TOGGLEABLE_PARAMETERS
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "OpenRouter"
@@ -243,16 +298,13 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
                     required=False,
                 ),
             }
+            fields.update(toggleable_parameters_extra_fields(TOGGLEABLE_PARAMETERS))
             fields.update(concurrent_inference_extra_fields())
             return fields
 
         extra_fields: dict[str, ExtraField] = pydantic.Field(
             default_factory=_build_extra_fields
         )
-
-    def __init__(self, **kwargs):
-        self._models_fetched = False
-        super().__init__(**kwargs)
 
     @property
     def provider_only(self) -> list[str]:
@@ -277,19 +329,6 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
     @property
     def min_reason_tokens(self) -> int:
         return MIN_THINKING_TOKENS
-
-    @property
-    def supported_parameters(self):
-        return [
-            "temperature",
-            "top_p",
-            "top_k",
-            "min_p",
-            "frequency_penalty",
-            "presence_penalty",
-            "repetition_penalty",
-            "max_tokens",
-        ]
 
     def emit_status(self, processing: bool = None):
         error_action = None
@@ -336,13 +375,12 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
         )
 
     async def status(self):
-        # Fetch models and providers if we have an API key and haven't fetched yet
-        if not self._models_fetched:
-            self._models_fetched = True
-            # Update the Meta class with new model choices
-            self.Meta.manual_model_choices = AVAILABLE_MODELS
+        # Retry fetches that haven't succeeded yet (e.g. the initial fetch
+        # failed, or ran before an API key was configured) — the fetchers
+        # latch on success and rate-limit retries internally.
+        if not MODELS_FETCHED:
+            await fetch_available_models(self.openrouter_api_key)
 
-        # Fetch providers if not already fetched
         if not PROVIDERS_FETCHED and self.openrouter_api_key:
             await fetch_available_providers(self.openrouter_api_key)
 

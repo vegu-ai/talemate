@@ -26,6 +26,13 @@ class UpdateCharacterVisualRulesPayload(pydantic.BaseModel):
     visual_rules: str | None = None
 
 
+class UpdateCharacterVisualFinalizersPayload(pydantic.BaseModel):
+    """Payload for updating a character's visual prompt finalizers."""
+
+    name: str
+    visual_finalizers: list[dict] = pydantic.Field(default_factory=list)
+
+
 class UpdateCharacterSharedPayload(pydantic.BaseModel):
     """Payload for updating a character shared."""
 
@@ -139,6 +146,34 @@ class CharacterMixin:
             )
             await self.signal_operation_failed(
                 "Failed to update character visual rules"
+            )
+            return
+
+        await self.handle_get_character_details({"name": payload.name})
+        await self.signal_operation_done()
+        self.scene.emit_status()
+
+    async def handle_update_character_visual_finalizers(self, data: dict):
+        """Update a character's visual prompt finalizers."""
+        try:
+            payload = UpdateCharacterVisualFinalizersPayload(**data)
+        except pydantic.ValidationError as e:
+            log.error("Invalid payload for update_character_visual_finalizers", error=e)
+            await self.signal_operation_failed(str(e))
+            return
+
+        try:
+            await self.world_state_manager.update_character_visual_finalizers(
+                payload.name, payload.visual_finalizers
+            )
+        except Exception as e:
+            log.error(
+                "Failed to update character visual finalizers",
+                character=payload.name,
+                error=e,
+            )
+            await self.signal_operation_failed(
+                "Failed to update character visual finalizers"
             )
             return
 

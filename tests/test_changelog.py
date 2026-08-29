@@ -1107,6 +1107,37 @@ async def test_in_memory_changelog_integration_with_existing_revisions(mock_scen
 
 
 @pytest.mark.asyncio
+async def test_in_memory_changelog_baselines_on_committed_snapshot(mock_scene):
+    """Mutations made between a commit and entering a new InMemoryChangelog
+    context must still land in the delta chain — the baseline is the last
+    committed snapshot, not the live scene state. Otherwise stored delta
+    values diverge from reconstructions and item removals get silently
+    skipped when applied (deepdiff verifies removed values)."""
+    await save_changelog(mock_scene)
+
+    items = [{"id": idx} for idx in range(1, 4)]
+    mock_scene.serialize = {"history": list(items)}
+    await append_scene_delta(mock_scene)
+    mock_scene.rev = 1
+
+    # mutate the scene BEFORE the in-memory changelog is entered
+    # (mirrors load-time mutations like message meta stamps)
+    items[1] = {"id": 2, "meta": {"agent": "narrator"}}
+    mock_scene.serialize = {"history": list(items)}
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        # remove the last two items (mirrors a rollback truncating history)
+        mock_scene.serialize = {"history": [items[0]]}
+        await changelog.append_delta()
+        await changelog.commit()
+
+    reconstructed = await reconstruct_scene_data(mock_scene, to_rev=2)
+    # _repair_history backfills message fields on bare entries; ids are
+    # what matters — both removals must have actually applied
+    assert [entry["id"] for entry in reconstructed["history"]] == [1]
+
+
+@pytest.mark.asyncio
 async def test_reconstruct_scene_data_disconnects_shared_context(mock_scene):
     """Test that shared_context is automatically disconnected during reconstruction."""
     # Setup base scene with shared_context
@@ -1261,6 +1292,132 @@ async def test_reconstruct_cleanup_repairs_bare_history_entries():
     assert repaired["flags"] == 0
     assert repaired["asset_id"] == "abc123"
     assert repaired["asset_type"] == "scene_illustration"
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_cleanup_repairs_forced_dict_history():
+    """An int-keyed dict where history should be a list (Delta force=True
+    artifact) is converted back to a list ordered by index — issue #81."""
+    data = {
+        "history": {
+            2: {"message": "third", "typ": "narrator", "source": "ai", "flags": 0},
+            1: {"message": "second", "typ": "narrator", "source": "ai", "flags": 0},
+        }
+    }
+
+    result = await reconstruct_cleanup(data)
+
+    history = result["history"]
+    assert isinstance(history, list)
+    assert [entry["message"] for entry in history] == ["second", "third"]
+    # the preview handler slices this — must not raise
+    assert history[-20:] == history
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_cleanup_repairs_forced_dict_history_string_keys():
+    """Index keys arrive as strings when the corrupted data round-tripped
+    through JSON — those convert too, and bare entries still get repaired."""
+    data = {"history": {"1": {"asset_id": "abc123"}, "0": {"m": 0}}}
+
+    result = await reconstruct_cleanup(data)
+
+    history = result["history"]
+    assert isinstance(history, list)
+    assert len(history) == 2
+    assert history[1]["asset_id"] == "abc123"
+    # _repair_history runs after the coercion and backfills required fields
+    for entry in history:
+        assert entry["typ"] == "narrator"
+        assert "message" in entry
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_cleanup_repairs_all_forced_list_fields():
+    """Every list field is normalized, including nested layered_history layers."""
+    data = {
+        "history": {0: {"message": "a", "typ": "narrator"}},
+        "archived_history": {0: {"text": "summary"}},
+        "layered_history": {0: [{"text": "layer0"}], 1: {0: {"text": "layer1"}}},
+        "active_characters": {0: "Alice", 1: "Bob"},
+        "game_state_watch_paths": {0: "game.state.foo"},
+    }
+
+    result = await reconstruct_cleanup(data)
+
+    assert isinstance(result["history"], list)
+    assert result["archived_history"] == [{"text": "summary"}]
+    assert result["layered_history"] == [[{"text": "layer0"}], [{"text": "layer1"}]]
+    assert result["active_characters"] == ["Alice", "Bob"]
+    assert result["game_state_watch_paths"] == ["game.state.foo"]
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_cleanup_leaves_legit_dicts_and_lists_alone():
+    """Dicts with non-index keys and healthy lists pass through untouched."""
+    data = {
+        "history": [{"message": "a", "typ": "narrator", "source": "ai", "flags": 0}],
+        # malformed digit-ish key — must not be treated as an index (and must
+        # not raise from int())
+        "archived_history": {"--5": {"text": "x"}},
+        "character_data": {"Alice": {"name": "Alice"}},
+        "agent_state": {"0_custom": True, "narrator": {}},
+    }
+
+    result = await reconstruct_cleanup(data)
+
+    assert result["history"] == data["history"]
+    assert result["archived_history"] == {"--5": {"text": "x"}}
+    assert result["character_data"] == {"Alice": {"name": "Alice"}}
+    assert result["agent_state"] == {"0_custom": True, "narrator": {}}
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_scene_data_repairs_forced_dict_history(mock_scene):
+    """End-to-end issue #81 repro: an iterable_item_added delta targeting a
+    missing history parent makes Delta(force=True) build history as an
+    int-keyed dict — reconstruction must still return a sliceable list."""
+    base_data = {"characters": [], "entries": []}  # no history at all
+    base_path = _base_path(mock_scene)
+    os.makedirs(os.path.dirname(base_path), exist_ok=True)
+    with open(base_path, "w") as f:
+        json.dump(base_data, f)
+
+    log_data = {
+        "version": 1,
+        "base": f"{mock_scene.filename}.base.json",
+        "start_rev": 0,
+        "deltas": [
+            {
+                "rev": 1,
+                "ts": 1672531200,
+                "delta": {
+                    "iterable_item_added": {
+                        "root['history'][1]": {
+                            "message": "hello",
+                            "typ": "narrator",
+                            "source": "ai",
+                            "flags": 0,
+                        }
+                    }
+                },
+                "meta": {},
+            }
+        ],
+        "latest_rev": 1,
+    }
+    log_path = _changelog_log_path(mock_scene, 0)
+    with open(log_path, "w") as f:
+        json.dump(log_data, f)
+
+    result = await reconstruct_scene_data(mock_scene, to_rev=1)
+
+    history = result["history"]
+    assert isinstance(history, list)
+    assert len(history) == 1
+    assert history[0]["message"] == "hello"
+    # the timeline preview slice that crashed in issue #81
+    assert history[-20:] == history
 
 
 @pytest.mark.asyncio

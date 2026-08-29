@@ -33,9 +33,9 @@
 
     <!-- Per-field overrides -->
     <div v-for="(action_config, config_key) in actionSchema.config" :key="config_key">
-      <div v-if="action_config.scene_overridable">
-        <AgentSettingField
-          :action-config="action_config"
+      <div v-if="action_config.scene_overridable && (fieldConditionMet(action_config) || isOverrideActive(config_key))">
+        <UxField
+          :field="action_config"
           :model-value="effectiveValue(config_key)"
           :readonly="!isOverrideActive(config_key)"
           :templates="templates"
@@ -48,12 +48,13 @@
               @toggle="toggleFieldOverride(config_key)"
             />
           </template>
-        </AgentSettingField>
+        </UxField>
       </div>
     </div>
   </v-sheet>
 
-  <v-sheet v-else density="compact">
+  <!-- action's own condition unmet → render nothing -->
+  <v-sheet v-else-if="actionConditionMet" density="compact">
     <div v-if="actionSchema.description" class="text-muted mt-2 mb-3">
       {{ actionSchema.description }}
       <p v-if="actionSchema.warning" class="text-warning mt-2 text-caption">
@@ -68,12 +69,12 @@
 </template>
 
 <script>
-import { actionHasOverridable } from '@/constants/sceneAgentSettings';
-import AgentSettingField from './AgentSettingField.vue';
+import { actionHasOverridable, effectiveConditionMet, hasEnabledOverride } from '@/constants/sceneAgentSettings';
+import UxField from './UxField.vue';
 import SceneOverrideToggle from './SceneOverrideToggle.vue';
 
 export default {
-  components: { AgentSettingField, SceneOverrideToggle },
+  components: { UxField, SceneOverrideToggle },
   props: {
     // Live mutable global action (deep clone owned by the modal). Read for
     // global values; NOT mutated by this component.
@@ -84,18 +85,31 @@ export default {
     // Per-action sparse override slice: {enabled?: bool, config: {key: {value}}}
     // Always an object; empty when nothing is overridden.
     overrides: { type: Object, default: () => ({}) },
-    // Forwarded to AgentSettingField — required for wstemplate widgets.
+    // The agent's full actions map (values + schema). Conditions address
+    // fields by their full path (e.g. "character_creation.config.fast") and
+    // may point into a different action, so the whole map is needed.
+    agentActions: { type: Object, required: true },
+    // Full sparse overlay {actions: {...}} — a condition's source field may
+    // itself be overridden for this scene.
+    overlay: { type: Object, default: () => ({ actions: {} }) },
+    // Forwarded to UxField — required for wstemplate widgets.
     templates: { type: Object, default: null },
-    // Forwarded to AgentSettingField — required for unified_api_key widgets.
+    // Forwarded to UxField — required for unified_api_key widgets.
     appConfig: { type: Object, default: null },
   },
   emits: ['update:overrides', 'change'],
   computed: {
     hasAnyOverridable() {
-      return actionHasOverridable(this.actionSchema);
+      return actionHasOverridable(this.actionSchema, this.conditionCtx);
+    },
+    conditionCtx() {
+      return { actions: this.agentActions, overlay: this.overlay, overrides: this.overrides };
+    },
+    actionConditionMet() {
+      return effectiveConditionMet(this.actionSchema?.condition, this.agentActions, this.overlay);
     },
     enabledOverrideActive() {
-      return this.overrides && this.overrides.enabled !== undefined && this.overrides.enabled !== null;
+      return hasEnabledOverride(this.overrides);
     },
     effectiveEnabled() {
       if (this.enabledOverrideActive) return this.overrides.enabled;
@@ -103,6 +117,9 @@ export default {
     },
   },
   methods: {
+    fieldConditionMet(actionConfig) {
+      return effectiveConditionMet(actionConfig.condition, this.agentActions, this.overlay);
+    },
     isOverrideActive(configKey) {
       return !!(this.overrides?.config && this.overrides.config[configKey]);
     },
@@ -175,9 +192,9 @@ export default {
 </script>
 
 <style scoped>
-/* Same pointer-events fix as inside AgentSettingField — needed here for the
+/* Same pointer-events fix as inside UxField — needed here for the
    container-level enabled override checkbox, which is rendered directly in
-   this template (not via AgentSettingField). */
+   this template (not via UxField). */
 :deep(.v-input--disabled) .v-input__prepend,
 :deep(.v-input--readonly) .v-input__prepend {
   pointer-events: auto;

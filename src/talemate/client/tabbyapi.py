@@ -1,33 +1,33 @@
 import random
 import json
 import httpx
-import pydantic
-import structlog
+from talemate.client.api_handles import (
+    ApiHandlesPromptTemplateConfig,
+    ApiHandlesPromptTemplateMixin,
+    api_handles_prompt_template_extra_fields,
+)
 from talemate.client.base import ClientBase, ExtraField, CommonDefaults
 from talemate.client.registry import register
 from talemate.client.utils import urljoin
 from talemate.config.schema import Client as BaseClientConfig
 
-log = structlog.get_logger("talemate.client.tabbyapi")
-
 EXPERIMENTAL_DESCRIPTION = """Use this client to use all of TabbyAPI's features. Note on EXL3 models: They seem to be very sensitive to `presence_penalty`, `frequency_penalty` and `repetition_penalty_range`. If you're getting gibberish output, try creating a new inference parameter group and turn those off or way down."""
 
 
-class Defaults(CommonDefaults, pydantic.BaseModel):
+class Defaults(CommonDefaults, ApiHandlesPromptTemplateConfig):
     api_url: str = "http://localhost:5000/v1"
     api_key: str = ""
     max_token_length: int = 8192
     model: str = ""
-    api_handles_prompt_template: bool = False
     double_coercion: str = None
 
 
-class ClientConfig(BaseClientConfig):
-    api_handles_prompt_template: bool = False
+class ClientConfig(ApiHandlesPromptTemplateConfig, BaseClientConfig):
+    pass
 
 
 @register()
-class TabbyAPIClient(ClientBase):
+class TabbyAPIClient(ApiHandlesPromptTemplateMixin, ClientBase):
     client_type = "tabbyapi"
     conversation_retries = 0
     config_cls = ClientConfig
@@ -41,19 +41,9 @@ class TabbyAPIClient(ClientBase):
         manual_model: bool = False
         defaults: Defaults = Defaults()
         self_hosted: bool = True
-        extra_fields: dict[str, ExtraField] = {
-            "api_handles_prompt_template": ExtraField(
-                name="api_handles_prompt_template",
-                type="bool",
-                label="API handles prompt template (chat/completions)",
-                required=False,
-                description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored. This is not recommended and should only be used if the API does not support the `completions` endpoint or you don't know which prompt template to use.",
-            )
-        }
-
-    @property
-    def api_handles_prompt_template(self) -> bool:
-        return self.client_config.api_handles_prompt_template
+        extra_fields: dict[str, ExtraField] = api_handles_prompt_template_extra_fields(
+            description="The API handles the prompt template, meaning your choice in the UI for the prompt template below will be ignored. This is not recommended and should only be used if the API does not support the `completions` endpoint or you don't know which prompt template to use.",
+        )
 
     @property
     def experimental(self):
@@ -87,11 +77,6 @@ class TabbyAPIClient(ClientBase):
             "temperature",
         ]
 
-    def prompt_template(self, system_message: str, prompt: str):
-        if not self.api_handles_prompt_template:
-            return super().prompt_template(system_message, prompt)
-        return prompt
-
     async def get_model_name(self):
         url = urljoin(self.api_url, "model")
         headers = {
@@ -124,25 +109,11 @@ class TabbyAPIClient(ClientBase):
                 parameters=parameters,
             )
 
-            if self.can_be_coerced:
-                prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
-            else:
-                coercion_prompt = None
-
-            messages = [
-                {"role": "system", "content": self.get_system_message(kind)},
-                {"role": "user", "content": prompt.strip()},
-            ]
+            messages, coercion_prompt = self.chat_messages_for_coercion(prompt, kind)
 
             if coercion_prompt:
-                log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
-                messages.append(
-                    {
-                        "role": "assistant",
-                        "content": coercion_prompt.strip(),
-                        "prefix": True,
-                    }
-                )
+                # TabbyAPI continues the pre-fill via its prefix flag
+                messages[-1]["prefix"] = True
 
             payload = {
                 "model": self.model_name,

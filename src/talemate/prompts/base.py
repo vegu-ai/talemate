@@ -16,7 +16,7 @@ import re
 import uuid
 from contextvars import ContextVar
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 from enum import Enum
 
 import jinja2
@@ -1067,7 +1067,9 @@ class Prompt(pydantic.BaseModel):
             return ""
         return iso8601_diff_to_human(iso8601_time, scene.ts)
 
-    def system_time(self, format: str = "full") -> str:
+    def system_time(
+        self, format: Literal["full", "date", "time", "iso", "datetime"] = "full"
+    ) -> str:
         """
         Returns the current system time in a clear, LLM-friendly format.
 
@@ -1084,18 +1086,21 @@ class Prompt(pydantic.BaseModel):
         """
         now = datetime.now()
 
-        if format == "full":
-            return now.strftime("%A, %B %-d, %Y at %-I:%M %p")
-        elif format == "date":
-            return now.strftime("%B %-d, %Y")
+        # %-d / %-I are glibc-only and raise ValueError on Windows, so the
+        # unpadded day and 12-hour clock are built from datetime attributes.
+        hour12 = now.hour % 12 or 12
+        time_str = f"{hour12}:{now:%M} {now:%p}"
+
+        if format == "date":
+            return f"{now:%B} {now.day}, {now.year}"
         elif format == "time":
-            return now.strftime("%-I:%M %p")
+            return time_str
         elif format == "iso":
             return now.strftime("%Y-%m-%dT%H:%M:%S")
         elif format == "datetime":
             return now.strftime("%Y-%m-%d %H:%M:%S")
         else:
-            return now.strftime("%A, %B %-d, %Y at %-I:%M %p")
+            return f"{now:%A}, {now:%B} {now.day}, {now.year} at {time_str}"
 
     def text_to_chunks(self, text: str, chunk_size: int = 512) -> list[str]:
         """

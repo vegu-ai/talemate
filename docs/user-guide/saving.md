@@ -12,7 +12,7 @@ Saves can also serve as **restore points**. By designating one save file as the 
 
 To save while looking at the scene, click the :material-content-save: **Save** button on the right of the [Scene tools](/talemate/user-guide/scenario-tools) toolbar.
 
-![Scene save](/talemate/img/0.26.0/scene-save.png)
+![Scene save](/talemate/img/0.39.0/scene-save.png)
 
 ## Saving from the world editor
 
@@ -47,4 +47,4 @@ These additional save files can be set as [restore points](/talemate/user-guide/
 
 You can create a new copy of a scene from any message in the scene by clicking the :material-source-fork: **Fork** button underneath the message.
 
-All progress after the target message will be removed and a new scene will be created with the previous messages.
+This opens the [timeline](/talemate/user-guide/restoring-scenes) positioned at that message's revision, where you can preview the scene state and fork it to a new save.

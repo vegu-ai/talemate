@@ -236,6 +236,20 @@ class TestDialogueExamples:
         assert c.example_dialogue == []
 
     @pytest.mark.asyncio
+    async def test_add_example_dialogue_replaces_smart_quotes(self):
+        c = Character(name="Bob")
+        await c.add_example_dialogue("Bob: “Hello!” He waves. ‘Really.’")
+        assert c.example_dialogue == ["Bob: \"Hello!\" He waves. 'Really.'"]
+
+    @pytest.mark.asyncio
+    async def test_set_example_dialogue_item_replaces_smart_quotes(
+        self, make_character
+    ):
+        c = make_character()
+        await c.set_example_dialogue_item(0, "Alice: “New line”")
+        assert c.example_dialogue[0] == 'Alice: "New line"'
+
+    @pytest.mark.asyncio
     async def test_set_example_dialogue_item_replaces_at_index(self, make_character):
         c = make_character()
         await c.set_example_dialogue_item(0, "Alice: New line")

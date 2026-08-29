@@ -8,11 +8,12 @@ To access the Visuals tab, open the :material-earth-box: **World Editor** and na
 
 ## Overview
 
-The Visuals tab is organized into three sub-tabs:
+The Visuals tab is organized into four sub-tabs:
 
 - **:material-image-frame: Cover Image** - Manage full character reference images
 - **:material-account-circle: Portrait** - Manage character portraits used in dialogue
 - **:material-format-list-bulleted-type: Rules** - Define permanent visual traits for image generation
+- **:material-auto-fix: Prompt Finalization** - Post-process image prompts involving this character
 
 ## Cover Image
 
@@ -172,6 +173,18 @@ Visual rules are included in every image generation prompt for this character, e
 - Temporary states like injuries or emotions
 
 Visual rules are saved automatically when you click outside the text field.
+
+## Prompt Finalization
+
+The Prompt Finalization tab holds a table of post-processing actions that rewrite the image generation prompt whenever this character is the subject of the image. They run right before the prompt is sent to the image generation backend, after the visualizer agent's own [prompt finalization actions](/talemate/user-guide/agents/visualizer/settings/#prompt-finalization) — so character-specific fixes always get the last word.
+
+Each action works exactly like the agent-level ones: exact, fuzzy, or regex match and replace, or an AI instruction applied to the whole prompt. See the [visualizer agent documentation](/talemate/user-guide/agents/visualizer/settings/#prompt-finalization) for a description of the available modes and options.
+
+**Example uses:**
+
+- Replace a keyword the prompt generator keeps getting wrong for this character ("red hair" → "auburn hair")
+- Remove a recurring unwanted keyword from prompts about this character
+- Enforce phrasing that your image model responds to better for this character
 
 ## Prerequisites
 

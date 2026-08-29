@@ -14,6 +14,18 @@ __all__ = [
 log = structlog.get_logger("talemate.agents.visual.style")
 
 
+def _part_from_style(template: VisualStyle) -> VisualPromptPart:
+    """Build a VisualPromptPart from a style template, mapping the
+    template's keyword lists onto the part's raw keyword fields."""
+    return VisualPromptPart(
+        positive_keywords_raw=template.positive_keywords,
+        negative_keywords_raw=template.negative_keywords,
+        positive_descriptive=template.positive_descriptive,
+        negative_descriptive=template.negative_descriptive,
+        instructions=template.instructions,
+    )
+
+
 class StyleMixin:
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
@@ -121,11 +133,7 @@ class StyleMixin:
         if not template_id:
             return None
 
-        try:
-            group_uid, template_uid = template_id.split("__")
-        except ValueError:
-            return None
-        return templates.find_template(group_uid, template_uid)
+        return templates.find_template_by_id(template_id)
 
     def _get_current_art_style_name(self) -> str | None:
         """Get the name of the currently active art style template"""
@@ -150,11 +158,26 @@ class StyleMixin:
     def apply_style(
         self, prompt: VisualPrompt, template_id: str
     ) -> VisualPromptPart | None:
-        template = self.style_template(template_id)
-        part = None
-        if template:
-            part = VisualPromptPart(**template.model_dump())
-            prompt.parts.insert(0, part)
+        """Apply a specific style template (by `group_uid__template_uid`) to
+        the prompt, inserting it at the front of the part list.
+
+        Returns the created part, or None if the template id is malformed or
+        the template was not found (prompt left unchanged).
+        """
+        scene = getattr(self, "scene", None)
+        if not scene or not template_id:
+            return None
+
+        manager: WorldStateManager = scene.world_state_manager
+        templates: Collection = manager.template_collection
+
+        template = templates.find_template_by_id(template_id)
+        if not isinstance(template, VisualStyle):
+            # unknown id, or a valid id pointing at a non-visual template
+            return None
+
+        part = _part_from_style(template)
+        prompt.parts.insert(0, part)
         return part
 
     def apply_styles(self, prompt: VisualPrompt, vis_type: VIS_TYPE) -> VisualPrompt:
@@ -170,27 +193,9 @@ class StyleMixin:
         )
 
         if template_subject_style:
-            prompt.parts.insert(
-                0,
-                VisualPromptPart(
-                    positive_keywords_raw=template_subject_style.positive_keywords,
-                    negative_keywords_raw=template_subject_style.negative_keywords,
-                    positive_descriptive=template_subject_style.positive_descriptive,
-                    negative_descriptive=template_subject_style.negative_descriptive,
-                    instructions=template_subject_style.instructions,
-                ),
-            )
+            prompt.parts.insert(0, _part_from_style(template_subject_style))
 
         if template_art_style:
-            prompt.parts.insert(
-                0,
-                VisualPromptPart(
-                    positive_keywords_raw=template_art_style.positive_keywords,
-                    negative_keywords_raw=template_art_style.negative_keywords,
-                    positive_descriptive=template_art_style.positive_descriptive,
-                    negative_descriptive=template_art_style.negative_descriptive,
-                    instructions=template_art_style.instructions,
-                ),
-            )
+            prompt.parts.insert(0, _part_from_style(template_art_style))
 
         return prompt

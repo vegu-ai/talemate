@@ -278,10 +278,11 @@
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="visuals">
                                             <WorldStateManagerCharacterVisuals
-                                            ref="visuals" 
+                                            ref="visuals"
                                             @require-scene-save="$emit('require-scene-save')"
                                             :character="character"
                                             :scene="scene"
+                                            :agent-status="agentStatus"
                                             :visual-agent-ready="visualAgentReady"
                                             :image-edit-available="imageEditAvailable"
                                             :image-create-available="imageCreateAvailable" />
@@ -636,6 +637,11 @@ export default {
                 return;
             }
             else if (message.action === 'character_details') {
+                // saves re-emit details for the saved character; when a save
+                // lands right as a different character is selected (e.g. a
+                // debounced editor flush on switch), the refresh must not
+                // steal the editor pane from the new selection
+                if (this.selected && message.data.name !== this.selected) return;
                 this.character = message.data;
                 this.$emit('selected-character', this.character)
             } else if(message.action === 'character_deleted') {

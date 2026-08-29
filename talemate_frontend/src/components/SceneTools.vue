@@ -3,19 +3,23 @@
     <v-sheet color="transparent" class="mb-2">
         <v-spacer></v-spacer>
         <!-- quick settings as v-chips -->
-        <v-chip size="x-small" v-for="(option, index) in quickSettings" :key="index" @click="toggleQuickSetting(option.value)"
-            :color="option.status() === true ? 'success' : 'grey'"
-            :disabled="appBusy || !appReady" class="ma-1">
-            <v-icon class="mr-1">{{ option.icon }}</v-icon>
-            {{ option.title }}
-            <v-icon class="ml-1" v-if="option.status() === true">mdi-check-circle-outline</v-icon>
-            <v-icon class="ml-1" v-else-if="option.status() === false">mdi-circle-outline</v-icon>
-            <v-tooltip v-else :text="option.status()">
-                <template v-slot:activator="{ props }">
-                    <v-icon class="ml-1" v-bind="props" color="orange">mdi-alert-outline</v-icon>
-                </template>
-            </v-tooltip>
-        </v-chip>
+        <v-tooltip v-for="(option, index) in visibleQuickSettings" :key="index" :text="option.description" location="top">
+            <template v-slot:activator="{ props: tooltipProps }">
+                <v-chip size="x-small" v-bind="tooltipProps" @click="toggleQuickSetting(option.value)"
+                    :color="option.status() === true ? 'success' : 'grey'"
+                    :disabled="appBusy || !appReady" class="ma-1">
+                    <v-icon class="mr-1">{{ option.icon }}</v-icon>
+                    {{ option.title }}
+                    <v-icon class="ml-1" v-if="option.status() === true">mdi-check-circle-outline</v-icon>
+                    <v-icon class="ml-1" v-else-if="option.status() === false">mdi-circle-outline</v-icon>
+                    <v-tooltip v-else :text="option.status()">
+                        <template v-slot:activator="{ props }">
+                            <v-icon class="ml-1" v-bind="props" color="orange">mdi-alert-outline</v-icon>
+                        </template>
+                    </v-tooltip>
+                </v-chip>
+            </template>
+        </v-tooltip>
 
         <SceneToolsSettings :app-busy="appBusy" :app-ready="appReady" />
 
@@ -224,6 +228,7 @@ import SceneToolsSave from './SceneToolsSave.vue';
 import SceneToolsTime from './SceneToolsTime.vue';
 import RequestInput from './RequestInput.vue';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
+
 export default {
 
     name: 'SceneTools',
@@ -254,6 +259,9 @@ export default {
         agentStatus: Object,
         scene: Object,
         visualAgentReady: Boolean,
+        // most recent message-attached background asset the "Immersive"
+        // chip promotes when the scene has no backdrop set yet
+        sceneBackdropCandidate: String,
         audioPlayedForMessageId: [Number, String],
     },
     computed: {
@@ -287,7 +295,19 @@ export default {
         ttsAgentEnabled() {
             const ttsAgent = this.agentStatus?.tts;
             return ttsAgent && ttsAgent.available;
-        }
+        },
+
+        sceneBackdropAssetId() {
+            return this.scene?.data?.assets?.backdrop || null;
+        },
+
+        immersiveActive() {
+            return !!(this.sceneBackdropAssetId && this.scene?.data?.assets?.backdrop_enabled);
+        },
+
+        visibleQuickSettings() {
+            return this.quickSettings.filter(option => !option.condition || option.condition());
+        },
     },
     data() {
         return {
@@ -312,6 +332,7 @@ export default {
             quickSettings: [
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
+                {"value": "toggleImmersive", "title": "Immersive", "icon": "mdi-image-area", "description": "Render the scene backdrop image behind the scene", "condition": () => { return !!(this.sceneBackdropAssetId || this.sceneBackdropCandidate) }, "status": () => { return this.immersiveActive }},
             ],
         }
     },
@@ -353,7 +374,24 @@ export default {
             } else if (setting == "toggleAutoProgress") {
                 this.autoProgress = !this.autoProgress;
                 this.getWebsocket().send(JSON.stringify({ type: 'quick_settings', action: 'set', setting: 'auto_progress', value: this.autoProgress }));
+            } else if (setting == "toggleImmersive") {
+                this.toggleImmersive();
             }
+        },
+
+        toggleImmersive() {
+            // the scene owns the backdrop: toggle rendering when one is set,
+            // otherwise promote the most recent scene background image
+            const message = { type: 'scene_assets', action: 'set_scene_backdrop' };
+            if (this.sceneBackdropAssetId) {
+                message.enabled = !this.immersiveActive;
+            } else if (this.sceneBackdropCandidate) {
+                message.asset_id = this.sceneBackdropCandidate;
+                message.enabled = true;
+            } else {
+                return;
+            }
+            this.getWebsocket().send(JSON.stringify(message));
         },
 
         openWorldStateManager(tab, sub1, sub2, sub3) {

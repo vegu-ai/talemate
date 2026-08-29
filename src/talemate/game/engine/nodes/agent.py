@@ -152,19 +152,27 @@ class AgentSettingsNode(Node):
 @register("agents/ToggleAgentAction")
 class ToggleAgentAction(Node):
     """
-    Allows disabling or enabling an agent action
+    Allows disabling or enabling an agent action that can be disabled
+
+    Raises an error if the agent or the action cannot be found, or if the
+    action is one that cannot be disabled — those are always enabled and
+    are not togglable from a graph.
 
     Inputs:
 
-    - agent: str,agent
-    - action_name: str
-    - enabled: bool
+    - state: The graph state
+    - agent: The agent (instance or name) to toggle the action on
+    - action_name: The name of the action to toggle
+    - enabled: Whether to enable or disable the action
 
     Outputs:
 
-    - agent: agent
-    - action_name: str
-    - enabled: bool
+    - state: The state input, passed through
+    - agent: The resolved agent instance
+    - action_name: The action name, passed through
+    - enabled: The action's effective enabled state after the write — when a
+      scene override is active it takes the write, so this reflects the
+      override rather than the agent's global setting
     """
 
     class Fields:
@@ -201,6 +209,7 @@ class ToggleAgentAction(Node):
         self.set_property("action_name", "")
         self.set_property("enabled", True)
 
+        self.add_output("state")
         self.add_output("agent", socket_type="agent")
         self.add_output("action_name", socket_type="str")
         self.add_output("enabled", socket_type="bool")
@@ -224,20 +233,53 @@ class ToggleAgentAction(Node):
             raise InputValueError(
                 self,
                 "action_name",
-                f"Could not find action {action_name} in agent {agent}",
+                f"Could not find action {action_name} in agent {agent.agent_type}",
+            )
+
+        if not action.can_be_disabled:
+            # The write would be refused, so say so rather than pass the graph
+            # through as if the action had been toggled. Matches how this node
+            # already reports an unknown agent or action.
+            raise InputValueError(
+                self,
+                "action_name",
+                f"Action {action_name} on agent {agent.agent_type} is always "
+                "enabled and cannot be toggled",
             )
 
         agent.write_enabled(action_name, enabled)
 
         self.set_output_values(
-            {"agent": agent, "action_name": action_name, "enabled": enabled}
+            {
+                "state": self.get_input_value("state"),
+                "agent": agent,
+                "action_name": action_name,
+                # Read back through the resolver rather than echoing the input:
+                # when a scene override is active it takes the write, so this
+                # reflects the override rather than the agent's global setting.
+                "enabled": agent.resolve_enabled(action_name),
+            }
         )
 
 
 @register("agents/CallAgentFunction")
 class CallAgentFunction(Node):
     """
-    Call an agent function
+    Call a function on an agent and return its result.
+
+    The agent can be given as an agent instance or by name. The function is
+    looked up on the agent by name and called with the given arguments as
+    keyword arguments (coroutine functions are awaited).
+
+    Inputs:
+
+    - agent: The agent (instance or name) to call the function on
+    - function_name: The name of the function to call on the agent
+    - arguments: Dict of keyword arguments to pass to the function
+
+    Outputs:
+
+    - result: The return value of the function call
     """
 
     class Fields:
@@ -319,7 +361,21 @@ class CallAgentFunction(Node):
 @register("agents/CallAgentFunctionConditional")
 class CallAgentFunctionConditional(CallAgentFunction):
     """
-    Call an agent function with state
+    Call a function on an agent and return its result.
+
+    Provides a required `state` input causing the node to only run when a state is provided
+
+    Inputs:
+
+    - state: The graph state
+    - agent: The agent (instance or name) to call the function on
+    - function_name: The name of the function to call on the agent
+    - arguments: Dict of keyword arguments to pass to the function
+
+    Outputs:
+
+    - state: The state input, passed through
+    - result: The return value of the function call
     """
 
     def __init__(self, title="Call Agent Function (Conditional)", **kwargs):
@@ -327,6 +383,7 @@ class CallAgentFunctionConditional(CallAgentFunction):
 
     def setup(self):
         self.add_input("state")
+        self.add_output("state")
         super().setup()
 
     async def run(self, state: GraphState):
@@ -337,7 +394,18 @@ class CallAgentFunctionConditional(CallAgentFunction):
 @register("agents/GetAgent")
 class GetAgent(Node):
     """
-    Get an agent instance
+    Get an agent instance by name.
+
+    Does nothing if no agent name is set; raises an error if the agent cannot
+    be found.
+
+    Properties:
+
+    - agent_name: The name of the agent to get
+
+    Outputs:
+
+    - agent: The agent instance
     """
 
     class Fields:
@@ -345,7 +413,7 @@ class GetAgent(Node):
             name="agent_name",
             type="str",
             default="",
-            description="The name of the agent to get the client for",
+            description="The name of the agent to get",
             choices=[],
             generate_choices=lambda: get_agent_types(),
         )
@@ -439,9 +507,30 @@ class AgentStateManipulation(StateManipulation):
 @register("agents/SetAgentState")
 class SetAgentState(AgentStateManipulation, ConditionalSetState):
     """
-    Set an agent state variable
+    Set a variable in an agent's state.
+
+    The `scene` scope writes agent state stored with the scene, the `context`
+    scope writes to the agent's context state.
 
     Provides a required `state` input causing the node to only run when a state is provided
+
+    Inputs:
+
+    - state: The graph state
+    - name: the name of the variable to set
+    - value: the value to set
+    - agent: the agent (instance or name) to set the state on
+
+    Properties:
+
+    - scope: which scope to write the variable to (scene or context)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - name: the name that was set
+    - value: the value that was set
+    - scope: the scope that was used
     """
 
     @pydantic.computed_field(description="Node style")
@@ -460,7 +549,26 @@ class SetAgentState(AgentStateManipulation, ConditionalSetState):
 @register("agents/GetAgentState")
 class GetAgentState(AgentStateManipulation, GetState):
     """
-    Get an agent state variable
+    Get a variable from an agent's state.
+
+    The `scene` scope reads agent state stored with the scene, the `context`
+    scope reads the agent's context state.
+
+    Inputs:
+
+    - name: the name of the variable to get
+    - default: value to return if the variable is not set (optional)
+    - agent: the agent (instance or name) to read the state from
+
+    Properties:
+
+    - scope: which scope to read the variable from (scene or context)
+
+    Outputs:
+
+    - name: the name that was retrieved
+    - value: the value that was retrieved
+    - scope: the scope that was retrieved
     """
 
     @pydantic.computed_field(description="Node style")
@@ -479,9 +587,29 @@ class GetAgentState(AgentStateManipulation, GetState):
 @register("agents/UnsetAgentState")
 class UnsetAgentState(AgentStateManipulation, ConditionalUnsetState):
     """
-    Unset an agent state variable
+    Unset a variable in an agent's state.
+
+    The `scene` scope removes agent state stored with the scene, the `context`
+    scope removes from the agent's context state.
 
     Provides a required `state` input causing the node to only run when a state is provided
+
+    Inputs:
+
+    - state: The graph state
+    - name: the name of the variable to unset
+    - agent: the agent (instance or name) to unset the state on
+
+    Properties:
+
+    - scope: which scope to remove the variable from (scene or context)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - name: the name that was unset
+    - value: the value that was unset
+    - scope: the scope that was used
     """
 
     @pydantic.computed_field(description="Node style")
@@ -511,7 +639,32 @@ class HasAgentState(AgentStateManipulation, HasState):
 @register("agents/CounterAgentState")
 class CounterAgentState(AgentStateManipulation, ConditionalCounterState):
     """
-    Increment or decrement an agent state variable
+    Increment a numeric variable in an agent's state and return the new value.
+
+    Provides a required `state` input causing the node to only run when a state is provided
+
+    Inputs:
+
+    - state: The graph state
+    - name: The name of the counter variable
+    - reset: If true, the value will be reset to 0 (optional)
+    - reset_cap: If set, the counter resets to 0 once it reaches this value (optional)
+    - agent: The agent (instance or name) whose state holds the counter
+
+    Properties:
+
+    - increment: The amount to increment the value by
+    - scope: Which scope holds the counter (scene or context)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - name: The name that was used
+    - value: The new value
+    - scope: The scope that was used
+    - reset: Whether the counter was reset
+    - reset_cap: The reset cap that was used
+    - new_cycle: True if the counter was at 0 before this run
     """
 
     @pydantic.computed_field(description="Node style")
@@ -530,8 +683,20 @@ class CounterAgentState(AgentStateManipulation, ConditionalCounterState):
 @register("agents/DynamicInstruction")
 class DynamicInstruction(Node):
     """
-    Dynamic instruction object to use for instruction injection
-    in event handlers
+    Create a dynamic instruction object to use for instruction injection
+    in event handlers.
+
+    A header is required at runtime (raises an error if missing). List content
+    is joined with newlines.
+
+    Inputs:
+
+    - header: The header (title) of the dynamic instruction
+    - content: The content of the dynamic instruction (string or list of strings)
+
+    Outputs:
+
+    - dynamic_instruction: The dynamic instruction object
     """
 
     class Fields:

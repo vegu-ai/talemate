@@ -249,12 +249,14 @@ class GetAssets(Node):
     """
     Get multiple assets by their IDs.
 
+    Asset IDs that don't exist are skipped rather than raising an error.
+
     Inputs:
     - asset_ids: list of asset IDs
 
     Outputs:
     - assets: list of asset objects
-    - asset_ids: list of asset IDs (passed through)
+    - asset_ids: list of asset IDs that were found (missing assets are skipped)
     - asset_count: number of assets retrieved
     """
 
@@ -532,6 +534,8 @@ class SearchAssets(Node):
     - character_name: character name to filter by (case insensitive)
     - tags: list of tags to filter by (case insensitive)
     - reference_vis_types: list of vis_types to filter by. Only return assets that have at least one matching vis_type in their reference list
+
+    Properties:
     - tag_match_mode: how to match tags - "all" (must have all), "any" (must have at least one), "none" (must not have any)
 
     Outputs:
@@ -723,6 +727,7 @@ class MakeAssetMeta(Node):
     - sampler_settings: sampler settings object
     - reference_assets: list of reference asset IDs
     - tags: list of tags
+    - analysis: analysis prompt text
     - reference: list of vis_types that this asset may be used as a reference for
 
     Outputs:
@@ -737,6 +742,7 @@ class MakeAssetMeta(Node):
     - sampler_settings: sampler settings object (passed through)
     - reference_assets: list of reference asset IDs (passed through)
     - tags: list of tags (passed through)
+    - analysis: analysis prompt text (passed through)
     - reference: list of vis_types that this asset may be used as a reference for (passed through)
     """
 
@@ -984,6 +990,7 @@ class UnpackAssetMeta(Node):
     - sampler_settings: sampler settings object
     - reference_assets: list of reference asset IDs
     - tags: list of tags
+    - analysis: analysis prompt text
     - reference: list of vis_types that this asset may be used as a reference for
     """
 
@@ -1054,17 +1061,37 @@ class MakeAssetAttachmentContext(Node):
     This controls how assets are automatically attached to messages when created.
 
     Inputs:
+    - asset_name: name to save the asset under
+    - tags: list of tags to add to the asset
     - allow_auto_attach: whether to allow automatic attachment of assets to messages
     - allow_override: whether to allow overriding existing message assets
     - delete_old: whether to delete the old asset when replacing a message's asset
     - message_ids: list of specific message IDs to attach to (empty = auto-detect last message)
+    - scene_cover: whether to set the scene cover image
+    - character_cover: whether to set the character cover image
+    - override_scene_cover: whether to override an existing scene cover image (requires scene_cover=true)
+    - override_character_cover: whether to override an existing character cover image (requires character_cover=true)
+    - default_avatar: whether to set the default avatar image
+    - current_avatar: whether to set the current avatar image
+    - override_default_avatar: whether to override the default avatar image (requires default_avatar=true)
+    - override_current_avatar: whether to override the current avatar image (requires current_avatar=true)
 
     Outputs:
     - context: the asset attachment context object
+    - asset_name: the asset name (passed through)
+    - tags: list of tags (passed through)
     - allow_auto_attach: whether to allow automatic attachment (passed through)
     - allow_override: whether to allow overriding existing assets (passed through)
     - delete_old: whether to delete old assets (passed through)
     - message_ids: list of message IDs (passed through)
+    - scene_cover: scene cover flag (passed through)
+    - character_cover: character cover flag (passed through)
+    - override_scene_cover: scene cover override flag (passed through)
+    - override_character_cover: character cover override flag (passed through)
+    - default_avatar: default avatar flag (passed through)
+    - current_avatar: current avatar flag (passed through)
+    - override_default_avatar: default avatar override flag (passed through)
+    - override_current_avatar: current avatar override flag (passed through)
 
     Note:
     - When message_ids is empty, assets will be attached to the most recent appropriate message
@@ -1277,7 +1304,29 @@ class MakeAssetAttachmentContext(Node):
 @register("assets/SetCoverImage")
 class SetCoverImage(Node):
     """
-    Set the cover image for a scene or character.
+    Set the cover image for the scene and/or a character from an existing scene asset.
+
+    If `set_on_scene` is true the asset becomes the scene cover image; if a
+    character is provided the asset becomes that character's cover image. The
+    override flags control whether an existing cover image is replaced.
+
+    Inputs:
+
+    - state: The graph state
+    - asset_id: The id of the asset to use as the cover image
+    - set_on_scene: Whether to set the cover image on the scene (optional)
+    - override_scene: Whether to override an existing scene cover image (optional)
+    - override_character: Whether to override an existing character cover image (optional)
+    - character: The character to set the cover image for (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - asset_id: The asset id, passed through
+    - set_on_scene: The set_on_scene input, passed through
+    - override_scene: The override_scene input, passed through
+    - override_character: The override_character input, passed through
+    - character: The character input, passed through
     """
 
     @pydantic.computed_field(description="Node style")
@@ -1458,18 +1507,15 @@ class SetAvatarImage(Node):
 @register("assets/UpdateMessageAsset")
 class UpdateMessageAsset(Node):
     """
-    Update the asset_id and asset_type of messages in the scene history
+    Update the asset_id of messages in the scene history
+
+    Messages that aren't found are skipped rather than raising an error.
 
     Inputs:
 
     - state: graph state (required)
     - message_ids: List of message IDs to update
     - asset_id: The new asset ID
-    - asset_type: The type of asset (e.g., "avatar")
-
-    Properties:
-
-    - asset_type: The type of asset (predefined choices)
 
     Outputs:
 
@@ -1477,7 +1523,6 @@ class UpdateMessageAsset(Node):
     - messages: List of updated message objects
     - message_ids: List of message IDs (passthrough)
     - asset_id: The asset ID (passthrough)
-    - asset_type: The asset type (passthrough)
     """
 
     @pydantic.computed_field(description="Node style")
@@ -1489,15 +1534,6 @@ class UpdateMessageAsset(Node):
             icon="F0287",
         )
 
-    class Fields:
-        asset_type = PropertyField(
-            name="asset_type",
-            description="The type of asset",
-            type="str",
-            default="avatar",
-            choices=["avatar", "card", "scene_illustration", "__keep__"],
-        )
-
     def __init__(self, title="Update Message Assets", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -1505,8 +1541,6 @@ class UpdateMessageAsset(Node):
         self.add_input("state")
         self.add_input("message_ids", socket_type="list", optional=True)
         self.add_input("asset_id", socket_type="str")
-
-        self.set_property("asset_type", "avatar")
 
         self.add_output("state")
         self.add_output("messages", socket_type="list")

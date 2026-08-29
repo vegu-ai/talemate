@@ -1,79 +1,87 @@
 <template>
     <!-- text -->
     <v-text-field
-    v-if="type === 'text' && !choicesExist" 
-    v-model="internalValue" 
-    :label="label" 
-    :hint="description" 
+    v-if="type === 'text' && !choicesExist"
+    v-model="internalValue"
+    :label="label"
+    :hint="description"
     :rules="internalRules"
     :required="required"
-    class="mt-3"
+    :density="density"
+    :class="marginClass"
     ></v-text-field>
 
     <!-- blob -->
-    <v-textarea 
-    v-else-if="type === 'blob'" 
-    v-model="internalValue" 
-    :label="label" 
-    :hint="description" 
+    <v-textarea
+    v-else-if="type === 'blob'"
+    v-model="internalValue"
+    :label="label"
+    :hint="description"
     :rules="internalRules"
     :required="required"
-    rows="5"
-    class="mt-3"
+    :rows="rows || 5"
+    :max-rows="maxRows"
+    :auto-grow="autoGrow"
+    :density="density"
+    :class="marginClass"
     ></v-textarea>
 
     <!-- select -->
-    <v-select 
-    v-else-if="type === 'text' && choicesExist" 
-    v-model="internalValue" 
-    :items="choices" 
-    :label="label" 
-    :hint="description" 
-    item-title="label" 
-    item-value="value" 
+    <v-select
+    v-else-if="type === 'text' && choicesExist"
+    v-model="internalValue"
+    :items="choices"
+    :label="label"
+    :hint="description"
+    item-title="label"
+    item-value="value"
     :rules="internalRules"
     :required="required"
-    class="mt-3"
+    :density="density"
+    :class="marginClass"
     ></v-select>
 
     <!-- flags -->
-    <v-select 
+    <v-select
     v-else-if="type === 'flags' && choicesExist"
-    v-model="internalValue" 
-    :items="choices" 
-    :label="label" 
-    :hint="description" 
-    item-title="label" 
+    v-model="internalValue"
+    :items="choices"
+    :label="label"
+    :hint="description"
+    item-title="label"
     item-subtitle="help"
     multiple
     chips
-    item-value="value" 
+    item-value="value"
     :rules="internalRules"
     :required="required"
-    class="mt-3"
+    :density="density"
+    :class="marginClass"
     >
     </v-select>
 
     <!-- number -->
-    <v-slider 
-    v-if="type === 'number'" 
-    v-model="internalValue" 
-    :label="label" 
-    :hint="description" 
-    :min="min" 
-    :max="max" 
-    :step="step || 1" 
-    color="primary" 
+    <v-slider
+    v-if="type === 'number'"
+    v-model="internalValue"
+    :label="label"
+    :hint="description"
+    :min="min"
+    :max="max"
+    :step="step || 1"
+    color="primary"
     thumb-label="always"
-    class="mt-3"
+    :density="density"
+    :class="marginClass"
     ></v-slider>
 
     <!-- boolean -->
-    <v-checkbox 
-    v-if="type === 'bool'" 
-    v-model="internalValue" 
-    :label="label" 
-    :messages="description" 
+    <v-checkbox
+    v-if="type === 'bool'"
+    v-model="internalValue"
+    :label="label"
+    :messages="description"
+    :density="density"
     color="primary">
     </v-checkbox>
 </template>
@@ -128,11 +136,32 @@ export default {
         rules: {
             type: Array,
             required: false
+        },
+        density: {
+            type: String,
+            required: false,
+            default: undefined
+        },
+        rows: {
+            type: [Number, String],
+            required: false
+        },
+        maxRows: {
+            type: [Number, String],
+            required: false
+        },
+        autoGrow: {
+            type: Boolean,
+            required: false,
+            default: false
         }
     },
     computed: {
         choicesExist() {
             return Array.isArray(this.choices) && this.choices.length > 0
+        },
+        marginClass() {
+            return this.density === 'compact' ? 'mt-1' : 'mt-3'
         },
         internalRules() {
             if (this.rules && Array.isArray(this.rules)) {

@@ -177,6 +177,8 @@ start_custom.bat
 
 For Docker deployments, you can configure the frontend port, backend port, and the WebSocket URL at container startup without rebuilding the image.
 
+The commands below use the default CUDA configuration and require an NVIDIA GPU and the NVIDIA Container Toolkit. On a host without an NVIDIA GPU, add `-f docker-compose.cpu.yml` to every command; for example, `TALEMATE_FRONTEND_PORT=9090 docker compose -f docker-compose.cpu.yml up`.
+
 ### Changing the frontend port
 
 Set `TALEMATE_FRONTEND_PORT` before running `docker compose up`:
@@ -224,3 +226,6 @@ The WebSocket URL is determined in this order:
 2. **Auto-detection** (`ws://<current-browser-hostname>:5050/ws`)
 
 This means you can use a single Docker image across different environments (staging, production) by simply changing the environment variable.
+
+!!! info "`0.0.0.0` in the WebSocket URL"
+    `0.0.0.0` is a bind address, not an address a browser can connect to. If the environment variable's host is `0.0.0.0`, the frontend replaces it with the hostname the page was loaded from — the configured port and path are kept. So `ws://0.0.0.0:6060/ws` behaves like auto-detection for the host, but on port `6060`.

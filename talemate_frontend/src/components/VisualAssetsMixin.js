@@ -9,6 +9,7 @@
  *   - vis_type: string (e.g., 'CHARACTER_PORTRAIT', 'CHARACTER_CARD')
  *   - namePrefix: string (e.g., 'avatar', 'cover')
  *   - character: object with name property
+ * - For confirmDelete/onDeleteConfirmed: Component must have a ConfirmActionPrompt with ref="deleteConfirm"
  * 
  * Provides:
  * - base64ById: data property for caching loaded asset base64 data
@@ -100,7 +101,16 @@ export function createSceneAssetsRequester(sendFn, windowMs = 100) {
 }
 
 export default {
-    inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'requestSceneAssets'],
+    inject: {
+        getWebsocket: {},
+        registerMessageHandler: {},
+        unregisterMessageHandler: {},
+        requestSceneAssets: {},
+        // Provided by TalemateApp; defaulted so consumers mounted outside
+        // its provide tree don't warn.
+        openVisualLibraryWithAsset: { default: null },
+        addToVisualLibraryPendingQueue: { default: null },
+    },
     data() {
         return {
             base64ById: {},
@@ -186,12 +196,33 @@ export default {
         
         deleteAsset(assetId) {
             if (!assetId) return;
-            
+
             this.getWebsocket().send(JSON.stringify({
                 type: 'scene_assets',
                 action: 'delete',
                 asset_id: assetId,
             }));
+        },
+
+        openInVisualLibrary(assetId, initialTab = 'info') {
+            if (!assetId) return;
+
+            if (typeof this.openVisualLibraryWithAsset === 'function') {
+                this.openVisualLibraryWithAsset(assetId, initialTab);
+            } else {
+                console.warn('openVisualLibraryWithAsset not available');
+            }
+        },
+
+        confirmDelete(assetId) {
+            if (!assetId) return;
+            this.$refs.deleteConfirm.initiateAction({ id: assetId });
+        },
+
+        onDeleteConfirmed(params) {
+            const assetId = params && params.id ? params.id : null;
+            if (!assetId) return;
+            this.deleteAsset(assetId);
         },
         
         requestCharacterDetails() {
@@ -248,18 +279,19 @@ export default {
             this.loadAssets(assetIds);
         },
         
-        saveGeneratedImage(base64, request, namePrefix = 'asset', reference = null) {
+        saveGeneratedImage(base64, request, namePrefix = 'asset', reference = null, nameContext = null) {
             // Save the generated image as a scene asset
             // namePrefix: prefix for the asset name (e.g., 'avatar', 'cover')
             // reference: optional list of VIS_TYPE values to set in asset meta.reference (e.g., ['CHARACTER_PORTRAIT', 'CHARACTER_CARD'])
+            // nameContext: middle segment of the asset name; defaults to the character name (e.g., 'scene' for scene-level assets)
             const dataUrl = `data:image/png;base64,${base64}`;
-            const characterName = request?.character_name || this.character?.name || 'unknown';
+            const context = nameContext || request?.character_name || this.character?.name || 'unknown';
             const payload = {
                 type: 'visual',
                 action: 'save_image',
                 base64: dataUrl,
                 generation_request: request,
-                name: `${namePrefix}_${characterName}_${Date.now().toString().slice(-6)}`,
+                name: `${namePrefix}_${context}_${Date.now().toString().slice(-6)}`,
             };
             
             // Add reference field if provided

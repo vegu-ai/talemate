@@ -12,6 +12,7 @@ import argparse
 import io
 import json
 import sys
+from pathlib import Path
 from typing import Any, Callable, TextIO
 
 import pydantic
@@ -232,7 +233,10 @@ def _emit(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m talemate.game.engine.nodes.tools",
-        description="Read-only static analysis for Talemate node graph JSON files.",
+        description=(
+            "Read-only static analysis for Talemate node graph JSON files, "
+            "plus the node glossary docs generator."
+        ),
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
@@ -285,6 +289,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_graph_arg(p_check)
 
+    p_glossary = sub.add_parser(
+        "glossary",
+        help="Generate the node glossary docs pages from the live registry",
+    )
+    glossary_mode = p_glossary.add_mutually_exclusive_group(required=True)
+    glossary_mode.add_argument(
+        "--write", action="store_true", help="Render and write all glossary pages"
+    )
+    glossary_mode.add_argument(
+        "--check",
+        action="store_true",
+        help="Verify the committed pages match a fresh render (exit 1 on drift)",
+    )
+    p_glossary.add_argument(
+        "--docs-root",
+        help="Override the output directory (default: docs/user-guide/node-editor/reference/nodes)",
+    )
+
     return parser
 
 
@@ -293,6 +315,14 @@ def _run(args: argparse.Namespace, out_stream: TextIO, err_stream: TextIO) -> in
     # runs. Loading once up-front gives consistent behavior across
     # commands and surfaces loader errors before we start analyzing.
     analysis.ensure_registry_loaded()
+
+    if args.cmd == "glossary":
+        from . import glossary
+
+        docs_root = Path(args.docs_root) if args.docs_root else None
+        if args.check:
+            return glossary.check_pages(docs_root)
+        return glossary.write_pages(docs_root)
 
     try:
         graph = load_graph(args.graph)

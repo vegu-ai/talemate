@@ -15,16 +15,10 @@
                 <v-list-item-subtitle>{{ primaryModifierLabel }}+click to wipe and start fresh</v-list-item-subtitle>
             </v-list-item>
 
-            <!-- add tracked world state -->
-            <v-list-item density="compact" prepend-icon="mdi-cube-scan" @click="$refs.createWorldState.open()">
-                <v-list-item-title>Add tracked world state</v-list-item-title>
-                <v-list-item-subtitle>Track and auto-update a world state</v-list-item-subtitle>
-            </v-list-item>
-
-            <!-- add tracked character state -->
-            <v-list-item density="compact" prepend-icon="mdi-account-search" @click="$refs.createCharacterState.open()">
-                <v-list-item-title>Add tracked character state</v-list-item-title>
-                <v-list-item-subtitle>Track and auto-update a character state</v-list-item-subtitle>
+            <!-- track state -->
+            <v-list-item density="compact" prepend-icon="mdi-cube-scan" @click="$refs.trackState.open()">
+                <v-list-item-title>Track state</v-list-item-title>
+                <v-list-item-subtitle>Track and auto-update a world or character state</v-list-item-subtitle>
             </v-list-item>
 
             <!-- player character submenu -->
@@ -121,22 +115,15 @@
     />
 
     <QuickCreateStateReinforcement
-        ref="createWorldState"
-        title="Add Tracked World State"
-        description="Create a tracked world state that the AI will automatically monitor and update at a regular interval. Once created, the state can be found and managed in the World State Manager under the World States tab."
-        :insertion-modes="insertionModes"
-        default-insert="never"
-        @create="createWorldStateReinforcement"
-    />
-
-    <QuickCreateStateReinforcement
-        ref="createCharacterState"
-        title="Add Tracked Character State"
-        description="Create a tracked character state that the AI will automatically monitor and update at a regular interval. Once created, the state can be found and managed in the World State Manager under the character's Tracked States tab."
+        ref="trackState"
+        title="Track State"
+        description="Create a tracked state that the AI will automatically monitor and update at a regular interval. Choose whether to track a world state or a specific character's state. Once created, it can be found and managed in the World State Manager."
         :insertion-modes="insertionModes"
         :characters="allCharacters"
-        default-insert="sequential"
-        @create="createCharacterStateReinforcement"
+        allow-world
+        character-default-insert="sequential"
+        world-default-insert="never"
+        @create="createStateReinforcement"
     />
 </template>
 
@@ -382,6 +369,14 @@ export default {
                 text: content,
                 meta: {},
             }));
+        },
+
+        createStateReinforcement(data) {
+            if (data.character) {
+                this.createCharacterStateReinforcement(data);
+            } else {
+                this.createWorldStateReinforcement(data);
+            }
         },
 
         createWorldStateReinforcement(data) {

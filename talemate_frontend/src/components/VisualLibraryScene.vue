@@ -62,16 +62,27 @@
             </v-tooltip>
             Cancel Analysis
           </v-btn>
-          <v-btn 
-            variant="text" 
+          <v-btn
+            variant="text"
             @click="onSetSceneCoverImage({ assetId: selectedId })"
-            prepend-icon="mdi-image-frame" 
+            prepend-icon="mdi-image-frame"
             color="primary"
           >
             <v-tooltip activator="parent" location="top">
               Set this image as the scene cover image
             </v-tooltip>
             Set cover
+          </v-btn>
+          <v-btn
+            variant="text"
+            @click="onSetSceneBackdrop({ assetId: selectedId })"
+            prepend-icon="mdi-image-area"
+            color="primary"
+          >
+            <v-tooltip activator="parent" location="top">
+              Set this image as the scene backdrop and render it behind the scene text
+            </v-tooltip>
+            Set backdrop
           </v-btn>
           <v-btn color="primary" variant="text" :disabled="!selectedId" @click="onOpenGenerate" prepend-icon="mdi-play">Use as reference</v-btn>
           <v-btn color="primary" variant="text" :disabled="!selectedId" @click="onOpenIterate" prepend-icon="mdi-repeat">Iterate</v-btn>
@@ -366,6 +377,15 @@ export default {
         type: 'scene_assets',
         action: 'set_scene_cover_image',
         asset_id: payload.assetId,
+      }));
+    },
+    onSetSceneBackdrop(payload) {
+      if (!payload || !payload.assetId) return;
+      this.getWebsocket().send(JSON.stringify({
+        type: 'scene_assets',
+        action: 'set_scene_backdrop',
+        asset_id: payload.assetId,
+        enabled: true,
       }));
     },
     saveMeta() {

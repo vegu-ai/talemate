@@ -24,7 +24,9 @@ Override example:
 
 {# CHARACTER CONTEXT #}
 {% set character_context %}
-{% with skip_sheet=True %}{% include "character-context.jinja2" %}{% endwith %}
+{% with skip_sheet=True,
+        skip_characters=[context_character.name] if context_character else [],
+        mentioned_characters=[context_character] if context_character else [] %}{% include "character-context.jinja2" %}{% endwith %}
 {% endset %}
 
 {# COMMON INSTRUCTIONS #}
@@ -43,7 +45,7 @@ Appearance: <description of appearance>
 Your response MUST be a character sheet with multiple attributes.
 Format MUST be one attribute per line, with a colon after the attribute name.
 {% if max_attributes and max_attributes > 0 %}
-You MUST output at most {{ max_attributes }} attributes (lines) total.
+You MUST output at most {{ max_attributes }} attributes (lines) in addition to the Name line.
 {% endif %}
 {% endset %}
 

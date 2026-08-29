@@ -53,6 +53,17 @@
 
                             <div v-if="character.generation_context.enabled">
                                 <v-checkbox  density="compact" :disabled="busy" v-model="character.generation_context.generateAttributes" label="Generate attributes" messages="Generate a few attributes based on the instructions and the description."></v-checkbox>
+                                <v-checkbox density="compact" :disabled="busy" v-model="character.generation_context.generateExampleDialogue" label="Generate example dialogue" messages="Generate a few examples of how the character speaks."></v-checkbox>
+                                <v-textarea
+                                    v-if="character.generation_context.generateExampleDialogue"
+                                    :disabled="busy"
+                                    v-model="character.generation_context.exampleDialogueInstructions"
+                                    label="Example dialogue guidance"
+                                    class="mt-2"
+                                    auto-grow rows="2"
+                                    placeholder="Speaks in short sentences, dry humor ..."
+                                    hint="Optional guidance for how the example dialogue should be generated.">
+                                </v-textarea>
                             </div>
 
                             <v-checkbox density="compact" :disabled="!canBePlayer || busy" v-model="character.is_player" label="Controlled by the player" hide-details></v-checkbox>
@@ -118,6 +129,8 @@ export default {
                     enabled: true,
                     instructions: "",
                     generateAttributes: true,
+                    generateExampleDialogue: false,
+                    exampleDialogueInstructions: "",
                 },
                 description: "",
                 name: "",
@@ -187,6 +200,8 @@ export default {
                     enabled: true,
                     instructions: "",
                     generateAttributes: true,
+                    generateExampleDialogue: false,
+                    exampleDialogueInstructions: "",
                 },
                 description: "",
                 name: "",
@@ -203,60 +218,35 @@ export default {
         },
         createCharacter() {
             this.busy=true;
-            
-            // If AI generation is disabled, use the old world_state_manager method
-            if (!this.character.generation_context.enabled) {
-                this.getWebsocket().send(JSON.stringify({
-                    type: 'world_state_manager',
-                    action: 'create_character',
-                    generate: false,
-                    name: this.character.name,
-                    description: this.character.description,
-                    is_player: this.character.is_player,
-                    generate_attributes: false,
-                    instructions: "",
-                    generation_options: this.generationOptions,
-                }));
-            } else {
-                // Use the new director persist_character method for AI generation
-                let payload = {
-                    name: this.character.name,
-                    templates: this.character.templates || [],
-                    active: this.character.is_player,
-                    content: this.character.generation_context.instructions,
-                    determine_name: this.character.generation_context.enabled && !this.character.name,
-                    narrate_entry: false,
-                    generate_attributes: this.character.generation_context.generateAttributes,
-                    augment_attributes: "Add some additional, interesting attributes that are not already present in the character sheet.",
-                    is_player: this.character.is_player,
-                    description: this.character.description,
-                    generation_options: this.generationOptions,
-                };
 
-                // Only include augment_attributes if enabled
-                if(!payload.augment_attributes_enabled) {
-                    delete payload.augment_attributes;
-                }
+            // All character creation routes through the director's
+            // persist_character - with AI generation disabled it runs in
+            // manual mode (no LLM calls, name and description used as given).
+            let payload = {
+                name: this.character.name,
+                templates: this.character.templates || [],
+                active: this.character.is_player,
+                content: this.character.generation_context.instructions,
+                generate: this.character.generation_context.enabled,
+                determine_name: this.character.generation_context.enabled && !this.character.name,
+                narrate_entry: false,
+                generate_attributes: this.character.generation_context.enabled && this.character.generation_context.generateAttributes,
+                generate_example_dialogue: this.character.generation_context.generateExampleDialogue,
+                example_dialogue_instructions: this.character.generation_context.exampleDialogueInstructions,
+                is_player: this.character.is_player,
+                description: this.character.description,
+                generation_options: this.generationOptions,
+            };
 
-                this.getWebsocket().send(JSON.stringify({
-                    type: 'director',
-                    action: 'persist_character',
-                    ...payload
-                }));
-            }
+            this.getWebsocket().send(JSON.stringify({
+                type: 'director',
+                action: 'persist_character',
+                ...payload
+            }));
         },
         handleMessage(message) {
-            // Handle world_state_manager responses (for non-AI generation)
-            if (message.type === 'world_state_manager' && message.action === 'character_created') {
-                this.busy = false;
-                this.$emit('character-created', message.data)
-                if(this.character.created) {
-                    this.character.created(message.data);
-                }
-                this.$emit('cancelled');
-            }
-            // Handle director responses (for AI generation)
-            else if (message.type === 'director' && message.action === 'character_persisted') {
+            // Handle director responses
+            if (message.type === 'director' && message.action === 'character_persisted') {
                 this.busy = false;
                 this.$emit('character-created', message.character)
                 if(this.character.created) {
@@ -264,7 +254,7 @@ export default {
                 }
                 this.$emit('cancelled');
             }
-            else if ((message.type === 'director' || message.type === 'world_state_manager') && message.action === 'operation_done') {
+            else if (message.type === 'director' && message.action === 'operation_done') {
                 this.busy = false;
             }
             else if (message.type === 'error') {

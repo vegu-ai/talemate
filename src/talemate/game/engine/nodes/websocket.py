@@ -63,7 +63,25 @@ class WebsocketBase(Node):
 @register("websocket/signals/OperationDone")
 class OperationDone(WebsocketBase):
     """
-    A node that signals that an operation has been done
+    Signal to the frontend that a websocket operation has completed successfully.
+
+    Sends an `operation_done` message through the websocket router, optionally
+    emits a status message and - unless `signal_only` is set - triggers an auto
+    save of the scene (or marks the scene as unsaved when auto save is off or
+    disallowed).
+
+    Inputs:
+
+    - state: The graph state
+    - websocket_router: The websocket router (plugin) to signal through
+    - signal_only: If true, only send the signal and skip the save handling (optional)
+    - allow_auto_save: Whether to allow the scene to auto save after the operation (optional)
+    - emit_status_message: Status message to display in the frontend (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - websocket_router: The websocket router, passed through
     """
 
     class Fields:
@@ -116,7 +134,22 @@ class OperationDone(WebsocketBase):
 @register("websocket/signals/OperationFailed")
 class OperationFailed(WebsocketBase):
     """
-    A node that signals that an operation has failed
+    Signal to the frontend that a websocket operation has failed.
+
+    Sends an `operation_done` message carrying the error through the websocket
+    router and optionally emits an error status message in the frontend.
+
+    Inputs:
+
+    - state: The graph state
+    - websocket_router: The websocket router (plugin) to signal through
+    - message: The error message (optional)
+    - emit_status: Whether to also emit an error status message (optional)
+
+    Outputs:
+
+    - state: The state input, passed through
+    - websocket_router: The websocket router, passed through
     """
 
     class Fields:
@@ -158,7 +191,24 @@ class OperationFailed(WebsocketBase):
 @register("websocket/WebsocketResponse")
 class QueueResponse(WebsocketBase):
     """
-    A node that queues a response to be sent to the websocket
+    Queue a message to be sent to the frontend through the websocket.
+
+    The message is sent with the router's name as its type, the given action
+    name, and the data dict merged into the message payload.
+
+    Inputs:
+
+    - state: The graph state
+    - websocket_router: The websocket router (plugin) to send the message through
+    - action: The action name of the message
+    - data: Dict of additional payload fields merged into the message
+
+    Outputs:
+
+    - state: The state input, passed through
+    - websocket_router: The websocket router, passed through
+    - action: The action input, passed through
+    - data: The data input, passed through
     """
 
     class Fields:
@@ -213,7 +263,20 @@ class QueueResponse(WebsocketBase):
 @register("websocket/GetWebsocketRouter")
 class GetWebsocketRouter(Node):
     """
-    A node that gets a websocket router
+    Get a websocket router (plugin) by its route name from the active
+    websocket handler.
+
+    Raises an error if no plugin is registered for the given route.
+
+    Properties:
+
+    - router: The route name to get the websocket plugin for
+
+    Outputs:
+
+    - router: The route name, passed through
+    - websocket_router: The websocket router (plugin) instance
+    - websocket_handler: The active websocket handler
     """
 
     class Fields:
@@ -251,7 +314,6 @@ class GetWebsocketRouter(Node):
         websocket_handler = active_websocket_handler()
         self.set_output_values(
             {
-                "state": state,
                 "websocket_router": websocket_router,
                 "websocket_handler": websocket_handler,
                 "router": router,

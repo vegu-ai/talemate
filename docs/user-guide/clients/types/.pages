@@ -11,6 +11,7 @@ nav:
     - OpenAI Compatible: openai-compatible.md
     - Ollama: ollama.md
     - OpenRouter: openrouter.md
+    - Pi Bridge: pi-bridge.md
     - TabbyAPI: tabbyapi.md
     - Text-Generation-WebUI: text-generation-webui.md
     - ...

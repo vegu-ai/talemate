@@ -5,6 +5,13 @@ Extractors:
 Override example:
   {{ set_anchor_extractor("ledger", "<MY_TAG>", "</MY_TAG>") }}
 -#}
+{% if recent_lines %}
+<|SECTION:RECENT LINES|>
+{% for entry in recent_lines %}
+{{ entry }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif %}
 <|SECTION:NEW LINE|>
 {{ line }}
 <|CLOSE_SECTION|>

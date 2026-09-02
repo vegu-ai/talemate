@@ -4,6 +4,7 @@ import pytest
 import structlog
 
 from talemate.client.base import ClientDisabledError
+from talemate.emit import async_signals
 from talemate.emit.async_signals import AsyncSignal
 from talemate.exceptions import (
     AbortCommand,
@@ -157,8 +158,6 @@ async def test_connect_dedupes_and_disconnect_is_forgiving():
 
 
 def test_character_activated_is_registered():
-    from talemate.emit import async_signals
-
     signal = async_signals.get("character.activated")
     assert isinstance(signal, AsyncSignal)
     assert signal.name == "character.activated"

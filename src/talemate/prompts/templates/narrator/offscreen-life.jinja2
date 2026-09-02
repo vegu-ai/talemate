@@ -6,25 +6,13 @@ Override example:
   {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
   {{ set_as_is_extractor("response") }}
 -#}
-{% with include_character_context=True, skip_characters=[character.name], feature_character=character %}
+{#- rendered from the character's own perspective: the history and the memory
+    block hold only what they know, so the span they missed is never shown -#}
+{% with include_character_context=True, skip_characters=[character.name], feature_character=character, perspective=character.name, talking_character=character %}
 {% include "narrate-context.jinja2" %}
 {% endwith %}
-<|SECTION:WHILE {{ character.name.upper() }} WAS AWAY|>
-{{ character.name }} was away from the scene for {{ elapsed }} and has just returned.
-{% if missed_facts %}
-What happened in the scene meanwhile ({{ character.name }} did not witness any of it):
-{%- for fact in missed_facts %}
-- {{ fact.text }}
-{%- endfor %}
-{% else %}
-What happened in the scene meanwhile ({{ character.name }} did not witness any of it):
-{%- for entry in missed %}
-- {{ entry.text }}
-{%- endfor %}
-{% endif %}
-<|CLOSE_SECTION|>
 <|SECTION:TASK|>
-Write what {{ character.name }} did during the {{ elapsed }} they were away from the scene, as a short account in the past tense. Base it on who {{ character.name }} is and on what they set out to do when they left. {{ character.name }} did not see the events listed above: do not have them learn, react to, or repeat any of those. Only things {{ character.name }} could have done, seen or heard on their own belong here. Plain prose, no dialogue, no line for the current scene.
+{{ character.name }} was away from the scene for {{ elapsed }} and has just returned; the scene above ends where they left it. Write what {{ character.name }} did during that time, as a short account in the past tense. Base it on who {{ character.name }} is and on what they set out to do when they left. Only things {{ character.name }} could have done, seen or heard on their own belong here. Plain prose, no dialogue, no line for the current scene.
 
 {{ extra_instructions }}
 {% include "response-length.jinja2" %}

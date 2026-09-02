@@ -80,7 +80,6 @@ def fact_memory_document(fact: Fact) -> dict:
         "ts": fact.ts if fact.ts is not None else 0,
         "restatements": fact.restatements,
         "false": fact.false,
-        "source": fact.source,
         **presence_metadata(fact.present),
     }
     if fact.archive_id:

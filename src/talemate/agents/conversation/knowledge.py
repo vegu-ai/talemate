@@ -38,6 +38,7 @@ __all__ = [
     "CharacterKnowledgeMixin",
     "parse_index_list",
     "parse_ledger",
+    "normalize_fact_id",
 ]
 
 log = structlog.get_logger("talemate.agents.conversation.knowledge")
@@ -45,23 +46,39 @@ log = structlog.get_logger("talemate.agents.conversation.knowledge")
 LEDGER_FACTS_PER_CHARACTER = 20
 
 
+_INDEX_LIST = re.compile(
+    r"^\s*(?:none|\d+(?:\s*[,\s]\s*\d+)*)\s*\.?\s*$", re.IGNORECASE
+)
+
+
 def parse_index_list(text: str | None) -> list[int] | None:
     """
     1-based candidate numbers from a `<KEEP>` or `<ORDER>` answer, in the
-    order given, without repeats. "none" is an empty list; no numbers and
-    no "none" is None (the answer could not be read).
+    order given, without repeats. Only integers separated by commas or
+    whitespace, or the word "none" (an empty list), are answers; anything
+    else between them means the answer could not be read (None).
     """
     if text is None:
         return None
     text = text.strip()
-    if not text or text.lower().startswith("none"):
-        return [] if text else None
+    if not text or not _INDEX_LIST.match(text):
+        return None
+    if text.rstrip(". ").lower() == "none":
+        return []
     numbers: list[int] = []
     for match in re.findall(r"\d+", text):
         value = int(match)
         if value >= 1 and value not in numbers:
             numbers.append(value)
     return numbers or None
+
+
+def normalize_fact_id(value: str) -> str:
+    """`f12`, `[F12]`, `12` and `F12` all name fact F12."""
+    cleaned = str(value).strip().strip("[]()").strip().upper()
+    if cleaned.isdigit():
+        cleaned = f"F{cleaned}"
+    return cleaned
 
 
 def parse_ledger(text: str | None) -> dict[str, list[str]] | None:
@@ -78,8 +95,9 @@ def parse_ledger(text: str | None) -> dict[str, list[str]] | None:
     try:
         data = json.loads(text)
     except ValueError:
+        # prose around the JSON: extract_json returns (string, object)
         try:
-            data, _ = extract_json(text)
+            _, data = extract_json(text)
         except Exception:
             data = None
     if not isinstance(data, dict):
@@ -90,7 +108,7 @@ def parse_ledger(text: str | None) -> dict[str, list[str]] | None:
             ids = [ids]
         if not isinstance(ids, list):
             continue
-        ledger[str(name)] = [str(i).strip() for i in ids if str(i).strip()]
+        ledger[str(name)] = [normalize_fact_id(i) for i in ids if str(i).strip()]
     return ledger
 
 
@@ -321,6 +339,17 @@ class CharacterKnowledgeMixin:
             context = await self.memory_rerank(character, context)
         return context
 
+    def _recent_lines(self) -> list[str]:
+        """The last few scene lines, as the memory retrieval sees them."""
+        return [
+            str(message)
+            for message in self.scene.collect_messages(
+                max_iterations=100,
+                max_messages=self.long_term_memory_num_messages,
+                typ=["character", "narrator", "director"],
+            )
+        ]
+
     async def knowledge_gate(self, character: "Character", candidates: list) -> list:
         """Keep the retrieved memories the character would know (+1 request)."""
         candidates = list(candidates)
@@ -358,14 +387,7 @@ class CharacterKnowledgeMixin:
         """Order the retrieved memories for the next line and keep the best few (+1 request)."""
         candidates = list(candidates)
         keep = self.knowledge_llm_rerank_keep
-        recent = [
-            str(message)
-            for message in self.scene.collect_messages(
-                max_iterations=100,
-                max_messages=self.long_term_memory_num_messages,
-                typ=["character", "narrator", "director"],
-            )
-        ]
+        recent = self._recent_lines()
         _, extracted = await Prompt.request(
             "conversation.memory-rerank",
             self.knowledge_analysis_client,
@@ -415,6 +437,7 @@ class CharacterKnowledgeMixin:
         if not listeners:
             return {}
 
+        dedupe = get_agent("summarizer").archive_fact_dedupe_distance
         absence: dict[str, list] = {}
         for name in listeners:
             facts = await absence_facts(
@@ -422,6 +445,7 @@ class CharacterKnowledgeMixin:
                 name,
                 limit=LEDGER_FACTS_PER_CHARACTER,
                 window=self.knowledge_absence_window,
+                dedupe_distance=dedupe,
             )
             if facts:
                 absence[name] = facts
@@ -430,6 +454,7 @@ class CharacterKnowledgeMixin:
             log.debug("ledger skipped: every listener knows the recent facts")
             return {}
 
+        recent = self._recent_lines()
         _, extracted = await Prompt.request(
             "conversation.knowledge-ledger",
             self.knowledge_analysis_client,
@@ -438,6 +463,7 @@ class CharacterKnowledgeMixin:
                 "scene": scene,
                 "max_tokens": self.knowledge_analysis_client.max_token_length,
                 "line": line,
+                "recent_lines": recent,
                 "speaker": character.name,
                 "listeners": ", ".join(absence.keys()),
                 "absence": absence,
@@ -459,6 +485,12 @@ class CharacterKnowledgeMixin:
             for fact_id in fact_ids:
                 fact = offered.get(fact_id)
                 if fact is None:
+                    log.warning(
+                        "ledger: fact id not among the listener's unknown facts",
+                        listener=name,
+                        fact_id=fact_id,
+                        offered=list(offered),
+                    )
                     continue
                 fact.known_by[name] = "inferred"
                 scene.world_state.knowledge.append(

@@ -16,6 +16,7 @@ import talemate.agents.base as agent_base
 from talemate.agents.tts.schema import Voice
 from talemate.agents.visual.schema import PromptFinalizer as VisualPromptFinalizer
 import talemate.emit.async_signals as async_signals
+from talemate.events import CharacterActivatedEvent
 from talemate.game.engine.context_id.character import (
     CharacterContext,
 )
@@ -739,8 +740,6 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
 
     await scene.add_actor(actor)
     scene.active_characters.append(character.name)
-
-    from talemate.events import CharacterActivatedEvent
 
     await async_signals.get("character.activated").send(
         CharacterActivatedEvent(

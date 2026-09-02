@@ -1,23 +1,37 @@
 """
 Retrieval (#394 part G): recency term, diversity threshold, similarity
-knowledge gate, entity lookup by id, cross-encoder rerank.
+knowledge gate, entity lookup by id, cross-encoder rerank, the conversation
+opt-ins, the narrator's offscreen life and the character.activated signal.
 """
 
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
+import talemate.emit.async_signals as async_signals
+from talemate.agents.conversation.knowledge import (
+    normalize_fact_id,
+    parse_index_list,
+    parse_ledger,
+)
 from talemate.agents.memory.rerank import (
     CrossEncoderReranker,
     RERANK_CANDIDATES,
     RERANK_KEEP,
     RERANK_MODEL,
 )
+from talemate.agents.memory import ChromaDBMemoryAgent
 from talemate.agents.memory.schema import MemoryDocument
-from talemate.character import Character
+from talemate.character import Character, activate_character
 from talemate.context import ActiveScene
+from talemate.events import ArchiveEvent, CharacterActivatedEvent
 from talemate.instance import get_agent
+from talemate.knowledge.absence import absence_facts
+from talemate.knowledge.bucket import KnowledgeIndex
+from talemate.knowledge.schema import Fact, KnowledgeEdge
+from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage
+from talemate.tale_mate import Actor
 
 
 def doc(id, text, distance=0.3, ts=None, embedding=None, typ="history", **meta):
@@ -32,6 +46,11 @@ def memory(scene):
     memory = get_agent("memory")
     memory.table = []
     memory.calls = []
+    memory.vectors = {}
+    memory.db = object()
+    memory._get_embeddings = lambda ids: {
+        i: memory.vectors[i] for i in ids if i in memory.vectors
+    }
     scene.ts = 1000
 
     async def fake_get(text, character=None, limit=15, **where):
@@ -39,16 +58,12 @@ def memory(scene):
         return list(memory.table)
 
     memory.get = fake_get
-    return memory
+    yield memory
+    memory.db = None
 
 
 def config(memory, key, value):
     memory.actions["retrieval"].config[key].value = value
-
-
-# ---------------------------------------------------------------------------
-# settings
-# ---------------------------------------------------------------------------
 
 
 class TestSettings:
@@ -67,11 +82,6 @@ class TestSettings:
         assert memory.reranker is not first
         assert memory.reranker.device == "cuda"
         memory.actions["_config"].config["device"].value = "cpu"
-
-
-# ---------------------------------------------------------------------------
-# recency
-# ---------------------------------------------------------------------------
 
 
 class TestRecency:
@@ -107,11 +117,6 @@ class TestRecency:
             assert await memory.multi_query(["q"], iterate=1) == ["new"]
 
 
-# ---------------------------------------------------------------------------
-# diversity
-# ---------------------------------------------------------------------------
-
-
 class TestDiversity:
     async def test_near_identical_result_is_skipped(self, scene, memory):
         config(memory, "recency_weight", 0)
@@ -143,61 +148,136 @@ class TestDiversity:
             assert await memory.multi_query(["q"], iterate=5) == ["first", "blind"]
 
 
-# ---------------------------------------------------------------------------
-# similarity knowledge gate
-# ---------------------------------------------------------------------------
-
-
 class TestSimilarityGate:
+    """
+    A result rejected for presence alone passes when a fact in Edwin's
+    bucket is a near-duplicate of it; revoked, hidden and offscreen items
+    never do. Both settings sit at their defaults (0.15 / 0.92).
+    """
+
     @pytest.fixture
-    def table(self, memory):
-        config(memory, "recency_weight", 0)
-        # the vectors below are all near-identical in cosine terms; the
-        # diversity check is not under test here
-        config(memory, "mmr_threshold", 1.0)
-        memory.table = [
-            doc("F1", "known fact", 0.2, typ="fact", embedding=[1.0, 0.0]),
-            doc("F9", "twin fact", 0.25, typ="fact", embedding=[1.0, 0.1]),
-            doc("F8", "far fact", 0.3, typ="fact", embedding=[1.0, 0.5]),
-            doc("e1", "history", 0.35, embedding=[1.0, 0.05]),
+    def filtered(self, scene, memory):
+        scene.world_state.facts = {
+            "F1": Fact(id="F1", text="known fact", ts=10, present=["Edwin", "Mara"]),
+            "F9": Fact(id="F9", text="twin fact", ts=20, present=["Mara"]),
+            "F8": Fact(id="F8", text="far fact", ts=30, present=["Mara"]),
+            "F7": Fact(id="F7", text="revoked twin", ts=40, present=["Mara"]),
+            "F6": Fact(
+                id="F6",
+                text="offscreen twin",
+                ts=50,
+                present=["Mara"],
+                source="offscreen",
+            ),
+        }
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Edwin", target="F7", kind="revoke")
         ]
-        return memory.table
-
-    @staticmethod
-    def outside(doc):
-        return doc.id == "F1"
-
-    async def test_near_duplicate_of_a_known_fact_passes(self, scene, memory, table):
+        memory.vectors = {
+            "F1": [1.0, 0.0],
+            "F9": [1.0, 0.1],
+            "F8": [1.0, 0.5],
+            "F7": [1.0, 0.05],
+            "F6": [1.0, 0.02],
+            "e1": [1.0, 0.05],
+            "Mara.detail.secret": [1.0, 0.03],
+        }
+        config(memory, "recency_weight", 0)
         get_agent("summarizer").actions["archive"].config[
             "fact_dedupe_distance"
         ].value = 0.15
-        with ActiveScene(scene):
-            result = await memory.multi_query(["q"], iterate=5, filter=self.outside)
-        # F9 (distance 0.1 from F1) passes, e1 (0.05) passes, F8 (0.5) does not
-        assert result == ["known fact", "twin fact", "history"]
+        mara = Character(name="Mara")
+        from talemate.knowledge.schema import EntryVisibility
 
-    async def test_gate_off_keeps_the_filter_strict(self, scene, memory, table):
-        config(memory, "similarity_gate", False)
+        mara.visibility = {"detail.secret": EntryVisibility(mode="owner")}
+        scene.character_data = {"Mara": mara, "Edwin": Character(name="Edwin")}
+        return KnowledgeIndex.from_scene(scene).retrieval_filter(scene, "Edwin")
+
+    def presence(self, id, text, distance, embedding, typ="fact", present='["Mara"]'):
+        return MemoryDocument(
+            text,
+            {"typ": typ, "presence_known": True, "present": present},
+            id,
+            text,
+            distance=distance,
+            embedding=embedding,
+        )
+
+    async def test_near_duplicate_of_a_known_fact_passes_and_survives_the_merge(
+        self, scene, memory, filtered
+    ):
+        memory.table = [
+            self.presence(
+                "F1", "known fact", 0.2, [1.0, 0.0], present='["Edwin", "Mara"]'
+            ),
+            self.presence("F9", "twin fact", 0.25, [1.0, 0.1]),
+            self.presence("F8", "far fact", 0.3, [1.0, 0.5]),
+            self.presence("e1", "history", 0.35, [1.0, 0.05], typ="history"),
+        ]
         with ActiveScene(scene):
-            result = await memory.multi_query(["q"], iterate=5, filter=self.outside)
+            result = await memory.multi_query(["q"], iterate=5, filter=filtered)
+        # F9 (0.10 from F1) and e1 (0.05) pass the gate and, being wanted
+        # near-copies, the diversity check at its default keeps them
+        assert result == ["known fact", "twin fact", "history"]
+        assert filtered.rejection(memory.table[1]) == "presence"
+
+    async def test_revoked_hidden_and_offscreen_are_never_rescued(
+        self, scene, memory, filtered
+    ):
+        memory.table = [
+            self.presence("F7", "revoked twin", 0.2, [1.0, 0.05]),
+            self.presence("F6", "offscreen twin", 0.22, [1.0, 0.02]),
+            MemoryDocument(
+                "secret",
+                {"typ": "details", "character": "Mara", "detail": "secret"},
+                "Mara.detail.secret",
+                "secret",
+                distance=0.24,
+                embedding=[1.0, 0.03],
+            ),
+            self.presence("F9", "twin fact", 0.25, [1.0, 0.1]),
+        ]
+        with ActiveScene(scene):
+            result = await memory.multi_query(["q"], iterate=5, filter=filtered)
+        assert result == ["twin fact"]
+        assert filtered.rejection(memory.table[0]) == "revoke"
+        assert filtered.rejection(memory.table[2]) == "visibility"
+        assert filtered.gateable(memory.table[1]) is False
+
+    async def test_gate_off_keeps_the_filter_strict(self, scene, memory, filtered):
+        config(memory, "similarity_gate", False)
+        memory.table = [
+            self.presence(
+                "F1", "known fact", 0.2, [1.0, 0.0], present='["Edwin", "Mara"]'
+            ),
+            self.presence("F9", "twin fact", 0.25, [1.0, 0.1]),
+        ]
+        with ActiveScene(scene):
+            result = await memory.multi_query(["q"], iterate=5, filter=filtered)
         assert result == ["known fact"]
 
-    async def test_no_known_fact_means_no_gate(self, scene, memory, table):
+    async def test_anchors_are_the_whole_bucket_not_the_query(
+        self, scene, memory, filtered
+    ):
+        # F1 is known but not among this query's results: the gate still admits F9
+        memory.table = [self.presence("F9", "twin fact", 0.25, [1.0, 0.1])]
         with ActiveScene(scene):
-            result = await memory.multi_query(
-                ["q"], iterate=5, filter=lambda d: d.id == "e1"
-            )
-        assert result == ["history"]
+            result = await memory.multi_query(["q"], iterate=5, filter=filtered)
+        assert result == ["twin fact"]
 
-    async def test_without_a_filter_nothing_is_gated(self, scene, memory, table):
+    async def test_plain_callable_filter_has_no_gate(self, scene, memory, filtered):
+        memory.table = [self.presence("F9", "twin fact", 0.25, [1.0, 0.1])]
         with ActiveScene(scene):
-            result = await memory.multi_query(["q"], iterate=5)
-        assert len(result) == 4
+            result = await memory.multi_query(["q"], iterate=5, filter=lambda d: False)
+        assert result == []
 
-
-# ---------------------------------------------------------------------------
-# cross-encoder rerank
-# ---------------------------------------------------------------------------
+    async def test_without_a_filter_nothing_is_gated(self, scene, memory, filtered):
+        memory.table = [
+            self.presence("F1", "known fact", 0.2, [1.0, 0.0]),
+            self.presence("F8", "far fact", 0.3, [0.0, 1.0]),
+        ]
+        with ActiveScene(scene):
+            assert len(await memory.multi_query(["q"], iterate=5)) == 2
 
 
 class FakeReranker:
@@ -255,9 +335,29 @@ class TestRerank:
             assert await memory.multi_query(["q"], iterate=5) == ["a", "b"]
         assert memory.rerank_error == "no model"
 
-    def test_agent_details_show_the_model_or_the_error(self):
-        from talemate.agents.memory import ChromaDBMemoryAgent
+    async def test_load_failure_does_not_cap_the_merge_at_the_pool(self, scene, memory):
+        config(memory, "recency_weight", 0)
+        config(memory, "rerank", True)
+        memory.table = [doc(f"D{i}", f"d{i}", 0.1 + i * 0.001) for i in range(40)]
 
+        class FailingReranker(FakeReranker):
+            def rerank(self, queries, docs, keep):
+                self.calls.append((list(queries), list(docs), keep))
+                self.error = "no model"
+                return docs
+
+        fake = FailingReranker(memory.device)
+        memory._reranker = fake
+        with ActiveScene(scene):
+            first = await memory.multi_query(["q"], iterate=40)
+            # the failure is recorded: the plain merge, not the 30-candidate pool
+            assert len(first) == 40
+            second = await memory.multi_query(["q"], iterate=40)
+        assert len(second) == 40
+        # asked once; a recorded failure is not retried
+        assert len(fake.calls) == 1
+
+    def test_agent_details_show_the_model_or_the_error(self):
         memory = ChromaDBMemoryAgent()
         config(memory, "rerank", True)
         memory._reranker = FakeReranker(memory.device)
@@ -310,45 +410,80 @@ class TestCrossEncoderReranker:
         ctor.assert_not_called()
 
 
-# ---------------------------------------------------------------------------
-# entity lookup
-# ---------------------------------------------------------------------------
-
-
 class TestEntityLookup:
     @pytest.fixture
     def zed(self, scene, memory):
         zed = Character(name="Zed", description="Zed is a smuggler.")
-        scene.character_data = {"Zed": zed}
+        will = Character(name="Will", description="Will is a fisherman.")
+        scene.character_data = {"Zed": zed, "Will": will}
         scene.world_state.character_name_mappings = {"Zed": ["the smuggler"]}
-        description = MemoryDocument(
-            "Zed's description: Zed is a smuggler.",
-            {"typ": "base_attribute", "character": "Zed", "attr": "description"},
-            "Zed.description",
-            "Zed's description: Zed is a smuggler.",
-        )
-        memory.get_document = AsyncMock(return_value={"Zed.description": description})
-        return description
 
-    async def test_named_inactive_character_is_fetched_by_id(self, scene, memory, zed):
+        def description(name, text):
+            return MemoryDocument(
+                text,
+                {"typ": "base_attribute", "character": name, "attr": "description"},
+                f"{name}.description",
+                text,
+            )
+
+        docs = {
+            "Zed": {
+                "Zed.description": description(
+                    "Zed", "Zed's description: Zed is a smuggler."
+                )
+            },
+            "Will": {
+                "Will.description": description(
+                    "Will", "Will's description: Will is a fisherman."
+                )
+            },
+        }
+
+        async def by_meta(meta):
+            memory.meta_calls.append(meta)
+            return docs.get(meta.get("character"), {})
+
+        memory.meta_calls = []
+        memory.get_documents_by_meta = by_meta
+        return docs["Zed"]["Zed.description"]
+
+    async def test_named_inactive_character_is_fetched_by_metadata(
+        self, scene, memory, zed
+    ):
         conversation = get_agent("conversation")
         with ActiveScene(scene):
             found = await conversation.entity_lookup(["Mara: I saw Zed at the pier."])
         assert found == [zed]
-        ids = memory.get_document.call_args.args[0]
-        assert ids[0] == "Zed.description" and "Zed.description.0" in ids
+        assert memory.meta_calls == [
+            {"character": "Zed", "typ": "base_attribute", "attr": "description"}
+        ]
 
     async def test_alias_from_the_name_mappings_counts(self, scene, memory, zed):
         conversation = get_agent("conversation")
         with ActiveScene(scene):
-            found = await conversation.entity_lookup(["Mara: the smuggler is back."])
+            found = await conversation.entity_lookup(["Mara: The Smuggler is back."])
+        # a lower-case alias matches whatever the prose's case
         assert found == [zed]
+
+    async def test_a_name_that_is_also_a_word_needs_its_capital(
+        self, scene, memory, zed
+    ):
+        conversation = get_agent("conversation")
+        with ActiveScene(scene):
+            assert (
+                await conversation.entity_lookup(["Alice: I will go north at dawn."])
+                == []
+            )
+            found = await conversation.entity_lookup(
+                ["Alice: Will went north at dawn."]
+            )
+        assert [d.id for d in found] == ["Will.description"]
 
     async def test_unrelated_lines_fetch_nothing(self, scene, memory, zed):
         conversation = get_agent("conversation")
         with ActiveScene(scene):
             assert await conversation.entity_lookup(["Mara: a quiet night."]) == []
-        memory.get_document.assert_not_called()
+        assert memory.meta_calls == []
 
     async def test_active_character_is_not_looked_up(self, scene, memory, zed):
         conversation = get_agent("conversation")
@@ -370,12 +505,6 @@ class TestEntityLookup:
             )
         assert found == []
 
-    async def test_backend_without_id_lookup(self, scene, memory, zed):
-        memory.get_document = AsyncMock(side_effect=NotImplementedError())
-        conversation = get_agent("conversation")
-        with ActiveScene(scene):
-            assert await conversation.entity_lookup(["Mara: I saw Zed."]) == []
-
     async def test_semantic_context_puts_the_description_first(
         self, scene, memory, zed
     ):
@@ -387,17 +516,36 @@ class TestEntityLookup:
         assert context[0] == zed
         assert "the pier at night" in context
 
-
-# ---------------------------------------------------------------------------
-# conversation opt-ins (AI knowledge gate, AI rerank, ledger)
-# ---------------------------------------------------------------------------
-
-from talemate.agents.conversation.knowledge import (  # noqa: E402
-    parse_index_list,
-    parse_ledger,
-)
-from talemate.knowledge.schema import Fact  # noqa: E402
-from talemate.prompts import Prompt  # noqa: E402
+    async def test_description_leads_under_the_queries_method_too(
+        self, scene, memory, zed
+    ):
+        conversation = get_agent("conversation")
+        world_state = get_agent("world_state")
+        scene.history = [CharacterMessage(message="Mara: I saw Zed at the pier.")]
+        scene.rag_cache = {}
+        memory.table = [doc("e1", "the pier at night", 0.2)]
+        conversation.actions["use_long_term_memory"].config[
+            "retrieval_method"
+        ].value = "queries"
+        conversation.actions["use_long_term_memory"].config["cache"].value = False
+        try:
+            with (
+                ActiveScene(scene),
+                patch.object(scene, "context_history", return_value=[]),
+                patch.object(
+                    world_state,
+                    "analyze_text_and_extract_context_via_queries",
+                    AsyncMock(return_value=["queried"]),
+                ),
+            ):
+                context = await conversation.rag_build()
+        finally:
+            conversation.actions["use_long_term_memory"].config[
+                "retrieval_method"
+            ].value = "direct"
+            conversation.actions["use_long_term_memory"].config["cache"].value = True
+        assert context[0] == zed
+        assert context[1:] == ["the pier at night", "queried"]
 
 
 class TestParsers:
@@ -407,8 +555,18 @@ class TestParsers:
         assert parse_index_list("none") == []
         assert parse_index_list("None.") == []
         assert parse_index_list("1, 3, 3, 0") == [1, 3]
-        assert parse_index_list("keep 2 and 4") == [2, 4]
+        assert parse_index_list("2 4") == [2, 4]
         assert parse_index_list("no idea") is None
+        # digits inside prose are not an answer
+        for text in (
+            "I cannot decide whether candidates 2 or 4 are known.",
+            "1 through 5",
+            "candidates 1 and 2 (see note 3)",
+            "1.5",
+            "-1, 2",
+            "keep 2 and 4",
+        ):
+            assert parse_index_list(text) is None, text
 
     def test_ledger(self):
         assert parse_ledger(None) is None
@@ -419,6 +577,15 @@ class TestParsers:
         assert parse_ledger("garbage") is None
         assert parse_ledger("[1]") is None
         assert parse_ledger('```json\n{"Mara": ["F1"]}\n```') == {"Mara": ["F1"]}
+        # prose around the JSON: the recovery path
+        assert parse_ledger('Here is the ledger: {"Mara": ["F12"]} as asked') == {
+            "Mara": ["F12"]
+        }
+        # ids are normalised
+        assert parse_ledger('{"Mara": [12, "f3", "[F4]", " F5 "]}') == {
+            "Mara": ["F12", "F3", "F4", "F5"]
+        }
+        assert normalize_fact_id("(f7)") == "F7"
 
 
 @pytest.fixture
@@ -581,6 +748,7 @@ class TestLedger:
         assert vars["speaker"] == "Alice"
         assert list(vars["absence"]) == ["Edwin"]
         assert [f.id for f in vars["absence"]["Edwin"]] == ["F2", "F1"]
+        assert vars["recent_lines"] == []
         assert request.call_args.args[0] == "conversation.knowledge-ledger"
         edges = scene.world_state.knowledge
         assert len(edges) == 1
@@ -600,6 +768,29 @@ class TestLedger:
         ):
             assert await conversation.record_learned_facts(alice, "Alice: hi") == {}
         request.assert_not_called()
+
+    async def test_uses_the_configured_near_duplicate_distance(
+        self, scene, opt_ins, facts
+    ):
+        conversation, alice = opt_ins
+        enable(conversation, "ledger")
+        get_agent("summarizer").actions["archive"].config[
+            "fact_dedupe_distance"
+        ].value = 0.3
+        try:
+            with (
+                ActiveScene(scene),
+                patch(
+                    "talemate.agents.conversation.knowledge.absence_facts",
+                    AsyncMock(return_value=[]),
+                ) as absence,
+            ):
+                await conversation.record_learned_facts(alice, "Alice: hi")
+            assert absence.call_args.kwargs["dedupe_distance"] == 0.3
+        finally:
+            get_agent("summarizer").actions["archive"].config[
+                "fact_dedupe_distance"
+            ].value = 0.15
 
     async def test_skipped_when_the_listeners_know_everything(
         self, scene, opt_ins, facts
@@ -636,17 +827,6 @@ class TestLedger:
         ):
             assert await conversation.record_learned_facts(alice, "Alice: hi") == {}
         request.assert_not_called()
-
-
-# ---------------------------------------------------------------------------
-# narrator offscreen life + character.activated
-# ---------------------------------------------------------------------------
-
-import talemate.emit.async_signals as async_signals  # noqa: E402
-from talemate.character import activate_character  # noqa: E402
-from talemate.events import ArchiveEvent, CharacterActivatedEvent  # noqa: E402
-from talemate.knowledge.absence import absence_facts  # noqa: E402
-from talemate.tale_mate import Actor  # noqa: E402
 
 
 @pytest.fixture
@@ -697,6 +877,7 @@ def offscreen(scene):
     }
     scene.world_state.fact_counter = 1
     get_agent("memory").add_many = AsyncMock()
+    narrator.connect(scene)
     yield narrator, zed
     narrator.actions["offscreen_life"].enabled = False
 
@@ -734,8 +915,9 @@ class TestOffscreenLife:
             await narrator.on_character_activated(activation(scene, zed))
         assert request.call_args.args[0] == "narrator.offscreen-life"
         vars = request.call_args.kwargs["vars"]
-        assert [e["id"] for e in vars["missed"]] == ["a2", "a3"]
-        assert [f.id for f in vars["missed_facts"]] == ["F1"]
+        # the prompt renders from Zed's perspective: no missed facts or entries in it
+        assert vars["missed_count"] == 2
+        assert "missed_facts" not in vars and "missed" not in vars
         assert vars["elapsed"]
         fact = scene.world_state.facts["F2"]
         assert fact.source == "offscreen"
@@ -743,12 +925,71 @@ class TestOffscreenLife:
         assert fact.ts == 5000
         assert "sailed to the mainland" in fact.text
         document = memory.add_many.call_args.args[0][0]
-        assert document["id"] == "F2" and document["meta"]["source"] == "offscreen"
+        assert document["id"] == "F2"
+        # the store's own `source` key stays the store's: an explicit value
+        # would take the document out of the unsaved-session purge
+        assert "source" not in document["meta"]
         assert document["meta"]["present"] == '["Zed"]'
         # only Zed knows it, and it never lists for anyone
         with ActiveScene(scene):
             assert "F2" not in [f.id for f in await absence_facts(scene, "Mara")]
             assert "F2" not in [f.id for f in await absence_facts(scene, "Zed")]
+
+    async def test_never_present_character_gets_no_account(self, scene, offscreen):
+        narrator, zed = offscreen
+        mira = Character(name="Mira")
+        scene.character_data["Mira"] = mira
+        with (
+            ActiveScene(scene),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            await narrator.on_character_activated(activation(scene, mira))
+        request.assert_not_called()
+        assert narrator.missed_entries(mira) == []
+        assert narrator.pending_returns == {}
+
+    async def test_partial_archive_waits_for_the_rest(self, scene, offscreen):
+        narrator, zed = offscreen
+        # two Mara-only messages after the newest archived entry: the absence
+        # is not fully archived, so the return waits for the cut
+        scene.history = [
+            CharacterMessage(message=f"Mara: line {i}", present=["Mara"])
+            for i in range(11)
+        ]
+        with (
+            ActiveScene(scene),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            await narrator.on_character_activated(activation(scene, zed))
+            request.assert_not_called()
+            assert "Zed" in narrator.pending_returns
+            actor = Actor(character=zed, agent=get_agent("conversation"))
+            actor.scene = scene
+            scene.actors.append(actor)
+            scene.active_characters.append("Zed")
+            scene.archived_history.append(
+                {
+                    "id": "a4",
+                    "text": "More alone.",
+                    "ts": 4000,
+                    "present": ["Mara"],
+                    "start": 10,
+                    "end": 10,
+                }
+            )
+            request.return_value = ("", {"response": "Zed rowed to the mainland."})
+            await narrator.on_archive_add_offscreen(
+                ArchiveEvent(
+                    scene=scene,
+                    event_type="archive_add",
+                    text="More alone.",
+                    memory_id="a4",
+                    ts=4000,
+                    present=["Mara"],
+                )
+            )
+        request.assert_called_once()
+        assert request.call_args.kwargs["vars"]["missed_count"] == 3
 
     async def test_disabled_makes_no_request(self, scene, offscreen):
         narrator, zed = offscreen
@@ -799,9 +1040,6 @@ class TestOffscreenLife:
             seen.append(event)
 
         async_signals.get("character.activated").connect(recorder)
-        # the agents are bound to the scene without connect() in the test
-        # bootstrap; the narrator subscribes in connect()
-        narrator.connect(scene)
         try:
             with (
                 ActiveScene(scene),
@@ -828,7 +1066,6 @@ class TestOffscreenLifeDeferral:
 
     async def test_return_before_the_cut_waits_for_the_archive(self, scene, offscreen):
         narrator, zed = offscreen
-        narrator.connect(scene)
         # nothing archived yet for the span Zed missed
         scene.archived_history = [scene.archived_history[0]]
         with (
@@ -907,7 +1144,6 @@ class TestOffscreenLifeDeferral:
 
     async def test_leaving_again_drops_the_wait(self, scene, offscreen):
         narrator, zed = offscreen
-        narrator.connect(scene)
         scene.archived_history = [scene.archived_history[0]]
         with (
             ActiveScene(scene),

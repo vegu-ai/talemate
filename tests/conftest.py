@@ -361,6 +361,12 @@ class MockMemoryAgent(talemate.agents.memory.MemoryAgent):
     async def delete(self, filters: dict):
         pass
 
+    def _get_document(self, id):
+        return {}
+
+    def _get_documents_by_meta(self, meta: dict):
+        return {}
+
 
 class MockScene(Scene):
     """Real Scene subclass with auto_progress forced on."""

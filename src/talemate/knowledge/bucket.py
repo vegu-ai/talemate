@@ -9,7 +9,7 @@ visibility settings the world state keeps.
 import hashlib
 import json
 import re
-from typing import TYPE_CHECKING, Callable, Literal
+from typing import TYPE_CHECKING, Literal
 
 import pydantic
 
@@ -23,10 +23,14 @@ __all__ = [
     "KnowledgeItem",
     "KnowledgeIndex",
     "ItemKind",
+    "Rejection",
+    "RetrievalFilter",
     "COMMON_KINDS",
     "knowledge_digest",
     "canonical_entry_id",
 ]
+
+Rejection = Literal["revoke", "visibility", "presence"]
 
 ItemKind = Literal[
     "history", "fact", "attribute", "detail", "description", "world_entry", "static"
@@ -167,20 +171,26 @@ class KnowledgeIndex:
     def revoked(self, character: str, target: str) -> bool:
         return (character, target) in self.revokes
 
-    def in_bucket(self, character: str, item: KnowledgeItem) -> bool:
+    def rejection(self, character: str, item: KnowledgeItem) -> Rejection | None:
+        """Why the item is outside the character's bucket, or None when it is inside."""
         if self.revoked(character, item.id):
-            return False
+            return "revoke"
         if self.granted(character, item.id):
-            return True
+            return None
         if item.visibility is not None and not item.visibility.allows(
             character, item.owner
         ):
-            return False
+            return "visibility"
         if item.owner == character:
-            return True
+            return None
         if item.kind in COMMON_KINDS:
-            return True
-        return item.present is None or character in item.present
+            return None
+        if item.present is None or character in item.present:
+            return None
+        return "presence"
+
+    def in_bucket(self, character: str, item: KnowledgeItem) -> bool:
+        return self.rejection(character, item) is None
 
     def item_for_entry(self, scene: "Scene", entry_id: str) -> KnowledgeItem:
         """Classify a memory document id without the document: world entry,
@@ -246,10 +256,47 @@ class KnowledgeIndex:
             return character.description
         return ""
 
-    def retrieval_filter(self, scene: "Scene", character: str) -> Callable:
-        def _filter(doc) -> bool:
-            return self.in_bucket(
-                character, KnowledgeItem.from_memory_document(doc, scene)
-            )
+    def retrieval_filter(self, scene: "Scene", character: str) -> "RetrievalFilter":
+        return RetrievalFilter(self, scene, character)
 
-        return _filter
+
+class RetrievalFilter:
+    """
+    The knowledge filter memory retrieval applies for one character: a
+    callable, and the reason a document was rejected for the similarity
+    knowledge gate.
+    """
+
+    def __init__(self, index: KnowledgeIndex, scene: "Scene", character: str):
+        self.index = index
+        self.scene = scene
+        self.character = character
+
+    def rejection(self, doc) -> Rejection | None:
+        return self.index.rejection(
+            self.character, KnowledgeItem.from_memory_document(doc, self.scene)
+        )
+
+    def __call__(self, doc) -> bool:
+        return self.rejection(doc) is None
+
+    def known_fact_ids(self) -> list[str]:
+        """The facts in the character's bucket (the gate's anchors)."""
+        return [
+            fact.id
+            for fact in self.scene.world_state.facts.values()
+            if self.index.in_bucket(
+                self.character,
+                KnowledgeItem(id=fact.id, kind="fact", present=fact.present),
+            )
+        ]
+
+    def gateable(self, doc) -> bool:
+        """
+        Only a presence rejection may be rescued by the gate: a revoke beats
+        a grant, and visibility, ownership and offscreen scoping are exact.
+        """
+        if self.rejection(doc) != "presence":
+            return False
+        fact = self.scene.world_state.facts.get(getattr(doc, "id", None))
+        return fact is None or fact.source != "offscreen"

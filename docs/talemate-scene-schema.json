@@ -27,6 +27,13 @@
           },
           "source": {
             "type": "string"
+          },
+          "present": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names of the characters active in the scene when this was recorded. Absent in scenes saved before presence tracking; absent means unknown, which every character treats as witnessed."
           }
         },
         "required": ["message", "id", "typ", "source"]
@@ -45,6 +52,13 @@
           },
           "ts": {
             "type": "string"
+          },
+          "present": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names of the characters active in the scene when this was recorded. Absent in scenes saved before presence tracking; absent means unknown, which every character treats as witnessed."
           }
         },
         "required": ["text", "ts"]

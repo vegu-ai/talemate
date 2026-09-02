@@ -18,6 +18,8 @@ Places volatile context (long term memory, dynamic notes) after the scene histor
 
 Automatically summarize scene dialogue when the number of tokens in the history exceeds a threshold. This helps keep the context history from growing too large.
 
+A summary entry also ends early, regardless of the threshold, when a time passage occurs or when the active character list changes (a character is activated or deactivated). Every entry then records one set of present characters; see [History -- Presence](/talemate/user-guide/world-editor/history/#presence).
+
 ###### Token Threshold
 
 The number of tokens in the history that will trigger the summarization process.

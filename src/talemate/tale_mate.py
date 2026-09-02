@@ -52,6 +52,7 @@ from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import GameStatePathSettings, ScenePerspectives
 from talemate.history import emit_archive_add, ArchiveEntry
+from talemate.knowledge.presence import presence_metadata
 from talemate.character import Character
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
@@ -685,6 +686,11 @@ class Scene(Emitter):
 
             elif isinstance(message, TimePassageMessage):
                 self.advance_time(message.ts)
+
+            # an empty active list means nobody is set up yet, not that
+            # nobody witnessed the message: leave presence unknown
+            if message.present is None and self.active_characters:
+                message.present = list(self.active_characters)
 
             valid_messages.append(message)
 
@@ -2055,6 +2061,7 @@ class Scene(Emitter):
                     "meta": {
                         "ts": entry.ts,
                         "typ": "history",
+                        **presence_metadata(entry.present),
                     },
                 }
             )

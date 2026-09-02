@@ -113,6 +113,9 @@ class SceneMessage(pydantic.BaseModel):
 
     rev: int = 0
 
+    # active characters at push time; None when the scene never recorded it
+    present: list[str] | None = None
+
     # Transient revision stack; seeded on opt-in subclasses, excluded
     # from to_dict / persistence.
     versions: list[MessageVersion] = pydantic.Field(
@@ -231,6 +234,9 @@ class SceneMessage(pydantic.BaseModel):
 
         if self.meta:
             rv["meta"] = self.meta
+
+        if self.present is not None:
+            rv["present"] = list(self.present)
 
         return rv
 

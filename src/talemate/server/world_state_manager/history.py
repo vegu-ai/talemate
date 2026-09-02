@@ -17,6 +17,7 @@ from talemate.history import (
     compute_layer_stats,
     collect_time_passages,
 )
+from talemate.knowledge.presence import layer_entry_presence
 from talemate.scene_message import TimePassageMessage
 from talemate.server.world_state_manager import world_state_templates
 from talemate.status import background_task
@@ -88,9 +89,10 @@ class HistoryMixin:
 
         if summarizer.layered_history_enabled:
             for index, layer in enumerate(self.scene.layered_history):
-                layered_history.append(
-                    history_with_relative_time(layer, self.scene.ts, layer=index + 1)
-                )
+                rows = history_with_relative_time(layer, self.scene.ts, layer=index + 1)
+                for row, entry in zip(rows, layer):
+                    row["present"] = layer_entry_presence(self.scene, index, entry)
+                layered_history.append(rows)
 
         time_passages = collect_time_passages(self.scene)
 

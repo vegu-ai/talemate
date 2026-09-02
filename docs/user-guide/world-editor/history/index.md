@@ -10,6 +10,14 @@ There are three types of historical entries:
 
 ![History](/talemate/img/0.31.0/history.png)
 
+### Presence
+
+Every entry generated from a summary carries the characters that were active in the scene while its source messages were written. They show as chips next to the entry time. Layered entries show the union over the entries they summarize.
+
+The summarizer starts a new entry whenever the active character list changes, the same way a time passage does, so every summarized entry has exactly one set of present characters. This is the record the per-character knowledge features build on.
+
+Scenes saved before presence tracking carry no presence on their old messages, and entries built from them show no chips. Unknown presence is never guessed from who spoke: an entry without chips counts as witnessed by everyone.
+
 ### Managing entries
 
 - **All entries** can be edited by double-clicking the text.

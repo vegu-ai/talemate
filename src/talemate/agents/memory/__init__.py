@@ -14,6 +14,7 @@ import structlog
 from chromadb.config import Settings
 
 import talemate.events as events
+from talemate.knowledge.presence import presence_metadata
 import talemate.util as util
 from talemate.client import ClientBase
 import talemate.instance as instance
@@ -498,7 +499,13 @@ class MemoryAgent(Agent):
         raise NotImplementedError()
 
     async def on_archive_add(self, event: events.ArchiveEvent):
-        await self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history")
+        await self.add(
+            event.text,
+            uid=event.memory_id,
+            ts=event.ts,
+            typ="history",
+            **presence_metadata(event.present),
+        )
 
     def connect(self, scene):
         super().connect(scene)

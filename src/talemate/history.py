@@ -66,6 +66,7 @@ class ArchiveEntry(pydantic.BaseModel):
     start: int | None = None
     end: int | None = None
     ts: int = 0
+    present: list[str] | None = None
 
 
 class LayeredArchiveEntry(ArchiveEntry):
@@ -86,6 +87,7 @@ class HistoryEntry(pydantic.BaseModel):
     time_end: str | None = None
     start: int | None = None
     end: int | None = None
+    present: list[str] | None = None
 
     @property
     def is_static(self) -> bool:
@@ -126,6 +128,7 @@ async def emit_archive_add(scene: "Scene", entry: ArchiveEntry):
             text=entry.text,
             ts=entry.ts,
             memory_id=entry.id,
+            present=entry.present,
         )
     )
 
@@ -399,6 +402,7 @@ def history_with_relative_time(
             time_end=diff_to_human(scene_time, entry.get("ts_end", None)),
             start=entry.get("start", None),
             end=entry.get("end", None),
+            present=entry.get("present", None),
         ).model_dump()
         for index, entry in enumerate(history)
     ]
@@ -739,17 +743,30 @@ async def update_history_entry(
     Updates a history entry in the scene's archived history
     """
 
+    # fields the payload does not carry (or carries as None) stay as stored
     if entry.layer == 0:
         # base layer
-        archive_entry = ArchiveEntry(**entry.model_dump())
+        archive_entry = ArchiveEntry(
+            **{
+                **scene.archived_history[entry.index],
+                **entry.model_dump(exclude_none=True),
+            }
+        )
         scene.archived_history[entry.index] = archive_entry.model_dump(
             exclude_none=True
         )
         await emit_archive_add(scene, archive_entry)
         return archive_entry
     else:
-        # layered history
-        layered_entry = LayeredArchiveEntry(**entry.model_dump())
+        # layered history; presence is computed from the sources, never stored
+        payload = entry.model_dump(exclude_none=True)
+        payload.pop("present", None)
+        layered_entry = LayeredArchiveEntry(
+            **{
+                **scene.layered_history[entry.layer - 1][entry.index],
+                **payload,
+            }
+        )
         scene.layered_history[entry.layer - 1][entry.index] = layered_entry.model_dump(
             exclude_none=True
         )

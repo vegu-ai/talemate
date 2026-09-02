@@ -53,6 +53,7 @@ class ArchiveEvent(Event):
     text: str
     memory_id: str
     ts: int | None = None
+    present: list[str] | None = None
 
 
 class CharacterStateEvent(Event):

@@ -31,6 +31,7 @@ from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 
 from talemate.history import ArchiveEntry
+from talemate.knowledge.presence import presence_differs, span_presence
 
 from .analyze_scene import SceneAnalyzationMixin
 from .context_history import ContextHistoryMixin
@@ -313,6 +314,7 @@ class SummarizeAgent(
         dialogue_entries = []
         ts = 0
         time_passage_termination = False
+        presence_termination = False
 
         token_threshold = self.archive_threshold
 
@@ -358,6 +360,14 @@ class SummarizeAgent(
                 end = i - 1
                 break
 
+            if dialogue_entries and presence_differs(
+                dialogue.present, dialogue_entries[-1].present
+            ):
+                log.debug("build_archive", presence_termination=dialogue.present)
+                presence_termination = True
+                end = i - 1
+                break
+
             tokens += util.count_tokens(dialogue)
             dialogue_entries.append(dialogue)
             if tokens > token_threshold:  #
@@ -375,6 +385,7 @@ class SummarizeAgent(
             end=end,
             ts=ts,
             time_passage_termination=time_passage_termination,
+            presence_termination=presence_termination,
         )
 
         # in order to summarize coherently, we need to determine if there is a favorable
@@ -387,7 +398,7 @@ class SummarizeAgent(
         # If not, we can ask the AI to find a good point of
         # termination.
 
-        if not time_passage_termination:
+        if not time_passage_termination and not presence_termination:
             # No TimePassageMessage, so we need to ask the AI to find a good point of termination
 
             terminating_line = await self.analyze_dialoge(dialogue_entries)
@@ -413,6 +424,8 @@ class SummarizeAgent(
                     )
 
         if dialogue_entries:
+            present = span_presence(dialogue_entries)
+
             if not extra_context:
                 # prepend scene intro to dialogue
                 dialogue_entries.insert(0, scene.intro)
@@ -435,11 +448,12 @@ class SummarizeAgent(
             # AI has likely identified the first line as a scene change, so we can't summarize
             # just use the first line
             summarized = str(scene.history[start])
+            present = scene.history[start].present
 
         # determine the appropariate timestamp for the summarization
 
         await scene.push_archive(
-            ArchiveEntry(text=summarized, start=start, end=end, ts=ts)
+            ArchiveEntry(text=summarized, start=start, end=end, ts=ts, present=present)
         )
 
         scene.ts = ts

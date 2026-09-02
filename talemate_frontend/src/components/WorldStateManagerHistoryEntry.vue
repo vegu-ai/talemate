@@ -5,6 +5,12 @@
                 {{ entry.id }}
             </span>
             <span v-if="!editing && !locked && hovered" class="text-body-small text-muted ml-2"><v-icon size="small" icon="mdi-pencil"></v-icon> double-click to edit</span>
+            <span v-if="entry.present" class="ml-2">
+                <v-chip v-for="name in entry.present" :key="name" size="x-small" color="primary" variant="tonal" class="mr-1" prepend-icon="mdi-account">
+                    {{ name }}
+                    <v-tooltip activator="parent" location="top">Present while this happened</v-tooltip>
+                </v-chip>
+            </span>
         </v-card-title>
         <v-card-text>
             <div v-if="!editing" class="history-entry text-medium-emphasis text-body-large" @dblclick="setEditing(true)" @mouseenter="hovered = true" @mouseleave="hovered = false">
@@ -87,6 +93,7 @@ class HistoryEntry(pydantic.BaseModel):
     time_end: str | None = None
     start: int | None = None
     end: int | None = None
+    present: list[str] | None = None
 */
 
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';

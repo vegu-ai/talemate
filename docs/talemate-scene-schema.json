@@ -90,6 +90,17 @@
           "details": {
             "type": "object"
           },
+          "visibility": {
+            "type": "object",
+            "description": "Known-by setting per sheet entry, keyed by the memory storage key (description, <attribute>, detail.<name>). Absent means everyone.",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "mode": {"type": "string", "enum": ["everyone", "owner", "list"]},
+                "characters": {"type": "array", "items": {"type": "string"}}
+              }
+            }
+          },
           "gender": {
             "type": "string"
           },
@@ -133,6 +144,22 @@
     "world_state": {
       "type": "object",
       "properties": {
+        "knowledge": {
+          "type": "array",
+          "description": "Grant and revoke edges: the only per-character knowledge state that is stored.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "character": {"type": "string"},
+              "target": {"type": "string", "description": "Memory document id: <name>.<attr>, <name>.detail.<key>, <name>.description, a world entry id or a summarized history entry id."},
+              "kind": {"type": "string", "enum": ["grant", "revoke"]},
+              "source": {"type": "string", "enum": ["told", "granted", "inferred", "manual"]},
+              "ts": {"type": ["integer", "null"]},
+              "note": {"type": ["string", "null"]}
+            }
+          }
+        },
         "characters": {
           "type": "object",
           "additionalProperties": {

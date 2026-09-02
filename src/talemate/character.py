@@ -1,5 +1,8 @@
 from typing import TYPE_CHECKING, Union
 import pydantic
+from talemate.context import active_scene
+from talemate.knowledge.schema import EntryVisibility
+from talemate.knowledge.rename import rename_knowledge_references
 from pydantic import ConfigDict
 import structlog
 import random
@@ -72,6 +75,9 @@ class Character(pydantic.BaseModel):
     # attribute and detail storage
     base_attributes: dict = pydantic.Field(default_factory=dict)
     details: dict[str, str] = pydantic.Field(default_factory=dict)
+
+    # keyed by the memory storage key: "description", "<attr>", "detail.<key>"
+    visibility: dict[str, EntryVisibility] = pydantic.Field(default_factory=dict)
 
     # helpful references
     agent: agent_base.Agent | None = pydantic.Field(default=None, exclude=True)
@@ -282,6 +288,10 @@ class Character(pydantic.BaseModel):
 
         orig_name = self.name
         self.name = new_name
+
+        scene = active_scene.get()
+        if scene is not None:
+            rename_knowledge_references(scene, orig_name, new_name)
 
         if orig_name.lower() == "you":
             # we dont want to replace "you" in the description

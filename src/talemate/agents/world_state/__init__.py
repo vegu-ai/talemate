@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import structlog
 
@@ -185,6 +185,7 @@ class WorldStateAgent(
         response_length=1024,
         num_queries=1,
         extra_context: list[str] = [],
+        filter: Callable | None = None,
     ) -> list[str]:
         response, extracted = await Prompt.request(
             "world_state.analyze-text-and-generate-rag-queries",
@@ -206,7 +207,8 @@ class WorldStateAgent(
 
         memory_agent = get_agent("memory")
 
-        context = await memory_agent.multi_query(queries, iterate=3)
+        kwargs = {"filter": filter} if filter is not None else {}
+        context = await memory_agent.multi_query(queries, iterate=3, **kwargs)
 
         # log.debug(
         #    "analyze_text_and_extract_context_via_queries",

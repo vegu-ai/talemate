@@ -10,6 +10,7 @@ from talemate.emit import emit
 from talemate.prompts import Prompt
 import talemate.game.focal.schema as focal_schema
 from talemate.game.schema import ConditionGroup
+from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
 from talemate.world_state.schema import (
     CharacterState,
     ObjectState,
@@ -88,6 +89,7 @@ class ManualContext(BaseModel):
     text: str
     meta: dict[str, Any] = {}
     shared: bool = False
+    visibility: EntryVisibility = Field(default_factory=EntryVisibility)
 
 
 class ContextPin(BaseModel):
@@ -159,6 +161,9 @@ class WorldState(BaseModel):
     character_name_mappings: dict[str, list[str]] = {}
 
     suggestions: list[Suggestion] = Field(default_factory=list)
+
+    # grant / revoke edges: the only per-character knowledge state that is stored
+    knowledge: list[KnowledgeEdge] = Field(default_factory=list)
 
     @property
     def agent(self):

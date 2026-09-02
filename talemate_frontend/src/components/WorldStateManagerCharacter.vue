@@ -227,6 +227,9 @@
                                     <v-tab value="visuals" prepend-icon="mdi-image-multiple">
                                         Visuals
                                     </v-tab>
+                                    <v-tab value="knowledge" prepend-icon="mdi-head-lightbulb-outline">
+                                        Knowledge
+                                    </v-tab>
                                 </v-tabs>
 
                                 <v-divider></v-divider>
@@ -239,6 +242,7 @@
                                             @require-scene-save="$emit('require-scene-save')"
                                             :generation-options="generationOptions"
                                             :templates="templates"
+                                            :character-names="characterNames"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="attributes">
@@ -247,6 +251,7 @@
                                             @require-scene-save="$emit('require-scene-save')"
                                             :generation-options="generationOptions"
                                             :templates="templates"
+                                            :character-names="characterNames"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="details">
@@ -259,6 +264,7 @@
                                             :generation-options="generationOptions"
                                             :templates="templates"
                                             :pins="pins"
+                                            :character-names="characterNames"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="reinforce">
@@ -286,6 +292,12 @@
                                             :visual-agent-ready="visualAgentReady"
                                             :image-edit-available="imageEditAvailable"
                                             :image-create-available="imageCreateAvailable" />
+                                        </v-tabs-window-item>
+                                        <v-tabs-window-item value="knowledge">
+                                            <WorldStateManagerCharacterKnowledge
+                                            ref="knowledge"
+                                            @require-scene-save="$emit('require-scene-save')"
+                                            :immutable-character="character" />
                                         </v-tabs-window-item>
                                     </v-tabs-window>
                                 </v-card-text>
@@ -371,6 +383,7 @@ import WorldStateManagerCharacterReinforcements from './WorldStateManagerCharact
 import WorldStateManagerCharacterActor from './WorldStateManagerCharacterActor.vue';
 import WorldStateManagerCharacterCreator from './WorldStateManagerCharacterCreator.vue';
 import WorldStateManagerCharacterVisuals from './WorldStateManagerCharacterVisuals.vue';
+import WorldStateManagerCharacterKnowledge from './WorldStateManagerCharacterKnowledge.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 import { FOLDER_NAME_MAX_LENGTH } from '@/constants/character';
 import { VIS_TYPE } from '@/constants/visual';
@@ -388,6 +401,7 @@ export default {
         WorldStateManagerCharacterActor,
         WorldStateManagerCharacterCreator,
         WorldStateManagerCharacterVisuals,
+        WorldStateManagerCharacterKnowledge,
     },
     props: {
         scene: Object,
@@ -442,6 +456,12 @@ export default {
         'add-pin',
     ],
     computed: {
+        characterNames() {
+            if (!this.characterList || !this.characterList.characters) {
+                return [];
+            }
+            return Object.values(this.characterList.characters).map(c => c.name);
+        },
         folderNameMaxLength() {
             return FOLDER_NAME_MAX_LENGTH;
         },

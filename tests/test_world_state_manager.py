@@ -1099,3 +1099,82 @@ class TestApplyTemplateDispatch:
 
         result = await manager.apply_template(Fake(name="x"))
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Knowledge: visibility and edges
+# ---------------------------------------------------------------------------
+
+
+class TestKnowledge:
+    async def test_character_details_carry_visibility(self, manager, scene):
+        from talemate.knowledge.schema import EntryVisibility
+
+        character = make_actor(scene, "Alice")
+        character.details["secret"] = "x"
+        await manager.set_character_entry_visibility(
+            "Alice", "detail.secret", EntryVisibility(mode="owner")
+        )
+        details = await manager.get_character_details("Alice")
+        assert details.visibility["detail.secret"].mode == "owner"
+
+    async def test_everyone_visibility_is_not_stored(self, manager, scene):
+        from talemate.knowledge.schema import EntryVisibility
+
+        character = make_actor(scene, "Alice")
+        character.details["secret"] = "x"
+        await manager.set_character_entry_visibility(
+            "Alice", "detail.secret", EntryVisibility(mode="owner")
+        )
+        await manager.set_character_entry_visibility(
+            "Alice", "detail.secret", EntryVisibility(mode="everyone")
+        )
+        assert character.visibility == {}
+
+    async def test_world_entry_visibility(self, manager, world_state):
+        from talemate.knowledge.schema import EntryVisibility
+
+        world_state.manual_context["w1"] = ManualContext(id="w1", text="lore")
+        await manager.set_world_entry_visibility(
+            "w1", EntryVisibility(mode="list", characters=["Alice"])
+        )
+        assert world_state.manual_context["w1"].visibility.characters == ["Alice"]
+
+    async def test_targets_catalogue(self, manager, scene, world_state):
+        character = make_actor(scene, "Alice")
+        character.base_attributes = {"age": "30", "_hidden": "x"}
+        character.details = {"secret": "y"}
+        character.description = "A surveyor."
+        world_state.manual_context["w1"] = ManualContext(id="w1", text="lore")
+        scene.archived_history = [
+            {"id": "s0", "text": "static", "ts": 0},
+            {"id": "e1", "text": "summary text", "ts": 0, "start": 0, "end": 1},
+        ]
+        ids = {t.id: t.kind for t in manager.knowledge_targets()}
+        assert ids == {
+            "Alice.description": "description",
+            "Alice.age": "attribute",
+            "Alice.detail.secret": "detail",
+            "w1": "world_entry",
+            "e1": "history",
+        }
+
+    async def test_edges_upsert_and_remove(self, manager, scene, world_state):
+        from talemate.knowledge.schema import KnowledgeEdge
+
+        scene.ts = 500
+        edge = await manager.set_knowledge_edge(
+            KnowledgeEdge(character="Alice", target="e1", kind="grant")
+        )
+        assert edge.ts == 500
+        edge.kind = "revoke"
+        await manager.set_knowledge_edge(edge)
+        assert len(world_state.knowledge) == 1
+        assert world_state.knowledge[0].kind == "revoke"
+
+        knowledge = await manager.get_character_knowledge("Alice")
+        assert [e.id for e in knowledge.edges] == [edge.id]
+        assert (await manager.get_character_knowledge("Bob")).edges == []
+
+        await manager.remove_knowledge_edge(edge.id)
+        assert world_state.knowledge == []

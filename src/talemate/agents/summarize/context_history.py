@@ -28,8 +28,11 @@ from talemate.scene_message import (
     DirectorMessage,
     ReinforcementMessage,
 )
+from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
+from talemate.knowledge.presence import layer_entry_presence
 from talemate.util import count_tokens
 from talemate.util.prompt import condensed
+from talemate.util.time import duration_to_human
 import talemate.util as util
 
 if TYPE_CHECKING:
@@ -114,11 +117,31 @@ class ContextHistoryParams(pydantic.BaseModel):
     assured_dialogue_num: int = 5
     chapter_labels: bool = False
 
+    # name of the character whose knowledge bucket filters the history
+    perspective: str | None = None
+
     # Dead kwargs — templates pass these but code never uses them.
     min_dialogue: int | None = None
     sections: bool | None = None
 
     model_config = pydantic.ConfigDict(extra="ignore")
+
+    _knowledge_index: KnowledgeIndex | None = pydantic.PrivateAttr(default=None)
+
+    def bind(self, scene: Scene) -> "ContextHistoryParams":
+        if self.perspective and self._knowledge_index is None:
+            self._knowledge_index = KnowledgeIndex.from_scene(scene)
+        return self
+
+    def knows(self, item: KnowledgeItem) -> bool:
+        if not self.perspective or self._knowledge_index is None:
+            return True
+        return self._knowledge_index.in_bucket(self.perspective, item)
+
+    def gap_line(self, seconds: int | None) -> str:
+        if seconds and seconds > 0:
+            return f"({self.perspective} was elsewhere for {duration_to_human(seconds, suffix='')})"
+        return f"({self.perspective} was elsewhere for a while)"
 
 
 class ContextHistoryMixin:
@@ -450,6 +473,7 @@ class ContextHistoryMixin:
         dialogue_start_idx = history_len
         dialogue_messages_collected = 0
         exhausted = False
+        pending_gap = False
 
         for i in range(history_len - 1, -1, -1):
             message = scene.history[i]
@@ -462,11 +486,19 @@ class ContextHistoryMixin:
             if not _is_qualifying(message, params):
                 continue
 
+            if not params.knows(KnowledgeItem.from_message(message)):
+                pending_gap = True
+                continue
+
             if count_tokens(parts_dialogue) + count_tokens(message) > budget:
                 break
 
             if max_count is not None and len(parts_dialogue) >= max_count:
                 break
+
+            if pending_gap:
+                parts_dialogue.insert(0, params.gap_line(None))
+                pending_gap = False
 
             parts_dialogue.insert(
                 0, message.as_format(conversation_format, mode=actor_direction_mode)
@@ -477,6 +509,10 @@ class ContextHistoryMixin:
                 dialogue_messages_collected += 1
         else:
             exhausted = True
+
+        if pending_gap:
+            # the missed run reaches the edge of the window; say so anyway
+            parts_dialogue.insert(0, params.gap_line(None))
 
         return parts_dialogue, dialogue_start_idx, exhausted
 
@@ -531,6 +567,7 @@ class ContextHistoryMixin:
         scene: Scene,
         budget: int,
         dialogue_start_idx: int,
+        params: ContextHistoryParams | None = None,
     ) -> tuple[list[str], int]:
         """Collect archived history entries backwards, skipping those fully
         covered by dialogue.
@@ -548,6 +585,7 @@ class ContextHistoryMixin:
         parts_archived: list[str] = []
         archived_boundary = 0
         archived_tokens = 0
+        gap_end_ts: int | None = None
 
         for i in range(len(scene.archived_history) - 1, -1, -1):
             entry = scene.archived_history[i]
@@ -566,18 +604,35 @@ class ContextHistoryMixin:
             if entry_start >= dialogue_start_idx:
                 continue
 
+            if params is not None and not params.knows(
+                KnowledgeItem.from_archive_entry(entry)
+            ):
+                if gap_end_ts is None:
+                    gap_end_ts = entry.get("ts") or 0
+                continue
+
             text = ContextHistoryMixin._context_history_format_archived_entry(
                 entry, scene.ts
             )
+            if gap_end_ts is not None:
+                gap = params.gap_line(gap_end_ts - (entry.get("ts") or 0))
+                text = f"{text}\n\n{gap}"
 
             text_tokens = count_tokens(text)
             if archived_tokens + text_tokens > budget:
                 archived_boundary = i + 1
+                if gap_end_ts is not None:
+                    parts_archived.insert(0, gap)
                 break
+
+            gap_end_ts = None
 
             parts_archived.insert(0, text)
             archived_tokens += text_tokens
             archived_boundary = i
+
+        if gap_end_ts is not None:
+            parts_archived.insert(0, params.gap_line(None))
 
         log.debug(
             "context_history",
@@ -596,6 +651,9 @@ class ContextHistoryMixin:
         *,
         chapter_labels: bool = False,
         chapter_layer_num: int | None = None,
+        scene: Scene | None = None,
+        layer_index: int | None = None,
+        params: ContextHistoryParams | None = None,
     ) -> tuple[list[str], int, list[str]]:
         """Collect entries from a single layered history layer backwards,
         skipping entries fully covered by the more-detailed level below.
@@ -617,6 +675,7 @@ class ContextHistoryMixin:
         layer_tokens = 0
         layer_boundary = 0
         chapter_numbers: list[str] = []
+        gap_end_ts: int | None = None
 
         for j in range(len(layer) - 1, -1, -1):
             entry = layer[j]
@@ -624,6 +683,17 @@ class ContextHistoryMixin:
             entry_start = entry.get("start", 0)
             if entry_start is not None and entry_start >= prev_boundary:
                 continue
+
+            if params is not None and scene is not None and layer_index is not None:
+                present = layer_entry_presence(scene, layer_index, entry)
+                if not params.knows(
+                    KnowledgeItem(
+                        id=entry.get("id", ""), kind="history", present=present
+                    )
+                ):
+                    if gap_end_ts is None:
+                        gap_end_ts = entry.get("ts_end") or entry.get("ts") or 0
+                    continue
 
             chapter_info = None
             if chapter_labels and chapter_layer_num is not None:
@@ -638,14 +708,26 @@ class ContextHistoryMixin:
             if chapter_number:
                 chapter_numbers.append(chapter_number)
 
+            if gap_end_ts is not None:
+                gap = params.gap_line(
+                    gap_end_ts - (entry.get("ts_end") or entry.get("ts") or 0)
+                )
+                text = f"{text}\n\n{gap}"
+
             text_tokens = count_tokens(text)
             if layer_tokens + text_tokens > budget:
                 layer_boundary = j + 1
+                if gap_end_ts is not None:
+                    layer_parts.insert(0, gap)
                 break
 
+            gap_end_ts = None
             layer_parts.insert(0, text)
             layer_tokens += text_tokens
             layer_boundary = j
+
+        if gap_end_ts is not None:
+            layer_parts.insert(0, params.gap_line(None))
 
         return layer_parts, layer_boundary, chapter_numbers
 
@@ -723,7 +805,7 @@ class ContextHistoryMixin:
         # --- Level 0: Archived History ---
         budget_archived = level_budgets[0] if level_budgets else 0
         parts_archived, archived_boundary = self._context_history_collect_archived(
-            scene, budget_archived, dialogue_start_idx
+            scene, budget_archived, dialogue_start_idx, params
         )
 
         # --- Layered History Levels ---
@@ -758,6 +840,9 @@ class ContextHistoryMixin:
                         prev_boundary,
                         chapter_labels=params.chapter_labels,
                         chapter_layer_num=chapter_layer_num,
+                        scene=scene,
+                        layer_index=layer_idx,
+                        params=params,
                     )
                 )
 
@@ -901,12 +986,24 @@ class ContextHistoryMixin:
 
                 formatted: list[str] = []
                 tokens: list[int] = []
-                for entry in entries:
-                    text, _ = self._context_history_format_layered_entry(
-                        entry, scene.ts
-                    )
+                in_gap = False
+                for j, entry in enumerate(entries):
+                    if params is not None and not params.knows(
+                        KnowledgeItem(
+                            id=entry.get("id", ""),
+                            kind="history",
+                            present=layer_entry_presence(scene, i, layer[j]),
+                        )
+                    ):
+                        text = "" if in_gap else params.gap_line(None)
+                        in_gap = True
+                    else:
+                        in_gap = False
+                        text, _ = self._context_history_format_layered_entry(
+                            entry, scene.ts
+                        )
                     formatted.append(text)
-                    tokens.append(count_tokens(text))
+                    tokens.append(count_tokens(text) if text else 0)
                 levels.append(
                     _BestFitLevel(
                         entries=entries,
@@ -940,10 +1037,20 @@ class ContextHistoryMixin:
 
                 formatted_arch: list[str] = []
                 tokens_arch: list[int] = []
+                in_gap = False
                 for entry in enriched:
-                    text = self._context_history_format_archived_entry(entry, scene.ts)
+                    if params is not None and not params.knows(
+                        KnowledgeItem.from_archive_entry(entry)
+                    ):
+                        text = "" if in_gap else params.gap_line(None)
+                        in_gap = True
+                    else:
+                        in_gap = False
+                        text = self._context_history_format_archived_entry(
+                            entry, scene.ts
+                        )
                     formatted_arch.append(text)
-                    tokens_arch.append(count_tokens(text))
+                    tokens_arch.append(count_tokens(text) if text else 0)
                 levels.append(
                     _BestFitLevel(
                         entries=enriched,
@@ -990,12 +1097,22 @@ class ContextHistoryMixin:
         entries: list[dict] = []
         formatted: list[str] = []
         tokens: list[int] = []
+        in_gap = False
 
         for i in range(summarized_to + 1):
             entries.append({"idx": i})
             if i < len(scene.history):
                 message = scene.history[i]
+                if _is_qualifying(message, params) and not params.knows(
+                    KnowledgeItem.from_message(message)
+                ):
+                    text = "" if in_gap else params.gap_line(None)
+                    in_gap = True
+                    formatted.append(text)
+                    tokens.append(count_tokens(text) if text else 0)
+                    continue
                 if _is_qualifying(message, params):
+                    in_gap = False
                     text = message.as_format(
                         conversation_format, mode=actor_direction_mode
                     )
@@ -1188,6 +1305,9 @@ class ContextHistoryMixin:
             if not _is_qualifying(message, params):
                 continue
 
+            if not params.knows(KnowledgeItem.from_message(message)):
+                continue
+
             formatted = message.as_format(
                 conversation_format, mode=actor_direction_mode
             )
@@ -1334,7 +1454,7 @@ class ContextHistoryMixin:
         Applies max_budget override, dialogue ratio, and optional boundary
         enforcement from the action config.
         """
-        params = self._context_history_extract_params(kwargs)
+        params = self._context_history_extract_params(kwargs).bind(scene)
 
         # Apply max_budget override
         if self.scene_history_max_budget > 0:

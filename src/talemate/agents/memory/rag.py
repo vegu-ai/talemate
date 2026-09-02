@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 import structlog
 from talemate.agents.base import (
     AgentAction,
@@ -7,6 +7,7 @@ from talemate.agents.base import (
     AgentActionConditional,
 )
 import talemate.instance as instance
+from talemate.knowledge.bucket import KnowledgeIndex
 from talemate.util.dedupe import compile_text_to_sentences, compile_sentences_to_length
 
 if TYPE_CHECKING:
@@ -144,6 +145,12 @@ class MemoryRAGMixin:
 
         return "-".join(map(str, parts))
 
+    def long_term_memory_cache_key_for(self, character: "Character | None") -> str:
+        # retrieval is filtered per speaker, so the speaker is part of the key
+        if character is None:
+            return self.long_term_memory_cache_key
+        return f"{self.long_term_memory_cache_key}-{character.name}"
+
     def connect(self, scene):
         super().connect(scene)
 
@@ -152,20 +159,24 @@ class MemoryRAGMixin:
 
     # methods
 
-    async def rag_set_cache(self, content: list[str]):
-        self.scene.rag_cache[self.long_term_memory_cache_key] = {
+    async def rag_set_cache(
+        self, content: list[str], character: "Character | None" = None
+    ):
+        self.scene.rag_cache[self.long_term_memory_cache_key_for(character)] = {
             "content": content,
             "fingerprint": self.scene.history[-1].fingerprint
             if self.scene.history
             else 0,
         }
 
-    async def rag_get_cache(self) -> list[str] | None:
+    async def rag_get_cache(
+        self, character: "Character | None" = None
+    ) -> list[str] | None:
         if not self.long_term_memory_cache:
             return None
 
         fingerprint = self.scene.history[-1].fingerprint if self.scene.history else 0
-        cache = self.scene.rag_cache.get(self.long_term_memory_cache_key)
+        cache = self.scene.rag_cache.get(self.long_term_memory_cache_key_for(character))
 
         if cache and cache["fingerprint"] == fingerprint:
             return cache["content"]
@@ -201,19 +212,21 @@ class MemoryRAGMixin:
         use_cache = retrieval_method is None
 
         if use_cache:
-            cached = await self.rag_get_cache()
+            cached = await self.rag_get_cache(character)
 
             if cached:
                 log.debug(
                     "Using cached long term memory",
                     agent=self.agent_type,
-                    key=self.long_term_memory_cache_key,
+                    key=self.long_term_memory_cache_key_for(character),
                 )
                 return cached
 
         memory_context = ""
+        memory_filter = self.rag_knowledge_filter(character)
         semantic_context = await self.semantic_context(
-            num_messages=self.long_term_memory_num_messages
+            num_messages=self.long_term_memory_num_messages,
+            filter=memory_filter,
         )
 
         if retrieval_method is None:
@@ -269,6 +282,7 @@ class MemoryRAGMixin:
                     response_length=self.long_term_memory_answer_length,
                     num_queries=self.long_term_memory_number_of_queries,
                     extra_context=semantic_context,
+                    filter=memory_filter,
                 )
             )
 
@@ -278,15 +292,24 @@ class MemoryRAGMixin:
             complete_context = list(set(memory_context))
 
         if use_cache:
-            await self.rag_set_cache(complete_context)
+            await self.rag_set_cache(complete_context, character)
 
         return complete_context
+
+    def rag_knowledge_filter(self, character: "Character | None"):
+        """Memory documents outside the speaker's knowledge bucket are dropped."""
+        if character is None:
+            return None
+        return KnowledgeIndex.from_scene(self.scene).retrieval_filter(
+            self.scene, character.name
+        )
 
     async def semantic_context(
         self,
         num_messages: int = 3,
         min_query_length: int = 100,
         max_response_tokens: int = 1024,
+        filter: Callable | None = None,
     ):
         """Will retrieve context from the long term memory based on semantic similarity
 
@@ -335,8 +358,9 @@ class MemoryRAGMixin:
         for query in queries:
             log.debug("memory_rag_mixin.build_prompt_default_memory", query=query)
 
+        kwargs = {"filter": filter} if filter is not None else {}
         context = await memory.multi_query(
-            queries, max_tokens=max_response_tokens, iterate=5
+            queries, max_tokens=max_response_tokens, iterate=5, **kwargs
         )
 
         return context

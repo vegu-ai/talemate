@@ -23,6 +23,7 @@ from talemate.character import (
 from talemate.instance import get_agent
 from talemate.emit import emit
 from talemate.util import replace_smart_quotes
+from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
 from talemate.world_state import (
     ContextPin,
     ManualContext,
@@ -132,6 +133,19 @@ class CharacterDetails(pydantic.BaseModel):
     shared_attributes: list[str] = []
     shared_details: list[str] = []
     folder: str | None = None
+    visibility: dict[str, EntryVisibility] = {}
+
+
+class KnowledgeTarget(pydantic.BaseModel):
+    id: str
+    label: str
+    kind: str
+
+
+class CharacterKnowledge(pydantic.BaseModel):
+    name: str
+    edges: list[KnowledgeEdge] = []
+    targets: list[KnowledgeTarget] = []
 
 
 class World(pydantic.BaseModel):
@@ -264,6 +278,7 @@ class WorldStateManager:
             shared_attributes=character.shared_attributes,
             shared_details=character.shared_details,
             folder=character.folder,
+            visibility=character.visibility,
         )
 
         # sorted base attributes
@@ -654,6 +669,95 @@ class WorldStateManager:
 
         if pin:
             await self.set_pin(entry_id, active=True)
+
+    async def set_world_entry_visibility(
+        self, entry_id: str, visibility: EntryVisibility
+    ):
+        self.world_state.manual_context[entry_id].visibility = visibility
+
+    async def set_character_entry_visibility(
+        self, character_name: str, key: str, visibility: EntryVisibility
+    ):
+        """
+        `key` is the memory storage key of the entry: "description", an
+        attribute name, or "detail.<name>". An `everyone` setting is the
+        default and is removed rather than stored.
+        """
+        character = self.scene.get_character(character_name)
+        if visibility.mode == "everyone":
+            character.visibility.pop(key, None)
+        else:
+            character.visibility[key] = visibility
+
+    def knowledge_targets(self) -> list[KnowledgeTarget]:
+        """Everything a knowledge edge can point at, by memory document id."""
+        targets: list[KnowledgeTarget] = []
+        for character in self.scene.character_data.values():
+            name = character.name
+            if character.description:
+                targets.append(
+                    KnowledgeTarget(
+                        id=f"{name}.description",
+                        label=f"{name}: description",
+                        kind="description",
+                    )
+                )
+            for attr in sorted(character.base_attributes):
+                if attr.startswith("_") or attr.lower() in ("name", "scenario_context"):
+                    continue
+                targets.append(
+                    KnowledgeTarget(
+                        id=f"{name}.{attr}", label=f"{name}: {attr}", kind="attribute"
+                    )
+                )
+            for key in sorted(character.details):
+                targets.append(
+                    KnowledgeTarget(
+                        id=f"{name}.detail.{key}", label=f"{name}: {key}", kind="detail"
+                    )
+                )
+        for entry in self.world_state.manual_context.values():
+            targets.append(
+                KnowledgeTarget(id=entry.id, label=entry.id, kind="world_entry")
+            )
+        for entry in self.scene.archived_history:
+            if entry.get("end") is None:
+                continue
+            text = entry.get("text", "")
+            targets.append(
+                KnowledgeTarget(
+                    id=entry["id"],
+                    label=f"history: {text[:60]}",
+                    kind="history",
+                )
+            )
+        return targets
+
+    async def get_character_knowledge(self, character_name: str) -> CharacterKnowledge:
+        edges = [
+            edge
+            for edge in self.world_state.knowledge
+            if edge.character == character_name
+        ]
+        return CharacterKnowledge(
+            name=character_name, edges=edges, targets=self.knowledge_targets()
+        )
+
+    async def set_knowledge_edge(self, edge: KnowledgeEdge) -> KnowledgeEdge:
+        """Upsert by id; a new edge takes the scene time."""
+        if edge.ts is None:
+            edge.ts = self.scene.ts
+        for idx, existing in enumerate(self.world_state.knowledge):
+            if existing.id == edge.id:
+                self.world_state.knowledge[idx] = edge
+                return edge
+        self.world_state.knowledge.append(edge)
+        return edge
+
+    async def remove_knowledge_edge(self, edge_id: str):
+        self.world_state.knowledge = [
+            edge for edge in self.world_state.knowledge if edge.id != edge_id
+        ]
 
     async def set_world_entry_shared(self, entry_id: str, shared: bool):
         """

@@ -1206,6 +1206,14 @@
   summary: 'Conceptual explanation of layered history: base layer static and summary entries, higher layers compressing further
     (useful up to about Layer 3), and the resulting detail gradient in the AI context. Covers compression statistics and the
     Summarizer agent settings that configure it.'
+- path: user-guide/world-editor/knowledge.md
+  title: Knowledge
+  summary: 'Per-character knowledge in the World Editor: what a character knows is derived from presence on history entries,
+    ownership of their own sheet, common lore (other sheets and world entries) and stored grant/revoke edges; only the
+    conversation prompt is filtered, by the speaking character, with missed spans replaced by a gap line and memory retrieval
+    filtered per speaker; the Known by visibility setting (everyone, only the owner, specific characters) on attributes,
+    details, descriptions and world entries; the Knowledge tab on a character for adding and removing grants and revokes;
+    the layered-history leak note and how older scenes without presence behave.'
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: 'Pinning context entries so the AI always considers them: creating pins from the Context editor or a character

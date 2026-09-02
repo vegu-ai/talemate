@@ -111,6 +111,13 @@
                             Remove this attribute from the shared world context.
                         </v-tooltip>
                         Unshare from world</v-btn>
+                    <v-spacer></v-spacer>
+                    <EntryVisibilitySelect
+                        :model-value="selectedVisibility"
+                        :character-names="otherCharacterNames"
+                        :owner-label="character.name"
+                        :disabled="busy"
+                        @update:model-value="setVisibility(selected, $event)" />
                 </v-card-actions>
             </v-card>
         </v-col>
@@ -119,6 +126,7 @@
 </template>
 <script>
 
+import EntryVisibilitySelect from './EntryVisibilitySelect.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
@@ -129,6 +137,7 @@ import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 export default {
     name: 'WorldStateManagerCharacterAttributes',
     components: {
+        EntryVisibilitySelect,
         ContextualGenerate,
         WorldStateManagerTemplateApplicator,
         SpiceAppliedNotification,
@@ -136,6 +145,10 @@ export default {
         AutocompleteRedoChip,
     },
     props: {
+        characterNames: {
+            type: Array,
+            default: () => [],
+        },
         immutableCharacter: Object,
         templates: Object,
         generationOptions: Object,
@@ -224,6 +237,13 @@ export default {
                 ? this.character.base_attributes[this.selected]
                 : null;
         },
+        selectedVisibility() {
+            if (!this.character || !this.selected) return null;
+            return (this.character.visibility || {})[this.selected] || null;
+        },
+        otherCharacterNames() {
+            return this.characterNames.filter(name => name !== this.character?.name);
+        },
         selectedIsShared() {
             return this.character.shared_attributes.includes(this.selected);
         },
@@ -246,6 +266,15 @@ export default {
         },
     },
     methods: {
+        setVisibility(name, visibility) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_character_entry_visibility',
+                name: this.character.name,
+                key: name,
+                visibility: visibility,
+            }));
+        },
         applyTemplates(templateUIDs, callback) {
             this.templateApplicatorCallback = callback;
             

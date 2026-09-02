@@ -60,6 +60,12 @@
                                 </v-card-text>
                             </v-card>
                         </v-col>
+                        <v-col cols="12" v-if="!isNewEntry">
+                            <EntryVisibilitySelect
+                                :model-value="entry.visibility"
+                                owner-label="nobody"
+                                @update:model-value="setVisibility" />
+                        </v-col>
                     </v-row>
 
                 </v-form>
@@ -95,12 +101,14 @@
 
 import ContextualGenerate from './ContextualGenerate.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import EntryVisibilitySelect from './EntryVisibilitySelect.vue';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
 import { createAutocompleteField } from '@/utils/autocompleteField';
 
 export default {
     name: 'WorldStateManagerWorldEntries',
     components: {
+        EntryVisibilitySelect,
         ContextualGenerate,
         ConfirmActionInline,
         AutocompleteRedoChip,
@@ -193,6 +201,15 @@ export default {
         });
     },
     methods: {
+        setVisibility(visibility) {
+            this.entry.visibility = visibility;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_world_entry_visibility',
+                entry_id: this.entry.id,
+                visibility: visibility,
+            }));
+        },
         queueSave(delay = 1500) {
 
             if(this.isNewEntry) {

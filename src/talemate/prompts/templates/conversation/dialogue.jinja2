@@ -48,6 +48,7 @@ Override example:
 {% include "memory-context.jinja2" %}
 {% include "world-state-snapshot.jinja2" %}
 {% include "extra-context-dynamic.jinja2" %}
+{% include "character-knowledge.jinja2" %}
 {% endset -%}
 {# END VOLATILE CONTEXT #}
 
@@ -56,7 +57,7 @@ Override example:
 {% set volatile_context_tokens = count_tokens(volatile_context_text) -%}
 {% set director_guidance = agent_context_state["director__actor_guidance"] -%}
 {% if director_guidance %}{% set keep_director=False %}{% else %}{% set keep_director=talking_character.name %}{% endif -%}
-{% set scene_history = scene.context_history(budget=max_tokens-200-rendered_context_tokens-volatile_context_tokens, min_dialogue=15, sections=False, keep_director=keep_director, perspective=talking_character.name) -%}
+{% set scene_history = scene.context_history(budget=max_tokens-200-rendered_context_tokens-volatile_context_tokens, min_dialogue=15, sections=False, keep_director=keep_director, perspective=agent_action("conversation", "knowledge_perspective", character=talking_character)) -%}
 {% if not director_guidance -%}
     {# INSERT ACTING INSTRUCTIONS VIA OFFSET #}
     {%- if actor_instructions_offset > 0 and talking_character.dialogue_instructions and scene.count_messages() > actor_instructions_offset -%}

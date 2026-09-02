@@ -498,6 +498,18 @@ class MemoryAgent(Agent):
     def _get_document(self, id):
         raise NotImplementedError()
 
+    async def get_embeddings(self, ids: list[str]) -> dict[str, list[float]]:
+        """Stored embedding vectors by document id (missing ids are absent)."""
+        if not ids:
+            return {}
+        if not await self._wait_until_ready():
+            return {}
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_embeddings, ids)
+
+    def _get_embeddings(self, ids: list[str]) -> dict[str, list[float]]:
+        raise NotImplementedError()
+
     async def on_archive_add(self, event: events.ArchiveEvent):
         await self.add(
             event.text,
@@ -1381,6 +1393,16 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 scene_ts=self.scene.ts,
             )
             return None
+
+    def _get_embeddings(self, ids: list[str]) -> dict[str, list[float]]:
+        result = self.db.get(ids=list(ids), include=["embeddings"])
+        embeddings = result.get("embeddings")
+        if embeddings is None:
+            return {}
+        return {
+            doc_id: [float(x) for x in vector]
+            for doc_id, vector in zip(result["ids"], embeddings)
+        }
 
     def _get_document(self, id) -> dict:
         if not id:

@@ -34,6 +34,7 @@ from talemate.agents.base import (
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.knowledge.bucket import KnowledgeIndex
+from talemate.agents.conversation.knowledge import CharacterKnowledgeMixin
 from talemate.agents.context import active_agent
 
 from .websocket_handler import ConversationWebsocketHandler
@@ -63,7 +64,7 @@ talemate.emit.async_signals.register(
 
 
 @register()
-class ConversationAgent(MemoryRAGMixin, Agent):
+class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
     """
     An agent that can be used to have a conversation with the AI
 
@@ -185,6 +186,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             ),
         }
         MemoryRAGMixin.add_actions(actions)
+        CharacterKnowledgeMixin.add_actions(actions)
         return actions
 
     def __init__(

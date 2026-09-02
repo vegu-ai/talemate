@@ -82,6 +82,26 @@ When enabled (default), the writing style selected in the [Scene Settings](/tale
 
 Disable this if you want the AI to generate dialogue without following the scene's writing style template.
 
+## :material-head-lightbulb-outline: Character Knowledge
+
+Builds the prompt from the speaking character's point of view. Nothing in this group adds a request. See [World Editor -- Knowledge](/talemate/user-guide/world-editor/knowledge/) for how a character's knowledge is worked out.
+
+##### Perspective filter
+
+Drop the spans of the history the character was not present for, replaced by a one-line gap, and return only what the character knows from long term memory. Off restores the shared record for every character.
+
+##### Absence block
+
+Add a section to the prompt that lists the recent facts the character does not know, so the model does not let them act on those. The section is only rendered when it has content.
+
+##### Absence block lines
+
+At most this many facts in the block (default 5). The most restated facts come first, then the newest.
+
+##### Absence block window
+
+How many of the most recent facts are considered for the block (default 30).
+
 ## Long Term Memory
 
 --8<-- "docs/snippets/tips.md:agent_long_term_memory_settings"

@@ -14,6 +14,10 @@ Only the conversation prompt is filtered this way, by the character that is spea
 
 When a character speaks, the scene history in their prompt drops the spans they missed and replaces each run of missed material with one line, for example `(Edwin was elsewhere for 2 hours)`. Director instructions, state reinforcements and context investigations are kept whatever the presence says: they are instructions to the actor, not story the character lived through. The long term memory retrieval for that prompt drops documents outside their knowledge as well, and the retrieval cache is kept per speaker.
 
+### What the speaking character does not know
+
+The prompt also gets a short section, *What X does not know*, built from the most recent facts: the facts outside the character's knowledge, minus any that sit next to a fact they do know (someone told them later, and the retold fact is a near-duplicate of the original), the most restated first, capped at five lines. The section is only rendered when it has content, so a character who knows everything recent gets no section. Facts come from summarized entries, and the span a returning character missed is summarized once the first message after their return is archived, so the section catches up on that character's second turn after the return. The switch and the cap live in the conversation agent's [Character Knowledge](/talemate/user-guide/agents/conversation/settings/#character-knowledge) settings, together with the perspective filter itself.
+
 !!! note "Layered history"
     Layered history entries summarize several base entries. Such an entry stays in a character's prompt when the character was present for *any* of its sources, so a coarse layer can still mention something the character missed. The exact filter applies to the base layer and to the memory store.
 

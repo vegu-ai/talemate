@@ -244,6 +244,37 @@ class TestSimilarityGate:
         assert filtered.rejection(memory.table[2]) == "visibility"
         assert filtered.gateable(memory.table[1]) is False
 
+    async def test_an_admission_is_remembered_by_the_diversity_check(
+        self, scene, memory, filtered
+    ):
+        memory.table = [
+            self.presence("F9", "twin fact", 0.25, [1.0, 0.1]),
+            # an ordinary near-copy of the admitted document, known to Edwin
+            self.presence(
+                "e2",
+                "copy of the twin",
+                0.3,
+                [1.0, 0.11],
+                typ="history",
+                present='["Edwin", "Mara"]',
+            ),
+        ]
+        with ActiveScene(scene):
+            result = await memory.multi_query(["q"], iterate=5, filter=filtered)
+        assert result == ["twin fact"]
+
+    async def test_anchors_are_fetched_once_per_call(self, scene, memory, filtered):
+        memory.table = [self.presence("F9", "twin fact", 0.25, [1.0, 0.1])]
+        with (
+            ActiveScene(scene),
+            patch.object(
+                memory, "get_embeddings", wraps=memory.get_embeddings
+            ) as fetch,
+        ):
+            await memory.multi_query(["q1", "q2", "q3"], iterate=5, filter=filtered)
+        anchor_fetches = [c for c in fetch.await_args_list if "F1" in c.args[0]]
+        assert len(anchor_fetches) == 1
+
     async def test_gate_off_keeps_the_filter_strict(self, scene, memory, filtered):
         config(memory, "similarity_gate", False)
         memory.table = [
@@ -479,6 +510,26 @@ class TestEntityLookup:
             )
         assert [d.id for d in found] == ["Will.description"]
 
+    async def test_description_paragraphs_come_back_in_number_order(
+        self, scene, memory, zed
+    ):
+        conversation = get_agent("conversation")
+
+        def paragraph(n):
+            text = f"paragraph {n}"
+            return MemoryDocument(
+                text,
+                {"typ": "base_attribute", "character": "Zed", "attr": "description"},
+                f"Zed.description.{n}",
+                text,
+            )
+
+        docs = {f"Zed.description.{n}": paragraph(n) for n in range(12)}
+        memory.get_documents_by_meta = AsyncMock(return_value=docs)
+        with ActiveScene(scene):
+            found = await conversation.entity_lookup(["Mara: I saw Zed."])
+        assert [d.id for d in found] == [f"Zed.description.{n}" for n in range(12)]
+
     async def test_unrelated_lines_fetch_nothing(self, scene, memory, zed):
         conversation = get_agent("conversation")
         with ActiveScene(scene):
@@ -554,6 +605,8 @@ class TestParsers:
         assert parse_index_list("") is None
         assert parse_index_list("none") == []
         assert parse_index_list("None.") == []
+        assert parse_index_list("None of them apply") == []
+        assert parse_index_list("none - she wasn't there") == []
         assert parse_index_list("1, 3, 3, 0") == [1, 3]
         assert parse_index_list("2 4") == [2, 4]
         assert parse_index_list("no idea") is None
@@ -760,6 +813,25 @@ class TestLedger:
         assert edges[0].source == "inferred" and edges[0].ts == 500
         assert facts["F1"].known_by["Edwin"] == "inferred"
 
+    async def test_the_new_line_is_not_repeated_in_the_recent_lines(
+        self, scene, opt_ins, facts
+    ):
+        conversation, alice = opt_ins
+        enable(conversation, "ledger")
+        scene.history = [
+            CharacterMessage(message="Edwin: Evening."),
+            CharacterMessage(message="Alice: I found the key under the mat."),
+        ]
+        with (
+            ActiveScene(scene),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            request.return_value = ("", {"ledger": "{}"})
+            await conversation.record_learned_facts(
+                alice, "Alice: I found the key under the mat."
+            )
+        assert request.call_args.kwargs["vars"]["recent_lines"] == ["Edwin: Evening."]
+
     async def test_off_makes_no_request(self, scene, opt_ins, facts):
         conversation, alice = opt_ins
         with (
@@ -916,8 +988,8 @@ class TestOffscreenLife:
         assert request.call_args.args[0] == "narrator.offscreen-life"
         vars = request.call_args.kwargs["vars"]
         # the prompt renders from Zed's perspective: no missed facts or entries in it
-        assert vars["missed_count"] == 2
         assert "missed_facts" not in vars and "missed" not in vars
+        assert vars["knowledge_index"] is not None
         assert vars["elapsed"]
         fact = scene.world_state.facts["F2"]
         assert fact.source == "offscreen"
@@ -948,13 +1020,31 @@ class TestOffscreenLife:
         assert narrator.missed_entries(mira) == []
         assert narrator.pending_returns == {}
 
-    async def test_partial_archive_waits_for_the_rest(self, scene, offscreen):
+    async def test_unknown_presence_is_not_prior_presence(self, scene, offscreen):
+        # a scene from before presence tracking: the old entry has no presence
         narrator, zed = offscreen
-        # two Mara-only messages after the newest archived entry: the absence
-        # is not fully archived, so the return waits for the cut
+        scene.archived_history[0]["present"] = None
+        mira = Character(name="Mira")
+        scene.character_data["Mira"] = mira
+        with (
+            ActiveScene(scene),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            await narrator.on_character_activated(activation(scene, mira))
+        request.assert_not_called()
+        assert narrator.was_in_scene(mira) is False
+        # Zed is on no entry with known presence either, but on a message
+        assert narrator.was_in_scene(zed) is False
+        scene.history = [CharacterMessage(message="Zed: here", present=["Zed"])]
+        assert narrator.was_in_scene(zed) is True
+
+    async def test_partial_archive_waits_for_the_last_chunk(self, scene, offscreen):
+        narrator, zed = offscreen
+        # messages 10-13 are Mara alone and not archived yet; the absence is
+        # cut in two chunks by the summarizer, and the account waits for both
         scene.history = [
             CharacterMessage(message=f"Mara: line {i}", present=["Mara"])
-            for i in range(11)
+            for i in range(14)
         ]
         with (
             ActiveScene(scene),
@@ -967,29 +1057,57 @@ class TestOffscreenLife:
             actor.scene = scene
             scene.actors.append(actor)
             scene.active_characters.append("Zed")
+            scene.history.append(
+                CharacterMessage(message="Zed: back", present=["Mara", "Zed"])
+            )
+            request.return_value = ("", {"response": "Zed rowed to the mainland."})
+
             scene.archived_history.append(
                 {
                     "id": "a4",
-                    "text": "More alone.",
+                    "text": "First chunk.",
                     "ts": 4000,
                     "present": ["Mara"],
                     "start": 10,
-                    "end": 10,
+                    "end": 11,
                 }
             )
-            request.return_value = ("", {"response": "Zed rowed to the mainland."})
             await narrator.on_archive_add_offscreen(
                 ArchiveEvent(
                     scene=scene,
                     event_type="archive_add",
-                    text="More alone.",
+                    text="First chunk.",
                     memory_id="a4",
                     ts=4000,
                     present=["Mara"],
                 )
             )
+            request.assert_not_called()
+            assert "Zed" in narrator.pending_returns
+
+            scene.archived_history.append(
+                {
+                    "id": "a5",
+                    "text": "Second chunk.",
+                    "ts": 4500,
+                    "present": ["Mara"],
+                    "start": 12,
+                    "end": 13,
+                }
+            )
+            await narrator.on_archive_add_offscreen(
+                ArchiveEvent(
+                    scene=scene,
+                    event_type="archive_add",
+                    text="Second chunk.",
+                    memory_id="a5",
+                    ts=4500,
+                    present=["Mara"],
+                )
+            )
         request.assert_called_once()
-        assert request.call_args.kwargs["vars"]["missed_count"] == 3
+        assert "Zed" not in narrator.pending_returns
+        assert narrator.absence_fully_archived(zed) is True
 
     async def test_disabled_makes_no_request(self, scene, offscreen):
         narrator, zed = offscreen

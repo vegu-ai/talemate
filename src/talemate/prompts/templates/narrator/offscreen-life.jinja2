@@ -8,11 +8,11 @@ Override example:
 -#}
 {#- rendered from the character's own perspective: the history and the memory
     block hold only what they know, so the span they missed is never shown -#}
-{% with include_character_context=True, skip_characters=[character.name], feature_character=character, perspective=character.name, talking_character=character %}
+{% with include_character_context=True, skip_characters=[character.name], feature_character=character, perspective=character.name, talking_character=character, knowledge_index=knowledge_index, knowledge_viewer=character.name %}
 {% include "narrate-context.jinja2" %}
 {% endwith %}
 <|SECTION:TASK|>
-{{ character.name }} was away from the scene for {{ elapsed }} and has just returned; the scene above ends where they left it. Write what {{ character.name }} did during that time, as a short account in the past tense. Base it on who {{ character.name }} is and on what they set out to do when they left. Only things {{ character.name }} could have done, seen or heard on their own belong here. Plain prose, no dialogue, no line for the current scene.
+{{ character.name }} was away from the scene for {{ elapsed }} and has just returned; the scene above shows what they know, up to and including their return. Write what {{ character.name }} did during that time away, as a short account in the past tense. Base it on who {{ character.name }} is and on what they set out to do when they left. Only things {{ character.name }} could have done, seen or heard on their own belong here. Plain prose, no dialogue, no line for the current scene.
 
 {{ extra_instructions }}
 {% include "response-length.jinja2" %}

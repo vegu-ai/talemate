@@ -30,7 +30,7 @@ A result whose embedding is more similar than this (cosine) to one already selec
 
 ##### Entity lookup
 
-When the recent lines name a character who is not in the scene (aliases from the world state's name mappings count), that character's description is fetched by id and placed ahead of the similarity results. On by default.
+When the recent lines name a character who is not in the scene (aliases from the world state's name mappings count), that character's description is fetched from the memory store and placed ahead of the similarity results. A name that carries a capital must appear as written, so "Will" is not found in "I will go"; an alias that is lower-case in the name mappings matches whatever the case. On by default.
 
 ##### Similarity knowledge gate
 

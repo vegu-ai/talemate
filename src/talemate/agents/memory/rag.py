@@ -27,6 +27,11 @@ def _entity_aliases(scene, name: str) -> set[str]:
     return {a.strip() for a in aliases if a and a.strip()}
 
 
+def _paragraph_order(doc_id: str) -> tuple[int, int]:
+    tail = doc_id.rsplit(".", 1)[-1]
+    return (1, int(tail)) if tail.isdigit() else (0, 0)
+
+
 def _alias_named(alias: str, text: str) -> bool:
     """
     Whole-word match. An alias that carries a capital (a name) must appear
@@ -445,7 +450,9 @@ class MemoryRAGMixin:
             documents = await memory.get_documents_by_meta(
                 {"character": name, "typ": "base_attribute", "attr": "description"}
             )
-            for doc_id in sorted(documents):
+            # `<name>.description`, then the paragraphs `.description.<n>` in
+            # number order (text order would put .10 before .2)
+            for doc_id in sorted(documents, key=_paragraph_order):
                 doc = documents[doc_id]
                 if filter is not None and not filter(doc):
                     continue

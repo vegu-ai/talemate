@@ -11,6 +11,7 @@ import talemate.emit.async_signals as async_signals
 import talemate.util as util
 from talemate.agents.base import AgentAction, AgentActionConfig
 from talemate.events import ArchiveEvent, CharacterActivatedEvent
+from talemate.knowledge.bucket import KnowledgeIndex
 from talemate.knowledge.facts import store_offscreen_fact
 from talemate.knowledge.schema import Fact
 from talemate.prompts import Prompt
@@ -94,32 +95,39 @@ class OffscreenLifeMixin:
         missed.reverse()
         return missed
 
-    def absence_fully_archived(self) -> bool:
+    def absence_fully_archived(self, character: "Character") -> bool:
         """
-        True when no message after the newest archived entry exists: the
-        archive holds the whole absence. The presence cut archives the missed
-        span only once a message after the return arrives, so a return with
-        an unarchived tail waits for that cut.
+        True when no unarchived message belongs to the absence: nothing after
+        the newest archived entry's `end` has a known presence that excludes
+        the character. The newest messages are never archived, so this looks
+        at what they are, not at whether they exist.
         """
-        history = self.scene.history
-        if not history:
-            return True
         last_end = -1
         for entry in reversed(self.scene.archived_history):
             if entry.get("end") is not None:
                 last_end = entry["end"]
                 break
-        return last_end >= len(history) - 1
+        name = character.name
+        for message in self.scene.history[last_end + 1 :]:
+            present = getattr(message, "present", None)
+            if present is not None and name not in present:
+                return False
+        return True
 
     def was_in_scene(self, character: "Character") -> bool:
-        """Present on an archived entry (or one with unknown presence) or on a message."""
+        """
+        Known prior presence on an archived entry or a message. Unknown
+        presence governs what the filter hides, not what spends a request:
+        a scene without presence data produces no account.
+        """
         name = character.name
-        for entry in self.scene.archived_history:
-            present = entry.get("present")
-            if present is None or name in present:
-                return True
+        if any(
+            name in (entry.get("present") or [])
+            for entry in self.scene.archived_history
+        ):
+            return True
         return any(
-            getattr(message, "present", None) and name in message.present
+            name in (getattr(message, "present", None) or [])
             for message in self.scene.history
         )
 
@@ -132,7 +140,7 @@ class OffscreenLifeMixin:
             log.debug("offscreen life: never in the scene", character=character.name)
             return
         missed = self.missed_entries(character)
-        if missed and self.absence_fully_archived():
+        if missed and self.absence_fully_archived(character):
             self.pending_returns.pop(character.name, None)
             await self._offscreen_life_if_enough(character, missed)
             return
@@ -150,14 +158,12 @@ class OffscreenLifeMixin:
             if character is None or name not in self.scene.active_characters:
                 pending.pop(name, None)
                 continue
-            missed = self.missed_entries(character)
-            if not missed:
-                # the newest entry covers the character: nothing was missed
-                if event.present is None or name in event.present:
-                    pending.pop(name, None)
+            if not self.absence_fully_archived(character):
+                # a long absence is cut into several entries: wait for the last
                 continue
+            missed = self.missed_entries(character)
             pending.pop(name, None)
-            if self.offscreen_life_enabled:
+            if missed and self.offscreen_life_enabled:
                 await self._offscreen_life_if_enough(character, missed)
 
     async def _offscreen_life_if_enough(
@@ -198,7 +204,7 @@ class OffscreenLifeMixin:
                 "scene": scene,
                 "max_tokens": self.client.max_token_length,
                 "character": character,
-                "missed_count": len(missed),
+                "knowledge_index": KnowledgeIndex.from_scene(scene),
                 "elapsed": elapsed or "a while",
                 "extra_instructions": self.extra_instructions,
                 "response_length": length,

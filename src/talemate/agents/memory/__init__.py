@@ -134,7 +134,7 @@ class MemoryAgent(Agent):
                     "entity_lookup": AgentActionConfig(
                         type="bool",
                         label="Entity lookup",
-                        description="When the recent lines name a character who is not in the scene, fetch that character's description by id and add it ahead of the similarity results.",
+                        description="When the recent lines name a character who is not in the scene (a name with a capital must appear as written), fetch that character's description from the memory store and add it ahead of the similarity results.",
                         value=True,
                     ),
                     "similarity_gate": AgentActionConfig(
@@ -620,12 +620,33 @@ class MemoryAgent(Agent):
         if not ids or not against:
             return set()
         vectors = await self.get_embeddings(list(dict.fromkeys(ids + against)))
+        return self._near_duplicates_in(
+            ids, {i: vectors[i] for i in against if i in vectors}, vectors, max_distance
+        )
+
+    async def near_duplicates_against(
+        self, ids: list[str], anchors: dict[str, list[float]], max_distance: float
+    ) -> set[str]:
+        """Like `near_duplicates`, with the anchor vectors already in hand."""
+        ids = [i for i in ids if i]
+        if not ids or not anchors:
+            return set()
+        vectors = await self.get_embeddings(ids)
+        return self._near_duplicates_in(ids, anchors, vectors, max_distance)
+
+    @staticmethod
+    def _near_duplicates_in(
+        ids: list[str],
+        anchors: dict[str, list[float]],
+        vectors: dict[str, list[float]],
+        max_distance: float,
+    ) -> set[str]:
         rows = [i for i in ids if i in vectors]
-        cols = [i for i in against if i in vectors]
+        cols = list(anchors)
         if not rows or not cols:
             return set()
         vecs_a = np.asarray([vectors[i] for i in rows], dtype=float)
-        vecs_b = np.asarray([vectors[i] for i in cols], dtype=float)
+        vecs_b = np.asarray([anchors[i] for i in cols], dtype=float)
         a_squared = np.sum(vecs_a**2, axis=1).reshape(-1, 1)
         b_squared = np.sum(vecs_b**2, axis=1).reshape(1, -1)
         distances = np.sqrt(
@@ -732,6 +753,9 @@ class MemoryAgent(Agent):
 
         per_query_results: list[list[str]] = []
         gate_distance = self._similarity_gate_distance() if filter else None
+        # the gate's anchors (the character's known facts and their vectors)
+        # do not change between the queries of one call: fetched once
+        anchors = await self._gate_anchors(filter) if gate_distance is not None else {}
 
         for query in queries:
             # Skip empty queries so that we keep indexing consistent for the
@@ -743,7 +767,9 @@ class MemoryAgent(Agent):
             # Fetch potential memories for this query.
             raw_results = await self.get(formatter(query), limit=limit, **where)
 
-            accepted = await self._apply_filter(raw_results, filter, gate_distance)
+            accepted = await self._apply_filter(
+                raw_results, filter, gate_distance, anchors
+            )
             accepted = self._rank_by_recency(accepted)
             per_query_results.append(accepted[:iterate])
 
@@ -779,13 +805,25 @@ class MemoryAgent(Agent):
             return None
         return float(instance.get_agent("summarizer").archive_fact_dedupe_distance)
 
+    async def _gate_anchors(self, filter: Callable | None) -> dict[str, list[float]]:
+        """The stored vectors of the facts in the filter's bucket, by id."""
+        known_fact_ids = getattr(filter, "known_fact_ids", None)
+        if known_fact_ids is None:
+            return {}
+        ids = known_fact_ids()
+        return await self.get_embeddings(ids) if ids else {}
+
     async def _apply_filter(
-        self, raw_results: list, filter: Callable | None, gate_distance: float | None
+        self,
+        raw_results: list,
+        filter: Callable | None,
+        gate_distance: float | None,
+        anchors: dict[str, list[float]] | None = None,
     ) -> list:
         """
         The knowledge filter, then the similarity knowledge gate: a result
         rejected for presence alone passes when a fact in the character's
-        bucket is a near-duplicate of it (one fetch over the stored vectors).
+        bucket is a near-duplicate of it (its vector against the anchors).
         An admitted result is marked so the diversity check keeps it.
         """
         if not filter:
@@ -799,20 +837,18 @@ class MemoryAgent(Agent):
             else:
                 rejected.append(memory)
 
-        if gate_distance is None or not rejected:
+        if gate_distance is None or not rejected or not anchors:
             return accepted
 
         gateable = getattr(filter, "gateable", None)
-        known_fact_ids = getattr(filter, "known_fact_ids", None)
-        if gateable is None or known_fact_ids is None:
+        if gateable is None:
             return accepted
 
         candidates = [doc for doc in rejected if gateable(doc)]
-        anchors = known_fact_ids()
-        if not candidates or not anchors:
+        if not candidates:
             return accepted
 
-        retold = await self.near_duplicates(
+        retold = await self.near_duplicates_against(
             [doc.id for doc in candidates], anchors, gate_distance
         )
         passed = []
@@ -886,18 +922,15 @@ class MemoryAgent(Agent):
                 if memory in memory_context:
                     continue
 
-                # a gate admission is a wanted near-copy of known knowledge
                 vector = getattr(memory, "embedding", None)
-                if (
-                    vector is not None
-                    and threshold < 1.0
-                    and not getattr(memory, "gate_admitted", False)
-                ):
+                if vector is not None and threshold < 1.0:
                     vector = np.asarray(vector, dtype=float)
                     norm = np.linalg.norm(vector)
                     if norm > 0:
                         unit = vector / norm
-                        if any(
+                        # a gate admission is a wanted near-copy of known
+                        # knowledge: kept, but remembered for later copies
+                        if not getattr(memory, "gate_admitted", False) and any(
                             float(np.dot(unit, other)) > threshold
                             for other in selected_vectors
                         ):

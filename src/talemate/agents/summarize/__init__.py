@@ -652,6 +652,7 @@ class SummarizeAgent(
                 parsed_facts,
                 self.archive_fact_dedupe_distance,
             )
+        await refresh_topics(self.scene, force=True)
         return summarized, self._facts_status(parsed_facts)
 
     async def regenerate_facts(self, entry: "HistoryEntry") -> FactsStatus | None:
@@ -685,6 +686,7 @@ class SummarizeAgent(
                 parsed_facts,
                 self.archive_fact_dedupe_distance,
             )
+        await refresh_topics(self.scene, force=True)
         status = self._facts_status(parsed_facts)
         stored = self.scene.archived_history[entry.index]
         if status is None:

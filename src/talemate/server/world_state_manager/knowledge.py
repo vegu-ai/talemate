@@ -4,6 +4,7 @@ import structlog
 from talemate.history import HistoryEntry
 from talemate.instance import get_agent
 from talemate.knowledge.facts import update_fact
+from talemate.knowledge.topics import refresh_topics
 from talemate.knowledge.schema import EntryVisibility, Fact, KnowledgeEdge
 from talemate.status import background_task
 
@@ -96,6 +97,7 @@ class KnowledgeMixin:
             log.warning("update_fact: unknown fact id", fact_id=fact.id)
             await self.signal_operation_done()
             return
+        await refresh_topics(self.scene, force=True)
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -118,6 +120,7 @@ class KnowledgeMixin:
             if other.supersedes == fact.id:
                 other.supersedes = None
         await get_agent("memory").delete({"ids": [fact.id]})
+        await refresh_topics(self.scene, force=True)
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",

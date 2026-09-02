@@ -14,10 +14,12 @@ from talemate.character import Character
 from talemate.context import ActiveScene
 from talemate.instance import get_agent
 from talemate.knowledge.schema import Fact, KnowledgeEdge, Topic
+from talemate.scene_message import CharacterMessage
 from talemate.knowledge.topics import (
     awareness_line,
     cluster_facts,
     coverage,
+    prune_topics,
     refresh_topics,
     topics_on_load,
 )
@@ -61,20 +63,42 @@ class TestClustering:
     def test_refinement_moves_a_fact_to_its_nearest_centroid(self):
         # F2 joins T1 on the greedy pass (just above the threshold) but sits
         # nearer the centroid that T2 grows into
-        # F4 joins T1 on the greedy pass (0.82 to its centroid, first match)
-        # but is nearer the centroid T2 has by then: the refinement moves it
-        facts = [fact(f"F{i}", "t", i, None) for i in range(1, 5)]
+        # F2 joins T1 on the greedy pass (exactly 0.8 to its leader F1); the
+        # three facts that open T2 pull its centroid to where F2 is nearer,
+        # so the refinement moves F2 there and F1 stays alone
+        facts = [fact(f"F{i}", "t", i, None) for i in range(1, 6)]
         vectors = {
             "F1": [1.0, 0.0],
-            "F2": [0.81, 0.586],
-            "F3": [0.5, 0.866],
-            "F4": [0.6, 0.8],
+            "F2": [0.8, 0.6],
+            "F3": [0.6, 0.8],
+            "F4": [0.65, 0.76],
+            "F5": [0.7, 0.714],
         }
         topics = cluster_facts(facts, vectors, 0.8)
         by_fact = {i: t.id for t in topics for i in t.fact_ids}
-        assert by_fact["F4"] == by_fact["F3"]
-        assert by_fact["F2"] == by_fact["F1"]
-        assert by_fact["F1"] != by_fact["F3"]
+        assert by_fact["F2"] == by_fact["F3"] == by_fact["F4"] == by_fact["F5"]
+        assert by_fact["F1"] != by_fact["F2"]
+
+    def test_admission_compares_with_the_leader_not_a_drifting_centroid(self):
+        # F2 and F3 each sit at 0.8 from the leader F1 but not from each other;
+        # both join T1 because the leader is held fixed for the admission test
+        facts = [fact(f"F{i}", "t", i, None) for i in range(1, 4)]
+        vectors = {"F1": [1.0, 0.0], "F2": [0.8, 0.6], "F3": [0.8, -0.6]}
+        topics = cluster_facts(facts, vectors, 0.8)
+        assert [t.fact_ids for t in topics] == [["F1", "F2", "F3"]]
+
+    def test_named_flag_and_comma_phrases(self):
+        facts = [
+            fact("F1", "a", 1, None, ["Sorena, the ship"]),
+            fact("F2", "b", 2, None, ["Sorena, the ship"]),
+            fact("F3", "c", 3, None),
+        ]
+        vectors = {"F1": [1.0, 0.0], "F2": [0.99, 0.1], "F3": [0.0, 1.0]}
+        topics = cluster_facts(facts, vectors, 0.8)
+        assert [(t.name, t.named) for t in topics] == [
+            ("Sorena", True),
+            ("topic 2", False),
+        ]
 
     def test_missing_vector_left_out_and_fallback_name(self):
         facts = [fact("F1", "a", 1, None), fact("F2", "b", 2, None)]
@@ -151,6 +175,27 @@ class TestRefresh:
                 scene.world_state.facts[f"F{n}"] = fact(f"F{n}", "y", n * 10, None)
                 memory.vectors[f"F{n}"] = [0.0, 1.0]
             assert await refresh_topics(scene) is True
+
+    async def test_a_shrink_counts_toward_the_step(self, scene):
+        memory = FakeMemory(VECTORS, step=2)
+        with patch("talemate.knowledge.topics.get_agent", return_value=memory):
+            await refresh_topics(scene)
+            del scene.world_state.facts["F2"]
+            assert await refresh_topics(scene) is False
+            del scene.world_state.facts["F3"]
+            assert await refresh_topics(scene) is True
+            assert [t.fact_ids for t in scene.world_state.topics.values()] == [["F1"]]
+
+    async def test_prune_drops_dead_ids_when_the_store_is_away(self, scene):
+        memory = FakeMemory(VECTORS)
+        with patch("talemate.knowledge.topics.get_agent", return_value=memory):
+            await refresh_topics(scene)
+            del scene.world_state.facts["F3"]
+            memory.ready = False
+            assert await refresh_topics(scene, force=True) is False
+        assert [t.fact_ids for t in scene.world_state.topics.values()] == [["F1", "F2"]]
+        assert scene.world_state.topics_fact_count == 2
+        assert prune_topics(scene.world_state) is False
 
     async def test_disabled_or_not_ready_keeps_topics(self, scene):
         with patch(
@@ -263,6 +308,29 @@ class TestAwarenessLine:
     def test_small_topics_do_not_qualify(self, topical):
         topical.world_state.topics = {"T4": topical.world_state.topics["T4"]}
         assert awareness_line(topical, "Edwin") is None
+
+    def test_speaker_name_and_placeholders_are_left_out(self, topical):
+        ws = topical.world_state
+        ws.topics["T1"].name = "Edwin"
+        ws.topics["T3"].name = "topic 3"
+        ws.topics["T3"].named = False
+        assert awareness_line(topical, "Edwin") == "Edwin knows some of sextant"
+        # the comparison ignores case
+        ws.topics["T1"].name = "edwin"
+        assert awareness_line(topical, "Edwin") == "Edwin knows some of sextant"
+        ws.topics["T1"].name = "Edwin"
+        # Mara is not the speaker named in T1: it stays for her
+        assert awareness_line(topical, "Mara") == "Mara knows all of Edwin and sextant"
+
+    def test_memory_topics_switch_stops_coverage_and_the_line(self, topical):
+        memory = get_agent("memory")
+        memory.actions["topics"].enabled = False
+        try:
+            assert coverage(topical, "Edwin") == []
+            assert awareness_line(topical, "Edwin") is None
+        finally:
+            memory.actions["topics"].enabled = True
+        assert coverage(topical, "Edwin")
 
     def test_cap_at_six_largest(self, topical):
         ws = topical.world_state
@@ -380,7 +448,9 @@ class TestMemoryTopics:
                 memory, "embed_text", AsyncMock(return_value=np.array([1.0, 0.0]))
             ),
         ):
-            result = await memory.multi_query(["the Sorena"], iterate=5)
+            result = await memory.multi_query(
+                ["the Sorena"], iterate=5, topic_first=True
+            )
         # F3 (most restated) first, then the newest; F1 was already retrieved
         assert result[:3] == ["fact F3", "fact F4", "fact F2"]
         assert "fact one" in result and "history" in result
@@ -401,11 +471,49 @@ class TestMemoryTopics:
         ):
             # newest three of T1 are F4, F3, F2; the filter drops F2
             result = await memory.multi_query(
-                ["q"], iterate=5, filter=lambda d: d.id != "F2"
+                ["q"], iterate=5, filter=lambda d: d.id != "F2", topic_first=True
             )
             assert result == ["fact F4", "fact F3", "history"]
             memory.actions["topics"].enabled = False
+            assert await memory.multi_query(["q"], iterate=5, topic_first=True) == [
+                "history"
+            ]
+
+    async def test_topic_first_is_opt_in_and_off_under_a_metadata_condition(
+        self, topical, memory
+    ):
+        await memory.rebuild_topic_centroids(topical)
+        memory.table = [doc("e1", "history", 0.3)]
+        memory.get_document = AsyncMock(
+            return_value={
+                i: doc(i, f"fact {i}", typ="fact") for i in ("F2", "F3", "F4")
+            }
+        )
+        embed = AsyncMock(return_value=np.array([1.0, 0.0]))
+        with ActiveScene(topical), patch.object(memory, "embed_text", embed):
+            # the default: no topic-first
             assert await memory.multi_query(["q"], iterate=5) == ["history"]
+            # a metadata condition (Context Database tag filter, node
+            # meta_filters) turns it off
+            assert await memory.multi_query(
+                ["q"], iterate=5, topic_first=True, typ="history"
+            ) == ["history"]
+            # the formatted query selects the topic
+            await memory.multi_query(
+                ["q"], iterate=5, topic_first=True, formatter=lambda q: f"formatted {q}"
+            )
+        assert embed.await_args.args[0] == "formatted q"
+        memory.get_document.assert_called_once()
+
+    async def test_prompt_retrieval_asks_for_topic_first(self, topical, memory):
+        conversation = get_agent("conversation")
+        topical.history = [CharacterMessage(message="Mara: a line")]
+        with (
+            ActiveScene(topical),
+            patch.object(memory, "multi_query", AsyncMock(return_value=[])) as mq,
+        ):
+            await conversation.semantic_context()
+        assert mq.call_args.kwargs["topic_first"] is True
 
     async def test_no_embedding_function_means_no_topic_first(self, topical, memory):
         await memory.rebuild_topic_centroids(topical)
@@ -413,7 +521,9 @@ class TestMemoryTopics:
         memory.get_document = AsyncMock(return_value={})
         with ActiveScene(topical):
             # the mock memory agent has no embedding function: embed_text is None
-            assert await memory.multi_query(["q"], iterate=5) == ["history"]
+            assert await memory.multi_query(["q"], iterate=5, topic_first=True) == [
+                "history"
+            ]
         memory.get_document.assert_not_called()
 
 
@@ -437,3 +547,67 @@ class TestManagerPayload:
         payload = knowledge.model_dump()
         assert payload["coverage"][0]["name"] == "Sorena"
         assert "awareness" in payload
+
+
+class TestMutationPathsRecluster:
+    async def test_delete_and_update_force_a_refresh(self, topical):
+        from talemate.server.world_state_manager.knowledge import KnowledgeMixin
+
+        class Handler(KnowledgeMixin):
+            def __init__(self, scene):
+                self.scene = scene
+                self.sent = []
+                self.websocket_handler = type(
+                    "W", (), {"queue_put": lambda _self, m: self.sent.append(m)}
+                )()
+
+            async def signal_operation_done(self, *a, **k):
+                pass
+
+        handler = Handler(topical)
+        with (
+            ActiveScene(topical),
+            patch(
+                "talemate.server.world_state_manager.knowledge.refresh_topics",
+                AsyncMock(),
+            ) as refresh,
+            patch.object(get_agent("memory"), "delete", AsyncMock()),
+        ):
+            await handler.handle_delete_fact({"fact_id": "F12"})
+            assert "F12" not in topical.world_state.facts
+            updated = topical.world_state.facts["F1"].model_copy(
+                update={"text": "edited"}
+            )
+            await handler.handle_update_fact({"fact": updated.model_dump()})
+        assert refresh.await_count == 2
+        assert all(c.kwargs.get("force") is True for c in refresh.await_args_list)
+
+    async def test_dropping_an_entry_prunes_the_topics(self, topical):
+        from talemate.knowledge.facts import drop_facts_for_entries
+
+        ws = topical.world_state
+        for fid in ("F5", "F6"):
+            ws.facts[fid].archive_id = "arch-1"
+        with (
+            ActiveScene(topical),
+            patch.object(get_agent("memory"), "delete", AsyncMock()),
+        ):
+            await drop_facts_for_entries(topical, {"arch-1"})
+        assert ws.topics["T2"].fact_ids == ["F7"]
+        assert ws.topics_fact_count == len(ws.facts)
+
+    async def test_preset_change_clears_the_grouping(self, topical):
+        memory = get_agent("memory")
+        topical.active = True
+        with (
+            ActiveScene(topical),
+            patch.object(memory, "close_db"),
+            patch.object(topical, "commit_to_memory", AsyncMock()),
+            patch.object(topical, "save", AsyncMock()),
+            patch("talemate.agents.memory.emit"),
+        ):
+            memory.topic_centroids = {"T1": np.array([1.0, 0.0])}
+            await memory.handle_embeddings_change()
+        assert topical.world_state.topics == {}
+        assert topical.world_state.topics_fact_count == 0
+        assert memory.topic_centroids == {}

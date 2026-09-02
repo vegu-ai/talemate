@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 __all__ = [
     "cluster_facts",
     "refresh_topics",
+    "prune_topics",
     "topics_on_load",
     "coverage",
     "awareness_line",
@@ -48,29 +49,34 @@ def _centroid(vectors: list[np.ndarray]) -> np.ndarray:
     return _unit(np.mean(np.stack(vectors), axis=0))
 
 
-def _topic_name(members: list[Fact], index: int) -> str:
+def _topic_name(members: list[Fact], index: int) -> tuple[str, bool]:
+    """The most frequent subject among the members (named), or a placeholder."""
     counts: Counter = Counter()
     first_seen: dict[str, str] = {}
     for fact in members:
         for subject in fact.subjects:
-            key = subject.strip().lower()
+            # a subject with a comma is a phrase; its head is the name
+            cleaned = subject.split(",")[0].strip()
+            key = cleaned.lower()
             if not key:
                 continue
             counts[key] += 1
-            first_seen.setdefault(key, subject.strip())
+            first_seen.setdefault(key, cleaned)
     if counts:
         best = max(counts.items(), key=lambda item: (item[1], -len(item[0]), item[0]))
-        return first_seen[best[0]]
-    return f"topic {index}"
+        return first_seen[best[0]], True
+    return f"topic {index}", False
 
 
 def cluster_facts(
     facts: list[Fact], vectors: dict[str, list[float]], threshold: float
 ) -> list[Topic]:
     """
-    Greedy leader clustering in creation order, then one refinement pass
-    that moves each fact to its nearest centroid. Facts without a vector are
-    left out.
+    Greedy leader clustering in creation order: a fact joins the first topic
+    whose leader (its first fact, held fixed) is at least `threshold` similar,
+    so the threshold means the pairwise quantity it was measured on. One
+    refinement pass then moves each fact to its nearest centroid. Facts
+    without a vector are left out.
     """
     ordered = [f for f in sorted(facts, key=fact_order) if f.id in vectors]
     if not ordered:
@@ -78,23 +84,22 @@ def cluster_facts(
     units = {f.id: _unit(vectors[f.id]) for f in ordered}
 
     groups: list[list[Fact]] = []
-    centroids: list[np.ndarray] = []
+    leaders: list[np.ndarray] = []
     for fact in ordered:
         vector = units[fact.id]
         placed = False
-        for i, centroid in enumerate(centroids):
-            if float(np.dot(vector, centroid)) >= threshold:
+        for i, leader in enumerate(leaders):
+            if float(np.dot(vector, leader)) >= threshold:
                 groups[i].append(fact)
-                centroids[i] = _centroid([units[m.id] for m in groups[i]])
                 placed = True
                 break
         if not placed:
             groups.append([fact])
-            centroids.append(vector.copy())
+            leaders.append(vector)
 
     # refinement: nearest centroid wins, then empty groups fall away
     if len(groups) > 1:
-        matrix = np.stack(centroids)
+        matrix = np.stack([_centroid([units[m.id] for m in g]) for g in groups])
         refined: list[list[Fact]] = [[] for _ in groups]
         for fact in ordered:
             scores = matrix @ units[fact.id]
@@ -103,41 +108,83 @@ def cluster_facts(
 
     topics: list[Topic] = []
     for i, members in enumerate(groups, start=1):
+        name, named = _topic_name(members, i)
         topics.append(
-            Topic(
-                id=f"T{i}",
-                name=_topic_name(members, i),
-                fact_ids=[m.id for m in members],
-            )
+            Topic(id=f"T{i}", name=name, named=named, fact_ids=[m.id for m in members])
         )
     return topics
 
 
-def _clusterable(scene: "Scene") -> list[Fact]:
-    return list(scene.world_state.facts.values())
+def _report_shape(topics: list[Topic], facts: int):
+    """Both degenerate outcomes look alike from outside: say which one it is."""
+    if not topics or facts < 2:
+        return
+    largest = max(len(t.fact_ids) for t in topics) / facts
+    singletons = sum(1 for t in topics if len(t.fact_ids) == 1) / len(topics)
+    if len(topics) == 1:
+        log.warning(
+            "topics: every fact in one topic; the similarity threshold may be too low for this embedding model",
+            facts=facts,
+        )
+    elif singletons >= 0.9 and len(topics) >= 5:
+        log.warning(
+            "topics: nearly every fact in its own topic; the similarity threshold may be too high for this embedding model",
+            facts=facts,
+            topics=len(topics),
+        )
+    log.info(
+        "topics",
+        facts=facts,
+        topics=len(topics),
+        largest_share=round(largest, 2),
+        singleton_share=round(singletons, 2),
+    )
+
+
+def prune_topics(world_state) -> bool:
+    """
+    Drop fact ids that no longer exist from the topics (a deletion or a
+    reset while the store is not available), and empty topics with them.
+    Returns True when anything changed.
+    """
+    changed = False
+    for topic_id in list(world_state.topics):
+        topic = world_state.topics[topic_id]
+        kept = [i for i in topic.fact_ids if i in world_state.facts]
+        if len(kept) != len(topic.fact_ids):
+            changed = True
+            if kept:
+                topic.fact_ids = kept
+            else:
+                del world_state.topics[topic_id]
+    if changed:
+        world_state.topics_fact_count = len(world_state.facts)
+    return changed
 
 
 async def refresh_topics(scene: "Scene", force: bool = False) -> bool:
     """
-    Recluster when enough facts arrived since the last run (or when forced).
-    Returns True when the topics were rebuilt.
+    Recluster when the fact count moved by the recluster step in either
+    direction since the last run, or when forced (every fact mutation the
+    user makes forces it). Returns True when the topics were rebuilt.
     """
     memory = get_agent("memory")
-    if not getattr(memory, "topics_enabled", False):
+    if not memory.topics_enabled:
         return False
     world_state = scene.world_state
-    facts = _clusterable(scene)
+    facts = list(world_state.facts.values())
     if not facts:
         if world_state.topics:
             world_state.topics = {}
             world_state.topics_fact_count = 0
             memory.topic_centroids = {}
         return False
-    new_facts = len(facts) - world_state.topics_fact_count
-    if not force and world_state.topics and new_facts < memory.topics_recluster_step:
+    moved = abs(len(facts) - world_state.topics_fact_count)
+    if not force and world_state.topics and moved < memory.topics_recluster_step:
         return False
     if not memory.ready:
         log.debug("topics: memory not ready, keeping the current topics")
+        prune_topics(world_state)
         return False
 
     vectors = await memory.get_embeddings([f.id for f in facts])
@@ -157,13 +204,14 @@ async def refresh_topics(scene: "Scene", force: bool = False) -> bool:
         topics=[(t.id, t.name, len(t.fact_ids)) for t in topics],
         facts=len(facts),
     )
+    _report_shape(topics, len(facts))
     return True
 
 
 async def topics_on_load(scene: "Scene"):
     """Centroids are not persisted: rebuild them, and cluster when nothing is stored yet."""
     memory = get_agent("memory")
-    if not getattr(memory, "topics_enabled", False):
+    if not memory.topics_enabled:
         return
     world_state = scene.world_state
     if not world_state.topics:
@@ -175,6 +223,8 @@ async def topics_on_load(scene: "Scene"):
 
 def coverage(scene: "Scene", character: str) -> list[TopicCoverage]:
     """Per topic, how many of its facts sit in the character's bucket; largest topics first."""
+    if not get_agent("memory").topics_enabled:
+        return []
     index = KnowledgeIndex.from_scene(scene)
     facts = scene.world_state.facts
     rows: list[TopicCoverage] = []
@@ -192,8 +242,13 @@ def coverage(scene: "Scene", character: str) -> list[TopicCoverage]:
         rows.append(
             TopicCoverage(id=topic.id, name=topic.name, total=len(members), known=known)
         )
-    rows.sort(key=lambda r: (-r.total, r.id))
+    rows.sort(key=lambda r: (-r.total, _topic_number(r.id)))
     return rows
+
+
+def _topic_number(topic_id: str) -> int:
+    digits = "".join(ch for ch in topic_id if ch.isdigit())
+    return int(digits) if digits else 0
 
 
 def awareness_line(scene: "Scene", character: str) -> str | None:
@@ -201,7 +256,17 @@ def awareness_line(scene: "Scene", character: str) -> str | None:
     `<name> knows all of A and B, some of C, nothing of D` over the topics
     with at least three facts, largest first, at most six.
     """
-    rows = [r for r in coverage(scene, character) if r.total >= AWARENESS_MIN_FACTS]
+    topics = scene.world_state.topics
+    rows = [
+        r
+        for r in coverage(scene, character)
+        if r.total >= AWARENESS_MIN_FACTS
+        # a placeholder name the model cannot resolve, or the speaker's own
+        # name ("Edwin knows nothing of Edwin"), is no awareness
+        and r.id in topics
+        and topics[r.id].named
+        and r.name.strip().lower() != character.strip().lower()
+    ]
     rows = rows[:AWARENESS_MAX_TOPICS]
     if not rows:
         return None

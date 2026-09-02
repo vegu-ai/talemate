@@ -12,6 +12,7 @@ import structlog
 from talemate.instance import get_agent
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.schema import Fact, KnowledgeEdge, ParsedFact
+from talemate.knowledge.topics import prune_topics
 from talemate.util.data import extract_json
 
 if TYPE_CHECKING:
@@ -152,6 +153,9 @@ async def drop_facts_for_entries(scene: "Scene", archive_ids: set[str]):
     removed = prune_summary_facts(scene.world_state, archive_ids)
     if removed:
         await get_agent("memory").delete({"ids": sorted(removed)})
+        # the reset and rebuild paths run while the store may be unavailable;
+        # the caller reclusters when it can
+        prune_topics(scene.world_state)
 
 
 async def update_fact(scene: "Scene", fact: Fact) -> bool:

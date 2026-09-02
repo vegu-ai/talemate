@@ -1,0 +1,71 @@
+## Characters
+
+### Hero
+name: Hero
+gender: male
+age: early 30s
+occupation: Adventurer
+
+### Elena
+name: Elena
+gender: female
+age: early 30s
+occupation: Healer
+
+A wandering healer with knowledge of ancient herbs.
+
+## Scene description
+A peaceful clearing in the heart of an ancient forest.
+
+## Additional information
+
+## Classification
+Content Classification: Fantasy adventure story
+
+Narrative Perspective: Third person limited, past tense.
+
+## What elena is aware of
+Elena knows all of the bridge, some of the letter, nothing of the mine.
+
+## Task
+This is a screenplay for a scene featuring the characters of Hero and Elena in Fantasy adventure story.
+
+Continue the scene by writing the next line of dialogue for Elena.
+
+Portray the character exactly as defined without holding back. You are the creator of the screenplay and you have the creative freedom to fill in gaps and flesh out Elena's details if needed.
+
+Based on Elena's existing dialogue, create a continuation of the scene that stays true to Elena's character and the scene progression.
+
+You may chose to have Elena respond to the conversation, or you may chose to have Elena perform a new action that is in line with Elena's character.
+
+The format is a screenplay, so you MUST write the character's name in all caps followed by a line break and then the character's dialogue and actions. Speech must be enclosed in double quotes, actions are plain text. For example:
+
+``` example
+ELENA
+The forest provides all we need.
+END-OF-LINE
+```
+
+STAY IN THE SCENE. YOU MUST NOT BREAK CHARACTER. YOU MUST NOT BREAK THE FOURTH WALL.
+
+YOU MUST MARK YOUR CONTRIBUTION WITH "END-OF-LINE" AT THE END OF YOUR CONTRIBUTION.
+
+YOU MUST ONLY WRITE NEW DIALOGUE FOR ELENA.
+
+The length of your response must fit within 4 paragraphs.
+
+## Acting instructions
+**TENSE**: Examine the existing conversation history and maintain the EXACT same tense (past/present) used in previous messages. **NEVER switch tenses mid-conversation**.
+**PERSPECTIVE**: The narrative perspective for this scene is — Third person limited, past tense.. Apply it consistently to Elena's actions and thoughts.
+
+## Scene
+(Broad character guidance for Elena: Speaks calmly and with wisdom. )
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
+
+Start your response with: ELENA

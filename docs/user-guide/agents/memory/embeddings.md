@@ -84,7 +84,7 @@ A multiplier applied to **Distance** when deciding whether a result is a match. 
 
 ##### Topic Threshold
 
-The cosine similarity at which two facts share a [topic](/talemate/user-guide/agents/memory/settings/#topics), and the least similarity a retrieval query needs to the nearest topic for that topic to contribute. The useful value depends on the model: with `all-MiniLM-L6-v2`, facts about the same thing score around 0.5 to 0.65 against each other, so every shipped preset starts at 0.50. The Memory agent's Topics group can override it for every preset at once.
+The cosine similarity at which two facts share a [topic](/talemate/user-guide/agents/memory/settings/#topics), and the least similarity a retrieval query needs to the nearest topic for that topic to contribute. The useful value depends on the model, and 0.50 was measured for `all-MiniLM-L6-v2` only (facts about the same thing score around 0.5 to 0.65 against each other); the other shipped presets inherit that number as a starting point, not a measurement. The threshold compares a fact with the topic's first fact, so it is the same pairwise quantity. When every fact lands in its own topic or all of them in one, the memory agent logs a warning naming the direction to move. The Memory agent's Topics group can override it for every preset at once.
 
 ##### Distance Function
 

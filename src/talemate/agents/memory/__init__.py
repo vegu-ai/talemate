@@ -41,9 +41,6 @@ from talemate.agents.memory.rerank import (
     RERANK_CANDIDATES,
     RERANK_KEEP,
 )
-
-# how many of the nearest topic's facts join a query's results
-TOPIC_FACTS_PER_QUERY = 3
 from talemate.util.gpu import release_cuda_cache
 
 import talemate.agents.memory.nodes  # noqa: F401
@@ -62,6 +59,9 @@ if TYPE_CHECKING:
     from talemate.client.base import ClientEmbeddingsStatus
 
 log = structlog.get_logger("talemate.agents.memory")
+
+# how many of the nearest topic's facts join a query's results
+TOPIC_FACTS_PER_QUERY = 3
 
 if not chromadb:
     log.info("ChromaDB not found, disabling Chroma agent")
@@ -340,7 +340,9 @@ class MemoryAgent(Agent):
         if value > 0:
             return value
         preset = self.embeddings_config
-        return float(getattr(preset, "topic_threshold", 0.5) or 0.5)
+        if preset is None:
+            return 0.5
+        return float(preset.topic_threshold)
 
     async def rebuild_topic_centroids(self, scene):
         """Centroids from the stored fact vectors of every topic's members."""
@@ -411,14 +413,9 @@ class MemoryAgent(Agent):
         log.debug("topic first matched", topic=topic_id, candidates=ids)
         if not ids:
             return []
-        try:
-            documents = await self.get_document(ids)
-        except NotImplementedError:
-            return []
+        documents = await self.get_document(ids)
         found = [documents[i] for i in ids if i in documents]
         if filter is not None:
-            # the knowledge filter still decides: a topic's facts the
-            # character does not know never reach their prompt
             found = [doc for doc in found if filter(doc)]
         log.debug("topic first", topic=topic_id, added=[d.id for d in found])
         return found
@@ -474,6 +471,10 @@ class MemoryAgent(Agent):
 
         self.close_db(scene)
         emit("status", "Re-importing context database", status="busy")
+        # topics were grouped in the old vector space: rebuilt on import
+        scene.world_state.topics = {}
+        scene.world_state.topics_fact_count = 0
+        self.topic_centroids = {}
         await scene.commit_to_memory()
         if not scene.immutable_save:
             await scene.save(auto=True)
@@ -841,13 +842,16 @@ class MemoryAgent(Agent):
         limit: int = 10,
         return_docs: bool = False,
         over_fetch: int = 1,
+        topic_first: bool = False,
         **where,
     ):
         """
         Get the character memory context for a given character
 
         `over_fetch` widens the vector search (limit × over_fetch) for callers
-        whose filter drops many candidates.
+        whose filter drops many candidates. `topic_first` lets the nearest
+        topic contribute its most restated facts (prompt retrieval only; a
+        metadata condition in `where` turns it off).
 
         Per query the candidates pass the filter (and the similarity knowledge
         gate), are re-ranked by distance plus the recency term, and are cut
@@ -878,7 +882,13 @@ class MemoryAgent(Agent):
 
             accepted = await self._apply_filter(raw_results, filter, gate_distance)
             accepted = self._rank_by_recency(accepted)
-            topic_docs = await self._topic_first(query, accepted, filter)
+            # only a caller without a metadata condition asks for topic-first
+            # facts: `where` is not applied to a fetch by id
+            topic_docs = (
+                await self._topic_first(formatter(query), accepted, filter)
+                if topic_first and not where
+                else []
+            )
             per_query_results.append(
                 (topic_docs + accepted)[: iterate + len(topic_docs)]
             )

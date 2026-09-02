@@ -410,6 +410,7 @@ class MemoryRAGMixin:
             iterate=5,
             filter=filter,
             over_fetch=3 if filter is not None else 1,
+            topic_first=True,
         )
 
         if not entity_context:

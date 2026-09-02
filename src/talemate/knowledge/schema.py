@@ -72,6 +72,8 @@ class Topic(pydantic.BaseModel):
 
     id: str
     name: str
+    # False when no subject named the topic and `name` is a placeholder
+    named: bool = True
     fact_ids: list[str] = pydantic.Field(default_factory=list)
 
 

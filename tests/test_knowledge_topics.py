@@ -100,6 +100,45 @@ class TestClustering:
             ("topic 2", False),
         ]
 
+    def test_two_topics_never_share_a_name(self):
+        facts = [
+            fact("F1", "a", 1, None, ["Sorena, the ship"]),
+            fact("F2", "b", 2, None, ["Sorena, the ship"]),
+            fact("F3", "c", 3, None, ["Sorena, the captain"]),
+            fact("F4", "d", 4, None, ["Sorena, the captain"]),
+        ]
+        vectors = {
+            "F1": [1.0, 0.0],
+            "F2": [0.99, 0.1],
+            "F3": [0.0, 1.0],
+            "F4": [0.1, 0.99],
+        }
+        topics = cluster_facts(facts, vectors, 0.8)
+        assert [t.name for t in topics] == ["Sorena, the ship", "Sorena, the captain"]
+
+    def test_shape_report_reads_the_facts_not_the_topics(self):
+        from talemate.knowledge.topics import _report_shape
+
+        def topic(i, n):
+            return Topic(
+                id=f"T{i}", name=f"t{i}", fact_ids=[f"F{i}_{k}" for k in range(n)]
+            )
+
+        def verdict(topics):
+            with patch("talemate.knowledge.topics.log") as log:
+                _report_shape(topics)
+            return " ".join(str(c.args[0]) for c in log.warning.call_args_list)
+
+        # 56 on one theme + 4 unrelated: a blob, not dust
+        text = verdict([topic(1, 56)] + [topic(i, 1) for i in range(2, 6)])
+        assert "too low" in text and "too high" not in text
+        # 50 + 10 unrelated: still a blob (83 percent), never "too high"
+        text = verdict([topic(1, 50)] + [topic(i, 1) for i in range(2, 12)])
+        assert "too low" in text and "too high" not in text
+        assert "too high" in verdict([topic(i, 1) for i in range(1, 11)])
+        # one clustered fact (the others had no vector): no verdict
+        assert verdict([topic(1, 1)]) == ""
+
     def test_missing_vector_left_out_and_fallback_name(self):
         facts = [fact("F1", "a", 1, None), fact("F2", "b", 2, None)]
         topics = cluster_facts(facts, {"F1": [1.0, 0.0]}, 0.8)
@@ -611,3 +650,30 @@ class TestMutationPathsRecluster:
         assert topical.world_state.topics == {}
         assert topical.world_state.topics_fact_count == 0
         assert memory.topic_centroids == {}
+
+    async def test_regenerate_paths_force_a_refresh(self, topical):
+        from talemate.history import ArchiveEntry, HistoryEntry
+
+        summarizer = get_agent("summarizer")
+        entry = ArchiveEntry(
+            id="arch-1", text="An entry.", ts=10, present=["Mara"], start=0, end=3
+        )
+        topical.archived_history = [entry.model_dump()]
+        history_entry = HistoryEntry(
+            text="An entry.", ts=10, index=0, layer=0, id="arch-1", start=0, end=3
+        )
+        topical.history = [
+            CharacterMessage(message=f"Mara: line {i}") for i in range(4)
+        ]
+        with (
+            ActiveScene(topical),
+            patch("talemate.agents.summarize.refresh_topics", AsyncMock()) as refresh,
+            patch("talemate.agents.summarize.drop_facts_for_entries", AsyncMock()),
+            patch("talemate.agents.summarize.store_facts", AsyncMock(return_value=[])),
+            # no facts come back: the rebuild must still follow the drop
+            patch.object(summarizer, "summarize", AsyncMock(return_value=("text", []))),
+        ):
+            await summarizer.regenerate_facts(history_entry)
+            await summarizer.summarize_with_facts("dialogue", entry)
+        assert refresh.await_count == 2
+        assert all(c.kwargs.get("force") is True for c in refresh.await_args_list)

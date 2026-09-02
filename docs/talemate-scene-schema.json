@@ -179,6 +179,7 @@
             "properties": {
               "id": {"type": "string"},
               "name": {"type": "string", "description": "The most frequent subject among the topic's facts, or topic N."},
+              "named": {"type": "boolean", "description": "False when no subject named the topic and name is a placeholder."},
               "fact_ids": {"type": "array", "items": {"type": "string"}}
             }
           }

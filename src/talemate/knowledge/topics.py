@@ -49,23 +49,43 @@ def _centroid(vectors: list[np.ndarray]) -> np.ndarray:
     return _unit(np.mean(np.stack(vectors), axis=0))
 
 
-def _topic_name(members: list[Fact], index: int) -> tuple[str, bool]:
-    """The most frequent subject among the members (named), or a placeholder."""
+def _topic_subject(members: list[Fact]) -> str | None:
+    """The most frequent subject among the members, as written; None without subjects."""
     counts: Counter = Counter()
     first_seen: dict[str, str] = {}
     for fact in members:
         for subject in fact.subjects:
-            # a subject with a comma is a phrase; its head is the name
-            cleaned = subject.split(",")[0].strip()
+            cleaned = subject.strip()
             key = cleaned.lower()
             if not key:
                 continue
             counts[key] += 1
             first_seen.setdefault(key, cleaned)
-    if counts:
-        best = max(counts.items(), key=lambda item: (item[1], -len(item[0]), item[0]))
-        return first_seen[best[0]], True
-    return f"topic {index}", False
+    if not counts:
+        return None
+    best = max(counts.items(), key=lambda item: (item[1], -len(item[0]), item[0]))
+    return first_seen[best[0]]
+
+
+def _topic_names(groups: list[list[Fact]]) -> list[tuple[str, bool]]:
+    """
+    One name per group: the head of its subject (the part before a comma)
+    when no other group claims the same head, else the whole subject, so
+    the awareness line and the coverage table never show two topics with
+    one name. Groups without a subject get a placeholder.
+    """
+    subjects = [_topic_subject(g) for g in groups]
+    heads = [s.split(",")[0].strip() if s else None for s in subjects]
+    head_counts = Counter(h.lower() for h in heads if h)
+    names: list[tuple[str, bool]] = []
+    for index, (subject, head) in enumerate(zip(subjects, heads), start=1):
+        if subject is None:
+            names.append((f"topic {index}", False))
+        elif head_counts[head.lower()] > 1:
+            names.append((subject, True))
+        else:
+            names.append((head, True))
+    return names
 
 
 def cluster_facts(
@@ -107,34 +127,47 @@ def cluster_facts(
         groups = [g for g in refined if g]
 
     topics: list[Topic] = []
-    for i, members in enumerate(groups, start=1):
-        name, named = _topic_name(members, i)
+    for i, (members, (name, named)) in enumerate(
+        zip(groups, _topic_names(groups)), start=1
+    ):
         topics.append(
             Topic(id=f"T{i}", name=name, named=named, fact_ids=[m.id for m in members])
         )
     return topics
 
 
-def _report_shape(topics: list[Topic], facts: int):
-    """Both degenerate outcomes look alike from outside: say which one it is."""
-    if not topics or facts < 2:
+LARGEST_SHARE_BLOB = 0.8
+SINGLETON_SHARE_DUST = 0.9
+
+
+def _report_shape(topics: list[Topic]):
+    """
+    Both degenerate outcomes look alike from outside: say which one it is.
+    Shares are over the clustered facts (facts without a vector never reach
+    the clustering), and the singleton share counts facts, not topics.
+    """
+    members = sum(len(t.fact_ids) for t in topics)
+    if not topics or members < 2:
         return
-    largest = max(len(t.fact_ids) for t in topics) / facts
-    singletons = sum(1 for t in topics if len(t.fact_ids) == 1) / len(topics)
-    if len(topics) == 1:
+    largest = max(len(t.fact_ids) for t in topics) / members
+    singletons = sum(len(t.fact_ids) for t in topics if len(t.fact_ids) == 1) / members
+    if largest >= LARGEST_SHARE_BLOB and members >= 5:
         log.warning(
-            "topics: every fact in one topic; the similarity threshold may be too low for this embedding model",
-            facts=facts,
-        )
-    elif singletons >= 0.9 and len(topics) >= 5:
-        log.warning(
-            "topics: nearly every fact in its own topic; the similarity threshold may be too high for this embedding model",
-            facts=facts,
+            "topics: most facts sit in one topic; the similarity threshold may be too low for this embedding model",
+            facts=members,
             topics=len(topics),
+            largest_share=round(largest, 2),
+        )
+    elif singletons >= SINGLETON_SHARE_DUST and members >= 5:
+        log.warning(
+            "topics: nearly every fact sits in its own topic; the similarity threshold may be too high for this embedding model",
+            facts=members,
+            topics=len(topics),
+            singleton_share=round(singletons, 2),
         )
     log.info(
         "topics",
-        facts=facts,
+        facts=members,
         topics=len(topics),
         largest_share=round(largest, 2),
         singleton_share=round(singletons, 2),
@@ -204,7 +237,7 @@ async def refresh_topics(scene: "Scene", force: bool = False) -> bool:
         topics=[(t.id, t.name, len(t.fact_ids)) for t in topics],
         facts=len(facts),
     )
-    _report_shape(topics, len(facts))
+    _report_shape(topics)
     return True
 
 

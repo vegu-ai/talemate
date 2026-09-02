@@ -48,6 +48,7 @@ class FakeMemory:
 
     # the real distance step over the fake vectors
     near_duplicates = MemoryAgent.near_duplicates
+    _near_duplicates_in = staticmethod(MemoryAgent._near_duplicates_in)
 
 
 @pytest.fixture

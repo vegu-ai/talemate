@@ -61,10 +61,13 @@ def parse_index_list(text: str | None) -> list[int] | None:
     if text is None:
         return None
     text = text.strip()
-    if not text or not _INDEX_LIST.match(text):
+    if not text:
         return None
-    if text.rstrip(". ").lower() == "none":
+    # "none" with a short prose tail is a normal completion of the prefill
+    if re.match(r"^none\b", text, re.IGNORECASE):
         return []
+    if not _INDEX_LIST.match(text):
+        return None
     numbers: list[int] = []
     for match in re.findall(r"\d+", text):
         value = int(match)
@@ -340,8 +343,8 @@ class CharacterKnowledgeMixin:
         return context
 
     def _recent_lines(self) -> list[str]:
-        """The last few scene lines, as the memory retrieval sees them."""
-        return [
+        """The last few scene lines, oldest first (collect_messages yields newest first)."""
+        lines = [
             str(message)
             for message in self.scene.collect_messages(
                 max_iterations=100,
@@ -349,6 +352,8 @@ class CharacterKnowledgeMixin:
                 typ=["character", "narrator", "director"],
             )
         ]
+        lines.reverse()
+        return lines
 
     async def knowledge_gate(self, character: "Character", candidates: list) -> list:
         """Keep the retrieved memories the character would know (+1 request)."""
@@ -455,6 +460,9 @@ class CharacterKnowledgeMixin:
             return {}
 
         recent = self._recent_lines()
+        # the line is already in the history when the signal arrives
+        if recent and recent[-1] == line:
+            recent = recent[:-1]
         _, extracted = await Prompt.request(
             "conversation.knowledge-ledger",
             self.knowledge_analysis_client,

@@ -18,15 +18,15 @@ The device to use for the embeddings. This can be either `cpu` or `cuda`.
 
 ## :material-shape-outline: Topics
 
-Clusters the stored facts into topics by embedding, without a request: facts are walked in creation order, each joins the first topic whose centroid is similar enough or opens a new one, and one refinement pass moves every fact to its nearest centroid. A topic is named after the most frequent subject among its facts. Topics give every character a coverage table in the World Editor and an [awareness line](/talemate/user-guide/agents/conversation/settings/#awareness-line) in the conversation prompt, and the topic nearest to a retrieval query contributes its most restated facts ahead of the similarity results. The container can be disabled.
+Clusters the stored facts into topics by embedding, without a request: facts are walked in creation order, each joins the first topic whose first fact is similar enough or opens a new one, and one refinement pass moves every fact to its nearest centroid. A topic is named after the most frequent subject among its facts (the whole subject when two topics would otherwise share a name). Topics give every character a coverage table in the World Editor and an [awareness line](/talemate/user-guide/agents/conversation/settings/#awareness-line) in the conversation prompt, and in the conversation prompt's memory retrieval the topic nearest to a query contributes its most restated facts ahead of the similarity results; a Context Database search or a node query gets no such addition. The container can be disabled, which also stops the coverage table and the awareness line.
 
 ##### Recluster step
 
-Rebuild the topics once this many facts arrived since the last clustering (default 20). Topics are also built on load when facts exist and none are stored yet; the centroids are never saved and are rebuilt from the memory store on load.
+Rebuild the topics once the fact count moved by this many since the last clustering, up or down (default 20). Editing, deleting or regenerating facts and changing the embedding preset rebuild the topics at once. Topics are also built on load when facts exist and none are stored yet; the centroids are never saved and are rebuilt from the memory store on load.
 
 ##### Similarity threshold
 
-A fact joins a topic when its cosine similarity to the topic's centroid is at least this; below it a new topic opens. The nearest topic contributes to retrieval only above this as well. At 0 (the default) the value comes from the [embedding preset's Topic Threshold](/talemate/user-guide/agents/memory/embeddings/#topic-threshold), 0.50 for every shipped preset, because the useful value depends on the model; set it here to override every preset at once.
+A fact joins a topic when its cosine similarity to the topic's first fact is at least this; below it a new topic opens. The nearest topic contributes to the conversation prompt's retrieval only above this as well. At 0 (the default) the value comes from the [embedding preset's Topic Threshold](/talemate/user-guide/agents/memory/embeddings/#topic-threshold), 0.50 for every shipped preset, because the useful value depends on the model; set it here to override every preset at once. When most facts land in one topic or nearly every fact in its own, the memory agent logs a warning naming the direction to move.
 
 ## :material-filter-variant: Retrieval
 
@@ -42,7 +42,7 @@ A result whose embedding is more similar than this (cosine) to one already selec
 
 ##### Entity lookup
 
-When the recent lines name a character who is not in the scene (aliases from the world state's name mappings count), that character's description is fetched by id and placed ahead of the similarity results. On by default.
+When the recent lines name a character who is not in the scene (aliases from the world state's name mappings count), that character's description is fetched from the memory store and placed ahead of the similarity results. A name that carries a capital must appear as written, so "Will" is not found in "I will go"; an alias that is lower-case in the name mappings matches whatever the case. On by default.
 
 ##### Similarity knowledge gate
 

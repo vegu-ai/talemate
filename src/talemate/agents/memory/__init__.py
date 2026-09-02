@@ -115,12 +115,12 @@ class MemoryAgent(Agent):
                 can_be_disabled=True,
                 icon="mdi-shape-outline",
                 label="Topics",
-                description="Cluster the stored facts into topics by embedding (no request). Topics give each character a coverage table and an awareness line, and the nearest topic contributes its most restated facts to retrieval.",
+                description="Cluster the stored facts into topics by embedding (no request). Topics give each character a coverage table and an awareness line, and in the conversation prompt's memory retrieval the nearest topic contributes its most restated facts.",
                 config={
                     "recluster_step": AgentActionConfig(
                         type="number",
                         label="Recluster step",
-                        description="Rebuild the topics once this many facts arrived since the last clustering.",
+                        description="Rebuild the topics once the fact count moved by this many, up or down, since the last clustering. Editing, deleting or regenerating facts, and changing the embedding preset, rebuild them at once.",
                         value=20,
                         min=1,
                         max=200,
@@ -129,7 +129,7 @@ class MemoryAgent(Agent):
                     "similarity_threshold": AgentActionConfig(
                         type="number",
                         label="Similarity threshold",
-                        description="A fact joins a topic when its cosine similarity to the topic's centroid is at least this; below it a new topic opens. The nearest topic contributes to retrieval only above this as well. 0 uses the embedding preset's topic threshold, which depends on the model.",
+                        description="A fact joins a topic when its cosine similarity to the topic's first fact is at least this; below it a new topic opens. The nearest topic contributes to the conversation prompt's retrieval only above this as well. 0 uses the embedding preset's topic threshold, which depends on the model.",
                         value=0,
                         min=0,
                         max=0.99,
@@ -165,7 +165,7 @@ class MemoryAgent(Agent):
                     "entity_lookup": AgentActionConfig(
                         type="bool",
                         label="Entity lookup",
-                        description="When the recent lines name a character who is not in the scene, fetch that character's description by id and add it ahead of the similarity results.",
+                        description="When the recent lines name a character who is not in the scene (a name with a capital must appear as written), fetch that character's description from the memory store and add it ahead of the similarity results.",
                         value=True,
                     ),
                     "similarity_gate": AgentActionConfig(
@@ -754,12 +754,33 @@ class MemoryAgent(Agent):
         if not ids or not against:
             return set()
         vectors = await self.get_embeddings(list(dict.fromkeys(ids + against)))
+        return self._near_duplicates_in(
+            ids, {i: vectors[i] for i in against if i in vectors}, vectors, max_distance
+        )
+
+    async def near_duplicates_against(
+        self, ids: list[str], anchors: dict[str, list[float]], max_distance: float
+    ) -> set[str]:
+        """Like `near_duplicates`, with the anchor vectors already in hand."""
+        ids = [i for i in ids if i]
+        if not ids or not anchors:
+            return set()
+        vectors = await self.get_embeddings(ids)
+        return self._near_duplicates_in(ids, anchors, vectors, max_distance)
+
+    @staticmethod
+    def _near_duplicates_in(
+        ids: list[str],
+        anchors: dict[str, list[float]],
+        vectors: dict[str, list[float]],
+        max_distance: float,
+    ) -> set[str]:
         rows = [i for i in ids if i in vectors]
-        cols = [i for i in against if i in vectors]
+        cols = list(anchors)
         if not rows or not cols:
             return set()
         vecs_a = np.asarray([vectors[i] for i in rows], dtype=float)
-        vecs_b = np.asarray([vectors[i] for i in cols], dtype=float)
+        vecs_b = np.asarray([anchors[i] for i in cols], dtype=float)
         a_squared = np.sum(vecs_a**2, axis=1).reshape(-1, 1)
         b_squared = np.sum(vecs_b**2, axis=1).reshape(1, -1)
         distances = np.sqrt(
@@ -869,6 +890,9 @@ class MemoryAgent(Agent):
 
         per_query_results: list[list[str]] = []
         gate_distance = self._similarity_gate_distance() if filter else None
+        # the gate's anchors (the character's known facts and their vectors)
+        # do not change between the queries of one call: fetched once
+        anchors = await self._gate_anchors(filter) if gate_distance is not None else {}
 
         for query in queries:
             # Skip empty queries so that we keep indexing consistent for the
@@ -880,7 +904,9 @@ class MemoryAgent(Agent):
             # Fetch potential memories for this query.
             raw_results = await self.get(formatter(query), limit=limit, **where)
 
-            accepted = await self._apply_filter(raw_results, filter, gate_distance)
+            accepted = await self._apply_filter(
+                raw_results, filter, gate_distance, anchors
+            )
             accepted = self._rank_by_recency(accepted)
             # only a caller without a metadata condition asks for topic-first
             # facts: `where` is not applied to a fetch by id
@@ -925,13 +951,25 @@ class MemoryAgent(Agent):
             return None
         return float(instance.get_agent("summarizer").archive_fact_dedupe_distance)
 
+    async def _gate_anchors(self, filter: Callable | None) -> dict[str, list[float]]:
+        """The stored vectors of the facts in the filter's bucket, by id."""
+        known_fact_ids = getattr(filter, "known_fact_ids", None)
+        if known_fact_ids is None:
+            return {}
+        ids = known_fact_ids()
+        return await self.get_embeddings(ids) if ids else {}
+
     async def _apply_filter(
-        self, raw_results: list, filter: Callable | None, gate_distance: float | None
+        self,
+        raw_results: list,
+        filter: Callable | None,
+        gate_distance: float | None,
+        anchors: dict[str, list[float]] | None = None,
     ) -> list:
         """
         The knowledge filter, then the similarity knowledge gate: a result
         rejected for presence alone passes when a fact in the character's
-        bucket is a near-duplicate of it (one fetch over the stored vectors).
+        bucket is a near-duplicate of it (its vector against the anchors).
         An admitted result is marked so the diversity check keeps it.
         """
         if not filter:
@@ -945,20 +983,18 @@ class MemoryAgent(Agent):
             else:
                 rejected.append(memory)
 
-        if gate_distance is None or not rejected:
+        if gate_distance is None or not rejected or not anchors:
             return accepted
 
         gateable = getattr(filter, "gateable", None)
-        known_fact_ids = getattr(filter, "known_fact_ids", None)
-        if gateable is None or known_fact_ids is None:
+        if gateable is None:
             return accepted
 
         candidates = [doc for doc in rejected if gateable(doc)]
-        anchors = known_fact_ids()
-        if not candidates or not anchors:
+        if not candidates:
             return accepted
 
-        retold = await self.near_duplicates(
+        retold = await self.near_duplicates_against(
             [doc.id for doc in candidates], anchors, gate_distance
         )
         passed = []
@@ -1032,18 +1068,15 @@ class MemoryAgent(Agent):
                 if memory in memory_context:
                     continue
 
-                # a gate admission is a wanted near-copy of known knowledge
                 vector = getattr(memory, "embedding", None)
-                if (
-                    vector is not None
-                    and threshold < 1.0
-                    and not getattr(memory, "gate_admitted", False)
-                ):
+                if vector is not None and threshold < 1.0:
                     vector = np.asarray(vector, dtype=float)
                     norm = np.linalg.norm(vector)
                     if norm > 0:
                         unit = vector / norm
-                        if any(
+                        # a gate admission is a wanted near-copy of known
+                        # knowledge: kept, but remembered for later copies
+                        if not getattr(memory, "gate_admitted", False) and any(
                             float(np.dot(unit, other)) > threshold
                             for other in selected_vectors
                         ):

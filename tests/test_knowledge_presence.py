@@ -189,15 +189,41 @@ class TestLayerEntryPresence:
             layer_entry_presence(scene, 0, {"text": "x", "start": 7, "end": 9, "ts": 0})
             is None
         )
-        # a partly truncated range would be a union over fewer sources than claimed
-        assert (
-            layer_entry_presence(scene, 0, {"text": "x", "start": 1, "end": 5, "ts": 0})
-            is None
-        )
         assert (
             layer_entry_presence(scene, 0, {"text": "x", "start": 2, "end": 1, "ts": 0})
             is None
         )
+
+    def test_truncated_range_over_known_sources_is_unknown(self):
+        # every source is known, so only the guard can turn this into None:
+        # a silent slice would return a union over fewer sources than claimed
+        scene = MockScene()
+        scene.archived_history = [
+            {"text": "a", "start": 0, "end": 1, "ts": 0, "present": ["Alice"]},
+            {"text": "b", "start": 2, "end": 3, "ts": 0, "present": ["Bob"]},
+            {"text": "c", "start": 4, "end": 5, "ts": 0, "present": ["Carol"]},
+        ]
+        assert (
+            layer_entry_presence(scene, 0, {"text": "x", "start": 0, "end": 5, "ts": 0})
+            is None
+        )
+        assert layer_entry_presence(
+            scene, 0, {"text": "x", "start": 0, "end": 2, "ts": 0}
+        ) == ["Alice", "Bob", "Carol"]
+
+    def test_negative_bounds_are_unknown(self):
+        scene = MockScene()
+        scene.archived_history = [
+            {"text": "a", "start": 0, "end": 1, "ts": 0, "present": ["Alice"]},
+            {"text": "b", "start": 2, "end": 3, "ts": 0, "present": ["Bob"]},
+        ]
+        for start, end in ((-3, 0), (-1, 0)):
+            assert (
+                layer_entry_presence(
+                    scene, 0, {"text": "x", "start": start, "end": end, "ts": 0}
+                )
+                is None
+            ), (start, end)
 
 
 # ---------------------------------------------------------------------------

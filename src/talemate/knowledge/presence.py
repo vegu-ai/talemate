@@ -58,7 +58,7 @@ def layer_entry_presence(
         sources = scene.layered_history[layer_index - 1]
 
     # a range that points outside the layer below is unknown, not "nobody"
-    if start > end or end >= len(sources):
+    if start < 0 or start > end or end >= len(sources):
         return None
     sources = sources[start : end + 1]
 

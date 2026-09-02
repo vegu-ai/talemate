@@ -1215,8 +1215,10 @@
     ownership of their own sheet, common lore (other sheets and world entries) and stored grant/revoke edges; only the
     conversation prompt is filtered, by the speaking character, with missed spans replaced by a gap line and memory retrieval
     filtered per speaker; the Known by visibility setting (everyone, only the owner, specific characters) on attributes,
-    details, descriptions and world entries; the Knowledge tab on a character for adding and removing grants and revokes;
-    the layered-history leak note and how older scenes without presence behave.'
+    details, descriptions and world entries; the Knowledge tab on a character for adding and removing grants and revokes
+    (targets: sheet entries, world entries, static and summarized history entries; a revoke is the only way to hide a static
+    entry); director instructions, state reinforcements and context investigations stay in the prompt whatever the presence
+    says; the layered-history leak note and how older scenes without presence behave.'
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: 'Pinning context entries so the AI always considers them: creating pins from the Context editor or a character

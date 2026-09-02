@@ -547,3 +547,228 @@ class TestVisibilityLifecycle:
             await bob.set_detail("secret", None)
             await bob.set_base_attribute("age", None)
         assert bob.visibility == {}
+
+
+# ---------------------------------------------------------------------------
+# round 2: description chunks, analysis prompts, query_memory over-fetch
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def memory(scene):
+    from talemate.instance import get_agent
+
+    memory = get_agent("memory")
+    memory.calls = []
+    scene.rag_cache = {}
+
+    async def fake_get(text, character=None, limit=15, **where):
+        memory.calls.append({"text": text, "limit": limit, **where})
+        return []
+
+    memory.get = fake_get
+    return memory
+
+
+class TestDescriptionChunks:
+    def test_chunk_ids_normalise_to_the_entry(self):
+        from talemate.knowledge.bucket import canonical_entry_id
+
+        assert canonical_entry_id("Bob.description.0") == "Bob.description"
+        assert canonical_entry_id("Bob.description.12") == "Bob.description"
+        assert canonical_entry_id("Bob.description") == "Bob.description"
+        assert canonical_entry_id("Bob.age") == "Bob.age"
+        assert canonical_entry_id("w1") == "w1"
+
+    def test_revoke_and_grant_match_chunk_documents(self, scene):
+        bob = Character(name="Bob", description="A keeper.\n\nHe lies.")
+        scene.character_data = {"Bob": bob}
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Alice", target="Bob.description", kind="revoke")
+        ]
+        index = KnowledgeIndex.from_scene(scene)
+        chunk = doc(
+            "Bob.description.1",
+            {"typ": "description", "character": "Bob", "attr": "description"},
+            "He lies.",
+        )
+        assert not index.retrieval_filter(scene, "Alice")(chunk)
+        assert index.retrieval_filter(scene, "Carol")(chunk)
+
+        bob.visibility["description"] = EntryVisibility(mode="owner")
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Alice", target="Bob.description", kind="grant")
+        ]
+        index = KnowledgeIndex.from_scene(scene)
+        assert index.retrieval_filter(scene, "Alice")(chunk)
+        assert not index.retrieval_filter(scene, "Carol")(chunk)
+        assert not index.knows_entry(scene, "Carol", "Bob.description.3")
+
+
+class TestAnalysisPrompts:
+    @pytest.fixture
+    def restricted_scene(self, scene):
+        from talemate.world_state.manager import AnnotatedContextPin
+        from talemate.world_state import ContextPin
+
+        bob = Character(
+            name="Bob",
+            description="Bob keeps the light.",
+            base_attributes={"age": "SECRET-AGE-40", "eyes": "grey"},
+            visibility={"age": EntryVisibility(mode="owner")},
+        )
+        alice = Character(name="Alice", description="Alice surveys wrecks.")
+        from talemate.tale_mate import Actor
+
+        scene.character_data = {"Alice": alice, "Bob": bob}
+        scene.actors = [
+            Actor(character=alice, agent=None),
+            Actor(character=bob, agent=None),
+        ]
+        scene.active_characters = ["Alice", "Bob"]
+        scene.world_state.manual_context["w1"] = ManualContext(
+            id="w1",
+            text="SECRET-LORE the wreck was sabotaged",
+            visibility=EntryVisibility(mode="owner"),
+        )
+        scene.active_pins = [
+            AnnotatedContextPin(
+                pin=ContextPin(entry_id="w1", active=True),
+                is_active=True,
+                text="SECRET-LORE the wreck was sabotaged",
+                time_aware_text="SECRET-LORE the wreck was sabotaged",
+                title="w1",
+            )
+        ]
+        return scene
+
+    def _render(self, scene, uid, viewer):
+        from unittest.mock import AsyncMock, Mock, patch
+
+        from talemate.prompts import Prompt
+
+        import talemate.instance as instance
+
+        memory = Mock()
+        memory.multi_query = AsyncMock(return_value=[])
+        memory.query = AsyncMock(return_value="")
+        world_state = Mock()
+        world_state.analyze_and_follow_instruction = AsyncMock(
+            return_value="1. What happened to the wreck?"
+        )
+        real_get_agent = instance.get_agent
+
+        def fake_get_agent(name, *args, **kwargs):
+            if name == "memory":
+                return memory
+            if name == "world_state":
+                return world_state
+            return real_get_agent(name, *args, **kwargs)
+
+        with patch(
+            "talemate.prompts.base.instance.get_agent", side_effect=fake_get_agent
+        ):
+            prompt = Prompt.get(
+                uid,
+                vars={
+                    "scene": scene,
+                    "max_tokens": 4096,
+                    "text": "Alice asks about the wreck.",
+                    "goal": "continue the scene as Alice",
+                    "include_character_context": True,
+                    "response_length": 512,
+                    "num_queries": 1,
+                    "extra_context": [],
+                    "memory_filter": None,
+                    "knowledge_index": KnowledgeIndex.from_scene(scene),
+                    "knowledge_viewer": viewer,
+                },
+            )
+            return prompt.render()
+
+    @pytest.mark.parametrize(
+        "uid",
+        [
+            "world_state.analyze-text-and-extract-context",
+            "world_state.analyze-text-and-generate-rag-queries",
+        ],
+    )
+    def test_restricted_sheet_and_pin_are_hidden_from_the_viewer(
+        self, restricted_scene, uid
+    ):
+        from talemate.context import ActiveScene
+
+        with ActiveScene(restricted_scene):
+            rendered = self._render(restricted_scene, uid, "Alice")
+        assert "SECRET-AGE-40" not in rendered
+        assert "eyes: grey" in rendered
+        assert "Bob keeps the light." in rendered
+        if uid.endswith("extract-context"):
+            assert "SECRET-LORE" not in rendered
+
+    @pytest.mark.parametrize(
+        "uid",
+        [
+            "world_state.analyze-text-and-extract-context",
+            "world_state.analyze-text-and-generate-rag-queries",
+        ],
+    )
+    def test_no_viewer_renders_everything(self, restricted_scene, uid):
+        from talemate.context import ActiveScene
+
+        with ActiveScene(restricted_scene):
+            rendered = self._render(restricted_scene, uid, None)
+        assert "SECRET-AGE-40" in rendered
+        if uid.endswith("extract-context"):
+            assert "SECRET-LORE" in rendered
+
+    async def test_rag_build_passes_the_viewer(self, scene, memory):
+        from unittest.mock import AsyncMock, patch
+
+        from talemate.context import ActiveScene
+        from talemate.instance import get_agent
+
+        conversation = get_agent("conversation")
+        conversation.actions["use_long_term_memory"].config[
+            "retrieval_method"
+        ].value = "questions"
+        world_state = get_agent("world_state")
+        alice = Character(name="Alice")
+        scene.character_data = {"Alice": alice}
+        scene.history = [CharacterMessage(message="Alice: hi there everyone")]
+        try:
+            with (
+                ActiveScene(scene),
+                patch.object(
+                    world_state,
+                    "analyze_text_and_extract_context",
+                    new_callable=AsyncMock,
+                    return_value="a",
+                ) as call,
+            ):
+                await conversation.rag_build(character=alice)
+            assert call.call_args.kwargs["viewer"] == "Alice"
+            assert call.call_args.kwargs["filter"] is not None
+        finally:
+            conversation.actions["use_long_term_memory"].config[
+                "retrieval_method"
+            ].value = "direct"
+
+
+class TestQueryMemoryOverFetch:
+    async def test_exclude_history_alone_keeps_the_limit(self, scene, memory):
+        from talemate.context import ActiveScene
+        from talemate.prompts import Prompt
+
+        with ActiveScene(scene):
+            prompt = Prompt.get(
+                "world_state.analyze-text-and-extract-context", vars={"scene": scene}
+            )
+            prompt.query_memory(
+                "q", as_question_answer=False, iterate=5, exclude_history=True
+            )
+            assert memory.calls[-1]["limit"] == 10
+            prompt.query_memory(
+                "q", as_question_answer=False, iterate=5, filter=lambda d: True
+            )
+            assert memory.calls[-1]["limit"] == 30

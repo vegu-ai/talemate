@@ -59,6 +59,11 @@
               "type": "string"
             },
             "description": "Names of the characters active in the scene when this was recorded. Absent in scenes saved before presence tracking; absent means unknown, which every character treats as witnessed."
+          },
+          "facts_status": {
+            "type": "string",
+            "enum": ["ok", "failed"],
+            "description": "Whether the summary call's facts output parsed. Absent when facts were never extracted."
           }
         },
         "required": ["text", "ts"]
@@ -144,6 +149,28 @@
     "world_state": {
       "type": "object",
       "properties": {
+        "facts": {
+          "type": "object",
+          "description": "Atomic facts keyed by id (F<n>), extracted by the summary call; the memory store mirrors them.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "text": {"type": "string"},
+              "ts": {"type": ["integer", "null"]},
+              "archive_id": {"type": ["string", "null"], "description": "The summarized history entry the fact came from."},
+              "present": {"type": ["array", "null"], "items": {"type": "string"}},
+              "subjects": {"type": "array", "items": {"type": "string"}},
+              "known_by": {"type": "object", "additionalProperties": {"type": "string", "enum": ["told", "granted", "inferred"]}},
+              "supersedes": {"type": ["string", "null"]},
+              "false": {"type": "boolean"},
+              "restatements": {"type": "integer"},
+              "last_seen_ts": {"type": ["integer", "null"]},
+              "source": {"type": "string", "enum": ["summary", "manual", "ledger", "offscreen"]}
+            }
+          }
+        },
+        "fact_counter": {"type": "integer"},
         "knowledge": {
           "type": "array",
           "description": "Grant and revoke edges: the only per-character knowledge state that is stored.",

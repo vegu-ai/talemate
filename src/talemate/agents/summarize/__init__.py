@@ -30,8 +30,15 @@ from talemate.agents.base import (
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 
-from talemate.history import ArchiveEntry
+from talemate.history import ArchiveEntry, HistoryEntry
 from talemate.knowledge.presence import presence_differs, span_presence
+from talemate.knowledge.facts import (
+    drop_facts_for_entries,
+    parse_facts,
+    previous_facts,
+    store_facts,
+)
+from talemate.knowledge.schema import FactsStatus
 
 from .analyze_scene import SceneAnalyzationMixin
 from .context_history import ContextHistoryMixin
@@ -142,6 +149,21 @@ class SummarizeAgent(
                         description="Optional instructions to guide the summarization process.",
                         value="",
                     ),
+                    "extract_facts": AgentActionConfig(
+                        type="bool",
+                        label="Extract facts",
+                        description="Ask for a list of atomic facts in the same summary call (no extra request). Facts feed the per-character knowledge features.",
+                        value=True,
+                    ),
+                    "fact_dedupe_distance": AgentActionConfig(
+                        type="number",
+                        label="Fact near-duplicate distance",
+                        description="A new fact this close to an existing one (embedding distance) is counted as a restatement instead of stored again.",
+                        value=0.15,
+                        min=0.0,
+                        max=1.0,
+                        step=0.01,
+                    ),
                 },
             ),
         }
@@ -180,6 +202,14 @@ class SummarizeAgent(
     @property
     def archive_include_previous(self):
         return self.resolve_config("archive", "include_previous")
+
+    @property
+    def archive_extract_facts(self) -> bool:
+        return self.actions["archive"].config["extract_facts"].value
+
+    @property
+    def archive_fact_dedupe_distance(self) -> float:
+        return float(self.actions["archive"].config["fact_dedupe_distance"].value)
 
     @property
     def archive_instructions(self):
@@ -435,30 +465,52 @@ class SummarizeAgent(
                 dialogue_entries.insert(0, scene.intro)
 
             summarized = None
+            parsed_facts = None
             retries = 5
 
             while not summarized and retries > 0:
-                summarized = await self.summarize(
+                summarized, parsed_facts = await self.summarize(
                     "\n".join(map(str, dialogue_entries)),
                     extra_context=extra_context,
                     generation_options=generation_options,
+                    return_facts=True,
                 )
                 retries -= 1
 
             if not summarized:
                 raise IOError("Failed to summarize dialogue", dialogue=dialogue_entries)
 
+            facts_status = self._facts_status(parsed_facts)
+
         else:
             # AI has likely identified the first line as a scene change, so we can't summarize
             # just use the first line
             summarized = str(scene.history[start])
             present = scene.history[start].present
+            parsed_facts = None
+            facts_status = None
 
         # determine the appropariate timestamp for the summarization
 
-        await scene.push_archive(
-            ArchiveEntry(text=summarized, start=start, end=end, ts=ts, present=present)
+        entry = ArchiveEntry(
+            text=summarized,
+            start=start,
+            end=end,
+            ts=ts,
+            present=present,
+            facts_status=facts_status,
         )
+        await scene.push_archive(entry)
+
+        if parsed_facts:
+            await store_facts(
+                scene,
+                entry.id,
+                present,
+                ts,
+                parsed_facts,
+                self.archive_fact_dedupe_distance,
+            )
 
         scene.ts = ts
         scene.emit_status()
@@ -554,6 +606,74 @@ class SummarizeAgent(
 
         return result
 
+    def _facts_status(self, parsed_facts) -> FactsStatus | None:
+        if not self.archive_extract_facts:
+            return None
+        return "ok" if parsed_facts is not None else "failed"
+
+    async def summarize_with_facts(
+        self,
+        text: str,
+        entry: ArchiveEntry,
+        extra_context: str = None,
+        generation_options: GenerationOptions | None = None,
+    ) -> tuple[str, FactsStatus | None]:
+        """
+        Re-summarize an existing base entry and replace its facts.
+        """
+        summarized, parsed_facts = await self.summarize(
+            text,
+            extra_context=extra_context,
+            generation_options=generation_options,
+            return_facts=True,
+        )
+        await drop_facts_for_entries(self.scene, {entry.id})
+        if parsed_facts:
+            await store_facts(
+                self.scene,
+                entry.id,
+                entry.present,
+                entry.ts,
+                parsed_facts,
+                self.archive_fact_dedupe_distance,
+            )
+        return summarized, self._facts_status(parsed_facts)
+
+    async def regenerate_facts(self, entry: "HistoryEntry") -> FactsStatus | None:
+        """
+        Re-run the summary call for one base entry and replace only its facts.
+        The entry text is kept.
+        """
+        from talemate.history import collect_source_entries, resolve_history_entry
+
+        archive_entry = resolve_history_entry(self.scene, entry)
+        sources = collect_source_entries(self.scene, entry)
+        if not sources:
+            return archive_entry.facts_status
+
+        _, parsed_facts = await self.summarize(
+            "\n".join(map(str, sources)),
+            extra_context=await self.previous_summaries(archive_entry),
+            return_facts=True,
+        )
+        await drop_facts_for_entries(self.scene, {archive_entry.id})
+        if parsed_facts:
+            await store_facts(
+                self.scene,
+                archive_entry.id,
+                archive_entry.present,
+                archive_entry.ts,
+                parsed_facts,
+                self.archive_fact_dedupe_distance,
+            )
+        status = self._facts_status(parsed_facts)
+        stored = self.scene.archived_history[entry.index]
+        if status is None:
+            stored.pop("facts_status", None)
+        else:
+            stored["facts_status"] = status
+        return status
+
     @set_processing
     async def summarize(
         self,
@@ -562,12 +682,18 @@ class SummarizeAgent(
         method: str = None,
         extra_instructions: str = None,
         generation_options: GenerationOptions | None = None,
+        return_facts: bool = False,
     ):
         """
         Summarize the given text
+
+        With `return_facts` the same call also asks for the atomic facts and
+        returns `(summary, facts)`, where `facts` is None when the model's
+        FACTS output did not parse.
         """
 
         response_length = 1024
+        extract_facts = return_facts and self.archive_extract_facts
 
         template_vars = {
             "dialogue": text,
@@ -581,6 +707,8 @@ class SummarizeAgent(
             "generation_options": generation_options,
             "analyze_chunks": self.layered_history_analyze_chunks,
             "response_length": response_length,
+            "extract_facts": extract_facts,
+            "previous_facts": previous_facts(self.scene) if extract_facts else [],
         }
 
         emission = SummarizeEmission(
@@ -617,7 +745,16 @@ class SummarizeAgent(
         summary = extracted["summary"]
         if not summary:
             log.error("summarize failed", response=response)
-            return ""
+            return ("", None) if return_facts else ""
+
+        parsed_facts = None
+        if extract_facts:
+            parsed_facts = parse_facts(extracted.get("facts"))
+            if parsed_facts is None:
+                log.warning(
+                    "summarize: facts output did not parse",
+                    tail=(response or "")[-300:],
+                )
 
         summary = summary.strip()
 
@@ -634,6 +771,9 @@ class SummarizeAgent(
         ).send(emission)
 
         summary = emission.response
+
+        if return_facts:
+            return self.clean_result(summary), parsed_facts
 
         return self.clean_result(summary)
 

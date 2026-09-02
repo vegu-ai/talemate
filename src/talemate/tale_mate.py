@@ -53,6 +53,7 @@ from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import GameStatePathSettings, ScenePerspectives
 from talemate.history import emit_archive_add, ArchiveEntry
 from talemate.knowledge.presence import presence_metadata
+from talemate.knowledge.facts import fact_memory_document
 from talemate.character import Character
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
@@ -2069,6 +2070,12 @@ class Scene(Emitter):
         if archive_entries:
             await memory.add_many(archive_entries)
 
+        fact_documents = [
+            fact_memory_document(fact) for fact in self.world_state.facts.values()
+        ]
+        if fact_documents:
+            await memory.add_many(fact_documents)
+
         for character in self.characters:
             await character.commit_to_memory(memory)
 
@@ -2079,8 +2086,23 @@ class Scene(Emitter):
         self.history = []
 
         # clear out archived history, but keep pre-established history
+        summarized_ids = {
+            ah.get("id")
+            for ah in self.archived_history
+            if ah.get("end") is not None and ah.get("id")
+        }
         self.archived_history = [
             ah for ah in self.archived_history if ah.get("end") is None
+        ]
+        self.world_state.facts = {
+            fact_id: fact
+            for fact_id, fact in self.world_state.facts.items()
+            if fact.archive_id not in summarized_ids
+        }
+        self.world_state.knowledge = [
+            edge
+            for edge in self.world_state.knowledge
+            if not edge.target.startswith("F") or edge.target in self.world_state.facts
         ]
 
         self.layered_history = []

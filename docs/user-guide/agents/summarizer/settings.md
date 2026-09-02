@@ -20,6 +20,14 @@ Automatically summarize scene dialogue when the number of tokens in the history 
 
 A summary entry also ends early, regardless of the threshold, when a time passage occurs or when the active character list changes (a character is activated or deactivated). Every entry then records one set of present characters; see [History -- Presence](/talemate/user-guide/world-editor/history/#presence).
 
+##### Extract facts
+
+Ask for a list of atomic facts in the same summary request (no extra request). The facts feed the per-character knowledge features; see [History -- Facts](/talemate/user-guide/world-editor/history/#facts). On by default.
+
+##### Fact near-duplicate distance
+
+A new fact this close to a stored fact (embedding distance, default 0.15) counts as a restatement of the stored fact instead of a new one.
+
 ###### Token Threshold
 
 The number of tokens in the history that will trigger the summarization process.

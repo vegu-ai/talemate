@@ -389,8 +389,10 @@ def summarizer_scene():
     summarizer = agents["summarizer"]
     summarizer.actions["archive"].config["threshold"].value = 100000
 
-    async def stub_summarize(text, extra_context=None, generation_options=None):
-        return "SUMMARY"
+    async def stub_summarize(
+        text, extra_context=None, generation_options=None, return_facts=False
+    ):
+        return ("SUMMARY", None) if return_facts else "SUMMARY"
 
     summarizer.summarize = stub_summarize
     summarizer.analyze_calls = 0

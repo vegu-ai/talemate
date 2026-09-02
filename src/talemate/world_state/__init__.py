@@ -10,7 +10,7 @@ from talemate.emit import emit
 from talemate.prompts import Prompt
 import talemate.game.focal.schema as focal_schema
 from talemate.game.schema import ConditionGroup
-from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
+from talemate.knowledge.schema import EntryVisibility, Fact, KnowledgeEdge
 from talemate.world_state.schema import (
     CharacterState,
     ObjectState,
@@ -164,6 +164,9 @@ class WorldState(BaseModel):
 
     # grant / revoke edges: the only per-character knowledge state that is stored
     knowledge: list[KnowledgeEdge] = Field(default_factory=list)
+
+    facts: dict[str, Fact] = Field(default_factory=dict)
+    fact_counter: int = 0
 
     @property
     def agent(self):

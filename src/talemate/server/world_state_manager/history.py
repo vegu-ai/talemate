@@ -17,6 +17,7 @@ from talemate.history import (
     compute_layer_stats,
     collect_time_passages,
 )
+from talemate.knowledge.facts import facts_for_entry
 from talemate.knowledge.presence import layer_entry_presence
 from talemate.scene_message import TimePassageMessage
 from talemate.server.world_state_manager import world_state_templates
@@ -82,6 +83,10 @@ class HistoryMixin:
         history = history_with_relative_time(
             self.scene.archived_history, self.scene.ts, layer=0
         )
+        for row in history:
+            row["facts"] = [
+                fact.model_dump() for fact in facts_for_entry(self.scene, row["id"])
+            ]
 
         layered_history = []
 

@@ -27,6 +27,8 @@ from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
 from talemate.context import handle_generation_cancelled
 from talemate.events import ArchiveEvent
+from talemate.knowledge.facts import drop_facts_for_entries
+from talemate.knowledge.schema import Fact, FactsStatus
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -67,6 +69,7 @@ class ArchiveEntry(pydantic.BaseModel):
     end: int | None = None
     ts: int = 0
     present: list[str] | None = None
+    facts_status: FactsStatus | None = None
 
 
 class LayeredArchiveEntry(ArchiveEntry):
@@ -88,6 +91,8 @@ class HistoryEntry(pydantic.BaseModel):
     start: int | None = None
     end: int | None = None
     present: list[str] | None = None
+    facts_status: FactsStatus | None = None
+    facts: list[Fact] = pydantic.Field(default_factory=list)
 
     @property
     def is_static(self) -> bool:
@@ -403,6 +408,7 @@ def history_with_relative_time(
             start=entry.get("start", None),
             end=entry.get("end", None),
             present=entry.get("present", None),
+            facts_status=entry.get("facts_status", None),
         ).model_dump()
         for index, entry in enumerate(history)
     ]
@@ -623,6 +629,14 @@ async def rebuild_history(
     summarizer = get_agent("summarizer")
 
     # clear out archived history, but keep pre-established history
+    await drop_facts_for_entries(
+        scene,
+        {
+            ah.get("id")
+            for ah in scene.archived_history
+            if ah.get("end") is not None and ah.get("id")
+        },
+    )
     scene.archived_history = [
         ah for ah in scene.archived_history if ah.get("end") is None
     ]
@@ -749,7 +763,7 @@ async def update_history_entry(
         archive_entry = ArchiveEntry(
             **{
                 **scene.archived_history[entry.index],
-                **entry.model_dump(exclude_none=True),
+                **entry.model_dump(exclude_none=True, exclude={"facts"}),
             }
         )
         scene.archived_history[entry.index] = archive_entry.model_dump(
@@ -817,11 +831,13 @@ async def regenerate_history_entry(
         summarized = "\n\n".join(entry.text for entry in new_archive_entries)
 
     elif isinstance(archive_entry, ArchiveEntry):
-        summarized = await summarizer.summarize(
+        summarized, facts_status = await summarizer.summarize_with_facts(
             "\n".join(map(str, entries)),
+            archive_entry,
             extra_context=await summarizer.previous_summaries(archive_entry),
             generation_options=generation_options,
         )
+        entry.facts_status = facts_status
 
     entry.text = summarized
 

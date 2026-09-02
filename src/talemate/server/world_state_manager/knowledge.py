@@ -1,7 +1,11 @@
 import pydantic
 import structlog
 
-from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
+from talemate.history import HistoryEntry
+from talemate.instance import get_agent
+from talemate.knowledge.facts import fact_memory_document
+from talemate.knowledge.schema import EntryVisibility, Fact, KnowledgeEdge
+from talemate.status import background_task
 
 log = structlog.get_logger("talemate.server.world_state_manager.knowledge")
 
@@ -28,6 +32,18 @@ class CharacterEntryVisibilityPayload(pydantic.BaseModel):
 class WorldEntryVisibilityPayload(pydantic.BaseModel):
     entry_id: str
     visibility: EntryVisibility
+
+
+class FactPayload(pydantic.BaseModel):
+    fact: Fact
+
+
+class DeleteFactPayload(pydantic.BaseModel):
+    fact_id: str
+
+
+class RegenerateFactsPayload(pydantic.BaseModel):
+    entry: HistoryEntry
 
 
 class KnowledgeMixin:
@@ -72,3 +88,54 @@ class KnowledgeMixin:
         )
         await self.handle_get_world({})
         await self.signal_operation_done()
+
+    async def handle_update_fact(self, data):
+        payload = FactPayload(**data)
+        fact = payload.fact
+        self.scene.world_state.facts[fact.id] = fact
+        await get_agent("memory").add_many([fact_memory_document(fact)])
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "fact_updated",
+                "data": fact.model_dump(),
+            }
+        )
+        await self.signal_operation_done()
+
+    async def handle_delete_fact(self, data):
+        payload = DeleteFactPayload(**data)
+        world_state = self.scene.world_state
+        fact = world_state.facts.pop(payload.fact_id, None)
+        if fact is None:
+            return
+        world_state.knowledge = [
+            edge for edge in world_state.knowledge if edge.target != fact.id
+        ]
+        for other in world_state.facts.values():
+            if other.supersedes == fact.id:
+                other.supersedes = None
+        await get_agent("memory").delete({"ids": [fact.id]})
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "fact_deleted",
+                "data": {"fact_id": fact.id, "archive_id": fact.archive_id},
+            }
+        )
+        await self.signal_operation_done()
+
+    @background_task("Regenerating facts")
+    async def handle_regenerate_facts(self, data):
+        payload = RegenerateFactsPayload(**data)
+        summarizer = get_agent("summarizer")
+        status = await summarizer.regenerate_facts(payload.entry)
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "facts_regenerated",
+                "data": {"entry_id": payload.entry.id, "facts_status": status},
+            }
+        )
+        await self.signal_operation_done()
+        await self.handle_request_scene_history({})

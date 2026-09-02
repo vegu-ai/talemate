@@ -5,6 +5,7 @@ Every character draws on the same records: the scene history, the summarized his
 - A history entry, summarized or verbatim, is known to the characters that were present for it (see [History -- Presence](/talemate/user-guide/world-editor/history/#presence)). An entry with unknown presence is known to everyone.
 - A character always knows their own description, attributes and details.
 - Other characters' sheets and world entries are common lore, unless their visibility says otherwise.
+- A fact recorded from a summary entry (see [History -- Facts](/talemate/user-guide/world-editor/history/#facts)) is known to the characters present for that entry, plus any character the summary named as having learned it, which is stored as a `told` grant.
 - A **grant** adds an entry to a character's knowledge, a **revoke** takes one away. Grants and revokes are the only knowledge that is stored per character.
 
 Only the conversation prompt is filtered this way, by the character that is speaking. The narrator, the director, the summarizer and the world state agent keep the full record.
@@ -29,6 +30,10 @@ Set it from the entry's editor in the Characters tab (Description, Attributes, D
 ## Grants and revokes
 
 Open a character in the Characters tab and pick the **Knowledge** tab. It lists the character's grants and revokes and lets you add one: pick the entry (a sheet entry of any character, a world entry or a summarized history entry), choose *Grant* or *Revoke*, and add an optional note. Grants and revokes made by hand carry the source `manual`; later releases add sources the story produces on its own.
+
+## Facts in node graphs
+
+The `knowledge/` nodes read the fact record without an LLM request: **Facts About** (facts mentioning an entity, optionally as one character knows them), **Current State** (the newest fact about an entity that no later fact supersedes), **Relationship Timeline** (facts mentioning two entities), and **Grant Knowledge** / **Revoke Knowledge** for edges written by a graph.
 
 ## Older scenes
 

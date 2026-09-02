@@ -1198,7 +1198,9 @@
     record (which characters were active for each summarized entry, shown as chips next to the entry time, the summarizer cut
     on a change of the active character list, the union over layered entries, and unknown presence on scenes saved before
     presence tracking, never guessed from who spoke), editing entries by double-click, deleting, regenerating and inspecting
-    them, adding static entries with Entry Text plus Unit and Amount duration, time passage entries with their duration and
+    them, the atomic facts listed under each summarized entry (ids F1, F2..., subjects, learned-by chips, restatement counter,
+    supersedes arrow; editing and removing a fact; the facts failed chip and Regenerate facts; the Extract facts setting),
+    adding static entries with Entry Text plus Unit and Amount duration, time passage entries with their duration and
     playthrough chapter title (the only surface that reaches a passage inserted before a summarized entry), and Regenerate
     All History.'
 - path: user-guide/world-editor/history/layered-history.md
@@ -1213,7 +1215,8 @@
     conversation prompt is filtered, by the speaking character, with missed spans replaced by a gap line and memory retrieval
     filtered per speaker; the Known by visibility setting (everyone, only the owner, specific characters) on attributes,
     details, descriptions and world entries; the Knowledge tab on a character for adding and removing grants and revokes;
-    the layered-history leak note and how older scenes without presence behave.'
+    facts from summaries as knowledge (told grants), the knowledge/ node graph nodes (Facts About, Current State, Relationship
+    Timeline, Grant/Revoke Knowledge), the layered-history leak note and how older scenes without presence behave.'
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: 'Pinning context entries so the AI always considers them: creating pins from the Context editor or a character

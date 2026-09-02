@@ -11,12 +11,50 @@
                     <v-tooltip activator="parent" location="top">Present while this happened</v-tooltip>
                 </v-chip>
             </span>
+            <v-chip v-if="entry.facts_status === 'failed'" size="x-small" color="warning" variant="tonal" class="ml-2" prepend-icon="mdi-alert-outline">
+                facts failed
+                <v-tooltip activator="parent" location="top">The summary was stored, but the facts list the model returned could not be read. Regenerate facts to try again.</v-tooltip>
+            </v-chip>
         </v-card-title>
         <v-card-text>
             <div v-if="!editing" class="history-entry text-medium-emphasis text-body-large" @dblclick="setEditing(true)" @mouseenter="hovered = true" @mouseleave="hovered = false">
                 {{ entry.text }}
             </div>
             <v-textarea v-else rows="1" auto-grow v-model="entry.text" @blur="setEditing(false)" @keydown.esc="setEditing(false)" ref="textarea" hint="Press Escape to cancel, Shift+Enter for new line, Enter to save" @keydown.enter="handleEnter" />
+
+            <div v-if="entry.facts && entry.facts.length" class="mt-3">
+                <div class="text-body-small text-medium-emphasis mb-1"><v-icon size="small" icon="mdi-format-list-checks" class="mr-1"></v-icon>Facts</div>
+                <v-list density="compact" slim class="bg-transparent py-0">
+                    <v-list-item v-for="fact in entry.facts" :key="fact.id" class="px-0">
+                        <template v-slot:prepend>
+                            <v-chip size="x-small" variant="tonal" color="muted" class="mr-2">{{ fact.id }}</v-chip>
+                        </template>
+                        <div v-if="editingFact !== fact.id" class="text-body-medium" @dblclick="startFactEdit(fact)">{{ fact.text }}</div>
+                        <v-text-field v-else v-model="factDraft" density="compact" variant="underlined" hide-details autofocus @keydown.enter="saveFact(fact)" @keydown.esc="editingFact = null" @blur="saveFact(fact)"></v-text-field>
+                        <div class="text-body-small text-medium-emphasis">
+                            <span v-if="fact.subjects && fact.subjects.length">{{ fact.subjects.join(', ') }}</span>
+                            <v-chip v-for="(kind, name) in fact.known_by" :key="name" size="x-small" variant="tonal" color="secondary" class="ml-1" prepend-icon="mdi-account-voice">
+                                {{ name }}
+                                <v-tooltip activator="parent" location="top">{{ name }} knows this fact ({{ kind }}) without having been present</v-tooltip>
+                            </v-chip>
+                            <v-chip v-if="fact.restatements" size="x-small" variant="text" class="ml-1" prepend-icon="mdi-repeat">
+                                {{ fact.restatements }}
+                                <v-tooltip activator="parent" location="top">Restated this many times since it was first recorded</v-tooltip>
+                            </v-chip>
+                            <v-chip v-if="fact.supersedes" size="x-small" variant="text" class="ml-1" prepend-icon="mdi-arrow-left-bold">
+                                {{ fact.supersedes }}
+                                <v-tooltip activator="parent" location="top">Supersedes fact {{ fact.supersedes }}</v-tooltip>
+                            </v-chip>
+                        </div>
+                        <template v-slot:append>
+                            <v-btn icon="mdi-close" size="x-small" variant="text" color="delete" :disabled="locked" @click="deleteFact(fact)">
+                                <v-icon icon="mdi-close"></v-icon>
+                                <v-tooltip activator="parent" location="top">Remove this fact</v-tooltip>
+                            </v-btn>
+                        </template>
+                    </v-list-item>
+                </v-list>
+            </div>
         </v-card-text>
 
         <v-card-actions>
@@ -28,6 +66,10 @@
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(isPrimaryModifier(ev))">Regenerate</v-btn>
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="toggleSourceEntries">{{ entry.source_entries ? 'Collapse' : 'Inspect' }}</v-btn>
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-clock-plus-outline" color="primary" @click="insertingTimePassage = true">Time Passage</v-btn>
+                <v-btn v-if="hasSourceEntries && entry.layer === 0" :disabled="editing || locked" prepend-icon="mdi-format-list-checks" color="primary" @click="regenerateFacts">
+                    Regenerate facts
+                    <v-tooltip activator="parent" location="top">Ask the summarizer for this entry's facts again. The entry text is kept.</v-tooltip>
+                </v-btn>
                 <ConfirmActionInline
                     v-if="deletable"
                     :disabled="locked"
@@ -94,6 +136,8 @@ class HistoryEntry(pydantic.BaseModel):
     start: int | None = None
     end: int | None = None
     present: list[str] | None = None
+    facts_status: "ok" | "failed" | None = None
+    facts: list[Fact] = []
 */
 
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
@@ -126,6 +170,8 @@ export default {
             insertTitle: '',
             insertUnits: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
             MAX_CONTENT_WIDTH,
+            editingFact: null,
+            factDraft: '',
         }
     },
     inject:[
@@ -214,6 +260,39 @@ export default {
             } else {
                 this.collapseSourceEntries();
             }
+        },
+        regenerateFacts() {
+            this.$emit('busy', this.entry.id);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'regenerate_facts',
+                entry: this.entry,
+            }));
+        },
+        startFactEdit(fact) {
+            if (this.locked) return;
+            this.editingFact = fact.id;
+            this.factDraft = fact.text;
+        },
+        saveFact(fact) {
+            if (this.editingFact !== fact.id) return;
+            this.editingFact = null;
+            const text = this.factDraft.trim();
+            if (!text || text === fact.text) return;
+            fact.text = text;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'update_fact',
+                fact: fact,
+            }));
+        },
+        deleteFact(fact) {
+            this.entry.facts = this.entry.facts.filter(f => f.id !== fact.id);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'delete_fact',
+                fact_id: fact.id,
+            }));
         },
         deleteEntry(){
             const entry = this.entry;

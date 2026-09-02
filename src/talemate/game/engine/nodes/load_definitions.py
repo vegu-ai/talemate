@@ -16,6 +16,7 @@ import talemate.game.engine.nodes.event  # noqa: F401
 import talemate.game.engine.nodes.focal  # noqa: F401
 import talemate.game.engine.nodes.util  # noqa: F401
 import talemate.game.engine.nodes.history  # noqa: F401
+import talemate.game.engine.nodes.knowledge  # noqa: F401
 import talemate.game.engine.nodes.prompt  # noqa: F401
 import talemate.game.engine.nodes.response  # noqa: F401
 import talemate.game.engine.nodes.context_id  # noqa: F401

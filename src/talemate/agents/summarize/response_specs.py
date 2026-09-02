@@ -23,7 +23,8 @@ __all__ = [
 # Used in summarize() and summarize_director_chat()
 SUMMARY_SPEC = ResponseSpec(
     extractors={
-        "summary": AfterAnchorExtractor(start="SUMMARY:"),
+        "summary": AfterAnchorExtractor(start="SUMMARY:", stop_at="FACTS:"),
+        "facts": AfterAnchorExtractor(start="FACTS:"),
     },
     required=[],  # Falls back to full response if not found
 )

@@ -362,10 +362,12 @@ class TestBuildArchive:
 
         called = {}
 
-        async def stub_summarize(text, extra_context=None, generation_options=None):
+        async def stub_summarize(
+            text, extra_context=None, generation_options=None, return_facts=False
+        ):
             called["text"] = text
             called["extra_context"] = extra_context
-            return "SUMMARIZED"
+            return ("SUMMARIZED", None) if return_facts else "SUMMARIZED"
 
         summarizer.summarize = stub_summarize
 
@@ -402,8 +404,10 @@ class TestBuildArchive:
             make_character_message("trailing"),
         ]
 
-        async def stub_summarize(text, extra_context=None, generation_options=None):
-            return "SUMM"
+        async def stub_summarize(
+            text, extra_context=None, generation_options=None, return_facts=False
+        ):
+            return ("SUMM", None) if return_facts else "SUMM"
 
         summarizer.summarize = stub_summarize
 
@@ -432,8 +436,10 @@ class TestBuildArchive:
             make_character_message("trailing"),
         ]
 
-        async def stub_summarize(text, extra_context=None, generation_options=None):
-            return "NEW SUMM"
+        async def stub_summarize(
+            text, extra_context=None, generation_options=None, return_facts=False
+        ):
+            return ("NEW SUMM", None) if return_facts else "NEW SUMM"
 
         summarizer.summarize = stub_summarize
 
@@ -467,8 +473,10 @@ class TestBuildArchive:
             make_character_message("trailing"),
         ]
 
-        async def stub_summarize(text, extra_context=None, generation_options=None):
-            return "NEW SUMM"
+        async def stub_summarize(
+            text, extra_context=None, generation_options=None, return_facts=False
+        ):
+            return ("NEW SUMM", None) if return_facts else "NEW SUMM"
 
         summarizer.summarize = stub_summarize
 

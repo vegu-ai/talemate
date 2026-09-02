@@ -18,6 +18,14 @@ The summarizer starts a new entry whenever the active character list changes, th
 
 Scenes saved before presence tracking carry no presence on their old messages, and entries built from them show no chips. Unknown presence is never guessed from who spoke: an entry without chips counts as witnessed by everyone.
 
+### Facts
+
+When the summarizer writes a summary entry it asks, in the same request, for the atomic facts the chapter established: one self-contained statement each, with the characters, items and places it is about, the characters who learned it during the chapter, and the earlier fact it replaces, if any. The facts are listed under the entry with their id (`F1`, `F2`, ...). A chip next to a fact names a character who learned it without being present; a repeat counter shows how often later chapters restated it; an arrow names the fact it supersedes.
+
+Facts are stored in the scene file and mirrored into the long term memory with the presence of their entry, so a character retrieves only the facts they know (see [Knowledge](/talemate/user-guide/world-editor/knowledge/)). A new fact that is a near-duplicate of a stored one is not stored again; the stored fact's repeat counter goes up instead.
+
+Double-click a fact to edit its text, use the :material-close: button to remove it. When the model's facts output could not be read, the summary is still stored and the entry shows a **facts failed** chip; **:material-format-list-checks: Regenerate facts** asks for the facts again and keeps the entry text. Regenerating the entry itself replaces its facts too. The summarizer's **Extract facts** setting turns the extraction off.
+
 ### Managing entries
 
 - **All entries** can be edited by double-clicking the text.

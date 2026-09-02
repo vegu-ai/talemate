@@ -67,6 +67,27 @@ class ParsedFact(pydantic.BaseModel):
         return str(value).strip()
 
 
+class Topic(pydantic.BaseModel):
+    """A cluster of facts; centroids live on the memory agent, not here."""
+
+    id: str
+    name: str
+    fact_ids: list[str] = pydantic.Field(default_factory=list)
+
+
+class TopicCoverage(pydantic.BaseModel):
+    """How much of one topic a character knows."""
+
+    id: str
+    name: str
+    total: int
+    known: int
+
+    @property
+    def share(self) -> float:
+        return self.known / self.total if self.total else 0.0
+
+
 class Fact(pydantic.BaseModel):
     id: str
     text: str

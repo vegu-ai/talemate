@@ -1,0 +1,439 @@
+"""
+Topics (#394 part E): clustering, refresh, coverage, awareness line,
+topic-first retrieval.
+"""
+
+from unittest.mock import AsyncMock, patch
+
+import numpy as np
+import pytest
+
+from conftest import MockScene, bootstrap_scene
+from talemate.agents.memory.schema import MemoryDocument
+from talemate.character import Character
+from talemate.context import ActiveScene
+from talemate.instance import get_agent
+from talemate.knowledge.schema import Fact, KnowledgeEdge, Topic
+from talemate.knowledge.topics import (
+    awareness_line,
+    cluster_facts,
+    coverage,
+    refresh_topics,
+    topics_on_load,
+)
+
+
+def fact(id, text, ts, present, subjects=(), **kw):
+    return Fact(id=id, text=text, ts=ts, present=present, subjects=list(subjects), **kw)
+
+
+# ---------------------------------------------------------------------------
+# clustering
+# ---------------------------------------------------------------------------
+
+
+class TestClustering:
+    def test_leader_clustering_and_names(self):
+        facts = [
+            fact("F1", "a", 10, None, ["Sorena", "wreck"]),
+            fact("F2", "b", 20, None, ["Sorena"]),
+            fact("F3", "c", 30, None, ["sextant"]),
+        ]
+        vectors = {"F1": [1.0, 0.0], "F2": [0.98, 0.2], "F3": [0.0, 1.0]}
+        topics = cluster_facts(facts, vectors, 0.8)
+        assert [(t.id, t.name, t.fact_ids) for t in topics] == [
+            ("T1", "Sorena", ["F1", "F2"]),
+            ("T2", "sextant", ["F3"]),
+        ]
+
+    def test_deterministic_and_order_by_creation(self):
+        facts = [
+            fact("F10", "x", 5, None),
+            fact("F2", "y", 5, None),
+            fact("F1", "z", 1, None),
+        ]
+        vectors = {"F1": [1.0, 0.0], "F2": [0.0, 1.0], "F10": [0.0, 0.99]}
+        first = cluster_facts(facts, vectors, 0.8)
+        again = cluster_facts(list(reversed(facts)), vectors, 0.8)
+        assert [t.fact_ids for t in first] == [["F1"], ["F2", "F10"]]
+        assert [t.fact_ids for t in again] == [t.fact_ids for t in first]
+
+    def test_refinement_moves_a_fact_to_its_nearest_centroid(self):
+        # F2 joins T1 on the greedy pass (just above the threshold) but sits
+        # nearer the centroid that T2 grows into
+        # F4 joins T1 on the greedy pass (0.82 to its centroid, first match)
+        # but is nearer the centroid T2 has by then: the refinement moves it
+        facts = [fact(f"F{i}", "t", i, None) for i in range(1, 5)]
+        vectors = {
+            "F1": [1.0, 0.0],
+            "F2": [0.81, 0.586],
+            "F3": [0.5, 0.866],
+            "F4": [0.6, 0.8],
+        }
+        topics = cluster_facts(facts, vectors, 0.8)
+        by_fact = {i: t.id for t in topics for i in t.fact_ids}
+        assert by_fact["F4"] == by_fact["F3"]
+        assert by_fact["F2"] == by_fact["F1"]
+        assert by_fact["F1"] != by_fact["F3"]
+
+    def test_missing_vector_left_out_and_fallback_name(self):
+        facts = [fact("F1", "a", 1, None), fact("F2", "b", 2, None)]
+        topics = cluster_facts(facts, {"F1": [1.0, 0.0]}, 0.8)
+        assert [(t.name, t.fact_ids) for t in topics] == [("topic 1", ["F1"])]
+        assert cluster_facts(facts, {}, 0.8) == []
+
+    def test_threshold_one_never_merges(self):
+        facts = [fact("F1", "a", 1, None), fact("F2", "b", 2, None)]
+        vectors = {"F1": [1.0, 0.0], "F2": [0.99, 0.1]}
+        assert len(cluster_facts(facts, vectors, 0.999)) == 2
+
+
+# ---------------------------------------------------------------------------
+# refresh + on load
+# ---------------------------------------------------------------------------
+
+
+class FakeMemory:
+    def __init__(self, vectors, ready=True, enabled=True, step=20, threshold=0.8):
+        self.vectors = vectors
+        self.ready = ready
+        self.topics_enabled = enabled
+        self.topics_recluster_step = step
+        self.topics_similarity_threshold = threshold
+        self.topic_centroids = {}
+        self.rebuild_topic_centroids = AsyncMock(return_value={})
+
+    async def get_embeddings(self, ids):
+        return {i: self.vectors[i] for i in ids if i in self.vectors}
+
+
+@pytest.fixture
+def scene():
+    s = MockScene()
+    bootstrap_scene(s)
+    s.world_state.facts = {
+        "F1": fact("F1", "Edwin keeps the light.", 10, ["Edwin", "Mara"], ["Edwin"]),
+        "F2": fact(
+            "F2", "Edwin was keeper for years.", 20, ["Edwin", "Mara"], ["Edwin"]
+        ),
+        "F3": fact("F3", "Mara found a sextant.", 30, ["Mara"], ["sextant"]),
+    }
+    return s
+
+
+VECTORS = {"F1": [1.0, 0.0], "F2": [0.97, 0.24], "F3": [0.0, 1.0]}
+
+
+class TestRefresh:
+    async def test_first_run_clusters_and_records_the_count(self, scene):
+        memory = FakeMemory(VECTORS)
+        with patch("talemate.knowledge.topics.get_agent", return_value=memory):
+            assert await refresh_topics(scene) is True
+        assert [t.fact_ids for t in scene.world_state.topics.values()] == [
+            ["F1", "F2"],
+            ["F3"],
+        ]
+        assert scene.world_state.topics_fact_count == 3
+        assert set(memory.topic_centroids) == {"T1", "T2"}
+        np.testing.assert_allclose(memory.topic_centroids["T2"], [0.0, 1.0])
+
+    async def test_step_gates_a_second_run(self, scene):
+        memory = FakeMemory(VECTORS, step=5)
+        with patch("talemate.knowledge.topics.get_agent", return_value=memory):
+            await refresh_topics(scene)
+            scene.world_state.facts["F4"] = fact("F4", "x", 40, None)
+            memory.vectors["F4"] = [0.0, 0.9]
+            assert await refresh_topics(scene) is False
+            assert scene.world_state.topics_fact_count == 3
+            assert await refresh_topics(scene, force=True) is True
+            assert scene.world_state.topics_fact_count == 4
+            for n in range(5, 10):
+                scene.world_state.facts[f"F{n}"] = fact(f"F{n}", "y", n * 10, None)
+                memory.vectors[f"F{n}"] = [0.0, 1.0]
+            assert await refresh_topics(scene) is True
+
+    async def test_disabled_or_not_ready_keeps_topics(self, scene):
+        with patch(
+            "talemate.knowledge.topics.get_agent",
+            return_value=FakeMemory(VECTORS, enabled=False),
+        ):
+            assert await refresh_topics(scene, force=True) is False
+        assert scene.world_state.topics == {}
+        with patch(
+            "talemate.knowledge.topics.get_agent",
+            return_value=FakeMemory(VECTORS, ready=False),
+        ):
+            assert await refresh_topics(scene, force=True) is False
+        with patch("talemate.knowledge.topics.get_agent", return_value=FakeMemory({})):
+            assert await refresh_topics(scene, force=True) is False
+
+    async def test_no_facts_clears_the_topics(self, scene):
+        memory = FakeMemory(VECTORS)
+        with patch("talemate.knowledge.topics.get_agent", return_value=memory):
+            await refresh_topics(scene)
+            scene.world_state.facts = {}
+            assert await refresh_topics(scene) is False
+        assert (
+            scene.world_state.topics == {} and scene.world_state.topics_fact_count == 0
+        )
+        assert memory.topic_centroids == {}
+
+    async def test_on_load_clusters_when_nothing_is_stored(self, scene):
+        memory = FakeMemory(VECTORS)
+        with patch("talemate.knowledge.topics.get_agent", return_value=memory):
+            await topics_on_load(scene)
+        assert len(scene.world_state.topics) == 2
+        memory.rebuild_topic_centroids.assert_not_called()
+
+    async def test_on_load_rebuilds_centroids_for_stored_topics(self, scene):
+        scene.world_state.topics = {
+            "T1": Topic(id="T1", name="Edwin", fact_ids=["F1", "F2", "F3"])
+        }
+        scene.world_state.topics_fact_count = 3
+        memory = FakeMemory(VECTORS)
+        with patch("talemate.knowledge.topics.get_agent", return_value=memory):
+            await topics_on_load(scene)
+        memory.rebuild_topic_centroids.assert_awaited_once_with(scene)
+        assert list(scene.world_state.topics) == ["T1"]
+
+
+# ---------------------------------------------------------------------------
+# coverage + awareness
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def topical(scene):
+    ws = scene.world_state
+    ws.facts = {}
+    # A: 4 facts, all known to Edwin; B: 3 facts, one known; C: 3 facts, none; D: 2 facts (below the line's minimum)
+    for n in range(1, 5):
+        ws.facts[f"F{n}"] = fact(f"F{n}", "a", n, ["Edwin", "Mara"], ["Sorena"])
+    ws.facts["F5"] = fact("F5", "b", 5, ["Edwin", "Mara"], ["sextant"])
+    ws.facts["F6"] = fact("F6", "b", 6, ["Mara"], ["sextant"])
+    ws.facts["F7"] = fact("F7", "b", 7, ["Mara"], ["sextant"])
+    for n in range(8, 11):
+        ws.facts[f"F{n}"] = fact(f"F{n}", "c", n, ["Mara"], ["boat"])
+    ws.facts["F11"] = fact("F11", "d", 11, ["Mara"], ["ledger"])
+    ws.facts["F12"] = fact("F12", "d", 12, ["Mara"], ["ledger"])
+    ws.topics = {
+        "T1": Topic(id="T1", name="Sorena", fact_ids=["F1", "F2", "F3", "F4"]),
+        "T2": Topic(id="T2", name="sextant", fact_ids=["F5", "F6", "F7"]),
+        "T3": Topic(id="T3", name="boat", fact_ids=["F8", "F9", "F10"]),
+        "T4": Topic(id="T4", name="ledger", fact_ids=["F11", "F12"]),
+    }
+    return scene
+
+
+class TestCoverage:
+    def test_rows_largest_first(self, topical):
+        rows = coverage(topical, "Edwin")
+        assert [(r.id, r.known, r.total) for r in rows] == [
+            ("T1", 4, 4),
+            ("T2", 1, 3),
+            ("T3", 0, 3),
+            ("T4", 0, 2),
+        ]
+        assert coverage(topical, "Mara")[1].known == 3
+
+    def test_grants_and_revokes_count(self, topical):
+        topical.world_state.knowledge = [
+            KnowledgeEdge(character="Edwin", target="F6"),
+            KnowledgeEdge(character="Edwin", target="F1", kind="revoke"),
+        ]
+        rows = {r.id: r for r in coverage(topical, "Edwin")}
+        assert rows["T1"].known == 3 and rows["T2"].known == 2
+
+    def test_missing_member_ids_are_ignored(self, topical):
+        topical.world_state.topics["T5"] = Topic(id="T5", name="gone", fact_ids=["F99"])
+        assert [r.id for r in coverage(topical, "Edwin")] == ["T1", "T2", "T3", "T4"]
+
+
+class TestAwarenessLine:
+    def test_all_some_nothing(self, topical):
+        assert (
+            awareness_line(topical, "Edwin")
+            == "Edwin knows all of Sorena, some of sextant, nothing of boat"
+        )
+        assert (
+            awareness_line(topical, "Mara")
+            == "Mara knows all of Sorena, sextant and boat"
+        )
+
+    def test_small_topics_do_not_qualify(self, topical):
+        topical.world_state.topics = {"T4": topical.world_state.topics["T4"]}
+        assert awareness_line(topical, "Edwin") is None
+
+    def test_cap_at_six_largest(self, topical):
+        ws = topical.world_state
+        for k in range(5, 13):
+            ids = []
+            for m in range(3):
+                fid = f"F{100 + k * 10 + m}"
+                ws.facts[fid] = fact(fid, "e", 200 + k, ["Mara"], [f"topic{k}"])
+                ids.append(fid)
+            ws.topics[f"T{k}"] = Topic(id=f"T{k}", name=f"topic{k}", fact_ids=ids)
+        line = awareness_line(topical, "Edwin")
+        assert line.startswith(
+            "Edwin knows all of Sorena, some of sextant, nothing of "
+        )
+        assert line.count(",") + line.count(" and ") <= 6
+
+    async def test_conversation_switch(self, topical):
+        conversation = get_agent("conversation")
+        edwin = Character(name="Edwin")
+        try:
+            with ActiveScene(topical):
+                assert (await conversation.awareness_line(edwin)).startswith(
+                    "Edwin knows"
+                )
+                conversation.actions["character_knowledge"].config[
+                    "awareness_line"
+                ].value = False
+                assert await conversation.awareness_line(edwin) is None
+                conversation.actions["character_knowledge"].config[
+                    "awareness_line"
+                ].value = True
+                conversation.actions["character_knowledge"].enabled = False
+                assert await conversation.awareness_line(edwin) is None
+        finally:
+            conversation.actions["character_knowledge"].config[
+                "awareness_line"
+            ].value = True
+            conversation.actions["character_knowledge"].enabled = True
+
+
+# ---------------------------------------------------------------------------
+# memory agent: settings, centroids, topic-first retrieval
+# ---------------------------------------------------------------------------
+
+
+def doc(id, text, distance=0.3, typ="history"):
+    return MemoryDocument(text, {"typ": typ}, id, text, distance=distance)
+
+
+class TestMemoryTopics:
+    @pytest.fixture
+    def memory(self, topical):
+        memory = get_agent("memory")
+        memory.db = object()
+        memory.calls = []
+        table = {
+            f: [1.0, 0.0] if f in ("F1", "F2", "F3", "F4") else [0.0, 1.0]
+            for f in topical.world_state.facts
+        }
+        memory._get_embeddings = lambda ids: {i: table[i] for i in ids if i in table}
+        memory.table = []
+
+        async def fake_get(text, character=None, limit=15, **where):
+            memory.calls.append(text)
+            return list(memory.table)
+
+        memory.get = fake_get
+        yield memory
+        memory.db = None
+        memory.topic_centroids = {}
+        memory.actions["topics"].enabled = True
+
+    def test_defaults(self, memory):
+        assert memory.topics_enabled is True
+        assert memory.topics_recluster_step == 20
+        # 0 in the setting: the embedding preset's model-dependent value
+        assert memory.actions["topics"].config["similarity_threshold"].value == 0
+        assert memory.topics_similarity_threshold == pytest.approx(0.50)
+
+    def test_setting_overrides_the_preset(self, memory):
+        from talemate.config.schema import EmbeddingFunctionPreset
+
+        assert EmbeddingFunctionPreset().topic_threshold == pytest.approx(0.5)
+        with patch.object(
+            type(memory),
+            "embeddings_config",
+            new=EmbeddingFunctionPreset(topic_threshold=0.42),
+        ):
+            assert memory.topics_similarity_threshold == pytest.approx(0.42)
+            memory.actions["topics"].config["similarity_threshold"].value = 0.7
+            try:
+                assert memory.topics_similarity_threshold == pytest.approx(0.7)
+            finally:
+                memory.actions["topics"].config["similarity_threshold"].value = 0
+
+    async def test_rebuild_centroids(self, topical, memory):
+        centroids = await memory.rebuild_topic_centroids(topical)
+        assert set(centroids) == {"T1", "T2", "T3", "T4"}
+        np.testing.assert_allclose(centroids["T1"], [1.0, 0.0])
+        assert memory.nearest_topic(np.array([0.99, 0.1])) == "T1"
+        assert memory.nearest_topic(np.array([-1.0, 0.0])) is None
+
+    async def test_topic_first_adds_the_most_restated_facts(self, topical, memory):
+        topical.world_state.facts["F3"].restatements = 5
+        await memory.rebuild_topic_centroids(topical)
+        memory.table = [
+            doc("F1", "fact one", 0.2, typ="fact"),
+            doc("e1", "history", 0.3),
+        ]
+        docs = {i: doc(i, f"fact {i}", typ="fact") for i in ("F2", "F3", "F4")}
+        memory.get_document = AsyncMock(return_value=docs)
+        with (
+            ActiveScene(topical),
+            patch.object(
+                memory, "embed_text", AsyncMock(return_value=np.array([1.0, 0.0]))
+            ),
+        ):
+            result = await memory.multi_query(["the Sorena"], iterate=5)
+        # F3 (most restated) first, then the newest; F1 was already retrieved
+        assert result[:3] == ["fact F3", "fact F4", "fact F2"]
+        assert "fact one" in result and "history" in result
+        assert memory.get_document.call_args.args[0] == ["F3", "F4", "F2"]
+
+    async def test_topic_first_respects_the_filter_and_the_switch(
+        self, topical, memory
+    ):
+        await memory.rebuild_topic_centroids(topical)
+        memory.table = [doc("e1", "history", 0.3)]
+        docs = {i: doc(i, f"fact {i}", typ="fact") for i in ("F2", "F3", "F4")}
+        memory.get_document = AsyncMock(return_value=docs)
+        with (
+            ActiveScene(topical),
+            patch.object(
+                memory, "embed_text", AsyncMock(return_value=np.array([1.0, 0.0]))
+            ),
+        ):
+            # newest three of T1 are F4, F3, F2; the filter drops F2
+            result = await memory.multi_query(
+                ["q"], iterate=5, filter=lambda d: d.id != "F2"
+            )
+            assert result == ["fact F4", "fact F3", "history"]
+            memory.actions["topics"].enabled = False
+            assert await memory.multi_query(["q"], iterate=5) == ["history"]
+
+    async def test_no_embedding_function_means_no_topic_first(self, topical, memory):
+        await memory.rebuild_topic_centroids(topical)
+        memory.table = [doc("e1", "history", 0.3)]
+        memory.get_document = AsyncMock(return_value={})
+        with ActiveScene(topical):
+            # the mock memory agent has no embedding function: embed_text is None
+            assert await memory.multi_query(["q"], iterate=5) == ["history"]
+        memory.get_document.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# world state manager payload
+# ---------------------------------------------------------------------------
+
+
+class TestManagerPayload:
+    async def test_character_knowledge_carries_coverage_and_awareness(self, topical):
+        from talemate.world_state.manager import WorldStateManager
+
+        manager = WorldStateManager(topical)
+        with ActiveScene(topical):
+            knowledge = await manager.get_character_knowledge("Edwin")
+        assert [(r.id, r.known, r.total) for r in knowledge.coverage][:2] == [
+            ("T1", 4, 4),
+            ("T2", 1, 3),
+        ]
+        assert knowledge.awareness.startswith("Edwin knows all of Sorena")
+        payload = knowledge.model_dump()
+        assert payload["coverage"][0]["name"] == "Sorena"
+        assert "awareness" in payload

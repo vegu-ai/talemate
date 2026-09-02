@@ -10,7 +10,7 @@ from talemate.emit import emit
 from talemate.prompts import Prompt
 import talemate.game.focal.schema as focal_schema
 from talemate.game.schema import ConditionGroup
-from talemate.knowledge.schema import EntryVisibility, Fact, KnowledgeEdge
+from talemate.knowledge.schema import EntryVisibility, Fact, KnowledgeEdge, Topic
 from talemate.world_state.schema import (
     CharacterState,
     ObjectState,
@@ -167,6 +167,9 @@ class WorldState(BaseModel):
 
     facts: dict[str, Fact] = Field(default_factory=dict)
     fact_counter: int = 0
+    # topics over the facts (part E); the fact count at the last clustering
+    topics: dict[str, Topic] = Field(default_factory=dict)
+    topics_fact_count: int = 0
 
     @property
     def agent(self):

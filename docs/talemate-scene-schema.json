@@ -166,11 +166,24 @@
               "false": {"type": "boolean"},
               "restatements": {"type": "integer"},
               "last_seen_ts": {"type": ["integer", "null"]},
-              "source": {"type": "string", "enum": ["summary", "manual", "ledger", "offscreen"]}
+              "source": {"type": "string", "enum": ["summary", "manual", "offscreen"]}
             }
           }
         },
         "fact_counter": {"type": "integer"},
+        "topics": {
+          "type": "object",
+          "description": "Facts clustered by embedding, keyed by topic id (T<n>); centroids are not stored.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "name": {"type": "string", "description": "The most frequent subject among the topic's facts, or topic N."},
+              "fact_ids": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        },
+        "topics_fact_count": {"type": "integer", "description": "The fact count at the last clustering."},
         "knowledge": {
           "type": "array",
           "description": "Grant and revoke edges: the only per-character knowledge state that is stored.",

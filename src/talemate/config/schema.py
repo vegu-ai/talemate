@@ -351,6 +351,8 @@ class EmbeddingFunctionPreset(pydantic.BaseModel):
     distance: float = 1.5
     distance_mod: float = 1.0
     distance_function: str = "l2"
+    # cosine similarity at which two facts share a topic; model dependent
+    topic_threshold: float = 0.5
     fast: bool = True
     gpu_recommendation: bool = False
     local: bool = True

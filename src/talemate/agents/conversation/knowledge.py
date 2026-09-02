@@ -24,6 +24,7 @@ from talemate.knowledge.absence import (
 )
 from talemate.knowledge.bucket import KnowledgeIndex
 from talemate.knowledge.schema import KnowledgeEdge
+from talemate.knowledge.topics import awareness_line as topic_awareness_line
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage
 from talemate.util.data import extract_json
@@ -138,6 +139,12 @@ class CharacterKnowledgeMixin:
                     max=200,
                     step=5,
                 ),
+                "awareness_line": AgentActionConfig(
+                    type="bool",
+                    label="Awareness line",
+                    description="One line in the prompt naming which topics the character knows all, some or nothing of (from the memory agent's topics).",
+                    value=True,
+                ),
                 "llm_gate": AgentActionConfig(
                     type="bool",
                     label="AI knowledge gate",
@@ -209,6 +216,20 @@ class CharacterKnowledgeMixin:
     @property
     def knowledge_absence_window(self) -> int:
         return int(self.resolve_config("character_knowledge", "absence_window"))
+
+    @property
+    def knowledge_awareness_line(self) -> bool:
+        return self.character_knowledge_enabled and bool(
+            self.resolve_config("character_knowledge", "awareness_line")
+        )
+
+    async def awareness_line(self, character: "Character | None") -> str | None:
+        """Which topics the character knows all, some or nothing of; None when nothing qualifies."""
+        if character is None or not self.knowledge_awareness_line:
+            return None
+        line = topic_awareness_line(self.scene, character.name)
+        log.debug("awareness line", character=character.name, line=line)
+        return line
 
     @property
     def knowledge_llm_gate(self) -> bool:

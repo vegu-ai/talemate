@@ -22,6 +22,7 @@ __all__ = [
     "render_absence_lines",
     "ABSENCE_LIMIT",
     "ABSENCE_WINDOW",
+    "fact_order",
 ]
 
 log = structlog.get_logger("talemate.knowledge.absence")
@@ -37,9 +38,12 @@ def _fact_number(fact: Fact) -> int:
     return int(match.group()) if match else 0
 
 
-def _fact_order(fact: Fact) -> tuple[int, int]:
+def fact_order(fact: Fact) -> tuple[int, int]:
     """Creation order: scene time, then the numeric part of the id (F10 after F2)."""
     return (fact.ts if fact.ts is not None else -1, _fact_number(fact))
+
+
+_fact_order = fact_order
 
 
 async def absence_facts(

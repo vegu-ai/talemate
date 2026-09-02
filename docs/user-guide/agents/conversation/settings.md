@@ -104,6 +104,10 @@ At most this many facts in the block (default 5). The most restated facts come f
 
 How many of the most recent facts are considered for the block (default 30).
 
+##### Awareness line
+
+One line in the prompt naming which topics the character knows all, some or nothing of, from the [Memory agent's topics](/talemate/user-guide/agents/memory/settings/#topics): `Edwin knows all of the Sorena, some of the sextant, nothing of the boat`. Only topics with at least three facts count, largest first, six at most; the line is left out when no topic qualifies. On by default, no request.
+
 ##### AI knowledge gate
 
 Asks the AI which of the retrieved memories the character would actually know, from their own point of view, and keeps only those. +1 request per line, handled by the World State agent's client. Off by default. An answer that cannot be read keeps every memory.

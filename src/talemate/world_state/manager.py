@@ -23,7 +23,8 @@ from talemate.character import (
 from talemate.instance import get_agent
 from talemate.emit import emit
 from talemate.util import replace_smart_quotes
-from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
+from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge, TopicCoverage
+from talemate.knowledge.topics import awareness_line, coverage
 from talemate.world_state import (
     ContextPin,
     ManualContext,
@@ -146,6 +147,8 @@ class CharacterKnowledge(pydantic.BaseModel):
     name: str
     edges: list[KnowledgeEdge] = []
     targets: list[KnowledgeTarget] = []
+    coverage: list[TopicCoverage] = []
+    awareness: str | None = None
 
 
 class World(pydantic.BaseModel):
@@ -741,7 +744,11 @@ class WorldStateManager:
             if edge.character == character_name
         ]
         return CharacterKnowledge(
-            name=character_name, edges=edges, targets=self.knowledge_targets()
+            name=character_name,
+            edges=edges,
+            targets=self.knowledge_targets(),
+            coverage=coverage(self.scene, character_name),
+            awareness=awareness_line(self.scene, character_name),
         )
 
     async def set_knowledge_edge(self, edge: KnowledgeEdge) -> KnowledgeEdge:

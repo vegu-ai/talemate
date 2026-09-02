@@ -41,6 +41,9 @@ from talemate.agents.memory.rerank import (
     RERANK_CANDIDATES,
     RERANK_KEEP,
 )
+
+# how many of the nearest topic's facts join a query's results
+TOPIC_FACTS_PER_QUERY = 3
 from talemate.util.gpu import release_cuda_cache
 
 import talemate.agents.memory.nodes  # noqa: F401
@@ -106,6 +109,34 @@ class MemoryAgent(Agent):
                     ),
                 },
             ),
+            "topics": AgentAction(
+                enabled=True,
+                container=True,
+                can_be_disabled=True,
+                icon="mdi-shape-outline",
+                label="Topics",
+                description="Cluster the stored facts into topics by embedding (no request). Topics give each character a coverage table and an awareness line, and the nearest topic contributes its most restated facts to retrieval.",
+                config={
+                    "recluster_step": AgentActionConfig(
+                        type="number",
+                        label="Recluster step",
+                        description="Rebuild the topics once this many facts arrived since the last clustering.",
+                        value=20,
+                        min=1,
+                        max=200,
+                        step=1,
+                    ),
+                    "similarity_threshold": AgentActionConfig(
+                        type="number",
+                        label="Similarity threshold",
+                        description="A fact joins a topic when its cosine similarity to the topic's centroid is at least this; below it a new topic opens. The nearest topic contributes to retrieval only above this as well. 0 uses the embedding preset's topic threshold, which depends on the model.",
+                        value=0,
+                        min=0,
+                        max=0.99,
+                        step=0.01,
+                    ),
+                },
+            ),
             "retrieval": AgentAction(
                 enabled=True,
                 container=True,
@@ -162,6 +193,8 @@ class MemoryAgent(Agent):
         self._db_generation = 0
         self._db_lock = threading.Lock()
         self._reranker: CrossEncoderReranker | None = None
+        # topic centroids (unit vectors) by topic id; rebuilt on load
+        self.topic_centroids: dict[str, np.ndarray] = {}
 
         async_signals.get("config.changed").connect(self.on_config_changed)
 
@@ -291,6 +324,106 @@ class MemoryAgent(Agent):
     @property
     def retrieval_rerank(self) -> bool:
         return bool(self.resolve_config("retrieval", "rerank"))
+
+    # topics
+
+    @property
+    def topics_enabled(self) -> bool:
+        return self.resolve_enabled("topics")
+
+    @property
+    def topics_recluster_step(self) -> int:
+        return int(self.resolve_config("topics", "recluster_step"))
+
+    @property
+    def topics_similarity_threshold(self) -> float:
+        """The Topics setting when set (> 0), else the embedding preset's model-dependent value."""
+        value = float(self.resolve_config("topics", "similarity_threshold") or 0)
+        if value > 0:
+            return value
+        preset = self.embeddings_config
+        return float(getattr(preset, "topic_threshold", 0.5) or 0.5)
+
+    async def rebuild_topic_centroids(self, scene):
+        """Centroids from the stored fact vectors of every topic's members."""
+        topics = scene.world_state.topics
+        ids = [i for topic in topics.values() for i in topic.fact_ids]
+        centroids: dict[str, np.ndarray] = {}
+        if ids and self.ready:
+            vectors = await self.get_embeddings(ids)
+            for topic in topics.values():
+                members = [vectors[i] for i in topic.fact_ids if i in vectors]
+                if not members:
+                    continue
+                units = []
+                for vector in members:
+                    vector = np.asarray(vector, dtype=float)
+                    norm = np.linalg.norm(vector)
+                    units.append(vector / norm if norm > 0 else vector)
+                centroid = np.mean(np.stack(units), axis=0)
+                norm = np.linalg.norm(centroid)
+                centroids[topic.id] = centroid / norm if norm > 0 else centroid
+        self.topic_centroids = centroids
+        return centroids
+
+    async def embed_text(self, text: str) -> np.ndarray | None:
+        """The query embedding, or None when no embedding function is set."""
+        try:
+            embed_fn = self.embedding_function
+        except RuntimeError:
+            return None
+        vectors = await asyncio.to_thread(embed_fn, [text])
+        if vectors is None or len(vectors) == 0:
+            return None
+        vector = np.asarray(vectors[0], dtype=float)
+        norm = np.linalg.norm(vector)
+        return vector / norm if norm > 0 else vector
+
+    def nearest_topic(self, vector: np.ndarray) -> str | None:
+        """The topic whose centroid is closest to the vector, at or above the threshold."""
+        if not self.topic_centroids or vector is None:
+            return None
+        best_id, best = None, self.topics_similarity_threshold
+        for topic_id, centroid in self.topic_centroids.items():
+            score = float(np.dot(vector, centroid))
+            if score >= best:
+                best_id, best = topic_id, score
+        return best_id
+
+    async def _topic_first(self, query: str, accepted: list, filter) -> list:
+        """
+        The nearest topic's most restated facts that the similarity search
+        did not return, ahead of that query's results.
+        """
+        if not self.topics_enabled or not self.topic_centroids or not self.scene:
+            return []
+        topic_id = self.nearest_topic(await self.embed_text(query))
+        if topic_id is None:
+            return []
+        topic = self.scene.world_state.topics.get(topic_id)
+        if topic is None:
+            return []
+        facts = self.scene.world_state.facts
+        seen = {getattr(doc, "id", None) for doc in accepted}
+        members = sorted(
+            (facts[i] for i in topic.fact_ids if i in facts and i not in seen),
+            key=lambda f: (-f.restatements, -(f.ts if f.ts is not None else -1)),
+        )
+        ids = [f.id for f in members[:TOPIC_FACTS_PER_QUERY]]
+        log.debug("topic first matched", topic=topic_id, candidates=ids)
+        if not ids:
+            return []
+        try:
+            documents = await self.get_document(ids)
+        except NotImplementedError:
+            return []
+        found = [documents[i] for i in ids if i in documents]
+        if filter is not None:
+            # the knowledge filter still decides: a topic's facts the
+            # character does not know never reach their prompt
+            found = [doc for doc in found if filter(doc)]
+        log.debug("topic first", topic=topic_id, added=[d.id for d in found])
+        return found
 
     @property
     def reranker(self) -> CrossEncoderReranker:
@@ -737,7 +870,10 @@ class MemoryAgent(Agent):
 
             accepted = self._apply_filter(raw_results, filter, gate_distance)
             accepted = self._rank_by_recency(accepted)
-            per_query_results.append(accepted[:iterate])
+            topic_docs = await self._topic_first(query, accepted, filter)
+            per_query_results.append(
+                (topic_docs + accepted)[: iterate + len(topic_docs)]
+            )
 
         # Now interleave the results in a round-robin fashion so that each
         # query gets a fair chance to contribute, until we hit the token

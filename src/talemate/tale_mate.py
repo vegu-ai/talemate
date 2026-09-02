@@ -54,6 +54,7 @@ from talemate.scene.schema import GameStatePathSettings, ScenePerspectives
 from talemate.history import emit_archive_add, ArchiveEntry
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.facts import fact_memory_document, prune_summary_facts
+from talemate.knowledge.topics import topics_on_load
 from talemate.character import Character
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
@@ -2080,6 +2081,9 @@ class Scene(Emitter):
             await character.commit_to_memory(memory)
 
         await self.world_state.commit_to_memory(memory)
+
+        # topic centroids are not persisted; cluster when nothing is stored yet
+        await topics_on_load(self)
 
     def reset(self):
         # remove messages

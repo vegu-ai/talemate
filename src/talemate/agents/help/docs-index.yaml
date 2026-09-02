@@ -92,9 +92,9 @@
   summary: 'Documents the Conversation agent''s client, caching, dialogue format, generation length, jiggle, task/actor instructions,
     instruction offset, and stop-token controls. Also covers scene-intent, writing-style, and long-term-memory context choices.
     Character Knowledge group: the perspective filter (drop spans the speaking character was not present for, memory filtered
-    by their knowledge), the absence block listing recent facts the character does not know, its line cap and window, and
-    three +1-request opt-ins off by default: AI knowledge gate, AI memory rerank (keep count), learned-this-turn ledger
-    (inferred grants).'
+    by their knowledge), the absence block listing recent facts the character does not know, its line cap and window, the
+    awareness line (which topics the character knows all, some or nothing of), and three +1-request opt-ins off by default:
+    AI knowledge gate, AI memory rerank (keep count), learned-this-turn ledger (inferred grants).'
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Explains AI continuation of supported text fields via Ctrl/Cmd+Enter, optional trailing brace hints, and the Redo/Undo
@@ -170,7 +170,8 @@
   title: Embeddings
   summary: Covers built-in and custom embedding presets, adding sentence-transformer models, download behavior, and the removal
     of INSTRUCTOR embeddings. Defines device switching, remote-code trust risk, distance cutoff/modifier/function controls,
-    and organizational tags.
+    the per-preset Topic Threshold (cosine similarity at which facts share a topic, model dependent, 0.50 shipped), and
+    organizational tags.
 - path: user-guide/agents/memory/index.md
   title: Overview
   summary: Introduces the Memory agent as Talemate's long-term semantic-memory layer backed by embeddings. Notes that ChromaDB
@@ -184,9 +185,10 @@
   title: Settings
   summary: 'Documents selecting the Memory agent''s embedding preset and overriding its execution device between CPU and CUDA.
     Explains the OpenAI-key prerequisite and live device switching that clears ChromaDB cache, frees GPU memory, and reimports
-    the active scene database. Retrieval group (no requests): recency weight, diversity threshold, entity lookup of characters
-    named but not in the scene, the similarity knowledge gate, and the optional local cross-encoder rerank (top 30 to 5,
-    ms-marco-MiniLM-L-6-v2, falls back on a load failure).'
+    the active scene database. Topics group: facts clustered by embedding without a request (recluster step, similarity
+    threshold), giving coverage tables, the awareness line and topic-first retrieval. Retrieval group (no requests): recency
+    weight, diversity threshold, entity lookup of characters named but not in the scene, the similarity knowledge gate, and
+    the optional local cross-encoder rerank (top 30 to 5, ms-marco-MiniLM-L-6-v2, falls back on a load failure).'
 - path: user-guide/agents/memory/testing.md
   title: Testing Embeddings
   summary: Explains evaluating Memory retrieval through Debug Tools while using a scene normally. Shows how to inspect a memory
@@ -1232,9 +1234,9 @@
     ownership of their own sheet, common lore (other sheets and world entries) and stored grant/revoke edges (sources manual,
     told, inferred); only the conversation prompt is filtered, by the speaking character, with missed spans replaced by a gap
     line, memory retrieval filtered per speaker and an absence block of facts they do not know; the Known by visibility setting
-    on attributes, details, descriptions and world entries; the Knowledge tab for grants and revokes; retrieval shaping (recency,
-    diversity, entity lookup, similarity gate, cross-encoder) and the opt-in AI gate, rerank, ledger and narrator offscreen
-    life; older scenes without presence.'
+    on attributes, details, descriptions and world entries; the Knowledge tab for grants and revokes with a per-topic coverage
+    table and the awareness line; retrieval shaping (recency, diversity, entity lookup, similarity gate, cross-encoder) and
+    the opt-in AI gate, rerank, ledger and narrator offscreen life; older scenes without presence.'
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: 'Pinning context entries so the AI always considers them: creating pins from the Context editor or a character

@@ -35,6 +35,10 @@ Set it from the entry's editor in the Characters tab (Description, Attributes, D
 
 Open a character in the Characters tab and pick the **Knowledge** tab. It lists the character's grants and revokes and lets you add one: pick the entry (a sheet entry of any character, a world entry, or a static or summarized history entry), choose *Grant* or *Revoke*, and add an optional note. A static history entry is common lore, so a revoke is the only way to hide one from a character. Grants and revokes made by hand carry the source `manual`. The story produces two more: `told`, when a summary names a character who learned a fact while absent, and `inferred`, from the conversation agent's [learned-this-turn ledger](/talemate/user-guide/agents/conversation/settings/#learned-this-turn-ledger).
 
+## Topics and coverage
+
+The memory agent clusters the stored facts into [topics](/talemate/user-guide/agents/memory/settings/#topics) by embedding, without a request. A character's **Knowledge** tab shows a coverage table: per topic, how many of its facts the character knows, largest topics first, with the awareness line the conversation prompt carries above it. Coverage follows the same rules as everything else on this page: presence, grants and revokes decide which facts count as known.
+
 ## Facts in node graphs
 
 The `knowledge/` nodes read the fact record without an LLM request: **Facts About** (facts mentioning an entity, optionally as one character knows them), **Current State** (the newest fact about an entity that no later fact supersedes), **Relationship Timeline** (facts mentioning two entities), and **Grant Knowledge** / **Revoke Knowledge** for edges written by a graph.

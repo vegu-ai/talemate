@@ -43,6 +43,7 @@ from talemate.knowledge.facts import (
     previous_facts,
     store_facts,
 )
+from talemate.knowledge.topics import refresh_topics
 from talemate.knowledge.schema import FactsStatus
 
 from .analyze_scene import SceneAnalyzationMixin
@@ -516,6 +517,7 @@ class SummarizeAgent(
                 parsed_facts,
                 self.archive_fact_dedupe_distance,
             )
+            await refresh_topics(scene)
 
         scene.ts = ts
         scene.emit_status()

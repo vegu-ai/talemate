@@ -60,6 +60,35 @@
         <v-alert v-else variant="text" density="compact" class="text-medium-emphasis" icon="mdi-information-outline">
             No grants or revokes for {{ character.name }} yet.
         </v-alert>
+
+        <v-card v-if="coverage.length" variant="tonal" class="mt-4">
+            <v-card-title class="text-body-large">Coverage</v-card-title>
+            <v-card-subtitle v-if="awareness">{{ awareness }}.</v-card-subtitle>
+            <v-card-text>
+                <v-table density="compact" class="coverage-table">
+                    <thead>
+                        <tr>
+                            <th>Topic</th>
+                            <th class="text-right">Known</th>
+                            <th class="text-right">Total</th>
+                            <th style="width: 40%"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in coverage" :key="row.id">
+                            <td>{{ row.name }}</td>
+                            <td class="text-right">{{ row.known }}</td>
+                            <td class="text-right">{{ row.total }}</td>
+                            <td>
+                                <v-progress-linear :model-value="row.total ? (row.known / row.total) * 100 : 0" color="primary" height="6" rounded>
+                                    <v-tooltip activator="parent" location="top">{{ row.known }} of {{ row.total }} facts known</v-tooltip>
+                                </v-progress-linear>
+                            </td>
+                        </tr>
+                    </tbody>
+                </v-table>
+            </v-card-text>
+        </v-card>
     </div>
 </template>
 
@@ -78,6 +107,8 @@ export default {
         return {
             character: null,
             edges: [],
+            coverage: [],
+            awareness: null,
             targets: [],
             newTarget: null,
             newKind: 'grant',
@@ -156,6 +187,8 @@ export default {
                 if (!this.character || message.data.name !== this.character.name) return;
                 this.edges = message.data.edges;
                 this.targets = message.data.targets;
+                this.coverage = message.data.coverage || [];
+                this.awareness = message.data.awareness || null;
                 if (this.busy) {
                     this.busy = false;
                     this.$emit('require-scene-save');

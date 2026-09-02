@@ -16,6 +16,18 @@ The device to use for the embeddings. This can be either `cpu` or `cuda`.
 !!! note "Switching device without a restart (0.37.0)"
     As of version 0.37.0, changing the device while a scene is loaded no longer requires restarting Talemate. The previously loaded model is released from ChromaDB's cache and any GPU memory it held is freed before the new device is applied. The scene's memory database is re-imported automatically — depending on the size of the model and scene this may take a moment.
 
+## :material-shape-outline: Topics
+
+Clusters the stored facts into topics by embedding, without a request: facts are walked in creation order, each joins the first topic whose centroid is similar enough or opens a new one, and one refinement pass moves every fact to its nearest centroid. A topic is named after the most frequent subject among its facts. Topics give every character a coverage table in the World Editor and an [awareness line](/talemate/user-guide/agents/conversation/settings/#awareness-line) in the conversation prompt, and the topic nearest to a retrieval query contributes its most restated facts ahead of the similarity results. The container can be disabled.
+
+##### Recluster step
+
+Rebuild the topics once this many facts arrived since the last clustering (default 20). Topics are also built on load when facts exist and none are stored yet; the centroids are never saved and are rebuilt from the memory store on load.
+
+##### Similarity threshold
+
+A fact joins a topic when its cosine similarity to the topic's centroid is at least this; below it a new topic opens. The nearest topic contributes to retrieval only above this as well. At 0 (the default) the value comes from the [embedding preset's Topic Threshold](/talemate/user-guide/agents/memory/embeddings/#topic-threshold), 0.50 for every shipped preset, because the useful value depends on the model; set it here to override every preset at once.
+
 ## :material-filter-variant: Retrieval
 
 How similarity results are ranked and merged before they reach a prompt. Nothing in this group adds a request; the cross-encoder runs a local model.

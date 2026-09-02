@@ -10,7 +10,12 @@ import pytest
 import talemate.util as util
 from conftest import MockScene, bootstrap_scene
 from talemate.knowledge.schema import KnowledgeEdge
-from talemate.scene_message import CharacterMessage
+from talemate.scene_message import (
+    CharacterMessage,
+    ContextInvestigationMessage,
+    DirectorMessage,
+    ReinforcementMessage,
+)
 
 
 def _chars(source):
@@ -126,6 +131,34 @@ class TestDialogue:
         scene.history = scene.history[:4]
         result = scene.context_history(budget=5000, perspective="Bob")
         assert result == ["L0", "L1", "(Bob was elsewhere for a while)"]
+
+    def test_exempt_message_types_are_never_filtered(self, summarizer):
+        scene = make_scene(summarizer)
+        scene.history = [
+            line(0, ["Alice", "Bob"]),
+            ReinforcementMessage(
+                message="Bob's mood: tense", present=["Alice"], source="Bob's mood:Bob"
+            ),
+            ContextInvestigationMessage(
+                message="The lamp room is empty.", present=["Alice"], source="narrator"
+            ),
+            DirectorMessage(
+                message="Bob: be curt",
+                present=["Alice"],
+                source="director",
+                meta={"character": "Bob", "action": "actor_instruction"},
+            ),
+            line(4, ["Alice", "Bob"]),
+        ]
+        result = scene.context_history(
+            budget=5000,
+            perspective="Bob",
+            keep_director="Bob",
+            include_reinforcements=True,
+        )
+        joined = "\n".join(result)
+        assert "elsewhere" not in joined
+        assert "tense" in joined and "lamp room" in joined
 
     def test_best_fit_dialogue_gap(self, summarizer):
         summarizer.actions["manage_scene_history"].config["best_fit"].value = True
@@ -271,9 +304,66 @@ class TestLayered:
         assert "LB" in joined
         assert "elsewhere" not in [part for part in result if "LB" in part][0]
 
-    def test_gap_survives_a_budget_break(self, summarizer):
+    def test_gap_survives_a_budget_break_as_one_line(self, summarizer):
         scene = self._scene(summarizer)
         # the archived level breaks on the entry that would carry the gap
         result = scene.context_history(budget=600, perspective="Bob")
         gaps = [part for part in result if part.startswith("(Bob was elsewhere")]
-        assert gaps, result
+        assert len(gaps) == 1, result
+        assert "elsewhere" not in "".join(
+            p for p in result if not p.startswith("(Bob was elsewhere")
+        )
+
+
+class TestBestFitTrim:
+    def test_gap_survives_a_trimmed_range(self, summarizer):
+        summarizer.actions["manage_scene_history"].config["best_fit"].value = True
+        scene = MockScene()
+        scene.history = [long_line(i, ["Alice", "Bob"]) for i in range(12)]
+        scene.archived_history = [
+            {
+                "id": "a0",
+                "text": pad("A0"),
+                "ts": 100,
+                "start": 0,
+                "end": 2,
+                "present": ["Alice", "Bob"],
+            },
+            {
+                "id": "a1",
+                "text": pad("A1"),
+                "ts": 200,
+                "start": 3,
+                "end": 5,
+                "present": ["Alice"],
+            },
+            {
+                "id": "a2",
+                "text": pad("A2"),
+                "ts": 300,
+                "start": 6,
+                "end": 8,
+                "present": ["Alice"],
+            },
+            {
+                "id": "a3",
+                "text": pad("A3"),
+                "ts": 400,
+                "start": 9,
+                "end": 9,
+                "present": ["Alice", "Bob"],
+            },
+        ]
+        scene.ts = 400
+        # a budget that forces the archived range to be trimmed from the old end
+        for budget in (260, 300, 340, 380):
+            result = scene.context_history(budget=budget, perspective="Bob")
+            joined = "\n".join(result)
+            if "A1" in joined or "A2" in joined:
+                raise AssertionError(result)
+            # whenever anything older than the missed run is shown, the gap is shown too
+            if "A0" in joined:
+                assert any(p.startswith("(Bob was elsewhere") for p in result), (
+                    budget,
+                    result,
+                )

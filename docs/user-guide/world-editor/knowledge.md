@@ -25,7 +25,7 @@ Each attribute, detail and description on a character sheet, and each world entr
 - **Only the owner**: only the character the entry belongs to knows it. A world entry with this setting is known to nobody until a grant names someone.
 - **Specific characters**: the owner and the listed characters know it.
 
-Set it from the entry's editor in the Characters tab (Description, Attributes, Details) or in the World tab. A grant still adds a reader to a restricted entry; a revoke removes one even from an entry that is visible to everyone.
+Set it from the entry's editor in the Characters tab (Description, Attributes, Details) or in the World tab. A grant still adds a reader to a restricted entry; a revoke removes one even from an entry that is visible to everyone. The setting applies wherever the conversation prompt shows the entry: the character sheets printed at the top of the prompt, pinned entries, and long term memory retrieval alike.
 
 ## Grants and revokes
 

@@ -967,10 +967,13 @@ class Prompt(pydantic.BaseModel):
 
         exclude_history = kwargs.pop("exclude_history", False)
         if exclude_history:
-            base_filter = kwargs.get("filter", lambda x: True)
+            base_filter = kwargs.get("filter") or (lambda x: True)
             kwargs["filter"] = lambda m: (
                 getattr(m, "meta", {}).get("typ") != "history" and base_filter(m)
             )
+        elif kwargs.get("filter") is not None:
+            # a knowledge filter narrows the pool, so fetch more candidates
+            kwargs.setdefault("over_fetch", 3)
 
         if not kwargs.get("iterate"):
             if not as_question_answer:

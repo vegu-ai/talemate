@@ -59,7 +59,7 @@ Your response must be a brief analysis of the scene followed by your "+to_str(nu
 
 {# VOLATILE CONTEXT (for budget calculation) #}
 {% set volatile_context_text %}
-{%- with memory_query=join(questions, "\n"), iterate=5 -%}
+{%- with memory_query=join(questions, "\n"), iterate=5, memory_filter=memory_filter|default(none) -%}
 {% include "memory-query.jinja2" %}
 {% endwith %}
 {% endset %}

@@ -535,6 +535,7 @@ class Character(pydantic.BaseModel):
         if not value:
             try:
                 del self.details[name]
+                self.visibility.pop(f"detail.{name}", None)
                 try:
                     self.shared_details.remove(name)
                 except ValueError:
@@ -569,6 +570,7 @@ class Character(pydantic.BaseModel):
         if not value:
             try:
                 del self.base_attributes[name]
+                self.visibility.pop(name, None)
                 try:
                     self.shared_attributes.remove(name)
                 except ValueError:

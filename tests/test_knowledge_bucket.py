@@ -7,7 +7,7 @@ import pytest
 
 from talemate.agents.memory.schema import MemoryDocument
 from talemate.character import Character
-from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
+from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem, knowledge_digest
 from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
 from talemate.scene_message import CharacterMessage
 from talemate.world_state import ManualContext, WorldState
@@ -339,7 +339,9 @@ class TestRetrieval:
         memory.get = fake_get
         return memory
 
-    async def test_multi_query_filter_over_fetches(self, scene, memory):
+    async def test_multi_query_filter_without_over_fetch_keeps_limit(
+        self, scene, memory
+    ):
         from talemate.context import ActiveScene
 
         with ActiveScene(scene):
@@ -348,7 +350,49 @@ class TestRetrieval:
                 ["q"], iterate=5, filter=index.retrieval_filter(scene, "Alice")
             )
         assert result == ["seen", "age"]
+        assert memory.calls[0]["limit"] == 10
+
+    async def test_over_fetch_is_explicit(self, scene, memory):
+        from talemate.context import ActiveScene
+
+        with ActiveScene(scene):
+            await memory.multi_query(["q"], iterate=5, over_fetch=3)
         assert memory.calls[0]["limit"] == 30
+
+    async def test_rag_semantic_context_over_fetches_only_with_a_filter(
+        self, scene, memory
+    ):
+        from talemate.context import ActiveScene
+        from talemate.instance import get_agent
+
+        conversation = get_agent("conversation")
+        scene.history = [
+            CharacterMessage(message="Alice: something happened here today")
+        ]
+        with ActiveScene(scene):
+            await conversation.semantic_context(filter=lambda d: True)
+            assert memory.calls[-1]["limit"] == 30
+            await conversation.semantic_context()
+            assert memory.calls[-1]["limit"] == 10
+
+    async def test_questions_mode_receives_the_filter(self, scene, memory):
+        from unittest.mock import AsyncMock, patch
+
+        from talemate.context import ActiveScene
+        from talemate.instance import get_agent
+        from talemate.prompts import Prompt
+
+        world_state = get_agent("world_state")
+        marker = lambda d: True  # noqa: E731
+        with (
+            ActiveScene(scene),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as req,
+        ):
+            req.return_value = ("", {"response": "answer"})
+            await world_state.analyze_text_and_extract_context(
+                "text", "goal", filter=marker
+            )
+        assert req.call_args.kwargs["vars"]["memory_filter"] is marker
 
     async def test_multi_query_without_filter_keeps_limit(self, scene, memory):
         from talemate.context import ActiveScene
@@ -395,8 +439,111 @@ class TestRetrieval:
             assert await conversation.rag_get_cache(bob) is None
             assert await conversation.rag_get_cache() == ["shared"]
 
-        assert conversation.long_term_memory_cache_key_for(alice).endswith("-Alice")
+        assert "-Alice-" in conversation.long_term_memory_cache_key_for(alice)
         assert (
             conversation.long_term_memory_cache_key_for(None)
             == conversation.long_term_memory_cache_key
         )
+
+
+# ---------------------------------------------------------------------------
+# direct renders: sheets, descriptions, pins
+# ---------------------------------------------------------------------------
+
+
+class TestEntryClassification:
+    @pytest.fixture
+    def populated(self, scene):
+        bob = Character(
+            name="Bob",
+            description="A keeper.",
+            base_attributes={"age": "40", "eyes": "grey"},
+            details={"secret": "x"},
+            visibility={
+                "age": EntryVisibility(mode="owner"),
+                "detail.secret": EntryVisibility(mode="list", characters=["Carol"]),
+                "description": EntryVisibility(mode="owner"),
+            },
+        )
+        scene.character_data = {"Bob": bob}
+        scene.world_state.manual_context["w1"] = ManualContext(
+            id="w1", text="lore", visibility=EntryVisibility(mode="owner")
+        )
+        scene.world_state.manual_context["w2"] = ManualContext(
+            id="w2", text="open lore"
+        )
+        scene.archived_history = [{"id": "s0", "text": "static", "ts": 0}]
+        return bob
+
+    def test_item_for_entry_classifies_ids(self, scene, populated):
+        index = KnowledgeIndex.from_scene(scene)
+        assert index.item_for_entry(scene, "w1").kind == "world_entry"
+        assert index.item_for_entry(scene, "Bob.age").kind == "attribute"
+        assert index.item_for_entry(scene, "Bob.detail.secret").kind == "detail"
+        assert index.item_for_entry(scene, "Bob.description").kind == "description"
+        assert index.item_for_entry(scene, "s0").kind == "static"
+        assert index.item_for_entry(scene, "unknown-id").kind == "world_entry"
+
+    def test_knows_entry(self, scene, populated):
+        index = KnowledgeIndex.from_scene(scene)
+        assert not index.knows_entry(scene, "Alice", "w1")
+        assert index.knows_entry(scene, "Alice", "w2")
+        assert not index.knows_entry(scene, "Alice", "Bob.age")
+        assert index.knows_entry(scene, "Bob", "Bob.age")
+        assert index.knows_entry(scene, "Carol", "Bob.detail.secret")
+        assert index.knows_entry(scene, "Alice", "Bob.eyes")
+        assert index.knows_entry(scene, None, "w1")
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Alice", target="s0", kind="revoke")
+        ]
+        assert not KnowledgeIndex.from_scene(scene).knows_entry(scene, "Alice", "s0")
+
+    def test_sheet_and_description_for_viewer(self, scene, populated):
+        index = KnowledgeIndex.from_scene(scene)
+        assert index.sheet(scene, populated, "Alice") == "eyes: grey"
+        assert index.sheet(scene, populated, "Bob") == "age: 40\neyes: grey"
+        assert index.sheet(scene, populated, None) == "age: 40\neyes: grey"
+        assert index.description(scene, populated, "Alice") == ""
+        assert index.description(scene, populated, "Bob") == "A keeper."
+
+    def test_sheet_without_base_attributes_keeps_name(self, scene):
+        plain = Character(
+            name="Zed",
+            description="Quiet.",
+            visibility={"description": EntryVisibility(mode="owner")},
+        )
+        scene.character_data = {"Zed": plain}
+        index = KnowledgeIndex.from_scene(scene)
+        assert (
+            index.sheet(scene, plain, "Alice", "description") == "name: Zed\ngender: "
+        )
+        assert "description" not in index.sheet(scene, plain, "Alice")
+
+    def test_digest_tracks_edges_and_visibility(self, scene, populated):
+        before = knowledge_digest(scene)
+        scene.world_state.knowledge.append(
+            KnowledgeEdge(character="Alice", target="w1")
+        )
+        after_edge = knowledge_digest(scene)
+        assert after_edge != before
+        populated.visibility["eyes"] = EntryVisibility(mode="owner")
+        assert knowledge_digest(scene) != after_edge
+
+
+class TestVisibilityLifecycle:
+    async def test_visibility_removed_with_the_entry(self, scene):
+        from talemate.context import ActiveScene
+
+        bob = Character(
+            name="Bob",
+            base_attributes={"age": "40"},
+            details={"secret": "x"},
+            visibility={
+                "age": EntryVisibility(mode="owner"),
+                "detail.secret": EntryVisibility(mode="owner"),
+            },
+        )
+        with ActiveScene(scene):
+            await bob.set_detail("secret", None)
+            await bob.set_base_attribute("age", None)
+        assert bob.visibility == {}

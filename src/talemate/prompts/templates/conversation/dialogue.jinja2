@@ -17,9 +17,9 @@ Override example:
 <|SECTION:CHARACTERS|>
 {% for character in characters %}
 ### {{ character.name }}
-{{ character.sheet_filtered("description") }}
+{{ knowledge_index.sheet(scene, character, knowledge_viewer, "description") }}
 
-{{ character.description }}
+{{ knowledge_index.description(scene, character, knowledge_viewer) }}
 {% endfor %}
 <|CLOSE_SECTION|>
 {% if scene.description %}

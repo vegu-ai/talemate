@@ -7,7 +7,7 @@ from talemate.agents.base import (
     AgentActionConditional,
 )
 import talemate.instance as instance
-from talemate.knowledge.bucket import KnowledgeIndex
+from talemate.knowledge.bucket import KnowledgeIndex, knowledge_digest
 from talemate.util.dedupe import compile_text_to_sentences, compile_sentences_to_length
 
 if TYPE_CHECKING:
@@ -146,10 +146,10 @@ class MemoryRAGMixin:
         return "-".join(map(str, parts))
 
     def long_term_memory_cache_key_for(self, character: "Character | None") -> str:
-        # retrieval is filtered per speaker, so the speaker is part of the key
         if character is None:
             return self.long_term_memory_cache_key
-        return f"{self.long_term_memory_cache_key}-{character.name}"
+        digest = knowledge_digest(self.scene)
+        return f"{self.long_term_memory_cache_key}-{character.name}-{digest}"
 
     def connect(self, scene):
         super().connect(scene)
@@ -251,6 +251,7 @@ class MemoryRAGMixin:
             prompt = self.scene.context_history(
                 keep_director=False,
                 budget=int(self.client.max_token_length * 0.75),
+                perspective=character.name if character else None,
             )
 
         if isinstance(prompt, list):
@@ -271,6 +272,7 @@ class MemoryRAGMixin:
                     response_length=self.long_term_memory_answer_length,
                     num_queries=self.long_term_memory_number_of_queries,
                     extra_context=semantic_context,
+                    filter=memory_filter,
                 )
             ).split("\n")
         elif retrieval_method == "queries":
@@ -297,7 +299,6 @@ class MemoryRAGMixin:
         return complete_context
 
     def rag_knowledge_filter(self, character: "Character | None"):
-        """Memory documents outside the speaker's knowledge bucket are dropped."""
         if character is None:
             return None
         return KnowledgeIndex.from_scene(self.scene).retrieval_filter(
@@ -358,9 +359,12 @@ class MemoryRAGMixin:
         for query in queries:
             log.debug("memory_rag_mixin.build_prompt_default_memory", query=query)
 
-        kwargs = {"filter": filter} if filter is not None else {}
         context = await memory.multi_query(
-            queries, max_tokens=max_response_tokens, iterate=5, **kwargs
+            queries,
+            max_tokens=max_response_tokens,
+            iterate=5,
+            filter=filter,
+            over_fetch=3 if filter is not None else 1,
         )
 
         return context

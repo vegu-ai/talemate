@@ -545,7 +545,7 @@ class MemoryAgent(Agent):
         self,
         query: str,
         max_tokens: int = 1000,
-        filter: Callable = lambda x: True,
+        filter: Callable | None = None,
         **where,
     ) -> str | None:
         """
@@ -571,15 +571,17 @@ class MemoryAgent(Agent):
         formatter: Callable = lambda x: x,
         limit: int = 10,
         return_docs: bool = False,
+        over_fetch: int = 1,
         **where,
     ):
         """
         Get the character memory context for a given character
+
+        `over_fetch` widens the vector search (limit × over_fetch) for callers
+        whose filter drops many candidates.
         """
 
-        # a post-filter drops candidates, so fetch more to keep the budget fillable
-        if filter is not None:
-            limit = limit * 3
+        limit = limit * max(1, over_fetch)
 
         # First, collect results for each individual query (respecting the
         # per-query `iterate` limit) so that we have them available before we

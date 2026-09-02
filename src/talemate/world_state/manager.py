@@ -694,7 +694,7 @@ class WorldStateManager:
         targets: list[KnowledgeTarget] = []
         for character in self.scene.character_data.values():
             name = character.name
-            if character.description:
+            if character.description and "description" not in character.base_attributes:
                 targets.append(
                     KnowledgeTarget(
                         id=f"{name}.description",
@@ -721,14 +721,15 @@ class WorldStateManager:
                 KnowledgeTarget(id=entry.id, label=entry.id, kind="world_entry")
             )
         for entry in self.scene.archived_history:
-            if entry.get("end") is None:
+            if not entry.get("id"):
                 continue
             text = entry.get("text", "")
+            static = entry.get("end") is None
             targets.append(
                 KnowledgeTarget(
                     id=entry["id"],
-                    label=f"history: {text[:60]}",
-                    kind="history",
+                    label=f"{'static history' if static else 'history'}: {text[:60]}",
+                    kind="static" if static else "history",
                 )
             )
         return targets
@@ -784,6 +785,7 @@ class WorldStateManager:
                 meta=meta,
                 id=entry_id,
                 shared=existing.shared if existing else False,
+                visibility=existing.visibility if existing else EntryVisibility(),
             )
         elif meta.get("typ") == "details":
             # character detail needs to be mirrored to the

@@ -180,12 +180,14 @@ async def _near_duplicate(
 async def _near_duplicate_in_batch(
     text: str, batch: list[Fact], max_distance: float
 ) -> Fact | None:
+    if not batch:
+        return None
     memory = get_agent("memory")
-    for fact in batch:
-        comparison = await memory.compare_strings(text, fact.text)
-        if comparison["euclidean_distance"] <= max_distance:
-            return fact
-    return None
+    result = await memory.compare_string_lists(
+        [text], [fact.text for fact in batch], distance_threshold=max_distance
+    )
+    matches = result["distance_matches"]
+    return batch[matches[0][1]] if matches else None
 
 
 async def store_facts(
@@ -202,7 +204,8 @@ async def store_facts(
     """
     world_state = scene.world_state
     stored: list[Fact] = []
-    documents: list[dict] = []
+    # keyed by fact id: a merge updates the stored fact's document, not a second copy
+    documents: dict[str, dict] = {}
 
     for item in parsed:
         existing = await _near_duplicate_in_batch(item.text, stored, dedupe_distance)
@@ -253,9 +256,9 @@ async def store_facts(
                     )
                 )
 
-        documents.append(fact_memory_document(fact))
+        documents[fact.id] = fact_memory_document(fact)
 
     if documents:
-        await get_agent("memory").add_many(documents)
+        await get_agent("memory").add_many(list(documents.values()))
 
     return stored

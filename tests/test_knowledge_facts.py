@@ -106,6 +106,18 @@ class FakeMemory:
     async def compare_strings(self, a, b):
         return {"cosine_similarity": 1.0, "euclidean_distance": self.distance}
 
+    async def compare_string_lists(
+        self, list_a, list_b, similarity_threshold=None, distance_threshold=None
+    ):
+        self.list_compares = getattr(self, "list_compares", 0) + 1
+        matches = [
+            (i, j, self.distance)
+            for i in range(len(list_a))
+            for j in range(len(list_b))
+            if distance_threshold is None or self.distance <= distance_threshold
+        ]
+        return {"distance_matches": matches, "similarity_matches": []}
+
     async def add_many(self, objects):
         self.added.extend(objects)
 
@@ -251,6 +263,10 @@ class TestStoreFacts:
         stored = await store_facts(scene, "e1", ["Mara"], 1, parsed, 0.15)
         assert [f.id for f in stored] == ["F1"]
         assert scene.world_state.facts["F1"].restatements == 1
+        # one embedding pass per item against the batch, and one document per fact id
+        assert fake_memory.list_compares == 1
+        assert [d["id"] for d in fake_memory.added] == ["F1"]
+        assert fake_memory.added[0]["meta"]["restatements"] == 1
 
     async def test_far_neighbour_is_stored(self, scene, fake_memory):
         existing = Fact(id="F1", text="something else", archive_id="e1")

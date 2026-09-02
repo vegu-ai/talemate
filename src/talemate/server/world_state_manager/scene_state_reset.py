@@ -3,6 +3,8 @@ from typing import Union
 import pydantic
 import structlog
 
+from talemate.knowledge.facts import drop_facts_for_entries
+
 log = structlog.get_logger("talemate.server.world_state_manager.scene_state_reset")
 
 
@@ -84,6 +86,15 @@ class SceneStateResetMixin:
 
             scene.history = []
             scene.layered_history = []
+
+            await drop_facts_for_entries(
+                scene,
+                {
+                    ah.get("id")
+                    for ah in scene.archived_history
+                    if ah.get("end") is not None and ah.get("id")
+                },
+            )
 
             if payload.wipe_history_include_static:
                 scene.archived_history = []

@@ -212,9 +212,10 @@
     context.
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
-  summary: Comprehensive reference for summary triggers and formats, layered-history compaction, chunking/analysis, long-term
-    memory, scene analysis, and caching. Details scene-history budget allocation, best-fit limits, manual ratios, and summary-boundary
-    enforcement.
+  summary: 'Comprehensive reference for summary triggers and formats (including the early cut on a time passage or a change of
+    the active character list), the Extract facts setting (atomic facts in the same summary request) and the Fact near-duplicate
+    distance, layered-history compaction, chunking/analysis, long-term memory, scene analysis, and caching. Details scene-history
+    budget allocation, best-fit limits, manual ratios, and summary-boundary enforcement.'
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
   summary: Documents the deprecated AUTOMATIC1111 text-to-image backend, including API prerequisites, sampling, CFG, prompt
@@ -915,6 +916,12 @@
   summary: 'Eighteen character nodes: Get Character (partial match), Get Player Character, List Characters (active/inactive/all),
     Make Character, Activate and Deactivate, Remove Character and Remove All Characters, Is Player / Is Active checks, Get
     and Set Character Attribute, Detail and Description, Unpack Character, and Update Character Data (including renaming).'
+- path: user-guide/node-editor/reference/nodes/knowledge.md
+  title: Knowledge Nodes
+  summary: 'Knowledge nodes over the fact record: Facts About (facts mentioning an entity, optionally as one character knows
+    them), Current State (the newest fact about an entity that no later fact supersedes), Relationship Timeline (facts
+    mentioning two entities), and Grant Knowledge / Revoke Knowledge for writing knowledge edges from a graph; inputs,
+    outputs and properties of each.'
 - path: user-guide/node-editor/reference/nodes/scene-history.md
   title: Scene History Nodes
   summary: 'History nodes: Push History and Pop History, Get Message By ID, Last Message of Type (stop_on_time_passage), Scene

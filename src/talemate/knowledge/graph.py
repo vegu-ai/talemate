@@ -43,8 +43,12 @@ def _mentions(fact: Fact, aliases: set[str]) -> bool:
     return any(re.search(rf"\b{re.escape(alias)}\b", text) for alias in aliases)
 
 
-def _ordered(facts: list[Fact]) -> list[Fact]:
-    return sorted(facts, key=lambda f: (f.ts if f.ts is not None else -1, f.id))
+def _ordered(facts: list[Fact], scene: "Scene") -> list[Fact]:
+    # ids are F<n>; the store's insertion order is the tiebreak, not the string
+    order = {fact_id: i for i, fact_id in enumerate(scene.world_state.facts)}
+    return sorted(
+        facts, key=lambda f: (f.ts if f.ts is not None else -1, order.get(f.id, 0))
+    )
 
 
 def facts_about(
@@ -56,7 +60,7 @@ def facts_about(
     if character:
         index = KnowledgeIndex.from_scene(scene)
         facts = [f for f in facts if index.in_bucket(character, _item(f))]
-    return _ordered(facts)
+    return _ordered(facts, scene)
 
 
 def relationship_timeline(scene: "Scene", a: str, b: str) -> list[Fact]:
@@ -68,7 +72,8 @@ def relationship_timeline(scene: "Scene", a: str, b: str) -> list[Fact]:
             f
             for f in scene.world_state.facts.values()
             if _mentions(f, aliases_a) and _mentions(f, aliases_b)
-        ]
+        ],
+        scene,
     )
 
 
@@ -101,7 +106,7 @@ def bucket(scene: "Scene", character: str) -> list[tuple[Fact, KnownKind]]:
     """Every fact the character knows, with how they know it."""
     index = KnowledgeIndex.from_scene(scene)
     known: list[tuple[Fact, KnownKind]] = []
-    for fact in _ordered(list(scene.world_state.facts.values())):
+    for fact in _ordered(list(scene.world_state.facts.values()), scene):
         if not index.in_bucket(character, _item(fact)):
             continue
         if fact.present and character in fact.present:

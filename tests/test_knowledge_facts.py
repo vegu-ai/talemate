@@ -71,6 +71,18 @@ class TestParseFacts:
     def test_not_a_list_fails(self):
         assert parse_facts('{"text": "x"}') is None
 
+    def test_brackets_inside_text_are_fine(self):
+        assert (
+            parse_facts('[{"text": "She called it Plan B]."}]')[0].text
+            == "She called it Plan B]."
+        )
+        assert parse_facts('[{"text": "The inscription begins [REDACTED."}]')[
+            0
+        ].text.startswith("The inscription")
+
+    def test_trailing_prose_after_the_list(self):
+        assert parse_facts('[{"text": "x"}]\nThat is all.')[0].text == "x"
+
 
 # ---------------------------------------------------------------------------
 # storing
@@ -102,8 +114,10 @@ class FakeMemory:
 
 
 @pytest.fixture
-def fake_memory(scene):
-    memory = FakeMemory(scene)
+def fake_memory():
+    # standalone on purpose: pulling the conftest `scene` fixture here would
+    # re-bootstrap every agent onto a second scene
+    memory = FakeMemory(None)
     with patch("talemate.knowledge.facts.get_agent", return_value=memory):
         yield memory
 
@@ -156,7 +170,13 @@ class TestStoreFacts:
         )
 
     async def test_near_duplicate_is_a_restatement(self, scene, fake_memory):
-        existing = Fact(id="F1", text="Mara found a sextant.", archive_id="e1", ts=1)
+        existing = Fact(
+            id="F1",
+            text="Mara found a sextant.",
+            archive_id="e1",
+            ts=1,
+            present=["Mara"],
+        )
         scene.world_state.facts["F1"] = existing
         scene.world_state.fact_counter = 1
         fake_memory.neighbours = [existing]
@@ -171,6 +191,66 @@ class TestStoreFacts:
         assert existing.known_by == {"Edwin": "told"}
         assert fake_memory.added[-1]["id"] == "F1"
         assert fake_memory.added[-1]["meta"]["restatements"] == 1
+
+    async def test_restatement_audience_learns_the_stored_fact(
+        self, scene, fake_memory
+    ):
+        # chapter 1: Edwin alone; chapter 5: Edwin tells Mara on screen
+        existing = Fact(
+            id="F1",
+            text="The Sorena sank in 1973.",
+            archive_id="e1",
+            ts=1,
+            present=["Edwin"],
+        )
+        scene.world_state.facts["F1"] = existing
+        scene.world_state.fact_counter = 1
+        fake_memory.neighbours = [existing]
+        fake_memory.distance = 0.05
+        parsed = parse_facts(
+            '[{"text": "Edwin says the Sorena went down in 1973.", "known_by": ["Mara"]}]'
+        )
+        await store_facts(scene, "e5", ["Edwin", "Mara"], 50, parsed, 0.15)
+        assert existing.known_by == {"Mara": "told"}
+        assert [(e.character, e.target) for e in scene.world_state.knowledge] == [
+            ("Mara", "F1")
+        ]
+        from talemate.knowledge.graph import bucket
+
+        assert "F1" in [f.id for f, _ in bucket(scene, "Mara")]
+
+    async def test_unknown_presence_writes_no_edges(self, scene, fake_memory):
+        parsed = parse_facts('[{"text": "x", "known_by": ["Mara", "Edwin"]}]')
+        await store_facts(scene, "e1", None, 7, parsed, 0.15)
+        fact = scene.world_state.facts["F1"]
+        assert fact.known_by == {} and scene.world_state.knowledge == []
+
+    async def test_restatement_of_unknown_presence_writes_no_edges(
+        self, scene, fake_memory
+    ):
+        existing = Fact(id="F1", text="x", archive_id="e1", ts=1)
+        scene.world_state.facts["F1"] = existing
+        scene.world_state.fact_counter = 1
+        fake_memory.neighbours = [existing]
+        fake_memory.distance = 0.05
+        await store_facts(
+            scene,
+            "e2",
+            ["Mara"],
+            9,
+            parse_facts('[{"text": "x again", "known_by": ["Carol"]}]'),
+            0.15,
+        )
+        assert existing.known_by == {} and scene.world_state.knowledge == []
+
+    async def test_near_duplicates_inside_one_batch_merge(self, scene, fake_memory):
+        fake_memory.distance = 0.05
+        parsed = parse_facts(
+            '[{"text": "Mara found a sextant."}, {"text": "Mara discovered a sextant."}]'
+        )
+        stored = await store_facts(scene, "e1", ["Mara"], 1, parsed, 0.15)
+        assert [f.id for f in stored] == ["F1"]
+        assert scene.world_state.facts["F1"].restatements == 1
 
     async def test_far_neighbour_is_stored(self, scene, fake_memory):
         existing = Fact(id="F1", text="something else", archive_id="e1")
@@ -229,6 +309,35 @@ RESPONSE_WITH_FACTS = (
 )
 
 
+class TestSpecs:
+    def test_prose_containing_facts_colon_is_not_truncated(self):
+        from talemate.agents.summarize.response_specs import (
+            SUMMARY_SPEC,
+            SUMMARY_WITH_FACTS_SPEC,
+        )
+
+        text = 'ANALYSIS: ...\nSUMMARY: Mara laid out the facts: the Sorena sank in 1973, the light failed.\n<FACTS>\n[{"text": "x"}]\n</FACTS>'
+        with_facts = SUMMARY_WITH_FACTS_SPEC.extract_all(text)
+        assert (
+            with_facts["summary"]
+            == "Mara laid out the facts: the Sorena sank in 1973, the light failed."
+        )
+        assert parse_facts(with_facts["facts"])[0].text == "x"
+        plain = SUMMARY_SPEC.extract_all(
+            "SUMMARY: Mara laid out the facts: the light failed."
+        )
+        assert plain["summary"] == "Mara laid out the facts: the light failed."
+
+    def test_open_facts_tag_still_parses(self):
+        from talemate.agents.summarize.response_specs import SUMMARY_WITH_FACTS_SPEC
+
+        out = SUMMARY_WITH_FACTS_SPEC.extract_all(
+            'SUMMARY: prose\n<FACTS>\n[{"text": "open"}]'
+        )
+        assert out["summary"] == "prose"
+        assert parse_facts(out["facts"])[0].text == "open"
+
+
 class TestSummarizeWithFacts:
     async def test_returns_summary_and_facts(self, summarizer_scene):
         scene, summarizer = summarizer_scene
@@ -242,6 +351,9 @@ class TestSummarizeWithFacts:
         assert summary == "Edwin told Mara about the wreck."
         assert facts and facts[0].known_by == ["Mara"]
         assert mock_request.call_args.kwargs["vars"]["extract_facts"] is True
+        from talemate.agents.summarize.response_specs import SUMMARY_WITH_FACTS_SPEC
+
+        assert mock_request.call_args.kwargs["response_spec"] is SUMMARY_WITH_FACTS_SPEC
 
     async def test_plain_call_keeps_the_string_contract(self, summarizer_scene):
         scene, summarizer = summarizer_scene
@@ -388,6 +500,59 @@ class TestLifecycle:
         assert docs["F1"]["meta"]["typ"] == "fact"
         assert docs["F1"]["meta"]["present"] == '["Mara"]'
 
+    def test_reset_keeps_edges_whose_target_starts_with_f(self, scene):
+        scene.archived_history = [
+            {"id": "e1", "text": "x", "ts": 0, "start": 0, "end": 1}
+        ]
+        scene.world_state.facts = {"F3": Fact(id="F3", text="a", archive_id="e1")}
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Edwin", target="F3"),
+            KnowledgeEdge(character="Edwin", target="Fiona.age"),
+            KnowledgeEdge(character="Edwin", target="Forge District"),
+            KnowledgeEdge(character="Edwin", target="Mara.age"),
+        ]
+        dropped = scene.reset()
+        assert dropped == {"F3"}
+        assert [e.target for e in scene.world_state.knowledge] == [
+            "Fiona.age",
+            "Forge District",
+            "Mara.age",
+        ]
+
+    def test_export_with_reset_progress_prunes_facts(self, scene):
+        import json as _json
+
+        from talemate.export import ExportOptions, scene_export_json
+
+        scene.archived_history = [
+            {"id": "s0", "text": "static", "ts": 0},
+            {"id": "e1", "text": "x", "ts": 0, "start": 0, "end": 1},
+        ]
+        scene.world_state.facts = {
+            "F1": Fact(id="F1", text="a", archive_id="e1"),
+            "F2": Fact(id="F2", text="manual", source="manual", supersedes="F1"),
+        }
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Edwin", target="F1"),
+            KnowledgeEdge(character="Edwin", target="F2"),
+        ]
+        exported = _json.loads(
+            scene_export_json(scene, ExportOptions(name="x", reset_progress=True))
+        )
+        ws = exported["world_state"]
+        assert list(ws["facts"]) == ["F2"] and ws["facts"]["F2"]["supersedes"] is None
+        assert [e["target"] for e in ws["knowledge"]] == ["F2"]
+        assert set(scene.world_state.facts) == {"F1", "F2"}
+
+    async def test_update_fact_refuses_unknown_ids(self, scene, fake_memory):
+        from talemate.knowledge.facts import update_fact
+
+        scene.world_state.facts = {"F1": Fact(id="F1", text="a")}
+        assert await update_fact(scene, Fact(id="F1", text="edited")) is True
+        assert scene.world_state.facts["F1"].text == "edited"
+        assert await update_fact(scene, Fact(id="F9", text="ghost")) is False
+        assert "F9" not in scene.world_state.facts
+
     def test_reset_drops_summary_facts_and_their_edges(self, scene):
         scene.archived_history = [
             {"id": "s0", "text": "static", "ts": 0},
@@ -415,6 +580,95 @@ class TestLifecycle:
 
 
 class TestRegenerateFacts:
+    async def test_extract_off_leaves_facts_alone(self, summarizer_scene, fake_memory):
+        from talemate.history import HistoryEntry, regenerate_history_entry
+
+        scene, summarizer = summarizer_scene
+        summarizer.actions["archive"].config["extract_facts"].value = False
+        scene.history = [CharacterMessage(message="Mara: one", present=["Mara"])]
+        scene.archived_history = [
+            {
+                "id": "e1",
+                "text": "kept",
+                "ts": 5,
+                "start": 0,
+                "end": 0,
+                "present": ["Mara"],
+                "facts_status": "ok",
+            }
+        ]
+        scene.world_state.facts = {
+            "F1": Fact(id="F1", text="hand edited", archive_id="e1")
+        }
+        calls = []
+
+        async def stub(
+            text, extra_context=None, generation_options=None, return_facts=False
+        ):
+            calls.append(return_facts)
+            return ("NEW", None) if return_facts else "NEW"
+
+        summarizer.summarize = stub
+        entry = HistoryEntry(
+            text="kept", ts=5, index=0, layer=0, id="e1", start=0, end=0
+        )
+        assert await summarizer.regenerate_facts(entry) == "ok"
+        assert calls == []
+        result = await regenerate_history_entry(scene, entry)
+        assert result.text == "NEW"
+        assert calls == [False]
+        assert scene.world_state.facts["F1"].text == "hand edited"
+        assert scene.archived_history[0]["facts_status"] == "ok"
+
+    async def test_layered_entry_is_refused(self, summarizer_scene, fake_memory):
+        from talemate.history import HistoryEntry
+
+        scene, summarizer = summarizer_scene
+        entry = HistoryEntry(text="x", ts=0, index=0, layer=1, id="l1", start=0, end=0)
+        assert await summarizer.regenerate_facts(entry) is None
+
+    async def test_entry_regeneration_returns_fresh_facts(
+        self, summarizer_scene, fake_memory
+    ):
+        from talemate.history import HistoryEntry, regenerate_history_entry
+
+        scene, summarizer = summarizer_scene
+        scene.history = [CharacterMessage(message="Mara: one", present=["Mara"])]
+        scene.archived_history = [
+            {
+                "id": "e1",
+                "text": "old",
+                "ts": 5,
+                "start": 0,
+                "end": 0,
+                "present": ["Mara"],
+                "facts_status": "ok",
+            }
+        ]
+        scene.world_state.facts = {"F1": Fact(id="F1", text="stale", archive_id="e1")}
+        scene.world_state.fact_counter = 1
+
+        async def stub(
+            text, extra_context=None, generation_options=None, return_facts=False
+        ):
+            return "NEW", parse_facts('[{"text": "fresh"}]')
+
+        summarizer.summarize = stub
+        entry = HistoryEntry(
+            text="old",
+            ts=5,
+            index=0,
+            layer=0,
+            id="e1",
+            start=0,
+            end=0,
+            facts=[Fact(id="F1", text="stale", archive_id="e1")],
+        )
+        result = await regenerate_history_entry(scene, entry)
+        assert [f.id for f in result.facts] == ["F2"] and result.facts[
+            0
+        ].text == "fresh"
+
     async def test_replaces_facts_and_keeps_the_text(
         self, summarizer_scene, fake_memory
     ):

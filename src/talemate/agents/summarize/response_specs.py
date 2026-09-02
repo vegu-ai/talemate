@@ -14,6 +14,7 @@ from talemate.prompts.response import (
 
 __all__ = [
     "SUMMARY_SPEC",
+    "SUMMARY_WITH_FACTS_SPEC",
     "MARKUP_SPEC",
     "AUDIO_TAGS_SPEC",
     "CHUNK_CLEAN_SPEC",
@@ -23,10 +24,19 @@ __all__ = [
 # Used in summarize() and summarize_director_chat()
 SUMMARY_SPEC = ResponseSpec(
     extractors={
-        "summary": AfterAnchorExtractor(start="SUMMARY:", stop_at="FACTS:"),
-        "facts": AfterAnchorExtractor(start="FACTS:"),
+        "summary": AfterAnchorExtractor(start="SUMMARY:"),
     },
     required=[],  # Falls back to full response if not found
+)
+
+# Used only when the summary call also asks for facts. The facts block is
+# delimited by tags no prose contains, so the summary is never cut short.
+SUMMARY_WITH_FACTS_SPEC = ResponseSpec(
+    extractors={
+        "summary": AfterAnchorExtractor(start="SUMMARY:", stop_at="<FACTS>"),
+        "facts": AnchorExtractor(left="<FACTS>", right="</FACTS>"),
+    },
+    required=[],
 )
 
 # For extracting content from <MARKUP>...</MARKUP> tags

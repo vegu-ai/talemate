@@ -20,13 +20,6 @@ Automatically summarize scene dialogue when the number of tokens in the history 
 
 A summary entry also ends early, regardless of the threshold, when a time passage occurs or when the active character list changes (a character is activated or deactivated). Every entry then records one set of present characters; see [History -- Presence](/talemate/user-guide/world-editor/history/#presence).
 
-##### Extract facts
-
-Ask for a list of atomic facts in the same summary request (no extra request). The facts feed the per-character knowledge features; see [History -- Facts](/talemate/user-guide/world-editor/history/#facts). On by default.
-
-##### Fact near-duplicate distance
-
-A new fact this close to a stored fact (embedding distance, default 0.15) counts as a restatement of the stored fact instead of a new one.
 
 ###### Token Threshold
 
@@ -50,6 +43,14 @@ Help the AI summarize by including the last few summaries as additional context.
 Custom instructions for the summarization agent. These instructions are included in the summarization prompt to guide how summaries are generated. Use this to customize the summarization style, focus areas, or format for your specific needs.
 
 Writing style instructions are also included during summarization to maintain consistency with your scene's chosen writing style.
+
+###### Extract facts
+
+Ask for a list of atomic facts in the same summary request (no extra request). The facts feed the per-character knowledge features; see [History -- Facts](/talemate/user-guide/world-editor/history/#facts). On by default. With this off, regenerating an entry leaves its recorded facts as they are.
+
+###### Fact near-duplicate distance
+
+A new fact this close to a stored fact (embedding distance, default 0.15) counts as a restatement of the stored fact instead of a new one.
 
 ## Layered History
 

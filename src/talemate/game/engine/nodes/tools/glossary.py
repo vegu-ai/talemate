@@ -155,6 +155,10 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
         "Agent Nodes",
         "Generic agent interaction: get an agent, call agent functions, read and count agent state variables.",
     ),
+    "knowledge": (
+        "Knowledge Nodes",
+        "The fact record: facts about an entity, an entity's current state, the timeline between two entities, and grant/revoke knowledge edges.",
+    ),
     "agents-conversation": (
         "Conversation Agent Nodes",
         "Generate character dialogue through the conversation agent.",

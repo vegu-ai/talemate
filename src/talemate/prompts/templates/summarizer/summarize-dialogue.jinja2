@@ -1,7 +1,7 @@
 {#-
 Extractors:
-  - summary: AfterAnchorExtractor("SUMMARY:", stop_at="FACTS:")
-  - facts: AfterAnchorExtractor("FACTS:")
+  - summary: AfterAnchorExtractor("SUMMARY:")
+  - with extract_facts: summary stops at <FACTS>; facts: AnchorExtractor("<FACTS>", "</FACTS>")
 
 Override example:
   {{ set_after_anchor_extractor("summary", "MY_MARKER:") }}
@@ -91,7 +91,9 @@ ANALYSIS: <brief analysis the cross over point from previous chapters to {{ summ
 {% if scene and scene.writing_style %}WRITING STYLE: <brief understanding of the writing style requirements and the story intention. Note at least one example where you will apply it.>{% endif %}
 SUMMARY: <summary of {{ summary_target }} based on analysis.{{ max_length }}>
 {% if extract_facts -%}
-FACTS: <a JSON list of the atomic facts established in {{ summary_target }}. One object per fact: {"text": "one self-contained statement, names spelled out, no pronouns", "subjects": ["names of the characters, items or places the fact is about"], "known_by": ["characters who learned this fact during {{ summary_target }}"], "supersedes": "id of a known fact this one replaces, or null"}. Facts only: events that happened, decisions taken, things revealed, states that changed. Between 1 and 12 items. Output the JSON list and nothing else after FACTS:>
+<FACTS>
+<a JSON list of the atomic facts established in {{ summary_target }}. One object per fact: {"text": "one self-contained statement, names spelled out, no pronouns", "subjects": ["names of the characters, items or places the fact is about"], "known_by": ["characters who learned this fact during {{ summary_target }}"], "supersedes": "id of a known fact this one replaces, or null"}. Facts only: events that happened, decisions taken, things revealed, states that changed. Between 1 and 12 items. Output the JSON list and nothing else between the tags.>
+</FACTS>
 {% endif -%}
 {% include "response-length.jinja2" %}
 <|CLOSE_SECTION|>

@@ -1,4 +1,5 @@
 from talemate.commands.base import TalemateCommand
+from talemate.instance import get_agent
 from talemate.commands.manager import register
 from talemate.emit import wait_for_input_yesno
 from talemate.exceptions import ResetScene
@@ -21,6 +22,8 @@ class CmdReset(TalemateCommand):
             self.system_message("Reset cancelled")
             return True
 
-        self.scene.reset()
+        dropped_facts = self.scene.reset()
+        if dropped_facts:
+            await get_agent("memory").delete({"ids": sorted(dropped_facts)})
 
         raise ResetScene()

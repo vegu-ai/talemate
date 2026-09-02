@@ -27,7 +27,7 @@ from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
 from talemate.context import handle_generation_cancelled
 from talemate.events import ArchiveEvent
-from talemate.knowledge.facts import drop_facts_for_entries
+from talemate.knowledge.facts import drop_facts_for_entries, facts_for_entry
 from talemate.knowledge.schema import Fact, FactsStatus
 
 if TYPE_CHECKING:
@@ -838,6 +838,7 @@ async def regenerate_history_entry(
             generation_options=generation_options,
         )
         entry.facts_status = facts_status
+        entry.facts = facts_for_entry(scene, entry.id)
 
     entry.text = summarized
 

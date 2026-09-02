@@ -8,7 +8,7 @@ import talemate.emit.async_signals
 import talemate.util as util
 from talemate.events import HistoryEvent
 from talemate.prompts import Prompt
-from .response_specs import SUMMARY_SPEC, CHUNK_CLEAN_SPEC
+from .response_specs import SUMMARY_SPEC, SUMMARY_WITH_FACTS_SPEC, CHUNK_CLEAN_SPEC
 from talemate.scene_message import (
     DirectorMessage,
     TimePassageMessage,
@@ -30,7 +30,12 @@ from talemate.agents.base import (
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 
-from talemate.history import ArchiveEntry, HistoryEntry
+from talemate.history import (
+    ArchiveEntry,
+    HistoryEntry,
+    collect_source_entries,
+    resolve_history_entry,
+)
 from talemate.knowledge.presence import presence_differs, span_presence
 from talemate.knowledge.facts import (
     drop_facts_for_entries,
@@ -620,7 +625,15 @@ class SummarizeAgent(
     ) -> tuple[str, FactsStatus | None]:
         """
         Re-summarize an existing base entry and replace its facts.
+
+        With fact extraction off the facts of the entry are left alone.
         """
+        if not self.archive_extract_facts:
+            summarized = await self.summarize(
+                text, extra_context=extra_context, generation_options=generation_options
+            )
+            return summarized, entry.facts_status
+
         summarized, parsed_facts = await self.summarize(
             text,
             extra_context=extra_context,
@@ -644,9 +657,13 @@ class SummarizeAgent(
         Re-run the summary call for one base entry and replace only its facts.
         The entry text is kept.
         """
-        from talemate.history import collect_source_entries, resolve_history_entry
+        if entry.layer != 0:
+            return None
 
         archive_entry = resolve_history_entry(self.scene, entry)
+        if not self.archive_extract_facts:
+            return archive_entry.facts_status
+
         sources = collect_source_entries(self.scene, entry)
         if not sources:
             return archive_entry.facts_status
@@ -734,7 +751,7 @@ class SummarizeAgent(
             f"summarize_{response_length}",
             vars=template_vars,
             dedupe_enabled=False,
-            response_spec=SUMMARY_SPEC,
+            response_spec=SUMMARY_WITH_FACTS_SPEC if extract_facts else SUMMARY_SPEC,
         )
 
         log.debug(

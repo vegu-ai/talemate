@@ -84,6 +84,20 @@ class TestQueries:
         assert [f.id for f in superseded_chain(scene, "F6")] == ["F5", "F4"]
         assert superseded_chain(scene, "F6", hops=3)[-1].id == "F2"
 
+    def test_ordering_survives_two_digit_ids(self, scene):
+        scene.world_state.facts = {
+            f"F{i}": Fact(
+                id=f"F{i}",
+                text=f"sextant fact {i}",
+                ts=200 if i > 3 else 100,
+                subjects=["sextant"],
+            )
+            for i in range(1, 15)
+        }
+        ordered = [f.id for f in facts_about(scene, "sextant")]
+        assert ordered == [f"F{i}" for i in range(1, 15)]
+        assert current_state(scene, "sextant").id == "F14"
+
     def test_bucket_kinds(self, scene):
         scene.world_state.facts["F2"].known_by = {"Edwin": "told"}
         scene.world_state.knowledge = [

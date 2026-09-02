@@ -3,7 +3,7 @@ import structlog
 
 from talemate.history import HistoryEntry
 from talemate.instance import get_agent
-from talemate.knowledge.facts import fact_memory_document
+from talemate.knowledge.facts import update_fact
 from talemate.knowledge.schema import EntryVisibility, Fact, KnowledgeEdge
 from talemate.status import background_task
 
@@ -92,8 +92,10 @@ class KnowledgeMixin:
     async def handle_update_fact(self, data):
         payload = FactPayload(**data)
         fact = payload.fact
-        self.scene.world_state.facts[fact.id] = fact
-        await get_agent("memory").add_many([fact_memory_document(fact)])
+        if not await update_fact(self.scene, fact):
+            log.warning("update_fact: unknown fact id", fact_id=fact.id)
+            await self.signal_operation_done()
+            return
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",

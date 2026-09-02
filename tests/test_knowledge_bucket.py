@@ -772,3 +772,117 @@ class TestQueryMemoryOverFetch:
                 "q", as_question_answer=False, iterate=5, filter=lambda d: True
             )
             assert memory.calls[-1]["limit"] == 30
+
+
+class TestDottedWorldEntryIds:
+    def test_world_entry_named_like_a_description_chunk_keeps_its_visibility(
+        self, scene
+    ):
+        scene.world_state.manual_context["lighthouse.description.1"] = ManualContext(
+            id="lighthouse.description.1",
+            text="secret lore",
+            visibility=EntryVisibility(mode="owner"),
+        )
+        index = KnowledgeIndex.from_scene(scene)
+        assert not index.knows_entry(scene, "Alice", "lighthouse.description.1")
+        assert (
+            index.item_for_entry(scene, "lighthouse.description.1").kind
+            == "world_entry"
+        )
+        document = doc(
+            "lighthouse.description.1",
+            {"typ": "world_state", "source": "manual"},
+            "secret lore",
+        )
+        assert not index.retrieval_filter(scene, "Alice")(document)
+        # an edge on the exact id still matches
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Alice", target="lighthouse.description.1")
+        ]
+        assert KnowledgeIndex.from_scene(scene).retrieval_filter(scene, "Alice")(
+            document
+        )
+
+    def test_only_description_documents_are_folded(self, scene):
+        index = KnowledgeIndex.from_scene(scene)
+        as_history = doc(
+            "Bob.description.2",
+            {"typ": "history", "presence_known": True, "present": '["Bob"]'},
+            "x",
+        )
+        assert (
+            KnowledgeItem.from_memory_document(as_history, scene).id
+            == "Bob.description.2"
+        )
+        as_description = doc(
+            "Bob.description.2",
+            {"typ": "base_attribute", "character": "Bob", "attr": "description"},
+            "x",
+        )
+        assert (
+            KnowledgeItem.from_memory_document(as_description, scene).id
+            == "Bob.description"
+        )
+        assert (
+            index.in_bucket(
+                "Alice", KnowledgeItem.from_memory_document(as_history, scene)
+            )
+            is False
+        )
+
+
+class TestAnalysisPromptsThroughTheAgent:
+    async def test_public_method_hides_restricted_entries(self, scene):
+        from unittest.mock import AsyncMock, Mock, patch
+
+        import talemate.instance as instance
+        from talemate.context import ActiveScene
+        from talemate.instance import get_agent
+        from talemate.prompts import Prompt
+        from talemate.tale_mate import Actor
+
+        bob = Character(
+            name="Bob",
+            base_attributes={"age": "SECRET-AGE-40", "eyes": "grey"},
+            visibility={"age": EntryVisibility(mode="owner")},
+        )
+        alice = Character(name="Alice")
+        scene.character_data = {"Alice": alice, "Bob": bob}
+        scene.actors = [
+            Actor(character=alice, agent=None),
+            Actor(character=bob, agent=None),
+        ]
+        world_state = get_agent("world_state")
+        rendered = {}
+        memory = Mock()
+        memory.multi_query = AsyncMock(return_value=[])
+        memory.query = AsyncMock(return_value="")
+        ws_stub = Mock()
+        ws_stub.analyze_and_follow_instruction = AsyncMock(return_value="1. q?")
+        real_get_agent = instance.get_agent
+
+        def fake_get_agent(name, *a, **k):
+            return {"memory": memory, "world_state": ws_stub}.get(
+                name
+            ) or real_get_agent(name, *a, **k)
+
+        async def fake_request(uid, client, kind, vars=None, **kwargs):
+            with patch(
+                "talemate.prompts.base.instance.get_agent", side_effect=fake_get_agent
+            ):
+                rendered[uid] = Prompt.get(uid, vars=vars).render()
+            return "", {"response": "1. a query?"}
+
+        with (
+            ActiveScene(scene),
+            patch.object(Prompt, "request", side_effect=fake_request),
+            patch("talemate.agents.world_state.get_agent", side_effect=fake_get_agent),
+        ):
+            await world_state.analyze_text_and_extract_context(
+                "text", "goal", include_character_context=True, viewer="Alice"
+            )
+            await world_state.analyze_text_and_extract_context_via_queries(
+                "text", "goal", include_character_context=True, viewer="Alice"
+            )
+        for text in rendered.values():
+            assert "SECRET-AGE-40" not in text and "eyes: grey" in text

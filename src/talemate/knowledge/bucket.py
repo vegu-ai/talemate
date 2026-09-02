@@ -85,7 +85,12 @@ class KnowledgeItem(pydantic.BaseModel):
         owner = meta.get("character")
         if owner == "__narrator__":
             owner = None
-        doc_id = canonical_entry_id(doc.id)
+        # only a description document (one per paragraph) folds onto its
+        # entry id; a world entry id is free text and is looked up as typed
+        is_description = typ == "description" or (
+            typ == "base_attribute" and meta.get("attr") == "description"
+        )
+        doc_id = canonical_entry_id(doc.id) if is_description else doc.id
 
         present = None
         if meta.get("presence_known"):
@@ -180,12 +185,12 @@ class KnowledgeIndex:
     def item_for_entry(self, scene: "Scene", entry_id: str) -> KnowledgeItem:
         """Classify a memory document id without the document: world entry,
         sheet entry (`<name>.<key>`), archive entry, or unknown (shared)."""
-        entry_id = canonical_entry_id(entry_id)
         entry = scene.world_state.manual_context.get(entry_id)
         if entry is not None:
             return KnowledgeItem(
                 id=entry_id, kind="world_entry", visibility=entry.visibility
             )
+        entry_id = canonical_entry_id(entry_id)
 
         for name, character in scene.character_data.items():
             prefix = f"{name}."

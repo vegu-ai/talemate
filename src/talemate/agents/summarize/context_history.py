@@ -1134,42 +1134,36 @@ class ContextHistoryMixin:
             and not params.knows(KnowledgeItem.from_message(scene.history[i]))
             for i in range(summarized_to + 1)
         ]
-        # slots that render nothing must not split a missed run
-        blank = [
-            i >= len(scene.history)
-            or not _is_qualifying(scene.history[i], params)
-            or (
-                bool(exclude)
-                and scene.history[i].as_format(
-                    conversation_format, mode=actor_direction_mode
+        # slots that render nothing must not split a missed run; a missed slot
+        # always renders (a gap line or its empty tail), so it is never blank
+        rendered: list[str | None] = []
+        for i in range(summarized_to + 1):
+            if i < len(scene.history) and _is_qualifying(scene.history[i], params):
+                rendered.append(
+                    scene.history[i].as_format(
+                        conversation_format, mode=actor_direction_mode
+                    )
                 )
-                in exclude
-            )
+            else:
+                rendered.append(None)
+        blank = [
+            not missed[i]
+            and (rendered[i] is None or (bool(exclude) and rendered[i] in exclude))
             for i in range(summarized_to + 1)
         ]
 
         for i in range(summarized_to + 1):
             entries.append({"idx": i})
-            if i < len(scene.history):
-                message = scene.history[i]
-                if missed[i]:
-                    text = ContextHistoryMixin._best_fit_gap_slot(
-                        params, missed, i, blank
-                    )
-                    formatted.append(text)
-                    tokens.append(count_tokens(text) if text else 0)
-                    continue
-                if _is_qualifying(message, params):
-                    text = message.as_format(
-                        conversation_format, mode=actor_direction_mode
-                    )
-                    if exclude and text in exclude:
-                        formatted.append("")
-                        tokens.append(0)
-                        continue
-                    formatted.append(text)
-                    tokens.append(count_tokens(text))
-                    continue
+            if missed[i]:
+                text = ContextHistoryMixin._best_fit_gap_slot(params, missed, i, blank)
+                formatted.append(text)
+                tokens.append(count_tokens(text) if text else 0)
+                continue
+            text = rendered[i]
+            if text is not None and not (exclude and text in exclude):
+                formatted.append(text)
+                tokens.append(count_tokens(text))
+                continue
             formatted.append("")
             tokens.append(0)
 

@@ -19,8 +19,11 @@ def span_presence(messages: list[SceneMessage]) -> list[str] | None:
     Presence of a span of messages.
 
     Unknown presence on any message makes the whole span unknown: a span is
-    never narrower than one of its messages.
+    never narrower than one of its messages. An empty span is unknown too,
+    never "nobody".
     """
+    if not messages:
+        return None
     names: set[str] = set()
     for message in messages:
         if message.present is None:
@@ -29,8 +32,9 @@ def span_presence(messages: list[SceneMessage]) -> list[str] | None:
     return sorted(names)
 
 
-def presence_differs(a: list[str] | None, b: list[str] | None) -> bool:
-    return a is not None and b is not None and set(a) != set(b)
+def presence_differs(new: list[str] | None, previous: list[str] | None) -> bool:
+    """True only when both sets are known and differ; an unknown side never cuts."""
+    return new is not None and previous is not None and set(new) != set(previous)
 
 
 def layer_entry_presence(
@@ -53,8 +57,13 @@ def layer_entry_presence(
     else:
         sources = scene.layered_history[layer_index - 1]
 
+    # a range that points outside the layer below is unknown, not "nobody"
+    if start > end or end >= len(sources):
+        return None
+    sources = sources[start : end + 1]
+
     names: set[str] = set()
-    for source in sources[start : end + 1]:
+    for source in sources:
         if layer_index == 0:
             present = source.get("present")
         else:

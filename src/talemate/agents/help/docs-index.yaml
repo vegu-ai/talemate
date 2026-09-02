@@ -1194,10 +1194,13 @@
     collection templates with the Spice Chance control.'
 - path: user-guide/world-editor/history/index.md
   title: History
-  summary: 'The World Editor''s History tab: the three entry types (static archived, summary archived, layered), editing entries
-    by double-click, deleting, regenerating and inspecting them, adding static entries with Entry Text plus Unit and Amount
-    duration, time passage entries with their duration and playthrough chapter title (the only surface that reaches a passage
-    inserted before a summarized entry), and Regenerate All History.'
+  summary: 'The World Editor''s History tab: the three entry types (static archived, summary archived, layered), the presence
+    record (which characters were active for each summarized entry, shown as chips next to the entry time, the summarizer cut
+    on a change of the active character list, the union over layered entries, and unknown presence on scenes saved before
+    presence tracking, never guessed from who spoke), editing entries by double-click, deleting, regenerating and inspecting
+    them, adding static entries with Entry Text plus Unit and Amount duration, time passage entries with their duration and
+    playthrough chapter title (the only surface that reaches a passage inserted before a summarized entry), and Regenerate
+    All History.'
 - path: user-guide/world-editor/history/layered-history.md
   title: Layered History
   summary: 'Conceptual explanation of layered history: base layer static and summary entries, higher layers compressing further

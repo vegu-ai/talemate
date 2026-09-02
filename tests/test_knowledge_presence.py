@@ -122,8 +122,8 @@ class TestSpanPresence:
     def test_unknown_message_makes_span_unknown(self):
         assert span_presence([line("a", ["Bob"]), line("b")]) is None
 
-    def test_empty_span(self):
-        assert span_presence([]) == []
+    def test_empty_span_is_unknown(self):
+        assert span_presence([]) is None
 
 
 class TestPresenceDiffers:
@@ -182,6 +182,22 @@ class TestLayerEntryPresence:
     def test_static_entry_is_unknown(self):
         scene = self._scene()
         assert layer_entry_presence(scene, 0, {"text": "static", "ts": 0}) is None
+
+    def test_range_outside_the_layer_below_is_unknown(self):
+        scene = self._scene()
+        assert (
+            layer_entry_presence(scene, 0, {"text": "x", "start": 7, "end": 9, "ts": 0})
+            is None
+        )
+        # a partly truncated range would be a union over fewer sources than claimed
+        assert (
+            layer_entry_presence(scene, 0, {"text": "x", "start": 1, "end": 5, "ts": 0})
+            is None
+        )
+        assert (
+            layer_entry_presence(scene, 0, {"text": "x", "start": 2, "end": 1, "ts": 0})
+            is None
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -385,6 +401,26 @@ class TestPresenceCut:
 
         # the next run starts at the new presence set and needs a cut of its own
         assert await summarizer.build_archive(scene) is None
+
+    async def test_unknown_message_does_not_suppress_a_later_cut(
+        self, summarizer_scene
+    ):
+        scene, summarizer = summarizer_scene
+        both = ["Alice", "Bob"]
+        scene.history = [
+            line("one", both),
+            line("two", both),
+            line("unknown"),
+            line("carol", ["Carol"]),
+            line("carol again", ["Carol"]),
+            line("trailing", ["Carol"]),
+        ]
+
+        assert await summarizer.build_archive(scene) is True
+        entry = scene.archived_history[0]
+        assert (entry["start"], entry["end"]) == (0, 2)
+        # the span holds an unknown message, so its presence stays unknown
+        assert "present" not in entry
 
     async def test_unknown_presence_never_cuts(self, summarizer_scene):
         scene, summarizer = summarizer_scene

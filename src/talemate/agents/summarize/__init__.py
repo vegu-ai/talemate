@@ -315,6 +315,9 @@ class SummarizeAgent(
         ts = 0
         time_passage_termination = False
         presence_termination = False
+        # presence of the span so far; an unknown message neither changes nor
+        # resets it, so a known change after an unknown message still cuts
+        span_present: list[str] | None = None
 
         token_threshold = self.archive_threshold
 
@@ -360,13 +363,14 @@ class SummarizeAgent(
                 end = i - 1
                 break
 
-            if dialogue_entries and presence_differs(
-                dialogue.present, dialogue_entries[-1].present
-            ):
+            if dialogue_entries and presence_differs(dialogue.present, span_present):
                 log.debug("build_archive", presence_termination=dialogue.present)
                 presence_termination = True
                 end = i - 1
                 break
+
+            if dialogue.present is not None:
+                span_present = dialogue.present
 
             tokens += util.count_tokens(dialogue)
             dialogue_entries.append(dialogue)

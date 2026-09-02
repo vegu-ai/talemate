@@ -2,6 +2,7 @@
 The absence block: recent facts minus the bucket minus near-duplicates.
 """
 
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -216,23 +217,35 @@ class TestNearDuplicates:
         yield memory
         memory.db = None
 
+    # a regression of the read path (waiting on the write gate) must fail,
+    # not park the worker: every read here is bounded
+    @staticmethod
+    async def bounded(coro):
+        return await asyncio.wait_for(coro, 1)
+
     async def test_row_minima_against_the_bucket(self, memory):
-        assert await memory.near_duplicates(["B", "C", "D"], ["A"], 0.15) == {"B"}
-        assert await memory.near_duplicates(["B", "C"], ["A", "D"], 0.8) == {"B", "C"}
+        assert await self.bounded(
+            memory.near_duplicates(["B", "C", "D"], ["A"], 0.15)
+        ) == {"B"}
+        assert await self.bounded(
+            memory.near_duplicates(["B", "C"], ["A", "D"], 0.8)
+        ) == {"B", "C"}
 
     async def test_missing_vectors_are_never_duplicates(self, memory):
-        assert await memory.near_duplicates(["X", "B"], ["A", "Y"], 0.15) == {"B"}
-        assert await memory.near_duplicates(["X"], ["A"], 0.15) == set()
-        assert await memory.near_duplicates([], ["A"], 0.15) == set()
+        assert await self.bounded(
+            memory.near_duplicates(["X", "B"], ["A", "Y"], 0.15)
+        ) == {"B"}
+        assert await self.bounded(memory.near_duplicates(["X"], ["A"], 0.15)) == set()
+        assert await self.bounded(memory.near_duplicates([], ["A"], 0.15)) == set()
 
     async def test_unset_store_answers_with_nothing(self, memory):
         memory.db = None
-        assert await memory.get_embeddings(["A"]) == {}
-        assert await memory.near_duplicates(["B"], ["A"], 0.15) == set()
+        assert await self.bounded(memory.get_embeddings(["A"])) == {}
+        assert await self.bounded(memory.near_duplicates(["B"], ["A"], 0.15)) == set()
 
     async def test_read_path_does_not_wait_for_the_write_gate(self, memory):
         memory._ready_to_add = False
-        assert await memory.get_embeddings(["A"]) == {"A": [1.0, 0.0]}
+        assert await self.bounded(memory.get_embeddings(["A"])) == {"A": [1.0, 0.0]}
 
 
 class TestPerspectiveSwitchSites:

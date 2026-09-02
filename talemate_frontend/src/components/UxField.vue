@@ -133,7 +133,7 @@
        branch below for the rationale on align-start. -->
   <div
     v-else-if="field.type === 'number' && field.graduations"
-    :class="$slots.prepend ? 'd-flex align-start mt-3' : 'mt-3'"
+    :class="$slots.prepend ? 'd-flex align-start mt-6' : 'mt-6'"
   >
     <div v-if="$slots.prepend" class="ux-field__outer-prepend">
       <slot name="prepend" />
@@ -161,7 +161,7 @@
        slider) rather than with the vertical center of the slider track. -->
   <div
     v-else-if="field.type === 'number'"
-    :class="$slots.prepend ? 'd-flex align-start mt-3' : 'mt-3'"
+    :class="$slots.prepend ? 'd-flex align-start mt-6' : 'mt-6'"
   >
     <div v-if="$slots.prepend" class="ux-field__outer-prepend">
       <slot name="prepend" />

@@ -27,6 +27,7 @@ __all__ = [
     "update_fact",
     "fact_memory_document",
     "previous_facts",
+    "store_offscreen_fact",
 ]
 
 log = structlog.get_logger("talemate.knowledge.facts")
@@ -79,6 +80,7 @@ def fact_memory_document(fact: Fact) -> dict:
         "ts": fact.ts if fact.ts is not None else 0,
         "restatements": fact.restatements,
         "false": fact.false,
+        "source": fact.source,
         **presence_metadata(fact.present),
     }
     if fact.archive_id:
@@ -262,3 +264,26 @@ async def store_facts(
         await get_agent("memory").add_many(list(documents.values()))
 
     return stored
+
+
+async def store_offscreen_fact(scene: "Scene", character: str, text: str) -> Fact:
+    """
+    What a character did while away from the scene: a fact only they were
+    present for, so it retrieves for them alone and never lists in an absence
+    block.
+    """
+    world_state = scene.world_state
+    world_state.fact_counter += 1
+    fact = Fact(
+        id=f"F{world_state.fact_counter}",
+        text=" ".join(text.split()),
+        ts=scene.ts,
+        present=[character],
+        subjects=[character],
+        source="offscreen",
+        last_seen_ts=scene.ts,
+    )
+    world_state.facts[fact.id] = fact
+    await get_agent("memory").add_many([fact_memory_document(fact)])
+    log.debug("offscreen fact stored", id=fact.id, character=character)
+    return fact

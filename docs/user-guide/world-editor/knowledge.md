@@ -33,11 +33,17 @@ Set it from the entry's editor in the Characters tab (Description, Attributes, D
 
 ## Grants and revokes
 
-Open a character in the Characters tab and pick the **Knowledge** tab. It lists the character's grants and revokes and lets you add one: pick the entry (a sheet entry of any character, a world entry, or a static or summarized history entry), choose *Grant* or *Revoke*, and add an optional note. A static history entry is common lore, so a revoke is the only way to hide one from a character. Grants and revokes made by hand carry the source `manual`; later releases add sources the story produces on its own.
+Open a character in the Characters tab and pick the **Knowledge** tab. It lists the character's grants and revokes and lets you add one: pick the entry (a sheet entry of any character, a world entry, or a static or summarized history entry), choose *Grant* or *Revoke*, and add an optional note. A static history entry is common lore, so a revoke is the only way to hide one from a character. Grants and revokes made by hand carry the source `manual`. The story produces two more: `told`, when a summary names a character who learned a fact while absent, and `inferred`, from the conversation agent's [learned-this-turn ledger](/talemate/user-guide/agents/conversation/settings/#learned-this-turn-ledger).
 
 ## Facts in node graphs
 
 The `knowledge/` nodes read the fact record without an LLM request: **Facts About** (facts mentioning an entity, optionally as one character knows them), **Current State** (the newest fact about an entity that no later fact supersedes), **Relationship Timeline** (facts mentioning two entities), and **Grant Knowledge** / **Revoke Knowledge** for edges written by a graph.
+
+## Retrieval
+
+Memory retrieval for a speaking character is filtered by their knowledge, and the [Memory agent's Retrieval settings](/talemate/user-guide/agents/memory/settings/#retrieval) shape what the filter sees: newer results rank higher (recency weight), near-identical results are skipped (diversity threshold), a character named in the recent lines but not in the scene has their description fetched by id (entity lookup), and a result outside the character's knowledge still passes when a fact they do know is a near-duplicate of it (similarity knowledge gate). An optional local cross-encoder reranks the merged results. None of these adds a request.
+
+Three opt-ins on the conversation agent add one request each: the [AI knowledge gate](/talemate/user-guide/agents/conversation/settings/#ai-knowledge-gate), the [AI memory rerank](/talemate/user-guide/agents/conversation/settings/#ai-memory-rerank) and the [learned-this-turn ledger](/talemate/user-guide/agents/conversation/settings/#learned-this-turn-ledger). The narrator's [Offscreen Life](/talemate/user-guide/agents/narrator/settings/#offscreen-life) writes what a returning character did while away and stores it as a fact only they know (source `offscreen`).
 
 ## Older scenes
 

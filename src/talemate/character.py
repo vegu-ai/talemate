@@ -35,7 +35,7 @@ __all__ = [
 
 log = structlog.get_logger("talemate.character")
 
-async_signals.register("character.voice_changed")
+async_signals.register("character.voice_changed", "character.activated")
 
 
 class Character(pydantic.BaseModel):
@@ -739,6 +739,14 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
 
     await scene.add_actor(actor)
     scene.active_characters.append(character.name)
+
+    from talemate.events import CharacterActivatedEvent
+
+    await async_signals.get("character.activated").send(
+        CharacterActivatedEvent(
+            scene=scene, character=character, event_type="character.activated"
+        )
+    )
 
 
 async def _demote_player_to_actor(scene: "Scene", character: "Character"):

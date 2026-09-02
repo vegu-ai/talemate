@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, Callable
+import re
 import structlog
 from talemate.agents.base import (
     AgentAction,
@@ -8,6 +9,7 @@ from talemate.agents.base import (
 )
 import talemate.instance as instance
 from talemate.knowledge.bucket import KnowledgeIndex, knowledge_digest
+from talemate.knowledge.graph import aliases_for
 from talemate.util.dedupe import compile_text_to_sentences, compile_sentences_to_length
 
 if TYPE_CHECKING:
@@ -375,6 +377,8 @@ class MemoryRAGMixin:
         for query in queries:
             log.debug("memory_rag_mixin.build_prompt_default_memory", query=query)
 
+        entity_context = await self.entity_lookup(history, filter=filter)
+
         context = await memory.multi_query(
             queries,
             max_tokens=max_response_tokens,
@@ -383,4 +387,54 @@ class MemoryRAGMixin:
             over_fetch=3 if filter is not None else 1,
         )
 
-        return context
+        if not entity_context:
+            return context
+        return entity_context + [item for item in context if item not in entity_context]
+
+    async def entity_lookup(
+        self, history: list[str], filter: Callable | None = None
+    ) -> list:
+        """
+        Descriptions of characters the recent lines name who are not in the
+        scene, fetched by document id (no similarity search).
+        """
+        memory = instance.get_agent("memory")
+        if not getattr(memory, "retrieval_entity_lookup", False):
+            return []
+
+        text = "\n".join(history).lower()
+        if not text.strip():
+            return []
+
+        scene = self.scene
+        named = []
+        for name in scene.inactive_characters:
+            aliases = aliases_for(scene, name)
+            if any(re.search(rf"\b{re.escape(alias)}\b", text) for alias in aliases):
+                named.append(name)
+
+        if not named:
+            return []
+
+        # one document per description, or one per paragraph (`.description.<n>`)
+        ids = []
+        for name in named:
+            ids.append(f"{name}.description")
+            ids.extend(f"{name}.description.{index}" for index in range(10))
+
+        try:
+            documents = await memory.get_document(ids)
+        except NotImplementedError:
+            # a backend without document lookup by id
+            return []
+        found = []
+        for doc_id in ids:
+            doc = documents.get(doc_id)
+            if doc is None:
+                continue
+            if filter is not None and not filter(doc):
+                continue
+            found.append(doc)
+
+        log.debug("entity lookup", named=named, documents=len(found))
+        return found

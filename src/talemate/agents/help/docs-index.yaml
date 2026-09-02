@@ -90,7 +90,11 @@
 - path: user-guide/agents/conversation/settings.md
   title: Settings
   summary: 'Documents the Conversation agent''s client, caching, dialogue format, generation length, jiggle, task/actor instructions,
-    instruction offset, and stop-token controls. Also covers scene-intent, writing-style, and long-term-memory context choices. Character Knowledge group (no extra requests): the perspective filter (drop spans the speaking character was not present for, memory filtered by their knowledge), the absence block listing recent facts the character does not know, its line cap and window.'
+    instruction offset, and stop-token controls. Also covers scene-intent, writing-style, and long-term-memory context choices.
+    Character Knowledge group: the perspective filter (drop spans the speaking character was not present for, memory filtered
+    by their knowledge), the absence block listing recent facts the character does not know, its line cap and window, and
+    three +1-request opt-ins off by default: AI knowledge gate, AI memory rerank (keep count), learned-this-turn ledger
+    (inferred grants).'
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Explains AI continuation of supported text fields via Ctrl/Cmd+Enter, optional trailing brace hints, and the Redo/Undo
@@ -178,9 +182,11 @@
     preset.
 - path: user-guide/agents/memory/settings.md
   title: Settings
-  summary: Documents selecting the Memory agent's embedding preset and overriding its execution device between CPU and CUDA.
+  summary: 'Documents selecting the Memory agent''s embedding preset and overriding its execution device between CPU and CUDA.
     Explains the OpenAI-key prerequisite and live device switching that clears ChromaDB cache, frees GPU memory, and reimports
-    the active scene database.
+    the active scene database. Retrieval group (no requests): recency weight, diversity threshold, entity lookup of characters
+    named but not in the scene, the similarity knowledge gate, and the optional local cross-encoder rerank (top 30 to 5,
+    ms-marco-MiniLM-L-6-v2, falls back on a load failure).'
 - path: user-guide/agents/memory/testing.md
   title: Testing Embeddings
   summary: Explains evaluating Memory retrieval through Debug Tools while using a scene normally. Shows how to inspect a memory
@@ -198,9 +204,10 @@
     post-dialogue narration.
 - path: user-guide/agents/narrator/settings.md
   title: Settings
-  summary: Reference for Narrator client, caching, jiggle, instructions, and separate token budgets for each narration type.
-    Covers scene intent and style context, guided time passage, Auto Narration chance/weights/direction gating, and long-term
-    memory.
+  summary: 'Reference for Narrator client, caching, jiggle, instructions, and separate token budgets for each narration type.
+    Covers scene intent and style context, guided time passage, Auto Narration chance/weights/direction gating, Offscreen Life
+    (what a returning character did while away, stored as a fact only they know; minimum missed entries, length; +1 request,
+    off by default), and long-term memory.'
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
   summary: Explains sparse per-scene overrides, the Global/Scene settings switch, inherited versus active fields, gated settings,
@@ -1222,16 +1229,12 @@
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
   summary: 'Per-character knowledge in the World Editor: what a character knows is derived from presence on history entries,
-    ownership of their own sheet, common lore (other sheets and world entries) and stored grant/revoke edges; only the
-    conversation prompt is filtered, by the speaking character, with missed spans replaced by a gap line and memory retrieval
-    filtered per speaker; the Known by visibility setting (everyone, only the owner, specific characters) on attributes,
-    details, descriptions and world entries; the Knowledge tab on a character for adding and removing grants and revokes
-    (targets: sheet entries, world entries, static and summarized history entries; a revoke is the only way to hide a static
-    entry); director instructions, state reinforcements and context investigations stay in the prompt whatever the presence
-    says; facts from summaries as knowledge (told grants), the What X does not know absence block in the conversation prompt
-    (recent facts outside the knowledge minus near-duplicates of known ones, capped, rendered only when non-empty), the
-    knowledge/ node graph nodes (Facts About, Current State, Relationship Timeline, Grant/Revoke Knowledge), the
-    layered-history leak note and how older scenes without presence behave.'
+    ownership of their own sheet, common lore (other sheets and world entries) and stored grant/revoke edges (sources manual,
+    told, inferred); only the conversation prompt is filtered, by the speaking character, with missed spans replaced by a gap
+    line, memory retrieval filtered per speaker and an absence block of facts they do not know; the Known by visibility setting
+    on attributes, details, descriptions and world entries; the Knowledge tab for grants and revokes; retrieval shaping (recency,
+    diversity, entity lookup, similarity gate, cross-encoder) and the opt-in AI gate, rerank, ledger and narrator offscreen
+    life; older scenes without presence.'
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: 'Pinning context entries so the AI always considers them: creating pins from the Context editor or a character

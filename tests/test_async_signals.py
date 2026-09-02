@@ -154,3 +154,11 @@ async def test_connect_dedupes_and_disconnect_is_forgiving():
 
     await signal.send(Emission())
     assert calls == ["only"]
+
+
+def test_character_activated_is_registered():
+    from talemate.emit import async_signals
+
+    signal = async_signals.get("character.activated")
+    assert isinstance(signal, AsyncSignal)
+    assert signal.name == "character.activated"

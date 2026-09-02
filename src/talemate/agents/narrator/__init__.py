@@ -27,6 +27,7 @@ from talemate.agents.context import active_agent
 from talemate.agents.world_state import TimePassageEmission
 from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.agents.narrator.auto_narration import AutoNarrationMixin
+from talemate.agents.narrator.offscreen import OffscreenLifeMixin
 from talemate.emit import emit
 from talemate.prompts import Prompt
 from talemate.scene_message import NarratorMessage
@@ -106,7 +107,7 @@ def set_processing(fn):
 
 
 @register()
-class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
+class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, OffscreenLifeMixin, Agent):
     """
     Handles narration of the story
     """
@@ -260,6 +261,7 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, Agent):
 
         MemoryRAGMixin.add_actions(actions)
         AutoNarrationMixin.add_actions(actions)
+        OffscreenLifeMixin.add_actions(actions)
         return actions
 
     def __init__(

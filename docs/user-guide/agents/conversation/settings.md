@@ -86,7 +86,7 @@ Disable this if you want the AI to generate dialogue without following the scene
 
 ![Conversation agent character knowledge settings](/talemate/img/0.40.0/conversation-character-knowledge-settings.png)
 
-Builds the prompt from the speaking character's point of view. Nothing in this group adds a request. See [World Editor -- Knowledge](/talemate/user-guide/world-editor/knowledge/) for how a character's knowledge is worked out.
+Builds the prompt from the speaking character's point of view. The first four settings add no request; the items marked +1 request are off by default. See [World Editor -- Knowledge](/talemate/user-guide/world-editor/knowledge/) for how a character's knowledge is worked out.
 
 ##### Perspective filter
 
@@ -103,6 +103,18 @@ At most this many facts in the block (default 5). The most restated facts come f
 ##### Absence block window
 
 How many of the most recent facts are considered for the block (default 30).
+
+##### AI knowledge gate
+
+Asks the AI which of the retrieved memories the character would actually know, from their own point of view, and keeps only those. +1 request per line, handled by the World State agent's client. Off by default. An answer that cannot be read keeps every memory.
+
+##### AI memory rerank
+
+Asks the AI to order the retrieved memories by how useful they are for the character's next line and keeps the best few (*AI memory rerank: keep*, default 5). +1 request per line, handled by the World State agent's client. Off by default. An answer that cannot be read keeps the merge order.
+
+##### Learned-this-turn ledger
+
+After each line, asks the AI which of the facts the listeners did not know the line revealed to them. Each becomes a grant with the source `inferred`, so the listener retrieves the fact from then on and it leaves their absence block. The speaker does not learn from their own line, and no request is sent when every listener already knows the recent facts. +1 request per line, handled by the World State agent's client. Off by default.
 
 ## Long Term Memory
 

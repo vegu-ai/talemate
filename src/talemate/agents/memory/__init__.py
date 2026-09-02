@@ -35,6 +35,12 @@ from talemate.agents.memory.exceptions import (
     SetDBError,
 )
 from talemate.agents.memory.schema import MemoryDocument
+from talemate.agents.memory.rerank import (
+    CrossEncoderReranker,
+    RERANK_MODEL,
+    RERANK_CANDIDATES,
+    RERANK_KEEP,
+)
 from talemate.util.gpu import release_cuda_cache
 
 import talemate.agents.memory.nodes  # noqa: F401
@@ -100,6 +106,52 @@ class MemoryAgent(Agent):
                     ),
                 },
             ),
+            "retrieval": AgentAction(
+                enabled=True,
+                container=True,
+                icon="mdi-filter-variant",
+                label="Retrieval",
+                description="How similarity results are ranked and merged before they reach a prompt. Nothing in this group adds a request; the cross-encoder runs a local model.",
+                config={
+                    "recency_weight": AgentActionConfig(
+                        type="number",
+                        label="Recency weight",
+                        description="Newer results rank higher: each result's score is its distance plus this weight times its age (0 = newest, 1 = oldest in the result set). 0 turns the term off.",
+                        value=0.1,
+                        min=0.0,
+                        max=1.0,
+                        step=0.05,
+                    ),
+                    "mmr_threshold": AgentActionConfig(
+                        type="number",
+                        label="Diversity threshold",
+                        description="A result whose embedding is more similar than this (cosine) to one already selected is skipped. 1 turns the check off.",
+                        value=0.92,
+                        min=0.5,
+                        max=1.0,
+                        step=0.01,
+                    ),
+                    "entity_lookup": AgentActionConfig(
+                        type="bool",
+                        label="Entity lookup",
+                        description="When the recent lines name a character who is not in the scene, fetch that character's description by id and add it ahead of the similarity results.",
+                        value=True,
+                    ),
+                    "similarity_gate": AgentActionConfig(
+                        type="bool",
+                        label="Similarity knowledge gate",
+                        description="When retrieval is filtered by a character's knowledge, a result outside their knowledge still passes if a fact they do know sits within the summarizer's fact near-duplicate distance of it.",
+                        value=True,
+                    ),
+                    "rerank": AgentActionConfig(
+                        type="bool",
+                        label="Cross-encoder rerank",
+                        description=f"Score the top {RERANK_CANDIDATES} merged results against the queries with a local cross-encoder and keep the best {RERANK_KEEP}. No request; the model runs on the embeddings device.",
+                        note=f"Downloads {RERANK_MODEL} on first use. When the model fails to load, retrieval carries on without the rerank and the agent shows the error.",
+                        value=False,
+                    ),
+                },
+            ),
         }
         return actions
 
@@ -109,6 +161,7 @@ class MemoryAgent(Agent):
         self._ready_to_add = False
         self._db_generation = 0
         self._db_lock = threading.Lock()
+        self._reranker: CrossEncoderReranker | None = None
 
         async_signals.get("config.changed").connect(self.on_config_changed)
 
@@ -216,6 +269,39 @@ class MemoryAgent(Agent):
             return self.embeddings_config.trust_remote_code
         except AttributeError:
             return False
+
+    # retrieval settings
+
+    @property
+    def retrieval_recency_weight(self) -> float:
+        return float(self.resolve_config("retrieval", "recency_weight"))
+
+    @property
+    def retrieval_mmr_threshold(self) -> float:
+        return float(self.resolve_config("retrieval", "mmr_threshold"))
+
+    @property
+    def retrieval_entity_lookup(self) -> bool:
+        return bool(self.resolve_config("retrieval", "entity_lookup"))
+
+    @property
+    def retrieval_similarity_gate(self) -> bool:
+        return bool(self.resolve_config("retrieval", "similarity_gate"))
+
+    @property
+    def retrieval_rerank(self) -> bool:
+        return bool(self.resolve_config("retrieval", "rerank"))
+
+    @property
+    def reranker(self) -> CrossEncoderReranker:
+        """The cross-encoder for the current device, created on first access."""
+        if self._reranker is None or self._reranker.device != self.device:
+            self._reranker = CrossEncoderReranker(device=self.device)
+        return self._reranker
+
+    @property
+    def rerank_error(self) -> str | None:
+        return self._reranker.error if self._reranker else None
 
     @property
     def fingerprint(self) -> str:
@@ -621,6 +707,12 @@ class MemoryAgent(Agent):
 
         `over_fetch` widens the vector search (limit × over_fetch) for callers
         whose filter drops many candidates.
+
+        Per query the candidates pass the filter (and the similarity knowledge
+        gate), are re-ranked by distance plus the recency term, and are cut
+        to `iterate`. The per-query lists are merged round-robin, skipping
+        near-identical results (diversity threshold), optionally reranked by
+        the cross-encoder, and cut to the token budget.
         """
 
         limit = limit * max(1, over_fetch)
@@ -631,6 +723,7 @@ class MemoryAgent(Agent):
         # monopolising the token budget.
 
         per_query_results: list[list[str]] = []
+        gate_distance = self._similarity_gate_distance() if filter else None
 
         for query in queries:
             # Skip empty queries so that we keep indexing consistent for the
@@ -642,54 +735,199 @@ class MemoryAgent(Agent):
             # Fetch potential memories for this query.
             raw_results = await self.get(formatter(query), limit=limit, **where)
 
-            # Apply filter and respect the `iterate` limit for this query.
-            accepted: list[str] = []
-            for memory in raw_results:
-                if filter and not filter(memory):
-                    continue
-
-                accepted.append(memory)
-                if len(accepted) >= iterate:
-                    break
-
-            per_query_results.append(accepted)
+            accepted = self._apply_filter(raw_results, filter, gate_distance)
+            accepted = self._rank_by_recency(accepted)
+            per_query_results.append(accepted[:iterate])
 
         # Now interleave the results in a round-robin fashion so that each
         # query gets a fair chance to contribute, until we hit the token
         # budget.
 
-        memory_context: list[str] = []
+        rerank = self.retrieval_rerank and bool([q for q in queries if q])
+        merge_cap = RERANK_CANDIDATES if rerank else None
+        merged = self._merge_round_robin(
+            per_query_results,
+            max_tokens=None if rerank else max_tokens,
+            cap=merge_cap,
+        )
+
+        if rerank:
+            merged = await self.rerank([q for q in queries if q], merged)
+            merged = self._cut_to_budget(merged, max_tokens)
+
+        return merged
+
+    # retrieval helpers
+
+    def _similarity_gate_distance(self) -> float | None:
+        """The near-duplicate distance the gate uses, or None when it is off."""
+        if not self.retrieval_similarity_gate:
+            return None
+        summarizer = instance.get_agent("summarizer")
+        try:
+            return float(summarizer.archive_fact_dedupe_distance)
+        except Exception:
+            return None
+
+    def _apply_filter(
+        self, raw_results: list, filter: Callable | None, gate_distance: float | None
+    ) -> list:
+        if not filter:
+            return list(raw_results)
+
+        accepted = []
+        rejected = []
+        for memory in raw_results:
+            if filter(memory):
+                accepted.append(memory)
+            else:
+                rejected.append(memory)
+
+        if gate_distance is None or not rejected:
+            return accepted
+
+        # similarity knowledge gate: a rejected result passes when a fact the
+        # character does know (accepted, typ=fact) is a near-duplicate of it
+        known_facts = [
+            np.asarray(doc.embedding, dtype=float)
+            for doc in accepted
+            if getattr(doc, "embedding", None) is not None
+            and (getattr(doc, "meta", None) or {}).get("typ") == "fact"
+        ]
+        if not known_facts:
+            return accepted
+
+        passed = []
+        for doc in rejected:
+            vector = getattr(doc, "embedding", None)
+            if vector is None:
+                continue
+            vector = np.asarray(vector, dtype=float)
+            if any(
+                float(np.linalg.norm(vector - fact)) <= gate_distance
+                for fact in known_facts
+            ):
+                passed.append(doc)
+                log.debug("similarity gate passed", id=getattr(doc, "id", None))
+
+        if not passed:
+            return accepted
+
+        # keep the store's distance order across the two groups
+        order = {id(doc): i for i, doc in enumerate(raw_results)}
+        return sorted(accepted + passed, key=lambda doc: order.get(id(doc), 0))
+
+    def _rank_by_recency(self, docs: list) -> list:
+        """Stable re-rank by distance + recency_weight × normalised age."""
+        weight = self.retrieval_recency_weight
+        scene_ts = getattr(self.scene, "ts", None)
+        if weight <= 0 or scene_ts is None or len(docs) < 2:
+            return list(docs)
+
+        ages: list[int | None] = []
+        for doc in docs:
+            ts = (getattr(doc, "meta", None) or {}).get("ts")
+            try:
+                ages.append(None if ts is None else int(scene_ts) - util.coerce_ts(ts))
+            except (TypeError, ValueError):
+                ages.append(None)
+
+        known = [age for age in ages if age is not None]
+        if not known:
+            return list(docs)
+        span = max(1, max(known))
+
+        def score(item):
+            index, doc = item
+            age = ages[index]
+            age_norm = 0.5 if age is None else min(1.0, max(0.0, age / span))
+            distance = getattr(doc, "distance", None)
+            if distance is None:
+                distance = 0.0
+            return (float(distance) + weight * age_norm, index)
+
+        return [doc for _, doc in sorted(enumerate(docs), key=score)]
+
+    def _merge_round_robin(
+        self,
+        per_query_results: list[list],
+        max_tokens: int | None,
+        cap: int | None = None,
+    ) -> list:
+        threshold = self.retrieval_mmr_threshold
+        memory_context: list = []
+        selected_vectors: list = []
         idx = 0
         while True:
-            added_any = False
+            # a skipped result (duplicate, near-identical) still counts as
+            # progress: the lists are exhausted only when no list has an
+            # item at this depth
+            progressed = False
 
             for result_list in per_query_results:
                 if idx >= len(result_list):
                     # No more items remaining for this query at this depth.
                     continue
 
+                progressed = True
                 memory = result_list[idx]
 
                 # Avoid duplicates in the final context.
                 if memory in memory_context:
                     continue
 
-                memory_context.append(memory)
-                added_any = True
+                # diversity: skip a near-identical result
+                vector = getattr(memory, "embedding", None)
+                if vector is not None and threshold < 1.0:
+                    vector = np.asarray(vector, dtype=float)
+                    norm = np.linalg.norm(vector)
+                    if norm > 0:
+                        unit = vector / norm
+                        if any(
+                            float(np.dot(unit, other)) > threshold
+                            for other in selected_vectors
+                        ):
+                            log.debug("diversity skip", id=getattr(memory, "id", None))
+                            continue
+                        selected_vectors.append(unit)
 
-                # Check token budget after each addition.
-                if util.count_tokens(memory_context) >= max_tokens:
+                memory_context.append(memory)
+
+                if cap is not None and len(memory_context) >= cap:
                     return memory_context
 
-            if not added_any:
-                # We iterated over all query result lists without adding
-                # anything. That means we have exhausted all available
-                # memories.
+                # Check token budget after each addition.
+                if (
+                    max_tokens is not None
+                    and util.count_tokens(memory_context) >= max_tokens
+                ):
+                    return memory_context
+
+            if not progressed:
+                # every list is exhausted at this depth
                 break
 
             idx += 1
 
         return memory_context
+
+    def _cut_to_budget(self, docs: list, max_tokens: int) -> list:
+        kept: list = []
+        for doc in docs:
+            kept.append(doc)
+            if util.count_tokens(kept) >= max_tokens:
+                break
+        return kept
+
+    async def rerank(self, queries: list[str], docs: list) -> list:
+        """Cross-encoder rerank of the merged candidates; unchanged on a load failure."""
+        if not docs:
+            return docs
+        reranker = self.reranker
+        result = await asyncio.to_thread(reranker.rerank, queries, docs, RERANK_KEEP)
+        if reranker.error:
+            return docs
+        return result
 
     @property
     def embedding_function(self) -> Callable:
@@ -883,6 +1121,21 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 value=self.device,
                 description="The device to use for embeddings.",
             ).model_dump()
+
+        if self.retrieval_rerank:
+            if self.rerank_error:
+                details["rerank"] = {
+                    "icon": "mdi-alert",
+                    "value": "Rerank model failed to load",
+                    "description": f"{RERANK_MODEL}: {self.rerank_error}. Retrieval runs without the rerank.",
+                    "color": "warning",
+                }
+            else:
+                details["rerank"] = AgentDetail(
+                    icon="mdi-sort-variant",
+                    value=RERANK_MODEL,
+                    description="The cross-encoder used to rerank retrieval results.",
+                ).model_dump()
 
         if self.embeddings == "openai" and not self.openai_api_key:
             # return "No OpenAI API key set"
@@ -1345,7 +1598,12 @@ class ChromaDBMemoryAgent(MemoryAgent):
         log.debug("crhomadb agent get", text=text, where=where)
 
         try:
-            _results = self.db.query(query_texts=[text], where=where, n_results=limit)
+            _results = self.db.query(
+                query_texts=[text],
+                where=where,
+                n_results=limit,
+                include=["documents", "metadatas", "distances", "embeddings"],
+            )
         except Exception as e:
             log.error("chromadb agent", error="failed to query", details=e)
             return []
@@ -1362,11 +1620,17 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         active_memory_request = memory_request.get()
 
+        embeddings = _results.get("embeddings")
+        embeddings = embeddings[0] if embeddings is not None else None
+
         for i in range(len(_results["distances"][0])):
             distance = _results["distances"][0][i]
 
             doc = _results["documents"][0][i]
             meta = _results["metadatas"][0][i]
+            embedding = None
+            if embeddings is not None and i < len(embeddings):
+                embedding = [float(x) for x in embeddings[i]]
 
             active_memory_request.add_result(doc, distance, meta)
 
@@ -1391,7 +1655,14 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 if date_prefix:
                     doc = f"{date_prefix}: {doc}"
 
-                doc = MemoryDocument(doc, meta, _results["ids"][0][i], raw)
+                doc = MemoryDocument(
+                    doc,
+                    meta,
+                    _results["ids"][0][i],
+                    raw,
+                    distance=distance,
+                    embedding=embedding,
+                )
 
                 results.append(doc)
                 active_memory_request.accept_result(str(doc), distance, meta)

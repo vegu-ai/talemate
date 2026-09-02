@@ -1,0 +1,25 @@
+{#-
+Extractors:
+  - ledger: AnchorExtractor("<LEDGER>", "</LEDGER>")
+
+Override example:
+  {{ set_anchor_extractor("ledger", "<MY_TAG>", "</MY_TAG>") }}
+-#}
+<|SECTION:NEW LINE|>
+{{ line }}
+<|CLOSE_SECTION|>
+{% for name, facts in absence.items() %}
+<|SECTION:WHAT {{ name.upper() }} DOES NOT KNOW YET|>
+{% for fact in facts %}
+- [{{ fact.id }}] {{ fact.text }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endfor %}
+<|SECTION:TASK|>
+{{ speaker }} just said the new line above, with {{ listeners }} present. For each listener, decide which of the facts they did not know yet the new line reveals to them. A fact counts as learned only when the line states it or makes it plain; a hint, a question, or a related fact does not count.
+
+Answer with a JSON object inside the tags: one key per listener, the value the list of fact ids they learned. Leave a listener out when they learned nothing. Answer <LEDGER>{}</LEDGER> when nobody learned anything.
+
+Example: <LEDGER>{"Mara": ["F12"], "Edwin": []}</LEDGER>
+<|CLOSE_SECTION|>
+{{ set_prepared_response("<LEDGER>") }}

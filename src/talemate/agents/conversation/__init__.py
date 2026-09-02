@@ -511,6 +511,7 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
         response = total_result
 
         log.debug("conversation agent", response=response)
+
         emission = ConversationAgentEmission(
             agent=self,
             actor=actor,

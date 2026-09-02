@@ -94,6 +94,18 @@ Drag any slider to set its weight; the other two redistribute proportionally to 
 
 Default on. When the [director's Scene Direction](/talemate/user-guide/agents/director/scene-direction) is enabled — either via the agent toggle or a scene-level always-on override — Auto Narration is skipped. Turn this off if you want both systems running at once.
 
+## :material-account-clock-outline: Offscreen Life
+
+When a character returns to the scene after missing at least one summarized history entry, the narrator writes what the character did while away, given their sheet, the time that passed and the facts established meanwhile (which the character did not witness). The result is stored as a fact with the source `offscreen` that only the returning character was present for: it retrieves for that character alone, is never listed in an absence block, and is not added to the scene text. +1 request per return. Off by default.
+
+##### Minimum missed entries
+
+The offscreen life is written only when the character missed at least this many summarized history entries (default 1).
+
+##### Length
+
+Token length for the offscreen life narration (default 192).
+
 ## :material-brain: Long Term Memory
 
 --8<-- "docs/snippets/tips.md:agent_long_term_memory_settings"

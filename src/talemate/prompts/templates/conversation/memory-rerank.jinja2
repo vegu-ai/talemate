@@ -1,0 +1,25 @@
+{#-
+Extractors:
+  - order: AnchorExtractor("<ORDER>", "</ORDER>")
+
+Override example:
+  {{ set_anchor_extractor("order", "<MY_TAG>", "</MY_TAG>") }}
+-#}
+<|SECTION:RECENT LINES|>
+{% for line in recent_lines %}
+{{ line }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:CANDIDATES|>
+{% for item in candidates %}
+{{ loop.index }}. {{ item|condensed }}
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+{{ character.name }} speaks next in {{ scene.context }}. Order the candidates by how useful each one is for writing {{ character.name }}'s next line: what it should react to, recall or build on. The most useful candidate comes first. Leave out candidates that add nothing to the next line.
+
+Answer with the candidate numbers, comma separated, inside the tags. Keep at most {{ keep }}.
+
+Example: <ORDER>3, 1, 5</ORDER>
+<|CLOSE_SECTION|>
+{{ set_prepared_response("<ORDER>") }}

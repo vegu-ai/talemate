@@ -19,13 +19,15 @@ __all__ = [
     "current_state",
     "bucket",
     "superseded_chain",
+    "aliases_for",
     "KnownKind",
 ]
 
 KnownKind = Literal["witnessed", "told", "granted", "inferred"]
 
 
-def _aliases(scene: "Scene", entity: str) -> set[str]:
+def aliases_for(scene: "Scene", entity: str) -> set[str]:
+    """The entity's name and every alias `character_name_mappings` groups with it, lower-cased."""
     names = {entity.strip().lower()}
     mappings = scene.world_state.character_name_mappings
     for name, aliases in mappings.items():
@@ -33,6 +35,9 @@ def _aliases(scene: "Scene", entity: str) -> set[str]:
         if entity.lower() in group:
             names |= group
     return {n for n in names if n}
+
+
+_aliases = aliases_for
 
 
 def _mentions(fact: Fact, aliases: set[str]) -> bool:

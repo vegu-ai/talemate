@@ -434,6 +434,14 @@ class ContextHistoryMixin:
         return True
 
     @staticmethod
+    def _is_knowledge_filterable(message) -> bool:
+        """Director, reinforcement and investigation messages are never filtered."""
+        return not isinstance(
+            message,
+            (DirectorMessage, ReinforcementMessage, ContextInvestigationMessage),
+        )
+
+    @staticmethod
     def _context_history_collect_dialogue(
         scene: Scene,
         budget: int,
@@ -486,7 +494,9 @@ class ContextHistoryMixin:
             if not _is_qualifying(message, params):
                 continue
 
-            if not params.knows(KnowledgeItem.from_message(message)):
+            if ContextHistoryMixin._is_knowledge_filterable(
+                message
+            ) and not params.knows(KnowledgeItem.from_message(message)):
                 pending_gap = True
                 continue
 
@@ -623,6 +633,7 @@ class ContextHistoryMixin:
                 archived_boundary = i + 1
                 if gap_end_ts is not None:
                     parts_archived.insert(0, gap)
+                    gap_end_ts = None
                 break
 
             gap_end_ts = None
@@ -719,6 +730,7 @@ class ContextHistoryMixin:
                 layer_boundary = j + 1
                 if gap_end_ts is not None:
                     layer_parts.insert(0, gap)
+                    gap_end_ts = None
                 break
 
             gap_end_ts = None
@@ -984,21 +996,23 @@ class ContextHistoryMixin:
                         for e in layer
                     ]
 
-                formatted: list[str] = []
-                tokens: list[int] = []
-                in_gap = False
-                for j, entry in enumerate(entries):
-                    if params is not None and not params.knows(
+                missed = [
+                    params is not None
+                    and not params.knows(
                         KnowledgeItem(
                             id=entry.get("id", ""),
                             kind="history",
                             present=layer_entry_presence(scene, i, layer[j]),
                         )
-                    ):
-                        text = "" if in_gap else params.gap_line(None)
-                        in_gap = True
+                    )
+                    for j, entry in enumerate(entries)
+                ]
+                formatted: list[str] = []
+                tokens: list[int] = []
+                for j, entry in enumerate(entries):
+                    if missed[j]:
+                        text = self._best_fit_gap_slot(params, missed, j)
                     else:
-                        in_gap = False
                         text, _ = self._context_history_format_layered_entry(
                             entry, scene.ts
                         )
@@ -1035,17 +1049,17 @@ class ContextHistoryMixin:
                                 computed_start = prev_end + 1
                         enriched.append({**entry, "start": computed_start})
 
+                missed_arch = [
+                    params is not None
+                    and not params.knows(KnowledgeItem.from_archive_entry(entry))
+                    for entry in enriched
+                ]
                 formatted_arch: list[str] = []
                 tokens_arch: list[int] = []
-                in_gap = False
-                for entry in enriched:
-                    if params is not None and not params.knows(
-                        KnowledgeItem.from_archive_entry(entry)
-                    ):
-                        text = "" if in_gap else params.gap_line(None)
-                        in_gap = True
+                for idx, entry in enumerate(enriched):
+                    if missed_arch[idx]:
+                        text = self._best_fit_gap_slot(params, missed_arch, idx)
                     else:
-                        in_gap = False
                         text = self._context_history_format_archived_entry(
                             entry, scene.ts
                         )
@@ -1069,6 +1083,15 @@ class ContextHistoryMixin:
                 levels.append(dialogue_level)
 
         return levels
+
+    @staticmethod
+    def _best_fit_gap_slot(
+        params: ContextHistoryParams, missed: list[bool], idx: int
+    ) -> str:
+        """A missed run renders one gap line, in the run's LAST slot: render
+        ranges are trimmed from the oldest end, so the last slot survives."""
+        last = idx + 1 >= len(missed) or not missed[idx + 1]
+        return params.gap_line(None) if last else ""
 
     @staticmethod
     def _best_fit_build_dialogue_level(
@@ -1097,22 +1120,24 @@ class ContextHistoryMixin:
         entries: list[dict] = []
         formatted: list[str] = []
         tokens: list[int] = []
-        in_gap = False
+        missed = [
+            i < len(scene.history)
+            and _is_qualifying(scene.history[i], params)
+            and ContextHistoryMixin._is_knowledge_filterable(scene.history[i])
+            and not params.knows(KnowledgeItem.from_message(scene.history[i]))
+            for i in range(summarized_to + 1)
+        ]
 
         for i in range(summarized_to + 1):
             entries.append({"idx": i})
             if i < len(scene.history):
                 message = scene.history[i]
-                if _is_qualifying(message, params) and not params.knows(
-                    KnowledgeItem.from_message(message)
-                ):
-                    text = "" if in_gap else params.gap_line(None)
-                    in_gap = True
+                if missed[i]:
+                    text = ContextHistoryMixin._best_fit_gap_slot(params, missed, i)
                     formatted.append(text)
                     tokens.append(count_tokens(text) if text else 0)
                     continue
                 if _is_qualifying(message, params):
-                    in_gap = False
                     text = message.as_format(
                         conversation_format, mode=actor_direction_mode
                     )
@@ -1305,7 +1330,9 @@ class ContextHistoryMixin:
             if not _is_qualifying(message, params):
                 continue
 
-            if not params.knows(KnowledgeItem.from_message(message)):
+            if ContextHistoryMixin._is_knowledge_filterable(
+                message
+            ) and not params.knows(KnowledgeItem.from_message(message)):
                 continue
 
             formatted = message.as_format(

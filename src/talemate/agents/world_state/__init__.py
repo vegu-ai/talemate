@@ -153,6 +153,7 @@ class WorldStateAgent(
         response_length=1024,
         num_queries=1,
         extra_context: list[str] = [],
+        filter: Callable | None = None,
     ):
         response, extracted = await Prompt.request(
             "world_state.analyze-text-and-extract-context",
@@ -167,6 +168,7 @@ class WorldStateAgent(
                 "response_length": response_length,
                 "num_queries": num_queries,
                 "extra_context": extra_context,
+                "memory_filter": filter,
             },
         )
 
@@ -207,8 +209,9 @@ class WorldStateAgent(
 
         memory_agent = get_agent("memory")
 
-        kwargs = {"filter": filter} if filter is not None else {}
-        context = await memory_agent.multi_query(queries, iterate=3, **kwargs)
+        context = await memory_agent.multi_query(
+            queries, iterate=3, filter=filter, over_fetch=3 if filter else 1
+        )
 
         # log.debug(
         #    "analyze_text_and_extract_context_via_queries",

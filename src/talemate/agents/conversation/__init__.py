@@ -33,6 +33,7 @@ from talemate.agents.base import (
 )
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
+from talemate.knowledge.bucket import KnowledgeIndex
 from talemate.agents.context import active_agent
 
 from .websocket_handler import ConversationWebsocketHandler
@@ -353,6 +354,8 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                 "main_character": main_character,
                 "formatted_names": formatted_names,
                 "talking_character": character,
+                "knowledge_index": KnowledgeIndex.from_scene(scene),
+                "knowledge_viewer": character.name,
                 "partial_message": char_message,
                 "director_message": director_message,
                 "extra_instructions": self.generation_settings_task_instructions,  # backward compatibility

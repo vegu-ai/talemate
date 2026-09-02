@@ -1156,8 +1156,34 @@ class TestKnowledge:
             "Alice.age": "attribute",
             "Alice.detail.secret": "detail",
             "w1": "world_entry",
+            "s0": "static",
             "e1": "history",
         }
+        labels = {t.id: t.label for t in manager.knowledge_targets()}
+        assert labels["s0"].startswith("static history:") and labels["e1"].startswith(
+            "history:"
+        )
+
+    async def test_targets_do_not_duplicate_a_description_attribute(
+        self, manager, scene
+    ):
+        character = make_actor(scene, "Alice")
+        character.description = "A surveyor."
+        character.base_attributes = {"description": "A surveyor.", "age": "30"}
+        ids = [t.id for t in manager.knowledge_targets()]
+        assert ids.count("Alice.description") == 1
+
+    async def test_world_entry_keeps_visibility_when_saved(self, manager, world_state):
+        from talemate.knowledge.schema import EntryVisibility
+
+        await manager.save_world_entry("w1", "lore", {})
+        await manager.set_world_entry_visibility(
+            "w1", EntryVisibility(mode="list", characters=["Alice"])
+        )
+        await manager.save_world_entry("w1", "edited lore", {})
+        entry = world_state.manual_context["w1"]
+        assert entry.text == "edited lore"
+        assert entry.visibility.characters == ["Alice"]
 
     async def test_edges_upsert_and_remove(self, manager, scene, world_state):
         from talemate.knowledge.schema import KnowledgeEdge

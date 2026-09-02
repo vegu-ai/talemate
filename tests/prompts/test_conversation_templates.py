@@ -51,8 +51,6 @@ def mock_conversation_agent_for_registry():
     conv.content_use_writing_style = True
     # rag_build is called by templates - needs to be an async function
     conv.rag_build = AsyncMock(return_value=[])
-    # dialogue.jinja2 asks the agent for the speaker's perspective and the
-    # absence block (character-knowledge.jinja2) through agent_action
     conv.knowledge_perspective = AsyncMock(return_value=None)
     conv.absence_block = AsyncMock(return_value=[])
     return conv

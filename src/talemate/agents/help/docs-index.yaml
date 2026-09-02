@@ -84,8 +84,9 @@
   summary: 'Introduces the Conversation agent, also called Actor, as the component that generates character-driven dialogue
     and actions. Notes that it requires an assigned text-generation client. Its Character knowledge section explains that
     the prompt is built from the speaking character''s point of view: the perspective filter drops history spans the
-    character was not present for and replaces them with a one-line gap, and long term memory retrieval returns only what
-    the character knows.'
+    character was not present for and replaces them with a one-line gap, long term memory retrieval returns only what the
+    character knows, and the absence block lists recent facts the character has not learned; the Character Knowledge
+    settings group holds the switches and can turn the whole treatment off.'
 - path: user-guide/agents/conversation/settings.md
   title: Settings
   summary: 'Documents the Conversation agent''s client, caching, dialogue format, generation length, jiggle, task/actor instructions,

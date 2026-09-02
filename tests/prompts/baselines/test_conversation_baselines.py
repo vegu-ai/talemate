@@ -81,3 +81,26 @@ class TestConversationBaselines:
         mock_llm_client.decensor_enabled = True
         await agent.converse(actor)
         baseline_checker(capture_prompt(agent), AGENT, "converse__with_decensor")
+
+    @pytest.mark.asyncio
+    async def test_converse__with_absence_block(
+        self, active_context, mock_scene, baseline_checker
+    ):
+        from talemate import instance
+
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = npc.actor
+        # the registry mock answers the template's agent_action call
+        instance.AGENTS["conversation"].absence_block = AsyncMock(
+            return_value=[
+                "Marcus found the letter under the floorboard.",
+                "The bridge to the east collapsed last night.",
+            ]
+        )
+        await agent.converse(actor)
+        prompt = capture_prompt(agent)
+        # the section name renders as a heading or, in the xml variant, a tag
+        assert "does not know" in prompt.lower().replace("_", " ")
+        assert "- Marcus found the letter under the floorboard." in prompt
+        baseline_checker(prompt, AGENT, "converse__with_absence_block")

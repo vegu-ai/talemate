@@ -148,6 +148,11 @@ class MemoryRAGMixin:
     def long_term_memory_cache_key_for(self, character: "Character | None") -> str:
         if character is None:
             return self.long_term_memory_cache_key
+        # the viewer is part of the key: results built with the knowledge
+        # filter on are not reused once it is off, and the other way round
+        viewer = self.rag_knowledge_viewer(character)
+        if viewer is None:
+            return f"{self.long_term_memory_cache_key}-{character.name}-shared"
         digest = knowledge_digest(self.scene)
         return f"{self.long_term_memory_cache_key}-{character.name}-{digest}"
 
@@ -224,6 +229,7 @@ class MemoryRAGMixin:
 
         memory_context = ""
         memory_filter = self.rag_knowledge_filter(character)
+        viewer = self.rag_knowledge_viewer(character)
         semantic_context = await self.semantic_context(
             num_messages=self.long_term_memory_num_messages,
             filter=memory_filter,
@@ -251,7 +257,7 @@ class MemoryRAGMixin:
             prompt = self.scene.context_history(
                 keep_director=False,
                 budget=int(self.client.max_token_length * 0.75),
-                perspective=character.name if character else None,
+                perspective=viewer,
             )
 
         if isinstance(prompt, list):
@@ -273,7 +279,7 @@ class MemoryRAGMixin:
                     num_queries=self.long_term_memory_number_of_queries,
                     extra_context=semantic_context,
                     filter=memory_filter,
-                    viewer=character.name if character else None,
+                    viewer=viewer,
                 )
             ).split("\n")
         elif retrieval_method == "queries":
@@ -286,7 +292,7 @@ class MemoryRAGMixin:
                     num_queries=self.long_term_memory_number_of_queries,
                     extra_context=semantic_context,
                     filter=memory_filter,
-                    viewer=character.name if character else None,
+                    viewer=viewer,
                 )
             )
 
@@ -300,11 +306,19 @@ class MemoryRAGMixin:
 
         return complete_context
 
+    def rag_knowledge_viewer(self, character: "Character | None") -> str | None:
+        """
+        The character whose knowledge filters this agent's prompt, or None
+        for the shared record. Agents with a switch override this.
+        """
+        return character.name if character is not None else None
+
     def rag_knowledge_filter(self, character: "Character | None"):
-        if character is None:
+        viewer = self.rag_knowledge_viewer(character)
+        if viewer is None:
             return None
         return KnowledgeIndex.from_scene(self.scene).retrieval_filter(
-            self.scene, character.name
+            self.scene, viewer
         )
 
     async def semantic_context(

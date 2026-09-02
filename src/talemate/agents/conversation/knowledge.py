@@ -4,7 +4,12 @@ import structlog
 
 from talemate.agents.base import AgentAction, AgentActionConfig
 from talemate.instance import get_agent
-from talemate.knowledge.absence import absence_facts, render_absence_lines
+from talemate.knowledge.absence import (
+    ABSENCE_LIMIT,
+    ABSENCE_WINDOW,
+    absence_facts,
+    render_absence_lines,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -17,9 +22,6 @@ log = structlog.get_logger("talemate.agents.conversation.knowledge")
 class CharacterKnowledgeMixin:
     """
     What the speaking character knows, applied to the conversation prompt.
-
-    The container holds the zero-turn pieces (the perspective filter and the
-    absence block). Items that add an LLM turn come later and ship off.
     """
 
     @classmethod
@@ -48,7 +50,7 @@ class CharacterKnowledgeMixin:
                     type="number",
                     label="Absence block lines",
                     description="At most this many facts in the absence block.",
-                    value=5,
+                    value=ABSENCE_LIMIT,
                     min=1,
                     max=20,
                     step=1,
@@ -57,7 +59,7 @@ class CharacterKnowledgeMixin:
                     type="number",
                     label="Absence block window",
                     description="How many of the most recent facts are considered for the block.",
-                    value=30,
+                    value=ABSENCE_WINDOW,
                     min=5,
                     max=200,
                     step=5,
@@ -89,16 +91,19 @@ class CharacterKnowledgeMixin:
     def knowledge_absence_window(self) -> int:
         return int(self.resolve_config("character_knowledge", "absence_window"))
 
-    async def knowledge_perspective(self, character: "Character | None") -> str | None:
-        """The name the context history filters by, or None when the filter is off."""
+    def rag_knowledge_viewer(self, character: "Character | None") -> str | None:
+        """
+        The name every filter site uses (sheets, pins, the context history,
+        retrieval and the analysis prompts), or None when the perspective
+        filter is off: the shared record for every character.
+        """
         if character is None or not self.knowledge_perspective_filter:
             return None
         return character.name
 
-    def rag_knowledge_filter(self, character: "Character | None"):
-        if not self.knowledge_perspective_filter:
-            return None
-        return super().rag_knowledge_filter(character)
+    async def knowledge_perspective(self, character: "Character | None") -> str | None:
+        """Template access to `rag_knowledge_viewer` (templates await agent actions)."""
+        return self.rag_knowledge_viewer(character)
 
     async def absence_block(self, character: "Character | None") -> list[str]:
         if character is None or not self.knowledge_absence_block:

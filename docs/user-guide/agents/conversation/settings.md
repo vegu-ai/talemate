@@ -84,6 +84,8 @@ Disable this if you want the AI to generate dialogue without following the scene
 
 ## :material-head-lightbulb-outline: Character Knowledge
 
+![Conversation agent character knowledge settings](/talemate/img/0.40.0/conversation-character-knowledge-settings.png)
+
 Builds the prompt from the speaking character's point of view. Nothing in this group adds a request. See [World Editor -- Knowledge](/talemate/user-guide/world-editor/knowledge/) for how a character's knowledge is worked out.
 
 ##### Perspective filter

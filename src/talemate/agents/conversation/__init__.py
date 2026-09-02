@@ -357,7 +357,7 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
                 "formatted_names": formatted_names,
                 "talking_character": character,
                 "knowledge_index": KnowledgeIndex.from_scene(scene),
-                "knowledge_viewer": character.name,
+                "knowledge_viewer": self.rag_knowledge_viewer(character),
                 "partial_message": char_message,
                 "director_message": director_message,
                 "extra_instructions": self.generation_settings_task_instructions,  # backward compatibility

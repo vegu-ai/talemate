@@ -499,16 +499,46 @@ class MemoryAgent(Agent):
         raise NotImplementedError()
 
     async def get_embeddings(self, ids: list[str]) -> dict[str, list[float]]:
-        """Stored embedding vectors by document id (missing ids are absent)."""
-        if not ids:
-            return {}
-        if not await self._wait_until_ready():
+        """
+        Stored embedding vectors by document id (missing ids are absent).
+
+        A read path: like `get` and `get_document` it never waits for the
+        write gate, and an unset store answers with nothing.
+        """
+        if not ids or not self.db:
             return {}
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._get_embeddings, ids)
 
     def _get_embeddings(self, ids: list[str]) -> dict[str, list[float]]:
         raise NotImplementedError()
+
+    async def near_duplicates(
+        self, ids: list[str], against: list[str], max_distance: float
+    ) -> set[str]:
+        """
+        The ids among `ids` whose stored embedding sits within `max_distance`
+        (euclidean) of any stored embedding among `against`. One fetch and one
+        distance matrix; an id without a stored vector is never a duplicate.
+        """
+        ids = [i for i in ids if i]
+        against = [i for i in against if i]
+        if not ids or not against:
+            return set()
+        vectors = await self.get_embeddings(list(dict.fromkeys(ids + against)))
+        rows = [i for i in ids if i in vectors]
+        cols = [i for i in against if i in vectors]
+        if not rows or not cols:
+            return set()
+        vecs_a = np.asarray([vectors[i] for i in rows], dtype=float)
+        vecs_b = np.asarray([vectors[i] for i in cols], dtype=float)
+        a_squared = np.sum(vecs_a**2, axis=1).reshape(-1, 1)
+        b_squared = np.sum(vecs_b**2, axis=1).reshape(1, -1)
+        distances = np.sqrt(
+            np.maximum(a_squared + b_squared - 2 * np.dot(vecs_a, vecs_b.T), 0.0)
+        )
+        nearest = distances.min(axis=1)
+        return {rows[i] for i in range(len(rows)) if nearest[i] <= max_distance}
 
     async def on_archive_add(self, event: events.ArchiveEvent):
         await self.add(
@@ -1400,8 +1430,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
         if embeddings is None:
             return {}
         return {
-            doc_id: [float(x) for x in vector]
-            for doc_id, vector in zip(result["ids"], embeddings)
+            doc_id: np.asarray(vector, dtype=float).tolist()
+            for doc_id, vector in zip(result.get("ids", []), embeddings)
         }
 
     def _get_document(self, id) -> dict:

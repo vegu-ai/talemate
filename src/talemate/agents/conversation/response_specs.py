@@ -10,8 +10,6 @@ __all__ = [
     "KNOWLEDGE_LEDGER_SPEC",
 ]
 
-# conversation/knowledge-gate.jinja2: the numbers of the candidates the
-# character would know, or "none"
 KNOWLEDGE_GATE_SPEC = ResponseSpec(
     extractors={
         "keep": AnchorExtractor(left="<KEEP>", right="</KEEP>"),
@@ -19,7 +17,6 @@ KNOWLEDGE_GATE_SPEC = ResponseSpec(
     required=[],
 )
 
-# conversation/memory-rerank.jinja2: the candidate numbers, most useful first
 MEMORY_RERANK_SPEC = ResponseSpec(
     extractors={
         "order": AnchorExtractor(left="<ORDER>", right="</ORDER>"),
@@ -27,7 +24,6 @@ MEMORY_RERANK_SPEC = ResponseSpec(
     required=[],
 )
 
-# conversation/knowledge-ledger.jinja2: {"Name": ["F3", ...]} per present character
 KNOWLEDGE_LEDGER_SPEC = ResponseSpec(
     extractors={
         "ledger": AnchorExtractor(left="<LEDGER>", right="</LEDGER>"),

@@ -61,6 +61,46 @@ talemate.emit.async_signals.register(
 )
 
 
+async def _narration(self, fn, args, kwargs, emit_generated: bool = True):
+    """
+    The narrator's generation context: the narrator speaker role, the
+    writing style, the injected instructions, and (for scene narration) the
+    generated signal with the response.
+    """
+    agent_context = active_agent.get()
+    # ActiveAgent.__enter__ shares state by reference with the parent context,
+    # so we save/restore the prior value rather than mutating in place.
+    _UNSET = object()
+    previous_speaker_role = agent_context.state.get("speaker_role", _UNSET)
+    agent_context.state["speaker_role"] = "narrator"
+    try:
+        emission: NarratorAgentEmission = NarratorAgentEmission(agent=self)
+
+        if self.content_use_writing_style:
+            self.set_context_states(writing_style=self.scene.writing_style)
+
+        await talemate.emit.async_signals.get("agent.narrator.before_generate").send(
+            emission
+        )
+        await talemate.emit.async_signals.get(
+            "agent.narrator.inject_instructions"
+        ).send(emission)
+
+        agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
+
+        response = await fn(self, *args, **kwargs)
+        if not emit_generated:
+            return response
+        emission.response = response
+        await talemate.emit.async_signals.get("agent.narrator.generated").send(emission)
+        return emission.response
+    finally:
+        if previous_speaker_role is _UNSET:
+            agent_context.state.pop("speaker_role", None)
+        else:
+            agent_context.state["speaker_role"] = previous_speaker_role
+
+
 def set_processing(fn):
     """
     Custom decorator that emits the agent status as processing while the function
@@ -70,38 +110,21 @@ def set_processing(fn):
     @_set_processing
     @wraps(fn)
     async def narration_wrapper(self, *args, **kwargs):
-        agent_context = active_agent.get()
-        # ActiveAgent.__enter__ shares state by reference with the parent context,
-        # so we save/restore the prior value rather than mutating in place.
-        _UNSET = object()
-        previous_speaker_role = agent_context.state.get("speaker_role", _UNSET)
-        agent_context.state["speaker_role"] = "narrator"
-        try:
-            emission: NarratorAgentEmission = NarratorAgentEmission(agent=self)
+        return await _narration(self, fn, args, kwargs)
 
-            if self.content_use_writing_style:
-                self.set_context_states(writing_style=self.scene.writing_style)
+    return narration_wrapper
 
-            await talemate.emit.async_signals.get(
-                "agent.narrator.before_generate"
-            ).send(emission)
-            await talemate.emit.async_signals.get(
-                "agent.narrator.inject_instructions"
-            ).send(emission)
 
-            agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
+def set_processing_no_emit(fn):
+    """
+    The narrator's generation context without the generated signal: for a
+    narration that becomes a fact rather than a scene message.
+    """
 
-            response = await fn(self, *args, **kwargs)
-            emission.response = response
-            await talemate.emit.async_signals.get("agent.narrator.generated").send(
-                emission
-            )
-            return emission.response
-        finally:
-            if previous_speaker_role is _UNSET:
-                agent_context.state.pop("speaker_role", None)
-            else:
-                agent_context.state["speaker_role"] = previous_speaker_role
+    @_set_processing
+    @wraps(fn)
+    async def narration_wrapper(self, *args, **kwargs):
+        return await _narration(self, fn, args, kwargs, emit_generated=False)
 
     return narration_wrapper
 
@@ -378,6 +401,12 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, OffscreenLifeMixin, Agen
         talemate.emit.async_signals.get("agent.world_state.time").connect(
             self.on_time_passage
         )
+
+    @set_processing_no_emit
+    async def narrate_offscreen_life(self, character: Character, missed: list[dict]):
+        # the narrator's context (speaker role, writing style, injected
+        # instructions) without the generated signal: the text becomes a fact
+        return await OffscreenLifeMixin.narrate_offscreen_life(self, character, missed)
 
     async def on_time_passage(self, event: TimePassageEmission):
         """

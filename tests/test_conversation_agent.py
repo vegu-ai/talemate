@@ -20,9 +20,13 @@ The full ``build_prompt_default`` pathway is left to template-baseline
 tests; here we patch ``build_prompt`` so converse can be tested end-to-end.
 """
 
+from unittest.mock import AsyncMock
+
 import pytest
 
 import talemate.client.context as client_context_module
+from talemate.events import GameLoopNewMessageEvent
+from talemate.scene_message import NarratorMessage
 from talemate.agents.conversation import (
     ConversationAgent,
 )
@@ -388,11 +392,6 @@ class TestConverse:
     async def test_new_character_line_reaches_the_ledger(
         self, conversation_scene, alice
     ):
-        from unittest.mock import AsyncMock
-
-        from talemate.events import GameLoopNewMessageEvent
-        from talemate.scene_message import NarratorMessage
-
         scene, conversation, alice_actor = conversation_scene
         conversation.actions["character_knowledge"].config["ledger"].value = True
         conversation.record_learned_facts = AsyncMock(return_value={})

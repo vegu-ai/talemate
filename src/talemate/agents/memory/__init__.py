@@ -270,8 +270,6 @@ class MemoryAgent(Agent):
         except AttributeError:
             return False
 
-    # retrieval settings
-
     @property
     def retrieval_recency_weight(self) -> float:
         return float(self.resolve_config("retrieval", "recency_weight"))
@@ -584,6 +582,16 @@ class MemoryAgent(Agent):
     def _get_document(self, id):
         raise NotImplementedError()
 
+    async def get_documents_by_meta(self, meta: dict) -> dict:
+        """Documents whose metadata carries every given key/value, by id."""
+        if not meta or not self.db:
+            return {}
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_documents_by_meta, meta)
+
+    def _get_documents_by_meta(self, meta: dict) -> dict:
+        raise NotImplementedError()
+
     async def get_embeddings(self, ids: list[str]) -> dict[str, list[float]]:
         """
         Stored embedding vectors by document id (missing ids are absent).
@@ -735,7 +743,7 @@ class MemoryAgent(Agent):
             # Fetch potential memories for this query.
             raw_results = await self.get(formatter(query), limit=limit, **where)
 
-            accepted = self._apply_filter(raw_results, filter, gate_distance)
+            accepted = await self._apply_filter(raw_results, filter, gate_distance)
             accepted = self._rank_by_recency(accepted)
             per_query_results.append(accepted[:iterate])
 
@@ -743,35 +751,43 @@ class MemoryAgent(Agent):
         # query gets a fair chance to contribute, until we hit the token
         # budget.
 
-        rerank = self.retrieval_rerank and bool([q for q in queries if q])
-        merge_cap = RERANK_CANDIDATES if rerank else None
+        # a reranker that already failed to load is not asked again: the
+        # plain, token-budgeted merge is the answer then
+        rerank = (
+            self.retrieval_rerank
+            and bool([q for q in queries if q])
+            and not self.reranker.error
+        )
         merged = self._merge_round_robin(
             per_query_results,
             max_tokens=None if rerank else max_tokens,
-            cap=merge_cap,
+            cap=RERANK_CANDIDATES if rerank else None,
         )
 
         if rerank:
-            merged = await self.rerank([q for q in queries if q], merged)
-            merged = self._cut_to_budget(merged, max_tokens)
+            reranked = await self.rerank([q for q in queries if q], merged)
+            if self.reranker.error:
+                # the one failed load: back to the plain merge
+                return self._merge_round_robin(per_query_results, max_tokens=max_tokens)
+            merged = self._cut_to_budget(reranked, max_tokens)
 
         return merged
-
-    # retrieval helpers
 
     def _similarity_gate_distance(self) -> float | None:
         """The near-duplicate distance the gate uses, or None when it is off."""
         if not self.retrieval_similarity_gate:
             return None
-        summarizer = instance.get_agent("summarizer")
-        try:
-            return float(summarizer.archive_fact_dedupe_distance)
-        except Exception:
-            return None
+        return float(instance.get_agent("summarizer").archive_fact_dedupe_distance)
 
-    def _apply_filter(
+    async def _apply_filter(
         self, raw_results: list, filter: Callable | None, gate_distance: float | None
     ) -> list:
+        """
+        The knowledge filter, then the similarity knowledge gate: a result
+        rejected for presence alone passes when a fact in the character's
+        bucket is a near-duplicate of it (one fetch over the stored vectors).
+        An admitted result is marked so the diversity check keeps it.
+        """
         if not filter:
             return list(raw_results)
 
@@ -786,29 +802,25 @@ class MemoryAgent(Agent):
         if gate_distance is None or not rejected:
             return accepted
 
-        # similarity knowledge gate: a rejected result passes when a fact the
-        # character does know (accepted, typ=fact) is a near-duplicate of it
-        known_facts = [
-            np.asarray(doc.embedding, dtype=float)
-            for doc in accepted
-            if getattr(doc, "embedding", None) is not None
-            and (getattr(doc, "meta", None) or {}).get("typ") == "fact"
-        ]
-        if not known_facts:
+        gateable = getattr(filter, "gateable", None)
+        known_fact_ids = getattr(filter, "known_fact_ids", None)
+        if gateable is None or known_fact_ids is None:
             return accepted
 
+        candidates = [doc for doc in rejected if gateable(doc)]
+        anchors = known_fact_ids()
+        if not candidates or not anchors:
+            return accepted
+
+        retold = await self.near_duplicates(
+            [doc.id for doc in candidates], anchors, gate_distance
+        )
         passed = []
-        for doc in rejected:
-            vector = getattr(doc, "embedding", None)
-            if vector is None:
-                continue
-            vector = np.asarray(vector, dtype=float)
-            if any(
-                float(np.linalg.norm(vector - fact)) <= gate_distance
-                for fact in known_facts
-            ):
+        for doc in candidates:
+            if doc.id in retold:
+                doc.gate_admitted = True
                 passed.append(doc)
-                log.debug("similarity gate passed", id=getattr(doc, "id", None))
+                log.debug("similarity gate passed", id=doc.id)
 
         if not passed:
             return accepted
@@ -820,7 +832,7 @@ class MemoryAgent(Agent):
     def _rank_by_recency(self, docs: list) -> list:
         """Stable re-rank by distance + recency_weight × normalised age."""
         weight = self.retrieval_recency_weight
-        scene_ts = getattr(self.scene, "ts", None)
+        scene_ts = self.scene.ts if self.scene else None
         if weight <= 0 or scene_ts is None or len(docs) < 2:
             return list(docs)
 
@@ -841,9 +853,7 @@ class MemoryAgent(Agent):
             index, doc = item
             age = ages[index]
             age_norm = 0.5 if age is None else min(1.0, max(0.0, age / span))
-            distance = getattr(doc, "distance", None)
-            if distance is None:
-                distance = 0.0
+            distance = doc.distance if doc.distance is not None else 0.0
             return (float(distance) + weight * age_norm, index)
 
         return [doc for _, doc in sorted(enumerate(docs), key=score)]
@@ -876,9 +886,13 @@ class MemoryAgent(Agent):
                 if memory in memory_context:
                     continue
 
-                # diversity: skip a near-identical result
+                # a gate admission is a wanted near-copy of known knowledge
                 vector = getattr(memory, "embedding", None)
-                if vector is not None and threshold < 1.0:
+                if (
+                    vector is not None
+                    and threshold < 1.0
+                    and not getattr(memory, "gate_admitted", False)
+                ):
                     vector = np.asarray(vector, dtype=float)
                     norm = np.linalg.norm(vector)
                     if norm > 0:
@@ -1124,12 +1138,12 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         if self.retrieval_rerank:
             if self.rerank_error:
-                details["rerank"] = {
-                    "icon": "mdi-alert",
-                    "value": "Rerank model failed to load",
-                    "description": f"{RERANK_MODEL}: {self.rerank_error}. Retrieval runs without the rerank.",
-                    "color": "warning",
-                }
+                details["rerank"] = AgentDetail(
+                    icon="mdi-alert",
+                    value="Rerank model failed to load",
+                    description=f"{RERANK_MODEL}: {self.rerank_error}. Retrieval runs without the rerank.",
+                    color="warning",
+                ).model_dump()
             else:
                 details["rerank"] = AgentDetail(
                     icon="mdi-sort-variant",
@@ -1710,8 +1724,15 @@ class ChromaDBMemoryAgent(MemoryAgent):
             return {}
 
         result = self.db.get(ids=[id] if isinstance(id, str) else id)
-        documents = {}
+        return self._documents_from(result)
 
+    def _get_documents_by_meta(self, meta: dict) -> dict:
+        clauses = [{key: value} for key, value in meta.items()]
+        where = clauses[0] if len(clauses) == 1 else {"$and": clauses}
+        return self._documents_from(self.db.get(where=where))
+
+    def _documents_from(self, result) -> dict:
+        documents = {}
         for idx, doc in enumerate(result["documents"]):
             date_prefix = self.convert_ts_to_date_prefix(
                 result["metadatas"][idx].get("ts")
@@ -1721,7 +1742,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
             documents[result["ids"][idx]] = MemoryDocument(
                 doc, result["metadatas"][idx], result["ids"][idx], doc
             )
-
         return documents
 
     @set_processing

@@ -9,13 +9,37 @@ from talemate.agents.base import (
 )
 import talemate.instance as instance
 from talemate.knowledge.bucket import KnowledgeIndex, knowledge_digest
-from talemate.knowledge.graph import aliases_for
 from talemate.util.dedupe import compile_text_to_sentences, compile_sentences_to_length
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
 
 __all__ = ["MemoryRAGMixin"]
+
+
+def _entity_aliases(scene, name: str) -> set[str]:
+    """The character's name and its name-mapping group, capitalisation kept."""
+    aliases = {name}
+    for key, values in scene.world_state.character_name_mappings.items():
+        group = {key, *values}
+        if name.lower() in {g.lower() for g in group}:
+            aliases |= group
+    return {a.strip() for a in aliases if a and a.strip()}
+
+
+def _alias_named(alias: str, text: str) -> bool:
+    """
+    Whole-word match. An alias that carries a capital (a name) must appear
+    with that capitalisation, so "Will" is not found in "I will go"; an alias
+    that is lower-case in the name mappings matches case-insensitively.
+    """
+    if not alias:
+        return False
+    pattern = rf"\b{re.escape(alias)}\b"
+    if alias == alias.lower():
+        return re.search(pattern, text, re.IGNORECASE) is not None
+    return re.search(pattern, text) is not None
+
 
 log = structlog.get_logger()
 
@@ -298,10 +322,11 @@ class MemoryRAGMixin:
                 )
             )
 
+        # keep the order (the entity lookup leads the semantic results)
         if include_raw_semantic:
-            complete_context = list(set(semantic_context + memory_context))
+            complete_context = list(dict.fromkeys(semantic_context + memory_context))
         else:
-            complete_context = list(set(memory_context))
+            complete_context = list(dict.fromkeys(memory_context))
 
         if use_cache:
             await self.rag_set_cache(complete_context, character)
@@ -396,45 +421,35 @@ class MemoryRAGMixin:
     ) -> list:
         """
         Descriptions of characters the recent lines name who are not in the
-        scene, fetched by document id (no similarity search).
+        scene, fetched by metadata (no similarity search).
         """
         memory = instance.get_agent("memory")
-        if not getattr(memory, "retrieval_entity_lookup", False):
+        if not memory.retrieval_entity_lookup:
             return []
 
-        text = "\n".join(history).lower()
+        text = "\n".join(history)
         if not text.strip():
             return []
 
         scene = self.scene
-        named = []
-        for name in scene.inactive_characters:
-            aliases = aliases_for(scene, name)
-            if any(re.search(rf"\b{re.escape(alias)}\b", text) for alias in aliases):
-                named.append(name)
-
+        named = [
+            name
+            for name in scene.inactive_characters
+            if any(_alias_named(alias, text) for alias in _entity_aliases(scene, name))
+        ]
         if not named:
             return []
 
-        # one document per description, or one per paragraph (`.description.<n>`)
-        ids = []
-        for name in named:
-            ids.append(f"{name}.description")
-            ids.extend(f"{name}.description.{index}" for index in range(10))
-
-        try:
-            documents = await memory.get_document(ids)
-        except NotImplementedError:
-            # a backend without document lookup by id
-            return []
         found = []
-        for doc_id in ids:
-            doc = documents.get(doc_id)
-            if doc is None:
-                continue
-            if filter is not None and not filter(doc):
-                continue
-            found.append(doc)
+        for name in named:
+            documents = await memory.get_documents_by_meta(
+                {"character": name, "typ": "base_attribute", "attr": "description"}
+            )
+            for doc_id in sorted(documents):
+                doc = documents[doc_id]
+                if filter is not None and not filter(doc):
+                    continue
+                found.append(doc)
 
         log.debug("entity lookup", named=named, documents=len(found))
         return found

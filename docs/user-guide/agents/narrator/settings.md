@@ -96,7 +96,7 @@ Default on. When the [director's Scene Direction](/talemate/user-guide/agents/di
 
 ## :material-account-clock-outline: Offscreen Life
 
-When a character returns to the scene after missing at least one summarized history entry, the narrator writes what the character did while away, given their sheet, the time that passed and the facts established meanwhile (which the character did not witness). The result is stored as a fact with the source `offscreen` that only the returning character was present for: it retrieves for that character alone, is never listed in an absence block, and is not added to the scene text. +1 request per return. Off by default.
+When a character returns to the scene after missing at least one summarized history entry, the narrator writes what the character did while away, given their sheet and the time that passed. The prompt is rendered from the returning character's own point of view: the history and the memory block hold only what they know, so the span they missed is never in front of the model. The result is stored as a fact with the source `offscreen` that only the returning character was present for: it retrieves for that character alone, is never listed in an absence block, and is not added to the scene text. A character new to the scene was not away and gets no account; when part of the absence is not summarized yet, the account waits for that summary so it spans the whole absence. +1 request per return. Off by default.
 
 ##### Minimum missed entries
 

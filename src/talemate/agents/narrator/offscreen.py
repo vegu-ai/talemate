@@ -9,9 +9,9 @@ import structlog
 
 import talemate.emit.async_signals as async_signals
 import talemate.util as util
-from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
+from talemate.agents.base import AgentAction, AgentActionConfig
 from talemate.events import ArchiveEvent, CharacterActivatedEvent
-from talemate.knowledge.facts import facts_for_entry, store_offscreen_fact
+from talemate.knowledge.facts import store_offscreen_fact
 from talemate.knowledge.schema import Fact
 from talemate.prompts import Prompt
 
@@ -21,8 +21,6 @@ if TYPE_CHECKING:
 __all__ = ["OffscreenLifeMixin"]
 
 log = structlog.get_logger("talemate.agents.narrator.offscreen")
-
-OFFSCREEN_FACTS_LIMIT = 20
 
 
 class OffscreenLifeMixin:
@@ -71,10 +69,7 @@ class OffscreenLifeMixin:
 
     def connect(self, scene):
         super().connect(scene)
-        # a return is written at once when the archive already holds the
-        # missed span; otherwise it waits for the next archive entry, since
-        # the span a character missed is cut only once a message after their
-        # return is archived
+        # returns whose absence is not fully archived yet, settled on archive_add
         self.pending_returns: dict[str, int] = {}
         async_signals.get("character.activated").connect(self.on_character_activated)
         async_signals.get("archive_add").connect(self.on_archive_add_offscreen)
@@ -83,34 +78,71 @@ class OffscreenLifeMixin:
         """
         The summarized history entries the character was absent for, up to
         their return: the tail of the archive whose presence is known and does
-        not include them, oldest first.
+        not include them, oldest first. A character the archive never saw
+        present (or with unknown presence) was not away: nothing is missed.
         """
         missed: list[dict] = []
+        anchored = False
         for entry in reversed(self.scene.archived_history):
             present = entry.get("present")
             if present is None or character.name in present:
+                anchored = True
                 break
             missed.append(entry)
+        if not anchored:
+            return []
         missed.reverse()
         return missed
+
+    def absence_fully_archived(self) -> bool:
+        """
+        True when no message after the newest archived entry exists: the
+        archive holds the whole absence. The presence cut archives the missed
+        span only once a message after the return arrives, so a return with
+        an unarchived tail waits for that cut.
+        """
+        history = self.scene.history
+        if not history:
+            return True
+        last_end = -1
+        for entry in reversed(self.scene.archived_history):
+            if entry.get("end") is not None:
+                last_end = entry["end"]
+                break
+        return last_end >= len(history) - 1
+
+    def was_in_scene(self, character: "Character") -> bool:
+        """Present on an archived entry (or one with unknown presence) or on a message."""
+        name = character.name
+        for entry in self.scene.archived_history:
+            present = entry.get("present")
+            if present is None or name in present:
+                return True
+        return any(
+            getattr(message, "present", None) and name in message.present
+            for message in self.scene.history
+        )
 
     async def on_character_activated(self, event: CharacterActivatedEvent):
         if not self.offscreen_life_enabled or event.scene is not self.scene:
             return
         character = event.character
-        pending = getattr(self, "pending_returns", None)
-        if pending is None:
-            pending = self.pending_returns = {}
+        if not self.was_in_scene(character):
+            # a character new to the scene was not away
+            log.debug("offscreen life: never in the scene", character=character.name)
+            return
         missed = self.missed_entries(character)
-        if missed:
-            pending.pop(character.name, None)
+        if missed and self.absence_fully_archived():
+            self.pending_returns.pop(character.name, None)
             await self._offscreen_life_if_enough(character, missed)
             return
-        pending[character.name] = self.scene.ts
+        # part of the absence is not archived yet: wait for the cut that
+        # covers it, so the account spans the whole absence
+        self.pending_returns[character.name] = self.scene.ts
         log.debug("offscreen life pending", character=character.name)
 
     async def on_archive_add_offscreen(self, event: ArchiveEvent):
-        pending = getattr(self, "pending_returns", None)
+        pending = self.pending_returns
         if not pending or event.scene is not self.scene:
             return
         for name in list(pending):
@@ -141,18 +173,16 @@ class OffscreenLifeMixin:
             return
         await self.narrate_offscreen_life(character, missed)
 
-    @set_processing
     async def narrate_offscreen_life(
         self, character: "Character", missed: list[dict]
     ) -> Fact | None:
-        """What the character did while away; stored as an offscreen fact."""
-        scene = self.scene
-        missed_facts: list[Fact] = []
-        for entry in missed:
-            if entry.get("id"):
-                missed_facts.extend(facts_for_entry(scene, entry["id"]))
-        missed_facts = missed_facts[-OFFSCREEN_FACTS_LIMIT:]
+        """
+        What the character did while away; stored as an offscreen fact.
 
+        The prompt renders from the character's own perspective (their
+        bucket), so the span they missed is not in front of the model at all.
+        """
+        scene = self.scene
         first_ts = missed[0].get("ts") if missed else None
         try:
             elapsed = util.diff_to_human(util.coerce_ts(first_ts), scene.ts)
@@ -168,14 +198,12 @@ class OffscreenLifeMixin:
                 "scene": scene,
                 "max_tokens": self.client.max_token_length,
                 "character": character,
-                "missed": missed,
-                "missed_facts": missed_facts,
+                "missed_count": len(missed),
                 "elapsed": elapsed or "a while",
                 "extra_instructions": self.extra_instructions,
                 "response_length": length,
             },
         )
-        # plain prose: no dialogue fix-up and no narrative markers on a fact
         text = self.clean_result(
             (extracted.get("response") or "").strip().strip("*"),
             ensure_dialog_format=False,

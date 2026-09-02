@@ -372,3 +372,22 @@ class TestBestFitSlots:
             "(Bob was elsewhere for a while)",
             "L4",
         ]
+
+    def test_excluded_text_inside_a_missed_run_does_not_split_it(self, summarizer):
+        scene = MockScene()
+        scene.history = [
+            line(0, ["Alice", "Bob"]),
+            CharacterMessage(message="L1", source="ai", present=["Alice"]),
+            CharacterMessage(message="L1", source="ai", present=["Alice"]),
+            line(3, ["Alice", "Bob"]),
+        ]
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryMixin,
+            ContextHistoryParams,
+        )
+
+        params = ContextHistoryParams(perspective="Bob").bind(scene)
+        level = ContextHistoryMixin._best_fit_build_dialogue_level(
+            scene, 3, params, exclude={"L1"}
+        )
+        assert level.formatted == ["L0", "", "(Bob was elsewhere for a while)", "L3"]

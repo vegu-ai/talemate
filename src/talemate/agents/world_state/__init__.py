@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable
 
+from talemate.knowledge.bucket import KnowledgeIndex
+
 import structlog
 
 import talemate.emit.async_signals
@@ -154,6 +156,7 @@ class WorldStateAgent(
         num_queries=1,
         extra_context: list[str] = [],
         filter: Callable | None = None,
+        viewer: str | None = None,
     ):
         response, extracted = await Prompt.request(
             "world_state.analyze-text-and-extract-context",
@@ -169,6 +172,8 @@ class WorldStateAgent(
                 "num_queries": num_queries,
                 "extra_context": extra_context,
                 "memory_filter": filter,
+                "knowledge_index": KnowledgeIndex.from_scene(self.scene),
+                "knowledge_viewer": viewer,
             },
         )
 
@@ -188,6 +193,7 @@ class WorldStateAgent(
         num_queries=1,
         extra_context: list[str] = [],
         filter: Callable | None = None,
+        viewer: str | None = None,
     ) -> list[str]:
         response, extracted = await Prompt.request(
             "world_state.analyze-text-and-generate-rag-queries",
@@ -202,6 +208,8 @@ class WorldStateAgent(
                 "response_length": response_length,
                 "num_queries": num_queries,
                 "extra_context": extra_context,
+                "knowledge_index": KnowledgeIndex.from_scene(self.scene),
+                "knowledge_viewer": viewer,
             },
         )
 

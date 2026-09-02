@@ -1086,11 +1086,18 @@ class ContextHistoryMixin:
 
     @staticmethod
     def _best_fit_gap_slot(
-        params: ContextHistoryParams, missed: list[bool], idx: int
+        params: ContextHistoryParams,
+        missed: list[bool],
+        idx: int,
+        blank: list[bool] | None = None,
     ) -> str:
         """A missed run renders one gap line, in the run's LAST slot: render
-        ranges are trimmed from the oldest end, so the last slot survives."""
-        last = idx + 1 >= len(missed) or not missed[idx + 1]
+        ranges are trimmed from the oldest end, so the last slot survives.
+        Slots that render nothing (`blank`) do not end a run."""
+        nxt = idx + 1
+        while nxt < len(missed) and blank is not None and blank[nxt]:
+            nxt += 1
+        last = nxt >= len(missed) or not missed[nxt]
         return params.gap_line(None) if last else ""
 
     @staticmethod
@@ -1127,13 +1134,28 @@ class ContextHistoryMixin:
             and not params.knows(KnowledgeItem.from_message(scene.history[i]))
             for i in range(summarized_to + 1)
         ]
+        # slots that render nothing must not split a missed run
+        blank = [
+            i >= len(scene.history)
+            or not _is_qualifying(scene.history[i], params)
+            or (
+                bool(exclude)
+                and scene.history[i].as_format(
+                    conversation_format, mode=actor_direction_mode
+                )
+                in exclude
+            )
+            for i in range(summarized_to + 1)
+        ]
 
         for i in range(summarized_to + 1):
             entries.append({"idx": i})
             if i < len(scene.history):
                 message = scene.history[i]
                 if missed[i]:
-                    text = ContextHistoryMixin._best_fit_gap_slot(params, missed, i)
+                    text = ContextHistoryMixin._best_fit_gap_slot(
+                        params, missed, i, blank
+                    )
                     formatted.append(text)
                     tokens.append(count_tokens(text) if text else 0)
                     continue

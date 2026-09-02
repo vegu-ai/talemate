@@ -273,6 +273,7 @@ class MemoryRAGMixin:
                     num_queries=self.long_term_memory_number_of_queries,
                     extra_context=semantic_context,
                     filter=memory_filter,
+                    viewer=character.name if character else None,
                 )
             ).split("\n")
         elif retrieval_method == "queries":
@@ -285,6 +286,7 @@ class MemoryRAGMixin:
                     num_queries=self.long_term_memory_number_of_queries,
                     extra_context=semantic_context,
                     filter=memory_filter,
+                    viewer=character.name if character else None,
                 )
             )
 

@@ -12,7 +12,7 @@ Only the conversation prompt is filtered this way, by the character that is spea
 
 ## What the speaking character gets
 
-When a character speaks, the scene history in their prompt drops the spans they missed and replaces each run of missed material with one line, for example `(Edwin was elsewhere for 2 hours)`. The long term memory retrieval for that prompt drops documents outside their knowledge as well, and the retrieval cache is kept per speaker.
+When a character speaks, the scene history in their prompt drops the spans they missed and replaces each run of missed material with one line, for example `(Edwin was elsewhere for 2 hours)`. Director instructions, state reinforcements and context investigations are kept whatever the presence says: they are instructions to the actor, not story the character lived through. The long term memory retrieval for that prompt drops documents outside their knowledge as well, and the retrieval cache is kept per speaker.
 
 !!! note "Layered history"
     Layered history entries summarize several base entries. Such an entry stays in a character's prompt when the character was present for *any* of its sources, so a coarse layer can still mention something the character missed. The exact filter applies to the base layer and to the memory store.
@@ -29,7 +29,7 @@ Set it from the entry's editor in the Characters tab (Description, Attributes, D
 
 ## Grants and revokes
 
-Open a character in the Characters tab and pick the **Knowledge** tab. It lists the character's grants and revokes and lets you add one: pick the entry (a sheet entry of any character, a world entry or a summarized history entry), choose *Grant* or *Revoke*, and add an optional note. Grants and revokes made by hand carry the source `manual`; later releases add sources the story produces on its own.
+Open a character in the Characters tab and pick the **Knowledge** tab. It lists the character's grants and revokes and lets you add one: pick the entry (a sheet entry of any character, a world entry, or a static or summarized history entry), choose *Grant* or *Revoke*, and add an optional note. A static history entry is common lore, so a revoke is the only way to hide one from a character. Grants and revokes made by hand carry the source `manual`; later releases add sources the story produces on its own.
 
 ## Facts in node graphs
 

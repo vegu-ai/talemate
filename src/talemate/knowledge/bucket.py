@@ -8,6 +8,7 @@ visibility settings the world state keeps.
 
 import hashlib
 import json
+import re
 from typing import TYPE_CHECKING, Callable, Literal
 
 import pydantic
@@ -24,6 +25,7 @@ __all__ = [
     "ItemKind",
     "COMMON_KINDS",
     "knowledge_digest",
+    "canonical_entry_id",
 ]
 
 ItemKind = Literal[
@@ -32,6 +34,16 @@ ItemKind = Literal[
 
 # kinds every character knows unless a visibility setting or a revoke says otherwise
 COMMON_KINDS = {"attribute", "detail", "description", "world_entry", "static"}
+
+
+_DESCRIPTION_CHUNK = re.compile(r"^(?P<base>.+\.description)\.\d+$")
+
+
+def canonical_entry_id(entry_id: str) -> str:
+    """`<name>.description.<n>` (one document per paragraph, written by
+    `Character.set_description`) is the same entry as `<name>.description`."""
+    match = _DESCRIPTION_CHUNK.match(entry_id)
+    return match.group("base") if match else entry_id
 
 
 def visibility_key(meta: dict) -> str | None:
@@ -73,6 +85,7 @@ class KnowledgeItem(pydantic.BaseModel):
         owner = meta.get("character")
         if owner == "__narrator__":
             owner = None
+        doc_id = canonical_entry_id(doc.id)
 
         present = None
         if meta.get("presence_known"):
@@ -82,9 +95,9 @@ class KnowledgeItem(pydantic.BaseModel):
                 present = None
 
         if typ == "history":
-            return cls(id=doc.id, kind="history", present=present)
+            return cls(id=doc_id, kind="history", present=present)
         if typ == "fact":
-            return cls(id=doc.id, kind="fact", owner=owner, present=present)
+            return cls(id=doc_id, kind="fact", owner=owner, present=present)
 
         key = visibility_key(meta)
         if key is not None and owner:
@@ -93,18 +106,18 @@ class KnowledgeItem(pydantic.BaseModel):
             )
             character = scene.get_character(owner)
             visibility = character.visibility.get(key) if character else None
-            return cls(id=doc.id, kind=kind, owner=owner, visibility=visibility)
+            return cls(id=doc_id, kind=kind, owner=owner, visibility=visibility)
 
         if typ == "world_state":
-            entry = scene.world_state.manual_context.get(doc.id)
+            entry = scene.world_state.manual_context.get(doc_id)
             return cls(
-                id=doc.id,
+                id=doc_id,
                 kind="world_entry",
                 visibility=entry.visibility if entry else None,
             )
 
         # anything the design does not classify stays shared
-        return cls(id=doc.id, kind="world_entry", owner=owner)
+        return cls(id=doc_id, kind="world_entry", owner=owner)
 
 
 def knowledge_digest(scene: "Scene") -> str:
@@ -167,6 +180,7 @@ class KnowledgeIndex:
     def item_for_entry(self, scene: "Scene", entry_id: str) -> KnowledgeItem:
         """Classify a memory document id without the document: world entry,
         sheet entry (`<name>.<key>`), archive entry, or unknown (shared)."""
+        entry_id = canonical_entry_id(entry_id)
         entry = scene.world_state.manual_context.get(entry_id)
         if entry is not None:
             return KnowledgeItem(

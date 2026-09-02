@@ -315,55 +315,60 @@ class TestLayered:
         )
 
 
-class TestBestFitTrim:
-    def test_gap_survives_a_trimmed_range(self, summarizer):
-        summarizer.actions["manage_scene_history"].config["best_fit"].value = True
+class TestBestFitSlots:
+    def _level(self, summarizer, scene):
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryMixin,
+            ContextHistoryParams,
+        )
+
+        params = ContextHistoryParams(perspective="Bob", keep_director=False).bind(
+            scene
+        )
+        return ContextHistoryMixin._best_fit_build_dialogue_level(
+            scene, len(scene.history) - 1, params
+        )
+
+    def test_gap_sits_in_the_last_slot_of_a_run(self, summarizer):
         scene = MockScene()
-        scene.history = [long_line(i, ["Alice", "Bob"]) for i in range(12)]
-        scene.archived_history = [
-            {
-                "id": "a0",
-                "text": pad("A0"),
-                "ts": 100,
-                "start": 0,
-                "end": 2,
-                "present": ["Alice", "Bob"],
-            },
-            {
-                "id": "a1",
-                "text": pad("A1"),
-                "ts": 200,
-                "start": 3,
-                "end": 5,
-                "present": ["Alice"],
-            },
-            {
-                "id": "a2",
-                "text": pad("A2"),
-                "ts": 300,
-                "start": 6,
-                "end": 8,
-                "present": ["Alice"],
-            },
-            {
-                "id": "a3",
-                "text": pad("A3"),
-                "ts": 400,
-                "start": 9,
-                "end": 9,
-                "present": ["Alice", "Bob"],
-            },
+        scene.history = [
+            line(0, ["Alice", "Bob"]),
+            line(1, ["Alice"]),
+            line(2, ["Alice"]),
+            line(3, ["Alice"]),
+            line(4, ["Alice", "Bob"]),
         ]
-        scene.ts = 400
-        # a budget that forces the archived range to be trimmed from the old end
-        for budget in (260, 300, 340, 380):
-            result = scene.context_history(budget=budget, perspective="Bob")
-            joined = "\n".join(result)
-            if "A1" in joined or "A2" in joined:
-                raise AssertionError(result)
-            # whenever anything older than the missed run is shown, the gap is shown too
-            if "A0" in joined:
-                assert any(p.startswith("(Bob was elsewhere") for p in result), (
-                    budget,
-                    result,
-                )
+        level = self._level(summarizer, scene)
+        assert level.formatted == [
+            "L0",
+            "",
+            "",
+            "(Bob was elsewhere for a while)",
+            "L4",
+        ]
+        assert level.tokens[1] == 0 and level.tokens[3] > 0
+
+    def test_a_blank_slot_does_not_split_a_run(self, summarizer):
+        scene = MockScene()
+        scene.history = [
+            line(0, ["Alice", "Bob"]),
+            line(1, ["Alice"]),
+            DirectorMessage(
+                message="Bob: be curt",
+                present=["Alice"],
+                source="director",
+                meta={"character": "Bob", "action": "actor_instruction"},
+            ),
+            line(3, ["Alice"]),
+            line(4, ["Alice", "Bob"]),
+        ]
+        level = self._level(summarizer, scene)
+        gaps = [f for f in level.formatted if f.startswith("(Bob was elsewhere")]
+        assert len(gaps) == 1
+        assert level.formatted == [
+            "L0",
+            "",
+            "",
+            "(Bob was elsewhere for a while)",
+            "L4",
+        ]

@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import structlog
 
+from talemate.agents.context import active_agent
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "CharacterKnowledgeMixin",
-    "parse_pass_items",
+    "pass_items",
     "parse_ledger",
     "normalize_fact_id",
 ]
@@ -45,47 +46,17 @@ log = structlog.get_logger("talemate.agents.conversation.knowledge")
 LEDGER_FACTS_PER_CHARACTER = 20
 
 
-# a wrapped line that opens with a time or a range ("10:30 she", "2-3 days")
-# is a continuation, not an item
-_ITEM_LINE = re.compile(r"^\s*(\d+)\s*(?:[.)]|[:-](?!\s*\d))\s*(.*)$")
-_NO_TEXT = re.compile(r"^[\W_]*$")
-
-
-def parse_pass_items(text: str | None) -> list[tuple[int, str]] | None:
-    """
-    `(candidate number, rewritten text)` pairs from an `<ITEMS>` answer, in
-    the order given; a number repeated later is ignored. A line that does
-    not start an item continues the previous one. "none" is an empty list;
-    an answer without a numbered line could not be read (None).
-    """
-    if text is None:
-        return None
-    text = text.strip()
-    if not text:
-        return None
-    # "none" with a short prose tail is a normal completion of the prefill
-    if re.match(r"^none\b", text, re.IGNORECASE):
-        return []
+def pass_items(blocks: list[dict] | None) -> list[tuple[int, str]]:
+    """`(candidate number, rewritten text)` per `<ITEM n="...">` block, in answer order; the first block for a number wins."""
     items: list[tuple[int, str]] = []
     seen: set[int] = set()
-    current: int | None = None
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("```"):
+    for block in blocks or []:
+        number = int(block["n"])
+        if number in seen:
             continue
-        match = _ITEM_LINE.match(line)
-        if match:
-            number = int(match.group(1))
-            if number in seen:
-                current = None
-                continue
-            seen.add(number)
-            items.append((number, match.group(2).strip()))
-            current = len(items) - 1
-        elif current is not None:
-            number, previous = items[current]
-            items[current] = (number, f"{previous} {stripped}".strip())
-    return items or None
+        seen.add(number)
+        items.append((number, (block.get("content") or "").strip()))
+    return items
 
 
 def normalize_fact_id(value: str) -> str:
@@ -335,19 +306,19 @@ class CharacterKnowledgeMixin:
     async def memory_pass(
         self, character: "Character", candidates: list[str]
     ) -> list[str]:
-        """
-        The retrieved memories as the character's next line should see them:
-        rewritten, dropped and ordered by one request. With the perspective
-        filter on they are cut to what the character knows.
-        """
+        """One request that rewrites, drops and orders the retrieved memories for the next line."""
         candidates = list(candidates)
         client = self.knowledge_analysis_client
         viewer = self.rag_knowledge_viewer(character)
+        # the dialogue prompt keeps the speaker's director messages unless
+        # director guidance replaces them
+        context = active_agent.get()
+        guidance = context.state.get("director__actor_guidance") if context else None
         scene_history = self.scene.context_history(
             budget=int(client.max_token_length * 0.5),
             min_dialogue=15,
             sections=False,
-            keep_director=False,
+            keep_director=False if guidance else character.name,
             perspective=viewer,
         )
         _, extracted = await Prompt.request(
@@ -365,21 +336,25 @@ class CharacterKnowledgeMixin:
             },
             response_spec=MEMORY_PASS_SPEC,
         )
-        items = parse_pass_items(extracted.get("items"))
-        if items is None:
-            log.warning(
-                "memory pass: answer not readable, keeping the candidates as retrieved",
-                character=character.name,
-                answer=extracted.get("items"),
-            )
-            return candidates
-        # a number with no rewrite (or only a placeholder) keeps the candidate as
-        # retrieved: the number alone says keep and where
+        items = pass_items(extracted.get("items"))
+        answer = (extracted.get("answer") or "").strip()
+        if not items and re.match(r"^none\b", answer, re.IGNORECASE):
+            log.debug("memory pass: none", character=character.name)
+            return []
+        # the number alone says keep and where
         passed = [
-            candidates[number - 1] if _NO_TEXT.match(text) else text
+            text or candidates[number - 1]
             for number, text in items
             if 1 <= number <= len(candidates)
         ]
+        if not passed:
+            log.warning(
+                "memory pass: answer not readable, keeping the candidates as retrieved",
+                character=character.name,
+                answer=answer,
+                items=items,
+            )
+            return candidates
         log.debug(
             "memory pass",
             character=character.name,

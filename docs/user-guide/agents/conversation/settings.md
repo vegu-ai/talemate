@@ -110,7 +110,7 @@ One line in the prompt naming which topics the character knows all, some or noth
 
 ##### AI memory pass
 
-One request that reads the retrieved memories together with the story as the character's prompt will see it, and returns them rewritten for the character's next line: what adds nothing is dropped, the rest is ordered most useful first. With the *Perspective filter* on, each memory becomes what the character knows of it, from their own point of view, and a memory they know nothing of is dropped. With the filter off the pass only rewrites for relevance, drops what adds nothing and orders. +1 request per line, handled by the World State agent's client. Off by default. An answer that cannot be read keeps the memories as retrieved.
+One request that reads the retrieved memories together with the story context the character's prompt shows (the same perspective-filtered history, within the World State client's budget), and returns them rewritten for the character's next line: what adds nothing is dropped, the rest is ordered most useful first. With the *Perspective filter* on, each memory becomes what the character knows of it, from their own point of view, and a memory they know nothing of is dropped. With the filter off the pass only rewrites for relevance, drops what adds nothing and orders. +1 request per line, handled by the World State agent's client. Off by default. An answer that cannot be read keeps the memories as retrieved.
 
 ##### Learned-this-turn ledger
 

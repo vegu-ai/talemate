@@ -2,7 +2,11 @@
 Response specifications for the conversation agent's knowledge opt-ins.
 """
 
-from talemate.prompts.response import ResponseSpec, AnchorExtractor
+from talemate.prompts.response import (
+    AnchorExtractor,
+    BlockListExtractor,
+    ResponseSpec,
+)
 
 __all__ = [
     "MEMORY_PASS_SPEC",
@@ -11,7 +15,10 @@ __all__ = [
 
 MEMORY_PASS_SPEC = ResponseSpec(
     extractors={
-        "items": AnchorExtractor(left="<ITEMS>", right="</ITEMS>"),
+        "answer": AnchorExtractor(left="<ITEMS>", right="</ITEMS>"),
+        "items": BlockListExtractor(
+            blocks=[("item", r'<ITEM n="(?P<n>\d+)">', "</ITEM>")]
+        ),
     },
     required=[],
 )

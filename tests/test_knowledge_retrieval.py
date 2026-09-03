@@ -12,8 +12,9 @@ import talemate.emit.async_signals as async_signals
 from talemate.agents.conversation.knowledge import (
     normalize_fact_id,
     parse_ledger,
-    parse_pass_items,
+    pass_items,
 )
+from talemate.agents.conversation.response_specs import MEMORY_PASS_SPEC
 from talemate.agents.memory.rerank import (
     CrossEncoderReranker,
     RERANK_CANDIDATES,
@@ -601,45 +602,45 @@ class TestEntityLookup:
 
 class TestParsers:
     def test_pass_items(self):
-        assert parse_pass_items(None) is None
-        assert parse_pass_items("") is None
-        assert parse_pass_items("   ") is None
-        assert parse_pass_items("none") == []
-        assert parse_pass_items("None.") == []
-        assert parse_pass_items("NONE - nothing applies") == []
-        assert parse_pass_items("3. Third\n1. First") == [(3, "Third"), (1, "First")]
-        # every separator the models use
-        assert parse_pass_items("2) two\n4: four\n5 - five") == [
-            (2, "two"),
-            (4, "four"),
-            (5, "five"),
+        assert pass_items(None) == []
+        assert pass_items([]) == []
+        assert pass_items(
+            [
+                {"type": "item", "n": "3", "content": " Third "},
+                {"type": "item", "n": "1", "content": "First"},
+                {"type": "item", "n": "3", "content": "again"},
+                {"type": "item", "n": "2", "content": ""},
+            ]
+        ) == [(3, "Third"), (1, "First"), (2, "")]
+
+    def test_pass_answer_extraction(self):
+        def extract(text):
+            return {
+                name: extractor.extract(text)
+                for name, extractor in MEMORY_PASS_SPEC.extractors.items()
+            }
+
+        blocks = extract(
+            '<ITEMS>\n<ITEM n="1">Mara owes the harbourmaster\n3.5 crowns.</ITEM>\n'
+            '<ITEM n="2">The Sorena went down in\n1929. The town watched.</ITEM>\n</ITEMS>'
+        )
+        assert pass_items(blocks["items"]) == [
+            (1, "Mara owes the harbourmaster\n3.5 crowns."),
+            (2, "The Sorena went down in\n1929. The town watched."),
         ]
-        # a rewrite that wraps continues the item
-        assert parse_pass_items("1. The lamp\nwent out.\n2. Two") == [
-            (1, "The lamp went out."),
-            (2, "Two"),
-        ]
-        # the first mention of a number wins; its later copy is ignored
-        assert parse_pass_items("1. one\n2. two\n1. again\nmore") == [
-            (1, "one"),
-            (2, "two"),
-        ]
-        # an empty rewrite is kept for the caller to fill in
-        assert parse_pass_items("2.\n1. one") == [(2, ""), (1, "one")]
-        # a wrapped line that opens with a time or a range continues the item
-        assert parse_pass_items("1. She left\n10:30 she returned") == [
-            (1, "She left 10:30 she returned")
-        ]
-        assert parse_pass_items("1. one\n2-3 days later she came back") == [
-            (1, "one 2-3 days later she came back")
-        ]
-        assert parse_pass_items("2- two\n3: three") == [(2, "two"), (3, "three")]
-        # fences and prose before the first item do not count
-        assert parse_pass_items("```\n1. one\n```") == [(1, "one")]
-        assert parse_pass_items("Here you go:\n1. one") == [(1, "one")]
-        # no numbered line: unreadable
-        assert parse_pass_items("keep the first two") is None
-        assert parse_pass_items("1, 3") is None
+        blocks = extract(
+            '<ITEMS>\n<ITEM n="1">one</ITEM>\n<ITEM n="2">two</ITEM>\n\n'
+            "I dropped candidate 3 because Mara knows nothing of it.\n</ITEMS>"
+        )
+        assert pass_items(blocks["items"]) == [(1, "one"), (2, "two")]
+        blocks = extract('<ITEMS>\n<ITEM n="2">two</ITEM>\n<ITEM n="1">cut off')
+        assert pass_items(blocks["items"]) == [(2, "two")]
+        for text in ("<ITEMS>none</ITEMS>", "<ITEMS>None - nothing applies</ITEMS>"):
+            blocks = extract(text)
+            assert blocks["items"] == []
+            assert blocks["answer"].lower().startswith("none")
+        blocks = extract('<ITEMS>None apply except:\n<ITEM n="3">three</ITEM></ITEMS>')
+        assert pass_items(blocks["items"]) == [(3, "three")]
 
     def test_ledger(self):
         assert parse_ledger(None) is None
@@ -689,14 +690,15 @@ def enable(conversation, key, value=True):
     conversation.actions["character_knowledge"].config[key].value = value
 
 
+def items(*pairs):
+    return [{"type": "item", "n": str(n), "content": text} for n, text in pairs]
+
+
 class TestMemoryPass:
     def test_off_by_default(self, scene):
         conversation = get_agent("conversation")
         assert conversation.knowledge_memory_pass is False
         assert conversation.knowledge_ledger is False
-        config = conversation.actions["character_knowledge"].config
-        for key in ("llm_gate", "llm_rerank", "llm_rerank_keep"):
-            assert key not in config
 
     async def test_no_request_when_off(self, scene, opt_ins):
         conversation, alice = opt_ins
@@ -716,7 +718,10 @@ class TestMemoryPass:
         ):
             request.return_value = (
                 "",
-                {"items": "3. C as Alice knows it\n1. A, in short"},
+                {
+                    "answer": "...",
+                    "items": items((3, "C as Alice knows it"), (1, "A, in short")),
+                },
             )
             assert await conversation.rag_build(character=alice) == [
                 "C as Alice knows it",
@@ -746,17 +751,42 @@ class TestMemoryPass:
             ActiveScene(scene),
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
         ):
-            request.return_value = ("", {"items": "1. a"})
-            await conversation.rag_build(character=alice)
+            request.return_value = ("", {"answer": "", "items": items((2, "B"))})
+            assert await conversation.rag_build(character=alice) == ["B"]
             assert calls[-1]["perspective"] == "Alice"
+            assert calls[-1]["keep_director"] == "Alice"
             assert request.call_args.kwargs["vars"]["viewer"] == "Alice"
 
             enable(conversation, "perspective_filter", False)
             scene.rag_cache = {}
-            await conversation.rag_build(character=alice)
+            request.return_value = (
+                "",
+                {"answer": "", "items": items((3, "C"), (1, ""))},
+            )
+            assert await conversation.rag_build(character=alice) == ["C", "a"]
             assert calls[-1]["perspective"] is None
             assert request.call_args.kwargs["vars"]["viewer"] is None
         assert request.call_count == 2
+
+    async def test_director_guidance_drops_the_director_messages(self, scene, opt_ins):
+        conversation, alice = opt_ins
+        enable(conversation, "memory_pass")
+        calls = []
+
+        def context_history(**kwargs):
+            calls.append(kwargs)
+            return []
+
+        scene.context_history = context_history
+        with (
+            ActiveScene(scene),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+            patch("talemate.agents.conversation.knowledge.active_agent") as agent_var,
+        ):
+            agent_var.get.return_value.state = {"director__actor_guidance": "Sulk."}
+            request.return_value = ("", {"answer": "", "items": items((1, "A"))})
+            await conversation.rag_build(character=alice)
+        assert calls[-1]["keep_director"] is False
 
     async def test_none_drops_everything(self, scene, opt_ins):
         conversation, alice = opt_ins
@@ -765,7 +795,7 @@ class TestMemoryPass:
             ActiveScene(scene),
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
         ):
-            request.return_value = ("", {"items": "none"})
+            request.return_value = ("", {"answer": "none", "items": []})
             assert await conversation.rag_build(character=alice) == []
 
     async def test_unreadable_answer_keeps_the_candidates(self, scene, opt_ins):
@@ -775,10 +805,13 @@ class TestMemoryPass:
             ActiveScene(scene),
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
         ):
-            request.return_value = ("", {"items": None})
-            assert await conversation.rag_build(character=alice) == ["a", "b", "c"]
-            request.return_value = ("", {"items": "I would keep the first one."})
-            assert await conversation.rag_build(character=alice) == ["a", "b", "c"]
+            for answer, blocks in (
+                (None, None),
+                ("I would keep the first one.", []),
+                ("", items((9, "nine"), (0, "zero"))),
+            ):
+                request.return_value = ("", {"answer": answer, "items": blocks})
+                assert await conversation.rag_build(character=alice) == ["a", "b", "c"]
 
     async def test_out_of_range_dropped_and_empty_rewrite_kept(self, scene, opt_ins):
         conversation, alice = opt_ins
@@ -787,8 +820,11 @@ class TestMemoryPass:
             ActiveScene(scene),
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
         ):
-            request.return_value = ("", {"items": "9. nine\n2.\n1. one\n3. ..."})
-            assert await conversation.rag_build(character=alice) == ["b", "one", "c"]
+            request.return_value = (
+                "",
+                {"answer": "", "items": items((9, "nine"), (2, ""), (1, "one"))},
+            )
+            assert await conversation.rag_build(character=alice) == ["b", "one"]
 
     async def test_only_for_a_speaker(self, scene, opt_ins):
         conversation, alice = opt_ins
@@ -811,6 +847,37 @@ class TestMemoryPass:
             assert await conversation.rag_build(character=alice) == ["a", "b", "c"]
         request.assert_not_called()
         conversation.actions["character_knowledge"].enabled = True
+
+    def test_template_renders_both_branches(self, scene, opt_ins):
+        conversation, alice = opt_ins
+        alice.description = "A keeper.\nShe hides a letter."
+        rendered = {}
+        for viewer in ("Alice", None):
+            with ActiveScene(scene):
+                prompt = Prompt.get(
+                    "conversation.memory-pass",
+                    vars={
+                        "scene": scene,
+                        "max_tokens": 8192,
+                        "character": alice,
+                        "viewer": viewer,
+                        "candidates": ["The lamp went out.", "Edwin hid the sextant."],
+                        "scene_history": ["Alice: Hello.", "Edwin: Hi."],
+                        "knowledge_index": KnowledgeIndex.from_scene(scene),
+                    },
+                )
+                rendered[viewer] = prompt.render()
+        with_viewer, without = rendered["Alice"], rendered[None]
+        assert "## Alice" in with_viewer and "She hides a letter." in with_viewer
+        assert "as what Alice knows of it" in with_viewer
+        assert "## Alice" not in without
+        assert "the part that matters for Alice's next line" in without
+        for text in rendered.values():
+            assert "1. The lamp went out." in text
+            assert "2. Edwin hid the sextant." in text
+            assert "Alice: Hello." in text
+            assert '<ITEM n="3">' in text
+            assert text.rstrip().endswith("<ITEMS>")
 
 
 class TestLedger:

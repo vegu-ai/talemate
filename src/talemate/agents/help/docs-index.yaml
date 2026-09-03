@@ -93,8 +93,9 @@
     instruction offset, and stop-token controls. Also covers scene-intent, writing-style, and long-term-memory context choices.
     Character Knowledge group: the perspective filter (drop spans the speaking character was not present for, memory filtered
     by their knowledge), the absence block listing recent facts the character does not know, its line cap and window, the
-    awareness line (which topics the character knows all, some or nothing of), and three +1-request opt-ins off by default:
-    AI knowledge gate, AI memory rerank (keep count), learned-this-turn ledger (inferred grants).'
+    awareness line (which topics the character knows all, some or nothing of), and two +1-request opt-ins off by default:
+    the AI memory pass (retrieved memories rewritten as what the character knows, dropped or ordered for the next line),
+    the learned-this-turn ledger (inferred grants).'
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Explains AI continuation of supported text fields via Ctrl/Cmd+Enter, optional trailing brace hints, and the Redo/Undo
@@ -1236,7 +1237,7 @@
     line, memory retrieval filtered per speaker and an absence block of facts they do not know; the Known by visibility setting
     on attributes, details, descriptions and world entries; the Knowledge tab for grants and revokes with a per-topic coverage
     table and the awareness line; retrieval shaping (recency, diversity, entity lookup, similarity gate, cross-encoder) and
-    the opt-in AI gate, rerank, ledger and narrator offscreen life; older scenes without presence.'
+    the opt-in AI memory pass, ledger and narrator offscreen life; older scenes without presence.'
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: 'Pinning context entries so the AI always considers them: creating pins from the Context editor or a character

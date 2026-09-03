@@ -108,13 +108,9 @@ How many of the most recent facts are considered for the block (default 30).
 
 One line in the prompt naming which topics the character knows all, some or nothing of, from the [Memory agent's topics](/talemate/user-guide/agents/memory/settings/#topics): `Edwin knows all of the Sorena, some of the sextant, nothing of the boat`. Only topics with at least three facts count, largest first, six at most; the line is left out when no topic qualifies. On by default, no request.
 
-##### AI knowledge gate
+##### AI memory pass
 
-Asks the AI which of the retrieved memories the character would actually know, from their own point of view, and keeps only those. +1 request per line, handled by the World State agent's client. Off by default. An answer that cannot be read keeps every memory.
-
-##### AI memory rerank
-
-Asks the AI to order the retrieved memories by how useful they are for the character's next line and keeps the best few (*AI memory rerank: keep*, default 5). +1 request per line, handled by the World State agent's client. Off by default. An answer that cannot be read keeps the merge order.
+One request that reads the retrieved memories together with the story as the character's prompt will see it, and returns them rewritten for the character's next line: what adds nothing is dropped, the rest is ordered most useful first. With the *Perspective filter* on, each memory becomes what the character knows of it, from their own point of view, and a memory they know nothing of is dropped. With the filter off the pass only rewrites for relevance, drops what adds nothing and orders. +1 request per line, handled by the World State agent's client. Off by default. An answer that cannot be read keeps the memories as retrieved.
 
 ##### Learned-this-turn ledger
 

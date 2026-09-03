@@ -1,7 +1,7 @@
 """
 Retrieval (#394 part G): recency term, diversity threshold, similarity
 knowledge gate, entity lookup by id, cross-encoder rerank, the conversation
-opt-ins, the narrator's offscreen life and the character.activated signal.
+opt-ins (the AI memory pass, the ledger), the narrator's offscreen life and the character.activated signal.
 """
 
 from unittest.mock import AsyncMock, patch
@@ -11,8 +11,8 @@ import pytest
 import talemate.emit.async_signals as async_signals
 from talemate.agents.conversation.knowledge import (
     normalize_fact_id,
-    parse_index_list,
     parse_ledger,
+    parse_pass_items,
 )
 from talemate.agents.memory.rerank import (
     CrossEncoderReranker,
@@ -600,26 +600,46 @@ class TestEntityLookup:
 
 
 class TestParsers:
-    def test_index_list(self):
-        assert parse_index_list(None) is None
-        assert parse_index_list("") is None
-        assert parse_index_list("none") == []
-        assert parse_index_list("None.") == []
-        assert parse_index_list("None of them apply") == []
-        assert parse_index_list("none - she wasn't there") == []
-        assert parse_index_list("1, 3, 3, 0") == [1, 3]
-        assert parse_index_list("2 4") == [2, 4]
-        assert parse_index_list("no idea") is None
-        # digits inside prose are not an answer
-        for text in (
-            "I cannot decide whether candidates 2 or 4 are known.",
-            "1 through 5",
-            "candidates 1 and 2 (see note 3)",
-            "1.5",
-            "-1, 2",
-            "keep 2 and 4",
-        ):
-            assert parse_index_list(text) is None, text
+    def test_pass_items(self):
+        assert parse_pass_items(None) is None
+        assert parse_pass_items("") is None
+        assert parse_pass_items("   ") is None
+        assert parse_pass_items("none") == []
+        assert parse_pass_items("None.") == []
+        assert parse_pass_items("NONE - nothing applies") == []
+        assert parse_pass_items("3. Third\n1. First") == [(3, "Third"), (1, "First")]
+        # every separator the models use
+        assert parse_pass_items("2) two\n4: four\n5 - five") == [
+            (2, "two"),
+            (4, "four"),
+            (5, "five"),
+        ]
+        # a rewrite that wraps continues the item
+        assert parse_pass_items("1. The lamp\nwent out.\n2. Two") == [
+            (1, "The lamp went out."),
+            (2, "Two"),
+        ]
+        # the first mention of a number wins; its later copy is ignored
+        assert parse_pass_items("1. one\n2. two\n1. again\nmore") == [
+            (1, "one"),
+            (2, "two"),
+        ]
+        # an empty rewrite is kept for the caller to fill in
+        assert parse_pass_items("2.\n1. one") == [(2, ""), (1, "one")]
+        # a wrapped line that opens with a time or a range continues the item
+        assert parse_pass_items("1. She left\n10:30 she returned") == [
+            (1, "She left 10:30 she returned")
+        ]
+        assert parse_pass_items("1. one\n2-3 days later she came back") == [
+            (1, "one 2-3 days later she came back")
+        ]
+        assert parse_pass_items("2- two\n3: three") == [(2, "two"), (3, "three")]
+        # fences and prose before the first item do not count
+        assert parse_pass_items("```\n1. one\n```") == [(1, "one")]
+        assert parse_pass_items("Here you go:\n1. one") == [(1, "one")]
+        # no numbered line: unreadable
+        assert parse_pass_items("keep the first two") is None
+        assert parse_pass_items("1, 3") is None
 
     def test_ledger(self):
         assert parse_ledger(None) is None
@@ -645,9 +665,11 @@ class TestParsers:
 def opt_ins(scene):
     conversation = get_agent("conversation")
     conversation.actions["character_knowledge"].enabled = True
-    for key in ("llm_gate", "llm_rerank", "ledger"):
+    for key in ("memory_pass", "ledger"):
         conversation.actions["character_knowledge"].config[key].value = False
-    conversation.actions["character_knowledge"].config["llm_rerank_keep"].value = 5
+    conversation.actions["character_knowledge"].config[
+        "perspective_filter"
+    ].value = True
     alice = Character(name="Alice")
     edwin = Character(name="Edwin")
     scene.character_data = {"Alice": alice, "Edwin": edwin}
@@ -659,6 +681,7 @@ def opt_ins(scene):
         return ["a", "b", "c"]
 
     conversation.semantic_context = semantic
+    scene.context_history = lambda **kwargs: ["Alice: hello", "Edwin: hi"]
     return conversation, alice
 
 
@@ -666,13 +689,14 @@ def enable(conversation, key, value=True):
     conversation.actions["character_knowledge"].config[key].value = value
 
 
-class TestOptIns:
+class TestMemoryPass:
     def test_off_by_default(self, scene):
         conversation = get_agent("conversation")
-        assert conversation.knowledge_llm_gate is False
-        assert conversation.knowledge_llm_rerank is False
+        assert conversation.knowledge_memory_pass is False
         assert conversation.knowledge_ledger is False
-        assert conversation.knowledge_llm_rerank_keep == 5
+        config = conversation.actions["character_knowledge"].config
+        for key in ("llm_gate", "llm_rerank", "llm_rerank_keep"):
+            assert key not in config
 
     async def test_no_request_when_off(self, scene, opt_ins):
         conversation, alice = opt_ins
@@ -683,43 +707,92 @@ class TestOptIns:
             assert await conversation.rag_build(character=alice) == ["a", "b", "c"]
         request.assert_not_called()
 
-    async def test_gate_keeps_the_answered_candidates(self, scene, opt_ins):
+    async def test_one_request_rewrites_drops_and_orders(self, scene, opt_ins):
         conversation, alice = opt_ins
-        enable(conversation, "llm_gate")
+        enable(conversation, "memory_pass")
         with (
             ActiveScene(scene),
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
         ):
-            request.return_value = ("", {"keep": "2, 3, 9"})
-            assert await conversation.rag_build(character=alice) == ["b", "c"]
-        assert request.call_args.args[0] == "conversation.knowledge-gate"
+            request.return_value = (
+                "",
+                {"items": "3. C as Alice knows it\n1. A, in short"},
+            )
+            assert await conversation.rag_build(character=alice) == [
+                "C as Alice knows it",
+                "A, in short",
+            ]
+        assert request.call_count == 1
+        assert request.call_args.args[0] == "conversation.memory-pass"
         assert request.call_args.args[1] is get_agent("world_state").client
-        assert request.call_args.kwargs["vars"]["candidates"] == ["a", "b", "c"]
-        assert request.call_args.kwargs["vars"]["character"] is alice
+        assert request.call_args.args[2] == "analyze_long"
+        vars = request.call_args.kwargs["vars"]
+        assert vars["candidates"] == ["a", "b", "c"]
+        assert vars["character"] is alice
+        assert vars["viewer"] == "Alice"
+        assert vars["scene_history"] == ["Alice: hello", "Edwin: hi"]
 
-    async def test_gate_none_drops_everything(self, scene, opt_ins):
+    async def test_story_context_follows_the_perspective_filter(self, scene, opt_ins):
         conversation, alice = opt_ins
-        enable(conversation, "llm_gate")
+        enable(conversation, "memory_pass")
+        calls = []
+
+        def context_history(**kwargs):
+            calls.append(kwargs)
+            return []
+
+        scene.context_history = context_history
         with (
             ActiveScene(scene),
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
         ):
-            request.return_value = ("", {"keep": "none"})
+            request.return_value = ("", {"items": "1. a"})
+            await conversation.rag_build(character=alice)
+            assert calls[-1]["perspective"] == "Alice"
+            assert request.call_args.kwargs["vars"]["viewer"] == "Alice"
+
+            enable(conversation, "perspective_filter", False)
+            scene.rag_cache = {}
+            await conversation.rag_build(character=alice)
+            assert calls[-1]["perspective"] is None
+            assert request.call_args.kwargs["vars"]["viewer"] is None
+        assert request.call_count == 2
+
+    async def test_none_drops_everything(self, scene, opt_ins):
+        conversation, alice = opt_ins
+        enable(conversation, "memory_pass")
+        with (
+            ActiveScene(scene),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            request.return_value = ("", {"items": "none"})
             assert await conversation.rag_build(character=alice) == []
 
-    async def test_gate_unreadable_answer_keeps_everything(self, scene, opt_ins):
+    async def test_unreadable_answer_keeps_the_candidates(self, scene, opt_ins):
         conversation, alice = opt_ins
-        enable(conversation, "llm_gate")
+        enable(conversation, "memory_pass")
         with (
             ActiveScene(scene),
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
         ):
-            request.return_value = ("", {"keep": None})
+            request.return_value = ("", {"items": None})
+            assert await conversation.rag_build(character=alice) == ["a", "b", "c"]
+            request.return_value = ("", {"items": "I would keep the first one."})
             assert await conversation.rag_build(character=alice) == ["a", "b", "c"]
 
-    async def test_gate_only_for_a_speaker(self, scene, opt_ins):
+    async def test_out_of_range_dropped_and_empty_rewrite_kept(self, scene, opt_ins):
         conversation, alice = opt_ins
-        enable(conversation, "llm_gate")
+        enable(conversation, "memory_pass")
+        with (
+            ActiveScene(scene),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            request.return_value = ("", {"items": "9. nine\n2.\n1. one\n3. ..."})
+            assert await conversation.rag_build(character=alice) == ["b", "one", "c"]
+
+    async def test_only_for_a_speaker(self, scene, opt_ins):
+        conversation, alice = opt_ins
+        enable(conversation, "memory_pass")
         with (
             ActiveScene(scene),
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
@@ -727,44 +800,9 @@ class TestOptIns:
             assert await conversation.rag_build() == ["a", "b", "c"]
         request.assert_not_called()
 
-    async def test_rerank_orders_and_keeps(self, scene, opt_ins):
+    async def test_container_off_disables_the_pass(self, scene, opt_ins):
         conversation, alice = opt_ins
-        enable(conversation, "llm_rerank")
-        enable(conversation, "llm_rerank_keep", 2)
-        with (
-            ActiveScene(scene),
-            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
-        ):
-            request.return_value = ("", {"order": "3, 1, 2"})
-            assert await conversation.rag_build(character=alice) == ["c", "a"]
-        assert request.call_args.args[0] == "conversation.memory-rerank"
-        assert request.call_args.kwargs["vars"]["keep"] == 2
-
-    async def test_rerank_unreadable_answer_keeps_the_merge(self, scene, opt_ins):
-        conversation, alice = opt_ins
-        enable(conversation, "llm_rerank")
-        with (
-            ActiveScene(scene),
-            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
-        ):
-            request.return_value = ("", {"order": "?"})
-            assert await conversation.rag_build(character=alice) == ["a", "b", "c"]
-
-    async def test_gate_then_rerank(self, scene, opt_ins):
-        conversation, alice = opt_ins
-        enable(conversation, "llm_gate")
-        enable(conversation, "llm_rerank")
-        with (
-            ActiveScene(scene),
-            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
-        ):
-            request.side_effect = [("", {"keep": "1, 3"}), ("", {"order": "2, 1"})]
-            assert await conversation.rag_build(character=alice) == ["c", "a"]
-        assert request.call_count == 2
-
-    async def test_container_off_disables_the_opt_ins(self, scene, opt_ins):
-        conversation, alice = opt_ins
-        enable(conversation, "llm_gate")
+        enable(conversation, "memory_pass")
         conversation.actions["character_knowledge"].enabled = False
         with (
             ActiveScene(scene),

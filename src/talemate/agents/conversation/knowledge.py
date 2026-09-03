@@ -11,9 +11,8 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.agents.conversation.response_specs import (
-    KNOWLEDGE_GATE_SPEC,
     KNOWLEDGE_LEDGER_SPEC,
-    MEMORY_RERANK_SPEC,
+    MEMORY_PASS_SPEC,
 )
 from talemate.instance import get_agent
 from talemate.knowledge.absence import (
@@ -36,7 +35,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "CharacterKnowledgeMixin",
-    "parse_index_list",
+    "parse_pass_items",
     "parse_ledger",
     "normalize_fact_id",
 ]
@@ -46,17 +45,18 @@ log = structlog.get_logger("talemate.agents.conversation.knowledge")
 LEDGER_FACTS_PER_CHARACTER = 20
 
 
-_INDEX_LIST = re.compile(
-    r"^\s*(?:none|\d+(?:\s*[,\s]\s*\d+)*)\s*\.?\s*$", re.IGNORECASE
-)
+# a wrapped line that opens with a time or a range ("10:30 she", "2-3 days")
+# is a continuation, not an item
+_ITEM_LINE = re.compile(r"^\s*(\d+)\s*(?:[.)]|[:-](?!\s*\d))\s*(.*)$")
+_NO_TEXT = re.compile(r"^[\W_]*$")
 
 
-def parse_index_list(text: str | None) -> list[int] | None:
+def parse_pass_items(text: str | None) -> list[tuple[int, str]] | None:
     """
-    1-based candidate numbers from a `<KEEP>` or `<ORDER>` answer, in the
-    order given, without repeats. Only integers separated by commas or
-    whitespace, or the word "none" (an empty list), are answers; anything
-    else between them means the answer could not be read (None).
+    `(candidate number, rewritten text)` pairs from an `<ITEMS>` answer, in
+    the order given; a number repeated later is ignored. A line that does
+    not start an item continues the previous one. "none" is an empty list;
+    an answer without a numbered line could not be read (None).
     """
     if text is None:
         return None
@@ -66,14 +66,26 @@ def parse_index_list(text: str | None) -> list[int] | None:
     # "none" with a short prose tail is a normal completion of the prefill
     if re.match(r"^none\b", text, re.IGNORECASE):
         return []
-    if not _INDEX_LIST.match(text):
-        return None
-    numbers: list[int] = []
-    for match in re.findall(r"\d+", text):
-        value = int(match)
-        if value >= 1 and value not in numbers:
-            numbers.append(value)
-    return numbers or None
+    items: list[tuple[int, str]] = []
+    seen: set[int] = set()
+    current: int | None = None
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("```"):
+            continue
+        match = _ITEM_LINE.match(line)
+        if match:
+            number = int(match.group(1))
+            if number in seen:
+                current = None
+                continue
+            seen.add(number)
+            items.append((number, match.group(2).strip()))
+            current = len(items) - 1
+        elif current is not None:
+            number, previous = items[current]
+            items[current] = (number, f"{previous} {stripped}".strip())
+    return items or None
 
 
 def normalize_fact_id(value: str) -> str:
@@ -166,10 +178,10 @@ class CharacterKnowledgeMixin:
                     description="One line in the prompt naming which topics the character knows all, some or nothing of (from the memory agent's topics).",
                     value=True,
                 ),
-                "llm_gate": AgentActionConfig(
+                "memory_pass": AgentActionConfig(
                     type="bool",
-                    label="AI knowledge gate",
-                    description="Ask the AI which of the retrieved memories the character would actually know, and keep only those.",
+                    label="AI memory pass",
+                    description="Ask the AI to rewrite the retrieved memories for the character's next line, drop what adds nothing and order the rest by use. With the perspective filter on, each memory becomes what the character knows of it, and what they know nothing of is dropped.",
                     value=False,
                     note_on_value={
                         True: AgentActionNote(
@@ -177,27 +189,6 @@ class CharacterKnowledgeMixin:
                             text="+1 request per line. Handled by the World State agent's client.",
                         ),
                     },
-                ),
-                "llm_rerank": AgentActionConfig(
-                    type="bool",
-                    label="AI memory rerank",
-                    description="Ask the AI to order the retrieved memories by how useful they are for the next line, and keep the best few.",
-                    value=False,
-                    note_on_value={
-                        True: AgentActionNote(
-                            color="primary",
-                            text="+1 request per line. Handled by the World State agent's client.",
-                        ),
-                    },
-                ),
-                "llm_rerank_keep": AgentActionConfig(
-                    type="number",
-                    label="AI memory rerank: keep",
-                    description="How many memories the rerank keeps.",
-                    value=5,
-                    min=1,
-                    max=20,
-                    step=1,
                 ),
                 "ledger": AgentActionConfig(
                     type="bool",
@@ -253,20 +244,10 @@ class CharacterKnowledgeMixin:
         return line
 
     @property
-    def knowledge_llm_gate(self) -> bool:
+    def knowledge_memory_pass(self) -> bool:
         return self.character_knowledge_enabled and bool(
-            self.resolve_config("character_knowledge", "llm_gate")
+            self.resolve_config("character_knowledge", "memory_pass")
         )
-
-    @property
-    def knowledge_llm_rerank(self) -> bool:
-        return self.character_knowledge_enabled and bool(
-            self.resolve_config("character_knowledge", "llm_rerank")
-        )
-
-    @property
-    def knowledge_llm_rerank_keep(self) -> int:
-        return int(self.resolve_config("character_knowledge", "llm_rerank_keep"))
 
     @property
     def knowledge_ledger(self) -> bool:
@@ -334,13 +315,9 @@ class CharacterKnowledgeMixin:
 
     async def rag_build(self, character: "Character | None" = None, **kwargs):
         context = await super().rag_build(character=character, **kwargs)
-        if character is None or not context:
+        if character is None or not context or not self.knowledge_memory_pass:
             return context
-        if self.knowledge_llm_gate:
-            context = await self.knowledge_gate(character, context)
-        if self.knowledge_llm_rerank and context:
-            context = await self.memory_rerank(character, context)
-        return context
+        return await self.memory_pass(character, context)
 
     def _recent_lines(self) -> list[str]:
         """The last few scene lines, oldest first (collect_messages yields newest first)."""
@@ -355,74 +332,62 @@ class CharacterKnowledgeMixin:
         lines.reverse()
         return lines
 
-    async def knowledge_gate(self, character: "Character", candidates: list) -> list:
-        """Keep the retrieved memories the character would know (+1 request)."""
+    async def memory_pass(
+        self, character: "Character", candidates: list[str]
+    ) -> list[str]:
+        """
+        The retrieved memories as the character's next line should see them:
+        rewritten, dropped and ordered by one request. With the perspective
+        filter on they are cut to what the character knows.
+        """
         candidates = list(candidates)
+        client = self.knowledge_analysis_client
+        viewer = self.rag_knowledge_viewer(character)
+        scene_history = self.scene.context_history(
+            budget=int(client.max_token_length * 0.5),
+            min_dialogue=15,
+            sections=False,
+            keep_director=False,
+            perspective=viewer,
+        )
         _, extracted = await Prompt.request(
-            "conversation.knowledge-gate",
-            self.knowledge_analysis_client,
-            "analyze_freeform",
+            "conversation.memory-pass",
+            client,
+            "analyze_long",
             vars={
                 "scene": self.scene,
-                "max_tokens": self.knowledge_analysis_client.max_token_length,
+                "max_tokens": client.max_token_length,
                 "character": character,
+                "viewer": viewer,
                 "candidates": candidates,
+                "scene_history": scene_history,
                 "knowledge_index": KnowledgeIndex.from_scene(self.scene),
             },
-            response_spec=KNOWLEDGE_GATE_SPEC,
+            response_spec=MEMORY_PASS_SPEC,
         )
-        keep = parse_index_list(extracted.get("keep"))
-        if keep is None:
+        items = parse_pass_items(extracted.get("items"))
+        if items is None:
             log.warning(
-                "knowledge gate: answer not readable, keeping every candidate",
+                "memory pass: answer not readable, keeping the candidates as retrieved",
                 character=character.name,
-                answer=extracted.get("keep"),
+                answer=extracted.get("items"),
             )
             return candidates
-        kept = [candidates[i - 1] for i in keep if i <= len(candidates)]
+        # a number with no rewrite (or only a placeholder) keeps the candidate as
+        # retrieved: the number alone says keep and where
+        passed = [
+            candidates[number - 1] if _NO_TEXT.match(text) else text
+            for number, text in items
+            if 1 <= number <= len(candidates)
+        ]
         log.debug(
-            "knowledge gate",
+            "memory pass",
             character=character.name,
+            viewer=viewer,
             candidates=len(candidates),
-            kept=len(kept),
+            kept=len(passed),
         )
-        return kept
-
-    async def memory_rerank(self, character: "Character", candidates: list) -> list:
-        """Order the retrieved memories for the next line and keep the best few (+1 request)."""
-        candidates = list(candidates)
-        keep = self.knowledge_llm_rerank_keep
-        recent = self._recent_lines()
-        _, extracted = await Prompt.request(
-            "conversation.memory-rerank",
-            self.knowledge_analysis_client,
-            "analyze_freeform",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.knowledge_analysis_client.max_token_length,
-                "character": character,
-                "candidates": candidates,
-                "recent_lines": recent,
-                "keep": keep,
-            },
-            response_spec=MEMORY_RERANK_SPEC,
-        )
-        order = parse_index_list(extracted.get("order"))
-        if order is None:
-            log.warning(
-                "memory rerank: answer not readable, keeping the merge order",
-                character=character.name,
-                answer=extracted.get("order"),
-            )
-            return candidates
-        ordered = [candidates[i - 1] for i in order if i <= len(candidates)]
-        log.debug(
-            "memory rerank",
-            character=character.name,
-            candidates=len(candidates),
-            kept=min(len(ordered), keep),
-        )
-        return ordered[:keep]
+        return passed
 
     # the signal path (a player line) has no active agent; the request needs one
     @set_processing

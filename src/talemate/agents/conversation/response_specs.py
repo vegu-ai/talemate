@@ -17,7 +17,8 @@ ITEMS_CONTAINER = AnchorExtractor(left="<ITEMS>", right="</ITEMS>")
 # an item ends at its closing tag or at the next opener; one still open at the
 # end of the container is a truncation and yields no match
 _ITEM_BLOCK = re.compile(
-    r'<ITEM n="(?P<n>\d+)">(?P<content>.*?)(?:</ITEM>|(?=<ITEM n="))',
+    r'<ITEM\s+n\s*=\s*"(?P<n>\d+)"\s*>(?P<content>.*?)'
+    r"(?:</\s*ITEM(?:\s[^>]*)?>|(?=<ITEM\s))",
     re.IGNORECASE | re.DOTALL,
 )
 

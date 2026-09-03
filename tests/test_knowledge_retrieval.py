@@ -641,6 +641,12 @@ class TestParsers:
             assert blocks["answer"].lower().startswith("none")
         blocks = extract('<ITEMS>None apply except:\n<ITEM n="3">three</ITEM></ITEMS>')
         assert pass_items(blocks["items"]) == [(3, "three")]
+        # whitespace inside a tag, mixed with a well-formed item
+        blocks = extract(
+            '<ITEMS>\n<ITEM n="1">alpha</ITEM >\n<ITEM  n="2" >beta</ITEM n="2">\n'
+            '<ITEM n = "3">gamma</ITEM>\n</ITEMS>'
+        )
+        assert pass_items(blocks["items"]) == [(1, "alpha"), (2, "beta"), (3, "gamma")]
         # an unclosed middle block ends at the next opener
         blocks = extract(
             '<ITEMS>\n<ITEM n="3">The Sorena went down the year Mara was born.\n'
@@ -828,6 +834,15 @@ class TestMemoryPass:
                 {"answer": "None apply except:", "items": items((3, "three"))},
             )
             assert await conversation.rag_build(character=alice) == ["three"]
+            # a preamble plus an item the extractor could not read is unreadable
+            request.return_value = (
+                "",
+                {
+                    "answer": 'None apply except:\n<ITEM n="3">Mara was born the year the Sor',
+                    "items": [],
+                },
+            )
+            assert await conversation.rag_build(character=alice) == ["a", "b", "c"]
 
     async def test_unreadable_answer_keeps_the_candidates(self, scene, opt_ins):
         conversation, alice = opt_ins

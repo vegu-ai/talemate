@@ -338,7 +338,13 @@ class CharacterKnowledgeMixin:
         )
         items = pass_items(extracted.get("items"))
         answer = (extracted.get("answer") or "").strip()
-        if not items and re.match(r"^none\b", answer, re.IGNORECASE):
+        # an answer that names an item but yields no readable block is
+        # unreadable, not none
+        if (
+            not items
+            and "<ITEM" not in answer.upper()
+            and re.match(r"^none\b", answer, re.IGNORECASE)
+        ):
             log.debug("memory pass: none", character=character.name)
             return []
         # the number alone says keep and where

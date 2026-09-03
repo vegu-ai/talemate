@@ -641,6 +641,28 @@ class TestParsers:
             assert blocks["answer"].lower().startswith("none")
         blocks = extract('<ITEMS>None apply except:\n<ITEM n="3">three</ITEM></ITEMS>')
         assert pass_items(blocks["items"]) == [(3, "three")]
+        # an unclosed middle block ends at the next opener
+        blocks = extract(
+            '<ITEMS>\n<ITEM n="3">The Sorena went down the year Mara was born.\n'
+            '<ITEM n="1">Mara still owes the harbourmaster.</ITEM>\n</ITEMS>'
+        )
+        assert pass_items(blocks["items"]) == [
+            (3, "The Sorena went down the year Mara was born."),
+            (1, "Mara still owes the harbourmaster."),
+        ]
+        # a tagged aside after the container is not an item
+        blocks = extract(
+            '<ITEMS>\n<ITEM n="1">Mara still owes the harbourmaster.</ITEM>\n</ITEMS>\n'
+            'I left out <ITEM n="2">Edwin hid the sextant.</ITEM> because Mara was not there.'
+        )
+        assert pass_items(blocks["items"]) == [
+            (1, "Mara still owes the harbourmaster.")
+        ]
+        blocks = extract(
+            '<ITEMS>none</ITEMS>\nFor reference I considered <ITEM n="2">the sextant</ITEM>.'
+        )
+        assert blocks["items"] == []
+        assert blocks["answer"].lower().startswith("none")
 
     def test_ledger(self):
         assert parse_ledger(None) is None
@@ -783,8 +805,12 @@ class TestMemoryPass:
             patch.object(Prompt, "request", new_callable=AsyncMock) as request,
             patch("talemate.agents.conversation.knowledge.active_agent") as agent_var,
         ):
-            agent_var.get.return_value.state = {"director__actor_guidance": "Sulk."}
             request.return_value = ("", {"answer": "", "items": items((1, "A"))})
+            agent_var.get.return_value.state = {}
+            await conversation.rag_build(character=alice)
+            assert calls[-1]["keep_director"] == "Alice"
+            agent_var.get.return_value.state = {"director__actor_guidance": "Sulk."}
+            scene.rag_cache = {}
             await conversation.rag_build(character=alice)
         assert calls[-1]["keep_director"] is False
 
@@ -797,6 +823,11 @@ class TestMemoryPass:
         ):
             request.return_value = ("", {"answer": "none", "items": []})
             assert await conversation.rag_build(character=alice) == []
+            request.return_value = (
+                "",
+                {"answer": "None apply except:", "items": items((3, "three"))},
+            )
+            assert await conversation.rag_build(character=alice) == ["three"]
 
     async def test_unreadable_answer_keeps_the_candidates(self, scene, opt_ins):
         conversation, alice = opt_ins

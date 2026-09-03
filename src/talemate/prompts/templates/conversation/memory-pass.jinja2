@@ -1,11 +1,11 @@
 {#-
 Extractors:
   - answer: AnchorExtractor("<ITEMS>", "</ITEMS>")
-  - items: BlockListExtractor([("item", '<ITEM n="(?P<n>\\d+)">', "</ITEM>")])
+  - items: ItemBlockExtractor (agents/conversation/response_specs.py): the
+    <ITEM n="..."></ITEM> blocks inside the <ITEMS> container only
 
 Override example:
   {{ set_anchor_extractor("answer", "<MY_TAG>", "</MY_TAG>") }}
-  {{ set_block_list_extractor("items", blocks=[("item", '<MY_ITEM n="(?P<n>\\d+)">', "</MY_ITEM>")]) }}
 -#}
 {% if viewer -%}
 <|SECTION:{{ character.name.upper() }}|>

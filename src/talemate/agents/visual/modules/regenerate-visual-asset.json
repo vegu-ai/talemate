@@ -347,21 +347,6 @@
       "registry": "core/Watch",
       "base_type": "core/Node"
     },
-    "d47774c2-2fa9-486d-9d63-bc69432e6245": {
-      "title": "true",
-      "id": "d47774c2-2fa9-486d-9d63-bc69432e6245",
-      "properties": {
-        "value": true
-      },
-      "x": 798,
-      "y": 3222,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
     "64a75e6e-9f7d-417f-9b91-3c511bea486a": {
       "title": "SET local.generation_request",
       "id": "64a75e6e-9f7d-417f-9b91-3c511bea486a",
@@ -994,9 +979,6 @@
     ],
     "8d683970-97bd-44d7-9456-eaa2dce36876.value": [
       "47561c5c-7a92-457b-a372-10f334ebcbfd.asset_attachment_context"
-    ],
-    "d47774c2-2fa9-486d-9d63-bc69432e6245.value": [
-      "47561c5c-7a92-457b-a372-10f334ebcbfd.save_asset"
     ],
     "64a75e6e-9f7d-417f-9b91-3c511bea486a.value": [
       "50af6757-ca83-45fd-9188-82c75d72b8ce.state"

@@ -19,6 +19,8 @@ from .base import (
     register_context_id_type,
     register_context_id_meta,
     compress_name,
+    context_id_item_by_name,
+    context_id_path_str,
 )
 
 if TYPE_CHECKING:
@@ -41,8 +43,8 @@ register_context_id_meta(
         context_id="world_entry",
         items=[
             ContextIDMeta(
-                context_id="world_entry.manual:<title_hash>",
-                description="The context of a world entry. You cannot know the title hash, so query for the title.",
+                context_id="world_entry.manual:<title_hash|title>",
+                description="The context of a world entry. If you do not know the title hash, use the exact title instead.",
                 creative=True,
             ),
         ],
@@ -127,6 +129,15 @@ class WorldEntryContext(ContextIDHandler):
             if item.compressed_path == path_str:
                 return item
         return None
+
+    async def context_id_item_from_name(
+        self, context_type: str, path: list[str], path_str: str, scene: "Scene"
+    ) -> WorldEntryContextItem | None:
+        if context_type != "world_entry.manual":
+            return None
+        return context_id_item_by_name(
+            self._items(scene), context_id_path_str(path_str)
+        )
 
     async def context_id_from_path(
         self, context_type: str, path: list[str], path_str: str, scene: "Scene"

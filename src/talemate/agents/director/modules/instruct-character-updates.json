@@ -1686,7 +1686,7 @@
       "properties": {
         "name": "context_id",
         "typ": "str",
-        "instructions": "The exact attribute name you want to update. Must exist in the current character attributes. This must NEVER be description."
+        "instructions": "The exact Context ID of the attribute or detail you want to update, for example `character.attribute:Elena.00df696235df`. If you do not know the Context ID, give the exact attribute or detail name instead, for example `character.attribute:Elena.Skills`. It must exist on the character, and it must NEVER be description."
       },
       "x": -507,
       "y": -1111,
@@ -2105,6 +2105,12 @@
             "instructions": "Completely rewrite her relationships to focus on her new romantic life. She is now in a committed relationship with Riley, whom she met at a medical conference. Include that this relationship has become her priority and she's distanced herself from most of her previous colleagues and friends to focus on this new chapter in her life.",
             "replace": true,
             "context_id": "character.detail:Dr. Chen.73649cbdef73"
+          },
+          {
+            "character_name": "Elena",
+            "instructions": "Note that she now walks with a slight limp after the fall.",
+            "replace": false,
+            "context_id": "character.detail:Elena.Physical condition"
           }
         ]
       },

@@ -90,6 +90,8 @@ For Talemate to properly interact with your workflow, you need to rename specifi
 2. **Talemate Negative Prompt**: The node that encodes the negative prompt (same node types as above)
 3. **Talemate Resolution**: The node that sets the image dimensions (typically an `EmptySD3LatentImage` or similar latent image node)
 
+For each prompt node, Talemate uses its only direct text value when there is one. This supports both encoder nodes and intermediate string nodes such as `PrimitiveStringMultiline`. If a node exposes multiple values, Talemate looks for a prompt receiver named `text`, `prompt`, or `value`, in that order.
+
 **Optional Node Titles:**
 
 - **Talemate Load Model** or **Talemate Load Checkpoint**: If you want to allow model selection from Talemate's settings, rename your model loader node (typically `CheckpointLoaderSimple`, `UNETLoader`, or `UnetLoaderGGUF`) to one of these titles. If this node is not present, Talemate will use the model specified in the workflow file itself, and the model dropdown will show "- Workflow default -" as the only option.
@@ -177,4 +179,3 @@ After exporting, place the workflow JSON file in Talemate's `templates/comfyui-w
 
 !!! info "Hot-Reloading Workflows"
     Changes to workflow files are automatically detected and reloaded by the agent. After modifying a workflow file, your changes will be applied to the next image generation without needing to restart Talemate or reload the browser window.
-

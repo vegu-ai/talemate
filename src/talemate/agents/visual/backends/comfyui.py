@@ -48,6 +48,8 @@ MODEL_RETRIEVAL_MAP = [
 
 MODEL_TYPES = list(set([model_type for _, _, model_type in MODEL_RETRIEVAL_MAP]))
 
+PROMPT_RECEIVER_FALLBACKS = ("text", "prompt", "value")
+
 
 class Model(pydantic.BaseModel):
     name: str
@@ -164,10 +166,33 @@ class Workflow(pydantic.BaseModel):
         resolution_node["inputs"]["width"] = resolution.width
         resolution_node["inputs"]["height"] = resolution.height
 
-    def set_prompt(self, prompt: str, negative_prompt: str = None):
-        positive_prompt_node = None
-        negative_prompt_node = None
+    def _set_prompt_node(self, node: dict, prompt: str, prompt_kind: str):
+        inputs = node.get("inputs", {})
+        direct_string_inputs = [
+            name for name, value in inputs.items() if isinstance(value, str)
+        ]
 
+        if len(direct_string_inputs) == 1:
+            receiver = direct_string_inputs[0]
+        else:
+            receiver = next(
+                (name for name in PROMPT_RECEIVER_FALLBACKS if name in inputs),
+                None,
+            )
+
+        if receiver is None:
+            log.warning(
+                "comfyui.prompt_receiver_missing",
+                prompt_kind=prompt_kind,
+                node_title=node.get("_meta", {}).get("title"),
+                node_type=node.get("class_type"),
+                input_properties=sorted(inputs),
+            )
+            return
+
+        inputs[receiver] = prompt
+
+    def set_prompt(self, prompt: str, negative_prompt: str | None = None):
         positive_prompt_node = self.positive_prompt_node
         negative_prompt_node = self.negative_prompt_node
 
@@ -175,17 +200,10 @@ class Workflow(pydantic.BaseModel):
             log.warning("set_prompt", error="No positive prompt node found")
             return
 
-        if positive_prompt_node:
-            if "text" in positive_prompt_node["inputs"]:
-                positive_prompt_node["inputs"]["text"] = prompt
-            elif "prompt" in positive_prompt_node["inputs"]:
-                positive_prompt_node["inputs"]["prompt"] = prompt
+        self._set_prompt_node(positive_prompt_node, prompt, "positive")
 
         if negative_prompt_node and negative_prompt:
-            if "text" in negative_prompt_node["inputs"]:
-                negative_prompt_node["inputs"]["text"] = negative_prompt
-            elif "prompt" in negative_prompt_node["inputs"]:
-                negative_prompt_node["inputs"]["prompt"] = negative_prompt
+            self._set_prompt_node(negative_prompt_node, negative_prompt, "negative")
 
     def set_main_model(self, model: str):
         main_model_node = self.main_model_node

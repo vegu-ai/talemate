@@ -8,6 +8,7 @@ import urllib.parse
 import random
 import hashlib
 from pathlib import Path
+from typing import Literal
 
 # import talemate.agents.visual.automatic1111  # noqa: F401
 # import talemate.agents.visual.comfyui  # noqa: F401
@@ -47,6 +48,9 @@ MODEL_RETRIEVAL_MAP = [
 ]
 
 MODEL_TYPES = list(set([model_type for _, _, model_type in MODEL_RETRIEVAL_MAP]))
+
+PROMPT_RECEIVER_FALLBACKS = ("text", "prompt", "value")
+OBJECT_INFO_TIMEOUT = 5.0
 
 
 class Model(pydantic.BaseModel):
@@ -164,10 +168,56 @@ class Workflow(pydantic.BaseModel):
         resolution_node["inputs"]["width"] = resolution.width
         resolution_node["inputs"]["height"] = resolution.height
 
-    def set_prompt(self, prompt: str, negative_prompt: str = None):
-        positive_prompt_node = None
-        negative_prompt_node = None
+    def _set_prompt_node(
+        self,
+        node: dict,
+        prompt: str,
+        prompt_kind: Literal["positive", "negative"],
+        object_info: dict | None = None,
+    ):
+        inputs = node.get("inputs", {})
+        receiver = next(
+            (name for name in PROMPT_RECEIVER_FALLBACKS if name in inputs),
+            None,
+        )
 
+        node_schema = (object_info or {}).get(node.get("class_type"))
+        if receiver is None and node_schema:
+            schema_inputs = node_schema.get("input", {})
+            declared_string_inputs = [
+                name
+                for group in ("required", "optional")
+                for name, definition in schema_inputs.get(group, {}).items()
+                if name in inputs and definition and definition[0] == "STRING"
+            ]
+            if len(declared_string_inputs) == 1:
+                receiver = declared_string_inputs[0]
+
+        if receiver is None and not node_schema:
+            direct_string_inputs = [
+                name for name, value in inputs.items() if isinstance(value, str)
+            ]
+            if len(direct_string_inputs) == 1:
+                receiver = direct_string_inputs[0]
+
+        if receiver is None:
+            log.warning(
+                "comfyui.prompt_receiver_missing",
+                prompt_kind=prompt_kind,
+                node_title=node.get("_meta", {}).get("title"),
+                node_type=node.get("class_type"),
+                input_properties=sorted(inputs),
+            )
+            return
+
+        inputs[receiver] = prompt
+
+    def set_prompt(
+        self,
+        prompt: str,
+        negative_prompt: str | None = None,
+        object_info: dict | None = None,
+    ):
         positive_prompt_node = self.positive_prompt_node
         negative_prompt_node = self.negative_prompt_node
 
@@ -175,17 +225,17 @@ class Workflow(pydantic.BaseModel):
             log.warning("set_prompt", error="No positive prompt node found")
             return
 
-        if positive_prompt_node:
-            if "text" in positive_prompt_node["inputs"]:
-                positive_prompt_node["inputs"]["text"] = prompt
-            elif "prompt" in positive_prompt_node["inputs"]:
-                positive_prompt_node["inputs"]["prompt"] = prompt
+        self._set_prompt_node(
+            positive_prompt_node, prompt, "positive", object_info=object_info
+        )
 
         if negative_prompt_node and negative_prompt:
-            if "text" in negative_prompt_node["inputs"]:
-                negative_prompt_node["inputs"]["text"] = negative_prompt
-            elif "prompt" in negative_prompt_node["inputs"]:
-                negative_prompt_node["inputs"]["prompt"] = negative_prompt
+            self._set_prompt_node(
+                negative_prompt_node,
+                negative_prompt,
+                "negative",
+                object_info=object_info,
+            )
 
     def set_main_model(self, model: str):
         main_model_node = self.main_model_node
@@ -325,10 +375,11 @@ class Backend(backends.Backend):
             return self._object_info
 
         log.debug("ComfyUI - Getting object info", api_url=self.api_url)
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=OBJECT_INFO_TIMEOUT) as client:
             response = await client.get(
                 url=f"{normalize_api_url(self.api_url)}/object_info"
             )
+            response.raise_for_status()
             self._object_info = response.json()
 
         return self._object_info
@@ -540,13 +591,37 @@ class Backend(backends.Backend):
             )
             return out
 
+    async def _set_workflow_prompt(
+        self,
+        workflow: Workflow,
+        prompt: str,
+        negative_prompt: str | None,
+    ):
+        try:
+            object_info = await self.object_info
+        except Exception as e:
+            log.warning(
+                "comfyui.object_info_unavailable",
+                error=backends.describe_error(e),
+                api_url=self.api_url,
+            )
+            object_info = None
+
+        workflow.set_prompt(
+            prompt,
+            negative_prompt,
+            object_info=object_info,
+        )
+
     async def generate(
         self, request: GenerationRequest, response: GenerationResponse
     ) -> bytes:
         model: str = request.agent_config["model"]
         workflow: Workflow = request.agent_config["workflow"].copy
         workflow.set_resolution(request.resolution)
-        workflow.set_prompt(request.prompt, request.negative_prompt)
+        await self._set_workflow_prompt(
+            workflow, request.prompt, request.negative_prompt
+        )
         workflow.set_main_model(model)
         workflow.set_seeds()
 

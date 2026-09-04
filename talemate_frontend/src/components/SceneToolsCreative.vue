@@ -141,6 +141,7 @@
 
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
+import { dispatchActivateCharacter, dispatchDeactivateCharacter } from '@/utils/entityActions';
 export default {
     name: 'SceneToolsCreative',
     components: {
@@ -256,13 +257,17 @@ export default {
         },
         
         activateCharacter(ev, name) {
-            let modifyNoNarration = isPrimaryModifier(ev);
-            this.getWebsocket().send(JSON.stringify({ type: 'director', action: 'activate_character', character_name: name, never_narrate: modifyNoNarration }));
+            dispatchActivateCharacter(this.getWebsocket(), {
+                name,
+                neverNarrate: isPrimaryModifier(ev),
+            });
         },
 
         deactivateCharacter(ev, name) {
-            let modifyNoNarration = isPrimaryModifier(ev);
-            this.getWebsocket().send(JSON.stringify({ type: 'director', action: 'deactivate_character', character_name: name, never_narrate: modifyNoNarration }));
+            dispatchDeactivateCharacter(this.getWebsocket(), {
+                name,
+                neverNarrate: isPrimaryModifier(ev),
+            });
         },
 
         validateTemplate(template) {

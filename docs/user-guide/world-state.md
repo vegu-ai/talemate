@@ -49,11 +49,45 @@ You can change the color of the highlights, or turn the inline styling off entir
 
 ## :material-account: Characters
 
-Each character entry will display the current emotional state next to the character's name.
+Every character that is active in the scene is listed here, whether or not the snapshot
+mentions them. Alongside them the snapshot lists the background characters it has picked up
+from the narrative — people the story refers to who are not characters in their own right yet.
+
+Each entry displays the current emotional state next to the character's name.
 
 When expanded it will also show a description of what the character is currently doing.
 
-![world state 2](/talemate/img/0.38.0/world-state-snapshot-2.png)
+![world state 2](/talemate/img/0.40.0/world-state-snapshot-2.png)
+
+### Who is in the scene
+
+An active character is one the story is happening to. It takes its turns, and it is aware of
+what happens around it. An inactive character still exists — it keeps its character sheet, its
+attributes and its tracked states — but it is out of the scene and hears none of it.
+
+![world state 6](/talemate/img/0.40.0/world-state-snapshot-6.png)
+
+#### :material-exit-run: Taking a character out of the scene
+
+Expand an active character and click the :material-exit-run: icon in its action row, beside
+**Look at** and **Manage Character**, to take that character out of the scene. It becomes an
+inactive character.
+
+The [Narrator Agent](/talemate/user-guide/agents/narrator/) narrates the exit, and asks you
+first for optional instructions for that narration. Hold **Ctrl** (or **Cmd** on macOS) while
+you click to skip the narration.
+
+#### :material-human-greeting: Calling a character back into the scene
+
+The inactive characters are collected in an **Inactive** section at the bottom of the character
+list, with their number in the heading. Expand it, then click the :material-human-greeting:
+icon beside a name to make that character active again.
+
+The entry is narrated the way an exit is, and the same **Ctrl** or **Cmd** modifier skips it.
+
+The [creative tools](/talemate/user-guide/scenario-tools/#creative-tools)
+menu and the [character editor](/talemate/user-guide/world-editor/characters) keep their own
+way of activating and deactivating characters.
 
 ### Action shortcuts
 
@@ -63,7 +97,12 @@ Beneath the description there are additional shortcuts.
 
 :material-book-open-page-variant: **Manage Character** will take you to the [character editor](/talemate/user-guide/world-editor/characters) for that character, where you can view and edit all of the character's details.
 
-:material-human-greeting: **Make real** If the world state has picked up a character that is not yet an interactive character, this will allow you to convert them into an interactive character.
+:material-exit-run: **Take out of the scene** removes an active character from the scene, as described in [Taking a character out of the scene](#taking-a-character-out-of-the-scene).
+
+:material-human-greeting: **Make real** If the world state has picked up a background character that is not yet an interactive character, this will allow you to convert them into an interactive character.
+
+
+The action is withheld when the entry's name overlaps the name of a character the scene already has, active or inactive — `Ana's sister` while `Ana` is on the roster, for example. Making that entry real would add a second character for what may be the same person, so the [creative tools](/talemate/user-guide/scenario-tools/#creative-tools) menu leaves such an entry out of its **Introduce** list too. If it really is somebody else, create them with **Introduce new character (Directed)**.
 
 ### :material-image-auto-adjust: Character State
 

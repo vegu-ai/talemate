@@ -249,16 +249,7 @@ export default {
       if (!this.scene || !this.scene.data || !this.scene.data.characters) {
         return null;
       }
-      // Find character in active characters
-      const char = this.scene.data.characters.find(c => c.name === this.character);
-      if (char) {
-        return char;
-      }
-      // Also check inactive characters
-      if (this.scene.data.inactive_characters) {
-        return Object.values(this.scene.data.inactive_characters).find(c => c.name === this.character) || null;
-      }
-      return null;
+      return this.scene.data.characters.find(c => c.name === this.character) || null;
     },
     // Asset mixin expects these
     assetId() {

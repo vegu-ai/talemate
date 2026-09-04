@@ -1,7 +1,12 @@
 /**
  * Shared websocket dispatchers for the entity-action surfaces (chat-view
- * tooltip via EntityHighlightMixin + WorldState.vue sidebar). Keeps the wire
- * shape for the two entity-level verbs in one place:
+ * tooltip via EntityHighlightMixin, WorldState.vue sidebar, creative tool
+ * menu). Keeps the wire shape for the entity-level verbs in one place:
+ *
+ *   - "Call into scene" / "Take out of scene" (UI labels) →
+ *     director.activate_character | director.deactivate_character
+ *     `neverNarrate` skips the narrator's entry/exit narration, which the
+ *     surfaces offer on the platform's primary modifier.
  *
  *   - "Add Detail" (UI label) → world_state_agent.examine_entity
  *     Expands the snapshot the user is looking at into a
@@ -43,6 +48,25 @@ function sendDescribeQuery(ws, name) {
     }));
 }
 
+function sendCharacterPresence(ws, { action, name, neverNarrate }) {
+    ws.send(JSON.stringify({
+        type: 'director',
+        action,
+        character_name: name,
+        never_narrate: neverNarrate,
+    }));
+}
+
+export function dispatchActivateCharacter(ws, { name, neverNarrate }) {
+    if (!ws || !name) return;
+    sendCharacterPresence(ws, { action: 'activate_character', name, neverNarrate: !!neverNarrate });
+}
+
+export function dispatchDeactivateCharacter(ws, { name, neverNarrate }) {
+    if (!ws || !name) return;
+    sendCharacterPresence(ws, { action: 'deactivate_character', name, neverNarrate: !!neverNarrate });
+}
+
 export function dispatchExamineEntity(ws, { name, kind, snapshot }) {
     if (!ws || !name || !kind || !snapshot) return;
     sendExamineEntity(ws, { name, kind, snapshot });
@@ -67,9 +91,7 @@ export function isKnownSceneCharacter(sceneData, name) {
     for (const c of active) {
         if (c?.name === name) return true;
     }
-    const inactive = sceneData.inactive_characters || {};
-    for (const key in inactive) {
-        if (inactive[key]?.name === name) return true;
-    }
-    return false;
+    // scene_status sends inactive_characters as a plain list of names
+    const inactive = sceneData.inactive_characters || [];
+    return inactive.includes(name);
 }

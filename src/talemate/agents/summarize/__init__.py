@@ -516,6 +516,7 @@ class SummarizeAgent(
                 ts,
                 parsed_facts,
                 self.archive_fact_dedupe_distance,
+                notify=True,
             )
             await refresh_topics(scene)
 

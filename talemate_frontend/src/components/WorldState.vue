@@ -30,7 +30,7 @@
             <!-- CHARACTERS -->
 
             <v-expansion-panels density="compact" v-for="row in characterRoster" :key="row.name">
-                <v-expansion-panel rounded="0" density="compact">
+                <v-expansion-panel rounded="0" density="compact" class="character-row" :class="{ 'character-row-active': row.active }">
 
                     <!-- TITLE: CHARACTER NAME -->
 
@@ -38,6 +38,7 @@
                         {{ row.name }}
                         <span class="text-body-small ml-1 text-muted">{{ row.emotion }}</span>
                         <template v-slot:actions>
+                            <span v-if="row.active" class="knowledge-marker-space"></span>
                             <v-icon v-if="characterSuggestions(row.name)" color="highlight5" class="mr-1">mdi-lightbulb-on</v-icon>
                             <div v-else-if="getCharacterAvatar(row.name)" class="character-avatar-square mr-1">
                                 <v-img :src="getCharacterAvatarSrc(row.name)" cover />
@@ -45,6 +46,17 @@
                             <v-icon v-else icon="mdi-account"></v-icon>
                         </template>
                     </v-expansion-panel-title>
+
+                    <Transition name="knowledge-marker">
+                        <KnowledgeChangeMarker
+                            v-if="row.active && !playthroughActive && knowledgeChanges.has(row.name)"
+                            class="active-knowledge-marker"
+                            :name="row.name"
+                            :changes="knowledgeChanges.get(row.name)"
+                            @pause="(reason, paused) => knowledgeNotifications.pause(row.name, reason, paused)"
+                            @open="openWorldStateManager('characters', row.name, 'knowledge')"
+                        />
+                    </Transition>
 
                     <!-- SNAPSHOT: CHARACTER -->
                             
@@ -135,6 +147,15 @@
                     <v-expansion-panel-text>
                         <div class="d-flex align-center" v-for="name in inactiveCharacters" :key="name">
                             <span class="text-body-small text-muted">{{ name }}</span>
+                            <Transition name="knowledge-marker">
+                                <KnowledgeChangeMarker
+                                    v-if="knowledgeChanges.has(name)"
+                                    :name="name"
+                                    :changes="knowledgeChanges.get(name)"
+                                    @pause="(reason, paused) => knowledgeNotifications.pause(name, reason, paused)"
+                                    @open="openWorldStateManager('characters', name, 'knowledge')"
+                                />
+                            </Transition>
                             <v-spacer></v-spacer>
                             <v-tooltip :text="activateTooltip(name)">
                                 <template v-slot:activator="{ props }">
@@ -258,6 +279,8 @@
 <script>
 
 import WorldStateRefreshDialog from './WorldStateRefreshDialog.vue';
+import KnowledgeChangeMarker from './KnowledgeChangeMarker.vue';
+import { createKnowledgeChanges } from '@/utils/knowledgeChanges';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import {
     dispatchActivateCharacter,
@@ -291,6 +314,7 @@ export default {
     name: 'WorldState',
     components: {
         WorldStateRefreshDialog,
+        KnowledgeChangeMarker,
     },
     mixins: [VisualAssetsMixin],
     data() {
@@ -305,6 +329,7 @@ export default {
             activePins: [],
             worldStateMaxHeight: null,
             hasAnyWorldState: false,
+            knowledgeChanges: new Map(),
         }
     },
 
@@ -315,6 +340,7 @@ export default {
     inject: [
         'getWebsocket',
         'registerMessageHandler',
+        'unregisterMessageHandler',
         'setWaitingForInput',
         'isInputDisabled',
         'formatWorldStateTemplateString',
@@ -329,6 +355,12 @@ export default {
     ],
 
     computed: {
+        knowledgeSceneId() {
+            return this.sceneData?.data?.id;
+        },
+        playthroughActive() {
+            return this.isPlaythroughActive();
+        },
         sceneData() {
             return this.scene ? this.scene() : null;
         },
@@ -389,6 +421,12 @@ export default {
     },
 
     watch: {
+        knowledgeSceneId() {
+            this.knowledgeNotifications.clear();
+        },
+        playthroughActive() {
+            this.knowledgeNotifications.clear();
+        },
         persistableCharacters: {
             handler(names) {
                 this.$emit('passive-characters', names);
@@ -609,6 +647,16 @@ export default {
         },
 
         handleMessage(data) {
+            if (data.type === 'knowledge_changed') {
+                if (data.data.scene_id === this.knowledgeSceneId && !this.playthroughActive) {
+                    this.knowledgeNotifications.add(data.data.changes, this.rosterNames);
+                }
+                return;
+            }
+            if ((data.type === 'system' && data.id === 'scene.loaded') ||
+                (data.type === 'scene_status' && data.data.restored)) {
+                this.knowledgeNotifications.clear();
+            }
             // Handle scene_asset messages using mixin method
             this.handleSceneAssetMessage(data);
             
@@ -656,12 +704,47 @@ export default {
     },
 
     created() {
+        this.knowledgeNotifications = createKnowledgeChanges((changes) => {
+            this.knowledgeChanges = changes;
+        });
         this.registerMessageHandler(this.handleMessage);
+    },
+    beforeUnmount() {
+        this.unregisterMessageHandler(this.handleMessage);
+        this.knowledgeNotifications.clear();
     },
 }
 </script>
 
 <style scoped>
+.character-row {
+    position: relative;
+}
+.character-row-active > .v-expansion-panel-title {
+    border-inline-start: 2px solid rgba(var(--v-theme-primary), 0.65);
+    background-color: rgba(var(--v-theme-primary), 0.06);
+}
+.knowledge-marker-space {
+    flex: 0 0 28px;
+}
+.active-knowledge-marker {
+    position: absolute;
+    inset-inline-end: 64px;
+    top: 12px;
+    z-index: 1;
+}
+.knowledge-marker-leave-active {
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.knowledge-marker-leave-to {
+    opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+    .knowledge-marker-leave-active {
+        transition: none;
+    }
+}
 .pre-wrap {
     white-space: pre-wrap;
 }

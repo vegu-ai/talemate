@@ -24,6 +24,7 @@ from talemate.instance import get_agent
 from talemate.emit import emit
 from talemate.util import replace_smart_quotes
 from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge, TopicCoverage
+from talemate.knowledge.changes import edge_change, emit_knowledge_changes
 from talemate.knowledge.topics import awareness_line, coverage
 from talemate.world_state import (
     ContextPin,
@@ -775,8 +776,11 @@ class WorldStateManager:
         for idx, existing in enumerate(self.world_state.knowledge):
             if existing.id == edge.id:
                 self.world_state.knowledge[idx] = edge
+                if edge_change(existing) != edge_change(edge):
+                    emit_knowledge_changes(self.scene, [edge_change(edge)])
                 return edge
         self.world_state.knowledge.append(edge)
+        emit_knowledge_changes(self.scene, [edge_change(edge)])
         return edge
 
     async def remove_knowledge_edge(self, edge_id: str):

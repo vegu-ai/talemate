@@ -23,6 +23,7 @@ from talemate.knowledge.absence import (
     render_absence_lines,
 )
 from talemate.knowledge.bucket import KnowledgeIndex
+from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 from talemate.knowledge.schema import KnowledgeEdge
 from talemate.knowledge.topics import awareness_line as topic_awareness_line
 from talemate.prompts import Prompt
@@ -459,5 +460,13 @@ class CharacterKnowledgeMixin:
                 )
                 learned.setdefault(name, []).append(fact.id)
 
+        emit_knowledge_changes(
+            scene,
+            [
+                KnowledgeChange(character=name, target=fact_id)
+                for name, fact_ids in learned.items()
+                for fact_id in fact_ids
+            ],
+        )
         log.debug("ledger", speaker=character.name, learned=learned)
         return learned

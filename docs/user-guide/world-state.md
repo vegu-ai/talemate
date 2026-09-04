@@ -55,9 +55,25 @@ from the narrative — people the story refers to who are not characters in thei
 
 Each entry displays the current emotional state next to the character's name.
 
+Active character rows have a subtle accent in the current theme's primary color.
+
 When expanded it will also show a description of what the character is currently doing.
 
 ![world state 2](/talemate/img/0.40.0/world-state-snapshot-2.png)
+
+### Knowledge changes
+
+A small dot beside a character marks new knowledge grants or revocations, or new facts
+attributed to them when a section of the story is summarized. Several changes share one
+dot. Hover over it or focus it with the keyboard to see the affected facts and entries,
+labelled **Added** or **Revoked**. Click it to open that character's **Knowledge** tab.
+
+The dot fades after eight seconds; hovering or focusing pauses that timer. Inactive
+characters can have a dot beside their name in the **Inactive** section too.
+
+Ordinary messages, snapshot refreshes, loading a scene and playthrough do not trigger the
+dot. Regenerating or deleting old facts and removing existing knowledge edges stay silent.
+These notifications add no AI requests.
 
 ### Who is in the scene
 

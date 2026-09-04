@@ -1162,7 +1162,7 @@
   title: Activate and Deactivate Characters
   summary: How to temporarily take a character out of the scene and bring them back with the Deactivate and Activate buttons
     beneath the character portrait in the Characters tab. Instant and without narration, unlike the equivalent scene tools
-    actions.
+    actions and the world panel controls.
 - path: user-guide/world-editor/characters/delete.md
   title: Delete character
   summary: 'How to permanently remove a character from a scene: select the character in the World Editor''s Characters tab,
@@ -1297,5 +1297,7 @@
 - path: user-guide/world-state.md
   title: World State
   summary: The world state snapshot panel maintained by the World State Agent - character entries with emotional state and
-    Look at / Manage Character / Make real shortcuts, object entries and tracked states, clickable entity highlights, manual
+    Look at / Manage Character / Make real shortcuts - Make real being withheld when the entry's name overlaps a character
+    the scene already has - the always-listed active characters, whose action row carries a control that takes one out of the
+    scene, the Inactive section that calls one back in, object entries and tracked states, clickable entity highlights, manual
     refresh, durable carry-forward and the Pin to context setting.

@@ -33,7 +33,21 @@ Set it from the entry's editor in the Characters tab (Description, Attributes, D
 
 ## Grants and revokes
 
-Open a character in the Characters tab and pick the **Knowledge** tab. It lists the character's grants and revokes and lets you add one: pick the entry (a sheet entry of any character, a world entry, or a static or summarized history entry), choose *Grant* or *Revoke*, and add an optional note. A static history entry is common lore, so a revoke is the only way to hide one from a character. Grants and revokes made by hand carry the source `manual`. The story produces two more: `told`, when a summary names a character who learned a fact while absent, and `inferred`, from the conversation agent's [learned-this-turn ledger](/talemate/user-guide/agents/conversation/settings/#learned-this-turn-ledger).
+Open a character in the Characters tab and pick the **Knowledge** tab. It lists the character's grants and revokes and lets you add one: pick the entry (a sheet entry of any character, a world entry, or a static or summarized history entry), choose *Grant* or *Revoke*, and add an optional note. A static history entry is common lore, so a revoke is the only way to hide one from a character. Grants and revokes made by hand carry the source `manual`, and the ones the [director](#the-director) writes carry `director`. The story produces two more: `told`, when a summary names a character who learned a fact while absent, and `inferred`, from the conversation agent's [learned-this-turn ledger](/talemate/user-guide/agents/conversation/settings/#learned-this-turn-ledger).
+
+## The director
+
+The [director chat](/talemate/user-guide/agents/director/chat/) reads and changes the same records, without an extra request beyond the call it already makes.
+
+Whenever the director looks at an entry, the entry carries a **Known by** line: the visibility setting, or the present characters of a summarized history entry, followed by the grants and revokes on it, for example `Known by: only Bob (owner); grants: Alice (director, "she read the ledger")`. The line appears in the context the director's update and query tools are given and under the value of a directly retrieved entry. The **Character Knowledge** query action answers "what does Alice know" with the character's grants and revokes, the restricted entries they can see, and the coverage table and awareness line the Knowledge tab shows.
+
+The **Character Knowledge** entry in the Update Context group of the director's actions gives it three operations, each confirmed like any other write action when confirmation is on:
+
+- `set_known_by` sets the Known by of a sheet entry or a world entry (everyone, only the owner, or a list of characters). It refuses history entries.
+- `grant_knowledge` grants a character an entry (a sheet entry, a world entry or a history entry), with an optional note.
+- `revoke_knowledge` revokes one, with an optional note.
+
+An entry can be named by its hashed Context ID or by its readable name, as everywhere else. Edges the director writes carry the source `director`, and one edge per character and entry is kept: a revoke after a grant replaces the grant, and a later grant replaces the revoke.
 
 ## Topics and coverage
 
@@ -41,7 +55,7 @@ The memory agent clusters the stored facts into [topics](/talemate/user-guide/ag
 
 ## Facts in node graphs
 
-The `knowledge/` nodes read the fact record without an LLM request: **Facts About** (facts mentioning an entity, optionally as one character knows them), **Current State** (the newest fact about an entity that no later fact supersedes), **Relationship Timeline** (facts mentioning two entities), and **Grant Knowledge** / **Revoke Knowledge** for edges written by a graph.
+The `knowledge/` nodes read the fact record without an LLM request: **Facts About** (facts mentioning an entity, optionally as one character knows them), **Current State** (the newest fact about an entity that no later fact supersedes), **Relationship Timeline** (facts mentioning two entities), and **Grant Knowledge** / **Revoke Knowledge** for edges written by a graph, which take the entry as an id or as a Context ID item, with a note, a source and a switch to keep one edge per character and entry. **Entry Knowledge** gives an entry's Known by line and edges, **Set Entry Visibility** sets the Known by of a sheet entry or world entry, and **Character Knowledge** renders the report the director's query uses. See the [node reference](/talemate/user-guide/node-editor/reference/nodes/knowledge/).
 
 ## Retrieval
 

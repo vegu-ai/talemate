@@ -110,6 +110,10 @@ class HistoryContextItem(ContextIDItem):
         human_time_diff = diff_to_human(scene.ts, self.entry.ts)
         return f"History entry - {human_time_diff} (id `{self.entry.id}`, layer {layer}, index {self.entry.index})"
 
+    @property
+    def knowledge_id(self) -> str | None:
+        return self.entry.id
+
     async def get(self, scene: "Scene") -> str | None:
         # Re-resolve latest text from scene using layer/index
         try:

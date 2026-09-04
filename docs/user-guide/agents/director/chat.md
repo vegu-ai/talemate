@@ -42,6 +42,7 @@ The director can help you with many tasks:
 - Advance time in your story
 - Manage game state variables (if your story uses them)
 - Generate images and illustrations (if the [Visualizer Agent](/talemate/user-guide/agents/visualizer) is configured)
+- Decide who knows what: set the Known by of a sheet entry or world entry, grant or revoke a character's knowledge of an entry, and ask what a character knows (see [Knowledge](/talemate/user-guide/world-editor/knowledge/#the-director))
 
 Simply describe what you want in natural language, and the director will figure out how to accomplish it.
 
@@ -149,8 +150,8 @@ Actions are organized into groups:
 | Group | Actions |
 |-------|---------|
 | **Direct Scene** | Advance time, Create new narration, Direct character action, Yield to User |
-| **Query** | Query World Information, Retrieve Context Directly, Query Game State, Query Scene Direction |
-| **Update Context** | Existing Characters, World Information, Story Configuration, Static History, Character Creation |
+| **Query** | Query World Information, Retrieve Context Directly, Query Game State, Query Scene Direction, Character Knowledge |
+| **Update Context** | Existing Characters, World Information, Story Configuration, Static History, Character Creation, Character Knowledge |
 | **Gamestate** | Make Changes (game state variables) |
 | **User Interaction** | Prompt for text input (Scene Direction only) |
 | **Visuals** | Create new Image(s), Edit Image(s) |

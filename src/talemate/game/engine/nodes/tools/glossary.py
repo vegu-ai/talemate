@@ -157,7 +157,7 @@ PAGE_TITLES: dict[str, tuple[str, str]] = {
     ),
     "knowledge": (
         "Knowledge Nodes",
-        "The fact record: facts about an entity, an entity's current state, the timeline between two entities, and grant/revoke knowledge edges.",
+        "The fact record and who knows what: facts about an entity, an entity's current state, the timeline between two entities, an entry's Known by line, a character's knowledge report, entry visibility and grant/revoke knowledge edges.",
     ),
     "agents-conversation": (
         "Conversation Agent Nodes",

@@ -735,6 +735,23 @@ class WorldStateManager:
                     kind="static" if static else "history",
                 )
             )
+        for layer_index, layer in enumerate(self.scene.layered_history or [], start=1):
+            for entry in layer:
+                if not entry.get("id"):
+                    continue
+                targets.append(
+                    KnowledgeTarget(
+                        id=entry["id"],
+                        label=f"history (layer {layer_index}): {entry.get('text', '')[:60]}",
+                        kind="history",
+                    )
+                )
+        for fact in self.world_state.facts.values():
+            targets.append(
+                KnowledgeTarget(
+                    id=fact.id, label=f"fact: {fact.text[:60]}", kind="fact"
+                )
+            )
         return targets
 
     async def get_character_knowledge(self, character_name: str) -> CharacterKnowledge:

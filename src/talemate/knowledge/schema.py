@@ -13,7 +13,7 @@ __all__ = [
 
 VisibilityMode = Literal["everyone", "owner", "list"]
 EdgeKind = Literal["grant", "revoke"]
-EdgeSource = Literal["told", "granted", "inferred", "manual"]
+EdgeSource = Literal["told", "granted", "inferred", "manual", "director"]
 FactSource = Literal["summary", "manual", "offscreen"]
 FactsStatus = Literal["ok", "failed"]
 

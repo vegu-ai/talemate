@@ -301,6 +301,12 @@ class CharacterContextItem(ContextIDItem):
             return f"{self.character.name}.detail.{self.name}"
         return None
 
+    @property
+    def knowledge_id(self) -> str | None:
+        if self.context_type == "description":
+            return f"{self.character.name}.description"
+        return self.memory_id
+
     async def get(self, scene: "Scene") -> str | int | float | bool | list[str] | None:
         if self.context_type == "description":
             return self.character.description

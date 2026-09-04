@@ -18,6 +18,7 @@ from talemate.game.engine.context_id import (
     get_meta_groups,
     scan_text_for_context_ids,
 )
+from talemate.knowledge.entry import known_by_lines
 from talemate.prompts import Prompt
 
 if TYPE_CHECKING:
@@ -78,7 +79,11 @@ class RenderContextIDs(Node):
 
         prompt = Prompt.get(
             "common.context_id_items",
-            vars={"items": items, "display_mode": display_mode},
+            vars={
+                "items": items,
+                "display_mode": display_mode,
+                "known_by": known_by_lines(active_scene.get(), items),
+            },
         )
         prompt.dedupe_enabled = False
         rendered = prompt.render()
@@ -199,7 +204,11 @@ class ScanContextIDs(Node):
 
         prompt = Prompt.get(
             "common.context_id_items",
-            vars={"items": result.resolved, "display_mode": display_mode},
+            vars={
+                "items": result.resolved,
+                "display_mode": display_mode,
+                "known_by": known_by_lines(scene, result.resolved),
+            },
         )
         prompt.dedupe_enabled = False
         rendered = prompt.render()

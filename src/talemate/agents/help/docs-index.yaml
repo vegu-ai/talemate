@@ -113,8 +113,9 @@
 - path: user-guide/agents/director/chat.md
   title: Director Chat
   summary: Comprehensive guide to the experimental Director Console chat for querying and modifying a scene, including modes,
-    action confirmation and timeout, action permissions, personas, and multiple chats. Covers action transparency, visual
-    generation, persistence, and concurrent read queries.
+    action confirmation and timeout, action permissions (Query, Update Context, Gamestate, Visuals groups; Character Knowledge
+    in Query and Update Context), personas, and multiple chats. Covers action transparency, visual generation, persistence,
+    and concurrent read queries.
 - path: user-guide/agents/director/index.md
   title: Overview
   summary: Introduces the Director agent as Talemate's game-master layer and surveys autonomous scene direction, interactive
@@ -929,9 +930,11 @@
     and Set Character Attribute, Detail and Description, Unpack Character, and Update Character Data (including renaming).'
 - path: user-guide/node-editor/reference/nodes/knowledge.md
   title: Knowledge Nodes
-  summary: 'Knowledge nodes over the fact record: Facts About (facts mentioning an entity, optionally as one character knows
-    them), Current State (the newest fact about an entity that no later fact supersedes), Relationship Timeline (facts
-    mentioning two entities), and Grant Knowledge / Revoke Knowledge for writing knowledge edges from a graph; inputs,
+  summary: 'Knowledge nodes over the fact record and who knows what: Facts About (facts mentioning an entity, optionally as
+    one character knows them), Current State (the newest fact about an entity that no later fact supersedes), Relationship
+    Timeline (facts mentioning two entities), Grant Knowledge / Revoke Knowledge for writing knowledge edges from a graph
+    (target id or Context ID item, note, source, replace), Entry Knowledge (an entry''s Known by line and edges), Set Entry
+    Visibility (Known by of a sheet or world entry) and Character Knowledge (a character''s knowledge report); inputs,
     outputs and properties of each.'
 - path: user-guide/node-editor/reference/nodes/scene-history.md
   title: Scene History Nodes
@@ -1236,8 +1239,9 @@
     told, inferred); only the conversation prompt is filtered, by the speaking character, with missed spans replaced by a gap
     line, memory retrieval filtered per speaker and an absence block of facts they do not know; the Known by visibility setting
     on attributes, details, descriptions and world entries; the Knowledge tab for grants and revokes with a per-topic coverage
-    table and the awareness line; retrieval shaping (recency, diversity, entity lookup, similarity gate, cross-encoder) and
-    the opt-in AI memory pass, ledger and narrator offscreen life; older scenes without presence.'
+    table and the awareness line; the director''s Known by line, its set_known_by / grant_knowledge / revoke_knowledge actions
+    (source director) and Character Knowledge query; retrieval shaping (recency, diversity, entity lookup, similarity gate,
+    cross-encoder) and the opt-in AI memory pass, ledger and narrator offscreen life; older scenes without presence.'
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: 'Pinning context entries so the AI always considers them: creating pins from the Context editor or a character

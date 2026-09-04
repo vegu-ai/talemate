@@ -202,7 +202,9 @@ class KnowledgeIndex:
             )
         entry_id = canonical_entry_id(entry_id)
 
-        for name, character in scene.character_data.items():
+        # the longest character name wins, so `Bob.Jr.age` is Bob.Jr's, not Bob's
+        for name in sorted(scene.character_data, key=len, reverse=True):
+            character = scene.character_data[name]
             prefix = f"{name}."
             if not entry_id.startswith(prefix):
                 continue

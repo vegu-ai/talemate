@@ -1086,7 +1086,7 @@
       "properties": {
         "name": "context_id",
         "typ": "str",
-        "instructions": "The exact context ID that you want to pin / unpin. Only world_entry.manual and character.detail context types can be pinned."
+        "instructions": "The exact context ID that you want to pin / unpin. If you do not know the hashed part of it, give the exact world entry title or character detail name instead. Only world_entry.manual and character.detail context types can be pinned."
       },
       "x": 139,
       "y": 2504,
@@ -1219,6 +1219,10 @@
             "context_id": "character.detail:Kaira.bff910fcffe3",
             "active": false,
             "condition": "Is Kaira currently in the medbay performing a procedure?"
+          },
+          {
+            "context_id": "world_entry.manual:Rosetti Family Bakery",
+            "active": true
           }
         ]
       },

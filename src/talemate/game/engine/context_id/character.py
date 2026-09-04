@@ -19,6 +19,8 @@ from .base import (
     register_context_id_type,
     register_context_id_handler,
     register_context_id_meta,
+    context_id_item_by_name,
+    context_id_path_str,
     _parts,
 )
 
@@ -67,13 +69,13 @@ register_context_id_meta(
                 creative=True,
             ),
             ContextIDMeta(
-                context_id="character.attribute:<character_name>.<attribute_hash>",
-                description="The attribute of a character. Replace <character_name> with the name of the character. You cannot know the attribute hash, so query for the attribute name.",
+                context_id="character.attribute:<character_name>.<attribute_hash|attribute_name>",
+                description="The attribute of a character. Replace <character_name> with the name of the character. If you do not know the attribute hash, use the exact attribute name instead.",
                 creative=True,
             ),
             ContextIDMeta(
-                context_id="character.detail:<character_name>.<detail_hash>",
-                description="The detail of a character. Replace <character_name> with the name of the character. You cannot know the detail hash, so query for the detail name.",
+                context_id="character.detail:<character_name>.<detail_hash|detail_name>",
+                description="The detail of a character. Replace <character_name> with the name of the character. If you do not know the detail hash, use the exact detail name instead.",
                 creative=True,
             ),
         ],
@@ -469,6 +471,14 @@ class CharacterContext(ContextIDHandler):
                 return detail
         return None
 
+    def _remaining_name(self, path_str: str) -> str | None:
+        """Get the readable name that follows the character name in a context ID."""
+        prefix = f"{self.character.name}."
+        raw_path = context_id_path_str(path_str)
+        if raw_path[: len(prefix)].casefold() != prefix.casefold():
+            return None
+        return raw_path[len(prefix) :]
+
     def _remaining_path(self, path: list[str]) -> list[str]:
         """Get the path elements after the character name.
 
@@ -525,6 +535,22 @@ class CharacterContext(ContextIDHandler):
 
         log.debug("context_id not found", path_str=path_str)
         return None
+
+    async def context_id_item_from_name(
+        self, context_type: str, path: list[str], path_str: str, scene: "Scene"
+    ) -> CharacterContextItem | None:
+        if context_type == "character.attribute":
+            iterator = self.attributes
+        elif context_type == "character.detail":
+            iterator = self.details
+        else:
+            return None
+
+        name = self._remaining_name(path_str)
+        if not name:
+            return None
+
+        return context_id_item_by_name(iterator, name)
 
     async def context_id_from_path(
         self, context_type: str, path: list[str], path_str: str, scene: "Scene"

@@ -236,7 +236,9 @@ class SummarizeAgent(
             writing_style=self.scene.writing_style,
         )
 
-        await self.build_archive(self.scene, generation_options=generation_options)
+        await self.build_archive(
+            self.scene, generation_options=generation_options, notify=True
+        )
 
     def clean_result(self, result):
         if "#" in result:
@@ -298,7 +300,11 @@ class SummarizeAgent(
 
     @set_processing
     async def build_archive(
-        self, scene, generation_options: GenerationOptions | None = None
+        self,
+        scene,
+        generation_options: GenerationOptions | None = None,
+        *,
+        notify: bool = False,
     ):
         end = None
         enabled = self.archive_enabled
@@ -516,7 +522,7 @@ class SummarizeAgent(
                 ts,
                 parsed_facts,
                 self.archive_fact_dedupe_distance,
-                notify=True,
+                notify=notify,
             )
             await refresh_topics(scene)
 

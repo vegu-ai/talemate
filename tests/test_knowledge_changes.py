@@ -9,12 +9,19 @@ from talemate.context import ActiveScene
 from talemate.emit.signals import KnowledgeChanged
 from talemate.game.engine.nodes.knowledge import GrantKnowledge, RevokeKnowledge
 from talemate.instance import get_agent
-from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
+from talemate.history import rebuild_history
+from talemate.knowledge.entry import set_edge
+from talemate.knowledge.changes import (
+    KnowledgeChange,
+    emit_knowledge_changes,
+    knowledge_label,
+)
 from talemate.knowledge.facts import store_facts
 from talemate.knowledge.schema import Fact, KnowledgeEdge, ParsedFact
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage, TimePassageMessage
 from talemate.server.websocket_server import WebsocketHandler
+from talemate.world_state import ManualContext
 
 
 @pytest.fixture
@@ -174,8 +181,9 @@ async def test_maintenance_fact_storage_is_silent(scene, notifications, fact_mem
     assert notifications == []
 
 
-async def test_build_archive_emits_after_facts_with_no_added_generation(
-    scene, notifications, fact_memory, monkeypatch
+@pytest.mark.parametrize("live", [True, False])
+async def test_live_archive_notifies_but_history_rebuild_is_silent(
+    scene, notifications, fact_memory, monkeypatch, live
 ):
     summarizer = get_agent("summarizer")
     summarizer.actions["archive"].config["threshold"].value = 100000
@@ -195,10 +203,18 @@ async def test_build_archive_emits_after_facts_with_no_added_generation(
     )
     monkeypatch.setattr(summarizer, "summarize", summarize)
     monkeypatch.setattr("talemate.agents.summarize.refresh_topics", AsyncMock())
-    assert await summarizer.build_archive(scene)
+    if live:
+        await summarizer.on_push_history(SimpleNamespace())
+    else:
+        monkeypatch.setattr(
+            "talemate.history.purge_all_history_from_memory", AsyncMock()
+        )
+        monkeypatch.setattr(scene, "commit_to_memory", AsyncMock())
+        await rebuild_history(scene)
     summarize.assert_awaited_once()
-    assert len(notifications) == 1
-    assert {c["character"] for c in notifications[0].data["changes"]} == set(both)
+    assert len(notifications) == int(live)
+    if live:
+        assert {c["character"] for c in notifications[0].data["changes"]} == set(both)
     assert scene.world_state.facts["F1"].archive_id == scene.archived_history[0]["id"]
 
 
@@ -251,3 +267,87 @@ def test_history_edge_has_a_readable_label(scene, notifications):
         notifications[0].data["changes"][0]["label"]
         == "history: Mara found the cellar key."
     )
+
+
+@pytest.mark.parametrize("writer", ["manual", "append", "replace"])
+async def test_edge_writers_ignore_source_changes_and_duplicate_grants(
+    scene, notifications, writer
+):
+    original = KnowledgeEdge(character="Mara", target="F1", source="told")
+    scene.world_state.knowledge = [original]
+    edge = KnowledgeEdge(character="Mara", target="F1", source="director")
+    if writer == "manual":
+        await scene.world_state_manager.set_knowledge_edge(edge)
+    else:
+        set_edge(scene, edge, replace=writer == "replace")
+    assert notifications == []
+    revoke = edge.model_copy(update={"kind": "revoke"})
+    if writer == "manual":
+        await scene.world_state_manager.set_knowledge_edge(revoke)
+    else:
+        set_edge(scene, revoke, replace=writer == "replace")
+    assert [n.data["changes"][0]["kind"] for n in notifications] == ["revoke"]
+
+
+def test_replacing_conflicting_edges_notifies_only_when_effective_kind_changes(
+    scene, notifications
+):
+    scene.world_state.knowledge = [
+        KnowledgeEdge(character="Mara", target="F1", kind=kind)
+        for kind in ["grant", "revoke"]
+    ]
+    set_edge(scene, KnowledgeEdge(character="Mara", target="F1"))
+    assert notifications == []
+    set_edge(scene, KnowledgeEdge(character="Mara", target="F1"), replace=True)
+    assert notifications[0].data["changes"][0]["kind"] == "grant"
+
+
+def test_fact_notification_does_not_build_target_catalogue(
+    scene, notifications, monkeypatch
+):
+    scene.world_state.facts["F1"] = Fact(id="F1", text="The key is hidden.")
+
+    def unexpected_catalogue():
+        pytest.fail("fact notification must not build the target catalogue")
+
+    monkeypatch.setattr(
+        scene.world_state_manager, "knowledge_targets", unexpected_catalogue
+    )
+    emit_knowledge_changes(scene, [KnowledgeChange(character="Mara", target="F1")])
+    assert notifications[0].data["changes"][0]["label"] == "The key is hidden."
+
+
+@pytest.mark.parametrize(
+    "target,label",
+    [
+        ("Mara.description", "Mara: description"),
+        ("Mara.secret", "Mara: secret"),
+        ("Mara.detail.hobby", "Mara: hobby"),
+        ("Mara.missing", "Mara.missing"),
+        ("world-secret", "world-secret"),
+        ("static-id", "static history: Before the story."),
+        ("layer-id", "history (layer 1): Earlier in the story."),
+        ("missing", "missing"),
+    ],
+)
+def test_notification_labels_resolve_only_requested_targets(scene, target, label):
+    scene.character_data = {
+        "Edwin": Character(name="Edwin"),
+        "Mara": Character(
+            name="Mara",
+            description="A keeper.",
+            base_attributes={"secret": "A secret."},
+            details={"hobby": "Sailing."},
+        ),
+    }
+    scene.world_state.manual_context["world-secret"] = ManualContext(
+        id="world-secret", text="The cellar floods."
+    )
+    scene.archived_history = [{"id": "static-id", "text": "Before the story."}]
+    scene.layered_history = [
+        [
+            {"id": "other-layer-id", "text": "Another entry."},
+            {"id": "layer-id", "text": "Earlier in the story."},
+        ]
+    ]
+    assert knowledge_label(scene, target) == label

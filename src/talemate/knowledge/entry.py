@@ -14,7 +14,11 @@ from talemate.knowledge.bucket import (
     canonical_entry_id,
 )
 from talemate.knowledge.presence import layer_entry_presence
-from talemate.knowledge.changes import edge_change, emit_knowledge_changes
+from talemate.knowledge.changes import (
+    edge_change,
+    edge_changes_knowledge,
+    emit_knowledge_changes,
+)
 from talemate.knowledge.schema import EdgeKind, EntryVisibility, KnowledgeEdge
 from talemate.knowledge.topics import awareness_line, coverage
 
@@ -270,12 +274,6 @@ def set_edge(
         for e in scene.world_state.knowledge
         if e.character == edge.character and e.target == edge.target
     ]
-    already_recorded = (
-        replace
-        and len(previous) == 1
-        and previous[0].kind == edge.kind
-        and previous[0].source == edge.source
-    )
     if replace:
         scene.world_state.knowledge = [
             e
@@ -283,7 +281,7 @@ def set_edge(
             if not (e.character == edge.character and e.target == edge.target)
         ]
     scene.world_state.knowledge.append(edge)
-    if not already_recorded:
+    if edge_changes_knowledge(edge, previous, scene.world_state.knowledge):
         emit_knowledge_changes(scene, [edge_change(edge)])
     return edge
 

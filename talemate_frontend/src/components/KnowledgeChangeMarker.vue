@@ -6,7 +6,7 @@
                     v-bind="props"
                     type="button"
                     class="knowledge-change-marker"
-                    :aria-label="`Knowledge changed for ${name}. Open Knowledge tab`"
+                    :aria-label="actionLabel || `Knowledge changed for ${name}. Open Knowledge tab`"
                     @mouseenter="$emit('pause', 'hover', true)"
                     @mouseleave="$emit('pause', 'hover', false)"
                     @focus="$emit('pause', 'focus', true)"
@@ -29,6 +29,7 @@ export default {
     props: {
         name: { type: String, required: true },
         changes: { type: Array, required: true },
+        actionLabel: { type: String, default: '' },
     },
     emits: ['open', 'pause'],
     beforeUnmount() {

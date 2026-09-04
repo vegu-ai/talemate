@@ -182,6 +182,12 @@ export default {
             }));
         },
         handleMessage(message) {
+            if (message.type === 'knowledge_changed') {
+                if (this.character && message.data?.changes?.some(change => change.character === this.character.name)) {
+                    this.request();
+                }
+                return;
+            }
             if (message.type !== 'world_state_manager') return;
             if (message.action === 'character_knowledge') {
                 if (!this.character || message.data.name !== this.character.name) return;

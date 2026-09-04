@@ -30,7 +30,7 @@
             <!-- CHARACTERS -->
 
             <v-expansion-panels density="compact" v-for="row in characterRoster" :key="row.name">
-                <v-expansion-panel rounded="0" density="compact" class="character-row" :class="{ 'character-row-active': row.active }">
+                <v-expansion-panel rounded="0" density="compact" class="character-row" :class="{ 'character-row-active': row.active, 'character-row-background': !row.active }">
 
                     <!-- TITLE: CHARACTER NAME -->
 
@@ -61,6 +61,15 @@
                     <!-- SNAPSHOT: CHARACTER -->
                             
                     <v-expansion-panel-text class="text-body-medium">
+                        <div class="mb-2">
+                            <v-tooltip :text="row.active ? 'A real character, present in the scene' : 'Picked up by the world state snapshot, not yet a character. Use Make real to promote.'">
+                                <template v-slot:activator="{ props }">
+                                    <v-chip v-bind="props" class="character-kind" size="x-small" variant="tonal" :color="row.active ? 'primary' : 'secondary'" label tabindex="0">
+                                        {{ row.active ? 'character' : 'background' }}
+                                    </v-chip>
+                                </template>
+                            </v-tooltip>
+                        </div>
                         {{ row.snapshot }}
 
                         <!-- ACTIONS: LOOK AT, PERSIST, MANAGE, TAKE OUT OF SCENE -->
@@ -136,14 +145,26 @@
 
             <!-- INACTIVE CHARACTERS -->
 
-            <v-expansion-panels density="compact" v-if="showInactiveCharacters">
-                <v-expansion-panel rounded="0" density="compact">
+            <v-expansion-panels density="compact" v-if="showInactiveCharacters" v-model="inactivePanel">
+                <v-expansion-panel rounded="0" density="compact" class="character-section-inactive">
                     <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         Inactive ({{ inactiveCharacters.length }})
                         <template v-slot:actions>
+                            <span class="knowledge-marker-space"></span>
                             <v-icon icon="mdi-account-off"></v-icon>
                         </template>
                     </v-expansion-panel-title>
+                    <Transition name="knowledge-marker">
+                        <KnowledgeChangeMarker
+                            v-if="inactivePanel !== 0 && inactiveKnowledgeChanges.length"
+                            class="active-knowledge-marker"
+                            name="inactive characters"
+                            action-label="Knowledge changed for inactive characters. Expand Inactive section"
+                            :changes="inactiveKnowledgeChanges"
+                            @pause="pauseInactiveKnowledge"
+                            @open="inactivePanel = 0"
+                        />
+                    </Transition>
                     <v-expansion-panel-text>
                         <div class="d-flex align-center" v-for="name in inactiveCharacters" :key="name">
                             <span class="text-body-small text-muted">{{ name }}</span>
@@ -330,6 +351,7 @@ export default {
             worldStateMaxHeight: null,
             hasAnyWorldState: false,
             knowledgeChanges: new Map(),
+            inactivePanel: null,
         }
     },
 
@@ -355,6 +377,14 @@ export default {
     ],
 
     computed: {
+        inactiveKnowledgeChanges() {
+            return this.inactiveCharacters.flatMap(name =>
+                (this.knowledgeChanges.get(name) || []).map(change => ({
+                    ...change,
+                    target: JSON.stringify([name, change.target]),
+                    label: `${name}: ${change.label}`,
+                })));
+        },
         knowledgeSceneId() {
             return this.sceneData?.data?.id;
         },
@@ -436,6 +466,11 @@ export default {
     },
 
     methods: {
+        pauseInactiveKnowledge(reason, paused) {
+            for (const name of this.inactiveCharacters) {
+                this.knowledgeNotifications.pause(name, reason, paused);
+            }
+        },
         onResize() {
             this.worldStateMaxHeight = this.availableHeight();
         },
@@ -717,12 +752,20 @@ export default {
 </script>
 
 <style scoped>
-.character-row {
+.character-row, .character-section-inactive {
     position: relative;
 }
 .character-row-active > .v-expansion-panel-title {
     border-inline-start: 2px solid rgba(var(--v-theme-primary), 0.65);
     background-color: rgba(var(--v-theme-primary), 0.06);
+}
+.character-row-background > .v-expansion-panel-title {
+    border-inline-start: 2px solid rgba(var(--v-theme-secondary), 0.65);
+    background-color: rgba(var(--v-theme-secondary), 0.06);
+}
+.character-section-inactive > .v-expansion-panel-title {
+    border-inline-start: 2px solid rgba(var(--v-theme-mutedheader), 0.45);
+    background-color: rgba(var(--v-theme-mutedheader), 0.04);
 }
 .knowledge-marker-space {
     flex: 0 0 28px;

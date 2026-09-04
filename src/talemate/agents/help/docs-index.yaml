@@ -1300,5 +1300,7 @@
     Look at / Manage Character / Make real shortcuts - Make real being withheld when the entry's name overlaps a character
     the scene already has - the always-listed active characters, whose action row carries a control that takes one out of the
     scene, the Inactive section that calls one back in, object entries and tracked states, clickable entity highlights, manual
-    refresh, durable carry-forward and the Pin to context setting. Active rows have a theme accent; a temporary knowledge-change
-    dot lists additions and revocations, pauses on hover/focus and opens Knowledge, without extra AI requests.
+    refresh, durable carry-forward and the Pin to context setting. Active rows, background names and the Inactive header have
+    distinct theme accents; expanded rows carry character/background chips with explanatory tooltips. A temporary knowledge-change
+    dot lists additions and revocations, surfaces changes on the collapsed Inactive header, pauses on hover/focus and opens fresh
+    Knowledge data, without extra AI requests. History rebuilds and other historical maintenance stay silent.

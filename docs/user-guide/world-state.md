@@ -56,8 +56,15 @@ from the narrative — people the story refers to who are not characters in thei
 Each entry displays the current emotional state next to the character's name.
 
 Active character rows have a subtle accent in the current theme's primary color.
+Background rows use the theme's secondary color, and the **Inactive** section header
+has a muted accent.
 
-When expanded it will also show a description of what the character is currently doing.
+Expand an entry to see what the character is currently doing and a small kind label:
+
+- **character**: "A real character, present in the scene"
+- **background**: "Picked up by the world state snapshot, not yet a character. Use Make real to promote."
+
+Hover over or focus the label to read its tooltip.
 
 ![world state 2](/talemate/img/0.40.0/world-state-snapshot-2.png)
 
@@ -69,7 +76,9 @@ dot. Hover over it or focus it with the keyboard to see the affected facts and e
 labelled **Added** or **Revoked**. Click it to open that character's **Knowledge** tab.
 
 The dot fades after eight seconds; hovering or focusing pauses that timer. Inactive
-characters can have a dot beside their name in the **Inactive** section too.
+characters can have a dot beside their name in the **Inactive** section too. When that
+section is collapsed, its header shows a dot listing the affected characters; click it
+to expand the section. The Knowledge tab refreshes when new changes arrive.
 
 Ordinary messages, snapshot refreshes, loading a scene and playthrough do not trigger the
 dot. Regenerating or deleting old facts and removing existing knowledge edges stay silent.

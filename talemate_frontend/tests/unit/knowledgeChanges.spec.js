@@ -5,8 +5,26 @@ import { lift, readSource } from './helpers/liftMethod.js';
 
 const source = readSource(fileURLToPath(new URL('../../src/components/WorldState.vue', import.meta.url)));
 const handleMessage = lift(source, 'handleMessage', 'WorldState.vue');
+const knowledgeSource = readSource(fileURLToPath(new URL('../../src/components/WorldStateManagerCharacterKnowledge.vue', import.meta.url)));
+const handleKnowledgeMessage = lift(knowledgeSource, 'handleMessage', 'WorldStateManagerCharacterKnowledge.vue');
 const change = (character = 'Mara', target = 'F1', kind = 'grant') => ({
     character, target, kind, label: 'The key is under the mat.',
+});
+
+describe('mounted character Knowledge tab', () => {
+    it('requests fresh knowledge once for its own character in a batched event', () => {
+        const host = { character: { name: 'Mara' }, request: vi.fn() };
+        handleKnowledgeMessage.call(host, { type: 'knowledge_changed', data: { changes: [change(), change('Mara', 'F2')] } });
+        expect(host.request).toHaveBeenCalledOnce();
+    });
+
+    it('ignores unrelated characters and an unselected tab', () => {
+        const host = { character: { name: 'Mara' }, request: vi.fn() };
+        handleKnowledgeMessage.call(host, { type: 'knowledge_changed', data: { changes: [change('Edwin')] } });
+        host.character = null;
+        handleKnowledgeMessage.call(host, { type: 'knowledge_changed', data: { changes: [change()] } });
+        expect(host.request).not.toHaveBeenCalled();
+    });
 });
 
 describe('transient knowledge changes', () => {

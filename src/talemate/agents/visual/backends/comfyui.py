@@ -8,6 +8,7 @@ import urllib.parse
 import random
 import hashlib
 from pathlib import Path
+from typing import Literal
 
 # import talemate.agents.visual.automatic1111  # noqa: F401
 # import talemate.agents.visual.comfyui  # noqa: F401
@@ -166,19 +167,37 @@ class Workflow(pydantic.BaseModel):
         resolution_node["inputs"]["width"] = resolution.width
         resolution_node["inputs"]["height"] = resolution.height
 
-    def _set_prompt_node(self, node: dict, prompt: str, prompt_kind: str):
+    def _set_prompt_node(
+        self,
+        node: dict,
+        prompt: str,
+        prompt_kind: Literal["positive", "negative"],
+        object_info: dict | None = None,
+    ):
         inputs = node.get("inputs", {})
-        direct_string_inputs = [
-            name for name, value in inputs.items() if isinstance(value, str)
-        ]
+        receiver = next(
+            (name for name in PROMPT_RECEIVER_FALLBACKS if name in inputs),
+            None,
+        )
 
-        if len(direct_string_inputs) == 1:
-            receiver = direct_string_inputs[0]
-        else:
-            receiver = next(
-                (name for name in PROMPT_RECEIVER_FALLBACKS if name in inputs),
-                None,
-            )
+        node_schema = (object_info or {}).get(node.get("class_type"))
+        if receiver is None and node_schema:
+            schema_inputs = node_schema.get("input", {})
+            declared_string_inputs = [
+                name
+                for group in ("required", "optional")
+                for name, definition in schema_inputs.get(group, {}).items()
+                if name in inputs and definition and definition[0] == "STRING"
+            ]
+            if len(declared_string_inputs) == 1:
+                receiver = declared_string_inputs[0]
+
+        if receiver is None and not node_schema:
+            direct_string_inputs = [
+                name for name, value in inputs.items() if isinstance(value, str)
+            ]
+            if len(direct_string_inputs) == 1:
+                receiver = direct_string_inputs[0]
 
         if receiver is None:
             log.warning(
@@ -192,7 +211,12 @@ class Workflow(pydantic.BaseModel):
 
         inputs[receiver] = prompt
 
-    def set_prompt(self, prompt: str, negative_prompt: str | None = None):
+    def set_prompt(
+        self,
+        prompt: str,
+        negative_prompt: str | None = None,
+        object_info: dict | None = None,
+    ):
         positive_prompt_node = self.positive_prompt_node
         negative_prompt_node = self.negative_prompt_node
 
@@ -200,10 +224,17 @@ class Workflow(pydantic.BaseModel):
             log.warning("set_prompt", error="No positive prompt node found")
             return
 
-        self._set_prompt_node(positive_prompt_node, prompt, "positive")
+        self._set_prompt_node(
+            positive_prompt_node, prompt, "positive", object_info=object_info
+        )
 
         if negative_prompt_node and negative_prompt:
-            self._set_prompt_node(negative_prompt_node, negative_prompt, "negative")
+            self._set_prompt_node(
+                negative_prompt_node,
+                negative_prompt,
+                "negative",
+                object_info=object_info,
+            )
 
     def set_main_model(self, model: str):
         main_model_node = self.main_model_node
@@ -564,7 +595,11 @@ class Backend(backends.Backend):
         model: str = request.agent_config["model"]
         workflow: Workflow = request.agent_config["workflow"].copy
         workflow.set_resolution(request.resolution)
-        workflow.set_prompt(request.prompt, request.negative_prompt)
+        workflow.set_prompt(
+            request.prompt,
+            request.negative_prompt,
+            object_info=await self.object_info,
+        )
         workflow.set_main_model(model)
         workflow.set_seeds()
 

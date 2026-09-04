@@ -90,7 +90,7 @@ For Talemate to properly interact with your workflow, you need to rename specifi
 2. **Talemate Negative Prompt**: The node that encodes the negative prompt (same node types as above)
 3. **Talemate Resolution**: The node that sets the image dimensions (typically an `EmptySD3LatentImage` or similar latent image node)
 
-For each prompt node, Talemate uses its only direct text value when there is one. This supports both encoder nodes and intermediate string nodes such as `PrimitiveStringMultiline`. If a node exposes multiple values, Talemate looks for a prompt receiver named `text`, `prompt`, or `value`, in that order.
+For each prompt node, Talemate first looks for an input named `text`, `prompt`, or `value`, in that order, including when that input is currently connected to another node. Otherwise, it uses ComfyUI's node schema to select the only declared `STRING` input. When the schema is unavailable, it falls back to the only direct string-valued input, which supports intermediate nodes such as `PrimitiveStringMultiline`. If Talemate cannot select a receiver unambiguously, it leaves the node unchanged and logs a warning containing the node title, type, and input names.
 
 **Optional Node Titles:**
 

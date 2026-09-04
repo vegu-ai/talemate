@@ -50,6 +50,7 @@ MODEL_RETRIEVAL_MAP = [
 MODEL_TYPES = list(set([model_type for _, _, model_type in MODEL_RETRIEVAL_MAP]))
 
 PROMPT_RECEIVER_FALLBACKS = ("text", "prompt", "value")
+OBJECT_INFO_TIMEOUT = 5.0
 
 
 class Model(pydantic.BaseModel):
@@ -374,10 +375,11 @@ class Backend(backends.Backend):
             return self._object_info
 
         log.debug("ComfyUI - Getting object info", api_url=self.api_url)
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=OBJECT_INFO_TIMEOUT) as client:
             response = await client.get(
                 url=f"{normalize_api_url(self.api_url)}/object_info"
             )
+            response.raise_for_status()
             self._object_info = response.json()
 
         return self._object_info
@@ -589,16 +591,36 @@ class Backend(backends.Backend):
             )
             return out
 
+    async def _set_workflow_prompt(
+        self,
+        workflow: Workflow,
+        prompt: str,
+        negative_prompt: str | None,
+    ):
+        try:
+            object_info = await self.object_info
+        except Exception as e:
+            log.warning(
+                "comfyui.object_info_unavailable",
+                error=backends.describe_error(e),
+                api_url=self.api_url,
+            )
+            object_info = None
+
+        workflow.set_prompt(
+            prompt,
+            negative_prompt,
+            object_info=object_info,
+        )
+
     async def generate(
         self, request: GenerationRequest, response: GenerationResponse
     ) -> bytes:
         model: str = request.agent_config["model"]
         workflow: Workflow = request.agent_config["workflow"].copy
         workflow.set_resolution(request.resolution)
-        workflow.set_prompt(
-            request.prompt,
-            request.negative_prompt,
-            object_info=await self.object_info,
+        await self._set_workflow_prompt(
+            workflow, request.prompt, request.negative_prompt
         )
         workflow.set_main_model(model)
         workflow.set_seeds()

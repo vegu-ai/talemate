@@ -1,10 +1,11 @@
 import json
 from pathlib import Path
 
+import httpx
 import pytest
 from structlog.testing import capture_logs
 
-from talemate.agents.visual.backends.comfyui import Workflow
+from talemate.agents.visual.backends.comfyui import Backend, Workflow
 
 
 def prompt_node(title, class_type, inputs):
@@ -111,6 +112,30 @@ def test_set_prompt_uses_unique_declared_string_instead_of_combo_value():
 
     assert workflow.nodes["positive"]["inputs"]["user_prompt"] == "new positive"
     assert workflow.nodes["positive"]["inputs"]["system_prompt"] == "superior"
+
+
+@pytest.mark.asyncio
+async def test_object_info_failure_uses_direct_string_fallback():
+    class UnavailableObjectInfoBackend(Backend):
+        @property
+        async def object_info(self):
+            raise httpx.ReadTimeout("")
+
+    workflow = workflow_with_prompt_nodes({"content": "old positive", "clip": ["1", 0]})
+    backend = UnavailableObjectInfoBackend(
+        api_url="http://comfyui.invalid", workflow=workflow
+    )
+
+    with capture_logs() as logs:
+        await backend._set_workflow_prompt(workflow, "new positive", None)
+
+    assert workflow.nodes["positive"]["inputs"]["content"] == "new positive"
+    assert {
+        "error": "ReadTimeout",
+        "api_url": "http://comfyui.invalid",
+        "event": "comfyui.object_info_unavailable",
+        "log_level": "warning",
+    } in logs
 
 
 @pytest.mark.parametrize(

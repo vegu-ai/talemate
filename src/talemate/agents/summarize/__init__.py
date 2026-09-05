@@ -36,6 +36,7 @@ from talemate.history import (
     collect_source_entries,
     resolve_history_entry,
 )
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.presence import presence_differs, span_presence
 from talemate.knowledge.facts import (
     drop_facts_for_entries,
@@ -51,12 +52,14 @@ from .context_history import ContextHistoryMixin
 from .layered_history import LayeredHistoryMixin
 from .tts_utils import TTSUtilsMixin
 from .perceptions import PerceptionMixin
+from .audience_summaries import AudienceSummaryMixin
 
 import talemate.agents.summarize.nodes  # noqa: F401
 from talemate.agents.summarize.websocket_handler import SummarizeWebsocketHandler
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
+
 
 log = structlog.get_logger("talemate.agents.summarize")
 
@@ -86,6 +89,7 @@ class SummarizeEmission(AgentTemplateEmission):
 
 @register()
 class SummarizeAgent(
+    AudienceSummaryMixin,
     PerceptionMixin,
     MemoryRAGMixin,
     ContextHistoryMixin,
@@ -184,6 +188,7 @@ class SummarizeAgent(
     def __init__(self, client: ClientBase | None = None, **kwargs):
         self.client = client
         self.init_perceptions()
+        self.init_audience_summaries()
 
         self.actions = SummarizeAgent.init_actions()
 
@@ -536,6 +541,9 @@ class SummarizeAgent(
             "agent.summarization.after_build_archive"
         ).send(emission)
 
+        await self.queue_summary_views(
+            scene, entry.id, generation_options=generation_options
+        )
         return True
 
     @set_processing
@@ -714,6 +722,8 @@ class SummarizeAgent(
         extra_instructions: str = None,
         generation_options: GenerationOptions | None = None,
         return_facts: bool = False,
+        audience: tuple[str, ...] | None = None,
+        skip_author_hooks: bool = False,
     ):
         """
         Summarize the given text
@@ -723,11 +733,16 @@ class SummarizeAgent(
         FACTS output did not parse.
         """
 
+        if audience and not character_knowledge_enabled(self.scene):
+            raise ValueError("Audience summaries require perception mode")
         response_length = 1024
+        if audience and return_facts:
+            raise ValueError("Audience summaries cannot return reader facts")
         extract_facts = return_facts and self.archive_extract_facts
 
         template_vars = {
             "dialogue": text,
+            "audience_summary": audience,
             "scene": self.scene,
             "max_tokens": self.client.max_token_length,
             "summarization_method": (self.archive_method if method is None else method),
@@ -753,9 +768,10 @@ class SummarizeAgent(
             summarization_type="dialogue",
         )
 
-        await talemate.emit.async_signals.get(
-            "agent.summarization.summarize.before"
-        ).send(emission)
+        if not skip_author_hooks:
+            await talemate.emit.async_signals.get(
+                "agent.summarization.summarize.before"
+            ).send(emission)
 
         template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
@@ -797,9 +813,10 @@ class SummarizeAgent(
 
         emission.response = self.clean_result(summary)
 
-        await talemate.emit.async_signals.get(
-            "agent.summarization.summarize.after"
-        ).send(emission)
+        if not skip_author_hooks:
+            await talemate.emit.async_signals.get(
+                "agent.summarization.summarize.after"
+            ).send(emission)
 
         summary = emission.response
 
@@ -818,11 +835,15 @@ class SummarizeAgent(
         analyze_chunks: bool = False,
         chunk_size: int = 1280,
         response_length: int = 2048,
+        audience: tuple[str, ...] | None = None,
+        skip_author_hooks: bool = False,
     ):
         """
         Summarize the given text
         """
 
+        if audience and not character_knowledge_enabled(self.scene):
+            raise ValueError("Audience summaries require perception mode")
         if not extra_context:
             extra_context = ""
 
@@ -832,6 +853,7 @@ class SummarizeAgent(
 
         template_vars = {
             "dialogue": text,
+            "audience_summary": audience,
             "scene": self.scene,
             "max_tokens": self.client.max_token_length,
             "extra_context": extra_context,
@@ -855,9 +877,10 @@ class SummarizeAgent(
             summarization_type="events",
         )
 
-        await talemate.emit.async_signals.get(
-            "agent.summarization.summarize.before"
-        ).send(emission)
+        if not skip_author_hooks:
+            await talemate.emit.async_signals.get(
+                "agent.summarization.summarize.before"
+            ).send(emission)
 
         template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
@@ -872,7 +895,8 @@ class SummarizeAgent(
 
         # Use extracted cleaned response (with CHUNK/CHAPTER prefixes stripped)
         cleaned_response = extracted["cleaned"] or ""
-        cleaned_response = cleaned_response.replace('"', "")
+        if not audience:
+            cleaned_response = cleaned_response.replace('"', "")
 
         log.debug(
             "layered_history_summarize",
@@ -896,11 +920,12 @@ class SummarizeAgent(
         # Filter out degenerate chunk lines that are too short to be
         # meaningful summaries. LLMs sometimes produce placeholder text
         # like "[No content.]" when a chunk overlaps with prior context.
-        cleaned_response = "\n".join(
-            line.strip()
-            for line in cleaned_response.split("\n")
-            if len(line.strip()) >= MIN_CHUNK_LINE_LENGTH or not line.strip()
-        )
+        if not audience:
+            cleaned_response = "\n".join(
+                line.strip()
+                for line in cleaned_response.split("\n")
+                if len(line.strip()) >= MIN_CHUNK_LINE_LENGTH or not line.strip()
+            )
 
         # capitalize first letter
         try:
@@ -910,9 +935,10 @@ class SummarizeAgent(
 
         emission.response = self.clean_result(cleaned_response)
 
-        await talemate.emit.async_signals.get(
-            "agent.summarization.summarize.after"
-        ).send(emission)
+        if not skip_author_hooks:
+            await talemate.emit.async_signals.get(
+                "agent.summarization.summarize.after"
+            ).send(emission)
 
         result = emission.response
 

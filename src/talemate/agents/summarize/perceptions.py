@@ -311,6 +311,7 @@ class PerceptionMixin:
                     continue
                 self._perception_status(scene, message, "pending")
         await self.ensure_perceptions(scene)
+        await self.schedule_audience_summaries(scene)
         if any(
             eligible_passage(message)
             and (
@@ -326,6 +327,7 @@ class PerceptionMixin:
     @background_task("Updating character perceptions")
     async def rebuild_perceptions(self, scene: "Scene") -> None:
         await self.ensure_perceptions(scene)
+        await self.repair_summary_views(scene)
         if self.scene is scene:
             await scene.attempt_auto_save()
 

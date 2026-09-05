@@ -185,6 +185,9 @@ class LayeredHistoryMixin:
         chunks: list[dict],
         extra_context: str,
         generation_options: GenerationOptions | None = None,
+        *,
+        audience: tuple[str, ...] | None = None,
+        skip_author_hooks: bool = False,
     ) -> list[str]:
         """
         Split chunks based on max_process_tokens and summarize each part.
@@ -222,7 +225,11 @@ class LayeredHistoryMixin:
                 response_length=self.layered_history_response_length,
                 analyze_chunks=self.layered_history_analyze_chunks,
                 chunk_size=self.layered_history_chunk_size,
+                audience=audience,
+                skip_author_hooks=skip_author_hooks,
             )
+            if audience and not summary_text.strip():
+                raise ValueError("An audience summary chunk was empty")
             summaries.append(summary_text)
 
         return summaries
@@ -355,13 +362,18 @@ class LayeredHistoryMixin:
         ).model_dump(exclude_none=True)
 
         next_layer.append(entry)
-
         emit(
             "status",
             status="busy",
             message=f"Updating layered history - layer {next_layer_index} - {num_entries_in_layer + 1} / {estimated_entries}",
         )
 
+        await self.queue_summary_views(
+            self.scene,
+            entry["id"],
+            next_layer_index + 1,
+            generation_options=generation_options,
+        )
         return entry
 
     async def _lh_summarize_layer(

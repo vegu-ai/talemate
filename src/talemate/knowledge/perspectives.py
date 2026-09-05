@@ -210,7 +210,7 @@ def _fresh(
     character,
     visited,
     *,
-    readable=True,
+    readable: bool | Literal["summary"] = True,
     read=None,
     remaining=MAX_DEPENDENCY_DEPTH - 1,
 ):
@@ -253,6 +253,10 @@ def _fresh_depth(scene, reference, character, visited, *, readable, read, remain
     ):
         return None
     views = [view for view in knowledge.views if character in view.audience]
+    # A summary may cite an analyzed source's absent audience as an omission.
+    if not views and reference.view_id is None and readable in (False, "summary"):
+        read.depths[key] = 0
+        return 0
     if reference.view_id is not None:
         views = [view for view in views if view.id == reference.view_id]
     if (
@@ -261,7 +265,8 @@ def _fresh_depth(scene, reference, character, visited, *, readable, read, remain
             reference.view_revision is not None
             and reference.view_revision != views[0].revision
         )
-        or (readable and views[0].status != "ready")
+        or (readable == "summary" and views[0].status not in ("ready", "omitted"))
+        or (readable is True and views[0].status != "ready")
         or not _passages_fresh(scene, views[0].passage_provenance, read)
     ):
         return None
@@ -272,7 +277,9 @@ def _fresh_depth(scene, reference, character, visited, *, readable, read, remain
             dependency,
             character,
             visited,
-            readable=readable,
+            readable="summary"
+            if readable and reference.kind == "summary"
+            else readable,
             read=read,
             remaining=remaining - 1,
         )
@@ -350,7 +357,7 @@ def select_character_view(
                 dependency,
                 character,
                 {source},
-                readable=status == "ready",
+                readable="summary" if source.kind == "summary" else status == "ready",
                 read=read,
             )
             for dependency in view.sources
@@ -448,7 +455,11 @@ def set_source_perspectives(
                     dependency,
                     character,
                     set(),
-                    readable=output.status == "ready",
+                    readable=(
+                        "summary" if kind == "summary" else output.status == "ready"
+                    )
+                    if output.status in ("ready", "omitted")
+                    else False,
                     read=read,
                 )
                 for character in output.audience

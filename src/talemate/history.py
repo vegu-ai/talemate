@@ -856,6 +856,9 @@ async def regenerate_history_entry(
     entry.text = summarized
 
     await update_history_entry(scene, entry)
+    await summarizer.queue_summary_views(
+        scene, entry.id, entry.layer, generation_options=generation_options
+    )
 
     return entry
 

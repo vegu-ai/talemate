@@ -9,7 +9,8 @@
     rejection, cancellation blocking, edit/version hooks and save/reload compatibility under the internal development gate.
     Defines project_character_history for budgeted actor/editor replacement prose, omission and pending behavior, revision
     boundaries and prefix readiness, formatted speaker attribution, reader-prose repetition detection, explicit stored-view
-    opt-in and the remaining summary/supplemental-context limits.'
+    opt-in, audience-targeted base/layered summary generation, exact dependencies, targeted repair, safe source-view fallback
+    and the remaining supplemental-context limits.'
 - path: dev/howto/add-a-worldstate-template-type.md
   title: Adding a new world-state template
   summary: 'Developer walkthrough for adding a world-state template type: a pydantic Template subclass under src/talemate/world_state/templates

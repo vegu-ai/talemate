@@ -50,6 +50,9 @@ END OF CONTENT TO SUMMARIZE
 
 {% include "dynamic-instructions.jinja2" %}
 <|SECTION:TASK|>
+{% if audience_summary %}
+{% include "audience-summary-instructions.jinja2" %}
+{% endif -%}
 Summarize {{ summary_target }} into a {{output_type}}.
 
 This is a specific chapter from {{ scene.context }}.

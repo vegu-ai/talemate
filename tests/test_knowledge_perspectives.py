@@ -696,7 +696,7 @@ def test_dependency_currency_readability_matrix(scene, dep_status, out_status):
     output = {"audience": ["Alice"], "status": out_status, "sources": [evidence]}
     if out_status == "ready":
         output["text"] = "Summary."
-    if out_status == "ready" and dep_status != "ready":
+    if out_status in ("ready", "omitted") and dep_status not in ("ready", "omitted"):
         before = scene.json
         with pytest.raises(ValueError, match="dependency"):
             set_source_perspectives(scene, "summary", "summary-1", [output])

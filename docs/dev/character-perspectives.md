@@ -202,18 +202,18 @@ unconscious-bystander examples for deterministic orchestration and real-model sm
 evaluation. The bounded physical-context window can miss older situational details;
 this step adds no historical reconstruction or long-term perception retrieval.
 
-## Character recent-history projection
+## Character history projection
 
 `talemate.knowledge.context.project_character_history(scene, character, *,
 budget=None, max_messages=None, before_message_id=None, keep_director=False,
 show_hidden=False, direction_mode="direction")` is the shared projection point
-for actor history and character-facing editor context. Later summary and
-supplemental-context steps should extend this function rather than introduce a
-second audience selector. It requires the internal mode and a canonical character
+for actor history and character-facing editor context, including stored base and
+layered audience summaries. Later supplemental-context steps should extend this
+function rather than introduce a second audience selector. It requires the internal mode and a canonical character
 name, and reads through `select_character_view` with one `PerspectiveReadContext`.
 
-The result is chronological replacement prose from character and narrator
-messages, rendered through the source message type's `as_format` on a temporary
+The result is chronological replacement prose from summaries and character/narrator
+messages. Messages are rendered through the source message type's `as_format` on a temporary
 copy. Character names come from the source message, not inference from the view:
 `movie_script` retains the NAME header and END-OF-LINE terminator, `chat` retains
 the speaker prefix, and `narrative` uses the body. Existing canonical speaker
@@ -222,7 +222,9 @@ a colon cannot supply a speaker name; its selected view uses plain passage
 formatting, never a header derived from reader prose. The token budget includes
 formatting. Only ready text enters the result; explicit omissions and unavailable
 views, including untracked historical passages, contribute nothing. Pending,
-failed or stale views raise `GenerationCancelled` without reader fallback. Async
+failed or stale passage views raise `GenerationCancelled` without reader fallback.
+An unavailable or stale summary descends to fresh lower-level summaries or source
+message views; it never contributes its reader text. Async
 conversation and character editor callers first await the summarizer's existing
 `ensure_perceptions` lifecycle, including its visible Retry/Cancel dialog. The
 projection performs no model request and stores no cache across reads.
@@ -240,9 +242,12 @@ optional perspective filter. The converted conversation and editor templates
 explicitly request stored views. `before_message_id` is rejected with `ValueError`
 unless this gated, perspective-specific projection is selected; it never silently
 returns later history. Best-fit expansion, minimum-dialogue backfill, intro fallback and reader
-summaries cannot append raw prose to this actor path. Until the summary step is
-implemented, this path contains recent message views only and may return less
-than the requested budget. Reader/author calls without a perspective and legacy
+summaries cannot append raw prose to this actor path. The projection chooses fresh
+audience summaries for fully covered older spans, preferring coarser summaries
+that fit, and keeps the unsummarized tail as message views. Spans crossing a
+revision boundary are excluded. A span containing hidden messages or requested
+director guidance descends to its sources so summarization cannot bypass those
+filters. The projection may return less than the requested budget. Reader/author calls without a perspective and legacy
 scenes retain their existing history assembly.
 
 Character dialogue, add-detail, rewrite and unslop use the same history projection.
@@ -352,3 +357,91 @@ only its serialized copy; the live scene is unchanged.
 explicit omission, pending/failure, a dependent summary and an independent later
 disclosure. Downstream tickets must reuse these models, `select_character_view`
 and `perspectives_changed`.
+
+## Audience summary generation and repair
+
+`SummarizeAgent.ensure_summary_views(scene, summary_id, layer=0)` derives a base
+summary from selected visible character/narrator passage views, or a higher summary from
+selected views in the immediately preceding layer. Base input reuses the projection's
+message formatter to retain source speaker attribution even for unprefixed views.
+Layer 0 means archived_history;
+layer 1 means layered_history[0], matching SourceReference. Creation and explicit
+regeneration finish reader facts, clock and status updates before scheduling audience work.
+Audience failures cannot abort reader finalization. The lifecycle uses the existing summarize /
+summarize_events request shapes for audience outputs. Higher layers retain the
+existing chunk splitting and reject empty chunks. Audience output retains short lines
+and quotation marks; the reader-only minimum-line-length filter is not applied. No new analytical request kind
+is added, and the shared development predicate gates the lifecycle.
+
+Audience groups require exactly equal supported text and compatible exact source
+references. Different audiences with identical text but independently addressed
+dependencies remain separate. Presence in one event never grants a containing
+reader summary. Explicitly omitted inputs contribute no prose but remain in
+`sources` with their view identity and revision: changing an omission invalidates
+its dependent summaries too. Ready and omitted summaries require terminal ready
+or omitted dependencies; pending/failed records can retain non-readable
+dependencies. An all-omitted input produces an omitted summary without a request.
+An analyzed source with no view for a character contributes no text; its source-only
+reference records that absence, so adding a view invalidates the partial summary.
+Thus a character joining partway through a span can receive a summary of the portion
+they know. A source with no analysis record, or a pending/failed assigned view, stays
+pending and cannot produce a falsely ready summary.
+Static or untracked historical entries are not reconstructed.
+
+Audience summary prompts receive selected source prose, with no reader previous
+summaries or global extracted facts. The source text includes established claims
+and beliefs; prompt instructions preserve speakers, attribution and uncertainty,
+and forbid inventing events or converting a reported claim into world truth.
+The audience lifecycle explicitly passes `skip_author_hooks=True` at the request
+boundary to bypass the dynamic-instruction and automatic-revision emissions;
+passing `audience` alone does not disable hooks. Their producers do not yet carry
+an audience. Configured archive instructions (base requests), explicit extra
+instructions, scene intention/context, and generation-option writing style still
+reach the templates as shared authored guidance. These inputs remain the author's
+responsibility and are not converted to character knowledge by this step. Reader
+summary calls keep their existing hooks. Combining `audience` with `return_facts=True`
+is rejected rather than silently returning no facts. These constraints reduce exposure but cannot
+guarantee that an LLM preserves every nuance; live prompt/output evaluation checks
+attributed claims alongside deterministic orchestration and persistence tests.
+
+Source changes use `perspectives_changed` and the existing transitive invalidation
+contract. Fresh sibling views and unrelated summary branches retain their prose,
+identity and revision. `repair_summary_views` queues individual audiences and processes compatible groups
+from base to higher layers, generating only affected views. Pending input parks the
+group outside the runnable queue until its sources become terminal; it does not
+start a background snackbar or autosave on every turn. A cancelled branch is removed from
+automatic retry; the shared cancellation handler consumes the scene cancellation
+flag before its sibling groups continue, and an unrelated audience edit
+does not restart its request or reset its failed status. Explicit
+regeneration can retry that branch. Message-edit background
+perception repair continues into summary repair; finalized perception work and
+manual summary edits/regeneration schedule summary repair through
+`schedule_audience_summaries`, which coalesces active work. These background tasks
+leave the websocket receive loop available for Retry/Cancel responses.
+
+Before publishing, the lifecycle rechecks the summary identity/range and exact
+selected inputs after each request. Changed or removed sources discard the
+response. Empty/failed responses leave a failed view and offer Retry; cancellation
+keeps the reader output and permits only safe lower-level context. If a concurrent
+edit changes the inputs, the discarded group is re-queued. Edits arriving during
+repair are drained in batches bounded by `MAX_SUMMARY_REPAIR_PASSES`. Waiters are
+checked after the last pass, and all repair entry points schedule remaining runnable
+work. One retained background task drains those batches, including edits arriving
+during autosave; projection uses safe sources until repair completes. Summary spans
+are derived from persisted source IDs and their current message positions, so deleting
+an uncited director or hidden message cannot widen a summary over its next passage.
+Hidden messages are excluded from new summary inputs. At selection time, projection
+checks that a summary actually covers the audience views currently requested within
+its span. Required-view checks are lazy: only passages missing from a candidate
+summary's coverage are selected, with each answer cached for the current projection.
+The projection no longer preselects every historical passage. Coverage cache keys
+include the character as well as the source and depth. Unhiding a message, or
+requesting `show_hidden=True` after a summary was built without it, descends to source views where needed. This check also applies
+through higher layers and requires no new visibility signal or saved schema. The
+projection conservatively descends past existing summaries spanning hidden messages
+unless `show_hidden=True`, and past requested director instructions. Selection checks
+freshness synchronously with the existing indexed, depth-bounded read context. Save/reload preserves the existing knowledge
+records and all dependency/view revisions; no separate summary schema is added.
+
+Debug event `character_history.skip_summary` records the summary ID, viewer and
+availability when projection descends to source views, without logging prose.

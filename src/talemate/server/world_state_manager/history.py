@@ -151,6 +151,7 @@ class HistoryMixin:
         payload = HistoryEntryPayload(**data)
 
         entry = await update_history_entry(self.scene, payload.entry)
+        await get_agent("summarizer").schedule_audience_summaries(self.scene)
 
         self.websocket_handler.queue_put(
             {

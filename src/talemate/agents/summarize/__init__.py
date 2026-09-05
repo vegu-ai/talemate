@@ -50,6 +50,7 @@ from .analyze_scene import SceneAnalyzationMixin
 from .context_history import ContextHistoryMixin
 from .layered_history import LayeredHistoryMixin
 from .tts_utils import TTSUtilsMixin
+from .perceptions import PerceptionMixin
 
 import talemate.agents.summarize.nodes  # noqa: F401
 from talemate.agents.summarize.websocket_handler import SummarizeWebsocketHandler
@@ -85,6 +86,7 @@ class SummarizeEmission(AgentTemplateEmission):
 
 @register()
 class SummarizeAgent(
+    PerceptionMixin,
     MemoryRAGMixin,
     ContextHistoryMixin,
     LayeredHistoryMixin,
@@ -181,6 +183,7 @@ class SummarizeAgent(
 
     def __init__(self, client: ClientBase | None = None, **kwargs):
         self.client = client
+        self.init_perceptions()
 
         self.actions = SummarizeAgent.init_actions()
 

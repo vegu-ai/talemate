@@ -1,0 +1,16 @@
+<|SECTION:TASK|>
+Analyze the finalized passage below. Do not continue the story. Produce complete replacement prose for each named character's perspective of THIS passage, or explicitly omit it when they perceive nothing of it.
+
+Use only supported events. Prior physical context is author evidence, not knowledge shared by the cast. Established knowledge belongs only to its named character. Authored descriptions and details are background, not proof of witnessing a new event. Preserve attribution, uncertainty and established beliefs: hearing a claim does not make it true. Do not invent beliefs, observations, disclosure, an arrival, awakening, or an opportunity to overhear. You have no authority to activate or deactivate characters.
+
+Presence is a contextual hint, never proof of attention, consciousness, audibility or access to private thought. A speaker knows their own stated private thought; other characters do not gain it from adjacent public speech. Whispered words reach only supported recipients. An unconscious bystander does not witness a passage merely because they are listed as present. A named but absent character gets an omission unless the supplied events explicitly support perception. Unknown presence is not permission to invent access.
+
+Each ready view must be standalone replacement prose containing everything this character can perceive of the current passage, without revealing inaccessible content or naming withheld secrets. Do not output the full reader passage with a private annotation. Do not restate unrelated earlier events as new learning. When nothing is perceived, use omitted and null text. Leave the reader's prose untouched.
+
+Return ONLY a JSON object with a views array. Exactly one entry per character in cast, using their exact name. Fields: audience (one-element array), status (ready or omitted), text (nonempty replacement prose for ready, null for omitted), knowledge_ids (array of supplied established-knowledge IDs actually used for this view), passage_ids (array of prior physical-context message IDs actually used for this view). Both ID arrays are required; use [] when no prior input was needed. Cite only decisive inputs, not every available context item. For an omission caused by an earlier passage (for example, unconsciousness), cite that passage even though the character did not perceive it. The host always records the current passage itself. Never invent IDs or cite another audience's knowledge. No other fields, explanation or surrounding prose.
+Example shape: {"views": [{"audience": ["Alice"], "status": "ready", "text": "Alice hears Bob say the road is closed.", "knowledge_ids": [], "passage_ids": []}, {"audience": ["Bob"], "status": "omitted", "text": null, "knowledge_ids": [], "passage_ids": [12]}]}
+<|CLOSE_SECTION|>
+<|SECTION:ANALYTICAL CONTEXT AND FINALIZED PASSAGE|>
+{{ context | tojson(indent=2) }}
+<|CLOSE_SECTION|>
+{{ bot_token }}

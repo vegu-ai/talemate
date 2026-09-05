@@ -34,6 +34,7 @@ from talemate.emit import emit, wait_for_input
 from talemate.exceptions import ActedAsCharacter, AbortWaitForInput, GenerationCancelled
 from talemate.context import active_scene, InteractionState
 from talemate.instance import get_agent, AGENTS
+from talemate.knowledge.perspectives import validate_character_rename
 from talemate.character import (
     activate_character,
     deactivate_character,
@@ -590,6 +591,10 @@ class UpdateCharacterData(Node):
         details = self.get_input_value("details")
         description = self.get_input_value("description")
         name = self.get_input_value("name")
+
+        scene = active_scene.get()
+        if self.is_set(name) and scene is not None:
+            validate_character_rename(scene, character, name)
 
         if self.is_set(base_attributes):
             character.update(base_attributes=base_attributes)

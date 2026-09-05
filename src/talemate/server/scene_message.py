@@ -18,6 +18,7 @@ import structlog
 
 import talemate.instance as instance
 from talemate.scene_message import VersionSource
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.server.websocket_plugin import Plugin
 
 log = structlog.get_logger("talemate.server.scene_message")
@@ -93,6 +94,8 @@ class SceneMessagePlugin(Plugin):
             )
 
         self.scene.edit_message(payload.id, new_text)
+        if character_knowledge_enabled(self.scene):
+            await instance.get_agent("summarizer").rebuild_perceptions(self.scene)
         await self.scene.attempt_auto_save()
         await self.signal_operation_done(signal_only=True)
 
@@ -117,6 +120,8 @@ class SceneMessagePlugin(Plugin):
             source=payload.source,
             reason=payload.reason,
         )
+        if character_knowledge_enabled(self.scene):
+            await instance.get_agent("summarizer").rebuild_perceptions(self.scene)
         await self.scene.attempt_auto_save()
         await self.signal_operation_done(signal_only=True)
 
@@ -141,5 +146,7 @@ class SceneMessagePlugin(Plugin):
                 f"Revision index {payload.index} out of range"
             )
             return
+        if character_knowledge_enabled(self.scene):
+            await instance.get_agent("summarizer").rebuild_perceptions(self.scene)
         await self.scene.attempt_auto_save()
         await self.signal_operation_done(signal_only=True)

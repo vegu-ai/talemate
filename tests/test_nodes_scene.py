@@ -443,6 +443,40 @@ async def test_update_character_data_skips_unset_fields(scene):
     assert char.color == "#abc"
 
 
+@pytest.mark.parametrize("name", ["Bob", "bob"])
+async def test_update_character_data_rejected_rename_leaves_all_fields_unchanged(
+    scene, name
+):
+    char = await _add_character(
+        scene,
+        "Alice",
+        description="Original",
+        base_attributes={"age": "30"},
+        details={"city": "Home"},
+        color="#abc",
+    )
+    other = await _add_character(scene, "Bob", description="Other character")
+    original = char.model_dump()
+    original_scene = scene.json
+    with pytest.raises(ValueError, match="another character"):
+        await _run_node(
+            UpdateCharacterData(),
+            scene,
+            inputs={
+                "character": char,
+                "base_attributes": {"age": "31"},
+                "details": {"city": "Elsewhere"},
+                "description": "Replacement",
+                "name": name,
+                "color": "#ff00ff",
+            },
+        )
+    assert char.model_dump() == original
+    assert scene.json == original_scene
+    assert scene.character_data["Alice"] is char
+    assert scene.character_data["Bob"] is other
+
+
 # ---------------------------------------------------------------------------
 # Get/SetCharacterAttribute / Detail / Description
 # ---------------------------------------------------------------------------

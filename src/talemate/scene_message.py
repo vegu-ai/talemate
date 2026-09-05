@@ -155,7 +155,11 @@ class SceneMessage(PerspectiveSourceModel):
             and 0 <= self.active_version < len(self.versions)
         ):
             self.versions[self.active_version].message = value
-        if name == "message" and value != old_text and self.knowledge is not None:
+        if (
+            name == "message"
+            and value != old_text
+            and (self.knowledge is not None or self._knowledge_scene)
+        ):
             message_content_changed(self)
 
     def append_version(
@@ -176,7 +180,7 @@ class SceneMessage(PerspectiveSourceModel):
         # wrote versions[-1].message and don't want to overwrite it.
         object.__setattr__(self, "active_version", len(self.versions) - 1)
         object.__setattr__(self, "message", message)
-        if self.knowledge is not None:
+        if self.knowledge is not None or self._knowledge_scene:
             message_content_changed(self)
         return version
 
@@ -190,7 +194,7 @@ class SceneMessage(PerspectiveSourceModel):
             )
         object.__setattr__(self, "active_version", index)
         object.__setattr__(self, "message", self.versions[index].message)
-        if self.knowledge is not None:
+        if self.knowledge is not None or self._knowledge_scene:
             message_content_changed(self)
 
     def versions_payload(self) -> dict:

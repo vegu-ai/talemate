@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 
 perspectives_changed = signal("perspectives_changed")
+MAX_DEPENDENCY_DEPTH = 32
 
 
 @dataclass
@@ -95,9 +96,35 @@ def _validate_key(key):
     SourceReference(kind=key[0], id=key[1], layer=key[2], revision=1)
 
 
-def _find(scene, key):
+class PerspectiveReadContext:
+    """Indexes and successful freshness depths for one synchronous, mutation-free read."""
+
+    def __init__(self, scene: "Scene"):
+        self.scene = scene
+        self.sources = {}
+        for source in _sources(scene):
+            self.sources.setdefault(source.key, []).append(source)
+        self.disclosures = {
+            item.id: item for item in (scene.knowledge or SceneKnowledge()).disclosures
+        }
+        self.depths = {}
+
+
+def _read_context(scene, read):
+    if read is None:
+        return PerspectiveReadContext(scene)
+    if read.scene is not scene:
+        raise ValueError("Perspective read context belongs to another scene")
+    return read
+
+
+def _find(scene, key, read=None):
     _validate_key(key)
-    matches = [source for source in _sources(scene) if source.key == key]
+    matches = (
+        _read_context(scene, read).sources.get(key, [])
+        if read is not None
+        else [source for source in _sources(scene) if source.key == key]
+    )
     if len(matches) > 1:
         raise ValueError(f"Ambiguous knowledge source: {key}")
     return matches[0] if matches else None
@@ -143,80 +170,157 @@ def source_reference(
     source_id: str | int,
     *,
     layer: int = 0,
+    read: PerspectiveReadContext | None = None,
 ) -> SourceReference | None:
     if scene.knowledge is None:
         return None
     if kind == "disclosure":
         if layer:
             raise ValueError("Disclosures do not have summary layers")
-        for disclosure in (scene.knowledge or SceneKnowledge()).disclosures:
-            if disclosure.id == source_id:
-                return SourceReference(
-                    kind=kind, id=source_id, revision=disclosure.revision
-                )
-        return None
-    source = _find(scene, (kind, source_id, layer))
+        disclosure = (
+            _read_context(scene, read).disclosures.get(source_id)
+            if read is not None
+            else next(
+                (item for item in scene.knowledge.disclosures if item.id == source_id),
+                None,
+            )
+        )
+        if disclosure is None:
+            return None
+        return SourceReference(kind=kind, id=source_id, revision=disclosure.revision)
+    source = _find(scene, (kind, source_id, layer), read)
     return source.reference() if source and source.knowledge else None
 
 
-def _fresh(scene, reference, character, visited, *, readable=True):
-    if reference in visited:
-        return False
+def _passages_fresh(scene, provenance, read=None):
+    for item in provenance:
+        source = _find(scene, ("message", item.message_id, 0), read)
+        if source is None or content_digest(source.text) != item.content_digest:
+            return False
+        if item.revision is not None and (
+            source.knowledge is None or source.knowledge.revision != item.revision
+        ):
+            return False
+    return True
+
+
+def _fresh(
+    scene,
+    reference,
+    character,
+    visited,
+    *,
+    readable=True,
+    read=None,
+    remaining=MAX_DEPENDENCY_DEPTH - 1,
+):
+    read = _read_context(scene, read)
+    return (
+        _fresh_depth(
+            scene,
+            reference,
+            character,
+            visited,
+            readable=readable,
+            read=read,
+            remaining=remaining,
+        )
+        is not None
+    )
+
+
+def _fresh_depth(scene, reference, character, visited, *, readable, read, remaining):
+    if reference in visited or remaining < 0:
+        return None
+    key = (reference, character, readable)
+    if key in read.depths:
+        depth = read.depths[key]
+        return depth if depth <= remaining else None
     visited = visited | {reference}
     if reference.kind == "disclosure":
-        state = scene.knowledge or SceneKnowledge()
-        return any(
-            item.id == reference.id
-            and item.revision == reference.revision
-            and character in item.audience
-            for item in state.disclosures
-        )
-    source = _find(scene, reference.key)
+        item = read.disclosures.get(reference.id)
+        if item and item.revision == reference.revision and character in item.audience:
+            read.depths[key] = 0
+            return 0
+        return None
+    source = _find(scene, reference.key, read)
     if not source or not source.knowledge:
-        return False
+        return None
     knowledge = source.knowledge
     if (
         knowledge.revision != reference.revision
         or knowledge.content_digest != content_digest(source.text)
     ):
-        return False
+        return None
     views = [view for view in knowledge.views if character in view.audience]
     if reference.view_id is not None:
         views = [view for view in views if view.id == reference.view_id]
-    return (
-        len(views) == 1
-        and (
-            reference.view_revision is None
-            or reference.view_revision == views[0].revision
+    if (
+        len(views) != 1
+        or (
+            reference.view_revision is not None
+            and reference.view_revision != views[0].revision
         )
-        and (not readable or views[0].status == "ready")
-        and all(
-            _fresh(scene, dependency, character, visited, readable=readable)
-            for dependency in views[0].sources
+        or (readable and views[0].status != "ready")
+        or not _passages_fresh(scene, views[0].passage_provenance, read)
+    ):
+        return None
+    depth = 0
+    for dependency in views[0].sources:
+        child_depth = _fresh_depth(
+            scene,
+            dependency,
+            character,
+            visited,
+            readable=readable,
+            read=read,
+            remaining=remaining - 1,
         )
+        if child_depth is None:
+            return None
+        depth = max(depth, child_depth + 1)
+    read.depths[key] = depth
+    return depth
+
+
+def can_cite_view(
+    scene: "Scene",
+    reference: SourceReference,
+    character: str,
+    *,
+    read: PerspectiveReadContext | None = None,
+) -> bool:
+    """Whether a ready view can support another view within the dependency limit."""
+    return character_knowledge_enabled(scene) and _fresh(
+        scene, reference, character, set(), read=read
     )
 
 
 def select_character_view(
-    scene: "Scene", source: SourceReference, character: str
+    scene: "Scene",
+    source: SourceReference,
+    character: str,
+    *,
+    read: PerspectiveReadContext | None = None,
 ) -> CharacterView:
     source = SourceReference.model_validate(source)
     if not character_knowledge_enabled(scene):
         return CharacterView(status="unavailable")
     _validate_audience(scene, (character,))
+    read = _read_context(scene, read)
     if source.kind == "disclosure":
-        for item in (scene.knowledge or SceneKnowledge()).disclosures:
-            if item.id == source.id and character in item.audience:
-                if item.revision != source.revision:
-                    return CharacterView(status="pending", source=source)
-                return CharacterView(
-                    status="ready",
-                    text=item.text,
-                    source=source,
-                    acquired=item.acquired,
-                )
+        item = read.disclosures.get(source.id)
+        if item is not None and character in item.audience:
+            if item.revision != source.revision:
+                return CharacterView(status="pending", source=source)
+            return CharacterView(
+                status="ready",
+                text=item.text,
+                source=source,
+                acquired=item.acquired,
+            )
         return CharacterView(status="unavailable", source=source)
-    owner = _find(scene, source.key)
+    owner = _find(scene, source.key, read)
     if not owner or not owner.knowledge:
         return CharacterView(status="unavailable", source=source)
     knowledge = owner.knowledge
@@ -238,9 +342,19 @@ def select_character_view(
     status = view.status
     if source.view_revision is not None and source.view_revision != view.revision:
         status = "pending"
-    if status in ("ready", "omitted") and not all(
-        _fresh(scene, dependency, character, {source}, readable=status == "ready")
-        for dependency in view.sources
+    if status in ("ready", "omitted") and not (
+        _passages_fresh(scene, view.passage_provenance, read)
+        and all(
+            _fresh(
+                scene,
+                dependency,
+                character,
+                {source},
+                readable=status == "ready",
+                read=read,
+            )
+            for dependency in view.sources
+        )
     ):
         status = "pending"
     return CharacterView(
@@ -276,6 +390,13 @@ def _notify(scene, old, replacement, reason, *, changes=None):
                     and (audience is None or set(view.audience).intersection(audience))
                     for dependency in view.sources
                     for reference, audience in changed
+                )
+                depends = depends or (
+                    reason in ("content", "deleted")
+                    and old.kind == "message"
+                    and any(
+                        item.message_id == old.id for item in view.passage_provenance
+                    )
                 )
                 if (
                     identity not in invalidated
@@ -315,8 +436,11 @@ def set_source_perspectives(
     if source is None:
         raise ValueError("Perspective source does not exist")
     parsed = tuple(PerspectiveOutput.model_validate(output) for output in outputs)
+    read = PerspectiveReadContext(scene)
     for output in parsed:
         _validate_audience(scene, output.audience)
+        if not _passages_fresh(scene, output.passage_provenance, read):
+            raise ValueError("Analytical passage provenance is stale or unresolved")
         for dependency in output.sources:
             if dependency.key == source.key or not all(
                 _fresh(
@@ -325,6 +449,7 @@ def set_source_perspectives(
                     character,
                     set(),
                     readable=output.status == "ready",
+                    read=read,
                 )
                 for character in output.audience
             ):
@@ -461,8 +586,24 @@ def source_content_changed(
     if scene.knowledge is None:
         return
     source = _find(scene, (kind, source_id, layer))
-    if source is None or source.knowledge is None:
+    if source is None:
         return
+    if source.knowledge is None:
+        if kind != "message" or not any(
+            item.message_id == source_id
+            and item.content_digest != content_digest(source.text)
+            for candidate in _sources(scene)
+            if candidate.knowledge is not None
+            for view in candidate.knowledge.views
+            for item in view.passage_provenance
+        ):
+            return
+        return _notify(
+            scene,
+            SourceReference(kind="message", id=source_id, revision=1),
+            None,
+            "content",
+        )
     if source.knowledge.content_digest == content_digest(source.text):
         return
     old = source.reference()
@@ -471,26 +612,28 @@ def source_content_changed(
 
 
 def source_deleted(
-    scene: "Scene", reference: SourceReference | None
+    scene: "Scene", reference: SourceReference | None, *, message_id: int | None = None
 ) -> PerspectiveInvalidation | None:
+    if reference is None and message_id is not None and scene.knowledge is not None:
+        reference = SourceReference(kind="message", id=message_id, revision=1)
     if reference is not None:
         return _notify(scene, reference, None, "deleted")
 
 
 def message_content_changed(message: "SceneMessage") -> None:
-    if message.knowledge is None:
-        return
     scene = message._knowledge_scene() if message._knowledge_scene else None
     if scene is not None and any(item is message for item in scene.history):
         source_content_changed(scene, "message", message.id)
-    elif message.knowledge.content_digest != content_digest(message.message):
+    elif (
+        message.knowledge is not None
+        and message.knowledge.content_digest != content_digest(message.message)
+    ):
         message.knowledge = message.knowledge.invalidated(message.message)
 
 
 def bind_perspective_sources(scene: "Scene") -> None:
     for message in scene.history:
-        if message.knowledge is not None:
-            message._knowledge_scene = weakref.ref(scene)
+        message._knowledge_scene = weakref.ref(scene)
 
 
 def validate_saved_knowledge(data: dict) -> SceneKnowledge | None:

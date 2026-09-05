@@ -83,11 +83,25 @@ class AudienceRecord(KnowledgeRecord):
         return value
 
 
+class PassageProvenance(KnowledgeRecord):
+    message_id: int = Field(ge=1, strict=True)
+    content_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    revision: int | None = Field(default=None, ge=1, strict=True)
+
+
 class PerspectiveOutput(AudienceRecord):
     id: str | None = Field(default=None, min_length=1)
     status: Literal["ready", "pending", "failed", "omitted"]
     text: StrictStr | None = None
     sources: tuple[SourceReference, ...] = ()
+    passage_provenance: tuple[PassageProvenance, ...] = ()
+
+    @model_serializer(mode="wrap")
+    def serialize_provenance(self, handler):
+        data = handler(self)
+        if not self.passage_provenance:
+            data.pop("passage_provenance", None)
+        return data
 
     @field_validator("id")
     @classmethod

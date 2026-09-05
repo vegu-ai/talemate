@@ -25,6 +25,9 @@ from talemate.knowledge.absence import (
 from talemate.knowledge.bucket import KnowledgeIndex
 from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 from talemate.knowledge.schema import KnowledgeEdge
+from talemate.knowledge.mode import (
+    character_knowledge_enabled as perception_mode_enabled,
+)
 from talemate.knowledge.topics import awareness_line as topic_awareness_line
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage
@@ -223,6 +226,8 @@ class CharacterKnowledgeMixin:
 
     @property
     def knowledge_ledger(self) -> bool:
+        if perception_mode_enabled(self.scene):
+            return False
         return self.character_knowledge_enabled and bool(
             self.resolve_config("character_knowledge", "ledger")
         )

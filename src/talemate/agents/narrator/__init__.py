@@ -33,6 +33,7 @@ from talemate.prompts import Prompt
 from talemate.scene_message import NarratorMessage
 
 from talemate.instance import get_agent
+from talemate.knowledge.mode import character_knowledge_enabled
 
 from talemate.agents.registry import register
 
@@ -67,6 +68,8 @@ async def _narration(self, fn, args, kwargs, emit_generated: bool = True):
     writing style, the injected instructions, and (for scene narration) the
     generated signal with the response.
     """
+    if character_knowledge_enabled(self.scene):
+        await get_agent("summarizer").ensure_perceptions(self.scene)
     agent_context = active_agent.get()
     # ActiveAgent.__enter__ shares state by reference with the parent context,
     # so we save/restore the prior value rather than mutating in place.

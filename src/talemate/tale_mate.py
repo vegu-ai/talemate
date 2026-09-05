@@ -34,6 +34,7 @@ from talemate.game.state import GameState
 from talemate.scene_assets import SceneAssets
 from talemate.scene.episodes import EpisodesManager
 from talemate.scene_message import (
+    NarratorMessage,
     CharacterMessage,
     DirectorMessage,
     VersionSource,
@@ -65,6 +66,7 @@ from talemate.knowledge.perspectives import (
 )
 from talemate.knowledge.mode import (
     KnowledgeEligibility,
+    character_knowledge_enabled,
     require_character_knowledge_support,
 )
 from talemate.scene.format import (
@@ -724,6 +726,33 @@ class Scene(Emitter):
 
         await self.signals["push_history"].send(event)
 
+        if character_knowledge_enabled(self):
+            try:
+                await get_agent("summarizer").finalize_perceptions(self, valid_messages)
+            except GenerationCancelled:
+                # Callers emit after push_history returns; a blocked turn must still show its saved prose.
+                for message in valid_messages:
+                    if (
+                        get_agent("summarizer").scene is self
+                        and any(entry is message for entry in self.history)
+                        and isinstance(message, (CharacterMessage, NarratorMessage))
+                    ):
+                        emit(
+                            message.typ,
+                            message=message,
+                            **(
+                                {
+                                    "character": self.get_character(
+                                        message.character_name
+                                    )
+                                }
+                                if isinstance(message, CharacterMessage)
+                                else {}
+                            ),
+                        )
+                self.emit_status()
+                raise
+
         loop = asyncio.get_event_loop()
         for message in valid_messages:
             loop.run_until_complete(
@@ -751,7 +780,7 @@ class Scene(Emitter):
                 self.history.remove(message)
             except ValueError:
                 return False
-            source_deleted(self, reference)
+            source_deleted(self, reference, message_id=message.id)
             self.emit_status()
             return True
         elif isinstance(message, int):
@@ -759,7 +788,7 @@ class Scene(Emitter):
             if message:
                 reference = source_reference(self, "message", message.id)
                 self.history.remove(message)
-                source_deleted(self, reference)
+                source_deleted(self, reference, message_id=message.id)
                 self.emit_status()
                 return True
             return False
@@ -822,7 +851,7 @@ class Scene(Emitter):
         for message in to_remove:
             reference = source_reference(self, "message", message.id)
             self.history.remove(message)
-            source_deleted(self, reference)
+            source_deleted(self, reference, message_id=message.id)
 
         # History changed — keep tail-dependent UI affordances (e.g. the
         # regenerate buttons) in sync. emit_status is debounced.
@@ -1411,7 +1440,7 @@ class Scene(Emitter):
             if message.id == message_id:
                 reference = source_reference(self, "message", message.id)
                 self.history.pop(i)
-                source_deleted(self, reference)
+                source_deleted(self, reference, message_id=message.id)
                 log.info(f"Deleted message {message_id}")
                 emit("remove_message", "", id=message_id)
 

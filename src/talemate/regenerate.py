@@ -7,6 +7,7 @@ import talemate.emit.async_signals as async_signals
 from talemate.agents.editor.revision import RevisionContext
 from talemate.context import regeneration_context
 from talemate.exceptions import GenerationCancelled
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.scene_message import (
     SceneMessage,
     CharacterMessage,
@@ -474,6 +475,14 @@ async def regenerate(scene: "Scene") -> list[SceneMessage]:
     scene.history.append(message)
     for text, source in versions_to_append:
         scene.append_message_version(message.id, text, source=source)
+
+    if character_knowledge_enabled(scene):
+        try:
+            await get_agent("summarizer").finalize_perceptions(scene, [message])
+        except BaseException:
+            if any(entry is message for entry in scene.history):
+                scene.history.extend(reversed(popped_reinforcement_messages))
+            raise
 
     regenerated_messages.append(message)
 

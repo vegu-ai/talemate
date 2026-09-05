@@ -16,6 +16,8 @@ from talemate.client.context import (
     set_conversation_context_attribute,
 )
 from talemate.prompts import Prompt
+from talemate.instance import get_agent
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.scene_message import CharacterMessage, DirectorMessage
 from talemate.agents.utils import handle_empty_response_limit
 
@@ -431,6 +433,9 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
         """
 
         character = actor.character
+
+        if character_knowledge_enabled(self.scene):
+            await get_agent("summarizer").ensure_perceptions(self.scene)
 
         emission = ConversationAgentEmission(
             agent=self, response="", actor=actor, character=character

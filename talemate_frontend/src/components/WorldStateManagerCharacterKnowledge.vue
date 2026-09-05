@@ -21,7 +21,7 @@
                             hide-details
                             clearable>
                             <template v-slot:item="{ props, item }">
-                                <v-list-item v-bind="props" :subtitle="item.raw.kind"></v-list-item>
+                                <v-list-item v-bind="props" :subtitle="item.kind"></v-list-item>
                             </template>
                         </v-autocomplete>
                     </v-col>

@@ -62,7 +62,7 @@
                             
                     <v-expansion-panel-text class="text-body-medium">
                         <div class="mb-2">
-                            <v-tooltip :text="row.active ? 'A real character, present in the scene' : 'Picked up by the world state snapshot, not yet a character. Use Make real to promote.'">
+                            <v-tooltip :text="characterKindTooltip(row)">
                                 <template v-slot:activator="{ props }">
                                     <v-chip v-bind="props" class="character-kind" size="x-small" variant="tonal" :color="row.active ? 'primary' : 'secondary'" label tabindex="0">
                                         {{ row.active ? 'character' : 'background' }}
@@ -87,7 +87,7 @@
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-if="!row.active && !mayBeExistingCharacter(row.name) && !isPlaythroughActive()" text="Make this character real, adding it to the scene as an actor.">
+                            <v-tooltip v-if="canMakeReal(row)" text="Make this character real, adding it to the scene as an actor.">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(row.name)" icon="mdi-human-greeting"></v-btn>
 
@@ -352,6 +352,7 @@ export default {
             hasAnyWorldState: false,
             knowledgeChanges: new Map(),
             inactivePanel: null,
+            inactiveKnowledgePauses: new Map(),
         }
     },
 
@@ -466,9 +467,26 @@ export default {
     },
 
     methods: {
+        canMakeReal(row) {
+            return !row.active && !this.mayBeExistingCharacter(row.name) && !this.isPlaythroughActive();
+        },
+        characterKindTooltip(row) {
+            if (row.active) return 'A real character, present in the scene';
+            const description = 'Picked up by the world state snapshot, not yet a character.';
+            return this.canMakeReal(row) ? `${description} Use Make real to promote.` : description;
+        },
         pauseInactiveKnowledge(reason, paused) {
-            for (const name of this.inactiveCharacters) {
-                this.knowledgeNotifications.pause(name, reason, paused);
+            const names = this.inactiveKnowledgePauses.get(reason) || new Set();
+            if (paused) {
+                this.inactiveKnowledgePauses.set(reason, names);
+                for (const name of this.inactiveCharacters) {
+                    if (this.knowledgeChanges.has(name)) names.add(name);
+                }
+            } else {
+                this.inactiveKnowledgePauses.delete(reason);
+            }
+            for (const name of names) {
+                this.knowledgeNotifications.pause(name, `inactive:${reason}`, paused);
             }
         },
         onResize() {
@@ -741,6 +759,10 @@ export default {
     created() {
         this.knowledgeNotifications = createKnowledgeChanges((changes) => {
             this.knowledgeChanges = changes;
+            if (!changes.size) this.inactiveKnowledgePauses.clear();
+            for (const reason of this.inactiveKnowledgePauses.keys()) {
+                this.pauseInactiveKnowledge(reason, true);
+            }
         });
         this.registerMessageHandler(this.handleMessage);
     },

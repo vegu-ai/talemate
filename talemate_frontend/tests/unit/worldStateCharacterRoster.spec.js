@@ -184,8 +184,10 @@ describe("offering to make a background character real", () => {
     });
 
     it("gates the button on it", () => {
-        expect(worldState).toContain(
-            'v-if="!row.active && !mayBeExistingCharacter(row.name) && !isPlaythroughActive()"');
+        expect(worldState).toContain('v-if="canMakeReal(row)"');
+        const canMakeReal = lift(worldState, "canMakeReal", "WorldState.vue");
+        const self = { mayBeExistingCharacter: () => true, isPlaythroughActive: () => false };
+        expect(canMakeReal.call(self, { name: "Jason", active: false })).toBe(false);
     });
 
     // The panel button is not the only surface that sends persist_character:

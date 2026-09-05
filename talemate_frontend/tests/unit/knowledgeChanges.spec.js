@@ -5,6 +5,11 @@ import { lift, readSource } from './helpers/liftMethod.js';
 
 const source = readSource(fileURLToPath(new URL('../../src/components/WorldState.vue', import.meta.url)));
 const handleMessage = lift(source, 'handleMessage', 'WorldState.vue');
+const pauseInactiveKnowledge = lift(source, 'pauseInactiveKnowledge', 'WorldState.vue');
+const inactiveKnowledgeChanges = lift(source, 'inactiveKnowledgeChanges', 'WorldState.vue');
+const createWorldState = lift(source, 'created', 'WorldState.vue', { createKnowledgeChanges });
+const canMakeReal = lift(source, 'canMakeReal', 'WorldState.vue');
+const characterKindTooltip = lift(source, 'characterKindTooltip', 'WorldState.vue');
 const knowledgeSource = readSource(fileURLToPath(new URL('../../src/components/WorldStateManagerCharacterKnowledge.vue', import.meta.url)));
 const handleKnowledgeMessage = lift(knowledgeSource, 'handleMessage', 'WorldStateManagerCharacterKnowledge.vue');
 const change = (character = 'Mara', target = 'F1', kind = 'grant') => ({
@@ -25,6 +30,80 @@ describe('mounted character Knowledge tab', () => {
         handleKnowledgeMessage.call(host, { type: 'knowledge_changed', data: { changes: [change()] } });
         expect(host.request).not.toHaveBeenCalled();
     });
+});
+
+describe('inactive header notifications', () => {
+    let host;
+    beforeEach(() => {
+        vi.useFakeTimers();
+        host = { inactiveCharacters: ['Nora', 'Edwin'], knowledgeChanges: new Map(),
+            inactiveKnowledgePauses: new Map(), registerMessageHandler: vi.fn() };
+        host.pauseInactiveKnowledge = pauseInactiveKnowledge.bind(host);
+        createWorldState.call(host);
+    });
+    afterEach(() => {
+        host.knowledgeNotifications.clear();
+        vi.useRealTimers();
+    });
+
+    it('labels each inactive learner and gives shared targets distinct tooltip keys', () => {
+        host.knowledgeNotifications.add([change('Nora'), change('Edwin')], host.inactiveCharacters);
+        const changes = inactiveKnowledgeChanges.call(host);
+        expect(changes.map(c => c.label)).toEqual(['Nora: The key is under the mat.', 'Edwin: The key is under the mat.']);
+        expect(new Set(changes.map(c => c.target)).size).toBe(2);
+    });
+
+    it('pauses late arrivals until hover and focus have both left the aggregate', () => {
+        host.knowledgeNotifications.add([change('Nora')], host.inactiveCharacters);
+        host.pauseInactiveKnowledge('hover', true);
+        host.pauseInactiveKnowledge('focus', true);
+        vi.advanceTimersByTime(2000);
+        host.knowledgeNotifications.add([change('Edwin')], host.inactiveCharacters);
+        vi.advanceTimersByTime(9000);
+        expect(host.knowledgeChanges.size).toBe(2);
+        host.pauseInactiveKnowledge('hover', false);
+        vi.advanceTimersByTime(9000);
+        expect(host.knowledgeChanges.size).toBe(2);
+        host.pauseInactiveKnowledge('focus', false);
+        vi.advanceTimersByTime(8000);
+        expect(host.knowledgeChanges.size).toBe(0);
+    });
+
+    it('releases the captured names even after activation removes them from the inactive list', () => {
+        host.knowledgeNotifications.add([change('Nora')], host.inactiveCharacters);
+        vi.advanceTimersByTime(1000);
+        host.pauseInactiveKnowledge('hover', true);
+        host.inactiveCharacters = ['Edwin'];
+        host.pauseInactiveKnowledge('hover', false);
+        vi.advanceTimersByTime(7000);
+        expect(host.knowledgeChanges.size).toBe(0);
+        expect(host.inactiveKnowledgePauses.size).toBe(0);
+    });
+
+    it('does not release a separate character-row pause', () => {
+        host.knowledgeNotifications.add([change('Nora')], host.inactiveCharacters);
+        host.pauseInactiveKnowledge('hover', true);
+        host.knowledgeNotifications.pause('Nora', 'hover', true);
+        host.pauseInactiveKnowledge('hover', false);
+        vi.advanceTimersByTime(9000);
+        expect(host.knowledgeChanges.has('Nora')).toBe(true);
+        host.knowledgeNotifications.pause('Nora', 'hover', false);
+        vi.advanceTimersByTime(8000);
+        expect(host.knowledgeChanges.size).toBe(0);
+    });
+});
+
+describe('background character promotion guidance', () => {
+    it.each([[false, false, true], [true, false, false], [false, true, false]])(
+        'matches Make real availability (possible existing character %s, playthrough %s)',
+        (existing, playthrough, available) => {
+            const host = { mayBeExistingCharacter: () => existing, isPlaythroughActive: () => playthrough };
+            host.canMakeReal = canMakeReal.bind(host);
+            const row = { name: 'Harbor clerk', active: false };
+            expect(host.canMakeReal(row)).toBe(available);
+            expect(characterKindTooltip.call(host, row).includes('Use Make real to promote.')).toBe(available);
+            expect(characterKindTooltip.call(host, { ...row, active: true })).toBe('A real character, present in the scene');
+        });
 });
 
 describe('transient knowledge changes', () => {

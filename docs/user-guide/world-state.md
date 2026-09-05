@@ -62,9 +62,10 @@ has a muted accent.
 Expand an entry to see what the character is currently doing and a small kind label:
 
 - **character**: "A real character, present in the scene"
-- **background**: "Picked up by the world state snapshot, not yet a character. Use Make real to promote."
+- **background**: "Picked up by the world state snapshot, not yet a character."
 
-Hover over or focus the label to read its tooltip.
+Hover over or focus the label to read its tooltip. When **Make real** is available on
+that row, the background tooltip also says "Use Make real to promote."
 
 ![world state 2](/talemate/img/0.40.0/world-state-snapshot-2.png)
 

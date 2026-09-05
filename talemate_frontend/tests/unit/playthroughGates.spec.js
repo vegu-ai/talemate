@@ -86,7 +86,10 @@ describe("the surfaces a replay hides", () => {
 
     it("hides the action that makes a world state character real", () => {
         expect(element(worldState, "Make this character real", "<v-tooltip"))
-            .toContain("!isPlaythroughActive()");
+            .toContain('v-if="canMakeReal(row)"');
+        const canMakeReal = lift(worldState, "canMakeReal", "WorldState.vue");
+        const host = { mayBeExistingCharacter: () => false, isPlaythroughActive: () => true };
+        expect(canMakeReal.call(host, { name: "stranger", active: false })).toBe(false);
     });
 });
 

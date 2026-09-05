@@ -343,10 +343,12 @@ I have identified no issues, i will mark with: <NO_FIX_REQUIRED/>
 
 {# SCENE CONTEXT #}
 {% set scene_context_text %}
-{% set history = scene.context_history(
+{% set history = scene.context_history(stored_views=True,
     budget=1024, 
     min_dialogue=20, 
-    sections=False) 
+    sections=False,
+    perspective=history_perspective|default(none),
+    before_message_id=history_before if history_perspective else none)
 %}
 <|SECTION:SCENE|>
 {% for scene_context in history -%}

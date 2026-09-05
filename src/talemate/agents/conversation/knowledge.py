@@ -265,7 +265,9 @@ class CharacterKnowledgeMixin:
         return character.name
 
     async def knowledge_perspective(self, character: "Character | None") -> str | None:
-        """Template access to `rag_knowledge_viewer` (templates await agent actions)."""
+        """Select the history viewer independently of legacy retrieval filtering."""
+        if character is not None and perception_mode_enabled(self.scene):
+            return character.name
         return self.rag_knowledge_viewer(character)
 
     async def absence_block(self, character: "Character | None") -> list[str]:

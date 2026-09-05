@@ -3,8 +3,9 @@
 These APIs are the persistence contract for the character-knowledge series.
 They require the [internal development gate](scene-format.md#internal-development-fixtures).
 The summarizer generates message perspectives through the lifecycle below.
-Switching existing actor context and summary pipelines to these views remains
-separate work in the series.
+Internally enabled actor recent history and character-facing editor context use
+stored views. Summary selection and supplemental prompt routes remain separate
+work in the series.
 
 ## Saved representation
 
@@ -112,8 +113,14 @@ new-message and archive hooks. It runs even when automatic archiving is disabled
 or its threshold has not been reached. In-place regeneration invokes the same
 entry point after the final canonical version is installed.
 
-`SummarizeAgent.ensure_perceptions(scene)` finishes existing pending or failed
-message records before dependent conversation or narrator generation. Explicit
+`SummarizeAgent.ensure_perceptions(scene, *, before_message_id=None)` finishes existing pending or failed
+message records before dependent conversation or narrator generation. Character
+revisions pass their target ID: only passages strictly before that target are
+registered or analyzed, and the boundary is rechecked after awaits. A later failed
+passage cannot block an earlier revision. Per-message cancellation counters retain
+every failure since a waiter's snapshot, so a later failure cannot mask an earlier
+cancellation inside its prefix, including repeated failures of the same message.
+A removed boundary cancels the operation. Explicit
 message edits/version changes schedule `rebuild_perceptions` using the existing
 background-task mechanism. The edit and save return to the websocket receive loop
 while re-analysis runs, so Retry/Cancel/Ignore frames remain dispatchable. Dependent
@@ -194,6 +201,79 @@ claims. `tests/data/perceptions/passages.json` supplies public/private, whisper 
 unconscious-bystander examples for deterministic orchestration and real-model smoke
 evaluation. The bounded physical-context window can miss older situational details;
 this step adds no historical reconstruction or long-term perception retrieval.
+
+## Character recent-history projection
+
+`talemate.knowledge.context.project_character_history(scene, character, *,
+budget=None, max_messages=None, before_message_id=None, keep_director=False,
+show_hidden=False, direction_mode="direction")` is the shared projection point
+for actor history and character-facing editor context. Later summary and
+supplemental-context steps should extend this function rather than introduce a
+second audience selector. It requires the internal mode and a canonical character
+name, and reads through `select_character_view` with one `PerspectiveReadContext`.
+
+The result is chronological replacement prose from character and narrator
+messages, rendered through the source message type's `as_format` on a temporary
+copy. Character names come from the source message, not inference from the view:
+`movie_script` retains the NAME header and END-OF-LINE terminator, `chat` retains
+the speaker prefix, and `narrative` uses the body. Existing canonical speaker
+prefixes in view text are not duplicated. A malformed character source without
+a colon cannot supply a speaker name; its selected view uses plain passage
+formatting, never a header derived from reader prose. The token budget includes
+formatting. Only ready text enters the result; explicit omissions and unavailable
+views, including untracked historical passages, contribute nothing. Pending,
+failed or stale views raise `GenerationCancelled` without reader fallback. Async
+conversation and character editor callers first await the summarizer's existing
+`ensure_perceptions` lifecycle, including its visible Retry/Cancel dialog. The
+projection performs no model request and stores no cache across reads.
+
+The projection walks backward and budgets the replacement text, stopping before
+an entry would exceed the token budget or the returned-message limit. Hidden
+messages are skipped unless requested. `before_message_id` excludes the revision
+target and all later messages; a removed target cancels the read. Director guidance
+is included only when requested and addressed to the viewing character. The
+reader message objects and their formatting are unchanged.
+
+`scene.context_history(perspective=character.name, stored_views=True, ...)`
+selects this projection under the development gate, independently of the legacy
+optional perspective filter. The converted conversation and editor templates
+explicitly request stored views. `before_message_id` is rejected with `ValueError`
+unless this gated, perspective-specific projection is selected; it never silently
+returns later history. Best-fit expansion, minimum-dialogue backfill, intro fallback and reader
+summaries cannot append raw prose to this actor path. Until the summary step is
+implemented, this path contains recent message views only and may return less
+than the requested budget. Reader/author calls without a perspective and legacy
+scenes retain their existing history assembly.
+
+Character dialogue, add-detail, rewrite and unslop use the same history projection.
+Repetition detection is author output: its corpus remains exact reader prose in
+**every mode**, including passages with omitted/unavailable views, because model
+paraphrases cannot establish lexical repetition. Comparison diagnostics can include
+reader text for the author. Revision templates render only `text_a`, the candidate
+being revised, never `text_b`, the earlier reader text used for matching. The
+character revision's scene-history block still uses stored views.
+Character unslop omits shared cached scene analysis until its producer supports
+character audiences. Narrator/author revisions retain their broader context.
+
+Passing `perspective` alone retains the existing bucket-filtered reader assembly,
+including gap markers and summary handling. In particular, offscreen-life narration
+(`narrator/offscreen-life.jinja2` through `narrate-context.jinja2`), RAG's analytical
+history (`agents/memory/rag.py`) and the optional conversation memory pass
+(`agents/conversation/knowledge.py`) do not opt into stored views in this step.
+Their existing presence/legacy-filter behavior is tested under the development
+gate, but no new protection claim applies to those supplemental routes.
+
+Debug event `character_history.skip` identifies the message ID, viewer and
+omitted/unavailable status when a passage contributes no text. It does not log
+reader or perspective prose.
+
+This intermediate step does **not** make the complete prompt audience-safe.
+Supplemental retrieval, memory, pins, snapshots, investigations, reinforcements and
+other direct context insertion routes remain later work; non-passage message types
+are absent from this new history projection except scoped director guidance.
+Scene description/story intention remain shared authoring inputs, and authored
+sheets/details/world entries retain the user/director visibility responsibility.
+No public mode switch or historical perception reconstruction is added.
 
 ## Edits and invalidation notifications
 

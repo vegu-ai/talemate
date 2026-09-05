@@ -21,6 +21,7 @@ from talemate.agents.base import (
     AgentTemplateEmission,
 )
 from talemate.instance import get_agent
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.emit import emit
 import talemate.emit.async_signals as async_signals
 from talemate.agents.creator.assistant import ContextualGenerateEmission
@@ -743,16 +744,9 @@ class RevisionMixin:
     # helpers
 
     async def revision_collect_repetition_range(self) -> list[str]:
-        """
-        Collect the range of text to revise against by going through the scene's
-        history and collecting narrator, character, and context-investigation
-        messages. CIMs are included regardless of whether they're an
-        automatic-revision target so the corpus reflects everything the player
-        sees in the narrative flow.
-        """
-
+        # Repetition detection is author output: compare exact reader prose in every
+        # mode, because perception paraphrases cannot establish lexical repetition.
         scene: "Scene" = self.scene
-
         ctx = revision_context.get()
 
         messages = scene.collect_messages(
@@ -843,7 +837,7 @@ class RevisionMixin:
         if character_name_prefix:
             text = text[len(character.name) + 2 :]
 
-        compare_against: list[str] = await self.revision_collect_repetition_range()
+        compare_against = await self.revision_collect_repetition_range()
 
         text_sentences = compile_text_to_sentences(text)
 
@@ -895,7 +889,7 @@ class RevisionMixin:
         Will return a tuple with the deduped text and the deduped text
         """
 
-        compare_against: list[str] = await self.revision_collect_repetition_range()
+        compare_against = await self.revision_collect_repetition_range()
 
         matches = []
 
@@ -1193,6 +1187,16 @@ class RevisionMixin:
 
         return text
 
+    async def revision_history_perspective(
+        self, character: "Character | None"
+    ) -> str | None:
+        if character is None or not character_knowledge_enabled(self.scene):
+            return None
+        await get_agent("summarizer").ensure_perceptions(
+            self.scene, before_message_id=revision_context.get().message_id
+        )
+        return character.name
+
     async def revision_rewrite(
         self,
         info: RevisionInformation,
@@ -1208,6 +1212,7 @@ class RevisionMixin:
 
         original_text = info.text
         character = info.character
+        history_perspective = await self.revision_history_perspective(character)
         loading_status = info.loading_status
 
         text, had_character_prefix = _strip_character_prefix(original_text, character)
@@ -1265,6 +1270,8 @@ class RevisionMixin:
             "dynamic_instructions": emission.dynamic_instructions,
             "context_type": info.context_type,
             "context_name": info.context_name,
+            "history_perspective": history_perspective,
+            "history_before": revision_context.get().message_id,
         }
 
         await async_signals.get("agent.editor.revision-revise.before").send(emission)
@@ -1338,15 +1345,18 @@ class RevisionMixin:
 
         original_text = info.text
         character = info.character
+        history_perspective = await self.revision_history_perspective(character)
 
         text, had_character_prefix = _strip_character_prefix(original_text, character)
 
         issues = await self.revision_collect_issues(text, character)
 
         summarizer = get_agent("summarizer")
-        scene_analysis = await summarizer.get_cached_analysis(
-            "conversation" if character else "narration"
-        )
+        scene_analysis = None
+        if character is None or not character_knowledge_enabled(self.scene):
+            scene_analysis = await summarizer.get_cached_analysis(
+                "conversation" if character else "narration"
+            )
 
         template = "editor.unslop"
         if info.context_type:
@@ -1379,6 +1389,8 @@ class RevisionMixin:
             "dynamic_instructions": emission.dynamic_instructions,
             "context_type": info.context_type,
             "context_name": info.context_name,
+            "history_perspective": history_perspective,
+            "history_before": revision_context.get().message_id,
             "summarization_history": info.summarization_history,
         }
 

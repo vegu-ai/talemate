@@ -29,6 +29,8 @@ from talemate.scene_message import (
     ReinforcementMessage,
 )
 from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.context import project_character_history
 from talemate.knowledge.presence import layer_entry_presence
 from talemate.util import count_tokens
 from talemate.util.prompt import condensed
@@ -116,6 +118,8 @@ class ContextHistoryParams(pydantic.BaseModel):
     include_reinforcements: bool = True
     assured_dialogue_num: int = 5
     chapter_labels: bool = False
+    before_message_id: int | None = None
+    stored_views: bool = False
 
     # name of the character whose knowledge bucket filters the history
     perspective: str | None = None
@@ -1497,11 +1501,36 @@ class ContextHistoryMixin:
         Applies max_budget override, dialogue ratio, and optional boundary
         enforcement from the action config.
         """
-        params = self._context_history_extract_params(kwargs).bind(scene)
+        params = self._context_history_extract_params(kwargs)
 
         # Apply max_budget override
         if self.scene_history_max_budget > 0:
             budget = min(self.scene_history_max_budget, budget)
+
+        if (
+            params.stored_views
+            and params.perspective
+            and character_knowledge_enabled(scene)
+        ):
+            return self._context_history_finalize(
+                [],
+                project_character_history(
+                    scene,
+                    params.perspective,
+                    budget=budget,
+                    before_message_id=params.before_message_id,
+                    keep_director=params.keep_director,
+                    show_hidden=params.show_hidden,
+                    direction_mode=get_agent("director").actor_direction_mode,
+                ),
+                [],
+            )
+
+        if params.before_message_id is not None:
+            raise ValueError(
+                "before_message_id requires gated stored_views with a perspective"
+            )
+        params.bind(scene)
 
         # Best-fit mode bypasses ratio-based distribution
         if self.scene_history_best_fit:

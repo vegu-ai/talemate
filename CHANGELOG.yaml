@@ -1,5 +1,6 @@
 0.40.0.dev:
   features:
+  - "Character Knowledge: Internally enabled character dialogue and editor revisions now assemble recent history from stored audience views. Unknown entries stay absent, incomplete analysis blocks dependent generation with retry, and reader prose remains complete. Summary and supplemental context conversion remain later development steps."
   - "Character Knowledge: Development-mode scenes now analyze finalized player, character and narrator passages through the summarizer before dependent generation. Audience views preserve reader prose, edited passages discard stale results, and failed analysis offers retry without duplicating the passage."
   - "Character Knowledge: Development fixtures can persist audience-specific message and summary views and independent disclosures, with source revisions, explicit availability states, edit invalidation and consistent character renames."
   - "World State: Active character rows, background rows and the Inactive heading have distinct theme-aware accents. Expanded rows show character or background chips with explanatory tooltips. A quiet dot marks knowledge additions and revocations, with a tooltip listing the changes and a shortcut to the character's Knowledge tab. Fixed the Knowledge Entry autocomplete failing to render its choices."

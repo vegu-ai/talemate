@@ -501,9 +501,12 @@ class TestOnPushHistory:
         scene, summarizer = summarizer_scene
         called = {}
 
-        async def stub_build_archive(scene_arg, generation_options=None):
+        async def stub_build_archive(
+            scene_arg, generation_options=None, *, notify=False
+        ):
             called["scene"] = scene_arg
             called["generation_options"] = generation_options
+            called["notify"] = notify
 
         summarizer.build_archive = stub_build_archive
 
@@ -511,6 +514,7 @@ class TestOnPushHistory:
             scene=scene, event_type="push_history.after", messages=[]
         )
         await summarizer.on_push_history(emission)
+        assert called["notify"] is True
         assert called["scene"] is scene
         # generation_options is constructed with the scene's writing_style.
         assert called["generation_options"] is not None

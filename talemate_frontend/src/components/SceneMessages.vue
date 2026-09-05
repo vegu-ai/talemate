@@ -944,13 +944,6 @@ export default {
                     return char.avatar;
                 }
             }
-            // Also check inactive characters
-            if (this.scene?.data?.inactive_characters) {
-                const char = Object.values(this.scene.data.inactive_characters).find(c => c.name === characterName);
-                if (char?.avatar) {
-                    return char.avatar;
-                }
-            }
             return null;
         },
         

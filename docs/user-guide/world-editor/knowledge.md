@@ -35,6 +35,10 @@ Set it from the entry's editor in the Characters tab (Description, Attributes, D
 
 Open a character in the Characters tab and pick the **Knowledge** tab. It lists the character's grants and revokes and lets you add one: pick the entry (a sheet entry of any character, a world entry, or a static or summarized history entry), choose *Grant* or *Revoke*, and add an optional note. A static history entry is common lore, so a revoke is the only way to hide one from a character. Grants and revokes made by hand carry the source `manual`, and the ones the [director](#the-director) writes carry `director`. The story produces two more: `told`, when a summary names a character who learned a fact while absent, and `inferred`, from the conversation agent's [learned-this-turn ledger](/talemate/user-guide/agents/conversation/settings/#learned-this-turn-ledger).
 
+The **Entry** field is searchable: type part of an entry's name or fact text, then select
+a result. Typing alone does not select an entry, so **Add** stays disabled until you pick
+one. Removing a grant or revoke keeps the underlying entry available to select again.
+
 ## The director
 
 The [director chat](/talemate/user-guide/agents/director/chat/) reads and changes the same records, without an extra request beyond the call it already makes.

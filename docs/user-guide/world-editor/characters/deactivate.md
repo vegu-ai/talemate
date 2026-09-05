@@ -16,7 +16,9 @@ Deactivating a character like this will be instant and not generate any narratio
 
     See [Scene Tools -> Take character out of scnee](/talemate/user-guide/scenario-tools/#take-character-out-of-scene) for more information.
 
-    Using this method will generate a narration to explain the character's absence.
+    The :material-earth: **World** panel offers the same action on every active character it lists. See [World State -> Taking a character out of the scene](/talemate/user-guide/world-state/#taking-a-character-out-of-the-scene).
+
+    Using either method will generate a narration to explain the character's absence.
 
 ## Reactivate a character
 
@@ -31,4 +33,6 @@ Activating a character like this will be instant and not generate any narration 
 
     See [Scene Tools -> Call character to scene](/talemate/user-guide/scenario-tools/#call-character-to-scene) for more information.
 
-    Using this method will generate a narration to explain the character's return.
+    The :material-earth: **World** panel lists the inactive characters in an **Inactive** section that activates them the same way. See [World State -> Calling a character back into the scene](/talemate/user-guide/world-state/#calling-a-character-back-into-the-scene).
+
+    Using either method will generate a narration to explain the character's return.

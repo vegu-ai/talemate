@@ -10,6 +10,7 @@ import pydantic
 import structlog
 
 from talemate.instance import get_agent
+from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.schema import Fact, KnowledgeEdge, ParsedFact
 from talemate.knowledge.topics import prune_topics
@@ -202,6 +203,8 @@ async def store_facts(
     ts: int | None,
     parsed: list[ParsedFact],
     dedupe_distance: float,
+    *,
+    notify: bool = False,
 ) -> list[Fact]:
     """
     Store parsed facts for one archive entry; a near-duplicate of a stored
@@ -211,6 +214,7 @@ async def store_facts(
     stored: list[Fact] = []
     # keyed by fact id: a merge updates the stored fact's document, not a second copy
     documents: dict[str, dict] = {}
+    changes: list[KnowledgeChange] = []
 
     for item in parsed:
         existing = await _near_duplicate_in_batch(item.text, stored, dedupe_distance)
@@ -241,6 +245,10 @@ async def store_facts(
             )
             world_state.facts[fact.id] = fact
             stored.append(fact)
+            changes.extend(
+                KnowledgeChange(character=name, target=fact.id)
+                for name in present or []
+            )
             learners = set(item.known_by)
             covered = set(present or [])
             # unknown presence means everyone witnessed it: nothing to grant
@@ -251,6 +259,7 @@ async def store_facts(
                 if name in fact.known_by:
                     continue
                 fact.known_by[name] = "told"
+                changes.append(KnowledgeChange(character=name, target=fact.id))
                 world_state.knowledge.append(
                     KnowledgeEdge(
                         character=name,
@@ -266,6 +275,8 @@ async def store_facts(
     if documents:
         await get_agent("memory").add_many(list(documents.values()))
 
+    if notify:
+        emit_knowledge_changes(scene, changes)
     return stored
 
 

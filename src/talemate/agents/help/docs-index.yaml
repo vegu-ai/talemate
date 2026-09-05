@@ -1162,7 +1162,7 @@
   title: Activate and Deactivate Characters
   summary: How to temporarily take a character out of the scene and bring them back with the Deactivate and Activate buttons
     beneath the character portrait in the Characters tab. Instant and without narration, unlike the equivalent scene tools
-    actions.
+    actions and the world panel controls.
 - path: user-guide/world-editor/characters/delete.md
   title: Delete character
   summary: 'How to permanently remove a character from a scene: select the character in the World Editor''s Characters tab,
@@ -1238,7 +1238,8 @@
     ownership of their own sheet, common lore (other sheets and world entries) and stored grant/revoke edges (sources manual,
     told, inferred); only the conversation prompt is filtered, by the speaking character, with missed spans replaced by a gap
     line, memory retrieval filtered per speaker and an absence block of facts they do not know; the Known by visibility setting
-    on attributes, details, descriptions and world entries; the Knowledge tab for grants and revokes with a per-topic coverage
+    on attributes, details, descriptions and world entries; the Knowledge tab for grants and revokes with a searchable Entry
+    field that requires selecting a result before Add, retaining entries after edge removal; a per-topic coverage
     table and the awareness line; the director''s Known by line, its set_known_by / grant_knowledge / revoke_knowledge actions
     (source director) and Character Knowledge query; retrieval shaping (recency, diversity, entity lookup, similarity gate,
     cross-encoder) and the opt-in AI memory pass, ledger and narrator offscreen life; older scenes without presence.'
@@ -1297,5 +1298,10 @@
 - path: user-guide/world-state.md
   title: World State
   summary: The world state snapshot panel maintained by the World State Agent - character entries with emotional state and
-    Look at / Manage Character / Make real shortcuts, object entries and tracked states, clickable entity highlights, manual
-    refresh, durable carry-forward and the Pin to context setting.
+    Look at / Manage Character / Make real shortcuts - Make real being withheld when the entry's name overlaps a character
+    the scene already has - the always-listed active characters, whose action row carries a control that takes one out of the
+    scene, the Inactive section that calls one back in, object entries and tracked states, clickable entity highlights, manual
+    refresh, durable carry-forward and the Pin to context setting. Active rows, background names and the Inactive header have
+    distinct theme accents; expanded rows carry character/background chips with explanatory tooltips. A temporary knowledge-change
+    dot lists additions and revocations, surfaces changes on the collapsed Inactive header, pauses on hover/focus and opens fresh
+    Knowledge data, without extra AI requests. History rebuilds and other historical maintenance stay silent.

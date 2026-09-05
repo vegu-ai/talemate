@@ -4,6 +4,8 @@ import structlog
 from typing import ClassVar, Literal
 
 import pydantic
+from talemate.knowledge.perspective_models import PerspectiveSourceModel
+from talemate.knowledge.perspectives import message_content_changed
 
 log = structlog.get_logger("talemate.scene_message")
 
@@ -86,7 +88,7 @@ class MessageVersion(pydantic.BaseModel):
     reason: str | None = None
 
 
-class SceneMessage(pydantic.BaseModel):
+class SceneMessage(PerspectiveSourceModel):
     """
     Base class for all messages that are sent to the scene.
     """
@@ -116,6 +118,8 @@ class SceneMessage(pydantic.BaseModel):
     # active characters at push time; None when the scene never recorded it
     present: list[str] | None = None
 
+    _knowledge_scene: object = pydantic.PrivateAttr(default=None)
+
     # Transient revision stack; seeded on opt-in subclasses, excluded
     # from to_dict / persistence.
     versions: list[MessageVersion] = pydantic.Field(
@@ -142,6 +146,7 @@ class SceneMessage(pydantic.BaseModel):
         # Keep `versions[active]` in lockstep with bare writes to
         # `.message` so streaming / in-flight cleanup don't drift the
         # canonical away from its stack entry.
+        old_text = self.message if name == "message" else None
         super().__setattr__(name, value)
         if (
             name == "message"
@@ -150,6 +155,8 @@ class SceneMessage(pydantic.BaseModel):
             and 0 <= self.active_version < len(self.versions)
         ):
             self.versions[self.active_version].message = value
+        if name == "message" and value != old_text and self.knowledge is not None:
+            message_content_changed(self)
 
     def append_version(
         self,
@@ -169,6 +176,8 @@ class SceneMessage(pydantic.BaseModel):
         # wrote versions[-1].message and don't want to overwrite it.
         object.__setattr__(self, "active_version", len(self.versions) - 1)
         object.__setattr__(self, "message", message)
+        if self.knowledge is not None:
+            message_content_changed(self)
         return version
 
     def set_active_version(self, index: int) -> None:
@@ -181,6 +190,8 @@ class SceneMessage(pydantic.BaseModel):
             )
         object.__setattr__(self, "active_version", index)
         object.__setattr__(self, "message", self.versions[index].message)
+        if self.knowledge is not None:
+            message_content_changed(self)
 
     def versions_payload(self) -> dict:
         """
@@ -237,6 +248,9 @@ class SceneMessage(pydantic.BaseModel):
 
         if self.present is not None:
             rv["present"] = list(self.present)
+
+        if self.knowledge is not None:
+            rv["knowledge"] = self.knowledge.model_dump(mode="json")
 
         return rv
 

@@ -56,6 +56,13 @@ from talemate.history import emit_archive_add, ArchiveEntry
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.facts import fact_memory_document, prune_summary_facts
 from talemate.knowledge.topics import topics_on_load
+from talemate.knowledge.perspective_models import SceneKnowledge
+from talemate.knowledge.perspectives import (
+    remove_perspective_audiences,
+    reset_perspectives,
+    source_deleted,
+    source_reference,
+)
 from talemate.knowledge.mode import (
     KnowledgeEligibility,
     require_character_knowledge_support,
@@ -145,6 +152,7 @@ class Scene(Emitter):
         self.actors = []
         self.helpers = []
         self.history = []
+        self.knowledge: SceneKnowledge | None = None
         self.archived_history = []
         self.character_data = {}
         self.active_characters = []
@@ -738,16 +746,20 @@ class Scene(Emitter):
         Removes the last message from the history that matches the given message
         """
         if isinstance(message, SceneMessage):
+            reference = source_reference(self, "message", message.id)
             try:
                 self.history.remove(message)
             except ValueError:
                 return False
+            source_deleted(self, reference)
             self.emit_status()
             return True
         elif isinstance(message, int):
             message = self.find_message(message)
             if message:
+                reference = source_reference(self, "message", message.id)
                 self.history.remove(message)
+                source_deleted(self, reference)
                 self.emit_status()
                 return True
             return False
@@ -808,7 +820,9 @@ class Scene(Emitter):
                 break
 
         for message in to_remove:
+            reference = source_reference(self, "message", message.id)
             self.history.remove(message)
+            source_deleted(self, reference)
 
         # History changed — keep tail-dependent UI affordances (e.g. the
         # regenerate buttons) in sync. emit_status is debounced.
@@ -1194,6 +1208,8 @@ class Scene(Emitter):
         if character.name in self.active_characters:
             self.active_characters.remove(character.name)
 
+        remove_perspective_audiences(self, character.name)
+
         if purge_from_memory:
             await character.purge_from_memory()
 
@@ -1393,7 +1409,9 @@ class Scene(Emitter):
         log.debug(f"Deleting message {message_id}")
         for i, message in enumerate(self.history):
             if message.id == message_id:
+                reference = source_reference(self, "message", message.id)
                 self.history.pop(i)
+                source_deleted(self, reference)
                 log.info(f"Deleted message {message_id}")
                 emit("remove_message", "", id=message_id)
 
@@ -2101,6 +2119,7 @@ class Scene(Emitter):
     def reset(self):
         # remove messages
         self.history = []
+        reset_perspectives(self)
 
         # clear out archived history, but keep pre-established history
         summarized_ids = {
@@ -2193,6 +2212,11 @@ class Scene(Emitter):
         scene = self
         return {
             **asdict(self.saved_format),
+            **(
+                {"knowledge": self.knowledge.model_dump(mode="json")}
+                if self.knowledge is not None
+                else {}
+            ),
             "id": scene.id,
             "description": scene.description,
             "intro": scene.intro,

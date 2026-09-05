@@ -73,8 +73,12 @@ def scene_export_json(scene: Scene, options: ExportOptions) -> str:
             if ah.get("end") is not None and ah.get("id")
         }
         data["archived_history"] = [
-            ah for ah in data["archived_history"] if ah.get("end") is None
+            {key: value for key, value in ah.items() if key != "knowledge"}
+            for ah in data["archived_history"]
+            if ah.get("end") is None
         ]
+        if data.get("knowledge") is not None:
+            data["knowledge"] = {**data["knowledge"], "disclosures": []}
         data["layered_history"] = []
         prune_serialized_facts(data["world_state"], summarized_ids)
         data["world_state"].update(

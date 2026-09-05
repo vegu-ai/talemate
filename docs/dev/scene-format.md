@@ -90,6 +90,10 @@ tickets add their own valid perspective/disclosure records to such fixtures.
 Do not relabel an existing playthrough as a fixture to imply its missing history
 was reconstructed.
 
+The [character perspective record contract](character-perspectives.md) defines
+optional message/summary views, independent disclosures, source content revisions,
+and the shared selection and invalidation APIs for downstream development.
+
 With the gate off, loading or saving a perception fixture fails with a clear
 development-gate error. It cannot silently fall back to legacy character context.
 Enabling the gate alone never changes an ordinary scene's eligibility. There is

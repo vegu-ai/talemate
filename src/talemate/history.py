@@ -29,6 +29,12 @@ from talemate.context import handle_generation_cancelled
 from talemate.events import ArchiveEvent
 from talemate.knowledge.facts import drop_facts_for_entries, facts_for_entry
 from talemate.knowledge.schema import Fact, FactsStatus
+from talemate.knowledge.perspective_models import PerspectiveSourceModel
+from talemate.knowledge.perspectives import (
+    source_content_changed,
+    source_deleted,
+    source_reference,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -62,7 +68,7 @@ class UnregeneratableEntryError(Exception):
     pass
 
 
-class ArchiveEntry(pydantic.BaseModel):
+class ArchiveEntry(PerspectiveSourceModel):
     text: str
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:8])
     start: int | None = None
@@ -77,7 +83,7 @@ class LayeredArchiveEntry(ArchiveEntry):
     ts_end: int | None = None
 
 
-class HistoryEntry(pydantic.BaseModel):
+class HistoryEntry(PerspectiveSourceModel):
     text: str
     ts: int
     index: int
@@ -409,6 +415,7 @@ def history_with_relative_time(
             end=entry.get("end", None),
             present=entry.get("present", None),
             facts_status=entry.get("facts_status", None),
+            knowledge=entry.get("knowledge"),
         ).model_dump()
         for index, entry in enumerate(history)
     ]
@@ -763,17 +770,19 @@ async def update_history_entry(
         archive_entry = ArchiveEntry(
             **{
                 **scene.archived_history[entry.index],
-                **entry.model_dump(exclude_none=True, exclude={"facts"}),
+                **entry.model_dump(exclude_none=True, exclude={"facts", "knowledge"}),
             }
         )
         scene.archived_history[entry.index] = archive_entry.model_dump(
             exclude_none=True
         )
+        source_content_changed(scene, "summary", archive_entry.id)
+        archive_entry = ArchiveEntry(**scene.archived_history[entry.index])
         await emit_archive_add(scene, archive_entry)
         return archive_entry
     else:
         # layered history; presence is computed from the sources, never stored
-        payload = entry.model_dump(exclude_none=True)
+        payload = entry.model_dump(exclude_none=True, exclude={"knowledge"})
         payload.pop("present", None)
         layered_entry = LayeredArchiveEntry(
             **{
@@ -783,6 +792,10 @@ async def update_history_entry(
         )
         scene.layered_history[entry.layer - 1][entry.index] = layered_entry.model_dump(
             exclude_none=True
+        )
+        source_content_changed(scene, "summary", layered_entry.id, layer=entry.layer)
+        layered_entry = LayeredArchiveEntry(
+            **scene.layered_history[entry.layer - 1][entry.index]
         )
         return layered_entry
 
@@ -1050,7 +1063,9 @@ async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEn
     if remove_idx is None:
         raise ValueError("Entry not found.")
 
+    reference = source_reference(scene, "summary", entry.id)
     removed_raw = scene.archived_history.pop(remove_idx)
+    source_deleted(scene, reference)
     removed_entry = ArchiveEntry(**removed_raw)
 
     if is_oldest_entry:

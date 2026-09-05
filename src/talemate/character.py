@@ -3,6 +3,7 @@ import pydantic
 from talemate.context import active_scene
 from talemate.knowledge.schema import EntryVisibility
 from talemate.knowledge.rename import rename_knowledge_references
+from talemate.knowledge.perspectives import validate_character_rename
 from pydantic import ConfigDict
 import structlog
 import random
@@ -287,10 +288,12 @@ class Character(pydantic.BaseModel):
         None
         """
 
+        scene = active_scene.get()
+        if scene is not None:
+            validate_character_rename(scene, self, new_name)
         orig_name = self.name
         self.name = new_name
 
-        scene = active_scene.get()
         if scene is not None:
             rename_knowledge_references(scene, orig_name, new_name)
 

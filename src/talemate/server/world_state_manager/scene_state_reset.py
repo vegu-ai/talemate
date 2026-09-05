@@ -4,6 +4,7 @@ import pydantic
 import structlog
 
 from talemate.knowledge.facts import drop_facts_for_entries
+from talemate.knowledge.perspectives import reset_perspectives
 
 log = structlog.get_logger("talemate.server.world_state_manager.scene_state_reset")
 
@@ -86,6 +87,7 @@ class SceneStateResetMixin:
 
             scene.history = []
             scene.layered_history = []
+            reset_perspectives(scene)
 
             await drop_facts_for_entries(
                 scene,

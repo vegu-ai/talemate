@@ -35,6 +35,10 @@ from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import ScenePerspectives, load_game_state_path_settings
 from talemate.scene.format import read_scene_format
 from talemate.knowledge.mode import require_character_knowledge_support
+from talemate.knowledge.perspectives import (
+    bind_perspective_sources,
+    validate_saved_knowledge,
+)
 from talemate.history import validate_history
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
@@ -329,6 +333,7 @@ async def load_scene_from_data(
 ) -> Scene:
     metadata = read_scene_format(scene_data)
     require_character_knowledge_support(metadata)
+    knowledge = validate_saved_knowledge(scene_data)
     loading_status = LoadingStatus(1)
     reset_message_id()
     config: Config = get_config()
@@ -369,6 +374,8 @@ async def load_scene_from_data(
     scene.history = _load_history(scene_data["history"])
     scene.archived_history = scene_data["archived_history"]
     scene.layered_history = scene_data.get("layered_history", [])
+    scene.knowledge = knowledge
+    bind_perspective_sources(scene)
 
     # load shared context
     shared_context_file = scene_data.get("shared_context", "")
@@ -417,6 +424,7 @@ async def load_scene_from_data(
         scene.history = []
         scene.archived_history = []
         scene.layered_history = []
+        scene.knowledge = None
         scene.intent_state.reset()
 
     asset_data = scene_data.get("assets", {})
@@ -513,6 +521,7 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
             with zipf.open("scene.json") as scene_file:
                 scene_data = json.load(scene_file)
             require_character_knowledge_support(read_scene_format(scene_data))
+            validate_saved_knowledge(scene_data)
 
             # Extract all files
             zipf.extractall(temp_path)

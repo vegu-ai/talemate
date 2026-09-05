@@ -1,6 +1,12 @@
 # Machine-readable index of the Talemate documentation (docs/).
 # Consumed by the help agent to route questions to the right document.
 # Generated file - regenerate with the docs-index claude skill in the work repo.
+- path: dev/character-perspectives.md
+  title: Character perspective records
+  summary: Developer contract for immutable character views on messages and summaries, independent disclosures, audiences,
+    acquisition order and source revisions. Documents publishing and select_character_view statuses, transitive invalidation
+    through perspectives_changed, edit/version hooks, rename handling, and save/reload validation under the internal character-knowledge
+    gate.
 - path: dev/howto/add-a-worldstate-template-type.md
   title: Adding a new world-state template
   summary: 'Developer walkthrough for adding a world-state template type: a pydantic Template subclass under src/talemate/world_state/templates
@@ -16,9 +22,9 @@
     hand-written intro text is preserved.
 - path: dev/scene-format.md
   title: Saved scene format
-  summary: 'Scene format_version and knowledge_eligibility: unversioned legacy files, supported versions, malformed or unsupported
-    format errors, and eligibility preservation through saves and forks. Documents the pure metadata parser and the internal
-    character_knowledge_enabled predicate and development fixtures.'
+  summary: 'Scene format_version and knowledge_eligibility: legacy and version-1 files, validation errors, eligibility preservation
+    through saves and forks, and the pure metadata parser. Documents character_knowledge_enabled, the TALEMATE_DEV_CHARACTER_KNOWLEDGE=1
+    development gate, fixtures, and the linked character perspective record contract.'
 - path: dev/templates.md
   title: Template Overrides
   summary: 'Older reference for Talemate''s Jinja2 prompt templates: section tags, overriding a default by dropping a same-named
@@ -914,6 +920,14 @@
   summary: Get Input (input/WaitForInput) which waits for player input in the scene loop, with reason, prefix, allow_commands
     (! prefix) and an abort_condition chain, plus the Process Input module that cleans the text and returns the interaction
     state.
+- path: user-guide/node-editor/reference/nodes/knowledge.md
+  title: Knowledge Nodes
+  summary: 'Knowledge nodes over the fact record and who knows what: Facts About (facts mentioning an entity, optionally as
+    one character knows them), Current State (the newest fact about an entity that no later fact supersedes), Relationship
+    Timeline (facts mentioning two entities), Grant Knowledge / Revoke Knowledge for writing knowledge edges from a graph
+    (target id or Context ID item, note, source, replace), Entry Knowledge (an entry''s Known by line and edges), Set Entry
+    Visibility (Known by of a sheet or world entry) and Character Knowledge (a character''s knowledge report); inputs,
+    outputs and properties of each.'
 - path: user-guide/node-editor/reference/nodes/prompt.md
   title: Prompt Nodes
   summary: 'Prompt and generation nodes: Build Prompt (include_* context toggles, reserved_tokens, memory_prompt, dedupe_enabled,
@@ -933,14 +947,6 @@
   summary: 'Eighteen character nodes: Get Character (partial match), Get Player Character, List Characters (active/inactive/all),
     Make Character, Activate and Deactivate, Remove Character and Remove All Characters, Is Player / Is Active checks, Get
     and Set Character Attribute, Detail and Description, Unpack Character, and Update Character Data (including renaming).'
-- path: user-guide/node-editor/reference/nodes/knowledge.md
-  title: Knowledge Nodes
-  summary: 'Knowledge nodes over the fact record and who knows what: Facts About (facts mentioning an entity, optionally as
-    one character knows them), Current State (the newest fact about an entity that no later fact supersedes), Relationship
-    Timeline (facts mentioning two entities), Grant Knowledge / Revoke Knowledge for writing knowledge edges from a graph
-    (target id or Context ID item, note, source, replace), Entry Knowledge (an entry''s Known by line and edges), Set Entry
-    Visibility (Known by of a sheet or world entry) and Character Knowledge (a character''s knowledge report); inputs,
-    outputs and properties of each.'
 - path: user-guide/node-editor/reference/nodes/scene-history.md
   title: Scene History Nodes
   summary: 'History nodes: Push History and Pop History, Get Message By ID, Last Message of Type (stop_on_time_passage), Scene

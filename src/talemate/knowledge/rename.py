@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+from talemate.knowledge.perspectives import rename_perspective_audiences
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -20,6 +21,10 @@ def rename_knowledge_references(scene: "Scene", old: str, new: str):
     """
     if old == new:
         return
+
+    rename_perspective_audiences(scene, old, new)
+    if old in scene.character_data:
+        scene.character_data[new] = scene.character_data.pop(old)
 
     scene.active_characters = _swap(scene.active_characters, old, new)
 

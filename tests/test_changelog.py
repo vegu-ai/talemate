@@ -1051,7 +1051,13 @@ async def test_write_reconstructed_scene(mock_scene):
 
     with open(output_path, "r") as f:
         result = json.load(f)
-    assert result == base_data
+    assert result == {
+        **base_data,
+        "format_version": 1,
+        "knowledge_eligibility": "legacy",
+    }
+    with open(base_path, "r") as f:
+        assert json.load(f) == base_data
 
 
 @pytest.mark.asyncio

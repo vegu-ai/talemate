@@ -33,6 +33,8 @@ from talemate.world_state import WorldState
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import ScenePerspectives, load_game_state_path_settings
+from talemate.scene.format import read_scene_format
+from talemate.knowledge.mode import require_character_knowledge_support
 from talemate.history import validate_history
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
@@ -325,6 +327,8 @@ async def load_scene_from_data(
     name: str | None = None,
     empty: bool = False,
 ) -> Scene:
+    metadata = read_scene_format(scene_data)
+    require_character_knowledge_support(metadata)
     loading_status = LoadingStatus(1)
     reset_message_id()
     config: Config = get_config()
@@ -335,6 +339,7 @@ async def load_scene_from_data(
     migrate_director_chat_state(scene_data)
     migrate_scene_time(scene_data)
 
+    scene.knowledge_eligibility = metadata.knowledge_eligibility
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
     scene.name = scene_data.get("name", "Unknown Scene")
@@ -505,14 +510,13 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
                     "ZIP archive does not contain required scene.json file"
                 )
 
+            with zipf.open("scene.json") as scene_file:
+                scene_data = json.load(scene_file)
+            require_character_knowledge_support(read_scene_format(scene_data))
+
             # Extract all files
             zipf.extractall(temp_path)
             log.debug("Extracted ZIP contents", files=len(zipf.namelist()))
-
-        # Load scene.json
-        scene_json_path = temp_path / "scene.json"
-        with open(scene_json_path, "r", encoding="utf-8") as f:
-            scene_data = json.load(f)
 
         log.debug(
             "Loaded scene JSON from ZIP", scene_name=scene_data.get("name", "Unknown")

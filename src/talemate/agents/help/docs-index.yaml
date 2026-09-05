@@ -14,6 +14,11 @@
   summary: The node reference pages under docs/user-guide/node-editor/reference/nodes/ are generated from the live node registry.
     Run 'uv run python -m talemate.game.engine.nodes.tools glossary --write' to regenerate and '--check' to fail on drift;
     hand-written intro text is preserved.
+- path: dev/scene-format.md
+  title: Saved scene format
+  summary: 'Scene format_version and knowledge_eligibility: unversioned legacy files, supported versions, malformed or unsupported
+    format errors, and eligibility preservation through saves and forks. Documents the pure metadata parser and the internal
+    character_knowledge_enabled predicate and development fixtures.'
 - path: dev/templates.md
   title: Template Overrides
   summary: 'Older reference for Talemate''s Jinja2 prompt templates: section tags, overriding a default by dropping a same-named

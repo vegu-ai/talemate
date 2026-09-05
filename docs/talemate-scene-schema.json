@@ -1,7 +1,24 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
+  "$comment": "Compatibility contract: dev/scene-format.md.",
+  "if": {
+    "properties": {"knowledge_eligibility": {"const": "perception"}},
+    "required": ["knowledge_eligibility"]
+  },
+  "then": {"required": ["format_version"]},
   "properties": {
+    "format_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Saved representation version. Absence means legacy format 0."
+    },
+    "knowledge_eligibility": {
+      "type": "string",
+      "enum": ["legacy", "perception"],
+      "default": "legacy",
+      "description": "Knowledge compatibility, not feature activation. Absence means legacy."
+    },
     "description": {
       "type": "string"
     },

@@ -4,6 +4,7 @@ import os
 import re
 import traceback
 import uuid
+from dataclasses import asdict
 from typing import Generator, Callable
 
 import structlog
@@ -55,6 +56,14 @@ from talemate.history import emit_archive_add, ArchiveEntry
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.facts import fact_memory_document, prune_summary_facts
 from talemate.knowledge.topics import topics_on_load
+from talemate.knowledge.mode import (
+    KnowledgeEligibility,
+    require_character_knowledge_support,
+)
+from talemate.scene.format import (
+    CURRENT_SCENE_FORMAT_VERSION,
+    SavedSceneFormat,
+)
 from talemate.character import Character
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
@@ -132,6 +141,7 @@ class Scene(Emitter):
         return os.path.abspath(relative_path)
 
     def __init__(self):
+        self.knowledge_eligibility: KnowledgeEligibility = "legacy"
         self.actors = []
         self.helpers = []
         self.history = []
@@ -1945,6 +1955,8 @@ class Scene(Emitter):
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
 
+        require_character_knowledge_support(self)
+
         if self.immutable_save and not save_as and not force:
             save_as = True
 
@@ -2022,6 +2034,7 @@ class Scene(Emitter):
         memory_sesion_id will be randomized
         """
 
+        require_character_knowledge_support(self)
         serialized = self.serialize
         serialized["immutable_save"] = True
         serialized["memory_session_id"] = str(uuid.uuid4())[:10]
@@ -2169,9 +2182,17 @@ class Scene(Emitter):
         loop.run_until_complete(self.restore())
 
     @property
+    def saved_format(self) -> SavedSceneFormat:
+        return SavedSceneFormat(
+            format_version=CURRENT_SCENE_FORMAT_VERSION,
+            knowledge_eligibility=self.knowledge_eligibility,
+        )
+
+    @property
     def serialize(self) -> dict:
         scene = self
         return {
+            **asdict(self.saved_format),
             "id": scene.id,
             "description": scene.description,
             "intro": scene.intro,

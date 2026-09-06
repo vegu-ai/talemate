@@ -15,8 +15,8 @@ from talemate.client.presets import make_kind
 from talemate.util import count_tokens
 from talemate.prompts.response import CodeBlockExtractorMixin
 from talemate.status import background_task
-from talemate.knowledge.context import history_prefix
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.reinforcements import prepare_reinforcement_source
 from talemate.knowledge.perspective_models import (
     KnowledgeRecord,
     PerspectiveOutput,
@@ -27,13 +27,18 @@ from talemate.knowledge.perspective_models import (
 )
 from talemate.knowledge.perspectives import (
     PerspectiveReadContext,
+    message_sources,
     can_cite_view,
     select_character_view,
     set_source_perspectives,
     source_reference,
 )
 from talemate.prompts import Prompt
-from talemate.scene_message import CharacterMessage, NarratorMessage, SceneMessage
+from talemate.scene_message import (
+    CharacterMessage,
+    ContextInvestigationMessage,
+    SceneMessage,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -101,7 +106,23 @@ def parse_perceptions(
 
 
 def eligible_passage(message: SceneMessage) -> bool:
-    return isinstance(message, (CharacterMessage, NarratorMessage))
+    return message.supports_perceptions
+
+
+def perception_passages(scene: "Scene") -> list[SceneMessage]:
+    return sorted(message_sources(scene), key=lambda entry: entry.id)
+
+
+def perception_prefix(
+    scene: "Scene", before_message_id: int | None = None
+) -> list[SceneMessage]:
+    passages = perception_passages(scene)
+    if before_message_id is None:
+        return passages
+    for index, passage in enumerate(passages):
+        if passage.id == before_message_id:
+            return passages[:index]
+    raise GenerationCancelled(f"History boundary {before_message_id} was removed")
 
 
 def relevant_audiences(scene: "Scene", message: SceneMessage) -> tuple[str, ...]:
@@ -116,20 +137,18 @@ def relevant_audiences(scene: "Scene", message: SceneMessage) -> tuple[str, ...]
 def passage_provenance(message: SceneMessage) -> PassageProvenance:
     return PassageProvenance(
         message_id=message.id,
-        content_digest=content_digest(message.message),
+        content_digest=content_digest(message.perception_text),
         revision=message.knowledge.revision if message.knowledge else None,
     )
 
 
 def perception_context(scene: "Scene", message: SceneMessage) -> dict:
     read = PerspectiveReadContext(scene)
-    previous = []
-    for entry in scene.history:
-        if entry is message:
-            break
-        if eligible_passage(entry):
-            previous.append(entry)
-    previous = previous[-CONTEXT_PASSAGES:]
+    previous = [
+        entry
+        for entry in perception_passages(scene)
+        if entry.id < message.id and eligible_passage(entry)
+    ][-CONTEXT_PASSAGES:]
     cast = []
     for name in relevant_audiences(scene, message):
         character = scene.character_data[name]
@@ -147,6 +166,7 @@ def perception_context(scene: "Scene", message: SceneMessage) -> dict:
             for disclosure in scene.knowledge.disclosures:
                 if character.name in disclosure.audience and (
                     message.id > disclosure.message_id_boundary
+                    and message.knowledge.acquired.order > disclosure.acquired.order
                 ):
                     known.append(
                         {
@@ -163,7 +183,11 @@ def perception_context(scene: "Scene", message: SceneMessage) -> dict:
                 "name": character.name,
                 "authored_description": character.description,
                 "authored_attributes": character.base_attributes,
-                "authored_details": character.details,
+                "authored_details": {
+                    key: value
+                    for key, value in character.details.items()
+                    if key not in character.reinforcement_entries
+                },
                 "established_knowledge": known,
             }
         )
@@ -174,7 +198,7 @@ def perception_context(scene: "Scene", message: SceneMessage) -> dict:
         "prior_physical_context": [
             {
                 "id": entry.id,
-                "text": entry.message,
+                "text": entry.perception_text,
                 "present": entry.present,
                 "provenance": passage_provenance(entry).model_dump(),
             }
@@ -182,8 +206,14 @@ def perception_context(scene: "Scene", message: SceneMessage) -> dict:
         ],
         "passage": {
             "provenance": passage_provenance(message).model_dump(),
-            "text": message.message,
+            "text": message.perception_text,
             "kind": message.typ,
+            "sub_type": message.sub_type
+            if isinstance(message, ContextInvestigationMessage)
+            else None,
+            "subject_character": message.source_arguments.get("character")
+            if isinstance(message, ContextInvestigationMessage)
+            else None,
             "speaker": message.character_name
             if isinstance(message, CharacterMessage)
             else None,
@@ -288,7 +318,7 @@ class PerceptionMixin:
         read = read or PerspectiveReadContext(scene)
         reference = source_reference(scene, "message", message.id, read=read)
         return message.knowledge.content_digest != content_digest(
-            message.message
+            message.perception_text
         ) or any(
             select_character_view(scene, reference, name, read=read).status
             not in ("ready", "omitted")
@@ -296,11 +326,9 @@ class PerceptionMixin:
             for name in view.audience
         )
 
-    async def finalize_perceptions(
+    def _register_perception_sources(
         self, scene: "Scene", messages: list[SceneMessage]
     ) -> None:
-        if not character_knowledge_enabled(scene):
-            return
         for message in messages:
             if eligible_passage(message) and message.knowledge is None:
                 if not relevant_audiences(scene, message):
@@ -309,12 +337,21 @@ class PerceptionMixin:
                     )
                     continue
                 self._perception_status(scene, message, "pending")
+
+    async def finalize_perceptions(
+        self, scene: "Scene", messages: list[SceneMessage]
+    ) -> None:
+        if not character_knowledge_enabled(scene):
+            return
+        if self.scene is not scene:
+            raise GenerationCancelled("Perception scene changed")
+        self._register_perception_sources(scene, messages)
         await self.ensure_perceptions(scene)
         await self.schedule_audience_summaries(scene)
         if any(
             eligible_passage(message)
             and (
-                not any(entry is message for entry in scene.history)
+                not any(entry is message for entry in message_sources(scene))
                 or (message.knowledge is None and relevant_audiences(scene, message))
             )
             for message in messages
@@ -335,12 +372,17 @@ class PerceptionMixin:
     ) -> None:
         if not character_knowledge_enabled(scene):
             return
+        if self.scene is not scene:
+            raise GenerationCancelled("Perception scene changed")
+        self._register_perception_sources(
+            scene, scene.world_state.prepare_reinforcement_perspectives()
+        )
         prefix_ids = {
-            message.id for message in history_prefix(scene, before_message_id)
+            message.id for message in perception_prefix(scene, before_message_id)
         }
         deferred = self._perception_deferred.get(scene, {})
         for identity, message in list(deferred.items()):
-            if not any(entry is message for entry in scene.history):
+            if not any(entry is message for entry in message_sources(scene)):
                 del deferred[identity]
             elif identity in prefix_ids and relevant_audiences(scene, message):
                 if message.knowledge is None:
@@ -352,7 +394,7 @@ class PerceptionMixin:
         async with lock:
             # A prefix revision can be queued behind unrelated later cancellations.
             prefix_ids = (
-                {entry.id for entry in history_prefix(scene, before_message_id)}
+                {entry.id for entry in perception_prefix(scene, before_message_id)}
                 if before_message_id is not None
                 else None
             )
@@ -371,18 +413,33 @@ class PerceptionMixin:
                 message = next(
                     (
                         entry
-                        for entry in history_prefix(scene, before_message_id)
+                        for entry in perception_prefix(scene, before_message_id)
                         if self._perception_needed(scene, entry, read=read)
                     ),
                     None,
                 )
                 if message is None:
                     return
+                reinforcement = next(
+                    (
+                        item
+                        for item in scene.world_state.reinforce
+                        if item.perspective_source is message
+                    ),
+                    None,
+                )
                 try:
                     await self.analyze_perceptions(scene, message)
                 except (GenerationCancelled, asyncio.CancelledError):
                     failures[message.id] = failures.get(message.id, 0) + 1
                     raise
+                if (
+                    reinforcement is not None
+                    and reinforcement in scene.world_state.reinforce
+                ):
+                    current = prepare_reinforcement_source(scene, reinforcement)
+                    if current is not None and current is not message:
+                        self._register_perception_sources(scene, [current])
 
     def _perception_current(
         self,
@@ -394,9 +451,18 @@ class PerceptionMixin:
         return (
             character_knowledge_enabled(scene)
             and self.scene is scene
-            and any(entry is message for entry in scene.history)
+            and any(entry is message for entry in message_sources(scene))
             and message.knowledge is knowledge
-            and knowledge.content_digest == content_digest(message.message)
+            and knowledge.content_digest == content_digest(message.perception_text)
+            and all(
+                reinforcement.perspective_source is not message
+                or (
+                    reinforcement.answer == message.message
+                    and reinforcement.question == message.question
+                    and reinforcement.character == message.character_name
+                )
+                for reinforcement in scene.world_state.reinforce
+            )
             and perception_context(scene, message) == context
         )
 
@@ -411,7 +477,7 @@ class PerceptionMixin:
         context = deepcopy(perception_context(scene, message))
         audiences = relevant_audiences(scene, message)
         answer_budget = max(
-            2048, len(audiences) * (count_tokens(message.message) + 256)
+            2048, len(audiences) * (count_tokens(message.perception_text) + 256)
         )
         try:
             _, extracted = await Prompt.request(

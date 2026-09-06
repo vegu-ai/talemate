@@ -95,10 +95,10 @@ class WorldEntryContextItem(ContextIDItem):
     async def set(self, scene: "Scene", value: str | None):
         if value is None:
             return
-        self.entry.text = value
         await scene.world_state_manager.update_context_db_entry(
             self.entry.id, value, self.entry.meta
         )
+        self.entry.text = value
 
 
 @register_context_id_handler

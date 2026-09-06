@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Union
 import pydantic
 from talemate.context import active_scene
-from talemate.knowledge.schema import EntryVisibility
+from talemate.knowledge.schema import EntryVisibility, ReinforcementEntry
 from talemate.knowledge.rename import rename_knowledge_references
 from talemate.knowledge.memory import invalidate_memory_audiences
 from talemate.knowledge.perspectives import validate_character_rename
@@ -78,6 +78,9 @@ class Character(pydantic.BaseModel):
     # attribute and detail storage
     base_attributes: dict = pydantic.Field(default_factory=dict)
     details: dict[str, str] = pydantic.Field(default_factory=dict)
+    reinforcement_entries: dict[str, ReinforcementEntry] = pydantic.Field(
+        default_factory=dict
+    )
 
     # keyed by the memory storage key: "description", "<attr>", "detail.<key>"
     visibility: dict[str, EntryVisibility] = pydantic.Field(default_factory=dict)
@@ -87,6 +90,13 @@ class Character(pydantic.BaseModel):
     actor: "Actor | None" = pydantic.Field(default=None, exclude=True)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @pydantic.model_serializer(mode="wrap")
+    def serialize_reinforcement_entries(self, handler):
+        data = handler(self)
+        if not self.reinforcement_entries:
+            data.pop("reinforcement_entries", None)
+        return data
 
     @property
     def gender(self) -> str:
@@ -536,8 +546,14 @@ class Character(pydantic.BaseModel):
 
         await memory_agent.add_many(items)
 
-    async def set_detail(self, name: str, value):
+    async def set_detail(
+        self, name: str, value, *, reinforcement: ReinforcementEntry | None = None
+    ):
         memory_agent = instance.get_agent("memory")
+        if not value or self.details.get(name) != value:
+            self.reinforcement_entries.pop(name, None)
+        if value and reinforcement is not None:
+            self.reinforcement_entries[name] = reinforcement
         if not value:
             try:
                 del self.details[name]
@@ -564,6 +580,8 @@ class Character(pydantic.BaseModel):
             await self.commit_single_detail_to_memory(memory_agent, name, value)
 
     def set_detail_defer(self, name: str, value):
+        if self.details.get(name) != value:
+            self.reinforcement_entries.pop(name, None)
         self.details[name] = value
         self.memory_dirty = True
         invalidate_memory_audiences(active_scene.get())
@@ -675,6 +693,15 @@ class Character(pydantic.BaseModel):
         updates = other_character.model_dump(exclude_none=True)
         updates.pop("base_attributes", None)
         updates.pop("details", None)
+        updates.pop("reinforcement_entries", None)
+        updates["visibility"] = {
+            key: EntryVisibility.model_validate(value)
+            for key, value in updates["visibility"].items()
+        }
+        updates["visual_finalizers"] = [
+            VisualPromptFinalizer.model_validate(value)
+            for value in updates["visual_finalizers"]
+        ]
         updates.pop(
             "current_avatar", None
         )  # current_avatar is scene-specific, not shared
@@ -691,6 +718,8 @@ class Character(pydantic.BaseModel):
         for detail in self.shared_details:
             if detail not in other_character.details:
                 continue
+            if self.details.get(detail) != other_character.details[detail]:
+                self.reinforcement_entries.pop(detail, None)
             self.details[detail] = other_character.details[detail]
 
         self.memory_dirty = True

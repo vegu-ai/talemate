@@ -1,6 +1,10 @@
 import hashlib
 import json
 
+import structlog
+from talemate.exceptions import GenerationCancelled
+from talemate.knowledge.reinforcements import entry_binding, reinforcement_entry_context
+
 from talemate.knowledge.bucket import visibility_key
 from talemate.knowledge.facts import fact_memory_document
 from talemate.knowledge.formatting import format_message_view
@@ -11,6 +15,9 @@ from talemate.knowledge.perspectives import (
 )
 from talemate.knowledge.schema import EntryVisibility
 from talemate.knowledge.supported_facts import character_fact, source_visible
+
+
+log = structlog.get_logger(__name__)
 
 
 def audience_where(viewer):
@@ -73,6 +80,30 @@ def audience_documents(scene, *, groups=None, read=None):
         }
 
     def authored(key, text, meta, visibility, owner=None):
+        if entry_binding(scene, key, owner=owner) is not None:
+            for name in scene.character_data:
+                if not visibility.allows(name, owner):
+                    continue
+                try:
+                    projected = reinforcement_entry_context(
+                        scene, key, name, read=read, owner=owner
+                    )
+                except GenerationCancelled as error:
+                    log.debug(
+                        "reinforcement_memory.skip",
+                        entry_id=key,
+                        viewer=name,
+                        status=str(error),
+                    )
+                    continue
+                add(
+                    ("authored",),
+                    key,
+                    projected,
+                    {**meta, "knowledge_reinforcement": True},
+                    (name,),
+                )
+            return
         add(
             ("authored",),
             key,

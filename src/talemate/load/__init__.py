@@ -35,6 +35,7 @@ from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import ScenePerspectives, load_game_state_path_settings
 from talemate.scene.format import read_scene_format
 from talemate.knowledge.mode import require_character_knowledge_support
+from talemate.knowledge.reinforcements import reinforcement_source_keys
 from talemate.knowledge.perspectives import (
     bind_perspective_sources,
     validate_saved_knowledge,
@@ -382,7 +383,6 @@ async def load_scene_from_data(
                 default=0,
             )
         )
-    bind_perspective_sources(scene)
 
     # load shared context
     shared_context_file = scene_data.get("shared_context", "")
@@ -433,6 +433,12 @@ async def load_scene_from_data(
         scene.layered_history = []
         scene.knowledge = None
         scene.intent_state.reset()
+
+    bind_perspective_sources(scene)
+    # Orphaned entry associations must not attach to a future reused message ID.
+    advance_message_id(
+        max((key[1] for key in reinforcement_source_keys(scene)), default=0)
+    )
 
     asset_data = scene_data.get("assets", {})
     scene.assets.cover_image = asset_data.get("cover_image", None)

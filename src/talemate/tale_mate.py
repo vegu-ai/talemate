@@ -34,7 +34,6 @@ from talemate.game.state import GameState
 from talemate.scene_assets import SceneAssets
 from talemate.scene.episodes import EpisodesManager
 from talemate.scene_message import (
-    NarratorMessage,
     CharacterMessage,
     DirectorMessage,
     VersionSource,
@@ -736,7 +735,7 @@ class Scene(Emitter):
                     if (
                         get_agent("summarizer").scene is self
                         and any(entry is message for entry in self.history)
-                        and isinstance(message, (CharacterMessage, NarratorMessage))
+                        and message.supports_perceptions
                     ):
                         emit(
                             message.typ,

@@ -161,6 +161,23 @@ class SceneMessage(PerspectiveSourceModel):
             and (self.knowledge is not None or self._knowledge_scene)
         ):
             message_content_changed(self)
+        elif name in ("meta", "source", "sub_type") and (
+            self.knowledge is not None or self._knowledge_scene
+        ):
+            message_content_changed(self)
+
+    @property
+    def perception_text(self) -> str:
+        return self.message
+
+    @property
+    def supports_perceptions(self) -> bool:
+        return self.typ in (
+            "character",
+            "narrator",
+            "reinforcement",
+            "context_investigation",
+        )
 
     def append_version(
         self,
@@ -332,11 +349,13 @@ class SceneMessage(PerspectiveSourceModel):
         self.meta["agent"] = agent
         self.meta["function"] = function
         self.meta["arguments"] = kwargs
+        message_content_changed(self)
 
     def set_meta(self, **kwargs):
         if not self.meta:
             self.meta = {}
         self.meta.update(kwargs)
+        message_content_changed(self)
 
 
 class CharacterMessage(SceneMessage):
@@ -597,6 +616,10 @@ class ReinforcementMessage(SceneMessage):
     source: str = "ai"
 
     @property
+    def perception_text(self) -> str:
+        return str(self)
+
+    @property
     def character_name(self):
         return self.source_arguments.get("character", "character")
 
@@ -639,6 +662,10 @@ class ContextInvestigationMessage(SceneMessage):
     sub_type: str | None = None
     asset_id: str | None = None
     asset_type: Literal["avatar", "card", "scene_illustration"] | None = None
+
+    @property
+    def perception_text(self) -> str:
+        return str(self)
 
     @property
     def character(self) -> str:

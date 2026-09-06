@@ -28,7 +28,12 @@ from talemate.knowledge.disclosures import grant_disclosure
 from talemate.knowledge.entry import _item_from_id, SHEET_KINDS
 from talemate.knowledge.perspective_models import Disclosure
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge, TopicCoverage
+from talemate.knowledge.schema import (
+    EntryVisibility,
+    KnowledgeEdge,
+    TopicCoverage,
+    ReinforcementEntry,
+)
 from talemate.knowledge.changes import (
     edge_change,
     edge_changes_knowledge,
@@ -668,7 +673,13 @@ class WorldStateManager:
         self.world_state.emit()
 
     async def save_world_entry(
-        self, entry_id: str, text: str, meta: dict, pin: bool = False
+        self,
+        entry_id: str,
+        text: str,
+        meta: dict,
+        pin: bool = False,
+        *,
+        reinforcement: ReinforcementEntry | None = None,
     ):
         """
         Saves a manual world entry with specified text and metadata.
@@ -680,7 +691,9 @@ class WorldStateManager:
         """
         meta["source"] = "manual"
         meta["typ"] = "world_state"
-        await self.update_context_db_entry(entry_id, text, meta)
+        await self.update_context_db_entry(
+            entry_id, text, meta, reinforcement=reinforcement
+        )
 
         if pin:
             await self.set_pin(entry_id, active=True)
@@ -842,7 +855,14 @@ class WorldStateManager:
         """
         self.world_state.manual_context[entry_id].shared = shared
 
-    async def update_context_db_entry(self, entry_id: str, text: str, meta: dict):
+    async def update_context_db_entry(
+        self,
+        entry_id: str,
+        text: str,
+        meta: dict,
+        *,
+        reinforcement: ReinforcementEntry | None = None,
+    ):
         """
         Updates an entry in the context database with new text and metadata.
 
@@ -862,13 +882,36 @@ class WorldStateManager:
                 id=entry_id,
                 shared=existing.shared if existing else False,
                 visibility=existing.visibility if existing else EntryVisibility(),
+                reinforcement=(
+                    reinforcement
+                    if reinforcement is not None
+                    else existing.reinforcement
+                    if existing and existing.text == text
+                    else None
+                ),
             )
         elif meta.get("typ") == "details":
             # character detail needs to be mirrored to the
             # character object in the scene
             character_name = meta.get("character")
             character = self.scene.get_character(character_name)
-            character.details[meta.get("detail")] = text
+            detail = meta.get("detail")
+            if detail in character.reinforcement_entries:
+                binding = character.reinforcement_entries[detail]
+                detail_text = character.details.get(detail)
+                # The context DB editor submits the stored document, including
+                # its heading, rather than the character's raw detail value.
+                documents = await self.memory_agent.get_document(entry_id)
+                if (
+                    character.reinforcement_entries.get(detail) is not binding
+                    or character.details.get(detail) != detail_text
+                ):
+                    log.debug("update_context_db_entry.stale_detail", entry_id=entry_id)
+                    return
+                previous = documents.get(entry_id)
+                if previous is None or previous.raw != text:
+                    character.reinforcement_entries.pop(detail, None)
+            character.details[detail] = text
 
         await self.memory_agent.add_many([{"id": entry_id, "text": text, "meta": meta}])
 

@@ -16,9 +16,7 @@ from talemate.knowledge.perspectives import (
     source_reference,
 )
 from talemate.scene_message import (
-    CharacterMessage,
     DirectorMessage,
-    NarratorMessage,
     SceneMessage,
 )
 from talemate.util import count_tokens
@@ -68,8 +66,7 @@ def project_character_history(
         if item.id not in required:
             source = (
                 source_reference(scene, "message", item.id, read=read)
-                if isinstance(item, (CharacterMessage, NarratorMessage))
-                and not (item.hidden and not show_hidden)
+                if item.supports_perceptions and not (item.hidden and not show_hidden)
                 else None
             )
             required[item.id] = bool(source) and select_character_view(
@@ -171,7 +168,7 @@ def project_character_history(
             if not keep_director or message.character_name != character:
                 continue
             text = message.as_format(scene.conversation_format, mode=direction_mode)
-        elif isinstance(message, (CharacterMessage, NarratorMessage)):
+        elif message.supports_perceptions:
             reference = source_reference(scene, "message", message.id, read=read)
             if reference is None:
                 log.debug(

@@ -4,17 +4,17 @@
 - path: dev/character-memory-retrieval.md
   title: Character memory retrieval
   summary: 'Character RAG: rag_build/rag_build_for_author, projected history/disclosures, goal-only sub_instruction, scoped
-    semantic/metadata/knowledge_id lookups, memory_viewer enforcement in query_memory/retrieve_memories. Covers cached eligible
+    semantic/metadata/knowledge_id lookups, memory_viewer enforcement in query_memory/retrieve_memories. Covers cached
     topic centroids with fresh ages without refetch, entity descriptions, AI query/question retrieval, optional conversation
-    memory pass, director direction mode, legacy memory_prompt character bucket/viewer semantics, uncached legacy direct retrieval,
+    memory pass, director direction mode, legacy memory_prompt character bucket/viewer semantics, uncached legacy/author direct retrieval,
     cache identity/invalidation, one-repeat index-change retries and scene-switch rejection under the perception gate.'
 - path: dev/character-perspectives.md
   title: Character perspective records
-  summary: 'Character views, revisions/invalidation, finalize_perceptions/ensure_perceptions retries, stale-output rejection,
-    cancellation blocking, project_character_history and audience summaries with safe source-view fallback; source-supported
-    facts, conservative exact deduplication, extraction failures and scoped graph queries. Covers partial/whole disclosures,
-    acquisition boundaries, director/author controls, independent fact rebuilding, and the derived audience memory index: viewer
-    filters, knowledge_index/knowledge_common/knowledge_audience metadata, reconciliation and rebuild_audience_index.'
+  summary: Character/reinforcement/investigation views, revisions/invalidation, finalize_perceptions/ensure_perceptions retries,
+    stale-output rejection, cancellation blocking, project_character_history, audience summaries with safe source-view fallback;
+    source-supported facts, conservative exact deduplication, extraction failures, scoped graph queries. Partial/whole disclosures,
+    acquisition boundaries, director/author controls, independent fact rebuilding, derived audience memory index viewer filters,
+    knowledge_index/knowledge_common/knowledge_audience metadata, reconciliation and rebuild_audience_index.
 - path: dev/howto/add-a-worldstate-template-type.md
   title: Adding a new world-state template
   summary: 'Developer walkthrough for adding a world-state template type: a pydantic Template subclass under src/talemate/world_state/templates
@@ -28,6 +28,12 @@
   summary: The node reference pages under docs/user-guide/node-editor/reference/nodes/ are generated from the live node registry.
     Run 'uv run python -m talemate.game.engine.nodes.tools glossary --write' to regenerate and '--check' to fail on drift;
     hand-written intro text is preserved.
+- path: dev/reinforcement-investigation-perspectives.md
+  title: Reinforcement and investigation perspectives
+  summary: Reinforcement and investigation audience views through shared summarizer analysis, changed-answer sources and
+    heading-aware replacements. Covers reader-operation metadata, context_for, entry-local ReinforcementEntry associations,
+    visibility, metadata saves, shared exports, author edits and renames, missing-source omission, selective index invalidation, loader binding,
+    acquisition boundaries and Retry/Cancel/Ignore; unchanged answers retain ready views.
 - path: dev/scene-format.md
   title: Saved scene format
   summary: 'Scene format_version and knowledge_eligibility: legacy and version-1 files, validation errors, eligibility preservation

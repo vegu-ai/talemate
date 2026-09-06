@@ -11,7 +11,6 @@ from talemate.knowledge.perspectives import (
     source_reference,
 )
 from talemate.knowledge.perspective_models import SourceReference
-from talemate.scene_message import CharacterMessage, NarratorMessage
 
 
 @dataclass(frozen=True)
@@ -44,9 +43,7 @@ def summary_sources(scene, entry, layer):
     selected = entries[start : end + 1]
     if layer == 0:
         return [
-            item
-            for item in selected
-            if isinstance(item, (CharacterMessage, NarratorMessage)) and not item.hidden
+            item for item in selected if item.supports_perceptions and not item.hidden
         ]
     return selected
 

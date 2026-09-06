@@ -11,6 +11,7 @@ from talemate.context import scene_is_loading
 
 from talemate.knowledge.memory import audience_documents
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.reinforcements import reinforcement_source_keys
 from talemate.knowledge.perspectives import PerspectiveReadContext, perspectives_changed
 
 log = structlog.get_logger(__name__)
@@ -46,6 +47,9 @@ class AudienceMemoryMixin:
 
     def _audiences_changed(self, scene, *, event):
         groups = {reference.key for reference in event.affected}
+        if groups.intersection(reinforcement_source_keys(scene)):
+            # Generated details/world entries select the reinforcement's view too.
+            groups.add(("authored",))
         # Other signal listeners may already have pruned the live contributions.
         groups.update(
             group
@@ -143,6 +147,8 @@ class AudienceMemoryMixin:
                     }
                     if removed:
                         state.dirty.update(removed)
+                        if removed.intersection(reinforcement_source_keys(scene)):
+                            state.dirty.add(("authored",))
                         state.dirty.update(
                             group
                             for group, sources in state.fact_sources.items()

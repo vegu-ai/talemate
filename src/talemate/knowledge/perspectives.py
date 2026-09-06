@@ -44,8 +44,14 @@ class _Source:
     @property
     def text(self):
         if isinstance(self.owner, dict):
+            if self.kind == "message":
+                from talemate.scene_message import MESSAGES
+
+                return MESSAGES.get(self.owner.get("typ"), MESSAGES["scene"])(
+                    **self.owner
+                ).perception_text
             return self.owner["message" if self.kind == "message" else "text"]
-        return self.owner.message
+        return self.owner.perception_text
 
     @property
     def knowledge(self) -> SourcePerspectives | None:
@@ -77,8 +83,32 @@ class _Source:
         )
 
 
+def message_sources(scene):
+    """History plus persisted reinforcement passages that are inserted directly."""
+    yield from scene.history
+    yield from direct_message_sources(scene)
+
+
+def direct_message_sources(scene):
+    world_state = getattr(scene, "world_state", None)
+    reinforcements = (
+        world_state.get("reinforce", ())
+        if isinstance(world_state, dict)
+        else getattr(world_state, "reinforce", ())
+    )
+    for reinforcement in reinforcements:
+        value = (
+            reinforcement.get
+            if isinstance(reinforcement, dict)
+            else lambda key: getattr(reinforcement, key, None)
+        )
+        source = value("perspective_source")
+        if source is not None and value("insert") != "sequential":
+            yield source
+
+
 def _sources(scene):
-    for message in scene.history:
+    for message in message_sources(scene):
         identity = (
             message.get("id")
             if isinstance(message, dict)
@@ -558,7 +588,9 @@ def add_disclosure(
         acquired=_acquire(scene),
         provenance=provenance,
         origin=origin,
-        message_id_boundary=max((item.id for item in scene.history), default=0),
+        message_id_boundary=max(
+            (item.id for item in message_sources(scene)), default=0
+        ),
     )
     _validate_audience(scene, disclosure.audience)
     for reference in disclosure.provenance:
@@ -639,18 +671,21 @@ def source_deleted(
 
 def message_content_changed(message: "SceneMessage") -> None:
     scene = message._knowledge_scene() if message._knowledge_scene else None
-    if scene is not None and any(item is message for item in scene.history):
+    if scene is not None and any(item is message for item in message_sources(scene)):
         source_content_changed(scene, "message", message.id)
     elif (
         message.knowledge is not None
-        and message.knowledge.content_digest != content_digest(message.message)
+        and message.knowledge.content_digest != content_digest(message.perception_text)
     ):
-        message.knowledge = message.knowledge.invalidated(message.message)
+        message.knowledge = message.knowledge.invalidated(message.perception_text)
 
 
 def bind_perspective_sources(scene: "Scene") -> None:
-    for message in scene.history:
+    from talemate.scene_message import advance_message_id
+
+    for message in message_sources(scene):
         message._knowledge_scene = weakref.ref(scene)
+        advance_message_id(message.id)
 
 
 def validate_saved_knowledge(data: dict) -> SceneKnowledge | None:
@@ -667,6 +702,12 @@ def validate_saved_knowledge(data: dict) -> SceneKnowledge | None:
         )
     state_data = data.get("knowledge")
     records = [*data.get("history", []), *data.get("archived_history", [])]
+    records.extend(
+        item["perspective_source"]
+        for item in data.get("world_state", {}).get("reinforce", ())
+        if item.get("perspective_source") is not None
+        and item.get("insert") != "sequential"
+    )
     records.extend(
         entry for layer in data.get("layered_history", []) for entry in layer
     )
@@ -694,6 +735,7 @@ def validate_saved_knowledge(data: dict) -> SceneKnowledge | None:
         history=data.get("history", []),
         archived_history=data.get("archived_history", []),
         layered_history=data.get("layered_history", []),
+        world_state=data.get("world_state", {}),
         character_data={
             key: SimpleNamespace(name=value["name"])
             for key, value in data.get("character_data", {}).items()

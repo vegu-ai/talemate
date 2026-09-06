@@ -8,7 +8,7 @@
 {% if memory_stack -%}
 <|SECTION:POTENTIALLY RELEVANT INFORMATION|>
 {% for memory in memory_stack -%}
-{% if technical %}
+{% if technical and not (memory.meta is defined and memory.meta.get("knowledge_reinforcement")) %}
 Context ID: `{{ memory.context_id }}`
 {% endif -%}
 {{ memory|condensed }}

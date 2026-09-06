@@ -38,6 +38,12 @@ class EntryVisibility(pydantic.BaseModel):
         return False
 
 
+class ReinforcementEntry(pydantic.BaseModel):
+    """A generated entry's passage; None records that no passage is available."""
+
+    source_id: pydantic.PositiveInt | None = None
+
+
 class KnowledgeEdge(pydantic.BaseModel):
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:8])
     character: str

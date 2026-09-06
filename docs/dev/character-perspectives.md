@@ -107,7 +107,7 @@ defines retry and blocking; summary producers remain separate.
 ## Finalized-passage analysis
 
 `SummarizeAgent.finalize_perceptions(scene, messages)` registers newly finalized
-character, player and narrator passages and awaits their audience views.
+character, player, narrator, reinforcement and investigation passages and awaits their audience views. Non-sequential reinforcement passages share this lifecycle through their persisted source records; see [reinforcement and investigation perspectives](reinforcement-investigation-perspectives.md).
 `Scene.push_history` calls it after the editor's revision hook and before
 new-message and archive hooks. It runs even when automatic archiving is disabled
 or its threshold has not been reached. In-place regeneration invokes the same
@@ -140,7 +140,7 @@ presence list and currently active characters, resolved to canonical scene names
 Other inactive character records are excluded. The answer budget is at least 2048
 tokens and scales as audience count times (source token count plus 256), using the
 client's dynamic analysis kind. The request uses
-up to 12 preceding character/narrator passages as physical author context,
+up to 12 preceding eligible passages as physical author context,
 the audience's ready views from that window and earlier disclosures, and authored
 character descriptions/details plus the shared scene description/story intention.
 Author context does not imply that a character observed it. Responses contain one
@@ -212,9 +212,9 @@ layered audience summaries. Later supplemental-context steps should extend this
 function rather than introduce a second audience selector. It requires the internal mode and a canonical character
 name, and reads through `select_character_view` with one `PerspectiveReadContext`.
 
-The result is chronological replacement prose from summaries and character/narrator
-messages. Messages are rendered through the source message type's `as_format` on a temporary
-copy. Character names come from the source message, not inference from the view:
+The result is chronological replacement prose from summaries and eligible
+messages. Character and narrator messages use the source type's `as_format` on a temporary
+copy; reinforcement and investigation views use plain replacement formatting so reader headings cannot reappear. Character names come from the source message, not inference from the view:
 `movie_script` retains the NAME header and END-OF-LINE terminator, `chat` retains
 the speaker prefix, and `narrative` uses the body. Existing canonical speaker
 prefixes in view text are not duplicated. A malformed character source without
@@ -273,8 +273,7 @@ omitted/unavailable status when a passage contributes no text. It does not log
 reader or perspective prose.
 
 This intermediate step does **not** make the complete prompt audience-safe.
-Supplemental retrieval, memory, pins, snapshots, investigations, reinforcements and
-other direct context insertion routes remain later work; non-passage message types
+Viewer-scoped [retrieval](character-memory-retrieval.md) and [reinforcement/investigation history, direct inserts and generated-entry pins](reinforcement-investigation-perspectives.md) are integrated. Snapshot and broader guidance integrations remain later work; other non-passage message types
 are absent from this new history projection except scoped director guidance.
 Scene description/story intention remain shared authoring inputs, and authored
 sheets/details/world entries retain the user/director visibility responsibility.
@@ -361,7 +360,7 @@ and `perspectives_changed`.
 ## Audience summary generation and repair
 
 `SummarizeAgent.ensure_summary_views(scene, summary_id, layer=0)` derives a base
-summary from selected visible character/narrator passage views, or a higher summary from
+summary from selected visible passage views, or a higher summary from
 selected views in the immediately preceding layer. Base input reuses the projection's
 message formatter to retain source speaker attribution even for unprefixed views.
 Layer 0 means archived_history;

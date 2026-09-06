@@ -1,5 +1,8 @@
 from typing import TYPE_CHECKING
-from talemate.knowledge.perspectives import rename_perspective_audiences
+from talemate.knowledge.perspectives import (
+    message_sources,
+    rename_perspective_audiences,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -50,7 +53,7 @@ def rename_knowledge_references(scene: "Scene", old: str, new: str):
 
     scene.active_characters = _swap(scene.active_characters, old, new)
 
-    for message in scene.history:
+    for message in message_sources(scene):
         message.present = _swap(message.present, old, new)
 
     for entry in scene.archived_history:
@@ -58,6 +61,14 @@ def rename_knowledge_references(scene: "Scene", old: str, new: str):
             entry["present"] = _swap(entry["present"], old, new)
 
     prefix = f"{old}."
+    for reinforcement in scene.world_state.reinforce:
+        if reinforcement.character == old:
+            source = reinforcement.source_for(scene)
+            reinforcement.character = new
+            if source is not None:
+                arguments = dict(source.source_arguments)
+                arguments["character"] = new
+                source.set_source("world_state", "update_reinforcement", **arguments)
     for edge in scene.world_state.knowledge:
         if edge.character == old:
             edge.character = new

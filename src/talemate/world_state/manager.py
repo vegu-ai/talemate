@@ -6,6 +6,7 @@ import pydantic
 import structlog
 
 import talemate.world_state.templates as world_state_templates
+from talemate.knowledge.memory import invalidate_memory_audiences
 from talemate.agents.tts.util import get_voice
 from talemate.config import commit_config, get_config
 from talemate.config.schema import SceneAppearance, SceneToolShortcut
@@ -688,6 +689,7 @@ class WorldStateManager:
         self, entry_id: str, visibility: EntryVisibility
     ):
         self.world_state.manual_context[entry_id].visibility = visibility
+        invalidate_memory_audiences(self.scene)
 
     async def set_character_entry_visibility(
         self, character_name: str, key: str, visibility: EntryVisibility
@@ -702,6 +704,7 @@ class WorldStateManager:
             character.visibility.pop(key, None)
         else:
             character.visibility[key] = visibility
+        invalidate_memory_audiences(self.scene)
 
     def knowledge_targets(self) -> list[KnowledgeTarget]:
         """Everything a knowledge edge can point at, by memory document id."""
@@ -880,6 +883,7 @@ class WorldStateManager:
 
         if entry_id in self.world_state.manual_context:
             del self.world_state.manual_context[entry_id]
+        invalidate_memory_audiences(self.scene)
 
         await self.remove_pin(entry_id)
 

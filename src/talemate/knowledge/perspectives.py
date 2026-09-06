@@ -779,6 +779,8 @@ def remove_perspective_audiences(scene: "Scene", name: str) -> None:
 
 
 def reset_perspectives(scene: "Scene") -> set[str]:
+    from talemate.knowledge.memory import invalidate_memory_audiences
+
     # Facts are disposable; resetting durable sources also removes their index.
     removed = {
         key for key, fact in scene.world_state.facts.items() if fact.contributions
@@ -792,6 +794,7 @@ def reset_perspectives(scene: "Scene") -> set[str]:
         scene.knowledge = scene.knowledge.model_copy(update={"disclosures": ()})
     for entry in scene.archived_history:
         entry.pop("knowledge", None)
+    invalidate_memory_audiences(scene)
     return removed
 
 

@@ -307,9 +307,17 @@ class SceneMessage(PerspectiveSourceModel):
 
     def hide(self):
         self.flags |= Flags.HIDDEN
+        self._audience_visibility_changed()
 
     def unhide(self):
         self.flags &= ~Flags.HIDDEN
+        self._audience_visibility_changed()
+
+    def _audience_visibility_changed(self):
+        from talemate.context import active_scene
+        from talemate.knowledge.memory import invalidate_memory_audiences
+
+        invalidate_memory_audiences(active_scene.get())
 
     def as_format(self, format: str, **kwargs) -> str:
         if format in ("movie_script", "ai_aware"):

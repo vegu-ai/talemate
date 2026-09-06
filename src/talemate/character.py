@@ -3,6 +3,7 @@ import pydantic
 from talemate.context import active_scene
 from talemate.knowledge.schema import EntryVisibility
 from talemate.knowledge.rename import rename_knowledge_references
+from talemate.knowledge.memory import invalidate_memory_audiences
 from talemate.knowledge.perspectives import validate_character_rename
 from pydantic import ConfigDict
 import structlog
@@ -297,6 +298,7 @@ class Character(pydantic.BaseModel):
         if scene is not None:
             rename_knowledge_references(scene, orig_name, new_name)
 
+        invalidate_memory_audiences(scene)
         if orig_name.lower() == "you":
             # we dont want to replace "you" in the description
             # or anywhere else so we can just return here
@@ -355,6 +357,7 @@ class Character(pydantic.BaseModel):
                 setattr(self, key, value)
 
         self.memory_dirty = True
+        invalidate_memory_audiences(active_scene.get())
 
     async def set_acting_instructions(self, instructions: str | None):
         """
@@ -401,11 +404,7 @@ class Character(pydantic.BaseModel):
         await memory_agent.delete({"character": self.name})
         log.info("purged character from memory", character=self.name)
 
-    async def commit_to_memory(self, memory_agent):
-        """
-        Commits this character's details to the memory agent. (vectordb)
-        """
-
+    def memory_documents(self):
         items = []
 
         if not self.base_attributes or "description" not in self.base_attributes:
@@ -462,9 +461,12 @@ class Character(pydantic.BaseModel):
                 }
             )
 
+        return items
+
+    async def commit_to_memory(self, memory_agent):
+        items = self.memory_documents()
         if items:
             await memory_agent.add_many(items)
-
         self.memory_dirty = False
 
     async def commit_single_attribute_to_memory(
@@ -564,6 +566,7 @@ class Character(pydantic.BaseModel):
     def set_detail_defer(self, name: str, value):
         self.details[name] = value
         self.memory_dirty = True
+        invalidate_memory_audiences(active_scene.get())
 
     def get_detail(self, name: str):
         return self.details.get(name)
@@ -591,6 +594,7 @@ class Character(pydantic.BaseModel):
     def set_base_attribute_defer(self, name: str, value):
         self.base_attributes[name] = value
         self.memory_dirty = True
+        invalidate_memory_audiences(active_scene.get())
 
     def get_base_attribute(self, name: str):
         return self.base_attributes.get(name)
@@ -690,6 +694,7 @@ class Character(pydantic.BaseModel):
             self.details[detail] = other_character.details[detail]
 
         self.memory_dirty = True
+        invalidate_memory_audiences(active_scene.get())
 
 
 class VoiceChangedEvent(pydantic.BaseModel):

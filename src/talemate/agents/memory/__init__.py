@@ -15,6 +15,9 @@ from chromadb.config import Settings
 
 import talemate.events as events
 from talemate.knowledge.presence import presence_metadata
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.memory import audience_where
+from talemate.agents.memory.audiences import AudienceMemoryMixin
 import talemate.util as util
 from talemate.client import ClientBase
 import talemate.instance as instance
@@ -67,7 +70,7 @@ if not chromadb:
     log.info("ChromaDB not found, disabling Chroma agent")
 
 
-class MemoryAgent(Agent):
+class MemoryAgent(AudienceMemoryMixin, Agent):
     """
     An agent that can be used to maintain and access a memory of the world
     using vector databases
@@ -188,6 +191,7 @@ class MemoryAgent(Agent):
 
     def __init__(self, **kwargs):
         self.db = None
+        self.init_audience_index()
         self.memory_tracker = {}
         self._ready_to_add = False
         self._db_generation = 0
@@ -549,6 +553,7 @@ class MemoryAgent(Agent):
         loop = asyncio.get_running_loop()
         try:
             await loop.run_in_executor(None, self._set_db)
+            self.invalidate_audience_index(reconcile=True)
         except EmbeddingsModelLoadError:
             raise
         except Exception as e:
@@ -652,6 +657,8 @@ class MemoryAgent(Agent):
                     **kwargs,
                 )
 
+        self.invalidate_audience_writes([{"id": uid, "meta": kwargs}])
+
     def _add(self, text, character=None, ts: int = None, **kwargs):
         raise NotImplementedError()
 
@@ -668,6 +675,7 @@ class MemoryAgent(Agent):
 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._add_many, objects)
+        self.invalidate_audience_writes(objects)
 
     def _add_many(self, objects: list[dict]):
         """
@@ -689,6 +697,7 @@ class MemoryAgent(Agent):
 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, self._delete, meta)
+        self.invalidate_audience_index(reconcile=True)
 
     def _delete(self, meta: dict):
         """
@@ -697,9 +706,13 @@ class MemoryAgent(Agent):
         raise NotImplementedError()
 
     @set_processing
-    async def get(self, text, character=None, **query):
+    async def get(self, text, character=None, *, viewer=None, **query):
         with MemoryRequest(query=text, query_params=query) as active_memory_request:
             active_memory_request.max_distance = self.max_distance
+            if viewer is not None:
+                return await self.audience_query(text, character, viewer, query)
+            if character_knowledge_enabled(self.scene):
+                await self.prepare_author_index()
             return await asyncio.to_thread(self._get, text, character, **query)
             # return await loop.run_in_executor(
             #    None, functools.partial(self._get, text, character, **query)
@@ -719,6 +732,9 @@ class MemoryAgent(Agent):
     async def get_documents_by_meta(self, meta: dict) -> dict:
         """Documents whose metadata carries every given key/value, by id."""
         if not meta or not self.db:
+            return {}
+        await self.prepare_author_index()
+        if not self.db:
             return {}
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._get_documents_by_meta, meta)
@@ -1676,6 +1692,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
         release_cuda_cache()
 
     def _add(self, text, character=None, uid=None, ts: int = None, **kwargs):
+        if character_knowledge_enabled(self.scene):
+            kwargs["knowledge_index"] = False
         metadatas = []
         ids = []
         scene = self.scene
@@ -1734,7 +1752,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
             seen_ids.add(obj["id"])
 
             documents.append(obj["text"])
-            meta = obj.get("meta", {})
+            meta = dict(obj.get("meta", {}))
+            if character_knowledge_enabled(scene):
+                meta["knowledge_index"] = False
             source = meta.get("source", "talemate")
             character = meta.get("character", "__narrator__")
             self.memory_tracker.setdefault(character, 0)
@@ -1763,14 +1783,23 @@ class ChromaDBMemoryAgent(MemoryAgent):
         self.db.delete(where=where)
         log.debug("chromadb agent delete", meta=meta, where=where)
 
-    def _get(self, text, character=None, limit: int = 15, **kwargs):
+    def _get(
+        self,
+        text,
+        character=None,
+        limit: int = 15,
+        *,
+        viewer=None,
+        _collection=None,
+        **kwargs,
+    ):
         where = {}
 
-        # this doesn't work because chromadb currently doesn't match
-        # non existing fields with $ne (or so it seems)
-        # where.setdefault("$and", [{"pin_only": {"$ne": True}}])
-
         where.setdefault("$and", [])
+        if character_knowledge_enabled(self.scene):
+            where["$and"].extend(audience_where(viewer))
+        elif viewer is not None:
+            raise ValueError("A memory viewer requires perception mode")
 
         character_filtered = False
 
@@ -1791,7 +1820,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         log.debug("crhomadb agent get", text=text, where=where)
 
         try:
-            _results = self.db.query(
+            _results = (_collection if _collection is not None else self.db).query(
                 query_texts=[text],
                 where=where,
                 n_results=limit,
@@ -1799,6 +1828,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
             )
         except Exception as e:
             log.error("chromadb agent", error="failed to query", details=e)
+            if viewer is not None:
+                raise
             return []
 
         # import json
@@ -1907,6 +1938,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
     def _get_documents_by_meta(self, meta: dict) -> dict:
         clauses = [{key: value} for key, value in meta.items()]
+        if character_knowledge_enabled(self.scene):
+            clauses.extend(audience_where(None))
         where = clauses[0] if len(clauses) == 1 else {"$and": clauses}
         return self._documents_from(self.db.get(where=where))
 

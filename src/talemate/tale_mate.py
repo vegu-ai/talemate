@@ -55,6 +55,7 @@ from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import GameStatePathSettings, ScenePerspectives
 from talemate.history import emit_archive_add, ArchiveEntry
 from talemate.knowledge.presence import presence_metadata
+from talemate.knowledge.memory import invalidate_memory_audiences
 from talemate.knowledge.facts import fact_memory_document, prune_summary_facts
 from talemate.knowledge.topics import topics_on_load
 from talemate.knowledge.perspective_models import SceneKnowledge
@@ -1193,6 +1194,7 @@ class Scene(Emitter):
 
         if actor.character.name not in self.character_data:
             self.character_data[actor.character.name] = actor.character
+            invalidate_memory_audiences(self)
 
         for actor in self.actors:
             if (
@@ -1233,6 +1235,7 @@ class Scene(Emitter):
 
         if character.name in self.character_data:
             del self.character_data[character.name]
+            invalidate_memory_audiences(self)
 
         if character.name in self.active_characters:
             self.active_characters.remove(character.name)
@@ -2141,6 +2144,7 @@ class Scene(Emitter):
             await character.commit_to_memory(memory)
 
         await self.world_state.commit_to_memory(memory)
+        await memory.rebuild_audience_index()
 
         # topic centroids are not persisted; cluster when nothing is stored yet
         await topics_on_load(self)

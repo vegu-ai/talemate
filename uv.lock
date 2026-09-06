@@ -5916,7 +5916,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.12.2" },
     { name = "black" },
     { name = "blinker", specifier = ">=1.6.2" },
-    { name = "chromadb", specifier = ">=1.0.12" },
+    { name = "chromadb", specifier = ">=1.5.0" },
     { name = "cohere", specifier = ">=6.0.0" },
     { name = "colorama", specifier = ">=0.4.6" },
     { name = "cryptography", specifier = ">48.0.0" },

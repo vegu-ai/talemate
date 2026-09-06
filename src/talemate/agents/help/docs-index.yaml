@@ -3,15 +3,11 @@
 # Generated file - regenerate with the docs-index claude skill in the work repo.
 - path: dev/character-perspectives.md
   title: Character perspective records
-  summary: 'Developer contract for immutable character views, disclosures, audiences, acquisition order, source revisions,
-    selection and transitive invalidation, source-supported facts, conservative exact deduplication, targeted rebuild costs,
-    extraction failure handling and explicitly scoped graph queries. Documents the summarizer finalized-passage lifecycle: finalize_perceptions after
-    editor revisions, ensure_perceptions before dependent generation, shared analytical prompts, serialized retries, stale-output
-    rejection, cancellation blocking, edit/version hooks and save/reload compatibility under the internal development gate.
-    Defines project_character_history for budgeted actor/editor replacement prose, omission and pending behavior, revision
-    boundaries and prefix readiness, formatted speaker attribution, reader-prose repetition detection, explicit stored-view
-    opt-in, audience-targeted base/layered summary generation, exact dependencies, targeted repair, safe source-view fallback
-    and the remaining supplemental-context limits. Covers partial versus whole-entry grants, durable disclosure origins and message-ID acquisition boundaries, director/author controls, ordered context and independent fact rebuilding.'
+  summary: 'Character views, revisions/invalidation, finalize_perceptions/ensure_perceptions retries, stale-output rejection,
+    cancellation blocking, project_character_history and audience summaries with safe source-view fallback; source-supported
+    facts, conservative exact deduplication, extraction failures and scoped graph queries. Covers partial/whole disclosures,
+    acquisition boundaries, director/author controls, independent fact rebuilding, and the derived audience memory index: viewer
+    filters, knowledge_index/knowledge_common/knowledge_audience metadata, reconciliation and rebuild_audience_index.'
 - path: dev/howto/add-a-worldstate-template-type.md
   title: Adding a new world-state template
   summary: 'Developer walkthrough for adding a world-state template type: a pydantic Template subclass under src/talemate/world_state/templates

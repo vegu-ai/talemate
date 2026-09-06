@@ -18,6 +18,8 @@ from talemate.knowledge.schema import (
     ReinforcementEntry,
 )
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.snapshot_models import SnapshotPerspectives
+from talemate.knowledge.snapshots import snapshot_for
 from talemate.scene_message import ReinforcementMessage
 from talemate.knowledge.perspectives import source_reference, source_deleted
 from talemate.knowledge.reinforcements import (
@@ -68,6 +70,7 @@ class WorldStateResponse(BaseModel):
 
     world_state: Union[dict, None] = None
     anchor_message_ids: list[int] = Field(default_factory=list)
+    audience_context: dict | None = Field(default=None, exclude=True)
 
 
 class InsertionMode(str, Enum):
@@ -194,6 +197,36 @@ class WorldState(BaseModel):
 
     # location description
     location: Union[str, None] = None
+    location_perspectives: SnapshotPerspectives | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_snapshot_perspectives(self, handler):
+        data = handler(self)
+        if self.location_perspectives is None:
+            data.pop("location_perspectives", None)
+        return data
+
+    def snapshot_for(self, viewer=None):
+        return snapshot_for(self.scene, viewer, world_state=self)
+
+    def clear_snapshot_perspectives(self):
+        self.location_perspectives = None
+        for bucket in (self.characters, self.items, self.places):
+            for entity in bucket.values():
+                entity.perspectives = None
+
+    def validate_snapshot_audiences(self, names):
+        records = [self.location_perspectives]
+        records.extend(
+            entity.perspectives
+            for bucket in (self.characters, self.items, self.places)
+            for entity in bucket.values()
+        )
+        for record in records:
+            if record and any(
+                not set(view.audience) <= set(names) for view in record.views
+            ):
+                raise ValueError("Unresolved snapshot audience")
 
     # ids of the scene history messages the snapshot was generated against;
     # every one of these can render inline entity highlights in the UI.
@@ -301,6 +334,7 @@ class WorldState(BaseModel):
         self.items = {}
         self.places = {}
         self.location = None
+        self.location_perspectives = None
         self.anchor_message_ids = []
 
     def emit(self, status="update"):

@@ -24,6 +24,7 @@ def rename_knowledge_references(scene: "Scene", old: str, new: str):
     """
     if old == new:
         return
+    scene.world_state.clear_snapshot_perspectives()
 
     for identity, fact in scene.world_state.facts.items():
         if any(old in item.audience for item in fact.contributions):

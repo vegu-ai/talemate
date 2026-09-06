@@ -8,7 +8,9 @@ import the state classes without cycling back through
 
 from typing import Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
+
+from talemate.knowledge.snapshot_models import SnapshotPerspectives
 
 # ``misses`` tracks how many consecutive durable-snapshot update passes an
 # entity has gone without being touched by the agent's patch. It is internal
@@ -16,20 +18,31 @@ from pydantic import BaseModel, Field
 # never shown to the model and the model is never asked to manage it.
 
 
-class CharacterState(BaseModel):
+class SnapshotEntity(BaseModel):
+    perspectives: SnapshotPerspectives | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_perspectives(self, handler):
+        data = handler(self)
+        if self.perspectives is None:
+            data.pop("perspectives", None)
+        return data
+
+
+class CharacterState(SnapshotEntity):
     snapshot: Union[str, None] = None
     emotion: Union[str, None] = None
     mentions: list[str] = Field(default_factory=list)
     misses: int = 0
 
 
-class ObjectState(BaseModel):
+class ObjectState(SnapshotEntity):
     snapshot: Union[str, None] = None
     mentions: list[str] = Field(default_factory=list)
     misses: int = 0
 
 
-class PlaceState(BaseModel):
+class PlaceState(SnapshotEntity):
     snapshot: Union[str, None] = None
     mentions: list[str] = Field(default_factory=list)
     misses: int = 0

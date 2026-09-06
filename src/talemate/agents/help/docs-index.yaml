@@ -39,6 +39,11 @@
   summary: 'Scene format_version and knowledge_eligibility: legacy and version-1 files, validation errors, eligibility preservation
     through saves and forks, and the pure metadata parser. Documents character_knowledge_enabled, the TALEMATE_DEV_CHARACTER_KNOWLEDGE=1
     development gate, fixtures, and the linked character perspective record contract.'
+- path: dev/snapshot-perspectives.md
+  title: Audience-targeted snapshots
+  summary: K11 snapshot views/location_views, active and mentioned audiences, placeholder examples, durable versus wholesale
+    updates, and snapshot_for(viewer). Documents host shape/identity/freshness checks, model-compliance limits, safe labels/emotions/location,
+    isolated malformed assignments, stale-view recovery and reader completeness under the internal perception gate.
 - path: dev/templates.md
   title: Template Overrides
   summary: 'Older reference for Talemate''s Jinja2 prompt templates: section tags, overriding a default by dropping a same-named
@@ -233,10 +238,10 @@
     post-dialogue narration.
 - path: user-guide/agents/narrator/settings.md
   title: Settings
-  summary: 'Reference for Narrator client, caching, jiggle, instructions, and separate token budgets for each narration type.
-    Covers scene intent and style context, guided time passage, Auto Narration chance/weights/direction gating, Offscreen Life
-    (what a returning character did while away, stored as a fact only they know; minimum missed entries, length; +1 request,
-    off by default), and long-term memory.'
+  summary: Narrator client, caching, jiggle, instructions and token budgets per narration type; scene intent/style, guided
+    time passage and Auto Narration chance/weights/direction gating. Offscreen Life covers returning-character facts, missed-entry
+    and length settings, +1 request, default off, shared legacy snapshots versus returning-character snapshots in perception
+    mode, and long-term memory.
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
   summary: Explains sparse per-scene overrides, the Global/Scene settings switch, inherited versus active fields, gated settings,

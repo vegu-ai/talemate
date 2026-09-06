@@ -11,6 +11,14 @@ import talemate.emit.async_signals
 from talemate.emit import emit
 from talemate.events import GameLoopActorIterEvent
 from talemate.exceptions import GenerationCancelled
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.snapshots import (
+    prepare_snapshot_patch,
+    prepare_snapshot_views,
+    snapshot_audience_context,
+    snapshot_digest,
+    snapshot_example,
+)
 from talemate.prompts import Prompt
 from talemate.prompts.response import AnchorExtractor, ResponseSpec
 from talemate.scene_message import TimePassageMessage
@@ -319,6 +327,7 @@ class WorldStateSnapshotMixin:
 
     @set_processing
     async def request_world_state(self, instructions: str = "") -> WorldStateResponse:
+        scene = self.scene
         # Walk scene.history backward collecting up to `focus_lines` narrative
         # messages. TimePassageMessage is a hard boundary — the moment on the
         # other side is a different scene, not what we're highlighting. Other
@@ -365,6 +374,15 @@ class WorldStateSnapshotMixin:
         t1 = time.time()
 
         durable_snapshot = self.update_world_state_durable_snapshot
+        audience_context = (
+            snapshot_audience_context(
+                scene,
+                max(1, self.client.max_token_length // 4),
+                "\n".join(str(message) for message in focus_messages) or intro_text,
+            )
+            if character_knowledge_enabled(scene)
+            else None
+        )
 
         # Pre-build a rendered current-state payload for the prompt's CURRENT
         # STATE section. Only shown in durable mode (legacy mode's prompt
@@ -377,15 +395,19 @@ class WorldStateSnapshotMixin:
             ws = self.scene.world_state
             current_state_payload = {
                 "characters": {
-                    name: char.model_dump(exclude={"mentions", "misses"})
+                    name: char.model_dump(
+                        exclude={"mentions", "misses", "perspectives"}
+                    )
                     for name, char in ws.characters.items()
                 },
                 "items": {
-                    name: obj.model_dump(exclude={"mentions", "misses"})
+                    name: obj.model_dump(exclude={"mentions", "misses", "perspectives"})
                     for name, obj in ws.items.items()
                 },
                 "places": {
-                    name: place.model_dump(exclude={"mentions", "misses"})
+                    name: place.model_dump(
+                        exclude={"mentions", "misses", "perspectives"}
+                    )
                     for name, place in ws.places.items()
                 },
                 "location": ws.location,
@@ -408,8 +430,17 @@ class WorldStateSnapshotMixin:
                 "current_state_payload": current_state_payload,
                 "custom_instructions": self.update_world_state_custom_instructions,
                 "instructions": instructions,
+                "snapshot_audience_context": audience_context,
+                "snapshot_audience_example": snapshot_example(
+                    audience_context, durable_snapshot
+                )
+                if audience_context
+                else None,
             },
         )
+
+        if self.scene is not scene:
+            raise GenerationCancelled("Scene changed during snapshot generation")
 
         self.scene.log.debug(
             "request_world_state",
@@ -419,7 +450,9 @@ class WorldStateSnapshotMixin:
         )
 
         return WorldStateResponse(
-            world_state=world_state, anchor_message_ids=anchor_message_ids
+            world_state=world_state,
+            anchor_message_ids=anchor_message_ids,
+            audience_context=audience_context,
         )
 
     async def apply_snapshot_update(
@@ -448,6 +481,7 @@ class WorldStateSnapshotMixin:
             world_state.items = {}
             world_state.places = {}
             world_state.location = None
+            world_state.location_perspectives = None
             world_state.anchor_message_ids = []
 
         world_state.emit(status="requested")
@@ -473,6 +507,10 @@ class WorldStateSnapshotMixin:
             return
 
         if response.world_state is None:
+            world_state.emit()
+            return
+
+        if self.scene is not scene or scene.world_state is not world_state:
             world_state.emit()
             return
 
@@ -508,6 +546,18 @@ class WorldStateSnapshotMixin:
             for name, payload in (raw.get("places") or {}).items()
         }
 
+        perception = character_knowledge_enabled(scene)
+        if perception:
+            char_patch = prepare_snapshot_patch(
+                scene, world_state.characters, char_patch, response.audience_context
+            )
+            item_patch = prepare_snapshot_patch(
+                scene, world_state.items, item_patch, response.audience_context
+            )
+            place_patch = prepare_snapshot_patch(
+                scene, world_state.places, place_patch, response.audience_context
+            )
+
         if self.update_world_state_durable_snapshot:
             # Delta merge: apply patch on top of current state. None values
             # drop the entity; partial dicts patch fields; omitted keys are
@@ -538,7 +588,18 @@ class WorldStateSnapshotMixin:
                 if not payload or not isinstance(payload, dict):
                     continue
                 char_kwargs = dict(payload)
-                if not char_kwargs.get("emotion") and name in world_state.characters:
+                if (
+                    perception
+                    and "snapshot" not in char_kwargs
+                    and name in world_state.characters
+                ):
+                    char_kwargs["snapshot"] = world_state.characters[name].snapshot
+                preserve_emotion = (
+                    "emotion" not in char_kwargs
+                    if perception
+                    else not char_kwargs.get("emotion")
+                )
+                if preserve_emotion and name in world_state.characters:
                     char_kwargs["emotion"] = world_state.characters[name].emotion
                 try:
                     new_chars[name] = CharacterState(**char_kwargs)
@@ -551,6 +612,15 @@ class WorldStateSnapshotMixin:
                 if not payload or not isinstance(payload, dict):
                     continue
                 try:
+                    if (
+                        perception
+                        and "snapshot" not in payload
+                        and name in world_state.items
+                    ):
+                        payload = {
+                            "snapshot": world_state.items[name].snapshot,
+                            **payload,
+                        }
                     new_items[name] = ObjectState(**payload)
                 except Exception as e:
                     log.error("world_state.apply_snapshot_update", error=e, item=name)
@@ -559,6 +629,15 @@ class WorldStateSnapshotMixin:
                 if not payload or not isinstance(payload, dict):
                     continue
                 try:
+                    if (
+                        perception
+                        and "snapshot" not in payload
+                        and name in world_state.places
+                    ):
+                        payload = {
+                            "snapshot": world_state.places[name].snapshot,
+                            **payload,
+                        }
                     new_places[name] = PlaceState(**payload)
                 except Exception as e:
                     log.error("world_state.apply_snapshot_update", error=e, place=name)
@@ -566,8 +645,20 @@ class WorldStateSnapshotMixin:
             world_state.items = new_items
             world_state.places = new_places
 
-        if "location" in raw and isinstance(raw["location"], (str, type(None))):
-            world_state.location = raw["location"]
+        valid_location = "location" not in raw or isinstance(
+            raw["location"], (str, type(None))
+        )
+        if "location" in raw and (perception or valid_location):
+            if valid_location:
+                world_state.location = raw["location"]
+            world_state.location_perspectives = None
+        if perception and valid_location and "location_views" in raw:
+            world_state.location_perspectives = prepare_snapshot_views(
+                scene,
+                raw["location_views"],
+                snapshot_digest("location", world_state.location),
+                response.audience_context,
+            )
 
         world_state.anchor_message_ids = list(response.anchor_message_ids)
 

@@ -1,22 +1,22 @@
 {# WORLD STATE SNAPSHOT -#}
 {% if agent_config("world_state.update_world_state.inject_as_scene_memory") -%}
-{% set ws = scene.world_state -%}
+{% set ws = scene.world_state.snapshot_for(knowledge_viewer|default(none)) -%}
 {% set snapshot_body -%}
 {%- if ws.location %}Location: {{ ws.location|condensed }}
 {% endif -%}
-{%- if ws.characters.values()|selectattr("snapshot")|list %}
+{%- if ws.characters %}
 ### Characters
-{% for name, char in ws.characters.items() if char.snapshot %}- {{ name }}{% if char.emotion %} ({{ char.emotion }}){% endif %} — {{ char.snapshot|condensed }}
+{% for text in ws.characters %}- {{ text|condensed }}
 {% endfor -%}
 {% endif -%}
-{%- if ws.items.values()|selectattr("snapshot")|list %}
+{%- if ws["items"] %}
 ### Items
-{% for name, item in ws.items.items() if item.snapshot %}- {{ name }} — {{ item.snapshot|condensed }}
+{% for text in ws["items"] %}- {{ text|condensed }}
 {% endfor -%}
 {% endif -%}
-{%- if ws.places.values()|selectattr("snapshot")|list %}
+{%- if ws.places %}
 ### Places
-{% for name, place in ws.places.items() if place.snapshot %}- {{ name }} — {{ place.snapshot|condensed }}
+{% for text in ws.places %}- {{ text|condensed }}
 {% endfor -%}
 {% endif -%}
 {%- endset -%}

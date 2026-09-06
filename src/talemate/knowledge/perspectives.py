@@ -776,6 +776,7 @@ def validate_character_rename(
 
 
 def remove_perspective_audiences(scene: "Scene", name: str) -> None:
+    scene.world_state.clear_snapshot_perspectives()
     changed = []
     for source in _sources(scene):
         knowledge = source.knowledge

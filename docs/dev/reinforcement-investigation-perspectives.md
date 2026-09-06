@@ -32,4 +32,4 @@ History and direct sources share one ordered merge for perception processing and
 
 Stored direct sources are bound after world-state loading and advance the message counter before any new message can be allocated. Orphaned entry associations also reserve their message IDs so a later passage cannot inherit their identity. Failure uses K03's pending/failed state and Retry/Cancel/Ignore behavior. Reader text remains stored; character generation never falls back to it. A retry does not retroactively acquire later evidence or disclosures, while a changed answer uses its new acquisition point.
 
-Snapshot audience generation remains K11 work. Broader director/guidance integration remains a separate step.
+The existing snapshot request generates [audience-targeted snapshot content](snapshot-perspectives.md) under K11. Broader director/guidance integration remains a separate step.

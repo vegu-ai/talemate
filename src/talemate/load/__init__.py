@@ -414,6 +414,7 @@ async def load_scene_from_data(
         scene.saved_memory_session_id = scene_data.get("saved_memory_session_id", None)
         scene.memory_session_id = scene_data.get("memory_session_id", None)
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
+        scene.world_state.validate_snapshot_audiences(scene.character_data)
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
         scene.game_state_watch_paths = scene_data.get("game_state_watch_paths", [])

@@ -172,13 +172,17 @@ def snapshot_view_text(
 
 
 def snapshot_for(
-    scene: "Scene", viewer: str | None, *, world_state: "WorldState | None" = None
+    scene: "Scene",
+    viewer: str | None,
+    *,
+    world_state: "WorldState | None" = None,
+    read: PerspectiveReadContext | None = None,
 ) -> dict:
     ws = world_state if world_state is not None else scene.world_state
     projected = viewer is not None and character_knowledge_enabled(scene)
     if projected and viewer not in scene.character_data:
         raise ValueError(f"Unknown snapshot viewer: {viewer}")
-    read = PerspectiveReadContext(scene) if projected else None
+    read = (read or PerspectiveReadContext(scene)) if projected else None
     location = ws.location
     if projected and location:
         location = snapshot_view_text(

@@ -273,7 +273,7 @@ omitted/unavailable status when a passage contributes no text. It does not log
 reader or perspective prose.
 
 This intermediate step does **not** make the complete prompt audience-safe.
-Viewer-scoped [retrieval](character-memory-retrieval.md) and [reinforcement/investigation history, direct inserts and generated-entry pins](reinforcement-investigation-perspectives.md) are integrated. Snapshot and broader guidance integrations remain later work; other non-passage message types
+Viewer-scoped [retrieval](character-memory-retrieval.md) and [reinforcement/investigation history, direct inserts and generated-entry pins](reinforcement-investigation-perspectives.md) are integrated. [Snapshot](snapshot-perspectives.md) and [guidance/scene analysis](character-evidence-guidance.md) integrations also use stored evidence; other non-passage message types
 are absent from this new history projection except scoped director guidance.
 Scene description/story intention remain shared authoring inputs, and authored
 sheets/details/world entries retain the user/director visibility responsibility.

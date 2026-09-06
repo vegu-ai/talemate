@@ -261,3 +261,5 @@ If enabled a critique pass is run on the generated outline to improve beat quali
 ##### Expansion critique
 
 If enabled a post-expansion critique pass is run to fix cross-beat redundancy and intensity monotony. This adds roughly 10 seconds per generation.
+
+--8<-- "docs/snippets/tips.md:character_evidence_guidance"

@@ -100,3 +100,16 @@ You will be taken to the world editor suggestions tab where you can view the pro
 
 ![Character change proposal expanded](/talemate/img/0.29.0/world-editor-suggestions-1.png)
 <!--- --8<-- [end:character_change_proposals] -->
+
+<!-- --8<-- [start:character_evidence_guidance] -->
+## Development-mode character evidence
+
+In internally enabled perception scenes, actor guidance and conversation analysis use
+the character’s stored evidence and last-known context. Cached advice is reused only
+for the same audience and unchanged evidence. Reader planning remains available,
+but its advice must not assume that characters know private reader information.
+Actor prompts omit the legacy unknown-fact lists and topic-awareness assertions.
+See [Character evidence in guidance and analysis](/talemate/dev/character-evidence-guidance/)
+for the development boundary and model-compliance limits. Legacy scenes retain the
+settings behavior described above.
+<!-- --8<-- [end:character_evidence_guidance] -->

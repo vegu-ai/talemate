@@ -187,3 +187,5 @@ Percentage of remaining budget allocated to each successive summary layer. Highe
 When enabled, dialogue will not expand into content that has already been summarized, producing the most compact context rendering at the cost of detail. When disabled, older messages may reappear in full as dialogue expands into previously summarized content.
 
 - **Default**: Off
+
+--8<-- "docs/snippets/tips.md:character_evidence_guidance"

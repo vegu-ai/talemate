@@ -49,12 +49,13 @@ def project_character_history(
     keep_director: bool | str = False,
     show_hidden: bool = False,
     direction_mode: Literal["direction", "internal_monologue"] = "direction",
+    read: PerspectiveReadContext | None = None,
 ) -> list[str]:
     if not character_knowledge_enabled(scene):
         raise ValueError("Character history projection requires perception mode")
     if character not in scene.character_data:
         raise ValueError(f"Unknown history perspective: {character}")
-    read = PerspectiveReadContext(scene)
+    read = read or PerspectiveReadContext(scene)
     parts = []
     tokens = 0
     prefix = history_prefix(scene, before_message_id)

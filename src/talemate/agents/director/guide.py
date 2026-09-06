@@ -1,6 +1,21 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 import structlog
 from functools import wraps
+from inspect import signature
+from talemate.exceptions import GenerationCancelled
+from talemate.knowledge.memory import audience_documents
+from talemate.knowledge.perspectives import PerspectiveReadContext
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.advice import (
+    KnowledgeAnalysisType,
+    advice_record_is_current,
+    advice_record_metadata,
+    advice_character,
+    advice_context,
+    advice_fingerprint,
+    emission_character,
+    require_current_advice,
+)
 from talemate.agents.base import (
     set_processing as _set_processing,
     AgentAction,
@@ -31,35 +46,49 @@ class DirectorGuidanceEmission(AgentTemplateEmission):
     pass
 
 
-def set_processing(fn):
-    """
-    Custom decorator that emits the agent status as processing while the function
-    is running and then emits the result of the function as a DirectorGuidanceEmission
-    """
+def set_processing(*, analysis_type: KnowledgeAnalysisType):
+    def decorate(fn):
+        """
+        Custom decorator that emits the agent status as processing while the function
+        is running and then emits the result of the function as a DirectorGuidanceEmission
+        """
 
-    @_set_processing
-    @wraps(fn)
-    async def wrapper(self, *args, **kwargs):
-        emission: DirectorGuidanceEmission = DirectorGuidanceEmission(agent=self)
+        @_set_processing
+        @wraps(fn)
+        async def wrapper(self, *args, **kwargs):
+            arguments = signature(fn).bind(self, *args, **kwargs).arguments
+            character = advice_character(
+                self.scene, arguments.get("character"), typ=analysis_type
+            )
+            scene = self.scene
+            fingerprint = advice_fingerprint(scene, character)
+            emission: DirectorGuidanceEmission = DirectorGuidanceEmission(
+                agent=self,
+                template_vars={"character": character, "analysis_type": analysis_type},
+            )
 
-        await talemate.emit.async_signals.get(
-            "agent.director.guide.before_generate"
-        ).send(emission)
-        await talemate.emit.async_signals.get(
-            "agent.director.guide.inject_instructions"
-        ).send(emission)
+            await talemate.emit.async_signals.get(
+                "agent.director.guide.before_generate"
+            ).send(emission)
+            await talemate.emit.async_signals.get(
+                "agent.director.guide.inject_instructions"
+            ).send(emission)
 
-        agent_context = active_agent.get()
-        agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
+            agent_context = active_agent.get()
+            agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
 
-        response = await fn(self, *args, **kwargs)
-        emission.response = response
-        await talemate.emit.async_signals.get("agent.director.guide.generated").send(
-            emission
-        )
-        return emission.response
+            response = await fn(self, *args, **kwargs)
+            emission.response = response
+            await talemate.emit.async_signals.get(
+                "agent.director.guide.generated"
+            ).send(emission)
+            if character_knowledge_enabled(scene):
+                require_current_advice(self, scene, character, fingerprint)
+            return emission.response
 
-    return wrapper
+        return wrapper
+
+    return decorate
 
 
 class GuideSceneMixin:
@@ -160,7 +189,15 @@ class GuideSceneMixin:
 
         guidance = None
 
-        cached_guidance = await self.get_cached_guidance(emission.response)
+        character = advice_character(
+            self.scene,
+            emission.template_vars.get("character"),
+            typ=emission.analysis_type,
+        )
+        fingerprint = advice_fingerprint(self.scene, character)
+        cached_guidance = await self.get_cached_guidance(
+            emission.response, character=character, analysis_type=emission.analysis_type
+        )
 
         if emission.analysis_type == "narration" and self.guide_narrator:
             if cached_guidance:
@@ -198,11 +235,17 @@ class GuideSceneMixin:
                 emission.response,
                 guidance,
                 emission.analysis_type,
-                emission.template_vars.get("character"),
+                character,
+                evidence_fp=fingerprint,
             )
 
     async def on_editor_revision_analysis_before(self, emission: AgentTemplateEmission):
-        cached_guidance = await self.get_cached_guidance(emission.response)
+        character = emission_character(self.scene, emission)
+        cached_guidance = await self.get_cached_guidance(
+            emission.response,
+            character=character,
+            analysis_type="conversation" if character else "narration",
+        )
         if cached_guidance:
             emission.dynamic_instructions.append(
                 DynamicInstruction(title="Guidance", content=cached_guidance)
@@ -213,14 +256,18 @@ class GuideSceneMixin:
     def _cache_key(self) -> str:
         return "cached_guidance"
 
-    async def get_cached_guidance(self, analysis: str | None = None) -> str | None:
-        """
-        Returns the cached guidance for the given analysis.
+    async def get_cached_guidance(
+        self,
+        analysis: str | None = None,
+        *,
+        character: "Character | None" = None,
+        analysis_type: KnowledgeAnalysisType | None = None,
+    ) -> str | None:
+        """Return enabled cached guidance.
 
-        If analysis is not provided, it will return the cached guidance for the last analysis regardless
-        of the fingerprint.
+        Without analysis, legacy mode ignores the generation fingerprint.
+        Perception mode always validates audience, type, context and evidence.
         """
-
         if not self.guide_scene_cache_guidance:
             return None
 
@@ -228,6 +275,11 @@ class GuideSceneMixin:
         cached_guidance = self.get_scene_state(key)
 
         if cached_guidance:
+            if character_knowledge_enabled(self.scene):
+                if not advice_record_is_current(
+                    self, cached_guidance, character, analysis_type
+                ):
+                    return None
             if not analysis:
                 return cached_guidance.get("guidance")
             elif cached_guidance.get("fp") == self.context_fingerprint(
@@ -241,8 +293,10 @@ class GuideSceneMixin:
         self,
         analysis: str,
         guidance: str,
-        analysis_type: str,
+        analysis_type: KnowledgeAnalysisType,
         character: "Character | None" = None,
+        *,
+        evidence_fp: str | None = None,
     ):
         """
         Sets the cached guidance for the given analysis.
@@ -252,9 +306,10 @@ class GuideSceneMixin:
             **{
                 key: {
                     "fp": self.context_fingerprint(extra=[analysis]),
+                    **advice_record_metadata(
+                        self, character, analysis_type, evidence_fp=evidence_fp
+                    ),
                     "guidance": guidance,
-                    "analysis_type": analysis_type,
-                    "character": character.name if character else None,
                 }
             }
         )
@@ -269,6 +324,12 @@ class GuideSceneMixin:
         if not cached_guidance:
             return None
 
+        if character_knowledge_enabled(self.scene):
+            character = advice_character(self.scene, character_name)
+            if not advice_record_is_current(
+                self, cached_guidance, character, "conversation"
+            ):
+                return None
         if (
             cached_guidance.get("character") == character_name
             and cached_guidance.get("analysis_type") == "conversation"
@@ -277,9 +338,41 @@ class GuideSceneMixin:
 
         return None
 
+    async def guidance_context(
+        self, character: "Character | str | None" = None, budget: int = 4096
+    ) -> list[dict[str, Any]]:
+        """Collect active-cast planning evidence in one synchronous read batch."""
+        if not character_knowledge_enabled(self.scene):
+            return []
+        characters = (
+            [advice_character(self.scene, character)]
+            if character is not None
+            else [
+                self.scene.character_data[name]
+                for name in self.scene.active_characters
+                if name in self.scene.character_data
+            ]
+        )
+        per_character = max(1, budget // max(1, len(characters)))
+        result = []
+        read = PerspectiveReadContext(self.scene)
+        documents = audience_documents(self.scene, groups={("authored",)}, read=read)
+        for item in characters:
+            try:
+                result.append(
+                    advice_context(
+                        self.scene, item, per_character, read=read, documents=documents
+                    )
+                )
+            except GenerationCancelled:
+                if character is not None:
+                    raise
+                result.append({"character": item.name, "unavailable": True})
+        return result
+
     # methods
 
-    @set_processing
+    @set_processing(analysis_type="conversation")
     async def guide_actor_off_of_scene_analysis(
         self, analysis: str, character: "Character", response_length: int = 256
     ):
@@ -300,6 +393,11 @@ class GuideSceneMixin:
                 "analysis": analysis,
                 "scene": self.scene,
                 "character": character,
+                "evidence": advice_context(
+                    self.scene, character, self.client.max_token_length // 2
+                )
+                if character_knowledge_enabled(self.scene)
+                else None,
                 "response_length": response_length,
                 "max_tokens": self.client.max_token_length,
             },
@@ -321,7 +419,7 @@ class GuideSceneMixin:
 
         return strip_partial_sentences(guidance).strip()
 
-    @set_processing
+    @set_processing(analysis_type="narration")
     async def guide_narrator_off_of_scene_analysis(
         self, analysis: str, response_length: int = 256
     ):
@@ -331,6 +429,7 @@ class GuideSceneMixin:
 
         log.debug("director.guide_narrator_off_of_scene_analysis", analysis=analysis)
 
+        character = advice_character(self.scene, typ="narration")
         response, extracted = await Prompt.request(
             "director.guide-narration",
             self.client,
@@ -338,6 +437,7 @@ class GuideSceneMixin:
             vars={
                 "analysis": analysis,
                 "scene": self.scene,
+                "character": character,
                 "response_length": response_length,
                 "max_tokens": self.client.max_token_length,
             },

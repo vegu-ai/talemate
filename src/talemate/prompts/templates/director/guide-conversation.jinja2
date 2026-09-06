@@ -1,4 +1,4 @@
-{#-
+{% if evidence %}{% include "guide-character-evidence.jinja2" %}{% else %}{#-
 Extractors:
   - guidance: AnchorExtractor("<GUIDANCE>", "</GUIDANCE>")
 
@@ -104,4 +104,4 @@ Provide your response in the following format:
 {% endif %}
 <GUIDANCE>... your guidance for the story writer ...</GUIDANCE>
 <|CLOSE_SECTION|>
-{{ bot_token }}{% if response_length > 512 %}<ANALYSIS>{% else %}<GUIDANCE>{% endif %}
+{{ bot_token }}{% if response_length > 512 %}<ANALYSIS>{% else %}<GUIDANCE>{% endif %}{% endif %}

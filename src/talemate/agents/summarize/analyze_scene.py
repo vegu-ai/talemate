@@ -18,6 +18,18 @@ from talemate.agents.narrator import NarratorAgentEmission
 from talemate.agents.context import active_agent
 from talemate.agents.base import RagBuildSubInstructionEmission
 from contextvars import ContextVar
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.advice import (
+    KnowledgeAnalysisType,
+    advice_record_is_current,
+    advice_record_metadata,
+    advice_character,
+    advice_context,
+    advice_fingerprint,
+    emission_character,
+    emission_analysis_type,
+    require_current_advice,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -211,13 +223,16 @@ class SceneAnalyzationMixin:
         if not analyze_scene_for_type:
             return
 
+        scene = self.scene
+        character = emission_character(scene, emission)
+        fingerprint = advice_fingerprint(scene, character)
         analysis = None
 
         # self.set_scene_states and self.get_scene_state to store
         # cached analysis in scene states
 
         if self.cache_analysis:
-            analysis = await self.get_cached_analysis(emission_type)
+            analysis = await self.get_cached_analysis(emission_type, character)
             if analysis:
                 await talemate.emit.async_signals.get(
                     "agent.summarization.scene_analysis.cached"
@@ -227,9 +242,8 @@ class SceneAnalyzationMixin:
                         analysis_type=emission_type,
                         response=analysis,
                         template_vars={
-                            "character": emission.character
-                            if hasattr(emission, "character")
-                            else None,
+                            "character": character,
+                            "analysis_type": emission_type,
                         },
                         dynamic_instructions=emission.dynamic_instructions,
                     )
@@ -239,14 +253,18 @@ class SceneAnalyzationMixin:
             # analyze the scene for the next action
             analysis = await self.analyze_scene_for_next_action(
                 emission_type,
-                emission.character if hasattr(emission, "character") else None,
+                character,
                 self.analysis_length,
             )
 
-            await self.set_cached_analysis(emission_type, analysis)
+            await self.set_cached_analysis(
+                emission_type, analysis, character, evidence_fp=fingerprint
+            )
 
         if not analysis:
             return
+        if character_knowledge_enabled(scene):
+            require_current_advice(self, scene, character, fingerprint)
         emission.dynamic_instructions.append(
             DynamicInstruction(title="Scene Analysis", content=analysis)
         )
@@ -267,6 +285,12 @@ class SceneAnalyzationMixin:
             return
 
         deep_analysis_context = self.get_scene_state("deep_analysis_context")
+        if character_knowledge_enabled(self.scene):
+            character = emission_character(self.scene, emission)
+            record = self.get_scene_state("deep_analysis_evidence") or {}
+            typ = emission_analysis_type(emission, character)
+            if not advice_record_is_current(self, record, character, typ):
+                return
         if deep_analysis_context:
             emission.dynamic_instructions.append(
                 DynamicInstruction(
@@ -286,7 +310,13 @@ class SceneAnalyzationMixin:
             emission.sub_instruction = sub_instruction
 
     async def on_editor_revision_analysis_before(self, emission: AgentTemplateEmission):
-        last_analysis = self.get_scene_state("scene_analysis")
+        if character_knowledge_enabled(self.scene):
+            character = emission_character(self.scene, emission)
+            last_analysis = await self.get_cached_analysis(
+                "conversation" if character else "narration", character
+            )
+        else:
+            last_analysis = self.get_scene_state("scene_analysis")
         if last_analysis:
             emission.dynamic_instructions.append(
                 DynamicInstruction(title="Scene Analysis", content=last_analysis)
@@ -294,7 +324,9 @@ class SceneAnalyzationMixin:
 
     # helpers
 
-    async def get_cached_analysis(self, typ: str) -> str | None:
+    async def get_cached_analysis(
+        self, typ: KnowledgeAnalysisType, character: "Character | None" = None
+    ) -> str | None:
         """
         Returns the cached analysis for the given type.
         """
@@ -304,6 +336,10 @@ class SceneAnalyzationMixin:
         if not cached_analysis:
             return None
 
+        if character_knowledge_enabled(self.scene):
+            character = advice_character(self.scene, character, typ=typ)
+            if not advice_record_is_current(self, cached_analysis, character, typ):
+                return None
         fingerprint = self.context_fingerprint()
 
         log.debug(
@@ -318,7 +354,14 @@ class SceneAnalyzationMixin:
 
         return None
 
-    async def set_cached_analysis(self, typ: str, analysis: str):
+    async def set_cached_analysis(
+        self,
+        typ: KnowledgeAnalysisType,
+        analysis: str,
+        character: "Character | None" = None,
+        *,
+        evidence_fp: str | None = None,
+    ):
         """
         Sets the cached analysis for the given type.
         """
@@ -330,6 +373,9 @@ class SceneAnalyzationMixin:
                 f"cached_analysis_{typ}": {
                     "fp": fingerprint,
                     "guidance": analysis,
+                    **advice_record_metadata(
+                        self, character, typ, evidence_fp=evidence_fp
+                    ),
                 }
             }
         )
@@ -436,13 +482,25 @@ class SceneAnalyzationMixin:
 
     @set_processing
     async def analyze_scene_for_next_action(
-        self, typ: str, character: "Character" = None, length: int = 1024
+        self,
+        typ: KnowledgeAnalysisType,
+        character: "Character | None" = None,
+        length: int = 1024,
     ) -> str:
         """
         Analyzes the current scene progress and gives a suggestion for the next action.
         taken by the given actor.
         """
 
+        scene = self.scene
+        character = advice_character(scene, character, typ=typ)
+        fingerprint = advice_fingerprint(scene, character)
+        scoped = (
+            character_knowledge_enabled(scene)
+            and typ == "conversation"
+            and character is not None
+        )
+        deep_context = ""
         deep_analysis = self.deep_analysis and self.long_term_memory_enabled
         analysis_sub_type = await self.analyze_scene_sub_type(typ)
 
@@ -450,6 +508,11 @@ class SceneAnalyzationMixin:
             "max_tokens": self.client.max_token_length,
             "scene": self.scene,
             "character": character,
+            "evidence": advice_context(
+                scene, character, self.client.max_token_length // 2
+            )
+            if scoped
+            else None,
             "length": length,
             "deep_analysis": deep_analysis,
             "analysis_type": typ,
@@ -499,22 +562,44 @@ class SceneAnalyzationMixin:
                     "agent.summarization.scene_analysis.before_deep_analysis"
                 ).send(deep_emission)
 
-                rag_results = await self.rag_build_for_author(
-                    prompt=result,
+                rag_options = dict(
                     sub_instruction=investigate,
                     retrieval_method="questions",
                     include_raw_semantic=False,
                 )
+                if scoped:
+                    rag_results = await self.rag_build(
+                        character=character, **rag_options
+                    )
+                else:
+                    rag_results = await self.rag_build_for_author(
+                        prompt=result, **rag_options
+                    )
 
                 if rag_results:
                     deep_analysis_context = "\n---\n".join(str(r) for r in rag_results)
                     deep_emission.deep_analysis_context = deep_analysis_context
-                    self.set_scene_states(deep_analysis_context=deep_analysis_context)
-                    self.set_context_states(deep_analysis_context=deep_analysis_context)
+                    deep_context = deep_analysis_context
+                    if not character_knowledge_enabled(scene):
+                        self.set_scene_states(
+                            deep_analysis_context=deep_analysis_context
+                        )
+                        self.set_context_states(
+                            deep_analysis_context=deep_analysis_context
+                        )
 
                 await talemate.emit.async_signals.get(
                     "agent.summarization.scene_analysis.after_deep_analysis"
                 ).send(deep_emission)
+
+        if character_knowledge_enabled(scene):
+            require_current_advice(self, scene, character, fingerprint)
+            self.set_scene_states(
+                deep_analysis_context=deep_context,
+                deep_analysis_evidence=advice_record_metadata(
+                    self, character, typ, evidence_fp=fingerprint
+                ),
+            )
 
         await talemate.emit.async_signals.get(
             "agent.summarization.scene_analysis.after"
@@ -528,6 +613,8 @@ class SceneAnalyzationMixin:
             )
         )
 
+        if character_knowledge_enabled(scene):
+            require_current_advice(self, scene, character, fingerprint)
         self.set_context_states(scene_analysis=result)
         self.set_scene_states(scene_analysis=result)
 

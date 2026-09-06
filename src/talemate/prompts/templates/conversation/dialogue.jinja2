@@ -55,7 +55,7 @@ Override example:
 {# PREPARE SCENE HISTORY #}
 {% set rendered_context_tokens = count_tokens(rendered_context_text) + count_tokens(task_main_text) -%}
 {% set volatile_context_tokens = count_tokens(volatile_context_text) -%}
-{% set director_guidance = agent_context_state["director__actor_guidance"] -%}
+{% if character_knowledge_enabled(scene) %}{% set director_guidance = agent_action("director", "get_cached_character_guidance", character_name=talking_character.name) %}{% else %}{% set director_guidance = agent_context_state["director__actor_guidance"] %}{% endif -%}
 {% if director_guidance %}{% set keep_director=False %}{% else %}{% set keep_director=talking_character.name %}{% endif -%}
 {% set scene_history = scene.context_history(stored_views=True,budget=max_tokens-200-rendered_context_tokens-volatile_context_tokens, min_dialogue=15, sections=False, keep_director=keep_director, perspective=agent_action("conversation", "knowledge_perspective", character=talking_character)) -%}
 {% if not director_guidance -%}

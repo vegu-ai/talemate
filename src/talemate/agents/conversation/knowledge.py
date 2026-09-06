@@ -212,7 +212,11 @@ class CharacterKnowledgeMixin:
 
     async def awareness_line(self, character: "Character | None") -> str | None:
         """Which topics the character knows all, some or nothing of; None when nothing qualifies."""
-        if character is None or not self.knowledge_awareness_line:
+        if (
+            perception_mode_enabled(self.scene)
+            or character is None
+            or not self.knowledge_awareness_line
+        ):
             return None
         line = topic_awareness_line(self.scene, character.name)
         log.debug("awareness line", character=character.name, line=line)
@@ -272,7 +276,11 @@ class CharacterKnowledgeMixin:
         return self.rag_knowledge_viewer(character)
 
     async def absence_block(self, character: "Character | None") -> list[str]:
-        if character is None or not self.knowledge_absence_block:
+        if (
+            perception_mode_enabled(self.scene)
+            or character is None
+            or not self.knowledge_absence_block
+        ):
             log.debug(
                 "absence_block skipped",
                 character=character.name if character else None,

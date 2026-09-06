@@ -9,6 +9,7 @@
     - history, scene (context only)
 #}
 
+{% set character_name_ids %}
 {% if has_character_callback%}
 <|SECTION:CHARACTER NAME IDS|>
 These are how the system knows the characters internally, use these when setting `character` arguments.
@@ -18,18 +19,8 @@ These are how the system knows the characters internally, use these when setting
 <|CLOSE_SECTION|>
 {% endif %}
 
-{% for m in history %}
-{# Support both DirectorChatMessage and DirectorChatActionResultMessage objects #}
-{% if m.type == 'action_result' %}
-[#{{ loop.index }}] <{{ m.source }}> executed action `{{ m.name }}`{% if m.instructions %} - Instructions: {{ m.instructions }}{% endif %}
-Result: {{ json(m.result) }}
----
-{% else %}
-[#{{ loop.index }}] <{{ m.source }}> {{ m.message }}
----
-{% endif %}
-{% endfor %}
-
+{% endset %}
+{% set action_instructions %}
 <|SECTION:FUNCTION CALLING INSTRUCTIONS|>
 {{ focal.render_instructions() }}
 Execute in exact order:
@@ -57,3 +48,24 @@ Any context IDs passed MUST be passed along and be fenced with backticks (`).
 
 {# The model should now emit a {{ focal.state.schema_format }} block listing calls in the same order. #}
 <|CLOSE_SECTION|>
+
+{% endset %}
+{% set planning_context %}{% include "character-evidence-planning.jinja2" %}{% endset %}
+{{ planning_context }}
+{{ character_name_ids }}
+{% if character_knowledge_enabled(scene) %}
+{% set history = trim_action_history(history, [0, max_tokens - count_tokens(action_instructions + character_name_ids + planning_context) - 300]|max) %}
+{% endif %}
+{% for m in history %}
+{# Support both DirectorChatMessage and DirectorChatActionResultMessage objects #}
+{% if m.type == 'action_result' %}
+[#{{ loop.index }}] <{{ m.source }}> executed action `{{ m.name }}`{% if m.instructions %} - Instructions: {{ m.instructions }}{% endif %}
+Result: {{ json(m.result) }}
+---
+{% else %}
+[#{{ loop.index }}] <{{ m.source }}> {{ m.message }}
+---
+{% endif %}
+{% endfor %}
+
+{{ action_instructions }}

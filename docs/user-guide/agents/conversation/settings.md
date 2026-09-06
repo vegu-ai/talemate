@@ -119,3 +119,5 @@ After each line, asks the AI which of the facts the listeners did not know the l
 ## Long Term Memory
 
 --8<-- "docs/snippets/tips.md:agent_long_term_memory_settings"
+
+--8<-- "docs/snippets/tips.md:character_evidence_guidance"

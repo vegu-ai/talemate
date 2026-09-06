@@ -1,0 +1,13 @@
+<|SECTION:CHARACTER EVIDENCE FOR {{ evidence.character|upper }}|>
+{% if evidence.unavailable %}Evidence is unavailable; do not infer this character's knowledge from reader context.{% else %}
+This is {{ evidence.character }}'s available evidence, including last-known context. It is not an omniscient account of the world.
+{% for text in evidence.authored %}
+{{ text }}
+{% endfor %}
+{% for text in evidence.history %}
+{{ text }}
+{% endfor %}
+Last-known snapshot:
+{{ json(evidence.snapshot) }}
+{% endif %}
+<|CLOSE_SECTION|>

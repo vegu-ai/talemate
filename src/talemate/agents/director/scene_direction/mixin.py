@@ -4,6 +4,7 @@ from contextvars import ContextVar
 
 from talemate.agents.base import set_processing, AgentAction, AgentActionConfig
 from talemate.emit import emit
+from talemate.exceptions import GenerationCancelled
 from talemate.events import UserInteractionEvent
 import talemate.emit.async_signals as async_signals
 import talemate.util as util
@@ -698,6 +699,8 @@ class SceneDirectionMixin:
                     actions_selected, on_action_complete
                 )
                 actions_taken.extend(action_results)
+            except GenerationCancelled:
+                raise
             except UnknownAction as e:
                 log.error("director.direction.actions.execute.unknown_action", error=e)
                 error_result = SceneDirectionActionResultMessage(

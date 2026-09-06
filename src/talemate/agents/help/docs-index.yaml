@@ -4,7 +4,8 @@
 - path: dev/character-perspectives.md
   title: Character perspective records
   summary: 'Developer contract for immutable character views, disclosures, audiences, acquisition order, source revisions,
-    selection and transitive invalidation. Documents the summarizer finalized-passage lifecycle: finalize_perceptions after
+    selection and transitive invalidation, source-supported facts, conservative exact deduplication, targeted rebuild costs,
+    extraction failure handling and explicitly scoped graph queries. Documents the summarizer finalized-passage lifecycle: finalize_perceptions after
     editor revisions, ensure_perceptions before dependent generation, shared analytical prompts, serialized retries, stale-output
     rejection, cancellation blocking, edit/version hooks and save/reload compatibility under the internal development gate.
     Defines project_character_history for budgeted actor/editor replacement prose, omission and pending behavior, revision
@@ -927,8 +928,9 @@
 - path: user-guide/node-editor/reference/nodes/knowledge.md
   title: Knowledge Nodes
   summary: 'Knowledge nodes over the fact record and who knows what: Facts About (facts mentioning an entity, optionally as
-    one character knows them), Current State (the newest fact about an entity that no later fact supersedes), Relationship
-    Timeline (facts mentioning two entities), Grant Knowledge / Revoke Knowledge for writing knowledge edges from a graph
+    one character knows them), Current State (the newest fact about an entity that no later accessible fact supersedes),
+    Relationship Timeline (facts mentioning two entities). Current State and Relationship Timeline accept an optional
+    character input for scoped evidence; leaving it empty retains the global author query. Grant Knowledge / Revoke Knowledge for writing knowledge edges from a graph
     (target id or Context ID item, note, source, replace), Entry Knowledge (an entry''s Known by line and edges), Set Entry
     Visibility (Known by of a sheet or world entry) and Character Knowledge (a character''s knowledge report); inputs,
     outputs and properties of each.'

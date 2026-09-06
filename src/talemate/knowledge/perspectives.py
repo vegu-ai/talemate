@@ -772,11 +772,21 @@ def remove_perspective_audiences(scene: "Scene", name: str) -> None:
         )
 
 
-def reset_perspectives(scene: "Scene") -> None:
+def reset_perspectives(scene: "Scene") -> set[str]:
+    # Facts are disposable; resetting durable sources also removes their index.
+    removed = {
+        key for key, fact in scene.world_state.facts.items() if fact.contributions
+    }
+    for key in removed:
+        del scene.world_state.facts[key]
+    scene.world_state.knowledge = [
+        edge for edge in scene.world_state.knowledge if edge.target not in removed
+    ]
     if scene.knowledge is not None:
         scene.knowledge = scene.knowledge.model_copy(update={"disclosures": ()})
     for entry in scene.archived_history:
         entry.pop("knowledge", None)
+    return removed
 
 
 def rename_perspective_audiences(scene: "Scene", old: str, new: str) -> None:

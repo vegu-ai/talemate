@@ -103,6 +103,7 @@ def summary_scene(scene, monkeypatch, request):
         ]
     ]
     summarizer = get_agent("summarizer")
+    summarizer.actions["archive"].config["extract_facts"].value = False
     summarizer.connect(scene)
     calls = []
 
@@ -896,12 +897,26 @@ async def test_author_hooks_are_explicit_at_request_boundary(
 
 
 @pytest.mark.asyncio
-async def test_audience_facts_request_is_rejected(summary_scene):
+async def test_audience_facts_request_uses_scoped_contract(summary_scene, monkeypatch):
     _, summarizer, _ = summary_scene
-    with pytest.raises(ValueError, match="cannot return reader facts"):
-        await type(summarizer).summarize(
-            summarizer, CLAIM, audience=("Bob",), return_facts=True
-        )
+    summarizer.actions["archive"].config["extract_facts"].value = True
+    prompts = []
+
+    async def request(uid, client, kind, **kwargs):
+        prompts.append(str(Prompt.get(uid, vars=kwargs["vars"])))
+        return "SUMMARY: Alice made a claim.", {
+            "summary": "Alice made a claim.",
+            "facts": '[{"text":"Alice made a claim."}]',
+        }
+
+    monkeypatch.setattr(Prompt, "request", request)
+    summary, facts = await type(summarizer).summarize(
+        summarizer, CLAIM, audience=("Bob",), return_facts=True, skip_author_hooks=True
+    )
+    assert summary == "Alice made a claim."
+    assert facts == [ParsedFact(text="Alice made a claim.")]
+    assert "Extract only what the supplied audience perspective supports" in prompts[0]
+    assert PRIVATE not in prompts[0]
 
 
 @pytest.mark.asyncio
@@ -936,12 +951,12 @@ async def test_audience_failure_cannot_interrupt_reader_finalization(
     )
     monkeypatch.setattr(scene, "emit_status", status)
     assert await summarizer.build_archive(scene)
-    store.assert_awaited_once()
-    topics.assert_awaited_once()
+    store.assert_not_awaited()
+    topics.assert_not_awaited()
     after.assert_awaited_once()
     status.assert_called_once()
     assert scene.ts == scene.archived_history[0]["ts"] == 0
-    assert scene.archived_history[0]["facts_status"] == "ok"
+    assert "facts_status" not in scene.archived_history[0]
     await summarizer.repair_summary_views(scene)
     assert selected(scene, scene.archived_history[0]["id"]).status == "failed"
     assert scene.archived_history[0]["text"] == "Reader summary."

@@ -43,13 +43,14 @@ can see, the topic coverage and the awareness line.
 
 `knowledge/CurrentState`
 
-The newest fact about an entity that no later fact supersedes.
+The newest fact about an entity that no later accessible fact supersedes.
 
 **Inputs**
 
 | Input | Type | Description |
 | --- | --- | --- |
 | `entity` | `str` | name of the entity |
+| `character` | `str` | (optional) perspective; omitted queries global author state |
 
 **Outputs**
 
@@ -147,6 +148,7 @@ Facts that mention both entities, oldest first.
 | --- | --- | --- |
 | `a` | `str` | first entity |
 | `b` | `str` | second entity |
+| `character` | `str` | (optional) perspective; omitted queries global author state |
 
 **Outputs**
 

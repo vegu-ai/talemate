@@ -72,10 +72,11 @@ class FactsAbout(Node):
 @register("knowledge/CurrentState")
 class CurrentState(Node):
     """
-    The newest fact about an entity that no later fact supersedes.
+    The newest fact about an entity that no later accessible fact supersedes.
 
     Inputs:
     - entity: name of the entity
+    - character: perspective; omitted queries global author state
 
     Outputs:
     - fact: the fact dict, or None
@@ -87,12 +88,17 @@ class CurrentState(Node):
 
     def setup(self):
         self.add_input("entity", socket_type="str")
+        self.add_input("character", socket_type="str", optional=True)
         self.add_output("fact", socket_type="knowledge/fact")
         self.add_output("text", socket_type="str")
 
     async def run(self, state: GraphState):
         scene = active_scene.get()
-        fact = current_state(scene, self.require_input("entity"))
+        fact = current_state(
+            scene,
+            self.require_input("entity"),
+            character=self.normalized_input_value("character") or None,
+        )
         self.set_output_values(
             {
                 "fact": fact.model_dump() if fact else None,
@@ -109,6 +115,7 @@ class RelationshipTimeline(Node):
     Inputs:
     - a: first entity
     - b: second entity
+    - character: perspective; omitted queries global author state
 
     Outputs:
     - facts: list of fact dicts
@@ -121,13 +128,17 @@ class RelationshipTimeline(Node):
     def setup(self):
         self.add_input("a", socket_type="str")
         self.add_input("b", socket_type="str")
+        self.add_input("character", socket_type="str", optional=True)
         self.add_output("facts", socket_type="list")
         self.add_output("text", socket_type="str")
 
     async def run(self, state: GraphState):
         scene = active_scene.get()
         facts = relationship_timeline(
-            scene, self.require_input("a"), self.require_input("b")
+            scene,
+            self.require_input("a"),
+            self.require_input("b"),
+            character=self.normalized_input_value("character") or None,
         )
         self.set_output_values(
             {

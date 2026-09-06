@@ -3,6 +3,12 @@ from typing import Literal
 
 import pydantic
 
+from talemate.knowledge.perspective_models import (
+    Acquisition,
+    SourceReference,
+    AudienceRecord,
+)
+
 __all__ = [
     "EntryVisibility",
     "KnowledgeEdge",
@@ -14,7 +20,7 @@ __all__ = [
 VisibilityMode = Literal["everyone", "owner", "list"]
 EdgeKind = Literal["grant", "revoke"]
 EdgeSource = Literal["told", "granted", "inferred", "manual", "director"]
-FactSource = Literal["summary", "manual", "offscreen"]
+FactSource = Literal["summary", "manual", "offscreen", "perspective", "disclosure"]
 FactsStatus = Literal["ok", "failed"]
 
 
@@ -49,6 +55,14 @@ class ParsedFact(pydantic.BaseModel):
     subjects: list[str] = pydantic.Field(default_factory=list)
     known_by: list[str] = pydantic.Field(default_factory=list)
     supersedes: str | None = None
+    time_scope: str | None = None
+
+    @pydantic.model_serializer(mode="wrap")
+    def serialize_time_scope(self, handler):
+        data = handler(self)
+        if self.time_scope is None:
+            data.pop("time_scope", None)
+        return data
 
     @pydantic.field_validator("subjects", "known_by", mode="before")
     @classmethod
@@ -90,6 +104,34 @@ class TopicCoverage(pydantic.BaseModel):
         return self.known / self.total if self.total else 0.0
 
 
+class FactContribution(AudienceRecord):
+    source: SourceReference
+    acquired: Acquisition
+    text: str = pydantic.Field(min_length=1)
+    subjects: tuple[str, ...] = ()
+    time_scope: str | None = None
+    supersedes: str | None = None
+
+    @pydantic.model_validator(mode="after")
+    def concrete_view(self):
+        if self.source.kind != "disclosure" and (
+            self.source.view_id is None or self.source.view_revision is None
+        ):
+            raise ValueError(
+                "Fact contributions require a specific source view revision"
+            )
+        return self
+
+    @property
+    def identity(self):
+        return self.source.key, self.source.view_id
+
+    @property
+    def equivalence_key(self):
+        # A calendar date is a qualifier, not an occurrence identity.
+        return self.text, tuple(sorted(self.subjects)), self.source.key, self.time_scope
+
+
 class Fact(pydantic.BaseModel):
     id: str
     text: str
@@ -106,3 +148,12 @@ class Fact(pydantic.BaseModel):
     restatements: int = 0
     last_seen_ts: int | None = None
     source: FactSource = "summary"
+
+    contributions: tuple[FactContribution, ...] = ()
+
+    @pydantic.model_serializer(mode="wrap")
+    def serialize_contributions(self, handler):
+        data = handler(self)
+        if not self.contributions:
+            data.pop("contributions", None)
+        return data

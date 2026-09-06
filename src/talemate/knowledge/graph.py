@@ -9,6 +9,9 @@ from typing import TYPE_CHECKING, Literal
 
 from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
 from talemate.knowledge.schema import Fact
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.perspectives import PerspectiveReadContext
+from talemate.knowledge.supported_facts import character_fact
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -61,44 +64,92 @@ def facts_about(
 ) -> list[Fact]:
     """Facts that mention the entity, oldest first, optionally as one character knows them."""
     aliases = _aliases(scene, entity)
-    facts = [f for f in scene.world_state.facts.values() if _mentions(f, aliases)]
-    if character:
-        index = KnowledgeIndex.from_scene(scene)
-        facts = [f for f in facts if index.in_bucket(character, _item(f))]
+    facts = list(scene.world_state.facts.values())
+    if character is not None:
+        if character_knowledge_enabled(scene):
+            read = PerspectiveReadContext(scene)
+            cache = {}
+            facts = [
+                view
+                for fact in facts
+                if (
+                    view := character_fact(
+                        scene, fact, character, read=read, cache=cache
+                    )
+                )
+                is not None
+            ]
+        else:
+            index = KnowledgeIndex.from_scene(scene)
+            facts = [
+                f
+                for f in facts
+                if _mentions(f, aliases) and index.in_bucket(character, _item(f))
+            ]
+    facts = [fact for fact in facts if _mentions(fact, aliases)]
+    if character is not None and character_knowledge_enabled(scene):
+        return sorted(
+            facts,
+            key=lambda fact: max(item.acquired.order for item in fact.contributions),
+        )
     return _ordered(facts, scene)
 
 
-def relationship_timeline(scene: "Scene", a: str, b: str) -> list[Fact]:
+def relationship_timeline(
+    scene: "Scene", a: str, b: str, *, character: str | None = None
+) -> list[Fact]:
     """Facts that mention both entities, oldest first."""
     aliases_a = _aliases(scene, a)
     aliases_b = _aliases(scene, b)
-    return _ordered(
-        [
-            f
-            for f in scene.world_state.facts.values()
-            if _mentions(f, aliases_a) and _mentions(f, aliases_b)
-        ],
-        scene,
-    )
+    return [
+        f
+        for f in facts_about(scene, a, character=character)
+        if _mentions(f, aliases_a) and _mentions(f, aliases_b)
+    ]
 
 
-def current_state(scene: "Scene", entity: str) -> Fact | None:
+def current_state(
+    scene: "Scene", entity: str, *, character: str | None = None
+) -> Fact | None:
     """The newest fact about the entity that no other fact supersedes."""
-    superseded = {
-        f.supersedes for f in scene.world_state.facts.values() if f.supersedes
-    }
-    candidates = [f for f in facts_about(scene, entity) if f.id not in superseded]
+    facts = facts_about(scene, entity, character=character)
+    superseders = facts if character is not None else scene.world_state.facts.values()
+    superseded = {f.supersedes for f in superseders if f.supersedes}
+    candidates = [
+        f
+        for f in facts
+        if f.id not in superseded
+        and (character is None or not character_knowledge_enabled(scene) or not f.false)
+    ]
     return candidates[-1] if candidates else None
 
 
-def superseded_chain(scene: "Scene", fact_id: str, hops: int = 2) -> list[Fact]:
+def superseded_chain(
+    scene: "Scene", fact_id: str, hops: int = 2, *, character: str | None = None
+) -> list[Fact]:
     """Walk `supersedes` backwards from a fact, at most `hops` steps."""
+    if character is not None and not character_knowledge_enabled(scene):
+        raise ValueError("Scoped superseded chains require perception mode")
+    seen = {fact_id}
     chain: list[Fact] = []
     current = scene.world_state.facts.get(fact_id)
+    if (
+        character is not None
+        and character_knowledge_enabled(scene)
+        and current is not None
+    ):
+        current = character_fact(scene, current, character)
     while current is not None and current.supersedes and len(chain) < hops:
         current = scene.world_state.facts.get(current.supersedes)
-        if current is None:
+        if (
+            current is not None
+            and character is not None
+            and character_knowledge_enabled(scene)
+        ):
+            current = character_fact(scene, current, character)
+        if current is None or current.id in seen:
             break
+        seen.add(current.id)
         chain.append(current)
     return chain
 
@@ -109,6 +160,25 @@ def _item(fact: Fact) -> KnowledgeItem:
 
 def bucket(scene: "Scene", character: str) -> list[tuple[Fact, KnownKind]]:
     """Every fact the character knows, with how they know it."""
+    if character_knowledge_enabled(scene):
+        read = PerspectiveReadContext(scene)
+        cache = {}
+        known = []
+        for fact in scene.world_state.facts.values():
+            view = character_fact(scene, fact, character, read=read, cache=cache)
+            if view is not None:
+                kind = (
+                    "granted"
+                    if all(
+                        item.source.kind == "disclosure" for item in view.contributions
+                    )
+                    else "inferred"
+                )
+                known.append((view, kind))
+        return sorted(
+            known,
+            key=lambda pair: max(item.acquired.order for item in pair[0].contributions),
+        )
     index = KnowledgeIndex.from_scene(scene)
     known: list[tuple[Fact, KnownKind]] = []
     for fact in _ordered(list(scene.world_state.facts.values()), scene):

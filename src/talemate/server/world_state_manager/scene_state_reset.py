@@ -3,6 +3,7 @@ from typing import Union
 import pydantic
 import structlog
 
+from talemate.instance import get_agent
 from talemate.knowledge.facts import drop_facts_for_entries
 from talemate.knowledge.perspectives import reset_perspectives
 
@@ -87,7 +88,9 @@ class SceneStateResetMixin:
 
             scene.history = []
             scene.layered_history = []
-            reset_perspectives(scene)
+            removed = reset_perspectives(scene)
+            if removed:
+                await get_agent("memory").delete({"ids": sorted(removed)})
 
             await drop_facts_for_entries(
                 scene,

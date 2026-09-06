@@ -13,6 +13,11 @@ from talemate.instance import get_agent
 from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.schema import Fact, KnowledgeEdge, ParsedFact
+from talemate.knowledge.supported_facts import (
+    prune_contributions,
+    aggregate_fact,
+    sanitize_fact_links,
+)
 from talemate.knowledge.topics import prune_topics
 from talemate.util.data import extract_json
 
@@ -94,6 +99,10 @@ def facts_for_entry(scene: "Scene", archive_id: str) -> list[Fact]:
         fact
         for fact in scene.world_state.facts.values()
         if fact.archive_id == archive_id
+        or any(
+            item.source.kind == "summary" and item.source.id == archive_id
+            for item in fact.contributions
+        )
     ]
 
 
@@ -109,32 +118,56 @@ def prune_summary_facts(world_state, archive_ids: set[str]) -> set[str]:
     the edges that target them. Returns the removed fact ids; memory
     documents are the caller's to delete.
     """
-    removed = {
+    before = set(world_state.facts)
+    references = {
+        item.source
+        for fact in world_state.facts.values()
+        for item in fact.contributions
+        if item.source.kind == "summary" and item.source.id in archive_ids
+    }
+    prune_contributions(world_state, references)
+    removed = before - world_state.facts.keys()
+    removed.update(
         fact_id
         for fact_id, fact in world_state.facts.items()
-        if fact.archive_id in archive_ids
-    }
+        if not fact.contributions and fact.archive_id in archive_ids
+    )
     if not removed:
         return removed
     for fact_id in removed:
-        del world_state.facts[fact_id]
+        world_state.facts.pop(fact_id, None)
     world_state.knowledge = [
         edge for edge in world_state.knowledge if edge.target not in removed
     ]
-    for fact in world_state.facts.values():
-        if fact.supersedes in removed:
-            fact.supersedes = None
+    sanitize_fact_links(world_state.facts)
     return removed
 
 
-def prune_serialized_facts(world_state: dict, archive_ids: set[str]) -> set[str]:
+def prune_serialized_facts(
+    world_state: dict, archive_ids: set[str], *, reset_sources: bool = False
+) -> set[str]:
     """`prune_summary_facts` over a serialized world state (an export copy)."""
     facts = world_state.get("facts") or {}
-    removed = {
-        fact_id
-        for fact_id, fact in facts.items()
-        if fact.get("archive_id") in archive_ids
-    }
+    removed = set()
+    for identity, values in list(facts.items()):
+        if values.get("contributions"):
+            fact = Fact.model_validate(values)
+            kept = tuple(
+                item
+                for item in fact.contributions
+                if not reset_sources
+                and not (
+                    item.source.kind == "summary" and item.source.id in archive_ids
+                )
+            )
+            if kept == fact.contributions:
+                continue
+            if kept:
+                facts[identity] = aggregate_fact(fact, kept).model_dump(mode="json")
+            else:
+                removed.add(identity)
+        elif values.get("archive_id") in archive_ids:
+            removed.add(identity)
     if not removed:
         return removed
     world_state["facts"] = {k: v for k, v in facts.items() if k not in removed}
@@ -146,12 +179,28 @@ def prune_serialized_facts(world_state: dict, archive_ids: set[str]) -> set[str]
     for fact in world_state["facts"].values():
         if fact.get("supersedes") in removed:
             fact["supersedes"] = None
+        for contribution in fact.get("contributions", []):
+            if contribution.get("supersedes") in removed:
+                contribution["supersedes"] = None
     return removed
 
 
 async def drop_facts_for_entries(scene: "Scene", archive_ids: set[str]):
     """Remove the facts (and the edges that target them) of the given archive entries."""
+    affected = {
+        fact.id
+        for fact in scene.world_state.facts.values()
+        if any(
+            item.source.kind == "summary" and item.source.id in archive_ids
+            for item in fact.contributions
+        )
+    }
     removed = prune_summary_facts(scene.world_state, archive_ids)
+    retained = affected - removed
+    if retained:
+        await get_agent("memory").add_many(
+            [fact_memory_document(scene.world_state.facts[key]) for key in retained]
+        )
     if removed:
         await get_agent("memory").delete({"ids": sorted(removed)})
         # the reset and rebuild paths run while the store may be unavailable;

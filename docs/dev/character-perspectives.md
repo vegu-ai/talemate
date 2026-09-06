@@ -4,8 +4,8 @@ These APIs are the persistence contract for the character-knowledge series.
 They require the [internal development gate](scene-format.md#internal-development-fixtures).
 The summarizer generates message perspectives through the lifecycle below.
 Internally enabled actor recent history and character-facing editor context use
-stored views. Summary selection and supplemental prompt routes remain separate
-work in the series.
+stored views and audience summaries. Source-supported fact extraction and graph
+queries extend those same records; supplemental prompt routes remain later work.
 
 ## Saved representation
 
@@ -366,7 +366,7 @@ selected views in the immediately preceding layer. Base input reuses the project
 message formatter to retain source speaker attribution even for unprefixed views.
 Layer 0 means archived_history;
 layer 1 means layered_history[0], matching SourceReference. Creation and explicit
-regeneration finish reader facts, clock and status updates before scheduling audience work.
+regeneration finish reader clock and status updates before scheduling audience work.
 Audience failures cannot abort reader finalization. The lifecycle uses the existing summarize /
 summarize_events request shapes for audience outputs. Higher layers retain the
 existing chunk splitting and reject empty chunks. Audience output retains short lines
@@ -399,8 +399,8 @@ an audience. Configured archive instructions (base requests), explicit extra
 instructions, scene intention/context, and generation-option writing style still
 reach the templates as shared authored guidance. These inputs remain the author's
 responsibility and are not converted to character knowledge by this step. Reader
-summary calls keep their existing hooks. Combining `audience` with `return_facts=True`
-is rejected rather than silently returning no facts. These constraints reduce exposure but cannot
+summary calls keep their existing hooks. Base audience calls can return supported
+facts in that same request, as described below. These constraints reduce exposure but cannot
 guarantee that an LLM preserves every nuance; live prompt/output evaluation checks
 attributed claims alongside deterministic orchestration and persistence tests.
 
@@ -445,3 +445,135 @@ records and all dependency/view revisions; no separate summary schema is added.
 
 Debug event `character_history.skip_summary` records the summary ID, viewer and
 availability when projection descends to source views, without logging prose.
+
+
+## Source-supported facts and scoped graph queries
+
+In the internal mode, enabled archive fact extraction runs in the existing base
+**audience** summary request (`summarize(..., audience=..., return_facts=True,
+skip_author_hooks=True)`). Reader calls publish complete summaries without reader
+facts; layered calls add no extraction request. Explicit omissions add no facts.
+The host supplies the audience from the selected view and ignores model `known_by`
+claims. Previous-fact context is the intersection of evidence available to every
+member of that audience, never the global fact list. Fact extraction remains off
+when the existing Extract Facts setting is disabled. Legacy extraction/deduplication
+keeps its existing behavior.
+
+`Fact.contributions` is a tuple of immutable `FactContribution` records in
+`talemate.knowledge.schema`. Each stores the exact source/view revision, audience,
+acquisition order/time, extracted text, subjects, optional event `time_scope`, and
+an optional accessible `supersedes` ID. A summary contribution uses the latest
+ready input acquisition as its conservative span-end learning bound, not the time
+archiving happened. Creating an old archive later cannot reorder it after a newer
+disclosure. Facts within the same span share that bound; event-time distinctions
+remain explicit in their prose and `time_scope`, without inferred timestamps.
+Message/summary contributions require a
+specific view ID and revision. Disclosure contributions reference the independent
+disclosure itself. These are derived snapshots: saved perspectives and disclosures
+remain the durable evidence, and no learning record depends on a disposable fact ID.
+Old facts omit this field when empty; old scenes need no reconstruction.
+
+`replace_source_facts(scene, batches)` accepts `(source_reference, audience,
+parsed_facts)` batches, validates all source views before publication, and replaces
+only those source/view contributions. Contributions from other passages, summaries
+or disclosures survive even when they share a combined fact. Valid empty extraction
+removes only the requested contribution. Source changes use `perspectives_changed`
+to prune stale evidence and refresh the affected memory documents in the existing
+background lifecycle. Sibling views and unrelated branches are not re-extracted.
+Removing an audience member preserves the other recipients; renames follow audience
+names without rewriting historical prose. Reset, Reset Scene State with history
+wiping, and progress-reset exports discard the source-derived index as well as its
+sources, retaining authored facts. Progress-retaining saves/exports preserve both.
+
+The new path combines only exact whitespace-normalized text and identical subject
+sets and time qualifiers from the same source. Equivalent views of that source can
+combine; different sources stay separate even with the same explicit ISO date or
+timestamp. A calendar date identifies neither an occurrence nor a shared event.
+The prompt example requests `time_scope` with a null case and omits model-assigned
+audiences. Dates must be literally supported in both extracted text and extraction
+input; an unsupported normalized date drops only the optional scope (with a debug
+log), preserving the fact and its source-local identity.
+Acquisition time is not event time;
+"holds the key" versus "held the key", attributed claims versus observations, and
+uncertainty qualifiers remain separate. Embeddings do not authorize a merge;
+this conservative implementation does not need candidate search for its exact
+lookup. Uncertain semantic matches remain separate with no verification LLM call.
+The shared contract intentionally adds no belief engine or confidence score:
+structural checks and exact matching cannot prove the model preserved every
+semantic qualification. The extraction prompt forbids invented events and requires
+attribution, uncertainty and established beliefs to survive; live evaluation and
+regression tests exercise those requirements without claiming a semantic guarantee.
+
+`SummarizeAgent.rebuild_supported_facts(scene, sources=None)` rebuilds from saved
+views/disclosures, including when all fact IDs were discarded. Passing source
+references limits requests and replacement work to those sources; a reference with
+`view_id` limits it to that view. Full explicit rebuild enumerates base summaries,
+uncovered saved passage views and independent disclosures. Coverage is tracked per
+concrete view revision and audience member, and only ready summary groups cover
+passages. Failed or pending summary groups leave ready passage evidence available
+for direct extraction. Full rebuild skips pending or failed passage views too;
+explicitly requesting such a view still fails instead of publishing a successful
+rebuild. Ready and omitted views remain eligible. A partly covered shared passage view is
+extracted for its whole audience. Base extraction reads
+the summary's saved source views by ID, preserving speaker formatting, rather than
+stale positional archive ranges. It does not reconstruct missing historical views.
+
+All requested results are staged and revalidated against current revisions before
+replacing the index. Missing/malformed extraction or a changed source returns
+`failed` with visible Retry/Cancel; it cannot publish a successful partial rebuild.
+An explicit empty source list or disabled extraction returns `None`. A valid empty
+FACTS list is successful. A valid audience summary remains ready when its FACTS
+block fails; only facts are marked failed, with visible retry. A later successful
+sibling summary does not clear that failure. Both the fact-failure dialog and
+explicit fact regeneration retry saved summary groups without replacing their prose, view identity, revision or dependent views.
+The dialog pins the concrete published view before waiting; if that view disappears
+or changes while the dialog is open, Retry stops without requesting sibling views.
+Successful rebuilds update the persisted base entry's `facts_status` as well as
+runtime audience failures, so a save/reload or later summary check cannot resurrect
+a repaired failure. A partial audience repair keeps other failed groups marked.
+
+Equivalent replacements preserve fact IDs, including unchanged local rebuilds.
+Canonical author edits are preserved when contribution sets match, even when a
+single-view replacement changes the order of two equivalent contributions.
+Removed facts lose incoming knowledge edges and supersession references in both
+canonical records and contributions. Publication rejects self-links and cycles
+across both forms of supersession, preserving existing valid links first.
+Memory I/O errors report failure even if the canonical source-supported index was
+already installed. Pending upserts and deletions remain in the per-scene dirty
+queue until written, including retries of an already-empty extraction. The mirror
+serializes writes and drains changes queued during I/O. Switching scenes pauses
+this work with its keys retained rather than raising a generation cancellation;
+resuming that scene can drain its queue. The existing background `regenerate_facts` route uses this operation for
+one base entry, keeps reader prose intact, and reports its actual `facts_status`.
+Async callers must run rebuilds off the websocket receive loop so retry responses
+can be dispatched. No new public mode or request kind is introduced.
+
+Local rebuild cost is limited to changed/requested source audience groups: one
+existing summary request per group, without regenerating unrelated summaries or
+replaying a scene's learning history. Source indexing, exact-match lookup, and
+selection checks still scan stored records; this is not a constant-time graph
+index. Background invalidation updates affected fact documents and preserves
+independent contributions. Full-scene extraction occurs only when explicitly
+requesting a full rebuild.
+
+`facts_about`, `current_state`, `relationship_timeline` and `superseded_chain` in
+`talemate.knowledge.graph` accept an explicit `character` argument. Omit it for
+existing global author queries, including author-marked false records. The Current State and Relationship Timeline nodes
+also expose an optional character input; an empty string means the global query.
+`superseded_chain(character=...)` rejects legacy mode with `ValueError` instead of
+silently returning an unscoped chain. `bucket(scene, character)` is scoped.
+In the new mode these queries select current supporting contributions before
+entity matching and return that character's text and acquisition evidence only.
+A global author correction, `false` flag, or inaccessible superseding update cannot
+replace their last-known evidence. A later witnessed update carries its own time
+and order; disclosure time stays independent of its historical provenance. Hidden
+passages are excluded through their derived facts too. Facts without supported
+contributions are absent from this scoped derived index; authored-entry visibility,
+manual learning APIs, vector retrieval, and other supplemental routes are converted
+in later steps. This does not claim those unconverted routes are protected.
+
+Known limits in this step: facts acquired from one source share its acquisition
+order. Ties retain extraction/insertion order; the model's list is not a finer
+verified event chronology. New-mode fact updates prune obsolete topic membership
+but do not recluster topics; audience-aware topic rebuilding is deferred to later
+steps in the series. Neither limitation changes the source contribution boundary.

@@ -16,6 +16,7 @@ from talemate.knowledge.perspectives import (
     source_reference,
 )
 from talemate.knowledge.summaries import SummaryInput, summary_entry, summary_inputs
+from talemate.knowledge.supported_facts import replace_source_facts
 from talemate.status import background_task
 
 log = structlog.get_logger(__name__)
@@ -28,6 +29,7 @@ class AudienceSummaryMixin:
         self._summary_rebuild_tasks = weakref.WeakKeyDictionary()
         self._summary_dirty = weakref.WeakKeyDictionary()
         self._summary_waiting = weakref.WeakKeyDictionary()
+        self._summary_fact_failures = weakref.WeakKeyDictionary()
         self._summary_generation_options = weakref.WeakKeyDictionary()
 
     def connect(self, scene):
@@ -117,15 +119,64 @@ class AudienceSummaryMixin:
                 groups.setdefault(inputs.get(name, SummaryInput("pending")), []).append(
                     name
                 )
+            failures = self._summary_failure_keys(scene, entry, layer, inputs)
+            completed = []
             for summary_input, names in groups.items():
-                await self._generate_summary_group(
-                    scene,
-                    entry,
-                    layer,
-                    tuple(names),
-                    summary_input,
-                    generation_options=generation_options,
+                completed.append(
+                    await self._generate_summary_group(
+                        scene,
+                        entry,
+                        layer,
+                        tuple(names),
+                        summary_input,
+                        generation_options=generation_options,
+                    )
                 )
+                keys = {(layer, identity, name) for name in names}
+                if completed[-1]:
+                    failures.difference_update(keys)
+                else:
+                    failures.update(keys)
+            if layer == 0 and self.archive_extract_facts and completed:
+                self._update_summary_facts_status(scene, entry, layer)
+
+    def _summary_failure_keys(self, scene, entry, layer, inputs):
+        failures = self._summary_fact_failures.setdefault(scene, set())
+        failures.difference_update(
+            key for key in tuple(failures) if key[2] not in scene.character_data
+        )
+        if entry.get("facts_status") == "failed" and not any(
+            key[:2] == (layer, entry["id"]) for key in failures
+        ):
+            # Persisted status cannot identify the failed audience after reload.
+            failures.update(
+                (layer, entry["id"], name)
+                for name in inputs
+                if name in scene.character_data
+            )
+        return failures
+
+    def _update_summary_facts_status(self, scene, entry, layer=0, *, read=None):
+        read = read or PerspectiveReadContext(scene)
+        inputs = summary_inputs(scene, entry, layer, read=read)
+        reference = source_reference(
+            scene, "summary", entry["id"], layer=layer, read=read
+        )
+        ready = reference is not None and all(
+            select_character_view(scene, reference, name, read=read).status
+            in ("ready", "omitted")
+            for name in inputs
+            if name in scene.character_data
+        )
+        entry["facts_status"] = (
+            "ok"
+            if ready
+            and not any(
+                key[:2] == (layer, entry["id"])
+                for key in self._summary_fact_failures.get(scene, ())
+            )
+            else "failed"
+        )
 
     async def _generate_summary_group(
         self, scene, entry, layer, audience, summary_input, *, generation_options=None
@@ -149,10 +200,12 @@ class AudienceSummaryMixin:
                 "omitted",
                 sources=summary_input.sources,
             )
-            return
+            return True
         stamp = (entry["text"], entry.get("start"), entry.get("end"))
 
         def current():
+            if self.scene is not scene or not character_knowledge_enabled(scene):
+                return False
             stored = summary_entry(scene, identity, layer)
             if (
                 stored is None
@@ -170,6 +223,8 @@ class AudienceSummaryMixin:
             requeue()
             return
 
+        published = False
+        published_source = None
         while True:
             try:
                 if layer == 0:
@@ -179,7 +234,10 @@ class AudienceSummaryMixin:
                         generation_options=generation_options,
                         audience=audience,
                         skip_author_hooks=True,
+                        return_facts=self.archive_extract_facts,
                     )
+                    if self.archive_extract_facts:
+                        result, parsed_facts = result
                 else:
                     summaries = await self._lh_split_and_summarize_chunks(
                         [{"text": part} for part in summary_input.texts],
@@ -191,54 +249,9 @@ class AudienceSummaryMixin:
                     result = "\n\n".join(summaries)
                 if not result.strip():
                     raise ValueError("Summary response was empty")
-            except asyncio.CancelledError:
-                requeue()
-                raise
-            except GenerationCancelled as exc:
-                handle_generation_cancelled(exc)
-                if current():
-                    self._publish_summary_group(
-                        scene,
-                        identity,
-                        layer,
-                        audience,
-                        "failed",
-                        sources=summary_input.sources,
-                    )
-                    dirty.difference_update(keys)
-                else:
-                    requeue()
-                return
-            except Exception as exc:
                 if not current():
                     requeue()
-                    return
-                self._publish_summary_group(
-                    scene,
-                    identity,
-                    layer,
-                    audience,
-                    "failed",
-                    sources=summary_input.sources,
-                )
-                log.warning(
-                    "audience summary failed",
-                    source_id=identity,
-                    layer=layer,
-                    error=str(exc),
-                )
-                action = await self.client._prompt_generation_error(
-                    f"Audience summary {identity} failed. Retry to rebuild it. "
-                    "Cancel or Ignore keeps it unavailable; character history uses only safe source views."
-                )
-                if not current():
-                    requeue()
-                    return
-                if action != "retry":
-                    dirty.difference_update(keys)
-                    return
-                continue
-            if current():
+                    return False
                 self._publish_summary_group(
                     scene,
                     identity,
@@ -248,12 +261,98 @@ class AudienceSummaryMixin:
                     text=result.strip(),
                     sources=summary_input.sources,
                 )
-            else:
-                log.info(
-                    "discarding stale audience summary", source_id=identity, layer=layer
-                )
+                published = True
+                if layer == 0 and self.archive_extract_facts:
+                    published_source = select_character_view(
+                        scene, source_reference(scene, "summary", identity), audience[0]
+                    ).source
+                    if parsed_facts is None:
+                        raise ValueError(
+                            "Audience fact extraction was missing or malformed"
+                        )
+                    await replace_source_facts(
+                        scene, [(published_source, audience, parsed_facts)]
+                    )
+                if not current():
+                    requeue()
+                    return False
+                return True
+            except asyncio.CancelledError:
                 requeue()
-            return
+                raise
+            except GenerationCancelled as exc:
+                handle_generation_cancelled(exc)
+                if current():
+                    if not published:
+                        self._publish_summary_group(
+                            scene,
+                            identity,
+                            layer,
+                            audience,
+                            "failed",
+                            sources=summary_input.sources,
+                        )
+                    dirty.difference_update(keys)
+                else:
+                    requeue()
+                return
+            except Exception as exc:
+                if not current():
+                    requeue()
+                    return
+                if not published:
+                    self._publish_summary_group(
+                        scene,
+                        identity,
+                        layer,
+                        audience,
+                        "failed",
+                        sources=summary_input.sources,
+                    )
+                log.warning(
+                    "audience summary failed",
+                    source_id=identity,
+                    layer=layer,
+                    error=str(exc),
+                )
+                action = await self.client._prompt_generation_error(
+                    (
+                        f"Audience facts for {identity} failed. The summary remains available. "
+                        "Retry fact extraction or Cancel to keep facts marked failed."
+                    )
+                    if published
+                    else (
+                        f"Audience summary {identity} failed. Retry to rebuild it. "
+                        "Cancel or Ignore keeps it unavailable; character history uses only safe source views."
+                    )
+                )
+                if not current():
+                    requeue()
+                    return
+                if action != "retry":
+                    dirty.difference_update(keys)
+                    return
+                if published:
+                    if published_source is None or published_source.view_id is None:
+                        return False
+                    read = PerspectiveReadContext(scene)
+                    if any(
+                        name not in scene.character_data
+                        or select_character_view(
+                            scene, published_source, name, read=read
+                        ).status
+                        != "ready"
+                        for name in audience
+                    ):
+                        return False
+                    status = await self.rebuild_supported_facts(
+                        scene, [published_source]
+                    )
+                    if not current():
+                        requeue()
+                        return False
+                    return status == "ok"
+                continue
 
     def _wake_summary_waiters(self, scene):
         waiting = self._summary_waiting.setdefault(scene, set())
@@ -326,7 +425,9 @@ class AudienceSummaryMixin:
         if not character_knowledge_enabled(scene):
             return
         self._wake_summary_waiters(scene)
-        if not self._summary_dirty.get(scene):
+        if not self._summary_dirty.get(scene) and not self._fact_memory_dirty.get(
+            scene
+        ):
             return
         task = self._summary_rebuild_tasks.get(scene)
         if task is not None and not task.done():
@@ -337,10 +438,16 @@ class AudienceSummaryMixin:
     @background_task("Updating character summaries")
     async def rebuild_audience_summaries(self, scene):
         while True:
+            if self.scene is not scene:
+                return
             await self.repair_summary_views(scene)
+            if not await self.flush_fact_memory(scene):
+                return
             if not self._summary_dirty.get(scene) and self.scene is scene:
                 await scene.attempt_auto_save()
             self._wake_summary_waiters(scene)
-            if not self._summary_dirty.get(scene):
+            if not self._summary_dirty.get(scene) and not self._fact_memory_dirty.get(
+                scene
+            ):
                 break
             await asyncio.sleep(0)

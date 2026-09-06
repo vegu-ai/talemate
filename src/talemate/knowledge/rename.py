@@ -22,6 +22,28 @@ def rename_knowledge_references(scene: "Scene", old: str, new: str):
     if old == new:
         return
 
+    for identity, fact in scene.world_state.facts.items():
+        if any(old in item.audience for item in fact.contributions):
+            contributions = tuple(
+                item.model_copy(
+                    update={
+                        "audience": tuple(
+                            new if name == old else name for name in item.audience
+                        )
+                    }
+                )
+                for item in fact.contributions
+            )
+            scene.world_state.facts[identity] = fact.model_copy(
+                update={
+                    "contributions": contributions,
+                    "present": _swap(fact.present, old, new),
+                    "known_by": {
+                        new if name == old else name: kind
+                        for name, kind in fact.known_by.items()
+                    },
+                }
+            )
     rename_perspective_audiences(scene, old, new)
     if old in scene.character_data:
         scene.character_data[new] = scene.character_data.pop(old)

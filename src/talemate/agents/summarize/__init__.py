@@ -53,6 +53,9 @@ from .layered_history import LayeredHistoryMixin
 from .tts_utils import TTSUtilsMixin
 from .perceptions import PerceptionMixin
 from .audience_summaries import AudienceSummaryMixin
+from .source_facts import SourceFactMixin
+from talemate.knowledge.supported_facts import previous_audience_facts
+from talemate.knowledge.perspectives import source_reference
 
 import talemate.agents.summarize.nodes  # noqa: F401
 from talemate.agents.summarize.websocket_handler import SummarizeWebsocketHandler
@@ -89,6 +92,7 @@ class SummarizeEmission(AgentTemplateEmission):
 
 @register()
 class SummarizeAgent(
+    SourceFactMixin,
     AudienceSummaryMixin,
     PerceptionMixin,
     MemoryRAGMixin,
@@ -189,6 +193,7 @@ class SummarizeAgent(
         self.client = client
         self.init_perceptions()
         self.init_audience_summaries()
+        self.init_source_facts()
 
         self.actions = SummarizeAgent.init_actions()
 
@@ -522,7 +527,7 @@ class SummarizeAgent(
         )
         await scene.push_archive(entry)
 
-        if parsed_facts:
+        if parsed_facts and not character_knowledge_enabled(scene):
             await store_facts(
                 scene,
                 entry.id,
@@ -634,6 +639,8 @@ class SummarizeAgent(
     def _facts_status(self, parsed_facts) -> FactsStatus | None:
         if not self.archive_extract_facts:
             return None
+        if character_knowledge_enabled(self.scene):
+            return None
         return "ok" if parsed_facts is not None else "failed"
 
     async def summarize_with_facts(
@@ -648,11 +655,13 @@ class SummarizeAgent(
 
         With fact extraction off the facts of the entry are left alone.
         """
-        if not self.archive_extract_facts:
+        if character_knowledge_enabled(self.scene) or not self.archive_extract_facts:
             summarized = await self.summarize(
                 text, extra_context=extra_context, generation_options=generation_options
             )
-            return summarized, entry.facts_status
+            return summarized, (
+                None if character_knowledge_enabled(self.scene) else entry.facts_status
+            )
 
         summarized, parsed_facts = await self.summarize(
             text,
@@ -684,6 +693,20 @@ class SummarizeAgent(
         archive_entry = resolve_history_entry(self.scene, entry)
         if not self.archive_extract_facts:
             return archive_entry.facts_status
+
+        if character_knowledge_enabled(self.scene):
+            scene = self.scene
+            reference = source_reference(scene, "summary", archive_entry.id)
+            status = (
+                await self.rebuild_supported_facts(scene, [reference])
+                if reference
+                else "failed"
+            )
+            for stored in scene.archived_history:
+                if stored.get("id") == archive_entry.id:
+                    stored["facts_status"] = status
+                    break
+            return status
 
         sources = collect_source_entries(self.scene, entry)
         if not sources:
@@ -736,9 +759,11 @@ class SummarizeAgent(
         if audience and not character_knowledge_enabled(self.scene):
             raise ValueError("Audience summaries require perception mode")
         response_length = 1024
-        if audience and return_facts:
-            raise ValueError("Audience summaries cannot return reader facts")
-        extract_facts = return_facts and self.archive_extract_facts
+        extract_facts = (
+            return_facts
+            and self.archive_extract_facts
+            and (bool(audience) or not character_knowledge_enabled(self.scene))
+        )
 
         template_vars = {
             "dialogue": text,
@@ -754,7 +779,13 @@ class SummarizeAgent(
             "analyze_chunks": self.layered_history_analyze_chunks,
             "response_length": response_length,
             "extract_facts": extract_facts,
-            "previous_facts": previous_facts(self.scene) if extract_facts else [],
+            "previous_facts": (
+                previous_audience_facts(self.scene, audience)
+                if audience
+                else previous_facts(self.scene)
+            )
+            if extract_facts
+            else [],
         }
 
         emission = SummarizeEmission(

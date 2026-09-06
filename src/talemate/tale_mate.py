@@ -2148,7 +2148,7 @@ class Scene(Emitter):
     def reset(self):
         # remove messages
         self.history = []
-        reset_perspectives(self)
+        dropped_facts = reset_perspectives(self)
 
         # clear out archived history, but keep pre-established history
         summarized_ids = {
@@ -2159,7 +2159,7 @@ class Scene(Emitter):
         self.archived_history = [
             ah for ah in self.archived_history if ah.get("end") is None
         ]
-        dropped_facts = prune_summary_facts(self.world_state, summarized_ids)
+        dropped_facts.update(prune_summary_facts(self.world_state, summarized_ids))
 
         self.layered_history = []
 

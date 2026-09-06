@@ -1,5 +1,5 @@
 import asyncio
-from contextlib import nullcontext
+from contextlib import ExitStack, nullcontext
 from unittest.mock import AsyncMock
 
 import chromadb
@@ -46,7 +46,19 @@ class FixedEmbedding(EmbeddingFunction):
 
 
 @pytest.fixture
-async def indexed_scene(scene, monkeypatch, tmp_path):
+def chroma_clients():
+    # PersistentClient keeps a global System reference until explicitly closed.
+    # Release its native threads after every test, including replacement stores.
+    with ExitStack() as clients:
+
+        def create(**kwargs):
+            return clients.enter_context(chromadb.PersistentClient(**kwargs))
+
+        yield create
+
+
+@pytest.fixture
+async def indexed_scene(scene, monkeypatch, tmp_path, chroma_clients):
     monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     scene.knowledge_eligibility = "perception"
     scene.history = []
@@ -64,7 +76,7 @@ async def indexed_scene(scene, monkeypatch, tmp_path):
     memory = ChromaDBMemoryAgent()
     memory.client = scene.mock_client
     memory.connect(scene)
-    memory.db = chromadb.PersistentClient(path=str(tmp_path)).create_collection(
+    memory.db = chroma_clients(path=str(tmp_path)).create_collection(
         "audience-memory", embedding_function=FixedEmbedding()
     )
     memory._ready_to_add = True
@@ -370,7 +382,7 @@ async def test_shared_current_cast_does_not_authorize_a_future_character(indexed
 
 
 async def test_scene_switch_never_installs_into_the_next_collection(
-    indexed_scene, monkeypatch, tmp_path
+    indexed_scene, monkeypatch, tmp_path, chroma_clients
 ):
     from talemate.tale_mate import Scene
 
@@ -379,7 +391,7 @@ async def test_scene_switch_never_installs_into_the_next_collection(
     original = memory._sync_audience_documents
     next_scene = Scene()
     next_scene.knowledge_eligibility = "perception"
-    next_db = chromadb.PersistentClient(path=str(tmp_path / "next")).create_collection(
+    next_db = chroma_clients(path=str(tmp_path / "next")).create_collection(
         "next-audience-memory", embedding_function=FixedEmbedding()
     )
 
@@ -439,7 +451,7 @@ async def test_cancelled_write_finishes_before_a_retry_can_publish(
 
 
 async def test_saved_sources_rebuild_an_empty_real_collection(
-    indexed_scene, monkeypatch, tmp_path
+    indexed_scene, monkeypatch, tmp_path, chroma_clients
 ):
     import json
     from talemate.load import load_scene_from_data
@@ -454,9 +466,9 @@ async def test_saved_sources_rebuild_an_empty_real_collection(
     saved = json.loads(scene.json)
     restored = Scene()
     memory.connect(restored)
-    memory.db = chromadb.PersistentClient(
-        path=str(tmp_path / "restored")
-    ).create_collection("restored-audience-memory", embedding_function=FixedEmbedding())
+    memory.db = chroma_clients(path=str(tmp_path / "restored")).create_collection(
+        "restored-audience-memory", embedding_function=FixedEmbedding()
+    )
     monkeypatch.setattr(memory, "set_db", AsyncMock())
     with ActiveScene(restored):
         await load_scene_from_data(restored, saved, name="audience-reload.json")
@@ -770,16 +782,16 @@ async def test_rename_you_refreshes_owner_and_list_authored_audiences(indexed_sc
 
 
 async def test_author_reads_unmarked_rows_when_first_reconcile_fails(
-    indexed_scene, monkeypatch, tmp_path
+    indexed_scene, monkeypatch, tmp_path, chroma_clients
 ):
     scene, memory, _ = indexed_scene
     await contents(memory)
     state = memory._audience_state(scene)
     if state.task:
         await state.task
-    memory.db = chromadb.PersistentClient(
-        path=str(tmp_path / "pre-gate")
-    ).create_collection("pre-gate-memory", embedding_function=FixedEmbedding())
+    memory.db = chroma_clients(path=str(tmp_path / "pre-gate")).create_collection(
+        "pre-gate-memory", embedding_function=FixedEmbedding()
+    )
     monkeypatch.delenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE")
     metadata = {"character": "Marie", "typ": "base_attribute", "attr": "occupation"}
     await memory.add_many(

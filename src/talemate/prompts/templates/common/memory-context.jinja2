@@ -1,7 +1,7 @@
 {# MEMORY -#}
 {% set memory_character = talking_character if talking_character is defined else None -%}
-{% if memory_prompt is defined -%}
-{% set memory_stack = agent_action(active_agent.agent.agent_type, "rag_build", character=memory_character, prompt=memory_prompt, sub_instruction=sub_instruction|default("")) -%}
+{% if memory_prompt is defined and (not memory_character or not character_knowledge_enabled(scene)) -%}
+{% set memory_stack = agent_action(active_agent.agent.agent_type, "rag_build_for_author", character=memory_character, prompt=memory_prompt, sub_instruction=sub_instruction|default("")) -%}
 {% else -%}
 {% set memory_stack = agent_action(active_agent.agent.agent_type, "rag_build", character=memory_character, sub_instruction=sub_instruction|default("")) -%}
 {% endif -%}

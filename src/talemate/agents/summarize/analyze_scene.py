@@ -499,7 +499,7 @@ class SceneAnalyzationMixin:
                     "agent.summarization.scene_analysis.before_deep_analysis"
                 ).send(deep_emission)
 
-                rag_results = await self.rag_build(
+                rag_results = await self.rag_build_for_author(
                     prompt=result,
                     sub_instruction=investigate,
                     retrieval_method="questions",

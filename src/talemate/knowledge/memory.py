@@ -51,6 +51,7 @@ def audience_documents(scene, *, groups=None, read=None):
             "knowledge_index": True,
             "knowledge_common": common,
             "knowledge_source": str(key),
+            "knowledge_id": str(key if group == ("authored",) else group[1]),
             "pin_only": bool(meta.get("pin_only", False)),
         }
         identity = hashlib.sha256(

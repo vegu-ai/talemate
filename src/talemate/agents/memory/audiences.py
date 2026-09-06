@@ -27,6 +27,8 @@ class AudienceIndexState:
     documents: dict = field(default_factory=dict)
     fact_sources: dict = field(default_factory=dict)
     dirty: set | None = None
+    collection_revision: int = 0
+    topics: dict = field(default_factory=dict)
 
 
 class AudienceMemoryMixin:
@@ -72,6 +74,7 @@ class AudienceMemoryMixin:
             return
         state = self._audience_state(scene)
         state.revision += 1
+        state.topics.clear()
         if groups is None or reconcile:
             state.dirty = None
         elif state.dirty is not None:
@@ -123,6 +126,8 @@ class AudienceMemoryMixin:
                 db = self.db
                 if state.db is not db:
                     state.db = db
+                    state.collection_revision += 1
+                    state.topics.clear()
                     state.applied = -1
                     state.fingerprints = None
                     state.dirty = None
@@ -144,6 +149,7 @@ class AudienceMemoryMixin:
                             if removed.intersection(sources)
                         )
                         state.revision += 1
+                        state.topics.clear()
                 if state.applied == state.revision and state.fingerprints is not None:
                     return
                 revision = state.revision
@@ -216,6 +222,15 @@ class AudienceMemoryMixin:
                 "author memory query without audience synchronization", error=str(error)
             )
 
+    async def audience_character_context(self, viewer, names=None):
+        names = list(names if names is not None else self.scene.active_characters)
+        if not names:
+            return ""
+        documents = await self.get_documents_by_meta(
+            {"character": {"$in": names}}, viewer=viewer
+        )
+        return "\n".join(str(doc) for doc in documents.values())
+
     @staticmethod
     def _sync_audience_documents(db, documents, fingerprints):
         if fingerprints is None:
@@ -262,21 +277,41 @@ class AudienceMemoryMixin:
         }
 
     async def audience_query(self, text, character, viewer, query):
+        return await self.audience_read(
+            self._get, text, character, viewer=viewer, **query
+        )
+
+    def validate_audience_viewer(self, viewer):
+        if not character_knowledge_enabled(self.scene):
+            raise ValueError("A memory viewer requires perception mode")
+        if viewer not in self.scene.character_data:
+            raise ValueError(f"Unknown memory viewer: {viewer}")
+
+    async def audience_read(self, reader, *args, viewer, **kwargs):
+        async def operation(db):
+            return await asyncio.to_thread(
+                reader, *args, viewer=viewer, _collection=db, **kwargs
+            )
+
+        return await self.audience_operation(viewer, operation)
+
+    async def audience_operation(self, viewer, operation):
         scene = self.scene
-        if viewer is not None:
-            if not character_knowledge_enabled(scene):
-                raise ValueError("A memory viewer requires perception mode")
-            if viewer not in scene.character_data:
-                raise ValueError(f"Unknown memory viewer: {viewer}")
-        while True:
+        for attempt in range(2):
+            self.validate_audience_viewer(viewer)
             await self.ensure_audience_index(scene)
             db = self.db
             state = self._audience_state(scene)
             revision = state.revision
-            results = await asyncio.to_thread(
-                self._get, text, character, viewer=viewer, _collection=db, **query
-            )
+            results = await operation(db)
             if self.scene is not scene or self.db is not db:
                 raise RuntimeError("Memory query scene or collection was released")
+            await self.ensure_audience_index(scene)
             if state.revision == revision:
                 return results
+            log.warning(
+                "audience changed during retrieval", viewer=viewer, attempt=attempt + 1
+            )
+        # A repeated visibility change can revoke content used by the model.
+        # Bound paid requests without returning a stale result as a fallback.
+        raise RuntimeError("Memory audience kept changing during retrieval; retry")

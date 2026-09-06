@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Callable
 
 from talemate.knowledge.bucket import KnowledgeIndex
+from talemate.knowledge.mode import character_knowledge_enabled
 
 import structlog
 
@@ -174,6 +175,9 @@ class WorldStateAgent(
                 "memory_filter": filter,
                 "knowledge_index": KnowledgeIndex.from_scene(self.scene),
                 "knowledge_viewer": viewer,
+                **await self.retrieval_perspective_vars(
+                    viewer, include_character_context
+                ),
             },
         )
 
@@ -210,6 +214,9 @@ class WorldStateAgent(
                 "extra_context": extra_context,
                 "knowledge_index": KnowledgeIndex.from_scene(self.scene),
                 "knowledge_viewer": viewer,
+                **await self.retrieval_perspective_vars(
+                    viewer, include_character_context
+                ),
             },
         )
 
@@ -218,7 +225,15 @@ class WorldStateAgent(
         memory_agent = get_agent("memory")
 
         context = await memory_agent.multi_query(
-            queries, iterate=3, filter=filter, over_fetch=3 if filter else 1
+            queries,
+            iterate=3,
+            filter=filter,
+            over_fetch=3 if filter else 1,
+            **(
+                {"viewer": viewer}
+                if viewer is not None and character_knowledge_enabled(self.scene)
+                else {}
+            ),
         )
 
         # log.debug(
@@ -230,6 +245,19 @@ class WorldStateAgent(
         # )
 
         return context
+
+    async def retrieval_perspective_vars(self, viewer, include_character_context):
+        if viewer is None or not character_knowledge_enabled(self.scene):
+            return {}
+        memory = get_agent("memory")
+        memory.validate_audience_viewer(viewer)
+        return {
+            "memory_viewer": viewer,
+            "character_retrieval": True,
+            "memory_character_context": await memory.audience_character_context(viewer)
+            if include_character_context
+            else "",
+        }
 
     @set_processing
     async def analyze_and_follow_instruction(

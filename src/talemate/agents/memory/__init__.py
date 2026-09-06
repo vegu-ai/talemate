@@ -394,11 +394,15 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 best_id, best = topic_id, score
         return best_id
 
-    async def _topic_first(self, query: str, accepted: list, filter) -> list:
+    async def _topic_first(
+        self, query: str, accepted: list, filter, *, viewer=None
+    ) -> list:
         """
         The nearest topic's most restated facts that the similarity search
         did not return, ahead of that query's results.
         """
+        if viewer is not None:
+            return await self._audience_topic_first(query, accepted, filter, viewer)
         if not self.topics_enabled or not self.topic_centroids or not self.scene:
             return []
         topic_id = self.nearest_topic(await self.embed_text(query))
@@ -423,6 +427,93 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             found = [doc for doc in found if filter(doc)]
         log.debug("topic first", topic=topic_id, added=[d.id for d in found])
         return found
+
+    @staticmethod
+    def _audience_topic_groups(topics, documents, vectors, filter=None):
+        by_source = {}
+        for doc in documents.values():
+            if doc.id in vectors and (filter is None or filter(doc)):
+                by_source.setdefault(doc.meta["knowledge_id"], []).append(doc)
+        groups = []
+        for topic in topics.values():
+            candidates = [
+                doc
+                for identity in topic.fact_ids
+                for doc in by_source.get(identity, ())
+            ]
+            units = []
+            for doc in candidates:
+                vector = np.asarray(vectors[doc.id], dtype=float)
+                norm = np.linalg.norm(vector)
+                if norm:
+                    units.append(vector / norm)
+            if not units:
+                continue
+            centroid = np.mean(units, axis=0)
+            norm = np.linalg.norm(centroid)
+            if not norm:
+                continue
+            candidates.sort(
+                key=lambda doc: (
+                    -doc.meta.get("restatements", 0),
+                    -doc.meta.get("ts", 0),
+                )
+            )
+            groups.append((centroid / norm, candidates))
+        return groups
+
+    async def _audience_topic_first(self, query, accepted, filter, viewer):
+        if not self.topics_enabled or not self.scene.world_state.topics:
+            return []
+        scene = self.scene
+        await self.ensure_audience_index(scene)
+        state = self._audience_state(scene)
+        topics = scene.world_state.topics
+        key = (
+            state.collection_revision,
+            state.revision,
+            tuple(
+                (identity, tuple(topic.fact_ids)) for identity, topic in topics.items()
+            ),
+        )
+        cached = state.topics.get(viewer)
+        if cached is None or cached[0] != key:
+            documents = await self.get_documents_by_meta({"typ": "fact"}, viewer=viewer)
+            # Cache source text; relative ages must be rendered against the current time.
+            documents = {
+                identity: MemoryDocument(doc.raw, doc.meta, doc.id, doc.raw)
+                for identity, doc in documents.items()
+            }
+            vectors = await self.get_embeddings(list(documents)) if documents else {}
+            groups = self._audience_topic_groups(topics, documents, vectors)
+            cached = (key, documents, vectors, groups)
+            # An outer audience_operation retries if this build raced an edit.
+            if (state.collection_revision, state.revision) == key[:2]:
+                state.topics[viewer] = cached
+        _, documents, vectors, groups = cached
+        if filter is not None:
+            # Arbitrary caller filters may change independently of index state.
+            # Reuse the fetched variants/vectors, but narrow before topic selection.
+            current_documents = {
+                identity: self._dated_document(doc.raw, doc.meta, doc.id)
+                for identity, doc in documents.items()
+            }
+            groups = self._audience_topic_groups(
+                topics, current_documents, vectors, filter
+            )
+        query_vector = await self.embed_text(query)
+        if query_vector is None:
+            return []
+        best, members = self.topics_similarity_threshold, []
+        for centroid, candidates in groups:
+            score = float(np.dot(query_vector, centroid))
+            if score >= best:
+                best, members = score, candidates
+        seen = {doc.id for doc in accepted}
+        selected = [doc for doc in members if doc.id not in seen][
+            :TOPIC_FACTS_PER_QUERY
+        ]
+        return [self._dated_document(doc.raw, doc.meta, doc.id) for doc in selected]
 
     @property
     def reranker(self) -> CrossEncoderReranker:
@@ -722,15 +813,30 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         raise NotImplementedError()
 
     @set_processing
-    async def get_document(self, id):
+    async def get_document(self, id, *, viewer=None):
+        if viewer is not None:
+            self.validate_audience_viewer(viewer)
+            ids = [id] if isinstance(id, str) else id
+            return (
+                await self.get_documents_by_meta(
+                    {"knowledge_id": {"$in": [str(identity) for identity in ids]}},
+                    viewer=viewer,
+                )
+                if ids
+                else {}
+            )
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._get_document, id)
 
     def _get_document(self, id):
         raise NotImplementedError()
 
-    async def get_documents_by_meta(self, meta: dict) -> dict:
+    async def get_documents_by_meta(self, meta: dict, *, viewer=None) -> dict:
         """Documents whose metadata carries every given key/value, by id."""
+        if viewer is not None:
+            return await self.audience_read(
+                self._get_documents_by_meta, meta, viewer=viewer
+            )
         if not meta or not self.db:
             return {}
         await self.prepare_author_index()
@@ -834,7 +940,10 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         if not query:
             return memory_context
 
-        for memory in await self.get(query):
+        for memory in await self.get(
+            query,
+            **({"viewer": name} if character_knowledge_enabled(self.scene) else {}),
+        ):
             if memory in memory_context:
                 continue
 
@@ -880,6 +989,40 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         return_docs: bool = False,
         over_fetch: int = 1,
         topic_first: bool = False,
+        viewer: str | None = None,
+        **where,
+    ):
+        async def retrieve(_collection=None):
+            return await self._multi_query(
+                queries,
+                iterate=iterate,
+                max_tokens=max_tokens,
+                filter=filter,
+                formatter=formatter,
+                limit=limit,
+                return_docs=return_docs,
+                over_fetch=over_fetch,
+                topic_first=topic_first,
+                viewer=viewer,
+                **where,
+            )
+
+        if viewer is not None:
+            return await self.audience_operation(viewer, retrieve)
+        return await retrieve()
+
+    async def _multi_query(
+        self,
+        queries: list[str],
+        iterate: int = 1,
+        max_tokens: int = 1000,
+        filter: Callable | None = None,
+        formatter: Callable = lambda x: x,
+        limit: int = 10,
+        return_docs: bool = False,
+        over_fetch: int = 1,
+        topic_first: bool = False,
+        viewer: str | None = None,
         **where,
     ):
         """
@@ -905,7 +1048,13 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         # monopolising the token budget.
 
         per_query_results: list[list[str]] = []
-        gate_distance = self._similarity_gate_distance() if filter else None
+        # D23: perception access is decided by the backend audience condition;
+        # even a caller-supplied bucket filter can only narrow that eligible set.
+        gate_distance = (
+            self._similarity_gate_distance()
+            if filter and not character_knowledge_enabled(self.scene)
+            else None
+        )
         # the gate's anchors (the character's known facts and their vectors)
         # do not change between the queries of one call: fetched once
         anchors = await self._gate_anchors(filter) if gate_distance is not None else {}
@@ -918,7 +1067,12 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 continue
 
             # Fetch potential memories for this query.
-            raw_results = await self.get(formatter(query), limit=limit, **where)
+            raw_results = await self.get(
+                formatter(query),
+                limit=limit,
+                **({"viewer": viewer} if viewer is not None else {}),
+                **where,
+            )
 
             accepted = await self._apply_filter(
                 raw_results, filter, gate_distance, anchors
@@ -927,7 +1081,12 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             # only a caller without a metadata condition asks for topic-first
             # facts: `where` is not applied to a fetch by id
             topic_docs = (
-                await self._topic_first(formatter(query), accepted, filter)
+                await self._topic_first(
+                    formatter(query),
+                    accepted,
+                    filter,
+                    **({"viewer": viewer} if viewer is not None else {}),
+                )
                 if topic_first and not where
                 else []
             )
@@ -1936,25 +2095,30 @@ class ChromaDBMemoryAgent(MemoryAgent):
         result = self.db.get(ids=[id] if isinstance(id, str) else id)
         return self._documents_from(result)
 
-    def _get_documents_by_meta(self, meta: dict) -> dict:
+    def _get_documents_by_meta(
+        self, meta: dict, *, viewer=None, _collection=None
+    ) -> dict:
         clauses = [{key: value} for key, value in meta.items()]
         if character_knowledge_enabled(self.scene):
-            clauses.extend(audience_where(None))
+            clauses.extend(audience_where(viewer))
+        elif viewer is not None:
+            raise ValueError("A memory viewer requires perception mode")
         where = clauses[0] if len(clauses) == 1 else {"$and": clauses}
-        return self._documents_from(self.db.get(where=where))
+        db = self.db if _collection is None else _collection
+        return self._documents_from(db.get(where=where))
 
     def _documents_from(self, result) -> dict:
         documents = {}
         for idx, doc in enumerate(result["documents"]):
-            date_prefix = self.convert_ts_to_date_prefix(
-                result["metadatas"][idx].get("ts")
-            )
-            if date_prefix:
-                doc = f"{date_prefix}: {doc}"
-            documents[result["ids"][idx]] = MemoryDocument(
-                doc, result["metadatas"][idx], result["ids"][idx], doc
+            documents[result["ids"][idx]] = self._dated_document(
+                doc, result["metadatas"][idx], result["ids"][idx]
             )
         return documents
+
+    def _dated_document(self, raw, meta, identity):
+        date_prefix = self.convert_ts_to_date_prefix(meta.get("ts"))
+        text = f"{date_prefix}: {raw}" if date_prefix else raw
+        return MemoryDocument(text, meta, identity, raw)
 
     @set_processing
     async def remove_unsaved_memory(self):

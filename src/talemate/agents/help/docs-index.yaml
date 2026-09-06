@@ -1,6 +1,13 @@
 # Machine-readable index of the Talemate documentation (docs/).
 # Consumed by the help agent to route questions to the right document.
 # Generated file - regenerate with the docs-index claude skill in the work repo.
+- path: dev/character-memory-retrieval.md
+  title: Character memory retrieval
+  summary: 'Character RAG: rag_build/rag_build_for_author, projected history/disclosures, goal-only sub_instruction, scoped
+    semantic/metadata/knowledge_id lookups, memory_viewer enforcement in query_memory/retrieve_memories. Covers cached eligible
+    topic centroids with fresh ages without refetch, entity descriptions, AI query/question retrieval, optional conversation
+    memory pass, director direction mode, legacy memory_prompt character bucket/viewer semantics, uncached legacy direct retrieval,
+    cache identity/invalidation, one-repeat index-change retries and scene-switch rejection under the perception gate.'
 - path: dev/character-perspectives.md
   title: Character perspective records
   summary: 'Character views, revisions/invalidation, finalize_perceptions/ensure_perceptions retries, stale-output rejection,
@@ -1012,9 +1019,10 @@
     count_tokens, llm_can_be_coerced and the `condensed` filter.'
 - path: user-guide/node-editor/reference/useful-template-patterns.md
   title: Template Pattern Cheat Sheet
-  summary: 'Copy-paste jinja2 prompt snippets: scene history via scene.context_history(budget=...), memory via agent_action("narrator",
-    "rag_build"), character context with filtered_sheet and query_memory, the scene-context / memory-context / character-context
-    / extra-context templates, token-budget conditionals, and bot_token / set_prepared_response scaffolding.'
+  summary: Jinja2 snippets for scene.context_history budgets, rag_build_for_author versus character rag_build, memory_prompt
+    overrides retaining legacy character bucket/viewer/memory-pass semantics, memory_goal guidance, and filtered_sheet/query_memory
+    context. Covers scene-context, memory-context, character-context and extra-context includes, token-budget conditionals,
+    and bot_token, set_prepared_response and set_data_response scaffolding.
 - path: user-guide/playthrough.md
   title: Playthrough Mode
   summary: Replaying a scene from the beginning one message at a time - starting it from the Playthrough quick-settings chip,

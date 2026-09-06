@@ -502,7 +502,9 @@ def test_bind_keeps_legacy_bucket_rule_in_perception_mode(cast):
 
 
 @pytest.mark.asyncio
-async def test_incidental_perspective_callers_retain_bucket_history(cast, monkeypatch):
+async def test_retrieval_projects_while_incidental_callers_retain_bucket_history(
+    cast, monkeypatch
+):
     from talemate.agents.memory.rag import MemoryRAGMixin
     from talemate.knowledge.bucket import KnowledgeIndex
 
@@ -524,9 +526,18 @@ async def test_incidental_perspective_callers_retain_bucket_history(cast, monkey
 
     request = AsyncMock(return_value=("", {"answer": "none", "items": []}))
     monkeypatch.setattr(Prompt, "request", request)
+    memory = get_agent("memory")
+    monkeypatch.setattr(
+        memory, "audience_character_context", AsyncMock(return_value="")
+    )
+
+    async def operation(viewer, callback):
+        return await callback(None)
+
+    monkeypatch.setattr(memory, "audience_operation", operation)
     await conversation.memory_pass(scene.character_data["Bob"], [])
     history = "".join(request.call_args.kwargs["vars"]["scene_history"])
-    assert expected in history and "Bob was elsewhere" in history
+    assert expected not in history and "Bob was elsewhere" not in history
 
     monkeypatch.setattr(conversation, "semantic_context", AsyncMock(return_value=[]))
     extract = AsyncMock(return_value="")
@@ -538,8 +549,8 @@ async def test_incidental_perspective_callers_retain_bucket_history(cast, monkey
         character=scene.character_data["Bob"],
         retrieval_method="questions",
     )
-    assert expected in extract.call_args.args[0]
-    assert "Bob was elsewhere" in extract.call_args.args[0]
+    assert expected not in extract.call_args.args[0]
+    assert "Bob was elsewhere" not in extract.call_args.args[0]
 
     narrator = get_agent("narrator")
     monkeypatch.setattr(narrator, "rag_build", AsyncMock(return_value=[]))

@@ -256,10 +256,11 @@ class CharacterKnowledgeMixin:
 
     def rag_knowledge_viewer(self, character: "Character | None") -> str | None:
         """
-        The name every filter site uses (sheets, pins, the context history,
-        retrieval and the analysis prompts), or None when the perspective
-        filter is off: the shared record for every character.
+        Perception scenes always use the character's audience. Legacy scenes
+        retain the perspective-filter switch; author calls have no viewer.
         """
+        if character is not None and perception_mode_enabled(self.scene):
+            return character.name
         if character is None or not self.knowledge_perspective_filter:
             return None
         return character.name
@@ -292,8 +293,7 @@ class CharacterKnowledgeMixin:
 
     # opt-in requests
 
-    async def rag_build(self, character: "Character | None" = None, **kwargs):
-        context = await super().rag_build(character=character, **kwargs)
+    async def rag_process_context(self, character, context):
         if character is None or not context or not self.knowledge_memory_pass:
             return context
         return await self.memory_pass(character, context)
@@ -322,12 +322,21 @@ class CharacterKnowledgeMixin:
         # director guidance replaces them
         context = active_agent.get()
         guidance = context.state.get("director__actor_guidance") if context else None
-        scene_history = self.scene.context_history(
-            budget=int(client.max_token_length * 0.5),
-            min_dialogue=15,
-            sections=False,
-            keep_director=False if guidance else character.name,
-            perspective=viewer,
+        scoped = viewer is not None and perception_mode_enabled(self.scene)
+        scene_history = (
+            self.rag_projected_history(
+                viewer,
+                budget=int(client.max_token_length * 0.5),
+                keep_director=False if guidance else character.name,
+            )
+            if scoped
+            else self.scene.context_history(
+                budget=int(client.max_token_length * 0.5),
+                min_dialogue=15,
+                sections=False,
+                keep_director=False if guidance else character.name,
+                perspective=viewer,
+            )
         )
         _, extracted = await Prompt.request(
             "conversation.memory-pass",
@@ -341,6 +350,12 @@ class CharacterKnowledgeMixin:
                 "candidates": candidates,
                 "scene_history": scene_history,
                 "knowledge_index": KnowledgeIndex.from_scene(self.scene),
+                "character_retrieval": scoped,
+                "memory_character_context": await get_agent(
+                    "memory"
+                ).audience_character_context(viewer, [character.name])
+                if scoped
+                else "",
             },
             response_spec=MEMORY_PASS_SPEC,
         )

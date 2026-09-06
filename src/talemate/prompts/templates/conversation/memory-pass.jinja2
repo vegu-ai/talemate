@@ -7,7 +7,13 @@ Extractors:
 Override example:
   {{ set_anchor_extractor("answer", "<MY_TAG>", "</MY_TAG>") }}
 -#}
-{% if viewer -%}
+{% if character_retrieval -%}
+{% if memory_character_context -%}
+<|SECTION:{{ character.name.upper() }}|>
+{{ memory_character_context }}
+<|CLOSE_SECTION|>
+{% endif -%}
+{% elif viewer -%}
 <|SECTION:{{ character.name.upper() }}|>
 {{ knowledge_index.sheet(scene, character, viewer, "description") }}
 

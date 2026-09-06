@@ -1,4 +1,6 @@
 from typing import TYPE_CHECKING, Callable
+import hashlib
+import json
 import re
 import structlog
 from talemate.agents.base import (
@@ -9,6 +11,8 @@ from talemate.agents.base import (
 )
 import talemate.instance as instance
 from talemate.knowledge.bucket import KnowledgeIndex, knowledge_digest
+from talemate.knowledge.context import project_character_history
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.util.dedupe import compile_text_to_sentences, compile_sentences_to_length
 
 if TYPE_CHECKING:
@@ -172,6 +176,7 @@ class MemoryRAGMixin:
             self.long_term_memory_retrieval_method,
             self.long_term_memory_number_of_queries,
             self.long_term_memory_answer_length,
+            self.long_term_memory_num_messages,
         ]
 
         return "-".join(map(str, parts))
@@ -184,6 +189,42 @@ class MemoryRAGMixin:
         viewer = self.rag_knowledge_viewer(character)
         if viewer is None:
             return f"{self.long_term_memory_cache_key}-{character.name}-shared"
+        if character_knowledge_enabled(self.scene):
+            memory = instance.get_agent("memory")
+            state = memory._audience_state(self.scene)
+            topics = tuple(
+                (key, tuple(topic.fact_ids))
+                for key, topic in self.scene.world_state.topics.items()
+            )
+            settings = (
+                memory.retrieval_recency_weight,
+                memory.retrieval_mmr_threshold,
+                memory.retrieval_entity_lookup,
+                memory.retrieval_rerank,
+                memory.max_distance,
+                memory.topics_enabled,
+                memory.topics_similarity_threshold,
+                tuple(self.scene.active_characters),
+                tuple(
+                    (name, tuple(aliases))
+                    for name, aliases in self.scene.world_state.character_name_mappings.items()
+                ),
+                self.scene.conversation_format,
+                self.client.max_token_length,
+                instance.get_agent("director").actor_direction_mode,
+            )
+            return hashlib.sha256(
+                json.dumps(
+                    (
+                        self.long_term_memory_cache_key,
+                        viewer,
+                        state.collection_revision,
+                        state.revision,
+                        topics,
+                        settings,
+                    )
+                ).encode()
+            ).hexdigest()
         digest = knowledge_digest(self.scene)
         return f"{self.long_term_memory_cache_key}-{character.name}-{digest}"
 
@@ -196,9 +237,9 @@ class MemoryRAGMixin:
     # methods
 
     async def rag_set_cache(
-        self, content: list[str], character: "Character | None" = None
+        self, content: list[str], character: "Character | None" = None, *, key=None
     ):
-        self.scene.rag_cache[self.long_term_memory_cache_key_for(character)] = {
+        self.scene.rag_cache[key or self.long_term_memory_cache_key_for(character)] = {
             "content": content,
             "fingerprint": self.scene.history[-1].fingerprint
             if self.scene.history
@@ -211,6 +252,10 @@ class MemoryRAGMixin:
         if not self.long_term_memory_cache:
             return None
 
+        viewer = self.rag_knowledge_viewer(character)
+        if viewer is not None and character_knowledge_enabled(self.scene):
+            await instance.get_agent("memory").ensure_audience_index(self.scene)
+
         fingerprint = self.scene.history[-1].fingerprint if self.scene.history else 0
         cache = self.scene.rag_cache.get(self.long_term_memory_cache_key_for(character))
 
@@ -220,6 +265,70 @@ class MemoryRAGMixin:
         return None
 
     async def rag_build(
+        self,
+        character: "Character | None" = None,
+        sub_instruction: str = "",
+        retrieval_method: str | None = None,
+        include_raw_semantic: bool = True,
+    ) -> list[str]:
+        """Derive history internally; sub_instruction is an authored/director goal."""
+        if not self.long_term_memory_enabled:
+            return []
+
+        async def retrieve(_collection=None):
+            context = await self._rag_build(
+                character=character,
+                sub_instruction=sub_instruction,
+                retrieval_method=retrieval_method,
+                include_raw_semantic=include_raw_semantic,
+            )
+            return await self.rag_process_context(character, context)
+
+        viewer = self.rag_knowledge_viewer(character)
+        if viewer is not None and character_knowledge_enabled(self.scene):
+            return await instance.get_agent("memory").audience_operation(
+                viewer, retrieve
+            )
+        return await retrieve()
+
+    async def rag_process_context(self, character, context):
+        return context
+
+    def rag_projected_history(
+        self, viewer, *, budget=None, max_messages=None, keep_director=False
+    ):
+        """Use K04's projection options and hard token budget for retrieval."""
+        return project_character_history(
+            self.scene,
+            viewer,
+            budget=budget,
+            max_messages=max_messages,
+            keep_director=keep_director,
+            direction_mode=instance.get_agent("director").actor_direction_mode,
+        )
+
+    async def rag_build_for_author(
+        self,
+        prompt: str = "",
+        sub_instruction: str = "",
+        retrieval_method: str | None = None,
+        include_raw_semantic: bool = True,
+        character: "Character | None" = None,
+    ) -> list[str]:
+        if character is not None and character_knowledge_enabled(self.scene):
+            raise ValueError(
+                "Perception characters must use rag_build without a raw prompt"
+            )
+        context = await self._rag_build(
+            character=character,
+            prompt=prompt,
+            sub_instruction=sub_instruction,
+            retrieval_method=retrieval_method,
+            include_raw_semantic=include_raw_semantic,
+        )
+        return await self.rag_process_context(character, context)
+
+    async def _rag_build(
         self,
         character: "Character | None" = None,
         prompt: str = "",
@@ -243,9 +352,19 @@ class MemoryRAGMixin:
         if not self.long_term_memory_enabled:
             return []
 
-        # When retrieval_method is overridden, skip cache to avoid
-        # poisoning the shared cache with non-standard results
-        use_cache = retrieval_method is None
+        viewer = self.rag_knowledge_viewer(character)
+        scoped = viewer is not None and character_knowledge_enabled(self.scene)
+        # Legacy memory writes do not invalidate caches. Keep direct retrieval fresh.
+        # Cache only the configured, goal-free retrieval operation.
+        use_cache = (
+            self.long_term_memory_cache
+            and retrieval_method is None
+            and not prompt
+            and not sub_instruction
+            and include_raw_semantic
+            and (scoped or self.long_term_memory_retrieval_method != "direct")
+        )
+        cache_key = self.long_term_memory_cache_key_for(character)
 
         if use_cache:
             cached = await self.rag_get_cache(character)
@@ -260,10 +379,10 @@ class MemoryRAGMixin:
 
         memory_context = ""
         memory_filter = self.rag_knowledge_filter(character)
-        viewer = self.rag_knowledge_viewer(character)
         semantic_context = await self.semantic_context(
             num_messages=self.long_term_memory_num_messages,
             filter=memory_filter,
+            **({"viewer": viewer} if scoped else {}),
         )
 
         if retrieval_method is None:
@@ -271,6 +390,10 @@ class MemoryRAGMixin:
 
         if retrieval_method == "direct":
             # configuration is set to only use direct semantic matched context
+            if use_cache and cache_key == self.long_term_memory_cache_key_for(
+                character
+            ):
+                await self.rag_set_cache(semantic_context, character, key=cache_key)
             return semantic_context
 
         if not sub_instruction:
@@ -285,10 +408,16 @@ class MemoryRAGMixin:
         world_state = instance.get_agent("world_state")
 
         if not prompt:
-            prompt = self.scene.context_history(
-                keep_director=False,
-                budget=int(self.client.max_token_length * 0.75),
-                perspective=viewer,
+            prompt = (
+                self.rag_projected_history(
+                    viewer, budget=int(self.client.max_token_length * 0.75)
+                )
+                if scoped
+                else self.scene.context_history(
+                    keep_director=False,
+                    budget=int(self.client.max_token_length * 0.75),
+                    perspective=viewer,
+                )
             )
 
         if isinstance(prompt, list):
@@ -333,8 +462,8 @@ class MemoryRAGMixin:
         else:
             complete_context = list(dict.fromkeys(memory_context))
 
-        if use_cache:
-            await self.rag_set_cache(complete_context, character)
+        if use_cache and cache_key == self.long_term_memory_cache_key_for(character):
+            await self.rag_set_cache(complete_context, character, key=cache_key)
 
         return complete_context
 
@@ -347,7 +476,7 @@ class MemoryRAGMixin:
 
     def rag_knowledge_filter(self, character: "Character | None"):
         viewer = self.rag_knowledge_viewer(character)
-        if viewer is None:
+        if viewer is None or character_knowledge_enabled(self.scene):
             return None
         return KnowledgeIndex.from_scene(self.scene).retrieval_filter(
             self.scene, viewer
@@ -359,6 +488,7 @@ class MemoryRAGMixin:
         min_query_length: int = 100,
         max_response_tokens: int = 1024,
         filter: Callable | None = None,
+        viewer: str | None = None,
     ):
         """Will retrieve context from the long term memory based on semantic similarity
 
@@ -371,14 +501,26 @@ class MemoryRAGMixin:
             list[str]: The context retrieved from the long term memory
         """
 
-        history = list(
-            map(
-                str,
-                self.scene.collect_messages(
-                    max_iterations=100,
-                    max_messages=num_messages,
-                    typ=["character", "narrator", "director"],
-                ),
+        history = (
+            list(
+                reversed(
+                    self.rag_projected_history(
+                        viewer,
+                        max_messages=num_messages,
+                        keep_director=viewer,
+                    )
+                )
+            )
+            if viewer is not None
+            else list(
+                map(
+                    str,
+                    self.scene.collect_messages(
+                        max_iterations=100,
+                        max_messages=num_messages,
+                        typ=["character", "narrator", "director"],
+                    ),
+                )
             )
         )
         log.debug(
@@ -407,7 +549,9 @@ class MemoryRAGMixin:
         for query in queries:
             log.debug("memory_rag_mixin.build_prompt_default_memory", query=query)
 
-        entity_context = await self.entity_lookup(history, filter=filter)
+        entity_context = await self.entity_lookup(
+            history, filter=filter, **({"viewer": viewer} if viewer is not None else {})
+        )
 
         context = await memory.multi_query(
             queries,
@@ -416,6 +560,7 @@ class MemoryRAGMixin:
             filter=filter,
             over_fetch=3 if filter is not None else 1,
             topic_first=True,
+            **({"viewer": viewer} if viewer is not None else {}),
         )
 
         if not entity_context:
@@ -423,7 +568,7 @@ class MemoryRAGMixin:
         return entity_context + [item for item in context if item not in entity_context]
 
     async def entity_lookup(
-        self, history: list[str], filter: Callable | None = None
+        self, history: list[str], filter: Callable | None = None, *, viewer=None
     ) -> list:
         """
         Descriptions of characters the recent lines name who are not in the
@@ -449,11 +594,17 @@ class MemoryRAGMixin:
         found = []
         for name in named:
             documents = await memory.get_documents_by_meta(
-                {"character": name, "typ": "base_attribute", "attr": "description"}
+                {"character": name, "typ": "base_attribute", "attr": "description"},
+                **({"viewer": viewer} if viewer is not None else {}),
             )
             # `<name>.description`, then the paragraphs `.description.<n>` in
             # number order (text order would put .10 before .2)
-            for doc_id in sorted(documents, key=_paragraph_order):
+            for doc_id in sorted(
+                documents,
+                key=lambda identity: _paragraph_order(
+                    documents[identity].meta.get("knowledge_id", identity)
+                ),
+            ):
                 doc = documents[doc_id]
                 if filter is not None and not filter(doc):
                     continue

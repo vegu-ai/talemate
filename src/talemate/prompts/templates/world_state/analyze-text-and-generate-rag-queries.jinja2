@@ -8,16 +8,24 @@ Override example:
 -#}
 {# RENDERED CONTEXT #}
 {% set rendered_context -%}
+{% if character_retrieval %}
+{% if memory_character_context %}
+<|SECTION:CHARACTERS|>
+{{ memory_character_context }}
+<|CLOSE_SECTION|>
+{% endif %}
+{% else %}
 <|SECTION:CONTEXT|>
 {% include "extra-context-static.jinja2" %}
 <|CLOSE_SECTION|>
 {% if include_character_context %}{% include "character-context.jinja2" %}{% endif %}
+{% endif %}
 {% endset %}
 {# END RENDERED CONTEXT #}
 
 {# VOLATILE CONTEXT #}
 {% set volatile_inner -%}
-{% include "extra-context-dynamic.jinja2" %}
+{% if not character_retrieval %}{% include "extra-context-dynamic.jinja2" %}{% endif %}
 {% if extra_context %}{% for context in extra_context %}{{ context }}
 ---
 {% endfor %}{% endif %}

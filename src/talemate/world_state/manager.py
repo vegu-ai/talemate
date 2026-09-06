@@ -23,6 +23,10 @@ from talemate.character import (
 from talemate.instance import get_agent
 from talemate.emit import emit
 from talemate.util import replace_smart_quotes
+from talemate.knowledge.disclosures import grant_disclosure
+from talemate.knowledge.entry import _item_from_id, SHEET_KINDS
+from talemate.knowledge.perspective_models import Disclosure
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge, TopicCoverage
 from talemate.knowledge.changes import (
     edge_change,
@@ -149,6 +153,8 @@ class KnowledgeTarget(pydantic.BaseModel):
 
 
 class CharacterKnowledge(pydantic.BaseModel):
+    perception_mode: bool = False
+    disclosures: list[Disclosure] = []
     name: str
     edges: list[KnowledgeEdge] = []
     targets: list[KnowledgeTarget] = []
@@ -715,7 +721,9 @@ class WorldStateManager:
                     continue
                 targets.append(
                     KnowledgeTarget(
-                        id=f"{name}.{attr}", label=f"{name}: {attr}", kind="attribute"
+                        id=f"{name}.{attr}",
+                        label=f"{name}: {attr}",
+                        kind="description" if attr == "description" else "attribute",
                     )
                 )
             for key in sorted(character.details):
@@ -757,7 +765,23 @@ class WorldStateManager:
                     id=fact.id, label=f"fact: {fact.text[:60]}", kind="fact"
                 )
             )
-        return targets
+        # Resolve collisions with the same precedence as graph and disclosure grants.
+        grouped = {}
+        for target in targets:
+            grouped.setdefault(target.id, []).append(target)
+        offered = []
+        for identity, candidates in grouped.items():
+            if len(candidates) == 1 and candidates[0].kind not in SHEET_KINDS:
+                offered.append(candidates[0])
+                continue
+            item = _item_from_id(self.scene, identity)
+            if item:
+                target = next(
+                    (entry for entry in candidates if entry.kind == item.kind), None
+                )
+                if target:
+                    offered.append(target)
+        return offered
 
     async def get_character_knowledge(self, character_name: str) -> CharacterKnowledge:
         edges = [
@@ -767,10 +791,25 @@ class WorldStateManager:
         ]
         return CharacterKnowledge(
             name=character_name,
+            perception_mode=character_knowledge_enabled(self.scene),
+            disclosures=[
+                item
+                for item in self.scene.knowledge.disclosures
+                if character_name in item.audience
+            ]
+            if self.scene.knowledge and character_knowledge_enabled(self.scene)
+            else [],
             edges=edges,
             targets=self.knowledge_targets(),
             coverage=coverage(self.scene, character_name),
             awareness=awareness_line(self.scene, character_name),
+        )
+
+    def grant_character_disclosure(
+        self, character, target, *, text=None, whole_entry=False
+    ):
+        return grant_disclosure(
+            self.scene, character, target, text=text, whole_entry=whole_entry
         )
 
     async def set_knowledge_edge(self, edge: KnowledgeEdge) -> KnowledgeEdge:

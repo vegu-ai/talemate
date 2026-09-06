@@ -1660,7 +1660,8 @@
       "title": "Describe",
       "id": "00f9caa5-c93e-48b1-967c-56025f02d647",
       "properties": {
-        "template": "Grant `{character}` knowledge of `{name}` (Context ID `{context_id}`)"
+        "template": "Grant `{character}` knowledge of `{name}` (Context ID `{context_id}`)",
+        "perception_template": "Establish knowledge for `{character}` from `{name}` (Context ID `{context_id}`). Whole entry: {whole_entry} (true gives ALL entry content; false gives only the text below). Selected information: {information}."
       },
       "x": -1280,
       "y": 2680,
@@ -1668,7 +1669,7 @@
       "height": 170,
       "collapsed": false,
       "inherited": false,
-      "registry": "data/string/AdvancedFormat",
+      "registry": "knowledge/GrantKnowledgeConfirmation",
       "dynamic_inputs": [
         {
           "name": "item0",
@@ -1680,6 +1681,14 @@
         },
         {
           "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        },
+        {
+          "name": "item4",
           "type": "*"
         }
       ],
@@ -1786,6 +1795,23 @@
             "context_id": "history_entry.dynamic:layer.0.id.4b29fc83",
             "note": "Tom told her what happened at the docks."
           }
+        ],
+        "perception_instructions": "Explicitly establish selected knowledge for a character from a resolved sheet, world or history entry. In perception mode information is saved as an independent disclosure at the current acquisition point; the containing entry is not unlocked. Default whole_entry=false. Set whole_entry=true only for an explicit request for ALL selected entry content. Do not invent a conversation or event to explain acquisition.",
+        "perception_examples": [
+          {
+            "character": "Sarah",
+            "context_id": "history_entry.dynamic:layer.0.id.4b29fc83",
+            "information": "The ledger is under the bed.",
+            "whole_entry": false,
+            "note": ""
+          },
+          {
+            "character": "Marcus",
+            "context_id": "character.detail:Elena.Physical condition",
+            "information": "",
+            "whole_entry": true,
+            "note": ""
+          }
         ]
       },
       "x": -1040,
@@ -1794,7 +1820,7 @@
       "height": 82,
       "collapsed": false,
       "inherited": false,
-      "registry": "focal/Metadata",
+      "registry": "knowledge/GrantKnowledgeMetadata",
       "base_type": "core/Node"
     },
     "654f2998-9248-4655-94f9-b9eed45fcf04": {
@@ -2299,6 +2325,40 @@
       "inherited": false,
       "registry": "data/string/Join",
       "base_type": "core/Node"
+    },
+    "e767d988-749f-4740-9f51-8ca3399cd021": {
+      "title": "information",
+      "id": "e767d988-749f-4740-9f51-8ca3399cd021",
+      "properties": {
+        "name": "information",
+        "typ": "str",
+        "instructions": "Only for a disclosure request: exact selected information, preserving attribution and uncertainty. Leave empty for ordinary entry grants or explicit whole-entry copying. Never invent dialogue or events."
+      },
+      "x": -2000,
+      "y": 3230,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "7dba269e-1f5c-4bc2-ac0a-2128d8b63021": {
+      "title": "whole_entry",
+      "id": "7dba269e-1f5c-4bc2-ac0a-2128d8b63021",
+      "properties": {
+        "name": "whole_entry",
+        "typ": "bool",
+        "instructions": "For a disclosure request, false gives only information; true requires an explicit request for ALL source content, including private details. Leave false for ordinary entry grants."
+      },
+      "x": -2000,
+      "y": 3410,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -2713,6 +2773,14 @@
     ],
     "176ab689-3eb7-4001-8d02-133c716efaf7.result": [
       "a1ced36e-3586-4c52-938d-cbfe966ed6af.item3"
+    ],
+    "e767d988-749f-4740-9f51-8ca3399cd021.value": [
+      "6e554977-b152-45b8-949c-1f1feea22a95.information",
+      "00f9caa5-c93e-48b1-967c-56025f02d647.item3"
+    ],
+    "7dba269e-1f5c-4bc2-ac0a-2128d8b63021.value": [
+      "6e554977-b152-45b8-949c-1f1feea22a95.whole_entry",
+      "00f9caa5-c93e-48b1-967c-56025f02d647.item4"
     ]
   },
   "groups": [

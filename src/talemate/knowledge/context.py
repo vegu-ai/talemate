@@ -4,7 +4,11 @@ import structlog
 
 from talemate.exceptions import GenerationCancelled
 from talemate.knowledge.formatting import format_message_view
-from talemate.knowledge.summaries import summary_spans, summary_coverage
+from talemate.knowledge.summaries import (
+    summary_spans,
+    summary_coverage,
+)
+from talemate.knowledge.disclosures import disclosure_positions, disclosure_text
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspectives import (
     PerspectiveReadContext,
@@ -73,8 +77,27 @@ def project_character_history(
             ).status in ("ready", "pending", "failed")
         return required[item.id]
 
+    disclosures = {
+        position: [item for item in items if character in item.audience]
+        for position, items in disclosure_positions(scene).items()
+    }
+    consumed = set()
     cursor = len(prefix) - 1
-    while cursor >= 0:
+    while cursor >= -1:
+        for disclosure in reversed(disclosures.get(cursor + 1, ())):
+            if disclosure.id in consumed:
+                continue
+            if max_messages is not None and len(parts) >= max_messages:
+                return list(reversed(parts))
+            text = disclosure_text(disclosure)
+            size = count_tokens(text)
+            if budget is not None and tokens + size > budget:
+                return list(reversed(parts))
+            parts.append(text)
+            tokens += size
+            consumed.add(disclosure.id)
+        if cursor < 0:
+            break
         if max_messages is not None and len(parts) >= max_messages:
             break
         message = prefix[cursor]
@@ -114,12 +137,28 @@ def project_character_history(
                     status="incomplete_coverage",
                 )
                 continue
+            disclosed = summary_coverage(
+                view.source,
+                character,
+                read=read,
+                cache=coverage_cache,
+                kind="disclosure",
+            )
+            required_disclosures = {
+                item.id
+                for position, items in disclosures.items()
+                if start <= position <= cursor
+                for item in items
+            }
+            if not required_disclosures <= disclosed:
+                continue
             size = count_tokens(view.text) if view.text else 0
             if budget is not None and tokens + size > budget:
                 continue
             if view.text:
                 parts.append(view.text)
                 tokens += size
+            consumed.update(disclosed)
             cursor = start - 1
             selected = True
             break

@@ -145,9 +145,8 @@ def perception_context(scene: "Scene", message: SceneMessage) -> dict:
                 known.append({"source": view.source.model_dump(), "text": view.text})
         if scene.knowledge and message.knowledge:
             for disclosure in scene.knowledge.disclosures:
-                if (
-                    character.name in disclosure.audience
-                    and disclosure.acquired.order < message.knowledge.acquired.order
+                if character.name in disclosure.audience and (
+                    message.id > disclosure.message_id_boundary
                 ):
                     known.append(
                         {

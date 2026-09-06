@@ -3,6 +3,11 @@ from typing import TYPE_CHECKING, ClassVar
 import structlog
 
 from talemate.context import active_scene
+from talemate.game.engine.nodes.focal import Metadata
+from talemate.game.engine.nodes.string import AdvancedFormat
+from talemate.instance import get_agent
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.perspectives import source_reference
 from talemate.knowledge.entry import (
     VISIBILITY_KINDS,
     character_knowledge_report,
@@ -232,26 +237,80 @@ class _EdgeNode(Node):
 @register("knowledge/GrantKnowledge")
 class GrantKnowledge(_EdgeNode):
     """
-    Grant a character knowledge of an entry (a fact id, a sheet entry id,
-    a world entry id or a summarized history entry id).
+    Establish selected information in perception mode, or a whole-entry edge in legacy mode.
+    Disclosures are acquired now without inventing dialogue; whole_entry explicitly copies all source text.
 
     Inputs:
     - state: graph state (passthrough)
     - character: character name or character
-    - target: entry id (or give context_id_item)
-    - context_id_item: the entry as a Context ID item (or give target)
-    - note: optional note stored on the edge
+    - target: existing entry id (or give context_id_item)
+    - context_id_item: resolved source entry (or give target)
+    - note: optional note on legacy edges
+    - information: selected text; required for partial disclosures
+    - whole_entry: false by default; true copies all current source content
 
     Outputs:
     - state: graph state
-    - edge: the stored edge
-    - text: the entry's Known by line after the change
+    - edge: legacy edge, or None in perception mode
+    - text: disclosure result or the legacy Known by line
+    - disclosure: saved disclosure in perception mode
     """
+
+    class Fields(_EdgeNode.Fields):
+        whole_entry = PropertyField(
+            name="whole_entry",
+            type="bool",
+            default=False,
+            description="True copies all source content, including private details; False discloses only the supplied information.",
+        )
 
     kind: ClassVar[str] = "grant"
 
     def __init__(self, title="Grant Knowledge", **kwargs):
         super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        super().setup()
+        self.add_input("information", socket_type="str", optional=True)
+        self.add_input("whole_entry", socket_type="bool", optional=True)
+        self.set_property("whole_entry", False)
+        self.add_output("disclosure", socket_type="dict")
+
+    async def run(self, state: GraphState):
+        scene = active_scene.get()
+        if not character_knowledge_enabled(scene):
+            return await super().run(state)
+        item = self.normalized_input_value("context_id_item")
+        target = (
+            item.knowledge_id
+            if item is not None
+            else self.normalized_input_value("target")
+        )
+        try:
+            disclosure = scene.world_state_manager.grant_character_disclosure(
+                _character_name(self.require_input("character")),
+                target,
+                text=self.normalized_input_value("information"),
+                whole_entry=self.normalized_input_value("whole_entry") or False,
+            )
+        except ValueError as exc:
+            raise InputValueError(self, "target", str(exc)) from exc
+        status = await get_agent("summarizer").rebuild_supported_facts(
+            scene, [source_reference(scene, "disclosure", disclosure.id)]
+        )
+        self.set_output_values(
+            {
+                "state": self.normalized_input_value("state"),
+                "edge": None,
+                "disclosure": disclosure.model_dump(),
+                "text": f"Established for {', '.join(disclosure.audience)}: {disclosure.text}"
+                + (
+                    " (Fact extraction failed; the disclosure is saved.)"
+                    if status == "failed"
+                    else ""
+                ),
+            }
+        )
 
 
 @register("knowledge/RevokeKnowledge")
@@ -480,3 +539,74 @@ class CharacterKnowledge(Node):
                 "text": character_knowledge_report(active_scene.get(), name),
             }
         )
+
+
+@register("knowledge/GrantKnowledgeMetadata")
+class GrantKnowledgeMetadata(Metadata):
+    """Director grant metadata selected by the shared character-knowledge gate.
+
+    Properties:
+    - instructions: legacy entry-grant instructions
+    - examples: legacy entry-grant examples
+    - perception_instructions: instructions for explicit disclosures
+    - perception_examples: selected-text and whole-entry disclosure examples
+    """
+
+    class Fields(Metadata.Fields):
+        perception_instructions = PropertyField(
+            name="perception_instructions",
+            type="text",
+            default="",
+            description="Instructions used only when character perceptions are internally enabled.",
+        )
+        perception_examples = PropertyField(
+            name="perception_examples",
+            type="list",
+            default=[],
+            description="Disclosure examples used only when character perceptions are internally enabled.",
+        )
+
+    def __init__(self, title="Grant Knowledge Metadata", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        super().setup()
+        self.set_property("perception_instructions", "")
+        self.set_property("perception_examples", [])
+
+    def normalized_input_value(self, input_name, none_is_set=False):
+        if input_name in ("instructions", "examples") and character_knowledge_enabled(
+            active_scene.get()
+        ):
+            input_name = f"perception_{input_name}"
+        return super().normalized_input_value(input_name, none_is_set=none_is_set)
+
+
+@register("knowledge/GrantKnowledgeConfirmation")
+class GrantKnowledgeConfirmation(AdvancedFormat):
+    """Format the director grant confirmation for the scene's knowledge mode.
+
+    Properties:
+    - template: legacy entry-grant confirmation
+    - perception_template: confirmation showing selected information or explicit whole-entry copying
+    """
+
+    class Fields(AdvancedFormat.Fields):
+        perception_template = PropertyField(
+            name="perception_template",
+            type="text",
+            default="",
+            description="Disclosure confirmation used only when character perceptions are internally enabled.",
+        )
+
+    def __init__(self, title="Grant Knowledge Confirmation", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        super().setup()
+        self.set_property("perception_template", "")
+
+    async def format(self, template, variables):
+        if character_knowledge_enabled(active_scene.get()):
+            template = self.get_property("perception_template")
+        return await super().format(template, variables)

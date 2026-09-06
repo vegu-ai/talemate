@@ -34,6 +34,9 @@ def edge_changes_knowledge(
 
 
 def knowledge_label(scene: "Scene", target: str) -> str:
+    for disclosure in scene.knowledge.disclosures if scene.knowledge else ():
+        if disclosure.id == target:
+            return disclosure.text
     fact = scene.world_state.facts.get(target)
     if fact:
         return fact.text

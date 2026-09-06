@@ -11,7 +11,7 @@
     Defines project_character_history for budgeted actor/editor replacement prose, omission and pending behavior, revision
     boundaries and prefix readiness, formatted speaker attribution, reader-prose repetition detection, explicit stored-view
     opt-in, audience-targeted base/layered summary generation, exact dependencies, targeted repair, safe source-view fallback
-    and the remaining supplemental-context limits.'
+    and the remaining supplemental-context limits. Covers partial versus whole-entry grants, durable disclosure origins and message-ID acquisition boundaries, director/author controls, ordered context and independent fact rebuilding.'
 - path: dev/howto/add-a-worldstate-template-type.md
   title: Adding a new world-state template
   summary: 'Developer walkthrough for adding a world-state template type: a pydantic Template subclass under src/talemate/world_state/templates
@@ -930,10 +930,12 @@
   summary: 'Knowledge nodes over the fact record and who knows what: Facts About (facts mentioning an entity, optionally as
     one character knows them), Current State (the newest fact about an entity that no later accessible fact supersedes),
     Relationship Timeline (facts mentioning two entities). Current State and Relationship Timeline accept an optional
-    character input for scoped evidence; leaving it empty retains the global author query. Grant Knowledge / Revoke Knowledge for writing knowledge edges from a graph
+    character input for scoped evidence; leaving it empty retains the global author query. Grant Knowledge for selected-text disclosures in perception scenes
+    (information and whole_entry inputs, disclosure output), legacy grant edges and Revoke Knowledge edges
     (target id or Context ID item, note, source, replace), Entry Knowledge (an entry''s Known by line and edges), Set Entry
-    Visibility (Known by of a sheet or world entry) and Character Knowledge (a character''s knowledge report); inputs,
-    outputs and properties of each.'
+    Visibility (Known by of a sheet or world entry) and Character Knowledge (a character''s knowledge report).
+    Grant Knowledge Metadata and Grant Knowledge Confirmation select the director instructions, examples and confirmation
+    text for the scene''s knowledge mode; inputs, outputs and properties of all ten nodes.'
 - path: user-guide/node-editor/reference/nodes/prompt.md
   title: Prompt Nodes
   summary: 'Prompt and generation nodes: Build Prompt (include_* context toggles, reserved_tokens, memory_prompt, dedupe_enabled,
@@ -1259,7 +1261,7 @@
     field that requires selecting a result before Add, retaining entries after edge removal; a per-topic coverage
     table and the awareness line; the director''s Known by line, its set_known_by / grant_knowledge / revoke_knowledge actions
     (source director) and Character Knowledge query; retrieval shaping (recency, diversity, entity lookup, similarity gate,
-    cross-encoder) and the opt-in AI memory pass, ledger and narrator offscreen life; older scenes without presence.'
+    cross-encoder) and the opt-in AI memory pass, ledger and narrator offscreen life; older scenes without presence. Also explains development-mode selected-text disclosures, the explicit whole-entry option, acquisition order, save/reload and independent source-fact regeneration.'
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: 'Pinning context entries so the AI always considers them: creating pins from the Context editor or a character

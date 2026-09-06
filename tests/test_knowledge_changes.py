@@ -351,3 +351,28 @@ def test_notification_labels_resolve_only_requested_targets(scene, target, label
         ]
     ]
     assert knowledge_label(scene, target) == label
+
+
+def test_disclosure_notification_labels_only_selected_text(
+    scene, notifications, monkeypatch
+):
+    from talemate.knowledge.disclosures import grant_disclosure
+
+    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
+    scene.knowledge_eligibility = "perception"
+    scene.character_data["Bob"] = Character(name="Bob")
+    scene.world_state.manual_context["mixed"] = ManualContext(
+        id="mixed", text="The ledger is under the bed. Alice plans betrayal."
+    )
+    disclosure = grant_disclosure(
+        scene, "Bob", "mixed", text="The ledger is under the bed."
+    )
+    assert knowledge_label(scene, disclosure.id) == disclosure.text
+    assert notifications[-1].data["changes"] == [
+        {
+            "character": "Bob",
+            "target": disclosure.id,
+            "kind": "grant",
+            "label": disclosure.text,
+        }
+    ]

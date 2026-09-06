@@ -375,6 +375,13 @@ async def load_scene_from_data(
     scene.archived_history = scene_data["archived_history"]
     scene.layered_history = scene_data.get("layered_history", [])
     scene.knowledge = knowledge
+    if knowledge:
+        advance_message_id(
+            max(
+                (item.message_id_boundary for item in knowledge.disclosures),
+                default=0,
+            )
+        )
     bind_perspective_sources(scene)
 
     # load shared context

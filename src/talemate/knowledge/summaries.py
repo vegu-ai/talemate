@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from talemate.knowledge.disclosures import disclosure_positions, disclosure_text
+from talemate.knowledge.perspective_models import Disclosure
 from talemate.knowledge.formatting import format_message_view
 from talemate.knowledge.perspectives import (
     MAX_DEPENDENCY_DEPTH,
@@ -54,20 +56,32 @@ def summary_inputs(scene, entry, layer, *, read=None):
     entries = summary_sources(scene, entry, layer)
     if not entries:
         return {}
+    if layer == 0:
+        positions = disclosure_positions(scene)
+        selected = {item.id: item for item in entries}
+        entries = []
+        for index in range(entry["start"], entry["end"] + 1):
+            entries.extend(positions.get(index, ()))
+            message = scene.history[index]
+            if message.id in selected:
+                entries.append(message)
     references = []
     names = set()
     kind = "message" if layer == 0 else "summary"
     source_layer = max(0, layer - 1)
     for item in entries:
+        disclosure = isinstance(item, Disclosure)
         identity = item.id if layer == 0 else item["id"]
         reference = source_reference(
             scene,
-            kind,
+            "disclosure" if disclosure else kind,
             identity,
             layer=source_layer,
             read=read,
         )
         references.append(reference)
+        if disclosure:
+            names.update(item.audience)
         owner = read.sources.get((kind, identity, source_layer), [])
         if owner and owner[0].knowledge:
             names.update(
@@ -83,6 +97,8 @@ def summary_inputs(scene, entry, layer, *, read=None):
         texts, sources = [], []
         complete = True
         for item, reference in zip(entries, references, strict=True):
+            if isinstance(item, Disclosure) and name not in item.audience:
+                continue
             if reference is None:
                 complete = False
                 continue
@@ -96,7 +112,9 @@ def summary_inputs(scene, entry, layer, *, read=None):
             sources.append(view.source)
             if view.status == "ready":
                 texts.append(
-                    format_message_view(item, view.text, "chat")
+                    disclosure_text(item)
+                    if isinstance(item, Disclosure)
+                    else format_message_view(item, view.text, "chat")
                     if layer == 0
                     else view.text
                 )
@@ -142,15 +160,15 @@ def summary_spans(scene, *, read=None):
 
 
 def summary_coverage(
-    reference, character, *, read, cache, remaining=MAX_DEPENDENCY_DEPTH
+    reference, character, *, read, cache, kind="message", remaining=MAX_DEPENDENCY_DEPTH
 ):
-    """Collect cited passage IDs for one audience, including through summary layers."""
+    """Collect cited source IDs for one audience, including through summary layers."""
     if remaining < 0:
         return frozenset()
-    key = (reference, character, remaining)
+    key = (reference, character, kind, remaining)
     if key in cache:
         return cache[key]
-    if reference.kind == "message":
+    if reference.kind == kind:
         return frozenset((reference.id,))
     owners = read.sources.get(reference.key, ())
     if len(owners) != 1 or owners[0].knowledge is None:
@@ -168,6 +186,7 @@ def summary_coverage(
                     character,
                     read=read,
                     cache=cache,
+                    kind=kind,
                     remaining=remaining - 1,
                 )
             )

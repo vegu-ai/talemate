@@ -190,7 +190,9 @@
             "view_id": "alice-view",
             "view_revision": 1
           }
-        ]
+        ],
+        "origin": null,
+        "message_id_boundary": 101
       }
     ]
   }

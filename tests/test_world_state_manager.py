@@ -1164,6 +1164,29 @@ class TestKnowledge:
             "history:"
         )
 
+    async def test_legacy_picker_keeps_standalone_detail_prefix_attribute(
+        self, manager, scene
+    ):
+        from talemate.knowledge.entry import entry_knowledge
+
+        scene.knowledge_eligibility = "legacy"
+        character = make_actor(scene, "Alice")
+        character.base_attributes["detail.secret"] = "A literal attribute."
+        targets = [
+            item
+            for item in manager.knowledge_targets()
+            if item.id == "Alice.detail.secret"
+        ]
+        assert len(targets) == 1 and targets[0].kind == "attribute"
+        assert entry_knowledge(scene, targets[0].id).kind == "attribute"
+        character.details["secret"] = "A real detail."
+        targets = [
+            item
+            for item in manager.knowledge_targets()
+            if item.id == "Alice.detail.secret"
+        ]
+        assert len(targets) == 1 and targets[0].kind == "detail"
+
     async def test_targets_do_not_duplicate_a_description_attribute(
         self, manager, scene
     ):

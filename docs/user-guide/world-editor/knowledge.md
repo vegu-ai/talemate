@@ -1,5 +1,7 @@
 # Knowledge
 
+The presence-based behavior below applies to legacy scenes. Internally enabled perception scenes use stored audience views and [explicit disclosures](#explicit-disclosures-development-mode); the complete opt-in mode is still under development.
+
 Every character draws on the same records: the scene history, the summarized history, the character sheets and the world entries. What a single character *knows* is not stored anywhere. It is worked out from those records each time the character speaks:
 
 - A history entry, summarized or verbatim, is known to the characters that were present for it (see [History -- Presence](/talemate/user-guide/world-editor/history/#presence)). An entry with unknown presence is known to everyone.
@@ -43,7 +45,7 @@ one. Removing a grant or revoke keeps the underlying entry available to select a
 
 The [director chat](/talemate/user-guide/agents/director/chat/) reads and changes the same records, without an extra request beyond the call it already makes.
 
-Whenever the director looks at an entry, the entry carries a **Known by** line: the visibility setting, or the present characters of a summarized history entry, followed by the grants and revokes on it, for example `Known by: only Bob (owner); grants: Alice (director, "she read the ledger")`. The line appears in the context the director's update and query tools are given and under the value of a directly retrieved entry. The **Character Knowledge** query action answers "what does Alice know" with the character's grants and revokes, the restricted entries they can see, and the coverage table and awareness line the Knowledge tab shows.
+Whenever the director looks at an entry, the entry carries a **Known by** line: the visibility setting, or the present characters of a summarized history entry, followed by the grants and revokes on it, for example `Known by: only Bob (owner); grants: Alice (director, "she read the ledger")`. The line appears in the context the director's update and query tools are given and under the value of a directly retrieved entry. In legacy scenes, the **Character Knowledge** query action answers "what does Alice know" with the character's grants and revokes, the restricted entries they can see, and the coverage table and awareness line the Knowledge tab shows. In perception scenes it also lists [explicit disclosures](#explicit-disclosures-development-mode) under their own heading; entry grants/revokes, restricted entries and coverage remain separate.
 
 The **Character Knowledge** entry in the Update Context group of the director's actions gives it three operations, each confirmed like any other write action when confirmation is on:
 
@@ -59,7 +61,7 @@ The memory agent clusters the stored facts into [topics](/talemate/user-guide/ag
 
 ## Facts in node graphs
 
-The `knowledge/` nodes read the fact record without an LLM request: **Facts About** (facts mentioning an entity, optionally as one character knows them), **Current State** (the newest fact about an entity that no later fact supersedes), **Relationship Timeline** (facts mentioning two entities), and **Grant Knowledge** / **Revoke Knowledge** for edges written by a graph, which take the entry as an id or as a Context ID item, with a note, a source and a switch to keep one edge per character and entry. **Entry Knowledge** gives an entry's Known by line and edges, **Set Entry Visibility** sets the Known by of a sheet entry or world entry, and **Character Knowledge** renders the report the director's query uses. See the [node reference](/talemate/user-guide/node-editor/reference/nodes/knowledge/).
+The `knowledge/` nodes read the fact record without an LLM request: **Facts About** (facts mentioning an entity, optionally as one character knows them), **Current State** (the newest fact about an entity that no later fact supersedes), **Relationship Timeline** (facts mentioning two entities), and **Grant Knowledge** / **Revoke Knowledge** for edges written by a graph, which take the entry as an id or as a Context ID item, with a note, a source and a switch to keep one edge per character and entry. **Entry Knowledge** gives an entry's Known by line and edges, **Set Entry Visibility** sets the Known by of a sheet entry or world entry, and **Character Knowledge** renders the report the director's query uses. In perception scenes **Grant Knowledge** uses `information` for the selected text and `whole_entry` for explicit copying of all content, returning a `disclosure`; see [explicit disclosures](#explicit-disclosures-development-mode). See the [node reference](/talemate/user-guide/node-editor/reference/nodes/knowledge/).
 
 ## Retrieval
 
@@ -70,3 +72,18 @@ Two opt-ins on the conversation agent add one request each: the [AI memory pass]
 ## Older scenes
 
 Scenes saved before presence tracking carry no presence on their messages, so nothing is hidden from anyone in those spans. Visibility settings and grants work on such scenes as soon as you set them.
+
+
+## Explicit disclosures (development mode)
+
+In an internally enabled perception scene, the character’s **Knowledge** tab offers **Establish character knowledge**. Select an existing **Source entry** and enter the **Information to disclose**. **Give selected information** copies only that text into this character’s durable knowledge now. For example, disclosing “The ledger is under the bed” does not also disclose a betrayal plan in the same archive.
+
+**Give the whole entry** is off by default. Turning it on and choosing **Give all entry content** copies *all* current text of the selected entry, including private details. Neither operation grants ongoing access to future edits of that entry. Both preserve the copied information when the source or its extracted facts are regenerated. Invalid or removed sources and unknown characters are rejected without adding content.
+
+This is explicit author establishment: no dialogue or event is invented to justify learning. Earlier character perspectives stay unchanged. Disclosures appear in later actor history and audience summaries in acquisition order, and survive saving and reloading. Ordinary learning from generated narrative continues through the perception lifecycle.
+
+The director’s `grant_knowledge` uses the same operation and usual write confirmation. `information` contains the selected text; `whole_entry` defaults to false and must be true only for an explicit request to give all entry content. Its confirmation states the choice. Existing legacy scenes keep their entry-grant instructions, note examples and confirmation. Existing grants/revokes remain visible and removable in perception scenes because they still affect supplemental routes; removing one does not remove a disclosure.
+
+When fact extraction is enabled, disclosure facts use the existing summarizer extraction request and contribution index. The disclosure is retained if extraction fails; the error dialog can retry extraction. If retry is cancelled, the Knowledge tab shows a warning. A supported-facts rebuild from saved sources can recover its facts later (the developer API is `SummarizeAgent.rebuild_supported_facts`; see the [developer guide](/talemate/dev/character-perspectives/)).
+
+These controls do not enable the full perception mode. Unconverted supplemental prompt and retrieval routes remain later integration work; this page does not claim they are protected by disclosure handling. Visibility of authored sheets and world entries remains the author’s responsibility.

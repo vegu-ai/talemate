@@ -1,11 +1,32 @@
 <template>
     <div v-if="character">
-        <v-alert variant="text" density="compact" icon="mdi-head-lightbulb-outline" class="text-medium-emphasis mb-2">
+        <v-alert v-if="!perceptionMode" variant="text" density="compact" icon="mdi-head-lightbulb-outline" class="text-medium-emphasis mb-2">
             What {{ character.name }} knows follows from where they were present, from what they own, and from what is shared with everyone.
             Grants add an entry to their knowledge, revokes take one away. Everything else is derived and never stored.
         </v-alert>
 
-        <v-card variant="tonal" class="mb-4">
+        <v-card v-if="perceptionMode" variant="tonal" class="mb-4">
+            <v-card-title class="text-body-large">Establish character knowledge</v-card-title>
+            <v-card-text>
+                <p class="mb-3">Give {{ character.name }} selected information now, without adding dialogue or changing what they knew earlier.</p>
+                <v-autocomplete v-model="newTarget" :items="targets" item-title="label" item-value="id" label="Source entry" variant="underlined" clearable />
+                <v-switch v-model="wholeEntry" label="Give the whole entry" color="primary" hide-details />
+                <p class="text-body-small mb-3">{{ wholeEntry ? 'All text in this entry will be copied into the character’s knowledge, including any private details.' : 'Only the information you enter below will be copied. Other details in the source entry stay undisclosed.' }}</p>
+                <v-textarea v-if="!wholeEntry" v-model="information" label="Information to disclose" auto-grow rows="3" variant="outlined" />
+                <v-alert v-if="error" type="error" variant="tonal">{{ error }}</v-alert>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer />
+                <v-btn :disabled="!newTarget || (!wholeEntry && !information.trim()) || busy" color="primary" @click="addDisclosure">{{ wholeEntry ? 'Give all entry content' : 'Give selected information' }}</v-btn>
+            </v-card-actions>
+        </v-card>
+        <v-list v-if="perceptionMode" density="compact">
+            <v-list-item v-for="disclosure in disclosures" :key="disclosure.id">
+                <v-list-item-title class="text-wrap">{{ disclosure.text }}</v-list-item-title>
+                <v-list-item-subtitle>Source: {{ targetLabel(disclosure.origin) }}</v-list-item-subtitle>
+            </v-list-item>
+        </v-list>
+        <v-card v-else variant="tonal" class="mb-4">
             <v-card-title class="text-body-large">Add a grant or revoke</v-card-title>
             <v-card-text>
                 <v-row>
@@ -39,6 +60,8 @@
             </v-card-actions>
         </v-card>
 
+        <v-alert v-if="factsWarning" type="warning" variant="tonal" class="mb-3">{{ factsWarning }}</v-alert>
+        <p v-if="perceptionMode && edges.length" class="mb-2">Entry grants and revokes still affect supplemental knowledge routes. Removing an edge does not remove a disclosure.</p>
         <v-list v-if="edges.length" density="compact">
             <v-list-item v-for="edge in edges" :key="edge.id">
                 <template v-slot:prepend>
@@ -57,7 +80,7 @@
                 </template>
             </v-list-item>
         </v-list>
-        <v-alert v-else variant="text" density="compact" class="text-medium-emphasis" icon="mdi-information-outline">
+        <v-alert v-else-if="!perceptionMode" variant="text" density="compact" class="text-medium-emphasis" icon="mdi-information-outline">
             No grants or revokes for {{ character.name }} yet.
         </v-alert>
 
@@ -94,6 +117,7 @@
 
 <script>
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import { newUuid } from '@/utils/uuid';
 
 export default {
     name: 'WorldStateManagerCharacterKnowledge',
@@ -106,6 +130,13 @@ export default {
     data() {
         return {
             character: null,
+            perceptionMode: false,
+            disclosures: [],
+            information: '',
+            wholeEntry: false,
+            error: null,
+            factsWarning: null,
+            disclosureRequestId: null,
             edges: [],
             coverage: [],
             awareness: null,
@@ -132,6 +163,15 @@ export default {
                 const changed = !this.character || this.character.name !== value.name;
                 this.character = { ...value };
                 if (changed) {
+                    this.error = null;
+                    this.factsWarning = null;
+                    this.disclosureRequestId = null;
+                    this.busy = false;
+                    this.perceptionMode = false;
+                    this.disclosures = [];
+                    this.newTarget = null;
+                    this.information = '';
+                    this.wholeEntry = false;
                     this.request();
                 }
             },
@@ -154,6 +194,19 @@ export default {
             return edge.kind === 'grant'
                 ? `${this.character.name} knows this entry even when they were not present for it.`
                 : `${this.character.name} does not know this entry even when they would otherwise.`;
+        },
+        addDisclosure() {
+            if (!this.newTarget || (!this.wholeEntry && !this.information.trim()) || this.busy) return;
+            this.busy = true;
+            this.error = null;
+            this.disclosureRequestId = newUuid();
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager', action: 'grant_disclosure',
+                request_id: this.disclosureRequestId,
+                name: this.character.name, target: this.newTarget,
+                information: this.wholeEntry ? null : this.information,
+                whole_entry: this.wholeEntry,
+            }));
         },
         addEdge() {
             if (!this.newTarget) return;
@@ -189,14 +242,36 @@ export default {
                 return;
             }
             if (message.type !== 'world_state_manager') return;
+            if (message.action === 'operation_done' && message.failed_action === 'grant_disclosure'
+                && (message.request_id ? message.request_id === this.disclosureRequestId : message.data?.name === this.character?.name)) {
+                this.busy = false;
+                this.disclosureRequestId = null;
+                this.error = message.error.message;
+            }
+            if (message.action === 'disclosure_indexed' && message.data.name === this.character?.name) {
+                this.factsWarning = message.data.facts_status === 'failed'
+                    ? 'The disclosure is saved, but fact extraction failed. A supported-facts rebuild can recover its facts.'
+                    : null;
+            }
             if (message.action === 'character_knowledge') {
                 if (!this.character || message.data.name !== this.character.name) return;
+                this.perceptionMode = message.data.perception_mode === true;
+                this.disclosures = message.data.disclosures || [];
                 this.edges = message.data.edges;
                 this.targets = message.data.targets;
                 this.coverage = message.data.coverage || [];
                 this.awareness = message.data.awareness || null;
-                if (this.busy) {
+                // Indexing refreshes can arrive after another grant has started.
+                const completesRequest = this.disclosureRequestId
+                    ? message.request_id === this.disclosureRequestId
+                    : !message.request_id;
+                if (this.busy && completesRequest) {
                     this.busy = false;
+                    if (this.disclosureRequestId) {
+                        this.information = '';
+                        this.wholeEntry = false;
+                        this.disclosureRequestId = null;
+                    }
                     this.$emit('require-scene-save');
                 }
             }

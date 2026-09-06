@@ -171,6 +171,8 @@ class PerspectiveSourceModel(BaseModel):
 
 
 class Disclosure(AudienceRecord):
+    origin: str | None = None
+    message_id_boundary: int = Field(ge=0, strict=True)
     id: str = Field(default_factory=lambda: uuid.uuid4().hex, min_length=1)
     revision: int = Field(default=1, ge=1, strict=True)
     text: StrictStr = Field(min_length=1)

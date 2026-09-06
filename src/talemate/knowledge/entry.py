@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Iterable, Literal
 
 import pydantic
 
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.bucket import (
     ItemKind,
     KnowledgeIndex,
@@ -100,7 +101,10 @@ class EntryKnowledge(pydantic.BaseModel):
 def _sheet_item(character, key: str) -> KnowledgeItem:
     if key == "description":
         kind = "description"
-    elif key.startswith("detail."):
+    elif key.startswith("detail.") and (
+        key[len("detail.") :] in character.details
+        or key not in character.base_attributes
+    ):
         kind = "detail"
     else:
         kind = "attribute"
@@ -210,6 +214,28 @@ def _item_from_id(scene: "Scene", entry_id: str) -> KnowledgeItem | None:
     return None
 
 
+def entry_text(scene, item: KnowledgeItem):
+    """Read the source selected by the canonical entry classifier."""
+    if item.kind == "world_entry":
+        return scene.world_state.manual_context[item.id].text
+    if item.kind in SHEET_KINDS:
+        character = scene.character_data[item.owner]
+        key = item.id[len(item.owner) + 1 :]
+        if item.kind == "description":
+            # The memory writer uses the imported attribute when both stores exist.
+            return character.base_attributes.get("description", character.description)
+        if item.kind == "detail":
+            return character.details.get(key[len("detail.") :])
+        return character.base_attributes.get(key)
+    if item.kind == "fact":
+        return scene.world_state.facts[item.id].text
+    for entries in [scene.archived_history, *scene.layered_history]:
+        for entry in entries:
+            if entry.get("id") == item.id:
+                return entry.get("text")
+    return None
+
+
 def entry_knowledge(scene: "Scene", entry: "str | ContextIDItem") -> EntryKnowledge:
     """
     The knowledge record of one entry: a resolved Context ID item keeps the
@@ -294,7 +320,7 @@ def sheet_visibility_key(entry: EntryKnowledge) -> str:
 
 def character_knowledge_report(scene: "Scene", name: str) -> str:
     """
-    Prompt text for one character: their grants and revokes with entry labels,
+    Author report: disclosures in perception mode, grants/revokes with entry labels,
     the restricted entries they can see, the topic coverage and the awareness
     line.
     """
@@ -323,6 +349,21 @@ def character_knowledge_report(scene: "Scene", name: str) -> str:
             restricted.append(f"- {target.label} ({entry.line})")
 
     lines = [f"### What {name} knows"]
+    if character_knowledge_enabled(scene):
+        disclosures = [
+            f"- {item.text}"
+            for item in sorted(
+                scene.knowledge.disclosures if scene.knowledge else (),
+                key=lambda item: item.acquired.order,
+            )
+            if name in item.audience
+        ]
+        lines.append(
+            "Explicit disclosures (oldest first):"
+            if disclosures
+            else "Explicit disclosures (oldest first): none"
+        )
+        lines += disclosures
     grants = edge_lines("grant")
     revokes = edge_lines("revoke")
     lines.append("Grants:" if grants else "Grants: none")

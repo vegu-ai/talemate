@@ -549,10 +549,16 @@ def add_disclosure(
     audience: Iterable[str],
     *,
     provenance: Iterable[SourceReference] = (),
+    origin: str | None = None,
 ) -> Disclosure:
     _require_enabled(scene)
     disclosure = Disclosure(
-        text=text, audience=audience, acquired=_acquire(scene), provenance=provenance
+        text=text,
+        audience=audience,
+        acquired=_acquire(scene),
+        provenance=provenance,
+        origin=origin,
+        message_id_boundary=max((item.id for item in scene.history), default=0),
     )
     _validate_audience(scene, disclosure.audience)
     for reference in disclosure.provenance:

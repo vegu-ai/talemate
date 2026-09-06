@@ -18,6 +18,7 @@ from talemate.knowledge.entry import (
 )
 from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge, Topic, Fact
 from talemate.world_state import ManualContext
+from talemate.knowledge.schema import TopicCoverage
 
 
 @pytest.fixture
@@ -202,6 +203,37 @@ class TestSetEdge:
 
 
 class TestCharacterKnowledgeReport:
+    def test_perception_headers_edges_and_coverage(self, scene, monkeypatch):
+        from talemate.knowledge.perspectives import add_disclosure
+
+        monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
+        scene.knowledge_eligibility = "perception"
+        add_disclosure(scene, "The ledger is under the bed.", ("Alice",))
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Alice", target="Hidden Door")
+        ]
+        monkeypatch.setattr(
+            "talemate.knowledge.entry.coverage",
+            lambda *args: [TopicCoverage(id="T1", name="ledger", known=1, total=2)],
+        )
+        monkeypatch.setattr(
+            "talemate.knowledge.entry.awareness_line",
+            lambda *args: "Alice knows some of ledger",
+        )
+        lines = character_knowledge_report(scene, "Alice").splitlines()
+        assert lines[:3] == [
+            "### What Alice knows",
+            "Explicit disclosures (oldest first):",
+            "- The ledger is under the bed.",
+        ]
+        assert "Grants:" in lines and "Revokes: none" in lines
+        assert "Restricted entries Alice can see:" in lines
+        assert "Topic coverage (known / total facts):" in lines
+        assert "Awareness: Alice knows some of ledger" in lines
+        report = character_knowledge_report(scene, "Nobody")
+        assert "Explicit disclosures (oldest first): none" in report
+        assert "Restricted entries Nobody can see: none" in report
+
     def test_empty(self, scene):
         report = character_knowledge_report(scene, "Alice")
         assert report.splitlines() == [

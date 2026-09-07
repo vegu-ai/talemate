@@ -38,9 +38,31 @@ __all__ = [
     "activate_character",
     "set_character_is_player",
     "set_voice",
+    "NAME_EXISTS_MESSAGE",
+    "name_is_taken",
 ]
 
 log = structlog.get_logger("talemate.character")
+
+NAME_EXISTS_MESSAGE = 'Name "{name}" already exists.'
+
+
+def name_is_taken(
+    scene: "Scene", name: str, character: "Character | None" = None
+) -> "Character | None":
+    """Return the character that already holds `name`, or None.
+
+    Names are compared without case, because `Scene.get_character` resolves
+    them that way: a scene holding `Bob` and `bob` has two records its own
+    lookup cannot tell apart. `character` is the character asking, which never
+    counts as its own collision.
+    """
+    folded = name.casefold()
+    for other in scene.character_data.values():
+        if other is not character and other.name.casefold() == folded:
+            return other
+    return None
+
 
 async_signals.register("character.voice_changed", "character.activated")
 
@@ -756,6 +778,10 @@ async def deactivate_character(scene: "Scene", character: Union[str, "Character"
 async def activate_character(scene: "Scene", character: Union[str, "Character"]):
     """
     Activates a character
+
+    A character that is already active is left alone: the call returns `False`
+    and sends no `character.activated`. Callers that create a character and
+    want the signal activate it here rather than adding the actor themselves.
 
     Arguments:
 

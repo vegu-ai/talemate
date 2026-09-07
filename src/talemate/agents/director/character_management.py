@@ -12,7 +12,13 @@ from talemate.util import (
     replace_smart_quotes,
 )
 from talemate.util.data import trim_attributes
-from talemate.character import Character, set_voice, deactivate_character
+from talemate.character import (
+    Character,
+    set_voice,
+    deactivate_character,
+    NAME_EXISTS_MESSAGE,
+    name_is_taken,
+)
 from talemate.status import LoadingStatus
 from talemate.exceptions import GenerationCancelled
 from talemate.agents.base import (
@@ -28,6 +34,8 @@ from talemate.agents.creator.character import (
 )
 import talemate.game.focal as focal
 from talemate.client.context import ClientContext
+from talemate.emit import emit
+from talemate.context import handle_generation_cancelled
 import talemate.emit.async_signals as async_signals
 
 if TYPE_CHECKING:
@@ -479,7 +487,9 @@ class CharacterManagementMixin:
         )
 
     @set_processing
-    async def persist_character(self, request: PersistCharacterRequest) -> Character:
+    async def persist_character(
+        self, request: PersistCharacterRequest
+    ) -> Character | None:
         """
         Persist a character into the scene - the single backend process all
         character creation paths route through.
@@ -505,199 +515,243 @@ class CharacterManagementMixin:
         # Start of character creation
         log.debug("persist_character", name=request.name, generate=request.generate)
 
-        # a name is existential - fail before any LLM call when no name was
-        # provided and none will be determined
-        if not request.name and not (request.generate and request.determine_name):
-            raise ValueError(NAME_REQUIRED_MESSAGE)
-
-        fast = request.generate and creator.cc_fast
-        max_attrs = self.cm_max_attributes if self.cm_max_attributes > 0 else None
-
-        name = request.name
-        description = request.description
-        dialogue_instructions = request.dialogue_instructions
-        example_dialogue = request.example_dialogue
-
-        generated = None
-        collected_templates = None
-        if fast:
-            preparation = await self._prepare_fast_generation(
-                request,
-                max_attrs=max_attrs,
-                loading_status=loading_status,
-            )
-            name = preparation.name
-            description = preparation.description
-            dialogue_instructions = preparation.dialogue_instructions
-            example_dialogue = preparation.example_dialogue
-            generated = preparation.generated
-            collected_templates = preparation.collected_templates
-        elif request.generate and request.determine_name:
-            name = await self._determine_split_name(
-                request, loading_status=loading_status
-            )
-
-        # a name is existential - regardless of mode and flag combination
-        if not name:
-            raise ValueError(NAME_REQUIRED_MESSAGE)
-
-        if name in self.scene.all_character_names:
-            raise ValueError(f'Name "{name}" already exists.')
-
-        # Create the blank character
-        character: Character = self.scene.Character(
-            name=name, is_player=request.is_player
-        )
-
-        if description:
-            character.description = description
-
-        emission = PersistCharacterEmission(
-            agent=self,
-            character=character,
-        )
-        await async_signals.get(
-            "agent.director.character_management.before_persist_character"
-        ).send(emission)
-
-        # Add the character to the scene
-        character.color = random_color()
-
-        if request.is_player:
-            actor = self.scene.Player(
-                character=character, agent=instance.get_agent("conversation")
-            )
-        else:
-            actor = self.scene.Actor(
-                character=character, agent=instance.get_agent("conversation")
-            )
-
-        await self.scene.add_actor(actor)
-
-        if not request.active:
-            # the actor goes back out before generation starts: an actor is what
-            # makes a character active, and an active character is stamped into
-            # the presence of every message the scene produces meanwhile
-            await deactivate_character(scene, character)
+        character: Character | None = None
 
         try:
-            any_attribute_templates = await self._apply_generation_templates(
-                character,
-                request,
-                collected_templates=collected_templates,
-                max_attrs=max_attrs,
-                loading_status=loading_status,
-            )
+            # a name is existential - fail before any LLM call when no name was
+            # provided and none will be determined
+            if not request.name and not (request.generate and request.determine_name):
+                raise ValueError(NAME_REQUIRED_MESSAGE)
 
-            # caller-provided attributes are resolved onto the character
-            # before aspect generation - the downstream prompts render the
-            # sheet
-            if (
-                not any_attribute_templates
-                and request.generate_attributes
-                and request.attributes
-            ):
-                character.base_attributes = world_state._parse_character_sheet(
-                    request.attributes, max_attributes=max_attrs
-                )
+            fast = request.generate and creator.cc_fast
+            max_attrs = self.cm_max_attributes if self.cm_max_attributes > 0 else None
 
-            # Enforce max_attributes limit on base_attributes if configured -
-            # before aspect generation, so the downstream prompts render the
-            # truncated sheet. Same budget rule as the generated sheet: the
-            # character's own name does not cost a slot.
-            if max_attrs:
-                limited_attrs = trim_attributes(
-                    character.base_attributes, max_attributes=max_attrs
-                )
-                if len(limited_attrs) < len(character.base_attributes):
-                    log.debug(
-                        "persist_character",
-                        limiting_attributes=True,
-                        original_count=len(character.base_attributes),
-                        limited_count=len(limited_attrs),
-                    )
-                    character.base_attributes = limited_attrs
+            name = request.name
+            description = request.description
+            dialogue_instructions = request.dialogue_instructions
+            example_dialogue = request.example_dialogue
 
-            if not fast and request.generate:
-                split = await self._prepare_split_generation(
+            generated = None
+            collected_templates = None
+            if fast:
+                preparation = await self._prepare_fast_generation(
                     request,
-                    character=character,
-                    any_attribute_templates=any_attribute_templates,
                     max_attrs=max_attrs,
                     loading_status=loading_status,
                 )
-                description = split.description
-                dialogue_instructions = split.dialogue_instructions
-                example_dialogue = split.example_dialogue
-                generated = split.generated
+                name = preparation.name
+                description = preparation.description
+                dialogue_instructions = preparation.dialogue_instructions
+                example_dialogue = preparation.example_dialogue
+                generated = preparation.generated
+                collected_templates = preparation.collected_templates
+            elif request.generate and request.determine_name:
+                name = await self._determine_split_name(
+                    request, loading_status=loading_status
+                )
 
-            self._apply_base_attributes(
-                character,
-                request,
-                generated=generated,
-                any_attribute_templates=any_attribute_templates,
-            )
+            # a name is existential - regardless of mode and flag combination
+            if not name:
+                raise ValueError(NAME_REQUIRED_MESSAGE)
+
+            if name_is_taken(self.scene, name):
+                raise ValueError(NAME_EXISTS_MESSAGE.format(name=name))
+
+            # Create the blank character
+            character = self.scene.Character(name=name, is_player=request.is_player)
 
             if description:
                 character.description = description
-                log.debug("persist_character", description=description)
 
-            if dialogue_instructions:
-                character.dialogue_instructions = dialogue_instructions
-                log.debug(
-                    "persist_character", dialogue_instructions=dialogue_instructions
-                )
-
-            if example_dialogue:
-                # generated examples arrive already normalized from the
-                # creator; pre-supplied ones (node graph literals, ws payload)
-                # skip generation, so this is where they get cleaned
-                example_dialogue = [
-                    replace_smart_quotes(example) for example in example_dialogue
-                ]
-                character.example_dialogue = example_dialogue
-                log.debug("persist_character", example_dialogue=example_dialogue)
-
-            # Narrate the character's entry if the option is selected
-            if request.generate and request.active and request.narrate_entry:
-                loading_status("Narrating character entry")
-                is_present = await world_state.is_character_present(name)
-                if not is_present:
-                    await narrator.action_to_narration(
-                        "narrate_character_entry",
-                        emit_message=True,
-                        character=character,
-                        narrative_direction=request.narrate_entry_direction,
-                    )
-
-            if request.generate and request.assign_voice:
-                await self.assign_voice_to_character(character)
-
-            # done() no-ops at step 0 - every mode needs one step to report
-            # a terminal status
-            loading_status("Adding character to scene")
-
-            # Commit the character's details to long term memory
-            await character.commit_to_memory(memory)
-            self.scene.emit_status()
-            self.scene.world_state.emit()
-
-            loading_status.done(
-                message=f"{character.name} added to scene", status="success"
+            emission = PersistCharacterEmission(
+                agent=self,
+                character=character,
             )
-
             await async_signals.get(
-                "agent.director.character_management.after_persist_character"
+                "agent.director.character_management.before_persist_character"
             ).send(emission)
 
-            return character
-        except GenerationCancelled:
-            loading_status.done(message="Character creation cancelled", status="idle")
-            await scene.remove_actor(actor)
+            # Add the character to the scene
+            character.color = random_color()
+
+            if request.is_player:
+                actor = self.scene.Player(
+                    character=character, agent=instance.get_agent("conversation")
+                )
+            else:
+                actor = self.scene.Actor(
+                    character=character, agent=instance.get_agent("conversation")
+                )
+
+            try:
+                # add_actor commits to memory through the memory agent, which
+                # raises on a pending cancel
+                await self.scene.add_actor(actor)
+
+                if not request.active:
+                    # the actor goes back out before generation starts: an actor is
+                    # what makes a character active, and an active character is
+                    # stamped into the presence of every message the scene produces
+                    # meanwhile
+                    await deactivate_character(scene, character)
+
+                any_attribute_templates = await self._apply_generation_templates(
+                    character,
+                    request,
+                    collected_templates=collected_templates,
+                    max_attrs=max_attrs,
+                    loading_status=loading_status,
+                )
+
+                # caller-provided attributes are resolved onto the character
+                # before aspect generation - the downstream prompts render the
+                # sheet
+                if (
+                    not any_attribute_templates
+                    and request.generate_attributes
+                    and request.attributes
+                ):
+                    character.base_attributes = world_state._parse_character_sheet(
+                        request.attributes, max_attributes=max_attrs
+                    )
+
+                # Enforce max_attributes limit on base_attributes if configured -
+                # before aspect generation, so the downstream prompts render the
+                # truncated sheet. Same budget rule as the generated sheet: the
+                # character's own name does not cost a slot.
+                if max_attrs:
+                    limited_attrs = trim_attributes(
+                        character.base_attributes, max_attributes=max_attrs
+                    )
+                    if len(limited_attrs) < len(character.base_attributes):
+                        log.debug(
+                            "persist_character",
+                            limiting_attributes=True,
+                            original_count=len(character.base_attributes),
+                            limited_count=len(limited_attrs),
+                        )
+                        character.base_attributes = limited_attrs
+
+                if not fast and request.generate:
+                    split = await self._prepare_split_generation(
+                        request,
+                        character=character,
+                        any_attribute_templates=any_attribute_templates,
+                        max_attrs=max_attrs,
+                        loading_status=loading_status,
+                    )
+                    description = split.description
+                    dialogue_instructions = split.dialogue_instructions
+                    example_dialogue = split.example_dialogue
+                    generated = split.generated
+
+                self._apply_base_attributes(
+                    character,
+                    request,
+                    generated=generated,
+                    any_attribute_templates=any_attribute_templates,
+                )
+
+                if description:
+                    character.description = description
+                    log.debug("persist_character", description=description)
+
+                if dialogue_instructions:
+                    character.dialogue_instructions = dialogue_instructions
+                    log.debug(
+                        "persist_character", dialogue_instructions=dialogue_instructions
+                    )
+
+                if example_dialogue:
+                    # generated examples arrive already normalized from the
+                    # creator; pre-supplied ones (node graph literals, ws payload)
+                    # skip generation, so this is where they get cleaned
+                    example_dialogue = [
+                        replace_smart_quotes(example) for example in example_dialogue
+                    ]
+                    character.example_dialogue = example_dialogue
+                    log.debug("persist_character", example_dialogue=example_dialogue)
+
+                # Narrate the character's entry if the option is selected
+                if request.generate and request.active and request.narrate_entry:
+                    loading_status("Narrating character entry")
+                    is_present = await world_state.is_character_present(name)
+                    if not is_present:
+                        await narrator.action_to_narration(
+                            "narrate_character_entry",
+                            emit_message=True,
+                            character=character,
+                            narrative_direction=request.narrate_entry_direction,
+                        )
+
+                if request.generate and request.assign_voice:
+                    await self.assign_voice_to_character(character)
+
+                # done() no-ops at step 0 - every mode needs one step to report
+                # a terminal status
+                loading_status("Adding character to scene")
+
+                # Commit the character's details to long term memory
+                await character.commit_to_memory(memory)
+                self.scene.emit_status()
+                self.scene.world_state.emit()
+
+                loading_status.done(
+                    message=f"{character.name} added to scene", status="success"
+                )
+
+                await async_signals.get(
+                    "agent.director.character_management.after_persist_character"
+                ).send(emission)
+
+                return character
+            except GenerationCancelled:
+                # the cancel policy is one level up; without this clause the
+                # handler below would swallow it
+                raise
+            except Exception:
+                emit("status", message="Character creation failed", status="error")
+                await self._discard_half_built_character(character)
+                log.error("Error persisting character", error=traceback.format_exc())
+        except GenerationCancelled as exc:
+            # every exit reports exactly one terminal status, and a cancel
+            # can be raised anywhere above: the generation before the try,
+            # a signal receiver, or the creation itself
+            emit("status", message="Character creation cancelled", status="idle")
+            # the flag must not outlive this call for a caller that does not
+            # handle the raise
+            handle_generation_cancelled(exc)
+            if character is not None:
+                await self._discard_half_built_character(character)
+            raise
+
+    async def _discard_half_built_character(self, character: Character):
+        """Take a character that failed to be created back out of the scene.
+
+        The memory purge reaches the memory agent, whose `set_processing` gate
+        turns a raised cancel flag into another `GenerationCancelled`. The flag
+        is lowered for that call alone and put back, so a cancel another
+        generation still has to observe is not consumed here.
+        """
+        scene: "Scene" = self.scene
+        if scene.character_data.get(character.name) is not character:
+            return
+
+        try:
+            await scene.remove_character(character, purge_from_memory=False)
+            pending_cancel = scene.cancel_requested
+            scene.cancel_requested = False
+            try:
+                await character.purge_from_memory()
+            finally:
+                if pending_cancel:
+                    scene.cancel_requested = True
         except Exception:
-            loading_status.done(message="Character creation failed", status="error")
-            await scene.remove_actor(actor)
-            log.error("Error persisting character", error=traceback.format_exc())
+            log.error(
+                "Error discarding half-built character",
+                name=character.name,
+                error=traceback.format_exc(),
+            )
 
     async def _apply_generation_templates(
         self,

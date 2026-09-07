@@ -13,7 +13,12 @@ import structlog
 
 import talemate.instance as instance
 from talemate import Actor, Character, Player, Scene
-from talemate.character import deactivate_character, activate_character
+from talemate.character import (
+    deactivate_character,
+    activate_character,
+    NAME_EXISTS_MESSAGE,
+    name_is_taken,
+)
 from talemate.config import get_config, Config
 from talemate.config.schema import GamePlayerCharacter
 from talemate.context import SceneIsLoading
@@ -832,6 +837,11 @@ async def transfer_character(
         # Create a Character object from the character data
         character = Character(**character_data)
 
+        # refuse before any asset is copied - add_actor would refuse anyway,
+        # and the copy leaves the assets behind in the target scene
+        if name_is_taken(scene, character.name):
+            raise ValueError(NAME_EXISTS_MESSAGE.format(name=character.name))
+
         # Store original asset IDs before we potentially modify them
         original_cover_image = character.cover_image
         has_avatar_assets = character.avatar or character.current_avatar
@@ -902,11 +912,22 @@ async def handle_no_player_character(
         log.warning("No player character found")
         return
 
-    await scene.add_actor(player)
-    await activate_character(scene, player.character)
+    # the scene may already hold a character under the configured name - adopt
+    # it instead of shadowing it with a blank default, but only when the scene
+    # itself calls it the player: turning an NPC into one is written into the
+    # next save and the user has to repair it by hand
+    existing = name_is_taken(scene, player.name)
+    if existing is not None:
+        if not existing.is_player:
+            log.warning("Default player character name is taken", name=player.name)
+            return
+        await activate_character(scene, existing)
+        return
+
+    await activate_character(scene, player)
 
 
-def default_player_character() -> Player | None:
+def default_player_character() -> Character | None:
     """
     Return a default player character.
     :return: Default player character.
@@ -922,14 +943,12 @@ def default_player_character() -> Player | None:
     color = default_player_character.color
     description = default_player_character.description
 
-    return Player(
-        Character(
-            name=name,
-            description=description,
-            greeting_text="",
-            color=color,
-        ),
-        None,
+    return Character(
+        name=name,
+        description=description,
+        greeting_text="",
+        color=color,
+        is_player=True,
     )
 
 

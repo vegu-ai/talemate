@@ -176,6 +176,73 @@ class TestAddActorAndCharacterLookups:
         assert real_scene.actors == [a2]
 
     @pytest.mark.asyncio
+    async def test_add_actor_refuses_a_second_object_under_one_name(self, real_scene):
+        # `actors` counts by object and `active_characters` by name, so two
+        # objects under one name give two actors and one name.
+        first = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=first, agent=None), commit_to_memory=False
+        )
+
+        with pytest.raises(ValueError, match='Name "Alice" already exists.'):
+            await real_scene.add_actor(
+                Actor(character=Character(name="Alice"), agent=None),
+                commit_to_memory=False,
+            )
+
+        assert real_scene.character_data["Alice"] is first
+        assert [actor.character for actor in real_scene.actors] == [first]
+        assert real_scene.active_characters == ["Alice"]
+
+    @pytest.mark.asyncio
+    async def test_add_actor_refuses_a_second_object_for_an_inactive_name(
+        self, real_scene
+    ):
+        first = Character(name="Alice")
+        actor = Actor(character=first, agent=None)
+        await real_scene.add_actor(actor, commit_to_memory=False)
+        await real_scene.remove_actor(actor)
+
+        with pytest.raises(ValueError, match='Name "Alice" already exists.'):
+            await real_scene.add_actor(
+                Actor(character=Character(name="Alice"), agent=None),
+                commit_to_memory=False,
+            )
+
+        assert real_scene.character_data["Alice"] is first
+
+    @pytest.mark.asyncio
+    async def test_add_actor_refuses_a_name_that_differs_only_in_case(self, real_scene):
+        # `get_character` resolves without case, so a scene holding Alice and
+        # alice has two records its own lookup cannot tell apart
+        first = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=first, agent=None), commit_to_memory=False
+        )
+
+        with pytest.raises(ValueError, match='Name "alice" already exists.'):
+            await real_scene.add_actor(
+                Actor(character=Character(name="alice"), agent=None),
+                commit_to_memory=False,
+            )
+
+        assert list(real_scene.character_data) == ["Alice"]
+        assert real_scene.active_characters == ["Alice"]
+
+    @pytest.mark.asyncio
+    async def test_add_actor_swaps_the_actor_of_a_character_it_holds(self, real_scene):
+        # the Actor/Player swap in `set_character_is_player` depends on this
+        char = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=char, agent=None), commit_to_memory=False
+        )
+        player = Player(character=char, agent=None)
+        await real_scene.add_actor(player, commit_to_memory=False)
+
+        assert real_scene.actors == [player]
+        assert real_scene.active_characters == ["Alice"]
+
+    @pytest.mark.asyncio
     async def test_add_actor_marks_player_character_is_player(self, real_scene):
         char = Character(name="Player", is_player=False)
         player = Player(character=char, agent=None)

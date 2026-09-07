@@ -510,6 +510,9 @@ export default {
         },
 
         onCharacterCreated(character) {
+            if (!character) {
+                return;
+            }
             this.$nextTick(() => {
                 this.selected = character.name;
             });

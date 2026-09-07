@@ -24,7 +24,7 @@ from talemate.agents.memory.rerank import (
 from talemate.agents.memory import ChromaDBMemoryAgent
 from talemate.agents.memory.schema import MemoryDocument
 from talemate.character import Character, activate_character
-from talemate.context import ActiveScene
+from talemate.context import ActiveScene, SceneIsLoading
 from talemate.events import ArchiveEvent, CharacterActivatedEvent
 from talemate.instance import get_agent
 from talemate.knowledge.absence import absence_facts
@@ -1123,6 +1123,20 @@ class TestOffscreenLife:
         # unknown presence counts as present: the walk stops there
         scene.archived_history[1]["present"] = None
         assert [e["id"] for e in narrator.missed_entries(zed)] == ["a3"]
+
+    async def test_a_scene_load_spends_no_request(self, scene, offscreen):
+        """The load path activates the scene's own characters, and an adopted
+        player has presence in the history. An offscreen account is a turn the
+        player asks for, so opening a scene must not spend one."""
+        narrator, zed = offscreen
+        with (
+            ActiveScene(scene),
+            SceneIsLoading(scene),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            await narrator.on_character_activated(activation(scene, zed))
+        request.assert_not_called()
+        assert narrator.pending_returns == {}
 
     async def test_return_writes_an_offscreen_fact(self, scene, offscreen):
         narrator, zed = offscreen

@@ -211,24 +211,38 @@ class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
         )
 
         async def handle_task_done(task):
-            if task.exception():
-                exc = task.exception()
-                log.error("Error persisting character", error=exc)
+            exc = task.exception()
 
-                # Handle GenerationCancelled properly to reset cancel_requested flag
-                if isinstance(exc, GenerationCancelled):
-                    handle_generation_cancelled(exc)
-
-                await self.signal_operation_failed(f"Error persisting character: {exc}")
-            else:
-                self.websocket_handler.queue_put(
-                    {
-                        "type": self.router,
-                        "action": "character_persisted",
-                        "character": task.result(),
-                    }
-                )
+            if isinstance(exc, GenerationCancelled):
+                # a cancel is not a failure: persist_character already reported
+                # it, so this only clears the frontend's busy state
+                handle_generation_cancelled(exc)
                 await self.signal_operation_done()
+                return
+
+            if exc:
+                log.error("Error persisting character", error=exc)
+                await self.signal_operation_failed(f"Error persisting character: {exc}")
+                return
+
+            character = task.result()
+            if character is None:
+                # persist_character reports the error itself, so the envelope
+                # goes without a second status - the frontend reads .name off
+                # the success payload and a None cannot go on the wire
+                await self.signal_operation_failed(
+                    "Character creation failed", emit_status=False
+                )
+                return
+
+            self.websocket_handler.queue_put(
+                {
+                    "type": self.router,
+                    "action": "character_persisted",
+                    "character": character,
+                }
+            )
+            await self.signal_operation_done()
 
         task.add_done_callback(lambda task: asyncio.create_task(handle_task_done(task)))
 

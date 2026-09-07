@@ -10,6 +10,7 @@ import structlog
 import talemate.emit.async_signals as async_signals
 import talemate.util as util
 from talemate.agents.base import AgentAction, AgentActionConfig
+from talemate.context import scene_is_loading
 from talemate.events import ArchiveEvent, CharacterActivatedEvent
 from talemate.knowledge.bucket import KnowledgeIndex
 from talemate.knowledge.facts import store_offscreen_fact
@@ -133,6 +134,11 @@ class OffscreenLifeMixin:
 
     async def on_character_activated(self, event: CharacterActivatedEvent):
         if not self.offscreen_life_enabled or event.scene is not self.scene:
+            return
+        if scene_is_loading.get() is event.scene:
+            # a load activates the scene's own characters; an offscreen account
+            # is a turn the player asks for, never a side effect of opening a
+            # scene
             return
         character = event.character
         if not self.was_in_scene(character):

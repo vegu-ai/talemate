@@ -421,6 +421,17 @@ def director(scene):
     return instance.get_agent("director")
 
 
+@pytest.fixture
+def activation_signal():
+    """Own the ``character.activated`` receivers for the duration of a test."""
+    signal = async_signals.get("character.activated")
+    saved = list(signal.receivers)
+    signal.receivers.clear()
+    yield signal
+    signal.receivers.clear()
+    signal.receivers.extend(saved)
+
+
 def bootstrap_scene(mock_scene):
     """Wire a MockClient and the mock_scene into every agent."""
     bootstrap_engine()

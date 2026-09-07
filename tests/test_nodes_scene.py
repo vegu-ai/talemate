@@ -249,6 +249,28 @@ async def test_make_character_inactive_keeps_the_character_out_of_the_roster(sce
 
 
 @pytest.mark.asyncio
+async def test_make_character_refuses_a_name_the_scene_already_has(scene):
+    """A second character object under one name would give the scene two
+    actors and one name, which puts the character in both rosters."""
+    existing = await _add_character(scene, "Barry")
+
+    node = MakeCharacter()
+    node.set_property("name", "Barry")
+    node.set_property("color", "#123456")
+    node.set_property("base_attributes", {})
+    node.set_property("is_player", False)
+    node.set_property("add_to_scene", True)
+    node.set_property("is_active", True)
+
+    with pytest.raises(ValueError, match='Name "Barry" already exists.'):
+        await _run_node(node, scene)
+
+    assert scene.character_data["Barry"] is existing
+    assert [actor.character for actor in scene.actors] == [existing]
+    assert scene.active_characters == ["Barry"]
+
+
+@pytest.mark.asyncio
 async def test_make_character_does_not_add_when_add_to_scene_false(scene):
     """add_to_scene=False must keep the character out of the scene."""
     node = MakeCharacter()
@@ -264,6 +286,7 @@ async def test_make_character_does_not_add_when_add_to_scene_false(scene):
     assert out["character"].name == "Lurker"
     assert "Lurker" not in scene.character_data
     assert "Lurker" not in scene.active_characters
+    assert out["actor"] is None
 
 
 # ---------------------------------------------------------------------------

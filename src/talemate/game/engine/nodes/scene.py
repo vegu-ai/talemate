@@ -231,7 +231,7 @@ class MakeCharacter(Node):
     Outputs:
 
     - character: The character object
-    - actor: The actor object
+    - actor: The actor object, or None when the character is not active in the scene
     """
 
     class Fields:
@@ -338,15 +338,15 @@ class MakeCharacter(Node):
         else:
             ActorCls = scene.Actor
 
-        actor = ActorCls(character, get_agent("conversation"))
-
         log.warning(
             "Make character",
             character=character,
             add_to_scene=add_to_scene,
             is_active=is_active,
         )
+        actor = None
         if add_to_scene:
+            actor = ActorCls(character, get_agent("conversation"))
             await scene.add_actor(actor)
             if not is_active:
                 await deactivate_character(scene, character)

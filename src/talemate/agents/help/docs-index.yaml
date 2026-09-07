@@ -440,7 +440,8 @@
     dropzone or Scene Library. Covers default-off Character perspectives and cancel/reopen reset, character detection/manual
     selection, per-step AI Generation toggles with card-data fallback, Full/Minimal presets, the director's attribute limit,
     character book entries and metadata, alternate greetings and episode titles, shared context setup, writing style templates,
-    player character setup via templates, detected characters or scene imports, and troubleshooting failed analysis.
+    player character setup via templates, detected characters or scene imports (a name already in the scene, or two selected
+    names differing only in case, stops the import), and troubleshooting failed analysis.
 - path: user-guide/clients/auto-retry.md
   title: Auto Retry
   summary: Per-client automatic retries for empty responses, HTTP 429 rate limits with exponential backoff, and missing reasoning
@@ -1162,7 +1163,8 @@
 - path: user-guide/world-editor/characters/import.md
   title: Import character
   summary: 'Import characters from another Talemate scene through World Editor Characters: choose Import character, select
-    the source scene and character, and import into the current scene.'
+    the source scene and character, and import into the current scene. The character arrives inactive, and an import is
+    refused with "Name X already exists." when the scene already holds that name, compared without case.'
 - path: user-guide/world-editor/characters/index.md
   title: Character Editor
   summary: Character Editor overview for creating/removing characters, switching player control, activation and folder organization.

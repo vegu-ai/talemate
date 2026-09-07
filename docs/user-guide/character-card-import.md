@@ -86,6 +86,9 @@ If Talemate missed a character that exists in the card, you can add it manually:
 !!! note "Manual Addition"
     Only add character names manually if you know they exist in the card but were missed by detection. The detection system analyzes greeting texts to find characters, so it may occasionally miss characters that don't appear in dialogue.
 
+!!! warning "No two selected names may match"
+    A scene holds one character per name, and the comparison ignores case, so `Bob` and `bob` are the same name here. The list refuses an exact repeat, but it accepts a name that differs only in case. Selecting both stops the import with `Name "X" already exists.` Deselect one of the two, or add the second under a different name.
+
 ## Import Options
 
 The right panel contains various import configuration options:
@@ -152,6 +155,9 @@ Create a new player character using the default template configured in [App Sett
 - Optionally provide a **Description**
 
 If this is your first time using this option and no default player character is configured, Talemate will save your entered values as the new default.
+
+!!! warning "Pick a name no imported character uses"
+    A scene holds one character per name, and the comparison ignores case. If the name you enter matches a character you selected for import, the import stops with `Name "X" already exists. Choose a different player character name for this import.` No scene is created — but the name and description above may already have been saved as your default player character, as the line above describes, so check them before you import again.
 
 ### Use Detected Character
 

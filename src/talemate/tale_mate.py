@@ -72,7 +72,7 @@ from talemate.scene.format import (
     CURRENT_SCENE_FORMAT_VERSION,
     SavedSceneFormat,
 )
-from talemate.character import Character
+from talemate.character import Character, NAME_EXISTS_MESSAGE, name_is_taken
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
 from talemate.regenerate import regeneration_status
@@ -1181,9 +1181,22 @@ class Scene(Emitter):
         An actor in the scene is what makes its character active, so this is
         also where `active_characters` gains the name. Callers that want an
         inactive character take the actor back out again.
+
+        One name is one character object: an actor that would add a second
+        `Character` under a name the scene already holds — compared without
+        case, the way `get_character` resolves it — is refused with a
+        `ValueError`. An actor around a character the scene already holds
+        replaces that character's actor, which is how a character is swapped
+        between `Actor` and `Player`, and how the load path attaches actors to
+        records it read from the scene file.
         """
 
-        # if actor with character already exists, remove it
+        registered = self.character_data.get(actor.character.name)
+        if registered is not actor.character and name_is_taken(
+            self, actor.character.name, actor.character
+        ):
+            raise ValueError(NAME_EXISTS_MESSAGE.format(name=actor.character.name))
+
         for _actor in list(self.actors):
             if _actor.character == actor.character:
                 self.actors.remove(_actor)

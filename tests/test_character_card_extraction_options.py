@@ -1056,6 +1056,23 @@ async def test_load_scene_runs_guarded_steps_by_default(tmp_path, pipeline_recor
     pipeline_recorders["_determine_character_dialogue_examples"].assert_awaited_once()
 
 
+async def test_two_selected_names_differing_only_in_case_are_refused(
+    tmp_path, pipeline_recorders
+):
+    """The selection is not de-duplicated and the dialog refuses only an exact
+    repeat, so two card characters can collide with each other. The refusal
+    comes before the character book is written or a request is spent."""
+    scene = _scene_stub()
+    options = CharacterCardImportOptions(selected_character_names=["Bob", "bob"])
+
+    with pytest.raises(ValueError, match='Name "bob" already exists.'):
+        await load_scene_from_character_card(scene, _write_card(tmp_path), options)
+
+    pipeline_recorders["_initialize_scene_memory"].assert_not_awaited()
+    pipeline_recorders["_determine_character_context"].assert_not_awaited()
+    assert scene.character_data == {}
+
+
 @pytest.mark.parametrize("enabled", [None, False, True])
 async def test_card_mode_is_applied_before_initialization(
     tmp_path, pipeline_recorders, enabled

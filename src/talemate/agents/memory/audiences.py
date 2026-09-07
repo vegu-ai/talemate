@@ -115,12 +115,33 @@ class AudienceMemoryMixin:
         self.invalidate_audience_index(reconcile=True)
         await self.ensure_audience_index(self.scene)
 
+    async def purge_audience_index(self, scene):
+        if self.scene is not scene:
+            return
+        state = self._audience_state(scene)
+        async with state.lock:
+            if self.db is not None:
+                operation = asyncio.create_task(
+                    asyncio.to_thread(self.db.delete, where={"knowledge_index": True})
+                )
+                try:
+                    await asyncio.shield(operation)
+                except asyncio.CancelledError:
+                    await asyncio.shield(operation)
+                    raise
+                finally:
+                    state.fingerprints = None
+                    state.dirty = None
+            self._audience_states.pop(scene, None)
+
     async def ensure_audience_index(self, scene):
         if not character_knowledge_enabled(scene):
             return
         state = self._audience_state(scene)
         async with state.lock:
             while True:
+                if not character_knowledge_enabled(scene):
+                    return
                 if self.readonly or not self._ready_to_add:
                     raise RuntimeError("Audience index collection is not writable")
                 if self.scene is not scene or not self.db:

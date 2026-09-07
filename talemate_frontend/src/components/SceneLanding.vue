@@ -216,6 +216,7 @@ export default {
                             scene_data: fileData,
                             filename: filename,
                             scene_initialization: {
+                                character_knowledge: result.characterKnowledge === true,
                                 character_card_import_options: result.options,
                             },
                         }));
@@ -225,6 +226,7 @@ export default {
                             type: 'load_scene',
                             file_path: filePath,
                             scene_initialization: {
+                                character_knowledge: result.characterKnowledge === true,
                                 character_card_import_options: result.options,
                             },
                         }));
@@ -310,6 +312,7 @@ export default {
                         scene_data: reader.result,
                         filename: file.name,
                         scene_initialization: {
+                            character_knowledge: result.characterKnowledge === true,
                             character_card_import_options: result.options,
                         },
                     }));
@@ -378,6 +381,7 @@ export default {
                     type: 'load_scene',
                     file_path: path,
                     scene_initialization: {
+                        character_knowledge: result.characterKnowledge === true,
                         character_card_import_options: result.options,
                     },
                 }));

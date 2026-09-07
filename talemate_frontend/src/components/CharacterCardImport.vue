@@ -175,6 +175,14 @@
                   Import Options
                 </v-card-title>
                 <v-card-text>
+                  <v-checkbox
+                    v-model="characterKnowledge"
+                    label="Character perspectives"
+                    color="primary"
+                    hint="Give each character their own view of events. Turn on to keep their replies grounded in what they have learned. Adds a Summarizer request after each passage or changed tracker answer, plus work to summarize and record facts for each audience. If analysis fails, character generation pauses so you can retry."
+                    persistent-hint
+                    class="mb-4"
+                  />
                   <v-tooltip text="If enabled, character book entries will be imported into world state." max-width="300">
                     <template v-slot:activator="{ props }">
                       <v-checkbox
@@ -552,6 +560,7 @@ export default {
       selectedCharacterNames: [],
       newCharacterName: '',
       options: defaultOptions(),
+      characterKnowledge: false,
       showGenerationOptions: false,
       resolveCallback: null,
       fileData: null,
@@ -601,6 +610,7 @@ export default {
     async open(fileData = null, filePath = null, filename = null) {
       // Reset to defaults
       this.options = defaultOptions();
+      this.characterKnowledge = false;
       this.showGenerationOptions = false;
       this.analysis = null;
       this.analysisError = null;
@@ -782,13 +792,14 @@ export default {
           };
         }
         
-        this.resolveCallback({ confirmed: true, options: { ...this.options } });
+        this.resolveCallback({ confirmed: true, options: { ...this.options }, characterKnowledge: this.characterKnowledge });
         this.resolveCallback = null;
       }
     },
     onDialogClose(value) {
       // When dialog is closed (value becomes false), treat it as cancel
       if (!value) {
+        this.characterKnowledge = false;
         // Only cancel if we have a callback (dialog was actually open)
         if (this.resolveCallback) {
           this.resolveCallback({ confirmed: false });
@@ -797,6 +808,7 @@ export default {
       }
     },
     cancel() {
+      this.characterKnowledge = false;
       this.showModal = false;
       if (this.resolveCallback) {
         this.resolveCallback({ confirmed: false });
@@ -873,4 +885,3 @@ export default {
   cursor: pointer;
 }
 </style>
-

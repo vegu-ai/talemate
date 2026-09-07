@@ -442,3 +442,103 @@ async def test_new_story_option_cannot_convert_loaded_legacy_file(load_env, tmp_
     )
     assert load_env.knowledge_eligibility == "legacy"
     assert not character_knowledge_enabled(load_env)
+
+
+@pytest.mark.parametrize("extension", [".json", ".png", ".webp"])
+@pytest.mark.parametrize("enabled", [None, False, True])
+async def test_card_dispatch_forwards_creation_choice(
+    load_env, tmp_path, monkeypatch, extension, enabled
+):
+    path = tmp_path / f"card{extension}"
+    path.write_text(json.dumps({"spec": "chara_card_v2", "data": {"name": "Hero"}}))
+    loader = AsyncMock(return_value=load_env)
+    monkeypatch.setattr("talemate.load.load_scene_from_character_card", loader)
+    initialization = (
+        SceneInitialization(character_knowledge=enabled)
+        if enabled is not None
+        else None
+    )
+    await load_scene(load_env, str(path), scene_initialization=initialization)
+    loader.assert_awaited_once()
+    assert loader.await_args.kwargs["character_knowledge"] is (enabled is True)
+
+
+@pytest.mark.parametrize("starting_mode", ["legacy", "perception"])
+async def test_empty_scene_mode_switch_round_trip(load_env, starting_mode):
+    from talemate.world_state.manager import WorldStateManager
+
+    await load_scene_from_data(
+        load_env,
+        new_scene(
+            SceneInitialization(character_knowledge=starting_mode == "perception")
+        ),
+        name="switch.json",
+    )
+    target = "perception" if starting_mode == "legacy" else "legacy"
+    await WorldStateManager(load_env).update_scene_settings(
+        knowledge_eligibility=target
+    )
+    await load_env.save()
+    saved = json.loads((Path(load_env.save_dir) / "switch.json").read_text())
+    assert saved["format_version"] == 1
+    assert saved["knowledge_eligibility"] == target
+    await load_scene_from_data(load_env, saved)
+    assert load_env.knowledge_eligibility == target
+    assert load_env.can_change_knowledge_eligibility
+
+
+@pytest.mark.parametrize("with_sources", [False, True])
+async def test_disclosure_scene_switch_off_save_reload(load_env, with_sources):
+    from _world_state_helpers import make_actor
+    from talemate.knowledge.disclosures import grant_disclosure
+    from talemate.world_state.manager import WorldStateManager
+
+    await load_scene_from_data(
+        load_env,
+        new_scene(SceneInitialization(character_knowledge=True)),
+        name="switch-disclosure.json",
+    )
+    character = make_actor(load_env, "Alice")
+    character.description = "The key is brass."
+    grant_disclosure(load_env, "Alice", "Alice.description.0", whole_entry=True)
+    assert load_env.knowledge.disclosures
+    if with_sources:
+        from talemate.knowledge.perspectives import set_source_perspectives
+        from talemate.scene_message import ReinforcementMessage
+        from talemate.world_state import Reinforcement
+
+        source = ReinforcementMessage(message="The key is brass.", source="key")
+        load_env.world_state.reinforce.append(
+            Reinforcement(
+                question="What is the key made of?",
+                insert="all-context",
+                perspective_source=source,
+            )
+        )
+        views = [
+            {"audience": ["Alice"], "text": "The key is brass.", "status": "ready"}
+        ]
+        set_source_perspectives(load_env, "message", source.id, views)
+        load_env.layered_history = [
+            [{"id": "key-summary", "text": "The key is brass."}]
+        ]
+        set_source_perspectives(load_env, "summary", "key-summary", views, layer=1)
+    assert load_env.can_change_knowledge_eligibility
+    await WorldStateManager(load_env).update_scene_settings(
+        knowledge_eligibility="legacy"
+    )
+    await load_env.save()
+    path = Path(load_env.save_dir) / "switch-disclosure.json"
+    saved = json.loads(path.read_text())
+    assert "knowledge" not in saved
+    if with_sources:
+        assert (
+            "knowledge"
+            not in saved["world_state"]["reinforce"][0]["perspective_source"]
+        )
+        assert "knowledge" not in saved["layered_history"][0][0]
+    assert saved["format_version"] == 1
+    assert saved["knowledge_eligibility"] == "legacy"
+    await load_scene_from_data(load_env, saved)
+    assert load_env.knowledge_eligibility == "legacy"
+    assert load_env.knowledge is None

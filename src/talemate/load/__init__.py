@@ -259,6 +259,10 @@ async def load_scene(
                     scene,
                     file_path,
                     import_options=import_options,
+                    character_knowledge=bool(
+                        scene_initialization
+                        and scene_initialization.character_knowledge
+                    ),
                 )
 
             # a zip file was uploaded, extract and load complete scene
@@ -283,6 +287,10 @@ async def load_scene(
                     scene,
                     file_path,
                     import_options=import_options,
+                    character_knowledge=bool(
+                        scene_initialization
+                        and scene_initialization.character_knowledge
+                    ),
                 )
 
             # if it is a talemate scene, load it

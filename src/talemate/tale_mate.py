@@ -1516,6 +1516,7 @@ class Scene(Emitter):
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
                 "experimental": self.experimental,
                 "knowledge_eligibility": self.knowledge_eligibility,
+                "can_change_knowledge_eligibility": self.can_change_knowledge_eligibility,
                 "immutable_save": self.immutable_save,
                 "description": self.description,
                 "intro": self.intro,
@@ -2235,6 +2236,10 @@ class Scene(Emitter):
     def sync_restore(self, *args, **kwargs):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.restore())
+
+    @property
+    def can_change_knowledge_eligibility(self) -> bool:
+        return not self.history and not self.archived_history
 
     @property
     def saved_format(self) -> SavedSceneFormat:

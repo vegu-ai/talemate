@@ -2,7 +2,7 @@
 
 To start a new, empty scene, go to the :material-home: **Home** screen and click the **Create new scene** card — it sits in the right-hand column of the [scene browser](/talemate/user-guide/scene-browser/), below the Import dropzone.
 
-![Create empty scene](/talemate/img/0.26.0/create-new-scene.png)
+![Create empty scene](/talemate/img/0.40.0/create-new-scene.png)
 
 A **Create New Story** dialog opens where you give the scene a name and can optionally pick a writing style, a director persona, Character perspectives (off by default), and whether the Director should assist with story setup. For this walkthrough just enter a name and click :material-check-circle-outline: **Continue**.
 
@@ -26,7 +26,7 @@ Since this is the first time you are saving the scene, you will be prompted to g
 
 ## Character perspectives
 
-In **Create New Story**, **Character perspectives** is off by default. Enable it before play to use the integrated audience mode for this story. It adds analytical requests and pauses dependent generation on a failed analysis. Existing stories cannot be converted by resaving or forking. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for costs, retry behavior and shared authoring fields.
+In **Create New Story**, **Character perspectives** is off by default. Enable it before play to use the integrated audience mode for this story. It adds analytical requests and pauses dependent generation on a failed analysis. You can still change the mode in Scene Settings while both history and archived history are empty. Once history exists, the mode is locked; resaving or forking does not reconstruct past perceptions. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for costs, retry behavior and shared authoring fields.
 
 ## Next
 

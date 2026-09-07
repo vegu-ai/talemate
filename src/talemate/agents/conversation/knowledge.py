@@ -340,7 +340,7 @@ class CharacterKnowledgeMixin:
     async def memory_pass(
         self, character: "Character", candidates: list[str]
     ) -> list[str]:
-        """One request that rewrites, drops and orders the retrieved memories for the next line."""
+        """One request that rewrites, drops and orders the retrieved memories for the next character message."""
         candidates = list(candidates)
         client = self.knowledge_analysis_client
         viewer = self.rag_knowledge_viewer(character)
@@ -425,9 +425,9 @@ class CharacterKnowledgeMixin:
         self, character: "Character", line: str
     ) -> dict[str, list[str]]:
         """
-        Which facts the listeners learned from the character's new line;
+        Which facts the listeners learned from the character's new character message;
         each becomes an inferred grant (+1 request). The speaker does not
-        learn from their own line.
+        learn from their own character message.
         """
         if not self.knowledge_ledger or not line or not line.strip():
             return {}

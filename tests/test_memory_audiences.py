@@ -818,3 +818,49 @@ async def test_author_reads_unmarked_rows_when_first_reconcile_fails(
     )
     with pytest.raises(RuntimeError, match="Initial marking failed"):
         await contents(memory)
+
+
+@pytest.mark.parametrize("queued_rebuild", [False, True])
+async def test_switch_off_purges_audience_rows_and_cached_state(
+    indexed_scene, queued_rebuild
+):
+    from talemate.world_state.manager import WorldStateManager
+
+    scene, memory, _ = indexed_scene
+    scene.history = []
+    scene.character_data["Marie"].description = "Marie tends the lighthouse."
+    await scene.character_data["Marie"].commit_to_memory(memory)
+    await memory.ensure_audience_index(scene)
+    stored = memory.db.get(where={"knowledge_index": True})
+    assert stored["ids"]
+    canonical = memory.db.get(where={"knowledge_index": False})["ids"]
+    assert canonical
+    state = memory._audience_state(scene)
+    assert state.documents
+
+    if queued_rebuild:
+        await state.lock.acquire()
+        switch = asyncio.create_task(
+            WorldStateManager(scene).update_scene_settings(
+                knowledge_eligibility="legacy"
+            )
+        )
+        await asyncio.sleep(0)
+        rebuild = asyncio.create_task(memory.ensure_audience_index(scene))
+        await asyncio.sleep(0)
+        state.lock.release()
+        await switch
+        await rebuild
+    else:
+        await WorldStateManager(scene).update_scene_settings(
+            knowledge_eligibility="legacy"
+        )
+
+    assert memory.db.get(where={"knowledge_index": True})["ids"] == []
+    assert memory.db.get(where={"knowledge_index": False})["ids"] == canonical
+    assert scene not in memory._audience_states
+    if state.task:
+        await state.task
+    assert memory.db.get(where={"knowledge_index": True})["ids"] == []
+    results = await memory.get("lighthouse", limit=100)
+    assert all(not doc.meta.get("knowledge_index") for doc in results)

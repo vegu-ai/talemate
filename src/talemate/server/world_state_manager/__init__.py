@@ -13,6 +13,7 @@ from talemate.export import ExportOptions, export
 from talemate.instance import get_agent
 from talemate.world_state.manager import WorldStateManager, Suggestion
 from talemate.scene.schema import ScenePerspectives
+from talemate.knowledge.mode import KnowledgeEligibility
 from talemate.status import background_task, set_loading
 import talemate.game.focal as focal
 from talemate.config import save_config, get_config, commit_config
@@ -190,6 +191,7 @@ class SceneOutlinePayload(pydantic.BaseModel):
 
 
 class SceneSettingsPayload(pydantic.BaseModel):
+    knowledge_eligibility: KnowledgeEligibility | None = None
     experimental: bool = False
     immutable_save: bool = False
     writing_style_template: str | None = None

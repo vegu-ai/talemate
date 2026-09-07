@@ -73,7 +73,7 @@
           hint="Give each character their own view of events. Turn on to keep their replies grounded in what they have learned. Adds a Summarizer request after each passage or changed tracker answer, plus work to summarize and record facts for each audience. If analysis fails, character generation pauses so you can retry."
           persistent-hint
         />
-        <p class="text-body-small mt-2">Choose before play; this mode stays with the story. Keep secrets out of the shared scene description and story intention.</p>
+        <p class="text-body-small mt-2">You can change this in Scene Settings while the scene has no history or archived history. Keep secrets out of the shared scene description and story intention.</p>
         <v-divider class="mt-4 mb-4"></v-divider>
 
         <v-row>

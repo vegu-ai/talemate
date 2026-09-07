@@ -37,7 +37,9 @@ and both shallow and reconstructed forks retain knowledge eligibility. A fork of
 an unversioned historical snapshot gets version 1 with legacy eligibility, even
 if the current scene has different eligibility. Existing snapshots are not rewritten.
 
-New stories default to legacy behavior. `SceneInitialization(character_knowledge=True)` opts a **new, empty history** into perception mode through `new_scene`. The public creation dialog supplies this strict boolean. It is not a runtime agent toggle and is not applied to loaded scene files. Existing scenes and character-card imports retain their saved mode; there is no historical reconstruction or conversion on reset, resave or fork. The choice persists with the scene.
+New stories and character-card imports default to legacy behavior. `SceneInitialization(character_knowledge=True)` opts a new scene into perception mode through `new_scene` or `load_scene_from_character_card(..., character_knowledge=True)`. Card imports apply the mode before initializing characters and memory. The strict creation boolean is not applied to loaded scene files.
+
+`Scene.can_change_knowledge_eligibility` is true only when both `history` and `archived_history` are empty; scene status exposes the same property. The `world_state_manager/update_scene_settings` request accepts an optional `knowledge_eligibility` (`legacy` or `perception`). Omission leaves the mode unchanged. A change on a scene with history raises `ValueError` before settings mutate; sending its current mode still permits unrelated settings edits. Settings changes mark the scene unsaved, and the normal save persists the choice and current format version. Switching off clears stored perspective records and removes derived audience-index rows before legacy retrieval resumes. Reset, resave and fork do not reconstruct historical perceptions.
 
 `talemate.scene.format.read_scene_format(data)` is a pure metadata parser. It
 returns `SavedSceneFormat` with the version actually read: 0 for an absent marker,

@@ -1579,6 +1579,8 @@ async def load_scene_from_character_card(
     scene,
     file_path,
     import_options: CharacterCardImportOptions | None = None,
+    *,
+    character_knowledge: bool = False,
 ):
     """
     Load a character card (tavern etc.) from the given file path.
@@ -1593,6 +1595,8 @@ async def load_scene_from_character_card(
 
     if import_options is None:
         import_options = CharacterCardImportOptions()
+
+    scene.knowledge_eligibility = "perception" if character_knowledge else "legacy"
 
     file_ext = os.path.splitext(file_path)[1].lower()
 

@@ -2,9 +2,11 @@
 
 ## Character perspectives (opt-in)
 
-When creating a **New Story**, enable **Character perspectives** to give each character their own view of events. Turn it on to keep replies grounded in what that character has learned. The choice is **off by default**; with it off, the story uses **Standard** mode, where knowledge follows presence, ownership and sharing.
+When creating a **New Story** or importing a character card, enable **Character perspectives** to give each character their own view of events. Turn it on to keep replies grounded in what that character has learned. The choice is **off by default**; with it off, the story uses **Standard** mode, where knowledge follows presence, ownership and sharing. The choice applies before initialization; cancelling an import or opening another one resets it.
 
-Choose the mode before play, then add your characters and world entries. **World Editor → Scene → Settings** shows the current mode. Saves, reloads and forks preserve it. **Scene → Shared World → New Scene** also inherits it for the next episode and shows the mode before creation.
+You can also turn the mode on or off in **World Editor → Scene → Settings** while the scene has **no history and no archived history**. An intro, characters and world entries do not lock the choice. Save the scene to persist a settings change. Once history exists, the switch is disabled and the current mode is explained below it. The server also refuses changes if history appeared since the settings were displayed.
+
+Saves, reloads and forks preserve the mode. **Scene → Shared World → New Scene** inherits it for the next episode. Stories with history cannot be converted by resaving, resetting or forking; past perceptions are not reconstructed. Turning Character perspectives off on an empty scene clears its stored perspectives and disclosures, along with the derived audience memory index. Turning it back on does not restore those records.
 
 The reader keeps the complete prose. Characters receive stored replacement views of passages, audience summaries, disclosures and accessible memories. Missing or failed views never substitute the reader's private text. Narration and author planning can retain broader reader context; character guidance and analysis use the character evidence appropriate to their task.
 

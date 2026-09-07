@@ -819,6 +819,22 @@ def remove_perspective_audiences(scene: "Scene", name: str) -> None:
         )
 
 
+def clear_perspective_records(scene: "Scene") -> None:
+    scene.knowledge = None
+    for message in message_sources(scene):
+        if isinstance(message, dict):
+            message.pop("knowledge", None)
+        else:
+            message.knowledge = None
+    for reinforcement in scene.world_state.reinforce:
+        if reinforcement.perspective_source is not None:
+            reinforcement.perspective_source.knowledge = None
+    for entries in [scene.archived_history, *scene.layered_history]:
+        for entry in entries:
+            entry.pop("knowledge", None)
+    scene.world_state.clear_snapshot_perspectives()
+
+
 def reset_perspectives(scene: "Scene") -> set[str]:
     from talemate.knowledge.memory import invalidate_memory_audiences
 

@@ -40,9 +40,9 @@
     associations, authored visibility, pin and memory projections, invalidation and shared-data export behavior.
 - path: dev/scene-format.md
   title: Saved scene format
-  summary: Saved scene JSON format_version and knowledge_eligibility contracts, validation and compatibility across loading,
-    saves, exports, resets and forks. Documents the public new-story Character perspectives opt-in, SceneInitialization(character_knowledge=True),
-    character_knowledge_enabled and the retired development environment variable.
+  summary: Saved scene format_version and knowledge_eligibility validation, compatibility, saves, exports and forks. Covers
+    new-story/card-import SceneInitialization opt-in, the empty-history can_change_knowledge_eligibility predicate and settings
+    API, clearing perspective records and audience-index rows when disabling, and character_knowledge_enabled.
 - path: dev/snapshot-perspectives.md
   title: Audience-targeted snapshots
   summary: 'Audience-targeted world-state snapshots in perception scenes: evidence budgets, entity views and location_views,
@@ -122,8 +122,9 @@
 - path: user-guide/agents/conversation/settings.md
   title: Settings
   summary: Conversation settings for Narrative, Screenplay, Chat and AI Aware formats, length, jiggle, task/actor instructions,
-    stop tokens, caching, scene direction, story intent and writing style. Perception mode uses audience evidence and hides
-    legacy presence, absence, awareness and learned-this-turn controls; the optional AI memory pass remains available.
+    stop tokens, caching, scene direction, story intent and writing style.
+    Character perspectives is selected at creation or in empty-scene settings; it hides Standard-mode knowledge filtering and learning
+    controls, while Refine memories with AI remains available at one request per generated character reply with retrieved memories.
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Autocomplete partial text with Ctrl/Cmd+Enter in dialogue, message editing, attributes, details, descriptions,
@@ -435,11 +436,11 @@
     static copy.
 - path: user-guide/character-card-import.md
   title: Character Card Import
-  summary: How to import TavernAI-style character cards (Chara Card V0-V3, PNG/JPG/WebP images or JSON) from the home screen's
-    Import dropzone or the Scene Library's Character Cards section to create a new scene. Covers the import dialog, character
-    detection/manual selection, the AI Generation section (per-step generation toggles with card-data fallback, Full/Minimal
-    presets, and the director's attribute limit capping extracted attributes), options for character book entries, alternate
-    greetings, shared context setup, writing style template, player character setup, and troubleshooting failed analysis.
+  summary: Import TavernAI-style character cards (Chara Card V0-V3, PNG/JPG/WebP images or JSON) from the home screen's Import
+    dropzone or Scene Library. Covers default-off Character perspectives and cancel/reopen reset, character detection/manual
+    selection, per-step AI Generation toggles with card-data fallback, Full/Minimal presets, the director's attribute limit,
+    character book entries and metadata, alternate greetings and episode titles, shared context setup, writing style templates,
+    player character setup via templates, detected characters or scene imports, and troubleshooting failed analysis.
 - path: user-guide/clients/auto-retry.md
   title: Auto Retry
   summary: Per-client automatic retries for empty responses, HTTP 429 rate limits with exponential backoff, and missing reasoning
@@ -590,8 +591,8 @@
 - path: user-guide/howto/create-a-new-scene/create-empty-scene.md
   title: Create an empty scene
   summary: Create New Story from Home, name it and optionally choose writing style, director persona, default-off Character
-    perspectives or Director assistance. Set the outline and save the scene before adding a player character; links explain
-    perception analysis cost and retry behavior.
+    perspectives or Director assistance. Set the outline and save; perspectives can also change in Scene Settings while history
+    and archived history are empty, with analysis costs and retry behavior linked.
 - path: user-guide/howto/create-a-new-scene/create-npc.md
   title: Add an AI controlled character
   summary: Add an AI-controlled NPC through Create Character with AI Generation Instructions and optional example dialogue.
@@ -1204,9 +1205,9 @@
     tools and context-budget review.
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
-  summary: Character perspectives opt-in, costs, retries and author responsibilities; mode persists through saves, forks and
-    Shared World continuations. Covers Known by visibility, durable selected/whole-entry disclosures, supported-fact access,
-    director/node tools and retained legacy grant/revoke behavior.
+  summary: Character perspectives opt-in for new stories/card imports and empty-scene switching; disabling clears perspectives,
+    disclosures and derived audience memory. Covers costs, retries, author responsibilities, Known by visibility, durable
+    disclosures, supported-fact access, director/node tools and Standard-mode grant/revoke behavior.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and
@@ -1234,9 +1235,9 @@
     fallback semantics and perspective context IDs.
 - path: user-guide/world-editor/scene/settings.md
   title: Settings
-  summary: Scene Settings select writing style, locked-save and experimental flags, plus restore-point saves that create new
-    unsaved scenes. Covers per-scene Agent settings file Auto-link, None or explicit file selection and project-shared override
-    files included in exports.
+  summary: Scene Settings control Character perspectives while history and archived history are empty; disabling clears stored
+    perspectives and disclosures. Covers writing style, locked-save and experimental flags, restore points, and per-scene
+    Agent settings file Auto-link, None or explicit project-shared overrides included in exports.
 - path: user-guide/world-editor/scene/shared-context.md
   title: Shared World & Episodes
   summary: Shared World links scenes to shared-context JSON files and synchronizes characters, selected attributes/details,

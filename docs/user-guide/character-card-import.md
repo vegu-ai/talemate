@@ -31,13 +31,17 @@ Character card import is initiated from the **Import** dropzone on the [home scr
 
 Cards already stored in your `scenes/characters/` directory can also be imported by clicking them in the **Character Cards** section of the [Scene Library](/talemate/user-guide/scene-browser#character-cards).
 
-![Character Card Import Dialog](/talemate/img/0.34.0/character-card-1.png)
+![Character Card Import Dialog](/talemate/img/0.40.0/character-card-1.png)
 
 The import dialog will automatically analyze the character card and display detected information.
 
 ## Import Dialog Overview
 
 The character card import dialog is divided into several sections:
+
+### Character perspectives
+
+**Character perspectives** is off by default. Enable it to give characters audience-specific context in the imported story. It adds Summarizer analyses and pauses dependent character generation if an analysis fails. Cancelling or reopening the import resets the checkbox. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for costs and retry behavior.
 
 ### Analysis Information
 

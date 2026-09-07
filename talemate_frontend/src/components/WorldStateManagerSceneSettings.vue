@@ -3,10 +3,20 @@
     <v-row>
         <v-col cols="12">
             <v-form class="mt-4">
-                <v-alert variant="tonal" class="mb-4" icon="mdi-head-lightbulb-outline">
+                <v-switch
+                    :model-value="scene?.data?.knowledge_eligibility === 'perception'"
+                    :disabled="!scene?.data?.can_change_knowledge_eligibility"
+                    label="Character perspectives"
+                    color="primary"
+                    :hint="scene?.data?.can_change_knowledge_eligibility ? 'Choose before play. Adds Summarizer analyses and audience-specific context. Save the scene to keep this choice. Switching off discards stored character perspectives and cannot be undone after the next save.' : 'This scene has history. Character perspectives cannot be changed.'"
+                    persistent-hint
+                    class="mb-4"
+                    @update:model-value="updateCharacterKnowledge"
+                />
+                <v-alert v-if="!scene?.data?.can_change_knowledge_eligibility" variant="tonal" class="mb-4" icon="mdi-head-lightbulb-outline">
                     <strong>Character knowledge: {{ scene?.data?.knowledge_eligibility === 'perception' ? 'Character perspectives' : 'Standard' }}</strong>
                     <p v-if="scene?.data?.knowledge_eligibility === 'perception'">Characters receive their own views of events and memories. Extra Summarizer requests track what they learn after passages and changed tracker answers. If analysis fails, character generation pauses: retry the failed request, or cancel, correct the source and retry generation. Saves and forks keep this mode.</p>
-                    <p v-else>Character knowledge follows where characters were present, what belongs to them, and what you share with them. Use the Conversation agent's Character Knowledge settings to adjust how this shapes replies. For separate character views of events, choose Character perspectives when creating a new story.</p>
+                    <p v-else>Character knowledge follows where characters were present, what belongs to them, and what you share with them. Use the Conversation agent's Character Knowledge settings to adjust how this shapes replies. For separate character views of events, choose Character perspectives when creating a new story or importing a character card, or before a scene has history.</p>
                 </v-alert>
 
 
@@ -271,10 +281,15 @@ export default {
                 restore_from: this.scene.data.restore_from,
             }));
         },
-        update() {
+        updateCharacterKnowledge(enabled) {
+            if (!this.scene?.data?.can_change_knowledge_eligibility) return;
+            return this.update(enabled ? 'perception' : 'legacy');
+        },
+        update(knowledgeEligibility) {
             return this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'update_scene_settings',
+                ...(knowledgeEligibility ? { knowledge_eligibility: knowledgeEligibility } : {}),
                 experimental: this.scene.data.experimental,
                 immutable_save: this.scene.data.immutable_save,
                 writing_style_template: this.scene.data.writing_style_template,

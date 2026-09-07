@@ -1056,6 +1056,25 @@ async def test_load_scene_runs_guarded_steps_by_default(tmp_path, pipeline_recor
     pipeline_recorders["_determine_character_dialogue_examples"].assert_awaited_once()
 
 
+@pytest.mark.parametrize("enabled", [None, False, True])
+async def test_card_mode_is_applied_before_initialization(
+    tmp_path, pipeline_recorders, enabled
+):
+    scene = _scene_stub()
+    scene.knowledge_eligibility = "perception"
+    observed = []
+    pipeline_recorders["_setup_player_character_from_options"].side_effect = (
+        lambda scene, options: observed.append(scene.knowledge_eligibility)
+    )
+    kwargs = {} if enabled is None else {"character_knowledge": enabled}
+    await load_scene_from_character_card(
+        scene, _write_card(tmp_path), _options_all_disabled(), **kwargs
+    )
+    expected = "perception" if enabled else "legacy"
+    assert observed == [expected]
+    assert scene.knowledge_eligibility == expected
+
+
 async def test_load_scene_skips_guarded_steps_when_disabled(
     tmp_path, pipeline_recorders
 ):

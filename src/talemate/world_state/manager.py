@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, Union
+from typing import TYPE_CHECKING, Any, Callable, Union, get_args
 
 import pydantic
 import structlog
@@ -27,7 +27,8 @@ from talemate.util import replace_smart_quotes
 from talemate.knowledge.disclosures import grant_disclosure
 from talemate.knowledge.entry import _item_from_id, SHEET_KINDS
 from talemate.knowledge.perspective_models import Disclosure
-from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.mode import KnowledgeEligibility, character_knowledge_enabled
+from talemate.knowledge.perspectives import clear_perspective_records
 from talemate.knowledge.schema import (
     EntryVisibility,
     KnowledgeEdge,
@@ -1546,6 +1547,20 @@ class WorldStateManager:
 
         return scene
 
+    def _validate_knowledge_eligibility(self, value):
+        if value is None:
+            return
+        if value not in get_args(KnowledgeEligibility):
+            raise ValueError("Character knowledge mode must be legacy or perception.")
+        if (
+            value != self.scene.knowledge_eligibility
+            and not self.scene.can_change_knowledge_eligibility
+        ):
+            raise ValueError(
+                "Character perspectives can only be changed when the scene "
+                "has no history or archived history."
+            )
+
     async def update_scene_settings(
         self,
         immutable_save: bool = False,
@@ -1554,22 +1569,15 @@ class WorldStateManager:
         agent_persona_templates: dict[str, str] | None = None,
         visual_style_template: str | None = None,
         restore_from: str | None = None,
+        knowledge_eligibility: KnowledgeEligibility | None = None,
         **agent_settings_kwargs,
     ) -> "Scene":
         scene = self.scene
-        scene.immutable_save = immutable_save
-        scene.experimental = experimental
-        scene.writing_style_template = writing_style_template
-        scene.visual_style_template = visual_style_template
-        if agent_persona_templates is not None:
-            scene.agent_persona_templates = agent_persona_templates or {}
-
+        self._validate_knowledge_eligibility(knowledge_eligibility)
         if restore_from and restore_from not in scene.save_files:
             raise ValueError(
                 f"Restore file {restore_from} not found in scene save files."
             )
-
-        scene.restore_from = restore_from
 
         # Caller strips agent_settings_* keys from kwargs when the inbound
         # payload didn't set them (see handle_update_scene_settings). Their
@@ -1584,6 +1592,26 @@ class WorldStateManager:
             filename=link_filename,
             opted_out_clear=opted_out_clear,
         )
+
+        if (
+            knowledge_eligibility is not None
+            and knowledge_eligibility != scene.knowledge_eligibility
+        ):
+            self._validate_knowledge_eligibility(knowledge_eligibility)
+            if knowledge_eligibility == "legacy":
+                await self.memory_agent.purge_audience_index(scene)
+                self._validate_knowledge_eligibility(knowledge_eligibility)
+                clear_perspective_records(scene)
+            scene.knowledge_eligibility = knowledge_eligibility
+            invalidate_memory_audiences(scene)
+
+        scene.immutable_save = immutable_save
+        scene.experimental = experimental
+        scene.writing_style_template = writing_style_template
+        scene.visual_style_template = visual_style_template
+        if agent_persona_templates is not None:
+            scene.agent_persona_templates = agent_persona_templates or {}
+        scene.restore_from = restore_from
 
         return scene
 

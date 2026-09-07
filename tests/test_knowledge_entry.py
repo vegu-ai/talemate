@@ -206,7 +206,6 @@ class TestCharacterKnowledgeReport:
     def test_perception_headers_edges_and_coverage(self, scene, monkeypatch):
         from talemate.knowledge.perspectives import add_disclosure
 
-        monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
         scene.knowledge_eligibility = "perception"
         add_disclosure(scene, "The ledger is under the bed.", ("Alice",))
         scene.world_state.knowledge = [
@@ -226,9 +225,9 @@ class TestCharacterKnowledgeReport:
             "Explicit disclosures (oldest first):",
             "- The ledger is under the bed.",
         ]
-        assert "Grants:" in lines and "Revokes: none" in lines
+        assert "Grants:" in lines and "Revokes: none" not in lines
         assert "Restricted entries Alice can see:" in lines
-        assert "Topic coverage (known / total facts):" in lines
+        assert "Topic coverage (accessible / total recorded facts):" in lines
         assert "Awareness: Alice knows some of ledger" in lines
         report = character_knowledge_report(scene, "Nobody")
         assert "Explicit disclosures (oldest first): none" in report
@@ -274,7 +273,7 @@ class TestCharacterKnowledgeReport:
             "- Bob: the fall: manual",
             "Restricted entries Alice can see:",
             '- Hidden Door (Known by: nobody; grants: Alice (director, "saw it"))',
-            "Topic coverage (known / total facts):",
+            "Topic coverage (accessible / total recorded facts):",
             "- the door: 1 / 3",
             "Awareness: Alice knows some of the door",
         ]
@@ -388,3 +387,31 @@ class TestReportLabels:
         report = character_knowledge_report(scene, "Alice")
         assert "- fact: Bob buried the ledger under the gallery floor.: told" in report
         assert "- history (layer 1): Mara and Edwin argued.: director" in report
+
+
+@pytest.mark.parametrize("route", ["entry", "manager"])
+async def test_perception_revoke_rejected_before_mutation(scene, route):
+    scene.knowledge_eligibility = "perception"
+    edge = KnowledgeEdge(character="Alice", target="The Lighthouse", kind="revoke")
+    with pytest.raises(ValueError, match="Revokes are unavailable"):
+        if route == "entry":
+            set_edge(scene, edge)
+        else:
+            await scene.world_state_manager.set_knowledge_edge(edge)
+    assert scene.world_state.knowledge == []
+
+
+async def test_stored_revoke_has_no_new_mode_effect_or_report(scene):
+    edge = KnowledgeEdge(character="Alice", target="The Lighthouse", kind="revoke")
+    set_edge(scene, edge)
+    assert "revokes: Alice" in known_by_line(scene, "The Lighthouse")
+    scene.knowledge_eligibility = "perception"
+    assert known_by_line(scene, "The Lighthouse") == "Known by: everyone"
+    report = await scene.world_state_manager.get_character_knowledge("Alice")
+    assert report.edges == []
+    assert report.awareness is None
+    assert "Revokes:" not in character_knowledge_report(scene, "Alice")
+    scene.knowledge_eligibility = "legacy"
+    assert (await scene.world_state_manager.get_character_knowledge("Alice")).edges == [
+        edge
+    ]

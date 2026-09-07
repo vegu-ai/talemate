@@ -1,11 +1,12 @@
 # Character perspective records
 
 These APIs are the persistence contract for the character-knowledge series.
-They require the [internal development gate](scene-format.md#internal-development-fixtures).
+They use the [public scene opt-in](scene-format.md#public-opt-in).
 The summarizer generates message perspectives through the lifecycle below.
-Internally enabled actor recent history and character-facing editor context use
+Perception-mode actor recent history and character-facing editor context use
 stored views and audience summaries. Source-supported fact extraction and graph
-queries extend those same records; supplemental prompt routes remain later work.
+queries extend those same records. Offscreen-life narration, RAG input and the
+optional memory pass also use viewer-specific evidence.
 
 ## Saved representation
 
@@ -96,7 +97,7 @@ interface.** It returns `CharacterView`:
 | `omitted` | Explicit saved decision that this entry is wholly unknown to the audience. |
 | `pending` | Recorded work is pending, or revision/content/dependencies are stale. |
 | `failed` | The producer recorded failure; no text is available. |
-| `unavailable` | No record/view exists for this source/audience, or the development mode is disabled. |
+| `unavailable` | No record/view exists for this source/audience, or the scene uses legacy mode. |
 
 Only `ready` contains text. Missing or failed views never fall back to reader
 prose. Unknown characters raise a validation error in the enabled mode. Selection
@@ -130,9 +131,9 @@ records so the next dependent generation can retry them. A finalized passage wit
 no relevant cast receives no empty record; the live lifecycle defers it until a cast
 is available. This runtime deferral does not backfill untracked history after reload.
 
-The internal development predicate from `talemate.knowledge.mode` governs all
+The shared scene-mode predicate from `talemate.knowledge.mode` governs all
 new requests. The legacy learned-this-turn ledger is disabled only in this mode.
-No public setting or character activation behavior is added.
+Activation uses the public new-story opt-in; perception does not manage character activation.
 
 The shared `summarizer.perceptions` prompt makes one analytical request per
 finalized source attempt for the relevant cast: the union of the passage's persisted
@@ -209,7 +210,7 @@ budget=None, max_messages=None, before_message_id=None, keep_director=False,
 show_hidden=False, direction_mode="direction")` is the shared projection point
 for actor history and character-facing editor context, including stored base and
 layered audience summaries. Later supplemental-context steps should extend this
-function rather than introduce a second audience selector. It requires the internal mode and a canonical character
+function rather than introduce a second audience selector. It requires perception mode and a canonical character
 name, and reads through `select_character_view` with one `PerspectiveReadContext`.
 
 The result is chronological replacement prose from summaries and eligible
@@ -237,7 +238,7 @@ is included only when requested and addressed to the viewing character. The
 reader message objects and their formatting are unchanged.
 
 `scene.context_history(perspective=character.name, stored_views=True, ...)`
-selects this projection under the development gate, independently of the legacy
+selects this projection in perception mode, independently of the legacy
 optional perspective filter. The converted conversation and editor templates
 explicitly request stored views. `before_message_id` is rejected with `ValueError`
 unless this gated, perspective-specific projection is selected; it never silently
@@ -260,24 +261,18 @@ character revision's scene-history block still uses stored views.
 Character unslop omits shared cached scene analysis until its producer supports
 character audiences. Narrator/author revisions retain their broader context.
 
-Passing `perspective` alone retains the existing bucket-filtered reader assembly,
-including gap markers and summary handling. In particular, offscreen-life narration
-(`narrator/offscreen-life.jinja2` through `narrate-context.jinja2`), RAG's analytical
-history (`agents/memory/rag.py`) and the optional conversation memory pass
-(`agents/conversation/knowledge.py`) do not opt into stored views in this step.
-Their existing presence/legacy-filter behavior is tested under the development
-gate, but no new protection claim applies to those supplemental routes.
+Passing `perspective` alone retains the legacy bucket-filtered reader assembly where explicitly used by legacy callers. Perception-mode offscreen-life narration, RAG input and the optional memory pass use the integrated viewer-specific paths documented in [Character memory retrieval](character-memory-retrieval.md).
 
 Debug event `character_history.skip` identifies the message ID, viewer and
 omitted/unavailable status when a passage contributes no text. It does not log
 reader or perspective prose.
 
-This intermediate step does **not** make the complete prompt audience-safe.
+The integrated routes select evidence in code; semantic containment remains the generating model’s responsibility.
 Viewer-scoped [retrieval](character-memory-retrieval.md) and [reinforcement/investigation history, direct inserts and generated-entry pins](reinforcement-investigation-perspectives.md) are integrated. [Snapshot](snapshot-perspectives.md) and [guidance/scene analysis](character-evidence-guidance.md) integrations also use stored evidence; other non-passage message types
 are absent from this new history projection except scoped director guidance.
 Scene description/story intention remain shared authoring inputs, and authored
 sheets/details/world entries retain the user/director visibility responsibility.
-No public mode switch or historical perception reconstruction is added.
+The public creation opt-in is documented in [Saved scene format](scene-format.md#public-opt-in). Historical perception reconstruction is not supported.
 
 ## Edits and invalidation notifications
 
@@ -370,7 +365,7 @@ Audience failures cannot abort reader finalization. The lifecycle uses the exist
 summarize_events request shapes for audience outputs. Higher layers retain the
 existing chunk splitting and reject empty chunks. Audience output retains short lines
 and quotation marks; the reader-only minimum-line-length filter is not applied. No new analytical request kind
-is added, and the shared development predicate gates the lifecycle.
+is added, and the shared scene-mode predicate controls the lifecycle.
 
 Audience groups require exactly equal supported text and compatible exact source
 references. Different audiences with identical text but independently addressed
@@ -448,7 +443,7 @@ availability when projection descends to source views, without logging prose.
 
 ## Source-supported facts and scoped graph queries
 
-In the internal mode, enabled archive fact extraction runs in the existing base
+In perception mode, enabled archive fact extraction runs in the existing base
 **audience** summary request (`summarize(..., audience=..., return_facts=True,
 skip_author_hooks=True)`). Reader calls publish complete summaries without reader
 facts; layered calls add no extraction request. Explicit omissions add no facts.
@@ -567,15 +562,14 @@ A global author correction, `false` flag, or inaccessible superseding update can
 replace their last-known evidence. A later witnessed update carries its own time
 and order; disclosure time stays independent of its historical provenance. Hidden
 passages are excluded through their derived facts too. Facts without supported
-contributions are absent from this scoped derived index; authored-entry visibility,
-manual learning APIs, vector retrieval, and other supplemental routes are converted
-in later steps. This does not claim those unconverted routes are protected.
+contributions are absent from this scoped derived index. Authored entries use visibility,
+explicit learning uses disclosures, and character retrieval uses audience records.
 
-Known limits in this step: facts acquired from one source share its acquisition
+Known limits: facts acquired from one source share its acquisition
 order. Ties retain extraction/insertion order; the model's list is not a finer
 verified event chronology. New-mode fact updates prune obsolete topic membership
-but do not recluster topics; audience-aware topic rebuilding is deferred to later
-steps in the series. Neither limitation changes the source contribution boundary.
+but do not recluster topics in this path. Neither limitation changes the source
+contribution boundary.
 
 
 ## Explicit grants and disclosures
@@ -590,14 +584,14 @@ steps in the series. Neither limitation changes the source contribution boundary
 
 The GrantKnowledge node and author websocket action share target validation. The author handler runs in the background so optional fact-extraction retry dialogs leave the receive loop available; it reports the disclosure before indexing and saves once after indexing finishes. Both pre-indexing and post-indexing `character_knowledge` frames echo the grant’s `request_id`; the tab completes a disclosure submission only for its matching frame, so a late indexing refresh cannot clear a later request. Rejected requests emit the normal correlated operation failure. The tab refreshes after indexing and shows failed extraction status. Both use `rebuild_supported_facts` with the independent disclosure reference, under the existing extraction setting. No new request kind or fact identity scheme is introduced. Extraction failure retains the disclosure and is not reported as a successful fact rebuild. The original source can be regenerated without replacing the disclosure contribution. `knowledge_changed` identifies the disclosure itself; its label is the selected text, never the containing archive.
 
-User-facing partial/whole wording is documented in the Knowledge guide. The shared mode predicate remains the only eligibility check; legacy grants keep their edge semantics. Supplemental context routes and full-mode activation remain outside this step.
+User-facing partial/whole wording is documented in the Knowledge guide. The shared mode predicate remains the only eligibility check; legacy grants keep their edge semantics.
 
-The director module uses Grant Knowledge Metadata and Grant Knowledge Confirmation adapters over the existing focal metadata and string formatter. Both select their content using the shared mode predicate: legacy examples and confirmations remain unchanged, while perception grants show selected information and the whole-entry choice. The character report labels disclosures and restricted entries separately and retains entry edges, topic coverage and awareness in both modes.
+The director module uses Grant Knowledge Metadata and Grant Knowledge Confirmation adapters over the existing focal metadata and string formatter. Both select their content using the shared mode predicate: legacy examples and confirmations remain unchanged, while perception grants show selected information and the whole-entry choice. The character report labels disclosures and restricted entries separately and retains supplemental grants and recorded-fact coverage. Revokes and topic-awareness assertions are legacy-only.
 
 
 ## Searchable effective audiences
 
-In internally enabled perception scenes, `knowledge.memory.audience_documents(scene)` builds a derived character index in the existing memory collection. It reuses `select_character_view`, `character_fact`, independent disclosures and authored `EntryVisibility`. Ready audience views replace reader prose; hidden, pending, failed, omitted and unsupported content is not indexed for characters. Fact documents use each character's supported wording, preserving last-known evidence despite a different author correction. Authored sheets, world entries and static history follow their author-managed visibility. An event known to the entire current cast is still audience-limited, not common lore for future characters. Legacy edges do not authorize these records.
+In opted-in perception scenes, `knowledge.memory.audience_documents(scene)` builds a derived character index in the existing memory collection. It reuses `select_character_view`, `character_fact`, independent disclosures and authored `EntryVisibility`. Ready audience views replace reader prose; hidden, pending, failed, omitted and unsupported content is not indexed for characters. Fact documents use each character's supported wording, preserving last-known evidence despite a different author correction. Authored sheets, world entries and static history follow their author-managed visibility. An event known to the entire current cast is still audience-limited, not common lore for future characters. Legacy edges do not authorize these records.
 
 Canonical reader/author memory documents remain available. Managed character variants have derived `knowledge:` IDs and the following metadata:
 

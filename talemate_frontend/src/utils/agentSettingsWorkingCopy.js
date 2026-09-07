@@ -87,7 +87,9 @@ export function materializeAgentEntry(config, liveAgents, agentType) {
     const actions = {};
     for (const [key, values] of Object.entries(effective)) {
         const actionConfig = {};
-        for (const [configKey, field] of Object.entries(values.config)) {
+        // The scene-specific schema can hide settings still used by legacy scenes.
+        const storedConfig = config.agents[agentType]?.actions?.[key]?.config || {};
+        for (const [configKey, field] of Object.entries({ ...storedConfig, ...values.config })) {
             actionConfig[configKey] = { value: field.value };
         }
         actions[key] = { enabled: values.enabled, config: actionConfig };

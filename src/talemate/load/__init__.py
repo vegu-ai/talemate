@@ -33,8 +33,7 @@ from talemate.world_state import WorldState
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import ScenePerspectives, load_game_state_path_settings
-from talemate.scene.format import read_scene_format
-from talemate.knowledge.mode import require_character_knowledge_support
+from talemate.scene.format import CURRENT_SCENE_FORMAT_VERSION, read_scene_format
 from talemate.knowledge.reinforcements import reinforcement_source_keys
 from talemate.knowledge.perspectives import (
     bind_perspective_sources,
@@ -97,6 +96,7 @@ def load_scene_perspectives(scene_data: dict) -> ScenePerspectives:
 
 
 class SceneInitialization(pydantic.BaseModel):
+    character_knowledge: pydantic.StrictBool = False
     project_name: str | None = None
     content_classification: str | None = None
     agent_persona_templates: dict[str, str | None] | None = None
@@ -333,7 +333,6 @@ async def load_scene_from_data(
     empty: bool = False,
 ) -> Scene:
     metadata = read_scene_format(scene_data)
-    require_character_knowledge_support(metadata)
     knowledge = validate_saved_knowledge(scene_data)
     loading_status = LoadingStatus(1)
     reset_message_id()
@@ -534,7 +533,7 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
 
             with zipf.open("scene.json") as scene_file:
                 scene_data = json.load(scene_file)
-            require_character_knowledge_support(read_scene_format(scene_data))
+            read_scene_format(scene_data)
             validate_saved_knowledge(scene_data)
 
             # Extract all files
@@ -1019,7 +1018,16 @@ def new_scene(
     }
 
     if scene_initialization:
-        scene_data.update(scene_initialization.model_dump(exclude_none=True))
+        scene_data.update(
+            scene_initialization.model_dump(
+                exclude_none=True, exclude={"character_knowledge"}
+            )
+        )
+        if scene_initialization.character_knowledge:
+            scene_data.update(
+                format_version=CURRENT_SCENE_FORMAT_VERSION,
+                knowledge_eligibility="perception",
+            )
 
     return scene_data
 

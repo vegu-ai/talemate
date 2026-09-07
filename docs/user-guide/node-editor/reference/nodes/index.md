@@ -34,7 +34,7 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Flow Exception Nodes](raise.md) | 3 | Stop graph execution or raise errors: Stop, input value errors and acted-as-character signals. |
 | [Function Nodes](core-functions.md) | 11 | Callable node modules: define, get and call functions, for-each calls, returns, error handlers, breakpoints and scoped API functions. |
 | [Input Nodes](input.md) | 2 | Process and wait for player input in the scene loop. |
-| [Knowledge Nodes](knowledge.md) | 10 | The fact record and who knows what: facts about an entity, an entity's current state, the timeline between two entities, an entry's Known by line, a character's knowledge report, entry visibility, disclosures and grant/revoke knowledge edges. Grant Knowledge Metadata and Grant Knowledge Confirmation select the director wording for the scene's knowledge mode. |
+| [Knowledge Nodes](knowledge.md) | 11 | The fact record and who knows what: facts about an entity, an entity's current state, the timeline between two entities, an entry's Known by line, a character's knowledge report, entry visibility, disclosures and grant/revoke knowledge edges. Grant Knowledge Metadata and Grant Knowledge Confirmation select the director wording for the scene's knowledge mode. |
 | [Logic Nodes](core-logic.md) | 12 | Branching and comparison: switches, routers, boolean logic and conditional routing. |
 | [Memory Agent Nodes](agents-memory.md) | 2 | Query the long-term memory context database and unpack memory documents. |
 | [Narrator Agent Nodes](agents-narrator.md) | 12 | Generate narration messages: progress, scene, environment, query, character entry/exit and time narration. |

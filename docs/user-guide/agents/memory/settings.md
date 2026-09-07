@@ -18,7 +18,7 @@ The device to use for the embeddings. This can be either `cpu` or `cuda`.
 
 ## :material-shape-outline: Topics
 
-Clusters the stored facts into topics by embedding, without a request: facts are walked in creation order, each joins the first topic whose first fact is similar enough or opens a new one, and one refinement pass moves every fact to its nearest centroid. A topic is named after the most frequent subject among its facts (the whole subject when two topics would otherwise share a name). Topics give every character a coverage table in the World Editor and an [awareness line](/talemate/user-guide/agents/conversation/settings/#awareness-line) in the conversation prompt, and in the conversation prompt's memory retrieval the topic nearest to a query contributes its most restated facts ahead of the similarity results; a Context Database search or a node query gets no such addition. The container can be disabled, which also stops the coverage table and the awareness line.
+Clusters the stored facts into topics by embedding, without a request: facts are walked in creation order, each joins the first topic whose first fact is similar enough or opens a new one, and one refinement pass moves every fact to its nearest centroid. A topic is named after the most frequent subject among its facts (the whole subject when two topics would otherwise share a name). Topics give characters a recorded-fact access table in the World Editor. Legacy scenes can also include an [awareness line](/talemate/user-guide/agents/conversation/settings/#awareness-line) in the conversation prompt. In the conversation prompt's memory retrieval the topic nearest to a query contributes its most restated facts ahead of the similarity results; a Context Database search or a node query gets no such addition. Disabling Topics stops the coverage table and legacy awareness line. Perception scenes count current supported facts and never make topic all/some/nothing assertions.
 
 ##### Recluster step
 
@@ -46,7 +46,9 @@ When the recent lines name a character who is not in the scene (aliases from the
 
 ##### Similarity knowledge gate
 
-When retrieval is filtered by a character's knowledge (see [World Editor -- Knowledge](/talemate/user-guide/world-editor/knowledge/)), a result outside their knowledge still passes if a fact they do know sits within the summarizer's *Fact near-duplicate distance* of it: someone told them later, and the retold fact sits next to the original. On by default.
+**Legacy scenes only; hidden and unused in perception scenes.** Similarity ranks eligible results in perception mode and never grants access.
+
+When legacy retrieval is filtered by a character's knowledge (see [World Editor -- Knowledge](/talemate/user-guide/world-editor/knowledge/)), a result outside their knowledge still passes if a fact they do know sits within the summarizer's *Fact near-duplicate distance* of it: someone told them later, and the retold fact sits next to the original. On by default.
 
 ##### Cross-encoder rerank
 

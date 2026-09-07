@@ -4,6 +4,7 @@ import structlog
 
 from talemate.context import active_scene
 from talemate.game.engine.nodes.focal import Metadata
+from talemate.game.engine.nodes.data import ListCollector
 from talemate.game.engine.nodes.string import AdvancedFormat
 from talemate.instance import get_agent
 from talemate.knowledge.mode import character_knowledge_enabled
@@ -201,6 +202,10 @@ class _EdgeNode(Node):
 
     async def run(self, state: GraphState):
         scene = active_scene.get()
+        if self.kind == "revoke" and character_knowledge_enabled(scene):
+            raise InputValueError(
+                self, "character", "Revokes are unavailable in perception mode."
+            )
         character = _character_name(self.require_input("character"))
         target = self.normalized_input_value("target")
         item = self.normalized_input_value("context_id_item")
@@ -316,7 +321,8 @@ class GrantKnowledge(_EdgeNode):
 @register("knowledge/RevokeKnowledge")
 class RevokeKnowledge(_EdgeNode):
     """
-    Revoke a character's knowledge of an entry.
+    Revoke a character's knowledge of an entry in legacy scenes.
+    Perception scenes reject this operation before mutation; no amnesia is provided.
 
     Inputs:
     - state: graph state (passthrough)
@@ -509,9 +515,10 @@ class SetEntryVisibility(Node):
 @register("knowledge/CharacterKnowledge")
 class CharacterKnowledge(Node):
     """
-    What one character knows, as prompt text and without an LLM request:
-    their grants and revokes with entry labels, the restricted entries they
-    can see, the topic coverage and the awareness line.
+    Report one character's knowledge without an LLM request: grants with entry
+    labels, accessible restricted entries and recorded-fact coverage. Legacy
+    reports also include revokes and the awareness line; perception reports
+    include disclosures and omit revokes and topic-awareness assertions.
 
     Inputs:
 
@@ -557,13 +564,13 @@ class GrantKnowledgeMetadata(Metadata):
             name="perception_instructions",
             type="text",
             default="",
-            description="Instructions used only when character perceptions are internally enabled.",
+            description="Instructions used only when character perspectives are enabled.",
         )
         perception_examples = PropertyField(
             name="perception_examples",
             type="list",
             default=[],
-            description="Disclosure examples used only when character perceptions are internally enabled.",
+            description="Disclosure examples used only when character perspectives are enabled.",
         )
 
     def __init__(self, title="Grant Knowledge Metadata", **kwargs):
@@ -596,7 +603,7 @@ class GrantKnowledgeConfirmation(AdvancedFormat):
             name="perception_template",
             type="text",
             default="",
-            description="Disclosure confirmation used only when character perceptions are internally enabled.",
+            description="Disclosure confirmation used only when character perspectives are enabled.",
         )
 
     def __init__(self, title="Grant Knowledge Confirmation", **kwargs):
@@ -610,3 +617,35 @@ class GrantKnowledgeConfirmation(AdvancedFormat):
         if character_knowledge_enabled(active_scene.get()):
             template = self.get_property("perception_template")
         return await super().format(template, variables)
+
+
+@register("knowledge/KnowledgeCallbacks")
+class KnowledgeCallbacks(ListCollector):
+    """Collect director knowledge callbacks, omitting revocation in perception scenes.
+
+    Legacy scenes retain all callbacks. Uses List Collector's dynamic inputs.
+
+    Inputs:
+    - list: optional base list
+    - item{i}: callback to collect
+
+    Outputs:
+    - list: available knowledge callbacks
+    """
+
+    def __init__(self, title="Knowledge Callbacks", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    async def run(self, state: GraphState):
+        await super().run(state)
+        if character_knowledge_enabled(active_scene.get()):
+            callbacks = self.get_output_socket("list").value
+            self.set_output_values(
+                {
+                    "list": [
+                        callback
+                        for callback in callbacks
+                        if callback.name != "revoke_knowledge"
+                    ]
+                }
+            )

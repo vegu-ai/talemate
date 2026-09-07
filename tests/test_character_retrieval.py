@@ -526,7 +526,7 @@ async def test_legacy_template_preserves_raw_author_override_with_character(
     rag, monkeypatch
 ):
     scene, _, _, conversation = rag
-    monkeypatch.delenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE")
+    rag[0].knowledge_eligibility = "legacy"
     monkeypatch.setattr(
         conversation.actions["character_knowledge"].config["memory_pass"], "value", True
     )
@@ -652,9 +652,9 @@ async def test_legacy_direct_retrieval_sees_world_entry_edit_at_same_history(
     rag, monkeypatch
 ):
     scene, memory, _, conversation = rag
-    # Complete any fixture reconciliation before switching the gate off.
+    # Complete fixture reconciliation before selecting legacy behavior.
     await memory.ensure_audience_index(scene)
-    monkeypatch.delenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE")
+    rag[0].knowledge_eligibility = "legacy"
     # A legacy store has no perception variants competing at the result cutoff.
     memory.db.delete(ids=memory.db.get()["ids"])
     config = conversation.actions["use_long_term_memory"].config
@@ -709,7 +709,7 @@ async def test_scoped_metadata_rejects_legacy_and_id_lists_filter_sources(
     assert {doc.meta["knowledge_id"] for doc in documents.values()} == {"F1", "lore"}
     assert all(identity.startswith("knowledge:") for identity in documents)
     assert await memory.get_document([], viewer="Elmer") == {}
-    monkeypatch.delenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE")
+    rag[0].knowledge_eligibility = "legacy"
     with pytest.raises(ValueError, match="requires perception mode"):
         await memory.get_documents_by_meta({"typ": "fact"}, viewer="Elmer")
     with pytest.raises(ValueError, match="requires perception mode"):

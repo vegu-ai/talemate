@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { createConfigSaveQueue } from "@/utils/configSaveQueue";
 import {
     agentClient,
     agentEnabled,
@@ -174,6 +175,100 @@ describe("materializeAgentEntry", () => {
             },
         });
         expect(config.agents.tts).toBe(entry);
+    });
+
+    it.each([
+        {
+            agentType: "conversation",
+            actionKey: "character_knowledge",
+            hidden: {
+                perspective_filter: false,
+                absence_block: false,
+                absence_limit: 11,
+                absence_window: 23,
+                awareness_line: false,
+                ledger: true,
+            },
+            defaults: {
+                perspective_filter: true,
+                absence_block: true,
+                absence_limit: 5,
+                absence_window: 30,
+                awareness_line: true,
+                ledger: false,
+            },
+            visibleKey: "memory_pass",
+            initialValue: false,
+            editedValue: true,
+        },
+        {
+            agentType: "memory",
+            actionKey: "retrieval",
+            hidden: { similarity_gate: false },
+            defaults: { similarity_gate: true },
+            visibleKey: "recency_weight",
+            initialValue: 0.2,
+            editedValue: 0.3,
+        },
+    ])("preserves hidden $agentType values through settings save and legacy reload", ({
+        agentType, actionKey, hidden, defaults, visibleKey, initialValue, editedValue,
+    }) => {
+        const fields = values => Object.fromEntries(
+            Object.entries(values).map(([key, value]) => [key, { value }]),
+        );
+        const config = {
+            agents: {
+                [agentType]: {
+                    enabled: true,
+                    client: null,
+                    actions: {
+                        [actionKey]: {
+                            enabled: true,
+                            config: fields({ ...hidden, [visibleKey]: initialValue }),
+                        },
+                    },
+                },
+            },
+            clients: {},
+        };
+        const perceptionAgents = {
+            [agentType]: {
+                data: {
+                    actions: {
+                        [actionKey]: { enabled: true, config: fields({ [visibleKey]: initialValue }) },
+                    },
+                },
+            },
+        };
+        expect(Object.keys(effectiveActionsFor(config, perceptionAgents, agentType)[actionKey].config))
+            .toEqual([visibleKey]);
+
+        const entry = materializeAgentEntry(config, perceptionAgents, agentType);
+        entryAction(entry, actionKey).config[visibleKey] = { value: editedValue };
+        let persisted;
+        const queue = createConfigSaveQueue({
+            send: message => { persisted = JSON.stringify(message.config); },
+        });
+        queue.sendConfigSave(config);
+        const reloaded = JSON.parse(persisted);
+        expect(reloaded.agents[agentType].actions[actionKey].config)
+            .toEqual(fields({ ...hidden, [visibleKey]: editedValue }));
+
+        // A fresh legacy schema supplies defaults, not the old running agent's values.
+        const legacyAgents = {
+            [agentType]: {
+                data: {
+                    actions: {
+                        [actionKey]: {
+                            enabled: true,
+                            config: fields({ ...defaults, [visibleKey]: initialValue }),
+                        },
+                    },
+                },
+            },
+        };
+        expect(effectiveActionsFor(reloaded, legacyAgents, agentType)[actionKey].config)
+            .toEqual(fields({ ...hidden, [visibleKey]: editedValue }));
     });
 
     it("creates the agents map when the config has none", () => {

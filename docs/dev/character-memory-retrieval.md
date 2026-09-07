@@ -1,6 +1,6 @@
 # Character memory retrieval
 
-Character retrieval in internally enabled perception scenes uses persisted views and disclosures for query inputs, and the [effective audience index](character-perspectives.md#searchable-effective-audiences) for candidates. The shared `character_knowledge_enabled(scene)` gate controls this path. Legacy scenes keep their existing retrieval behavior.
+Character retrieval in opted-in perception scenes uses persisted views and disclosures for query inputs, and the [effective audience index](character-perspectives.md#searchable-effective-audiences) for candidates. The shared `character_knowledge_enabled(scene)` gate controls this path. Legacy scenes keep their existing retrieval behavior.
 
 ## Character and author inputs
 

@@ -17,6 +17,8 @@ from talemate.instance import get_agent
 from talemate.knowledge.absence import fact_order
 from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
 from talemate.knowledge.schema import Fact, Topic, TopicCoverage
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.perspectives import PerspectiveReadContext
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -258,19 +260,26 @@ def coverage(scene: "Scene", character: str) -> list[TopicCoverage]:
     """Per topic, how many of its facts sit in the character's bucket; largest topics first."""
     if not get_agent("memory").topics_enabled:
         return []
-    index = KnowledgeIndex.from_scene(scene)
+    from talemate.knowledge.supported_facts import character_fact
+
     facts = scene.world_state.facts
+    read = PerspectiveReadContext(scene) if character_knowledge_enabled(scene) else None
+    if read is not None and character not in scene.character_data:
+        return []
+    index = KnowledgeIndex.from_scene(scene) if read is None else None
+    cache = {}
     rows: list[TopicCoverage] = []
     for topic in scene.world_state.topics.values():
         members = [facts[i] for i in topic.fact_ids if i in facts]
         if not members:
             continue
         known = sum(
-            1
-            for f in members
-            if index.in_bucket(
-                character, KnowledgeItem(id=f.id, kind="fact", present=f.present)
+            character_fact(scene, fact, character, read=read, cache=cache) is not None
+            if read is not None
+            else index.in_bucket(
+                character, KnowledgeItem(id=fact.id, kind="fact", present=fact.present)
             )
+            for fact in members
         )
         rows.append(
             TopicCoverage(id=topic.id, name=topic.name, total=len(members), known=known)
@@ -289,6 +298,8 @@ def awareness_line(scene: "Scene", character: str) -> str | None:
     `<name> knows all of A and B, some of C, nothing of D` over the topics
     with at least three facts, largest first, at most six.
     """
+    if character_knowledge_enabled(scene):
+        return None
     topics = scene.world_state.topics
     rows = [
         r

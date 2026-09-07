@@ -60,7 +60,6 @@ def result(text=None):
 
 @pytest.fixture
 def setup(scene, monkeypatch):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     scene.knowledge_eligibility = "perception"
     scene.character_data = {name: Character(name=name) for name in ("Alice", "Bob")}
     scene.active_characters = ["Alice", "Bob"]
@@ -131,11 +130,9 @@ async def test_editor_finalization_precedes_analysis_and_archive(setup):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("gate,mode", [("0", "perception"), ("1", "legacy")])
-async def test_no_new_requests_outside_mode(setup, monkeypatch, gate, mode):
+async def test_no_new_requests_in_legacy_mode(setup):
     scene, summarizer, request = setup
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", gate)
-    scene.knowledge_eligibility = mode
+    scene.knowledge_eligibility = "legacy"
     message = CharacterMessage(message="Alice: Hello.")
     await scene.push_history(message)
     await summarizer.ensure_perceptions(scene)
@@ -381,6 +378,9 @@ def test_prompt_context_separates_reader_from_prior_knowledge(setup):
 def test_new_mode_replaces_legacy_ledger(setup):
     scene, summarizer, request = setup
     conversation = get_agent("conversation")
+    scene.actors = [
+        Actor(character, conversation) for character in scene.character_data.values()
+    ]
     conversation.actions["character_knowledge"].config["ledger"].value = True
     assert conversation.knowledge_ledger is False
     scene.knowledge_eligibility = "legacy"
@@ -512,7 +512,6 @@ async def test_analytical_fixtures_persist_supported_views(setup, case):
 
 @pytest.mark.asyncio
 async def test_shared_prompt_renders_without_additional_requests(scene, monkeypatch):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     scene.knowledge_eligibility = "perception"
     scene.character_data = {name: Character(name=name) for name in ("Alice", "Bob")}
     scene.active_characters = ["Alice", "Bob"]
@@ -1088,3 +1087,87 @@ def test_depth_limit_is_preserved_by_shared_freshness_cache(setup):
             ],
         )
     assert new.knowledge is None
+
+
+async def test_public_mode_replaces_learning_even_with_legacy_ledger_enabled(
+    setup, monkeypatch
+):
+    scene, summarizer, request = setup
+    conversation = get_agent("conversation")
+    scene.actors = [
+        Actor(character, conversation) for character in scene.character_data.values()
+    ]
+    conversation.actions["character_knowledge"].config["ledger"].value = True
+    ledger = AsyncMock()
+    monkeypatch.setattr(conversation, "record_learned_facts", ledger)
+    message = CharacterMessage(message="Alice: Hello.", source="player")
+    await scene.push_history(message)
+    event = type("Event", (), {"scene": scene, "message": message})()
+    await conversation.on_new_message(event)
+    await summarizer.ensure_perceptions(scene)
+    assert request.await_count == 1
+    ledger.assert_not_awaited()
+    assert await conversation.absence_block(scene.character_data["Bob"]) == []
+    assert await conversation.awareness_line(scene.character_data["Bob"]) is None
+    public = conversation.config_options(agent=conversation)["actions"][
+        "character_knowledge"
+    ]
+    assert set(public["config"]) == {"memory_pass"}
+    assert (
+        "similarity_gate"
+        not in get_agent("memory").config_options(agent=get_agent("memory"))["actions"][
+            "retrieval"
+        ]["config"]
+    )
+    scene.knowledge_eligibility = "legacy"
+    legacy = conversation.config_options(agent=conversation)["actions"][
+        "character_knowledge"
+    ]
+    assert legacy["config"]["ledger"]["value"] is True
+    assert (
+        "similarity_gate"
+        in get_agent("memory").config_options(agent=get_agent("memory"))["actions"][
+            "retrieval"
+        ]["config"]
+    )
+    await conversation.on_new_message(event)
+    ledger.assert_awaited_once()
+
+
+@pytest.mark.parametrize(
+    "agent_name,action,hidden",
+    [
+        (
+            "conversation",
+            "character_knowledge",
+            {
+                "perspective_filter",
+                "absence_block",
+                "absence_limit",
+                "absence_window",
+                "awareness_line",
+                "ledger",
+            },
+        ),
+        ("memory", "retrieval", {"similarity_gate"}),
+    ],
+)
+async def test_status_payload_hides_retired_controls_and_restores_legacy(
+    setup, monkeypatch, agent_name, action, hidden
+):
+    scene, _, _ = setup
+    agent = get_agent(agent_name)
+    original = {key: value.model_dump() for key, value in agent.actions.items()}
+    emitted = []
+    monkeypatch.setattr(
+        "talemate.agents.base.emit", lambda *args, **kwargs: emitted.append(kwargs)
+    )
+    await agent._do_emit_status()
+    public = emitted[-1]["data"]["actions"][action]
+    assert not hidden.intersection(public["config"])
+    if agent_name == "conversation":
+        assert set(public["config"]) == {"memory_pass"}
+    scene.knowledge_eligibility = "legacy"
+    await agent._do_emit_status()
+    assert emitted[-1]["data"]["actions"] == original
+    assert {key: value.model_dump() for key, value in agent.actions.items()} == original

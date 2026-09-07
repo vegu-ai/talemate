@@ -84,9 +84,13 @@ Disable this if you want the AI to generate dialogue without following the scene
 
 ## :material-head-lightbulb-outline: Character Knowledge
 
+**Character perspectives** is selected when creating a new story, off by default. It always scopes history and retrieval, replaces the learned-this-turn request with Summarizer perception, and omits absence warnings and topic-awareness assertions. Those legacy controls are hidden while a perception scene is active; the optional AI memory pass remains. This group does not enable or disable the scene's perception mode. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for cost, retry behavior and author responsibilities.
+
+The controls below apply to legacy scenes unless stated otherwise.
+
 ![Conversation agent character knowledge settings](/talemate/img/0.40.0/conversation-character-knowledge-settings.png)
 
-Builds the prompt from the speaking character's point of view. The first five settings add no request; the items marked +1 request are off by default. See [World Editor -- Knowledge](/talemate/user-guide/world-editor/knowledge/) for how a character's knowledge is worked out.
+In legacy scenes, the presence filter, absence settings and awareness line add no request. The optional AI memory pass works in either mode; the learned-this-turn ledger is legacy-only. Both items marked +1 request are off by default. See [World Editor -- Knowledge](/talemate/user-guide/world-editor/knowledge/) for how a character's knowledge is worked out.
 
 ##### Perspective filter
 

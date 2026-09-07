@@ -62,7 +62,6 @@ def publish(scene, message, alice, bob):
 
 @pytest.fixture
 def summary_scene(scene, monkeypatch, request):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     scene.knowledge_eligibility = "perception"
     for name in ("Alice", "Bob", "Cara"):
         character = Character(name=name, is_player=name == "Alice")

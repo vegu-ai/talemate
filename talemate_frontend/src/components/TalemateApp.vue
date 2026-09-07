@@ -1672,9 +1672,14 @@ export default {
             client = null;
           }
 
+          const actions = Object.fromEntries(Object.entries(agent.actions || {}).map(([key, action]) => [key, {
+            ...action,
+            // Status hides legacy controls, but a drawer save must preserve their values.
+            config: { ...config.agents?.[agent.name]?.actions?.[key]?.config, ...action.config },
+          }]));
           return {
             enabled: agent.enabled,
-            actions: agent.actions,
+            actions: actions,
             client: client,
           }
         });

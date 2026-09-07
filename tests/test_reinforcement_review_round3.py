@@ -115,7 +115,7 @@ async def shared_file(tmp_path, character):
 async def test_file_loaded_shared_character_preserves_models_and_can_rename(
     scene, tmp_path, monkeypatch, existing
 ):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "0")
+    scene.knowledge_eligibility = "legacy"
     character = Character(
         name="Bob",
         shared=True,
@@ -145,7 +145,7 @@ async def test_file_loaded_shared_character_preserves_models_and_can_rename(
 async def test_shared_file_removal_unshares_only_the_removed_character(
     scene, tmp_path, monkeypatch
 ):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "0")
+    scene.knowledge_eligibility = "legacy"
     removed = Character(
         name="X", shared=True, details={"x": "old"}, shared_details=["x"]
     )

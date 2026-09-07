@@ -4,11 +4,11 @@ import zipfile
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 from typing import get_args
-from types import SimpleNamespace
 
 import pytest
 
 import talemate.instance as instance
+import talemate.knowledge.mode as knowledge_mode
 from _changelog_test_helpers import make_changelog_scene
 from conftest import MockScene, bootstrap_scene
 from talemate.changelog import (
@@ -24,6 +24,7 @@ from talemate.load import (
     load_scene_from_data,
     load_scene_from_zip,
     new_scene,
+    SceneInitialization,
 )
 from talemate.scene.format import (
     SceneFormatError,
@@ -38,11 +39,6 @@ FIXTURES = Path(__file__).parent / "data" / "scene_format"
 
 def fixture_data(name="legacy"):
     return json.loads((FIXTURES / f"{name}.json").read_text())
-
-
-@pytest.fixture(autouse=True)
-def clean_env(monkeypatch):
-    monkeypatch.delenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", raising=False)
 
 
 @pytest.fixture
@@ -81,10 +77,7 @@ async def test_load_save_reload_retains_legacy_eligibility(load_env, name):
 
 
 @pytest.mark.parametrize("save_as", [False, True])
-async def test_saving_never_promotes_legacy_even_with_gate(
-    load_env, monkeypatch, save_as
-):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
+async def test_saving_never_promotes_legacy(load_env, monkeypatch, save_as):
     await load_scene_from_data(load_env, fixture_data(), name="original.json")
     await load_env.save(copy_name="copy.json" if save_as else None)
     saved = json.loads((Path(load_env.save_dir) / load_env.filename).read_text())
@@ -94,7 +87,6 @@ async def test_saving_never_promotes_legacy_even_with_gate(
 
 @pytest.mark.parametrize("name", ["legacy", "versioned", "perception"])
 async def test_reset_preserves_eligibility(load_env, monkeypatch, name):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     data = fixture_data(name)
     expected = data.get("knowledge_eligibility", "legacy")
     await load_scene_from_data(load_env, data, reset=True, empty=True)
@@ -103,7 +95,6 @@ async def test_reset_preserves_eligibility(load_env, monkeypatch, name):
 
 
 async def test_perception_fixture_round_trip(load_env, monkeypatch):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     await load_scene_from_data(
         load_env, fixture_data("perception"), name="perception.json"
     )
@@ -121,13 +112,14 @@ async def test_perception_fixture_round_trip(load_env, monkeypatch):
 
 
 @pytest.mark.parametrize("gate", [None, "0", "true", "1"])
-def test_single_gate_requires_explicit_flag_and_eligible_scene(monkeypatch, gate):
+def test_public_mode_ignores_retired_development_flag(monkeypatch, gate):
+    monkeypatch.delenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", raising=False)
     if gate is not None:
         monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", gate)
     scene = Scene()
     assert not character_knowledge_enabled(scene)
     scene.knowledge_eligibility = "perception"
-    assert character_knowledge_enabled(scene) is (gate == "1")
+    assert character_knowledge_enabled(scene)
 
 
 @pytest.mark.parametrize("version", [None, True, False, "1", 1.0, 0, -1, [], {}])
@@ -166,25 +158,16 @@ def test_schema_eligibility_matches_runtime_definition():
 async def test_parser_and_scene_serialization_do_not_consult_process_policy(
     load_env, monkeypatch
 ):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     data = fixture_data("perception")
     await load_scene_from_data(load_env, data)
     expected = load_env.json
-    environment = Mock()
-    environment.get.side_effect = AssertionError(
-        "pure metadata must not read the environment"
-    )
-    monkeypatch.setattr(
-        "talemate.knowledge.mode.os", SimpleNamespace(environ=environment)
-    )
+    assert not hasattr(knowledge_mode, "os")
     assert read_scene_format(data).knowledge_eligibility == "perception"
     assert normalize_scene_format(data)["knowledge_eligibility"] == "perception"
     assert load_env.json == expected
-    environment.get.assert_not_called()
 
 
 def test_unversioned_data_cannot_claim_perception(monkeypatch):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     with pytest.raises(SceneFormatError, match="Unversioned scenes"):
         read_scene_format({"knowledge_eligibility": "perception"})
 
@@ -207,8 +190,7 @@ def test_normalization_preserves_payload_without_mutating_input():
     }
 
 
-def test_new_scenes_remain_legacy_with_gate(monkeypatch):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
+def test_new_scenes_default_to_legacy(monkeypatch):
     assert read_scene_format(new_scene()).knowledge_eligibility == "legacy"
     assert Scene().serialize["knowledge_eligibility"] == "legacy"
 
@@ -218,10 +200,6 @@ def test_new_scenes_remain_legacy_with_gate(monkeypatch):
     [
         ({"format_version": 2}, "Unsupported scene format version 2"),
         ({"format_version": "1"}, "positive integer"),
-        (
-            {"format_version": 1, "knowledge_eligibility": "perception"},
-            "development gate",
-        ),
     ],
 )
 async def test_rejected_load_precedes_migrations_and_runtime_changes(
@@ -268,21 +246,28 @@ async def test_rejected_file_unchanged_and_no_import_writes(
     load_env.add_to_recent_scenes.assert_not_called()
 
 
-async def test_valid_zip_loads_and_writes_versioned_legacy_save(load_env, tmp_path):
+@pytest.mark.parametrize("name", ["versioned", "perception"])
+async def test_valid_zip_loads_and_writes_saved_mode(load_env, tmp_path, name):
     path = tmp_path / "versioned.zip"
+    data = fixture_data("versioned")
+    data["knowledge_eligibility"] = "perception" if name == "perception" else "legacy"
     with zipfile.ZipFile(path, "w") as zipf:
-        zipf.write(FIXTURES / "versioned.json", "scene.json")
+        zipf.writestr("scene.json", json.dumps(data))
         zipf.writestr("info/imported.md", "Imported archive content")
     original = path.read_bytes()
     scene = await load_scene_from_zip(load_env, str(path))
-    assert scene.knowledge_eligibility == "legacy"
-    assert (
-        scene.history[0].message == fixture_data("versioned")["history"][0]["message"]
+    assert scene.knowledge_eligibility == (
+        "perception" if name == "perception" else "legacy"
     )
+    assert [message.message for message in scene.history] == [
+        message["message"] for message in data["history"]
+    ]
     for filename in ["versioned.json", "initial.json"]:
         saved = json.loads((Path(scene.save_dir) / filename).read_text())
         assert saved["format_version"] == 1
-        assert saved["knowledge_eligibility"] == "legacy"
+        assert saved["knowledge_eligibility"] == (
+            "perception" if name == "perception" else "legacy"
+        )
     assert (
         Path(scene.save_dir) / "info/imported.md"
     ).read_text() == "Imported archive content"
@@ -291,7 +276,6 @@ async def test_valid_zip_loads_and_writes_versioned_legacy_save(load_env, tmp_pa
 
 @pytest.mark.parametrize("name", ["legacy", "perception"])
 async def test_shallow_fork_retains_eligibility(load_env, monkeypatch, name):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     data = fixture_data()
     if name == "perception":
         data.update(format_version=1, knowledge_eligibility="perception")
@@ -309,7 +293,6 @@ async def test_shallow_fork_retains_eligibility(load_env, monkeypatch, name):
 async def test_reconstructed_fork_retains_snapshot_eligibility(
     load_env, tmp_path, monkeypatch, name
 ):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     data = fixture_data(name)
     source = make_changelog_scene(str(tmp_path / "chain"), initial_serialize=data)
     await save_changelog(source)
@@ -348,7 +331,7 @@ async def test_reconstructed_write_rejects_future_before_mutation_or_write(tmp_p
         (
             {"format_version": 1, "knowledge_eligibility": "perception"},
             {"knowledge_eligibility": "legacy"},
-            "development gate",
+            "overrides cannot change",
         ),
         ({}, {"knowledge_eligibility": "perception"}, "overrides cannot change"),
         ({}, {"format_version": 2}, "overrides cannot change"),
@@ -391,7 +374,6 @@ async def test_reconstruction_applies_history_override_after_zeroing(tmp_path):
 
 @pytest.mark.parametrize("name", ["legacy", "perception"])
 async def test_restore_and_export_preserve_eligibility(load_env, monkeypatch, name):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     await load_scene_from_data(load_env, fixture_data(name))
     await load_env.save_restore("initial.json")
     restored = json.loads((Path(load_env.save_dir) / "initial.json").read_text())
@@ -404,27 +386,15 @@ async def test_restore_and_export_preserve_eligibility(load_env, monkeypatch, na
 
 
 @pytest.mark.parametrize("restore_save", [False, True])
-async def test_save_boundary_requires_support_for_loaded_perception_scene(
-    load_env, monkeypatch, restore_save
-):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
+async def test_save_boundary_supports_public_perception_scene(load_env, restore_save):
     await load_scene_from_data(load_env, fixture_data("perception"))
-    before_scene = load_env.json
-    before_files = {
-        p: p.read_bytes() for p in Path(load_env.save_dir).rglob("*") if p.is_file()
-    }
-    monkeypatch.delenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE")
-    assert load_env.json == before_scene
-    with pytest.raises(TalemateError, match="development gate"):
-        if restore_save:
-            await load_env.save_restore("blocked.json")
-        else:
-            await load_env.save(copy_name="blocked")
-    assert load_env.json == before_scene
-    assert {
-        p: p.read_bytes() for p in Path(load_env.save_dir).rglob("*") if p.is_file()
-    } == before_files
-    load_env.commit_to_memory.assert_not_called()
+    if restore_save:
+        await load_env.save_restore("public.json")
+    else:
+        await load_env.save(copy_name="public")
+    data = json.loads((Path(load_env.save_dir) / "public.json").read_text())
+    assert data["knowledge_eligibility"] == "perception"
+    assert data["format_version"] == 1
 
 
 async def test_restore_entry_point_retains_legacy_eligibility(load_env, monkeypatch):
@@ -439,3 +409,36 @@ async def test_restore_entry_point_retains_legacy_eligibility(load_env, monkeypa
     restored = json.loads((Path(load_env.save_dir) / "restored.json").read_text())
     assert restored["format_version"] == 1
     assert restored["knowledge_eligibility"] == "legacy"
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+async def test_creation_opt_in_round_trip(load_env, enabled):
+    data = new_scene(SceneInitialization(character_knowledge=enabled))
+    assert "character_knowledge" not in data
+    await load_scene_from_data(load_env, data, name="choice.json")
+    assert character_knowledge_enabled(load_env) is enabled
+    await load_env.save()
+    saved = json.loads((Path(load_env.save_dir) / "choice.json").read_text())
+    await load_scene_from_data(load_env, saved)
+    assert character_knowledge_enabled(load_env) is enabled
+
+
+def test_creation_payload_cannot_supply_history_or_relabel_legacy():
+    payload = SceneInitialization(
+        character_knowledge=True, history=["old"], knowledge_eligibility="legacy"
+    )
+    data = new_scene(payload)
+    assert data["history"] == []
+    assert data["knowledge_eligibility"] == "perception"
+
+
+async def test_new_story_option_cannot_convert_loaded_legacy_file(load_env, tmp_path):
+    path = tmp_path / "old.json"
+    path.write_text(json.dumps(fixture_data()))
+    await load_scene(
+        load_env,
+        str(path),
+        scene_initialization=SceneInitialization(character_knowledge=True),
+    )
+    assert load_env.knowledge_eligibility == "legacy"
+    assert not character_knowledge_enabled(load_env)

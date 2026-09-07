@@ -177,9 +177,7 @@ def _validate_audience(scene, audience):
 
 def _require_enabled(scene):
     if not character_knowledge_enabled(scene):
-        raise ValueError(
-            "Perspective operations require the character-knowledge development gate"
-        )
+        raise ValueError("Perspective operations require perception mode")
 
 
 def _acquire(scene):

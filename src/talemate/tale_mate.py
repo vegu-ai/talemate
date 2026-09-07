@@ -67,7 +67,6 @@ from talemate.knowledge.perspectives import (
 from talemate.knowledge.mode import (
     KnowledgeEligibility,
     character_knowledge_enabled,
-    require_character_knowledge_support,
 )
 from talemate.scene.format import (
     CURRENT_SCENE_FORMAT_VERSION,
@@ -1509,6 +1508,7 @@ class Scene(Emitter):
                 "agent_state": self.agent_state,
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
                 "experimental": self.experimental,
+                "knowledge_eligibility": self.knowledge_eligibility,
                 "immutable_save": self.immutable_save,
                 "description": self.description,
                 "intro": self.intro,
@@ -2004,8 +2004,6 @@ class Scene(Emitter):
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
 
-        require_character_knowledge_support(self)
-
         if self.immutable_save and not save_as and not force:
             save_as = True
 
@@ -2083,7 +2081,6 @@ class Scene(Emitter):
         memory_sesion_id will be randomized
         """
 
-        require_character_knowledge_support(self)
         serialized = self.serialize
         serialized["immutable_save"] = True
         serialized["memory_session_id"] = str(uuid.uuid4())[:10]

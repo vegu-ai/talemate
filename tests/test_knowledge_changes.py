@@ -358,7 +358,6 @@ def test_disclosure_notification_labels_only_selected_text(
 ):
     from talemate.knowledge.disclosures import grant_disclosure
 
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     scene.knowledge_eligibility = "perception"
     scene.character_data["Bob"] = Character(name="Bob")
     scene.world_state.manual_context["mixed"] = ManualContext(

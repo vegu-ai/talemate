@@ -287,7 +287,7 @@ async def test_legacy_uses_reader_fields_and_has_no_audience_context(
     prepared, monkeypatch
 ):
     scene, _, request, _ = prepared
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "0")
+    scene.knowledge_eligibility = "legacy"
     await apply(prepared)
     assert request.call_args.kwargs["vars"]["snapshot_audience_context"] is None
     assert SECRET in render(scene, "Alice")

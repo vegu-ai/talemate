@@ -1,6 +1,6 @@
 # Audience-targeted snapshots
 
-K11 adds audience replacements to the existing world-state snapshot request. It is active only when `character_knowledge_enabled(scene)` is true: the internal environment gate and the scene's perception eligibility must both allow it. Legacy scenes keep the existing request shape and rendering. There is no new public setting or additional awareness request.
+K11 adds audience replacements to the existing world-state snapshot request. It is active only when `character_knowledge_enabled(scene)` is true: the scene has opted into character perspectives. Legacy scenes keep the existing request shape and rendering. The scene creation choice activates the integrated mode; snapshot generation adds no separate awareness request.
 
 ## Generation and evidence
 

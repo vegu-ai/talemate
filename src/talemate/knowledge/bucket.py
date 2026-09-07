@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Literal
 
 import pydantic
 
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.schema import EntryVisibility
 
 if TYPE_CHECKING:
@@ -161,6 +162,8 @@ class KnowledgeIndex:
         grants: set[tuple[str, str]] = set()
         revokes: set[tuple[str, str]] = set()
         for edge in scene.world_state.knowledge:
+            if edge.kind == "revoke" and character_knowledge_enabled(scene):
+                continue
             bucket = grants if edge.kind == "grant" else revokes
             bucket.add((edge.character, edge.target))
         return cls(grants, revokes)

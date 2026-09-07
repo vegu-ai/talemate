@@ -66,6 +66,14 @@
           </v-col>
         </v-row>
 
+        <v-checkbox
+          v-model="characterKnowledge"
+          label="Character perspectives"
+          color="primary"
+          hint="Opt in for this new story. Adds a Summarizer analysis after each passage and changed tracker answer, plus audience summaries and facts. Failed analysis pauses character generation for retry."
+          persistent-hint
+        />
+        <p class="text-body-small mt-2">Choose before play; existing stories cannot be converted. Keep secrets out of the shared scene description and story intention.</p>
         <v-divider class="mt-4 mb-4"></v-divider>
 
         <v-row>
@@ -106,6 +114,7 @@ export default {
   data() {
     return {
       sceneName: '',
+      characterKnowledge: false,
       assistWithSetup: false,
       selectedWritingStyle: null,
       selectedDirectorPersona: null,
@@ -115,6 +124,7 @@ export default {
     modelValue(val) {
       if (val) {
         this.sceneName = '';
+        this.characterKnowledge = false;
         this.assistWithSetup = false;
         this.selectedWritingStyle = null;
         this.selectedDirectorPersona = null;
@@ -153,6 +163,7 @@ export default {
         writingStyle: this.selectedWritingStyle || null,
         directorPersona: this.selectedDirectorPersona || null,
         assistWithSetup: this.assistWithSetup,
+        characterKnowledge: this.characterKnowledge,
       });
       this.$emit('update:modelValue', false);
     },

@@ -804,6 +804,7 @@ class WorldStateManager:
             edge
             for edge in self.world_state.knowledge
             if edge.character == character_name
+            and not (edge.kind == "revoke" and character_knowledge_enabled(self.scene))
         ]
         return CharacterKnowledge(
             name=character_name,
@@ -830,6 +831,10 @@ class WorldStateManager:
 
     async def set_knowledge_edge(self, edge: KnowledgeEdge) -> KnowledgeEdge:
         """Upsert by id; a new edge takes the scene time."""
+        if edge.kind == "revoke" and character_knowledge_enabled(self.scene):
+            raise ValueError(
+                "Revokes are unavailable in perception mode; knowledge cannot be erased."
+            )
         if edge.ts is None:
             edge.ts = self.scene.ts
         previous = list(self.world_state.knowledge)

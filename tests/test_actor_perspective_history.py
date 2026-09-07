@@ -23,7 +23,6 @@ READER = "Alice: The sapphire is hidden in her boot. She says the rain has stopp
 
 @pytest.fixture
 def cast(scene, monkeypatch):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     scene.knowledge_eligibility = "perception"
     conversation = get_agent("conversation")
     for name in ("Alice", "Bob", "Cara"):

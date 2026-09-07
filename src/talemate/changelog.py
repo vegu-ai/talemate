@@ -82,7 +82,6 @@ from talemate.scene.format import (
     normalize_scene_format,
     read_scene_format,
 )
-from talemate.knowledge.mode import require_character_knowledge_support
 from talemate.path import SCENES_DIR
 from talemate.util.data import coerce_forced_list
 from talemate.util.time import migrate_scene_time
@@ -1153,8 +1152,7 @@ async def write_reconstructed_scene(
         else await reconstruct_scene_data(scene, to_rev=to_rev)
     )
 
-    metadata = read_scene_format(reconstructed)
-    require_character_knowledge_support(metadata)
+    read_scene_format(reconstructed)
     if overrides and {"format_version", "knowledge_eligibility"}.intersection(
         overrides
     ):

@@ -1,10 +1,9 @@
 # Character evidence in guidance and analysis
 
-In internally enabled perception scenes, actor guidance and conversation
+In opted-in perception scenes, actor guidance and conversation
 analysis use the guided character's projected history, disclosures, authored entries
 allowed by visibility, and last-known snapshot. These paths use `character_knowledge_enabled(scene)`; legacy
-scenes retain their existing prompts and cache behavior. Public activation is a later
-step.
+scenes retain their existing prompts and cache behavior.
 
 The generating prompts instruct the model to preserve who claimed what, contradictory testimony,
 uncertainty and established beliefs. Author goals are explicitly separate from evidence:

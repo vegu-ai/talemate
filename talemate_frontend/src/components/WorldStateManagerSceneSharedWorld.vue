@@ -86,6 +86,7 @@
                 Create New Scene
             </v-card-title>
             <v-card-text>
+                <p class="mb-4">Character knowledge: {{ scene?.data?.knowledge_eligibility === 'perception' ? 'Character perspectives' : 'Legacy' }}. The new scene keeps the current story's mode.</p>
                 <v-alert v-if="!scene?.data?.saved && !creatingNewScene" color="muted" variant="text" density="compact" class="mb-4">
                     <template v-slot:prepend>
                         <v-icon color="warning">mdi-alert-circle-outline</v-icon>
@@ -313,6 +314,7 @@ export default {
             }
             
             const scene_initialization = {
+                character_knowledge: currentScene.knowledge_eligibility === 'perception',
                 content_classification: currentScene.context || null,
                 agent_persona_templates: currentScene.agent_persona_templates || null,
                 writing_style_template: currentScene.writing_style_template || null,
@@ -432,4 +434,3 @@ export default {
     }
 }
 </script>
-

@@ -1,6 +1,6 @@
 # Reinforcement and investigation perspectives
 
-In internally enabled perception scenes, reinforcements and context investigations use the same summarizer-owned analysis as character and narrator passages. This is the K10 integration; the shared `character_knowledge_enabled(scene)` gate controls it. Legacy scenes retain their existing behavior and request counts.
+In opted-in perception scenes, reinforcements and context investigations use the same summarizer-owned analysis as character and narrator passages. This is the K10 integration; the shared `character_knowledge_enabled(scene)` gate controls it. Legacy scenes retain their existing behavior and request counts.
 
 ## One source, one analysis
 

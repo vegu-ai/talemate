@@ -250,7 +250,12 @@ def entry_knowledge(scene: "Scene", entry: "str | ContextIDItem") -> EntryKnowle
         entry_id = entry.knowledge_id or ""
     if item is None:
         return EntryKnowledge(id=entry_id, kind="unknown")
-    edges = [e for e in scene.world_state.knowledge if e.target == item.id]
+    edges = [
+        e
+        for e in scene.world_state.knowledge
+        if e.target == item.id
+        and not (e.kind == "revoke" and character_knowledge_enabled(scene))
+    ]
     return EntryKnowledge(
         id=item.id,
         kind=item.kind,
@@ -287,6 +292,10 @@ def set_edge(
     given, except that a character description paragraph id folds onto the
     description entry.
     """
+    if edge.kind == "revoke" and character_knowledge_enabled(scene):
+        raise ValueError(
+            "Revokes are unavailable in perception mode; knowledge cannot be erased."
+        )
     if item is not None:
         edge.target = item.knowledge_id
     else:
@@ -368,8 +377,9 @@ def character_knowledge_report(scene: "Scene", name: str) -> str:
     revokes = edge_lines("revoke")
     lines.append("Grants:" if grants else "Grants: none")
     lines += grants
-    lines.append("Revokes:" if revokes else "Revokes: none")
-    lines += revokes
+    if not character_knowledge_enabled(scene):
+        lines.append("Revokes:" if revokes else "Revokes: none")
+        lines += revokes
     lines.append(
         f"Restricted entries {name} can see:"
         if restricted
@@ -378,7 +388,7 @@ def character_knowledge_report(scene: "Scene", name: str) -> str:
     lines += restricted
     rows = coverage(scene, name)
     if rows:
-        lines.append("Topic coverage (known / total facts):")
+        lines.append("Topic coverage (accessible / total recorded facts):")
         lines += [f"- {row.name}: {row.known} / {row.total}" for row in rows]
     awareness = awareness_line(scene, name)
     if awareness:

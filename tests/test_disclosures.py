@@ -43,7 +43,6 @@ def append(scene, text="The rain stops."):
 
 @pytest.fixture
 def disclosure_scene(scene, monkeypatch):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     scene.knowledge_eligibility = "perception"
     scene.history = []
     scene.archived_history = []

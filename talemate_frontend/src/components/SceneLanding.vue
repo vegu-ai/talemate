@@ -163,6 +163,7 @@ export default {
                 file_path: "$NEW_SCENE$",
                 scene_initialization: {
                     project_name: payload.sceneName || null,
+                    character_knowledge: payload.characterKnowledge === true,
                     writing_style_template: payload.writingStyle || null,
                     agent_persona_templates: { director: payload.directorPersona || null },
                 },

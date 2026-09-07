@@ -320,6 +320,16 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         return bool(self.resolve_config("retrieval", "entity_lookup"))
 
     @property
+    def sanitized_action_config(self):
+        config = super().sanitized_action_config
+        if (
+            character_knowledge_enabled(getattr(self, "scene", None))
+            and "retrieval" in config
+        ):
+            config["retrieval"]["config"].pop("similarity_gate", None)
+        return config
+
+    @property
     def retrieval_similarity_gate(self) -> bool:
         return bool(self.resolve_config("retrieval", "similarity_gate"))
 

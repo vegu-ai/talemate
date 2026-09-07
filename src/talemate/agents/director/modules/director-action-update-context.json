@@ -659,7 +659,7 @@
       "title": "Jinja2 Format",
       "id": "b62ffa05-640b-4de1-a71f-fa8b265a80e3",
       "properties": {
-        "template": "Analyze the instruction and route it to the appropriate function(s).\n\nYour only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\nChanges to who knows an entry (its Known by visibility, or a character's grant or revoke of an entry) are applied here directly with `set_known_by`, `grant_knowledge` and `revoke_knowledge`. Do NOT route them to the other functions.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nYou MUST pass along this context ID in your instructions.\n{% if target.context_id.context_type in context_id_types and target.context_id.__str__() not in allowed_for_direct_update -%}\nYOU MUST NOT USE THE `direct_context_update` FUNCTION HERE.\n{%- endif %}\n{% endif %}\n\nINSTRUCTIONS:\n```\n{{ instructions }}\n```"
+        "template": "Analyze the instruction and route it to the appropriate function(s).\n\nYour only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if character_knowledge_enabled(scene) %}\nUse `set_known_by` for authored visibility and `grant_knowledge` for an explicit disclosure. Revocation and forgetting are unavailable. Do not route a revoke request to another function or edit history to simulate it.\n{% else %}\nChanges to who knows an entry (its Known by visibility, or a character's grant or revoke of an entry) are applied here directly with `set_known_by`, `grant_knowledge` and `revoke_knowledge`. Do NOT route them to the other functions.\n{% endif %}\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nYou MUST pass along this context ID in your instructions.\n{% if target.context_id.context_type in context_id_types and target.context_id.__str__() not in allowed_for_direct_update -%}\nYOU MUST NOT USE THE `direct_context_update` FUNCTION HERE.\n{%- endif %}\n{% endif %}\n\nINSTRUCTIONS:\n```\n{{ instructions }}\n```"
       },
       "x": 675,
       "y": 496,
@@ -683,6 +683,10 @@
         },
         {
           "name": "item3",
+          "type": "*"
+        },
+        {
+          "name": "item4",
           "type": "*"
         }
       ],
@@ -1513,7 +1517,7 @@
       "title": "AI Function Callback Metadata",
       "id": "521d4926-9bc8-492b-8377-99ba3813dd7b",
       "properties": {
-        "instructions": "Set the Known by visibility of a character sheet entry (description, attribute, detail) or a world entry: common lore for everyone, private to its owner, or known only to specific characters. It cannot be used on history entries; use `grant_knowledge` / `revoke_knowledge` for those.",
+        "instructions": "Set the Known by visibility of a character sheet entry (description, attribute, detail) or a world entry: common lore for everyone, private to its owner, or known only to specific characters. It cannot be used on history entries; use the available knowledge callbacks for those. Visibility changes do not erase acquired disclosures.",
         "examples": [
           {
             "context_id": "world_entry.manual:Hidden Door",
@@ -2102,7 +2106,7 @@
       "height": 140,
       "collapsed": false,
       "inherited": false,
-      "registry": "data/ListCollector",
+      "registry": "knowledge/KnowledgeCallbacks",
       "dynamic_inputs": [
         {
           "name": "item0",
@@ -2359,6 +2363,18 @@
       "inherited": false,
       "registry": "focal/Argument",
       "base_type": "core/Node"
+    },
+    "4a8f086e-a1ef-46e1-8c56-470065a59489": {
+      "title": "Get Scene State",
+      "id": "4a8f086e-a1ef-46e1-8c56-470065a59489",
+      "properties": {},
+      "x": 400,
+      "y": 1100,
+      "width": 210,
+      "height": 170,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetSceneState"
     }
   },
   "edges": {
@@ -2781,6 +2797,9 @@
     "7dba269e-1f5c-4bc2-ac0a-2128d8b63021.value": [
       "6e554977-b152-45b8-949c-1f1feea22a95.whole_entry",
       "00f9caa5-c93e-48b1-967c-56025f02d647.item4"
+    ],
+    "4a8f086e-a1ef-46e1-8c56-470065a59489.scene": [
+      "b62ffa05-640b-4de1-a71f-fa8b265a80e3.item4"
     ]
   },
   "groups": [

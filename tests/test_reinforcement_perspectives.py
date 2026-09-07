@@ -246,7 +246,7 @@ async def test_legacy_reinforcement_has_no_perception_request_or_serialized_sour
     setup, monkeypatch, insert, character
 ):
     scene, summarizer, request = setup
-    monkeypatch.delenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE")
+    scene.knowledge_eligibility = "legacy"
     finalize = AsyncMock()
     monkeypatch.setattr(summarizer, "finalize_perceptions", finalize)
     reinforcement = await apply(scene, request, insert=insert, character=character)

@@ -102,9 +102,9 @@ You will be taken to the world editor suggestions tab where you can view the pro
 <!--- --8<-- [end:character_change_proposals] -->
 
 <!-- --8<-- [start:character_evidence_guidance] -->
-## Development-mode character evidence
+## Character evidence in perception scenes
 
-In internally enabled perception scenes, actor guidance and conversation analysis use
+In opted-in perception scenes, actor guidance and conversation analysis use
 the character’s stored evidence and last-known context. Cached advice is reused only
 for the same audience and unchanged evidence. Reader planning remains available,
 but its advice must not assume that characters know private reader information.

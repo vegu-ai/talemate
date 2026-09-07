@@ -115,7 +115,7 @@ class CharacterKnowledgeMixin:
             can_be_disabled=True,
             icon="mdi-head-lightbulb-outline",
             label="Character Knowledge",
-            description="Build the prompt from the speaking character's point of view: drop what they were not present for, retrieve only what they know, and tell the model what they do not know. The items marked +1 request are off by default.",
+            description="Legacy scenes use the presence filter, absence block, awareness line and learned-this-turn ledger below. Character perspectives is a separate choice when creating a new story; it replaces those controls and always scopes history and retrieval. The optional AI memory pass works in either mode.",
             config={
                 "perspective_filter": AgentActionConfig(
                     type="bool",
@@ -179,6 +179,24 @@ class CharacterKnowledgeMixin:
                 ),
             },
         )
+
+    @property
+    def sanitized_action_config(self):
+        config = super().sanitized_action_config
+        if (
+            perception_mode_enabled(getattr(self, "scene", None))
+            and "character_knowledge" in config
+        ):
+            action = config["character_knowledge"]
+            action["description"] = (
+                "Character perspectives is active for this story. History and retrieval always use character evidence; the optional AI memory pass is configured below."
+            )
+            action["config"] = {
+                key: value
+                for key, value in action["config"].items()
+                if key == "memory_pass"
+            }
+        return config
 
     @property
     def character_knowledge_enabled(self) -> bool:

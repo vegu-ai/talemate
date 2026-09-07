@@ -33,11 +33,6 @@ FIXTURE = Path(__file__).parent / "data/knowledge_perspectives/scene.json"
 load_env = test_scene_format.load_env
 
 
-@pytest.fixture(autouse=True)
-def clean_env(monkeypatch):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
-
-
 @pytest.fixture
 def scene_data():
     return json.loads(FIXTURE.read_text())
@@ -104,18 +99,14 @@ def test_explicit_omission_differs_from_unavailable(scene, name, status):
     assert result.text is None
 
 
-@pytest.mark.parametrize("eligibility,gate", [("legacy", "1"), ("perception", "0")])
-def test_disabled_mode_does_not_create_or_select_views(
-    scene, monkeypatch, eligibility, gate
-):
-    scene.knowledge_eligibility = eligibility
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", gate)
+def test_legacy_mode_does_not_create_or_select_views(scene):
+    scene.knowledge_eligibility = "legacy"
     assert (
         select_character_view(scene, message_ref(scene), "Alice").status
         == "unavailable"
     )
     before = scene.json
-    with pytest.raises(ValueError, match="development gate"):
+    with pytest.raises(ValueError, match="perception mode"):
         add_disclosure(scene, "Text", ["Alice"])
     assert scene.json == before
 
@@ -835,16 +826,13 @@ def test_view_revision_withholds_stale_saved_dependency_without_notification(sce
         add_disclosure(scene, "Claim", ["Alice"], provenance=[evidence])
 
 
-@pytest.mark.parametrize(
-    "eligibility,gate", [("legacy", "0"), ("legacy", "1"), ("perception", "0")]
-)
+@pytest.mark.parametrize("eligibility", ["legacy", "perception"])
 @pytest.mark.parametrize("new_name", ["Bob", "bob"])
-def test_rename_collision_preserves_both_characters_outside_mode(
-    scene, monkeypatch, eligibility, gate, new_name
+def test_rename_collision_preserves_both_characters_in_both_modes(
+    scene, eligibility, new_name
 ):
     scene.knowledge_eligibility = eligibility
     scene.knowledge = None
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", gate)
     alice, bob = scene.character_data["Alice"], scene.character_data["Bob"]
     alice.description = "Alice's description"
     bob.description = "Bob's description"

@@ -459,12 +459,7 @@ class Agent(ABC):
             "requires_llm_client": cls.requires_llm_client,
             "scene_overrides": cls._scene_overrides_payload(agent),
         }
-        actions = getattr(agent, "actions", None)
-
-        if actions:
-            config_options["actions"] = {k: v.model_dump() for k, v in actions.items()}
-        else:
-            config_options["actions"] = {}
+        config_options["actions"] = agent.sanitized_action_config if agent else {}
 
         return config_options
 

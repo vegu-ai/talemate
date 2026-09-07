@@ -61,7 +61,7 @@
         </v-card>
 
         <v-alert v-if="factsWarning" type="warning" variant="tonal" class="mb-3">{{ factsWarning }}</v-alert>
-        <p v-if="perceptionMode && edges.length" class="mb-2">Entry grants and revokes still affect supplemental knowledge routes. Removing an edge does not remove a disclosure.</p>
+        <p v-if="perceptionMode && edges.length" class="mb-2">Removing a supplemental grant does not remove a disclosure.</p>
         <v-list v-if="edges.length" density="compact">
             <v-list-item v-for="edge in edges" :key="edge.id">
                 <template v-slot:prepend>
@@ -85,14 +85,14 @@
         </v-alert>
 
         <v-card v-if="coverage.length" variant="tonal" class="mt-4">
-            <v-card-title class="text-body-large">Coverage</v-card-title>
-            <v-card-subtitle v-if="awareness">{{ awareness }}.</v-card-subtitle>
+            <v-card-title class="text-body-large">Recorded-fact access</v-card-title>
+            <v-card-subtitle v-if="!perceptionMode && awareness">{{ awareness }}.</v-card-subtitle>
             <v-card-text>
                 <v-table density="compact" class="coverage-table">
                     <thead>
                         <tr>
                             <th>Topic</th>
-                            <th class="text-right">Known</th>
+                            <th class="text-right">Accessible</th>
                             <th class="text-right">Total</th>
                             <th style="width: 40%"></th>
                         </tr>
@@ -104,7 +104,7 @@
                             <td class="text-right">{{ row.total }}</td>
                             <td>
                                 <v-progress-linear :model-value="row.total ? (row.known / row.total) * 100 : 0" color="primary" height="6" rounded>
-                                    <v-tooltip activator="parent" location="top">{{ row.known }} of {{ row.total }} facts known</v-tooltip>
+                                    <v-tooltip activator="parent" location="top">{{ row.known }} of {{ row.total }} recorded facts accessible; not a measure of understanding</v-tooltip>
                                 </v-progress-linear>
                             </td>
                         </tr>

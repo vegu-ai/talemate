@@ -28,7 +28,8 @@ from talemate.knowledge.perspectives import (
     set_source_perspectives,
     source_reference,
 )
-from talemate.knowledge.schema import Fact, KnowledgeEdge, ParsedFact
+from talemate.knowledge.schema import Fact, KnowledgeEdge, ParsedFact, Topic
+from talemate.knowledge.topics import coverage, awareness_line
 from talemate.knowledge.supported_facts import replace_source_facts
 from talemate.load import load_scene_from_data
 from talemate.prompts import Prompt
@@ -38,7 +39,6 @@ from talemate.tale_mate import Actor, Scene
 
 @pytest.fixture
 def supported_scene(scene, monkeypatch):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     scene.knowledge_eligibility = "perception"
     scene.history = []
     scene.archived_history = []
@@ -1499,3 +1499,46 @@ async def test_fact_retry_cannot_widen_when_view_changes_during_dialog(
     bob = select_character_view(scene, bob_source, "Bob")
     assert bob.status == "ready" and bob.text == "Bob sees the key."
     assert scene.archived_history[0]["facts_status"] == "failed"
+
+
+async def test_topic_coverage_measures_supported_access_and_staleness(supported_scene):
+    scene, _, memory = supported_scene
+    memory.actions["topics"].enabled = True
+    message, source = passage(
+        scene, "The key is in the drawer.", audience=("Alice", "Bob")
+    )
+    await store(scene, source, ("Alice", "Bob"), "The key is in the drawer.")
+    fact = next(iter(scene.world_state.facts.values()))
+    fact.present = []
+    scene.world_state.topics = {"T1": Topic(id="T1", name="Key", fact_ids=[fact.id])}
+    assert coverage(scene, "Bob")[0].known == 1
+    assert awareness_line(scene, "Bob") is None
+    scene.edit_message(message.id, "The key was moved.")
+    assert coverage(scene, "Bob") == []
+    scene.world_state.facts[fact.id] = fact
+    scene.world_state.topics = {"T1": Topic(id="T1", name="Key", fact_ids=[fact.id])}
+    assert coverage(scene, "Bob")[0].known == 0
+    assert coverage(scene, "Bob")[0].total == 1
+
+
+async def test_topic_coverage_tolerates_removed_viewer_without_legacy_index(
+    supported_scene, monkeypatch
+):
+    scene, _, memory = supported_scene
+    memory.actions["topics"].enabled = True
+    _, source = passage(scene, "The key is in the drawer.", audience=("Alice", "Bob"))
+    await store(scene, source, ("Alice", "Bob"), "The key is in the drawer.")
+    fact = next(iter(scene.world_state.facts.values()))
+    scene.world_state.topics = {"T1": Topic(id="T1", name="Key", fact_ids=[fact.id])}
+
+    def unexpected_index(*args):
+        raise AssertionError("Perception coverage must not build the legacy index")
+
+    monkeypatch.setattr(
+        "talemate.knowledge.topics.KnowledgeIndex.from_scene", unexpected_index
+    )
+    assert coverage(scene, "Bob")[0].known == 1
+    scene.character_data.pop("Bob")
+    assert coverage(scene, "Bob") == []
+    report = await scene.world_state_manager.get_character_knowledge("Bob")
+    assert report.coverage == []

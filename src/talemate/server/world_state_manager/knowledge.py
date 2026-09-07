@@ -118,7 +118,13 @@ class KnowledgeMixin:
 
     async def handle_set_knowledge_edge(self, data):
         payload = KnowledgeEdgePayload(**data)
-        edge = await self.world_state_manager.set_knowledge_edge(payload.edge)
+        try:
+            edge = await self.world_state_manager.set_knowledge_edge(payload.edge)
+        except ValueError as exc:
+            await self.signal_operation_failed(
+                str(exc), failed_action="set_knowledge_edge"
+            )
+            return
         await self._send_character_knowledge(edge.character)
         await self.signal_operation_done()
 

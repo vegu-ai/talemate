@@ -59,7 +59,6 @@ def chroma_clients():
 
 @pytest.fixture
 async def indexed_scene(scene, monkeypatch, tmp_path, chroma_clients):
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
     scene.knowledge_eligibility = "perception"
     scene.history = []
     scene.archived_history = []
@@ -579,7 +578,7 @@ async def test_reconcile_marks_preexisting_rows_without_losing_metadata(
     state = memory._audience_state(scene)
     if state.task:
         await state.task
-    monkeypatch.delenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE")
+    scene.knowledge_eligibility = "legacy"
     metadata = {
         "character": "Marie",
         "typ": "base_attribute",
@@ -592,7 +591,7 @@ async def test_reconcile_marks_preexisting_rows_without_losing_metadata(
     )
     original = memory.db.get(ids=["old-sheet"], include=["metadatas"])["metadatas"][0]
     assert "knowledge_index" not in original
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
+    scene.knowledge_eligibility = "perception"
     await memory.rebuild_audience_index()
     marked = memory.db.get(ids=["old-sheet"], include=["metadatas"])["metadatas"][0]
     assert marked == {**original, "knowledge_index": False}
@@ -792,7 +791,7 @@ async def test_author_reads_unmarked_rows_when_first_reconcile_fails(
     memory.db = chroma_clients(path=str(tmp_path / "pre-gate")).create_collection(
         "pre-gate-memory", embedding_function=FixedEmbedding()
     )
-    monkeypatch.delenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE")
+    scene.knowledge_eligibility = "legacy"
     metadata = {"character": "Marie", "typ": "base_attribute", "attr": "occupation"}
     await memory.add_many(
         [{"id": "old-sheet", "text": "Marie is a sailor.", "meta": metadata}]
@@ -810,7 +809,7 @@ async def test_author_reads_unmarked_rows_when_first_reconcile_fails(
         raise RuntimeError("Initial marking failed")
 
     monkeypatch.setattr(type(memory.db), "update", fail)
-    monkeypatch.setenv("TALEMATE_DEV_CHARACTER_KNOWLEDGE", "1")
+    scene.knowledge_eligibility = "perception"
     assert await contents(memory, viewer=None) == {"Marie is a sailor."}
     assert set(await memory.get_documents_by_meta(metadata)) == {"old-sheet"}
     assert (

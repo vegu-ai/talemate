@@ -3,15 +3,22 @@ The knowledge nodes the director's context tools call: EntryKnowledge,
 SetEntryVisibility, CharacterKnowledge and the grant / revoke edge nodes.
 """
 
+import json
+from pathlib import Path
+from types import SimpleNamespace
+
 import pytest
 
-from _node_test_helpers import run_node
+from _node_test_helpers import run_node, build_graph, execute_graph
 from conftest import MockScene, bootstrap_scene
 from talemate.character import Character
 from talemate.game.engine.context_id import context_id_item_from_string
 from talemate.game.engine.nodes.core import InputValueError
+from talemate.game.engine.nodes.scene import GetSceneState
+from talemate.game.engine.nodes.string import Jinja2Format
 from talemate.game.engine.nodes.knowledge import (
     CharacterKnowledge,
+    KnowledgeCallbacks,
     EntryKnowledgeNode,
     GrantKnowledge,
     RevokeKnowledge,
@@ -533,3 +540,90 @@ class TestAttributeNamedLikeAParagraph:
             "Bob.description.3",
             "Bob.description",
         ]
+
+
+async def test_revoke_node_rejects_perception_scene(scene):
+    scene.knowledge_eligibility = "perception"
+    with pytest.raises(InputValueError, match="Revokes are unavailable"):
+        await run_node(
+            RevokeKnowledge(),
+            scene=scene,
+            inputs={"character": "Alice", "target": "Hidden Door"},
+        )
+    assert scene.world_state.knowledge == []
+
+
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
+async def test_director_callback_collection_omits_only_new_mode_revoke(scene, mode):
+    scene.knowledge_eligibility = mode
+    module = json.loads(
+        Path(
+            "src/talemate/agents/director/modules/director-action-update-context.json"
+        ).read_text()
+    )
+    node = module["nodes"]["1dc17802-3dd3-4a37-b4e8-6c123af30edc"]
+    assert node["registry"] == "knowledge/KnowledgeCallbacks"
+    callbacks = [
+        SimpleNamespace(name=name)
+        for name in ("set_known_by", "grant_knowledge", "revoke_knowledge")
+    ]
+    out = await run_node(KnowledgeCallbacks(), scene=scene, inputs={"list": callbacks})
+    assert [item.name for item in out["list"]] == [
+        item.name
+        for item in callbacks
+        if mode == "legacy" or item.name != "revoke_knowledge"
+    ]
+
+
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
+async def test_update_context_routing_template_renders_with_shipped_scene_connection(
+    scene, mode
+):
+    scene.knowledge_eligibility = mode
+    module = json.loads(
+        Path(
+            "src/talemate/agents/director/modules/director-action-update-context.json"
+        ).read_text()
+    )
+    target_id = "b62ffa05-640b-4de1-a71f-fa8b265a80e3"
+    target = module["nodes"][target_id]
+    producers = [
+        (source, destination)
+        for source, destinations in module["edges"].items()
+        for destination in destinations
+        if destination.startswith(target_id + ".")
+        and module["nodes"][source.split(".")[0]]["registry"] == "scene/GetSceneState"
+    ]
+    assert len(producers) == 1
+    source, destination = producers[0]
+    producer = GetSceneState()
+    node = Jinja2Format()
+    node.dynamic_inputs = target["dynamic_inputs"]
+    node.setup()
+    node.set_property("template", target["properties"]["template"])
+    node.set_property(
+        "variables",
+        {
+            "instructions": "Give Alice knowledge of the hidden door.",
+            "context_id_items": [],
+            "context_id_types": [],
+            "allowed_for_direct_update": [],
+        },
+    )
+    graph = build_graph(producer, node)
+    graph.connect(
+        producer.get_output_socket(source.split(".")[1]),
+        node.get_input_socket(destination.split(".")[1]),
+    )
+    rendered = []
+
+    async def capture(state):
+        rendered.append(node.get_output_socket("result").value)
+
+    graph.callbacks.append(capture)
+    await execute_graph(scene, graph)
+    assert "Give Alice knowledge of the hidden door." in rendered[-1]
+    assert ("Revocation and forgetting are unavailable" in rendered[-1]) == (
+        mode == "perception"
+    )
+    assert ("`revoke_knowledge`" in rendered[-1]) == (mode == "legacy")

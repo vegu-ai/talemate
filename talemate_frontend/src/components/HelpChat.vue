@@ -1,7 +1,7 @@
 <template>
     <div class="help-chat-root">
 
-    <v-toolbar density="compact" flat color="mutedbg" class="chat-selector-toolbar">
+    <v-toolbar density="compact" flat color="transparent" class="chat-selector-toolbar">
         <v-select
             v-if="chatSelectItems.length > 0"
             :model-value="activeChatId"
@@ -41,7 +41,7 @@
         </v-btn>
     </v-toolbar>
 
-    <v-toolbar density="compact" flat color="mutedbg">
+    <v-toolbar density="compact" flat color="transparent">
         <v-toolbar-title class="text-title-small text-muted d-flex align-center" style="overflow: visible;">
             <v-tooltip v-if="activeChatId" :text="sceneAware ? 'The help chat can see your loaded scene. Click to make it unaware.' : 'The help chat cannot see your loaded scene. Click to make it aware.'" location="top" max-width="300">
                 <template v-slot:activator="{ props }">

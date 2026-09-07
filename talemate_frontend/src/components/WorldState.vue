@@ -99,6 +99,7 @@
 
                                 </template>
                             </v-tooltip>
+                            <CharacterKnowledgeHub v-if="row.active && !isPlaythroughActive()" :name="row.name" @open-knowledge="openWorldStateManager('characters', row.name, 'knowledge')" />
                             <v-tooltip v-if="row.active && !isPlaythroughActive()" :text="deactivateTooltip(row.name)">
                                 <template v-slot:activator="{ props }">
                                     <v-btn :disabled="busy" :aria-label="deactivateLabel(row.name)" size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="deactivateCharacter($event, row.name)" icon="mdi-exit-run"></v-btn>
@@ -178,6 +179,7 @@
                                 />
                             </Transition>
                             <v-spacer></v-spacer>
+                            <CharacterKnowledgeHub :name="name" variant="text" color="secondary" @open-knowledge="openWorldStateManager('characters', name, 'knowledge')" />
                             <v-tooltip :text="activateTooltip(name)">
                                 <template v-slot:activator="{ props }">
                                     <v-btn :disabled="busy" :aria-label="activateLabel(name)" size="x-small" color="secondary" v-bind="props" variant="text" density="comfortable" rounded="sm" @click.stop="activateCharacter($event, name)" icon="mdi-human-greeting"></v-btn>
@@ -301,6 +303,7 @@
 
 import WorldStateRefreshDialog from './WorldStateRefreshDialog.vue';
 import KnowledgeChangeMarker from './KnowledgeChangeMarker.vue';
+import CharacterKnowledgeHub from './CharacterKnowledgeHub.vue';
 import { createKnowledgeChanges } from '@/utils/knowledgeChanges';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import {
@@ -336,6 +339,7 @@ export default {
     components: {
         WorldStateRefreshDialog,
         KnowledgeChangeMarker,
+        CharacterKnowledgeHub,
     },
     mixins: [VisualAssetsMixin],
     data() {

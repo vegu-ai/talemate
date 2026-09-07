@@ -35,13 +35,19 @@ from talemate.knowledge.schema import (
     TopicCoverage,
     ReinforcementEntry,
     is_memory_attribute,
+    KnownFact,
 )
 from talemate.knowledge.changes import (
     edge_change,
     edge_changes_knowledge,
     emit_knowledge_changes,
 )
-from talemate.knowledge.topics import awareness_line, coverage
+from talemate.knowledge.topics import (
+    awareness_line,
+    coverage,
+    known_bucket,
+    known_facts,
+)
 from talemate.world_state import (
     ContextPin,
     ManualContext,
@@ -167,6 +173,8 @@ class CharacterKnowledge(pydantic.BaseModel):
     edges: list[KnowledgeEdge] = []
     targets: list[KnowledgeTarget] = []
     coverage: list[TopicCoverage] = []
+    known_facts: list[KnownFact] = []
+    known_facts_total: int = 0
     awareness: str | None = None
 
 
@@ -808,9 +816,13 @@ class WorldStateManager:
             if edge.character == character_name
             and not (edge.kind == "revoke" and character_knowledge_enabled(self.scene))
         ]
+        known = known_bucket(self.scene, character_name)
+        recent, total = known_facts(self.scene, character_name, known=known)
         return CharacterKnowledge(
             name=character_name,
             perception_mode=character_knowledge_enabled(self.scene),
+            known_facts=recent,
+            known_facts_total=total,
             disclosures=[
                 item
                 for item in self.scene.knowledge.disclosures
@@ -820,7 +832,7 @@ class WorldStateManager:
             else [],
             edges=edges,
             targets=self.knowledge_targets(),
-            coverage=coverage(self.scene, character_name),
+            coverage=coverage(self.scene, character_name, known=known),
             awareness=awareness_line(self.scene, character_name),
         )
 

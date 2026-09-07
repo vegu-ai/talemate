@@ -1036,6 +1036,33 @@ async def test_time_scope_flows_through_real_prompt_and_response(
 
 
 @pytest.mark.asyncio
+async def test_known_facts_carry_the_character_view_in_the_character_order(
+    supported_scene,
+):
+    from talemate.knowledge.topics import coverage, known_facts
+
+    scene, _, _ = supported_scene
+    _, first = passage(scene, "Alice has a key.", ts=1)
+    key = (await store(scene, first, ("Alice",), "Alice has a key."))[0]
+    _, second = passage(scene, "The lamp is lit.", audience=("Alice", "Bob"), ts=2)
+    lamp = (await store(scene, second, ("Alice", "Bob"), "The lamp is lit."))[0]
+    # the author's correction is not evidence Alice received
+    key.false = True
+    key.text = "AUTHOR: Alice never had a key."
+
+    recent, total = known_facts(scene, "Alice")
+    assert total == 2
+    assert [fact.id for fact in recent] == [lamp.id, key.id]
+    assert [fact.text for fact in recent] == ["The lamp is lit.", "Alice has a key."]
+    assert [fact.ts for fact in recent] == [2, 1]
+
+    recent, total = known_facts(scene, "Bob")
+    assert ([fact.id for fact in recent], total) == ([lamp.id], 1)
+    assert known_facts(scene, "Nobody") == ([], 0)
+    assert coverage(scene, "Nobody") == []
+
+
+@pytest.mark.asyncio
 async def test_global_false_current_state_keeps_author_semantics(supported_scene):
     scene, _, _ = supported_scene
     _, source = passage(scene, "Alice has a key.")
@@ -1535,7 +1562,7 @@ async def test_topic_coverage_tolerates_removed_viewer_without_legacy_index(
         raise AssertionError("Perception coverage must not build the legacy index")
 
     monkeypatch.setattr(
-        "talemate.knowledge.topics.KnowledgeIndex.from_scene", unexpected_index
+        "talemate.knowledge.graph.KnowledgeIndex.from_scene", unexpected_index
     )
     assert coverage(scene, "Bob")[0].known == 1
     scene.character_data.pop("Bob")

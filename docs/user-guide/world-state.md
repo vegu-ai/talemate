@@ -85,6 +85,54 @@ Ordinary messages, snapshot refreshes, loading a scene and playthrough do not tr
 dot. Regenerating or deleting old facts and removing existing knowledge edges stay silent.
 These notifications add no AI requests.
 
+### Knowledge hub
+
+Expand an active character and click the :material-head-lightbulb-outline: icon in its action
+row to open the **knowledge hub**, a menu that gathers what the system does for that character's
+knowledge. In the **Inactive** section, the same icon sits at the right edge of each character's
+row, beside the call-into-scene button.
+Background characters have no hub, since they are not characters yet. The menu stays open while
+you click inside it; press Escape or click elsewhere to close it. It adds no AI requests: it
+reads the current state and writes settings.
+
+![world state knowledge hub](/talemate/img/0.40.0/world-state-knowledge-hub-1.png)
+
+**What the character knows** lists the newest facts the character knows, as the character holds
+them (in a Character perspectives story that is their own view of a passage, not the author's
+record), each with its topic while [Topics](/talemate/user-guide/agents/memory/settings/#topics)
+is enabled, and a count of all the facts they know. It is followed by the newest of the
+character's **Disclosures** in a Character perspectives story or **Entry access rules**
+(Allow / Block) in a Standard story, again with the count. Both lists show at most five entries.
+**Open Knowledge tab** jumps to the character's
+[Knowledge tab](/talemate/user-guide/world-editor/knowledge/) in the World Editor, which holds
+the full lists and the known facts by topic table, and where you establish knowledge or adjust
+rules.
+
+**Story mode** shows the **Character perspectives** switch. It can be changed while the scene
+has no history and no archived history, exactly as in
+[Scene Settings](/talemate/user-guide/world-editor/scene/settings/); once history exists the
+switch is disabled and the reason is shown. Save the scene to keep a change.
+
+The menu header shows the story mode. **Thoroughness** starts with a summary line naming the
+options that add a request and are on ("No extra requests per line" when none is). Below it are the settings that shape
+knowledge keeping, grouped by agent, with the same labels, descriptions and cost notes as the
+agent settings:
+
+- Conversation → Character Knowledge: the group switch, Limit to character knowledge, Remind
+  about unknown facts, Topic knowledge overview, Refine memories with AI, Track learning from
+  dialogue
+- Summarizer → Summarization: Extract facts
+- Memory → Retrieval: Match known facts
+- Memory → Topics: the group switch
+
+A :material-plus-circle-outline: icon marks an option that adds a request; hover it to read the
+cost. The toggles write the same settings as the agent settings dialog, so both places stay in
+sync. When the loaded scene overrides a setting, the hub toggles the scene override and marks it
+**scene override**. Options that a Character perspectives story does not use are hidden, as they
+are in the agent settings. Click a group name to open its section in the agent settings.
+
+![knowledge hub in a perspectives story](/talemate/img/0.40.0/world-state-knowledge-hub-2.png)
+
 ### Who is in the scene
 
 An active character is one the story is happening to. It takes its turns, and it is aware of
@@ -122,6 +170,8 @@ Beneath the description there are additional shortcuts.
 :material-eye: **Look at** Will cause the [Narrator Agent](/talemate/user-guide/agents/narrator/) to describe the character.
 
 :material-book-open-page-variant: **Manage Character** will take you to the [character editor](/talemate/user-guide/world-editor/characters) for that character, where you can view and edit all of the character's details.
+
+:material-head-lightbulb-outline: **Knowledge** opens the [knowledge hub](#knowledge-hub) for that character.
 
 :material-exit-run: **Take out of the scene** removes an active character from the scene, as described in [Taking a character out of the scene](#taking-a-character-out-of-the-scene).
 

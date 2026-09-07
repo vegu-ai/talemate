@@ -1060,6 +1060,8 @@ export default {
       scene: () => this.scene,
       getClients: () => this.getClients(),
       getAgents: () => this.getAgents(),
+      toggleAgentAction: (agentName, actionName) => this.toggleAgentAction(agentName, actionName),
+      toggleAgentConfig: (agentName, actionName, configName) => this.toggleAgentConfig(agentName, actionName, configName),
       openAgentSettings: this.openAgentSettings,
       openClientSettings: this.openClientSettings,
       requestSceneAssets: (asset_ids) => this.requestSceneAssets(asset_ids),
@@ -1755,6 +1757,22 @@ export default {
         return [];
       }
       return this.$refs.aiAgent.state.agents;
+    },
+    // The agent drawer's quick-toggle chips are the one write path for a
+    // single agent setting; the World State knowledge hub goes through them.
+    toggleAgentAction(agentName, actionName) {
+      const agent = this.getAgents().find((candidate) => candidate.name === agentName);
+      const action = agent?.actions?.[actionName];
+      if (!action) return false;
+      this.$refs.aiAgent.toggleAction(agent, actionName, action);
+      return true;
+    },
+    toggleAgentConfig(agentName, actionName, configName) {
+      const agent = this.getAgents().find((candidate) => candidate.name === agentName);
+      const config = agent?.actions?.[actionName]?.config?.[configName];
+      if (!config) return false;
+      this.$refs.aiAgent.toggleSubConfig(agent, actionName, configName, config);
+      return true;
     },
     activeClientName() {
       if (!this.$refs.aiClient) {

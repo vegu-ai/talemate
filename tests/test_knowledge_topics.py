@@ -588,6 +588,67 @@ class TestManagerPayload:
         assert "awareness" in payload
 
 
+class TestKnownFacts:
+    def test_newest_known_facts_first_with_the_full_count(self, topical):
+        from talemate.knowledge.topics import known_facts
+
+        recent, total = known_facts(topical, "Edwin", limit=3)
+        assert [fact.id for fact in recent] == ["F5", "F4", "F3"]
+        assert [fact.topic for fact in recent] == ["sextant", "Sorena", "Sorena"]
+        assert total == 5
+        recent, total = known_facts(topical, "Mara")
+        assert [fact.id for fact in recent] == ["F12", "F11", "F10", "F9", "F8"]
+        assert total == 12
+
+    def test_a_limit_of_zero_lists_nothing_but_still_counts(self, topical):
+        from talemate.knowledge.topics import known_facts
+
+        assert known_facts(topical, "Edwin", limit=0) == ([], 5)
+
+    def test_the_list_survives_the_topics_switch_but_the_labels_follow_it(
+        self, topical
+    ):
+        from talemate.knowledge.topics import known_facts
+
+        get_agent("memory").actions["topics"].enabled = False
+        recent, total = known_facts(topical, "Edwin")
+        assert [fact.id for fact in recent] == ["F5", "F4", "F3", "F2", "F1"]
+        assert [fact.topic for fact in recent] == [None] * 5
+        assert total == 5
+
+    async def test_handler_payload_carries_the_capped_facts(self, topical):
+        from talemate.server.world_state_manager.knowledge import KnowledgeMixin
+
+        class Handler(KnowledgeMixin):
+            def __init__(self, scene):
+                self.scene = scene
+                self.sent = []
+                self.websocket_handler = type(
+                    "W", (), {"queue_put": lambda _self, m: self.sent.append(m)}
+                )()
+
+            @property
+            def world_state_manager(self):
+                from talemate.world_state.manager import WorldStateManager
+
+                return WorldStateManager(self.scene)
+
+        handler = Handler(topical)
+        with ActiveScene(topical):
+            await handler.handle_get_character_knowledge({"name": "Mara"})
+        payload = handler.sent[-1]
+        assert payload["action"] == "character_knowledge"
+        assert [fact["id"] for fact in payload["data"]["known_facts"]] == [
+            "F12",
+            "F11",
+            "F10",
+            "F9",
+            "F8",
+        ]
+        assert payload["data"]["known_facts"][0]["topic"] == "ledger"
+        assert payload["data"]["known_facts_total"] == 12
+
+
 class TestMutationPathsRecluster:
     async def test_delete_and_update_force_a_refresh(self, topical):
         from talemate.server.world_state_manager.knowledge import KnowledgeMixin

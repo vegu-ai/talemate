@@ -4,18 +4,18 @@
         <v-col cols="12">
             <v-form class="mt-4">
                 <v-switch
-                    :model-value="scene?.data?.knowledge_eligibility === 'perception'"
+                    :model-value="perspectives"
                     :disabled="!scene?.data?.can_change_knowledge_eligibility"
                     label="Character perspectives"
                     color="primary"
-                    :hint="scene?.data?.can_change_knowledge_eligibility ? 'Choose before play. Adds Summarizer analyses and audience-specific context. Save the scene to keep this choice. Switching off discards stored character perspectives and cannot be undone after the next save.' : 'This scene has history. Character perspectives cannot be changed.'"
+                    :hint="scene?.data?.can_change_knowledge_eligibility ? PERSPECTIVES_OPEN_HINT : PERSPECTIVES_LOCKED_HINT"
                     persistent-hint
                     class="mb-4"
                     @update:model-value="updateCharacterKnowledge"
                 />
                 <v-alert v-if="!scene?.data?.can_change_knowledge_eligibility" variant="tonal" class="mb-4" icon="mdi-head-lightbulb-outline">
-                    <strong>Character knowledge: {{ scene?.data?.knowledge_eligibility === 'perception' ? 'Character perspectives' : 'Standard' }}</strong>
-                    <p v-if="scene?.data?.knowledge_eligibility === 'perception'">Characters receive their own views of events and memories. Extra Summarizer requests track what they learn after passages and changed tracker answers. If analysis fails, character generation pauses: retry the failed request, or cancel, correct the source and retry generation. Saves and forks keep this mode.</p>
+                    <strong>Character knowledge: {{ perspectives ? 'Character perspectives' : 'Standard' }}</strong>
+                    <p v-if="perspectives">Characters receive their own views of events and memories. Extra Summarizer requests track what they learn after passages and changed tracker answers. If analysis fails, character generation pauses: retry the failed request, or cancel, correct the source and retry generation. Saves and forks keep this mode.</p>
                     <p v-else>Character knowledge follows where characters were present, what belongs to them, and what you share with them. Use the Conversation agent's Character Knowledge settings to adjust how this shapes replies. For separate character views of events, choose Character perspectives when creating a new story or importing a character card, or before a scene has history.</p>
                 </v-alert>
 
@@ -139,6 +139,7 @@
 <script>
 
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import { PERSPECTIVES_LOCKED_HINT, PERSPECTIVES_OPEN_HINT, buildSceneSettingsPayload, canChangePerspectives, perspectivesEnabled } from '@/utils/sceneSettings';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 export default {
@@ -174,6 +175,9 @@ export default {
         },
     },
     computed: {
+        perspectives() {
+            return perspectivesEnabled(this.scene?.data);
+        },
         writingStyleTemplates() {
             let templates = Object.values(this.templates.by_type.writing_style).map((template) => {
                 return {
@@ -255,6 +259,8 @@ export default {
     data() {
         return {
             MAX_CONTENT_WIDTH,
+            PERSPECTIVES_LOCKED_HINT,
+            PERSPECTIVES_OPEN_HINT,
             scene: null,
             contentContext: [],
         }
@@ -282,37 +288,20 @@ export default {
             }));
         },
         updateCharacterKnowledge(enabled) {
-            if (!this.scene?.data?.can_change_knowledge_eligibility) return;
+            if (!canChangePerspectives(this.scene?.data)) return;
             return this.update(enabled ? 'perception' : 'legacy');
         },
         update(knowledgeEligibility) {
-            return this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'update_scene_settings',
-                ...(knowledgeEligibility ? { knowledge_eligibility: knowledgeEligibility } : {}),
-                experimental: this.scene.data.experimental,
-                immutable_save: this.scene.data.immutable_save,
-                writing_style_template: this.scene.data.writing_style_template,
-                agent_persona_templates: this.scene.data.agent_persona_templates || {},
-                visual_style_template: this.scene.data.visual_style_template,
-                restore_from: this.scene.data.restore_from,
-            }));
+            return this.getWebsocket().send(JSON.stringify(
+                buildSceneSettingsPayload(this.scene.data, { knowledgeEligibility })
+            ));
         },
         updateAgentSettings(value) {
             // Translate picker value into a backend payload. Server reads
             // presence-vs-absence of these keys (via pydantic
             // model_fields_set) to distinguish "explicit None = opt out"
             // from "absent = leave the link alone".
-            const payload = {
-                type: 'world_state_manager',
-                action: 'update_scene_settings',
-                experimental: this.scene.data.experimental,
-                immutable_save: this.scene.data.immutable_save,
-                writing_style_template: this.scene.data.writing_style_template,
-                agent_persona_templates: this.scene.data.agent_persona_templates || {},
-                visual_style_template: this.scene.data.visual_style_template,
-                restore_from: this.scene.data.restore_from,
-            };
+            const payload = buildSceneSettingsPayload(this.scene.data);
 
             if (value === '__opt_out__') {
                 payload.agent_settings_file = null;

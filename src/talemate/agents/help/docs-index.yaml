@@ -1209,7 +1209,8 @@
   title: Knowledge
   summary: Character perspectives opt-in for new stories/card imports and empty-scene switching; disabling clears perspectives,
     disclosures and derived audience memory. Covers costs, retries, author responsibilities, Known by visibility, durable
-    disclosures, supported-fact access, director/node tools and Standard-mode grant/revoke behavior.
+    disclosures, supported-fact access, director/node tools, Standard-mode grant/revoke behavior and the World State
+    knowledge hub shortcut (newest known facts, rules, mode switch, agent toggles).
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and
@@ -1262,5 +1263,7 @@
 - path: user-guide/world-state.md
   title: World State
   summary: World panel shows durable character/object snapshots, tracked states, entity highlights with Look at/Add Detail,
-    and knowledge-change dots. Covers active/background/inactive characters, Make real name-overlap protection, narrated activation,
+    knowledge-change dots and a per-character knowledge hub menu (newest known facts with topic labels, newest disclosures
+    or access rules with counts, Character perspectives switch, conversation/summarizer/memory knowledge toggles with cost
+    notes). Covers active/background/inactive characters, Make real name-overlap protection, narrated activation,
     Ctrl/Cmd-guided refresh or wipe, cancellation, background cadence and Pin to context.

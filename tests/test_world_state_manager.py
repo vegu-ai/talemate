@@ -1326,6 +1326,28 @@ async def test_settings_websocket_mode_update(scene, blocked):
         scene.emit_status.assert_called_once()
 
 
+@pytest.mark.parametrize(
+    "history, mode, refreshed",
+    [
+        ([], "perception", True),
+        ([], "legacy", False),
+        ([NarratorMessage("A passage.")], "perception", False),
+    ],
+)
+async def test_settings_websocket_mode_change_refreshes_agent_status(
+    scene, monkeypatch, history, mode, refreshed
+):
+    scene.history = history
+    scene.emit_status = MagicMock()
+    emitted = MagicMock()
+    monkeypatch.setattr(
+        "talemate.server.world_state_manager.emit_agents_status", emitted
+    )
+    plugin = WorldStateManagerPlugin(MagicMock(scene=scene))
+    await plugin.handle_update_scene_settings({"knowledge_eligibility": mode})
+    assert emitted.call_count == (1 if refreshed else 0)
+
+
 @pytest.mark.parametrize("mode", ["legacy", "perception"])
 @pytest.mark.parametrize("invalid_setting", ["restore_from", "agent_settings_file"])
 async def test_rejected_settings_preserve_mode_and_records(

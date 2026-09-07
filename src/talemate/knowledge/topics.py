@@ -15,10 +15,8 @@ import structlog
 
 from talemate.instance import get_agent
 from talemate.knowledge.absence import fact_order
-from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
-from talemate.knowledge.schema import Fact, Topic, TopicCoverage
+from talemate.knowledge.schema import Fact, KnownFact, Topic, TopicCoverage
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.perspectives import PerspectiveReadContext
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -32,6 +30,9 @@ __all__ = [
     "awareness_line",
     "AWARENESS_MIN_FACTS",
     "AWARENESS_MAX_TOPICS",
+    "known_bucket",
+    "known_facts",
+    "KNOWN_FACTS_LIMIT",
 ]
 
 log = structlog.get_logger("talemate.knowledge.topics")
@@ -39,6 +40,7 @@ log = structlog.get_logger("talemate.knowledge.topics")
 AWARENESS_MIN_FACTS = 3
 AWARENESS_MAX_TOPICS = 6
 AWARENESS_ALL = 0.9
+KNOWN_FACTS_LIMIT = 5
 
 
 def _unit(vector) -> np.ndarray:
@@ -256,36 +258,81 @@ async def topics_on_load(scene: "Scene"):
     await memory.rebuild_topic_centroids(scene)
 
 
-def coverage(scene: "Scene", character: str) -> list[TopicCoverage]:
-    """Per topic, how many of its facts sit in the character's bucket; largest topics first."""
+def known_bucket(scene: "Scene", character: str) -> list[Fact]:
+    """Every fact the character knows, oldest first, as the character holds it."""
+    # graph -> supported_facts -> summaries -> disclosures -> entry -> topics:
+    # a module-level import cycles, like character_fact's at the other sites
+    from talemate.knowledge.graph import bucket
+
+    # a viewer the scene no longer holds has no perspective to resolve
+    if character_knowledge_enabled(scene) and character not in scene.character_data:
+        return []
+    return [fact for fact, _ in bucket(scene, character)]
+
+
+def _topic_of(scene: "Scene") -> dict[str, str]:
+    """Fact id -> topic name, empty while the Memory agent's Topics group is off."""
+    if not get_agent("memory").topics_enabled:
+        return {}
+    return {
+        fact_id: topic.name
+        for topic in scene.world_state.topics.values()
+        for fact_id in topic.fact_ids
+    }
+
+
+def coverage(
+    scene: "Scene", character: str, known: list[Fact] | None = None
+) -> list[TopicCoverage]:
+    """
+    Per topic, how many of its facts the character knows; largest topics first.
+    `known` is the character's bucket when the caller already holds it.
+    """
     if not get_agent("memory").topics_enabled:
         return []
-    from talemate.knowledge.supported_facts import character_fact
-
-    facts = scene.world_state.facts
-    read = PerspectiveReadContext(scene) if character_knowledge_enabled(scene) else None
-    if read is not None and character not in scene.character_data:
+    if character_knowledge_enabled(scene) and character not in scene.character_data:
         return []
-    index = KnowledgeIndex.from_scene(scene) if read is None else None
-    cache = {}
+    if known is None:
+        known = known_bucket(scene, character)
+    known_ids = {fact.id for fact in known}
+    facts = scene.world_state.facts
     rows: list[TopicCoverage] = []
     for topic in scene.world_state.topics.values():
         members = [facts[i] for i in topic.fact_ids if i in facts]
         if not members:
             continue
-        known = sum(
-            character_fact(scene, fact, character, read=read, cache=cache) is not None
-            if read is not None
-            else index.in_bucket(
-                character, KnowledgeItem(id=fact.id, kind="fact", present=fact.present)
-            )
-            for fact in members
-        )
         rows.append(
-            TopicCoverage(id=topic.id, name=topic.name, total=len(members), known=known)
+            TopicCoverage(
+                id=topic.id,
+                name=topic.name,
+                total=len(members),
+                known=sum(fact.id in known_ids for fact in members),
+            )
         )
     rows.sort(key=lambda r: (-r.total, _topic_number(r.id)))
     return rows
+
+
+def known_facts(
+    scene: "Scene",
+    character: str,
+    limit: int = KNOWN_FACTS_LIMIT,
+    known: list[Fact] | None = None,
+) -> tuple[list[KnownFact], int]:
+    """
+    The newest `limit` facts the character knows, newest first, and how many
+    they know in all. `known` is the character's bucket when the caller
+    already holds it.
+    """
+    if known is None:
+        known = known_bucket(scene, character)
+    topic_of = _topic_of(scene)
+    # known[-0:] is the whole list
+    recent = known[-limit:] if limit > 0 else []
+    return [
+        KnownFact(id=fact.id, text=fact.text, topic=topic_of.get(fact.id), ts=fact.ts)
+        for fact in reversed(recent)
+    ], len(known)
 
 
 def _topic_number(topic_id: str) -> int:

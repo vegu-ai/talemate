@@ -10,7 +10,7 @@ import structlog
 import talemate.world_state.templates as world_state_templates
 from talemate.game.schema import ConditionGroup
 from talemate.export import ExportOptions, export
-from talemate.instance import get_agent
+from talemate.instance import emit_agents_status, get_agent
 from talemate.world_state.manager import WorldStateManager, Suggestion
 from talemate.scene.schema import ScenePerspectives
 from talemate.knowledge.mode import KnowledgeEligibility
@@ -1156,6 +1156,7 @@ class WorldStateManagerPlugin(
         if "agent_settings_opted_out" not in payload.model_fields_set:
             kwargs.pop("agent_settings_opted_out", None)
 
+        mode_before = self.scene.knowledge_eligibility
         try:
             await self.world_state_manager.update_scene_settings(**kwargs)
         except ValueError as exc:
@@ -1170,6 +1171,11 @@ class WorldStateManagerPlugin(
                 "data": payload.model_dump(),
             }
         )
+        # The agents describe their settings for the scene's mode (a
+        # Character perspectives scene hides the Standard-only controls), so a
+        # mode change has to refresh what every settings view shows.
+        if self.scene.knowledge_eligibility != mode_before:
+            emit_agents_status()
 
         await self.signal_operation_done(allow_auto_save=False)
 

@@ -102,6 +102,15 @@ class Topic(pydantic.BaseModel):
     fact_ids: list[str] = pydantic.Field(default_factory=list)
 
 
+class KnownFact(pydantic.BaseModel):
+    """One fact a character knows, as the World State knowledge hub lists it."""
+
+    id: str
+    text: str
+    topic: str | None = None
+    ts: int | None = None
+
+
 class TopicCoverage(pydantic.BaseModel):
     """How much of one topic a character knows."""
 

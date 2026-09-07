@@ -1312,13 +1312,12 @@ class TestOffscreenLife:
         try:
             with (
                 ActiveScene(scene),
-                patch.object(scene, "add_actor", AsyncMock()),
                 patch.object(Prompt, "request", new_callable=AsyncMock) as request,
             ):
                 request.return_value = ("", {"response": "Zed slept in the boat."})
                 await activate_character(scene, "Zed")
-                # a second activation is a no-op (add_actor is patched away,
-                # so the name lookup would not find the active actor: pass the object)
+                # the character now has an actor, so a second activation is a
+                # no-op
                 assert await activate_character(scene, zed) is False
         finally:
             async_signals.get("character.activated").disconnect(recorder)

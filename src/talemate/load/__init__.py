@@ -366,7 +366,9 @@ async def load_scene_from_data(
         name: Character(**character_data)
         for name, character_data in scene_data.get("character_data", {}).items()
     }
-    scene.active_characters = scene_data.get("active_characters", [])
+    # a copy: the activation loop below iterates the saved list while add_actor
+    # maintains the scene's own
+    scene.active_characters = list(scene_data.get("active_characters", []))
     scene.context = scene_data.get("context", "")
     scene.perspectives = load_scene_perspectives(scene_data)
     scene.project_name = scene_data.get("project_name")
@@ -472,6 +474,7 @@ async def load_scene_from_data(
                 character_name=character_name,
                 available_characters=list(scene.character_data.keys()),
             )
+            scene.active_characters.remove(character_name)
             continue
 
         character = scene.character_data[character_name]

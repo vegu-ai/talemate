@@ -219,14 +219,31 @@ class TestAddActorAndCharacterLookups:
         assert real_scene.intro == "Pre-existing intro"
 
     @pytest.mark.asyncio
+    async def test_add_actor_marks_the_character_active(self, real_scene):
+        char = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=char, agent=None), commit_to_memory=False
+        )
+        assert real_scene.active_characters == ["Alice"]
+        assert "Alice" not in real_scene.inactive_characters
+
+    @pytest.mark.asyncio
+    async def test_add_actor_twice_marks_the_character_once(self, real_scene):
+        char = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=char, agent=None), commit_to_memory=False
+        )
+        await real_scene.add_actor(
+            Actor(character=char, agent=None), commit_to_memory=False
+        )
+        assert real_scene.active_characters == ["Alice"]
+
+    @pytest.mark.asyncio
     async def test_remove_character_clears_state(self, real_scene):
         char = Character(name="Alice")
         await real_scene.add_actor(
             Actor(character=char, agent=None), commit_to_memory=False
         )
-        # add_actor populates character_data; active_characters is managed
-        # separately (e.g. via load_scene). Manually mark active for this test.
-        real_scene.active_characters.append("Alice")
 
         await real_scene.remove_character(char, purge_from_memory=False)
         assert "Alice" not in real_scene.character_data
@@ -241,6 +258,21 @@ class TestAddActorAndCharacterLookups:
         await real_scene.remove_actor(actor)
         assert actor not in real_scene.actors
         assert actor.character is None
+        assert "Alice" not in real_scene.active_characters
+
+    @pytest.mark.asyncio
+    async def test_remove_all_actors_clears_the_active_list(self, real_scene):
+        await real_scene.add_actor(
+            Actor(character=Character(name="Alice"), agent=None),
+            commit_to_memory=False,
+        )
+        await real_scene.add_actor(
+            Actor(character=Character(name="Bob"), agent=None),
+            commit_to_memory=False,
+        )
+        await real_scene.remove_all_actors()
+        assert real_scene.actors == []
+        assert real_scene.active_characters == []
 
     @pytest.mark.asyncio
     async def test_remove_all_actors_clears_actors_list(self, real_scene):

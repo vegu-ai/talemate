@@ -1177,6 +1177,10 @@ class Scene(Emitter):
     async def add_actor(self, actor: Actor, commit_to_memory: bool = True):
         """
         Add an actor to the scene
+
+        An actor in the scene is what makes its character active, so this is
+        also where `active_characters` gains the name. Callers that want an
+        inactive character take the actor back out again.
         """
 
         # if actor with character already exists, remove it
@@ -1186,6 +1190,9 @@ class Scene(Emitter):
 
         self.actors.append(actor)
         actor.scene = self
+
+        if actor.character.name not in self.active_characters:
+            self.active_characters.append(actor.character.name)
 
         if isinstance(actor, Player):
             actor.character.is_player = True
@@ -1227,16 +1234,13 @@ class Scene(Emitter):
         Remove a character from the scene
         """
 
-        for actor in self.actors:
+        for actor in list(self.actors):
             if actor.character == character:
                 await self.remove_actor(actor)
 
         if character.name in self.character_data:
             del self.character_data[character.name]
             invalidate_memory_audiences(self)
-
-        if character.name in self.active_characters:
-            self.active_characters.remove(character.name)
 
         remove_perspective_audiences(self, character.name)
 
@@ -1248,9 +1252,12 @@ class Scene(Emitter):
         Remove an actor from the scene
         """
 
-        for _actor in self.actors:
+        for _actor in list(self.actors):
             if _actor == actor:
                 self.actors.remove(_actor)
+
+        if actor.character and actor.character.name in self.active_characters:
+            self.active_characters.remove(actor.character.name)
 
         actor.character = None
 
@@ -2174,6 +2181,7 @@ class Scene(Emitter):
             actor.character = None
 
         self.actors = []
+        self.active_characters = []
 
     async def reset_memory(self):
         memory_agent = get_agent("memory")
@@ -2196,7 +2204,6 @@ class Scene(Emitter):
             from talemate.load import load_scene
 
             self.reset()
-            self.active_characters = []
             await self.remove_all_actors()
 
             await load_scene(

@@ -746,12 +746,11 @@ async def deactivate_character(scene: "Scene", character: Union[str, "Character"
     if isinstance(character, str):
         character = scene.get_character(character)
 
-    if character.name not in scene.active_characters:
+    if not scene.character_is_active(character):
         # already deactivated
         return False
 
     await scene.remove_actor(character.actor)
-    scene.active_characters.remove(character.name)
 
 
 async def activate_character(scene: "Scene", character: Union[str, "Character"]):
@@ -767,7 +766,7 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
     if isinstance(character, str):
         character = scene.get_character(character)
 
-    if character.name in scene.active_characters:
+    if scene.character_is_active(character):
         # already activated
         return False
 
@@ -777,7 +776,6 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
         actor = scene.Player(character, None)
 
     await scene.add_actor(actor)
-    scene.active_characters.append(character.name)
 
     await async_signals.get("character.activated").send(
         CharacterActivatedEvent(

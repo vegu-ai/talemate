@@ -646,11 +646,13 @@ class TestActivateDeactivate:
         scene = Scene()
         char = Character(name="Bob")
         scene.character_data["Bob"] = char
-        scene.active_characters.append("Bob")
+        await activate_character(scene, char)
 
         result = await activate_character(scene, char)
 
         assert result is False
+        assert scene.active_characters == ["Bob"]
+        assert len(scene.actors) == 1
 
     @pytest.mark.asyncio
     async def test_activate_with_string_name_resolves_via_scene(
@@ -689,6 +691,28 @@ class TestActivateDeactivate:
         await deactivate_character(scene, char)
 
         assert "Bob" not in scene.active_characters
+        assert "Bob" not in scene.character_names
+        assert "Bob" in scene.inactive_characters
+
+    @pytest.mark.asyncio
+    async def test_deactivate_removes_an_actor_added_directly(
+        self, bootstrap_engine_isolated
+    ):
+        """A character added as an actor is active, whichever way it got there.
+
+        The creation and import paths add the actor first and decide about
+        activation afterwards, so deactivate has to undo a plain `add_actor`.
+        """
+        scene = Scene()
+        char = Character(name="Bob")
+        await scene.add_actor(scene.Actor(char, None), commit_to_memory=False)
+
+        result = await deactivate_character(scene, char)
+
+        assert result is not False
+        assert scene.actors == []
+        assert "Bob" not in scene.active_characters
+        assert "Bob" in scene.inactive_characters
 
 
 class TestListCharacters:

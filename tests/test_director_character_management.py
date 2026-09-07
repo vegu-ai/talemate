@@ -625,6 +625,58 @@ class TestPersistCharacterGenerationModes:
         assert scene.get_character("Manual Bob") is not None
 
     @pytest.mark.asyncio
+    async def test_inactive_character_is_listed_only_as_inactive(self, scene, director):
+        """A character created inactive belongs to one list, not to both.
+
+        The World State sidebar reads `characters` and `inactive_characters`
+        from the scene status, so a stray actor puts the new character in both.
+        """
+        await scene.add_actor(
+            scene.Actor(Character(name="Nora"), None), commit_to_memory=False
+        )
+
+        await director.persist_character(
+            PersistCharacterRequest(
+                name="Barry Largo",
+                description="A newcomer who waits outside.",
+                generate=False,
+                determine_name=False,
+                active=False,
+            )
+        )
+
+        assert "Barry Largo" in scene.inactive_characters
+        assert "Barry Largo" not in scene.character_names
+        assert "Barry Largo" not in scene.active_characters
+
+        scene.active = True
+        with patch("talemate.tale_mate.emit") as emit:
+            scene._do_emit_status()
+
+        (status,) = [
+            call for call in emit.call_args_list if call.args[0] == "scene_status"
+        ]
+        data = status.kwargs["data"]
+        assert data["inactive_characters"] == ["Barry Largo"]
+        assert [character["name"] for character in data["characters"]] == ["Nora"]
+
+    @pytest.mark.asyncio
+    async def test_active_character_gets_an_actor(self, scene, director):
+        await director.persist_character(
+            PersistCharacterRequest(
+                name="Elmer",
+                description="A newcomer who stays.",
+                generate=False,
+                determine_name=False,
+                active=True,
+            )
+        )
+
+        assert "Elmer" in scene.character_names
+        assert scene.active_characters == ["Elmer"]
+        assert "Elmer" not in scene.inactive_characters
+
+    @pytest.mark.asyncio
     async def test_manual_mode_requires_name(self, scene, director):
         with pytest.raises(ValueError, match="name is required"):
             await director.persist_character(

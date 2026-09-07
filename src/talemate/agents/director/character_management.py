@@ -12,7 +12,7 @@ from talemate.util import (
     replace_smart_quotes,
 )
 from talemate.util.data import trim_attributes
-from talemate.character import Character, set_voice, activate_character
+from talemate.character import Character, set_voice, deactivate_character
 from talemate.status import LoadingStatus
 from talemate.exceptions import GenerationCancelled
 from talemate.agents.base import (
@@ -671,9 +671,8 @@ class CharacterManagementMixin:
             # a terminal status
             loading_status("Adding character to scene")
 
-            # Deactivate the character if not active
-            if request.active:
-                await activate_character(scene, character)
+            if not request.active:
+                await deactivate_character(scene, character)
 
             # Commit the character's details to long term memory
             await character.commit_to_memory(memory)

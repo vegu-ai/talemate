@@ -58,7 +58,8 @@ it('shows a failed extraction only for the selected character', () => {
     expect(vm.factsWarning).toBeNull();
     message.data.name = 'Bob';
     vm.handleMessage(message);
-    expect(vm.factsWarning).toContain('supported-facts rebuild');
+    expect(vm.factsWarning).toContain('The information is saved');
+    expect(vm.factsWarning).toContain('Knowledge in the user guide');
     message.data.facts_status = 'ok';
     vm.handleMessage(message);
     expect(vm.factsWarning).toBeNull();

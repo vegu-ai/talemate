@@ -1,8 +1,8 @@
 <template>
     <div v-if="character">
         <v-alert v-if="!perceptionMode" variant="text" density="compact" icon="mdi-head-lightbulb-outline" class="text-medium-emphasis mb-2">
-            What {{ character.name }} knows follows from where they were present, from what they own, and from what is shared with everyone.
-            Grants add an entry to their knowledge, revokes take one away. Everything else is derived and never stored.
+            What {{ character.name }} knows follows from where they were present, what belongs to them, and what is shared with everyone.
+            To change access to an entry, choose Allow to add it to their knowledge or Block to keep it out.
         </v-alert>
 
         <v-card v-if="perceptionMode" variant="tonal" class="mb-4">
@@ -27,7 +27,7 @@
             </v-list-item>
         </v-list>
         <v-card v-else variant="tonal" class="mb-4">
-            <v-card-title class="text-body-large">Add a grant or revoke</v-card-title>
+            <v-card-title class="text-body-large">Adjust entry knowledge</v-card-title>
             <v-card-text>
                 <v-row>
                     <v-col cols="12" md="6">
@@ -47,7 +47,7 @@
                         </v-autocomplete>
                     </v-col>
                     <v-col cols="6" md="2">
-                        <v-select v-model="newKind" :items="kinds" item-title="label" item-value="value" label="Kind" density="compact" variant="underlined" hide-details></v-select>
+                        <v-select v-model="newKind" :items="kinds" item-title="label" item-value="value" label="Action" density="compact" variant="underlined" hide-details></v-select>
                     </v-col>
                     <v-col cols="6" md="4">
                         <v-text-field v-model="newNote" label="Note (optional)" density="compact" variant="underlined" hide-details @keyup.enter="addEdge"></v-text-field>
@@ -56,17 +56,17 @@
             </v-card-text>
             <v-card-actions>
                 <v-spacer></v-spacer>
-                <v-btn color="primary" prepend-icon="mdi-plus" :disabled="!newTarget || busy" @click="addEdge">Add</v-btn>
+                <v-btn color="primary" prepend-icon="mdi-plus" :disabled="!newTarget || busy" @click="addEdge">Apply</v-btn>
             </v-card-actions>
         </v-card>
 
         <v-alert v-if="factsWarning" type="warning" variant="tonal" class="mb-3">{{ factsWarning }}</v-alert>
-        <p v-if="perceptionMode && edges.length" class="mb-2">Removing a supplemental grant does not remove a disclosure.</p>
+        <p v-if="perceptionMode && edges.length" class="mb-2">Removing an access rule does not erase information already given to this character.</p>
         <v-list v-if="edges.length" density="compact">
             <v-list-item v-for="edge in edges" :key="edge.id">
                 <template v-slot:prepend>
                     <v-chip size="small" :color="edge.kind === 'grant' ? 'success' : 'delete'" variant="tonal" class="mr-2" :prepend-icon="edge.kind === 'grant' ? 'mdi-key-plus' : 'mdi-key-minus'">
-                        {{ edge.kind }}
+                        {{ edge.kind === 'grant' ? 'Allow' : 'Block' }}
                         <v-tooltip activator="parent" location="top">{{ edgeHint(edge) }}</v-tooltip>
                     </v-chip>
                 </template>
@@ -81,19 +81,19 @@
             </v-list-item>
         </v-list>
         <v-alert v-else-if="!perceptionMode" variant="text" density="compact" class="text-medium-emphasis" icon="mdi-information-outline">
-            No grants or revokes for {{ character.name }} yet.
+            No entry access rules for {{ character.name }} yet. Their knowledge follows presence, ownership and sharing.
         </v-alert>
 
         <v-card v-if="coverage.length" variant="tonal" class="mt-4">
-            <v-card-title class="text-body-large">Recorded-fact access</v-card-title>
+            <v-card-title class="text-body-large">Known facts by topic</v-card-title>
             <v-card-subtitle v-if="!perceptionMode && awareness">{{ awareness }}.</v-card-subtitle>
             <v-card-text>
                 <v-table density="compact" class="coverage-table">
                     <thead>
                         <tr>
                             <th>Topic</th>
-                            <th class="text-right">Accessible</th>
-                            <th class="text-right">Total</th>
+                            <th class="text-right">Known</th>
+                            <th class="text-right">Recorded</th>
                             <th style="width: 40%"></th>
                         </tr>
                     </thead>
@@ -104,7 +104,7 @@
                             <td class="text-right">{{ row.total }}</td>
                             <td>
                                 <v-progress-linear :model-value="row.total ? (row.known / row.total) * 100 : 0" color="primary" height="6" rounded>
-                                    <v-tooltip activator="parent" location="top">{{ row.known }} of {{ row.total }} recorded facts accessible; not a measure of understanding</v-tooltip>
+                                    <v-tooltip activator="parent" location="top">{{ row.known }} of {{ row.total }} recorded facts known; this does not measure understanding or all world knowledge</v-tooltip>
                                 </v-progress-linear>
                             </td>
                         </tr>
@@ -146,8 +146,8 @@ export default {
             newNote: '',
             busy: false,
             kinds: [
-                { label: 'Grant', value: 'grant' },
-                { label: 'Revoke', value: 'revoke' },
+                { label: 'Allow', value: 'grant' },
+                { label: 'Block', value: 'revoke' },
             ],
         }
     },
@@ -250,7 +250,7 @@ export default {
             }
             if (message.action === 'disclosure_indexed' && message.data.name === this.character?.name) {
                 this.factsWarning = message.data.facts_status === 'failed'
-                    ? 'The disclosure is saved, but fact extraction failed. A supported-facts rebuild can recover its facts.'
+                    ? 'The information is saved, but its searchable facts could not be recorded. Retry the failed request if it is still open; otherwise see Knowledge in the user guide for recovery steps.'
                     : null;
             }
             if (message.action === 'character_knowledge') {

@@ -61,7 +61,7 @@ export default {
         modes() {
             return [
                 { label: 'Everyone', value: 'everyone' },
-                { label: `Only ${this.ownerLabel}`, value: 'owner' },
+                { label: this.ownerLabel === 'nobody' ? 'Nobody' : `Only ${this.ownerLabel}`, value: 'owner' },
                 { label: 'Specific characters', value: 'list' },
             ];
         },
@@ -75,8 +75,10 @@ export default {
         hint() {
             return {
                 everyone: 'Every character can draw on this entry.',
-                owner: `Only ${this.ownerLabel} knows this entry, unless a knowledge grant names another character.`,
-                list: 'Only the listed characters (and the owner) know this entry, unless a knowledge grant names another character.',
+                owner: this.ownerLabel === 'nobody'
+                    ? 'Keep this entry hidden from characters, unless you explicitly give them access.'
+                    : `Keep this entry private to ${this.ownerLabel}, unless you explicitly give another character access.`,
+                list: 'Share this entry with the listed characters and its owner, unless you explicitly give another character access. Choose characters below.',
             }[this.mode];
         },
     },

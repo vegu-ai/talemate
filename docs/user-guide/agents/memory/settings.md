@@ -18,15 +18,27 @@ The device to use for the embeddings. This can be either `cpu` or `cuda`.
 
 ## :material-shape-outline: Topics
 
-Clusters the stored facts into topics by embedding, without a request: facts are walked in creation order, each joins the first topic whose first fact is similar enough or opens a new one, and one refinement pass moves every fact to its nearest centroid. A topic is named after the most frequent subject among its facts (the whole subject when two topics would otherwise share a name). Topics give characters a recorded-fact access table in the World Editor. Legacy scenes can also include an [awareness line](/talemate/user-guide/agents/conversation/settings/#awareness-line) in the conversation prompt. In the conversation prompt's memory retrieval the topic nearest to a query contributes its most restated facts ahead of the similarity results; a Context Database search or a node query gets no such addition. Disabling Topics stops the coverage table and legacy awareness line. Perception scenes count current supported facts and never make topic all/some/nothing assertions.
+![Memory agent Topics settings](/talemate/img/0.40.0/memory-topics-settings.png)
 
-##### Recluster step
+Group recorded facts by subject to show each character's knowledge and find related memories. **Turn on for the Known facts by topic table and topic-based memory retrieval.** Grouping uses the embedding model, with no extra text-generation request.
 
-Rebuild the topics once the fact count moved by this many since the last clustering, up or down (default 20). Editing, deleting or regenerating facts and changing the embedding preset rebuild the topics at once. Topics are also built on load when facts exist and none are stored yet; the centroids are never saved and are rebuilt from the memory store on load.
+The World Editor's Knowledge tab counts each character's known facts within each topic. Standard mode can also give the AI a [Topic knowledge overview](/talemate/user-guide/agents/conversation/settings/#topic-knowledge-overview); Character perspectives mode does not make those all/some/nothing assertions. Disabling Topics hides the table and overview.
 
-##### Similarity threshold
+For conversation memory searches, the closest matching topic contributes its most repeated facts ahead of other search results. Context Database searches and node queries do not get this addition. Topics take their names from the most frequent subjects in their facts.
 
-A fact joins a topic when its cosine similarity to the topic's first fact is at least this; below it a new topic opens. The nearest topic contributes to the conversation prompt's retrieval only above this as well. At 0 (the default) the value comes from the [embedding preset's Topic Threshold](/talemate/user-guide/agents/memory/embeddings/#topic-threshold), 0.50 for every shipped preset, because the useful value depends on the model; set it here to override every preset at once. When most facts land in one topic or nearly every fact in its own, the memory agent logs a warning naming the direction to move.
+##### Facts between topic updates
+
+Regroup topics when the fact count changes by this many (default 20), up or down. **Lower for more frequent updates; raise to regroup less often.** This controls how often topics are updated, not how many topics you get.
+
+Editing, deleting or regenerating facts, or changing the embedding preset, updates topics immediately. Topics are also built on load when facts exist but no topics are stored. The memory agent rebuilds the information it needs for topic matching when loading a story.
+
+##### Topic similarity
+
+Set how closely facts must match to share a topic, and how closely a topic must match a memory search. **Raise for tighter, smaller groups; lower for broader groups.** A higher value also requires a closer match before a topic contributes memories to a search. Results depend on the facts and embedding model.
+
+**0 = use embedding preset** (the default), shown at the slider. It uses the [embedding preset's Topic Threshold](/talemate/user-guide/agents/memory/embeddings/#topic-threshold), currently 0.50 in the shipped presets. Zero does not disable topics. Choose a value above zero to set a custom threshold.
+
+If most facts land in one topic, try raising the value. If nearly every fact has its own topic, try lowering it. The memory agent logs a warning for these cases. Internally, each fact joins the first topic whose first fact is similar enough; one refinement pass then moves facts to the closest topic center.
 
 ## :material-filter-variant: Retrieval
 
@@ -44,11 +56,13 @@ A result whose embedding is more similar than this (cosine) to one already selec
 
 When the recent lines name a character who is not in the scene (aliases from the world state's name mappings count), that character's description is fetched from the memory store and placed ahead of the similarity results. A name that carries a capital must appear as written, so "Will" is not found in "I will go"; an alias that is lower-case in the name mappings matches whatever the case. On by default.
 
-##### Similarity knowledge gate
+##### Match known facts
 
-**Legacy scenes only; hidden and unused in perception scenes.** Similarity ranks eligible results in perception mode and never grants access.
+Allow a memory of an event the character missed when it closely matches a fact they know. **Turn on to recognize retold information; turn off for stricter access filtering.** On by default.
 
-When legacy retrieval is filtered by a character's knowledge (see [World Editor -- Knowledge](/talemate/user-guide/world-editor/knowledge/)), a result outside their knowledge still passes if a fact they do know sits within the summarizer's *Fact near-duplicate distance* of it: someone told them later, and the retold fact sits next to the original. On by default.
+Available in **Standard** mode when retrieval is limited to a character's knowledge. Uses the Summarizer's [Fact matching tolerance](/talemate/user-guide/agents/summarizer/settings/#fact-matching-tolerance): raise that tolerance to accept looser matches, or lower it for closer matches. This cannot override an entry's **Known by** setting or a **Block** rule. See [Knowledge](/talemate/user-guide/world-editor/knowledge/).
+
+Hidden and unused in **Character perspectives** mode, where similarity ranks available memories and never grants access to unavailable ones.
 
 ##### Cross-encoder rerank
 

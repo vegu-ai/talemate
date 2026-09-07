@@ -86,7 +86,7 @@
                 Create New Scene
             </v-card-title>
             <v-card-text>
-                <p class="mb-4">Character knowledge: {{ scene?.data?.knowledge_eligibility === 'perception' ? 'Character perspectives' : 'Legacy' }}. The new scene keeps the current story's mode.</p>
+                <p class="mb-4">Character knowledge: {{ scene?.data?.knowledge_eligibility === 'perception' ? 'Character perspectives' : 'Standard' }}. The new scene keeps the current story's mode.</p>
                 <v-alert v-if="!scene?.data?.saved && !creatingNewScene" color="muted" variant="text" density="compact" class="mb-4">
                     <template v-slot:prepend>
                         <v-icon color="warning">mdi-alert-circle-outline</v-icon>

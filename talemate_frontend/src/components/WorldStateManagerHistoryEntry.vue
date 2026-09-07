@@ -24,6 +24,7 @@
 
             <div v-if="entry.facts && entry.facts.length" class="mt-3">
                 <div class="text-body-small text-medium-emphasis mb-1"><v-icon size="small" icon="mdi-format-list-checks" class="mr-1"></v-icon>Facts</div>
+                <div v-if="!locked" class="text-body-small text-medium-emphasis mb-1">Double-click a fact to edit it</div>
                 <v-list density="compact" slim class="bg-transparent py-0">
                     <v-list-item v-for="fact in entry.facts" :key="fact.id" class="px-0">
                         <template v-slot:prepend>

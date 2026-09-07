@@ -115,24 +115,24 @@ class CharacterKnowledgeMixin:
             can_be_disabled=True,
             icon="mdi-head-lightbulb-outline",
             label="Character Knowledge",
-            description="Legacy scenes use the presence filter, absence block, awareness line and learned-this-turn ledger below. Character perspectives is a separate choice when creating a new story; it replaces those controls and always scopes history and retrieval. The optional AI memory pass works in either mode.",
+            description="Help characters respond using what they know. In Standard mode, use the controls below to limit memories, remind the AI about unknown facts, and track learning from dialogue. Choose Character perspectives when creating a story for separate character views of events. Refine memories with AI works in either mode.",
             config={
                 "perspective_filter": AgentActionConfig(
                     type="bool",
-                    label="Perspective filter",
-                    description="Drop spans of the history the character was not present for (replaced by a one-line gap) and filter long term memory by their knowledge.",
+                    label="Limit to character knowledge",
+                    description="Leave out events the character missed and memories they do not know. Turn on to base replies on their own experience; turn off to use the shared history and memories.",
                     value=True,
                 ),
                 "absence_block": AgentActionConfig(
                     type="bool",
-                    label="Absence block",
-                    description="List the recent facts the character does not know, so the model does not let them act on those.",
+                    label="Remind about unknown facts",
+                    description="Tell the AI which recent facts the character does not know. Turn on if characters act on information they missed.",
                     value=True,
                 ),
                 "absence_limit": AgentActionConfig(
                     type="number",
-                    label="Absence block lines",
-                    description="At most this many facts in the absence block.",
+                    label="Unknown-fact reminders",
+                    description="Limit how many unknown facts are listed for the AI. Raise to include more reminders; lower to keep the prompt shorter.",
                     value=ABSENCE_LIMIT,
                     min=1,
                     max=20,
@@ -140,8 +140,8 @@ class CharacterKnowledgeMixin:
                 ),
                 "absence_window": AgentActionConfig(
                     type="number",
-                    label="Absence block window",
-                    description="How many of the most recent facts are considered for the block.",
+                    label="Recent facts to check",
+                    description="Choose how many recent facts to check for unknown-fact reminders. Raise to cover older facts; lower to focus on the newest.",
                     value=ABSENCE_WINDOW,
                     min=5,
                     max=200,
@@ -149,31 +149,31 @@ class CharacterKnowledgeMixin:
                 ),
                 "awareness_line": AgentActionConfig(
                     type="bool",
-                    label="Awareness line",
-                    description="One line in the prompt naming which topics the character knows all, some or nothing of (from the memory agent's topics).",
+                    label="Topic knowledge overview",
+                    description="Give the AI a short overview of which topics the character knows about. Turn on for topic-level reminders; requires Topics in the Memory agent.",
                     value=True,
                 ),
                 "memory_pass": AgentActionConfig(
                     type="bool",
-                    label="AI memory pass",
-                    description="Ask the AI to rewrite the retrieved memories for the character's next line, drop what adds nothing and order the rest by use. With the perspective filter on, each memory becomes what the character knows of it, and what they know nothing of is dropped.",
+                    label="Refine memories with AI",
+                    description="Ask the AI to rewrite and select retrieved memories for the next character reply. Turn on when memories need a more relevant focus. With Limit to character knowledge on, the AI also rewrites memories from the character's point of view and drops what they do not know.",
                     value=False,
                     note_on_value={
                         True: AgentActionNote(
                             color="primary",
-                            text="+1 request per line. Handled by the World State agent's client.",
+                            text="One more request before each generated character reply that has retrieved memories, using the World State agent's client.",
                         ),
                     },
                 ),
                 "ledger": AgentActionConfig(
                     type="bool",
-                    label="Learned-this-turn ledger",
-                    description="After each line, ask the AI which of the facts the listeners did not know the line revealed to them; each becomes a grant.",
+                    label="Track learning from dialogue",
+                    description="Ask the AI what listeners learned from each character message and add those facts to their knowledge. Turn on to track information shared in dialogue.",
                     value=False,
                     note_on_value={
                         True: AgentActionNote(
                             color="primary",
-                            text="+1 request per line, only when a listener has facts they do not know. Handled by the World State agent's client.",
+                            text="One more request after a character message when a listener has recent facts they do not know, using the World State agent's client.",
                         ),
                     },
                 ),
@@ -189,7 +189,7 @@ class CharacterKnowledgeMixin:
         ):
             action = config["character_knowledge"]
             action["description"] = (
-                "Character perspectives is active for this story. History and retrieval always use character evidence; the optional AI memory pass is configured below."
+                "Character perspectives is active: characters receive their own views of events and the memories available to them. Turn on Refine memories with AI below to give retrieved memories a more relevant focus."
             )
             action["config"] = {
                 key: value

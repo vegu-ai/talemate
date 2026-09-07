@@ -84,41 +84,47 @@ Disable this if you want the AI to generate dialogue without following the scene
 
 ## :material-head-lightbulb-outline: Character Knowledge
 
-**Character perspectives** is selected when creating a new story, off by default. It always scopes history and retrieval, replaces the learned-this-turn request with Summarizer perception, and omits absence warnings and topic-awareness assertions. Those legacy controls are hidden while a perception scene is active; the optional AI memory pass remains. This group does not enable or disable the scene's perception mode. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for cost, retry behavior and author responsibilities.
+Help characters respond using what they know. In **Standard** mode, use this group to limit memories, remind the AI about unknown facts, and track learning from dialogue. The controls below apply to Standard mode unless stated otherwise.
 
-The controls below apply to legacy scenes unless stated otherwise.
+**Character perspectives**, chosen when creating a new story, gives characters separate views of events and memories. It replaces the Standard-mode filtering and learning controls, which are hidden while that mode is active. **Refine memories with AI** remains available in either mode. This group does not change the story's mode. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for setup, cost and retry guidance.
 
 ![Conversation agent character knowledge settings](/talemate/img/0.40.0/conversation-character-knowledge-settings.png)
 
-In legacy scenes, the presence filter, absence settings and awareness line add no request. The optional AI memory pass works in either mode; the learned-this-turn ledger is legacy-only. Both items marked +1 request are off by default. See [World Editor -- Knowledge](/talemate/user-guide/world-editor/knowledge/) for how a character's knowledge is worked out.
+Limiting knowledge and adding reminders need no extra request. **Refine memories with AI** and **Track learning from dialogue** each add a request when they run and are off by default.
 
-##### Perspective filter
+##### Limit to character knowledge
 
-Drop the spans of the history the character was not present for, replaced by a one-line gap, and return only what the character knows from long term memory. Off restores the shared record for every character.
+Leave out events the character missed and return only memories they know. **Turn on to base replies on their own experience; turn off to use the shared history and memories.** Missed history is replaced by a one-line gap. On by default.
 
-##### Absence block
+##### Remind about unknown facts
 
-Add a section to the prompt that lists the recent facts the character does not know, so the model does not let them act on those. The section is only rendered when it has content.
+Tell the AI which recent facts the character does not know. **Turn on if characters act on information they missed.** These reminders guide the model; they cannot guarantee its response. Nothing is added when there are no facts to list. On by default.
 
-##### Absence block lines
+##### Unknown-fact reminders
 
-At most this many facts in the block (default 5). The most restated facts come first, then the newest.
+Limit how many unknown facts are listed for the AI (default 5). **Raise to include more reminders; lower to keep the prompt shorter.** The most repeated facts come first, then the newest.
 
-##### Absence block window
+##### Recent facts to check
 
-How many of the most recent facts are considered for the block (default 30).
+Choose how many recent facts to check for unknown-fact reminders (default 30). **Raise to cover older facts; lower to focus on the newest.** This changes the pool to check, while **Unknown-fact reminders** limits how many appear.
 
-##### Awareness line
+##### Topic knowledge overview
 
-One line in the prompt naming which topics the character knows all, some or nothing of, from the [Memory agent's topics](/talemate/user-guide/agents/memory/settings/#topics): `Edwin knows all of the Sorena, some of the sextant, nothing of the boat`. Only topics with at least three facts count, largest first, six at most; the line is left out when no topic qualifies. On by default, no request.
+Give the AI a short overview of which topics the character knows about. **Turn on for topic-level reminders**, and enable [Topics in the Memory agent](/talemate/user-guide/agents/memory/settings/#topics). On by default, with no extra request.
 
-##### AI memory pass
+For example: `Edwin knows all of the Sorena, some of the sextant, nothing of the boat`. Only topics with at least three facts count; at most six are listed, largest first. The overview is omitted when no topic qualifies. It describes recorded facts, not everything a character understands.
 
-One request that reads the retrieved memories together with the story context the character's prompt shows (the same perspective-filtered history, within the World State client's budget), and returns them rewritten for the character's next line: what adds nothing is dropped, the rest is ordered most useful first. With the *Perspective filter* on, each memory becomes what the character knows of it, from their own point of view, and a memory they know nothing of is dropped. With the filter off the pass only rewrites for relevance, drops what adds nothing and orders. +1 request per line, handled by the World State agent's client. Off by default. An answer that cannot be read keeps the memories as retrieved.
+##### Refine memories with AI
 
-##### Learned-this-turn ledger
+Ask the AI to rewrite and select retrieved memories for the next character reply. **Turn on when memories need a more relevant focus.** The AI drops unhelpful memories and puts useful ones first. With **Limit to character knowledge** on, it also rewrites memories from the character's point of view and drops what they do not know. With that filter off, it only refines relevance. In Character perspectives mode, the memories are already limited to the character's knowledge.
 
-After each line, asks the AI which of the facts the listeners did not know the line revealed to them. Each becomes a grant with the source `inferred`, so the listener retrieves the fact from then on and it leaves their absence block. The speaker does not learn from their own line, and no request is sent when every listener already knows the recent facts. +1 request per line, handled by the World State agent's client. Off by default.
+Off by default. Uses **one more request before each generated character reply that has retrieved memories**, through the World State agent's client. The request uses the character's story context within that client's budget. If the answer cannot be read, the original retrieved memories are kept.
+
+##### Track learning from dialogue
+
+Ask the AI what listeners learned from each character message and add those facts to their knowledge. **Turn on to track information shared in dialogue.** It checks recent recorded facts the listeners do not know, so it can recognize retold information rather than discover arbitrary new facts. Learned facts become available in memory and leave the unknown-fact reminders. The speaker does not learn from their own message; player messages are included.
+
+Off by default. Uses **one more request after a character message when a listener has recent facts they do not know**, through the World State agent's client. No request is sent when every listener already knows those facts. Available in Standard mode only.
 
 ## Long Term Memory
 

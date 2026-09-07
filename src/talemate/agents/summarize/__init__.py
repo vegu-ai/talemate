@@ -168,13 +168,13 @@ class SummarizeAgent(
                     "extract_facts": AgentActionConfig(
                         type="bool",
                         label="Extract facts",
-                        description="Ask for a list of atomic facts in the same summary call (no extra request). Facts feed the per-character knowledge features.",
+                        description="Save individual facts alongside summaries for character knowledge. Leave on to build the fact record; this summary step needs no extra request.",
                         value=True,
                     ),
                     "fact_dedupe_distance": AgentActionConfig(
                         type="number",
-                        label="Fact near-duplicate distance",
-                        description="A new fact this close to an existing one (embedding distance) is counted as a restatement instead of stored again.",
+                        label="Fact matching tolerance",
+                        description="Treat sufficiently similar facts as repeats instead of saving them again. Raise to merge more similar facts; lower to keep more distinctions.",
                         value=0.15,
                         min=0.0,
                         max=1.0,

@@ -4,9 +4,9 @@
         <v-col cols="12">
             <v-form class="mt-4">
                 <v-alert variant="tonal" class="mb-4" icon="mdi-head-lightbulb-outline">
-                    <strong>Character knowledge: {{ scene?.data?.knowledge_eligibility === 'perception' ? 'Character perspectives' : 'Legacy' }}</strong>
-                    <p v-if="scene?.data?.knowledge_eligibility === 'perception'">Character inputs use stored perspectives. Additional Summarizer analyses run after passages and changed tracker answers; failed analyses pause dependent generation. Retry the failed request, or cancel and retry generation after correcting the source. Saves and forks keep this mode.</p>
-                    <p v-else>This story uses legacy knowledge behavior. Saving or forking does not reconstruct past perceptions. To opt in, select Character perspectives when creating a new story.</p>
+                    <strong>Character knowledge: {{ scene?.data?.knowledge_eligibility === 'perception' ? 'Character perspectives' : 'Standard' }}</strong>
+                    <p v-if="scene?.data?.knowledge_eligibility === 'perception'">Characters receive their own views of events and memories. Extra Summarizer requests track what they learn after passages and changed tracker answers. If analysis fails, character generation pauses: retry the failed request, or cancel, correct the source and retry generation. Saves and forks keep this mode.</p>
+                    <p v-else>Character knowledge follows where characters were present, what belongs to them, and what you share with them. Use the Conversation agent's Character Knowledge settings to adjust how this shapes replies. For separate character views of events, choose Character perspectives when creating a new story.</p>
                 </v-alert>
 
 

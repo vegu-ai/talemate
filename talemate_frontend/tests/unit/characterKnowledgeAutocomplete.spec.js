@@ -51,7 +51,7 @@ describe('character knowledge autocomplete slot', () => {
         host.querySelector('[data-entry="F1"]').click();
         await nextTick();
         expect(vm.newTarget).toBe('F1');
-        const add = [...host.querySelectorAll('button')].find(button => button.textContent === 'Add');
+        const add = [...host.querySelectorAll('button')].find(button => button.textContent === 'Apply');
         expect(add.disabled).toBe(false);
         add.click();
         const edge = { id: 'edge-1', target: 'F1', kind: 'grant', source: 'manual' };

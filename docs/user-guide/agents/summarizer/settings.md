@@ -45,11 +45,13 @@ Writing style instructions are also included during summarization to maintain co
 
 ###### Extract facts
 
-Ask for a list of atomic facts in the same summary request (no extra request). The facts feed the per-character knowledge features; see [History -- Facts](/talemate/user-guide/world-editor/history/#facts). On by default. With this off, regenerating an entry leaves its recorded facts as they are.
+Save individual facts alongside summaries for character knowledge. **Leave on to build the fact record**; this summary step needs no extra request. On by default. With this off, regenerating an entry leaves its recorded facts as they are. See [History — Facts](/talemate/user-guide/world-editor/history/#facts).
 
-###### Fact near-duplicate distance
+###### Fact matching tolerance
 
-A new fact this close to a stored fact (embedding distance, default 0.15) counts as a restatement of the stored fact instead of a new one.
+Treat sufficiently similar facts as repeats instead of saving them again (default 0.15). **Raise to merge more similar facts; lower to keep more distinctions.** A repeat increases the stored fact's repeat counter.
+
+This is the maximum distance allowed between facts as measured by the embedding model. Zero is the strictest value, not an off switch. In Standard mode, the Memory agent's [Match known facts](/talemate/user-guide/agents/memory/settings/#match-known-facts) also uses this tolerance when checking retold information.
 
 ## Layered History
 

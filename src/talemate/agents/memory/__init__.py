@@ -25,6 +25,7 @@ from talemate.agents.base import (
     Agent,
     AgentAction,
     AgentActionConfig,
+    AgentActionNote,
     AgentDetail,
     set_processing,
 )
@@ -118,12 +119,12 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 can_be_disabled=True,
                 icon="mdi-shape-outline",
                 label="Topics",
-                description="Cluster the stored facts into topics by embedding (no request). Topics give each character a coverage table and an awareness line, and in the conversation prompt's memory retrieval the nearest topic contributes its most restated facts.",
+                description="Group recorded facts by subject to show each character's knowledge and find related memories. Turn on for the Known facts by topic table and topic-based memory retrieval; no extra text-generation request. Standard mode can also use the Conversation agent's Topic knowledge overview.",
                 config={
                     "recluster_step": AgentActionConfig(
                         type="number",
-                        label="Recluster step",
-                        description="Rebuild the topics once the fact count moved by this many, up or down, since the last clustering. Editing, deleting or regenerating facts, and changing the embedding preset, rebuild them at once.",
+                        label="Facts between topic updates",
+                        description="Regroup topics when the fact count changes by this many. Lower for more frequent updates; raise to regroup less often. Editing, deleting or regenerating facts, or changing the embedding preset, updates topics immediately.",
                         value=20,
                         min=1,
                         max=200,
@@ -131,8 +132,14 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                     ),
                     "similarity_threshold": AgentActionConfig(
                         type="number",
-                        label="Similarity threshold",
-                        description="A fact joins a topic when its cosine similarity to the topic's first fact is at least this; below it a new topic opens. The nearest topic contributes to the conversation prompt's retrieval only above this as well. 0 uses the embedding preset's topic threshold, which depends on the model.",
+                        label="Topic similarity",
+                        description="Set how closely facts must match to share a topic, and how closely a topic must match a memory search. Raise for tighter, smaller groups; lower for broader groups. Set to 0 to use the embedding preset.",
+                        note_on_value={
+                            0: AgentActionNote(
+                                color="primary",
+                                text="Use embedding preset: 0 uses its Topic Threshold instead of a custom value.",
+                            ),
+                        },
                         value=0,
                         min=0,
                         max=0.99,
@@ -173,8 +180,8 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                     ),
                     "similarity_gate": AgentActionConfig(
                         type="bool",
-                        label="Similarity knowledge gate",
-                        description="When retrieval is filtered by a character's knowledge, a result outside their knowledge still passes if a fact they do know sits within the summarizer's fact near-duplicate distance of it.",
+                        label="Match known facts",
+                        description="Allow a memory of an event the character missed when it closely matches a fact they know. Turn on to recognize retold information; turn off for stricter access filtering. Uses the Summarizer's Fact matching tolerance and cannot override entry visibility or blocked knowledge.",
                         value=True,
                     ),
                     "rerank": AgentActionConfig(

@@ -18,6 +18,7 @@ from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.client import ClientBase
 from talemate.game.focal.schema import Call
 from talemate.game.engine.nodes.core import GraphState
+from .visibility import VisibilityAssessmentMixin
 from .guide import GuideSceneMixin
 from .generate_choices import GenerateChoicesMixin
 from .legacy_scene_instructions import LegacySceneInstructionsMixin
@@ -37,6 +38,7 @@ log = structlog.get_logger("talemate.agent.director")
 
 @register()
 class DirectorAgent(
+    VisibilityAssessmentMixin,
     DirectorChatMixin,
     SceneDirectionMixin,
     PlanMixin,

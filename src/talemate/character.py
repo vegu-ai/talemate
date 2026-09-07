@@ -1,7 +1,11 @@
 from typing import TYPE_CHECKING, Union
 import pydantic
 from talemate.context import active_scene
-from talemate.knowledge.schema import EntryVisibility, ReinforcementEntry
+from talemate.knowledge.schema import (
+    EntryVisibility,
+    ReinforcementEntry,
+    is_memory_attribute,
+)
 from talemate.knowledge.rename import rename_knowledge_references
 from talemate.knowledge.memory import invalidate_memory_audiences
 from talemate.knowledge.perspectives import validate_character_rename
@@ -435,10 +439,7 @@ class Character(pydantic.BaseModel):
         seen_attributes = set()
 
         for attr, value in self.base_attributes.items():
-            if attr.startswith("_"):
-                continue
-
-            if attr.lower() in ["name", "scenario_context"]:
+            if not is_memory_attribute(attr):
                 continue
 
             seen_attributes.add(attr)

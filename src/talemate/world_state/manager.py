@@ -33,6 +33,7 @@ from talemate.knowledge.schema import (
     KnowledgeEdge,
     TopicCoverage,
     ReinforcementEntry,
+    is_memory_attribute,
 )
 from talemate.knowledge.changes import (
     edge_change,
@@ -733,7 +734,7 @@ class WorldStateManager:
                     )
                 )
             for attr in sorted(character.base_attributes):
-                if attr.startswith("_") or attr.lower() in ("name", "scenario_context"):
+                if not is_memory_attribute(attr):
                     continue
                 targets.append(
                     KnowledgeTarget(

@@ -78,6 +78,27 @@ In this mode, the director acts more confidently on your instructions and avoids
 
 This mode prevents the director from revealing information that could spoil the story. The director will still make changes and answer questions, but will be careful not to discuss plot points or details that should remain hidden.
 
+## Assess visibility in bulk
+
+Ask the director to assess **Known by** for all attributes of one character, all details of one character, or selected world entries. The **Assess Visibility** action is available in director chat, including legacy stories. It never runs as a background sweep, and enabling Character perspectives never triggers it.
+
+For example:
+
+- “Assess all of Alice's attributes for public or private knowledge.”
+- “Assess Alice's details. Preserve existing restrictions.”
+- “Assess the world entries Town Square and Hidden Vault. Only Bob has discovered the vault.”
+- “Reassess Alice's details, including the existing restrictions.”
+
+Ordinary assessment preserves entries already restricted to their owner or a character list. Include an explicit request for **reassessment** to reconsider those restrictions. The director uses your instruction, the selected content and relevant story context; it can still misunderstand who knows something. Review its report and correct **Known by** in the World Editor when needed.
+
+If an entry mixes public and private information requiring different audiences, the action flags it and leaves its current visibility unchanged. Split that entry or set its visibility manually. Uncertain, missing or malformed decisions also leave the corresponding entry unchanged.
+
+Each invocation assesses at most 32 eligible entries (after restricted and empty entries are excluded) and makes one assessment request for the eligible content, in addition to normal director chat/action requests. Oversized input is rejected without assessing it; split a world-entry selection or use manual visibility editing for oversized character sheets. Fully protected or empty scopes make no assessment request. Common JSON wrappers and separator mistakes are repaired locally. Unrecoverable output requires another user request; there is no automatic model-assisted repair request.
+
+The proposed batch uses the existing **Write action confirmation** setting: one confirmation for the batch when enabled, immediate application when disabled. Rejection leaves visibility unchanged. If selected entries or cast membership change before application, request a fresh assessment. New messages, time advances and cast reordering do not discard an otherwise valid batch. The report lists applied changes and entries left unchanged.
+
+This changes authored visibility only. Existing grants and disclosures remain, and characters do not forget information they already acquired.
+
 ## Write action confirmation
 
 By default, the director will ask for confirmation before performing actions that modify your scene (like progressing the story or making significant changes).
@@ -151,7 +172,7 @@ Actions are organized into groups:
 |-------|---------|
 | **Direct Scene** | Advance time, Create new narration, Direct character action, Yield to User |
 | **Query** | Query World Information, Retrieve Context Directly, Query Game State, Query Scene Direction, Character Knowledge |
-| **Update Context** | Existing Characters, World Information, Story Configuration, Static History, Character Creation, Character Knowledge |
+| **Update Context** | Existing Characters, World Information, Story Configuration, Static History, Character Creation, Character Knowledge, Assess Visibility (Director Chat only) |
 | **Gamestate** | Make Changes (game state variables) |
 | **User Interaction** | Prompt for text input (Scene Direction only) |
 | **Visuals** | Create new Image(s), Edit Image(s) |

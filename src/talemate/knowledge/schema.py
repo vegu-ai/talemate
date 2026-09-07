@@ -24,6 +24,11 @@ FactSource = Literal["summary", "manual", "offscreen", "perspective", "disclosur
 FactsStatus = Literal["ok", "failed"]
 
 
+def is_memory_attribute(name: str) -> bool:
+    """Whether an attribute has an authored memory/visibility entry."""
+    return not name.startswith("_") and name.lower() not in ("name", "scenario_context")
+
+
 class EntryVisibility(pydantic.BaseModel):
     mode: VisibilityMode = "everyone"
     characters: list[str] = pydantic.Field(default_factory=list)

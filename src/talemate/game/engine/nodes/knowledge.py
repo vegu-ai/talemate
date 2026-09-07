@@ -16,6 +16,7 @@ from talemate.knowledge.entry import (
     known_by_line,
     set_edge,
     sheet_visibility_key,
+    resolve_character_names,
 )
 from talemate.knowledge.graph import (
     current_state,
@@ -444,31 +445,10 @@ class SetEntryVisibility(Node):
         self.add_output("text", socket_type="str")
 
     def _resolve_names(self, scene, names) -> list[str]:
-        by_lower = {name.lower(): name for name in scene.character_data}
-        resolved = []
-
-        def add(name: str):
-            canonical = by_lower.get(name.strip().lower())
-            if not canonical:
-                raise InputValueError(
-                    self, "characters", f"Character `{name}` does not exist."
-                )
-            if canonical not in resolved:
-                resolved.append(canonical)
-
-        for name in names or []:
-            name = str(name)
-            if not name.strip():
-                continue
-            # a list argument arrives split on newlines, so "Alice, Carol" is
-            # one item; a name that carries a comma still resolves whole
-            if name.strip().lower() in by_lower or "," not in name:
-                add(name)
-                continue
-            for part in name.split(","):
-                if part.strip():
-                    add(part)
-        return resolved
+        try:
+            return resolve_character_names(scene, names or [])
+        except ValueError as exc:
+            raise InputValueError(self, "characters", str(exc)) from exc
 
     async def run(self, state: GraphState):
         scene = active_scene.get()

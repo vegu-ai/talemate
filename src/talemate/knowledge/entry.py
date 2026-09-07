@@ -37,11 +37,30 @@ __all__ = [
     "set_edge",
     "sheet_visibility_key",
     "character_knowledge_report",
+    "resolve_character_names",
 ]
 
 SHEET_KINDS = {"description", "attribute", "detail"}
 VISIBILITY_KINDS = SHEET_KINDS | {"world_entry"}
 PRESENCE_KINDS = {"history", "fact"}
+
+
+def resolve_character_names(scene: "Scene", names: Iterable[str]) -> list[str]:
+    """Resolve audience names, including comma-joined lists, to distinct cast names."""
+    by_lower = {name.lower(): name for name in scene.character_data}
+    resolved = []
+    for name in names:
+        name = str(name)
+        parts = [name] if name.strip().lower() in by_lower else name.split(",")
+        for part in parts:
+            if not part.strip():
+                continue
+            canonical = by_lower.get(part.strip().lower())
+            if not canonical:
+                raise ValueError(f"Character `{part}` does not exist.")
+            if canonical not in resolved:
+                resolved.append(canonical)
+    return resolved
 
 
 def _edge_detail(edge: KnowledgeEdge) -> str:

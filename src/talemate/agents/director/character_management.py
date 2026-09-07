@@ -574,6 +574,12 @@ class CharacterManagementMixin:
 
         await self.scene.add_actor(actor)
 
+        if not request.active:
+            # the actor goes back out before generation starts: an actor is what
+            # makes a character active, and an active character is stamped into
+            # the presence of every message the scene produces meanwhile
+            await deactivate_character(scene, character)
+
         try:
             any_attribute_templates = await self._apply_generation_templates(
                 character,
@@ -670,9 +676,6 @@ class CharacterManagementMixin:
             # done() no-ops at step 0 - every mode needs one step to report
             # a terminal status
             loading_status("Adding character to scene")
-
-            if not request.active:
-                await deactivate_character(scene, character)
 
             # Commit the character's details to long term memory
             await character.commit_to_memory(memory)

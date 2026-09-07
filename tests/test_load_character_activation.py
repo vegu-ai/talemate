@@ -69,6 +69,23 @@ async def test_load_activates_the_saved_characters(load_env):
 
 
 @pytest.mark.asyncio
+async def test_load_keeps_one_entry_per_actor(load_env):
+    """A saved list naming a character twice yields one entry, not two.
+
+    A second entry outlives the character's actor and hides it from both
+    rosters: the active list is built from the actors, the inactive one from
+    the names.
+    """
+    scene = await load_scene_from_data(
+        load_env,
+        _scene_data(["Alice", "Alice"], ["Alice"]),
+        name="activation.json",
+    )
+
+    assert scene.active_characters == ["Alice"]
+
+
+@pytest.mark.asyncio
 async def test_load_drops_an_active_name_that_has_no_character(load_env):
     """A saved name with no character data cannot become an actor, so it must
     not stay in the active list either."""

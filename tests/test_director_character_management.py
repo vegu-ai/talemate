@@ -661,6 +661,44 @@ class TestPersistCharacterGenerationModes:
         assert [character["name"] for character in data["characters"]] == ["Nora"]
 
     @pytest.mark.asyncio
+    async def test_inactive_character_is_not_active_while_it_is_built(
+        self, scene, director
+    ):
+        """Generation can take minutes, and the scene plays on meanwhile.
+
+        An active character is stamped into the presence of every message the
+        scene produces and written into every save, so a character that is
+        being built to stay out of the scene must not be active for that time.
+        """
+        await scene.add_actor(
+            scene.Actor(Character(name="Nora"), None), commit_to_memory=False
+        )
+        seen = {}
+
+        async def record(self, character, request, **kwargs):
+            seen["active"] = list(scene.active_characters)
+            seen["actors"] = list(scene.character_names)
+            return False
+
+        with patch.object(
+            type(director),
+            "_apply_generation_templates",
+            autospec=True,
+            side_effect=record,
+        ):
+            await director.persist_character(
+                PersistCharacterRequest(
+                    name="Barry Largo",
+                    generate=False,
+                    determine_name=False,
+                    active=False,
+                )
+            )
+
+        assert seen["active"] == ["Nora"]
+        assert seen["actors"] == ["Nora"]
+
+    @pytest.mark.asyncio
     async def test_active_character_gets_an_actor(self, scene, director):
         await director.persist_character(
             PersistCharacterRequest(

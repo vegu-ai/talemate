@@ -238,12 +238,14 @@ async def test_make_character_inactive_keeps_the_character_out_of_the_roster(sce
     node.set_property("add_to_scene", True)
     node.set_property("is_active", False)
 
-    await _run_node(node, scene)
+    out = await _run_node(node, scene)
 
     assert "Barry" in scene.character_data
     assert "Barry" not in scene.character_names
     assert "Barry" not in scene.active_characters
     assert "Barry" in scene.inactive_characters
+    # an inactive character has no actor, so the node reports none
+    assert out["actor"] is None
 
 
 @pytest.mark.asyncio

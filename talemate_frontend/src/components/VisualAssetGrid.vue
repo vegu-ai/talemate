@@ -14,11 +14,13 @@
                     @dragleave.prevent="$emit('dragleave', $event)"
                     @drop.prevent="$emit('drop', $event)"
                     elevation="2"
+                    tabindex="0"
+                    :aria-label="`${dropLabel}: drop or paste an image`"
                 >
                     <div class="asset-image-container">
                         <div class="dropzone-content">
                             <v-icon size="32" color="muted">mdi-tray-arrow-down</v-icon>
-                            <span class="text-body-small mt-2">Drop image</span>
+                            <span class="text-body-small mt-2">Drop or paste image</span>
                         </div>
                     </div>
                     <v-card-text class="pa-2 text-body-small text-truncate">
@@ -194,6 +196,7 @@ export default {
 }
 
 .dropzone-card:hover,
+.dropzone-card:focus-visible,
 .dropzone-card.dropzone-active {
     border-color: rgba(var(--v-theme-primary), 0.6);
     background-color: rgba(var(--v-theme-primary), 0.05);
@@ -210,7 +213,13 @@ export default {
     transition: color 0.2s ease;
 }
 
+.dropzone-card:focus-visible {
+    outline: 2px solid rgb(var(--v-theme-primary));
+    outline-offset: 2px;
+}
+
 .dropzone-card:hover .dropzone-content,
+.dropzone-card:focus-visible .dropzone-content,
 .dropzone-card.dropzone-active .dropzone-content {
     color: rgba(var(--v-theme-primary), 0.8);
 }

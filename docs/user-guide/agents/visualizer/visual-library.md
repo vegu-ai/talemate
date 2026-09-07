@@ -180,11 +180,11 @@ The **Scene Assets** tab provides access to all saved images in your scene. Asse
 !!! note "Shared Assets Across Scenes"
     Scene assets are shared across all scene files within the same project. This means that when you save an image in one scene, it becomes available to all other scenes in that project. This is particularly useful for maintaining visual consistency across multiple scenes and reusing character portraits, scene backgrounds, and other assets without duplicating them.
 
-![A dark-mode screenshot of the "Visual Library" interface with the "Scene Assets" tab selected. The sidebar features a drag-and-drop upload area and a file tree containing "SCENE_CARD" and "CHARACTER_CARD" folders, while the main viewing pane is empty with the text "Select an asset to view."](/talemate/img/0.34.0/visual-library-18.png)
+![A dark-mode screenshot of the "Visual Library" interface with the "Scene Assets" tab selected. The sidebar features an upload area reading "Drag & drop or paste an image here, or browse" and a file tree of asset folders, while the main viewing pane is empty with the text "Select an asset to view."](/talemate/img/0.40.0/visual-library-18.png)
 
 The left sidebar shows:
 
-- **Upload Area**: Drag and drop images here to add them to your scene assets
+- **Upload Area**: Drag and drop images here, or paste one from the clipboard, to add them to your scene assets
 - **Asset Tree**: Organized folders showing assets by visual type and character
 
 Selecting an asset from the tree displays it in the main viewing area with full metadata and management options.
@@ -212,6 +212,7 @@ To upload an image:
 2. In the left sidebar, locate the **Upload Area**
 3. Either:
     - **Drag and drop** an image file directly onto the upload area, or
+    - **Paste** an image from the clipboard with **Ctrl+V** (**Cmd+V** on macOS) — click the upload area first if more than one image panel is open, or
     - **Click** the upload area to open a file browser and select an image file
 4. Once the image is selected, you'll be prompted to configure:
     - **Vis Type**: Select the appropriate visual type for the image (e.g., `CHARACTER_CARD`, `SCENE_BACKGROUND`, etc.)

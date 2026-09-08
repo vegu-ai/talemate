@@ -27,7 +27,7 @@ These are all experimental and will probably change / get merged in the future.
 
 ## :material-cube-unfolded: Embeddings
 
-![App settings - Presets - Embeddings](/talemate/img/0.39.0/app-settings-presets-embeddings.png)
+![App settings - Presets - Embeddings](/talemate/img/0.40.0/app-settings-presets-embeddings.png)
 
 Allows you to add, remove and manage various embedding models for the memory agent to use via chromadb.
 

@@ -252,6 +252,26 @@ def cleanup_instructor_embeddings(config: Config):
             config.dirty = True
 
 
+def restore_missing_embedding_presets(config: Config):
+    """
+    Adds shipped embedding presets that a saved config predates.
+
+    `save_config` persists `presets.embeddings` in full and the load replaces
+    the dict wholesale, so a config written before a preset shipped would
+    never see it.
+    """
+
+    if not config:
+        return
+
+    for preset_key, preset in config.presets.embeddings_defaults.items():
+        if preset_key in config.presets.embeddings:
+            continue
+
+        log.info("restoring shipped embedding preset", preset=preset_key)
+        config.presets.embeddings[preset_key] = preset.model_copy(deep=True)
+
+
 def cleanup() -> Config:
     log.info("cleaning up config")
 
@@ -261,6 +281,7 @@ def cleanup() -> Config:
     cleanup_removed_agents(config)
     cleanup_removed_recent_scenes(config)
     cleanup_instructor_embeddings(config)
+    restore_missing_embedding_presets(config)
 
     save_config()
 

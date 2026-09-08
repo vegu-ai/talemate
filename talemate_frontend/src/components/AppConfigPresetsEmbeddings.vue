@@ -207,6 +207,7 @@ export default {
             embeddings: [
                 {title: 'SentenceTransformer', value: 'sentence-transformer'},
                 {title: 'OpenAI', value: 'openai'},
+                {title: 'OpenRouter', value: 'openrouter'},
                 {title: 'Client API', value: 'client-api'},
             ],
             distanceFunctions: [
@@ -272,7 +273,7 @@ export default {
 
             let identifier = `${this.newPreset.embeddings}/${this.newPreset.model || this.newPreset.url || this.newPreset.client}`;
 
-            if(this.newPreset.embeddings === 'client-api') {
+            if(this.newPreset.embeddings !== 'sentence-transformer') {
                 this.newPreset.local = false;
             }
 

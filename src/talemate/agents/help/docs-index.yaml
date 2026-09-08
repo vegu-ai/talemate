@@ -160,9 +160,11 @@
     global agent settings.
 - path: user-guide/agents/memory/embeddings.md
   title: Embeddings
-  summary: Covers built-in and custom embedding presets, adding sentence-transformer models, download behavior, and the removal
-    of INSTRUCTOR embeddings. Defines device switching, remote-code trust risk, distance cutoff/modifier/function controls,
-    and organizational tags.
+  summary: Covers built-in and custom embedding presets and what each of the four driver types asks for when adding one -
+    a Huggingface model for sentence-transformer, a provider model id for the hosted OpenAI and OpenRouter drivers, a client
+    for client-api - plus which of them download a model, and the removal of INSTRUCTOR embeddings. Defines device switching,
+    remote-code trust risk, distance cutoff/modifier/function controls, the Local flag that hides the Device and GPU
+    Recommendation controls for a hosted model, and the Fast and GPU Recommendation tags.
 - path: user-guide/agents/memory/index.md
   title: Overview
   summary: Introduces the Memory agent as Talemate's long-term semantic-memory layer backed by embeddings. Notes that ChromaDB
@@ -175,8 +177,8 @@
 - path: user-guide/agents/memory/settings.md
   title: Settings
   summary: Documents selecting the Memory agent's embedding preset and overriding its execution device between CPU and CUDA.
-    Explains the OpenAI-key prerequisite and live device switching that clears ChromaDB cache, frees GPU memory, and reimports
-    the active scene database.
+    Names the OpenAI and OpenRouter API keys the hosted embeddings need, and live device switching that clears ChromaDB
+    cache, frees GPU memory, and reimports the active scene database.
 - path: user-guide/agents/memory/testing.md
   title: Testing Embeddings
   summary: Explains evaluating Memory retrieval through Debug Tools while using a scene normally. Shows how to inspect a memory

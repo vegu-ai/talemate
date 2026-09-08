@@ -8,7 +8,7 @@ import hashlib
 import threading
 import traceback
 import numpy as np
-from typing import Callable
+from typing import Callable, Literal
 
 import structlog
 from chromadb.config import Settings
@@ -52,6 +52,10 @@ if TYPE_CHECKING:
     from talemate.client.base import ClientEmbeddingsStatus
 
 log = structlog.get_logger("talemate.agents.memory")
+
+OPENROUTER_EMBEDDINGS_BASE_URL = "https://openrouter.ai/api/v1"
+
+HostedEmbeddingsProvider = Literal["OpenAI", "OpenRouter"]
 
 if not chromadb:
     log.info("ChromaDB not found, disabling Chroma agent")
@@ -164,6 +168,10 @@ class MemoryAgent(Agent):
     @property
     def using_openai_embeddings(self):
         return self.embeddings == "openai"
+
+    @property
+    def using_openrouter_embeddings(self):
+        return self.embeddings == "openrouter"
 
     @property
     def using_sentence_transformer_embeddings(self):
@@ -751,7 +759,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
     @property
     def ready(self):
-        if self.embeddings == "openai" and not self.openai_api_key:
+        if self.missing_hosted_embeddings_provider:
             return False
 
         if getattr(self, "db_client", None):
@@ -788,7 +796,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
         if self.ready:
             return "active" if not getattr(self, "processing", False) else "busy"
 
-        if self.embeddings == "openai" and not self.openai_api_key:
+        if self.missing_hosted_embeddings_provider:
             return "error"
 
         return "waiting"
@@ -829,12 +837,12 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 description="The device to use for embeddings.",
             ).model_dump()
 
-        if self.embeddings == "openai" and not self.openai_api_key:
-            # return "No OpenAI API key set"
+        missing_provider = self.missing_hosted_embeddings_provider
+        if missing_provider:
             details["error"] = {
                 "icon": "mdi-alert",
-                "value": "No OpenAI API key set",
-                "description": "You must provide an OpenAI API key to use OpenAI embeddings",
+                "value": f"No {missing_provider} API key set",
+                "description": f"You must provide an {missing_provider} API key to use {missing_provider} embeddings",
                 "color": "error",
             }
 
@@ -880,6 +888,20 @@ class ChromaDBMemoryAgent(MemoryAgent):
     @property
     def openai_api_key(self):
         return self.config.openai.api_key
+
+    @property
+    def openrouter_api_key(self):
+        return self.config.openrouter.api_key
+
+    @property
+    def missing_hosted_embeddings_provider(self) -> HostedEmbeddingsProvider | None:
+        if self.using_openai_embeddings and not self.openai_api_key:
+            return "OpenAI"
+
+        if self.using_openrouter_embeddings and not self.openrouter_api_key:
+            return "OpenRouter"
+
+        return None
 
     @property
     def embedding_function(self) -> Callable:
@@ -962,32 +984,54 @@ class ChromaDBMemoryAgent(MemoryAgent):
             log.info("chromadb agent", status="db ready")
             self._ready_to_add = True
 
+    def _openai_compatible_embedding_function(
+        self,
+        provider_label: HostedEmbeddingsProvider,
+        api_key: str | None,
+        model_name: str,
+        api_base: str | None,
+    ):
+        if not api_key:
+            raise ValueError(
+                f"You must provide an {provider_label} API key in the config if you want to use it for chromadb embeddings"
+            )
+
+        log.info(
+            "chromadb",
+            embeddings=provider_label,
+            api_key=api_key[:5] + "...",
+            model=model_name,
+            api_base=api_base,
+        )
+
+        return embedding_functions.OpenAIEmbeddingFunction(
+            api_key=api_key,
+            model_name=model_name,
+            api_base=api_base,
+        )
+
     def _build_collection(self, collection_name):
-        openai_key = self.openai_api_key
         distance_function = self.distance_function
         collection_metadata = {"hnsw:space": distance_function}
         device = self.actions["_config"].config["device"].value
         model_name = self.model
 
-        if self.using_openai_embeddings:
-            if not openai_key:
-                raise ValueError(
-                    "You must provide an the openai ai key in the config if you want to use it for chromadb embeddings"
+        if self.using_openai_embeddings or self.using_openrouter_embeddings:
+            if self.using_openrouter_embeddings:
+                provider_label, api_key, api_base = (
+                    "OpenRouter",
+                    self.openrouter_api_key,
+                    OPENROUTER_EMBEDDINGS_BASE_URL,
                 )
+            else:
+                provider_label, api_key, api_base = "OpenAI", self.openai_api_key, None
 
-            log.info(
-                "chromadb",
-                embeddings="OpenAI",
-                openai_key=openai_key[:5] + "...",
-                model=model_name,
-            )
-            openai_ef = embedding_functions.OpenAIEmbeddingFunction(
-                api_key=openai_key,
-                model_name=model_name,
+            ef = self._openai_compatible_embedding_function(
+                provider_label, api_key, model_name, api_base
             )
             return self.db_client.get_or_create_collection(
                 collection_name,
-                embedding_function=openai_ef,
+                embedding_function=ef,
                 metadata=collection_metadata,
             )
 

@@ -378,6 +378,12 @@ def generate_chromadb_presets() -> dict[str, EmbeddingFunctionPreset]:
             distance=1,
             local=False,
         ),
+        "openrouter": EmbeddingFunctionPreset(
+            embeddings="openrouter",
+            model="openai/text-embedding-3-small",
+            distance=1,
+            local=False,
+        ),
     }
 
 

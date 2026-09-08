@@ -236,11 +236,33 @@ class MemoryRAGMixin:
 
     # methods
 
-    async def rag_set_cache(
-        self, content: list[str], character: "Character | None" = None, *, key=None
+    async def _rag_publish(
+        self, content, character, *, key, scene, memory_revision, use_cache
     ):
+        if (
+            use_cache
+            and self.scene is scene
+            and key == self.long_term_memory_cache_key_for(character)
+        ):
+            await self.rag_set_cache(
+                content, character, key=key, memory_revision=memory_revision
+            )
+
+    async def rag_set_cache(
+        self,
+        content: list[str],
+        character: "Character | None" = None,
+        *,
+        key=None,
+        memory_revision: int | None = None,
+    ):
+        if memory_revision is None:
+            memory_revision = self.scene.memory_revision
+        if memory_revision != self.scene.memory_revision:
+            return
         self.scene.rag_cache[key or self.long_term_memory_cache_key_for(character)] = {
             "content": content,
+            "memory_revision": memory_revision,
             "fingerprint": self.scene.history[-1].fingerprint
             if self.scene.history
             else 0,
@@ -259,7 +281,11 @@ class MemoryRAGMixin:
         fingerprint = self.scene.history[-1].fingerprint if self.scene.history else 0
         cache = self.scene.rag_cache.get(self.long_term_memory_cache_key_for(character))
 
-        if cache and cache["fingerprint"] == fingerprint:
+        if (
+            cache
+            and cache["fingerprint"] == fingerprint
+            and cache["memory_revision"] == self.scene.memory_revision
+        ):
             return cache["content"]
 
         return None
@@ -354,7 +380,6 @@ class MemoryRAGMixin:
 
         viewer = self.rag_knowledge_viewer(character)
         scoped = viewer is not None and character_knowledge_enabled(self.scene)
-        # Legacy memory writes do not invalidate caches. Keep direct retrieval fresh.
         # Cache only the configured, goal-free retrieval operation.
         use_cache = (
             self.long_term_memory_cache
@@ -362,9 +387,12 @@ class MemoryRAGMixin:
             and not prompt
             and not sub_instruction
             and include_raw_semantic
+            # Legacy direct retrieval queries the store each time and needs no AI cache.
             and (scoped or self.long_term_memory_retrieval_method != "direct")
         )
         cache_key = self.long_term_memory_cache_key_for(character)
+        cache_scene = self.scene
+        memory_revision = cache_scene.memory_revision
 
         if use_cache:
             cached = await self.rag_get_cache(character)
@@ -390,10 +418,14 @@ class MemoryRAGMixin:
 
         if retrieval_method == "direct":
             # configuration is set to only use direct semantic matched context
-            if use_cache and cache_key == self.long_term_memory_cache_key_for(
-                character
-            ):
-                await self.rag_set_cache(semantic_context, character, key=cache_key)
+            await self._rag_publish(
+                semantic_context,
+                character,
+                key=cache_key,
+                scene=cache_scene,
+                memory_revision=memory_revision,
+                use_cache=use_cache,
+            )
             return semantic_context
 
         if not sub_instruction:
@@ -462,8 +494,14 @@ class MemoryRAGMixin:
         else:
             complete_context = list(dict.fromkeys(memory_context))
 
-        if use_cache and cache_key == self.long_term_memory_cache_key_for(character):
-            await self.rag_set_cache(complete_context, character, key=cache_key)
+        await self._rag_publish(
+            complete_context,
+            character,
+            key=cache_key,
+            scene=cache_scene,
+            memory_revision=memory_revision,
+            use_cache=use_cache,
+        )
 
         return complete_context
 

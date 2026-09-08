@@ -191,6 +191,7 @@ class Scene(Emitter):
         self._nodes_filename = ""
         self._creative_nodes_filename = ""
         self.memory_id = str(uuid.uuid4())[:10]
+        self.memory_revision = 0
         self.saved_memory_session_id = None
         self.memory_session_id = str(uuid.uuid4())[:10]
         self.restore_from = None

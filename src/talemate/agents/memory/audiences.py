@@ -63,14 +63,14 @@ class AudienceMemoryMixin:
         )
         self.invalidate_audience_index(scene, groups=groups)
 
-    def invalidate_audience_writes(self, documents):
+    def invalidate_audience_writes(self, documents, *, scene=None):
         groups = {("authored",)}
         for document in documents:
             if document.get("meta", {}).get("typ") == "fact":
                 groups.add(("fact", document["id"], 0))
             elif document.get("meta", {}).get("typ") == "history":
                 groups.add(("summary", document["id"], 0))
-        self.invalidate_audience_index(groups=groups)
+        self.invalidate_audience_index(scene, groups=groups)
 
     def invalidate_audience_index(self, scene=None, *, reconcile=False, groups=None):
         scene = scene or self.scene

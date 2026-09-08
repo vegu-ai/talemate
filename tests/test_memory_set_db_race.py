@@ -93,6 +93,7 @@ class _FakeScene:
         saved_memory_session_id=None,
     ):
         self.memory_id = memory_id
+        self.memory_revision = 0
         self.saved = saved
         self.memory_session_id = memory_session_id
         self.saved_memory_session_id = saved_memory_session_id

@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uuid
 from typing import TYPE_CHECKING, Any, Callable, Union, get_args
@@ -952,6 +953,16 @@ class WorldStateManager:
         Arguments:
             entry_id: The identifier of the world entry to be deleted.
         """
+        # A running store deletion cannot be cancelled. Finish removing its
+        # authored source before audience reconciliation can recreate it.
+        operation = asyncio.create_task(self._delete_context_db_entry(entry_id))
+        try:
+            await asyncio.shield(operation)
+        except asyncio.CancelledError:
+            await asyncio.shield(operation)
+            raise
+
+    async def _delete_context_db_entry(self, entry_id: str):
         await self.memory_agent.delete({"ids": entry_id})
 
         if entry_id in self.world_state.manual_context:

@@ -1,3 +1,5 @@
+import asyncio
+import threading
 from unittest.mock import AsyncMock, Mock
 
 import numpy as np
@@ -13,6 +15,7 @@ from talemate.knowledge.schema import EntryVisibility, ParsedFact, Topic
 from talemate.knowledge.supported_facts import replace_source_facts
 from talemate.prompts import Prompt
 from talemate.scene_message import DirectorMessage, NarratorMessage
+from talemate.tale_mate import Scene
 from talemate.world_state import Reinforcement
 
 pytestmark = pytest.mark.asyncio
@@ -64,6 +67,8 @@ async def test_direct_queries_and_entities_ignore_private_changes_and_follow_dis
     scene.character_data["Zed"] = Character(
         name="Zed", description="Zed reads the tides."
     )
+    # Direct fixture mutation bypasses the roster's authored-source notification.
+    memory.invalidate_audience_index(scene, groups={("authored",)})
     views(scene, message)
     queries, entities = [], []
     get = memory._get
@@ -675,6 +680,255 @@ async def test_legacy_direct_retrieval_sees_world_entry_edit_at_same_history(
     assert any("closes at dusk" in doc for doc in after)
     assert not any("opens at dawn" in doc for doc in after)
     assert not scene.rag_cache
+
+
+async def configure_cached_rag(rag, monkeypatch, mode, viewer, method):
+    scene, memory, _, conversation = rag
+    await memory.ensure_audience_index(scene)
+    if mode == "legacy":
+        scene.knowledge_eligibility = "legacy"
+        memory.db.delete(ids=memory.db.get()["ids"])
+    config = conversation.actions["use_long_term_memory"].config
+    monkeypatch.setattr(config["cache"], "value", True)
+    monkeypatch.setattr(config["retrieval_method"], "value", method)
+    if viewer == "shared":
+        monkeypatch.setattr(conversation, "rag_knowledge_viewer", lambda _: None)
+    return None if viewer == "author" else scene.character_data["Elmer"]
+
+
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
+@pytest.mark.parametrize("viewer", ["author", "shared", "character"])
+@pytest.mark.parametrize("method", ["queries", "questions"])
+@pytest.mark.parametrize("edit", ["world", "detail", "manual", "delete"])
+async def test_cached_retrieval_follows_memory_edits(
+    rag, monkeypatch, mode, viewer, method, edit
+):
+    scene, _, _, conversation = rag
+    character = await configure_cached_rag(rag, monkeypatch, mode, viewer, method)
+    ai = AsyncMock(return_value=[] if method == "queries" else "")
+    monkeypatch.setattr(
+        get_agent("world_state"),
+        "analyze_text_and_extract_context_via_queries"
+        if method == "queries"
+        else "analyze_text_and_extract_context",
+        ai,
+    )
+
+    async def save(text):
+        if edit == "detail":
+            await scene.character_data["Elmer"].set_detail("harbor", text)
+        elif edit == "manual":
+            await scene.world_state_manager.update_context_db_entry(
+                "lore", text, {"source": "manual", "typ": "world_state"}
+            )
+        else:
+            await scene.world_state_manager.save_world_entry("lore", text, {})
+
+    await save("The harbor opens at dawn.")
+    history = scene.history[-1].fingerprint
+    before = await conversation.rag_build(character)
+    assert any("opens at dawn" in doc for doc in before)
+    assert await conversation.rag_build(character) == before
+    assert ai.await_count == 1
+
+    if edit == "delete":
+        await scene.world_state_manager.delete_context_db_entry("lore")
+    else:
+        await save("The harbor closes at dusk.")
+    after = await conversation.rag_build(character)
+
+    assert scene.history[-1].fingerprint == history
+    assert ai.await_count == 2
+    assert not any("opens at dawn" in doc for doc in after)
+    if edit != "delete":
+        assert any("closes at dusk" in doc for doc in after)
+        assert await conversation.rag_build(character) == after
+        assert ai.await_count == 2
+
+
+@pytest.mark.parametrize("viewer", ["author", "shared", "character"])
+@pytest.mark.parametrize("method", ["queries", "questions"])
+async def test_memory_edit_during_retrieval_does_not_publish_or_retry(
+    rag, monkeypatch, viewer, method
+):
+    scene, _, _, conversation = rag
+    character = await configure_cached_rag(rag, monkeypatch, "legacy", viewer, method)
+    await scene.world_state_manager.save_world_entry(
+        "lore", "The harbor opens at dawn.", {}
+    )
+    started, resume = asyncio.Event(), asyncio.Event()
+
+    async def request(*args, **kwargs):
+        started.set()
+        await asyncio.wait_for(resume.wait(), timeout=5)
+        return [] if method == "queries" else ""
+
+    ai = AsyncMock(side_effect=request)
+    monkeypatch.setattr(
+        get_agent("world_state"),
+        "analyze_text_and_extract_context_via_queries"
+        if method == "queries"
+        else "analyze_text_and_extract_context",
+        ai,
+    )
+    pending = asyncio.create_task(conversation.rag_build(character))
+    try:
+        await asyncio.wait_for(started.wait(), timeout=5)
+        await scene.world_state_manager.save_world_entry(
+            "lore", "The harbor closes at dusk.", {}
+        )
+    finally:
+        resume.set()
+        current = await asyncio.wait_for(pending, timeout=5)
+
+    assert any("opens at dawn" in doc for doc in current)
+    assert ai.await_count == 1
+    assert not scene.rag_cache
+    assert await conversation.rag_get_cache(character) is None
+    fresh = await conversation.rag_build(character)
+    assert any("closes at dusk" in doc for doc in fresh)
+    assert not any("opens at dawn" in doc for doc in fresh)
+    assert ai.await_count == 2
+    assert await conversation.rag_build(character) == fresh
+    assert ai.await_count == 2
+
+
+@pytest.mark.parametrize("method", ["queries", "questions"])
+async def test_perception_memory_edit_during_retrieval_retries_once(
+    rag, monkeypatch, method
+):
+    scene, _, _, conversation = rag
+    character = await configure_cached_rag(
+        rag, monkeypatch, "perception", "character", method
+    )
+    await scene.world_state_manager.save_world_entry(
+        "lore", "The harbor opens at dawn.", {}
+    )
+    started, resume = asyncio.Event(), asyncio.Event()
+
+    async def request(*args, **kwargs):
+        started.set()
+        await asyncio.wait_for(resume.wait(), timeout=5)
+        return [] if method == "queries" else ""
+
+    ai = AsyncMock(side_effect=request)
+    monkeypatch.setattr(
+        get_agent("world_state"),
+        "analyze_text_and_extract_context_via_queries"
+        if method == "queries"
+        else "analyze_text_and_extract_context",
+        ai,
+    )
+    pending = asyncio.create_task(conversation.rag_build(character))
+    try:
+        await asyncio.wait_for(started.wait(), timeout=5)
+        await scene.world_state_manager.save_world_entry(
+            "lore", "The harbor closes at dusk.", {}
+        )
+    finally:
+        resume.set()
+        current = await asyncio.wait_for(pending, timeout=5)
+    assert ai.await_count == 2
+    assert any("closes at dusk" in doc for doc in current)
+    assert not any("opens at dawn" in doc for doc in current)
+    assert await conversation.rag_build(character) == current
+    assert ai.await_count == 2
+
+
+@pytest.mark.parametrize("method", ["queries", "questions"])
+async def test_scene_rebind_during_retrieval_does_not_publish(rag, monkeypatch, method):
+    scene, _, _, conversation = rag
+    await configure_cached_rag(rag, monkeypatch, "legacy", "author", method)
+    await scene.world_state_manager.save_world_entry(
+        "lore", "The harbor opens at dawn.", {}
+    )
+    replacement = Scene()
+    replacement.rag_cache = {}
+    replacement.memory_revision = scene.memory_revision
+    replacement.history = list(scene.history)
+    started, resume = asyncio.Event(), asyncio.Event()
+
+    async def request(*args, **kwargs):
+        started.set()
+        await asyncio.wait_for(resume.wait(), timeout=5)
+        return [] if method == "queries" else ""
+
+    monkeypatch.setattr(
+        get_agent("world_state"),
+        "analyze_text_and_extract_context_via_queries"
+        if method == "queries"
+        else "analyze_text_and_extract_context",
+        request,
+    )
+    pending = asyncio.create_task(conversation.rag_build())
+    try:
+        await asyncio.wait_for(started.wait(), timeout=5)
+        monkeypatch.setattr(conversation, "scene", replacement)
+    finally:
+        resume.set()
+        current = await asyncio.wait_for(pending, timeout=5)
+    assert any("opens at dawn" in doc for doc in current)
+    assert not scene.rag_cache
+    assert not replacement.rag_cache
+
+
+@pytest.mark.parametrize("edit", ["world", "delete"])
+async def test_cancelled_perception_write_refreshes_audience_cache(
+    rag, monkeypatch, edit
+):
+    scene, memory, _, conversation = rag
+    character = await configure_cached_rag(
+        rag, monkeypatch, "perception", "character", "queries"
+    )
+    monkeypatch.setattr(
+        get_agent("world_state"),
+        "analyze_text_and_extract_context_via_queries",
+        AsyncMock(return_value=[]),
+    )
+    manager = scene.world_state_manager
+    await manager.save_world_entry("lore", "The harbor opens at dawn.", {})
+    before = await conversation.rag_build(character)
+    assert any("opens at dawn" in doc for doc in before)
+    started, invalidated = asyncio.Event(), asyncio.Event()
+    release = threading.Event()
+    loop = asyncio.get_running_loop()
+    operation_name = "_add_many" if edit == "world" else "_delete"
+    original = getattr(memory, operation_name)
+    invalidate = memory.invalidate_audience_index
+
+    def blocked(*args, **kwargs):
+        loop.call_soon_threadsafe(started.set)
+        assert release.wait(timeout=5)
+        return original(*args, **kwargs)
+
+    def observe_invalidation(*args, **kwargs):
+        invalidate(*args, **kwargs)
+        invalidated.set()
+
+    monkeypatch.setattr(memory, operation_name, blocked)
+    monkeypatch.setattr(memory, "invalidate_audience_index", observe_invalidation)
+    pending = asyncio.create_task(
+        manager.save_world_entry("lore", "The harbor closes at dusk.", {})
+        if edit == "world"
+        else manager.delete_context_db_entry("lore")
+    )
+    try:
+        await asyncio.wait_for(started.wait(), timeout=5)
+        pending.cancel()
+        # Deliver cancellation while the actual ChromaDB write is still paused.
+        await asyncio.sleep(0)
+    finally:
+        release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(pending, timeout=5)
+        await asyncio.wait_for(invalidated.wait(), timeout=5)
+    after = await conversation.rag_build(character)
+    assert not any("opens at dawn" in doc for doc in after)
+    if edit == "world":
+        assert any("closes at dusk" in doc for doc in after)
+    else:
+        assert "lore" not in scene.world_state.manual_context
+        assert not await memory.get_document("lore", viewer=character.name)
 
 
 async def test_cache_tracks_distance_and_collection_generation(

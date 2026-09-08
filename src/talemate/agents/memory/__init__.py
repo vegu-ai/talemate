@@ -710,6 +710,17 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
         return True
 
+    def _write_memory(self, scene, operation, *args, **kwargs):
+        # Executor queues and retries can outlive the scene that requested the write.
+        if self.scene is not scene:
+            return
+        scene.memory_revision += 1
+        try:
+            return operation(*args, **kwargs)
+        finally:
+            # The executor can finish a write after its awaiting task is cancelled.
+            scene.memory_revision += 1
+
     @set_processing
     async def add(self, text, character=None, uid=None, ts: int = None, **kwargs):
         if not text:
@@ -720,6 +731,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
         if not await self._wait_until_ready():
             return
+        scene = self.scene
 
         log.debug(
             "memory agent add",
@@ -735,7 +747,16 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         try:
             await loop.run_in_executor(
                 None,
-                functools.partial(self._add, text, character, uid=uid, ts=ts, **kwargs),
+                functools.partial(
+                    self._write_memory,
+                    scene,
+                    self._add,
+                    text,
+                    character,
+                    uid=uid,
+                    ts=ts,
+                    **kwargs,
+                ),
             )
         except AttributeError as e:
             # not sure how this sometimes happens.
@@ -757,7 +778,14 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 await loop.run_in_executor(
                     None,
                     functools.partial(
-                        self._add, text, character, uid=uid, ts=ts, **kwargs
+                        self._write_memory,
+                        scene,
+                        self._add,
+                        text,
+                        character,
+                        uid=uid,
+                        ts=ts,
+                        **kwargs,
                     ),
                 )
             except Exception as e:
@@ -772,13 +800,15 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                     **kwargs,
                 )
 
-        self.invalidate_audience_writes([{"id": uid, "meta": kwargs}])
+        self.invalidate_audience_writes([{"id": uid, "meta": kwargs}], scene=scene)
 
     def _add(self, text, character=None, ts: int = None, **kwargs):
         raise NotImplementedError()
 
     @set_processing
     async def add_many(self, objects: list[dict]):
+        if not objects:
+            return
         if self.readonly:
             log.debug("memory agent", status="readonly")
             return
@@ -788,9 +818,29 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
         log.debug("memory agent add many", len=len(objects))
 
+        scene = self.scene
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._add_many, objects)
-        self.invalidate_audience_writes(objects)
+        operation = loop.run_in_executor(
+            None,
+            functools.partial(self._write_memory, scene, self._add_many, objects),
+        )
+        try:
+            await asyncio.shield(operation)
+        finally:
+            if operation.done():
+                self.invalidate_audience_writes(objects, scene=scene)
+            else:
+                # Cancellation must not detach index invalidation from the
+                # executor write. Run it on the event loop once the write ends.
+                operation.add_done_callback(
+                    functools.partial(self._complete_cancelled_write, scene, objects)
+                )
+
+    def _complete_cancelled_write(self, scene, objects, operation):
+        error = operation.exception()
+        if error is not None:
+            log.warning("memory write failed after cancellation", error=str(error))
+        self.invalidate_audience_writes(objects, scene=scene)
 
     def _add_many(self, objects: list[dict]):
         """
@@ -811,7 +861,9 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             return
 
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._delete, meta)
+        await loop.run_in_executor(
+            None, functools.partial(self._write_memory, self.scene, self._delete, meta)
+        )
         self.invalidate_audience_index(reconcile=True)
 
     def _delete(self, meta: dict):

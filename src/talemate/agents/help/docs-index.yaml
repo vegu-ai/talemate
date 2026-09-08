@@ -212,7 +212,9 @@
     Device and GPU Recommendation for hosted models; Fast and GPU Recommendation tags are also covered.
 - path: user-guide/agents/memory/index.md
   title: Overview
-  summary: Memory agent manages long-term memory with embeddings and the ChromaDB backend.
+  summary: Memory agent manages long-term memory with embeddings and the ChromaDB backend. Cached memory refreshes after
+    edits or deletions for the next prompt, even without new story messages, with or without Character perspectives.
+    Explains how retrieval already in progress can finish with earlier context without caching it for the next prompt.
 - path: user-guide/agents/memory/koboldcpp.md
   title: KoboldCpp Embeddings
   summary: Use an embedding GGUF loaded in KoboldCpp with --embeddingsmodel; the Memory agent detects it and switches to Client

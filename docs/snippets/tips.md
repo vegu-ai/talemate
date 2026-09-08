@@ -85,6 +85,12 @@ The maximum response length of the generated answers.
 
 Enables the agent wide cache of the long term memory retrieval. That means any agents that share the same long term memory settings will share the same cache. This can be useful to reduce the number of queries to the memory agent.
 
+Cached long term memory is refreshed after edits to world entries, character details,
+or other stored memories, including deletions. The next prompt uses the updated
+memory even when no story message has been added. This applies with and without
+Character perspectives enabled. A retrieval already in progress can finish with
+its earlier context; that context will not be reused by the next prompt.
+
 <!--- --8<-- [end:agent_long_term_memory_settings] -->
 
 <!--- --8<-- [start:character_change_proposals] -->

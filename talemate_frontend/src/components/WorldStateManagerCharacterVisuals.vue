@@ -42,7 +42,6 @@
                 ref="rules"
                 :character="character"
                 :scene="scene"
-                @require-scene-save="$emit('require-scene-save')"
             />
             <WorldStateManagerCharacterVisualsFinalizers
                 v-else-if="tab === 'finalizers'"

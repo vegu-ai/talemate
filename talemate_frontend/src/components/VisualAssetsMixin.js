@@ -22,6 +22,8 @@
  * - onDragLeave(e): drag handler method
  * - onDrop(e): drag handler method
  * - handleFileUpload(file): file upload handler method
+ * - handlePastedImage(file): clipboard paste handler; registered as a paste
+ *   target while uploadConfig is set (see ImagePasteTargetMixin)
  * - deleteAsset(assetId): method to delete an asset
  * - requestCharacterDetails(): method to request character details refresh (requires character prop)
  * - hasTags(asset): method to check if an asset has tags
@@ -31,6 +33,7 @@
  */
 
 import { newUuid } from '@/utils/uuid';
+import ImagePasteTargetMixin from './ImagePasteTargetMixin.js';
 
 /**
  * Creates a scene assets requester that batches and debounces asset requests.
@@ -103,6 +106,7 @@ export function createSceneAssetsRequester(sendFn, windowMs = 100) {
 }
 
 export default {
+    mixins: [ImagePasteTargetMixin],
     inject: {
         getWebsocket: {},
         registerMessageHandler: {},
@@ -122,6 +126,9 @@ export default {
     computed: {
         assetsMap() {
             return (this.scene?.data?.assets?.assets) || {};
+        },
+        pasteTargetEnabled() {
+            return !!this.uploadConfig;
         },
     },
     methods: {
@@ -161,6 +168,10 @@ export default {
             }
         },
         
+        handlePastedImage(file) {
+            this.handleFileUpload(file);
+        },
+
         onDrop(e) {
             this.isDragging = false;
             const file = e.dataTransfer?.files?.[0];

@@ -140,6 +140,7 @@
 import DirectorConsoleMessage from './DirectorConsoleMessage.vue';
 import DirectorConsoleSceneDirection from './DirectorConsoleSceneDirection.vue';
 import DirectorConsoleChats from './DirectorConsoleChats.vue';
+import { askAgentRequests } from '@/utils/askAgent';
 
 export default {
     name: 'DirectorConsole',
@@ -170,6 +171,9 @@ export default {
         'openWorldStateManager',
     ],
     computed: {
+        askAgentRequests() {
+            return askAgentRequests('director');
+        },
         regularMessages() {
             return this.messages.filter(message => message.subtype !== 'function_call');
         },
@@ -206,6 +210,12 @@ export default {
         currentDirectorPersona() {
             return this.scene?.data?.agent_persona_templates?.director || null;
         }
+    },
+    watch: {
+        askAgentRequests() {
+            // the chat the action asked for is answered in the chats tab
+            this.activeTab = 'chats';
+        },
     },
     data() {
         return {

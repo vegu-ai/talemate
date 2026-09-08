@@ -627,7 +627,12 @@
         "items": [
           "story_configuration:title",
           "story_configuration:description",
-          "story_configuration:content_classification"
+          "story_configuration:content_classification",
+          "story_configuration:perspective",
+          "story_configuration:perspective.default",
+          "story_configuration:perspective.player",
+          "story_configuration:perspective.other",
+          "story_configuration:perspective.narrator"
         ]
       },
       "x": 135,
@@ -1305,12 +1310,13 @@
         "group": "Update Context",
         "action_id": "update_context.story_configuration",
         "action_title": "Story Configuration",
-        "description_chat": "Make changes to the story / experience's configuration: Title, Description, Introduction, Content Classification, Story Intention, Scene Intention and Scene Type.\n\nManage Contextual Pins (add, update, remove pins of world entries).",
+        "description_chat": "Make changes to the story / experience's configuration: Title, Description, Introduction, Content Classification, Story Intention, Scene Intention, Scene Type and Narrative Perspective.\n\nThe narrative perspective is the prose voice and tense of the story. It has a scene-wide default (Context ID `story_configuration:perspective`) and three optional per-speaker overrides (`story_configuration:perspective.player`, `.other` and `.narrator`), each of which falls back to the default while it is empty.\n\nManage Contextual Pins (add, update, remove pins of world entries).",
         "description_scene_direction": "",
         "instruction_examples": [
           "Update the story intention to be more specific about the expected story's mature content.",
           "Change the scene type to `roleplay`. Julienne should explore the marketplace to see if she finds anything interesting.",
-          "Keep the scene type `roleplay` but update the goal. Lara and Gustav are discussing how to traverse the puzzle room."
+          "Keep the scene type `roleplay` but update the goal. Lara and Gustav are discussing how to traverse the puzzle room.",
+          "Set the narrative perspective. `story_configuration:perspective` becomes 'Second person, present tense.' and `story_configuration:perspective.other` becomes 'Third person limited, present tense.'"
         ],
         "availability": "both",
         "force_enabled": false

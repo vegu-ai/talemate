@@ -206,9 +206,10 @@
     scenes.'
 - path: user-guide/agents/memory/embeddings.md
   title: Embeddings
-  summary: Manage embedding presets using local MiniLM/GTE sentence transformers, OpenAI or KoboldCpp Client API; INSTRUCTOR
-    is removed. Covers model downloads, Trust Remote Code, CPU/CUDA switching without restart, distance functions, Distance
-    Mod/Search Strictness and model-dependent Topic Threshold.
+  summary: Manage built-in and custom presets for local sentence transformers, hosted OpenAI and OpenRouter drivers, and
+    Client API. Covers each driver's model or client input, model downloads, INSTRUCTOR removal, Trust Remote Code, CPU/CUDA
+    switching, distance functions, Distance Mod/Search Strictness and model-dependent Topic Threshold. The Local flag hides
+    Device and GPU Recommendation for hosted models; Fast and GPU Recommendation tags are also covered.
 - path: user-guide/agents/memory/index.md
   title: Overview
   summary: Memory agent manages long-term memory with embeddings and the ChromaDB backend.
@@ -220,7 +221,8 @@
   title: Settings
   summary: 'Memory settings: embeddings and CPU/CUDA switching, topic clustering/recluster thresholds and recorded-fact access.
     Retrieval uses recency, diversity, entity lookup and optional local cross-encoder reranking; topic awareness and similarity
-    knowledge rescue are legacy-only.'
+    knowledge rescue are legacy-only. Names the OpenAI and OpenRouter API keys needed by hosted embeddings; live device
+    switching clears ChromaDB cache, frees GPU memory and reimports the active scene database.'
 - path: user-guide/agents/memory/testing.md
   title: Testing Embeddings
   summary: Test embeddings through Debug Tools → Memory by inspecting generation-time requests, result distances and selected
@@ -1253,7 +1255,8 @@
   title: Outline
   summary: Scene Outline sets title, content classification, internal description and player introduction with AI generation/autocomplete.
     Explains perspective/tense defaults and player/NPC/narrator overrides, POV presets, {player_name} substitution and suppression,
-    fallback semantics and perspective context IDs.
+    fallback semantics and perspective context IDs. Shipped presets show explanatory and sample-prose subtitles, and Ask
+    director to set up perspectives opens a new director chat that chooses and writes perspectives from the existing prose.
 - path: user-guide/world-editor/scene/settings.md
   title: Settings
   summary: Scene Settings control Character perspectives while history and archived history are empty; disabling clears stored

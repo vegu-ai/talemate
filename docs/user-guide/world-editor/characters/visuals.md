@@ -4,7 +4,7 @@ The **Visuals** tab in the Character Editor provides a dedicated interface for m
 
 To access the Visuals tab, open the :material-earth-box: **World Editor** and navigate to the :material-account-group: **Characters** tab. Select a character, then click on the :material-image-multiple: **Visuals** tab.
 
-![Character editor Visuals tab overview](/talemate/img/0.35.0/character-visuals-overview.png)
+![Character editor Visuals tab overview](/talemate/img/0.40.0/character-visuals-overview.png)
 
 ## Overview
 
@@ -31,8 +31,9 @@ The Cover Image view displays all images of type `CHARACTER_CARD` associated wit
 You can add new cover images in several ways:
 
 1. **Drag and Drop**: Drag an image file directly onto the drop zone labeled "Add Cover"
-2. **Generate from Reference**: Create a new cover image based on an existing character image
-3. **Generate New**: Create a completely new cover image from scratch using AI
+2. **Paste**: Copy an image to the clipboard and press **Ctrl+V** (**Cmd+V** on macOS). Click the drop zone first if more than one image panel is open.
+3. **Generate from Reference**: Create a new cover image based on an existing character image
+4. **Generate New**: Create a completely new cover image from scratch using AI
 
 ### Context Menu Actions
 
@@ -85,7 +86,7 @@ The Visual Agent will use your instructions along with the character's informati
 
 Portraits are face-focused images used in dialogue messages and character lists. They are typically in **square format** and help identify characters during conversations.
 
-![Character portrait management](/talemate/img/0.35.0/character-visuals-portrait.png)
+![Character portrait management](/talemate/img/0.40.0/character-visuals-portrait.png)
 
 ### Portrait Types
 
@@ -99,6 +100,7 @@ The Portrait view manages images of type `CHARACTER_PORTRAIT` and tracks two dis
 The portrait management interface works similarly to cover images:
 
 - **Drag and Drop**: Add new portraits by dropping image files onto the drop zone
+- **Paste**: Add a new portrait by copying an image to the clipboard and pressing **Ctrl+V** (**Cmd+V** on macOS). Click the drop zone first if more than one image panel is open.
 - **Generate from Reference**: Create portraits based on existing character images
 - **Generate New**: Create completely new portraits using AI
 

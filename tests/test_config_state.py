@@ -9,7 +9,8 @@ Covers:
   presets / unified_api_key configs / dangling preset_groups / a dangling
   inference param panel client).
 - `cleanup_removed_clients`, `cleanup_removed_agents`,
-  `cleanup_removed_recent_scenes`, `cleanup_instructor_embeddings`.
+  `cleanup_removed_recent_scenes`, `cleanup_instructor_embeddings`,
+  `restore_missing_embedding_presets`.
 - `commit_config` (no-op when not dirty, otherwise saves and clears flag).
 
 We isolate filesystem and signal side-effects so the test never writes to
@@ -35,6 +36,7 @@ from talemate.config.schema import (
     InferencePresets,
     RecentScene,
     SceneAppearance,
+    generate_chromadb_presets,
 )
 
 
@@ -531,6 +533,76 @@ class TestCleanupInstructorEmbeddings:
 
     def test_none_config_is_noop(self):
         config_state.cleanup_instructor_embeddings(None)
+
+
+# ---------------------------------------------------------------------------
+# restore_missing_embedding_presets
+# ---------------------------------------------------------------------------
+
+
+class TestRestoreMissingEmbeddingPresets:
+    """`save_config` writes `presets.embeddings` in full and `_load_config`
+    replaces the dict, so a config saved before a preset shipped never sees
+    it - which is how the config that reaches this function is built."""
+
+    @staticmethod
+    def _saved_config(omit: str | None = None, **edits) -> Config:
+        embeddings = {
+            key: preset.model_dump()
+            for key, preset in generate_chromadb_presets().items()
+            if key != omit
+        }
+        for key, fields in edits.items():
+            embeddings[key].update(fields)
+        return Config.model_validate({"presets": {"embeddings": embeddings}})
+
+    def test_restores_a_preset_the_saved_config_predates(self):
+        config = self._saved_config(omit="openrouter")
+        assert "openrouter" not in config.presets.embeddings
+
+        config_state.restore_missing_embedding_presets(config)
+
+        assert config.presets.embeddings["openrouter"].embeddings == "openrouter"
+        assert (
+            config.presets.embeddings["openrouter"].model
+            == "openai/text-embedding-3-small"
+        )
+
+    def test_leaves_an_edited_shipped_preset_alone(self):
+        config = self._saved_config(openrouter={"model": "qwen/qwen3-embedding-8b"})
+
+        config_state.restore_missing_embedding_presets(config)
+
+        assert (
+            config.presets.embeddings["openrouter"].model == "qwen/qwen3-embedding-8b"
+        )
+
+    def test_leaves_a_custom_preset_alone(self):
+        """A preset must be missing, or the restore branch never runs and the
+        assertion holds for a body that does nothing."""
+        config = self._saved_config(omit="openrouter")
+        config.presets.embeddings["mine"] = EmbeddingFunctionPreset(
+            embeddings="sentence-transformer", model="my/model", custom=True
+        )
+
+        config_state.restore_missing_embedding_presets(config)
+
+        assert "openrouter" in config.presets.embeddings
+        assert config.presets.embeddings["mine"].model == "my/model"
+        assert config.presets.embeddings["mine"].custom is True
+
+    def test_does_not_mark_the_config_dirty(self):
+        """`cleanup()` saves on the line after this one, so a dirty flag here
+        would only buy a second write from the next `commit_config` pass."""
+        config = self._saved_config(omit="openrouter")
+        config.dirty = False
+
+        config_state.restore_missing_embedding_presets(config)
+
+        assert config.dirty is False
+
+    def test_none_config_is_noop(self):
+        config_state.restore_missing_embedding_presets(None)
 
 
 # ---------------------------------------------------------------------------

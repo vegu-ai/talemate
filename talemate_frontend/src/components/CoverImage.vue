@@ -1,5 +1,11 @@
 <template>
-    <v-sheet v-if="expanded" elevation="3">
+    <v-sheet
+        v-if="expanded"
+        elevation="3"
+        class="cover-image"
+        :tabindex="allowUpdate ? 0 : undefined"
+        :aria-label="allowUpdate ? 'Drop or paste an image to update the cover image' : undefined"
+    >
         <div class="portrait-image-container" v-if="asset_id !== null" v-on:drop="onDrop" v-on:dragover.prevent>
             <v-img cover @click="toggle()" :src="displaySrc" class="portrait-image"></v-img>
         </div>
@@ -8,10 +14,10 @@
             <v-card-text v-if="allowUpdate" class="drop-hint text-center">
                 <v-icon size="48" color="primary">mdi-upload</v-icon>
                 <div class="text-body-small text-medium-emphasis" v-if="type === 'character' && target">
-                    Drag and drop an image to update <span class="text-primary">{{ target.name }}</span>'s main image.
+                    Drag, drop or paste an image to update <span class="text-primary">{{ target.name }}</span>'s main image.
                 </div>
                 <div class="text-body-small text-medium-emphasis" v-else>
-                    Drag and drop an image to update <span class="text-primary">the scene's</span> cover image.
+                    Drag, drop or paste an image to update <span class="text-primary">the scene's</span> cover image.
                 </div>
             </v-card-text>
         </v-card>
@@ -27,9 +33,11 @@
 
 <script>
 import { VIS_TYPE } from '@/constants/visual';
+import ImagePasteTargetMixin from './ImagePasteTargetMixin.js';
 
 export default {
     name: 'CoverImage',
+    mixins: [ImagePasteTargetMixin],
     data() {
         return {
             asset_id: null,
@@ -54,6 +62,9 @@ export default {
         }
     },
     computed: {
+        pasteTargetEnabled() {
+            return this.allowUpdate && this.expanded;
+        },
         isScene() {
             return this.type === 'scene';
         },
@@ -95,13 +106,20 @@ export default {
             e.preventDefault();
             let files = e.dataTransfer.files;
             if (files.length > 0) {
-                let reader = new FileReader();
-                reader.onload = (e) => {
-                    let result = e.target.result;
-                    this.uploadCharacterImage(result);
-                };
-                reader.readAsDataURL(files[0]);
+                this.readCoverImage(files[0]);
             }
+        },
+
+        handlePastedImage(file) {
+            this.readCoverImage(file);
+        },
+
+        readCoverImage(file) {
+            let reader = new FileReader();
+            reader.onload = (e) => {
+                this.uploadCharacterImage(e.target.result);
+            };
+            reader.readAsDataURL(file);
         },
         uploadCharacterImage(image_file_base64) {
             if(!this.allowUpdate)
@@ -342,6 +360,11 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.cover-image:focus-visible {
+    outline: 2px solid rgb(var(--v-theme-primary));
+    outline-offset: 2px;
 }
 
 .empty-portrait .drop-hint {

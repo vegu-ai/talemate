@@ -269,9 +269,9 @@
       "id": "b37eaa4d-16d6-4dc5-b990-7f411b45a60b",
       "properties": {
         "template": null,
-        "max_calls": 1,
+        "max_calls": 5,
         "retries": 0,
-        "response_length": 1024
+        "response_length": 2048
       },
       "x": 4910,
       "y": 1657,

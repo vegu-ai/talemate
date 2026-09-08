@@ -9,6 +9,9 @@ Select which embedding to use. Embeddings themselves are managed through the [Em
 !!! info "openAI"
     If you are using the OpenAI API, you will need to have an API key set under **Connections → API Keys**. See the [OpenAI API setup](/talemate/user-guide/apis/openai/) for setting up the OpenAI API key.
 
+!!! info "openRouter"
+    If you are using the OpenRouter API, you will need to have an API key set under **Connections → API Keys**. See the [OpenRouter API setup](/talemate/user-guide/apis/openrouter/) for setting up the OpenRouter API key.
+
 ###### Device
 
 The device to use for the embeddings. This can be either `cpu` or `cuda`.

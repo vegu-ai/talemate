@@ -135,9 +135,9 @@
       "id": "8f2177e4-c419-447b-a301-4e5a8096417e",
       "properties": {
         "template": null,
-        "max_calls": 1,
+        "max_calls": 5,
         "retries": 0,
-        "response_length": 1024
+        "response_length": 2048
       },
       "x": 4209,
       "y": 709,
@@ -1257,7 +1257,7 @@
       "id": "9a2abc46-6afb-4eef-8d84-6064dd29fb6c",
       "properties": {
         "name": "update_introduction",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true
       },
       "x": 3620,
       "y": 1630,
@@ -1399,7 +1399,7 @@
       "id": "01735c3e-805a-4b5e-bbeb-67d96ce74fd7",
       "properties": {
         "name": "direct_context_update",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true
       },
       "x": 3610,
       "y": 1800,

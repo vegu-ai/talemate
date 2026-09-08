@@ -132,34 +132,6 @@ class TestDialogue:
         result = scene.context_history(budget=5000, perspective="Bob")
         assert result == ["L0", "L1", "(Bob was elsewhere for a while)"]
 
-    def test_exempt_message_types_are_never_filtered(self, summarizer):
-        scene = make_scene(summarizer)
-        scene.history = [
-            line(0, ["Alice", "Bob"]),
-            ReinforcementMessage(
-                message="Bob's mood: tense", present=["Alice"], source="Bob's mood:Bob"
-            ),
-            ContextInvestigationMessage(
-                message="The lamp room is empty.", present=["Alice"], source="narrator"
-            ),
-            DirectorMessage(
-                message="Bob: be curt",
-                present=["Alice"],
-                source="director",
-                meta={"character": "Bob", "action": "actor_instruction"},
-            ),
-            line(4, ["Alice", "Bob"]),
-        ]
-        result = scene.context_history(
-            budget=5000,
-            perspective="Bob",
-            keep_director="Bob",
-            include_reinforcements=True,
-        )
-        joined = "\n".join(result)
-        assert "elsewhere" not in joined
-        assert "tense" in joined and "lamp room" in joined
-
     def test_best_fit_dialogue_gap(self, summarizer):
         summarizer.actions["manage_scene_history"].config["best_fit"].value = True
         scene = make_scene(summarizer)
@@ -169,6 +141,165 @@ class TestDialogue:
 
 def pad(label, n=60):
     return label + "." * (n - len(label))
+
+
+@pytest.fixture
+def absence_scene(summarizer):
+    scene = MockScene()
+    investigation = ContextInvestigationMessage(
+        message="SECRET_BLOUSE", present=["Alice"], source="narrator"
+    )
+    guidance = DirectorMessage(
+        message="Bob: KEPT_GUIDANCE",
+        present=["Alice"],
+        meta={"character": "Bob", "action": "actor_instruction"},
+    )
+    notes = []
+    for owner, content in [
+        ("Bob", "OWN_STATE"),
+        ("Alice", "OTHER_STATE"),
+        (None, "WORLD_STATE"),
+    ]:
+        note = ReinforcementMessage(message=content, present=["Alice"])
+        note.set_source(
+            "world_state", "update_reinforcement", character=owner, question="Mood"
+        )
+        notes.append(note)
+    scene.history = [
+        line(0, ["Alice", "Bob"]),
+        line(1, ["Alice"]),
+        investigation,
+        guidance,
+        *notes,
+        line(7, ["Alice"]),
+        line(8, ["Alice", "Bob"]),
+    ]
+    return scene
+
+
+class TestAbsenceNotes:
+    @pytest.mark.parametrize("best_fit", [False, True])
+    def test_observed_sequence_has_one_gap(self, summarizer, absence_scene, best_fit):
+        summarizer.actions["manage_scene_history"].config["best_fit"].value = best_fit
+        result = absence_scene.context_history(
+            budget=5000, perspective="Bob", keep_director="Bob"
+        )
+        joined = "\n".join(result)
+        assert joined.count("(Bob was elsewhere for a while)") == 1
+        assert "KEPT_GUIDANCE" in joined and "OWN_STATE" in joined
+        assert "SECRET_BLOUSE" not in joined
+        assert "OTHER_STATE" not in joined and "WORLD_STATE" not in joined
+        assert "L1" not in result and "L7" not in result
+        assert result[0] == "L0" and result[-1] == "L8"
+
+    @pytest.mark.parametrize("perspective", [None, "Alice"])
+    def test_unfiltered_and_present_views_keep_notes(self, absence_scene, perspective):
+        joined = "\n".join(
+            absence_scene.context_history(budget=5000, perspective=perspective)
+        )
+        assert "elsewhere" not in joined
+        for content in ["SECRET_BLOUSE", "OWN_STATE", "OTHER_STATE", "WORLD_STATE"]:
+            assert content in joined
+
+    def test_inclusion_flags_still_hide_own_notes_and_guidance(self, absence_scene):
+        joined = "\n".join(
+            absence_scene.context_history(
+                budget=5000,
+                perspective="Bob",
+                keep_director=False,
+                include_reinforcements=False,
+                keep_context_investigation=False,
+            )
+        )
+        assert joined.count("elsewhere") == 1
+        assert "OWN_STATE" not in joined and "KEPT_GUIDANCE" not in joined
+
+    @pytest.mark.parametrize("start,end", [(0, -1), (1, None), (1, -1)])
+    def test_absence_at_window_edges_keeps_one_gap(self, absence_scene, start, end):
+        absence_scene.history = absence_scene.history[start:end]
+        joined = "\n".join(
+            absence_scene.context_history(
+                budget=5000, perspective="Bob", keep_director="Bob"
+            )
+        )
+        assert joined.count("elsewhere") == 1
+        assert "KEPT_GUIDANCE" in joined and "OWN_STATE" in joined
+
+    @pytest.mark.parametrize("best_fit", [False, True])
+    def test_a_known_passage_separates_two_absences(
+        self, summarizer, absence_scene, best_fit
+    ):
+        summarizer.actions["manage_scene_history"].config["best_fit"].value = best_fit
+        absence_scene.history.insert(5, line(10, ["Alice", "Bob"]))
+        result = absence_scene.context_history(
+            budget=5000, perspective="Bob", keep_director="Bob"
+        )
+        gap = "(Bob was elsewhere for a while)"
+        assert result.count(gap) == 2
+        assert result.index(gap) < result.index("L10") < len(result) - 2
+        assert result[-2] == gap
+
+    @pytest.mark.parametrize("kind,visible", [("grant", True), ("revoke", False)])
+    @pytest.mark.parametrize("message_idx", [2, 5, 6])
+    def test_explicit_knowledge_edges_apply_to_filtered_notes(
+        self, absence_scene, kind, visible, message_idx
+    ):
+        message = absence_scene.history[message_idx]
+        message.present = ["Alice", "Bob"] if kind == "revoke" else ["Alice"]
+        absence_scene.world_state.knowledge = [
+            KnowledgeEdge(character="Bob", target=str(message.id), kind=kind)
+        ]
+        joined = "\n".join(
+            absence_scene.context_history(budget=5000, perspective="Bob")
+        )
+        assert (message.message in joined) is visible
+
+    def test_best_fit_slots_keep_guidance_without_splitting_gap(self, absence_scene):
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryMixin,
+            ContextHistoryParams,
+        )
+
+        params = ContextHistoryParams(perspective="Bob", keep_director="Bob").bind(
+            absence_scene
+        )
+        level = ContextHistoryMixin._best_fit_build_dialogue_level(
+            absence_scene, len(absence_scene.history) - 1, params
+        )
+        assert len(level.formatted) == len(absence_scene.history)
+        assert level.formatted[1:3] == ["", ""]
+        assert "KEPT_GUIDANCE" in level.formatted[3]
+        assert "OWN_STATE" in level.formatted[4]
+        assert level.formatted[5:8] == ["", "", "(Bob was elsewhere for a while)"]
+        assert level.tokens == [_chars(text) for text in level.formatted]
+
+    def test_best_fit_backfill_does_not_restore_unknown_notes(self, absence_scene):
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryMixin,
+            ContextHistoryParams,
+        )
+
+        params = ContextHistoryParams(perspective="Bob", keep_director="Bob").bind(
+            absence_scene
+        )
+        result = ContextHistoryMixin._best_fit_ensure_min_dialogue(
+            absence_scene, ["L8"], params, min_count=20
+        )
+        joined = "\n".join(result)
+        assert "KEPT_GUIDANCE" in joined and "OWN_STATE" in joined
+        assert "SECRET_BLOUSE" not in joined
+        assert "OTHER_STATE" not in joined and "WORLD_STATE" not in joined
+        assert result[0] == "L0" and result[-1] == "L8"
+
+    @pytest.mark.parametrize("present", [None, ["Alice", "Bob"]])
+    def test_known_or_unrecorded_presence_keeps_investigations(
+        self, absence_scene, present
+    ):
+        absence_scene.history[2].present = present
+        joined = "\n".join(
+            absence_scene.context_history(budget=5000, perspective="Bob")
+        )
+        assert "SECRET_BLOUSE" in joined
 
 
 def long_line(i, present, n=50):
@@ -316,6 +447,100 @@ class TestLayered:
 
 
 class TestBestFitSlots:
+    @pytest.mark.parametrize("separate_absences", [False, True])
+    @pytest.mark.parametrize("note_position", [2, 3])
+    @pytest.mark.parametrize("own_note", [False, True])
+    def test_one_gap_across_summarized_live_boundary(
+        self, summarizer, note_position, own_note, separate_absences
+    ):
+        scene = MockScene()
+        both = ["Alice", "Bob"]
+        if own_note:
+            note = ReinforcementMessage(message="OWN_STATE", present=["Alice"])
+            note.set_source("world_state", "update_reinforcement", character="Bob")
+        else:
+            note = DirectorMessage(
+                message="Bob: GUIDANCE",
+                present=["Alice"],
+                meta={"character": "Bob", "action": "actor_instruction"},
+            )
+        archived_span = [line(0, both), line(1, ["Alice"]), line(2, ["Alice"])]
+        archived_span.insert(note_position, note)
+        scene.history = [
+            long_line(-1, both, 1000),
+            *archived_span,
+            line(4, ["Alice"]),
+            line(8, both),
+            line(9, both),
+            line(10, both),
+        ]
+        if separate_absences:
+            scene.history.insert(5, CharacterMessage(message="BREAK", present=both))
+        scene.archived_history = [
+            {
+                "id": "old",
+                "text": "OLDER",
+                "start": 0,
+                "end": 0,
+                "ts": 0,
+                "present": both,
+            },
+            {
+                "id": "recent",
+                "text": "RECENT",
+                "start": 1,
+                "end": 4,
+                "ts": 0,
+                "present": both,
+            },
+        ]
+        summarizer.actions["manage_scene_history"].config["best_fit"].value = True
+        with patch.object(
+            summarizer,
+            "_best_fit_build_levels",
+            wraps=summarizer._best_fit_build_levels,
+        ) as build_levels:
+            result = scene.context_history(
+                budget=200, perspective="Bob", keep_director="Bob"
+            )
+        build_levels.assert_called_once()
+        assert "L0" in result and "RECENT" not in "\n".join(result)
+        assert "L-1" not in "\n".join(result)
+        assert (
+            "OWN_STATE" in "\n".join(result)
+            if own_note
+            else "GUIDANCE" in "\n".join(result)
+        )
+        gap = "(Bob was elsewhere for a while)"
+        kept_note = next(
+            part for part in result if ("OWN_STATE" if own_note else "GUIDANCE") in part
+        )
+        expected = (
+            ["L0", kept_note, gap]
+            if separate_absences and note_position == 2
+            else ["L0", gap, kept_note]
+        )
+        if separate_absences:
+            expected.extend(["BREAK", gap])
+        assert result[1:] == [*expected, "L8", "L9", "L10"]
+        from talemate.agents.summarize.context_history import ContextHistoryParams
+
+        preview = summarizer._context_history_preview_best_fit(
+            scene,
+            200,
+            ContextHistoryParams(perspective="Bob", keep_director="Bob").bind(scene),
+            summarized_to=4,
+            eff_max_budget=200,
+            eff_best_fit_min_dialogue=summarizer.scene_history_best_fit_min_dialogue,
+            eff_best_fit_max_dialogue=summarizer.scene_history_best_fit_max_dialogue,
+        )
+        assert [
+            text
+            for section in preview["sections"]
+            for text in section["entries"]
+            if text
+        ] == result
+
     def _level(self, summarizer, scene):
         from talemate.agents.summarize.context_history import (
             ContextHistoryMixin,

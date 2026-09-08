@@ -131,6 +131,10 @@ The maximum number of tokens for the response. (e.g., how long should the analys
 
 Enable scene analysis for conversation tasks.
 
+In Standard mode, the Conversation agent's **Character Knowledge** master switch also gives the analysis **Known facts** and **Unknown recent facts** for the character. The analysis uses these lists to judge awareness and avoid suggesting actions based on information the character missed. This applies even when **Limit to character knowledge** or **Remind about unknown facts** is off.
+
+Known facts are considered newest first; facts too large for the remaining budget are skipped. Unknown facts use **Unknown-fact reminders** and **Recent facts to check** from Conversation settings. Each list uses up to one sixth of the client's context budget, plus headings; their actual size is reserved from scene history. The blocks are omitted when neither list has facts that fit. Analysis always keeps its instruction to use established story facts without assumptions. This adds prompt content without another AI request.
+
 ##### Narration
 
 Enable scene analysis for narration tasks.
@@ -145,6 +149,8 @@ Cache the analysis results for the scene. Enable this to prevent regenerationg t
 
 !!! info
     This cache is anchored to the last message in the scene (excluding the current message). Editing that message will invalidate the cache.
+
+In Standard mode with Character Knowledge enabled, changing the target character, recorded facts, Allow/Block rules, or the fact-selection settings also invalidates the cached conversation analysis.
 
 ## Scene History
 

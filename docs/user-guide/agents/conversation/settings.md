@@ -86,6 +86,8 @@ Disable this if you want the AI to generate dialogue without following the scene
 
 Help characters respond using what they know. In **Standard** mode, use this group to limit memories, remind the AI about unknown facts, and track learning from dialogue. The controls below apply to Standard mode unless stated otherwise.
 
+The **Character Knowledge** master switch also supplies **Known facts** and **Unknown recent facts** to the Summarizer's [conversation analysis](/talemate/user-guide/agents/summarizer/settings/#conversation), when Scene Analysis is enabled. These lists apply even if **Limit to character knowledge** or **Remind about unknown facts** is off. Turning the master switch off removes them. Each list uses up to one sixth of the analysis client's context budget, plus headings, reserved from scene history; they add no AI request and are omitted when neither list has facts that fit.
+
 **Character perspectives**, chosen when creating a new story or importing a character card, gives characters separate views of events and memories. It can also be changed in Scene Settings while history and archived history are empty. It replaces the Standard-mode filtering and learning controls, which are hidden while that mode is active. **Refine memories with AI** remains available in either mode. This group does not change the story's mode. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for setup, cost and retry guidance.
 
 ![Conversation agent character knowledge settings](/talemate/img/0.40.0/conversation-character-knowledge-settings.png)
@@ -94,7 +96,7 @@ Limiting knowledge and adding reminders need no extra request. **Refine memories
 
 ##### Limit to character knowledge
 
-Leave out events the character missed and return only memories they know. **Turn on to base replies on their own experience; turn off to use the shared history and memories.** Missed history is replaced by a one-line gap. On by default.
+Leave out events the character missed and return only memories they know. **Turn on to base replies on their own experience; turn off to use the shared history and memories.** The filter also covers context investigations and world or other-character state notes. The character's own stored state notes and director guidance remain available; neither splits an absence into multiple markers. Missed history is replaced by one gap line, including when it crosses the summarized/live boundary in Best Fit mode. On by default.
 
 ##### Remind about unknown facts
 

@@ -438,11 +438,14 @@ class ContextHistoryMixin:
         return True
 
     @staticmethod
-    def _is_knowledge_filterable(message) -> bool:
-        """Director, reinforcement and investigation messages are never filtered."""
-        return not isinstance(
-            message,
-            (DirectorMessage, ReinforcementMessage, ContextInvestigationMessage),
+    def _is_knowledge_filterable(message, params: ContextHistoryParams) -> bool:
+        """Keep director guidance and the character's own stored state; filter other notes like passages."""
+        if isinstance(message, DirectorMessage):
+            return False
+        return not (
+            isinstance(message, ReinforcementMessage)
+            and params.perspective
+            and message.character_name == params.perspective
         )
 
     @staticmethod
@@ -498,9 +501,8 @@ class ContextHistoryMixin:
             if not _is_qualifying(message, params):
                 continue
 
-            if ContextHistoryMixin._is_knowledge_filterable(
-                message
-            ) and not params.knows(KnowledgeItem.from_message(message)):
+            filterable = ContextHistoryMixin._is_knowledge_filterable(message, params)
+            if filterable and not params.knows(KnowledgeItem.from_message(message)):
                 pending_gap = True
                 continue
 
@@ -510,7 +512,7 @@ class ContextHistoryMixin:
             if max_count is not None and len(parts_dialogue) >= max_count:
                 break
 
-            if pending_gap:
+            if pending_gap and filterable:
                 parts_dialogue.insert(0, params.gap_line(None))
                 pending_gap = False
 
@@ -1093,13 +1095,13 @@ class ContextHistoryMixin:
         params: ContextHistoryParams,
         missed: list[bool],
         idx: int,
-        blank: list[bool] | None = None,
+        transparent: list[bool] | None = None,
     ) -> str:
         """A missed run renders one gap line, in the run's LAST slot: render
         ranges are trimmed from the oldest end, so the last slot survives.
-        Slots that render nothing (`blank`) do not end a run."""
+        Transparent slots do not end a run, even when they render guidance."""
         nxt = idx + 1
-        while nxt < len(missed) and blank is not None and blank[nxt]:
+        while nxt < len(missed) and transparent is not None and transparent[nxt]:
             nxt += 1
         last = nxt >= len(missed) or not missed[nxt]
         return params.gap_line(None) if last else ""
@@ -1134,12 +1136,10 @@ class ContextHistoryMixin:
         missed = [
             i < len(scene.history)
             and _is_qualifying(scene.history[i], params)
-            and ContextHistoryMixin._is_knowledge_filterable(scene.history[i])
+            and ContextHistoryMixin._is_knowledge_filterable(scene.history[i], params)
             and not params.knows(KnowledgeItem.from_message(scene.history[i]))
             for i in range(summarized_to + 1)
         ]
-        # slots that render nothing must not split a missed run; a missed slot
-        # always renders (a gap line or its empty tail), so it is never blank
         rendered: list[str | None] = []
         for i in range(summarized_to + 1):
             if i < len(scene.history) and _is_qualifying(scene.history[i], params):
@@ -1150,16 +1150,24 @@ class ContextHistoryMixin:
                 )
             else:
                 rendered.append(None)
-        blank = [
+        gap_transparent = [
             not missed[i]
-            and (rendered[i] is None or (bool(exclude) and rendered[i] in exclude))
+            and (
+                rendered[i] is None
+                or (bool(exclude) and rendered[i] in exclude)
+                or not ContextHistoryMixin._is_knowledge_filterable(
+                    scene.history[i], params
+                )
+            )
             for i in range(summarized_to + 1)
         ]
 
         for i in range(summarized_to + 1):
             entries.append({"idx": i})
             if missed[i]:
-                text = ContextHistoryMixin._best_fit_gap_slot(params, missed, i, blank)
+                text = ContextHistoryMixin._best_fit_gap_slot(
+                    params, missed, i, gap_transparent
+                )
                 formatted.append(text)
                 tokens.append(count_tokens(text) if text else 0)
                 continue
@@ -1351,7 +1359,7 @@ class ContextHistoryMixin:
                 continue
 
             if ContextHistoryMixin._is_knowledge_filterable(
-                message
+                message, params
             ) and not params.knows(KnowledgeItem.from_message(message)):
                 continue
 
@@ -1438,7 +1446,43 @@ class ContextHistoryMixin:
         result.render_ranges = self._best_fit_compute_ranges(
             levels, result.expansion_budget
         )
+        self._best_fit_coalesce_boundary_gap(scene, result, params)
         return result
+
+    def _best_fit_coalesce_boundary_gap(
+        self, scene: Scene, collected: _BestFitCollected, params: ContextHistoryParams
+    ) -> None:
+        """The summarized and live collectors can each mark the same absence."""
+        gap = params.gap_line(None)
+        context = [
+            text
+            for level, (start, end) in zip(collected.levels, collected.render_ranges)
+            for text in level.formatted[start:end]
+            if text
+        ]
+        if gap not in context or gap not in collected.parts_dialogue:
+            return
+        direction_mode = get_agent("director").actor_direction_mode
+        transparent = set()
+        passages = set()
+        for message in scene.history:
+            if not self._is_dialogue_qualifying(message, params):
+                continue
+            text = message.as_format(scene.conversation_format, mode=direction_mode)
+            if self._is_knowledge_filterable(message, params):
+                passages.add(text)
+            else:
+                transparent.add(text)
+        transparent -= passages
+        previous = next(
+            (text for text in reversed(context) if text not in transparent), None
+        )
+        for index, text in enumerate(collected.parts_dialogue):
+            if text in transparent:
+                continue
+            if previous == gap and text == gap:
+                del collected.parts_dialogue[index]
+            break
 
     def _context_history_best_fit_build(
         self,

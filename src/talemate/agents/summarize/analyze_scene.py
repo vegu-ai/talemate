@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+from types import EllipsisType
 import structlog
 import pydantic
 from talemate.agents.base import (
@@ -19,6 +20,11 @@ from talemate.agents.context import active_agent
 from talemate.agents.base import RagBuildSubInstructionEmission
 from contextvars import ContextVar
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.standard_analysis import (
+    standard_analysis_context,
+    standard_analysis_enabled,
+    standard_analysis_fingerprint,
+)
 from talemate.knowledge.advice import (
     KnowledgeAnalysisType,
     advice_record_is_current,
@@ -226,6 +232,9 @@ class SceneAnalyzationMixin:
         scene = self.scene
         character = emission_character(scene, emission)
         fingerprint = advice_fingerprint(scene, character)
+        standard_fp = standard_analysis_fingerprint(
+            scene, character, emission_type, self.client.max_token_length // 2
+        )
         analysis = None
 
         # self.set_scene_states and self.get_scene_state to store
@@ -258,7 +267,11 @@ class SceneAnalyzationMixin:
             )
 
             await self.set_cached_analysis(
-                emission_type, analysis, character, evidence_fp=fingerprint
+                emission_type,
+                analysis,
+                character,
+                evidence_fp=fingerprint,
+                standard_fp=standard_fp,
             )
 
         if not analysis:
@@ -336,6 +349,13 @@ class SceneAnalyzationMixin:
         if not cached_analysis:
             return None
 
+        if cached_analysis.get(
+            "standard_knowledge_fp"
+        ) != standard_analysis_fingerprint(
+            self.scene, character, typ, self.client.max_token_length // 2
+        ):
+            return None
+
         if character_knowledge_enabled(self.scene):
             character = advice_character(self.scene, character, typ=typ)
             if not advice_record_is_current(self, cached_analysis, character, typ):
@@ -361,18 +381,25 @@ class SceneAnalyzationMixin:
         character: "Character | None" = None,
         *,
         evidence_fp: str | None = None,
+        standard_fp: str | None | EllipsisType = ...,
     ):
         """
         Sets the cached analysis for the given type.
         """
 
         fingerprint = self.context_fingerprint()
+        # Preserve a captured disabled-state fingerprint if settings change mid-request.
+        if standard_fp is ...:
+            standard_fp = standard_analysis_fingerprint(
+                self.scene, character, typ, self.client.max_token_length // 2
+            )
 
         self.set_scene_states(
             **{
                 f"cached_analysis_{typ}": {
                     "fp": fingerprint,
                     "guidance": analysis,
+                    "standard_knowledge_fp": standard_fp,
                     **advice_record_metadata(
                         self, character, typ, evidence_fp=evidence_fp
                     ),
@@ -508,6 +535,11 @@ class SceneAnalyzationMixin:
             "max_tokens": self.client.max_token_length,
             "scene": self.scene,
             "character": character,
+            "standard_knowledge": await standard_analysis_context(
+                scene, character, self.client.max_token_length // 2
+            )
+            if standard_analysis_enabled(scene, character, typ)
+            else None,
             "evidence": advice_context(
                 scene, character, self.client.max_token_length // 2
             )

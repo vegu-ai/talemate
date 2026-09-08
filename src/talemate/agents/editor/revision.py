@@ -1357,7 +1357,7 @@ class RevisionMixin:
         scene_analysis = None
         if character is None or not character_knowledge_enabled(self.scene):
             scene_analysis = await summarizer.get_cached_analysis(
-                "conversation" if character else "narration"
+                "conversation" if character else "narration", character
             )
 
         template = "editor.unslop"

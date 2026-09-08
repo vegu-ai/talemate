@@ -361,7 +361,7 @@ class TestOnInjectInstructions:
     ):
         _, summarizer, _ = summarizer_with_active_agent
         # Pre-populate cache.
-        await summarizer.set_cached_analysis("conversation", "cached analysis")
+        await summarizer.set_cached_analysis("conversation", "cached analysis", alice)
 
         emission = ConversationAgentEmission(
             agent=summarizer, response="", actor=None, character=alice

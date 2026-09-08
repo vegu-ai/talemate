@@ -40,6 +40,16 @@
                     <v-icon class="mr-2" color="primary">mdi-transit-connection-variant</v-icon>
                     <span class="text-body-large">{{ selectedAgent.label || selectedAgent.name }}</span>
                     <v-spacer></v-spacer>
+                    <v-tooltip v-if="selectedAgent.data.requires_llm_client" location="top"
+                        :text="`Per-action settings for the ${selectedAgent.label || selectedAgent.name} agent, such as turning reasoning off`">
+                        <template #activator="{ props }">
+                            <v-btn v-bind="props" size="small" variant="tonal" color="primary" prepend-icon="mdi-tune" class="text-none mr-4"
+                                data-testid="agent-settings-overrides-door" @click="openAgentActionOverrides({ agentType: selectedName })">
+                                Agent action overrides
+                                <v-chip v-if="selectedOverrideCount > 0" size="x-small" label color="primary" variant="flat" class="ml-1">{{ selectedOverrideCount }}</v-chip>
+                            </v-btn>
+                        </template>
+                    </v-tooltip>
                     <v-btn-toggle v-if="hasAnyOverridable" :model-value="mode" @update:modelValue="(v) => v && setMode(v)"
                         mandatory density="compact" variant="outlined" color="primary" divided class="mr-4">
                         <v-btn value="global" size="small" prepend-icon="mdi-earth">Global</v-btn>
@@ -144,6 +154,7 @@
 
 <script>
 import { agentActionConditionMet } from '@/utils/uxConditions';
+import { countOverrides } from '@/utils/agentActionOverrides';
 import { hasOwnName } from '@/utils/nameKeyedMap';
 import AgentConfigSection from './AgentConfigSection.vue';
 import AgentSceneSettings from './AgentSceneSettings.vue';
@@ -225,7 +236,7 @@ export default {
         dirty: { type: Boolean, default: false },
     },
     emits: ['extra-dirty', 'extra-error'],
-    inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'getAgents', 'requestTemplates', 'scene', 'isConnected'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'getAgents', 'requestTemplates', 'scene', 'isConnected', 'openAgentActionOverrides'],
     data() {
         return {
             selected: [],
@@ -279,6 +290,9 @@ export default {
         },
         selectedAgent() {
             return this.selectedName ? (this.liveAgents[this.selectedName] || null) : null;
+        },
+        selectedOverrideCount() {
+            return countOverrides(this.config?.agent_actions?.overrides, this.selectedName);
         },
         // effective (working copy over live) action values of the selected
         // agent — the read side of every field on the page and the context

@@ -14,7 +14,7 @@ The Prompts tab shows a log of all AI prompts that have been sent during your se
 
 For headless captures or longer-running debug sessions, the same prompt records can also be streamed to a file — see [Prompt Logging](../getting-started/advanced/prompt-logging.md).
 
-The prompt detail view also lets you force reasoning off for the specific agent action that produced a prompt, using the :material-brain: brain icon next to the action — see [Forcing Reasoning Off for Specific Actions](clients/reasoning.md#forcing-reasoning-off-for-specific-actions).
+The prompt detail view also lets you force reasoning off for the specific agent action that produced a prompt, using the **Reasoning: client default** button next to the action. The full list of actions and their overrides lives in the **Agent action overrides** dialog — see [Forcing Reasoning Off for Specific Actions](clients/reasoning.md#forcing-reasoning-off-for-specific-actions).
 
 ### :material-memory: Memory
 

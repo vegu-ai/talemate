@@ -22,6 +22,7 @@ import json
 import talemate.client.presets as presets
 import talemate.instance as instance
 import talemate.util as util
+from talemate.agents import observed_actions
 from talemate.agents.context import active_agent
 from talemate.client.context import client_context_attribute
 from talemate.client.model_prompts import model_prompt, DEFAULT_TEMPLATE, PromptSpec
@@ -2024,6 +2025,14 @@ class ClientBase:
             if "<|RESPONSE_LENGTH_INSTRUCTIONS|>" in finalized_prompt:
                 finalized_prompt = finalized_prompt.replace(
                     "\n<|RESPONSE_LENGTH_INSTRUCTIONS|>", ""
+                )
+
+            try:
+                observed_actions.record_context(active_agent.get(), self.name)
+            except Exception:
+                self.log.warning(
+                    "observed_actions.record_context failed",
+                    error=traceback.format_exc(),
                 )
 
             response = await self._generate_with_reasoning_handling(

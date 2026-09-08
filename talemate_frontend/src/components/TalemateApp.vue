@@ -421,7 +421,7 @@
       </v-container>
     </v-main>
 
-    <AgentActionOverrides ref="agentActionOverrides" :app-config="appConfig" :agent-status="agentStatus" />
+    <AgentActionOverrides ref="agentActionOverrides" :app-config="appConfig" :agent-status="agentStatus" :agent-actions="agentActions" :settings-dirty="appSettingsDirty" />
 
     <v-dialog v-model="worldEditorUnavailable" max-width="420">
       <v-card>
@@ -706,6 +706,8 @@ export default {
       worldStateTemplates: {},
       // busy status of agents
       agentStatus: {},
+      // agent actions the backend has seen send a request (`config/agent_actions`)
+      agentActions: [],
       // scene state of agents
       agentState: {},
       // null prototype — keyed by user-chosen client names, see
@@ -1073,7 +1075,8 @@ export default {
       sendConfigSave: (config, options) => this.sendConfigSave(config, options),
       openAppConfig: this.openAppConfig,
       notifyError: (error) => this.uxErrorHandler(error),
-      openAgentActionOverrides: () => this.$refs.agentActionOverrides?.open(),
+      openAgentActionOverrides: (options) => this.$refs.agentActionOverrides?.open(options),
+      settingsDirty: () => this.appSettingsDirty,
       openSceneTimeline: (options) => this.$refs.sceneTimeline.open(options),
       configurationRequired: () => this.configurationRequired(),
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
@@ -1216,6 +1219,7 @@ export default {
         this.requestAppConfig();
         this.requestWorldStateTemplates();
         this.requestPromptOutdatedCheck();
+        this.requestAgentActions();
       };
       this.websocket.onclose = (event) => {
         console.log('WebSocket connection closed', event);
@@ -1266,6 +1270,11 @@ export default {
       // Handle prompt_sent messages (capture prompts for PromptsMenu)
       if (data.type === 'prompt_sent') {
         this.handlePromptSent(data.data);
+        return;
+      }
+
+      if (data.type === 'config' && data.action === 'agent_actions') {
+        this.agentActions = data.data?.actions || [];
         return;
       }
 
@@ -1607,6 +1616,13 @@ export default {
       this.websocket.send(JSON.stringify({
         type: 'prompts',
         action: 'list_templates'
+      }));
+    },
+
+    requestAgentActions() {
+      this.websocket.send(JSON.stringify({
+        type: 'config',
+        action: 'request_agent_actions'
       }));
     },
 

@@ -473,8 +473,10 @@
 - path: user-guide/clients/reasoning.md
   title: Reasoning Model Support
   summary: Covers enabling reasoning, allocating reasoning tokens, stripping and validating thinking patterns, prefills, missing-pattern
-    behavior, and model compatibility. Also explains per-agent-action overrides that disable reasoning selectively and how
-    to manage or troubleshoot them.
+    behavior, and model compatibility. Also explains the Agent action overrides dialog that turns reasoning off per agent
+    action - it lists the actions seen sending requests with each agent's client and whether that client honours the
+    override - and its four entry points, the Agents panel button, the client Reasoning section, the agent settings header
+    and the prompt detail view.
 - path: user-guide/clients/recommended-models.md
   title: Recommended Local Models
   summary: States that Talemate no longer maintains a fixed recommended-model list, points to an external benchmark, and advises

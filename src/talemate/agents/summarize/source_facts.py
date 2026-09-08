@@ -61,16 +61,7 @@ class SourceFactMixin:
             prune_topics(scene.world_state)
         if not touched:
             return
-        self._fact_memory_dirty.setdefault(scene, set()).update(touched)
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            return
-        task = self._fact_wakeup_tasks.get(scene)
-        if task is None or task.done():
-            task = loop.create_task(self.schedule_audience_summaries(scene))
-            self._fact_wakeup_tasks[scene] = task
-            task.add_done_callback(self._fact_wakeup_done)
+        self._queue_fact_work(scene, touched, self.schedule_audience_summaries)
 
     @staticmethod
     def _fact_wakeup_done(task):
@@ -107,6 +98,23 @@ class SourceFactMixin:
                     dirty.update(keys)
                     raise
             return self.scene is scene
+
+    def queue_fact_memory(self, scene, ids):
+        self._queue_fact_work(scene, ids, self.flush_fact_memory)
+
+    def _queue_fact_work(self, scene, ids, run):
+        self._fact_memory_dirty.setdefault(scene, set()).update(ids)
+        if self.scene is not scene:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        task = self._fact_wakeup_tasks.get(scene)
+        if task is None or task.done():
+            task = loop.create_task(run(scene))
+            self._fact_wakeup_tasks[scene] = task
+            task.add_done_callback(self._fact_wakeup_done)
 
     def saved_fact_sources(self, scene):
         read = PerspectiveReadContext(scene)

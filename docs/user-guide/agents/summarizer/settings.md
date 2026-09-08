@@ -47,6 +47,8 @@ Writing style instructions are also included during summarization to maintain co
 
 Save individual facts alongside summaries for character knowledge. **Leave on to build the fact record**; this summary step needs no extra request. On by default. With this off, regenerating an entry leaves its recorded facts as they are. See [History — Facts](/talemate/user-guide/world-editor/history/#facts).
 
+Extraction asks for facts whose omission could make a later scene go wrong, allowing **0–12 facts per chapter**. A first hug can be a relationship milestone; a routine greeting hug is not a new fact. Each fact receives an **importance** of Routine (1), State (2), or Milestone (3) in the same response. These are model judgments that can be corrected in History; facts saved before importance was added default to State (2).
+
 ###### Fact matching tolerance
 
 Treat sufficiently similar facts as repeats instead of saving them again (default 0.15). **Raise to merge more similar facts; lower to keep more distinctions.** A repeat increases the stored fact's repeat counter.

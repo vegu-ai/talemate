@@ -39,6 +39,7 @@ from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import ScenePerspectives, load_game_state_path_settings
 from talemate.scene.format import CURRENT_SCENE_FORMAT_VERSION, read_scene_format
+from talemate.knowledge.dialogue_facts import prune_invalid_dialogue_facts
 from talemate.knowledge.reinforcements import reinforcement_source_keys
 from talemate.knowledge.perspectives import (
     bind_perspective_sources,
@@ -470,6 +471,9 @@ async def load_scene_from_data(
     loading_status("Initializing long-term memory...")
 
     await memory.set_db()
+    removed_dialogue_facts = prune_invalid_dialogue_facts(scene)
+    if removed_dialogue_facts:
+        await memory.delete({"ids": sorted(removed_dialogue_facts)})
     # await memory.remove_unsaved_memory()
 
     await scene.world_state_manager.remove_all_empty_pins()

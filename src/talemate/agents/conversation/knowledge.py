@@ -1,5 +1,6 @@
 import json
 import re
+import weakref
 from typing import TYPE_CHECKING
 
 import structlog
@@ -9,10 +10,12 @@ from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
     AgentActionNote,
+    AgentActionConditional,
     set_processing,
 )
 from talemate.agents.conversation.response_specs import (
     KNOWLEDGE_LEDGER_SPEC,
+    KNOWLEDGE_LEDGER_FACTS_SPEC,
     MEMORY_PASS_SPEC,
 )
 from talemate.instance import get_agent
@@ -25,6 +28,9 @@ from talemate.knowledge.absence import (
 from talemate.knowledge.bucket import KnowledgeIndex
 from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 from talemate.knowledge.schema import KnowledgeEdge
+from talemate.knowledge.facts import parse_facts, previous_facts, store_facts
+from talemate.knowledge.perspective_models import content_digest
+from talemate.knowledge.topics import refresh_topics
 from talemate.knowledge.mode import (
     character_knowledge_enabled as perception_mode_enabled,
 )
@@ -177,6 +183,22 @@ class CharacterKnowledgeMixin:
                         ),
                     },
                 ),
+                "establish_facts": AgentActionConfig(
+                    type="bool",
+                    label="Establish facts from dialogue",
+                    description="Save important facts as soon as a character says or establishes them, before the next summary. Routine dialogue can yield no facts.",
+                    value=False,
+                    condition=AgentActionConditional(
+                        attribute="character_knowledge.config.ledger",
+                        value=True,
+                    ),
+                    note_on_value={
+                        True: AgentActionNote(
+                            color="primary",
+                            text="Uses the same World State client request as Track learning from dialogue, but runs it after every character line, including player lines, even when everyone knows the recent facts. No second request per line.",
+                        ),
+                    },
+                ),
             },
         )
 
@@ -259,6 +281,12 @@ class CharacterKnowledgeMixin:
         """The client the opt-in requests use (the World State agent's)."""
         return get_agent("world_state").client
 
+    @property
+    def knowledge_establish_facts(self) -> bool:
+        return self.knowledge_ledger and bool(
+            self.resolve_config("character_knowledge", "establish_facts")
+        )
+
     def connect(self, scene):
         super().connect(scene)
         # the ledger runs on every character line the scene records, the
@@ -274,7 +302,10 @@ class CharacterKnowledgeMixin:
         character = self.scene.get_character(message.character_name)
         if character is None:
             return
-        await self.record_learned_facts(character, str(message))
+        if self.knowledge_establish_facts:
+            await self.record_learned_facts(character, str(message), message=message)
+        else:
+            await self.record_learned_facts(character, str(message))
 
     def rag_knowledge_viewer(self, character: "Character | None") -> str | None:
         """
@@ -423,20 +454,56 @@ class CharacterKnowledgeMixin:
     # the signal path (a player line) has no active agent; the request needs one
     @set_processing
     async def record_learned_facts(
-        self, character: "Character", line: str
+        self,
+        character: "Character",
+        line: str,
+        *,
+        message: CharacterMessage | None = None,
     ) -> dict[str, list[str]]:
         """
-        Which facts the listeners learned from the character's new character message;
-        each becomes an inferred grant (+1 request). The speaker does not
-        learn from their own character message.
+        Track listener learning and optionally establish sourced dialogue facts.
+        Both outputs share one request; fact extraction runs on every character line.
         """
         if not self.knowledge_ledger or not line or not line.strip():
             return {}
 
         scene = self.scene
-        listeners = [name for name in scene.active_characters if name != character.name]
-        if not listeners:
+        establish = self.knowledge_establish_facts
+        if establish and (
+            message is None or scene.get_message(message.id) is not message
+        ):
             return {}
+        present = (
+            list(
+                dict.fromkeys(
+                    [
+                        character.name,
+                        *(
+                            message.present
+                            if message.present is not None
+                            else scene.active_characters
+                        ),
+                    ]
+                )
+            )
+            if establish
+            else scene.active_characters
+        )
+        listeners = [name for name in present if name != character.name]
+        if not listeners and not establish:
+            return {}
+        ts = scene.ts
+        digest = content_digest(message.perception_text) if establish else None
+        if establish:
+            message._knowledge_scene = weakref.ref(scene)
+
+            def source_current():
+                return (
+                    self.scene is scene
+                    and self.knowledge_establish_facts
+                    and scene.get_message(message.id) is message
+                    and content_digest(message.perception_text) == digest
+                )
 
         dedupe = get_agent("summarizer").archive_fact_dedupe_distance
         absence: dict[str, list] = {}
@@ -451,7 +518,7 @@ class CharacterKnowledgeMixin:
             if facts:
                 absence[name] = facts
 
-        if not absence:
+        if not absence and not establish:
             log.debug("ledger skipped: every listener knows the recent facts")
             return {}
 
@@ -469,11 +536,32 @@ class CharacterKnowledgeMixin:
                 "line": line,
                 "recent_lines": recent,
                 "speaker": character.name,
-                "listeners": ", ".join(absence.keys()),
+                "listeners": (", ".join(listeners) or "no listeners")
+                if establish
+                else ", ".join(absence.keys()),
                 "absence": absence,
+                **(
+                    {"establish_facts": True, "previous_facts": previous_facts(scene)}
+                    if establish
+                    else {}
+                ),
             },
-            response_spec=KNOWLEDGE_LEDGER_SPEC,
+            response_spec=KNOWLEDGE_LEDGER_FACTS_SPEC
+            if establish
+            else KNOWLEDGE_LEDGER_SPEC,
         )
+        if establish and not await self._store_dialogue_facts(
+            scene,
+            message,
+            extracted.get("facts"),
+            present,
+            listeners,
+            ts,
+            digest,
+            dedupe,
+            source_current,
+        ):
+            return {}
         ledger = parse_ledger(extracted.get("ledger"))
         if ledger is None:
             log.warning(
@@ -487,7 +575,9 @@ class CharacterKnowledgeMixin:
         for name, fact_ids in ledger.items():
             offered = {fact.id: fact for fact in absence.get(name, [])}
             for fact_id in fact_ids:
-                fact = offered.get(fact_id)
+                fact = (
+                    scene.world_state.facts.get(fact_id) if fact_id in offered else None
+                )
                 if fact is None:
                     log.warning(
                         "ledger: fact id not among the listener's unknown facts",
@@ -519,3 +609,48 @@ class CharacterKnowledgeMixin:
         )
         log.debug("ledger", speaker=character.name, learned=learned)
         return learned
+
+    async def _store_dialogue_facts(
+        self,
+        scene,
+        message,
+        raw,
+        present,
+        listeners,
+        ts,
+        digest,
+        dedupe,
+        source_current,
+    ):
+        if not source_current():
+            return False
+        parsed = parse_facts(raw)
+        if parsed is None:
+            log.warning("dialogue facts: answer not readable", message_id=message.id)
+            return source_current()
+        parsed = [
+            item.model_copy(
+                update={
+                    "known_by": [name for name in item.known_by if name in listeners]
+                }
+            )
+            for item in parsed
+        ]
+        stored = await store_facts(
+            scene,
+            None,
+            present,
+            ts,
+            parsed,
+            dedupe,
+            notify=True,
+            message_id=message.id,
+            message_digest=digest,
+            still_current=source_current,
+        )
+        if not source_current():
+            return False
+        if stored:
+            await refresh_topics(scene)
+            scene.emit_status()
+        return source_current()

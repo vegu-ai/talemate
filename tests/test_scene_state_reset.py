@@ -10,6 +10,10 @@ from conftest import MockScene, bootstrap_scene
 from talemate.server.world_state_manager.scene_state_reset import (
     SceneStateResetMixin,
 )
+from talemate.context import ActiveScene
+from talemate.instance import get_agent
+from talemate.knowledge.schema import Fact, KnowledgeEdge
+from talemate.scene_message import CharacterMessage
 from talemate.world_state import Reinforcement
 
 
@@ -603,3 +607,37 @@ class TestCombinedOperations:
         assert (
             operations[0]["agent_state_has_director"] is False
         )  # Agent state already reset
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reset_context_db", [False, True])
+async def test_wipe_history_removes_dialogue_facts_before_reindex(
+    scene_factory, mixin_instance, monkeypatch, reset_context_db
+):
+    scene = scene_factory(history=[CharacterMessage(message="Alice: I moved in.")])
+    scene.world_state.facts = {
+        "F1": Fact(
+            id="F1",
+            text="Alice moved in.",
+            source="dialogue",
+            message_id=scene.history[0].id,
+        ),
+        "F2": Fact(id="F2", text="The house is old.", source="manual"),
+    }
+    scene.world_state.knowledge = [KnowledgeEdge(character="Bob", target="F1")]
+    memory = get_agent("memory")
+    monkeypatch.setattr(memory, "delete", AsyncMock())
+
+    async def reindex():
+        assert set(scene.world_state.facts) == {"F2"}
+        assert scene.world_state.knowledge == []
+
+    scene.commit_to_memory.side_effect = reindex
+    with ActiveScene(scene):
+        await mixin_instance(scene).handle_execute_scene_state_reset(
+            {"wipe_history": True, "reset_context_db": reset_context_db}
+        )
+    assert set(scene.world_state.facts) == {"F2"}
+    assert scene.world_state.knowledge == []
+    memory.delete.assert_awaited_once_with({"ids": ["F1"]})
+    assert scene.commit_to_memory.await_count == int(reset_context_db)

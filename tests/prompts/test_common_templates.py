@@ -142,6 +142,7 @@ class TestCommonTemplatesDocumentation:
             "extra-context.jinja2",
             "extra-context-dynamic.jinja2",
             "extra-context-static.jinja2",
+            "fact-extraction-instructions.jinja2",
             "full-scene-context.jinja2",
             "gamestate-context.jinja2",
             "gamestate-context-path.jinja2",

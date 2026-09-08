@@ -26,34 +26,8 @@
                 <div class="text-body-small text-medium-emphasis mb-1"><v-icon size="small" icon="mdi-format-list-checks" class="mr-1"></v-icon>Facts</div>
                 <div v-if="!locked" class="text-body-small text-medium-emphasis mb-1">Double-click a fact to edit it</div>
                 <v-list density="compact" slim class="bg-transparent py-0">
-                    <v-list-item v-for="fact in shownFacts" :key="fact.id" class="px-0">
-                        <template v-slot:prepend>
-                            <v-chip size="x-small" variant="tonal" color="muted" class="mr-2">{{ fact.id }}</v-chip>
-                        </template>
-                        <div v-if="editingFact !== fact.id" class="text-body-medium" @dblclick="startFactEdit(fact)">{{ fact.text }}</div>
-                        <v-text-field v-else v-model="factDraft" density="compact" variant="underlined" hide-details autofocus @keydown.enter="saveFact(fact)" @keydown.esc="editingFact = null" @blur="saveFact(fact)"></v-text-field>
-                        <div class="text-body-small text-medium-emphasis">
-                            <span v-if="fact.subjects && fact.subjects.length">{{ fact.subjects.join(', ') }}</span>
-                            <v-chip v-for="(kind, name) in fact.known_by" :key="name" size="x-small" variant="tonal" color="secondary" class="ml-1" prepend-icon="mdi-account-voice">
-                                {{ name }}
-                                <v-tooltip activator="parent" location="top">{{ name }} knows this fact ({{ kind }}) without having been present</v-tooltip>
-                            </v-chip>
-                            <v-chip v-if="fact.restatements" size="x-small" variant="text" class="ml-1" prepend-icon="mdi-repeat">
-                                {{ fact.restatements }}
-                                <v-tooltip activator="parent" location="top">Restated this many times since it was first recorded</v-tooltip>
-                            </v-chip>
-                            <v-chip v-if="fact.supersedes" size="x-small" variant="text" class="ml-1" prepend-icon="mdi-arrow-left-bold">
-                                {{ fact.supersedes }}
-                                <v-tooltip activator="parent" location="top">Supersedes fact {{ fact.supersedes }}</v-tooltip>
-                            </v-chip>
-                        </div>
-                        <template v-slot:append>
-                            <v-btn icon="mdi-close" size="x-small" variant="text" color="delete" :disabled="locked" @click="deleteFact(fact)">
-                                <v-icon icon="mdi-close"></v-icon>
-                                <v-tooltip activator="parent" location="top">Remove this fact</v-tooltip>
-                            </v-btn>
-                        </template>
-                    </v-list-item>
+                    <WorldStateManagerFactRow v-for="fact in shownFacts" :key="fact.id" :fact="fact" :locked="locked"
+                        @updated="updateFact" @deleted="removeFact" @source="$emit('source', $event)" />
                 </v-list>
             </div>
         </v-card-text>
@@ -146,6 +120,7 @@ import { isPrimaryModifier } from '@/utils/keyboardModifiers';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 import ContextualGenerate from './ContextualGenerate.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import WorldStateManagerFactRow from './WorldStateManagerFactRow.vue';
 
 export default {
     name: 'WorldStateManagerHistoryEntry',
@@ -174,14 +149,12 @@ export default {
             insertTitle: '',
             insertUnits: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
             MAX_CONTENT_WIDTH,
-            editingFact: null,
-            factDraft: '',
         }
     },
     inject:[
         'getWebsocket',
     ],
-    emits: ['busy', 'collapse'],
+    emits: ['busy', 'collapse', 'source'],
     computed: {
         shownFacts() {
             const facts = this.entry?.facts || [];
@@ -279,30 +252,11 @@ export default {
                 entry: this.entry,
             }));
         },
-        startFactEdit(fact) {
-            if (this.locked) return;
-            this.editingFact = fact.id;
-            this.factDraft = fact.text;
+        updateFact(fact) {
+            this.entry.facts = this.entry.facts.map((existing) => existing.id === fact.id ? fact : existing);
         },
-        saveFact(fact) {
-            if (this.editingFact !== fact.id) return;
-            this.editingFact = null;
-            const text = this.factDraft.trim();
-            if (!text || text === fact.text) return;
-            fact.text = text;
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'update_fact',
-                fact: fact,
-            }));
-        },
-        deleteFact(fact) {
-            this.entry.facts = this.entry.facts.filter(f => f.id !== fact.id);
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'delete_fact',
-                fact_id: fact.id,
-            }));
+        removeFact(id) {
+            this.entry.facts = this.entry.facts.filter((fact) => fact.id !== id);
         },
         deleteEntry(){
             const entry = this.entry;
@@ -329,6 +283,7 @@ export default {
         },
     },
     components: {
+        WorldStateManagerFactRow,
         ConfirmActionInline,
         ContextualGenerate,
     },

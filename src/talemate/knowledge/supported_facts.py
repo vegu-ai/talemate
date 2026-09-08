@@ -186,6 +186,7 @@ def contributions_for_source(scene, source, audience, parsed):
                 acquired=acquired,
                 audience=tuple(audience),
                 text=text,
+                importance=item.importance,
                 subjects=tuple(sorted(set(item.subjects))),
                 time_scope=time_scope,
                 supersedes=item.supersedes
@@ -291,6 +292,7 @@ def _replace_contributions(facts, sources, replacements, counter):
             fact = Fact(
                 id=identity,
                 text=contribution.text,
+                importance=contribution.importance,
                 source="disclosure"
                 if contribution.source.kind == "disclosure"
                 else "perspective",

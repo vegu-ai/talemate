@@ -62,12 +62,16 @@ def knowledge_label(scene: "Scene", target: str) -> str:
     return target
 
 
-def emit_knowledge_changes(scene: "Scene", changes: list[KnowledgeChange]):
+def emit_knowledge_changes(
+    scene: "Scene", changes: list[KnowledgeChange], *, labels=None
+):
     if not changes or not scene.active:
         return
     unique = {(c.character, c.target, c.kind): c for c in changes}
     labels = {
-        target: knowledge_label(scene, target)
+        target: labels[target]
+        if labels and target in labels
+        else knowledge_label(scene, target)
         for target in {c.target for c in unique.values()}
     }
     entries = []

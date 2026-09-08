@@ -4,7 +4,7 @@ mirrored into the memory store.
 """
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import pydantic
 import structlog
@@ -39,8 +39,6 @@ __all__ = [
 
 log = structlog.get_logger("talemate.knowledge.facts")
 
-_FactList = pydantic.TypeAdapter(list[ParsedFact])
-
 
 def parse_facts(raw: str | None) -> list[ParsedFact] | None:
     """
@@ -74,11 +72,26 @@ def parse_facts(raw: str | None) -> list[ParsedFact] | None:
         log.warning("facts parse failed", error="not a list", tail=raw[-300:])
         return None
 
-    try:
-        return _FactList.validate_python(data)
-    except pydantic.ValidationError as exc:
-        log.warning("facts parse failed", error=str(exc)[:300], tail=raw[-300:])
-        return None
+    parsed = []
+    for item in data:
+        if isinstance(item, dict):
+            importance = item.get("importance", 2)
+            try:
+                level = pydantic.TypeAdapter(int).validate_python(importance)
+                if isinstance(importance, bool) or level not in (1, 2, 3):
+                    raise ValueError("importance must be 1, 2 or 3")
+            except (pydantic.ValidationError, ValueError):
+                log.warning(
+                    "fact importance unreadable; defaulting to 2", importance=importance
+                )
+                level = 2
+            item = {**item, "importance": level}
+        try:
+            parsed.append(ParsedFact.model_validate(item))
+        except pydantic.ValidationError as exc:
+            log.warning("facts parse failed", error=str(exc)[:300], tail=raw[-300:])
+            return None
+    return parsed
 
 
 def fact_memory_document(fact: Fact) -> dict:
@@ -166,7 +179,9 @@ def prune_serialized_facts(
                 facts[identity] = aggregate_fact(fact, kept).model_dump(mode="json")
             else:
                 removed.add(identity)
-        elif values.get("archive_id") in archive_ids:
+        elif values.get("archive_id") in archive_ids or (
+            reset_sources and values.get("source") == "dialogue"
+        ):
             removed.add(identity)
     if not removed:
         return removed
@@ -247,13 +262,16 @@ async def _near_duplicate_in_batch(
 
 async def store_facts(
     scene: "Scene",
-    archive_id: str,
+    archive_id: str | None,
     present: list[str] | None,
     ts: int | None,
     parsed: list[ParsedFact],
     dedupe_distance: float,
     *,
     notify: bool = False,
+    message_id: int | None = None,
+    message_digest: str | None = None,
+    still_current: Callable[[], bool] | None = None,
 ) -> list[Fact]:
     """
     Store parsed facts for one archive entry; a near-duplicate of a stored
@@ -264,12 +282,25 @@ async def store_facts(
     # keyed by fact id: a merge updates the stored fact's document, not a second copy
     documents: dict[str, dict] = {}
     changes: list[KnowledgeChange] = []
+    staged: dict[str, Fact] = {}
+    restatements: dict[str, int] = {}
+    grants: list[KnowledgeEdge] = []
 
     for item in parsed:
         existing = await _near_duplicate_in_batch(item.text, stored, dedupe_distance)
         if existing is None:
             existing = await _near_duplicate(scene, item.text, dedupe_distance)
+        if still_current is not None and not still_current():
+            return []
         if existing is not None:
+            if still_current is not None:
+                if existing.id not in staged:
+                    restatements[existing.id] = 0
+                existing = staged.setdefault(
+                    existing.id, existing.model_copy(deep=True)
+                )
+                if existing.id in restatements:
+                    restatements[existing.id] += 1
             existing.restatements += 1
             existing.last_seen_ts = ts
             fact = existing
@@ -285,14 +316,26 @@ async def store_facts(
             fact = Fact(
                 id=f"F{world_state.fact_counter}",
                 text=item.text,
+                importance=item.importance,
                 ts=ts,
                 archive_id=archive_id,
+                message_id=message_id,
+                message_digest=message_digest,
+                source="dialogue" if message_id is not None else "summary",
                 present=present,
                 subjects=item.subjects,
+                known_by={
+                    name: "told" for name in item.known_by if name in (present or [])
+                }
+                if message_id is not None
+                else {},
                 supersedes=supersedes,
                 last_seen_ts=ts,
             )
-            world_state.facts[fact.id] = fact
+            if still_current is None:
+                world_state.facts[fact.id] = fact
+            else:
+                staged[fact.id] = fact
             stored.append(fact)
             changes.extend(
                 KnowledgeChange(character=name, target=fact.id)
@@ -309,7 +352,7 @@ async def store_facts(
                     continue
                 fact.known_by[name] = "told"
                 changes.append(KnowledgeChange(character=name, target=fact.id))
-                world_state.knowledge.append(
+                (world_state.knowledge if still_current is None else grants).append(
                     KnowledgeEdge(
                         character=name,
                         target=fact.id,
@@ -323,6 +366,52 @@ async def store_facts(
 
     if documents:
         await get_agent("memory").add_many(list(documents.values()))
+
+    if still_current is not None:
+        if not still_current():
+            memory = get_agent("memory")
+            restore = [
+                fact_memory_document(world_state.facts[identity])
+                for identity in staged
+                if identity in world_state.facts
+            ]
+            removed = staged.keys() - world_state.facts.keys()
+            if restore:
+                await memory.add_many(restore)
+            if removed:
+                await memory.delete({"ids": sorted(removed)})
+            return []
+        removed = restatements.keys() - world_state.facts.keys()
+        for identity, fact in staged.items():
+            if identity not in restatements:
+                world_state.facts[identity] = fact
+            elif identity not in removed:
+                live = world_state.facts[identity]
+                live.restatements += restatements[identity]
+                times = [
+                    value for value in (live.last_seen_ts, ts) if value is not None
+                ]
+                live.last_seen_ts = max(times) if times else None
+        for grant in grants:
+            live = world_state.facts.get(grant.target)
+            if live is None:
+                continue
+            if grant.target in restatements:
+                if grant.character in live.known_by:
+                    continue
+                live.known_by[grant.character] = "told"
+            world_state.knowledge.append(grant)
+        changes = [change for change in changes if change.target not in removed]
+        repair = [
+            fact_memory_document(world_state.facts[identity])
+            for identity in restatements.keys() - removed
+            if fact_memory_document(world_state.facts[identity]) != documents[identity]
+        ]
+        memory = get_agent("memory")
+        if repair:
+            await memory.add_many(repair)
+        if removed:
+            await memory.delete({"ids": sorted(removed)})
 
     if notify:
         emit_knowledge_changes(scene, changes)

@@ -130,6 +130,14 @@ Ask the AI what listeners learned from each character message and add those fact
 
 Off by default. Uses **one more request after a character message when a listener has recent facts they do not know**, through the World State agent's client. No request is sent when every listener already knows those facts. Available in Standard mode only.
 
+##### Establish facts from dialogue
+
+Save important facts immediately from a character's latest line, before the next summary. Available only when **Track learning from dialogue** is on, in Standard mode; off by default. A line that establishes nothing worth remembering yields no fact. Facts retain attribution and uncertainty: a character's claim is recorded as a claim.
+
+**Uses the same World State client request as Track learning from dialogue, but runs it after every character line**, including player lines and a speaker talking alone, even when everyone already knows the recent facts. There is no second request per line. Everyone present knows the recorded fact; the named learners describe who learned it rather than restricting its audience.
+
+New facts have an importance level and appear under **Dialogue facts** in [History](/talemate/user-guide/world-editor/history/#facts), where their text and importance can be edited and their source message inspected. The archive pass still extracts facts, including narrator lines and time passages, and merges sufficiently similar restatements into the existing fact. Removing or changing a source message removes the facts it established.
+
 ## Long Term Memory
 
 --8<-- "docs/snippets/tips.md:agent_long_term_memory_settings"

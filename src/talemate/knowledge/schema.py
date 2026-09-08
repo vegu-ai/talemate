@@ -1,5 +1,5 @@
 import uuid
-from typing import Literal
+from typing import Annotated, Literal
 
 import pydantic
 
@@ -20,9 +20,12 @@ __all__ = [
 VisibilityMode = Literal["everyone", "owner", "list"]
 EdgeKind = Literal["grant", "revoke"]
 EdgeSource = Literal["told", "granted", "inferred", "manual", "director"]
-FactSource = Literal["summary", "manual", "offscreen", "perspective", "disclosure"]
+FactSource = Literal[
+    "summary", "manual", "offscreen", "perspective", "disclosure", "dialogue"
+]
 FactsStatus = Literal["ok", "failed"]
 KnownKind = Literal["witnessed", "told", "granted", "inferred"]
+FactImportance = Annotated[int, pydantic.Field(strict=True, ge=1, le=3)]
 
 FACT_SOURCE_LABELS: dict[FactSource, str] = {
     "summary": "history entry",
@@ -30,6 +33,7 @@ FACT_SOURCE_LABELS: dict[FactSource, str] = {
     "offscreen": "offscreen life",
     "perspective": "perception",
     "disclosure": "disclosure",
+    "dialogue": "dialogue",
 }
 
 
@@ -72,6 +76,7 @@ class ParsedFact(pydantic.BaseModel):
     """One item of the FACTS list the summary call returns."""
 
     text: str = pydantic.Field(min_length=1)
+    importance: FactImportance = 2
     subjects: list[str] = pydantic.Field(default_factory=list)
     known_by: list[str] = pydantic.Field(default_factory=list)
     supersedes: str | None = None
@@ -147,6 +152,7 @@ class FactContribution(AudienceRecord):
     source: SourceReference
     acquired: Acquisition
     text: str = pydantic.Field(min_length=1)
+    importance: FactImportance = 2
     subjects: tuple[str, ...] = ()
     time_scope: str | None = None
     supersedes: str | None = None
@@ -174,8 +180,11 @@ class FactContribution(AudienceRecord):
 class Fact(pydantic.BaseModel):
     id: str
     text: str
+    importance: FactImportance = 2
     ts: int | None = None
     archive_id: str | None = None
+    message_id: int | None = None
+    message_digest: str | None = None
     present: list[str] | None = None
     subjects: list[str] = pydantic.Field(default_factory=list)
     # never "witnessed": that is derived from `present`
@@ -195,4 +204,7 @@ class Fact(pydantic.BaseModel):
         data = handler(self)
         if not self.contributions:
             data.pop("contributions", None)
+        for key in ("message_id", "message_digest"):
+            if data.get(key) is None:
+                data.pop(key, None)
         return data

@@ -1021,6 +1021,7 @@ async def test_time_scope_flows_through_real_prompt_and_response(
                         "text": text,
                         "subjects": ["key"],
                         "time_scope": "2026-09-01",
+                        "importance": 3,
                         "supersedes": None,
                     }
                 ]
@@ -1033,6 +1034,7 @@ async def test_time_scope_flows_through_real_prompt_and_response(
     assert len(prompts) == 1
     fact = current_state(scene, "key", character="Alice")
     assert fact.contributions[0].time_scope == "2026-09-01"
+    assert fact.importance == fact.contributions[0].importance == 3
 
 
 @pytest.mark.asyncio

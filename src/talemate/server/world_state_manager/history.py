@@ -109,6 +109,11 @@ class HistoryMixin:
                     "history": history,
                     "layered_history": layered_history,
                     "time_passages": time_passages,
+                    "dialogue_facts": [
+                        fact.model_dump()
+                        for fact in self.scene.world_state.facts.values()
+                        if fact.source == "dialogue"
+                    ],
                 },
             }
         )

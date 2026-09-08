@@ -58,7 +58,7 @@
                     </div>
 
                     <v-card-title class="d-flex align-center">
-                        Summarized History
+                        History
                         <v-spacer></v-spacer>
                         <v-select v-model="knownBy" :items="characterNames" label="Known by" density="compact" variant="underlined" hide-details clearable prepend-inner-icon="mdi-head-lightbulb-outline" class="known-by-filter" style="max-width: 260px"></v-select>
                     </v-card-title>
@@ -66,6 +66,19 @@
                         Showing only the facts {{ knownBy }} knows ({{ knownFactIds ? knownFactIds.length : '…' }} in their record, history entries and other sources together).
                     </div>
 
+                    <v-card v-if="dialogueFacts.length" variant="tonal" class="mb-4 dialogue-facts">
+                        <v-card-title class="text-body-large">Dialogue facts</v-card-title>
+                        <v-card-text>
+                            <div class="text-body-small text-medium-emphasis mb-2">Facts established in dialogue, with a link to the original message. Double-click a fact or select its importance to edit it.</div>
+                            <v-list density="compact" slim class="bg-transparent py-0">
+                                <WorldStateManagerFactRow v-for="fact in shownDialogueFacts" :key="fact.id" :fact="fact"
+                                    :locked="appBusy || !appReady || busy" @updated="updateFact" @deleted="removeFact" @source="openFactSource" />
+                            </v-list>
+                            <div v-if="!shownDialogueFacts.length" class="text-body-small text-medium-emphasis">No dialogue facts match the selected character.</div>
+                        </v-card-text>
+                    </v-card>
+
+                    <v-card-title>Summarized History</v-card-title>
 
                     <template v-for="(item, index) in interleavedHistory" :key="item.type + '_' + index">
                         <WorldStateManagerHistoryEntry
@@ -77,6 +90,7 @@
                             :app-config="appConfig"
                             :generation-options="generationOptions"
                             :busy="busyEntry && busyEntry === item.data.id"
+                            @source="openFactSource"
                             @busy="(entry_id) => setBusyEntry(entry_id)"
                             @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
 
@@ -138,6 +152,16 @@
     </v-window>
 
     <WorldStateManagerHistoryAdd v-model="showAddDialog" :generation-options="generationOptions" @add="addHistoryEntry" />
+    <v-dialog :model-value="factSource !== null" max-width="720" @update:model-value="value => { if (!value) factSource = null; }">
+        <v-card title="Source message">
+            <v-card-subtitle v-if="factSource?.message_id != null">Message {{ factSource.message_id }}</v-card-subtitle>
+            <v-card-text>
+                <v-progress-linear v-if="factSource?.loading" indeterminate color="primary" />
+                <div v-else class="text-body-large" style="white-space: pre-wrap">{{ factSource?.text ?? 'The source message is no longer available.' }}</div>
+            </v-card-text>
+            <v-card-actions><v-spacer /><v-btn @click="factSource = null">Close</v-btn></v-card-actions>
+        </v-card>
+    </v-dialog>
     </div>
 </template>
 
@@ -145,6 +169,7 @@
 import WorldStateManagerHistoryEntry from './WorldStateManagerHistoryEntry.vue';
 import WorldStateManagerHistoryAdd from './WorldStateManagerHistoryAdd.vue';
 import WorldStateManagerTimePassageEntry from './WorldStateManagerTimePassageEntry.vue';
+import WorldStateManagerFactRow from './WorldStateManagerFactRow.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 
@@ -154,6 +179,7 @@ export default {
         WorldStateManagerHistoryEntry,
         WorldStateManagerHistoryAdd,
         WorldStateManagerTimePassageEntry,
+        WorldStateManagerFactRow,
     },
     props: {
         generationOptions: Object,
@@ -173,6 +199,8 @@ export default {
             // the selected character's whole bucket, ids only; null while unset
             knownFactIds: null,
             history: [],
+            dialogueFacts: [],
+            factSource: null,
             layered_history: [],
             time_passages: [],
             busy: false,
@@ -204,6 +232,11 @@ export default {
         },
     },
     computed: {
+        shownDialogueFacts() {
+            if (this.knownFactIds === null) return this.dialogueFacts;
+            const known = new Set(this.knownFactIds);
+            return this.dialogueFacts.filter((fact) => known.has(fact.id));
+        },
         characterNames() {
             return Object.keys(this.characterList?.characters || {});
         },
@@ -272,6 +305,8 @@ export default {
     methods:{
         reset() {
             this.history = [];
+            this.dialogueFacts = [];
+            this.factSource = null;
             this.time_passages = [];
             this.busy = false;
             this.knownBy = null;
@@ -358,9 +393,26 @@ export default {
                 name,
             }));
         },
+        updateFact(fact) {
+            this.dialogueFacts = this.dialogueFacts.map((existing) => existing.id === fact.id ? fact : existing);
+            for (const entry of this.history) {
+                entry.facts = (entry.facts || []).map((existing) => existing.id === fact.id ? fact : existing);
+            }
+        },
+        removeFact(id) {
+            this.dialogueFacts = this.dialogueFacts.filter((fact) => fact.id !== id);
+            for (const entry of this.history) {
+                entry.facts = (entry.facts || []).filter((fact) => fact.id !== id);
+            }
+        },
+        openFactSource(fact) {
+            this.factSource = { fact_id: fact.id, message_id: fact.message_id, loading: true };
+            this.getWebsocket().send(JSON.stringify({ type: 'world_state_manager', action: 'get_fact_source', fact_id: fact.id }));
+        },
         handleMessage(message) {
-            if (message.type === 'knowledge_changed' && this.knownBy) {
-                this.requestKnownFacts(this.knownBy);
+            if (message.type === 'knowledge_changed') {
+                if (this.knownBy) this.requestKnownFacts(this.knownBy);
+                if (this.visible) this.requestSceneHistory();
                 return;
             }
             if (message.type != 'world_state_manager') {
@@ -375,6 +427,7 @@ export default {
 
             if(message.action == 'scene_history') {
                 this.history = message.data.history;
+                this.dialogueFacts = [...(message.data.dialogue_facts || [])].reverse();
                 this.layered_history = message.data.layered_history;
                 this.time_passages = message.data.time_passages || [];
                 // reverse
@@ -390,6 +443,13 @@ export default {
                     const layerIndex = parseInt(this.tab.split('_')[1]);
                     this.requestLayerStats(layerIndex);
                 }
+            } else if (message.action === 'fact_updated') {
+                this.updateFact(message.data);
+            } else if (message.action === 'fact_deleted') {
+                this.removeFact(message.data.fact_id);
+                if (this.knownBy) this.requestKnownFacts(this.knownBy);
+            } else if (message.action === 'fact_source') {
+                if (this.factSource?.fact_id === message.data.fact_id) this.factSource = { ...message.data, loading: false };
             } else if (message.action == 'layer_stats') {
                 this.layerStats = {...this.layerStats, [message.data.layer]: message.data};
                 this.layerStatsLoading = {...this.layerStatsLoading, [message.data.layer]: false};

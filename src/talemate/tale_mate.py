@@ -53,6 +53,7 @@ from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import GameStatePathSettings, ScenePerspectives
 from talemate.history import emit_archive_add, ArchiveEntry
+from talemate.knowledge.dialogue_facts import prune_dialogue_facts
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.memory import invalidate_memory_audiences
 from talemate.knowledge.facts import fact_memory_document, prune_summary_facts
@@ -2173,6 +2174,7 @@ class Scene(Emitter):
         # remove messages
         self.history = []
         dropped_facts = reset_perspectives(self)
+        dropped_facts.update(prune_dialogue_facts(self.world_state))
 
         # clear out archived history, but keep pre-established history
         summarized_ids = {

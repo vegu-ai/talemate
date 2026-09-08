@@ -52,7 +52,7 @@ class FactPayload(pydantic.BaseModel):
     fact: Fact
 
 
-class DeleteFactPayload(pydantic.BaseModel):
+class FactIdPayload(pydantic.BaseModel):
     fact_id: str
 
 
@@ -61,6 +61,26 @@ class RegenerateFactsPayload(pydantic.BaseModel):
 
 
 class KnowledgeMixin:
+    async def handle_get_fact_source(self, data):
+        payload = FactIdPayload(**data)
+        fact = self.scene.world_state.facts.get(payload.fact_id)
+        message = (
+            self.scene.get_message(fact.message_id)
+            if fact and fact.message_id is not None
+            else None
+        )
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "fact_source",
+                "data": {
+                    "fact_id": payload.fact_id,
+                    "message_id": message.id if message is not None else None,
+                    "text": str(message) if message is not None else None,
+                },
+            }
+        )
+
     async def _send_character_knowledge(
         self, name: str, *, request_id: str | None = None
     ):
@@ -192,7 +212,7 @@ class KnowledgeMixin:
         await self.signal_operation_done()
 
     async def handle_delete_fact(self, data):
-        payload = DeleteFactPayload(**data)
+        payload = FactIdPayload(**data)
         world_state = self.scene.world_state
         fact = world_state.facts.pop(payload.fact_id, None)
         if fact is None:

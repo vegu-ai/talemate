@@ -10,6 +10,7 @@ __all__ = [
     "ItemBlockExtractor",
     "MEMORY_PASS_SPEC",
     "KNOWLEDGE_LEDGER_SPEC",
+    "KNOWLEDGE_LEDGER_FACTS_SPEC",
 ]
 
 ITEMS_CONTAINER = AnchorExtractor(left="<ITEMS>", right="</ITEMS>")
@@ -50,6 +51,14 @@ MEMORY_PASS_SPEC = ResponseSpec(
 KNOWLEDGE_LEDGER_SPEC = ResponseSpec(
     extractors={
         "ledger": AnchorExtractor(left="<LEDGER>", right="</LEDGER>"),
+    },
+    required=[],
+)
+
+KNOWLEDGE_LEDGER_FACTS_SPEC = ResponseSpec(
+    extractors={
+        **KNOWLEDGE_LEDGER_SPEC.extractors,
+        "facts": AnchorExtractor(left="<FACTS>", right="</FACTS>"),
     },
     required=[],
 )

@@ -756,9 +756,17 @@ class SceneAssets:
         # this will be used as the filename
         asset_id = hashlib.sha256(asset_bytes).hexdigest()
 
-        # if the asset already exists, return the existing asset
+        # if the asset already exists, return the existing asset. The signal
+        # still fires: an upload of an image the scene already holds carries a
+        # new meta and a new attachment context, and the status emitted from
+        # the handler is what tells the frontend about them.
         if asset_id in self.assets:
             existing_asset = self.assets[asset_id]
+            self._signal_asset_saved(
+                existing_asset,
+                new_asset=False,
+                asset_attachment_context=asset_attachment_context,
+            )
             return existing_asset
 
         # create the asset path if it doesn't exist

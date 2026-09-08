@@ -725,7 +725,7 @@ app.delete - Destructive actions - remove buttons and delete confirmations.
 app.cancel - Cancel, close and reset buttons.
 app.muted - De-emphasized text and icons throughout. The second most used color in the app.
 app.mutedheader - Captions and small headers above muted text; message toolbar chips; every markdown heading, table header and code span, the last of these drawn on the mutedbg fill.
-app.mutedbg - Filled bands drawn under content: chat selector and library toolbars, the director message's left rule, and the fill behind markdown code spans and code blocks (whose text is mutedheader).
+app.mutedbg - Filled bands drawn under content: panel section headers and library toolbars, the director message's left rule, and the fill behind markdown code spans and code blocks (whose text is mutedheader).
 app.normal - Body text in the message edit box. Character message text takes the character's own color instead.
 app.unsaved - The 'not saved yet' marker on new characters and loaded presets.
 app.favorite - The favorite star on templates.

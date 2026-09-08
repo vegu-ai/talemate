@@ -33,16 +33,33 @@ Sentence transformer model that is decently fast and accurate and will likely be
 
 OpenAI's current text embedding model. Fast and accurate, but not free.
 
+Requires an OpenAI API key.
+
+### OpenRouter openai/text-embedding-3-small
+
+The same model, served through OpenRouter's embeddings endpoint. Use this if you already run Talemate on OpenRouter and do not want a separate OpenAI account.
+
+It uses the OpenRouter API key from **Connections → API Keys**, so there is no extra key to set here. See the [OpenRouter API setup](/talemate/user-guide/apis/openrouter/). You do not need an OpenRouter client for this — the key is enough.
+
+!!! warning "The key is required"
+    With this embedding selected and no OpenRouter key configured, the Memory agent reports the missing key and scenes will not load until you set one. This is the same behaviour the OpenAI embedding has without an OpenAI key.
+
+OpenRouter serves other embedding models as well. To use one, add an embedding with the **OpenRouter** type and enter the model id, for example `qwen/qwen3-embedding-8b`.
+
 ## Adding an Embedding
 
 You can add new embeddings by clicking the **:material-plus: Add new** button.
 
-Select the embedding type and then enter the model name. When using sentence-transformer, make sure the modelname matches the name of the model repository on Huggingface, so for example `Alibaba-NLP/gte-base-en-v1.5`.
+Select the embedding type first. The form then asks for what that type needs:
 
-![Add new embedding](/talemate/img/0.39.0/embedding-settings-new-1.png)
+- `sentence-transformer` — the model name, matching the model repository on Huggingface, so for example `Alibaba-NLP/gte-base-en-v1.5`.
+- `openai` and `openrouter` — the model id as the provider spells it, so `text-embedding-3-large` or `qwen/qwen3-embedding-8b`.
+- `client-api` — a client rather than a model. The selector lists the ready clients that expose an embeddings endpoint, and the model is whichever one that client has loaded.
 
-!!! warning "New embeddings require a download"
-    When you add a new embedding model and use it for the first time in the Memory agent, Talemate will download the model from Huggingface. This can take a while, depending on the size of the model and your internet connection.
+![Add new embedding](/talemate/img/0.40.0/embedding-settings-new-1.png)
+
+!!! warning "New sentence-transformer embeddings require a download"
+    When you add a new **sentence-transformer** embedding and use it for the first time in the Memory agent, Talemate will download the model from Huggingface. This can take a while, depending on the size of the model and your internet connection. The hosted types — `openai` and `openrouter` — download nothing, and `client-api` uses the model your client already has loaded.
 
     You can track the download in the talemate process window. A better UX based download progress bar is planned for a future release.
 
@@ -100,5 +117,5 @@ This is a tag to mark the embedding as needing a GPU. It doesn't actually do any
 
 ##### Local
 
-This is a tag to mark the embedding as local. It doesn't actually do anything, but can be useful for sorting later on.
+Marks the embedding as running on your own machine. Turning it off hides the **Device** and **GPU Recommendation** controls, which mean nothing for a model served over an API. It is set for you when you add an embedding: only `sentence-transformer` is local.
 <!--- --8<-- [end:embeddings_setup] -->

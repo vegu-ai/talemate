@@ -4,7 +4,7 @@ The **Visuals** tab in the Scene Editor provides a dedicated interface for manag
 
 To access it, open the :material-earth-box: **World Editor**, navigate to the :material-script: **Scene** tab, and click the :material-image-multiple-outline: **Visuals** tab.
 
-![Scene editor Visuals tab, Scene Card sub-tab](/talemate/img/0.39.0/world-editor-scene-visuals-overview.png)
+![Scene editor Visuals tab, Scene Card sub-tab](/talemate/img/0.40.0/world-editor-scene-visuals-overview.png)
 
 ## Overview
 
@@ -24,8 +24,9 @@ When a backdrop is set, a banner above the grid names the backdrop image, offers
 ### Adding images
 
 1. **Drag and Drop**: Drop an image file onto the upload card
-2. **Generate Variation**: Create a variation of an existing scene image — modify time of day, weather, mood, or details via an image-editing prompt (e.g. "make it night time", "add rain"). Batch prompts let you generate several variations in one go.
-3. **Generate New**: Create a completely new image; the visual agent builds a prompt from the current scene state and your instructions
+2. **Paste**: Copy an image to the clipboard and press **Ctrl+V** (**Cmd+V** on macOS). Click the drop zone first if more than one image panel is open.
+3. **Generate Variation**: Create a variation of an existing scene image — modify time of day, weather, mood, or details via an image-editing prompt (e.g. "make it night time", "add rain"). Batch prompts let you generate several variations in one go.
+4. **Generate New**: Create a completely new image; the visual agent builds a prompt from the current scene state and your instructions
 
 Generation requires a ready [Visualizer Agent](/talemate/user-guide/agents/visualizer); Generate Variation additionally needs a backend with image-editing support and at least one existing image to use as reference.
 

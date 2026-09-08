@@ -491,6 +491,23 @@ class TestAddAsset:
         # Only one library entry
         assert list(scene.assets.assets.keys()) == [a.id]
 
+    async def test_signals_a_known_asset_so_the_view_is_told(
+        self, scene, capture_signal
+    ):
+        # the only scene status an upload emits comes from the asset_saved
+        # handler; without a signal for an image the scene already holds, its
+        # new meta reaches nothing that is watching
+        received = capture_signal("asset_saved")
+        payload = b"identical"
+
+        first = await scene.assets.add_asset(payload, "png", "image/png")
+        second = await scene.assets.add_asset(payload, "png", "image/png")
+        await asyncio.sleep(0)
+
+        assert first.id == second.id
+        assert [p.new_asset for p in received] == [True, False]
+        assert [p.asset.id for p in received] == [first.id, first.id]
+
     async def test_uses_provided_meta(self, scene):
         meta = AssetMeta(name="custom", tags=["t1"])
         asset = await scene.assets.add_asset(b"bytes-x", "png", "image/png", meta=meta)

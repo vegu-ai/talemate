@@ -1062,6 +1062,8 @@ export default {
       getAgents: () => this.getAgents(),
       toggleAgentAction: (agentName, actionName) => this.toggleAgentAction(agentName, actionName),
       toggleAgentConfig: (agentName, actionName, configName) => this.toggleAgentConfig(agentName, actionName, configName),
+      applyAgentValues: (agentName, actionName, values) => this.applyAgentValues(agentName, actionName, values),
+      queueKnowledgeEffort: (stop, mode, options) => this.$refs.aiAgent.queueEffort(stop, mode, options),
       openAgentSettings: this.openAgentSettings,
       openClientSettings: this.openClientSettings,
       requestSceneAssets: (asset_ids) => this.requestSceneAssets(asset_ids),
@@ -1766,6 +1768,11 @@ export default {
       if (!action) return false;
       this.$refs.aiAgent.toggleAction(agent, actionName, action);
       return true;
+    },
+    applyAgentValues(agentName, actionName, values) {
+      const agent = this.getAgents().find((candidate) => candidate.name === agentName);
+      if (!agent?.actions?.[actionName]) return false;
+      return this.$refs.aiAgent.applyActionValues(agent, actionName, values);
     },
     toggleAgentConfig(agentName, actionName, configName) {
       const agent = this.getAgents().find((candidate) => candidate.name === agentName);

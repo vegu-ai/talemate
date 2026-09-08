@@ -141,6 +141,7 @@
 
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
+import { queueEffortAcrossSwitch } from '@/utils/knowledgeEffort';
 import { PERSPECTIVES_LOCKED_HINT, PERSPECTIVES_OPEN_HINT, buildSceneSettingsPayload, canChangePerspectives, perspectivesEnabled } from '@/utils/sceneSettings';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
@@ -274,6 +275,8 @@ export default {
         'autocompleteRequest',
         'registerMessageHandler',
         'unregisterMessageHandler',
+        'getAgents',
+        'queueKnowledgeEffort',
     ],
     methods: {
         restoreScene(confirmed=false) {
@@ -292,6 +295,7 @@ export default {
         },
         updateCharacterKnowledge(enabled) {
             if (!canChangePerspectives(this.scene?.data)) return;
+            queueEffortAcrossSwitch(this.getAgents(), enabled, this.queueKnowledgeEffort);
             return this.update(enabled ? 'perception' : 'legacy');
         },
         update(knowledgeEligibility) {

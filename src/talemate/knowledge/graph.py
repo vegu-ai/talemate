@@ -5,10 +5,10 @@ No embedding search: name matching and the `supersedes` links only.
 """
 
 import re
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
-from talemate.knowledge.schema import Fact
+from talemate.knowledge.schema import Fact, KnownKind
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspectives import PerspectiveReadContext
 from talemate.knowledge.supported_facts import character_fact
@@ -25,8 +25,6 @@ __all__ = [
     "aliases_for",
     "KnownKind",
 ]
-
-KnownKind = Literal["witnessed", "told", "granted", "inferred"]
 
 
 def aliases_for(scene: "Scene", entity: str) -> set[str]:

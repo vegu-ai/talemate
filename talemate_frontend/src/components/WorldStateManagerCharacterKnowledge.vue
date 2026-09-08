@@ -88,28 +88,39 @@
             <v-card-title class="text-body-large">Known facts by topic</v-card-title>
             <v-card-subtitle v-if="!perceptionMode && awareness">{{ awareness }}.</v-card-subtitle>
             <v-card-text>
-                <v-table density="compact" class="coverage-table">
-                    <thead>
-                        <tr>
-                            <th>Topic</th>
-                            <th class="text-right">Known</th>
-                            <th class="text-right">Recorded</th>
-                            <th style="width: 40%"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="row in coverage" :key="row.id">
-                            <td>{{ row.name }}</td>
-                            <td class="text-right">{{ row.known }}</td>
-                            <td class="text-right">{{ row.total }}</td>
-                            <td>
-                                <v-progress-linear :model-value="row.total ? (row.known / row.total) * 100 : 0" color="primary" height="6" rounded>
+                <div class="d-flex align-center mb-2">
+                    <v-text-field v-model="factFilter" density="compact" variant="underlined" hide-details clearable prepend-inner-icon="mdi-magnify" label="Filter topics and loaded facts" class="mr-4"></v-text-field>
+                    <v-btn size="small" variant="text" color="primary" :prepend-icon="allOpen ? 'mdi-collapse-all-outline' : 'mdi-expand-all-outline'" @click="toggleAll">{{ allOpen ? 'Collapse all' : 'Expand all' }}</v-btn>
+                </div>
+                <v-expansion-panels v-model="openTopics" multiple variant="accordion" class="coverage-topics">
+                    <v-expansion-panel v-for="row in visibleCoverage" :key="row.id" :value="row.id">
+                        <v-expansion-panel-title class="py-1">
+                            <div class="d-flex align-center w-100">
+                                <span class="mr-3">{{ row.name }}</span>
+                                <span class="text-body-small text-medium-emphasis mr-3">{{ row.known }} of {{ row.total }} known</span>
+                                <v-progress-linear :model-value="row.total ? (row.known / row.total) * 100 : 0" color="primary" height="6" rounded class="flex-grow-1 mr-4" style="max-width: 200px">
                                     <v-tooltip activator="parent" location="top">{{ row.known }} of {{ row.total }} recorded facts known; this does not measure understanding or all world knowledge</v-tooltip>
                                 </v-progress-linear>
-                            </td>
-                        </tr>
-                    </tbody>
-                </v-table>
+                            </div>
+                        </v-expansion-panel-title>
+                        <v-expansion-panel-text>
+                            <v-progress-linear v-if="!topicFacts[row.id]" indeterminate color="primary" height="2"></v-progress-linear>
+                            <v-list v-else density="compact" slim class="bg-transparent py-0">
+                                <v-list-item v-for="fact in visibleFacts(row.id)" :key="fact.id" class="px-0" :class="{ 'topic-fact-unknown': !fact.known }">
+                                    <template v-slot:prepend>
+                                        <v-chip size="x-small" variant="tonal" color="muted" class="mr-2">{{ fact.id }}</v-chip>
+                                    </template>
+                                    <div class="text-body-medium">{{ fact.text }}</div>
+                                    <div class="text-body-small text-medium-emphasis">
+                                        <span>{{ fact.known ? howLabel(fact.how) : `${character.name} does not know this` }}</span>
+                                        <span class="ml-2">via {{ fact.source_id ? `${fact.source} ${fact.source_id}` : fact.source }}</span>
+                                    </div>
+                                </v-list-item>
+                                <v-list-item v-if="!visibleFacts(row.id).length" class="px-0 text-body-small text-medium-emphasis">No facts match the filter.</v-list-item>
+                            </v-list>
+                        </v-expansion-panel-text>
+                    </v-expansion-panel>
+                </v-expansion-panels>
             </v-card-text>
         </v-card>
     </div>
@@ -140,6 +151,11 @@ export default {
             edges: [],
             coverage: [],
             awareness: null,
+            // topic id -> that topic's facts for this character, fetched on
+            // expand and dropped on the next knowledge change
+            topicFacts: {},
+            openTopics: [],
+            factFilter: '',
             targets: [],
             newTarget: null,
             newKind: 'grant',
@@ -151,7 +167,24 @@ export default {
             ],
         }
     },
+    computed: {
+        filterText() {
+            return (this.factFilter || '').trim().toLowerCase();
+        },
+        visibleCoverage() {
+            if (!this.filterText) return this.coverage;
+            return this.coverage.filter((row) =>
+                row.name.toLowerCase().includes(this.filterText)
+                || (this.topicFacts[row.id] || []).some((fact) => fact.text.toLowerCase().includes(this.filterText)));
+        },
+        allOpen() {
+            return this.coverage.length > 0 && this.coverage.every((row) => this.openTopics.includes(row.id));
+        },
+    },
     watch: {
+        openTopics(ids) {
+            this.requestTopicFacts(ids.filter((id) => !this.topicFacts[id]));
+        },
         immutableCharacter: {
             immediate: true,
             handler(value) {
@@ -172,6 +205,9 @@ export default {
                     this.newTarget = null;
                     this.information = '';
                     this.wholeEntry = false;
+                    this.topicFacts = {};
+                    this.openTopics = [];
+                    this.factFilter = '';
                     this.request();
                 }
             },
@@ -185,6 +221,30 @@ export default {
                 action: 'get_character_knowledge',
                 name: this.character.name,
             }));
+        },
+        // one request for several rows: the backend walks the bucket once
+        requestTopicFacts(topicIds) {
+            if (!this.character || !topicIds.length) return;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'get_topic_facts',
+                name: this.character.name,
+                topic_ids: topicIds,
+            }));
+        },
+        toggleAll() {
+            this.openTopics = this.allOpen ? [] : this.coverage.map((row) => row.id);
+        },
+        visibleFacts(topicId) {
+            const facts = this.topicFacts[topicId] || [];
+            if (!this.filterText) return facts;
+            return facts.filter((fact) => fact.text.toLowerCase().includes(this.filterText));
+        },
+        howLabel(how) {
+            const labels = this.perceptionMode
+                ? { granted: 'Disclosed', inferred: 'Perceived' }
+                : { witnessed: 'Present', told: 'Told in dialogue', granted: 'Allowed by rule', inferred: 'Learned from dialogue' };
+            return labels[how] || 'Known';
         },
         targetLabel(id) {
             const target = this.targets.find(t => t.id === id);
@@ -237,7 +297,9 @@ export default {
         handleMessage(message) {
             if (message.type === 'knowledge_changed') {
                 if (this.character && message.data?.changes?.some(change => change.character === this.character.name)) {
+                    this.topicFacts = {};
                     this.request();
+                    this.requestTopicFacts([...this.openTopics]);
                 }
                 return;
             }
@@ -252,6 +314,11 @@ export default {
                 this.factsWarning = message.data.facts_status === 'failed'
                     ? 'The information is saved, but its searchable facts could not be recorded. Retry the failed request if it is still open; otherwise see Knowledge in the user guide for recovery steps.'
                     : null;
+            }
+            if (message.action === 'topic_facts') {
+                if (!this.character || message.data.name !== this.character.name) return;
+                this.topicFacts = { ...this.topicFacts, ...message.data.topics };
+                return;
             }
             if (message.action === 'character_knowledge') {
                 if (!this.character || message.data.name !== this.character.name) return;
@@ -285,3 +352,9 @@ export default {
     },
 }
 </script>
+
+<style scoped>
+.topic-fact-unknown {
+    opacity: var(--v-medium-emphasis-opacity);
+}
+</style>

@@ -113,7 +113,13 @@ has no history and no archived history, exactly as in
 [Scene Settings](/talemate/user-guide/world-editor/scene/settings/); once history exists the
 switch is disabled and the reason is shown. Save the scene to keep a change.
 
-The menu header shows the story mode. **Thoroughness** starts with a summary line naming the
+The count line under the newest facts is a link to the character's Knowledge tab, where every known fact is listed by topic.
+
+The menu header shows the story mode. **Thoroughness** starts with the **Character knowledge effort** slider (see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets)): one drag sets the toggles below to a tuned stop, with the stop's extra requests and model expectation under it; a manual change to any toggle shows **Custom**. Group headers and toggles share one checkbox column; a group without a master checkbox keeps the space so its label lines up.
+
+![knowledge hub effort slider](/talemate/img/0.40.0/world-state-knowledge-hub-effort.png)
+
+Then comes a summary line naming the
 options that add a request and are on ("No extra requests per line" when none is). Below it are the settings that shape
 knowledge keeping, grouped by agent, with the same labels, descriptions and cost notes as the
 agent settings:

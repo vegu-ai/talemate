@@ -57,13 +57,21 @@
                         </v-btn>
                     </div>
 
-                    <v-card-title>Summarized History</v-card-title>
+                    <v-card-title class="d-flex align-center">
+                        Summarized History
+                        <v-spacer></v-spacer>
+                        <v-select v-model="knownBy" :items="characterNames" label="Known by" density="compact" variant="underlined" hide-details clearable prepend-inner-icon="mdi-head-lightbulb-outline" class="known-by-filter" style="max-width: 260px"></v-select>
+                    </v-card-title>
+                    <div v-if="knownBy" class="text-body-small text-medium-emphasis mb-2">
+                        Showing only the facts {{ knownBy }} knows ({{ knownFactIds ? knownFactIds.length : '…' }} in their record, history entries and other sources together).
+                    </div>
 
 
                     <template v-for="(item, index) in interleavedHistory" :key="item.type + '_' + index">
                         <WorldStateManagerHistoryEntry
                             v-if="item.type === 'entry'"
                             :entry="item.data"
+                            :known-fact-ids="knownFactIds"
                             :app-busy="appBusy"
                             :app-ready="appReady"
                             :app-config="appConfig"
@@ -117,7 +125,7 @@
                         </v-card-text>
                     </v-card>
 
-                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index"
+                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" :known-fact-ids="knownFactIds"
                     :entry="entry"
                     :app-busy="appBusy"
                     :app-config="appConfig"
@@ -157,9 +165,13 @@ export default {
         },
         appConfig: Object,
         visible: Boolean,
+        characterList: Object,
     },
     data() {
         return {
+            knownBy: null,
+            // the selected character's whole bucket, ids only; null while unset
+            knownFactIds: null,
             history: [],
             layered_history: [],
             time_passages: [],
@@ -173,6 +185,10 @@ export default {
         }
     },
     watch: {
+        knownBy(name) {
+            this.knownFactIds = null;
+            if (name) this.requestKnownFacts(name);
+        },
         tab(val) {
             if (val === 'base') {
                 if (!this.layerStats[0] && !this.layerStatsLoading[0] && this.summaryEntriesExist) {
@@ -188,6 +204,9 @@ export default {
         },
     },
     computed: {
+        characterNames() {
+            return Object.keys(this.characterList?.characters || {});
+        },
         layers() {
             return this.layered_history.map((layer, index) => {
                 return {
@@ -255,6 +274,8 @@ export default {
             this.history = [];
             this.time_passages = [];
             this.busy = false;
+            this.knownBy = null;
+            this.knownFactIds = null;
         },
         regenerate() {
             this.history = [];
@@ -330,8 +351,25 @@ export default {
             }));
         },
 
+        requestKnownFacts(name) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'get_character_knowledge',
+                name,
+            }));
+        },
         handleMessage(message) {
+            if (message.type === 'knowledge_changed' && this.knownBy) {
+                this.requestKnownFacts(this.knownBy);
+                return;
+            }
             if (message.type != 'world_state_manager') {
+                return;
+            }
+            if (message.action === 'character_knowledge') {
+                if (this.knownBy && message.data?.name === this.knownBy) {
+                    this.knownFactIds = message.data.known_fact_ids || [];
+                }
                 return;
             }
 

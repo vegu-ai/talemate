@@ -142,6 +142,8 @@
 
 <script>
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
+import { effortMode, effortPatch } from '@/utils/knowledgeEffort';
+import { perspectivesEnabled } from '@/utils/sceneSettings';
 import AgentMessages from './AgentMessages.vue';
 import {
     configOverrideActive,
@@ -152,6 +154,9 @@ import {
     setActionOverrideSlice,
 } from '@/constants/sceneAgentSettings';
 
+const EFFORT_AGENTS = ['conversation', 'summarizer', 'memory'];
+const PENDING_EFFORT_TTL = 30000;
+
 export default {
     components: {
         AgentMessages
@@ -160,6 +165,9 @@ export default {
 
     data() {
         return {
+            pendingEffort: null,
+            // the story mode of the last scene status frame
+            sceneMode: 'legacy',
             state: {
                 agents: [],
             },
@@ -379,6 +387,70 @@ export default {
             // Save the agent to persist the changes
             this.saveAgent(agent);
         },
+        // Every change of one agent action in one write: values already under a
+        // scene override go to the override slice, the rest to the agent, each
+        // saved once. Returns false when the action is unknown.
+        applyActionValues(agent, action_name, { enabled, config = {} } = {}) {
+            const action = agent?.actions?.[action_name];
+            if (!action) return false;
+            let slice = null;
+            const overrideSlice = () => {
+                if (!slice) slice = JSON.parse(JSON.stringify(this.sceneOverlay(agent).actions[action_name]));
+                return slice;
+            };
+            let agentChanged = false;
+            if (enabled !== undefined) {
+                if (this.isEnabledOverridden(agent, action_name)) {
+                    if (this.sceneOverlay(agent).actions[action_name].enabled !== enabled) overrideSlice().enabled = enabled;
+                } else if (action.enabled !== enabled) {
+                    action.enabled = enabled;
+                    agentChanged = true;
+                }
+            }
+            for (const [config_name, value] of Object.entries(config)) {
+                const field = action.config?.[config_name];
+                if (!field) continue;
+                if (this.isConfigOverridden(agent, action_name, config_name)) {
+                    overrideSlice().config[config_name] = { value };
+                } else if (field.value !== value) {
+                    field.value = value;
+                    agentChanged = true;
+                }
+            }
+            if (slice) this.saveSceneOverrideSlice(agent, action_name, slice);
+            if (agentChanged) this.saveAgent(agent);
+            return true;
+        },
+        // A stop for a mode the loaded scene is about to be in: a story created
+        // from the New Story dialog (armed once it has loaded) or a story-mode
+        // switch. It is written when the scene reports the target mode and the
+        // three knowledge agents have reported since, refused when the change is
+        // rejected, and dropped unwritten after PENDING_EFFORT_TTL.
+        queueEffort(stop, mode, { afterLoad = false } = {}) {
+            this.pendingEffort = {
+                stop,
+                mode,
+                armed: !afterLoad,
+                seen: new Set(),
+                // a New Story stop starts its clock when the load arms it
+                until: afterLoad ? null : Date.now() + PENDING_EFFORT_TTL,
+            };
+        },
+        applyPendingEffort() {
+            const pending = this.pendingEffort;
+            if (!pending) return;
+            if (pending.until !== null && Date.now() > pending.until) {
+                this.pendingEffort = null;
+                return;
+            }
+            if (!pending.armed || this.sceneMode !== pending.mode) return;
+            if (!EFFORT_AGENTS.every((name) => pending.seen.has(name))) return;
+            this.pendingEffort = null;
+            for (const entry of effortPatch(this.state.agents, pending.mode, pending.stop)) {
+                const agent = this.state.agents.find((candidate) => candidate.name === entry.agent);
+                this.applyActionValues(agent, entry.action, entry);
+            }
+        },
         getQuickToggleActions(agent) {
             const result = {};
             if (agent.actions) {
@@ -426,6 +498,23 @@ export default {
             if (data.type === "system" && data.id === 'scene.loaded') {
                 this.messages = {};
                 this.agentHasMessages = {};
+                // the agents report after this frame; frames from the load itself do not count
+                if (this.pendingEffort) {
+                    this.pendingEffort.armed = true;
+                    this.pendingEffort.seen = new Set();
+                    this.pendingEffort.until = Date.now() + PENDING_EFFORT_TTL;
+                }
+            }
+            if (data.type === "system" && data.id === 'scene.load_failure') {
+                this.pendingEffort = null;
+            }
+            if (data.type === 'scene_status') {
+                this.sceneMode = effortMode(perspectivesEnabled(data.data));
+                this.applyPendingEffort();
+            }
+            if (data.type === 'world_state_manager' && data.action === 'operation_done'
+                && data.error && data.failed_action === 'update_scene_settings') {
+                this.pendingEffort = null;
             }
 
             // Handle agent_status message type
@@ -472,6 +561,10 @@ export default {
                         meta: data.meta,
                     });
                     console.log("agents: added new agent", this.state.agents[this.state.agents.length - 1], data)
+                }
+                if (this.pendingEffort?.armed) {
+                    this.pendingEffort.seen.add(data.name);
+                    this.applyPendingEffort();
                 }
                 return;
             }

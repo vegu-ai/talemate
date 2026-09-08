@@ -135,7 +135,8 @@
     stop tokens, caching, scene direction, story intent and writing style. Character perspectives hides Standard filtering/learning;
     Refine memories with AI remains available at one request per generated character reply with retrieved memories; Character
     Knowledge keeps own notes/guidance while filtering missed investigations/state, adds Summarizer known/unknown facts with
-    sub-switches off, and covers reminder limits/windows and Topics.'
+    sub-switches off, and covers reminder limits/windows and Topics. The Character Knowledge section opens with the Character
+    knowledge effort slider that sets the knowledge presets of three agents.'
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Autocomplete partial text with Ctrl/Cmd+Enter in dialogue, message editing, attributes, details, descriptions,
@@ -1214,6 +1215,7 @@
   summary: World Editor History manages static backstory, archived summaries and layered history, with presence chips and
     atomic facts, repeat counters and supersedes links. Edit, inspect, regenerate entries or failed facts, add dated seed-guided
     history, manage time-passage chapters and regenerate all summaries.
+    A Known by selector narrows the listed facts to what one character knows.
 - path: user-guide/world-editor/history/layered-history.md
   title: Layered History
   summary: Layered History compresses dialogue into base summaries and successively smaller layers to preserve a full-timeline
@@ -1221,8 +1223,9 @@
     tools and context-budget review.
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
-  summary: Choosing a mode comparison of Standard and Character perspectives with pros, cons and a pick-this-if table.
-    Character perspectives opt-in for new stories/card imports and empty-scene switching; disabling clears perspectives,
+  summary: Choosing a mode comparison of Standard and Character perspectives with pros, cons and a pick-this-if table,
+    and the Character knowledge effort slider presets (Minimal to Ultra) per mode with their model expectations.
+    Known facts by topic rows expand to every fact a character knows with how and where. Character perspectives opt-in for new stories/card imports and empty-scene switching; disabling clears perspectives,
     disclosures and derived audience memory. Covers costs, retries, author responsibilities, Known by visibility, durable
     disclosures, supported-fact access, director/node tools, Standard-mode grant/revoke behavior and the World State
     knowledge hub shortcut (newest known facts, rules, mode switch, agent toggles).
@@ -1282,3 +1285,4 @@
     or access rules with counts, Character perspectives switch, conversation/summarizer/memory knowledge toggles with cost
     notes). Covers active/background/inactive characters, Make real name-overlap protection, narrated activation,
     Ctrl/Cmd-guided refresh or wipe, cancellation, background cadence and Pin to context.
+    The knowledge hub Thoroughness section starts with the Character knowledge effort slider.

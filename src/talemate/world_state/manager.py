@@ -36,6 +36,7 @@ from talemate.knowledge.schema import (
     ReinforcementEntry,
     is_memory_attribute,
     KnownFact,
+    TopicFact,
 )
 from talemate.knowledge.changes import (
     edge_change,
@@ -47,6 +48,7 @@ from talemate.knowledge.topics import (
     coverage,
     known_bucket,
     known_facts,
+    topics_facts,
 )
 from talemate.world_state import (
     ContextPin,
@@ -175,6 +177,7 @@ class CharacterKnowledge(pydantic.BaseModel):
     coverage: list[TopicCoverage] = []
     known_facts: list[KnownFact] = []
     known_facts_total: int = 0
+    known_fact_ids: list[str] = []
     awareness: str | None = None
 
 
@@ -823,6 +826,7 @@ class WorldStateManager:
             perception_mode=character_knowledge_enabled(self.scene),
             known_facts=recent,
             known_facts_total=total,
+            known_fact_ids=[fact.id for fact in known],
             disclosures=[
                 item
                 for item in self.scene.knowledge.disclosures
@@ -835,6 +839,11 @@ class WorldStateManager:
             coverage=coverage(self.scene, character_name, known=known),
             awareness=awareness_line(self.scene, character_name),
         )
+
+    def get_topics_facts(
+        self, character_name: str, topic_ids: list[str]
+    ) -> dict[str, list[TopicFact]]:
+        return topics_facts(self.scene, character_name, topic_ids)
 
     def grant_character_disclosure(
         self, character, target, *, text=None, whole_entry=False

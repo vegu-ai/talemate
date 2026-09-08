@@ -73,6 +73,7 @@
           hide-details
         />
         <CharacterKnowledgeModeComparison :perspectives="characterKnowledge" class="mt-2" />
+        <KnowledgeEffortSlider :mode="effortMode" :agents="getAgents()" :value="effortForMode" class="mt-4" @apply="effort = $event" />
         <p class="text-body-small mt-2">You can change this in Scene Settings while the scene has no history or archived history. Keep secrets out of the shared scene description and story intention.</p>
         <v-divider class="mt-4 mb-4"></v-divider>
 
@@ -98,10 +99,13 @@
 
 <script>
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
+import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
+import { DEFAULT_EFFORT } from '@/constants/knowledgeEffort';
+import { effortMode, stopForMode } from '@/utils/knowledgeEffort';
 
 export default {
   name: 'NewSceneSetupModal',
-  components: { CharacterKnowledgeModeComparison },
+  components: { CharacterKnowledgeModeComparison, KnowledgeEffortSlider },
   props: {
     modelValue: {
       type: Boolean,
@@ -113,11 +117,12 @@ export default {
     },
   },
   emits: ['update:modelValue', 'create'],
-  inject: ['openWorldStateManager'],
+  inject: ['openWorldStateManager', 'getAgents'],
   data() {
     return {
       sceneName: '',
       characterKnowledge: false,
+      effort: DEFAULT_EFFORT,
       assistWithSetup: false,
       selectedWritingStyle: null,
       selectedDirectorPersona: null,
@@ -128,6 +133,7 @@ export default {
       if (val) {
         this.sceneName = '';
         this.characterKnowledge = false;
+        this.effort = DEFAULT_EFFORT;
         this.assistWithSetup = false;
         this.selectedWritingStyle = null;
         this.selectedDirectorPersona = null;
@@ -135,6 +141,12 @@ export default {
     },
   },
   computed: {
+    effortMode() {
+      return effortMode(this.characterKnowledge);
+    },
+    effortForMode() {
+      return stopForMode(this.effort, this.effortMode);
+    },
     hasWritingStyles() {
       return !!(this.templates && this.templates.by_type && this.templates.by_type.writing_style && Object.keys(this.templates.by_type.writing_style).length);
     },
@@ -167,6 +179,7 @@ export default {
         directorPersona: this.selectedDirectorPersona || null,
         assistWithSetup: this.assistWithSetup,
         characterKnowledge: this.characterKnowledge,
+        effort: this.effortForMode,
       });
       this.$emit('update:modelValue', false);
     },

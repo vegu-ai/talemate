@@ -17,14 +17,17 @@ const change = (character = 'Mara', target = 'F1', kind = 'grant') => ({
 });
 
 describe('mounted character Knowledge tab', () => {
-    it('requests fresh knowledge once for its own character in a batched event', () => {
-        const host = { character: { name: 'Mara' }, request: vi.fn() };
+    it('requests fresh knowledge once for its own character in a batched event and drops the topic cache', () => {
+        const host = { character: { name: 'Mara' }, request: vi.fn(), requestTopicFacts: vi.fn(), openTopics: ['T1', 'T2'], topicFacts: { T1: [] } };
         handleKnowledgeMessage.call(host, { type: 'knowledge_changed', data: { changes: [change(), change('Mara', 'F2')] } });
         expect(host.request).toHaveBeenCalledOnce();
+        expect(host.topicFacts).toEqual({});
+        expect(host.requestTopicFacts).toHaveBeenCalledTimes(1);
+        expect(host.requestTopicFacts).toHaveBeenCalledWith(['T1', 'T2']);
     });
 
     it('ignores unrelated characters and an unselected tab', () => {
-        const host = { character: { name: 'Mara' }, request: vi.fn() };
+        const host = { character: { name: 'Mara' }, request: vi.fn(), requestTopicFacts: vi.fn(), openTopics: [], topicFacts: {} };
         handleKnowledgeMessage.call(host, { type: 'knowledge_changed', data: { changes: [change('Edwin')] } });
         host.character = null;
         handleKnowledgeMessage.call(host, { type: 'knowledge_changed', data: { changes: [change()] } });

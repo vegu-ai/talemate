@@ -125,14 +125,14 @@ describe('scene settings character perspectives', () => {
     it.each([false, true])('sends choice %s without optimistically changing the server mode', enabled => {
         const send = vi.fn();
         const mode = enabled ? 'legacy' : 'perception';
-        const vm = { scene: { data: { can_change_knowledge_eligibility: true, knowledge_eligibility: mode } }, getWebsocket: () => ({ send }) };
+        const vm = { scene: { data: { can_change_knowledge_eligibility: true, knowledge_eligibility: mode } }, getWebsocket: () => ({ send }), getAgents: () => [], queueKnowledgeEffort: vi.fn() };
         vm.update = SceneSettings.methods.update.bind(vm);
         SceneSettings.methods.updateCharacterKnowledge.call(vm, enabled);
         expect(JSON.parse(send.mock.calls[0][0])).toMatchObject({ action: 'update_scene_settings', knowledge_eligibility: enabled ? 'perception' : 'legacy' });
         expect(vm.scene.data.knowledge_eligibility).toBe(mode);
     });
     it.each([false, undefined])('does not send changes when availability is %s', available => {
-        const vm = { scene: { data: { can_change_knowledge_eligibility: available } }, update: vi.fn() };
+        const vm = { scene: { data: { can_change_knowledge_eligibility: available } }, update: vi.fn(), getAgents: () => [], queueKnowledgeEffort: vi.fn() };
         SceneSettings.methods.updateCharacterKnowledge.call(vm, true);
         expect(vm.update).not.toHaveBeenCalled();
     });

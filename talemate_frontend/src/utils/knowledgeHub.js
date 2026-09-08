@@ -26,6 +26,9 @@ export const KNOWLEDGE_TOGGLES = Object.freeze([
 
 export const PERSPECTIVES_ANALYSIS_COST = 'Summarizer analysis after each passage';
 
+// carried by the status in both modes, but only runs in Character perspectives
+const PERSPECTIVES_ONLY_ACTIONS = new Set(['summarizer.perceptions']);
+
 const AGENT_LABELS = Object.freeze({
     conversation: 'Conversation',
     summarizer: 'Summarizer',
@@ -39,14 +42,16 @@ function costNote(field) {
 
 /**
  * Group the hub's toggles by agent action, reading each value as the loaded
- * scene sees it (the scene override when one is active).
+ * scene sees it (the scene override when one is active). With `perspectives`
+ * false the groups that only run in Character perspectives are left out.
  *
  * `agents` is the list AIAgent keeps from agent_status frames: entries carry
  * `name`, `label`, `actions` and `data.scene_overrides`.
  */
-export function resolveKnowledgeToggles(agents) {
+export function resolveKnowledgeToggles(agents, { perspectives = true } = {}) {
     const groups = [];
     for (const spec of KNOWLEDGE_TOGGLES) {
+        if (!perspectives && PERSPECTIVES_ONLY_ACTIONS.has(`${spec.agent}.${spec.action}`)) continue;
         const agent = (agents || []).find((candidate) => candidate.name === spec.agent);
         const action = agent?.actions?.[spec.action];
         if (!action) continue;
@@ -91,6 +96,7 @@ export function thoroughnessSummary(groups, perspectives) {
     const extras = perspectives ? [PERSPECTIVES_ANALYSIS_COST] : [];
     for (const group of groups) {
         if (!group.enabled) continue;
+        if (!perspectives && PERSPECTIVES_ONLY_ACTIONS.has(`${group.agent}.${group.action}`)) continue;
         for (const toggle of group.toggles) {
             if (toggle.costNote && toggle.value) extras.push(toggle.label);
         }

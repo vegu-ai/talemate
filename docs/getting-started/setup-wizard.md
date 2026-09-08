@@ -37,7 +37,7 @@ For **Hosted API** users, OpenRouter is selected by default. For **Self-hosted**
 
 Select your preferred client from the dropdown. The essential settings for that client type — its name, API URL and key, and the model — appear right below the dropdown. Fill them in and click **Add Client** to create the client.
 
-A one-line pointer above the settings links to the [Model expectations](model-expectations.md) page. A new client starts with a Context Length of 16384 tokens; the client settings editor shows the value and warns if you lower it below that floor.
+A one-line pointer above the settings links to the [Model expectations](model-expectations.md) page. A new client starts with a Context Length of 16384 tokens. The wizard does not show that setting; the editor on **Settings → Connections → Clients** shows the value and warns when it sits below the floor.
 
 ![Setup wizard step 2 - add client](../img/0.40.0/setup-wizard-step2-add-client.png)
 

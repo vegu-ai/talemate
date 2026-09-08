@@ -76,7 +76,7 @@ describe('perspectivesPayload', () => {
 describe('the settings page sends the shared payload', () => {
     it('for a mode change', () => {
         const send = vi.fn();
-        const vm = { scene: { data: { ...sceneData } }, getWebsocket: () => ({ send }) };
+        const vm = { scene: { data: { ...sceneData } }, getWebsocket: () => ({ send }), getAgents: () => [], queueKnowledgeEffort: vi.fn() };
         vm.update = SceneSettings.methods.update.bind(vm);
         SceneSettings.methods.updateCharacterKnowledge.call(vm, true);
         expect(JSON.parse(send.mock.calls[0][0])).toEqual(perspectivesPayload(sceneData, true));

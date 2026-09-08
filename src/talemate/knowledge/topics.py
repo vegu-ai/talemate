@@ -15,7 +15,15 @@ import structlog
 
 from talemate.instance import get_agent
 from talemate.knowledge.absence import fact_order
-from talemate.knowledge.schema import Fact, KnownFact, Topic, TopicCoverage
+from talemate.knowledge.schema import (
+    Fact,
+    KnownFact,
+    Topic,
+    TopicCoverage,
+    FACT_SOURCE_LABELS,
+    KnownKind,
+    TopicFact,
+)
 from talemate.knowledge.mode import character_knowledge_enabled
 
 if TYPE_CHECKING:
@@ -33,6 +41,8 @@ __all__ = [
     "known_bucket",
     "known_facts",
     "KNOWN_FACTS_LIMIT",
+    "topic_facts",
+    "topics_facts",
 ]
 
 log = structlog.get_logger("talemate.knowledge.topics")
@@ -258,8 +268,8 @@ async def topics_on_load(scene: "Scene"):
     await memory.rebuild_topic_centroids(scene)
 
 
-def known_bucket(scene: "Scene", character: str) -> list[Fact]:
-    """Every fact the character knows, oldest first, as the character holds it."""
+def _known(scene: "Scene", character: str) -> list[tuple[Fact, KnownKind]]:
+    """The character's bucket with how each fact is known, oldest first."""
     # graph -> supported_facts -> summaries -> disclosures -> entry -> topics:
     # a module-level import cycles, like character_fact's at the other sites
     from talemate.knowledge.graph import bucket
@@ -267,7 +277,62 @@ def known_bucket(scene: "Scene", character: str) -> list[Fact]:
     # a viewer the scene no longer holds has no perspective to resolve
     if character_knowledge_enabled(scene) and character not in scene.character_data:
         return []
-    return [fact for fact, _ in bucket(scene, character)]
+    return bucket(scene, character)
+
+
+def known_bucket(scene: "Scene", character: str) -> list[Fact]:
+    """Every fact the character knows, oldest first, as the character holds it."""
+    return [fact for fact, _ in _known(scene, character)]
+
+
+def topic_facts(
+    scene: "Scene",
+    character: str,
+    topic_id: str,
+    known: list[tuple[Fact, KnownKind]] | None = None,
+) -> list[TopicFact]:
+    """
+    Every fact of one topic for the character: the ones they know, as the
+    character holds them, with how they know them, and the recorded ones they
+    do not, in topic order. `known` is the character's bucket when the caller
+    already holds it.
+    """
+    topic = scene.world_state.topics.get(topic_id)
+    if topic is None:
+        return []
+    if known is None:
+        known = _known(scene, character)
+    views = {fact.id: (fact, kind) for fact, kind in known}
+    facts = scene.world_state.facts
+    rows = []
+    for fact_id in topic.fact_ids:
+        canonical = facts.get(fact_id)
+        if canonical is None:
+            continue
+        view, kind = views.get(fact_id, (canonical, None))
+        rows.append(
+            TopicFact(
+                id=fact_id,
+                text=view.text,
+                known=kind is not None,
+                how=kind,
+                source=FACT_SOURCE_LABELS[canonical.source],
+                source_id=view.archive_id,
+                ts=view.ts,
+            )
+        )
+    return rows
+
+
+def topics_facts(
+    scene: "Scene", character: str, topic_ids: list[str]
+) -> dict[str, list[TopicFact]]:
+    """The rows of several topics from one bucket pass."""
+    known = _known(scene, character)
+    return {
+        topic_id: topic_facts(scene, character, topic_id, known=known)
+        for topic_id in topic_ids
+    }
 
 
 def _topic_of(scene: "Scene") -> dict[str, str]:

@@ -91,6 +91,7 @@
             <v-window-item value="history">
                 <WorldStateManagerHistory ref="history" 
                 :scene="scene"
+                :character-list="characterList"
                 :generation-options="generationOptions"
                 :app-busy="appBusy"
                 :app-ready="appReady"

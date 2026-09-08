@@ -39,7 +39,7 @@
                             <span v-if="fact.topic" class="text-mutedheader mr-1">{{ fact.topic }}:</span>{{ fact.text }}
                         </div>
                     </div>
-                    <div class="text-body-small text-muted">{{ factsCount }}</div>
+                    <a href="#" class="text-body-small text-muted d-block knowledge-hub-count" @click.prevent="openKnowledge">{{ factsCount }}</a>
                     <div v-if="!knowledge.perception_mode && knowledge.awareness" class="text-body-small text-muted mt-1">{{ knowledge.awareness }}.</div>
 
                     <div class="text-body-small text-mutedheader mt-2">
@@ -84,30 +84,42 @@
             <!-- THOROUGHNESS -->
 
             <v-card-subtitle class="text-uppercase pt-3">Thoroughness</v-card-subtitle>
+            <v-card-text class="pt-1 pb-0">
+                <KnowledgeEffortSlider :mode="effortMode" :agents="getAgents()" @apply="applyEffort" />
+            </v-card-text>
             <v-card-text class="pt-1 pb-0 text-body-small text-muted">{{ summary.text }}</v-card-text>
             <v-card-text v-if="!groups.length" class="pt-1 text-body-small text-muted">Waiting for the agents to report.</v-card-text>
             <template v-for="group in groups" :key="group.agent + '.' + group.action">
-                <div class="d-flex align-center px-4 mt-2">
-                    <v-checkbox-btn
-                        v-if="group.master"
-                        :model-value="group.enabled"
-                        :aria-label="`${group.label} on or off`"
-                        density="compact"
-                        color="primary"
-                        class="flex-grow-0 mr-1"
-                        @click.stop="toggleGroup(group)"></v-checkbox-btn>
-                    <v-btn size="x-small" variant="text" class="px-1 text-body-small" append-icon="mdi-open-in-new" @click="openSettings(group)">
-                        {{ group.agentLabel }} / {{ group.label }}
-                    </v-btn>
-                    <v-chip v-if="group.master && group.enabledOverridden" size="x-small" label variant="outlined" color="secondary" class="ml-1">scene override</v-chip>
-                </div>
-                <v-list density="compact" class="py-0">
+                <!-- the header is a list row like the toggles under it, so both take
+                     Vuetify's prepend spacing; a group without a master keeps an
+                     invisible checkbox so its label lands on the same x -->
+                <v-list density="compact" class="py-0 mt-1">
+                    <v-list-item density="compact" class="knowledge-hub-group">
+                        <template v-slot:prepend>
+                            <v-checkbox-btn
+                                v-if="group.master"
+                                :model-value="group.enabled"
+                                :aria-label="`${group.label} on or off`"
+                                density="compact"
+                                color="primary"
+                                hide-details
+                                @click.stop="toggleGroup(group)"></v-checkbox-btn>
+                            <v-checkbox-btn v-else class="knowledge-hub-checkbox-placeholder" density="compact" hide-details aria-hidden="true" tabindex="-1" disabled></v-checkbox-btn>
+                        </template>
+                        <v-list-item-title class="text-body-small">
+                            <v-btn size="x-small" variant="text" class="px-0 text-body-small" append-icon="mdi-open-in-new" @click="openSettings(group)">
+                                {{ group.agentLabel }} / {{ group.label }}
+                            </v-btn>
+                            <v-chip v-if="group.master && group.enabledOverridden" size="x-small" label variant="outlined" color="secondary" class="ml-1">scene override</v-chip>
+                        </v-list-item-title>
+                    </v-list-item>
                     <!-- not :disabled - Vuetify drops pointer events on a disabled item, which
                          takes the tooltips with it; the checkbox and the click guard carry the state -->
                     <v-list-item
                         v-for="toggle in group.toggles"
                         :key="toggle.key"
                         density="compact"
+                        class="knowledge-hub-toggle"
                         :class="{ 'knowledge-hub-toggle-off': !group.enabled }"
                         v-bind="group.enabled ? { onClick: () => toggleConfig(group, toggle) } : {}">
                         <template v-slot:prepend>
@@ -139,6 +151,8 @@
 
 <script>
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
+import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
+import { effortMode, effortPatch, queueEffortAcrossSwitch } from '@/utils/knowledgeEffort';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { resolveKnowledgeToggles, thoroughnessSummary } from '@/utils/knowledgeHub';
 import {
@@ -153,7 +167,7 @@ const ENTRY_LIMIT = 5;
 
 export default {
     name: 'CharacterKnowledgeHub',
-    components: { CharacterKnowledgeModeComparison },
+    components: { CharacterKnowledgeModeComparison, KnowledgeEffortSlider },
     props: {
         name: { type: String, required: true },
         variant: { type: String, default: 'tonal' },
@@ -167,6 +181,8 @@ export default {
         'getAgents',
         'toggleAgentAction',
         'toggleAgentConfig',
+        'applyAgentValues',
+        'queueKnowledgeEffort',
         'openAgentSettings',
     ],
     emits: ['open-knowledge'],
@@ -190,8 +206,11 @@ export default {
         canChange() {
             return canChangePerspectives(this.sceneData);
         },
+        effortMode() {
+            return effortMode(this.perspectives);
+        },
         groups() {
-            return resolveKnowledgeToggles(this.getAgents());
+            return resolveKnowledgeToggles(this.getAgents(), { perspectives: this.perspectives });
         },
         summary() {
             return thoroughnessSummary(this.groups, this.perspectives);
@@ -264,8 +283,14 @@ export default {
         setPerspectives(enabled) {
             const payload = perspectivesPayload(this.sceneData, enabled);
             if (!payload) return false;
+            queueEffortAcrossSwitch(this.getAgents(), enabled, this.queueKnowledgeEffort);
             this.getWebsocket().send(JSON.stringify(payload));
             return true;
+        },
+        applyEffort(stop) {
+            for (const entry of effortPatch(this.getAgents(), this.effortMode, stop)) {
+                this.applyAgentValues(entry.agent, entry.action, entry);
+            }
         },
         toggleGroup(group) {
             return this.toggleAgentAction(group.agent, group.action);
@@ -310,6 +335,12 @@ export default {
 </script>
 
 <style scoped>
+.knowledge-hub-checkbox-placeholder {
+    visibility: hidden;
+}
+.knowledge-hub-toggle {
+    padding-inline-start: 40px;
+}
 .knowledge-hub-fact {
     display: -webkit-box;
     -webkit-line-clamp: 2;

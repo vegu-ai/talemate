@@ -1,0 +1,113 @@
+// The character knowledge effort presets: one stop flips the knowledge
+// toggles of three agents to a tuned set. Keys are `agent.action.config`;
+// `enabled` names the action's own switch. Stops are ordered by request count
+// and quality; a stop never trades one for the other. The docs page
+// docs/user-guide/world-editor/knowledge.md repeats these tables row by row
+// and a unit test checks every row: edit both.
+
+export const EFFORT_LABELS = Object.freeze({
+    minimal: 'Minimal',
+    light: 'Light',
+    balanced: 'Balanced',
+    thorough: 'Thorough',
+    ultra: 'Ultra',
+});
+
+export const DEFAULT_EFFORT = 'balanced';
+
+// Character perspectives has no Ultra: nothing is left to raise past Thorough
+export const EFFORT_STOPS = Object.freeze({
+    legacy: ['minimal', 'light', 'balanced', 'thorough', 'ultra'],
+    perception: ['minimal', 'light', 'balanced', 'thorough'],
+});
+
+const CK = 'conversation.character_knowledge';
+
+const standard = (overrides) => ({
+    [`${CK}.enabled`]: true,
+    [`${CK}.perspective_filter`]: true,
+    [`${CK}.absence_block`]: false,
+    [`${CK}.awareness_line`]: false,
+    [`${CK}.ledger`]: false,
+    [`${CK}.memory_pass`]: false,
+    [`${CK}.absence_limit`]: 5,
+    [`${CK}.absence_window`]: 30,
+    'memory.topics.enabled': false,
+    'memory.retrieval.similarity_gate': false,
+    'summarizer.archive.extract_facts': false,
+    ...overrides,
+});
+
+const perspectives = (overrides) => ({
+    [`${CK}.enabled`]: true,
+    [`${CK}.memory_pass`]: false,
+    'summarizer.perceptions.automatic_repair': false,
+    'summarizer.archive.extract_facts': false,
+    'memory.topics.enabled': false,
+    ...overrides,
+});
+
+const STANDARD_LIGHT = {
+    [`${CK}.absence_block`]: true,
+    [`${CK}.awareness_line`]: true,
+    'memory.topics.enabled': true,
+    'memory.retrieval.similarity_gate': true,
+    'summarizer.archive.extract_facts': true,
+};
+
+export const EFFORT_PRESETS = Object.freeze({
+    legacy: {
+        minimal: standard({}),
+        light: standard(STANDARD_LIGHT),
+        balanced: standard({ ...STANDARD_LIGHT, [`${CK}.ledger`]: true }),
+        thorough: standard({ ...STANDARD_LIGHT, [`${CK}.ledger`]: true, [`${CK}.memory_pass`]: true }),
+        ultra: standard({
+            ...STANDARD_LIGHT,
+            [`${CK}.ledger`]: true,
+            [`${CK}.memory_pass`]: true,
+            [`${CK}.absence_limit`]: 10,
+            [`${CK}.absence_window`]: 100,
+        }),
+    },
+    perception: {
+        minimal: perspectives({}),
+        light: perspectives({ 'memory.topics.enabled': true }),
+        balanced: perspectives({
+            'memory.topics.enabled': true,
+            'summarizer.archive.extract_facts': true,
+            'summarizer.perceptions.automatic_repair': true,
+        }),
+        thorough: perspectives({
+            'memory.topics.enabled': true,
+            'summarizer.archive.extract_facts': true,
+            'summarizer.perceptions.automatic_repair': true,
+            [`${CK}.memory_pass`]: true,
+        }),
+    },
+});
+
+export const EFFORT_MODEL_TIER = Object.freeze({
+    legacy: { minimal: 'any', light: 'any', balanced: 'structured', thorough: 'reasoning', ultra: 'frontier' },
+    perception: { minimal: 'structured', light: 'structured', balanced: 'structured', thorough: 'reasoning' },
+});
+
+export const EFFORT_NOTES = Object.freeze({
+    perception: {
+        minimal: 'The analysis after each passage is mandatory in this mode, so this is the floor.',
+    },
+});
+
+export const EFFORT_DESCRIPTIONS = Object.freeze({
+    minimal: 'No optional work.',
+    light: 'Zero-request helpers only.',
+    balanced: 'The best-value extra request for this mode.',
+    thorough: 'Every request-costing option.',
+    ultra: 'Everything on, wider reminder windows. A switch to Character perspectives lands on Thorough.',
+});
+
+// the toggles that add a request per line, with the label their cost line shows
+export const REQUEST_TOGGLES = Object.freeze({
+    [`${CK}.memory_pass`]: 'Refine memories with AI',
+    [`${CK}.ledger`]: 'Track learning from dialogue',
+    'summarizer.perceptions.automatic_repair': 'Automatically repair analysis',
+});

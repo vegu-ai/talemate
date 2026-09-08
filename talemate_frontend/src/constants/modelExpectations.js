@@ -30,6 +30,15 @@ export const KNOWN_GOOD_MODELS = {
     ],
 };
 
+// What a feature tier asks of the model, in the words the effort slider and
+// the docs share.
+export const MODEL_TIERS = Object.freeze({
+    any: 'Works with any model.',
+    structured: 'Needs reliable structured output (JSON / function calls): most current hosted models and strong local models.',
+    reasoning: 'Needs a current reasoning-class model; small or older local models will produce failed analyses.',
+    frontier: 'Current frontier / reasoning model recommended; expect frequent retries on anything less.',
+});
+
 export const WORKS_WITHOUT_THE_BAR = 'Basic conversation and narration work with older or smaller models.';
 export const STRUGGLES_WITHOUT_THE_BAR = 'Expect failures in the director, planning, knowledge and Character perspectives features and in other analytical requests.';
 

@@ -91,6 +91,7 @@
 </template>
 
 <script>
+import { effortMode } from '@/utils/knowledgeEffort';
 import CharacterCardImport from './CharacterCardImport.vue';
 import IntroRecentScenes from './IntroRecentScenes.vue';
 import NewSceneSetupModal from './NewSceneSetupModal.vue';
@@ -115,7 +116,7 @@ export default {
         worldStateTemplates: Object,
     },
     emits: ['loading', 'open-director', 'request-scene-load'],
-    inject: ['getWebsocket', 'registerMessageHandler', 'isConnected'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'isConnected', 'queueKnowledgeEffort'],
     data() {
         return {
             loading: false,
@@ -158,6 +159,9 @@ export default {
             this.loading = true;
             this.$emit("loading", true);
             this.pendingAssistWithSetup = payload.assistWithSetup;
+            if (payload.effort) {
+                this.queueKnowledgeEffort(payload.effort, effortMode(payload.characterKnowledge === true), { afterLoad: true });
+            }
             this.getWebsocket().send(JSON.stringify({
                 type: 'load_scene',
                 file_path: "$NEW_SCENE$",

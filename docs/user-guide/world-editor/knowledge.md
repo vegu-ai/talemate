@@ -41,6 +41,29 @@ Every story runs in one of two character knowledge modes. You choose when you cr
 | Your story | has few secrets | depends on who knows what |
 | Your workflow | you manage exceptions by hand with Allow / Block rules | hands-off once set up, with disclosures when needed |
 
+### Effort presets
+
+The knowledge settings of three agents decide how much work each line costs. The **Character knowledge effort** slider sets them together: drag it in the knowledge hub's **Thoroughness** section, in the Create New Story dialog next to the mode choice, or in the Conversation agent's **Character Knowledge** settings. Each stop states its extra requests and what it asks of your model; the model lines come from the [Model expectations](/talemate/getting-started/model-expectations/) page. A stop writes the same settings the individual switches do; change one switch afterwards and the slider shows **Custom** instead of overwriting your choice. A scene created without the dialog reads whatever its agents hold: with the shipped settings a Standard scene sits on Light and a Character perspectives scene on Balanced. Switching the story mode re-applies the current stop from the other table; a Standard scene on Ultra lands on Thorough, the top stop Character perspectives has.
+
+**Standard** (five stops):
+
+| Stop | Toggles | Extra requests | Model |
+|---|---|---|---|
+| **Minimal** | Character Knowledge on, Limit to character knowledge on; everything else off | None | Works with any model. |
+| **Light** | Minimal + Remind about unknown facts, Topic knowledge overview, Memory Topics, Match known facts, Extract facts | None | Works with any model. |
+| **Balanced** (the Create New Story default) | Light + Track learning from dialogue | One after a character message when a listener has unknown facts | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
+| **Thorough** | Balanced + Refine memories with AI | Two | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
+| **Ultra** | Thorough with Unknown-fact reminders 10 and Recent facts to check 100 | Two | Current frontier / reasoning model recommended; expect frequent retries on anything less. |
+
+**Character perspectives** (four stops; there is no Ultra, because nothing is left to raise past Thorough):
+
+| Stop | Toggles | Extra requests | Model |
+|---|---|---|---|
+| **Minimal** | The analysis after each passage only; Automatic repair, Extract facts, Memory Topics and Refine memories off | The mandatory analysis | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. The analysis after each passage is mandatory in this mode, so this is the floor. |
+| **Light** | Minimal + Memory Topics | The analysis | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
+| **Balanced** (the Create New Story default) | Light + Extract facts + Automatically repair analysis | The analysis, plus a repair when a view is invalid | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
+| **Thorough** | Balanced + Refine memories with AI | The analysis, repairs, and one before each reply with memories | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
+
 The rest of this page is the reference for both modes.
 
 ## Character perspectives (opt-in)
@@ -89,7 +112,11 @@ When **Extract facts** is enabled, the information also becomes searchable facts
 
 ## Topics and coverage
 
-Enable [Topics in the Memory agent](/talemate/user-guide/agents/memory/settings/#topics) to group recorded facts by subject without an extra text-generation request. The Knowledge tab's **Known facts by topic** table shows **Known** facts out of **Recorded** facts in each **Topic**. In perception mode, only facts with current supporting audience evidence count. Pending or invalidated support does not count. This measures access to the index, not understanding or exhaustive world knowledge. Topics remain useful for retrieval and author inspection; characters receive no all/some/nothing topic assertions in this mode.
+Enable [Topics in the Memory agent](/talemate/user-guide/agents/memory/settings/#topics) to group recorded facts by subject without an extra text-generation request. The Knowledge tab's **Known facts by topic** list shows **Known** facts out of **Recorded** facts in each **Topic**. In perception mode, only facts with current supporting audience evidence count. Pending or invalidated support does not count. This measures access to the index, not understanding or exhaustive world knowledge. Topics remain useful for retrieval and author inspection; characters receive no all/some/nothing topic assertions in this mode.
+
+Each topic row expands to list that topic's facts for the character. A fact the character knows shows how they know it (**Present**, **Told in dialogue**, **Allowed by rule** or **Learned from dialogue**; in a Character perspectives story **Perceived** or **Disclosed**) and where it was recorded (the history entry, a manual entry, offscreen life, a perception or a disclosure). A recorded fact the character does not know is listed greyed, so you can see what they are missing. **Expand all** opens every row; the filter field narrows topics by name and, once a row has loaded, its facts by text, so expand a topic (or Expand all) before you search inside it. The facts load when a row opens and add no request.
+
+![known facts by topic expanded](/talemate/img/0.40.0/world-editor-character-knowledge-topics.png)
 
 ## The director
 

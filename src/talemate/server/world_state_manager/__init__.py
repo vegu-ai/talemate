@@ -1161,7 +1161,9 @@ class WorldStateManagerPlugin(
             await self.world_state_manager.update_scene_settings(**kwargs)
         except ValueError as exc:
             log.warning("update_scene_settings rejected", error=str(exc))
-            await self.signal_operation_failed(str(exc))
+            await self.signal_operation_failed(
+                str(exc), failed_action="update_scene_settings"
+            )
             return
 
         self.websocket_handler.queue_put(

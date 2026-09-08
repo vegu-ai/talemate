@@ -22,11 +22,11 @@
             </div>
             <v-textarea v-else rows="1" auto-grow v-model="entry.text" @blur="setEditing(false)" @keydown.esc="setEditing(false)" ref="textarea" hint="Press Escape to cancel, Shift+Enter for new line, Enter to save" @keydown.enter="handleEnter" />
 
-            <div v-if="entry.facts && entry.facts.length" class="mt-3">
+            <div v-if="shownFacts.length" class="mt-3">
                 <div class="text-body-small text-medium-emphasis mb-1"><v-icon size="small" icon="mdi-format-list-checks" class="mr-1"></v-icon>Facts</div>
                 <div v-if="!locked" class="text-body-small text-medium-emphasis mb-1">Double-click a fact to edit it</div>
                 <v-list density="compact" slim class="bg-transparent py-0">
-                    <v-list-item v-for="fact in entry.facts" :key="fact.id" class="px-0">
+                    <v-list-item v-for="fact in shownFacts" :key="fact.id" class="px-0">
                         <template v-slot:prepend>
                             <v-chip size="x-small" variant="tonal" color="muted" class="mr-2">{{ fact.id }}</v-chip>
                         </template>
@@ -151,6 +151,9 @@ export default {
     name: 'WorldStateManagerHistoryEntry',
     props: {
         entry: Object,
+        // the History tab's Known by filter: only these fact ids are listed;
+        // null lists every fact
+        knownFactIds: { type: Array, default: null },
         appBusy: Boolean,
         appReady: {
             type: Boolean,
@@ -180,6 +183,12 @@ export default {
     ],
     emits: ['busy', 'collapse'],
     computed: {
+        shownFacts() {
+            const facts = this.entry?.facts || [];
+            if (this.knownFactIds === null) return facts;
+            const known = new Set(this.knownFactIds);
+            return facts.filter((fact) => known.has(fact.id));
+        },
         locked() {
             return this.appBusy || !this.appReady || this.busy;
         },

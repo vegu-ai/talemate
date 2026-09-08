@@ -22,6 +22,15 @@ EdgeKind = Literal["grant", "revoke"]
 EdgeSource = Literal["told", "granted", "inferred", "manual", "director"]
 FactSource = Literal["summary", "manual", "offscreen", "perspective", "disclosure"]
 FactsStatus = Literal["ok", "failed"]
+KnownKind = Literal["witnessed", "told", "granted", "inferred"]
+
+FACT_SOURCE_LABELS: dict[FactSource, str] = {
+    "summary": "history entry",
+    "manual": "manual entry",
+    "offscreen": "offscreen life",
+    "perspective": "perception",
+    "disclosure": "disclosure",
+}
 
 
 def is_memory_attribute(name: str) -> bool:
@@ -108,6 +117,16 @@ class KnownFact(pydantic.BaseModel):
     id: str
     text: str
     topic: str | None = None
+    ts: int | None = None
+
+
+class TopicFact(pydantic.BaseModel):
+    id: str
+    text: str
+    known: bool
+    how: KnownKind | None = None
+    source: str
+    source_id: str | None = None
     ts: int | None = None
 
 

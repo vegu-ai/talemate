@@ -243,6 +243,17 @@ describe('the thoroughness toggles', () => {
         expect(source).not.toMatch(/v-for="toggle in group\.toggles"[\s\S]{0,300}@click="toggleConfig/);
     });
 
+    it('renders group headers as list rows with a checkbox slot, so the label gap matches the toggles', () => {
+        const source = readSource(fileURLToPath(new URL('../../src/components/CharacterKnowledgeHub.vue', import.meta.url)));
+        const block = source.slice(source.indexOf('<!-- THOROUGHNESS -->'), source.indexOf('<div class="pb-2"></div>'));
+        const header = block.slice(block.indexOf('class="knowledge-hub-group"'), block.indexOf('</v-list-item>'));
+        expect(header).toContain('<template v-slot:prepend>');
+        expect(header).toContain('v-if="group.master"');
+        expect(header).toContain('v-else class="knowledge-hub-checkbox-placeholder"');
+        expect(block).not.toMatch(/<div class="d-flex align-center px-4/);
+        expect(block).toContain('class="knowledge-hub-toggle"');
+    });
+
     it('refuses a toggle while its group is off', () => {
         const vm = hub({ agents: [conversation({ ledger: ledgerField }, false)] });
         const [group] = vm.groups;

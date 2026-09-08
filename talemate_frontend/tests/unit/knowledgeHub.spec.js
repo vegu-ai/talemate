@@ -195,3 +195,14 @@ describe('thoroughnessSummary', () => {
         expect(summary.extras).toEqual([PERSPECTIVES_ANALYSIS_COST, 'Automatically repair analysis']);
     });
 });
+
+describe('perspectives-only toggles in the cost line', () => {
+    it('are left out of a Standard scene, and counted in a Character perspectives scene', () => {
+        const groups = [
+            { agent: 'summarizer', action: 'perceptions', enabled: true, toggles: [{ key: 'automatic_repair', label: 'Automatically repair analysis', value: true, costNote: 'One more request.' }] },
+            { agent: 'conversation', action: 'character_knowledge', enabled: true, toggles: [{ key: 'ledger', label: 'Track learning from dialogue', value: true, costNote: 'One more request.' }] },
+        ];
+        expect(thoroughnessSummary(groups, false).extras).toEqual(['Track learning from dialogue']);
+        expect(thoroughnessSummary(groups, true).extras).toEqual([PERSPECTIVES_ANALYSIS_COST, 'Automatically repair analysis', 'Track learning from dialogue']);
+    });
+});

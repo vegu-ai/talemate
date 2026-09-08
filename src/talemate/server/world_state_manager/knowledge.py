@@ -16,6 +16,11 @@ class CharacterKnowledgePayload(pydantic.BaseModel):
     name: str
 
 
+class TopicFactsPayload(pydantic.BaseModel):
+    name: str
+    topic_ids: list[str] = pydantic.Field(min_length=1)
+
+
 class DisclosurePayload(pydantic.BaseModel):
     name: str
     target: str
@@ -72,6 +77,25 @@ class KnowledgeMixin:
     async def handle_get_character_knowledge(self, data):
         payload = CharacterKnowledgePayload(**data)
         await self._send_character_knowledge(payload.name)
+
+    async def handle_get_topic_facts(self, data):
+        payload = TopicFactsPayload(**data)
+        rows = self.world_state_manager.get_topics_facts(
+            payload.name, payload.topic_ids
+        )
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "topic_facts",
+                "data": {
+                    "name": payload.name,
+                    "topics": {
+                        topic_id: [fact.model_dump() for fact in facts]
+                        for topic_id, facts in rows.items()
+                    },
+                },
+            }
+        )
 
     @background_task("Recording character disclosure")
     async def handle_grant_disclosure(self, data):

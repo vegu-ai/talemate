@@ -24,6 +24,10 @@ When the summarizer writes a summary entry it asks, in the same request, for the
 
 Facts are stored in the scene file and mirrored into the long term memory with the presence of their entry, so a character retrieves only the facts they know (see [Knowledge](/talemate/user-guide/world-editor/knowledge/)). A new fact that is a near-duplicate of a stored one is not stored again; the stored fact's repeat counter goes up instead.
 
+The **Known by** selector above the entries narrows the listed facts to those a chosen character knows, through the same knowledge record the [Knowledge tab](/talemate/user-guide/world-editor/knowledge/#topics-and-coverage) uses; presence-based knowledge counts, not only the chip cases. Clear it to list every fact again.
+
+![history known by filter](/talemate/img/0.40.0/world-editor-history-known-by.png)
+
 Double-click a fact to edit its text, use the :material-close: button to remove it. When the model's facts output could not be read, the summary is still stored and the entry shows a **facts failed** chip; **:material-format-list-checks: Regenerate facts** asks for the facts again and keeps the entry text. Regenerating the entry itself replaces its facts too. The summarizer's **Extract facts** setting turns the extraction off.
 
 ### Managing entries

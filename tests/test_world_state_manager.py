@@ -470,7 +470,7 @@ class TestWorldEntryCRUD:
     async def test_update_context_db_entry_details_writes_to_character(
         self, scene, manager_with_memory
     ):
-        manager, _ = manager_with_memory
+        manager, tracking = manager_with_memory
         ch = make_actor(scene, "Alice")
         await manager.update_context_db_entry(
             "Alice.detail.mood",
@@ -478,6 +478,65 @@ class TestWorldEntryCRUD:
             {"typ": "details", "character": "Alice", "detail": "mood"},
         )
         assert ch.details["mood"] == "happy"
+        assert tracking.add_many_calls[-1][0]["text"] == "Alice - mood: happy"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("submitted", "value"),
+        [
+            ("Alice - mood: happy", "happy"),
+            ("Alice - mood: ", ""),
+            (
+                "Alice - mood: calm: for now\nStill watchful.",
+                "calm: for now\nStill watchful.",
+            ),
+            (
+                "Alice - mood: Alice - mood: quoted heading",
+                "Alice - mood: quoted heading",
+            ),
+            ("Bob - mood: happy", "Bob - mood: happy"),
+            ("Text before Alice - mood: happy", "Text before Alice - mood: happy"),
+            ("Alice - mood:  padded \n", " padded \n"),
+        ],
+    )
+    async def test_context_db_detail_strips_one_exact_heading(
+        self, scene, manager_with_memory, submitted, value
+    ):
+        manager, tracking = manager_with_memory
+        character = make_actor(scene, "Alice")
+        meta = {
+            "typ": "details",
+            "character": "Alice",
+            "detail": "mood",
+            "custom": "retained",
+        }
+        entry_id = "custom-detail-id"
+
+        await manager.update_context_db_entry(entry_id, submitted, meta)
+
+        assert character.details["mood"] == value
+        assert tracking.add_many_calls[-1] == [
+            {"id": entry_id, "text": f"Alice - mood: {value}", "meta": meta}
+        ]
+
+    @pytest.mark.asyncio
+    async def test_context_db_detail_repeated_save_and_memory_commit(
+        self, scene, manager_with_memory
+    ):
+        manager, tracking = manager_with_memory
+        character = make_actor(scene, "Alice")
+        meta = {"typ": "details", "character": "Alice", "detail": "mood"}
+        document = "Alice - mood: happy"
+        for _ in range(3):
+            await manager.update_context_db_entry("Alice.detail.mood", document, meta)
+            assert character.details["mood"] == "happy"
+            document = tracking.add_many_calls[-1][0]["text"]
+            assert document == "Alice - mood: happy"
+
+        await character.commit_to_memory(tracking)
+        assert tracking.add_many_calls[-1] == [
+            {"id": "Alice.detail.mood", "text": "Alice - mood: happy", "meta": meta}
+        ]
 
     @pytest.mark.asyncio
     async def test_delete_context_db_entry_removes_manual_context_and_pin(

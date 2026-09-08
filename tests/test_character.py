@@ -489,15 +489,39 @@ class TestSharedContext:
         assert set(c.shared_details) == set(c.details.keys())
 
     @pytest.mark.asyncio
-    async def test_set_shared_false_clears_attributes(self, make_character):
+    async def test_set_shared_false_clears_attributes_and_details(self, make_character):
         c = make_character()
         await c.set_shared(True)
         await c.set_shared(False)
         assert c.shared is False
         assert c.shared_attributes == []
-        # set_shared_details is reseeded at the end regardless; verify it
-        # contains the current details keys (a known oddity of the impl).
-        assert set(c.shared_details) == set(c.details.keys())
+        assert c.shared_details == []
+
+    @pytest.mark.asyncio
+    async def test_reenabling_sharing_uses_current_details(self, make_character):
+        c = make_character()
+        await c.set_shared(True)
+        await c.set_shared(False)
+        c.details = {"mood": "happy"}
+        await c.set_shared(True)
+        assert c.shared is True
+        assert c.shared_details == ["mood"]
+        assert set(c.shared_attributes) == set(c.base_attributes)
+
+    @pytest.mark.asyncio
+    async def test_disabled_shared_context_preserves_recipient_details(
+        self, make_character
+    ):
+        source = make_character()
+        recipient = Character(name=source.name, details={"hair": "brown"})
+        await source.set_shared(True)
+        await source.set_shared(False)
+
+        await recipient.apply_shared_context(source)
+
+        assert recipient.shared is False
+        assert recipient.shared_details == []
+        assert recipient.details == {"hair": "brown"}
 
     @pytest.mark.asyncio
     async def test_set_shared_attribute_adds_and_removes(self, make_character):

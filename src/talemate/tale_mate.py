@@ -783,8 +783,8 @@ class Scene(Emitter):
             self.emit_status()
             return True
         elif isinstance(message, int):
-            message = self.find_message(message)
-            if message:
+            message = self.get_message(message)
+            if message is not None:
                 reference = source_reference(self, "message", message.id)
                 self.history.remove(message)
                 source_deleted(self, reference, message_id=message.id)
@@ -872,9 +872,11 @@ class Scene(Emitter):
             if message.typ != typ:
                 continue
 
-            for filter_name, filter_value in filters.items():
-                if getattr(message, filter_name, None) != filter_value:
-                    continue
+            if not all(
+                getattr(message, filter_name, None) == filter_value
+                for filter_name, filter_value in filters.items()
+            ):
+                continue
 
             return self.history[idx]
 

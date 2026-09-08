@@ -89,8 +89,9 @@ async def test_context_db_detail_round_trips_real_prefixed_document(
         await manager.update_context_db_entry(row.id, text, row.meta)
         (row,) = (await manager.get_context_db_entries(f"id:{identity}")).entries
         assert row.text == text
-        # Preserve the existing context-DB storage behavior; normalization is a separate ticket.
-        assert scene.character_data["Marie"].details[cases.QUESTION] == text
+        assert scene.character_data["Marie"].details[cases.QUESTION] == (
+            "Public replacement." if changed else cases.READER
+        )
         assert entry_binding(scene, identity) == (None if changed else binding)
         visible = await memory.get_document(identity, viewer="Elmer")
         assert visible

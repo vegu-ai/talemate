@@ -65,6 +65,7 @@
   - "Character Perspectives: Unreadable or missing citation fields now require repair instead of losing dependencies. Automatic repair shows its request cost in the Summarizer settings and the knowledge hub; generation action labels and help routing are consistent."
   - "Character Perspectives: Citation mistakes no longer stop analysis or discard valid views. Missing views can receive one automatic repair attempt, controlled by a new Summarizer toggle. Failed analysis now shows its reason."
   - "Prompt Log: Memory refinement, editor rewrite and unslop, director beat expansion and critique, Director and Help chat titles, visual AI finalization, and reinforcement generation now have distinct action labels. Nested and concurrent requests preserve the active outer action and busy status."
+  - "Character Details: Turning off sharing now clears the shared globe icons beside character details."
   - "Character Perspectives: Turning off perspectives on an empty scene now clears perspective records and audience memory copies so saves reopen correctly; rejected settings changes keep the current mode. The switch warns that the loss cannot be undone after the next save."
   - "Character Knowledge: Clearer settings labels and tuning hints, visible automatic topic settings, and a hint for double-clicking History facts to edit them."
   - "Character Knowledge: Clarified that Refine memories with AI and Track learning from dialogue requests run per character message."

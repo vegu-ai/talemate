@@ -717,6 +717,41 @@ class TestHistoryAccessors:
         real_scene.history = [_char_msg("c"), NarratorMessage(message="n", source="ai")]
         assert real_scene.find_message("narrator", max_iterations=1) is None
 
+    def test_find_message_skips_filter_mismatches(self, real_scene):
+        older = _char_msg("older", character="Alice", source="player")
+        match = _char_msg("match", character="Alice", source="player")
+        real_scene.history = [
+            older,
+            match,
+            _char_msg("wrong character", character="Bob", source="player"),
+            _char_msg("wrong source", character="Alice", source="ai"),
+            NarratorMessage(message="wrong type", source="player"),
+        ]
+
+        assert (
+            real_scene.find_message(
+                "character", source="player", character_name="Alice"
+            )
+            is match
+        )
+
+    def test_find_message_returns_none_when_all_filters_mismatch(self, real_scene):
+        real_scene.history = [_char_msg("first"), _char_msg("last")]
+        assert real_scene.find_message("character", source="player") is None
+        assert real_scene.find_message("character", missing_attribute="value") is None
+
+    def test_find_message_filters_respect_iteration_limit(self, real_scene):
+        match = _char_msg("match", source="player")
+        real_scene.history = [match, _char_msg("later"), _char_msg("latest")]
+        assert (
+            real_scene.find_message("character", max_iterations=3, source="player")
+            is None
+        )
+        assert (
+            real_scene.find_message("character", max_iterations=4, source="player")
+            is match
+        )
+
     def test_message_index_finds_id(self, real_scene):
         a = _char_msg("a")
         b = _char_msg("b")
@@ -1012,19 +1047,45 @@ class TestPopMessage:
         assert real_scene.pop_message(a) is True
         assert real_scene.history == [b]
 
-    def test_pop_by_int_returns_false_when_no_typ_match(self, real_scene):
-        # The int branch calls find_message(message) treating the int as a typ
-        # filter. Since message.typ is always a string, no message will match
-        # and pop_message returns False without mutating history.
+    def test_pop_by_missing_id_returns_false(self, real_scene):
         a = _char_msg("a")
         real_scene.history = [a]
         assert real_scene.pop_message(123) is False
         assert real_scene.history == [a]
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("index", [0, 1, 2])
+    async def test_pop_by_id_removes_only_requested_message(
+        self, real_scene, index, monkeypatch
+    ):
+        messages = [_char_msg("first"), _char_msg("middle"), _char_msg("last")]
+        real_scene.history = list(messages)
+        status = MagicMock()
+        monkeypatch.setattr(real_scene, "emit_status", status)
+
+        assert real_scene.pop_message(messages[index].id) is True
+
+        assert real_scene.history == messages[:index] + messages[index + 1 :]
+        status.assert_called_once_with()
+        assert real_scene.pop_message(messages[index].id) is False
+        status.assert_called_once_with()
+
     def test_pop_nonexistent_returns_false(self, real_scene):
         ghost = _char_msg("ghost")
         real_scene.history = [_char_msg("a")]
         assert real_scene.pop_message(ghost) is False
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("by_id", [False, True])
+    async def test_pop_empty_message_by_object_or_id(self, real_scene, by_id):
+        empty = NarratorMessage(message="", source="ai")
+        other = _char_msg("keep this message")
+        real_scene.history = [empty, other]
+
+        assert real_scene.pop_message(empty.id if by_id else empty) is True
+
+        assert real_scene.history == [other]
+        assert real_scene.get_message(empty.id) is None
 
     def test_pop_invalid_type_raises_value_error(self, real_scene):
         with pytest.raises(ValueError):

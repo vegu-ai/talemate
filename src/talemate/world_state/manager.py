@@ -930,7 +930,9 @@ class WorldStateManager:
                 previous = documents.get(entry_id)
                 if previous is None or previous.raw != text:
                     character.reinforcement_entries.pop(detail, None)
-            character.details[detail] = text
+            heading = f"{character.name} - {detail}: "
+            character.details[detail] = text.removeprefix(heading)
+            text = f"{heading}{character.details[detail]}"
 
         await self.memory_agent.add_many([{"id": entry_id, "text": text, "meta": meta}])
 

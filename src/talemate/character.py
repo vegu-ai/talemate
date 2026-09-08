@@ -683,8 +683,6 @@ class Character(pydantic.BaseModel):
             self.shared_attributes = []
             self.shared_details = []
 
-        self.shared_details = list(self.details.keys())
-
     async def set_shared_attribute(self, attribute: str, shared: bool):
         """
         Set the shared attribute for this character

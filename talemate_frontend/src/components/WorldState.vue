@@ -36,6 +36,11 @@
 
                     <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         {{ row.name }}
+                        <v-tooltip v-if="row.manual" :text="manualEntryTooltip">
+                            <template v-slot:activator="{ props }">
+                                <v-icon v-bind="props" size="x-small" class="ml-1" color="muted">mdi-pin</v-icon>
+                            </template>
+                        </v-tooltip>
                         <span class="text-body-small ml-1 text-muted">{{ row.emotion }}</span>
                         <template v-slot:actions>
                             <span v-if="row.active" class="knowledge-marker-space"></span>
@@ -197,6 +202,11 @@
                 <v-expansion-panel rounded="0" density="compact">
                     <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         {{ name}}
+                        <v-tooltip v-if="obj.manual" :text="manualEntryTooltip">
+                            <template v-slot:activator="{ props }">
+                                <v-icon v-bind="props" size="x-small" class="ml-1" color="muted">mdi-pin</v-icon>
+                            </template>
+                        </v-tooltip>
                         <template v-slot:actions>
                             <v-icon icon="mdi-cube"></v-icon>
                         </template>
@@ -315,6 +325,11 @@ import {
 } from '@/utils/entityActions';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
 
+const MANUAL_ENTRY_TOOLTIP =
+    'Added by hand from a scene message. While the snapshot is durable it never ages out as a '
+    + 'stale entry and the item limit never drops it — though it keeps its slot in that limit — '
+    + 'until the story drops it, a time jump cuts the scene, or the snapshot is wiped.';
+
 // snapshot.py canonicalizes a key against the actors of the pass that wrote
 // it, so most keys arrive canonical - but one written while a character was
 // inactive, or before that loop existed, stays raw for good. Claiming is exact
@@ -417,6 +432,9 @@ export default {
                 ...this.inactiveCharacters,
             ];
         },
+        manualEntryTooltip() {
+            return MANUAL_ENTRY_TOOLTIP;
+        },
         characterRoster() {
             const snapshot = this.characters || {};
             const keys = Object.keys(snapshot);
@@ -428,6 +446,7 @@ export default {
                     name: character.name,
                     emotion: entry?.emotion || '',
                     snapshot: entry?.snapshot || '',
+                    manual: entry?.manual || false,
                     active: true,
                 });
             }
@@ -438,6 +457,7 @@ export default {
                     name: key,
                     emotion: snapshot[key].emotion,
                     snapshot: snapshot[key].snapshot,
+                    manual: snapshot[key].manual || false,
                     active: false,
                 });
             }

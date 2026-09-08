@@ -16,6 +16,14 @@ For each bucket (characters, items, places):
   preserved); otherwise construct a fresh entity from the patch.
 - Key omitted from the patch → entity is untouched.
 
+Manual entries
+--------------
+An entry the user added by hand (``manual=True``) is pinned: it never ages
+out through ``misses`` and the item cap never drops it. It goes only when
+the model explicitly drops it, when the user resets the snapshot, or on a
+scene cut. ``manual`` is host-owned — a patch never sets it, and an entry
+stays manual when a later pass updates it.
+
 Auto-eviction
 -------------
 The model can't be trusted to reliably drop entities it has stopped
@@ -53,6 +61,7 @@ def apply_bucket_patch(
     patch_data: Any,
     factory: Callable[..., StateT],
     eviction_threshold: int = 0,
+    mark_manual: bool = False,
 ) -> dict[str, StateT]:
     """
     Apply a delta dict against a prior bucket. Returns a new bucket dict;
@@ -66,7 +75,13 @@ def apply_bucket_patch(
     reaches the threshold; touched entities reset to 0. The ``misses``
     field is controlled entirely here — any value supplied in the patch is
     ignored. An entry whose patch raised a constructor error counts as
-    untouched (it wasn't actually updated), so it ages this pass.
+    untouched (it wasn't actually updated), so it ages this pass. Manual
+    entries never age.
+
+    ``mark_manual=True`` stamps every entity the patch touches as manual —
+    the manual-add path passes it. The ``manual`` field is host-owned like
+    ``misses``: a value supplied in the patch is ignored, and an entity that
+    is already manual stays manual.
     """
     result: dict[str, StateT] = dict(prior)
     if not isinstance(patch_data, dict):
@@ -84,12 +99,15 @@ def apply_bucket_patch(
             )
             continue
         try:
-            if key in result:
-                merged_fields = {**result[key].model_dump(), **value}
+            previous = result.get(key)
+            if previous is not None:
+                merged_fields = {**previous.model_dump(), **value}
             else:
                 merged_fields = dict(value)
-            # ``misses`` is ours to manage — a touched entity is fresh.
             merged_fields["misses"] = 0
+            merged_fields["manual"] = mark_manual or bool(
+                previous is not None and previous.manual
+            )
             result[key] = factory(**merged_fields)
             touched.add(key)
         except Exception as e:
@@ -102,7 +120,7 @@ def apply_bucket_patch(
             )
     if eviction_threshold > 0:
         for key in list(result.keys()):
-            if key in touched:
+            if key in touched or result[key].manual:
                 continue
             misses = result[key].misses + 1
             if misses >= eviction_threshold:
@@ -120,13 +138,20 @@ def cap_bucket(bucket: dict[str, StateT], max_items: int) -> dict[str, StateT]:
     entries the earliest-added is dropped first. Returns a new bucket dict
     preserving the original insertion order of the kept entries.
 
+    Manual entries are never dropped, but they do consume the budget, so
+    ``max_items`` stays a true total: pinning entries leaves fewer slots for
+    the model's own, and pinning ``max_items`` of them leaves none.
+
     ``max_items <= 0`` disables the cap and returns the bucket unchanged.
     """
     if max_items <= 0 or len(bucket) <= max_items:
         return bucket
+    kept = {key for key, value in bucket.items() if value.manual}
+    budget = max(0, max_items - len(kept))
     # Ascending by misses keeps the freshest entries; the stable sort
     # preserves insertion order among ties so we keep the earliest-added.
-    kept = set(sorted(bucket, key=lambda k: bucket[k].misses)[:max_items])
+    candidates = [key for key in bucket if key not in kept]
+    kept.update(sorted(candidates, key=lambda k: bucket[k].misses)[:budget])
     return {key: value for key, value in bucket.items() if key in kept}
 
 

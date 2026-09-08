@@ -6,6 +6,11 @@ from talemate.scene_message import ContextInvestigationMessage
 from talemate.server.websocket_plugin import Plugin
 from talemate.status import set_loading
 
+from talemate.agents.world_state.snapshot import (
+    SNAPSHOT_ENTITY_SELECTION_MAX,
+    normalize_snapshot_selection,
+)
+
 __all__ = [
     "WorldStateWebsocketHandler",
 ]
@@ -25,6 +30,11 @@ class ExamineEntityPayload(pydantic.BaseModel):
     entity_name: str
     entity_kind: str
     snapshot_text: str
+
+
+class AddSnapshotEntityPayload(pydantic.BaseModel):
+    message_id: int
+    text: str
 
 
 class WorldStateWebsocketHandler(Plugin):
@@ -47,6 +57,42 @@ class WorldStateWebsocketHandler(Plugin):
         await self.agent.dispatch_world_state_update(
             cancel_in_flight=True, instructions=payload.instructions
         )
+        await self.signal_operation_done(allow_auto_save=False)
+
+    async def handle_add_snapshot_entity(self, data: dict):
+        payload = AddSnapshotEntityPayload(**data)
+        selection = normalize_snapshot_selection(payload.text)
+
+        agent = self.agent
+        if not agent.enabled or not agent.update_world_state_enabled:
+            await self.signal_operation_failed(
+                "Turn on the World State agent and its Update world state action "
+                "to add entities by hand."
+            )
+            return
+
+        if not agent.client:
+            await self.signal_operation_failed(
+                "The World State agent has no client assigned."
+            )
+            return
+
+        if not selection:
+            await self.signal_operation_failed(
+                "Select some text in a scene message first."
+            )
+            return
+
+        if len(selection) > SNAPSHOT_ENTITY_SELECTION_MAX:
+            await self.signal_operation_failed(
+                f"That selection is too long — select up to "
+                f"{SNAPSHOT_ENTITY_SELECTION_MAX} characters."
+            )
+            return
+
+        # Same background slot as the refresh: the panel's spinner shows it and
+        # its cancel button cancels it.
+        await self.agent.dispatch_add_snapshot_entity(payload.message_id, selection)
         await self.signal_operation_done(allow_auto_save=False)
 
     async def handle_cancel_request_update(self, data: dict):

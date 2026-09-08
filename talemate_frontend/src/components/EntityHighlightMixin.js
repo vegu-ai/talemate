@@ -1,9 +1,23 @@
 import EntityTooltip from './EntityTooltip.vue';
+import EntitySelectionAction from './EntitySelectionAction.vue';
 import {
+    dispatchAddSnapshotEntity,
     dispatchExamineEntity,
     dispatchLookAtEntity,
     isKnownSceneCharacter,
 } from '@/utils/entityActions';
+import { evaluateSelection, snapOffsetsToWords } from '@/utils/messageSelection';
+import {
+    effectiveActionEnabled,
+    effectiveConfigValue,
+} from '@/constants/sceneAgentSettings';
+
+// The message types the world-state snapshot can anchor a highlight to.
+// director and time messages are permanent members of the agent's ignore list,
+// so a selection there could never become one. A context-investigation message
+// joins them only while "Include Look at / Add Detail" is on.
+const SELECTABLE_MESSAGE_TYPES = new Set(['character', 'narrator']);
+const CONTEXT_INVESTIGATION = 'context_investigation';
 
 // Shared empty array for messages with no entity highlights — using the same
 // reference avoids invalidating the entityMentions prop on every parent render.
@@ -22,6 +36,13 @@ const NO_ENTITY_MENTIONS = Object.freeze([]);
  *  - Template: bind `:entityMentions="getEntityMentionsForMessage(message.id)"`
  *    on every message component that should render highlights, and add
  *    `@click="onMessageContainerClick"` on the message container element.
+ *  - Template: mount `<EntitySelectionAction
+ *        :model-value="entitySelection.open"
+ *        :target="entitySelection.target"
+ *        :reason="entitySelection.reason"
+ *        @update:model-value="onEntitySelectionUpdate"
+ *        @add="triggerAddSnapshotEntity" />` and add
+ *    `@mouseup="onMessageContainerMouseUp"` on the message container element.
  *  - Template: mount `<EntityTooltip
  *        :model-value="entityTooltip.open"
  *        :activator="entityTooltip.activator"
@@ -33,6 +54,10 @@ const NO_ENTITY_MENTIONS = Object.freeze([]);
  *  - In the host's `handleMessage(data)`, call
  *    `this.rebuildWorldStateEntities(data.data)` when
  *    `data.type === 'world_state' && data.status !== 'requested' && data.data`.
+ *  - The host must pass an `agentStatus` prop — the action is offered only
+ *    while the World State agent can serve it.
+ *  - Template: stamp `:data-message-type="message.type"` on the same element
+ *    that carries the `message-<id>` id.
  *  - The host must inject `getWebsocket` — the mixin dispatches the
  *    `world_state_agent.examine_entity` and `narrator.*` actions over the
  *    socket.
@@ -40,7 +65,11 @@ const NO_ENTITY_MENTIONS = Object.freeze([]);
  *    since style blocks can't ride along on a mixin.
  */
 export default {
-    components: { EntityTooltip },
+    components: { EntityTooltip, EntitySelectionAction },
+
+    inject: {
+        isPlaythroughActive: { default: () => () => false },
+    },
 
     data() {
         return {
@@ -59,15 +88,27 @@ export default {
                 activator: null,
                 entity: null,
             },
+            // Floating "Add to world state" action for a text selection.
+            // `target` is a viewport coordinate pair rather than an element —
+            // a selection spans text nodes and has no element to anchor to.
+            entitySelection: {
+                open: false,
+                target: null,
+                reason: null,
+                text: '',
+                messageId: null,
+            },
         };
     },
 
     mounted() {
         document.addEventListener('click', this.onDocumentClickForTooltip);
+        document.addEventListener('mousedown', this.onDocumentMouseDownForSelection);
     },
 
     beforeUnmount() {
         document.removeEventListener('click', this.onDocumentClickForTooltip);
+        document.removeEventListener('mousedown', this.onDocumentMouseDownForSelection);
     },
 
     methods: {
@@ -186,6 +227,136 @@ export default {
                 kind: entity.kind,
                 snapshot: entity.snapshot,
             });
+        },
+
+        // Delegated mouseup on the message container. A drag or shift-click
+        // that leaves a selection inside one message offers to add it to the
+        // world state. A selection inside an existing highlight is left to the
+        // click handler above, which opens the entity popover instead, and a
+        // double click is left to the inline editor.
+        onMessageContainerMouseUp(event) {
+            if (this.isPlaythroughActive()) return;
+            if (!this.worldStateCanAddEntity()) return;
+            // A double click has already selected a word by mouseup, and the
+            // dblclick that follows opens the inline editor — offering the
+            // card here would leave it floating over a textarea.
+            if (event.detail >= 2) return;
+            if (event.target.closest?.('.scene-entity')) return;
+
+            const selection = window.getSelection?.();
+            if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
+
+            const range = selection.getRangeAt(0);
+            const messageId = this.resolveSelectionMessageId(range);
+            if (messageId === null) return;
+
+            this.snapRangeToWords(range);
+            const evaluated = evaluateSelection(range.toString());
+            if (evaluated.reason === 'empty') return;
+
+            const rect = range.getBoundingClientRect();
+            this.entitySelection = {
+                open: true,
+                target: [rect.left + rect.width / 2, rect.bottom],
+                reason: evaluated.reason,
+                text: evaluated.text,
+                messageId,
+            };
+        },
+
+        // True while the World State agent is on, has a client and has its
+        // snapshot action enabled — a card the agent cannot serve would spend a
+        // click on a failure toast. Effective values: the backend resolves both
+        // the action and its config through the scene overlay, so a scene
+        // override has to reach this gate too.
+        worldStateCanAddEntity() {
+            const agent = this.agentStatus?.world_state;
+            if (!agent?.available) return false;
+            return effectiveActionEnabled(
+                agent.actions,
+                agent.scene_overrides,
+                'update_world_state',
+            );
+        },
+
+        // Whether a Look at / Add Detail message counts as part of the current
+        // moment — with the setting off the agent skips the type, so an entry
+        // added from one could carry no highlight.
+        worldStateIncludesContextInvestigation() {
+            const agent = this.agentStatus?.world_state;
+            return effectiveConfigValue(
+                agent?.actions,
+                agent?.scene_overrides,
+                'update_world_state.config.include_context_investigation',
+            ) === true;
+        },
+
+        // The message id both ends of the selection sit in, or null when the
+        // selection spans two messages, lands outside one, or lands on a
+        // message type the snapshot never looks at.
+        resolveSelectionMessageId(range) {
+            const element = (node) =>
+                (node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement) || null;
+            const wrapperOf = (node) => element(node)?.closest?.('[id^="message-"]') || null;
+            const start = wrapperOf(range.startContainer);
+            if (!start || start !== wrapperOf(range.endContainer)) return null;
+            const type = start.dataset?.messageType;
+            const selectable =
+                SELECTABLE_MESSAGE_TYPES.has(type)
+                || (type === CONTEXT_INVESTIGATION
+                    && this.worldStateIncludesContextInvestigation());
+            if (!selectable) return null;
+            const messageId = parseInt(start.id.slice('message-'.length), 10);
+            return Number.isFinite(messageId) ? messageId : null;
+        },
+
+        // Grow the live range outward so neither edge cuts a word in half. The
+        // user sees their selection snap, and the phrase we send can match on
+        // the word boundaries the highlight parser needs.
+        snapRangeToWords(range) {
+            const { startContainer, endContainer } = range;
+            if (startContainer.nodeType === Node.TEXT_NODE) {
+                const [from] = snapOffsetsToWords(
+                    startContainer.textContent,
+                    range.startOffset,
+                    range.startOffset,
+                );
+                range.setStart(startContainer, from);
+            }
+            if (endContainer.nodeType === Node.TEXT_NODE) {
+                const [, to] = snapOffsetsToWords(
+                    endContainer.textContent,
+                    range.endOffset,
+                    range.endOffset,
+                );
+                range.setEnd(endContainer, to);
+            }
+        },
+
+        closeEntitySelectionAction() {
+            if (!this.entitySelection.open) return;
+            this.entitySelection = { ...this.entitySelection, open: false };
+        },
+
+        // A press anywhere outside the card dismisses it — including the press
+        // that starts the next selection, which lands before the mouseup that
+        // would reopen it.
+        onDocumentMouseDownForSelection(event) {
+            if (event.target.closest?.('.v-overlay__content')) return;
+            this.closeEntitySelectionAction();
+        },
+
+        onEntitySelectionUpdate(open) {
+            if (!open) {
+                this.closeEntitySelectionAction();
+            }
+        },
+
+        triggerAddSnapshotEntity() {
+            const { text, messageId } = this.entitySelection;
+            this.closeEntitySelectionAction();
+            window.getSelection?.()?.removeAllRanges();
+            dispatchAddSnapshotEntity(this.getWebsocket(), { messageId, text });
         },
 
         triggerLookAtEntity(entity) {

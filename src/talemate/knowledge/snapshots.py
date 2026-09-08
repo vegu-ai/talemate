@@ -216,9 +216,8 @@ def snapshot_for(
     return result
 
 
-def snapshot_example(context: dict, durable: bool) -> dict:
-    names = [item["name"] for item in context["cast"]]
-    replacements = [
+def snapshot_views_example(context: dict) -> list[dict]:
+    return [
         {
             "audience": [item["name"]],
             "status": "ready" if item["established_knowledge"] else "omitted",
@@ -228,6 +227,11 @@ def snapshot_example(context: dict, durable: bool) -> dict:
         }
         for item in context["cast"]
     ]
+
+
+def snapshot_example(context: dict, durable: bool) -> dict:
+    names = [item["name"] for item in context["cast"]]
+    replacements = snapshot_views_example(context)
     result = {
         "characters": {
             "Observed character (placeholder)": {

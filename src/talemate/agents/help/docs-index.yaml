@@ -1286,3 +1286,9 @@
     notes). Covers active/background/inactive characters, Make real name-overlap protection, narrated activation,
     Ctrl/Cmd-guided refresh or wipe, cancellation, background cadence and Pin to context.
     The knowledge hub Thoroughness section starts with the Character knowledge effort slider.
+    Adding one yourself explains how to select text in a scene message to add an entity the
+    snapshot missed, covering the Add to world state action on a drag or shift-click selection,
+    whole-word snapping, the 240-character cap, refusal when the selection names no
+    character/item/place, the entity popover for a selection inside an existing highlight, no
+    inline highlight from a message outside the current moment, and the pin that keeps a manual
+    entry from ageing out.

@@ -16,10 +16,14 @@ from talemate.knowledge.snapshot_models import SnapshotPerspectives
 # entity has gone without being touched by the agent's patch. It is internal
 # bookkeeping for auto-eviction (see ``talemate.world_state.merge``) — it is
 # never shown to the model and the model is never asked to manage it.
+#
+# ``manual`` marks an entry the user added by hand and is host-owned in the same
+# way; ``talemate.world_state.merge`` states what it changes.
 
 
 class SnapshotEntity(BaseModel):
     perspectives: SnapshotPerspectives | None = None
+    manual: bool = False
 
     @model_serializer(mode="wrap")
     def serialize_perspectives(self, handler):

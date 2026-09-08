@@ -12,6 +12,10 @@
  *     Expands the snapshot the user is looking at into a
  *     ContextInvestigationMessage. Requires a snapshot to seed from.
  *
+ *   - "Add to world state" (UI label) → world_state_agent.add_snapshot_entity
+ *     Resolves a span of text the user selected in a scene message into a new
+ *     snapshot entry.
+ *
  *   - "Look at" → narrator.look_at_character | narrator.query
  *     Fresh narrator-driven take. Characters use the dedicated handler when
  *     they map to a live Scene actor; everything else (unknown character
@@ -28,6 +32,15 @@ function sendExamineEntity(ws, { name, kind, snapshot }) {
         entity_name: name,
         entity_kind: kind,
         snapshot_text: snapshot,
+    }));
+}
+
+function sendAddSnapshotEntity(ws, { messageId, text }) {
+    ws.send(JSON.stringify({
+        type: 'world_state_agent',
+        action: 'add_snapshot_entity',
+        message_id: messageId,
+        text,
     }));
 }
 
@@ -70,6 +83,11 @@ export function dispatchDeactivateCharacter(ws, { name, neverNarrate }) {
 export function dispatchExamineEntity(ws, { name, kind, snapshot }) {
     if (!ws || !name || !kind || !snapshot) return;
     sendExamineEntity(ws, { name, kind, snapshot });
+}
+
+export function dispatchAddSnapshotEntity(ws, { messageId, text }) {
+    if (!ws || messageId === null || messageId === undefined || !text) return;
+    sendAddSnapshotEntity(ws, { messageId, text });
 }
 
 export function dispatchLookAtEntity(ws, { name, kind, isKnownCharacter }) {

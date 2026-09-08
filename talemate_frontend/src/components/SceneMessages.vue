@@ -293,7 +293,7 @@
     <!-- Fallback image viewer for the shared asset menu (see handleViewImage) -->
     <AssetView v-model="assetViewShow" :image-src="assetViewSrc" />
 
-    <div class="message-container mb-8" ref="messageContainer" :class="{ 'no-text-shadow': !sceneBackdropTextShadow }" :style="{ '--scene-backdrop-panel-opacity': sceneBackdropPanelOpacity }" style="flex-grow: 1; overflow-y: auto;" @click="onSceneAreaClick">
+    <div class="message-container mb-8" ref="messageContainer" :class="{ 'no-text-shadow': !sceneBackdropTextShadow }" :style="{ '--scene-backdrop-panel-opacity': sceneBackdropPanelOpacity }" style="flex-grow: 1; overflow-y: auto;" @click="onSceneAreaClick" @mouseup="onMessageContainerMouseUp">
         <div v-for="(message, index) in visibleMessages" :key="message.id != null ? `${message.type}-${message.id}` : `idx-${index}`" class="message-wrapper">
             <!-- marks the message whose illustration is the active backdrop -->
             <v-tooltip v-if="sceneBackdrop && message.id != null && message.id === sceneBackdrop.messageId" text="This image is the current scene background" location="left">
@@ -302,7 +302,7 @@
                 </template>
             </v-tooltip>
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
-                :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
+                :class="`message ${message.type}`" :id="`message-${message.id}`" :data-message-type="message.type" :style="{ borderColor: message.color }">
                 <div class="character-message">
                     <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === visibleMessages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
@@ -345,17 +345,17 @@
                 </div>
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
-                <div class="narrator-message"  :id="`message-${message.id}`">
+                <div class="narrator-message"  :id="`message-${message.id}`" :data-message-type="message.type">
                     <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === visibleMessages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
-                <div class="director-message"  :id="`message-${message.id}`">
+                <div class="director-message"  :id="`message-${message.id}`" :data-message-type="message.type">
                     <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action" :subtype="message.subtype" :uxLocked="uxLocked" :isLastMessage="index === visibleMessages.length - 1"/>
                 </div>
             </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
-                <div class="time-message"  :id="`message-${message.id}`">
+                <div class="time-message"  :id="`message-${message.id}`" :data-message-type="message.type">
                     <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :title="message.title" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === visibleMessages.length - 1" />
                 </div>
             </div>
@@ -370,7 +370,7 @@
                 </div>
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
-                <div class="context-investigation-message"  :id="`message-${message.id}`">
+                <div class="context-investigation-message"  :id="`message-${message.id}`" :data-message-type="message.type">
                     <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === visibleMessages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
@@ -379,6 +379,13 @@
                 {{ message.text }}
             </div>
         </div>
+        <EntitySelectionAction
+            :model-value="entitySelection.open"
+            :target="entitySelection.target"
+            :reason="entitySelection.reason"
+            @update:model-value="onEntitySelectionUpdate"
+            @add="triggerAddSnapshotEntity"
+        />
         <EntityTooltip
             :model-value="entityTooltip.open"
             :activator="entityTooltip.activator"

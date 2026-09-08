@@ -532,3 +532,77 @@ async def test_offscreen_life_uses_returning_character_snapshot(prepared, monkey
         rendered = prompt.render()
     snapshot = rendered.split("## Scene notes", 1)[1].split("## Scene\n", 1)[0]
     assert PUBLIC in snapshot and SECRET not in snapshot
+
+
+async def manual_add(prepared, entity):
+    scene, world, request, message = prepared
+    request.return_value = ("response", {"entity": entity})
+    return await world.add_snapshot_entity(message.id, "poison vial")
+
+
+async def test_manual_entity_scopes_views_per_audience(prepared):
+    scene, _, request, _ = prepared
+    result = await manual_add(
+        prepared,
+        {
+            "resolved": True,
+            "kind": "item",
+            "name": "Poison vial",
+            "snapshot": "A lethal poison vial disguised as medicine.",
+            "mentions": ["bandaged arm"],
+            "views": views("A bottle of medicine.", "A bottle of poison."),
+        },
+    )
+    assert result.resolved is True
+    assert scene.world_state.items["Poison Vial"].manual is True
+    assert request.call_args.kwargs["vars"]["snapshot_audience_context"] is not None
+    alice = render(scene, "Alice")
+    assert "bottle of medicine" in alice and "poison" not in alice.lower()
+    assert "bottle of poison" in render(scene, "Bob")
+    assert "disguised as medicine" in render(scene)
+
+
+async def test_manual_entity_without_views_stays_reader_only(prepared):
+    scene, _, _, _ = prepared
+    await manual_add(
+        prepared,
+        {
+            "resolved": True,
+            "kind": "item",
+            "name": "Poison vial",
+            "snapshot": "A lethal poison vial disguised as medicine.",
+            "mentions": ["bandaged arm"],
+        },
+    )
+    assert not render(scene, "Alice").strip()
+    assert not render(scene, "Bob").strip()
+    assert "disguised as medicine" in render(scene)
+
+
+@pytest.mark.parametrize("data_format", ["json", "yaml"])
+async def test_manual_add_prompt_carries_the_audience_rules(
+    prepared, monkeypatch, data_format
+):
+    _, world, request, _ = prepared
+    await manual_add(
+        prepared,
+        {
+            "resolved": True,
+            "kind": "item",
+            "name": "Poison vial",
+            "snapshot": "A lethal poison vial disguised as medicine.",
+            "mentions": ["bandaged arm"],
+            "views": views("A bottle of medicine.", "A bottle of poison."),
+        },
+    )
+    monkeypatch.setattr(world.actions["use_long_term_memory"], "enabled", False)
+    prompt = Prompt.get(
+        "world_state.add-snapshot-entity", vars=request.call_args.kwargs["vars"]
+    )
+    prompt.data_format_type = data_format
+    with ActiveAgent(world, world.add_snapshot_entity):
+        rendered = prompt.render()
+    assert "Audience replacements:" in rendered
+    assert "COMPLETE character-facing replacement" in rendered
+    assert "Alice" in rendered and "Bob" in rendered
+    assert "bandaged arm" in rendered

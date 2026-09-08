@@ -7,7 +7,7 @@ const SRC = fileURLToPath(new URL("../../src", import.meta.url));
 
 // registered on the component through a mixin's `components` option instead of
 // its own, so the SFC that mounts it carries no import
-const REGISTERED_BY_MIXIN = new Set(["EntityTooltip"]);
+const REGISTERED_BY_MIXIN = new Set(["EntityTooltip", "EntitySelectionAction"]);
 
 const VUE_BUILT_INS = new Set([
     "Component",

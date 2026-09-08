@@ -307,6 +307,34 @@ class TestWorldStateExamineBaselines:
         baseline_checker(capture_prompt(agent), AGENT, "examine_entity")
 
 
+class TestWorldStateAddEntityBaselines:
+    """Baseline tests for the manual add of a snapshot entity."""
+
+    @pytest.mark.asyncio
+    async def test_add_snapshot_entity(
+        self, active_context, mock_scene, baseline_checker
+    ):
+        agent = active_context
+
+        message = NarratorMessage(
+            message="The clearing opens onto a moss-covered shrine."
+        )
+        mock_scene.history = [message]
+        mock_scene.world_state.items = {"Waystone": ObjectState(snapshot="Weathered.")}
+
+        # `set_data_response` seeds `{ "entity": {`, so the mocked completion
+        # closes that prefix into a valid object.
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"resolved": true, "kind": "item", "name": "Moss-covered shrine",'
+                ' "snapshot": "Its carvings predate the road.", "mentions":'
+                ' ["a moss-covered shrine"]}}'
+            )
+        )
+        await agent.add_snapshot_entity(message.id, "moss-covered shrine")
+        baseline_checker(capture_prompt(agent), AGENT, "add_snapshot_entity")
+
+
 class TestWorldStateReinforcementBaselines:
     """Baseline tests for world_state reinforcement methods."""
 

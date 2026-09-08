@@ -46,9 +46,13 @@ The two settings below only apply when **Durable snapshot** is on.
 
 The maximum number of items the snapshot can hold at once. When a refresh would exceed this, the stalest items are dropped first. Set to `0` for no limit.
 
+An item you [added by hand](/talemate/user-guide/world-state/#adding-one-yourself) is never the one dropped, but it does keep its slot in the limit — pin ten items with the limit at ten and the snapshot has no room left for the items a refresh finds.
+
 ###### Auto-evict stale entries
 
 Automatically drops a snapshot entry that the agent leaves unchanged for this many refreshes in a row. This guards against stale entries lingering when the agent fails to remove them on its own. Set to `0` to disable.
+
+An entry you [added by hand](/talemate/user-guide/world-state/#adding-one-yourself) never ages out this way — the story dropping it, a time jump, or wiping the snapshot removes it.
 
 ##### Update state reinforcements
 

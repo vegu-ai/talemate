@@ -290,10 +290,7 @@ export class SceneTextParser {
                         return text;
                     }
                     self._entitiesSeenInParse.add(seenKey);
-                    const name = escapeHtmlAttr(token.entityName);
-                    const kind = escapeHtmlAttr(token.entityKind);
-                    const styleStr = self.buildStyleString(styles);
-                    return `<span class="scene-entity" data-entity-name="${name}" data-entity-kind="${kind}" style="${styleStr}">${text}</span>`;
+                    return self.buildEntitySpan(text, token.entityName, token.entityKind);
                 },
             }
         ];
@@ -302,15 +299,17 @@ export class SceneTextParser {
         const renderer = {
             // Emphasis renders its own source as text rather than parsing it:
             // markup nested in emphasis keeps the emphasis styling, and a
-            // deeply nested run costs linear rather than quadratic time.
+            // deeply nested run costs linear rather than quadratic time. Entity
+            // mentions are marked by hand instead, since the inline tokenizer
+            // never sees what is inside emphasis and most scene prose is.
             em: (token) => {
                 const styles = this.config.emphasis;
-                return this.buildSpan('emphasis', escapeMarkupChars(token.text), styles);
+                return this.buildSpan('emphasis', this.markEntitiesInRawText(token.text), styles);
             },
             
             // Optionally override other elements
             strong: (token) => {
-                const text = escapeMarkupChars(token.text);
+                const text = this.markEntitiesInRawText(token.text);
                 if (this.config.strong) {
                     return this.buildElement('strong', text, this.config.strong);
                 }
@@ -348,6 +347,40 @@ export class SceneTextParser {
         });
     }
     
+    buildEntitySpan(content, name, kind) {
+        const styleStr = this.buildStyleString(this.config.entities);
+        return `<span class="scene-entity" data-entity-name="${escapeHtmlAttr(name)}" `
+            + `data-entity-kind="${escapeHtmlAttr(kind)}" style="${styleStr}">${content}</span>`;
+    }
+
+    // Wrap entity mentions inside a run of text a renderer emits verbatim.
+    // Shares `_entitiesSeenInParse` with the tokenizer path, so an entity that
+    // appears both inside and outside emphasis is still marked once, on its
+    // first occurrence in the message.
+    markEntitiesInRawText(text) {
+        const compiled = this._entityMentions;
+        const styles = this.config.entities;
+        if (!compiled || !this._entitiesSeenInParse || (styles && styles.show === false)) {
+            return escapeMarkupChars(text);
+        }
+        const pattern = new RegExp(compiled.startRegex.source, 'gi');
+        let marked = '';
+        let cursor = 0;
+        for (const match of text.matchAll(pattern)) {
+            const phrase = match[0];
+            const entity = compiled.phraseToEntity[phrase.toLowerCase()];
+            if (!entity) continue;
+            const seenKey = `${entity.kind}:${entity.name}`;
+            if (this._entitiesSeenInParse.has(seenKey)) continue;
+            this._entitiesSeenInParse.add(seenKey);
+            marked += escapeMarkupChars(text.slice(cursor, match.index));
+            marked += this.buildEntitySpan(
+                escapeMarkupChars(phrase), entity.name, entity.kind);
+            cursor = match.index + phrase.length;
+        }
+        return marked + escapeMarkupChars(text.slice(cursor));
+    }
+
     buildSpan(type, content, styles) {
         const styleStr = this.buildStyleString(styles);
         return `<span class="${styles.className}" style="${styleStr}">${content}</span>`;

@@ -37,6 +37,55 @@ From the popover you can take two actions:
 
 :material-cog-outline: **Configure highlights** opens the [World State Agent settings](/talemate/user-guide/agents/world-state/settings/) where the highlight behavior is controlled.
 
+### Adding one yourself
+
+The snapshot decides what to highlight, and it does not always pick the thing you
+care about. Select the text yourself to add it.
+
+Drag across a span of text in a scene message — a character message, a narrator
+message, or a Look at / Add Detail message when **Include Look at / Add Detail**
+is on — and a small **Add to world state** action appears next to the selection.
+A shift-click selection works the same way. A double click still opens the
+message editor, as it always has, so use a drag when you want the action.
+
+The action is offered only while the World State Agent can serve it. Turn the
+agent off, leave it without a client, or turn its **Update world state** action
+off, and no action appears.
+
+Clicking it sends the selected text to the World State Agent, which resolves it
+into a single snapshot entry: a character, an item or a place, with the short
+description the popover shows. It is one request, it runs in the background like
+a manual refresh, and the :material-close: cancel icon stops it.
+
+The new entry appears in the snapshot, and the selected words become a highlight
+in the message, so the normal **Look at** and **Add Detail** actions work on it
+straight away.
+
+A few things to know:
+
+- Your selection is widened to whole words, and it can be at most 240 characters
+  long. The action says so when a selection is too long.
+- Select something the story names — a person, an object, a place. A selection
+  that names no such thing is refused rather than turned into an entry, and
+  Talemate tells you so.
+- Select inside an existing highlight and the entity popover opens instead, where
+  **Add Detail** expands the entry you already have.
+- The message has to be part of the current moment to show an inline highlight.
+  Add from an older message and the entry still joins the snapshot; Talemate tells
+  you that it carries no highlight.
+- An entry you add by hand is marked with a :material-pin: pin on its row in the
+  World panel. It never ages out as a stale entry and the item limit never drops
+  it, so it stays until the story drops it, a time jump cuts the scene, or you
+  wipe the snapshot. It does keep its slot in **Max items tracked**, so pinning
+  items leaves fewer slots for the ones a refresh finds. With **Durable
+  snapshot** off, every refresh rebuilds the snapshot from scratch, so a manual
+  entry lives until the next refresh like any other.
+- The panel lists characters and items, so a place you add shows as a highlight
+  and in its popover rather than as a row of its own.
+- In a Character perspectives story the new entry is written for every audience
+  in the same pass, like the entries a refresh produces, so it carries no reader
+  detail into a character's view.
+
 ### Controlling the highlights
 
 Entity highlighting follows the world state snapshot, so it shares the snapshot's settings in the [World State Agent configuration](/talemate/user-guide/agents/world-state/settings/):

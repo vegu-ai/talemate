@@ -199,6 +199,7 @@ import DirectorConsoleChatInput from './DirectorConsoleChatInput.vue';
 import DirectorConsoleChatMessageActionResult from './DirectorConsoleChatMessageActionResult.vue';
 import DirectorConsoleChatMessageLoading from './DirectorConsoleChatMessageLoading.vue';
 import DirectorConsoleChatMessageMarkdown from './DirectorConsoleChatMessageMarkdown.vue';
+import { askAgentRequests, takePendingPrompt } from '@/utils/askAgent';
 
 const usageCheatSheet = "Ask anything about how to use Talemate - settings, agents, clients, the world editor and more.\n\nAnswers are grounded in the bundled documentation.\n\nThe help chat cannot change your scene; ask the director chat for that."
 
@@ -252,9 +253,16 @@ export default {
             // window would otherwise re-send the first one's value
             pendingPermissions: {},
             permissionError: null,
+            // prompt from an AskAgent action, and the id of the chat created for
+            // it — the prompt is sent when that chat's own history arrives
+            askAgentPrompt: null,
+            askAgentChatId: null,
         }
     },
     computed: {
+        askAgentRequests() {
+            return askAgentRequests('help');
+        },
         helpAvailable() {
             return this.agentStatus?.help?.available || false;
         },
@@ -308,6 +316,9 @@ export default {
         },
     },
     watch: {
+        askAgentRequests() {
+            this.startAskAgentChat();
+        },
         permissionConfig: {
             handler(config) {
                 this.adoptPermissionState(config);
@@ -316,6 +327,26 @@ export default {
         },
     },
     methods: {
+        startAskAgentChat() {
+            // taken even when it is refused below, so a discarded ask leaves
+            // nothing behind for the next mount to pick up
+            const prompt = takePendingPrompt('help');
+            if(!prompt) return;
+            // one ask at a time: a second one while the first chat is still
+            // coming up would create a second chat, move the active chat off
+            // the first, and send both prompts
+            if(this.askAgentPrompt) return;
+            this.askAgentPrompt = prompt;
+            this.createChat();
+        },
+        sendAskAgentPrompt(chatId) {
+            if(!this.askAgentPrompt || chatId !== this.askAgentChatId) return;
+            const message = this.askAgentPrompt;
+            this.askAgentPrompt = null;
+            this.askAgentChatId = null;
+            this.chatInput = message;
+            this.sendChat();
+        },
         permissionGranted(key) {
             if(key in this.pendingPermissions) {
                 return this.pendingPermissions[key];
@@ -510,7 +541,14 @@ export default {
                 this.activeChatId = message.chat_id;
                 this.chatMessages = [];
                 this.tokenTotal = null;
-                this.requestChatHistory();
+                // an AskAgent prompt waits for the history the backend already
+                // queues for the chat it just created: a second one would land
+                // after the prompt was sent and replace its optimistic bubbles
+                if(this.askAgentPrompt) {
+                    this.askAgentChatId = message.chat_id;
+                } else {
+                    this.requestChatHistory();
+                }
                 return;
             }
             if(message.action === 'chat_deleted') {
@@ -539,6 +577,9 @@ export default {
                     if(this.isProcessing) {
                         this.ensureTrailingPlaceholder();
                     }
+                    // after the replacement above: the bubbles the prompt adds
+                    // must not be wiped by this history
+                    this.sendAskAgentPrompt(message.chat_id);
                 }
                 return;
             }
@@ -565,7 +606,13 @@ export default {
     },
     mounted() {
         this.registerMessageHandler(this.handleMessage);
-        this.requestChatList();
+        // an action that opened this drawer left its prompt behind before this
+        // component existed, so the pending one is picked up here rather than
+        // by the watcher alone
+        this.startAskAgentChat();
+        if(!this.askAgentPrompt) {
+            this.requestChatList();
+        }
     },
     unmounted() {
         this.unregisterMessageHandler(this.handleMessage);

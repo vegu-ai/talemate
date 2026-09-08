@@ -1230,7 +1230,9 @@
   title: Outline
   summary: 'The Scene tab''s Outline panel: Title, Content Classification, the four perspective-and-tense fields (scene default
     plus player, other and narrator overrides, with the {player_name} placeholder and shipped presets), the internal Description,
-    and the player-facing Introduction.'
+    and the player-facing Introduction. Each shipped preset carries a two-line subtitle in the dropdown - what it means and a
+    sample of the prose it produces - and an "Ask director to set up perspectives" action below the field opens the director
+    console and has the director choose and write the perspectives from the prose the scene already has.'
 - path: user-guide/world-editor/scene/settings.md
   title: Settings
   summary: 'The Scene tab''s Settings panel: selecting a writing style template, the Locked save file flag, the Experimental

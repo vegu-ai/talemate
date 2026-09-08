@@ -63,6 +63,12 @@
               </v-col>
             </v-row>
 
+            <v-row class="justify-center mb-2">
+              <v-col cols="12" md="10">
+                <ModelExpectationsPanel />
+              </v-col>
+            </v-row>
+
             <div class="text-center mt-2">
               <v-btn
                 variant="text"
@@ -135,6 +141,12 @@
               </v-col>
             </v-row>
             
+            <v-row v-if="draftClient" class="justify-center">
+              <v-col cols="12" md="8" class="text-left">
+                <ModelExpectationsPanel compact class="mb-2" />
+              </v-col>
+            </v-row>
+
             <!-- the same editor the settings Clients page uses, in its
                  reduced (simple) field set — bound to a local draft client
                  that is written on Add Client -->
@@ -501,6 +513,7 @@
 <script>
 import { getProperty, setProperty } from 'dot-prop';
 import ClientConfigEditor from './ClientConfigEditor.vue';
+import ModelExpectationsPanel from './ModelExpectationsPanel.vue';
 import { buildClientFromDefaults } from '@/utils/clientPresets';
 import { cloneNameKeyedMap, isReservedName } from '@/utils/nameKeyedMap';
 
@@ -508,6 +521,7 @@ export default {
   name: 'OnboardingWizard',
   components: {
     ClientConfigEditor,
+    ModelExpectationsPanel,
   },
   props: {
     clients: {

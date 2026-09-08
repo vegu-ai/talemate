@@ -16,7 +16,7 @@ MAX_STOPPING_STRINGS = 4
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
     api_url: str = "http://localhost:1234"
-    max_token_length: int = 8192
+    max_token_length: int = 16384
 
 
 @register()

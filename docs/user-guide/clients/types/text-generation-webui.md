@@ -43,7 +43,7 @@ With reasoning models, Text-Generation-WebUI separates the thinking from the res
 
 ##### Context Length
 
-The number of tokens to use as context when generating text. Defaults to `8192`.
+The number of tokens to use as context when generating text. Defaults to `16384`.
 
 ### Common issues
 

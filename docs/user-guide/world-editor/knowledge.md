@@ -2,6 +2,47 @@
 
 The World State panel offers a [knowledge hub](/talemate/user-guide/world-state/#knowledge-hub) on every character row: the newest facts the character knows and their disclosures or access rules, the Character perspectives switch, and the agent settings that shape knowledge keeping, without leaving the main view. The sections below describe the settings themselves.
 
+## Choosing a mode
+
+Every story runs in one of two character knowledge modes. You choose when you create the story, in the **Create New Story** dialog or in a [character card import](/talemate/user-guide/character-card-import/#character-perspectives). The choice stays open in [Scene Settings](/talemate/user-guide/world-editor/scene/settings/#character-perspectives) while the scene has no history, and locks once history exists. Both dialogs show the comparison below next to the switch.
+
+![Create New Story dialog with the two modes side by side](/talemate/img/0.40.0/create-new-story-modes.png)
+
+**Standard** — Characters know what they were present for and what you allow. No extra requests. You manage exceptions by hand with Allow / Block rules and the knowledge switches in Conversation settings. Good for most stories, any model, and stories without many secrets.
+
+- Pros:
+    - No extra requests
+    - Works with any model
+    - Nothing is locked in
+    - You control exceptions directly with Allow / Block rules
+- Cons:
+    - A present character sees the full reader prose, private thoughts included
+    - Leaks are yours to catch and fix by hand
+    - The reminder and limit switches are approximate
+- Pick this if: Your model is small or older, or the story has few secrets.
+
+**Character perspectives** — After every passage the AI writes what each character actually perceived, and their replies are grounded in that. Hands-off for you: keep secrets out of the shared description, mark private entries, hand out knowledge with a disclosure when needed. One extra analytical request per passage; needs a strong, reliable model. Best for stories with secrets. **Cannot be changed once the story has history.**
+
+- Pros:
+    - Characters only know what they actually perceived
+    - Secrets hold without hand-tuning
+    - Hands-off once set up
+    - Disclosures give exact control when needed
+- Cons:
+    - One extra analytical request per passage (slower, costs more)
+    - Needs a strong, reliable model, or analyses fail and pause generation
+    - Cannot be turned off once the story has history
+    - No forget or block of already acquired knowledge
+- Pick this if: Your model is current and reliable, and the story depends on who knows what.
+
+| Pick this if | Standard | Character perspectives |
+|---|---|---|
+| Your model | is small or older, or you want any model to work | is current and reliable; see [Model expectations](/talemate/getting-started/model-expectations/) for what that means |
+| Your story | has few secrets | depends on who knows what |
+| Your workflow | you manage exceptions by hand with Allow / Block rules | hands-off once set up, with disclosures when needed |
+
+The rest of this page is the reference for both modes.
+
 ## Character perspectives (opt-in)
 
 When creating a **New Story** or importing a character card, enable **Character perspectives** to give each character their own view of events. Turn it on to keep replies grounded in what that character has learned. The choice is **off by default**; with it off, the story uses **Standard** mode, where knowledge follows presence, ownership and sharing. The choice applies before initialization; cancelling an import or opening another one resets it.

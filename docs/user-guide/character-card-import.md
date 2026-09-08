@@ -41,7 +41,7 @@ The character card import dialog is divided into several sections:
 
 ### Character perspectives
 
-**Character perspectives** is off by default. Enable it to give characters audience-specific context in the imported story. It adds Summarizer analyses and pauses dependent character generation if an analysis fails. Cancelling or reopening the import resets the checkbox. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for costs and retry behavior.
+**Character perspectives** is off by default. The two modes are compared under the checkbox, with their pros and cons and a "pick this if" line; [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode) has the same comparison. Enable it to give characters audience-specific context in the imported story. It adds Summarizer analyses and pauses dependent character generation if an analysis fails. Cancelling or reopening the import resets the checkbox. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for costs and retry behavior.
 
 ### Analysis Information
 

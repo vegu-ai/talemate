@@ -73,6 +73,27 @@
           </v-card>
         </v-container>
         <v-container v-if="analysis && !analyzing" fluid>
+          <!-- the story mode choice gets the full width so the two cards sit
+               side by side; the import options keep their three columns -->
+          <v-row>
+            <v-col cols="12">
+              <v-card elevation="0">
+                <v-card-title class="text-body-large">
+                  <v-icon class="mr-2" size="small">mdi-head-lightbulb-outline</v-icon>
+                  Story mode
+                </v-card-title>
+                <v-card-text>
+                  <v-checkbox
+                    v-model="characterKnowledge"
+                    label="Character perspectives"
+                    color="primary"
+                    hide-details
+                  />
+                  <CharacterKnowledgeModeComparison :perspectives="characterKnowledge" class="mt-2" />
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
           <v-row>
             <v-col cols="12" md="4">
               <v-card elevation="0">
@@ -175,14 +196,6 @@
                   Import Options
                 </v-card-title>
                 <v-card-text>
-                  <v-checkbox
-                    v-model="characterKnowledge"
-                    label="Character perspectives"
-                    color="primary"
-                    hint="Give each character their own view of events. Turn on to keep their replies grounded in what they have learned. Adds a Summarizer request after each passage or changed tracker answer, plus work to summarize and record facts for each audience. If analysis fails, character generation pauses so you can retry."
-                    persistent-hint
-                    class="mb-4"
-                  />
                   <v-tooltip text="If enabled, character book entries will be imported into world state." max-width="300">
                     <template v-slot:activator="{ props }">
                       <v-checkbox
@@ -514,6 +527,8 @@
 </template>
 
 <script>
+import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
+
 const GENERATION_OPTION_KEYS = [
   'determine_content_context',
   'extract_description',
@@ -546,6 +561,7 @@ function defaultOptions() {
 
 export default {
   name: 'CharacterCardImport',
+  components: { CharacterKnowledgeModeComparison },
   props: {
     templates: Object,
   },

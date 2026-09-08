@@ -180,7 +180,7 @@ class CommonDefaults(pydantic.BaseModel):
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
-    max_token_length: int = 8192
+    max_token_length: int = 16384
     double_coercion: str = None
     lock_template: bool = False
 

@@ -84,6 +84,7 @@
   summary: Add and save local or hosted LLM clients through Settings → Connections → Clients, choose the API/client type,
     and assign the first client to agents automatically or use Assign to all agents. Explains readiness indicators and links
     individual provider setup guides.
+    A Which model note links the Model expectations page before the add-client steps.
 - path: getting-started/installation/docker.md
   title: Docker installation
   summary: Install Talemate with Docker Compose using prebuilt images or manual builds; the default CUDA configuration requires
@@ -109,11 +110,16 @@
   summary: Load the Infinity Quest scenario from Home Quick load after configuring clients, wait for the initial memory-model
     download, and send quoted dialogue or asterisk-wrapped actions. Introduces scenario tools, agent activity indicators and
     expandable world-state snapshots.
+- path: getting-started/model-expectations.md
+  title: Model expectations
+  summary: What Talemate expects from a model - a current reasoning-capable model, reliable JSON and tool-call output and 16k
+    or more context (32k recommended for Character perspectives), with known good hosted and self-hosted examples, what still
+    works with an older model, the symptoms of a model below the bar, the Context Length warning and the Model Testing Harness.
 - path: getting-started/setup-wizard.md
   title: Setup Wizard
   summary: First-run Setup Wizard for selecting hosted or self-hosted AI, adding a client, choosing Better/Standard embeddings
-    and CPU/CUDA, and optionally configuring Google/OpenRouter visuals. Explains Apply & finish, skipping setup, reasoning
-    defaults and where to change settings later.
+    and CPU/CUDA, and optionally configuring Google/OpenRouter visuals. Shows the What Talemate expects from your model panel
+    and a pointer to the Model expectations page. Explains Apply & finish, skipping setup, reasoning defaults and where to change settings later.
 - path: index.md
   title: Talemate Documentation
   summary: Talemate documentation landing page for AI roleplay with narration and world/game-state tracking, linking Windows,
@@ -475,6 +481,7 @@
   summary: Overview of local and hosted AI clients and assigning different models to specialized agents or using one client
     for everything. Links supported provider setup guides, OpenAI-compatible services and the bundled Model Testing Harness
     for checking a new model.
+    Opens with what Talemate expects from a model (reasoning-capable, reliable JSON and tool calls, 16k context) and links the Model expectations page.
 - path: user-guide/clients/model-testing-harness.md
   title: Model Testing Harness
   summary: 'Bundled Model Testing Harness scene runs six minimum-viability checks on assigned agent clients: tagged instructions,
@@ -1212,7 +1219,8 @@
     tools and context-budget review.
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
-  summary: Character perspectives opt-in for new stories/card imports and empty-scene switching; disabling clears perspectives,
+  summary: Choosing a mode comparison of Standard and Character perspectives with pros, cons and a pick-this-if table.
+    Character perspectives opt-in for new stories/card imports and empty-scene switching; disabling clears perspectives,
     disclosures and derived audience memory. Covers costs, retries, author responsibilities, Known by visibility, durable
     disclosures, supported-fact access, director/node tools, Standard-mode grant/revoke behavior and the World State
     knowledge hub shortcut (newest known facts, rules, mode switch, agent toggles).

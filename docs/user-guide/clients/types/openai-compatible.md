@@ -56,7 +56,7 @@ mistralai/Mixtral-8x22B-Instruct-v0.1
 
 ##### Context Length
 
-The number of tokens to use as context when generating text. Defaults to `8192`.
+The number of tokens to use as context when generating text. Defaults to `16384`.
 
 ### Parameters
 

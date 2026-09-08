@@ -18,6 +18,7 @@
                     <p v-if="perspectives">Characters receive their own views of events and memories. Extra Summarizer requests track what they learn after passages and changed tracker answers. If analysis fails, character generation pauses: retry the failed request, or cancel, correct the source and retry generation. Saves and forks keep this mode.</p>
                     <p v-else>Character knowledge follows where characters were present, what belongs to them, and what you share with them. Use the Conversation agent's Character Knowledge settings to adjust how this shapes replies. For separate character views of events, choose Character perspectives when creating a new story or importing a character card, or before a scene has history.</p>
                 </v-alert>
+                <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" collapsed class="mb-4" />
 
 
                 <v-row>
@@ -139,6 +140,7 @@
 <script>
 
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
 import { PERSPECTIVES_LOCKED_HINT, PERSPECTIVES_OPEN_HINT, buildSceneSettingsPayload, canChangePerspectives, perspectivesEnabled } from '@/utils/sceneSettings';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
@@ -151,6 +153,7 @@ export default {
         generationOptions: Object,
     },
     components: {
+        CharacterKnowledgeModeComparison,
         ConfirmActionPrompt,
     },
     watch: {

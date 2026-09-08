@@ -26,7 +26,7 @@ Since this is the first time you are saving the scene, you will be prompted to g
 
 ## Character perspectives
 
-In **Create New Story**, **Character perspectives** is off by default. Enable it before play to use the integrated audience mode for this story. It adds analytical requests and pauses dependent generation on a failed analysis. You can still change the mode in Scene Settings while both history and archived history are empty. Once history exists, the mode is locked; resaving or forking does not reconstruct past perceptions. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for costs, retry behavior and shared authoring fields.
+In **Create New Story**, **Character perspectives** is off by default. The dialog shows both modes side by side, with their pros and cons and a "pick this if" line; see [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode) for the same comparison in the docs. Enable it before play to use the integrated audience mode for this story. It adds analytical requests and pauses dependent generation on a failed analysis. You can still change the mode in Scene Settings while both history and archived history are empty. Once history exists, the mode is locked; resaving or forking does not reconstruct past perceptions. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for costs, retry behavior and shared authoring fields.
 
 ## Next
 

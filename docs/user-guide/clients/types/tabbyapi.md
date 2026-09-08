@@ -41,7 +41,7 @@ This setting is recommended to keep disabled.
 
 ##### Context Length
 
-The number of tokens to use as context when generating text. Defaults to `8192`.
+The number of tokens to use as context when generating text. Defaults to `16384`.
 
 ### Common issues
 

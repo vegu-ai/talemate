@@ -43,7 +43,7 @@ class Client(pydantic.BaseModel):
     api_url: Union[str, None] = None
     api_key: Union[str, None] = None
     # max input tokens to send with a generation request
-    max_token_length: int = 8192
+    max_token_length: int = 16384
 
     # prefill text for ALL requests
     double_coercion: Union[str, None] = None

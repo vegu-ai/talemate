@@ -567,7 +567,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 "name": emission.id,
                 "status": emission.status,
                 "data": emission.data,
-                "max_token_length": client.max_token_length if client else 8192,
+                "max_token_length": client.max_token_length if client else 16384,
                 "api_url": getattr(client, "api_url", None) if client else None,
                 "api_key": getattr(client, "api_key", None)
                 if enable_api_auth

@@ -7,6 +7,9 @@ Once Talemate is up and running and you are connected, the Home screen shows a w
 
 Talemate uses client(s) to connect to local or remote AI text generation APIs like koboldcpp, text-generation-webui or OpenAI.
 
+!!! note "Which model?"
+    Talemate expects a current reasoning model with reliable structured output and 16k or more context. See [Model expectations](model-expectations.md) for the bar, known good examples and what still works with an older model.
+
 ## Add a new client
 
 On the right hand side click the **:material-plus-box: ADD CLIENT** button. 

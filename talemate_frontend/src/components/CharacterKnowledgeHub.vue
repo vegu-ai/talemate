@@ -76,6 +76,7 @@
                     :hint="canChange ? PERSPECTIVES_OPEN_HINT : PERSPECTIVES_LOCKED_HINT"
                     persistent-hint
                     @update:model-value="setPerspectives"></v-switch>
+                <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" collapsed stacked class="mt-2" />
             </v-card-text>
 
             <v-divider></v-divider>
@@ -137,6 +138,7 @@
 </template>
 
 <script>
+import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { resolveKnowledgeToggles, thoroughnessSummary } from '@/utils/knowledgeHub';
 import {
@@ -151,6 +153,7 @@ const ENTRY_LIMIT = 5;
 
 export default {
     name: 'CharacterKnowledgeHub',
+    components: { CharacterKnowledgeModeComparison },
     props: {
         name: { type: String, required: true },
         variant: { type: String, default: 'tonal' },

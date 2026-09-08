@@ -17,7 +17,7 @@ EXPERIMENTAL_DESCRIPTION = """Use this client to use all of TabbyAPI's features.
 class Defaults(CommonDefaults, ApiHandlesPromptTemplateConfig):
     api_url: str = "http://localhost:5000/v1"
     api_key: str = ""
-    max_token_length: int = 8192
+    max_token_length: int = 16384
     model: str = ""
     double_coercion: str = None
 

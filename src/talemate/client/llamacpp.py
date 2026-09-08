@@ -31,7 +31,7 @@ APPLY_TEMPLATE_TIMEOUT = 30
 class Defaults(CommonDefaults, ApiHandlesPromptTemplateConfig):
     # llama.cpp `llama-server` defaults to port 8080 (see ggml-org/llama.cpp README)
     api_url: str = "http://localhost:8080"
-    max_token_length: int = 8192
+    max_token_length: int = 16384
 
 
 class ClientConfig(

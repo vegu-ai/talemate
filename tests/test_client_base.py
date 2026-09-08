@@ -315,7 +315,7 @@ class TestDefaults:
     def test_defaults_extends_common(self):
         d = Defaults()
         assert d.api_url == "http://localhost:5000"
-        assert d.max_token_length == 8192
+        assert d.max_token_length == 16384
         assert d.lock_template is False
         # inherits CommonDefaults
         assert d.reason_enabled is False
@@ -342,7 +342,7 @@ class TestClientBaseConfigGetters:
         assert client.model is None
         assert client.api_key is None
         assert client.api_url is None
-        assert client.max_token_length == 8192
+        assert client.max_token_length == 16384
         assert client.enabled is True
         assert client.rate_limit is None
         assert client.lock_template is False

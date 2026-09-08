@@ -6,7 +6,7 @@ The `Settings` tab allows you to configure various settings for the scene.
 
 ### Character perspectives
 
-Turn **Character perspectives** on or off while the scene has no history or archived history, then save the scene. An intro and configured characters do not prevent the change. Once history exists, the switch is disabled and the current mode remains visible. Turning this off clears stored character perspectives and disclosures; turning it on again does not restore them. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for analysis costs and recovery.
+Turn **Character perspectives** on or off while the scene has no history or archived history, then save the scene. An intro and configured characters do not prevent the change. Once history exists, the switch is disabled and the current mode remains visible. **About the two modes** under the switch expands the same pros-and-cons comparison as the Create New Story dialog; see [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode). Turning this off clears stored character perspectives and disclosures; turning it on again does not restore them. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for analysis costs and recovery.
 
 ### Writing Style
 

@@ -1,5 +1,5 @@
 <template>
-  <v-dialog :model-value="modelValue" max-width="640" @update:model-value="$emit('update:modelValue', $event)">
+  <v-dialog :model-value="modelValue" max-width="900" @update:model-value="$emit('update:modelValue', $event)">
     <v-card>
       <v-card-title class="text-title-large">
         <v-icon class="mr-2">mdi-script</v-icon>
@@ -70,9 +70,9 @@
           v-model="characterKnowledge"
           label="Character perspectives"
           color="primary"
-          hint="Give each character their own view of events. Turn on to keep their replies grounded in what they have learned. Adds a Summarizer request after each passage or changed tracker answer, plus work to summarize and record facts for each audience. If analysis fails, character generation pauses so you can retry."
-          persistent-hint
+          hide-details
         />
+        <CharacterKnowledgeModeComparison :perspectives="characterKnowledge" class="mt-2" />
         <p class="text-body-small mt-2">You can change this in Scene Settings while the scene has no history or archived history. Keep secrets out of the shared scene description and story intention.</p>
         <v-divider class="mt-4 mb-4"></v-divider>
 
@@ -97,8 +97,11 @@
 </template>
 
 <script>
+import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
+
 export default {
   name: 'NewSceneSetupModal',
+  components: { CharacterKnowledgeModeComparison },
   props: {
     modelValue: {
       type: Boolean,

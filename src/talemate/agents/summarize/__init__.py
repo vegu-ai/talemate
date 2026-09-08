@@ -187,6 +187,7 @@ class SummarizeAgent(
         LayeredHistoryMixin.add_actions(actions)
         MemoryRAGMixin.add_actions(actions)
         SceneAnalyzationMixin.add_actions(actions)
+        PerceptionMixin.add_actions(actions)
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):

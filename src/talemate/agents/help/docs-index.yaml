@@ -1,6 +1,10 @@
 # Machine-readable index of the Talemate documentation (docs/).
 # Consumed by the help agent to route questions to the right document.
 # Generated file - regenerate with the docs-index claude skill in the work repo.
+- path: dev/agent-actions.md
+  title: Generation action identity
+  summary: Generation action keys in prompt logs and per-action overrides, including memory passes and offscreen narration.
+    Covers nested context restoration, foreground/background status and concurrent actions.
 - path: dev/bulk-visibility-assessment.md
   title: Bulk visibility assessment
   summary: Director chat assess_visibility API for explicit batches of character attributes, details or world entries. Covers
@@ -242,7 +246,8 @@
   title: Settings
   summary: Summarizer settings for summary thresholds/methods, early time/presence boundaries, fact extraction and near-duplicate
     distance, layered history and cached deep scene analysis. Scene History controls include Max Budget, Best Fit, minimum/maximum
-    dialogue, dialogue/detail ratios and Enforce Summary Boundary.
+    dialogue, dialogue/detail ratios and Enforce Summary Boundary. Character Perspectives controls one automatic repair
+    of missing or invalid views, its extra-request cost and its knowledge hub toggle.
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
   summary: Legacy AUTOMATIC1111 text-to-image backend setup with API URL, steps, sampler, schedule, CFG, keyword/descriptive

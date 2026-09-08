@@ -146,15 +146,20 @@ the audience's ready views from that window and earlier disclosures, and authore
 character descriptions/details plus the shared scene description/story intention.
 Author context does not imply that a character observed it. Responses contain one
 complete replacement view per character, or an explicit omission. Validation
-rejects missing/duplicate/unknown audiences, unfinished statuses, empty ready
-text and model-supplied identities, dependency references or activation fields.
+keeps the first valid view for each requested canonical audience. Unrequested
+audiences, extra fields and model-supplied identities/references are ignored.
+Invalid views leave their audience missing; they do not discard valid siblings.
 The response includes explicit `knowledge_ids` and `passage_ids` arrays per audience,
 naming only the supplied inputs actually used; empty arrays mean none. The host
-rejects unknown or cross-audience knowledge IDs and resolves the IDs to its own
-references. Merely appearing in the 12-passage context window does not establish a
-dependency. The shared code-block extractor accepts bare structured JSON, fenced
-JSON with surrounding prose, uppercase language tags and open fences before strict
-schema validation. Complete JSON and JSON inside a fence are decoded before fence
+drops unknown or cross-audience knowledge IDs with audience/ID warnings and
+resolves offered IDs to its own references. Unknown physical citations are also
+dropped with warnings. Current-passage citations are silently ignored because
+the host records that passage exactly once. Missing or malformed citation arrays and
+wrongly typed IDs invalidate that view and require repair, with audience/field
+warnings. Only explicit empty arrays mean no dependencies. Merely appearing in
+the 12-passage context window does not establish a dependency. The shared code-block extractor accepts bare structured JSON, fenced
+JSON with surrounding prose, uppercase language tags and open fences before
+validating each requested view independently. Persistence models remain strict. Complete JSON and JSON inside a fence are decoded before fence
 matching, so literal triple backticks inside replacement prose are preserved.
 
 Used ready knowledge goes in `sources` and retains transitive invalidation.
@@ -187,8 +192,14 @@ requires rebuilding. Source revisions and the analytical input snapshot are chec
 after each request; stale output after editing, deletion, reset or character
 changes is discarded. A changed source is analyzed again before dependents proceed.
 
-Request failures use the existing generation-error dialog. Malformed analysis
-also opens that dialog and records failed views. **Retry** analyzes the current
+The Summarizer `perceptions.automatic_repair` setting defaults to true. Missing
+valid views trigger at most one automatic repair request per attempt, with the
+validation reason and only the missing cast. Already valid views are kept.
+Turning the setting off goes directly to the generation-error dialog. Invalid
+JSON or a missing views array counts as no valid views. Transport errors do not
+trigger this validation repair. Request failures and unsuccessful repairs use
+the existing generation-error dialog, including the underlying reason. Valid
+siblings remain saved; only unresolved views are marked failed. **Retry** analyzes the current
 passage again. **Cancel** or **Ignore** stops dependent generation; neither grants
 access to reader prose. The already-finalized reader passage remains in history
 and is emitted even when its analysis is cancelled. Retrying never pushes a second

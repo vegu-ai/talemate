@@ -19,6 +19,7 @@ export const KNOWLEDGE_TOGGLES = Object.freeze([
     { agent: 'conversation', action: 'character_knowledge', config: 'memory_pass' },
     { agent: 'conversation', action: 'character_knowledge', config: 'ledger' },
     { agent: 'summarizer', action: 'archive', config: 'extract_facts' },
+    { agent: 'summarizer', action: 'perceptions', config: 'automatic_repair' },
     { agent: 'memory', action: 'retrieval', config: 'similarity_gate' },
     { agent: 'memory', action: 'topics', config: null },
 ]);

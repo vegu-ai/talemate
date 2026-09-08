@@ -53,6 +53,18 @@ Treat sufficiently similar facts as repeats instead of saving them again (defaul
 
 This is the maximum distance allowed between facts as measured by the embedding model. Zero is the strictest value, not an off switch. In Standard mode, the Memory agent's [Match known facts](/talemate/user-guide/agents/memory/settings/#match-known-facts) also uses this tolerance when checking retold information.
 
+## Character Perspectives
+
+The Character Perspectives section is visible with any scene or with no scene loaded.
+Its settings only affect scenes using character perspectives.
+Automatic repair can add one Summarizer request when a view is missing or invalid.
+The same toggle and cost note are available in the World State knowledge hub.
+
+##### Automatically repair analysis
+
+When a character’s view is missing or invalid, make one extra request to repair it before showing the generation error dialog. Valid views are kept. On by default; turn off to use manual retries only. This setting applies to stories using [Character perspectives](/talemate/user-guide/world-editor/knowledge/). Self-citations and correctly typed unoffered IDs do not trigger repair. Missing or non-array citation fields and wrongly typed IDs require repair.
+With automatic repair off, an unreadable citation field stops the passage and shows the generation error dialog.
+
 ## Layered History
 
 Settings for the layered history summarization.

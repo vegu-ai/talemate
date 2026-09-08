@@ -64,6 +64,7 @@ def setup(scene, monkeypatch):
     scene.character_data = {name: Character(name=name) for name in ("Alice", "Bob")}
     scene.active_characters = ["Alice", "Bob"]
     summarizer = get_agent("summarizer")
+    summarizer.actions["perceptions"].config["automatic_repair"].value = False
     request = AsyncMock(return_value=result())
     monkeypatch.setattr("talemate.agents.summarize.perceptions.Prompt.request", request)
     with ActiveScene(scene):
@@ -204,8 +205,6 @@ async def test_batch_analysis_is_ordered_and_every_passage_registered(setup):
         answer().replace('"Bob"', '"Alice"'),
         answer().replace('"Bob"', '"Carol"'),
         answer().replace('"ready"', '"pending"'),
-        answer().replace('"views":', '"activation": [], "views":'),
-        answer().replace('"status":', '"id": "invented", "status":'),
     ],
 )
 def test_reject_invalid_analysis(payload):
@@ -892,7 +891,7 @@ async def test_provenance_survives_save_and_detects_unbound_physical_edit(setup)
 
 
 @pytest.mark.asyncio
-async def test_reject_unoffered_analytical_input_ids(setup):
+async def test_drop_unoffered_analytical_input_ids(setup):
     from talemate.agents.summarize.perceptions import resolve_perception_inputs
 
     scene, _, _ = setup
@@ -900,11 +899,13 @@ async def test_reject_unoffered_analytical_input_ids(setup):
     scene.history.append(message)
     payload = json.loads(answer())
     payload["views"][0]["knowledge_ids"] = ["K1-999"]
-    with pytest.raises(ValueError, match="not offered"):
-        resolve_perception_inputs(
-            parse_perceptions(json.dumps(payload), ("Alice", "Bob")),
-            perception_context(scene, message),
-        )
+    outputs = resolve_perception_inputs(
+        parse_perceptions(json.dumps(payload), ("Alice", "Bob")),
+        perception_context(scene, message),
+    )
+    assert len(outputs) == 2
+    assert outputs[0].sources == ()
+    assert outputs[0].text == "Alice says hello."
 
 
 @pytest.mark.parametrize("text", ["A ```print(1)``` sign.", "A stray ``` marker."])

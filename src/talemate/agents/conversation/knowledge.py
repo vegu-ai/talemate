@@ -337,6 +337,7 @@ class CharacterKnowledgeMixin:
         lines.reverse()
         return lines
 
+    @set_processing
     async def memory_pass(
         self, character: "Character", candidates: list[str]
     ) -> list[str]:

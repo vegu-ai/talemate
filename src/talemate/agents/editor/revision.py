@@ -1197,6 +1197,7 @@ class RevisionMixin:
         )
         return character.name
 
+    @set_processing
     async def revision_rewrite(
         self,
         info: RevisionInformation,
@@ -1334,6 +1335,7 @@ class RevisionMixin:
 
         return _reattach_character_prefix(revision, character, had_character_prefix)
 
+    @set_processing
     async def revision_unslop(
         self,
         info: RevisionInformation,

@@ -13,6 +13,7 @@ from .schema import (
 
 import talemate.emit.async_signals as async_signals
 from talemate.agents.base import (
+    set_processing,
     AgentAction,
     AgentActionConfig,
     AgentActionNote,
@@ -358,6 +359,7 @@ class PromptFinalizationMixin:
             )
         return text
 
+    @set_processing
     async def apply_ai_finalizer(
         self,
         text: str,

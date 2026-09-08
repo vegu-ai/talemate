@@ -919,6 +919,7 @@ class HelpChatMixin:
         )
         return has_user and has_help
 
+    @set_processing
     async def chat_generate_title(self, chat_id: str) -> str | None:
         chat = self.chat_get(chat_id)
         if not chat:

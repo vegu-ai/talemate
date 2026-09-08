@@ -118,13 +118,12 @@ def set_processing(fn):
     return narration_wrapper
 
 
-def set_processing_no_emit(fn):
+def narration_no_emit(fn):
     """
     The narrator's generation context without the generated signal: for a
     narration that becomes a fact rather than a scene message.
     """
 
-    @_set_processing
     @wraps(fn)
     async def narration_wrapper(self, *args, **kwargs):
         return await _narration(self, fn, args, kwargs, emit_generated=False)
@@ -405,7 +404,8 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, OffscreenLifeMixin, Agen
             self.on_time_passage
         )
 
-    @set_processing_no_emit
+    @_set_processing
+    @narration_no_emit
     async def narrate_offscreen_life(self, character: Character, missed: list[dict]):
         # the narrator's context (speaker role, writing style, injected
         # instructions) without the generated signal: the text becomes a fact

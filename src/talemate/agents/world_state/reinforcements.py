@@ -135,7 +135,7 @@ class WorldStateReinforcementsMixin:
         ]
 
         async def generate(item: PreparedReinforcement) -> str:
-            return await self._generate_reinforcement(item.reinforcement, reset)
+            return await self.generate_reinforcement(item.reinforcement, reset)
 
         async def apply(item: PreparedReinforcement, answer: str):
             await self._apply_reinforcement(
@@ -176,7 +176,7 @@ class WorldStateReinforcementsMixin:
             return
 
         message = self._prepare_reinforcement(reinforcement, reset)
-        answer = await self._generate_reinforcement(reinforcement, reset)
+        answer = await self.generate_reinforcement(reinforcement, reset)
         return await self._apply_reinforcement(reinforcement, message, answer, reset)
 
     def _prepare_reinforcement(
@@ -197,7 +197,8 @@ class WorldStateReinforcementsMixin:
 
         return message
 
-    async def _generate_reinforcement(
+    @set_processing
+    async def generate_reinforcement(
         self, reinforcement: "Reinforcement", reset: bool
     ) -> str:
         if reinforcement.insert == "sequential":

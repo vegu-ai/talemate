@@ -43,6 +43,9 @@ function agents({ overrides = {}, perspectives = false } = {}) {
             name: 'summarizer', label: 'Summarizer',
             data: { scene_overrides: overrides.summarizer || {} },
             actions: {
+                ...(perspectives ? { perceptions: { enabled: true, label: 'Character Perspectives', config: {
+                    automatic_repair: bool('Automatically repair analysis', true, request('One more Summarizer request when a character view is missing or invalid.')),
+                } } } : {}),
                 archive: { enabled: true, can_be_disabled: true, label: 'Summarization', config: {
                     threshold: { type: 'number', label: 'Token Threshold', value: 1536 },
                     extract_facts: bool('Extract facts', true),
@@ -75,6 +78,7 @@ describe('the hub toggle list', () => {
             'conversation.character_knowledge.memory_pass',
             'conversation.character_knowledge.ledger',
             'summarizer.archive.extract_facts',
+            'summarizer.perceptions.automatic_repair',
             'memory.retrieval.similarity_gate',
             'memory.topics.null',
         ]);
@@ -117,8 +121,18 @@ describe('resolveKnowledgeToggles', () => {
     // Character perspectives scene; the hub shows the keys it is given.
     it('hides what the status hides in a Character perspectives scene', () => {
         const groups = resolveKnowledgeToggles(agents({ perspectives: true }));
-        expect(groups.map((g) => g.label)).toEqual(['Character Knowledge', 'Summarization', 'Topics']);
+        expect(groups.map((g) => g.label)).toEqual(['Character Knowledge', 'Summarization', 'Character Perspectives', 'Topics']);
         expect(keys(groups[0])).toEqual(['memory_pass']);
+    });
+
+    it('exposes repair with its cost and respects the scene override', () => {
+        const overrides = { summarizer: { actions: { perceptions: { config: { automatic_repair: { value: false } } } } } };
+        const groups = resolveKnowledgeToggles(agents({ perspectives: true, overrides }));
+        const repair = groups.find((g) => g.action === 'perceptions').toggles[0];
+        expect(repair).toMatchObject({ key: 'automatic_repair', value: false, overridden: true });
+        expect(repair.costNote).toMatch(/One more Summarizer request/);
+        expect(thoroughnessSummary(groups, true).extras).toEqual([PERSPECTIVES_ANALYSIS_COST]);
+        expect(resolveKnowledgeToggles(agents()).some((g) => g.action === 'perceptions')).toBe(false);
     });
 
     it('offers only bool fields and only the listed ones', () => {
@@ -178,6 +192,6 @@ describe('thoroughnessSummary', () => {
     it('counts the analysis a Character perspectives scene runs', () => {
         const summary = thoroughnessSummary(resolveKnowledgeToggles(agents({ perspectives: true })), true);
         expect(summary.mode).toBe('Character perspectives');
-        expect(summary.extras).toEqual([PERSPECTIVES_ANALYSIS_COST]);
+        expect(summary.extras).toEqual([PERSPECTIVES_ANALYSIS_COST, 'Automatically repair analysis']);
     });
 });

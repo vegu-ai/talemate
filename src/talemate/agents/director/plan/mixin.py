@@ -5,7 +5,7 @@ to the director agent.
 
 import structlog
 
-from talemate.agents.base import AgentAction, AgentActionConfig
+from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
 from talemate.emit import emit
 import talemate.emit.async_signals
 from talemate.agents.narrator import NarratorAgentEmission
@@ -129,7 +129,8 @@ class PlanMixin:
 
         return len(content.split())
 
-    async def _plan_critique_expanded_blocks(
+    @set_processing
+    async def plan_critique_expanded_blocks(
         self, blocks: list[dict], narrator, close_arc: bool = False
     ) -> list[dict]:
         """
@@ -160,6 +161,7 @@ class PlanMixin:
         log.info("expand.critique.done", original=len(blocks), revised=len(revised))
         return revised
 
+    @set_processing
     async def plan_expand_beats(
         self,
         scene,
@@ -274,7 +276,7 @@ class PlanMixin:
         # Post-expansion critique pass
         do_critique = critique if critique is not None else self.plan_expand_critique
         if do_critique and len(chunks) > 1 and all_blocks:
-            all_blocks = await self._plan_critique_expanded_blocks(
+            all_blocks = await self.plan_critique_expanded_blocks(
                 all_blocks, narrator, close_arc=close_arc
             )
 

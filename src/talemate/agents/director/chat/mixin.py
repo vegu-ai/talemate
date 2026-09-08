@@ -816,6 +816,7 @@ class DirectorChatMixin:
 
     # === Title generation ===
 
+    @set_processing
     async def chat_generate_title(self, chat_id: str) -> str | None:
         """Generate a title for the chat based on its initial messages."""
         chat = self.chat_get(chat_id)

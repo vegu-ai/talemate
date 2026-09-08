@@ -87,7 +87,7 @@ def wire_reinforcements(agent, recorder, monkeypatch):
         await recorder.apply(reinforcement.question)
         return message
 
-    monkeypatch.setattr(agent, "_generate_reinforcement", _generate)
+    monkeypatch.setattr(agent, "generate_reinforcement", _generate)
     monkeypatch.setattr(agent, "_apply_reinforcement", _apply)
 
 

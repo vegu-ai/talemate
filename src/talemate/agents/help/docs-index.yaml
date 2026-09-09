@@ -215,7 +215,8 @@
   title: Overview
   summary: Memory agent manages long-term memory with embeddings and the ChromaDB backend. Cached memory refreshes after edits
     or deletions for the next prompt, even without new story messages, with or without Character perspectives. Explains how
-    retrieval already in progress can finish with earlier context without caching it for the next prompt.
+    retrieval already in progress can finish with earlier context without caching it for the next prompt, and obsolete cached
+    retrievals are released on memory writes. Deletions finishing after an interruption still refresh character audiences.
 - path: user-guide/agents/memory/koboldcpp.md
   title: KoboldCpp Embeddings
   summary: Use an embedding GGUF loaded in KoboldCpp with --embeddingsmodel; the Memory agent detects it and switches to Client
@@ -226,7 +227,7 @@
     clustering and thresholds, and Standard-only topic awareness and Match known facts. Retrieval owns relevance order through
     recency weighting, diversity, entity lookup and local cross-encoder reranking; chronology filters fact eligibility and
     adds time markers without reordering results, while Standard topic additions rank by chronology and Perspectives retains
-    audience-fact order.'
+    audience-fact order. Final diversity also applies to admitted copies; fresher facts replace every redundant selected slot.'
 - path: user-guide/agents/memory/testing.md
   title: Testing Embeddings
   summary: Test embeddings through Debug Tools → Memory by inspecting generation-time requests, result distances and selected
@@ -1233,7 +1234,7 @@
   title: How character knowledge works
   summary: 'Turn-by-turn character knowledge flow with five diagrams: Standard presence and dialogue learning, chapter facts
     and restatements, per-viewer supersession and formerly clauses, Perspectives analysis/repair and disclosures. Covers reply
-    inputs, intro audiences and author-facing summary rules, Scene Context inspection, memory ranking, subjects/aliases and fact aging, effort presets,
+    inputs, intro audiences and author-facing summary rules, Scene Context inspection, memory ranking and exclusion of already-rendered Character perspectives passages, subjects/aliases and fact aging, effort presets,
     the Individual settings pane and choosing a mode.'
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge

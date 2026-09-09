@@ -749,11 +749,13 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         if self.scene is not scene:
             return
         scene.memory_revision += 1
+        scene.rag_cache = {}
         try:
             return operation(*args, **kwargs)
         finally:
             # The executor can finish a write after its awaiting task is cancelled.
             scene.memory_revision += 1
+            scene.rag_cache = {}
 
     @set_processing
     async def add(self, text, character=None, uid=None, ts: int = None, **kwargs):
@@ -841,10 +843,12 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
     @set_processing
     async def add_many(self, objects: list[dict]):
-        if not objects:
-            return
+        """An empty batch refreshes authored audiences without a store write."""
         if self.readonly:
             log.debug("memory agent", status="readonly")
+            return
+        if not objects:
+            self.invalidate_audience_writes(objects, scene=self.scene)
             return
 
         if not await self._wait_until_ready():
@@ -858,23 +862,27 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             None,
             functools.partial(self._write_memory, scene, self._add_many, objects),
         )
+        await self._shielded_write(
+            operation,
+            functools.partial(self.invalidate_audience_writes, objects, scene=scene),
+        )
+
+    async def _shielded_write(self, operation, invalidate):
         try:
             await asyncio.shield(operation)
         finally:
             if operation.done():
-                self.invalidate_audience_writes(objects, scene=scene)
+                invalidate()
             else:
-                # Cancellation must not detach index invalidation from the
-                # executor write. Run it on the event loop once the write ends.
                 operation.add_done_callback(
-                    functools.partial(self._complete_cancelled_write, scene, objects)
+                    functools.partial(self._complete_cancelled_write, invalidate)
                 )
 
-    def _complete_cancelled_write(self, scene, objects, operation):
+    def _complete_cancelled_write(self, invalidate, operation):
         error = operation.exception()
         if error is not None:
             log.warning("memory write failed after cancellation", error=str(error))
-        self.invalidate_audience_writes(objects, scene=scene)
+        invalidate()
 
     def _add_many(self, objects: list[dict]):
         """
@@ -894,11 +902,17 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         if not await self._wait_until_ready():
             return
 
+        scene = self.scene
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(
-            None, functools.partial(self._write_memory, self.scene, self._delete, meta)
+        operation = loop.run_in_executor(
+            None, functools.partial(self._write_memory, scene, self._delete, meta)
         )
-        self.invalidate_audience_index(reconcile=True)
+        await self._shielded_write(
+            operation,
+            functools.partial(
+                self.invalidate_audience_index, scene=scene, reconcile=True
+            ),
+        )
 
     def _delete(self, meta: dict):
         """
@@ -1259,7 +1273,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         The knowledge filter, then the similarity knowledge gate: a result
         rejected for presence alone passes when a fact in the character's
         bucket is a near-duplicate of it (its vector against the anchors).
-        An admitted result is marked so the diversity check keeps it.
+        Admission does not exempt a result from duplicates in the final merge.
         """
         if not filter:
             return list(raw_results)
@@ -1289,7 +1303,6 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         passed = []
         for doc in candidates:
             if doc.id in retold:
-                doc.gate_admitted = True
                 passed.append(doc)
                 log.debug("similarity gate passed", id=doc.id)
 
@@ -1377,7 +1390,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                             if float(np.dot(unit, other)) > threshold
                         ]
                         replacement = (
-                            duplicates[0]
+                            min(duplicates)
                             if duplicates
                             and all(
                                 self._is_fresher_fact(memory, memory_context[position])
@@ -1387,18 +1400,25 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                         )
                         if replacement is not None:
                             # Preserve the selected fact's relevance slot before the budget cut.
+                            for position in duplicates:
+                                log.debug(
+                                    "diversity skip",
+                                    id=getattr(memory_context[position], "id", None),
+                                    reason="duplicate",
+                                    replacement_id=getattr(memory, "id", None),
+                                )
+                                if position != replacement:
+                                    memory_context[position] = None
+                                    del selected_vectors[position]
                             memory_context[replacement] = memory
                             selected_vectors[replacement] = unit
                             continue
-                        if any(
-                            self._is_fresher_fact(memory_context[position], memory)
-                            for position in duplicates
-                        ):
-                            continue
-                        # a gate admission is a wanted near-copy of known
-                        # knowledge: kept, but remembered for later copies
-                        if duplicates and not getattr(memory, "gate_admitted", False):
-                            log.debug("diversity skip", id=getattr(memory, "id", None))
+                        if duplicates:
+                            log.debug(
+                                "diversity skip",
+                                id=getattr(memory, "id", None),
+                                reason="duplicate",
+                            )
                             continue
                         selected_vectors[len(memory_context)] = unit
 
@@ -1410,7 +1430,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
             idx += 1
 
-        return memory_context
+        return [memory for memory in memory_context if memory is not None]
 
     def _cut_to_budget(self, docs: list, max_tokens: int) -> list:
         kept: list = []

@@ -9,6 +9,7 @@ from math import cos, radians, sin
 from unittest.mock import AsyncMock, patch
 
 import pytest
+import numpy as np
 
 import talemate.emit.async_signals as async_signals
 from talemate.agents.conversation.knowledge import (
@@ -143,6 +144,70 @@ class TestRecency:
 
 
 class TestDiversity:
+    @pytest.mark.parametrize("threshold", [0.5, 0.92, 0.99])
+    @pytest.mark.parametrize("dimensions", [2, 3, 8])
+    def test_random_merge_selection_has_no_near_duplicate_pair(
+        self, scene, memory, threshold, dimensions
+    ):
+        config(memory, "mmr_threshold", threshold)
+        rng = np.random.default_rng(504)
+        for trial in range(200):
+            vectors = rng.normal(size=(24, dimensions))
+            vectors /= np.linalg.norm(vectors, axis=1, keepdims=True)
+            timestamps = rng.integers(0, 100, size=len(vectors))
+            candidates = [
+                doc(
+                    f"random-{number}",
+                    f"Random fact {number}",
+                    ts=int(timestamp),
+                    typ="fact",
+                    embedding=vector.tolist(),
+                )
+                for number, (vector, timestamp) in enumerate(zip(vectors, timestamps))
+            ]
+            query_count = int(rng.integers(1, 5))
+            result = memory._merge_round_robin(
+                [candidates[offset::query_count] for offset in range(query_count)]
+            )
+            assert result
+            assert {item.id for item in result} <= {item.id for item in candidates}
+            assert all(
+                float(np.dot(left.embedding, right.embedding)) <= threshold + 1e-12
+                for left, right in combinations(result, 2)
+            ), (trial, dimensions, threshold, [item.id for item in result])
+
+    @pytest.mark.parametrize("budget", [1, 2, 5])
+    async def test_fresher_fact_removes_all_beaten_slots(
+        self, scene, memory, monkeypatch, budget
+    ):
+        config(memory, "recency_weight", 0)
+        config(memory, "mmr_threshold", 0.92)
+        scene.ts = 100 * DAY
+
+        def fact(identity, degrees, timestamp):
+            angle = radians(degrees)
+            return doc(
+                identity,
+                identity,
+                ts=timestamp * DAY,
+                typ="fact",
+                importance=3,
+                embedding=[cos(angle), sin(angle)],
+            )
+
+        first = fact("first", 0, 60)
+        second = fact("second", 40, 70)
+        fresh = fact("fresh", 20, 99)
+        other = doc("other", "Other history", embedding=[-1.0, 0.0])
+        later = doc("later", "Later history", embedding=[0.0, -1.0])
+        memory.get = AsyncMock(side_effect=[[first, second, later], [other, fresh]])
+        monkeypatch.setattr("talemate.agents.memory.util.count_tokens", len)
+        with ActiveScene(scene):
+            result = await memory.multi_query(
+                ["q1", "q2"], iterate=5, max_tokens=budget
+            )
+        assert [item.id for item in result] == ["fresh", "other", "later"][:budget]
+
     async def test_fresh_replacement_must_clear_every_duplicate(self, scene, memory):
         config(memory, "recency_weight", 0)
         config(memory, "mmr_threshold", 0.92)
@@ -343,13 +408,36 @@ class TestSimilarityGate:
             self.presence("F8", "far fact", 0.3, [1.0, 0.5]),
             self.presence("e1", "history", 0.35, [1.0, 0.05], typ="history"),
         ]
-        with ActiveScene(scene):
+        with ActiveScene(scene), patch("talemate.agents.memory.log.debug") as debug:
             result = await memory.multi_query(["q"], iterate=5, filter=filtered)
-        # Diversity prefers the fresher F9 retelling over F1
-        # and the independently admitted history document.
-        assert [doc.raw for doc in result] == ["twin fact", "history"]
+        assert [doc.raw for doc in result] == ["twin fact"]
+        debug.assert_any_call("similarity gate passed", id="e1")
         assert str(result[0]) == "(16 Minutes and 20 Seconds ago) twin fact"
         assert filtered.rejection(memory.table[1]) == "presence"
+
+    @pytest.mark.parametrize("reverse", [False, True])
+    @pytest.mark.parametrize("admitted_is_fresher", [False, True])
+    async def test_admitted_and_selected_facts_keep_only_the_fresher_copy(
+        self, scene, memory, filtered, reverse, admitted_is_fresher
+    ):
+        scene.world_state.facts["F1"].ts = 10 if admitted_is_fresher else 30
+        known = self.presence(
+            "F1", "known fact", 0.2, [1.0, 0.0], present='["Edwin", "Mara"]'
+        )
+        admitted = self.presence("F9", "twin fact", 0.25, [1.0, 0.1])
+        memory.table = [admitted, known] if reverse else [known, admitted]
+        with ActiveScene(scene), patch("talemate.agents.memory.log.debug") as debug:
+            result = await memory.multi_query(["q"], iterate=5, filter=filtered)
+        kept, dropped = ("F9", "F1") if admitted_is_fresher else ("F1", "F9")
+        assert [item.id for item in result] == [kept]
+        debug.assert_any_call("similarity gate passed", id="F9")
+        assert any(
+            call.args == ("diversity skip",)
+            and call.kwargs.get("id") == dropped
+            and call.kwargs.get("reason") == "duplicate"
+            for call in debug.call_args_list
+        )
+        assert len(memory.calls) == 1
 
     async def test_revoked_hidden_and_offscreen_are_never_rescued(
         self, scene, memory, filtered

@@ -12,7 +12,7 @@ from talemate.agents.base import (
 import talemate.instance as instance
 from talemate.knowledge.chronology import ranked_fact_documents
 from talemate.knowledge.bucket import KnowledgeIndex, knowledge_digest
-from talemate.knowledge.context import project_character_history
+from talemate.knowledge.context import ContextHistoryMessage, project_character_history
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.util.dedupe import compile_text_to_sentences, compile_sentences_to_length
 
@@ -291,6 +291,26 @@ class MemoryRAGMixin:
 
         return None
 
+    @staticmethod
+    async def rag_exclude_context_history(
+        context: list[str], context_history: list[str]
+    ) -> list[str]:
+        message_ids = {
+            str(part.message_id)
+            for part in context_history
+            if isinstance(part, ContextHistoryMessage)
+        }
+        filtered = []
+        for item in context:
+            meta = getattr(item, "meta", {})
+            if (
+                meta.get("knowledge_kind") == "message"
+                and str(meta.get("knowledge_id")) in message_ids
+            ):
+                continue
+            filtered.append(item)
+        return filtered
+
     async def rag_build(
         self,
         character: "Character | None" = None,
@@ -454,7 +474,12 @@ class MemoryRAGMixin:
                 )
             )
 
+        extra_context = semantic_context
         if isinstance(prompt, list):
+            if scoped:
+                extra_context = await self.rag_exclude_context_history(
+                    semantic_context, prompt
+                )
             prompt = "\n".join(prompt)
 
         log.debug(
@@ -471,7 +496,7 @@ class MemoryRAGMixin:
                     include_character_context=True,
                     response_length=self.long_term_memory_answer_length,
                     num_queries=self.long_term_memory_number_of_queries,
-                    extra_context=semantic_context,
+                    extra_context=extra_context,
                     filter=memory_filter,
                     viewer=viewer,
                 )
@@ -484,7 +509,7 @@ class MemoryRAGMixin:
                     include_character_context=True,
                     response_length=self.long_term_memory_answer_length,
                     num_queries=self.long_term_memory_number_of_queries,
-                    extra_context=semantic_context,
+                    extra_context=extra_context,
                     filter=memory_filter,
                     viewer=viewer,
                 )

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from talemate.agents.context import active_agent
+from talemate.agents.memory.schema import MemoryDocument
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
@@ -465,11 +466,24 @@ class CharacterKnowledgeMixin:
             log.debug("memory pass: none", character=character.name)
             return []
         # the number alone says keep and where
-        passed = [
-            text or candidates[number - 1]
-            for number, text in items
-            if 1 <= number <= len(candidates)
-        ]
+        passed = []
+        for number, text in items:
+            if not 1 <= number <= len(candidates):
+                continue
+            candidate = candidates[number - 1]
+            if text and isinstance(candidate, MemoryDocument):
+                passed.append(
+                    MemoryDocument(
+                        text,
+                        candidate.meta,
+                        candidate.id,
+                        candidate.raw,
+                        distance=candidate.distance,
+                        embedding=candidate.embedding,
+                    )
+                )
+            else:
+                passed.append(text or candidate)
         if not passed:
             log.warning(
                 "memory pass: answer not readable, keeping the candidates as retrieved",

@@ -12,7 +12,7 @@ from talemate.agents.memory import MemoryAgent
 @pytest.fixture
 def memory():
     agent = object.__new__(MemoryAgent)
-    agent.scene = SimpleNamespace(memory_revision=0)
+    agent.scene = SimpleNamespace(memory_revision=0, rag_cache={"old": {}})
     agent._ready_to_add = True
     agent.invalidate_audience_writes = Mock()
     agent.invalidate_audience_index = Mock()
@@ -32,6 +32,8 @@ def memory():
 async def test_memory_write_invalidates_on_completion(memory, operation, args, fails):
     def persist(*args, **kwargs):
         assert memory.scene.memory_revision == 1
+        assert memory.scene.rag_cache == {}
+        memory.scene.rag_cache["during-write"] = {"memory_revision": 1}
         if fails:
             raise RuntimeError("partial write")
 
@@ -45,23 +47,27 @@ async def test_memory_write_invalidates_on_completion(memory, operation, args, f
         await call(memory, *args)
     assert write.call_count == 1
     assert memory.scene.memory_revision == 2
+    assert memory.scene.rag_cache == {}
 
 
 @pytest.mark.asyncio
-async def test_empty_writes_do_not_invalidate(memory):
+async def test_empty_writes_preserve_store_revision_and_rag_cache(memory):
     memory._add = Mock()
     memory._add_many = Mock()
     await MemoryAgent.add.__wrapped__(memory, "")
     await MemoryAgent.add_many.__wrapped__(memory, [])
     assert memory.scene.memory_revision == 0
+    assert memory.scene.rag_cache == {"old": {}}
     memory._add.assert_not_called()
     memory._add_many.assert_not_called()
+    memory.invalidate_audience_writes.assert_called_once_with([], scene=memory.scene)
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("fails", [False, True])
+@pytest.mark.parametrize("operation", ["add_many", "delete"])
 async def test_cancelled_write_invalidates_original_scene_when_executor_finishes(
-    memory, monkeypatch, fails
+    memory, monkeypatch, fails, operation
 ):
     original = memory.scene
     loop = asyncio.get_running_loop()
@@ -71,7 +77,12 @@ async def test_cancelled_write_invalidates_original_scene_when_executor_finishes
     invalidated = asyncio.Event()
     warning = Mock()
     monkeypatch.setattr("talemate.agents.memory.log.warning", warning)
-    memory.invalidate_audience_writes.side_effect = lambda *a, **kw: invalidated.set()
+    invalidation = (
+        memory.invalidate_audience_writes
+        if operation == "add_many"
+        else memory.invalidate_audience_index
+    )
+    invalidation.side_effect = lambda *a, **kw: invalidated.set()
 
     def write(objects):
         loop.call_soon_threadsafe(started.set)
@@ -87,10 +98,15 @@ async def test_cancelled_write_invalidates_original_scene_when_executor_finishes
         finally:
             loop.call_soon_threadsafe(completed.set)
 
-    memory._add_many = write
+    setattr(memory, f"_{operation}", write)
     memory._write_memory = observed
+    payload = (
+        [{"id": "lore", "text": "new"}]
+        if operation == "add_many"
+        else {"ids": ["lore"]}
+    )
     pending = asyncio.create_task(
-        MemoryAgent.add_many.__wrapped__(memory, [{"id": "lore", "text": "new"}])
+        getattr(MemoryAgent, operation).__wrapped__(memory, payload)
     )
     try:
         await asyncio.wait_for(started.wait(), timeout=5)
@@ -105,9 +121,10 @@ async def test_cancelled_write_invalidates_original_scene_when_executor_finishes
     assert original.memory_revision == 2
     assert memory.scene.memory_revision == 0
     await asyncio.wait_for(invalidated.wait(), timeout=5)
-    memory.invalidate_audience_writes.assert_called_once_with(
-        [{"id": "lore", "text": "new"}], scene=original
-    )
+    if operation == "add_many":
+        invalidation.assert_called_once_with(payload, scene=original)
+    else:
+        invalidation.assert_called_once_with(scene=original, reconcile=True)
     if fails:
         warning.assert_called_once_with(
             "memory write failed after cancellation", error="cancelled write failed"
@@ -137,14 +154,28 @@ async def test_add_retry_keeps_original_revision_scene(memory, monkeypatch):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("cancel", [False, True])
-async def test_queued_write_refused_after_scene_rebind(memory, monkeypatch, cancel):
+@pytest.mark.parametrize("operation", ["add_many", "delete"])
+async def test_queued_write_refused_after_scene_rebind(
+    memory, monkeypatch, cancel, operation
+):
     original = memory.scene
     replacement = SimpleNamespace(memory_revision=0)
     loop = asyncio.get_running_loop()
     busy, queued, invalidated = asyncio.Event(), asyncio.Event(), asyncio.Event()
     release = threading.Event()
-    memory._add_many = Mock()
-    memory.invalidate_audience_writes.side_effect = lambda *a, **kw: invalidated.set()
+    write = Mock()
+    setattr(memory, f"_{operation}", write)
+    payload = (
+        [{"id": "lore", "text": "new"}]
+        if operation == "add_many"
+        else {"ids": ["lore"]}
+    )
+    invalidation = (
+        memory.invalidate_audience_writes
+        if operation == "add_many"
+        else memory.invalidate_audience_index
+    )
+    invalidation.side_effect = lambda *a, **kw: invalidated.set()
     run_in_executor = loop.run_in_executor
 
     def occupy_worker():
@@ -164,9 +195,7 @@ async def test_queued_write_refused_after_scene_rebind(memory, monkeypatch, canc
         try:
             await asyncio.wait_for(busy.wait(), timeout=5)
             pending = asyncio.create_task(
-                MemoryAgent.add_many.__wrapped__(
-                    memory, [{"id": "lore", "text": "new"}]
-                )
+                getattr(MemoryAgent, operation).__wrapped__(memory, payload)
             )
             await asyncio.wait_for(queued.wait(), timeout=5)
             if cancel:
@@ -180,11 +209,12 @@ async def test_queued_write_refused_after_scene_rebind(memory, monkeypatch, canc
                 await asyncio.wait_for(pending, timeout=5)
         await asyncio.wait_for(invalidated.wait(), timeout=5)
         blocker.result()
-    memory._add_many.assert_not_called()
+    write.assert_not_called()
     assert original.memory_revision == replacement.memory_revision == 0
-    memory.invalidate_audience_writes.assert_called_once_with(
-        [{"id": "lore", "text": "new"}], scene=original
-    )
+    if operation == "add_many":
+        invalidation.assert_called_once_with(payload, scene=original)
+    else:
+        invalidation.assert_called_once_with(scene=original, reconcile=True)
 
 
 def test_cancelled_write_completion_consumes_exception(memory, monkeypatch):
@@ -193,7 +223,12 @@ def test_cancelled_write_completion_consumes_exception(memory, monkeypatch):
     warning = Mock()
     monkeypatch.setattr("talemate.agents.memory.log.warning", warning)
     objects = [{"id": "lore", "text": "new"}]
-    memory._complete_cancelled_write(memory.scene, objects, operation)
+    from functools import partial
+
+    memory._complete_cancelled_write(
+        partial(memory.invalidate_audience_writes, objects, scene=memory.scene),
+        operation,
+    )
     operation.exception.assert_called_once_with()
     warning.assert_called_once_with(
         "memory write failed after cancellation", error="cancelled write failed"

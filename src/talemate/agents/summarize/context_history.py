@@ -31,7 +31,7 @@ from talemate.scene_message import (
 from talemate.knowledge.diagnostics import ContextDiagnostics
 from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.context import project_character_history
+from talemate.knowledge.context import ContextHistoryMessage, project_character_history
 from talemate.knowledge.presence import layer_entry_presence
 from talemate.util import count_tokens
 from talemate.util.prompt import condensed
@@ -49,6 +49,8 @@ _PREVIEW_DEFAULT_BUDGET = 8192
 # regardless of budget. Set to 0 to disable the guarantee.
 _BEST_FIT_MIN_DIALOGUE = 3
 
+HistoryLine = pydantic.InstanceOf[ContextHistoryMessage] | str
+
 
 class _CollectedHistory(pydantic.BaseModel):
     """Intermediate result from the shared collection phase."""
@@ -59,7 +61,7 @@ class _CollectedHistory(pydantic.BaseModel):
     budget: int
     budget_dialogue: int
     level_budgets: list[int]  # [archived, layer0, layer1, ...]
-    parts_dialogue: list[str]
+    parts_dialogue: list[HistoryLine]
     dialogue_start_idx: int
     parts_archived: list[str]
     archived_boundary: int
@@ -90,7 +92,7 @@ class _BestFitLevel(pydantic.BaseModel):
     """A single level in the best-fit hierarchy."""
 
     entries: list[dict]
-    formatted: list[str]
+    formatted: list[HistoryLine]
     tokens: list[int]
     admitted: list[bool] = []
     type: str  # 'layer' or 'archived'
@@ -104,8 +106,8 @@ class _BestFitCollected(pydantic.BaseModel):
     intro_carried: bool = False
     has_context: bool = False
     all_dialogue_fits: bool = False
-    all_dialogue: list[str] = []
-    parts_dialogue: list[str] = []
+    all_dialogue: list[HistoryLine] = []
+    parts_dialogue: list[HistoryLine] = []
     expansion_budget: int = 0
     levels: list[_BestFitLevel] = []
     render_ranges: list[tuple[int, int]] = []
@@ -554,7 +556,7 @@ class ContextHistoryMixin:
                 parts_dialogue.insert(0, params.gap_line(None))
                 pending_gap = False
 
-            parts_dialogue.insert(0, formatted)
+            parts_dialogue.insert(0, ContextHistoryMessage(formatted, message.id))
             dialogue_start_idx = i
 
             if isinstance(message, CharacterMessage):
@@ -828,7 +830,10 @@ class ContextHistoryMixin:
         if active_agent_ctx:
             active_agent_ctx.state["chapter_numbers"] = chapter_numbers
 
-        return list(map(str, parts_context)) + list(map(str, parts_dialogue))
+        return [
+            part if isinstance(part, ContextHistoryMessage) else str(part)
+            for part in [*parts_context, *parts_dialogue]
+        ]
 
     @staticmethod
     def _summary_carries_intro(scene, entry, layer=None):
@@ -1324,8 +1329,11 @@ class ContextHistoryMixin:
         for i in range(summarized_to + 1):
             if i < len(scene.history) and _is_qualifying(scene.history[i], params):
                 rendered.append(
-                    scene.history[i].as_format(
-                        conversation_format, mode=actor_direction_mode
+                    ContextHistoryMessage(
+                        scene.history[i].as_format(
+                            conversation_format, mode=actor_direction_mode
+                        ),
+                        scene.history[i].id,
                     )
                 )
             else:
@@ -1553,7 +1561,7 @@ class ContextHistoryMixin:
             if formatted in collected:
                 continue
 
-            parts_dialogue.insert(0, formatted)
+            parts_dialogue.insert(0, ContextHistoryMessage(formatted, message.id))
             collected.add(formatted)
             needed -= 1
 

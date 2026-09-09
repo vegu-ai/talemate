@@ -57,7 +57,7 @@ Newer results rank higher. Each result's score is its distance plus this weight 
 
 ##### Diversity threshold
 
-A result whose embedding is more similar than this (cosine) to one already selected is skipped, so the memory block does not repeat itself. Default 0.92; 1 turns the check off.
+A result whose embedding is more similar than this (cosine) to one already selected is skipped, so the memory block does not repeat itself. A fresher fact keeps the earliest selected slot and replaces every older near-copy it overlaps. This also applies to results admitted by Match known facts. Default 0.92; 1 turns the check off.
 
 ##### Entity lookup
 

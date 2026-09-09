@@ -212,8 +212,6 @@ def render_fact_document(scene, document, *, fact=None, predecessor=None):
     rendered.fact_predecessor = predecessor or getattr(
         document, "fact_predecessor", None
     )
-    if getattr(document, "gate_admitted", False):
-        rendered.gate_admitted = True
     return rendered
 
 

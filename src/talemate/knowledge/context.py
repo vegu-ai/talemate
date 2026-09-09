@@ -28,6 +28,16 @@ if TYPE_CHECKING:
 log = structlog.get_logger(__name__)
 
 
+class ContextHistoryMessage(str):
+    def __new__(cls, text: str, message_id: int):
+        instance = super().__new__(cls, text)
+        instance.message_id = message_id
+        return instance
+
+    def __getnewargs__(self):
+        return str(self), self.message_id
+
+
 def history_prefix(
     scene: "Scene", before_message_id: int | None = None
 ) -> list[SceneMessage]:
@@ -263,7 +273,7 @@ def project_character_history(
         size = count_tokens(text)
         if budget is not None and tokens + size > budget:
             break
-        append(text, "dialogue", message.id)
+        append(ContextHistoryMessage(text, message.id), "dialogue", message.id)
         tokens += size
     if cursor < 0 and (max_messages is None or len(parts) < max_messages):
         reference = source_reference(scene, "intro", "intro", read=read)

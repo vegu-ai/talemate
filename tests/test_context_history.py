@@ -3099,6 +3099,14 @@ class TestBestFit:
         assert len(summarized_messages) > 0, (
             "Some summarized messages should be expanded to dialogue"
         )
+        message_ids = {
+            message.as_format("chat"): message.id for message in scene.history
+        }
+        for part in result:
+            if part in message_ids:
+                assert part.message_id == message_ids[part]
+            else:
+                assert not hasattr(part, "message_id")
 
     def test_best_fit_dialogue_expansion_maximizes_detail(self, summarizer, test_data):
         """Dialogue expansion should prefer recent messages over summaries."""

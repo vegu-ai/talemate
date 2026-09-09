@@ -1,5 +1,5 @@
 {% include "character-evidence-context.jinja2" %}
-{% with talking_character=character %}{% include "memory-context.jinja2" %}{% endwith %}
+{% with talking_character=character, memory_context_history=evidence.history %}{% include "memory-context.jinja2" %}{% endwith %}
 {% include "dynamic-instructions.jinja2" %}
 {% if scene.description %}
 <|SECTION:SCENE DESCRIPTION|>{{ scene.description }}<|CLOSE_SECTION|>

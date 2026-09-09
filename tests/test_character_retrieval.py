@@ -968,3 +968,41 @@ async def test_scoped_metadata_rejects_legacy_and_id_lists_filter_sources(
         await memory.get_documents_by_meta({"typ": "fact"}, viewer="Elmer")
     with pytest.raises(ValueError, match="requires perception mode"):
         memory._get_documents_by_meta({"typ": "fact"}, viewer="Elmer")
+
+
+async def test_memory_writes_evict_rotating_perception_cache_entries(rag, monkeypatch):
+    scene, memory, message, conversation = rag
+    config = conversation.actions["use_long_term_memory"].config
+    monkeypatch.setattr(config["cache"], "value", True)
+    viewers = [scene.character_data[name] for name in ("Elmer", "Marie")]
+    fingerprint = message.fingerprint
+    previous_keys = set()
+    for number in range(10):
+        await memory.add(f"Stored update {number}.", uid="rolling-update")
+        await memory.ensure_audience_index(scene)
+        assert scene.rag_cache == {}
+        keys = set()
+        for viewer in viewers:
+            await conversation.rag_set_cache([f"Context {number}"], viewer)
+            keys.add(conversation.long_term_memory_cache_key_for(viewer))
+            assert await conversation.rag_get_cache(viewer) == [f"Context {number}"]
+        assert keys.isdisjoint(previous_keys)
+        assert set(scene.rag_cache) == keys
+        previous_keys = keys
+    assert message.fingerprint == fingerprint
+
+
+async def test_empty_memory_write_preserves_valid_perception_cache(rag, monkeypatch):
+    scene, memory, _, conversation = rag
+    monkeypatch.setattr(
+        conversation.actions["use_long_term_memory"].config["cache"], "value", True
+    )
+    await memory.ensure_audience_index(scene)
+    viewer = scene.character_data["Elmer"]
+    await conversation.rag_set_cache(["Still valid"], viewer)
+    cache = dict(scene.rag_cache)
+    revision = scene.memory_revision
+    await memory.add("")
+    assert scene.memory_revision == revision
+    assert scene.rag_cache == cache
+    assert await conversation.rag_get_cache(viewer) == ["Still valid"]

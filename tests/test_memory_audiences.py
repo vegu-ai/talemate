@@ -1,6 +1,7 @@
 import asyncio
+import threading
 from contextlib import ExitStack, nullcontext
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import chromadb
 from chromadb.api.types import EmbeddingFunction
@@ -864,3 +865,70 @@ async def test_switch_off_purges_audience_rows_and_cached_state(
     assert memory.db.get(where={"knowledge_index": True})["ids"] == []
     results = await memory.get("lighthouse", limit=100)
     assert all(not doc.meta.get("knowledge_index") for doc in results)
+
+
+async def test_empty_world_state_commit_refreshes_authored_audiences(
+    indexed_scene, monkeypatch
+):
+    scene, memory, _ = indexed_scene
+    assert "Common rain lore." in await contents(memory)
+    state = memory._audience_state(scene)
+    if state.task:
+        await state.task
+    audience_revision = state.revision
+    memory_revision = scene.memory_revision
+    scene.world_state.manual_context.clear()
+    upsert = Mock(side_effect=AssertionError("Empty input must not write the store"))
+    monkeypatch.setattr(memory, "_add_many", upsert)
+
+    await scene.world_state.commit_to_memory(memory)
+
+    assert state.revision > audience_revision
+    assert scene.memory_revision == memory_revision
+    upsert.assert_not_called()
+    assert "Common rain lore." not in await contents(memory)
+
+
+async def test_cancelled_direct_delete_removes_stale_audience_projection(
+    indexed_scene, monkeypatch
+):
+    scene, memory, _ = indexed_scene
+    await scene.world_state.commit_to_memory(memory)
+    assert "Common rain lore." in await contents(memory)
+    state = memory._audience_state(scene)
+    if state.task:
+        await state.task
+    assert memory.db.get(ids=["lore"])["ids"] == ["lore"]
+    scene.world_state.manual_context.pop("lore")
+    loop = asyncio.get_running_loop()
+    started, invalidated = asyncio.Event(), asyncio.Event()
+    release = threading.Event()
+    delete = memory._delete
+    invalidate = memory.invalidate_audience_index
+
+    def blocked(meta):
+        loop.call_soon_threadsafe(started.set)
+        assert release.wait(timeout=5)
+        delete(meta)
+
+    def observe(*args, **kwargs):
+        invalidate(*args, **kwargs)
+        invalidated.set()
+
+    monkeypatch.setattr(memory, "_delete", blocked)
+    monkeypatch.setattr(memory, "invalidate_audience_index", observe)
+    pending = asyncio.create_task(memory.delete({"ids": ["lore"]}))
+    try:
+        await asyncio.wait_for(started.wait(), timeout=5)
+        pending.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await pending
+        assert not invalidated.is_set()
+    finally:
+        release.set()
+        await asyncio.wait_for(invalidated.wait(), timeout=5)
+
+    assert memory.db.get(ids=["lore"])["ids"] == []
+    assert "Common rain lore." not in await contents(memory)
+    stored = memory.db.get(where={"knowledge_index": True}, include=["documents"])
+    assert "Common rain lore." not in stored["documents"]

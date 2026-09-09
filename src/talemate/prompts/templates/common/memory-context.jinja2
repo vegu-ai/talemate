@@ -1,10 +1,16 @@
 {# MEMORY -#}
 {% set memory_character = talking_character if talking_character is defined else None -%}
+{% if memory_context_state is defined and memory_context_state.stack is not none -%}
+{% set memory_stack = memory_context_state.stack -%}
+{% else -%}
 {% if memory_prompt is defined and (not memory_character or not character_knowledge_enabled(scene)) -%}
 {% set memory_stack = agent_action(active_agent.agent.agent_type, "rag_build_for_author", character=memory_character, prompt=memory_prompt, sub_instruction=sub_instruction|default("")) -%}
 {% else -%}
 {% set memory_stack = agent_action(active_agent.agent.agent_type, "rag_build", character=memory_character, sub_instruction=sub_instruction|default("")) -%}
 {% endif -%}
+{% endif -%}
+{% if memory_context_history is defined and memory_stack %}{% set memory_stack = agent_action(active_agent.agent.agent_type, "rag_exclude_context_history", context=memory_stack, context_history=memory_context_history) %}{% endif -%}
+{% if memory_context_state is defined %}{% set memory_context_state.stack = memory_stack %}{% endif -%}
 {% if memory_stack -%}
 <|SECTION:POTENTIALLY RELEVANT INFORMATION|>
 {% for memory in memory_stack -%}

@@ -324,6 +324,42 @@ class CharacterKnowledgeMixin:
             return character.name
         return self.rag_knowledge_viewer(character)
 
+    async def history_context(
+        self,
+        character,
+        budget,
+        *,
+        keep_director=None,
+        preview=False,
+        overrides=None,
+        diagnostics=None,
+    ):
+        # Summarizer imports its websocket handler, which imports knowledge.review.
+        from talemate.agents.summarize.context_history import ContextHistoryParams
+
+        if keep_director is None:
+            if perception_mode_enabled(self.scene):
+                guidance = await get_agent("director").get_cached_character_guidance(
+                    character.name
+                )
+            else:
+                context = active_agent.get()
+                guidance = (
+                    context.state.get("director__actor_guidance") if context else None
+                )
+            keep_director = False if guidance else character.name
+        params = ContextHistoryParams(
+            stored_views=True,
+            perspective=await self.knowledge_perspective(character),
+            keep_director=keep_director,
+        )
+        if preview:
+            params._diagnostics = diagnostics
+            return get_agent("summarizer").context_history_preview(
+                self.scene, budget=budget, overrides=overrides, params=params
+            )
+        return self.scene.context_history(budget=budget, **params.model_dump())
+
     async def absence_block(self, character: "Character | None") -> list[str]:
         if (
             perception_mode_enabled(self.scene)

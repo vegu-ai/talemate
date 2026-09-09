@@ -90,6 +90,26 @@ Keep secrets out of **scene description** and **story intention**: these remain 
 
 In Character perspectives mode, separate character views replace **Limit to character knowledge**, **Remind about unknown facts**, **Topic knowledge overview**, **Track learning from dialogue**, and **Match known facts**. These Standard-mode controls are hidden while Character perspectives is active. Blocking already acquired knowledge is not available in this mode. There is no forget/amnesia operation. Restricting an authored entry is not erasure of an already acquired disclosure.
 
+## Scene introductions
+
+The introduction belongs to the characters active when it is established. A character activated later does not receive it in their filtered history, analysis or memories. The original audience stays attached to the introduction through saves and character renames; replacing the introduction records the currently active characters as its new audience.
+
+In Character perspectives mode, that audience shares the same opening text. Talemate does not generate separate intro perspectives or make an extra AI request. The reader/player display retains the introduction. Shared author-facing history inserts a separate introduction only when no summaries or dialogue expanded from them are selected.
+
+For a scene saved before introduction audiences existed, loading derives the audience once from the first narrative message's recorded presence. If that message has no presence record, or there is no narrative history, it uses the restored active roster. The result is saved with the scene, including an explicitly empty audience. This is a load convention, not a reconstruction of who actually witnessed an older opening.
+
+If the first summary's audience includes someone outside the opening audience, the introduction stays separate from that summary and its extracted facts. Characters can still receive their own dialogue and summaries without acquiring the opening.
+
+## Fact relevance
+
+The age-based relevance exception for a present character uses the fact's subjects and character aliases. A fact with no subjects falls back to a name match in its text; an unrelated subject prevents incidental words such as “will” from keeping a fact just because Will is present. This affects prompt relevance, not knowledge access.
+
+## Superseded facts
+
+When a newer fact supersedes an older one, prompt lists omit the older fact. The rule uses the character's knowledge: someone who knows where Mara used to keep the sextant but has not learned that she moved it still receives the old fact. History and Knowledge inspection retain both records and their supersedes links; access is unchanged.
+
+**Show formerly clause**, under Summarizer → **Fact chronology**, is on by default. If both records are in the list's candidates, the successor can include a short clause: `Mara moved the sextant to her bag. (formerly: Mara keeps the sextant in the drawer.)` Only the immediate predecessor appears, capped at 240 characters, with no separate time marker. For A → B → C, C is rendered with B as formerly; A is omitted. Turning the setting off removes the clause while keeping the older fact out of prompt lists. This is a rendering rule and adds no AI requests.
+
 ## Visibility
 
 Character descriptions, attributes, details and world entries have **Known by** settings:

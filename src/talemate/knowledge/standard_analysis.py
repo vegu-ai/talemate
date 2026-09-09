@@ -10,7 +10,11 @@ from talemate.knowledge.topics import known_facts
 from talemate.knowledge.advice import KnowledgeAnalysisType
 from talemate.knowledge.schema import Fact, KnownFact
 from talemate.util import count_tokens
-from talemate.knowledge.chronology import chronology_settings, render_fact
+from talemate.knowledge.chronology import (
+    chronology_settings,
+    render_fact,
+    formerly_enabled,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -47,6 +51,7 @@ def standard_analysis_fingerprint(
         # Unknown-fact deduplication is skipped when memory is unavailable.
         "memory_ready": get_agent("memory").ready,
         "chronology": chronology_settings(scene),
+        "show_formerly": formerly_enabled(),
         "scene_ts": scene.ts,
         "active_characters": sorted(scene.active_characters),
     }
@@ -59,6 +64,7 @@ def _bounded_lines(
     budget: int,
     *,
     false_ids: set[str] | None = None,
+    diagnostics=None,
 ) -> list[str]:
     lines = []
     used = 0
@@ -69,6 +75,8 @@ def _bounded_lines(
         if used + size <= budget:
             lines.append(line)
             used += size
+        elif diagnostics is not None:
+            diagnostics.exclude("fact", fact.id, fact.text, "budget", "Known facts")
     return lines
 
 

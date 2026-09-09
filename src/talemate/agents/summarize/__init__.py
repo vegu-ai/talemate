@@ -486,12 +486,17 @@ class SummarizeAgent(
                         adjusted_dialogue=adjusted_dialogue,
                     )
 
+        intro_included = None
         if dialogue_entries:
             present = span_presence(dialogue_entries)
 
             if not extra_context:
-                # prepend scene intro to dialogue
-                dialogue_entries.insert(0, scene.intro)
+                intro_present = getattr(scene, "intro_present", None)
+                intro_included = intro_present is None or (
+                    present is not None and set(present) <= set(intro_present)
+                )
+                if intro_included:
+                    dialogue_entries.insert(0, scene.intro)
 
             summarized = None
             parsed_facts = None
@@ -527,6 +532,7 @@ class SummarizeAgent(
             end=end,
             ts=ts,
             present=present,
+            intro_included=intro_included,
             facts_status=facts_status,
         )
         await scene.push_archive(entry)

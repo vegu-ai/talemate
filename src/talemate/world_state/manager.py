@@ -7,6 +7,7 @@ import pydantic
 import structlog
 
 import talemate.world_state.templates as world_state_templates
+from talemate.knowledge.intro import initialize_intro_audience
 from talemate.knowledge.memory import invalidate_memory_audiences
 from talemate.knowledge.chronology import render_fact
 from talemate.agents.tts.util import get_voice
@@ -824,7 +825,9 @@ class WorldStateManager:
             and not (edge.kind == "revoke" and character_knowledge_enabled(self.scene))
         ]
         known = known_bucket(self.scene, character_name)
-        recent, total = known_facts(self.scene, character_name, known=known)
+        recent, total = known_facts(
+            self.scene, character_name, known=known, prompt=False
+        )
         return CharacterKnowledge(
             name=character_name,
             perception_mode=character_knowledge_enabled(self.scene),
@@ -1640,6 +1643,8 @@ class WorldStateManager:
                 self._validate_knowledge_eligibility(knowledge_eligibility)
                 clear_perspective_records(scene)
             scene.knowledge_eligibility = knowledge_eligibility
+            if knowledge_eligibility == "perception":
+                initialize_intro_audience(scene)
             invalidate_memory_audiences(scene)
 
         scene.immutable_save = immutable_save

@@ -25,7 +25,7 @@ from talemate.knowledge.schema import (
     TopicFact,
 )
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.chronology import ranked_facts, fact_time
+from talemate.knowledge.chronology import ranked_facts, fact_time, prompt_fact_text
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -385,15 +385,19 @@ def known_facts(
     character: str,
     limit: int = KNOWN_FACTS_LIMIT,
     known: list[Fact] | None = None,
+    *,
+    prompt: bool = True,
 ) -> tuple[list[KnownFact], int]:
     if known is None:
         known = known_bucket(scene, character)
     topic_of = _topic_of(scene)
-    recent = ranked_facts(scene, known, limit=limit)
+    recent = ranked_facts(
+        scene, known, limit=limit, character=character, prompt=prompt, superseders=known
+    )
     return [
         KnownFact(
             id=fact.id,
-            text=fact.text,
+            text=prompt_fact_text(fact),
             topic=topic_of.get(fact.id),
             ts=fact.ts,
             last_seen_ts=fact.last_seen_ts,

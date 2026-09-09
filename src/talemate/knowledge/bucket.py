@@ -133,6 +133,7 @@ class KnowledgeItem(pydantic.BaseModel):
 def knowledge_digest(scene: "Scene") -> str:
     """Short digest of every stored input to the predicate: edges and visibility."""
     payload = {
+        "intro": [getattr(scene, "intro", ""), getattr(scene, "intro_present", None)],
         "edges": sorted(
             (e.character, e.target, e.kind) for e in scene.world_state.knowledge
         ),

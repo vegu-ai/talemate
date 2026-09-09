@@ -66,12 +66,15 @@ def conversation_agent(mock_llm_client, mock_scene):
 
 
 @pytest.fixture
-def setup_agents(mock_conversation_agent_for_registry):
+def setup_agents(mock_conversation_agent_for_registry, conversation_agent):
     """Set up the agent registry with mocked agents."""
     # Save original AGENTS dict
     original_agents = instance.AGENTS.copy()
 
     # Set up mock agents in the registry
+    mock_conversation_agent_for_registry.history_context = (
+        conversation_agent.history_context
+    )
     instance.AGENTS["conversation"] = mock_conversation_agent_for_registry
 
     yield
@@ -102,6 +105,19 @@ class TestConverseMethod:
     2. Format-specific processing (movie_script, chat, or narrative)
     3. Character name prefixing to produce "CharName: dialogue"
     """
+
+    @pytest.mark.asyncio
+    async def test_converse_projects_history_once(
+        self, active_context, mock_scene, monkeypatch
+    ):
+        agent = active_context
+        projection = AsyncMock(wraps=agent.history_context)
+        monkeypatch.setattr(agent, "history_context", projection)
+        monkeypatch.setattr(
+            instance.AGENTS["conversation"], "history_context", projection
+        )
+        await agent.converse(mock_scene.get_character("Elena").actor)
+        projection.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_converse_calls_client(self, active_context, mock_scene):

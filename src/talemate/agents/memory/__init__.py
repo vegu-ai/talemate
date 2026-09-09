@@ -16,6 +16,7 @@ from chromadb.config import Settings
 import talemate.events as events
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.topics import known_bucket
 from talemate.knowledge.memory import audience_where
 from talemate.agents.memory.audiences import AudienceMemoryMixin
 import talemate.util as util
@@ -426,7 +427,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         return best_id
 
     async def _topic_first(
-        self, query: str, accepted: list, filter, *, viewer=None
+        self, query: str, accepted: list, filter, *, viewer=None, ranking_viewer=None
     ) -> list:
         """
         The nearest topic's highest-scoring eligible facts that the similarity search
@@ -444,11 +445,29 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             return []
         facts = self.scene.world_state.facts
         seen = {getattr(doc, "id", None) for doc in accepted}
+        candidates = {
+            i: facts[i] for i in topic.fact_ids if i in facts and i not in seen
+        }
+        visible = (
+            {fact.id: fact for fact in known_bucket(self.scene, ranking_viewer)}
+            if ranking_viewer is not None
+            and any(fact.supersedes for fact in candidates.values())
+            else None
+        )
+        predecessors = {
+            identity: fact
+            for identity, fact in candidates.items()
+            if visible is None or identity in visible
+        }
         members = ranked_facts(
             self.scene,
-            (facts[i] for i in topic.fact_ids if i in facts and i not in seen),
+            candidates.values(),
+            character=ranking_viewer,
+            superseders=visible.values() if visible is not None else None,
+            predecessors=predecessors,
         )
-        ids = [f.id for f in members[:TOPIC_FACTS_PER_QUERY]]
+        selected = {f.id: f for f in members[:TOPIC_FACTS_PER_QUERY]}
+        ids = list(selected)
         log.debug("topic first matched", topic=topic_id, candidates=ids)
         if not ids:
             return []
@@ -457,7 +476,15 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         if filter is not None:
             found = [doc for doc in found if filter(doc)]
         log.debug("topic first", topic=topic_id, added=[d.id for d in found])
-        return found
+        return [
+            render_fact_document(
+                self.scene,
+                doc,
+                fact=selected[doc.id],
+                predecessor=predecessors.get(selected[doc.id].supersedes),
+            )
+            for doc in found
+        ]
 
     @staticmethod
     def _audience_topic_groups(topics, documents, vectors, filter=None):
@@ -542,9 +569,9 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 best, members = score, candidates
         seen = {doc.id for doc in accepted}
         selected = ranked_fact_documents(
-            scene, [doc for doc in members if doc.id not in seen]
+            scene, [doc for doc in members if doc.id not in seen], character=viewer
         )[:TOPIC_FACTS_PER_QUERY]
-        return [self._dated_document(doc.raw, doc.meta, doc.id) for doc in selected]
+        return selected
 
     @property
     def reranker(self) -> CrossEncoderReranker:
@@ -1073,6 +1100,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         over_fetch: int = 1,
         topic_first: bool = False,
         viewer: str | None = None,
+        ranking_viewer: str | None = None,
         **where,
     ):
         async def retrieve(_collection=None):
@@ -1087,6 +1115,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 over_fetch=over_fetch,
                 topic_first=topic_first,
                 viewer=viewer,
+                ranking_viewer=ranking_viewer,
                 **where,
             )
 
@@ -1106,6 +1135,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         over_fetch: int = 1,
         topic_first: bool = False,
         viewer: str | None = None,
+        ranking_viewer: str | None = None,
         **where,
     ):
         """
@@ -1123,6 +1153,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         the cross-encoder, and cut to the token budget.
         """
 
+        ranking_viewer = viewer if ranking_viewer is None else ranking_viewer
         limit = limit * max(1, over_fetch)
 
         # First, collect results for each individual query (respecting the
@@ -1161,7 +1192,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 raw_results, filter, gate_distance, anchors
             )
             accepted = ranked_fact_documents(
-                self.scene, self._rank_by_recency(accepted)
+                self.scene, self._rank_by_recency(accepted), character=ranking_viewer
             )
             # only a caller without a metadata condition asks for topic-first
             # facts: `where` is not applied to a fetch by id
@@ -1170,6 +1201,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                     formatter(query),
                     accepted,
                     filter,
+                    ranking_viewer=ranking_viewer,
                     **({"viewer": viewer} if viewer is not None else {}),
                 )
                 if topic_first and not where
@@ -1187,7 +1219,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             and not self.reranker.error
         )
         merged = self._merge_round_robin(per_query_results)
-        merged = ranked_fact_documents(self.scene, merged)
+        merged = ranked_fact_documents(self.scene, merged, character=ranking_viewer)
 
         if rerank:
             reranked = await self.rerank(
@@ -1196,7 +1228,9 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             if self.reranker.error:
                 # A failed reranker keeps the filtered relevance order.
                 return self._cut_to_budget(merged, max_tokens)
-            merged = ranked_fact_documents(self.scene, reranked)
+            merged = ranked_fact_documents(
+                self.scene, reranked, character=ranking_viewer
+            )
 
         return self._cut_to_budget(merged, max_tokens)
 

@@ -1,8 +1,12 @@
 from dataclasses import dataclass
+from textwrap import shorten
 from typing import TYPE_CHECKING, Iterable
+
+from pydantic import Field
 
 from talemate.instance import get_agent
 from talemate.knowledge.schema import Fact
+from talemate.knowledge.names import aliases_for, mentions
 from talemate.util.time import UNIT_TO_SECONDS, duration_to_human
 
 if TYPE_CHECKING:
@@ -59,9 +63,6 @@ class FactChronology:
 
 
 def fact_chronology(scene: "Scene", fact: "Fact", settings=None) -> FactChronology:
-    # graph imports supported_facts, whose prompt selector uses this module.
-    from talemate.knowledge.graph import _mentions, aliases_for
-
     settings = settings if settings is not None else chronology_settings(scene)
     age = fact_age(scene, fact)
     score = fact_score(scene, fact, settings)
@@ -70,17 +71,68 @@ def fact_chronology(scene: "Scene", fact: "Fact", settings=None) -> FactChronolo
         recent
         or score > max(settings["score_floor"], 0)
         or any(
-            _mentions(fact, aliases_for(scene, name))
+            mentions(fact, aliases_for(scene, name), subjects_first=True)
             for name in scene.active_characters
         )
     )
     return FactChronology(score, age, recent, eligible)
 
 
+class PromptFact(Fact):
+    formerly: str | None = Field(default=None, exclude=True)
+
+
+def formerly_enabled() -> bool:
+    return bool(
+        get_agent("summarizer").resolve_config("fact_chronology", "show_formerly")
+    )
+
+
+def prompt_fact_text(fact) -> str:
+    text = " ".join(fact.text.split())
+    formerly = getattr(fact, "formerly", None)
+    return f"{text} (formerly: {formerly})" if formerly else text
+
+
+def superseded_fact_ids(scene, *, character=None, superseders=None) -> set[str]:
+    if superseders is None:
+        if not any(
+            fact.supersedes or any(item.supersedes for item in fact.contributions)
+            for fact in scene.world_state.facts.values()
+        ):
+            return set()
+        if character is None:
+            superseders = scene.world_state.facts.values()
+        else:
+            from talemate.knowledge.topics import known_bucket
+
+            superseders = known_bucket(scene, character)
+    return {
+        fact.supersedes for fact in superseders if fact.supersedes and not fact.false
+    }
+
+
 def ranked_facts(
-    scene: "Scene", facts: Iterable["Fact"], *, limit=None, tiers=True
+    scene: "Scene",
+    facts: Iterable["Fact"],
+    *,
+    limit=None,
+    tiers=True,
+    character=None,
+    prompt=True,
+    superseders=None,
+    predecessors=None,
 ) -> list["Fact"]:
     settings = chronology_settings(scene)
+    facts = list(facts)
+    predecessors = (
+        predecessors if predecessors is not None else {fact.id: fact for fact in facts}
+    )
+    if prompt:
+        superseded = superseded_fact_ids(
+            scene, character=character, superseders=superseders
+        )
+        facts = [fact for fact in facts if fact.id not in superseded]
     rows = [(fact, fact_chronology(scene, fact, settings)) for fact in facts]
     order = {identity: index for index, identity in enumerate(scene.world_state.facts)}
     rows = [row for row in rows if not tiers or row[1].eligible]
@@ -92,7 +144,20 @@ def ranked_facts(
         )
     )
     result = [fact for fact, _ in rows]
-    return result[: max(0, limit)] if limit is not None else result
+    result = result[: max(0, limit)] if limit is not None else result
+    if prompt and formerly_enabled():
+        result = [
+            PromptFact(
+                **fact.model_dump(),
+                formerly=shorten(
+                    predecessors[fact.supersedes].text, width=240, placeholder="…"
+                ),
+            )
+            if fact.supersedes in predecessors
+            else fact
+            for fact in result
+        ]
+    return result
 
 
 def render_fact(
@@ -102,7 +167,7 @@ def render_fact(
     text = " ".join(fact.text.split())
     if extraction:
         return f"{prefix}Fact: {text} | Record age (metadata, do not copy): {fact_time(scene, fact)}"
-    return f"{prefix}({fact_time(scene, fact)}) {text}"
+    return f"{prefix}({fact_time(scene, fact)}) {prompt_fact_text(fact)}"
 
 
 def fact_display(scene, fact):
@@ -128,11 +193,11 @@ def memory_fact(scene, document):
     )
 
 
-def render_fact_document(scene, document):
+def render_fact_document(scene, document, *, fact=None, predecessor=None):
     # Importing the memory package initializes MemoryAgent, which imports chronology.
     from talemate.agents.memory.schema import MemoryDocument
 
-    fact = memory_fact(scene, document)
+    fact = fact if fact is not None else memory_fact(scene, document)
     if fact is None:
         return document
     rendered = MemoryDocument(
@@ -143,22 +208,78 @@ def render_fact_document(scene, document):
         distance=document.distance,
         embedding=document.embedding,
     )
+    # Keep evidence across query merging, reranking and cache-time re-rendering.
+    rendered.fact_predecessor = predecessor or getattr(
+        document, "fact_predecessor", None
+    )
     if getattr(document, "gate_admitted", False):
         rendered.gate_admitted = True
     return rendered
 
 
-def ranked_fact_documents(scene, documents):
+def ranked_fact_documents(scene, documents, *, character=None):
     if not any(
         getattr(document, "meta", {}).get("typ") == "fact" for document in documents
     ):
         return list(documents)
-    settings = chronology_settings(scene)
+    facts = [
+        fact
+        for document in documents
+        if (fact := memory_fact(scene, document)) is not None
+    ]
+    predecessors = {fact.id: fact for fact in facts}
+    for document in documents:
+        predecessor = getattr(document, "fact_predecessor", None)
+        if predecessor is not None:
+            predecessors.setdefault(predecessor.id, predecessor)
+    superseders = None
+    if character is None and any(
+        getattr(document, "meta", {}).get("knowledge_index") for document in documents
+    ):
+        # An unscoped caller must not infer a private successor from the reader record.
+        superseders = facts
+    elif character is not None:
+        from talemate.knowledge.topics import known_bucket
+
+        visible = {fact.id: fact for fact in known_bucket(scene, character)}
+        superseders = list(visible.values())
+        predecessors = {
+            identity: fact
+            for identity, fact in predecessors.items()
+            if identity in visible
+        }
+        facts = [
+            fact.model_copy(update={"supersedes": visible[fact.id].supersedes})
+            if fact.id in visible
+            else fact
+            for fact in facts
+        ]
+    selected = {
+        fact.id: fact
+        for fact in ranked_facts(
+            scene,
+            facts,
+            character=character,
+            superseders=superseders,
+            predecessors=predecessors,
+        )
+    }
     result = []
     for document in documents:
         fact = memory_fact(scene, document)
         if fact is None:
             result.append(document)
-        elif fact_chronology(scene, fact, settings).eligible:
-            result.append(render_fact_document(scene, document))
+        elif fact.id in selected:
+            rendered = PromptFact(
+                **fact.model_dump(),
+                formerly=getattr(selected[fact.id], "formerly", None),
+            )
+            result.append(
+                render_fact_document(
+                    scene,
+                    document,
+                    fact=rendered,
+                    predecessor=predecessors.get(selected[fact.id].supersedes),
+                )
+            )
     return result

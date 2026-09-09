@@ -4,6 +4,7 @@ import structlog
 from talemate.agents.summarize.context_history import ContextHistoryPreviewOverrides
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
+from talemate.knowledge.review import character_context_review
 
 __all__ = [
     "SummarizeWebsocketHandler",
@@ -36,19 +37,36 @@ class SummarizeWebsocketHandler(Plugin):
     async def handle_context_review(self, data: dict):
         scene = self.scene
         if not scene:
-            await self.signal_operation_failed("No scene loaded")
+            await self.signal_operation_failed(
+                "No scene loaded",
+                request_id=data.get("request_id"),
+                failed_action="context_review",
+            )
             return
 
         overrides = None
         if "overrides" in data:
             overrides = ContextHistoryPreviewOverrides(**data["overrides"])
 
-        preview = self.summarizer.context_history_preview(scene, overrides=overrides)
+        name = data.get("character")
+        if name is not None:
+            if not isinstance(name, str) or name not in scene.active_characters:
+                raise ValueError("Select an active character for the context preview")
+            preview = await character_context_review(
+                scene, scene.character_data[name], overrides
+            )
+        else:
+            preview = self.summarizer.context_history_preview(
+                scene, overrides=overrides
+            )
+            preview.update({"perspective": None, "exclusions": []})
+        preview["characters"] = list(scene.active_characters)
         self.websocket_handler.queue_put(
             {
                 "type": self.router,
                 "action": "context_review",
                 "data": preview,
+                "request_id": data.get("request_id"),
             }
         )
 

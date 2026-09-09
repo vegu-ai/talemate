@@ -145,17 +145,19 @@ class RelationshipTimeline(Node):
 
     async def run(self, state: GraphState):
         scene = active_scene.get()
+        character = self.normalized_input_value("character") or None
         facts = relationship_timeline(
             scene,
             self.require_input("a"),
             self.require_input("b"),
-            character=self.normalized_input_value("character") or None,
+            character=character,
         )
         self.set_output_values(
             {
                 "facts": _fact_dicts(facts),
                 "text": "\n".join(
-                    render_fact(scene, f) for f in ranked_facts(scene, facts)
+                    render_fact(scene, f)
+                    for f in ranked_facts(scene, facts, character=character)
                 ),
             }
         )

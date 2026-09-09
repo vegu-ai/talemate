@@ -22,9 +22,10 @@
     Documents cache invalidation, index revisions, retryable failures and memory_viewer template enforcement.'
 - path: dev/character-perspectives.md
   title: Character perspective records
-  summary: 'Character perspective persistence APIs: SourcePerspectives, select_character_view, disclosures, acquisition order,
-    revisions, provenance and invalidation. Covers finalized-passage perception and retries, actor history projection, audience
-    summary repair, source-supported facts, scoped graph queries, explicit grants and the searchable effective-audience index.'
+  summary: 'Character perspective APIs: intro_present / intro_knowledge, SourceReference(kind="intro"), opening-audience derivation
+    on load, stored views, disclosures, revisions and invalidation. Covers correlated context_review requests with a character
+    parameter, knowledge.review exclusions, intro budgeting and unscoped summary rules, audience-summary repair, supported
+    facts and scoped graph/memory access.'
 - path: dev/howto/add-a-worldstate-template-type.md
   title: Adding a new world-state template
   summary: 'Developer walkthrough for adding a world-state template type using Writing Style phrase detection: register a
@@ -257,11 +258,10 @@
     investigation. Deep analysis can retrieve additional historical context but may add many prompts.'
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
-  summary: 'Summarizer thresholds, fact matching, 0–12 salient Routine/State/Milestone facts, layered history, Perspectives
-    repair, deep analysis, Scene History budgets, Best Fit and Enforce Summary Boundary. Chronology uses 90/14/2-day half-lives,
-    a 3-day window and floor 0.5: default cuts at 3/42/450 days unless a present character is mentioned; floor 0 disables
-    cuts, extraction inventories stay uncut, markers follow restatements, effort presets leave settings unchanged, and Standard
-    analysis cache inputs include chronology, scene time and presence.'
+  summary: 'Summarizer settings: thresholds, fact matching and salient extraction, layered history, Perspectives repair, scene
+    analysis and cache inputs. Chronology covers half-lives, recent-window/floor cuts, subjects and aliases, per-viewer supersession,
+    Show formerly clause and uncut extraction inventories; Scene History covers budgets, Best Fit, minimum dialogue and summary
+    boundaries.'
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
   summary: Legacy AUTOMATIC1111 text-to-image backend setup with API URL, steps, sampler, schedule, CFG, keyword/descriptive
@@ -455,12 +455,11 @@
     static copy.
 - path: user-guide/character-card-import.md
   title: Character Card Import
-  summary: Import TavernAI-style character cards (Chara Card V0-V3, PNG/JPG/WebP images or JSON) from the home screen's Import
-    dropzone or Scene Library. Covers default-off Character perspectives and cancel/reopen reset, character detection/manual
-    selection, per-step AI Generation toggles with card-data fallback, Full/Minimal presets, the director's attribute limit,
-    character book entries and metadata, alternate greetings and episode titles, shared context setup, writing style templates,
-    player character setup via templates, detected characters or scene imports (a name already in the scene, or two selected
-    names differing only in case, stops the import), and troubleshooting failed analysis.
+  summary: Import TavernAI-style Chara Card V0–V3 from PNG/JPG/WebP or JSON via the home dropzone or Scene Library. Covers
+    default-off Character perspectives, cancel/reopen reset, detection/manual cast selection, per-step AI Generation with
+    card-data fallback, Full/Minimal presets, director attribute limits, lore-book entries and metadata, alternate greetings
+    as titled episodes, shared world.json, writing style templates, player setup from a template, detected actor or another
+    scene, case-insensitive name collisions, cover assets and failed analysis troubleshooting.
 - path: user-guide/clients/auto-retry.md
   title: Auto Retry
   summary: Per-client automatic retries for empty responses, HTTP 429 rate limits with exponential backoff, and missing reasoning
@@ -1015,9 +1014,9 @@
     from here using revision state or trimmed legacy history.
 - path: user-guide/prompts/context-history-review.md
   title: Scene Context History Review
-  summary: Scene Context review in Prompt Manager previews layered history, archived summaries and dialogue with token counts,
-    budgets and incomplete warnings. Tune Best Fit min/max dialogue or manual dialogue/detail ratios, Enforce Boundary and
-    Max Budget, then Refresh and Apply to summarizer settings.
+  summary: Scene Context in Prompt Manager previews Scene or an active character using Conversation history selection. Covers
+    eligible facts, false markers, existing analysis, archive/layer and fact exclusion reasons with counts and capped samples,
+    intro/summary rules, budget cuts, the client context-window default, Refresh and scene-wide Apply; previews make no AI requests.
 - path: user-guide/prompts/deduplication.md
   title: Prompt Deduplication
   summary: Prompt deduplication removes near-duplicate long lines but is off by default because it can damage structured content
@@ -1232,19 +1231,16 @@
     tools and context-budget review.
 - path: user-guide/world-editor/knowledge-how-it-works.md
   title: How character knowledge works
-  summary: 'Short plain-words walk-through with five diagrams of the character knowledge flow: a Standard-mode turn (presence,
-    Track learning from dialogue, Establish facts from dialogue, chapter facts, restatements, linked facts, Show formerly
-    clause), a Character perspectives turn (per-passage analysis, Automatically repair analysis, Retry, Known by, disclosures,
-    retired controls), what a reply is built from (sheets, gap lines, memory ranking, unknown-fact reminders, Facts age half-lives
-    and floor), the effort stops and the Individual settings pane that holds the switches they set, and which mode to pick;
-    power-user detail in Details expanders.'
+  summary: 'Turn-by-turn character knowledge flow with five diagrams: Standard presence and dialogue learning, chapter facts
+    and restatements, per-viewer supersession and formerly clauses, Perspectives analysis/repair and disclosures. Covers reply
+    inputs, intro audiences and author-facing summary rules, Scene Context inspection, memory ranking, subjects/aliases and fact aging, effort presets,
+    the Individual settings pane and choosing a mode.'
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
-  summary: Standard versus Character perspectives comparison, new-story/card-import opt-in and empty-scene switching, Character
-    knowledge effort presets and model expectations, costs/retries, Known by visibility, durable disclosures, supported evidence
-    and Standard Allow/Block rules. The knowledge hub ranks facts by importance and age with relative time markers and recent/older
-    selection; expanded Known facts by topic rows retain the full record and show how/where each fact is known, without extra
-    AI requests or changes to access or effort settings.
+  summary: Standard versus Character perspectives, creation opt-in, empty-scene switching, effort presets, model expectations
+    and repair costs. Covers Known by visibility, disclosures and Allow/Block rules, opening audiences and old-save derivation,
+    subjects/aliases, per-viewer supersession and Show formerly clause, ranked hub facts, full topic inspection, director/node
+    operations and audience-scoped retrieval.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and
@@ -1301,6 +1297,6 @@
   summary: World panel durable snapshots, tracked states, Look at/Add Detail highlights, Add to world state text selection,
     knowledge-change dots, active/inactive/background characters and Make real name protection. The knowledge hub shows
     chronology-selected facts ranked by importance and recency with time markers, topics and counts, disclosures/access rules,
-    Character perspectives with a Compare modes popover, effort presets and an Individual settings pane that starts closed
-    and counts the switches that are on; also covers narrated activation, guided refresh/wipe, cancellation, background
+    Character perspectives with a Compare modes popover, effort presets and a closed Individual settings pane
+    counting enabled switches; also covers narrated activation, guided refresh/wipe, cancellation, background
     cadence and Pin to context.

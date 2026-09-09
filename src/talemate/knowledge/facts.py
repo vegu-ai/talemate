@@ -134,7 +134,7 @@ def facts_for_entry(scene: "Scene", archive_id: str) -> list[Fact]:
 
 def previous_facts(scene: "Scene", limit: int = 30) -> list[Fact]:
     return ranked_facts(
-        scene, scene.world_state.facts.values(), limit=limit, tiers=False
+        scene, scene.world_state.facts.values(), limit=limit, tiers=False, prompt=False
     )
 
 

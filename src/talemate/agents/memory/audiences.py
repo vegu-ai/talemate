@@ -163,7 +163,7 @@ class AudienceMemoryMixin:
                     removed = {
                         doc["group"]
                         for doc in state.documents.values()
-                        if doc["group"][0] in ("message", "summary")
+                        if doc["group"][0] in ("message", "summary", "intro")
                         and doc["group"] not in read.sources
                     }
                     if removed:

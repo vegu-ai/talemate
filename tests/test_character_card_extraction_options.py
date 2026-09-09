@@ -16,7 +16,7 @@ fails loudly)."""
 
 import json
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -100,6 +100,7 @@ def _scene_stub():
         context="",
         character_data={},
         world_state=SimpleNamespace(manual_context={}),
+        set_intro=Mock(),
     )
 
 

@@ -172,7 +172,7 @@
                 <!-- Context Review Tab -->
                 <v-window-item value="context-review">
                     <SceneContextReviewInline
-                        :visible="mainTab === 'context-review'"
+                        :visible="visible && effectiveMainTab === 'context-review'"
                         :agent-status="agentStatus"
                     />
                 </v-window-item>

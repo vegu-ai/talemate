@@ -13,6 +13,7 @@ import structlog
 
 import talemate.instance as instance
 from talemate import Actor, Character, Player, Scene
+from talemate.knowledge.intro import initialize_intro_audience
 from talemate.character import (
     deactivate_character,
     activate_character,
@@ -361,6 +362,8 @@ async def load_scene_from_data(
     scene.knowledge_eligibility = metadata.knowledge_eligibility
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
+    scene.intro_present = None
+    scene.intro_knowledge = None
     scene.name = scene_data.get("name", "Unknown Scene")
     scene.environment = scene_data.get("environment", "scene")
     scene.filename = None
@@ -525,6 +528,8 @@ async def load_scene_from_data(
 
     # Initialize intro and title for new scenes
     await _initialize_scene_intro(scene, scene_data, empty)
+
+    initialize_intro_audience(scene, {} if reset else scene_data)
 
     return scene
 

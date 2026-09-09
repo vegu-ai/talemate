@@ -23,7 +23,7 @@ class KnowledgeRecord(BaseModel):
 
 
 class SourceReference(KnowledgeRecord):
-    kind: Literal["message", "summary", "disclosure"]
+    kind: Literal["message", "summary", "disclosure", "intro"]
     id: StrictInt | StrictStr
     revision: int = Field(ge=1, strict=True)
     layer: int = Field(default=0, ge=0, strict=True)

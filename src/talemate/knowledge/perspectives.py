@@ -32,7 +32,7 @@ MAX_DEPENDENCY_DEPTH = 32
 
 @dataclass
 class _Source:
-    kind: Literal["message", "summary"]
+    kind: Literal["message", "summary", "intro"]
     id: str | int
     layer: int
     owner: object
@@ -43,6 +43,8 @@ class _Source:
 
     @property
     def text(self):
+        if self.kind == "intro":
+            return self.owner.intro
         if isinstance(self.owner, dict):
             if self.kind == "message":
                 from talemate.scene_message import MESSAGES
@@ -55,6 +57,11 @@ class _Source:
 
     @property
     def knowledge(self) -> SourcePerspectives | None:
+        if self.kind == "intro":
+            value = self.owner.intro_knowledge
+            return (
+                SourcePerspectives.model_validate(value) if value is not None else None
+            )
         value = (
             self.owner.get("knowledge")
             if isinstance(self.owner, dict)
@@ -64,7 +71,9 @@ class _Source:
 
     @knowledge.setter
     def knowledge(self, value: SourcePerspectives):
-        if isinstance(self.owner, dict):
+        if self.kind == "intro":
+            self.owner.intro_knowledge = value
+        elif isinstance(self.owner, dict):
             self.owner["knowledge"] = value.model_dump(mode="json")
         else:
             self.owner.knowledge = value
@@ -108,6 +117,11 @@ def direct_message_sources(scene):
 
 
 def _sources(scene):
+    if (
+        getattr(scene, "intro_present", None) is not None
+        or getattr(scene, "intro_knowledge", None) is not None
+    ):
+        yield _Source("intro", "intro", 0, scene)
     for message in message_sources(scene):
         identity = (
             message.get("id")
@@ -194,7 +208,7 @@ def _commit_order(scene, acquired):
 
 def source_reference(
     scene: "Scene",
-    kind: Literal["message", "summary", "disclosure"],
+    kind: Literal["message", "summary", "disclosure", "intro"],
     source_id: str | int,
     *,
     layer: int = 0,
@@ -458,15 +472,17 @@ def _notify(scene, old, replacement, reason, *, changes=None):
 
 def set_source_perspectives(
     scene: "Scene",
-    kind: Literal["message", "summary"],
+    kind: Literal["message", "summary", "intro"],
     source_id: str | int,
     outputs: Iterable[PerspectiveOutput | dict],
     *,
     layer: int = 0,
 ) -> SourceReference:
     _require_enabled(scene)
-    if kind not in ("message", "summary"):
-        raise ValueError("Only messages and summaries have perspective views")
+    if kind not in ("message", "summary", "intro"):
+        raise ValueError(
+            "Only introductions, messages and summaries have perspective views"
+        )
     source = _find(scene, (kind, source_id, layer))
     if source is None:
         raise ValueError("Perspective source does not exist")
@@ -709,6 +725,8 @@ def validate_saved_knowledge(data: dict) -> SceneKnowledge | None:
         )
     state_data = data.get("knowledge")
     records = [*data.get("history", []), *data.get("archived_history", [])]
+    if data.get("intro_knowledge") is not None:
+        records.append({"id": "intro", "knowledge": data["intro_knowledge"]})
     records.extend(
         item["perspective_source"]
         for item in data.get("world_state", {}).get("reinforce", ())
@@ -739,6 +757,9 @@ def validate_saved_knowledge(data: dict) -> SceneKnowledge | None:
         raise ValueError("Perspective records require a persisted source identity")
     state = SceneKnowledge.model_validate(state_data)
     scene = SimpleNamespace(
+        intro=data.get("intro", ""),
+        intro_present=data.get("intro_present"),
+        intro_knowledge=data.get("intro_knowledge"),
         history=data.get("history", []),
         archived_history=data.get("archived_history", []),
         layered_history=data.get("layered_history", []),
@@ -783,6 +804,10 @@ def validate_character_rename(
 
 
 def remove_perspective_audiences(scene: "Scene", name: str) -> None:
+    if getattr(scene, "intro_present", None) is not None:
+        scene.intro_present = [
+            member for member in scene.intro_present if member != name
+        ]
     scene.world_state.clear_snapshot_perspectives()
     changed = []
     for source in _sources(scene):
@@ -830,6 +855,7 @@ def remove_perspective_audiences(scene: "Scene", name: str) -> None:
 
 def clear_perspective_records(scene: "Scene") -> None:
     scene.knowledge = None
+    scene.intro_knowledge = None
     for message in message_sources(scene):
         if isinstance(message, dict):
             message.pop("knowledge", None)

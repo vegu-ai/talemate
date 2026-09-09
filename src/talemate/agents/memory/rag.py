@@ -287,7 +287,7 @@ class MemoryRAGMixin:
             and cache["fingerprint"] == fingerprint
             and cache["memory_revision"] == self.scene.memory_revision
         ):
-            return ranked_fact_documents(self.scene, cache["content"])
+            return ranked_fact_documents(self.scene, cache["content"], character=viewer)
 
         return None
 
@@ -411,6 +411,7 @@ class MemoryRAGMixin:
         semantic_context = await self.semantic_context(
             num_messages=self.long_term_memory_num_messages,
             filter=memory_filter,
+            ranking_viewer=viewer,
             **({"viewer": viewer} if scoped else {}),
         )
 
@@ -528,6 +529,7 @@ class MemoryRAGMixin:
         max_response_tokens: int = 1024,
         filter: Callable | None = None,
         viewer: str | None = None,
+        ranking_viewer: str | None = None,
     ):
         """Will retrieve context from the long term memory based on semantic similarity
 
@@ -599,6 +601,7 @@ class MemoryRAGMixin:
             filter=filter,
             over_fetch=3 if filter is not None else 1,
             topic_first=True,
+            ranking_viewer=ranking_viewer,
             **({"viewer": viewer} if viewer is not None else {}),
         )
 

@@ -4,7 +4,6 @@ Fact graph queries over ``world_state.facts`` and ``world_state.knowledge``.
 No embedding search: name matching and the `supersedes` links only.
 """
 
-import re
 from typing import TYPE_CHECKING
 
 from talemate.knowledge.chronology import ranked_facts
@@ -13,6 +12,7 @@ from talemate.knowledge.schema import Fact, KnownKind
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspectives import PerspectiveReadContext
 from talemate.knowledge.supported_facts import character_fact
+from talemate.knowledge.names import aliases_for, mentions
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -28,28 +28,6 @@ __all__ = [
 ]
 
 
-def aliases_for(scene: "Scene", entity: str) -> set[str]:
-    """The entity's name and every alias `character_name_mappings` groups with it, lower-cased."""
-    names = {entity.strip().lower()}
-    mappings = scene.world_state.character_name_mappings
-    for name, aliases in mappings.items():
-        group = {name.lower(), *(a.lower() for a in aliases)}
-        if entity.lower() in group:
-            names |= group
-    return {n for n in names if n}
-
-
-_aliases = aliases_for
-
-
-def _mentions(fact: Fact, aliases: set[str]) -> bool:
-    subjects = {s.lower() for s in fact.subjects}
-    if subjects & aliases:
-        return True
-    text = fact.text.lower()
-    return any(re.search(rf"\b{re.escape(alias)}\b", text) for alias in aliases)
-
-
 def _ordered(facts: list[Fact], scene: "Scene") -> list[Fact]:
     # ids are F<n>; the store's insertion order is the tiebreak, not the string
     order = {fact_id: i for i, fact_id in enumerate(scene.world_state.facts)}
@@ -59,33 +37,22 @@ def _ordered(facts: list[Fact], scene: "Scene") -> list[Fact]:
 
 
 def _facts_about(
-    scene: "Scene", entity: str, character: str | None = None
+    scene: "Scene", entity: str, character: str | None = None, *, known=None
 ) -> list[Fact]:
     """Facts that mention the entity, oldest first, optionally as one character knows them."""
-    aliases = _aliases(scene, entity)
-    facts = list(scene.world_state.facts.values())
-    if character is not None:
+    aliases = aliases_for(scene, entity)
+    facts = list(known) if known is not None else list(scene.world_state.facts.values())
+    if known is None and character is not None:
         if character_knowledge_enabled(scene):
-            read = PerspectiveReadContext(scene)
-            cache = {}
-            facts = [
-                view
-                for fact in facts
-                if (
-                    view := character_fact(
-                        scene, fact, character, read=read, cache=cache
-                    )
-                )
-                is not None
-            ]
+            facts = [fact for fact, _ in bucket(scene, character)]
         else:
             index = KnowledgeIndex.from_scene(scene)
             facts = [
-                f
-                for f in facts
-                if _mentions(f, aliases) and index.in_bucket(character, _item(f))
+                fact
+                for fact in facts
+                if mentions(fact, aliases) and index.in_bucket(character, _item(fact))
             ]
-    facts = [fact for fact in facts if _mentions(fact, aliases)]
+    facts = [fact for fact in facts if mentions(fact, aliases)]
     if character is not None and character_knowledge_enabled(scene):
         return sorted(
             facts,
@@ -97,19 +64,36 @@ def _facts_about(
 def facts_about(
     scene: "Scene", entity: str, character: str | None = None
 ) -> list[Fact]:
-    return ranked_facts(scene, _facts_about(scene, entity, character))
+    if not character_knowledge_enabled(scene) and not any(
+        fact.supersedes for fact in scene.world_state.facts.values()
+    ):
+        # No supersession needs unrelated facts: preserve Standard's cheap
+        # entity filter before checking knowledge membership.
+        matching = _facts_about(scene, entity, character)
+        return ranked_facts(scene, matching, character=character, superseders=matching)
+    known = (
+        [fact for fact, _ in bucket(scene, character)]
+        if character is not None
+        else list(scene.world_state.facts.values())
+    )
+    return ranked_facts(
+        scene,
+        _facts_about(scene, entity, character, known=known),
+        character=character,
+        superseders=known,
+    )
 
 
 def relationship_timeline(
     scene: "Scene", a: str, b: str, *, character: str | None = None
 ) -> list[Fact]:
     """Facts that mention both entities, oldest first."""
-    aliases_a = _aliases(scene, a)
-    aliases_b = _aliases(scene, b)
+    aliases_a = aliases_for(scene, a)
+    aliases_b = aliases_for(scene, b)
     return [
         f
         for f in _facts_about(scene, a, character=character)
-        if _mentions(f, aliases_a) and _mentions(f, aliases_b)
+        if mentions(f, aliases_a) and mentions(f, aliases_b)
     ]
 
 

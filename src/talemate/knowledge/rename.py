@@ -53,6 +53,7 @@ def rename_knowledge_references(scene: "Scene", old: str, new: str):
         scene.character_data[new] = scene.character_data.pop(old)
 
     scene.active_characters = _swap(scene.active_characters, old, new)
+    scene.intro_present = _swap(scene.intro_present, old, new)
 
     for message in message_sources(scene):
         message.present = _swap(message.present, old, new)

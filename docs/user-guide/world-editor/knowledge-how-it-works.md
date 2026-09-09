@@ -50,7 +50,7 @@ flowchart TD
     - A presence list is missing on lines from stories written before presence was recorded, and on lines said while no character is active; a summary that contains such a line is known to everyone.
     - The speaker learns nothing from their own line. Learned facts leave the listener's unknown-fact reminders and enter their memory.
     - A restatement keeps the fact's text, importance and original time.
-    - With **Show formerly clause** on (default, under Fact chronology), the newer fact carries the fact it updated as a short *formerly* clause of at most 240 characters, with no second time marker and no extra request. In a chain, only the last step shows.
+    - With **Show formerly clause** on (default, under Fact chronology), a newer fact can include its immediate predecessor when both are prompt candidates, as a short *formerly* clause of at most 240 characters, with no second time marker or extra request. For A → B → C, C can show B as formerly; A is omitted. Turning the setting off removes the clause while keeping superseded facts out of the prompt for characters who know their successor.
 
 ## Character perspectives mode: one line is said
 
@@ -115,13 +115,17 @@ flowchart LR
 
 **The story so far.** Standard mode uses the shared story; with **Limit to character knowledge** on, what the character missed becomes one gap line, such as *(Edwin was elsewhere for 2 Days)*. Character perspectives mode uses their own views, chapter summaries and disclosures, in story order.
 
+**The introduction.** The opening stays with the characters active when it was established; a later arrival does not receive it through filtered history or its derived knowledge. Character perspectives shares that opening text within its recorded audience without another request. The introduction and selected history share a token budget. A character receives a separate opening only when their selected summaries do not already carry it; those summaries need no extra intro reservation. The reader retains the opening. Shared author-facing history, including the narrator and director, inserts a separate introduction only when no summaries or dialogue expanded from them are selected.
+
+**Inspect a character's context.** In Prompt Manager → **Scene Context**, choose an active character to inspect their history, eligible facts and existing analysis. **Excluded** shows reasons and counts, including archive/layer exclusions and fact budget cuts, with bounded samples. Refresh generates no reply or analysis; Apply saves history settings scene-wide. See [Scene Context History Review](/talemate/user-guide/prompts/context-history-review/).
+
 **Memories.** The Memory agent finds what fits the last lines among what the character may know, ranked by relevance; **Recency weight** moves newer ones up, the **Diversity threshold** drops near-repeats, and **Cross-encoder rerank** (off by default) reorders the top results locally. The result is cached until the story or the memory changes. **Refine memories with AI** adds one request that keeps the useful memories, rewritten from the character's point of view.
 
 **Facts and reminders (Standard only).** **Remind about unknown facts** lists the recent facts the character does not know, so the AI keeps them from acting on those. **Topic knowledge overview** states which topics they know all, some or nothing of. The Summarizer's Scene Analysis, when on for conversation, lists their known and unknown facts. No request is added.
 
 ### Facts age
 
-A fact scores its importance divided by one plus its age over its half-life: **Milestone (3)** halves every 90 days, **State (2)** every 14, **Routine (1)** every 2, counted from the last restatement. Facts newer than the **Recent facts window** (3 days) always stay eligible; older ones need a score above the **Older facts score floor** (0.5) or must mention a character in the scene. Rendered facts carry a time such as *(21 Days ago)*. Aging never erases knowledge; the settings sit under [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology).
+A fact scores its importance divided by one plus its age over its half-life: **Milestone (3)** halves every 90 days, **State (2)** every 14, **Routine (1)** every 2, counted from the last restatement. Facts newer than the **Recent facts window** (3 days) always stay eligible; older ones need a score above the **Older facts score floor** (0.5) or must concern a character in the scene. That exception matches recorded subjects and character aliases; only facts without subjects fall back to a name match in their text, so a ship fact containing “will” is not retained merely because Will is present. Rendered facts carry a time such as *(21 Days ago)*. Aging never erases knowledge; the settings sit under [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology).
 
 ??? note "Details"
     - Director notes and the character's own state notes stay in the story part.

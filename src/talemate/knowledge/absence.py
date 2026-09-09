@@ -77,7 +77,8 @@ async def absence_facts(
         key=fact_order,
         reverse=True,
     )[: max(0, window)]
-    recent = ranked_facts(scene, recent)
+    # This warning describes current author-state facts the viewer does not know.
+    recent = ranked_facts(scene, recent, superseders=world_state.facts.values())
 
     # a fact marked false is never listed: in the bucket it is known, outside
     # it there is nothing to warn about

@@ -969,6 +969,8 @@ class Prompt(pydantic.BaseModel):
         query = query.format(**self.vars)
         if self.vars.get("memory_viewer") is not None:
             kwargs["viewer"] = self.vars["memory_viewer"]
+        if self.vars.get("knowledge_viewer") is not None:
+            kwargs["ranking_viewer"] = self.vars["knowledge_viewer"]
 
         exclude_history = kwargs.pop("exclude_history", False)
         if exclude_history:

@@ -62,7 +62,7 @@ class TestQueries:
     def test_facts_about_uses_subjects_text_and_aliases(self, scene):
         assert [f.id for f in facts_about(scene, "Edwin")] == ["F3", "F1"]
         assert [f.id for f in facts_about(scene, "halloran")] == ["F3", "F1"]
-        assert [f.id for f in facts_about(scene, "sextant")] == ["F4", "F2"]
+        assert [f.id for f in facts_about(scene, "sextant")] == ["F4"]
 
     def test_facts_about_filtered_by_character(self, scene):
         assert [f.id for f in facts_about(scene, "sextant", character="Edwin")] == []
@@ -126,7 +126,7 @@ class TestNodes:
     async def test_facts_about_node(self, scene):
         node = get_node("knowledge/FactsAbout")()
         out = await run_node(node, scene, {"entity": "sextant"})
-        assert [f["id"] for f in out["facts"]] == ["F4", "F2"]
+        assert [f["id"] for f in out["facts"]] == ["F4"]
         assert out["text"].startswith("[F4]")
 
     async def test_current_state_node(self, scene):

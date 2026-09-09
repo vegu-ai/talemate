@@ -1720,6 +1720,7 @@ async def load_scene_from_character_card(
     # Activate Characters from Greeting Text
 
     await _activate_characters_from_greeting(scene, original_greeting_text)
+    scene.set_intro(original_greeting_text)
 
     # Add Alternate Greetings as Episodes
 

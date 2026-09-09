@@ -75,6 +75,7 @@ class ArchiveEntry(PerspectiveSourceModel):
     end: int | None = None
     ts: int = 0
     present: list[str] | None = None
+    intro_included: bool | None = None
     facts_status: FactsStatus | None = None
 
 
@@ -97,6 +98,7 @@ class HistoryEntry(PerspectiveSourceModel):
     start: int | None = None
     end: int | None = None
     present: list[str] | None = None
+    intro_included: bool | None = None
     facts_status: FactsStatus | None = None
     facts: list[Fact] = pydantic.Field(default_factory=list)
 
@@ -416,6 +418,7 @@ def history_with_relative_time(
             present=entry.get("present", None),
             facts_status=entry.get("facts_status", None),
             knowledge=entry.get("knowledge"),
+            intro_included=entry.get("intro_included"),
         ).model_dump()
         for index, entry in enumerate(history)
     ]
@@ -852,6 +855,8 @@ async def regenerate_history_entry(
         )
         entry.facts_status = facts_status
         entry.facts = facts_for_entry(scene, entry.id)
+        if archive_entry.intro_included is not None:
+            entry.intro_included = False
 
     entry.text = summarized
 

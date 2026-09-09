@@ -18,6 +18,7 @@ import talemate.events as events
 import talemate.save as save
 import talemate.util as util
 import talemate.world_state.templates as world_state_templates
+from talemate.knowledge.intro import initialize_intro_audience, sync_intro_knowledge
 from talemate.config import Config, get_config
 from talemate.context import interaction
 from talemate.emit import Emitter, emit
@@ -171,6 +172,8 @@ class Scene(Emitter):
         self.voice_library: VoiceLibrary = VoiceLibrary()
         self.description = ""
         self.intro = ""
+        self.intro_present: list[str] | None = None
+        self.intro_knowledge = None
         self.outline = ""
         self.title = ""
         self.writing_style_template = None
@@ -612,10 +615,15 @@ class Scene(Emitter):
     def active_node_graph(self):
         return getattr(self, "node_graph", getattr(self, "creative_node_graph", None))
 
-    def set_intro(self, intro: str):
-        # Silent setter — emitting writers go through apply_intro; load paths
-        # assign scene.intro directly.
+    def set_intro(self, intro: str, present: list[str] | None = None):
+        if intro == self.intro and present is None and self.intro_present is not None:
+            return
         self.intro = intro
+        self.intro_present = list(
+            dict.fromkeys(self.active_characters if present is None else present)
+        )
+
+        sync_intro_knowledge(self)
 
     async def apply_intro(self, intro: str | None, emit_history: bool = True):
         # None is licensed but coerced: get_intro cannot take a None intro.
@@ -681,6 +689,9 @@ class Scene(Emitter):
 
         if isinstance(messages, SceneMessage):
             messages = [messages]
+
+        if self.intro and self.intro_present is None:
+            initialize_intro_audience(self)
 
         # there can only ever be one director message in the history
         # so if there is a new DirectorMessage in messages we remove the old one
@@ -1401,10 +1412,17 @@ class Scene(Emitter):
             return ""
         return value.replace("{player_name}", character.name)
 
-    def get_intro(self, intro: str = None) -> str:
+    def get_intro(self, intro: str = None, *, perspective: str | None = None) -> str:
         """
         Returns the intro text of the scene
         """
+
+        if (
+            perspective is not None
+            and self.intro_present is not None
+            and perspective not in self.intro_present
+        ):
+            return ""
 
         if not intro:
             intro = self.intro
@@ -1822,6 +1840,8 @@ class Scene(Emitter):
             await memory.set_db()
 
     async def emit_history(self, uncapped: bool = False):
+        if self.intro and self.intro_present is None:
+            initialize_intro_audience(self)
         emit("clear_screen", "")
         # this is mostly to support character cards
         # we introduce the main character to all such characters, replacing
@@ -2280,6 +2300,16 @@ class Scene(Emitter):
             "id": scene.id,
             "description": scene.description,
             "intro": scene.intro,
+            **(
+                {"intro_present": list(scene.intro_present)}
+                if scene.intro_present is not None
+                else {}
+            ),
+            **(
+                {"intro_knowledge": scene.intro_knowledge.model_dump(mode="json")}
+                if scene.intro_knowledge is not None
+                else {}
+            ),
             "name": scene.name,
             "project_name": scene.project_name,
             "title": scene.title,

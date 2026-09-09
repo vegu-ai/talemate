@@ -39,6 +39,20 @@ Preserve attribution and uncertainty in prose: “Alice said the ledger burned�
 does not assert that it burned or that the listener believes her. Storage performs
 no belief inference or fact extraction.
 
+### Introduction source
+
+Scenes persist `intro_present` separately from the existing `intro` text. In perception mode, `intro_knowledge` holds a deterministic ready view of that text for the recorded audience, addressed by `SourceReference(kind="intro", id="intro", ...)`. It uses the existing revision, citation, memory-index and snapshot-evidence checks. Intro replacement invalidates dependent evidence; it does not request a perception rewrite.
+
+Character history projection includes the eligible introduction within its token budget. It remains a separate opening source rather than creating another audience-summary or fact-extraction request. Standard collectors first select history with the full budget, then allocate a separate eligible intro only if the selected summaries do not carry it for that viewer. A summary that already carries the opening costs no separate intro reservation. If the reduced allocation selects an opening summary instead of dialogue, collection keeps that summary so the character retains the opening, accepting the unused intro reservation. Opening coverage skips static history notes and follows the original archive indices through layered and best-fit selection. Unscoped callers (`perspective=None`, including director, creator and author-facing templates) keep the separate intro only when no summaries or dialogue expanded from them are selected. The shared first archive only includes the intro when its entire known dialogue audience witnessed it; `intro_included: false` keeps the opening available separately to its own audience.
+
+Missing audiences on load use the first narrative message's explicit presence, otherwise the restored active roster. Explicit empty lists survive. This is a one-time load convention for saves predating the field, not historical reconstruction.
+
+### Character context review
+
+The Summarizer `context_review` WebSocket action accepts an optional active `character` and echoes `request_id`. The Conversation template and preview use `history_context` to resolve the same history audience and director-message settings. Standard previews reuse the history collectors; Perspectives previews obtain entry metadata from `project_character_history(entries=...)`, so labels do not introduce another selector.
+
+`knowledge.review` adds the existing fact, absence and analysis renderers plus author-facing exclusion diagnostics. The selectors report exclusions through `ContextDiagnostics`, including base archive and layer identities; counts cover all decisions while samples are capped at 20 per reason and 500 characters. Known facts use the shared bounded renderer, preserve false markers, and report budget cuts. Character previews derive their default budget from the Conversation client’s context window. Exclusions are separate from rendered character sections. Previewing never generates missing analysis or runs dynamic RAG retrieval, and history-budget overrides do not mutate agent settings. The existing Apply action remains scene-wide.
+
 ## Publish and select
 
 The reusable entry points live in `talemate.knowledge.perspectives`:
@@ -253,8 +267,9 @@ selects this projection in perception mode, independently of the legacy
 optional perspective filter. The converted conversation and editor templates
 explicitly request stored views. `before_message_id` is rejected with `ValueError`
 unless this gated, perspective-specific projection is selected; it never silently
-returns later history. Best-fit expansion, minimum-dialogue backfill, intro fallback and reader
-summaries cannot append raw prose to this actor path. The projection chooses fresh
+returns later history. Best-fit expansion, minimum-dialogue backfill and reader
+summaries cannot append raw prose to this actor path. The introduction enters only
+through its recorded audience view. The projection chooses fresh
 audience summaries for fully covered older spans, preferring coarser summaries
 that fit, and keeps the unsummarized tail as message views. Spans crossing a
 revision boundary are excluded. A span containing hidden messages or requested

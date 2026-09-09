@@ -474,6 +474,8 @@ class TestMemoryTopics:
 
     async def test_topic_first_adds_the_highest_scored_facts(self, topical, memory):
         topical.world_state.facts["F3"].restatements = 5
+        for identity, fact in topical.world_state.facts.items():
+            fact.text = f"Distinct fact {identity}"
         await memory.rebuild_topic_centroids(topical)
         memory.table = [
             doc("F1", "fact one", 0.2, typ="fact"),
@@ -492,13 +494,44 @@ class TestMemoryTopics:
             )
         # Repetition count alone does not make F3 fresher than F4.
         assert [item.id for item in result[:4]] == ["F4", "F3", "F2", "F1"]
-        assert all(str(item) == "(Recently) a" for item in result[:4])
+        assert [str(item) for item in result[:4]] == [
+            f"(Recently) Distinct fact {identity}"
+            for identity in ("F4", "F3", "F2", "F1")
+        ]
         assert "history" in result
         assert memory.get_document.call_args.args[0] == ["F4", "F3", "F2"]
+
+    async def test_topic_first_without_predecessors_keeps_the_cheap_bucket_path(
+        self, topical, memory
+    ):
+        await memory.rebuild_topic_centroids(topical)
+        memory.get_document = AsyncMock(
+            return_value={i: doc(i, "fact", typ="fact") for i in ("F2", "F3", "F4")}
+        )
+        with (
+            ActiveScene(topical),
+            patch.object(
+                memory, "embed_text", AsyncMock(return_value=np.array([1.0, 0.0]))
+            ),
+            patch(
+                "talemate.agents.memory.known_bucket",
+                side_effect=AssertionError("Unnecessary predecessor bucket build"),
+            ),
+            patch(
+                "talemate.knowledge.topics.known_bucket",
+                side_effect=AssertionError("Unnecessary supersession bucket build"),
+            ),
+        ):
+            result = await memory._topic_first(
+                "the Sorena", [], None, ranking_viewer="Bob"
+            )
+        assert [item.id for item in result] == ["F4", "F3", "F2"]
 
     async def test_topic_first_respects_the_filter_and_the_switch(
         self, topical, memory
     ):
+        for identity, fact in topical.world_state.facts.items():
+            fact.text = f"Distinct fact {identity}"
         await memory.rebuild_topic_centroids(topical)
         memory.table = [doc("e1", "history", 0.3)]
         docs = {i: doc(i, f"fact {i}", typ="fact") for i in ("F2", "F3", "F4")}
@@ -515,8 +548,8 @@ class TestMemoryTopics:
             )
             assert [item.id for item in result] == ["F4", "F3", "e1"]
             assert [str(item) for item in result] == [
-                "(Recently) a",
-                "(Recently) a",
+                "(Recently) Distinct fact F4",
+                "(Recently) Distinct fact F3",
                 "history",
             ]
             memory.actions["topics"].enabled = False

@@ -18,7 +18,7 @@ from talemate.client.context import (
 from talemate.prompts import Prompt
 from talemate.instance import get_agent
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.scene_message import CharacterMessage, DirectorMessage
+from talemate.scene_message import CharacterMessage
 from talemate.agents.utils import handle_empty_response_limit
 
 from talemate.agents.base import (
@@ -292,19 +292,7 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
         """
         Builds the prompt that drives the AI's conversational response
         """
-        # the amount of tokens we can use
-        # we subtract 200 to account for the response
-
         scene = character.actor.scene
-
-        total_token_budget = self.client.max_token_length - 200
-        scene_and_dialogue_budget = total_token_budget - 500
-
-        scene_and_dialogue = scene.context_history(
-            budget=scene_and_dialogue_budget,
-            keep_director=True,
-            sections=False,
-        )
 
         main_character = scene.main_character.character
 
@@ -324,11 +312,6 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
             )
         else:
             formatted_names = character_names[0] if character_names else ""
-
-        try:
-            director_message = isinstance(scene_and_dialogue[-1], DirectorMessage)
-        except IndexError:
-            director_message = False
 
         inject_instructions_emission = ConversationAgentEmission(
             agent=self,
@@ -351,8 +334,6 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
             vars={
                 "scene": scene,
                 "max_tokens": self.client.max_token_length,
-                "scene_and_dialogue_budget": scene_and_dialogue_budget,
-                "scene_and_dialogue": scene_and_dialogue,
                 "memory": None,  # DEPRECATED VARIABLE
                 "characters": list(scene.get_characters()),
                 "main_character": main_character,
@@ -361,7 +342,6 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
                 "knowledge_index": KnowledgeIndex.from_scene(scene),
                 "knowledge_viewer": self.rag_knowledge_viewer(character),
                 "partial_message": char_message,
-                "director_message": director_message,
                 "extra_instructions": self.generation_settings_task_instructions,  # backward compatibility
                 "task_instructions": self.generation_settings_task_instructions,
                 "actor_instructions": self.generation_settings_actor_instructions,

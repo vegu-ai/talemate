@@ -1,5 +1,17 @@
 <template>
   <div>
+    <div class="d-flex align-center ga-3 mb-4 px-2 pt-2">
+      <v-select
+        v-model="selectedCharacter"
+        :items="characterOptions"
+        label="View context for"
+        variant="outlined"
+        density="compact"
+        hide-details
+        style="max-width: 320px"
+      />
+      <v-btn variant="text" prepend-icon="mdi-refresh" :loading="loading" @click="fetchPreview">Refresh</v-btn>
+    </div>
     <div v-if="loading && !preview" class="text-center py-8">
       <v-progress-circular indeterminate color="primary" />
       <div class="text-body-small mt-2">Building context preview...</div>
@@ -27,7 +39,8 @@
 
     <template v-else>
       <v-card variant="text" class="text-body-small text-muted mb-4 px-2">
-        This is a preview of how the scene history will be rendered into context for AI prompts. Adjust the settings below to change how the context budget is distributed, then click Refresh to see the effect.
+        <template v-if="selectedCharacter">History follows {{ selectedCharacter }}'s Conversation settings. Knowledge sections show eligible facts and existing analysis. Refresh never generates analysis.</template>
+        <template v-else>This is a preview of how the scene history will be rendered into context for AI prompts. Adjust the settings below to change how the context budget is distributed, then click Refresh to see the effect.</template>
       </v-card>
 
       <v-row no-gutters>
@@ -36,8 +49,12 @@
         <v-col class="sidebar-col" style="flex: 0 0 320px; max-width: 320px;">
           <div class="sidebar-content pa-4">
             <v-chip v-if="preview" size="small" variant="tonal" label class="mb-4">
-              {{ preview.summary.total_tokens }} / {{ preview.budget.total }} tokens used
+              {{ preview.summary.history_tokens ?? preview.summary.total_tokens }} / {{ preview.budget.total }} history tokens
             </v-chip>
+            <v-chip v-if="preview.summary.knowledge_tokens" size="small" variant="tonal" label class="mb-4">{{ preview.summary.knowledge_tokens }} knowledge tokens</v-chip>
+            <div v-if="selectedCharacter && preview.knowledge_mode === 'perception'" class="note-block text-body-small mb-4">
+              Character perspectives uses stored views. Budget limits this history preview; the other history controls apply to Scene view.
+            </div>
 
             <!-- Best Fit Mode -->
             <div class="sidebar-field mb-4">
@@ -189,9 +206,24 @@
                 block
               >
                 Apply
-                <v-tooltip activator="parent" location="top">Apply settings to the summarization agent</v-tooltip>
+                <v-tooltip activator="parent" location="top">Apply history settings scene-wide, for every character</v-tooltip>
               </v-btn>
             </div>
+            <v-expansion-panels v-if="selectedCharacter" class="mt-4" :model-value="0" variant="accordion">
+              <v-expansion-panel>
+                <v-expansion-panel-title>Excluded ({{ preview.exclusion_total ?? preview.exclusions?.length ?? 0 }})</v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div v-for="(count, reason) in preview.exclusion_counts" :key="reason" class="text-body-small mb-1">{{ exclusionReason(reason) }}: {{ count }}</div>
+                  <div v-if="preview.exclusion_total > preview.exclusions?.length" class="text-body-small text-medium-emphasis mb-2">Showing up to 20 samples per reason; passage text is shortened.</div>
+                  <div v-if="!preview.exclusions?.length" class="text-body-small">No presence, audience or chronology exclusions.</div>
+                  <div v-for="item in preview.exclusions" :key="`${item.kind}:${item.id}:${item.layer}:${item.reason}`" class="exclusion-entry py-2">
+                    <v-chip size="x-small" color="warning" variant="tonal">{{ exclusionReason(item.reason) }}</v-chip>
+                    <div class="text-body-small text-medium-emphasis mt-1">{{ item.section }} · {{ item.id }}<template v-if="item.layer != null && item.kind === 'layer'"> · layer {{ item.layer }}</template></div>
+                    <div class="text-body-small exclusion-text">{{ item.text }}</div>
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
           </div>
         </v-col>
 
@@ -248,17 +280,26 @@
 
 <script>
 import { SceneTextParser } from '../utils/sceneMessageRenderer.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const SECTION_COLORS = {
   layer: '#B39DDB',
   archived: '#FF8A65',
   dialogue: '#4FC3F7',
+  intro: '#64B5F6',
+  disclosure: '#AED581',
+  knowledge: '#AED581',
+  analysis: '#80CBC4',
 };
 
 const SECTION_ICONS = {
   layer: 'mdi-layers',
   archived: 'mdi-archive-outline',
   dialogue: 'mdi-message-text-outline',
+  intro: 'mdi-book-open-page-variant',
+  disclosure: 'mdi-account-voice',
+  knowledge: 'mdi-lightbulb-outline',
+  analysis: 'mdi-head-lightbulb-outline',
 };
 
 export default {
@@ -273,6 +314,9 @@ export default {
       applying: false,
       error: null,
       preview: null,
+      selectedCharacter: null,
+      activeCharacters: [],
+      previewHandler: null,
       overrides: {
         dialogue_ratio: 50,
         summary_detail_ratio: 50,
@@ -287,6 +331,9 @@ export default {
     };
   },
   computed: {
+    characterOptions() {
+      return [{ title: 'Scene (default)', value: null }, ...this.activeCharacters.map(name => ({ title: name, value: name }))];
+    },
     nonEmptySections() {
       if (!this.preview) return [];
       return this.preview.sections.filter(s => s.entries.length > 0);
@@ -339,13 +386,21 @@ export default {
     },
   },
   watch: {
+    selectedCharacter() {
+      if (this.visible) {
+        this.preview = null;
+        this.fetchPreview();
+      }
+    },
     visible: {
       immediate: true,
       handler(val) {
         if (val) {
           this.fetchPreview();
         } else {
+          this.clearPreviewHandler();
           this.preview = null;
+          this.selectedCharacter = null;
           this.error = null;
           this.overridesInitialized = false;
           this.savedValues = null;
@@ -353,14 +408,25 @@ export default {
       },
     },
   },
+  beforeUnmount() {
+    this.clearPreviewHandler();
+  },
   methods: {
+    clearPreviewHandler() {
+      if (this.previewHandler) this.unregisterMessageHandler(this.previewHandler);
+      this.previewHandler = null;
+    },
     fetchPreview() {
+      this.clearPreviewHandler();
       this.loading = true;
       this.error = null;
+      const requestId = uuidv4();
 
       const handler = (data) => {
+        if (data.request_id !== requestId) return;
         if (data.type === 'summarizer' && data.action === 'context_review') {
           this.preview = data.data;
+          this.activeCharacters = data.data.characters || [];
           if (!this.overridesInitialized) {
             this.overrides.dialogue_ratio = data.data.summary.dialogue_ratio ?? this.overrides.dialogue_ratio;
             this.overrides.summary_detail_ratio = data.data.summary.summary_detail_ratio ?? this.overrides.summary_detail_ratio;
@@ -373,19 +439,22 @@ export default {
             this.overridesInitialized = true;
           }
           this.loading = false;
-          this.unregisterMessageHandler(handler);
+          this.clearPreviewHandler();
         } else if (data.type === 'summarizer' && data.action === 'operation_done' && data.error) {
           this.error = data.error.message || 'Failed to load context review';
           this.loading = false;
-          this.unregisterMessageHandler(handler);
+          this.clearPreviewHandler();
         }
       };
 
+      this.previewHandler = handler;
       this.registerMessageHandler(handler);
 
       const message = {
         type: 'summarizer',
         action: 'context_review',
+        character: this.selectedCharacter,
+        request_id: requestId,
       };
 
       if (this.overridesInitialized) {
@@ -398,7 +467,7 @@ export default {
       } else {
         this.error = 'WebSocket not connected';
         this.loading = false;
-        this.unregisterMessageHandler(handler);
+        this.clearPreviewHandler();
       }
     },
 
@@ -421,6 +490,10 @@ export default {
 
     sectionColor(section) {
       return SECTION_COLORS[section.type] || '#9E9E9E';
+    },
+
+    exclusionReason(reason) {
+      return { budget: 'Over token budget', absent: 'Absent', not_in_audience: 'Not in audience', chronology_floor: 'Below chronology floor', superseded: 'Superseded', hidden: 'Hidden', blocked: 'Blocked', pending: 'Perspective pending', failed: 'Perspective failed', omitted: 'View omitted' }[reason] || reason;
     },
 
     sectionIcon(section) {
@@ -450,6 +523,9 @@ export default {
   border-bottom: 1px solid rgba(var(--v-theme-primary), 0.05);
   padding-bottom: 12px;
 }
+
+.exclusion-entry + .exclusion-entry { border-top: 1px solid rgba(var(--v-theme-primary), 0.1); }
+.exclusion-text { white-space: normal; overflow-wrap: anywhere; }
 
 .note-block {
   padding: 4px 8px;

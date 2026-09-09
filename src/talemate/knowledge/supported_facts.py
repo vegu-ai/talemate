@@ -84,7 +84,7 @@ def character_fact(scene, fact, character, *, read=None, cache=None):
     return aggregate_fact(fact, contributions).model_copy(update={"false": False})
 
 
-def previous_audience_facts(scene, audience, limit=30):
+def previous_audience_facts(scene, audience, limit=30, *, prompt=True):
     read = PerspectiveReadContext(scene)
     result = []
     cache = {}
@@ -105,7 +105,9 @@ def previous_audience_facts(scene, audience, limit=30):
                         }
                     )
                 )
-    return ranked_facts(scene, result, limit=limit, tiers=False)
+    return ranked_facts(
+        scene, result, limit=limit, tiers=False, superseders=result, prompt=prompt
+    )
 
 
 def extraction_text(scene, source, character, *, read=None):
@@ -182,7 +184,9 @@ def contributions_for_source(scene, source, audience, parsed):
         extraction_text(scene, source, audience[0], read=read).split()
     )
     acquired = learning_acquisition(scene, view.source, audience[0], read=read)
-    allowed_previous = {fact.id for fact in previous_audience_facts(scene, audience)}
+    allowed_previous = {
+        fact.id for fact in previous_audience_facts(scene, audience, prompt=False)
+    }
     result = []
     for item in parsed:
         text = " ".join(item.text.split())

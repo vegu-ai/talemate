@@ -161,7 +161,7 @@ async def test_overrides_do_not_mutate_scene_settings(review_scene):
     assert summ.actions["manage_scene_history"].model_dump() == before
 
 
-def add_fact(
+async def add_fact(
     scene, identity, text, *, audience=("Alice", "Bob"), age=0, supersedes=None
 ):
     fact = Fact(
@@ -185,7 +185,7 @@ def add_fact(
             [{"audience": audience, "status": "ready", "text": text}],
         )
         source = source_reference(scene, "message", message.id)
-        fact.contributions = contributions_for_source(
+        fact.contributions = await contributions_for_source(
             scene,
             source,
             audience,
@@ -203,10 +203,10 @@ def add_fact(
 @pytest.mark.asyncio
 async def test_fact_audience_chronology_and_supersession_exclusions(review_scene):
     scene = review_scene
-    add_fact(scene, "F1", "A private fact.", audience=("Alice",))
-    add_fact(scene, "F2", "A stale routine fact.", age=500)
-    add_fact(scene, "F3", "The sextant was in the drawer.")
-    add_fact(scene, "F4", "The sextant is in the bag.", supersedes="F3")
+    await add_fact(scene, "F1", "A private fact.", audience=("Alice",))
+    await add_fact(scene, "F2", "A stale routine fact.", age=500)
+    await add_fact(scene, "F3", "The sextant was in the drawer.")
+    await add_fact(scene, "F4", "The sextant is in the bag.", supersedes="F3")
     preview = await character_context_review(scene, scene.character_data["Bob"])
     excluded = {
         item["id"]: item["reason"]
@@ -377,7 +377,7 @@ async def test_preview_includes_all_eligible_facts_and_marks_false_and_budget(
 ):
     scene = review_scene
     for index in range(30):
-        add_fact(scene, f"F{index}", f"The sextant record {index} is known.")
+        await add_fact(scene, f"F{index}", f"The sextant record {index} is known.")
     scene.world_state.facts["F0"].false = True
     preview = await character_context_review(
         scene,
@@ -475,7 +475,9 @@ async def test_character_preview_uses_client_window_and_bounds_exclusion_samples
         type(conversation.client), "max_token_length", property(lambda self: 2048)
     )
     for i in range(45):
-        add_fact(scene, f"F{i}", "A long private fact. " * 100, audience=("Alice",))
+        await add_fact(
+            scene, f"F{i}", "A long private fact. " * 100, audience=("Alice",)
+        )
     preview = await character_context_review(
         scene, scene.character_data["Bob"], ContextHistoryPreviewOverrides(max_budget=0)
     )

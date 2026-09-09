@@ -1027,6 +1027,14 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             return set()
         vecs_a = np.asarray([vectors[i] for i in rows], dtype=float)
         vecs_b = np.asarray([anchors[i] for i in cols], dtype=float)
+        norms_a = np.linalg.norm(vecs_a, axis=1, keepdims=True)
+        norms_b = np.linalg.norm(vecs_b, axis=1, keepdims=True)
+        vecs_a = np.divide(
+            vecs_a, norms_a, out=np.zeros_like(vecs_a), where=norms_a != 0
+        )
+        vecs_b = np.divide(
+            vecs_b, norms_b, out=np.zeros_like(vecs_b), where=norms_b != 0
+        )
         a_squared = np.sum(vecs_a**2, axis=1).reshape(-1, 1)
         b_squared = np.sum(vecs_b**2, axis=1).reshape(1, -1)
         distances = np.sqrt(
@@ -1454,26 +1462,19 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
     def embedding_function(self) -> Callable:
         raise NotImplementedError()
 
+    async def embed_texts(self, texts: list[str]) -> np.ndarray:
+        vectors = np.asarray(
+            await asyncio.to_thread(self.embedding_function, texts), dtype=float
+        )
+        norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+        return np.divide(vectors, norms, out=np.zeros_like(vectors), where=norms != 0)
+
     async def compare_strings(self, string1: str, string2: str) -> dict:
-        """
-        Compare two strings using the current embedding function without touching the database.
-
-        Returns a dictionary with 'cosine_similarity' and 'euclidean_distance'.
-        """
-
-        embed_fn = self.embedding_function
-
-        # Embed the two strings
-        vec1 = np.array(embed_fn([string1])[0])
-        vec2 = np.array(embed_fn([string2])[0])
-
-        # Compute cosine similarity
-        cosine_sim = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-
-        # Compute Euclidean distance
-        euclidean_dist = np.linalg.norm(vec1 - vec2)
-
-        return {"cosine_similarity": cosine_sim, "euclidean_distance": euclidean_dist}
+        vec1, vec2 = await self.embed_texts([string1, string2])
+        return {
+            "cosine_similarity": np.dot(vec1, vec2),
+            "euclidean_distance": np.linalg.norm(vec1 - vec2),
+        }
 
     async def compare_string_lists(
         self,
@@ -1491,15 +1492,6 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             - 'similarity_matches': list of (i, j, score) (filtered if threshold set, otherwise all)
             - 'distance_matches': list of (i, j, distance) (filtered if threshold set, otherwise all)
         """
-        if (
-            not self.db
-            or not hasattr(self.db, "_embedding_function")
-            or self.db._embedding_function is None
-        ):
-            raise RuntimeError(
-                "Embedding function is not initialized. Make sure the database is set."
-            )
-
         if not list_a or not list_b:
             return {
                 "cosine_similarity_matrix": np.array([]),
@@ -1508,28 +1500,17 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 "distance_matches": [],
             }
 
-        embed_fn = self.db._embedding_function
-
-        # Batch embed all strings
-        embeddings_a = embed_fn(list_a)
-        embeddings_b = embed_fn(list_b)
-
-        vecs_a = np.array(embeddings_a)  # shape: (len(list_a), embedding_dim)
-        vecs_b = np.array(embeddings_b)  # shape: (len(list_b), embedding_dim)
-
-        # Normalize for cosine similarity
-        vecs_a_norm = vecs_a / np.linalg.norm(vecs_a, axis=1, keepdims=True)
-        vecs_b_norm = vecs_b / np.linalg.norm(vecs_b, axis=1, keepdims=True)
-
-        # Cosine similarity matrix
-        cosine_similarity_matrix = np.dot(vecs_a_norm, vecs_b_norm.T)
-
-        # Euclidean distance matrix
-        a_squared = np.sum(vecs_a**2, axis=1).reshape(-1, 1)
-        b_squared = np.sum(vecs_b**2, axis=1).reshape(1, -1)
-        euclidean_distance_matrix = np.sqrt(
-            a_squared + b_squared - 2 * np.dot(vecs_a, vecs_b.T)
+        texts = list(dict.fromkeys((*list_a, *list_b)))
+        vectors = dict(zip(texts, await self.embed_texts(texts)))
+        vecs_a = np.array([vectors[text] for text in list_a])
+        vecs_b = np.array([vectors[text] for text in list_b])
+        cosine_similarity_matrix = np.dot(vecs_a, vecs_b.T)
+        squared = (
+            np.sum(vecs_a**2, axis=1)[:, None]
+            + np.sum(vecs_b**2, axis=1)[None, :]
+            - 2 * cosine_similarity_matrix
         )
+        euclidean_distance_matrix = np.sqrt(np.maximum(squared, 0))
 
         # Prepare matches
         similarity_matches = []

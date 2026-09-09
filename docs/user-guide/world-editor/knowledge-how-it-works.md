@@ -86,11 +86,19 @@ flowchart TD
 
 **What the character remembers.** Only what they have evidence for: their views, summaries and disclosures, the entries they may know, and the facts drawn from their views. A memory search cannot grant more.
 
+**Shared facts.** Characters present for a passage can share facts extracted from it when their own views cite the supporting moment. If Alice's extraction records a public interaction that Bob's extraction missed, Bob can receive it as **Inferred from shared evidence**. A present subject gets the fact when their own view cites the span; otherwise not. Being named or mentioned through an alias does not override a missing citation. Pending, failed and omitted views cannot receive the fact this way.
+
+The existing analysis marks fully perceived spans, and each extracted fact can cite one. During extraction, the embedding service compares the fact with all spans in its source, including every message feeding a chapter summary. A better match only blocks the citation when that competing span is outside the audience's perceived set. The model can therefore choose a public span containing pronouns even when another public span scores higher. Sharing requires the recipient to cite the chosen span and to have perceived every higher-scoring competitor; a private competitor in another source message can veto the transfer. Spans are never widened, and sharing adds no prose comparison, tolerance setting or generation request. This check does not prove that the model preserved every qualification. Similar-fact matching uses **Fact matching tolerance**, and a recipient who already holds a close phrasing of the same moment does not receive another row. Evidence is offered as short excerpts within the model's context budget.
+
+In a character's **Knowledge** pane, unknown fact rows explain why: **Citation not supported** when a higher-scoring span outside the audience’s view vetoed a citation, **No contribution from [name]'s view**, **Not in their view** when a citation is missing, **Not present**, **View pending or failed**, **View being rebuilt** when evidence is stale, or **Private moment** for an explicitly omitted view. The topic count uses the same known facts as these rows.
+
+Views saved without evidence references need their perceptions regenerated before rebuilding facts can share them. Existing scenes are not automatically reanalyzed on load or fact rebuild; each old view stays excluded from reconciliation until you regenerate it. No evidence is guessed from the old prose.
+
 **Retired here:** Track learning from dialogue, Establish facts from dialogue, Remind about unknown facts, Topic knowledge overview and Match known facts. Block rules cannot be created. **Refine memories with AI** stays.
 
 ??? note "Details"
     - The request carries what each character already knows from the previous passages and their disclosures, so a view never invents an observation to justify knowledge.
-    - When a chapter is summarized, each character gets a summary from their own views, once their views of the chapter are complete. Characters with identical views share one request. Facts from such a summary belong to those characters, and linked facts work as in Standard mode.
+    - When a chapter is summarized, each character gets a summary from their own views, once their views of the chapter are complete. Characters with identical views share one request. Facts belong to the extracting audience and can reach other present characters through shared evidence from the same passage; presence elsewhere in the chapter is not enough. Linked facts work as in Standard mode.
     - With **Extract facts** on, a disclosure also becomes searchable facts.
 
 ## What a character's reply is built from

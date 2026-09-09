@@ -36,6 +36,7 @@ def answer(alice="Alice says hello.", bob="Bob hears Alice say hello."):
                     "audience": [name],
                     "knowledge_ids": [],
                     "passage_ids": [],
+                    "evidence_spans": [],
                     "status": "ready" if text else "omitted",
                     "text": text,
                 }
@@ -52,6 +53,7 @@ def result(text=None):
         for view in data.get("views", []):
             view.setdefault("knowledge_ids", [])
             view.setdefault("passage_ids", [])
+            view.setdefault("evidence_spans", [])
         text = json.dumps(data)
     except (ValueError, AttributeError):
         pass
@@ -818,6 +820,7 @@ async def test_relevant_cast_and_scaled_answer_budget(setup):
                         "text": "The passage.",
                         "knowledge_ids": [],
                         "passage_ids": [],
+                        "evidence_spans": [],
                     }
                     for name in names
                 ]
@@ -937,6 +940,7 @@ async def test_cited_history_has_bounded_rebuild_and_one_index_per_scan(
                     "text": "An observation.",
                     "knowledge_ids": [known[-1]["id"]] if known else [],
                     "passage_ids": [],
+                    "evidence_spans": [],
                 }
             )
         return result(json.dumps({"views": views}))

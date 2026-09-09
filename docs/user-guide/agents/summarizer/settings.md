@@ -53,7 +53,7 @@ Save individual facts alongside summaries for character knowledge. **Leave on to
 
 Treat sufficiently similar facts as repeats instead of saving them again (default 0.15). **Raise to merge more similar facts; lower to keep more distinctions.** A repeat increases the stored fact's repeat counter.
 
-This is the maximum distance allowed between facts as measured by the embedding model. Zero is the strictest value, not an off switch. In Standard mode, the Memory agent's [Match known facts](/talemate/user-guide/agents/memory/settings/#match-known-facts) also uses this tolerance when checking retold information.
+This is the maximum distance allowed between normalized fact embeddings. Zero is the strictest value, not an off switch. In Standard mode, the Memory agent's [Match known facts](/talemate/user-guide/agents/memory/settings/#match-known-facts) also uses this tolerance when checking retold information. In Perspectives mode it also merges similar facts extracted by different audiences from the same moment.
 
 ## Fact chronology
 

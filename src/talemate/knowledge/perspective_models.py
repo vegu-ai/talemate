@@ -89,18 +89,40 @@ class PassageProvenance(KnowledgeRecord):
     revision: int | None = Field(default=None, ge=1, strict=True)
 
 
+class PassageEvidence(KnowledgeRecord):
+    message_id: int = Field(ge=1, strict=True)
+    revision: int = Field(ge=1, strict=True)
+    span: int = Field(ge=0, strict=True)
+
+    @property
+    def id(self):
+        return f"M{self.message_id}R{self.revision}S{self.span}"
+
+
 class PerspectiveOutput(AudienceRecord):
     id: str | None = Field(default=None, min_length=1)
     status: Literal["ready", "pending", "failed", "omitted"]
     text: StrictStr | None = None
     sources: tuple[SourceReference, ...] = ()
     passage_provenance: tuple[PassageProvenance, ...] = ()
+    evidence_spans: tuple[StrictInt, ...] | None = None
+
+    @field_validator("evidence_spans")
+    @classmethod
+    def valid_evidence_spans(cls, value):
+        if value is not None and (
+            any(index < 0 for index in value) or len(set(value)) != len(value)
+        ):
+            raise ValueError("Evidence spans must be unique nonnegative indexes")
+        return value
 
     @model_serializer(mode="wrap")
     def serialize_provenance(self, handler):
         data = handler(self)
         if not self.passage_provenance:
             data.pop("passage_provenance", None)
+        if self.evidence_spans is None:
+            data.pop("evidence_spans", None)
         return data
 
     @field_validator("id")
@@ -119,6 +141,8 @@ class PerspectiveOutput(AudienceRecord):
                 )
         elif self.text is not None:
             raise ValueError("Only a ready perspective may carry text")
+        if self.status != "ready" and self.evidence_spans:
+            raise ValueError("Only a ready perspective may carry evidence")
         return self
 
 
@@ -128,7 +152,12 @@ class PerspectiveView(PerspectiveOutput):
 
     def invalidated(self) -> "PerspectiveView":
         return self.model_copy(
-            update={"revision": self.revision + 1, "status": "pending", "text": None}
+            update={
+                "revision": self.revision + 1,
+                "status": "pending",
+                "text": None,
+                "evidence_spans": (),
+            }
         )
 
 

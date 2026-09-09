@@ -6,6 +6,7 @@ from talemate.instance import get_agent
 from talemate.knowledge.chronology import ranked_facts
 from talemate.knowledge.formatting import format_message_view
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.evidence import view_evidence
 from talemate.knowledge.perspective_models import SourceReference
 from talemate.knowledge.perspectives import (
     PerspectiveReadContext,
@@ -29,6 +30,8 @@ def source_visible(source, character, *, read, cache):
 
 
 def supported_contributions(scene, fact, character=None, *, read=None, cache=None):
+    from talemate.knowledge.fact_reconciliation import inference_supported
+
     read = read or PerspectiveReadContext(scene)
     result = []
     coverage = {} if cache is None else cache
@@ -39,6 +42,7 @@ def supported_contributions(scene, fact, character=None, *, read=None, cache=Non
             for name in names
             if name in contribution.audience
             and name in scene.character_data
+            and inference_supported(scene, contribution, name, read=read)
             and source_visible(contribution.source, name, read=read, cache=coverage)
             and select_character_view(
                 scene, contribution.source, name, read=read
@@ -51,7 +55,10 @@ def supported_contributions(scene, fact, character=None, *, read=None, cache=Non
 
 
 def aggregate_fact(fact, contributions):
-    ordered = sorted(contributions, key=lambda item: item.acquired.order)
+    ordered = sorted(
+        contributions,
+        key=lambda item: (item.acquired.order, item.inferred_from is not None),
+    )
     first, last = ordered[0], ordered[-1]
     return fact.model_copy(
         update={
@@ -65,7 +72,14 @@ def aggregate_fact(fact, contributions):
             ),
             "present": sorted({name for item in ordered for name in item.audience}),
             "known_by": {},
-            "supersedes": last.supersedes,
+            "supersedes": next(
+                (
+                    item.supersedes
+                    for item in reversed(ordered)
+                    if item.inferred_from is None
+                ),
+                last.supersedes,
+            ),
             "restatements": len(ordered) - 1,
             "contributions": tuple(ordered),
         }
@@ -168,7 +182,12 @@ def learning_acquisition(scene, source, character, *, read, cache=None):
     return acquired
 
 
-def contributions_for_source(scene, source, audience, parsed):
+async def contributions_for_source(
+    scene, source, audience, parsed, *, comparisons=None
+):
+    from talemate.knowledge.fact_comparisons import FactComparisons
+
+    comparisons = comparisons or FactComparisons(scene, [(source, audience, parsed)])
     read = PerspectiveReadContext(scene)
     views = [select_character_view(scene, source, name, read=read) for name in audience]
     if views and not parsed and all(view.status == "omitted" for view in views):
@@ -188,8 +207,33 @@ def contributions_for_source(scene, source, audience, parsed):
         fact.id for fact in previous_audience_facts(scene, audience, prompt=False)
     }
     result = []
+    evidence = {
+        item.id: item for item in view_evidence(scene, source, audience[0], read=read)
+    }
     for item in parsed:
+        if item.evidence_id is not None and item.evidence_id not in evidence:
+            log.warning(
+                "dropping unsupported fact evidence",
+                source_id=source.id,
+                evidence_id=item.evidence_id,
+            )
         text = " ".join(item.text.split())
+        cited = evidence.get(item.evidence_id)
+        competitors = (
+            await comparisons.outranking(text, cited, source, audience[0])
+            if cited is not None
+            else ()
+        )
+        citation_rejected = cited is not None and (
+            competitors is None or not set(competitors).issubset(evidence.values())
+        )
+        if citation_rejected:
+            log.warning(
+                "citation not supported",
+                source_id=source.id,
+                evidence_id=item.evidence_id,
+            )
+            cited = None
         time_scope = " ".join(item.time_scope.split()) if item.time_scope else None
         if time_scope and (time_scope not in text or time_scope not in input_text):
             log.debug("dropping unsupported fact time scope", source_id=source.id)
@@ -202,6 +246,9 @@ def contributions_for_source(scene, source, audience, parsed):
                 text=text,
                 importance=item.importance,
                 subjects=tuple(sorted(set(item.subjects))),
+                evidence=cited,
+                citation_rejected=citation_rejected,
+                evidence_competitors=competitors or (),
                 time_scope=time_scope,
                 supersedes=item.supersedes
                 if item.supersedes in allowed_previous
@@ -332,18 +379,89 @@ async def replace_source_facts(
     if not character_knowledge_enabled(scene):
         raise ValueError("Source-supported facts require perception mode")
     batches = list(batches)
+    snapshot = {
+        key: fact.model_copy(deep=True) for key, fact in scene.world_state.facts.items()
+    }
+    from talemate.knowledge.fact_comparisons import FactComparisons
+
+    comparisons = FactComparisons(scene, batches)
     replacements = []
     sources = set()
     for source, audience, parsed in batches:
-        replacements.extend(contributions_for_source(scene, source, audience, parsed))
+        replacements.extend(
+            await contributions_for_source(
+                scene, source, audience, parsed, comparisons=comparisons
+            )
+        )
         selected = select_character_view(scene, source, audience[0])
         sources.add((selected.source.key, selected.source.view_id))
-    facts, touched, counter = _replace_contributions(
-        scene.world_state.facts, sources, replacements, scene.world_state.fact_counter
+    from talemate.knowledge.fact_reconciliation import (
+        without_inferences,
+        reconcile_facts,
+    )
+
+    source_keys = {source.key for source, _, _ in batches}
+    facts, touched, _ = _replace_contributions(
+        without_inferences(scene.world_state.facts, source_keys),
+        sources,
+        replacements,
+        scene.world_state.fact_counter,
+    )
+    facts, aliases = await reconcile_facts(
+        scene, facts, source_keys, comparisons=comparisons
+    )
+    if (
+        scene.world_state.facts != snapshot
+        or get_agent("summarizer").scene is not scene
+    ):
+        raise ValueError("Stored facts changed during reconciliation")
+    if aliases:
+        for identity, fact in list(facts.items()):
+            facts[identity] = fact.model_copy(
+                update={
+                    "supersedes": aliases.get(fact.supersedes, fact.supersedes),
+                    "contributions": tuple(
+                        item.model_copy(
+                            update={
+                                "supersedes": aliases.get(
+                                    item.supersedes, item.supersedes
+                                ),
+                            }
+                        )
+                        for item in fact.contributions
+                    ),
+                }
+            )
+        for topic in scene.world_state.topics.values():
+            topic.fact_ids = list(
+                dict.fromkeys(
+                    aliases.get(identity, identity) for identity in topic.fact_ids
+                )
+            )
+    touched.update(sanitize_fact_links(facts, snapshot))
+    for identity in facts.keys() & snapshot.keys():
+        if facts[identity].supersedes == snapshot[identity].supersedes and frozenset(
+            facts[identity].contributions
+        ) == frozenset(snapshot[identity].contributions):
+            facts[identity] = snapshot[identity]
+    touched.update(
+        key
+        for key in snapshot.keys() | facts.keys()
+        if snapshot.get(key) != facts.get(key)
     )
     removed = scene.world_state.facts.keys() - facts.keys()
     scene.world_state.facts = facts
-    scene.world_state.fact_counter = counter
+    scene.world_state.fact_counter = max(
+        scene.world_state.fact_counter,
+        max(
+            (
+                int(identity[1:])
+                for identity in facts
+                if identity.startswith("F") and identity[1:].isdigit()
+            ),
+            default=0,
+        ),
+    )
     scene.world_state.knowledge = [
         edge for edge in scene.world_state.knowledge if edge.target not in removed
     ]
@@ -355,19 +473,28 @@ async def replace_source_facts(
 
 def prune_contributions(world_state, references):
     references = tuple(references)
-    sources = {
-        item.identity
-        for fact in world_state.facts.values()
-        for item in fact.contributions
-        if any(
-            item.source.key == reference.key
-            and (reference.view_id is None or item.source.view_id == reference.view_id)
-            for reference in references
+    facts = dict(world_state.facts)
+    touched = set()
+    for identity, fact in world_state.facts.items():
+        kept = tuple(
+            item
+            for item in fact.contributions
+            if not any(
+                support.key == reference.key
+                and (reference.view_id is None or support.view_id == reference.view_id)
+                for support in (item.source, item.inferred_from)
+                if support is not None
+                for reference in references
+            )
         )
-    }
-    facts, touched, _ = _replace_contributions(
-        world_state.facts, sources, (), world_state.fact_counter
-    )
+        if kept == fact.contributions:
+            continue
+        touched.add(identity)
+        if kept:
+            facts[identity] = aggregate_fact(fact, kept)
+        else:
+            del facts[identity]
+    touched.update(sanitize_fact_links(facts, world_state.facts))
     world_state.facts = facts
     return touched
 
@@ -379,8 +506,12 @@ def retain_current_contributions(scene, references):
     touched = set()
     for identity, fact in list(scene.world_state.facts.items()):
         if not any(
-            item.source.key == reference.key
-            and (reference.view_id is None or item.source.view_id == reference.view_id)
+            any(
+                support.key == reference.key
+                and (reference.view_id is None or support.view_id == reference.view_id)
+                for support in (item.source, item.inferred_from)
+                if support is not None
+            )
             for item in fact.contributions
             for reference in references
         ):

@@ -490,6 +490,15 @@ def set_source_perspectives(
     read = PerspectiveReadContext(scene)
     for output in parsed:
         _validate_audience(scene, output.audience)
+        if output.evidence_spans:
+            from talemate.knowledge.evidence import passage_spans
+
+            if kind != "message" or max(output.evidence_spans) >= len(
+                passage_spans(source.text)
+            ):
+                raise ValueError(
+                    "Evidence must reference an offered span of this message"
+                )
         if not _passages_fresh(scene, output.passage_provenance, read):
             raise ValueError("Analytical passage provenance is stale or unresolved")
         for dependency in output.sources:

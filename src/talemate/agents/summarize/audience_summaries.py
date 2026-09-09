@@ -7,6 +7,7 @@ import structlog
 from talemate.context import handle_generation_cancelled
 from talemate.exceptions import GenerationCancelled
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.evidence import extraction_evidence
 from talemate.knowledge.perspective_models import PerspectiveOutput
 from talemate.knowledge.perspectives import (
     PerspectiveReadContext,
@@ -235,6 +236,11 @@ class AudienceSummaryMixin:
                         audience=audience,
                         skip_author_hooks=True,
                         return_facts=self.archive_extract_facts,
+                        fact_evidence=extraction_evidence(
+                            scene, summary_input.sources, audience
+                        )
+                        if self.archive_extract_facts
+                        else None,
                     )
                     if self.archive_extract_facts:
                         result, parsed_facts = result

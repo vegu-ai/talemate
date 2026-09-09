@@ -757,6 +757,7 @@ class SummarizeAgent(
         return_facts: bool = False,
         audience: tuple[str, ...] | None = None,
         skip_author_hooks: bool = False,
+        fact_evidence: list[dict] | None = None,
     ):
         """
         Summarize the given text
@@ -778,6 +779,7 @@ class SummarizeAgent(
         template_vars = {
             "dialogue": text,
             "audience_summary": audience,
+            "fact_evidence": fact_evidence or [],
             "scene": self.scene,
             "max_tokens": self.client.max_token_length,
             "summarization_method": (self.archive_method if method is None else method),
@@ -815,6 +817,31 @@ class SummarizeAgent(
             ).send(emission)
 
         template_vars["dynamic_instructions"] = emission.dynamic_instructions
+
+        from talemate.knowledge.evidence import budget_evidence
+
+        template_vars["fact_evidence"] = (
+            budget_evidence(
+                fact_evidence or [],
+                self.client.max_token_length,
+                util.count_tokens(
+                    "\n".join(
+                        str(template_vars[key])
+                        for key in (
+                            "dialogue",
+                            "extra_context",
+                            "extra_instructions",
+                            "agent_instructions",
+                            "previous_facts",
+                            "dynamic_instructions",
+                        )
+                    )
+                ),
+                response_length,
+            )
+            if extract_facts
+            else ""
+        )
 
         response, extracted = await Prompt.request(
             "summarizer.summarize-dialogue",

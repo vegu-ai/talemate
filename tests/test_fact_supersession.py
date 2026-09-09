@@ -40,7 +40,7 @@ def fact_scene(scene, request, monkeypatch):
     return scene
 
 
-def record(scene, identity, text, audience=("Mara", "Bob"), supersedes=None):
+async def record(scene, identity, text, audience=("Mara", "Bob"), supersedes=None):
     fact = Fact(
         id=identity,
         text=text,
@@ -53,7 +53,7 @@ def record(scene, identity, text, audience=("Mara", "Bob"), supersedes=None):
     if scene.knowledge_eligibility == "perception":
         disclosure = add_disclosure(scene, text, audience)
         reference = source_reference(scene, "disclosure", disclosure.id)
-        fact.contributions = contributions_for_source(
+        fact.contributions = await contributions_for_source(
             scene,
             reference,
             audience,
@@ -64,9 +64,9 @@ def record(scene, identity, text, audience=("Mara", "Bob"), supersedes=None):
     return fact
 
 
-def pair(scene, audience=("Mara", "Bob")):
-    old = record(scene, "F1", "Mara keeps the sextant in the drawer.")
-    new = record(
+async def pair(scene, audience=("Mara", "Bob")):
+    old = await record(scene, "F1", "Mara keeps the sextant in the drawer.")
+    new = await record(
         scene,
         "F2",
         "Mara moved the sextant to her bag.",
@@ -76,8 +76,9 @@ def pair(scene, audience=("Mara", "Bob")):
     return old, new
 
 
-def test_sextant_pair_is_one_prompt_fact_and_access_is_unchanged(fact_scene):
-    old, new = pair(fact_scene)
+@pytest.mark.asyncio
+async def test_sextant_pair_is_one_prompt_fact_and_access_is_unchanged(fact_scene):
+    old, new = await pair(fact_scene)
     before = fact_scene.world_state.model_dump()
     selected = facts_about(fact_scene, "sextant", character="Mara")
     assert [fact.id for fact in selected] == [new.id]
@@ -93,9 +94,10 @@ def test_sextant_pair_is_one_prompt_fact_and_access_is_unchanged(fact_scene):
     assert "formerly" not in selected[0].model_dump()
 
 
-def test_chain_keeps_only_latest_and_one_predecessor(fact_scene):
-    old, middle = pair(fact_scene)
-    latest = record(
+@pytest.mark.asyncio
+async def test_chain_keeps_only_latest_and_one_predecessor(fact_scene):
+    old, middle = await pair(fact_scene)
+    latest = await record(
         fact_scene, "F3", "Mara gave the sextant to the captain.", supersedes=middle.id
     )
     selected = facts_about(fact_scene, "sextant", character="Mara")
@@ -106,8 +108,9 @@ def test_chain_keeps_only_latest_and_one_predecessor(fact_scene):
     assert line.count("formerly:") == 1
 
 
-def test_viewer_keeps_old_fact_until_they_know_successor(fact_scene):
-    old, new = pair(fact_scene, audience=("Mara",))
+@pytest.mark.asyncio
+async def test_viewer_keeps_old_fact_until_they_know_successor(fact_scene):
+    old, new = await pair(fact_scene, audience=("Mara",))
     assert [
         fact.id for fact in facts_about(fact_scene, "sextant", character="Mara")
     ] == [new.id]
@@ -117,13 +120,17 @@ def test_viewer_keeps_old_fact_until_they_know_successor(fact_scene):
     assert "formerly:" not in render_fact(fact_scene, bob[0])
 
 
-def test_successor_outside_query_still_suppresses_old_without_injecting_it(fact_scene):
-    old, _ = pair(fact_scene)
+@pytest.mark.asyncio
+async def test_successor_outside_query_still_suppresses_old_without_injecting_it(
+    fact_scene,
+):
+    old, _ = await pair(fact_scene)
     assert ranked_facts(fact_scene, [old], character="Mara") == []
 
 
-def test_formerly_setting_changes_rendering_only(fact_scene):
-    old, new = pair(fact_scene)
+@pytest.mark.asyncio
+async def test_formerly_setting_changes_rendering_only(fact_scene):
+    old, new = await pair(fact_scene)
     get_agent("summarizer").actions["fact_chronology"].config[
         "show_formerly"
     ].value = False
@@ -134,7 +141,7 @@ def test_formerly_setting_changes_rendering_only(fact_scene):
 
 @pytest.mark.asyncio
 async def test_known_fact_inspection_keeps_both_records(fact_scene):
-    old, new = pair(fact_scene)
+    old, new = await pair(fact_scene)
     prompts, total = known_facts(fact_scene, "Mara")
     assert [fact.id for fact in prompts] == [new.id]
     assert total == 2
@@ -151,7 +158,7 @@ async def test_standard_analysis_absence_and_ledger_candidates(scene, monkeypatc
     }
     scene.active_characters = []
     scene.ts = 10 * DAY
-    old, new = pair(scene, audience=("Mara",))
+    old, new = await pair(scene, audience=("Mara",))
     request = AsyncMock(side_effect=AssertionError("Unexpected generation"))
     monkeypatch.setattr(Prompt, "request", request)
     with ActiveScene(scene):
@@ -183,8 +190,9 @@ def test_formerly_setting_invalidates_standard_analysis(scene):
     )
 
 
-def test_memory_selection_respects_viewer_and_preserves_raw_text(fact_scene):
-    old, new = pair(fact_scene, audience=("Mara",))
+@pytest.mark.asyncio
+async def test_memory_selection_respects_viewer_and_preserves_raw_text(fact_scene):
+    old, new = await pair(fact_scene, audience=("Mara",))
     docs = [
         MemoryDocument(fact.text, {"typ": "fact"}, fact.id, fact.text)
         for fact in (old, new)
@@ -202,7 +210,7 @@ async def test_formerly_survives_memory_merge_rerank_and_cache(fact_scene, monke
     from types import SimpleNamespace
 
     scene = fact_scene
-    old, new = pair(scene)
+    old, new = await pair(scene)
     memory = get_agent("memory")
     documents = [
         MemoryDocument(f.text, {"typ": "fact"}, f.id, f.text) for f in (old, new)
@@ -248,7 +256,7 @@ async def test_standard_rag_cache_hit_and_miss_keep_bobs_only_version(
     scene.character_data = {name: Character(name=name) for name in ("Mara", "Bob")}
     scene.active_characters = []
     scene.ts = 10 * DAY
-    old, new = pair(scene, audience=("Mara",))
+    old, new = await pair(scene, audience=("Mara",))
     scene.rag_cache = {}
     scene.history = [
         NarratorMessage(
@@ -293,7 +301,7 @@ async def test_relationship_node_uses_one_viewer_for_facts_and_text(fact_scene):
     from _node_test_helpers import run_node
     from talemate.game.engine.nodes.knowledge import RelationshipTimeline
 
-    old, new = pair(fact_scene, audience=("Mara",))
+    old, new = await pair(fact_scene, audience=("Mara",))
     output = await run_node(
         RelationshipTimeline(),
         scene=fact_scene,
@@ -304,11 +312,12 @@ async def test_relationship_node_uses_one_viewer_for_facts_and_text(fact_scene):
     assert new.text not in output["text"]
 
 
-def test_rankers_reuse_the_bucket_they_already_built(fact_scene, monkeypatch):
+@pytest.mark.asyncio
+async def test_rankers_reuse_the_bucket_they_already_built(fact_scene, monkeypatch):
     from unittest.mock import Mock
     from talemate.knowledge import topics, graph
 
-    old, new = pair(fact_scene)
+    old, new = await pair(fact_scene)
     known = Mock(wraps=topics.known_bucket)
     monkeypatch.setattr(topics, "known_bucket", known)
     topics.known_facts(fact_scene, "Bob")
@@ -341,13 +350,15 @@ async def test_standard_topic_first_preserves_formerly_through_rerank_and_cache(
     scene.character_data = {name: Character(name=name) for name in ("Mara", "Bob")}
     scene.active_characters = []
     scene.ts = 10 * DAY
-    old = record(
+    old = await record(
         scene,
         "F1",
         "Mara keeps the sextant in the drawer.",
         audience=("Mara", "Bob") if predecessor_known else ("Mara",),
     )
-    new = record(scene, "F2", "Mara moved the sextant to her bag.", supersedes=old.id)
+    new = await record(
+        scene, "F2", "Mara moved the sextant to her bag.", supersedes=old.id
+    )
     scene.world_state.topics["T1"] = Topic(
         id="T1", name="sextant", fact_ids=[old.id, new.id]
     )

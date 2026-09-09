@@ -27,6 +27,7 @@ def response(names=("Alice", "Bob")):
                 "text": f"{name} hears a bell.",
                 "knowledge_ids": [],
                 "passage_ids": [],
+                "evidence_spans": [],
             }
             for name in names
         ]
@@ -79,7 +80,7 @@ def test_unknown_audiences_duplicates_and_host_fields_keep_first_valid_views():
     }
 
 
-@pytest.mark.parametrize("field", ["passage_ids", "knowledge_ids"])
+@pytest.mark.parametrize("field", ["passage_ids", "knowledge_ids", "evidence_spans"])
 @pytest.mark.parametrize(
     "citations", [None, "13", {}, [True], [13.0], [None], [{}], [[]], "absent"]
 )
@@ -237,14 +238,19 @@ async def test_mixed_citations_resolve_only_audiences_offered_sources(analysis):
     dialog.assert_not_awaited()
 
 
+@pytest.mark.parametrize("missing", ["audience", "evidence_spans"])
 async def test_repair_requests_only_missing_audience_and_preserves_valid_prose(
     analysis,
+    missing,
 ):
     scene, summarizer, request, dialog = analysis
     assert summarizer.resolve_config("perceptions", "automatic_repair") is True
     repaired = response()
     repaired["views"][0]["text"] = "Unwanted replacement."
-    request.side_effect = [result(response(("Alice",))), result(repaired)]
+    broken = response(("Alice",)) if missing == "audience" else response()
+    if missing == "evidence_spans":
+        broken["views"][1].pop("evidence_spans")
+    request.side_effect = [result(broken), result(repaired)]
     message = NarratorMessage(message="A bell rings.")
     await scene.push_history(message)
     assert request.await_count == 2

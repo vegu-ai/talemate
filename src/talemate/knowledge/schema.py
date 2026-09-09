@@ -7,6 +7,7 @@ from talemate.knowledge.perspective_models import (
     Acquisition,
     SourceReference,
     AudienceRecord,
+    PassageEvidence,
 )
 
 __all__ = [
@@ -81,6 +82,7 @@ class ParsedFact(pydantic.BaseModel):
     known_by: list[str] = pydantic.Field(default_factory=list)
     supersedes: str | None = None
     time_scope: str | None = None
+    evidence_id: pydantic.StrictStr | None = None
 
     @pydantic.model_serializer(mode="wrap")
     def serialize_time_scope(self, handler):
@@ -136,6 +138,7 @@ class TopicFact(pydantic.BaseModel):
     source_id: str | None = None
     ts: int | None = None
     time: str = "Time unknown"
+    reason: str | None = None
 
 
 class TopicCoverage(pydantic.BaseModel):
@@ -159,6 +162,10 @@ class FactContribution(AudienceRecord):
     subjects: tuple[str, ...] = ()
     time_scope: str | None = None
     supersedes: str | None = None
+    evidence: PassageEvidence | None = None
+    inferred_from: SourceReference | None = None
+    citation_rejected: bool = False
+    evidence_competitors: tuple[PassageEvidence, ...] = ()
 
     @pydantic.model_validator(mode="after")
     def concrete_view(self):
@@ -167,6 +174,15 @@ class FactContribution(AudienceRecord):
         ):
             raise ValueError(
                 "Fact contributions require a specific source view revision"
+            )
+        if self.inferred_from is not None and (
+            self.evidence is None
+            or self.inferred_from.view_id is None
+            or self.inferred_from.view_revision is None
+            or self.inferred_from.key != self.source.key
+        ):
+            raise ValueError(
+                "Inferred contributions require evidence and a donor view of the same source"
             )
         return self
 
@@ -177,7 +193,12 @@ class FactContribution(AudienceRecord):
     @property
     def equivalence_key(self):
         # A calendar date is a qualifier, not an occurrence identity.
-        return self.text, tuple(sorted(self.subjects)), self.source.key, self.time_scope
+        return (
+            self.text,
+            tuple(sorted(self.subjects)),
+            self.source.key,
+            self.time_scope,
+        )
 
 
 class Fact(pydantic.BaseModel):

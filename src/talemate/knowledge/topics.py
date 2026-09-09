@@ -25,6 +25,7 @@ from talemate.knowledge.schema import (
     TopicFact,
 )
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.perspectives import PerspectiveReadContext
 from talemate.knowledge.chronology import ranked_facts, fact_time, prompt_fact_text
 
 if TYPE_CHECKING:
@@ -291,6 +292,9 @@ def topic_facts(
     character: str,
     topic_id: str,
     known: list[tuple[Fact, KnownKind]] | None = None,
+    *,
+    read: PerspectiveReadContext | None = None,
+    cache: dict | None = None,
 ) -> list[TopicFact]:
     """
     Every fact of one topic for the character: the ones they know, as the
@@ -298,6 +302,8 @@ def topic_facts(
     do not, in topic order. `known` is the character's bucket when the caller
     already holds it.
     """
+    from talemate.knowledge.fact_reconciliation import fact_knowledge_reason
+
     topic = scene.world_state.topics.get(topic_id)
     if topic is None:
         return []
@@ -306,6 +312,9 @@ def topic_facts(
     views = {fact.id: (fact, kind) for fact, kind in known}
     facts = scene.world_state.facts
     rows = []
+    if character_knowledge_enabled(scene) and read is None:
+        read = PerspectiveReadContext(scene)
+    cache = {} if cache is None else cache
     for fact_id in topic.fact_ids:
         canonical = facts.get(fact_id)
         if canonical is None:
@@ -321,6 +330,11 @@ def topic_facts(
                 source_id=view.archive_id,
                 ts=view.ts,
                 time=fact_time(scene, view),
+                reason=fact_knowledge_reason(
+                    scene, canonical, character, read=read, cache=cache
+                )
+                if character_knowledge_enabled(scene)
+                else None,
             )
         )
     return rows
@@ -331,8 +345,12 @@ def topics_facts(
 ) -> dict[str, list[TopicFact]]:
     """The rows of several topics from one bucket pass."""
     known = _known(scene, character)
+    read = PerspectiveReadContext(scene) if character_knowledge_enabled(scene) else None
+    cache = {}
     return {
-        topic_id: topic_facts(scene, character, topic_id, known=known)
+        topic_id: topic_facts(
+            scene, character, topic_id, known=known, read=read, cache=cache
+        )
         for topic_id in topic_ids
     }
 

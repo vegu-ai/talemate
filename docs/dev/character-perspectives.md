@@ -163,14 +163,16 @@ complete replacement view per character, or an explicit omission. Validation
 keeps the first valid view for each requested canonical audience. Unrequested
 audiences, extra fields and model-supplied identities/references are ignored.
 Invalid views leave their audience missing; they do not discard valid siblings.
-The response includes explicit `knowledge_ids` and `passage_ids` arrays per audience,
-naming only the supplied inputs actually used; empty arrays mean none. The host
+The response includes explicit `knowledge_ids`, `passage_ids`, and `evidence_spans`
+arrays per audience. The first two name supplied prior inputs actually used;
+`evidence_spans` names fully perceived sentence/line spans of the current passage.
+An explicit empty array means no citations in that category. The host
 drops unknown or cross-audience knowledge IDs with audience/ID warnings and
 resolves offered IDs to its own references. Unknown physical citations are also
 dropped with warnings. Current-passage citations are silently ignored because
 the host records that passage exactly once. Missing or malformed citation arrays and
 wrongly typed IDs invalidate that view and require repair, with audience/field
-warnings. Only explicit empty arrays mean no dependencies. Merely appearing in
+warnings. Only explicit empty prior-input arrays mean no dependencies. Merely appearing in
 the 12-passage context window does not establish a dependency. The shared code-block extractor accepts bare structured JSON, fenced
 JSON with surrounding prose, uppercase language tags and open fences before
 validating each requested view independently. Persistence models remain strict. Complete JSON and JSON inside a fence are decoded before fence
@@ -481,8 +483,13 @@ keeps its existing behavior.
 
 `Fact.contributions` is a tuple of immutable `FactContribution` records in
 `talemate.knowledge.schema`. Each stores the exact source/view revision, audience,
-acquisition order/time, extracted text, subjects, optional event `time_scope`, and
-an optional accessible `supersedes` ID. A summary contribution uses the latest
+acquisition order/time, extracted text, subjects, optional event `time_scope`,
+an optional accessible `supersedes` ID, optional `evidence` (message ID, revision,
+span index), optional `inferred_from` (the donor's concrete source/view revision),
+`citation_rejected` (a failed extraction-time citation check), and
+`evidence_competitors` (references to spans scoring higher than the citation).
+An unknown extraction `evidence_id` drops with a warning; the fact remains local
+with `evidence=None`. A summary contribution uses the latest
 ready input acquisition as its conservative span-end learning bound, not the time
 archiving happened. Creating an old archive later cannot reorder it after a newer
 disclosure. Facts within the same span share that bound; event-time distinctions
@@ -505,8 +512,9 @@ names without rewriting historical prose. Reset, Reset Scene State with history
 wiping, and progress-reset exports discard the source-derived index as well as its
 sources, retaining authored facts. Progress-retaining saves/exports preserve both.
 
-The new path combines only exact whitespace-normalized text and identical subject
-sets and time qualifiers from the same source. Equivalent views of that source can
+The exact path combines whitespace-normalized text and identical subject sets and
+time qualifiers from the same source, regardless of which span each extraction cites.
+Equivalent views of that source can
 combine; different sources stay separate even with the same explicit ISO date or
 timestamp. A calendar date identifies neither an occurrence nor a shared event.
 The prompt example requests `time_scope` with a null case and omits model-assigned
@@ -515,12 +523,62 @@ input; an unsupported normalized date drops only the optional scope (with a debu
 log), preserving the fact and its source-local identity.
 Acquisition time is not event time;
 "holds the key" versus "held the key", attributed claims versus observations, and
-uncertainty qualifiers remain separate. Embeddings do not authorize a merge;
-this conservative implementation does not need candidate search for its exact
-lookup. Uncertain semantic matches remain separate with no verification LLM call.
+uncertainty qualifiers must remain in the extracted text. The existing embedding
+matcher also compares same-source, same-span candidates with compatible time scopes
+and supersession links. Subject lists need not be identical: after matching text,
+nonempty lists must intersect after casefolded alias expansion with `aliases_for`.
+Merges retain each audience's wording and evidence; an audience already represented
+by the merge does not also receive an inferred contribution. Before any transfer,
+a recipient's contribution from the same source and span within **Fact matching
+tolerance** also prevents a duplicate row, even when the pair could not merge.
+
+`contributions_for_source` scores each fact against the original sentence/line
+spans of every dependency message returned by `message_views` for its donor view.
+This includes the full input of a summary, not just the message containing the
+citation. Spans are never widened to include neighbouring text. The per-message
+cache keeps one embedding batch and one score vector per fact text/message revision;
+all embedding batches run in `asyncio.to_thread`. Normalized vectors and cached
+pairwise distances also serve deduplication.
+
+The model's choice within an audience's offered set is accepted. Only a span
+outside that set with a strictly higher cosine score vetoes the citation; ties do
+not. There is no support tolerance. Extraction records the higher-scoring span
+references in `evidence_competitors`. If any lies outside the extracting audience's
+own offered set, the citation is logged as `citation not supported`, with
+`evidence=None` and `citation_rejected=True`; the fact remains local.
+
+A recipient needs a ready view citing the original span and every retained
+competitor. A competitor outside their offered set blocks transfer with the same
+log and **Citation not supported** reason. This allows pronoun-bearing public spans
+to cite their original wording even when another public span scores higher, while
+a better-matching private span in any donor dependency vetoes sharing. No recipient
+prose is embedded and no score is recomputed for transfer or later reads.
+
+The recipient must not be explicitly absent; `present=None` is unknown and does
+not cut. Subjects and aliases cannot bypass the citation or competitor checks.
+Inference records the donor revision and is invalidated when its supporting views
+change; publication rechecks sources after embedding calls. The general memory
+comparison methods and stored-vector **Match known facts** all measure Euclidean
+distance on normalized vectors, independent of raw embedding magnitudes.
+
+Extraction offers IDs with excerpts of at most 160 characters. The evidence block
+uses at most one eighth of the client's context limit, further reduced by input
+tokens, the requested response, and 2048 tokens reserved for prompt instructions.
+No evidence list is built when fact extraction is off. Views saved without
+`evidence_spans` remain usable for their existing audience but cannot reconcile
+until explicitly regenerated. Loading or rebuilding facts does not automatically
+reanalyze those views. Explicit empty arrays remain serialized so they are distinct
+from the absent field on old saves.
+
+Fact rows distinguish **Citation not supported** (an extraction or recipient competitor veto),
+**Not in their view** (no citation), **Not present**,
+**View being rebuilt** (stale evidence), **View pending or failed**, and
+**Private moment** (an explicit omission). Pending status takes priority. Multi-topic
+queries share a source read context and coverage cache for these reasons.
+
 The shared contract intentionally adds no belief engine or confidence score:
-structural checks and exact matching cannot prove the model preserved every
-semantic qualification. The extraction prompt forbids invented events and requires
+structural checks and relative span ranking cannot prove the model preserved every
+semantic qualification or reject an invented fact absent from all passage spans. The extraction prompt forbids invented events and requires
 attribution, uncertainty and established beliefs to survive; live evaluation and
 regression tests exercise those requirements without claiming a semantic guarantee.
 

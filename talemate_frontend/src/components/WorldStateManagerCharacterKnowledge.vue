@@ -112,7 +112,7 @@
                                     </template>
                                     <div class="text-body-medium"><span class="text-medium-emphasis fact-time mr-1">({{ fact.time || 'Time unknown' }})</span>{{ fact.text }}</div>
                                     <div class="text-body-small text-medium-emphasis">
-                                        <span>{{ fact.known ? howLabel(fact.how) : `${character.name} does not know this` }}</span>
+                                        <span>{{ fact.reason || (fact.known ? howLabel(fact.how) : `${character.name} does not know this`) }}</span>
                                         <span class="ml-2">via {{ fact.source_id ? `${fact.source} ${fact.source_id}` : fact.source }}</span>
                                     </div>
                                 </v-list-item>

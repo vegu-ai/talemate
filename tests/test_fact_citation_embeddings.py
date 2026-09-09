@@ -1,0 +1,174 @@
+import asyncio
+import threading
+from pathlib import Path
+from types import MethodType
+from unittest.mock import AsyncMock, Mock
+
+import numpy as np
+import pytest
+
+import test_supported_facts
+from test_fact_evidence import evidence_message
+from talemate.agents.memory import MemoryAgent
+from talemate.knowledge.fact_reconciliation import fact_knowledge_reason
+from talemate.knowledge.graph import bucket
+from talemate.knowledge.schema import ParsedFact
+from talemate.knowledge.supported_facts import replace_source_facts
+
+supported_scene = test_supported_facts.supported_scene
+
+
+def real_comparisons(memory, embed, monkeypatch):
+    monkeypatch.setattr(
+        type(memory), "embedding_function", property(lambda self: embed)
+    )
+    for name in ("embed_texts", "compare_strings", "compare_string_lists"):
+        monkeypatch.setattr(
+            memory, name, MethodType(getattr(MemoryAgent, name), memory)
+        )
+
+
+@pytest.mark.asyncio
+async def test_comparisons_normalize_and_batch_off_the_event_loop(
+    supported_scene, monkeypatch
+):
+    _, _, memory = supported_scene
+    loop_thread = threading.get_ident()
+    calls = []
+
+    def embed(texts):
+        assert threading.get_ident() != loop_thread
+        calls.append(texts)
+        return [
+            {"a": [3, 0], "b": [0, 7], "c": [19, 0], "zero": [0, 0]}[text]
+            for text in texts
+        ]
+
+    real_comparisons(memory, embed, monkeypatch)
+    assert (await memory.compare_strings("a", "c"))["euclidean_distance"] == 0
+    result = await memory.compare_string_lists(
+        ["a", "b"], ["b", "c"], distance_threshold=0.15
+    )
+    assert calls == [["a", "c"], ["a", "b", "c"]]
+    assert {(i, j) for i, j, _ in result["distance_matches"]} == {(0, 1), (1, 0)}
+    assert result["euclidean_distance_matrix"][0, 0] == pytest.approx(2**0.5)
+    assert np.isfinite(await memory.embed_texts(["zero"])).all()
+
+
+@pytest.mark.asyncio
+async def test_300_message_rebuild_embeds_once_per_passage(
+    supported_scene, monkeypatch
+):
+    scene, summarizer, memory = supported_scene
+    for _ in range(300):
+        evidence_message(scene)
+    loop_thread = threading.get_ident()
+    calls = []
+    facts = [f"Public fact {i}." for i in range(12)]
+    vectors = {
+        "Alice rings the bell.": [1, 0],
+        "Bob privately fears the signal.": [0, 1],
+        **{text: [1, i / 100] for i, text in enumerate(facts)},
+    }
+
+    def embed(texts):
+        assert threading.get_ident() != loop_thread
+        calls.append(texts)
+        return [vectors[text] for text in texts]
+
+    async def summarize(text, *, fact_evidence, **kwargs):
+        return text, [
+            ParsedFact(text=fact, evidence_id=fact_evidence[0]["id"]) for fact in facts
+        ]
+
+    real_comparisons(memory, embed, monkeypatch)
+    monkeypatch.setattr(summarizer, "summarize", AsyncMock(side_effect=summarize))
+    monkeypatch.setattr(summarizer, "flush_fact_memory", AsyncMock(return_value=True))
+    ticks = 0
+
+    async def heartbeat():
+        nonlocal ticks
+        while True:
+            ticks += 1
+            await asyncio.sleep(0)
+
+    task = asyncio.create_task(heartbeat())
+    try:
+        assert await summarizer.rebuild_supported_facts(scene) == "ok"
+    finally:
+        task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+    assert len(calls) == 300
+    assert all(set(batch) == set(vectors) for batch in calls)
+    assert summarizer.summarize.await_count == 600
+    assert len(scene.world_state.facts) == 3600
+    assert ticks >= 300
+
+
+@pytest.fixture(scope="module")
+def minilm():
+    snapshots = (
+        Path.home()
+        / ".cache/huggingface/hub/models--sentence-transformers--all-MiniLM-L6-v2/snapshots"
+    )
+    models = list(snapshots.glob("*"))
+    if not models:
+        pytest.skip("Real embedding regression requires cached all-MiniLM-L6-v2")
+    from sentence_transformers import SentenceTransformer
+
+    model = SentenceTransformer(str(models[0]), device="cpu", local_files_only=True)
+    return lambda texts: model.encode(texts, convert_to_numpy=True)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "text,span,shared",
+    [
+        ("The bell was rung by Alice.", 0, True),
+        ("Bob plans to betray Alice.", 0, False),
+        ("Bob privately fears the signal.", 0, False),
+        ("Bob privately fears the signal.", 1, False),
+    ],
+)
+async def test_real_embeddings_rank_citations_and_preserve_private_subjects(
+    supported_scene, monkeypatch, minilm, text, span, shared
+):
+    from structlog.testing import capture_logs
+
+    scene, _, memory = supported_scene
+    private = (
+        "Bob plans to betray Alice."
+        if "betray" in text
+        else "Bob privately fears the signal."
+    )
+    _, source = evidence_message(scene, private=private)
+    embed = Mock(side_effect=minilm)
+    real_comparisons(memory, embed, monkeypatch)
+    with capture_logs() as logs:
+        await replace_source_facts(
+            scene,
+            [
+                (
+                    source,
+                    ("Bob",),
+                    [
+                        ParsedFact(
+                            text=text,
+                            evidence_id=f"M{source.id}R1S{span}",
+                            subjects=["ALICE", "Robert"],
+                        )
+                    ],
+                )
+            ],
+        )
+    assert bool(bucket(scene, "Alice")) is shared
+    assert len(bucket(scene, "Bob")) == 1
+    assert embed.call_count == 1
+    fact = next(iter(scene.world_state.facts.values()))
+    rejected = not shared and span == 0
+    assert not fact.contributions[0].citation_rejected
+    if rejected:
+        assert fact.contributions[0].evidence_competitors
+        assert fact.contributions[0].evidence is not None
+        assert fact_knowledge_reason(scene, fact, "Alice") == "Citation not supported"
+        assert any(entry["event"] == "citation not supported" for entry in logs)

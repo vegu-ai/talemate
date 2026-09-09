@@ -136,7 +136,8 @@ def test_explicit_empty_audience_beats_history_and_roster(intro_scene):
     assert json.loads(scene.json)["intro_present"] == []
 
 
-def test_deterministic_intro_supports_analysis_memory_and_facts(intro_scene):
+@pytest.mark.asyncio
+async def test_deterministic_intro_supports_analysis_memory_and_facts(intro_scene):
     scene = intro_scene
     scene.knowledge_eligibility = "perception"
     scene.set_intro(INTRO)
@@ -162,12 +163,12 @@ def test_deterministic_intro_supports_analysis_memory_and_facts(intro_scene):
     assert cast["Alice"]["established_knowledge"][0]["text"] == INTRO
     assert cast["Bob"]["established_knowledge"] == []
     parsed = [ParsedFact(text="A ruby is beneath the sundial.")]
-    contributions = contributions_for_source(
+    contributions = await contributions_for_source(
         scene, reference, ("Alice", "Player"), parsed
     )
     assert contributions[0].audience == ("Alice", "Player")
     with pytest.raises(ValueError, match="current source"):
-        contributions_for_source(scene, reference, ("Bob",), parsed)
+        await contributions_for_source(scene, reference, ("Bob",), parsed)
 
 
 def test_intro_edit_invalidates_old_evidence_and_stamps_new_audience(intro_scene):

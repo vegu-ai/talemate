@@ -10,20 +10,25 @@
             <v-tooltip
                 v-if="overrideKey"
                 location="top"
-                :text="reasoningOverrideActive
-                    ? `Reasoning is forced off for ${overrideLabel}. Click to remove the override.`
-                    : `Force reasoning off whenever ${overrideLabel} runs (clients that always reason will ignore it).`"
+                :text="settingsDirty()
+                    ? 'Save or discard your changes in Settings first — overrides are applied immediately, and a later save of the settings page would overwrite them.'
+                    : (reasoningOverrideActive
+                        ? `Reasoning is forced off for ${overrideLabel}. Click to remove the override.`
+                        : `Force reasoning off whenever ${overrideLabel} runs (clients that always reason will ignore it).`)"
             >
                 <template v-slot:activator="{ props }">
-                    <v-btn
-                        v-bind="props"
-                        size="x-small"
-                        variant="text"
-                        class="mr-1"
-                        icon="mdi-brain"
-                        :color="reasoningOverrideActive ? 'delete' : 'muted'"
-                        @click="toggleReasoningOverride"
-                    />
+                    <span v-bind="props" tabindex="-1" @focusin="props.onFocus" @focusout="props.onBlur">
+                        <v-btn
+                            size="x-small"
+                            :variant="reasoningOverrideActive ? 'tonal' : 'text'"
+                            class="mr-1 text-none"
+                            prepend-icon="mdi-brain"
+                            :color="reasoningOverrideActive ? 'delete' : 'muted'"
+                            :disabled="settingsDirty()"
+                            data-testid="prompt-reasoning-override"
+                            @click="toggleReasoningOverride"
+                        >{{ reasoningOverrideActive ? `Reasoning: off for ${overrideLabel}` : 'Reasoning: client default' }}</v-btn>
+                    </span>
                 </template>
             </v-tooltip>
             <v-chip class="mr-1" size="small" color="muted" label variant="tonal">
@@ -306,6 +311,9 @@ export default {
     inject: [
         "getWebsocket",
         'registerMessageHandler',
+        // the settings page's unsaved-edits state: this button writes the
+        // applied config, which a later save of that page would overwrite
+        'settingsDirty',
     ],
     methods: {
         parameterType(name) {

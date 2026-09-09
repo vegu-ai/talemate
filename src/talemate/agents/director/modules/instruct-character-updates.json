@@ -349,7 +349,7 @@
       "id": "5849479f-a26b-44b2-8f96-107ba935a798",
       "properties": {
         "name": "remove_attribute",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true
       },
       "x": 4702,
       "y": 1699,
@@ -1785,7 +1785,7 @@
       "id": "f67f6775-0cc4-4554-b93d-df8e24e03832",
       "properties": {
         "name": "add_attribute",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true
       },
       "x": 4700,
       "y": 1350,
@@ -1816,7 +1816,7 @@
       "id": "09602a83-b16d-4d14-87e6-5d976cecab07",
       "properties": {
         "name": "add_attribute",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true
       },
       "x": 4700,
       "y": 1520,
@@ -1862,7 +1862,7 @@
       "id": "1941a582-79cf-4521-b3e6-15b7f4df1b72",
       "properties": {
         "name": "set_description",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true
       },
       "x": 4683,
       "y": 2079,
@@ -2128,7 +2128,7 @@
       "id": "59fae325-d3d6-408a-bbc6-6f6720b926f1",
       "properties": {
         "name": "set_description",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": true
       },
       "x": 4680,
       "y": 1900,

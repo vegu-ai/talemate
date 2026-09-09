@@ -203,6 +203,21 @@
           <v-alert icon="mdi-brain" density="compact" class="text-medium-emphasis" variant="text">
             Configuration to deal with reasoning models.
           </v-alert>
+          <v-alert density="compact" variant="tonal" color="primary" icon="mdi-tune" class="mb-2">
+            <div class="d-flex align-center flex-wrap ga-2">
+              <span class="text-body-small">Reasoning can also be turned off per agent action, whichever client runs it.</span>
+              <v-spacer></v-spacer>
+              <v-tooltip location="top" text="Open the agent action overrides">
+                <template #activator="{ props }">
+                  <v-btn v-bind="props" size="small" variant="tonal" color="primary" prepend-icon="mdi-tune" class="text-none"
+                    data-testid="client-reasoning-overrides-door" @click="openAgentActionOverrides()">
+                    Agent action overrides
+                    <v-chip v-if="overrideCount > 0" size="x-small" label color="primary" variant="flat" class="ml-1">{{ overrideCount }}</v-chip>
+                  </v-btn>
+                </template>
+              </v-tooltip>
+            </div>
+          </v-alert>
           <v-row>
             <v-col cols="12">
               <v-checkbox v-model="values.reason_enabled" label="Enable Reasoning" hide-details :disabled="reasonLocked"></v-checkbox>
@@ -323,6 +338,7 @@
 <script>
 
 import { conditionMet } from '@/utils/uxConditions';
+import { countOverrides } from '@/utils/agentActionOverrides';
 import { TOKEN_GRADUATIONS } from '@/utils/clientPresets';
 import { contextLengthWarning } from '@/constants/modelExpectations';
 import AppConfigPresetsSystemPrompts from './AppConfigPresetsSystemPrompts.vue';
@@ -386,7 +402,7 @@ export default {
     },
   },
   emits: ['rename'],
-  inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'navigateToLLMTemplates'],
+  inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'navigateToLLMTemplates', 'openAgentActionOverrides'],
   data() {
     return {
       openPanels: ['general'],
@@ -475,6 +491,9 @@ export default {
     },
     reasonLocked() {
       return this.status ? !!this.status.data?.reason_locked : false;
+    },
+    overrideCount() {
+      return countOverrides(this.config?.agent_actions?.overrides);
     },
     minReasonTokens() {
       return this.status?.data?.min_reason_tokens || 0;

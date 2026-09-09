@@ -6,6 +6,7 @@ import shutil
 from typing import Literal, get_args
 
 from talemate import VERSION
+from talemate.agents import observed_actions
 from talemate.changelog import delete_changelog_files, scene_ref_from_path
 from talemate.client.model_prompts import model_prompt, PromptSpec
 from talemate.client.registry import CLIENT_CLASSES
@@ -568,6 +569,15 @@ class ConfigPlugin(Plugin):
                 "type": "config",
                 "action": "client_types",
                 "data": clients,
+            }
+        )
+
+    async def handle_request_agent_actions(self, data):
+        self.websocket_handler.queue_put(
+            {
+                "type": "config",
+                "action": "agent_actions",
+                "data": {"actions": observed_actions.snapshot()},
             }
         )
 

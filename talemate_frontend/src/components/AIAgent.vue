@@ -2,7 +2,7 @@
     <v-list-subheader class="text-uppercase">
         <v-icon>mdi-transit-connection-variant</v-icon>
         Agents
-        <v-tooltip v-if="overrideCount > 0" location="top" :text="`${overrideCount} per-action override${overrideCount === 1 ? '' : 's'} active — manage`">
+        <v-tooltip location="top" text="Manage agent action overrides — per-action settings such as turning reasoning off">
             <template #activator="{ props }">
                 <v-btn
                     v-bind="props"
@@ -11,8 +11,12 @@
                     variant="tonal"
                     color="primary"
                     prepend-icon="mdi-tune"
-                    class="ml-2"
-                >{{ overrideCount }}</v-btn>
+                    class="ml-2 text-none"
+                    data-testid="agent-action-overrides-door"
+                >
+                    Agent action overrides
+                    <v-chip v-if="overrideCount > 0" size="x-small" label color="primary" variant="flat" class="ml-1">{{ overrideCount }}</v-chip>
+                </v-btn>
             </template>
         </v-tooltip>
     </v-list-subheader>
@@ -142,6 +146,7 @@
 
 <script>
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
+import { countOverrides } from '@/utils/agentActionOverrides';
 import { effortMode, effortPatch } from '@/utils/knowledgeEffort';
 import { perspectivesEnabled } from '@/utils/sceneSettings';
 import AgentMessages from './AgentMessages.vue';
@@ -187,7 +192,7 @@ export default {
     },
     computed: {
         overrideCount() {
-            return Object.keys(this.appConfig?.agent_actions?.overrides || {}).length;
+            return countOverrides(this.appConfig?.agent_actions?.overrides);
         },
         agentStateNotifications() {
             // if key begins with 'notify__' and value is a string, return the key and value

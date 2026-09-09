@@ -510,9 +510,10 @@
     reset countdown and generation cancellation, and distinguishes this client-side cap from HTTP 429 Auto Retry handling.
 - path: user-guide/clients/reasoning.md
   title: Reasoning Model Support
-  summary: 'Reasoning support: token budgets, strip/validation patterns, gpt-oss/gemma-4/think presets, Fail/Ignore and retries,
-    Reason Prefill and coercion behavior. Per-action brain-icon overrides disable reasoning from Prompt Manager or Debug Tools,
-    with a management dialog, model limitations and Test Changes exceptions.'
+  summary: Covers enabling reasoning, token budgets, strip and validation patterns, gpt-oss/gemma-4/think presets, missing-pattern
+    behavior, Fail/Ignore and retries, Reason Prefill, coercion and model compatibility. Also explains per-action overrides
+    from Prompt Manager or Debug Tools, the management dialog's observed actions, client support states and four entry points,
+    model limitations and Test Changes exceptions.
 - path: user-guide/clients/recommended-models.md
   title: Recommended Local Models
   summary: Guidance for choosing local models, with an external benchmark in place of a maintained recommendation list. Advises
@@ -605,9 +606,10 @@
     connection failures.
 - path: user-guide/debug-tools.md
   title: Debug Tools
-  summary: Debug Tools inspect prompt logs, memory retrieval and game-state variables, with full scene-state editing. Pin
-    labeled variables to Debug Vars or scene toolbar knobs, configure sliders/dropdowns/order/read-only limits, edit JSON,
-    and disable reasoning for individual agent actions.
+  summary: 'The bug-icon Debug Tools panel covers Prompts, Memory and Vars: inspect sent prompts and disable reasoning per
+    action, watch memory retrieval, and edit game-state variables or the full scene-state JSON. Pin labeled paths independently
+    to Debug Vars or scene toolbar knobs, with descriptions, order, read-only controls, number bounds and sliders, string choices,
+    type-matched controls, path subtitles and three routes to the Game State editor.'
 - path: user-guide/howto/create-a-new-scene/create-empty-scene.md
   title: Create an empty scene
   summary: Create New Story from Home, name it and optionally choose writing style, director persona, default-off Character

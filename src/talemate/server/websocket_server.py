@@ -484,6 +484,15 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             }
         )
 
+    def handle_agent_actions_observed(self, emission: Emission):
+        self.queue_put(
+            {
+                "type": "config",
+                "action": "agent_actions",
+                "data": emission.data,
+            }
+        )
+
     def handle_clear_screen(self, emission: Emission):
         self.queue_put(
             {

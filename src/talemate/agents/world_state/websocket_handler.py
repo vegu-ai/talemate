@@ -4,7 +4,7 @@ from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.scene_message import ContextInvestigationMessage
 from talemate.server.websocket_plugin import Plugin
-from talemate.status import set_loading
+from talemate.status import LoadingLabel, set_loading
 
 from talemate.agents.world_state.snapshot import (
     SNAPSHOT_ENTITY_SELECTION_MAX,
@@ -35,6 +35,18 @@ class ExamineEntityPayload(pydantic.BaseModel):
 class AddSnapshotEntityPayload(pydantic.BaseModel):
     message_id: int
     text: str
+
+
+def _summarize_and_pin_label(handler, data: dict) -> LoadingLabel:
+    return LoadingLabel(
+        "Summarizing {} messages and pinning",
+        SummarizeAndPinPayload(**data).num_messages,
+    )
+
+
+def _examine_label(handler, data: dict) -> LoadingLabel | str:
+    entity = ExamineEntityPayload(**data).entity_name
+    return LoadingLabel("Examining {}", entity) if entity else "Examining"
 
 
 class WorldStateWebsocketHandler(Plugin):
@@ -99,7 +111,7 @@ class WorldStateWebsocketHandler(Plugin):
         self.agent.cancel_world_state_update()
         await self.signal_operation_done(allow_auto_save=False)
 
-    @set_loading("Summarizing and pinning", cancellable=True, as_async=True)
+    @set_loading(_summarize_and_pin_label, cancellable=True, as_async=True)
     async def handle_summarize_and_pin(self, data: dict):
         payload = SummarizeAndPinPayload(**data)
 
@@ -112,7 +124,7 @@ class WorldStateWebsocketHandler(Plugin):
         )
         await self.signal_operation_done(allow_auto_save=False)
 
-    @set_loading("Examining", cancellable=True, as_async=True)
+    @set_loading(_examine_label, cancellable=True, as_async=True)
     async def handle_examine_entity(self, data: dict):
         payload = ExamineEntityPayload(**data)
         examine_text = await self.agent.examine_entity(

@@ -1,6 +1,6 @@
 <template>
   <v-row density="compact" class="mode-comparison">
-    <v-col v-for="mode in modes" :key="mode.key" cols="12" :md="stacked ? 12 : 6">
+    <v-col v-for="mode in modes" :key="mode.key" cols="12" md="6">
       <v-card variant="outlined" class="mode-card h-100" :class="{ 'mode-card--selected': mode.key === selectedKey }">
         <v-card-title class="text-title-small d-flex align-center">
           {{ mode.title }}
@@ -31,7 +31,7 @@
 </template>
 
 <script>
-import { CHARACTER_KNOWLEDGE_MODES } from '@/constants/characterKnowledgeModes';
+import { CHARACTER_KNOWLEDGE_MODES, characterKnowledgeMode } from '@/constants/characterKnowledgeModes';
 
 export default {
   name: 'CharacterKnowledgeModeCards',
@@ -45,10 +45,6 @@ export default {
       type: String,
       default: 'selected',
     },
-    stacked: {
-      type: Boolean,
-      default: false,
-    },
   },
   data() {
     return {
@@ -57,7 +53,7 @@ export default {
   },
   computed: {
     selectedKey() {
-      return this.perspectives ? 'perception' : 'legacy';
+      return characterKnowledgeMode(this.perspectives).key;
     },
   },
 };

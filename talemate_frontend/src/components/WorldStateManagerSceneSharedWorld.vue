@@ -86,8 +86,8 @@
                 Create New Scene
             </v-card-title>
             <v-card-text>
-                <p class="mb-2">Character knowledge: {{ perspectives ? 'Character perspectives' : 'Standard' }}. The new scene keeps the current story's mode.</p>
-                <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" collapsed stacked class="mb-4" />
+                <p class="mb-2">The new scene keeps the current story's character knowledge mode.</p>
+                <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" compact class="mb-4" />
                 <v-alert v-if="!scene?.data?.saved && !creatingNewScene" color="muted" variant="text" density="compact" class="mb-4">
                     <template v-slot:prepend>
                         <v-icon color="warning">mdi-alert-circle-outline</v-icon>

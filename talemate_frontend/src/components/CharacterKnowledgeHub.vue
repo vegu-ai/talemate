@@ -76,7 +76,7 @@
                     :hint="canChange ? PERSPECTIVES_OPEN_HINT : PERSPECTIVES_LOCKED_HINT"
                     persistent-hint
                     @update:model-value="setPerspectives"></v-switch>
-                <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" collapsed stacked class="mt-2" />
+                <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" compact class="mt-2" />
             </v-card-text>
 
             <v-divider></v-divider>
@@ -89,72 +89,83 @@
             </v-card-text>
             <v-card-text class="pt-1 pb-0 text-body-small text-muted">{{ summary.text }}</v-card-text>
             <v-card-text v-if="!groups.length" class="pt-1 text-body-small text-muted">Waiting for the agents to report.</v-card-text>
-            <template v-for="group in groups" :key="group.agent + '.' + group.action">
-                <!-- the header is a list row like the toggles under it, so both take
-                     Vuetify's prepend spacing; a group without a master keeps an
-                     invisible checkbox so its label lands on the same x -->
-                <v-list density="compact" class="py-0 mt-1">
-                    <v-list-item density="compact" class="knowledge-hub-group">
-                        <template v-slot:prepend>
-                            <v-checkbox-btn
-                                v-if="group.master"
-                                :model-value="group.enabled"
-                                :aria-label="`${group.label} on or off`"
-                                density="compact"
-                                color="primary"
-                                hide-details
-                                @click.stop="toggleGroup(group)"></v-checkbox-btn>
-                            <v-checkbox-btn v-else class="knowledge-hub-checkbox-placeholder" density="compact" hide-details aria-hidden="true" tabindex="-1" disabled></v-checkbox-btn>
+            <v-expansion-panels v-else :model-value="individualOpen" variant="accordion" class="knowledge-hub-individual mt-1" @update:model-value="setIndividualOpen">
+                <v-expansion-panel value="individual">
+                    <v-expansion-panel-title class="text-body-small">
+                        Individual settings
+                        <span class="text-muted ml-1">&middot; {{ tally.on }} of {{ tally.total }} on</span>
+                    </v-expansion-panel-title>
+                    <v-expansion-panel-text>
+                        <template v-for="group in groups" :key="group.agent + '.' + group.action">
+                            <!-- the header is a list row like the toggles under it, so both take
+                                 Vuetify's prepend spacing; a group without a master keeps an
+                                 invisible checkbox so its label lands on the same x -->
+                            <v-list density="compact" class="py-0 mt-1">
+                                <v-list-item density="compact" class="knowledge-hub-group">
+                                    <template v-slot:prepend>
+                                        <v-checkbox-btn
+                                            v-if="group.master"
+                                            :model-value="group.enabled"
+                                            :aria-label="`${group.label} on or off`"
+                                            density="compact"
+                                            color="primary"
+                                            hide-details
+                                            @click.stop="toggleGroup(group)"></v-checkbox-btn>
+                                        <v-checkbox-btn v-else class="knowledge-hub-checkbox-placeholder" density="compact" hide-details aria-hidden="true" tabindex="-1" disabled></v-checkbox-btn>
+                                    </template>
+                                    <v-list-item-title class="text-body-small">
+                                        <v-btn size="x-small" variant="text" class="px-0 text-body-small" append-icon="mdi-open-in-new" @click="openSettings(group)">
+                                            {{ group.agentLabel }} / {{ group.label }}
+                                        </v-btn>
+                                        <v-chip v-if="group.master && group.enabledOverridden" size="x-small" label variant="outlined" color="secondary" class="ml-1">scene override</v-chip>
+                                    </v-list-item-title>
+                                </v-list-item>
+                                <!-- not :disabled - Vuetify drops pointer events on a disabled item, which
+                                     takes the tooltips with it; the checkbox and the click guard carry the state -->
+                                <v-list-item
+                                    v-for="toggle in group.toggles"
+                                    :key="toggle.key"
+                                    density="compact"
+                                    class="knowledge-hub-toggle"
+                                    :class="{ 'knowledge-hub-toggle-off': !group.enabled }"
+                                    v-bind="group.enabled ? { onClick: () => toggleConfig(group, toggle) } : {}">
+                                    <template v-slot:prepend>
+                                        <v-checkbox-btn :model-value="toggle.value" :disabled="!group.enabled" :aria-label="toggle.label" tabindex="-1" density="compact" color="primary" hide-details @click.stop="toggleConfig(group, toggle)"></v-checkbox-btn>
+                                    </template>
+                                    <v-list-item-title class="text-body-small">
+                                        {{ toggle.label }}
+                                        <v-chip v-if="toggle.overridden" size="x-small" label variant="outlined" color="secondary" class="ml-1">scene override</v-chip>
+                                    </v-list-item-title>
+                                    <template v-slot:append>
+                                        <v-tooltip v-if="toggle.costNote" :text="toggle.costNote" max-width="320" location="start">
+                                            <template v-slot:activator="{ props: costProps }">
+                                                <v-icon v-bind="costProps" size="small" color="primary" class="mr-1" tabindex="0" role="img" aria-label="Adds a request">mdi-plus-circle-outline</v-icon>
+                                            </template>
+                                        </v-tooltip>
+                                        <v-tooltip :text="toggle.description" max-width="320" location="start">
+                                            <template v-slot:activator="{ props: infoProps }">
+                                                <v-icon v-bind="infoProps" size="small" color="muted" tabindex="0" role="img" aria-label="About this option">mdi-information-outline</v-icon>
+                                            </template>
+                                        </v-tooltip>
+                                    </template>
+                                </v-list-item>
+                            </v-list>
                         </template>
-                        <v-list-item-title class="text-body-small">
-                            <v-btn size="x-small" variant="text" class="px-0 text-body-small" append-icon="mdi-open-in-new" @click="openSettings(group)">
-                                {{ group.agentLabel }} / {{ group.label }}
-                            </v-btn>
-                            <v-chip v-if="group.master && group.enabledOverridden" size="x-small" label variant="outlined" color="secondary" class="ml-1">scene override</v-chip>
-                        </v-list-item-title>
-                    </v-list-item>
-                    <!-- not :disabled - Vuetify drops pointer events on a disabled item, which
-                         takes the tooltips with it; the checkbox and the click guard carry the state -->
-                    <v-list-item
-                        v-for="toggle in group.toggles"
-                        :key="toggle.key"
-                        density="compact"
-                        class="knowledge-hub-toggle"
-                        :class="{ 'knowledge-hub-toggle-off': !group.enabled }"
-                        v-bind="group.enabled ? { onClick: () => toggleConfig(group, toggle) } : {}">
-                        <template v-slot:prepend>
-                            <v-checkbox-btn :model-value="toggle.value" :disabled="!group.enabled" :aria-label="toggle.label" tabindex="-1" density="compact" color="primary" hide-details @click.stop="toggleConfig(group, toggle)"></v-checkbox-btn>
-                        </template>
-                        <v-list-item-title class="text-body-small">
-                            {{ toggle.label }}
-                            <v-chip v-if="toggle.overridden" size="x-small" label variant="outlined" color="secondary" class="ml-1">scene override</v-chip>
-                        </v-list-item-title>
-                        <template v-slot:append>
-                            <v-tooltip v-if="toggle.costNote" :text="toggle.costNote" max-width="320" location="start">
-                                <template v-slot:activator="{ props: costProps }">
-                                    <v-icon v-bind="costProps" size="small" color="primary" class="mr-1" tabindex="0" role="img" aria-label="Adds a request">mdi-plus-circle-outline</v-icon>
-                                </template>
-                            </v-tooltip>
-                            <v-tooltip :text="toggle.description" max-width="320" location="start">
-                                <template v-slot:activator="{ props: infoProps }">
-                                    <v-icon v-bind="infoProps" size="small" color="muted" tabindex="0" role="img" aria-label="About this option">mdi-information-outline</v-icon>
-                                </template>
-                            </v-tooltip>
-                        </template>
-                    </v-list-item>
-                </v-list>
-            </template>
+                    </v-expansion-panel-text>
+                </v-expansion-panel>
+            </v-expansion-panels>
             <div class="pb-2"></div>
         </v-card>
     </v-menu>
 </template>
 
 <script>
+import { reactive } from 'vue';
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
 import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
 import { effortMode, effortPatch, queueEffortAcrossSwitch } from '@/utils/knowledgeEffort';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
-import { resolveKnowledgeToggles, thoroughnessSummary } from '@/utils/knowledgeHub';
+import { resolveKnowledgeToggles, switchTally, thoroughnessSummary } from '@/utils/knowledgeHub';
 import {
     PERSPECTIVES_LOCKED_HINT,
     PERSPECTIVES_OPEN_HINT,
@@ -164,6 +175,11 @@ import {
 } from '@/utils/sceneSettings';
 
 const ENTRY_LIMIT = 5;
+const INDIVIDUAL_PANE = 'individual';
+
+// every hub shares one open state for the individual settings, for as long as
+// the page lives: a reload starts collapsed again
+const individualPane = reactive({ open: false });
 
 export default {
     name: 'CharacterKnowledgeHub',
@@ -219,6 +235,12 @@ export default {
         summary() {
             return thoroughnessSummary(this.groups, this.perspectives);
         },
+        tally() {
+            return switchTally(this.groups);
+        },
+        individualOpen() {
+            return individualPane.open ? INDIVIDUAL_PANE : undefined;
+        },
         // an agent that has not reported yet is taken as on
         topicsOn() {
             const topics = this.groups.find((group) => group.agent === 'memory' && group.action === 'topics');
@@ -265,6 +287,9 @@ export default {
         },
     },
     methods: {
+        setIndividualOpen(value) {
+            individualPane.open = value === INDIVIDUAL_PANE;
+        },
         // both leave the panel for another view; an open menu would linger over it
         openKnowledge() {
             this.open = false;
@@ -347,6 +372,14 @@ export default {
 </script>
 
 <style scoped>
+/* the switches keep the spacing they have outside the pane, and the row does
+   not grow by Vuetify's taller active title when it opens */
+.knowledge-hub-individual :deep(.v-expansion-panel-text__wrapper) {
+    padding: 0 0 8px 0;
+}
+.knowledge-hub-individual :deep(.v-expansion-panel--active > .v-expansion-panel-title) {
+    min-height: unset;
+}
 .knowledge-hub-checkbox-placeholder {
     visibility: hidden;
 }

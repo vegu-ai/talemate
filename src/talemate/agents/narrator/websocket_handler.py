@@ -1,10 +1,11 @@
 import pydantic
 import structlog
+from textwrap import shorten
 
 from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
-from talemate.status import set_loading
+from talemate.status import LoadingLabel, set_loading
 
 
 from talemate.scene_message import ContextInvestigationMessage
@@ -14,6 +15,8 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.server.narrator")
+
+QUERY_STATUS_MAX_LENGTH = 60
 
 
 class QueryPayload(pydantic.BaseModel):
@@ -27,6 +30,22 @@ class NarrativeDirectionPayload(pydantic.BaseModel):
 
 class CharacterPayload(NarrativeDirectionPayload):
     character: str = ""
+
+
+def _query_label(handler, data: dict) -> LoadingLabel | str:
+    query = shorten(
+        QueryPayload(**data).query, QUERY_STATUS_MAX_LENGTH, placeholder="..."
+    )
+    return LoadingLabel("Investigating: {}", query) if query else "Working on a query"
+
+
+def _look_at_character_label(handler, data: dict) -> LoadingLabel | str:
+    character = CharacterPayload(**data).character
+    return (
+        LoadingLabel("Looking at {}", character)
+        if character
+        else "Looking at a character"
+    )
 
 
 class NarratorWebsocketHandler(Plugin):
@@ -64,7 +83,7 @@ class NarratorWebsocketHandler(Plugin):
             emit_message=True,
         )
 
-    @set_loading("Working on a query", cancellable=True, as_async=True)
+    @set_loading(_query_label, cancellable=True, as_async=True)
     async def handle_query(self, data: dict):
         """
         Give a query or instruction to the narrator that results in a context investigation
@@ -102,7 +121,7 @@ class NarratorWebsocketHandler(Plugin):
         await self.scene.push_history(message)
         emit("context_investigation", message=message)
 
-    @set_loading("Looking at a character", cancellable=True, as_async=True)
+    @set_loading(_look_at_character_label, cancellable=True, as_async=True)
     async def handle_look_at_character(self, data: dict):
         """
         Look at a character (optionally to a specific direction)

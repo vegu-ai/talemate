@@ -12,7 +12,7 @@ from .action_core.gating import (
     extract_all_callback_descriptors,
 )
 from talemate.context import interaction, handle_generation_cancelled
-from talemate.status import set_loading
+from talemate.status import LoadingLabel, set_loading
 from talemate.exceptions import GenerationCancelled, GenerationProcessingError
 from .scene_direction.schema import UserInteractionMessage
 from .character_management import PersistCharacterRequest
@@ -90,6 +90,15 @@ class SetDisabledSubActionsPayload(pydantic.BaseModel):
     disabled_action_ids: list[str]
 
 
+def _dynamic_choices_label(handler, data: dict) -> LoadingLabel | str:
+    character = CharacterPayload(**data).character
+    return (
+        LoadingLabel("Generating actions for {}", character)
+        if character
+        else "Generating dynamic actions"
+    )
+
+
 class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
     """
     Handles director actions
@@ -161,7 +170,7 @@ class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
 
         await self.signal_operation_done(emit_status_message=message)
 
-    @set_loading("Generating dynamic actions", cancellable=True, as_async=True)
+    @set_loading(_dynamic_choices_label, cancellable=True, as_async=True)
     async def handle_request_dynamic_choices(self, data: dict):
         """
         Generate clickable actions for the user

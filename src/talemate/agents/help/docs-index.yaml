@@ -1236,7 +1236,8 @@
     Track learning from dialogue, Establish facts from dialogue, chapter facts, restatements, linked facts, Show formerly
     clause), a Character perspectives turn (per-passage analysis, Automatically repair analysis, Retry, Known by, disclosures,
     retired controls), what a reply is built from (sheets, gap lines, memory ranking, unknown-fact reminders, Facts age half-lives
-    and floor), the effort stops, and which mode to pick; power-user detail in Details expanders.'
+    and floor), the effort stops and the Individual settings pane that holds the switches they set, and which mode to pick;
+    power-user detail in Details expanders.'
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
   summary: Standard versus Character perspectives comparison, new-story/card-import opt-in and empty-scene switching, Character
@@ -1272,9 +1273,10 @@
     to set up perspectives opens a new director chat that chooses and writes perspectives from the existing prose.
 - path: user-guide/world-editor/scene/settings.md
   title: Settings
-  summary: Scene Settings control Character perspectives while history and archived history are empty; disabling clears stored
-    perspectives and disclosures. Covers writing style, locked-save and experimental flags, restore points, and per-scene
-    Agent settings file Auto-link, None or explicit project-shared overrides included in exports.
+  summary: Scene Settings control Character perspectives while history and archived history are empty, with a Compare modes
+    popover holding the two mode cards; disabling clears stored perspectives and disclosures. Covers writing style, locked-save
+    and experimental flags, restore points, and per-scene Agent settings file Auto-link, None or explicit project-shared
+    overrides included in exports.
 - path: user-guide/world-editor/scene/shared-context.md
   title: Shared World & Episodes
   summary: Shared World links scenes to shared-context JSON files and synchronizes characters, selected attributes/details,
@@ -1297,7 +1299,8 @@
 - path: user-guide/world-state.md
   title: World State
   summary: World panel durable snapshots, tracked states, Look at/Add Detail highlights, Add to world state text selection,
-    knowledge-change dots, active/inactive/background characters and Make real name protection. The knowledge hub shows chronology-selected
-    facts ranked by importance and recency with time markers, topics and counts, disclosures/access rules, Character perspectives
-    and effort presets; also covers narrated activation, guided refresh/wipe, cancellation, background cadence and Pin to
-    context.
+    knowledge-change dots, active/inactive/background characters and Make real name protection. The knowledge hub shows
+    chronology-selected facts ranked by importance and recency with time markers, topics and counts, disclosures/access rules,
+    Character perspectives with a Compare modes popover, effort presets and an Individual settings pane that starts closed
+    and counts the switches that are on; also covers narrated activation, guided refresh/wipe, cancellation, background
+    cadence and Pin to context.

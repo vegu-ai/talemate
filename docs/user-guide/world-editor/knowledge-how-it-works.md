@@ -131,7 +131,7 @@ A fact scores its importance divided by one plus its age over its half-life: **M
 
 ## The effort slider and what it switches
 
-The **Character knowledge effort** slider sets the knowledge switches of the Conversation, Summarizer and Memory agents together; each stop adds to the one below it. It sits in the knowledge hub's **Thoroughness** section, the **Create New Story** dialog and the Conversation agent's settings. Change a switch by hand and it shows **Custom**.
+The **Character knowledge effort** slider sets the knowledge switches of the Conversation, Summarizer and Memory agents together; each stop adds to the one below it. It sits in the knowledge hub's **Thoroughness** section, the **Create New Story** dialog and the Conversation agent's settings. In the hub the switches it drives are in the **Individual settings** pane under it, which starts closed and counts how many are on. Change a switch by hand and the slider shows **Custom**.
 
 ```mermaid
 flowchart LR
@@ -166,4 +166,4 @@ flowchart TD
     Q3 -- "yes" --> CP["Character perspectives<br/>Secrets hold without hand-tuning.<br/>Cannot be turned off once<br/>the story has history."]
 ```
 
-**Standard** costs nothing extra, works with any model and locks nothing in; a present character sees the full reader prose, so leaks are yours to catch with Allow / Block rules. **Character perspectives** grounds every reply in what the character perceived, so secrets hold; it costs one request per passage, needs a [strong model](/talemate/getting-started/model-expectations/) and cannot be turned off once the story has history. [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode) has the full comparison.
+**Standard** costs nothing extra, works with any model and locks nothing in; a present character sees the full reader prose, so leaks are yours to catch with Allow / Block rules. **Character perspectives** grounds every reply in what the character perceived, so secrets hold; it costs one request per passage, needs a [strong model](/talemate/getting-started/model-expectations/) and cannot be turned off once the story has history. [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode) has the full comparison, and **Compare modes** shows the same two cards wherever the mode is named in the interface.

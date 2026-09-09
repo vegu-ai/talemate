@@ -6,7 +6,7 @@
 
         <v-progress-circular v-if="statusMessageType === 'busy'" indeterminate="disable-shrink" color="primary" size="20"></v-progress-circular>
         <v-icon v-else>{{ notificationIcon() }}</v-icon>
-        <span class="ml-2">{{ statusMessageText }}</span>
+        <span class="ml-2"><span v-for="(part, index) in statusMessageParts" :key="index" :class="{ 'text-primary': part.name }">{{ part.text }}</span></span>
     </v-snackbar>
 </template>
 
@@ -21,7 +21,7 @@ export default {
         return {
             statusTitle: '',
             statusMessage: false,
-            statusMessageText: '',
+            statusMessageParts: [],
             statusMessageType: '',
             cancellable: false,
         }
@@ -68,11 +68,11 @@ export default {
 
             if(transition.op === 'clear') {
                 this.statusMessage = false;
-                this.statusMessageText = '';
+                this.statusMessageParts = [];
                 this.statusMessageType = '';
             } else if(transition.op === 'show') {
                 this.statusMessage = true;
-                this.statusMessageText = transition.text;
+                this.statusMessageParts = transition.parts;
                 this.statusMessageType = transition.type;
                 this.cancellable = transition.cancellable;
             }

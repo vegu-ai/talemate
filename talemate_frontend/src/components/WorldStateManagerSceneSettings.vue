@@ -14,11 +14,11 @@
                     @update:model-value="updateCharacterKnowledge"
                 />
                 <v-alert v-if="!scene?.data?.can_change_knowledge_eligibility" variant="tonal" class="mb-4" icon="mdi-head-lightbulb-outline">
-                    <strong>Character knowledge: {{ perspectives ? 'Character perspectives' : 'Standard' }}</strong>
+                    <strong>Character knowledge: {{ modeTitle }}</strong>
                     <p v-if="perspectives">Characters receive their own views of events and memories. Extra Summarizer requests track what they learn after passages and changed tracker answers. If analysis fails, character generation pauses: retry the failed request, or cancel, correct the source and retry generation. Saves and forks keep this mode.</p>
                     <p v-else>Character knowledge follows where characters were present, what belongs to them, and what you share with them. Use the Conversation agent's Character Knowledge settings to adjust how this shapes replies. For separate character views of events, choose Character perspectives when creating a new story or importing a character card, or before a scene has history.</p>
                 </v-alert>
-                <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" collapsed class="mb-4" />
+                <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" compact class="mb-4" />
 
 
                 <v-row>
@@ -144,6 +144,7 @@ import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison
 import { queueEffortAcrossSwitch } from '@/utils/knowledgeEffort';
 import { PERSPECTIVES_LOCKED_HINT, PERSPECTIVES_OPEN_HINT, buildSceneSettingsPayload, canChangePerspectives, perspectivesEnabled } from '@/utils/sceneSettings';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
+import { characterKnowledgeMode } from '@/constants/characterKnowledgeModes';
 
 export default {
     name: "WorldStateManagerSceneSettings",
@@ -181,6 +182,9 @@ export default {
     computed: {
         perspectives() {
             return perspectivesEnabled(this.scene?.data);
+        },
+        modeTitle() {
+            return characterKnowledgeMode(this.perspectives).title;
         },
         writingStyleTemplates() {
             let templates = Object.values(this.templates.by_type.writing_style).map((template) => {

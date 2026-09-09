@@ -163,16 +163,28 @@ rules.
 **Story mode** shows the **Character perspectives** switch. It can be changed while the scene
 has no history and no archived history, exactly as in
 [Scene Settings](/talemate/user-guide/world-editor/scene/settings/); once history exists the
-switch is disabled and the reason is shown. Save the scene to keep a change.
+switch is disabled and the reason is shown. Save the scene to keep a change. Under the switch
+one line names the current mode and offers **Compare modes**, which opens the two mode cards
+side by side in a popover over the panel, with the **current** chip on the mode the story runs
+in — the same comparison the Create New Story dialog shows, described in
+[Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode). The popover
+leaves the menu open behind it; press Escape or click outside to close it.
+
+![knowledge hub mode comparison](/talemate/img/0.40.0/world-state-knowledge-hub-compare.png)
 
 The count line under the ranked facts is a link to the character's Knowledge tab, where every known fact is listed by topic.
 
-The menu header shows the story mode. **Thoroughness** starts with the **Character knowledge effort** slider (see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets)): one drag sets the toggles below to a tuned stop, with the stop's extra requests and model expectation under it; a manual change to any toggle shows **Custom**. Group headers and toggles share one checkbox column; a group without a master checkbox keeps the space so its label lines up.
+The menu header shows the story mode. **Thoroughness** starts with the **Character knowledge effort** slider (see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets)): one drag sets the settings in the pane below to a tuned stop, with the stop's extra requests and model expectation under it; a manual change to any setting shows **Custom**.
 
 ![knowledge hub effort slider](/talemate/img/0.40.0/world-state-knowledge-hub-effort.png)
 
 Then comes a summary line naming the
-options that add a request and are on ("No extra requests per line" when none is). Below it are the settings that shape
+options that add a request and are on ("No extra requests per line" when none is). Below it sits
+**Individual settings**, a pane that is closed when the application loads and counts the settings
+it holds, for example "6 of 8 on". The count is over the settings themselves: a group switch that
+heads settings of its own is not counted, a group that is a single switch (Memory → Topics) is,
+and a setting under a group switch that is off counts as off. Opening the pane on one character
+leaves it open on the others until the page is reloaded. Open it for the settings that shape
 knowledge keeping, grouped by agent, with the same labels, descriptions and cost notes as the
 agent settings:
 
@@ -183,8 +195,9 @@ agent settings:
 - Memory → Retrieval: Match known facts
 - Memory → Topics: the group switch
 
-A :material-plus-circle-outline: icon marks an option that adds a request; hover it to read the
-cost. The toggles write the same settings as the agent settings dialog, so both places stay in
+Group headers and toggles share one checkbox column; a group without a master checkbox keeps
+the space so its label lines up. A :material-plus-circle-outline: icon marks an option that adds
+a request; hover it to read the cost. The toggles write the same settings as the agent settings dialog, so both places stay in
 sync. When the loaded scene overrides a setting, the hub toggles the scene override and marks it
 **scene override**. Options that a Character perspectives story does not use are hidden, as they
 are in the agent settings. Click a group name to open its section in the agent settings.

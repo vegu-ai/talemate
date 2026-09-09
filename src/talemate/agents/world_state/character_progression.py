@@ -3,7 +3,7 @@ import structlog
 from talemate.agents.base import set_processing, AgentAction, AgentActionConfig
 from talemate.instance import get_agent
 from talemate.events import GameLoopEvent
-from talemate.status import set_loading
+from talemate.status import LoadingLabel, set_loading
 
 import talemate.emit.async_signals
 import talemate.game.focal as focal
@@ -234,7 +234,10 @@ class CharacterProgressionMixin:
 
         creator = get_agent("creator")
 
-        @set_loading("Generating character attribute", cancellable=True)
+        def attribute_label(name: str, instructions: str) -> LoadingLabel:
+            return LoadingLabel("Generating {} for {}", name, character.name)
+
+        @set_loading(attribute_label, cancellable=True)
         async def add_attribute(name: str, instructions: str) -> str:
             return await creator.generate_character_attribute(
                 character,
@@ -243,7 +246,7 @@ class CharacterProgressionMixin:
                 generation_options=generation_options,
             )
 
-        @set_loading("Generating character attribute", cancellable=True)
+        @set_loading(attribute_label, cancellable=True)
         async def update_attribute(name: str, instructions: str) -> str:
             return await creator.generate_character_attribute(
                 character,
@@ -256,7 +259,9 @@ class CharacterProgressionMixin:
         async def remove_attribute(name: str, reason: str) -> str:
             return None
 
-        @set_loading("Generating character description", cancellable=True)
+        @set_loading(
+            LoadingLabel("Updating {}'s description", character.name), cancellable=True
+        )
         async def update_description(instructions: str) -> str:
             return await creator.generate_character_detail(
                 character,

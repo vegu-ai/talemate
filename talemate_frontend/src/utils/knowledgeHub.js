@@ -1,6 +1,7 @@
 // The World State knowledge hub: which agent settings it offers and how they
 // are read off the live agent_status. It never writes; the hub component hands
 // a click to the agent drawer's own toggle functions.
+import { characterKnowledgeMode } from '@/constants/characterKnowledgeModes';
 import {
     configOverrideActive,
     effectiveActionEnabled,
@@ -102,8 +103,31 @@ export function thoroughnessSummary(groups, perspectives) {
         }
     }
     return {
-        mode: perspectives ? 'Character perspectives' : 'Standard',
+        mode: characterKnowledgeMode(perspectives).title,
         extras,
         text: extras.length ? `Extra requests: ${extras.join(', ')}` : 'No extra requests per line',
     };
+}
+
+/**
+ * How many of the hub's individual settings are on. A group that heads its own
+ * toggles is a heading rather than a setting, so only its toggles count; a
+ * group with a master and no toggles of its own is one setting. An off group
+ * turns its toggles off in effect, so they count as off.
+ */
+export function switchTally(groups) {
+    let on = 0;
+    let total = 0;
+    for (const group of groups || []) {
+        if (!group.toggles.length) {
+            total += 1;
+            if (group.enabled) on += 1;
+            continue;
+        }
+        for (const toggle of group.toggles) {
+            total += 1;
+            if (group.enabled && toggle.value) on += 1;
+        }
+    }
+    return { on, total };
 }

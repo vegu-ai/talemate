@@ -10,9 +10,33 @@ describe("statusTransition", () => {
         expect(statusTransition("", status("busy", "Generating..."))).toEqual({
             op: "show",
             text: "Generating...",
+            parts: [{ text: "Generating...", name: false }],
             type: "busy",
             cancellable: false,
         });
+    });
+
+    it("carries the chunks of a label the backend split, so the names can be painted", () => {
+        const label = [
+            { text: "Looking at ", name: false },
+            { text: "Mara", name: true },
+        ];
+        expect(statusTransition("", status("busy", "Looking at Mara", { label })).parts).toEqual(label);
+    });
+
+    it("shows a message the backend did not split as one plain chunk", () => {
+        for (const data of [null, {}, { label: [] }, { label: "Looking at Mara" }]) {
+            expect(statusTransition("", status("busy", "Looking at Mara", data)).parts)
+                .toEqual([{ text: "Looking at Mara", name: false }]);
+        }
+    });
+
+    it("reads a chunk that carries no text as empty and no name", () => {
+        const label = [{ name: true }, { text: "!", name: "yes" }];
+        expect(statusTransition("", status("busy", "x", { label })).parts).toEqual([
+            { text: "", name: true },
+            { text: "!", name: true },
+        ]);
     });
 
     it("carries the cancellable flag of the message", () => {

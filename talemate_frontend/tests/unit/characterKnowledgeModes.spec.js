@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
-import { CHARACTER_KNOWLEDGE_MODES, CHARACTER_KNOWLEDGE_MODES_EXPANDER_LABEL } from '@/constants/characterKnowledgeModes';
+import {
+    CHARACTER_KNOWLEDGE_MODES,
+    CHARACTER_KNOWLEDGE_MODES_COMPARE_LABEL,
+    CHARACTER_KNOWLEDGE_MODES_COMPARE_TITLE,
+    characterKnowledgeMode,
+} from '@/constants/characterKnowledgeModes';
 import { MODEL_EXPECTATIONS_DOCS_URL } from '@/constants/modelExpectations';
 
 const read = (relative) => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf-8');
@@ -10,13 +15,14 @@ const mode = (key) => CHARACTER_KNOWLEDGE_MODES.find((entry) => entry.key === ke
 
 const OLD_HINT = 'Give each character their own view of events';
 
-// the five points of choice and where each shows the comparison
+// the five points of choice and where each shows the comparison: a narrow host
+// takes it compact, one line and a popover
 const SITES = [
-    { file: 'NewSceneSetupModal.vue', collapsed: false },
-    { file: 'CharacterCardImport.vue', collapsed: false },
-    { file: 'WorldStateManagerSceneSettings.vue', collapsed: true },
-    { file: 'CharacterKnowledgeHub.vue', collapsed: true },
-    { file: 'WorldStateManagerSceneSharedWorld.vue', collapsed: true },
+    { file: 'NewSceneSetupModal.vue', compact: false },
+    { file: 'CharacterCardImport.vue', compact: false },
+    { file: 'WorldStateManagerSceneSettings.vue', compact: true },
+    { file: 'CharacterKnowledgeHub.vue', compact: true },
+    { file: 'WorldStateManagerSceneSharedWorld.vue', compact: true },
 ];
 
 describe('the shared constant', () => {
@@ -33,6 +39,11 @@ describe('the shared constant', () => {
         expect(mode.cons.length).toBeLessThanOrEqual(4);
         expect(mode.pickIf).toMatch(/\.$/);
     });
+    it('names the mode the scene flag selects', () => {
+        expect(characterKnowledgeMode(true)).toBe(mode('perception'));
+        expect(characterKnowledgeMode(false)).toBe(mode('legacy'));
+        expect(characterKnowledgeMode(undefined).title).toBe('Standard');
+    });
     it('the perspectives card names the lock once and links the model guidance', () => {
         const perception = mode('perception');
         const lockMentions = [...perception.pros, ...perception.cons, perception.summary, perception.pickIf]
@@ -44,11 +55,11 @@ describe('the shared constant', () => {
 });
 
 describe('every point of choice shows the comparison from the constant', () => {
-    it.each(SITES)('$file renders CharacterKnowledgeModeComparison ($collapsed collapsed) and no copy of its own', ({ file, collapsed }) => {
+    it.each(SITES)('$file renders CharacterKnowledgeModeComparison ($compact compact) and no copy of its own', ({ file, compact }) => {
         const source = read(`../../src/components/${file}`);
         const tag = source.match(/<CharacterKnowledgeModeComparison[^>]*>/);
         expect(tag, `${file} has no comparison`).not.toBeNull();
-        expect(tag[0].includes(' collapsed')).toBe(collapsed);
+        expect(tag[0].includes(' compact')).toBe(compact);
         expect(tag[0]).toMatch(/:perspectives=/);
         expect(tag[0]).not.toMatch(/'perception'|'legacy'/);
         expect(source).not.toContain(OLD_HINT);
@@ -58,16 +69,31 @@ describe('every point of choice shows the comparison from the constant', () => {
             }
         }
     });
-    it('the cards read the constant and the wrapper takes its expander label from it', () => {
+    it('the cards read the constant and the wrapper takes its trigger label from it', () => {
         const cards = read('../../src/components/CharacterKnowledgeModeCards.vue');
         expect(cards).toContain("from '@/constants/characterKnowledgeModes'");
         expect(cards).toMatch(/mode\.pros/);
         expect(cards).toMatch(/mode\.cons/);
         expect(cards).toMatch(/mode\.pickIf/);
         const wrapper = read('../../src/components/CharacterKnowledgeModeComparison.vue');
-        expect(wrapper).toContain('CHARACTER_KNOWLEDGE_MODES_EXPANDER_LABEL');
-        expect(wrapper).not.toContain(CHARACTER_KNOWLEDGE_MODES_EXPANDER_LABEL);
-        expect(CHARACTER_KNOWLEDGE_MODES_EXPANDER_LABEL).toBe('About the two modes');
+        expect(wrapper).toContain('CHARACTER_KNOWLEDGE_MODES_COMPARE_LABEL');
+        expect(wrapper).toContain('CHARACTER_KNOWLEDGE_MODES_COMPARE_TITLE');
+        expect(wrapper).not.toContain(CHARACTER_KNOWLEDGE_MODES_COMPARE_LABEL);
+        expect(wrapper).not.toContain(CHARACTER_KNOWLEDGE_MODES_COMPARE_TITLE);
+        expect(CHARACTER_KNOWLEDGE_MODES_COMPARE_LABEL).toBe('Compare modes');
+        expect(CHARACTER_KNOWLEDGE_MODES_COMPARE_TITLE).toBe('Compare the two modes');
+    });
+
+    // #511: the comparison used to expand inside the host and made a narrow
+    // panel comically tall
+    it('keeps the cards out of the compact hosts and behind a popover of its own', () => {
+        const wrapper = read('../../src/components/CharacterKnowledgeModeComparison.vue');
+        expect(wrapper).not.toContain('v-expansion-panel');
+        expect(wrapper).toContain('<v-menu');
+        expect(wrapper).not.toContain('<v-dialog');
+        const compact = wrapper.slice(wrapper.indexOf('v-if="compact"'), wrapper.indexOf('</v-menu>'));
+        expect(compact).toContain('<CharacterKnowledgeModeCards');
+        expect(compact).toContain(':close-on-content-click="false"');
     });
 });
 

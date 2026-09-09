@@ -3,6 +3,7 @@ import {
     KNOWLEDGE_TOGGLES,
     PERSPECTIVES_ANALYSIS_COST,
     resolveKnowledgeToggles,
+    switchTally,
     thoroughnessSummary,
 } from '@/utils/knowledgeHub';
 
@@ -204,5 +205,36 @@ describe('perspectives-only toggles in the cost line', () => {
         ];
         expect(thoroughnessSummary(groups, false).extras).toEqual(['Track learning from dialogue']);
         expect(thoroughnessSummary(groups, true).extras).toEqual([PERSPECTIVES_ANALYSIS_COST, 'Automatically repair analysis', 'Track learning from dialogue']);
+    });
+});
+
+// #511: the count in the collapsed pane's title
+describe('switchTally', () => {
+    it('counts the leaf switches plus a group that has no leaves of its own', () => {
+        const groups = resolveKnowledgeToggles(agents());
+        expect(groups.map((g) => [g.label, g.toggles.length])).toEqual([
+            ['Character Knowledge', 5], ['Summarization', 1], ['Retrieval', 1], ['Topics', 0],
+        ]);
+        expect(switchTally(groups)).toEqual({ on: 6, total: 8 });
+    });
+
+    it('reads a leaf under an off group as off, and leaves the total alone', () => {
+        const overrides = { conversation: { actions: { character_knowledge: { enabled: false } } } };
+        expect(switchTally(resolveKnowledgeToggles(agents({ overrides })))).toEqual({ on: 3, total: 8 });
+    });
+
+    it('follows a leaf that is switched on', () => {
+        const overrides = { conversation: { actions: { character_knowledge: { config: { ledger: { value: true } } } } } };
+        expect(switchTally(resolveKnowledgeToggles(agents({ overrides })))).toEqual({ on: 7, total: 8 });
+    });
+
+    it('follows an off leafless group', () => {
+        const overrides = { memory: { actions: { topics: { enabled: false } } } };
+        expect(switchTally(resolveKnowledgeToggles(agents({ overrides })))).toEqual({ on: 5, total: 8 });
+    });
+
+    it('counts nothing while the agents have not reported', () => {
+        expect(switchTally([])).toEqual({ on: 0, total: 0 });
+        expect(switchTally(undefined)).toEqual({ on: 0, total: 0 });
     });
 });

@@ -14,7 +14,7 @@ from talemate.instance import emit_agents_status, get_agent
 from talemate.world_state.manager import WorldStateManager, Suggestion
 from talemate.scene.schema import ScenePerspectives
 from talemate.knowledge.mode import KnowledgeEligibility
-from talemate.status import background_task, set_loading
+from talemate.status import LoadingLabel, background_task, set_loading
 import talemate.game.focal as focal
 from talemate.config import save_config, get_config, commit_config
 from talemate.server.websocket_plugin import Plugin
@@ -1303,7 +1303,7 @@ class WorldStateManagerPlugin(
                     focal_context.hooks_after_call.append(send_suggestion)
 
                 @set_loading(
-                    "Analyzing character development",
+                    LoadingLabel("Analyzing {}'s development", character.name),
                     cancellable=True,
                     set_success=True,
                     set_error=True,

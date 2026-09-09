@@ -1,8 +1,4 @@
 // @vitest-environment jsdom
-//
-// #513: the toast paints the names of a status. The Vuetify snackbar is a
-// stub that always renders its content, so what is under test is the markup
-// the component builds from the label it was sent.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApp, defineComponent, h, nextTick } from 'vue';

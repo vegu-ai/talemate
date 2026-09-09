@@ -208,29 +208,35 @@ describe('perspectives-only toggles in the cost line', () => {
     });
 });
 
-// #511: the count in the collapsed pane's title
 describe('switchTally', () => {
-    it('counts the leaf switches plus a group that has no leaves of its own', () => {
+    it('counts every switch the pane draws: the group masters and their leaves', () => {
         const groups = resolveKnowledgeToggles(agents());
-        expect(groups.map((g) => [g.label, g.toggles.length])).toEqual([
-            ['Character Knowledge', 5], ['Summarization', 1], ['Retrieval', 1], ['Topics', 0],
+        expect(groups.map((g) => [g.label, g.master, g.toggles.length])).toEqual([
+            ['Character Knowledge', true, 5], ['Summarization', false, 1], ['Retrieval', false, 1], ['Topics', true, 0],
         ]);
-        expect(switchTally(groups)).toEqual({ on: 6, total: 8 });
+        expect(switchTally(groups)).toEqual({ on: 7, total: 9 });
     });
 
-    it('reads a leaf under an off group as off, and leaves the total alone', () => {
+    it('reads a leaf under an off group as off, and counts the master itself as off', () => {
         const overrides = { conversation: { actions: { character_knowledge: { enabled: false } } } };
-        expect(switchTally(resolveKnowledgeToggles(agents({ overrides })))).toEqual({ on: 3, total: 8 });
+        expect(switchTally(resolveKnowledgeToggles(agents({ overrides })))).toEqual({ on: 3, total: 9 });
     });
 
     it('follows a leaf that is switched on', () => {
         const overrides = { conversation: { actions: { character_knowledge: { config: { ledger: { value: true } } } } } };
-        expect(switchTally(resolveKnowledgeToggles(agents({ overrides })))).toEqual({ on: 7, total: 8 });
+        expect(switchTally(resolveKnowledgeToggles(agents({ overrides })))).toEqual({ on: 8, total: 9 });
     });
 
     it('follows an off leafless group', () => {
         const overrides = { memory: { actions: { topics: { enabled: false } } } };
-        expect(switchTally(resolveKnowledgeToggles(agents({ overrides })))).toEqual({ on: 5, total: 8 });
+        expect(switchTally(resolveKnowledgeToggles(agents({ overrides })))).toEqual({ on: 6, total: 9 });
+    });
+
+    it('moves when the master of a group whose only leaf is off is switched off', () => {
+        const perspectives = true;
+        const overrides = { conversation: { actions: { character_knowledge: { enabled: false } } } };
+        expect(switchTally(resolveKnowledgeToggles(agents({ perspectives }), { perspectives }))).toEqual({ on: 4, total: 5 });
+        expect(switchTally(resolveKnowledgeToggles(agents({ overrides, perspectives }), { perspectives }))).toEqual({ on: 3, total: 5 });
     });
 
     it('counts nothing while the agents have not reported', () => {

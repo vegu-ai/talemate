@@ -15,7 +15,6 @@
 
 const TERMINAL_TYPES = ['success', 'error', 'warning', 'info'];
 
-// a label the backend did not split is one plain chunk
 function labelParts(label, message) {
     if (!Array.isArray(label) || !label.length) return [{ text: message, name: false }];
     return label.map((part) => ({ text: String(part.text ?? ''), name: !!part.name }));

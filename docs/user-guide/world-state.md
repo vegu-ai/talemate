@@ -180,13 +180,12 @@ The menu header shows the story mode. **Thoroughness** starts with the **Charact
 
 Then comes a summary line naming the
 options that add a request and are on ("No extra requests per line" when none is). Below it sits
-**Individual settings**, a pane that is closed when the application loads and counts the settings
-it holds, for example "6 of 8 on". The count is over the settings themselves: a group switch that
-heads settings of its own is not counted, a group that is a single switch (Memory → Topics) is,
-and a setting under a group switch that is off counts as off. Opening the pane on one character
-leaves it open on the others until the page is reloaded. Open it for the settings that shape
-knowledge keeping, grouped by agent, with the same labels, descriptions and cost notes as the
-agent settings:
+**Individual settings**, a pane that is closed when the application loads and counts the switches
+it holds, for example "7 of 9 on". The count is over every switch the pane draws, the group
+switches and the settings under them alike, and a setting under a group switch that is off counts
+as off. Opening the pane on one character leaves it open on the others until the page is
+reloaded. Open it for the settings that shape knowledge keeping, grouped by agent, with the same
+labels, descriptions and cost notes as the agent settings:
 
 - Conversation → Character Knowledge: the group switch, Limit to character knowledge, Remind
   about unknown facts, Topic knowledge overview, Refine memories with AI, Track learning from

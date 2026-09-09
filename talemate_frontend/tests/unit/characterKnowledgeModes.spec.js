@@ -84,8 +84,6 @@ describe('every point of choice shows the comparison from the constant', () => {
         expect(CHARACTER_KNOWLEDGE_MODES_COMPARE_TITLE).toBe('Compare the two modes');
     });
 
-    // #511: the comparison used to expand inside the host and made a narrow
-    // panel comically tall
     it('keeps the cards out of the compact hosts and behind a popover of its own', () => {
         const wrapper = read('../../src/components/CharacterKnowledgeModeComparison.vue');
         expect(wrapper).not.toContain('v-expansion-panel');

@@ -129,8 +129,10 @@
 
                             <template v-else-if="mode === 'global' && !section.registry">
                                 <!-- one stop writes three agents, so the slider is not part of the section -->
+                                <!-- immediate=false: the page writes its working copy and saves later,
+                                     so no agent status frame answers the change -->
                                 <KnowledgeEffortSlider v-if="selectedName === 'conversation' && section.key === 'character_knowledge'"
-                                    :mode="effortMode" :agents="effortAgents" class="mb-4" @apply="applyEffort" />
+                                    :mode="effortMode" :agents="effortAgents" :immediate="false" class="mb-4" @apply="applyEffort" />
                                 <AgentConfigSection v-bind="sectionProps(section.key)" />
                             </template>
 

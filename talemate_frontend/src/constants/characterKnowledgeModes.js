@@ -42,10 +42,9 @@ export const CHARACTER_KNOWLEDGE_MODES = [
     },
 ];
 
-// the scene's `perspectives` flag names one of the two modes
+export const CHARACTER_KNOWLEDGE_MODES_COMPARE_LABEL = 'Compare modes';
+export const CHARACTER_KNOWLEDGE_MODES_COMPARE_TITLE = 'Compare the two modes';
+
 export function characterKnowledgeMode(perspectives) {
     return CHARACTER_KNOWLEDGE_MODES.find((mode) => mode.key === (perspectives ? 'perception' : 'legacy'));
 }
-
-export const CHARACTER_KNOWLEDGE_MODES_COMPARE_LABEL = 'Compare modes';
-export const CHARACTER_KNOWLEDGE_MODES_COMPARE_TITLE = 'Compare the two modes';

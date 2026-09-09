@@ -1,6 +1,5 @@
 import pydantic
 import structlog
-from textwrap import shorten
 
 from talemate.emit import emit
 from talemate.instance import get_agent
@@ -33,9 +32,9 @@ class CharacterPayload(NarrativeDirectionPayload):
 
 
 def _query_label(handler, data: dict) -> LoadingLabel | str:
-    query = shorten(
-        QueryPayload(**data).query, QUERY_STATUS_MAX_LENGTH, placeholder="..."
-    )
+    query = " ".join(QueryPayload(**data).query.split())
+    if len(query) > QUERY_STATUS_MAX_LENGTH:
+        query = f"{query[:QUERY_STATUS_MAX_LENGTH].rstrip()}..."
     return LoadingLabel("Investigating: {}", query) if query else "Working on a query"
 
 

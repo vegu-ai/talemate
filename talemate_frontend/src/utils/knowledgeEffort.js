@@ -2,12 +2,13 @@
 // way the knowledge hub reads its toggles. A key the status does not carry
 // (the backend strips the other mode's keys) is left out of every comparison
 // and every patch.
+import { characterKnowledgeMode } from '@/constants/characterKnowledgeModes';
 import { effectiveActionEnabled, effectiveConfigValue } from '@/constants/sceneAgentSettings';
 import { EFFORT_PRESETS, EFFORT_STOPS, REQUEST_TOGGLES } from '@/constants/knowledgeEffort';
 import { PERSPECTIVES_ANALYSIS_COST } from '@/utils/knowledgeHub';
 
 export function effortMode(perspectives) {
-    return perspectives ? 'perception' : 'legacy';
+    return characterKnowledgeMode(perspectives).key;
 }
 
 // A stop the target table lacks (Standard Ultra in Character perspectives)

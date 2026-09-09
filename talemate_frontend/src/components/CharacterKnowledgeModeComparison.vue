@@ -1,7 +1,7 @@
 <template>
   <div v-if="compact" class="d-flex align-center flex-wrap">
     <span class="text-body-small text-mutedheader">{{ currentTitle }}</span>
-    <v-menu v-model="open" :close-on-content-click="false" location="bottom" max-width="880" min-width="320">
+    <v-menu v-model="open" :close-on-content-click="false" location="bottom" max-width="880" min-width="320" :activator-props="{ 'aria-haspopup': 'dialog' }" @after-leave="restoreFocus">
       <template v-slot:activator="{ props: activatorProps }">
         <v-btn
           v-bind="activatorProps"
@@ -47,7 +47,6 @@ export default {
       type: String,
       default: 'selected',
     },
-    // one line and a popover instead of both cards, for a narrow host
     compact: {
       type: Boolean,
       default: false,
@@ -58,11 +57,29 @@ export default {
       open: false,
       compareLabel: CHARACTER_KNOWLEDGE_MODES_COMPARE_LABEL,
       compareTitle: CHARACTER_KNOWLEDGE_MODES_COMPARE_TITLE,
+      restoring: false,
     };
   },
   computed: {
     currentTitle() {
       return characterKnowledgeMode(this.perspectives).title;
+    },
+  },
+  watch: {
+    // Vuetify restores focus itself only on Escape, and never for an overlay
+    // that sits inside another one - the hub menu and the Shared World dialog
+    open(shown) {
+      if (shown) return;
+      this.restoring = !!document.activeElement?.closest?.('.mode-comparison-popover');
+    },
+  },
+  methods: {
+    // afterLeave, so the focus is not handed back while the overlay's focus
+    // trap is still up to take it again
+    restoreFocus() {
+      if (!this.restoring) return;
+      this.restoring = false;
+      this.$el?.querySelector?.('.mode-comparison-trigger')?.focus();
     },
   },
 };

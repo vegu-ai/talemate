@@ -11,8 +11,16 @@ import unittest.mock
 
 import pytest
 
+from talemate.agents.director.websocket_handler import _dynamic_choices_label
+from talemate.agents.narrator.websocket_handler import (
+    QUERY_STATUS_MAX_LENGTH,
+    _look_at_character_label,
+    _query_label,
+)
+from talemate.agents.world_state.websocket_handler import _examine_label
 from talemate.exceptions import GenerationCancelled
 from talemate.status import (
+    FALLBACK_LABEL,
     LoadingLabel,
     set_loading,
     set_loading_label,
@@ -207,7 +215,6 @@ class TestSetLoading:
 class TestNestedLoading:
     @pytest.mark.asyncio
     async def test_the_inner_call_hands_the_status_back_when_it_ends(self, emissions):
-        # the character development chain: an analysis that runs generations
         @set_loading(LoadingLabel("Analyzing {}", "Mara"), set_success=True)
         async def outer():
             await inner()
@@ -308,36 +315,35 @@ class TestHandlerLabels:
     """The labels the websocket handlers build from their own payloads."""
 
     def test_the_narrator_names_the_character_it_looks_at(self):
-        from talemate.agents.narrator.websocket_handler import (
-            _look_at_character_label,
-        )
-
         label = _look_at_character_label(None, {"character": "Mara"})
         assert label.text == "Looking at Mara"
         assert label.names == ["Mara"]
         assert _look_at_character_label(None, {}) == "Looking at a character"
 
     def test_the_narrator_shows_the_query_it_investigates(self):
-        from talemate.agents.narrator.websocket_handler import (
-            QUERY_STATUS_MAX_LENGTH,
-            _query_label,
-        )
-
         label = _query_label(None, {"query": "What is behind the lamp room door?"})
         assert label.text == "Investigating: What is behind the lamp room door?"
 
         long = _query_label(
             None, {"query": "Why does " + "the light keep turning " * 8}
         )
-        assert len(long.text) <= len("Investigating: ") + QUERY_STATUS_MAX_LENGTH
+        assert len(long.text) <= len("Investigating: ") + QUERY_STATUS_MAX_LENGTH + 3
         assert long.text.endswith("...")
 
-    def test_the_world_state_names_the_entity_and_counts_the_messages(self):
-        from talemate.agents.world_state.websocket_handler import (
-            _examine_label,
-            _summarize_and_pin_label,
-        )
+    def test_the_narrator_keeps_the_subject_of_a_query_without_spaces(self):
+        for query in (
+            "灯台の扉の向こうには何がありますか" * 5,
+            "https://example.com/" + "a" * 80,
+            "x" * (QUERY_STATUS_MAX_LENGTH + 1),
+        ):
+            assert len(query) > QUERY_STATUS_MAX_LENGTH
+            label = _query_label(None, {"query": query})
+            assert label.names == [f"{query[:QUERY_STATUS_MAX_LENGTH]}..."]
+            assert label.text.startswith(f"Investigating: {query[:10]}")
 
+        assert _query_label(None, {"query": "   "}) == "Working on a query"
+
+    def test_the_world_state_names_the_entity_it_examines(self):
         label = _examine_label(
             None,
             {
@@ -349,14 +355,7 @@ class TestHandlerLabels:
         assert label.text == "Examining the oil store"
         assert label.names == ["the oil store"]
 
-        assert (
-            _summarize_and_pin_label(None, {"num_messages": 12}).text
-            == "Summarizing 12 messages and pinning"
-        )
-
     def test_the_director_names_the_character_it_generates_actions_for(self):
-        from talemate.agents.director.websocket_handler import _dynamic_choices_label
-
         label = _dynamic_choices_label(None, {"character": "Elmer"})
         assert label.text == "Generating actions for Elmer"
         assert _dynamic_choices_label(None, {}) == "Generating dynamic actions"
@@ -365,8 +364,6 @@ class TestHandlerLabels:
 class TestLabelFailure:
     @pytest.mark.asyncio
     async def test_runs_the_call_even_when_its_label_cannot_be_built(self, emissions):
-        from talemate.status import FALLBACK_LABEL
-
         def label(data: dict) -> LoadingLabel:
             return LoadingLabel("Looking at {}", data["character"])
 
@@ -378,3 +375,20 @@ class TestLabelFailure:
         assert busy(emissions) == [
             {"message": FALLBACK_LABEL, "status": "busy", "data": {}}
         ]
+
+    @pytest.mark.asyncio
+    async def test_runs_the_call_even_when_the_label_is_an_unusable_value(
+        self, emissions
+    ):
+        for value in (None, 3, {"character": "Mara"}):
+
+            @set_loading(lambda data: value)
+            async def handler(data: dict):
+                return "done"
+
+            assert await handler({}) == "done"
+
+        assert (
+            busy(emissions)
+            == [{"message": FALLBACK_LABEL, "status": "busy", "data": {}}] * 3
+        )

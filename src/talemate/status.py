@@ -24,9 +24,7 @@ FALLBACK_LABEL = "Working on it"
 
 class LoadingLabel:
     """
-    A loading message with the names in it kept apart from the words around
-    them, so the interface can paint the names: `LoadingLabel("Looking at {}",
-    "Mara")`. A name is passed rather than substituted because a name can
+    A name is passed rather than substituted into the message because a name can
     repeat the letters of the words around it - "Analyzing Ana's development".
     """
 
@@ -53,7 +51,6 @@ class LoadingLabel:
 
     @property
     def parts(self) -> list[dict]:
-        """The label as alternating chunks, each one a name or not."""
         parts = []
         for index, chunk in enumerate(self.chunks):
             if chunk:
@@ -75,8 +72,6 @@ def _as_label(label: str | LoadingLabel) -> LoadingLabel:
 
 
 class _Loading:
-    """The status one `set_loading` call is showing, while it runs."""
-
     def __init__(self, label: LoadingLabel, cancellable: bool, set_busy: bool):
         self.label = label
         self.cancellable = cancellable
@@ -134,11 +129,13 @@ class set_loading:
         self.as_async = as_async
 
     def _label(self, *args, **kwargs) -> LoadingLabel:
-        """The label of one call: a callable is given the call's own arguments."""
         if isinstance(self.message, (str, LoadingLabel)):
             return _as_label(self.message)
         try:
-            return _as_label(self.message(*args, **kwargs))
+            label = self.message(*args, **kwargs)
+            if not isinstance(label, (str, LoadingLabel)):
+                raise TypeError(f"a label cannot be built from {type(label).__name__}")
+            return _as_label(label)
         except Exception as e:
             # the call is what matters; it reports a bad payload itself
             log.warning("Could not build the loading label", error=e)

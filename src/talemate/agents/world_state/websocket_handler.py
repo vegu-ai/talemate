@@ -37,13 +37,6 @@ class AddSnapshotEntityPayload(pydantic.BaseModel):
     text: str
 
 
-def _summarize_and_pin_label(handler, data: dict) -> LoadingLabel:
-    return LoadingLabel(
-        "Summarizing {} messages and pinning",
-        SummarizeAndPinPayload(**data).num_messages,
-    )
-
-
 def _examine_label(handler, data: dict) -> LoadingLabel | str:
     entity = ExamineEntityPayload(**data).entity_name
     return LoadingLabel("Examining {}", entity) if entity else "Examining"
@@ -111,7 +104,7 @@ class WorldStateWebsocketHandler(Plugin):
         self.agent.cancel_world_state_update()
         await self.signal_operation_done(allow_auto_save=False)
 
-    @set_loading(_summarize_and_pin_label, cancellable=True, as_async=True)
+    @set_loading("Summarizing messages and pinning", cancellable=True, as_async=True)
     async def handle_summarize_and_pin(self, data: dict):
         payload = SummarizeAndPinPayload(**data)
 

@@ -109,22 +109,16 @@ export function thoroughnessSummary(groups, perspectives) {
     };
 }
 
-/**
- * How many of the hub's individual settings are on. A group that heads its own
- * toggles is a heading rather than a setting, so only its toggles count; a
- * group with a master and no toggles of its own is one setting. An off group
- * turns its toggles off in effect, so they count as off.
- */
+// How many of the switches the pane draws are on; an off group turns its own toggles off
 export function switchTally(groups) {
     let on = 0;
     let total = 0;
     for (const group of groups || []) {
-        if (!group.toggles.length) {
+        if (group.master) {
             total += 1;
             if (group.enabled) on += 1;
-            continue;
         }
-        for (const toggle of group.toggles) {
+        for (const toggle of group.toggles || []) {
             total += 1;
             if (group.enabled && toggle.value) on += 1;
         }

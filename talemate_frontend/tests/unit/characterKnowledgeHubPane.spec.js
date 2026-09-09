@@ -1,12 +1,7 @@
 // @vitest-environment jsdom
-//
-// #511: what the hub renders before anything is opened. The Vuetify overlay and
-// expansion panel are replaced by stubs that keep their contract — a menu shows
-// its content while its model is true, a panel shows its text while it is the
-// open one — so the wiring of the hub is what is under test.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createApp, defineComponent, h, inject, nextTick, provide } from 'vue';
+import { createApp, defineComponent, h, inject, nextTick, provide, watch } from 'vue';
 import Comparison from '@/components/CharacterKnowledgeModeComparison.vue';
 import { CHARACTER_KNOWLEDGE_MODES } from '@/constants/characterKnowledgeModes';
 
@@ -26,12 +21,23 @@ afterEach(() => {
 
 const Container = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) });
 
+// a real button, so a test can assert where the focus lands
+const VBtnStub = defineComponent({ setup: (_, { slots }) => () => h('button', slots.default?.()) });
+
+// VOverlay emits after-leave once the content has left; the comparison hangs
+// its focus restore on that
 const VMenuStub = defineComponent({
     props: ['modelValue'],
-    setup: (props, { slots }) => () => h('div', [
-        slots.activator?.({ props: {} }),
-        props.modelValue ? h('div', { class: 'menu-content' }, slots.default?.()) : null,
-    ]),
+    emits: ['after-leave'],
+    setup(props, { slots, emit }) {
+        watch(() => props.modelValue, (shown) => {
+            if (!shown) nextTick(() => emit('after-leave'));
+        });
+        return () => h('div', [
+            slots.activator?.({ props: {} }),
+            props.modelValue ? h('div', { class: 'menu-content' }, slots.default?.()) : null,
+        ]);
+    },
 });
 
 const VExpansionPanels = defineComponent({
@@ -92,7 +98,7 @@ const agents = () => ([
 
 const sceneData = { knowledge_eligibility: 'legacy', can_change_knowledge_eligibility: true };
 
-function mount(component, props = {}) {
+function mount(component, props = {}, injections = {}) {
     host = document.createElement('div');
     document.body.appendChild(host);
     app = createApp(component, props);
@@ -102,15 +108,16 @@ function mount(component, props = {}) {
     app.provide('scene', () => ({ data: sceneData }));
     app.provide('getAgents', agents);
     app.provide('toggleAgentAction', vi.fn());
-    app.provide('toggleAgentConfig', vi.fn());
+    app.provide('toggleAgentConfig', injections.toggleAgentConfig || vi.fn());
     app.provide('applyAgentValues', vi.fn());
     app.provide('queueKnowledgeEffort', vi.fn());
     app.provide('openAgentSettings', vi.fn());
     for (const name of ['VCard', 'VCardItem', 'VCardTitle', 'VCardSubtitle', 'VCardText', 'VChip', 'VIcon', 'VDivider',
-        'VSpacer', 'VProgressLinear', 'VBtn', 'VTooltip', 'VSwitch', 'VList', 'VListItem', 'VListItemTitle',
+        'VSpacer', 'VProgressLinear', 'VTooltip', 'VSwitch', 'VList', 'VListItem', 'VListItemTitle',
         'VCheckboxBtn', 'VSlider', 'VRow', 'VCol']) {
         app.component(name, Container);
     }
+    app.component('VBtn', VBtnStub);
     app.component('VMenu', VMenuStub);
     app.component('VExpansionPanels', VExpansionPanels);
     app.component('VExpansionPanel', VExpansionPanel);
@@ -129,7 +136,7 @@ describe('the hub before anything is opened', () => {
         const text = host.textContent;
         expect(text).toContain('Character knowledge effort');
         expect(text).toContain('Individual settings');
-        expect(text).toContain('2 of 3 on');
+        expect(text).toContain('3 of 4 on');
         for (const label of SWITCH_LABELS) expect(text, `${label} is rendered while the pane is collapsed`).not.toContain(label);
         expect(host.querySelector('.panel-text')).toBeNull();
     });
@@ -167,6 +174,17 @@ describe('the hub before anything is opened', () => {
         expect(host.textContent).not.toContain(SWITCH_LABELS[0]);
     });
 
+    it('hands a click on a leaf to the agent drawer', async () => {
+        const toggleAgentConfig = vi.fn();
+        const vm = mount(Hub, { name: 'Nora' }, { toggleAgentConfig });
+        vm.open = true;
+        await nextTick();
+        host.querySelector('.panel-title').click();
+        await nextTick();
+        host.querySelector('.knowledge-hub-toggle').click();
+        expect(toggleAgentConfig).toHaveBeenCalledWith('conversation', 'character_knowledge', 'perspective_filter');
+    });
+
     it('shows one line for the story mode and no mode card', async () => {
         const vm = mount(Hub, { name: 'Nora' });
         vm.open = true;
@@ -180,6 +198,32 @@ describe('the hub before anything is opened', () => {
 });
 
 describe('the comparison popover', () => {
+    it('returns focus to the trigger when it closes, since Vuetify skips a nested overlay', async () => {
+        const vm = mount(Comparison, { perspectives: false, selectedLabel: 'current', compact: true });
+        const trigger = host.querySelector('.mode-comparison-trigger');
+        trigger.focus();
+        vm.open = true;
+        await nextTick();
+        host.querySelector('.mode-comparison-popover button').focus();
+        vm.open = false;
+        await nextTick();
+        await nextTick();
+        await nextTick();
+        expect(document.activeElement).toBe(trigger);
+    });
+
+    it('leaves the focus alone when the click that closed it was outside the popover', async () => {
+        const vm = mount(Comparison, { perspectives: false, selectedLabel: 'current', compact: true });
+        vm.open = true;
+        await nextTick();
+        document.body.focus();
+        vm.open = false;
+        await nextTick();
+        await nextTick();
+        await nextTick();
+        expect(document.activeElement).toBe(document.body);
+    });
+
     it('holds both cards, and neither of them before it is opened', async () => {
         const vm = mount(Comparison, { perspectives: false, selectedLabel: 'current', compact: true });
         expect(host.textContent).toContain('Compare modes');

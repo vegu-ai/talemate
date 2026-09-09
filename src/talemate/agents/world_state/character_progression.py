@@ -235,6 +235,8 @@ class CharacterProgressionMixin:
         creator = get_agent("creator")
 
         def attribute_label(name: str, instructions: str) -> LoadingLabel:
+            if not name:
+                return LoadingLabel("Generating an attribute for {}", character.name)
             return LoadingLabel("Generating {} for {}", name, character.name)
 
         @set_loading(attribute_label, cancellable=True)

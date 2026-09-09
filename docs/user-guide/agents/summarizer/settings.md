@@ -47,7 +47,7 @@ Writing style instructions are also included during summarization to maintain co
 
 Save individual facts alongside summaries for character knowledge. **Leave on to build the fact record**; this summary step needs no extra request. On by default. With this off, regenerating an entry leaves its recorded facts as they are. See [History — Facts](/talemate/user-guide/world-editor/history/#facts).
 
-Extraction asks for facts whose omission could make a later scene go wrong, allowing **0–12 facts per chapter**. A first hug can be a relationship milestone; a routine greeting hug is not a new fact. Each fact receives an **importance** of Routine (1), State (2), or Milestone (3) in the same response. These are model judgments that can be corrected in History; facts saved before importance was added default to State (2).
+[How character knowledge works](/talemate/user-guide/world-editor/knowledge-how-it-works/#standard-mode-one-line-is-said) shows who learns a chapter's facts. Extraction asks for facts whose omission could make a later scene go wrong, allowing **0–12 facts per chapter**. A first hug can be a relationship milestone; a routine greeting hug is not a new fact. Each fact receives an **importance** of Routine (1), State (2), or Milestone (3) in the same response. These are model judgments that can be corrected in History; facts saved before importance was added default to State (2).
 
 ###### Fact matching tolerance
 
@@ -57,7 +57,9 @@ This is the maximum distance allowed between facts as measured by the embedding 
 
 ## Fact chronology
 
-Fact chronology selects context facts by importance and age without a separate AI request. The **Character knowledge effort** slider leaves these settings untouched; you can also override them for one scene.
+Fact chronology selects context facts by importance and age without a separate AI request. The **Character knowledge effort** slider leaves these settings untouched; you can also override them for one scene. [Facts age](/talemate/user-guide/world-editor/knowledge-how-it-works/#facts-age) explains it in plain words.
+
+![Summarizer agent fact chronology settings](/talemate/img/0.40.0/summarizer-fact-chronology-settings.png)
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
@@ -81,6 +83,9 @@ The Character Perspectives section is visible with any scene or with no scene lo
 Its settings only affect scenes using character perspectives.
 Automatic repair can add one Summarizer request when a view is missing or invalid.
 The same toggle and cost note are available in the World State knowledge hub.
+[How character knowledge works](/talemate/user-guide/world-editor/knowledge-how-it-works/#character-perspectives-mode-one-line-is-said) shows the analysis, repair and Retry flow.
+
+![Summarizer agent character perspectives settings](/talemate/img/0.40.0/summarizer-character-perspectives-settings.png)
 
 ##### Automatically repair analysis
 

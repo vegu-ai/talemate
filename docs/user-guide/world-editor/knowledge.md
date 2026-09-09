@@ -1,6 +1,6 @@
 # Knowledge
 
-The World State panel offers a [knowledge hub](/talemate/user-guide/world-state/#knowledge-hub) on every character row: the character’s known facts ranked by importance and recency and their disclosures or access rules, the Character perspectives switch, and the agent settings that shape knowledge keeping, without leaving the main view. The sections below describe the settings themselves.
+The World State panel offers a [knowledge hub](/talemate/user-guide/world-state/#knowledge-hub) on every character row: the character’s known facts ranked by importance and recency and their disclosures or access rules, the Character perspectives switch, and the agent settings that shape knowledge keeping, without leaving the main view. The sections below describe the settings themselves. [How character knowledge works](/talemate/user-guide/world-editor/knowledge-how-it-works/) shows the flow behind them, with diagrams.
 
 ## Choosing a mode
 
@@ -98,7 +98,7 @@ Character descriptions, attributes, details and world entries have **Known by** 
 - **Only [character]**: keep the entry private to its character owner. World entries have no owner, so this option reads **Nobody**.
 - **Specific characters**: share the entry with its owner and the characters you choose. Select names in the **Characters** field. Explicit access rules can also give other characters access.
 
-Set visibility in the Characters or World tab. It governs authored inputs, pins and retrieval. Generated reinforcements also need a current audience view; visibility alone cannot expose their withheld full answer. The director's `set_known_by` uses the same visibility settings and normal write confirmation.
+Set visibility in the Characters or World tab. It governs authored inputs, pins and retrieval. Generated reinforcements also need a current audience view; visibility alone cannot expose their withheld full answer. The director can set **Known by** for you as well, through its usual write confirmation.
 
 ## Explicit disclosures
 
@@ -106,7 +106,7 @@ In a perception scene, **Characters → Knowledge → Establish character knowle
 
 **Give the whole entry** is off by default. **Give all entry content** explicitly copies all current source text, including private details. Neither choice grants access to future edits. Invalid sources and unknown characters are rejected before content is added. Earlier perspectives stay unchanged; the disclosure appears in subsequent context and survives saves, source edits and fact regeneration.
 
-This is author establishment: no dialogue or discovery event is invented. The director's `grant_knowledge` uses the same operation, with `information` for selected text or explicit `whole_entry: true`. Removing an additional access rule does not erase information already given to the character. Revokes are unavailable in this mode, including node and API writes.
+This is author establishment: no dialogue or discovery event is invented. The director can give a disclosure the same way, with selected information or the whole entry. Removing an additional access rule does not erase information already given to the character. Revokes are unavailable in this mode, including node and API writes.
 
 When **Extract facts** is enabled, the information also becomes searchable facts. If that step fails, the information is still saved. Follow the [cost and recovery guidance](#cost-and-recovery) to recover its facts.
 
@@ -144,4 +144,4 @@ Turn on **Limit to character knowledge** to omit events the character missed. If
 
 In **Characters → Knowledge → Adjust entry knowledge**, select an **Entry**, choose **Allow** or **Block** under **Action**, and click **Apply**. Use Allow to add the entry to the character's knowledge; use Block to keep it out. **Note (optional)** records your reason. Select an actual autocomplete result; typing alone does not choose an entry. Block takes precedence over Allow. Remove a rule to return to the remaining knowledge rules; removing it keeps the source entry.
 
-The director's `grant_knowledge` and `revoke_knowledge` use normal confirmation and replace the previous rule for that character and entry. The API and saved data still call Allow rules `grant` and Block rules `revoke`.
+The director can add an Allow or Block rule the same way, through its usual confirmation. A new rule replaces the previous rule for that character and entry.

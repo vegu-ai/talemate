@@ -140,7 +140,7 @@ Expand an active character and click the :material-head-lightbulb-outline: icon 
 row to open the **knowledge hub**, a menu that gathers what the system does for that character's
 knowledge. In the **Inactive** section, the same icon sits at the right edge of each character's
 row, beside the call-into-scene button.
-Background characters have no hub, since they are not characters yet. The menu stays open while
+[How character knowledge works](/talemate/user-guide/world-editor/knowledge-how-it-works/) shows what these settings do, with diagrams. Background characters have no hub, since they are not characters yet. The menu stays open while
 you click inside it; press Escape or click elsewhere to close it. It adds no AI requests: it
 reads the current state and writes settings.
 

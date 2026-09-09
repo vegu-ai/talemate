@@ -28,9 +28,11 @@ The **Known by** selector above the entries narrows the listed facts to those a 
 
 ![history known by filter](/talemate/img/0.40.0/world-editor-history-known-by.png)
 
+![history facts with importance and time markers](/talemate/img/0.40.0/world-editor-history-facts.png)
+
 The importance chip shows **Routine (1)** for a smaller continuity-relevant detail, **State (2)** for a durable change, or **Milestone (3)** for firsts, revelations, deaths, and story-changing decisions. Hover it for an explanation. The extraction prompt asks the model to omit trivia and allows an empty facts list: a first hug may matter, while another routine hug does not. Facts saved before importance was added load as State (2).
 
-Each fact also shows a relative time marker based on scene time and its latest restatement, such as **(21 Days ago)**. History keeps the full fact record; the Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology) settings select and rank context facts without a separate AI request.
+Each fact also shows a relative time marker based on scene time and its latest restatement, such as **(21 Days ago)**. History keeps the full fact record; the Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology) settings select and rank context facts without a separate AI request. [How character knowledge works](/talemate/user-guide/world-editor/knowledge-how-it-works/#standard-mode-one-line-is-said) shows how facts are recorded, restated and aged.
 
 Double-click a fact or select its importance chip to edit its text and importance, then select **Save**. A later restatement preserves the original fact's importance, including a manual correction. Use the :material-close: button to remove a fact. When the model's facts output could not be read, the summary is still stored and the entry shows a **facts failed** chip; **:material-format-list-checks: Regenerate facts** asks for the facts again and keeps the entry text. Regenerating the entry itself replaces its facts too. The summarizer's **Extract facts** setting turns the archive extraction off.
 

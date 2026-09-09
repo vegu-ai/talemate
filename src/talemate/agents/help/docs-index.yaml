@@ -83,8 +83,7 @@
   title: Connect a client
   summary: Add and save local or hosted LLM clients through Settings → Connections → Clients, choose the API/client type,
     and assign the first client to agents automatically or use Assign to all agents. Explains readiness indicators and links
-    individual provider setup guides.
-    A Which model note links the Model expectations page before the add-client steps.
+    individual provider setup guides. A Which model note links the Model expectations page before the add-client steps.
 - path: getting-started/installation/docker.md
   title: Docker installation
   summary: Install Talemate with Docker Compose using prebuilt images or manual builds; the default CUDA configuration requires
@@ -112,14 +111,16 @@
     expandable world-state snapshots.
 - path: getting-started/model-expectations.md
   title: Model expectations
-  summary: What Talemate expects from a model - a current reasoning-capable model, reliable JSON and tool-call output and 16k
-    or more context (32k recommended for Character perspectives), with known good hosted and self-hosted examples, what still
-    works with an older model, the symptoms of a model below the bar, the Context Length warning and the Model Testing Harness.
+  summary: What Talemate expects from a model - a current reasoning-capable model, reliable JSON and tool-call output and
+    16k or more context (32k recommended for Character perspectives), with known good hosted and self-hosted examples, what
+    still works with an older model, the symptoms of a model below the bar, the Context Length warning and the Model Testing
+    Harness.
 - path: getting-started/setup-wizard.md
   title: Setup Wizard
   summary: First-run Setup Wizard for selecting hosted or self-hosted AI, adding a client, choosing Better/Standard embeddings
     and CPU/CUDA, and optionally configuring Google/OpenRouter visuals. Shows the What Talemate expects from your model panel
-    and a pointer to the Model expectations page. Explains Apply & finish, skipping setup, reasoning defaults and where to change settings later.
+    and a pointer to the Model expectations page. Explains Apply & finish, skipping setup, reasoning defaults and where to
+    change settings later.
 - path: index.md
   title: Talemate Documentation
   summary: Talemate documentation landing page for AI roleplay with narration and world/game-state tracking, linking Windows,
@@ -131,11 +132,11 @@
     pass or topic-awareness assertions.
 - path: user-guide/agents/conversation/settings.md
   title: Settings
-  summary: 'Conversation formats including AI Aware, length, instructions, stop tokens, caching, story intent, writing style,
+  summary: Conversation formats including AI Aware, length, instructions, stop tokens, caching, story intent, writing style,
     effort presets, knowledge filtering, topic overview and memory refinement; unknown-fact reminders rank eligible facts
-    within the newest-record pool. Establish facts from dialogue uses the learning request after every character line,
-    including player lines and solo speakers; everyone present knows the facts, History supports importance edits and source
-    inspection, source changes remove facts, and Perspectives replaces Standard controls.'
+    within the newest-record pool. Establish facts from dialogue uses the learning request after every character line, including
+    player lines and solo speakers; everyone present knows the facts, History supports importance edits and source inspection,
+    source changes remove facts, and Perspectives replaces Standard controls.
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Autocomplete partial text with Ctrl/Cmd+Enter in dialogue, message editing, attributes, details, descriptions,
@@ -205,15 +206,15 @@
     scenes.'
 - path: user-guide/agents/memory/embeddings.md
   title: Embeddings
-  summary: Manage built-in and custom presets for local sentence transformers, hosted OpenAI and OpenRouter drivers, and
-    Client API. Covers each driver's model or client input, model downloads, INSTRUCTOR removal, Trust Remote Code, CPU/CUDA
-    switching, distance functions, Distance Mod/Search Strictness and model-dependent Topic Threshold. The Local flag hides
-    Device and GPU Recommendation for hosted models; Fast and GPU Recommendation tags are also covered.
+  summary: Manage built-in and custom presets for local sentence transformers, hosted OpenAI and OpenRouter drivers, and Client
+    API. Covers each driver's model or client input, model downloads, INSTRUCTOR removal, Trust Remote Code, CPU/CUDA switching,
+    distance functions, Distance Mod/Search Strictness and model-dependent Topic Threshold. The Local flag hides Device and
+    GPU Recommendation for hosted models; Fast and GPU Recommendation tags are also covered.
 - path: user-guide/agents/memory/index.md
   title: Overview
-  summary: Memory agent manages long-term memory with embeddings and the ChromaDB backend. Cached memory refreshes after
-    edits or deletions for the next prompt, even without new story messages, with or without Character perspectives.
-    Explains how retrieval already in progress can finish with earlier context without caching it for the next prompt.
+  summary: Memory agent manages long-term memory with embeddings and the ChromaDB backend. Cached memory refreshes after edits
+    or deletions for the next prompt, even without new story messages, with or without Character perspectives. Explains how
+    retrieval already in progress can finish with earlier context without caching it for the next prompt.
 - path: user-guide/agents/memory/koboldcpp.md
   title: KoboldCpp Embeddings
   summary: Use an embedding GGUF loaded in KoboldCpp with --embeddingsmodel; the Memory agent detects it and switches to Client
@@ -258,8 +259,8 @@
   title: Settings
   summary: 'Summarizer thresholds, fact matching, 0–12 salient Routine/State/Milestone facts, layered history, Perspectives
     repair, deep analysis, Scene History budgets, Best Fit and Enforce Summary Boundary. Chronology uses 90/14/2-day half-lives,
-    a 3-day window and floor 0.5: default cuts at 3/42/450 days unless a present character is mentioned; floor 0 disables cuts,
-    extraction inventories stay uncut, markers follow restatements, effort presets leave settings unchanged, and Standard
+    a 3-day window and floor 0.5: default cuts at 3/42/450 days unless a present character is mentioned; floor 0 disables
+    cuts, extraction inventories stay uncut, markers follow restatements, effort presets leave settings unchanged, and Standard
     analysis cache inputs include chronology, scene time and presence.'
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
@@ -487,8 +488,8 @@
   title: Overview
   summary: Overview of local and hosted AI clients and assigning different models to specialized agents or using one client
     for everything. Links supported provider setup guides, OpenAI-compatible services and the bundled Model Testing Harness
-    for checking a new model.
-    Opens with what Talemate expects from a model (reasoning-capable, reliable JSON and tool calls, 16k context) and links the Model expectations page.
+    for checking a new model. Opens with what Talemate expects from a model (reasoning-capable, reliable JSON and tool calls,
+    16k context) and links the Model expectations page.
 - path: user-guide/clients/model-testing-harness.md
   title: Model Testing Harness
   summary: 'Bundled Model Testing Harness scene runs six minimum-viability checks on assigned agent clients: tagged instructions,
@@ -608,8 +609,8 @@
   title: Debug Tools
   summary: 'The bug-icon Debug Tools panel covers Prompts, Memory and Vars: inspect sent prompts and disable reasoning per
     action, watch memory retrieval, and edit game-state variables or the full scene-state JSON. Pin labeled paths independently
-    to Debug Vars or scene toolbar knobs, with descriptions, order, read-only controls, number bounds and sliders, string choices,
-    type-matched controls, path subtitles and three routes to the Game State editor.'
+    to Debug Vars or scene toolbar knobs, with descriptions, order, read-only controls, number bounds and sliders, string
+    choices, type-matched controls, path subtitles and three routes to the Game State editor.'
 - path: user-guide/howto/create-a-new-scene/create-empty-scene.md
   title: Create an empty scene
   summary: Create New Story from Home, name it and optionally choose writing style, director persona, default-off Character
@@ -922,10 +923,9 @@
 - path: user-guide/node-editor/reference/nodes/knowledge.md
   title: Knowledge Nodes
   summary: Knowledge nodes query facts, current state, relationships, visibility and character reports; Facts About ranks
-    importance and recency, fact text outputs apply chronology selection and relative time markers, while Relationship
-    Timeline raw facts remain oldest first. Perception reports include disclosures and supported-fact access; revokes and
-    awareness lines are legacy-only, and Grant Knowledge establishes disclosures with mode-aware director callbacks and
-    confirmation.
+    importance and recency, fact text outputs apply chronology selection and relative time markers, while Relationship Timeline
+    raw facts remain oldest first. Perception reports include disclosures and supported-fact access; revokes and awareness
+    lines are legacy-only, and Grant Knowledge establishes disclosures with mode-aware director callbacks and confirmation.
 - path: user-guide/node-editor/reference/nodes/prompt.md
   title: Prompt Nodes
   summary: Prompt nodes build Jinja2 prompts with scene, character, memory, game state and dynamic context toggles; load templates
@@ -1186,8 +1186,8 @@
 - path: user-guide/world-editor/characters/import.md
   title: Import character
   summary: 'Import characters from another Talemate scene through World Editor Characters: choose Import character, select
-    the source scene and character, and import into the current scene. The character arrives inactive, and an import is
-    refused with "Name X already exists." when the scene already holds that name, compared without case.'
+    the source scene and character, and import into the current scene. The character arrives inactive, and an import is refused
+    with "Name X already exists." when the scene already holds that name, compared without case.'
 - path: user-guide/world-editor/characters/index.md
   title: Character Editor
   summary: Character Editor overview for creating/removing characters, switching player control, activation and folder organization.
@@ -1221,22 +1221,29 @@
 - path: user-guide/world-editor/history/index.md
   title: History
   summary: World Editor History manages static backstory, archived summaries, layered history, presence chips and time-passage
-    chapters. Facts show Routine/State/Milestone importance, relative time such as (21 Days ago) since their latest restatement, repeats and supersedes
-    links; archived and Dialogue facts share text/importance editing and Known by filtering, source inspection and cleanup,
-    and failed extraction retries; History retains the full record despite prompt chronology cuts and supports dated
-    seed-guided entries and regeneration.
+    chapters. Facts show Routine/State/Milestone importance, relative time such as (21 Days ago) since their latest restatement,
+    repeats and supersedes links; archived and Dialogue facts share text/importance editing and Known by filtering, source
+    inspection and cleanup, and failed extraction retries; History retains the full record despite prompt chronology cuts
+    and supports dated seed-guided entries and regeneration.
 - path: user-guide/world-editor/history/layered-history.md
   title: Layered History
   summary: Layered History compresses dialogue into base summaries and successively smaller layers to preserve a full-timeline
     detail gradient. Covers compression statistics, token thresholds, layer limits, chunking/analyzation settings, edit/regenerate/inspect
     tools and context-budget review.
+- path: user-guide/world-editor/knowledge-how-it-works.md
+  title: How character knowledge works
+  summary: 'Short plain-words walk-through with five diagrams of the character knowledge flow: a Standard-mode turn (presence,
+    Track learning from dialogue, Establish facts from dialogue, chapter facts, restatements, linked facts, Show formerly
+    clause), a Character perspectives turn (per-passage analysis, Automatically repair analysis, Retry, Known by, disclosures,
+    retired controls), what a reply is built from (sheets, gap lines, memory ranking, unknown-fact reminders, Facts age half-lives
+    and floor), the effort stops, and which mode to pick; power-user detail in Details expanders.'
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
-  summary: Standard versus Character perspectives comparison, new-story/card-import opt-in and empty-scene switching,
-    Character knowledge effort presets and model expectations, costs/retries, Known by visibility, durable disclosures,
-    supported evidence and Standard Allow/Block rules. The knowledge hub ranks facts by importance and age with relative
-    time markers and recent/older selection; expanded Known facts by topic rows retain the full record and show how/where
-    each fact is known, without extra AI requests or changes to access or effort settings.
+  summary: Standard versus Character perspectives comparison, new-story/card-import opt-in and empty-scene switching, Character
+    knowledge effort presets and model expectations, costs/retries, Known by visibility, durable disclosures, supported evidence
+    and Standard Allow/Block rules. The knowledge hub ranks facts by importance and age with relative time markers and recent/older
+    selection; expanded Known facts by topic rows retain the full record and show how/where each fact is known, without extra
+    AI requests or changes to access or effort settings.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and
@@ -1261,8 +1268,8 @@
   title: Outline
   summary: Scene Outline sets title, content classification, internal description and player introduction with AI generation/autocomplete.
     Explains perspective/tense defaults and player/NPC/narrator overrides, POV presets, {player_name} substitution and suppression,
-    fallback semantics and perspective context IDs. Shipped presets show explanatory and sample-prose subtitles, and Ask
-    director to set up perspectives opens a new director chat that chooses and writes perspectives from the existing prose.
+    fallback semantics and perspective context IDs. Shipped presets show explanatory and sample-prose subtitles, and Ask director
+    to set up perspectives opens a new director chat that chooses and writes perspectives from the existing prose.
 - path: user-guide/world-editor/scene/settings.md
   title: Settings
   summary: Scene Settings control Character perspectives while history and archived history are empty; disabling clears stored
@@ -1290,7 +1297,7 @@
 - path: user-guide/world-state.md
   title: World State
   summary: World panel durable snapshots, tracked states, Look at/Add Detail highlights, Add to world state text selection,
-    knowledge-change dots, active/inactive/background characters and Make real name protection. The knowledge hub shows
-    chronology-selected facts ranked by importance and recency with time markers, topics and counts, disclosures/access rules,
-    Character perspectives and effort presets; also covers narrated activation, guided refresh/wipe, cancellation, background
-    cadence and Pin to context.
+    knowledge-change dots, active/inactive/background characters and Make real name protection. The knowledge hub shows chronology-selected
+    facts ranked by importance and recency with time markers, topics and counts, disclosures/access rules, Character perspectives
+    and effort presets; also covers narrated activation, guided refresh/wipe, cancellation, background cadence and Pin to
+    context.

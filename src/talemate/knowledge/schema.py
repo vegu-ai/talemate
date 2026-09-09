@@ -123,6 +123,8 @@ class KnownFact(pydantic.BaseModel):
     text: str
     topic: str | None = None
     ts: int | None = None
+    last_seen_ts: int | None = None
+    time: str = "Time unknown"
 
 
 class TopicFact(pydantic.BaseModel):
@@ -133,6 +135,7 @@ class TopicFact(pydantic.BaseModel):
     source: str
     source_id: str | None = None
     ts: int | None = None
+    time: str = "Time unknown"
 
 
 class TopicCoverage(pydantic.BaseModel):

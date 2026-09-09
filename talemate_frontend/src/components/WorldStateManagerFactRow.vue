@@ -4,6 +4,7 @@
             <v-chip size="x-small" variant="tonal" color="muted" class="mr-2">{{ fact.id }}</v-chip>
         </template>
         <div v-if="!editing" class="d-flex align-center flex-wrap ga-2">
+            <span class="text-body-small text-medium-emphasis fact-time">({{ fact.time || 'Time unknown' }})</span>
             <span class="text-body-medium fact-text" @dblclick.stop="startEdit">{{ fact.text }}</span>
             <v-chip size="x-small" variant="tonal" :color="importance.color" @click="startEdit">
                 {{ importance.title }}

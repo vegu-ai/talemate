@@ -576,6 +576,7 @@ class Prompt(pydantic.BaseModel):
         env.globals["volatile_context_placement"] = self.volatile_context_placement
         env.globals["retrieve_memories"] = self.retrieve_memories
         env.globals["time_diff"] = self.time_diff
+        env.globals["render_fact"] = self.render_fact
         env.globals["system_time"] = self.system_time
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
@@ -1096,6 +1097,14 @@ class Prompt(pydantic.BaseModel):
         except ValueError:
             return ""
         return diff_to_human(ts, scene.ts)
+
+    def render_fact(self, fact, *, extraction=False):
+        # instance imports clients and prompts before chronology can use get_agent.
+        from talemate.knowledge.chronology import render_fact
+
+        return render_fact(
+            self.vars.get("scene") or active_scene.get(), fact, extraction=extraction
+        )
 
     def system_time(
         self, format: Literal["full", "date", "time", "iso", "datetime"] = "full"

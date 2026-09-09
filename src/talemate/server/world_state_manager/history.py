@@ -18,6 +18,7 @@ from talemate.history import (
     collect_time_passages,
 )
 from talemate.knowledge.facts import facts_for_entry
+from talemate.knowledge.chronology import fact_display
 from talemate.knowledge.presence import layer_entry_presence
 from talemate.scene_message import TimePassageMessage
 from talemate.server.world_state_manager import world_state_templates
@@ -85,7 +86,8 @@ class HistoryMixin:
         )
         for row in history:
             row["facts"] = [
-                fact.model_dump() for fact in facts_for_entry(self.scene, row["id"])
+                fact_display(self.scene, fact)
+                for fact in facts_for_entry(self.scene, row["id"])
             ]
 
         layered_history = []
@@ -110,7 +112,7 @@ class HistoryMixin:
                     "layered_history": layered_history,
                     "time_passages": time_passages,
                     "dialogue_facts": [
-                        fact.model_dump()
+                        fact_display(self.scene, fact)
                         for fact in self.scene.world_state.facts.values()
                         if fact.source == "dialogue"
                     ],

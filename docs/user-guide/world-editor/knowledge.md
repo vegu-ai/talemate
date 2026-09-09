@@ -1,6 +1,6 @@
 # Knowledge
 
-The World State panel offers a [knowledge hub](/talemate/user-guide/world-state/#knowledge-hub) on every character row: the newest facts the character knows and their disclosures or access rules, the Character perspectives switch, and the agent settings that shape knowledge keeping, without leaving the main view. The sections below describe the settings themselves.
+The World State panel offers a [knowledge hub](/talemate/user-guide/world-state/#knowledge-hub) on every character row: the character’s known facts ranked by importance and recency and their disclosures or access rules, the Character perspectives switch, and the agent settings that shape knowledge keeping, without leaving the main view. The sections below describe the settings themselves.
 
 ## Choosing a mode
 
@@ -115,6 +115,8 @@ When **Extract facts** is enabled, the information also becomes searchable facts
 Enable [Topics in the Memory agent](/talemate/user-guide/agents/memory/settings/#topics) to group recorded facts by subject without an extra text-generation request. The Knowledge tab's **Known facts by topic** list shows **Known** facts out of **Recorded** facts in each **Topic**. In perception mode, only facts with current supporting audience evidence count. Pending or invalidated support does not count. This measures access to the index, not understanding or exhaustive world knowledge. Topics remain useful for retrieval and author inspection; characters receive no all/some/nothing topic assertions in this mode.
 
 Each topic row expands to list that topic's facts for the character. A fact the character knows shows how they know it (**Present**, **Told in dialogue**, **Allowed by rule** or **Learned from dialogue**; in a Character perspectives story **Perceived** or **Disclosed**) and where it was recorded (the history entry, a manual entry, offscreen life, a perception or a disclosure). A recorded fact the character does not know is listed greyed, so you can see what they are missing. **Expand all** opens every row; the filter field narrows topics by name and, once a row has loaded, its facts by text, so expand a topic (or Expand all) before you search inside it. The facts load when a row opens and add no request.
+
+Facts show relative time markers based on their latest known restatement. The hub applies the Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology) order and cut; expanded topic rows keep the full record for inspection. The score combines importance and age, with recent facts retained and older facts kept when salient or about a present character. This adds no AI request and leaves character access and the effort slider unchanged.
 
 ![known facts by topic expanded](/talemate/img/0.40.0/world-editor-character-knowledge-topics.png)
 

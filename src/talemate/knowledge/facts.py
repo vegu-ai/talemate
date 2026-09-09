@@ -4,12 +4,14 @@ mirrored into the memory store.
 """
 
 import json
+import re
 from typing import TYPE_CHECKING, Callable
 
 import pydantic
 import structlog
 
 from talemate.instance import get_agent
+from talemate.knowledge.chronology import ranked_facts
 from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.schema import Fact, KnowledgeEdge, ParsedFact
@@ -38,6 +40,10 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.knowledge.facts")
+
+
+def _strip_record_age(text: str) -> str:
+    return re.sub(r"^(?:\s*\(\d[^()\n]*\bago\)\s*)+", "", text, flags=re.IGNORECASE)
 
 
 def parse_facts(raw: str | None) -> list[ParsedFact] | None:
@@ -86,6 +92,8 @@ def parse_facts(raw: str | None) -> list[ParsedFact] | None:
                 )
                 level = 2
             item = {**item, "importance": level}
+            if isinstance(item.get("text"), str):
+                item["text"] = _strip_record_age(item["text"])
         try:
             parsed.append(ParsedFact.model_validate(item))
         except pydantic.ValidationError as exc:
@@ -99,11 +107,16 @@ def fact_memory_document(fact: Fact) -> dict:
         "typ": "fact",
         "ts": fact.ts if fact.ts is not None else 0,
         "restatements": fact.restatements,
+        "importance": fact.importance,
         "false": fact.false,
         **presence_metadata(fact.present),
     }
     if fact.archive_id:
         meta["archive_id"] = fact.archive_id
+    if fact.last_seen_ts is not None:
+        meta["last_seen_ts"] = fact.last_seen_ts
+    if fact.subjects:
+        meta["fact_subjects"] = fact.subjects
     return {"id": fact.id, "text": fact.text, "meta": meta}
 
 
@@ -120,9 +133,9 @@ def facts_for_entry(scene: "Scene", archive_id: str) -> list[Fact]:
 
 
 def previous_facts(scene: "Scene", limit: int = 30) -> list[Fact]:
-    """The most recent stored facts, oldest first, for the summary prompt."""
-    facts = list(scene.world_state.facts.values())
-    return facts[-limit:]
+    return ranked_facts(
+        scene, scene.world_state.facts.values(), limit=limit, tiers=False
+    )
 
 
 def prune_summary_facts(world_state, archive_ids: set[str]) -> set[str]:
@@ -287,6 +300,7 @@ async def store_facts(
     grants: list[KnowledgeEdge] = []
 
     for item in parsed:
+        item = item.model_copy(update={"text": _strip_record_age(item.text)})
         existing = await _near_duplicate_in_batch(item.text, stored, dedupe_distance)
         if existing is None:
             existing = await _near_duplicate(scene, item.text, dedupe_distance)

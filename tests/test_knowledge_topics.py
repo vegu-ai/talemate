@@ -472,7 +472,7 @@ class TestMemoryTopics:
         assert memory.nearest_topic(np.array([0.99, 0.1])) == "T1"
         assert memory.nearest_topic(np.array([-1.0, 0.0])) is None
 
-    async def test_topic_first_adds_the_most_restated_facts(self, topical, memory):
+    async def test_topic_first_adds_the_highest_scored_facts(self, topical, memory):
         topical.world_state.facts["F3"].restatements = 5
         await memory.rebuild_topic_centroids(topical)
         memory.table = [
@@ -490,10 +490,11 @@ class TestMemoryTopics:
             result = await memory.multi_query(
                 ["the Sorena"], iterate=5, topic_first=True
             )
-        # F3 (most restated) first, then the newest; F1 was already retrieved
-        assert result[:3] == ["fact F3", "fact F4", "fact F2"]
-        assert "fact one" in result and "history" in result
-        assert memory.get_document.call_args.args[0] == ["F3", "F4", "F2"]
+        # Repetition count alone does not make F3 fresher than F4.
+        assert [item.id for item in result[:4]] == ["F4", "F3", "F2", "F1"]
+        assert all(str(item) == "(Recently) a" for item in result[:4])
+        assert "history" in result
+        assert memory.get_document.call_args.args[0] == ["F4", "F3", "F2"]
 
     async def test_topic_first_respects_the_filter_and_the_switch(
         self, topical, memory
@@ -512,7 +513,12 @@ class TestMemoryTopics:
             result = await memory.multi_query(
                 ["q"], iterate=5, filter=lambda d: d.id != "F2", topic_first=True
             )
-            assert result == ["fact F4", "fact F3", "history"]
+            assert [item.id for item in result] == ["F4", "F3", "e1"]
+            assert [str(item) for item in result] == [
+                "(Recently) a",
+                "(Recently) a",
+                "history",
+            ]
             memory.actions["topics"].enabled = False
             assert await memory.multi_query(["q"], iterate=5, topic_first=True) == [
                 "history"

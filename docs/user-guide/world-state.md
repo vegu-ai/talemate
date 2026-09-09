@@ -146,10 +146,13 @@ reads the current state and writes settings.
 
 ![world state knowledge hub](/talemate/img/0.40.0/world-state-knowledge-hub-1.png)
 
-**What the character knows** lists the newest facts the character knows, as the character holds
+**What the character knows** lists eligible facts ranked by importance and recency, as the character holds
 them (in a Character perspectives story that is their own view of a passage, not the author's
 record), each with its topic while [Topics](/talemate/user-guide/agents/memory/settings/#topics)
-is enabled, and a count of all the facts they know. It is followed by the newest of the
+is enabled, a relative time marker such as **(21 Days ago)**, and a count of all the facts they know.
+The Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology)
+settings keep recent facts and select older ones by score or mention of a present character.
+This selection leaves the character's knowledge intact. It is followed by the newest of the
 character's **Disclosures** in a Character perspectives story or **Entry access rules**
 (Allow / Block) in a Standard story, again with the count. Both lists show at most five entries.
 **Open Knowledge tab** jumps to the character's
@@ -162,7 +165,7 @@ has no history and no archived history, exactly as in
 [Scene Settings](/talemate/user-guide/world-editor/scene/settings/); once history exists the
 switch is disabled and the reason is shown. Save the scene to keep a change.
 
-The count line under the newest facts is a link to the character's Knowledge tab, where every known fact is listed by topic.
+The count line under the ranked facts is a link to the character's Knowledge tab, where every known fact is listed by topic.
 
 The menu header shows the story mode. **Thoroughness** starts with the **Character knowledge effort** slider (see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets)): one drag sets the toggles below to a tuned stop, with the stop's extra requests and model expectation under it; a manual change to any toggle shows **Custom**. Group headers and toggles share one checkbox column; a group without a master checkbox keeps the space so its label lines up.
 

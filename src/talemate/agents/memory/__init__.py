@@ -39,6 +39,13 @@ from talemate.agents.memory.exceptions import (
     SetDBError,
 )
 from talemate.agents.memory.schema import MemoryDocument
+from talemate.knowledge.chronology import (
+    fact_timestamp,
+    memory_fact,
+    ranked_facts,
+    ranked_fact_documents,
+    render_fact_document,
+)
 from talemate.agents.memory.rerank import (
     CrossEncoderReranker,
     RERANK_MODEL,
@@ -422,7 +429,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         self, query: str, accepted: list, filter, *, viewer=None
     ) -> list:
         """
-        The nearest topic's most restated facts that the similarity search
+        The nearest topic's highest-scoring eligible facts that the similarity search
         did not return, ahead of that query's results.
         """
         if viewer is not None:
@@ -437,9 +444,9 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             return []
         facts = self.scene.world_state.facts
         seen = {getattr(doc, "id", None) for doc in accepted}
-        members = sorted(
+        members = ranked_facts(
+            self.scene,
             (facts[i] for i in topic.fact_ids if i in facts and i not in seen),
-            key=lambda f: (-f.restatements, -(f.ts if f.ts is not None else -1)),
         )
         ids = [f.id for f in members[:TOPIC_FACTS_PER_QUERY]]
         log.debug("topic first matched", topic=topic_id, candidates=ids)
@@ -534,9 +541,9 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             if score >= best:
                 best, members = score, candidates
         seen = {doc.id for doc in accepted}
-        selected = [doc for doc in members if doc.id not in seen][
-            :TOPIC_FACTS_PER_QUERY
-        ]
+        selected = ranked_fact_documents(
+            scene, [doc for doc in members if doc.id not in seen]
+        )[:TOPIC_FACTS_PER_QUERY]
         return [self._dated_document(doc.raw, doc.meta, doc.id) for doc in selected]
 
     @property
@@ -1106,7 +1113,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
         `over_fetch` widens the vector search (limit × over_fetch) for callers
         whose filter drops many candidates. `topic_first` lets the nearest
-        topic contribute its most restated facts (prompt retrieval only; a
+        topic contribute its highest-scoring eligible facts (prompt retrieval only; a
         metadata condition in `where` turns it off).
 
         Per query the candidates pass the filter (and the similarity knowledge
@@ -1153,7 +1160,9 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             accepted = await self._apply_filter(
                 raw_results, filter, gate_distance, anchors
             )
-            accepted = self._rank_by_recency(accepted)
+            accepted = ranked_fact_documents(
+                self.scene, self._rank_by_recency(accepted)
+            )
             # only a caller without a metadata condition asks for topic-first
             # facts: `where` is not applied to a fetch by id
             topic_docs = (
@@ -1170,10 +1179,6 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 (topic_docs + accepted)[: iterate + len(topic_docs)]
             )
 
-        # Now interleave the results in a round-robin fashion so that each
-        # query gets a fair chance to contribute, until we hit the token
-        # budget.
-
         # a reranker that already failed to load is not asked again: the
         # plain, token-budgeted merge is the answer then
         rerank = (
@@ -1181,20 +1186,19 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             and bool([q for q in queries if q])
             and not self.reranker.error
         )
-        merged = self._merge_round_robin(
-            per_query_results,
-            max_tokens=None if rerank else max_tokens,
-            cap=RERANK_CANDIDATES if rerank else None,
-        )
+        merged = self._merge_round_robin(per_query_results)
+        merged = ranked_fact_documents(self.scene, merged)
 
         if rerank:
-            reranked = await self.rerank([q for q in queries if q], merged)
+            reranked = await self.rerank(
+                [q for q in queries if q], merged[:RERANK_CANDIDATES]
+            )
             if self.reranker.error:
-                # the one failed load: back to the plain merge
-                return self._merge_round_robin(per_query_results, max_tokens=max_tokens)
-            merged = self._cut_to_budget(reranked, max_tokens)
+                # A failed reranker keeps the filtered relevance order.
+                return self._cut_to_budget(merged, max_tokens)
+            merged = ranked_fact_documents(self.scene, reranked)
 
-        return merged
+        return self._cut_to_budget(merged, max_tokens)
 
     def _similarity_gate_distance(self) -> float | None:
         """The near-duplicate distance the gate uses, or None when it is off."""
@@ -1291,15 +1295,23 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
         return [doc for _, doc in sorted(enumerate(docs), key=score)]
 
-    def _merge_round_robin(
-        self,
-        per_query_results: list[list],
-        max_tokens: int | None,
-        cap: int | None = None,
-    ) -> list:
+    def _is_fresher_fact(self, candidate, selected) -> bool:
+        candidate_fact = memory_fact(self.scene, candidate)
+        selected_fact = memory_fact(self.scene, selected)
+        if candidate_fact is None or selected_fact is None:
+            return False
+        candidate_ts = fact_timestamp(candidate_fact)
+        selected_ts = fact_timestamp(selected_fact)
+        return (
+            candidate_ts is not None
+            and selected_ts is not None
+            and candidate_ts > selected_ts
+        )
+
+    def _merge_round_robin(self, per_query_results: list[list]) -> list:
         threshold = self.retrieval_mmr_threshold
         memory_context: list = []
-        selected_vectors: list = []
+        selected_vectors: dict = {}
         idx = 0
         while True:
             # a skipped result (duplicate, near-identical) still counts as
@@ -1325,27 +1337,38 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                     norm = np.linalg.norm(vector)
                     if norm > 0:
                         unit = vector / norm
+                        duplicates = [
+                            position
+                            for position, other in selected_vectors.items()
+                            if float(np.dot(unit, other)) > threshold
+                        ]
+                        replacement = (
+                            duplicates[0]
+                            if duplicates
+                            and all(
+                                self._is_fresher_fact(memory, memory_context[position])
+                                for position in duplicates
+                            )
+                            else None
+                        )
+                        if replacement is not None:
+                            # Preserve the selected fact's relevance slot before the budget cut.
+                            memory_context[replacement] = memory
+                            selected_vectors[replacement] = unit
+                            continue
+                        if any(
+                            self._is_fresher_fact(memory_context[position], memory)
+                            for position in duplicates
+                        ):
+                            continue
                         # a gate admission is a wanted near-copy of known
                         # knowledge: kept, but remembered for later copies
-                        if not getattr(memory, "gate_admitted", False) and any(
-                            float(np.dot(unit, other)) > threshold
-                            for other in selected_vectors
-                        ):
+                        if duplicates and not getattr(memory, "gate_admitted", False):
                             log.debug("diversity skip", id=getattr(memory, "id", None))
                             continue
-                        selected_vectors.append(unit)
+                        selected_vectors[len(memory_context)] = unit
 
                 memory_context.append(memory)
-
-                if cap is not None and len(memory_context) >= cap:
-                    return memory_context
-
-                # Check token budget after each addition.
-                if (
-                    max_tokens is not None
-                    and util.count_tokens(memory_context) >= max_tokens
-                ):
-                    return memory_context
 
             if not progressed:
                 # every list is exhausted at this depth
@@ -2158,6 +2181,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
                     distance=distance,
                     embedding=embedding,
                 )
+                doc = render_fact_document(self.scene, doc)
 
                 results.append(doc)
                 active_memory_request.accept_result(str(doc), distance, meta)
@@ -2230,7 +2254,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
     def _dated_document(self, raw, meta, identity):
         date_prefix = self.convert_ts_to_date_prefix(meta.get("ts"))
         text = f"{date_prefix}: {raw}" if date_prefix else raw
-        return MemoryDocument(text, meta, identity, raw)
+        return render_fact_document(
+            self.scene, MemoryDocument(text, meta, identity, raw)
+        )
 
     @set_processing
     async def remove_unsaved_memory(self):

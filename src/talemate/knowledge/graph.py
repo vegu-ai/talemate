@@ -7,6 +7,7 @@ No embedding search: name matching and the `supersedes` links only.
 import re
 from typing import TYPE_CHECKING
 
+from talemate.knowledge.chronology import ranked_facts
 from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
 from talemate.knowledge.schema import Fact, KnownKind
 from talemate.knowledge.mode import character_knowledge_enabled
@@ -57,7 +58,7 @@ def _ordered(facts: list[Fact], scene: "Scene") -> list[Fact]:
     )
 
 
-def facts_about(
+def _facts_about(
     scene: "Scene", entity: str, character: str | None = None
 ) -> list[Fact]:
     """Facts that mention the entity, oldest first, optionally as one character knows them."""
@@ -93,6 +94,12 @@ def facts_about(
     return _ordered(facts, scene)
 
 
+def facts_about(
+    scene: "Scene", entity: str, character: str | None = None
+) -> list[Fact]:
+    return ranked_facts(scene, _facts_about(scene, entity, character))
+
+
 def relationship_timeline(
     scene: "Scene", a: str, b: str, *, character: str | None = None
 ) -> list[Fact]:
@@ -101,7 +108,7 @@ def relationship_timeline(
     aliases_b = _aliases(scene, b)
     return [
         f
-        for f in facts_about(scene, a, character=character)
+        for f in _facts_about(scene, a, character=character)
         if _mentions(f, aliases_a) and _mentions(f, aliases_b)
     ]
 
@@ -110,7 +117,7 @@ def current_state(
     scene: "Scene", entity: str, *, character: str | None = None
 ) -> Fact | None:
     """The newest fact about the entity that no other fact supersedes."""
-    facts = facts_about(scene, entity, character=character)
+    facts = _facts_about(scene, entity, character=character)
     superseders = facts if character is not None else scene.world_state.facts.values()
     superseded = {f.supersedes for f in superseders if f.supersedes}
     candidates = [

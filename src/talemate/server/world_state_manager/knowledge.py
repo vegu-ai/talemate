@@ -4,6 +4,7 @@ import structlog
 from talemate.history import HistoryEntry
 from talemate.instance import get_agent
 from talemate.knowledge.facts import update_fact
+from talemate.knowledge.chronology import fact_display
 from talemate.knowledge.perspectives import source_reference
 from talemate.knowledge.topics import refresh_topics
 from talemate.knowledge.schema import EntryVisibility, Fact, KnowledgeEdge
@@ -206,7 +207,7 @@ class KnowledgeMixin:
             {
                 "type": "world_state_manager",
                 "action": "fact_updated",
-                "data": fact.model_dump(),
+                "data": fact_display(self.scene, fact),
             }
         )
         await self.signal_operation_done()

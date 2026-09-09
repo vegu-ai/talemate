@@ -168,7 +168,10 @@ def test_archive_prompt_salience_and_importance_contract(
     assert "first hug" in rendered and "routinely hug" in rendered
     assert "return []" in rendered
     assert "attribution, uncertainty, tense, time" in rendered
-    assert "[F1] Mara and Edwin routinely hug." in rendered
+    assert "[F1] Fact: Mara and Edwin routinely hug." in rendered
+    assert "Record age (metadata, do not copy): Time unknown" in rendered
+    assert "Do not copy it into extracted facts." in rendered
+    assert "[F1] (Time unknown)" not in rendered
     if audience:
         assert "A report is a report" in rendered
         assert "appearing in BOTH its text and the source" in rendered

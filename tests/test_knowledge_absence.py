@@ -14,6 +14,7 @@ from talemate.character import Character
 from talemate.context import ActiveScene
 from talemate.instance import get_agent
 from talemate.knowledge.absence import absence_facts, render_absence_lines
+from talemate.knowledge.chronology import DAY
 from talemate.knowledge.schema import Fact, KnowledgeEdge
 from talemate.tale_mate import Actor
 
@@ -62,14 +63,23 @@ def embeddings():
 
 
 class TestAbsenceFacts:
-    async def test_unknown_facts_ordered_by_restatements_then_recency(
-        self, scene, embeddings
-    ):
+    async def test_window_is_newest_pool_before_chronology(self, scene, embeddings):
+        scene.ts = 100 * DAY
+        scene.active_characters = []
+        scene.world_state.facts = {
+            "F1": fact("F1", "Old milestone", 10 * DAY, [], importance=3),
+            "F2": fact("F2", "Fresh routine", 99 * DAY, [], importance=1),
+            "F3": fact("F3", "Fresh state", 99 * DAY, [], importance=2),
+        }
+        result = await absence_facts(scene, "Edwin", window=2, limit=2)
+        assert [item.id for item in result] == ["F3", "F2"]
+
+    async def test_unknown_facts_ordered_by_score_then_recency(self, scene, embeddings):
         result = await absence_facts(scene, "Edwin")
-        assert [f.id for f in result] == ["F3", "F4", "F2"]
+        assert [f.id for f in result] == ["F4", "F3", "F2"]
 
     async def test_cap_and_window(self, scene, embeddings):
-        assert [f.id for f in await absence_facts(scene, "Edwin", limit=1)] == ["F3"]
+        assert [f.id for f in await absence_facts(scene, "Edwin", limit=1)] == ["F4"]
         # a window of two keeps only F4 and F5 (F5 is false: dropped)
         assert [f.id for f in await absence_facts(scene, "Edwin", window=2)] == ["F4"]
 
@@ -109,11 +119,11 @@ class TestAbsenceFacts:
         assert ids[:3] == ["F36", "F35", "F34"]
         assert ids[-3:] == ["F9", "F8", "F7"]
 
-    def test_render_collapses_newlines(self):
+    def test_render_collapses_newlines(self, scene):
         lines = render_absence_lines(
-            [fact("F1", "Mara found\na sextant.", 1, ["Mara"])]
+            [fact("F1", "Mara found\na sextant.", 1, ["Mara"])], scene
         )
-        assert lines == ["Mara found a sextant."]
+        assert lines == ["(Recently) Mara found a sextant."]
 
     async def test_near_duplicate_of_a_known_fact_is_dropped(self, scene, embeddings):
         # Edwin was told a retelling of F3; the retelling F6 is in his bucket
@@ -143,8 +153,8 @@ class TestAbsenceFacts:
             return_value=FakeMemory({}, ready=False),
         ):
             assert [f.id for f in await absence_facts(scene, "Edwin")] == [
-                "F3",
                 "F4",
+                "F3",
                 "F2",
             ]
 
@@ -159,9 +169,9 @@ class TestConversationContainer:
             assert conversation.rag_knowledge_filter(edwin) is not None
             lines = await conversation.absence_block(edwin)
             assert lines == [
-                "Mara hid the sextant in her bag.",
-                "The boat leaks.",
-                "Mara found a sextant.",
+                "(Recently) The boat leaks.",
+                "(Recently) Mara hid the sextant in her bag.",
+                "(Recently) Mara found a sextant.",
             ]
 
             conversation.actions["character_knowledge"].config[
@@ -192,7 +202,7 @@ class TestConversationContainer:
         try:
             with ActiveScene(scene):
                 assert await conversation.absence_block(Character(name="Edwin")) == [
-                    "Mara hid the sextant in her bag."
+                    "(Recently) The boat leaks."
                 ]
         finally:
             conversation.actions["character_knowledge"].config[

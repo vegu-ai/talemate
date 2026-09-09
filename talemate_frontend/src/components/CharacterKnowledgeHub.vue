@@ -36,7 +36,7 @@
                 <template v-else-if="knowledge">
                     <div v-if="knowledge.known_facts.length">
                         <div v-for="fact in knowledge.known_facts" :key="fact.id" class="text-body-small py-1 knowledge-hub-fact">
-                            <span v-if="fact.topic" class="text-mutedheader mr-1">{{ fact.topic }}:</span>{{ fact.text }}
+                            <span v-if="fact.topic" class="text-mutedheader mr-1">{{ fact.topic }}:</span><span class="text-medium-emphasis fact-time mr-1">({{ fact.time || 'Time unknown' }})</span>{{ fact.text }}
                         </div>
                     </div>
                     <a href="#" class="text-body-small text-muted d-block knowledge-hub-count" @click.prevent="openKnowledge">{{ factsCount }}</a>
@@ -194,11 +194,15 @@ export default {
             loading: false,
             knowledge: null,
             topicsSeen: true,
+            chronologySeen: null,
         };
     },
     computed: {
         sceneData() {
             return this.scene ? this.scene()?.data : null;
+        },
+        chronologyMoment() {
+            return JSON.stringify([this.sceneData?.scene_ts, this.sceneData?.characters?.map(character => character.name)]);
         },
         perspectives() {
             return perspectivesEnabled(this.sceneData);
@@ -248,10 +252,13 @@ export default {
             const total = this.knowledge?.known_facts_total || 0;
             if (!total) return 'No known facts yet.';
             const shown = this.knowledge.known_facts.length;
-            return shown < total ? `${shown} of ${total} known facts, newest first.` : `${total} known fact${total === 1 ? '' : 's'}.`;
+            return shown < total ? `${shown} of ${total} known facts, ranked by importance and recency.` : `${total} known fact${total === 1 ? '' : 's'}.`;
         },
     },
     watch: {
+        chronologyMoment() {
+            if (this.open) this.request();
+        },
         // the record's shape follows the scene mode
         perspectives() {
             if (this.open) this.request();
@@ -300,6 +307,11 @@ export default {
             return this.toggleAgentConfig(group.agent, group.action, toggle.key);
         },
         handleMessage(data) {
+            if (data.type === 'agent_status' && data.name === 'summarizer' && data.data?.actions?.fact_chronology) {
+                const value = JSON.stringify([data.data?.actions?.fact_chronology, data.data?.scene_overrides?.actions?.fact_chronology]);
+                if (this.open && value !== this.chronologySeen) this.request();
+                this.chronologySeen = value;
+            }
             if (data.type === 'system' && data.id === 'scene.loaded') {
                 this.knowledge = null;
                 this.loading = false;

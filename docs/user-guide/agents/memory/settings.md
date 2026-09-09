@@ -27,7 +27,7 @@ Group recorded facts by subject to show each character's knowledge and find rela
 
 The World Editor's Knowledge tab counts each character's known facts within each topic. Standard mode can also give the AI a [Topic knowledge overview](/talemate/user-guide/agents/conversation/settings/#topic-knowledge-overview); Character perspectives mode does not make those all/some/nothing assertions. Disabling Topics hides the table and overview.
 
-For conversation memory searches, the closest matching topic contributes its most repeated facts ahead of other search results. Context Database searches and node queries do not get this addition. Topics take their names from the most frequent subjects in their facts.
+For conversation memory searches, the closest matching topic contributes facts ahead of other search results. In Standard mode, these additions are selected and ranked by the Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology) rules. Character perspectives keeps the topic's existing audience-fact order, applying chronology only to eligibility and relative time markers. Context Database searches and node queries do not get this addition. Topics take their names from the most frequent subjects in their facts.
 
 ##### Facts between topic updates
 
@@ -46,6 +46,8 @@ If most facts land in one topic, try raising the value. If nearly every fact has
 ## :material-filter-variant: Retrieval
 
 How similarity results are ranked and merged before they reach a prompt. Nothing in this group adds a request; the cross-encoder runs a local model.
+
+Retrieval controls the order of search results through query relevance, the recency weight and the optional cross-encoder rerank. The Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology) rules remove ineligible facts and add relative time markers while preserving that retrieval order. A fact's chronology score does not move it ahead of a more relevant retrieved result. Character knowledge filtering still determines access before facts can enter a character's prompt.
 
 ##### Recency weight
 

@@ -1522,6 +1522,7 @@ class Scene(Emitter):
                     if self.ts is not None
                     else None
                 ),
+                "scene_ts": self.ts,
                 "saved": self.saved,
                 "auto_save": self.auto_save,
                 "auto_progress": self.auto_progress,

@@ -60,9 +60,9 @@ def scene():
 
 class TestQueries:
     def test_facts_about_uses_subjects_text_and_aliases(self, scene):
-        assert [f.id for f in facts_about(scene, "Edwin")] == ["F1", "F3"]
-        assert [f.id for f in facts_about(scene, "halloran")] == ["F1", "F3"]
-        assert [f.id for f in facts_about(scene, "sextant")] == ["F2", "F4"]
+        assert [f.id for f in facts_about(scene, "Edwin")] == ["F3", "F1"]
+        assert [f.id for f in facts_about(scene, "halloran")] == ["F3", "F1"]
+        assert [f.id for f in facts_about(scene, "sextant")] == ["F4", "F2"]
 
     def test_facts_about_filtered_by_character(self, scene):
         assert [f.id for f in facts_about(scene, "sextant", character="Edwin")] == []
@@ -95,7 +95,7 @@ class TestQueries:
             for i in range(1, 15)
         }
         ordered = [f.id for f in facts_about(scene, "sextant")]
-        assert ordered == [f"F{i}" for i in range(1, 15)]
+        assert ordered == [f"F{i}" for i in range(14, 0, -1)]
         assert current_state(scene, "sextant").id == "F14"
 
     def test_bucket_kinds(self, scene):
@@ -126,15 +126,15 @@ class TestNodes:
     async def test_facts_about_node(self, scene):
         node = get_node("knowledge/FactsAbout")()
         out = await run_node(node, scene, {"entity": "sextant"})
-        assert [f["id"] for f in out["facts"]] == ["F2", "F4"]
-        assert out["text"].startswith("[F2]")
+        assert [f["id"] for f in out["facts"]] == ["F4", "F2"]
+        assert out["text"].startswith("[F4]")
 
     async def test_current_state_node(self, scene):
         node = get_node("knowledge/CurrentState")()
         out = await run_node(node, scene, {"entity": "sextant"})
         assert (
             out["fact"]["id"] == "F4"
-            and out["text"] == "Mara moved the sextant to her bag."
+            and out["text"] == "(Recently) Mara moved the sextant to her bag."
         )
 
     async def test_relationship_timeline_node(self, scene):

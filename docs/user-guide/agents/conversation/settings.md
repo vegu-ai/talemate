@@ -106,11 +106,11 @@ Tell the AI which recent facts the character does not know. **Turn on if charact
 
 ##### Unknown-fact reminders
 
-Limit how many unknown facts are listed for the AI (default 5). **Raise to include more reminders; lower to keep the prompt shorter.** The most repeated facts come first, then the newest.
+Limit how many unknown facts are listed for the AI (default 5). **Raise to include more reminders; lower to keep the prompt shorter.** Within the **Recent facts to check** pool, eligible facts are ranked by the Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology) importance and recency score before this limit is applied.
 
 ##### Recent facts to check
 
-Choose how many recent facts to check for unknown-fact reminders (default 30). **Raise to cover older facts; lower to focus on the newest.** This changes the pool to check, while **Unknown-fact reminders** limits how many appear.
+Choose how many of the newest recorded facts to check for unknown-fact reminders (default 30). **Raise to cover older facts; lower to focus on the newest.** The pool follows original fact creation order; a restatement refreshes a fact's chronology score but does not move it into this pool. Chronology selection and ranking apply within the pool, while **Unknown-fact reminders** limits how many appear.
 
 ##### Topic knowledge overview
 

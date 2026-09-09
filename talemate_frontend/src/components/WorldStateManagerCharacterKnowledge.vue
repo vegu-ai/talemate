@@ -110,7 +110,7 @@
                                     <template v-slot:prepend>
                                         <v-chip size="x-small" variant="tonal" color="muted" class="mr-2">{{ fact.id }}</v-chip>
                                     </template>
-                                    <div class="text-body-medium">{{ fact.text }}</div>
+                                    <div class="text-body-medium"><span class="text-medium-emphasis fact-time mr-1">({{ fact.time || 'Time unknown' }})</span>{{ fact.text }}</div>
                                     <div class="text-body-small text-medium-emphasis">
                                         <span>{{ fact.known ? howLabel(fact.how) : `${character.name} does not know this` }}</span>
                                         <span class="ml-2">via {{ fact.source_id ? `${fact.source} ${fact.source_id}` : fact.source }}</span>
@@ -161,6 +161,7 @@ export default {
             newKind: 'grant',
             newNote: '',
             busy: false,
+            sceneTs: null,
             kinds: [
                 { label: 'Allow', value: 'grant' },
                 { label: 'Block', value: 'revoke' },
@@ -295,6 +296,11 @@ export default {
             }));
         },
         handleMessage(message) {
+            if (message.type === 'scene_status') {
+                if (message.data?.scene_ts !== this.sceneTs && this.character) this.requestTopicFacts([...this.openTopics]);
+                this.sceneTs = message.data?.scene_ts;
+                return;
+            }
             if (message.type === 'knowledge_changed') {
                 if (this.character && message.data?.changes?.some(change => change.character === this.character.name)) {
                     this.topicFacts = {};

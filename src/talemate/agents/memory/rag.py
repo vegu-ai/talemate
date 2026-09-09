@@ -10,6 +10,7 @@ from talemate.agents.base import (
     AgentActionConditional,
 )
 import talemate.instance as instance
+from talemate.knowledge.chronology import ranked_fact_documents
 from talemate.knowledge.bucket import KnowledgeIndex, knowledge_digest
 from talemate.knowledge.context import project_character_history
 from talemate.knowledge.mode import character_knowledge_enabled
@@ -286,7 +287,7 @@ class MemoryRAGMixin:
             and cache["fingerprint"] == fingerprint
             and cache["memory_revision"] == self.scene.memory_revision
         ):
-            return cache["content"]
+            return ranked_fact_documents(self.scene, cache["content"])
 
         return None
 

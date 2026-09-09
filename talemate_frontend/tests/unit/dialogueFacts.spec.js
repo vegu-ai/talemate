@@ -67,3 +67,15 @@ describe('Dialogue facts in History', () => {
         expect(vm.factSource).toBeNull();
     });
 });
+
+describe('History fact time', () => {
+    it('refreshes visible facts when scene time advances', () => {
+        const vm = history();
+        vm.requestSceneHistory = vi.fn();
+        History.watch['scene.data.scene_ts'].call(vm);
+        expect(vm.requestSceneHistory).toHaveBeenCalledOnce();
+        vm.visible = false;
+        History.watch['scene.data.scene_ts'].call(vm);
+        expect(vm.requestSceneHistory).toHaveBeenCalledOnce();
+    });
+});

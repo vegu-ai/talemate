@@ -61,7 +61,7 @@ The newest fact about an entity that no later accessible fact supersedes.
 | Output | Type | Description |
 | --- | --- | --- |
 | `fact` | `knowledge/fact` | the fact dict, or None |
-| `text` | `str` | the fact text, or an empty string |
+| `text` | `str` | the fact with a relative time marker, empty when chronology excludes it |
 
 ## Entry Knowledge
 
@@ -91,7 +91,7 @@ history entry) and the grant and revoke edges pointing at it.
 
 `knowledge/FactsAbout`
 
-Facts recorded about an entity (character, item or place), oldest first.
+Facts selected about an entity, ranked by importance and recency.
 
 **Inputs**
 
@@ -105,7 +105,7 @@ Facts recorded about an entity (character, item or place), oldest first.
 | Output | Type | Description |
 | --- | --- | --- |
 | `facts` | `list` | list of fact dicts |
-| `text` | `str` | the facts as one line per fact |
+| `text` | `str` | selected facts with relative time markers, one line per fact |
 
 ## Grant Knowledge
 
@@ -225,7 +225,8 @@ This node supports **dynamic inputs** - additional input sockets can be added in
 
 `knowledge/RelationshipTimeline`
 
-Facts that mention both entities, oldest first.
+Facts that mention both entities. Raw facts retain oldest-first order;
+text applies the chronology score and cut.
 
 **Inputs**
 
@@ -240,7 +241,7 @@ Facts that mention both entities, oldest first.
 | Output | Type | Description |
 | --- | --- | --- |
 | `facts` | `list` | list of fact dicts |
-| `text` | `str` | one line per fact |
+| `text` | `str` | selected facts with relative time markers, ranked by importance and recency |
 
 ## Revoke Knowledge
 

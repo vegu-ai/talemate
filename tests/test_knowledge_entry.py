@@ -385,7 +385,10 @@ class TestReportLabels:
             KnowledgeEdge(character="Alice", target="L1", source="director"),
         ]
         report = character_knowledge_report(scene, "Alice")
-        assert "- fact: Bob buried the ledger under the gallery floor.: told" in report
+        assert (
+            "- fact: (Time unknown) Bob buried the ledger under the gallery floor.: told"
+            in report
+        )
         assert "- history (layer 1): Mara and Edwin argued.: director" in report
 
 

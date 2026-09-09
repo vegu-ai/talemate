@@ -477,7 +477,7 @@ async def test_cached_topic_dates_follow_scene_time_without_refetch(rag, monkeyp
     assert str(current[0]) != str(initial[0])
     assert (
         str(current[0])
-        == f"{memory.convert_ts_to_date_prefix(current[0].meta['ts'])}: {current[0].raw}"
+        == f"({memory.convert_ts_to_date_prefix(current[0].meta['ts'])}) {current[0].raw}"
     )
     assert metadata.await_count == vectors.await_count == groups.call_count == 1
     seen = []

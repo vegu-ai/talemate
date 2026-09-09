@@ -3,6 +3,7 @@ from collections.abc import Iterable
 import structlog
 
 from talemate.instance import get_agent
+from talemate.knowledge.chronology import ranked_facts
 from talemate.knowledge.formatting import format_message_view
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import SourceReference
@@ -94,8 +95,17 @@ def previous_audience_facts(scene, audience, limit=30):
         ]
         if views and all(view is not None for view in views):
             if len({(view.text, view.ts) for view in views}) == 1:
-                result.append(views[0])
-    return sorted(result, key=lambda fact: fact.last_seen_ts or 0)[-limit:]
+                seen = [view.last_seen_ts for view in views]
+                result.append(
+                    views[0].model_copy(
+                        update={
+                            "last_seen_ts": min(seen)
+                            if all(ts is not None for ts in seen)
+                            else None
+                        }
+                    )
+                )
+    return ranked_facts(scene, result, limit=limit, tiers=False)
 
 
 def extraction_text(scene, source, character, *, read=None):

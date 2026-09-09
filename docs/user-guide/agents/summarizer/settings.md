@@ -55,6 +55,26 @@ Treat sufficiently similar facts as repeats instead of saving them again (defaul
 
 This is the maximum distance allowed between facts as measured by the embedding model. Zero is the strictest value, not an off switch. In Standard mode, the Memory agent's [Match known facts](/talemate/user-guide/agents/memory/settings/#match-known-facts) also uses this tolerance when checking retold information.
 
+## Fact chronology
+
+Fact chronology selects context facts by importance and age without a separate AI request. The **Character knowledge effort** slider leaves these settings untouched; you can also override them for one scene.
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| Milestone half-life (days) | 90 | Time for a Milestone (3) score to halve |
+| State half-life (days) | 14 | Time for a State (2) score to halve |
+| Routine half-life (days) | 2 | Time for a Routine (1) score to halve |
+| Recent facts window (days) | 3 | Newer facts remain eligible in full |
+| Older facts score floor | 0.5 | Older facts need a score above this, or must mention a present character; 0 disables the age-based cut |
+
+The score is `importance / (1 + age_days / half_life)`. Age uses scene time and the latest of the fact's original or restatement time. A restated fact becomes fresh again. For example, a first hug yesterday scores about 2.97, ahead of a month-old milestone at 2.25. Existing fact and token limits still apply.
+
+With the defaults, facts that do not mention a present character are excluded from context at **3 days for Routine**, **42 days for State**, and **450 days for Milestone**, measured since their latest restatement. Routine facts remain eligible throughout the recent window even after their score reaches the floor. At the window boundary or later, the score must be strictly above the floor. Set **Older facts score floor** to **0** to keep older facts eligible; ranking and existing prompt limits still apply.
+
+Context fact lists use this selection and ranking. Unknown-fact reminders first take the newest records by original creation order according to **Recent facts to check**, then apply chronology within that pool. Retrieved memories retain their query-relevance, recency-weight and cross-encoder order; chronology only selects eligible facts and adds time markers there. The previous-facts lists supplied to fact extraction are ranked without the age-based cut, then bounded by their existing limit, so extraction can still recognize an older fact or its replacement.
+
+Every rendered fact includes a relative time such as **(1 Day ago)** or **(21 Days ago)**. Undated facts show **(Time unknown)** and remain eligible; future timestamps count as fresh. History and the full Knowledge topic list retain older facts for inspection even when prompts omit them. Character perspectives applies the same rules to each character's supported evidence; private restatements cannot make another character's facts fresher. Aging does not erase knowledge. Cached Standard conversation analysis is refreshed when its inputs change, as described under **Cache analysis** below.
+
 ## Character Perspectives
 
 The Character Perspectives section is visible with any scene or with no scene loaded.
@@ -135,7 +155,7 @@ Enable scene analysis for conversation tasks.
 
 In Standard mode, the Conversation agent's **Character Knowledge** master switch also gives the analysis **Known facts** and **Unknown recent facts** for the character. The analysis uses these lists to judge awareness and avoid suggesting actions based on information the character missed. This applies even when **Limit to character knowledge** or **Remind about unknown facts** is off.
 
-Known facts are considered newest first; facts too large for the remaining budget are skipped. Unknown facts use **Unknown-fact reminders** and **Recent facts to check** from Conversation settings. Each list uses up to one sixth of the client's context budget, plus headings; their actual size is reserved from scene history. The blocks are omitted when neither list has facts that fit. Analysis always keeps its instruction to use established story facts without assumptions. This adds prompt content without another AI request.
+Known facts follow importance and recency scores and the Fact chronology cut; facts too large for the remaining budget are skipped. Unknown facts use **Unknown-fact reminders** and **Recent facts to check** from Conversation settings. Each list uses up to one sixth of the client's context budget, plus headings; their actual size is reserved from scene history. The blocks are omitted when neither list has facts that fit. Analysis always keeps its instruction to use established story facts without assumptions. This adds prompt content without another AI request.
 
 ##### Narration
 
@@ -152,7 +172,7 @@ Cache the analysis results for the scene. Enable this to prevent regenerationg t
 !!! info
     This cache is anchored to the last message in the scene (excluding the current message). Editing that message will invalidate the cache.
 
-In Standard mode with Character Knowledge enabled, changing the target character, recorded facts, Allow/Block rules, or the fact-selection settings also invalidates the cached conversation analysis.
+In Standard mode with Character Knowledge enabled, the cache fingerprint includes the target character, the knowledge record (including Allow/Block rules), the complete recorded facts, the analysis context budget, Conversation's **Recent facts to check** and **Unknown-fact reminders**, the Summarizer's **Fact matching tolerance**, and whether memory is ready. It also includes all five resolved **Fact chronology** settings (including scene overrides), the current scene time, and the sorted names of active characters. Changing any of these inputs invalidates the cached conversation analysis so the next analysis request uses current fact selection and time markers. Checking the fingerprint itself makes no AI request.
 
 ## Scene History
 

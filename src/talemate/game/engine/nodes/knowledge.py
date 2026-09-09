@@ -24,6 +24,7 @@ from talemate.knowledge.graph import (
     relationship_timeline,
 )
 from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge
+from talemate.knowledge.chronology import fact_chronology, ranked_facts, render_fact
 
 from .core import GraphState, InputValueError, Node, PropertyField, TYPE_CHOICES
 from .registry import register
@@ -43,7 +44,7 @@ def _fact_dicts(facts) -> list[dict]:
 @register("knowledge/FactsAbout")
 class FactsAbout(Node):
     """
-    Facts recorded about an entity (character, item or place), oldest first.
+    Facts selected about an entity, ranked by importance and recency.
 
     Inputs:
     - entity: name of the entity
@@ -51,7 +52,7 @@ class FactsAbout(Node):
 
     Outputs:
     - facts: list of fact dicts
-    - text: the facts as one line per fact
+    - text: selected facts with relative time markers, one line per fact
     """
 
     def __init__(self, title="Facts About", **kwargs):
@@ -71,7 +72,7 @@ class FactsAbout(Node):
         self.set_output_values(
             {
                 "facts": _fact_dicts(facts),
-                "text": "\n".join(f"[{f.id}] {f.text}" for f in facts),
+                "text": "\n".join(render_fact(scene, f) for f in facts),
             }
         )
 
@@ -87,7 +88,7 @@ class CurrentState(Node):
 
     Outputs:
     - fact: the fact dict, or None
-    - text: the fact text, or an empty string
+    - text: the fact with a relative time marker, empty when chronology excludes it
     """
 
     def __init__(self, title="Current State", **kwargs):
@@ -109,7 +110,9 @@ class CurrentState(Node):
         self.set_output_values(
             {
                 "fact": fact.model_dump() if fact else None,
-                "text": fact.text if fact else "",
+                "text": render_fact(scene, fact, include_id=False)
+                if fact and fact_chronology(scene, fact).eligible
+                else "",
             }
         )
 
@@ -117,7 +120,8 @@ class CurrentState(Node):
 @register("knowledge/RelationshipTimeline")
 class RelationshipTimeline(Node):
     """
-    Facts that mention both entities, oldest first.
+    Facts that mention both entities. Raw facts retain oldest-first order;
+    text applies the chronology score and cut.
 
     Inputs:
     - a: first entity
@@ -126,7 +130,7 @@ class RelationshipTimeline(Node):
 
     Outputs:
     - facts: list of fact dicts
-    - text: one line per fact
+    - text: selected facts with relative time markers, ranked by importance and recency
     """
 
     def __init__(self, title="Relationship Timeline", **kwargs):
@@ -150,7 +154,9 @@ class RelationshipTimeline(Node):
         self.set_output_values(
             {
                 "facts": _fact_dicts(facts),
-                "text": "\n".join(f"[{f.id}] {f.text}" for f in facts),
+                "text": "\n".join(
+                    render_fact(scene, f) for f in ranked_facts(scene, facts)
+                ),
             }
         )
 

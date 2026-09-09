@@ -25,6 +25,7 @@ from talemate.knowledge.schema import (
     TopicFact,
 )
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.chronology import ranked_facts, fact_time
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -319,6 +320,7 @@ def topic_facts(
                 source=FACT_SOURCE_LABELS[canonical.source],
                 source_id=view.archive_id,
                 ts=view.ts,
+                time=fact_time(scene, view),
             )
         )
     return rows
@@ -384,19 +386,20 @@ def known_facts(
     limit: int = KNOWN_FACTS_LIMIT,
     known: list[Fact] | None = None,
 ) -> tuple[list[KnownFact], int]:
-    """
-    The newest `limit` facts the character knows, newest first, and how many
-    they know in all. `known` is the character's bucket when the caller
-    already holds it.
-    """
     if known is None:
         known = known_bucket(scene, character)
     topic_of = _topic_of(scene)
-    # known[-0:] is the whole list
-    recent = known[-limit:] if limit > 0 else []
+    recent = ranked_facts(scene, known, limit=limit)
     return [
-        KnownFact(id=fact.id, text=fact.text, topic=topic_of.get(fact.id), ts=fact.ts)
-        for fact in reversed(recent)
+        KnownFact(
+            id=fact.id,
+            text=fact.text,
+            topic=topic_of.get(fact.id),
+            ts=fact.ts,
+            last_seen_ts=fact.last_seen_ts,
+            time=fact_time(scene, fact),
+        )
+        for fact in recent
     ], len(known)
 
 

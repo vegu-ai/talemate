@@ -184,7 +184,7 @@ async def test_known_false_fact_is_labeled(standard_scene):
     scene, _, bob = standard_scene
     scene.world_state.facts["F2"].false = True
     context = await standard_analysis_context(scene, bob, 900)
-    assert "[F2] (known to be false) NEWER_KNOWN" in context["text"]
+    assert "[F2] (known to be false) (Recently) NEWER_KNOWN" in context["text"]
 
 
 async def test_fact_blocks_reserve_history_budget(
@@ -256,6 +256,13 @@ async def test_knowledge_edit_does_not_cancel_standard_generation(
         "window",
         "limit",
         "character",
+        "scene_time",
+        "active_characters",
+        "milestone_half_life",
+        "state_half_life",
+        "routine_half_life",
+        "recent_window",
+        "score_floor",
     ],
 )
 async def test_cached_analysis_invalidates_on_knowledge_changes(standard_scene, change):
@@ -289,6 +296,12 @@ async def test_cached_analysis_invalidates_on_knowledge_changes(standard_scene, 
         ].value += 1
     elif change == "character":
         bob = scene.character_data["Alice"]
+    elif change == "scene_time":
+        scene.ts += 1
+    elif change == "active_characters":
+        scene.active_characters = ["Alice"]
+    else:
+        summarizer.actions["fact_chronology"].config[change].value += 1
     assert await summarizer.get_cached_analysis("conversation", bob) is None
 
 

@@ -1,3 +1,5 @@
+from talemate.knowledge.chronology import DAY, fact_time
+from talemate.knowledge.supported_facts import previous_audience_facts
 import json
 from copy import deepcopy
 from pathlib import Path
@@ -627,9 +629,10 @@ async def test_graph_nodes_have_explicit_character_scope(supported_scene):
         inputs={"a": "Alice", "b": "key", "character": "Bob"},
     )
     assert "secretly" in author["text"]
-    assert actor["text"] == "Bob sees Alice hold the key."
+    assert actor["text"] == "(1 Second ago) Bob sees Alice hold the key."
     assert len(timeline["facts"]) == 1
-    assert timeline["facts"][0]["text"] == actor["text"]
+    assert timeline["facts"][0]["text"] == actor["fact"]["text"]
+    assert timeline["text"] == f"[{actor['fact']['id']}] {actor['text']}"
 
 
 @pytest.mark.asyncio
@@ -1571,3 +1574,47 @@ async def test_topic_coverage_tolerates_removed_viewer_without_legacy_index(
     assert coverage(scene, "Bob") == []
     report = await scene.world_state_manager.get_character_knowledge("Bob")
     assert report.coverage == []
+
+
+@pytest.mark.asyncio
+async def test_shared_prompt_does_not_refresh_from_one_listeners_private_restatement(
+    supported_scene,
+):
+    scene, _, _ = supported_scene
+    text = "On September 1, 2026, the lighthouse opened."
+    _, shared = passage(scene, text, ("Alice", "Bob"), 10 * DAY)
+    await store(
+        scene,
+        shared,
+        ("Alice", "Bob"),
+        text,
+        importance=3,
+        time_scope="September 1, 2026",
+    )
+    _, private = passage(scene, text, ("Alice",), 39 * DAY)
+    await store(
+        scene, private, ("Alice",), text, importance=3, time_scope="September 1, 2026"
+    )
+    scene.ts = 40 * DAY
+    first, second = scene.world_state.facts.values()
+    scene.world_state.facts = {
+        first.id: first.model_copy(
+            update={"contributions": first.contributions + second.contributions}
+        )
+    }
+    alice = previous_audience_facts(scene, ("Alice",))[0]
+    shared = previous_audience_facts(scene, ("Alice", "Bob"))[0]
+    assert fact_time(scene, alice) == "1 Day ago"
+    assert fact_time(scene, shared) == "1 Month ago"
+
+
+@pytest.mark.asyncio
+async def test_extraction_keeps_old_supported_supersede_targets(supported_scene):
+    scene, _, _ = supported_scene
+    scene.active_characters = []
+    text = "The sextant is in the drawer."
+    _, source = passage(scene, text, ("Alice", "Bob"), DAY)
+    await store(scene, source, ("Alice", "Bob"), text, importance=1)
+    scene.ts = 100 * DAY
+    facts = previous_audience_facts(scene, ("Alice", "Bob"))
+    assert [fact.text for fact in facts] == [text]

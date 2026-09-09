@@ -243,3 +243,16 @@ describe('the docs page repeats the tables', () => {
         expect(section).toMatch(/Ultra lands on Thorough/);
     });
 });
+
+describe('fact chronology settings stay independent of effort', () => {
+    it.each(['legacy', 'perception'])('%s: leaves all five custom values untouched at every stop', mode => {
+        const agents = agentsAt(mode, 'light');
+        const chronology = { config: Object.fromEntries(Object.entries({ milestone_half_life: 180, state_half_life: 30, routine_half_life: 5, recent_window: 7, score_floor: 1 }).map(([key, value]) => [key, number(key, value)])) };
+        agents.find(agent => agent.name === 'summarizer').actions.fact_chronology = chronology;
+        const before = JSON.stringify(chronology);
+        for (const stop of EFFORT_STOPS[mode]) {
+            expect(effortPatch(agents, mode, stop).some(change => change.action === 'fact_chronology')).toBe(false);
+            expect(JSON.stringify(chronology)).toBe(before);
+        }
+    });
+});

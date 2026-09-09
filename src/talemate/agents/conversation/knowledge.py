@@ -344,7 +344,7 @@ class CharacterKnowledgeMixin:
             window=self.knowledge_absence_window,
             dedupe_distance=dedupe,
         )
-        lines = render_absence_lines(facts)
+        lines = render_absence_lines(facts, self.scene)
         log.debug("absence_block", character=character.name, lines=len(lines))
         return lines
 

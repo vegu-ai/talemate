@@ -167,7 +167,7 @@ describe('what the character knows', () => {
         vm.handleMessage(knowledgeFrame('Nora', { known_facts: [{ id: 'F9', text: 'The key is brass.', topic: 'key' }], known_facts_total: 1 }));
         expect(vm.factsCount).toBe('1 known fact.');
         vm.handleMessage(knowledgeFrame('Nora', { known_facts: Array.from({ length: 5 }, (_, i) => ({ id: `F${i}`, text: `fact ${i}` })), known_facts_total: 37 }));
-        expect(vm.factsCount).toBe('5 of 37 known facts, newest first.');
+        expect(vm.factsCount).toBe('5 of 37 known facts, ranked by importance and recency.');
     });
 
     it('lists the disclosures in a Character perspectives scene', () => {
@@ -326,5 +326,37 @@ describe('where the hub sits', () => {
     it('names the control for a screen reader', () => {
         expect(Hub.props.name.required).toBe(true);
         expect(Hub.emits).toEqual(['open-knowledge']);
+    });
+});
+
+describe('fact chronology refreshes', () => {
+    it('refreshes when only the scene score-floor override changes', () => {
+        const vm = hub({ open: true });
+        const frame = value => ({ type: 'agent_status', name: 'summarizer', data: {
+            actions: { fact_chronology: { config: { score_floor: { value: 0.5 } } } },
+            scene_overrides: { actions: { fact_chronology: { config: { score_floor: { value } } } } },
+        } });
+        vm.handleMessage(frame(0.5));
+        const before = vm.sent.length;
+        vm.handleMessage(frame(2));
+        expect(vm.sent.slice(before).map(item => item.action)).toEqual(['get_character_knowledge']);
+        vm.handleMessage(frame(2));
+        expect(vm.sent).toHaveLength(before + 1);
+    });
+    it('refreshes the open hub on scene time or presence changes', () => {
+        const vm = hub({ open: true });
+        Hub.watch.chronologyMoment.call(vm);
+        expect(vm.sent).toHaveLength(1);
+        vm.open = false;
+        Hub.watch.chronologyMoment.call(vm);
+        expect(vm.sent).toHaveLength(1);
+    });
+    it('refreshes once for changed Summarizer chronology settings without an AI request', () => {
+        const vm = hub({ open: true });
+        const frame = value => ({ type: 'agent_status', name: 'summarizer', data: { actions: { fact_chronology: { config: { recent_window: { value } } } } } });
+        vm.handleMessage(frame(3));
+        vm.handleMessage(frame(3));
+        vm.handleMessage(frame(7));
+        expect(vm.sent.map(item => item.action)).toEqual(['get_character_knowledge', 'get_character_knowledge']);
     });
 });

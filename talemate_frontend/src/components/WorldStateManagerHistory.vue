@@ -213,6 +213,9 @@ export default {
         }
     },
     watch: {
+        'scene.data.scene_ts'() {
+            if (this.visible) this.requestSceneHistory();
+        },
         knownBy(name) {
             this.knownFactIds = null;
             if (name) this.requestKnownFacts(name);

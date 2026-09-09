@@ -4,6 +4,8 @@ knowledge gate, entity lookup by id, cross-encoder rerank, the conversation
 opt-ins (the AI memory pass, the ledger), the narrator's offscreen life and the character.activated signal.
 """
 
+from itertools import combinations
+from math import cos, radians, sin
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -29,6 +31,7 @@ from talemate.events import ArchiveEvent, CharacterActivatedEvent
 from talemate.instance import get_agent
 from talemate.knowledge.absence import absence_facts
 from talemate.knowledge.bucket import KnowledgeIndex
+from talemate.knowledge.chronology import DAY
 from talemate.knowledge.schema import Fact, KnowledgeEdge
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage
@@ -86,6 +89,27 @@ class TestSettings:
 
 
 class TestRecency:
+    async def test_weight_zero_keeps_distance_order_for_facts(self, scene, memory):
+        config(memory, "recency_weight", 0)
+        scene.ts = 100 * DAY
+        memory.table = [
+            doc("F1", "relevant old fact", 0.1, ts=70 * DAY, typ="fact", importance=3),
+            doc(
+                "F2",
+                "less relevant fresh fact",
+                0.2,
+                ts=99 * DAY,
+                typ="fact",
+                importance=3,
+            ),
+        ]
+        with ActiveScene(scene):
+            result = await memory.multi_query(["q"], iterate=5)
+        assert [item.raw for item in result] == [
+            "relevant old fact",
+            "less relevant fresh fact",
+        ]
+
     async def test_newer_result_outranks_a_slightly_closer_old_one(self, scene, memory):
         # A: 0.30 + 0.1 * 1.0 = 0.40, B: 0.35 + 0.1 * 0.0 = 0.35
         memory.table = [doc("A", "old", 0.30, ts=100), doc("B", "new", 0.35, ts=1000)]
@@ -119,6 +143,110 @@ class TestRecency:
 
 
 class TestDiversity:
+    async def test_fresh_replacement_must_clear_every_duplicate(self, scene, memory):
+        config(memory, "recency_weight", 0)
+        config(memory, "mmr_threshold", 0.92)
+        scene.ts = 100 * DAY
+
+        def vector(degrees):
+            angle = radians(degrees)
+            return [cos(angle), sin(angle)]
+
+        history = doc("H", "history", embedding=vector(0))
+        fresh = doc(
+            "F_fresh",
+            "fresh fact",
+            ts=99 * DAY,
+            typ="fact",
+            importance=3,
+            embedding=vector(20),
+        )
+        old = doc(
+            "F_old",
+            "old fact",
+            ts=70 * DAY,
+            typ="fact",
+            importance=3,
+            embedding=vector(40),
+        )
+        other = doc("X", "other history", embedding=vector(120))
+        memory.get = AsyncMock(side_effect=[[history, old], [other, fresh]])
+        with ActiveScene(scene):
+            result = await memory.multi_query(["q1", "q2"], iterate=5)
+        assert [item.id for item in result] == ["H", "X", "F_old"]
+        assert all(
+            sum(a * b for a, b in zip(left.embedding, right.embedding)) <= 0.92
+            for left, right in combinations(result, 2)
+        )
+
+    @pytest.mark.parametrize("budget", [1, 2, 5])
+    async def test_fresher_fact_keeps_selected_slot_across_queries(
+        self, scene, memory, monkeypatch, budget
+    ):
+        config(memory, "recency_weight", 0)
+        config(memory, "mmr_threshold", 0.92)
+        scene.ts = 100 * DAY
+        old = doc(
+            "F_old",
+            "old wording",
+            0.1,
+            ts=70 * DAY,
+            typ="fact",
+            importance=3,
+            embedding=[1.0, 0.0, 0.0],
+        )
+        fresh = doc(
+            "F_fresh",
+            "fresh wording",
+            0.3,
+            ts=99 * DAY,
+            typ="fact",
+            importance=3,
+            embedding=[0.995, (1 - 0.995**2) ** 0.5, 0.0],
+        )
+        h1 = doc("H1", "history one", embedding=[0.0, 0.0, 1.0])
+        h2 = doc("H2", "history two", embedding=[0.0, 1.0, 0.0])
+        h3 = doc("H3", "history three", embedding=[-1.0, 0.0, 0.0])
+        memory.get = AsyncMock(side_effect=[[old, h1], [h2, h3, fresh]])
+        monkeypatch.setattr("talemate.agents.memory.util.count_tokens", len)
+        with ActiveScene(scene):
+            result = await memory.multi_query(
+                ["q1", "q2"], iterate=5, max_tokens=budget
+            )
+        assert [item.id for item in result] == ["F_fresh", "H2", "H1", "H3"][:budget]
+
+    @pytest.mark.parametrize("reverse", [False, True])
+    async def test_fresher_fact_wins_near_duplicate_across_queries(
+        self, scene, memory, reverse
+    ):
+        config(memory, "recency_weight", 0)
+        scene.ts = 100 * DAY
+        old = doc(
+            "F1",
+            "month-old event",
+            0.1,
+            ts=70 * DAY,
+            typ="fact",
+            importance=3,
+            embedding=[1.0, 0.0],
+        )
+        fresh = doc(
+            "F2",
+            "yesterday event",
+            0.2,
+            ts=99 * DAY,
+            typ="fact",
+            importance=1,
+            embedding=[0.99, 0.1],
+        )
+        queries = [[old], [fresh]]
+        memory.get = AsyncMock(
+            side_effect=list(reversed(queries)) if reverse else queries
+        )
+        with ActiveScene(scene):
+            result = await memory.multi_query(["q1", "q2"], iterate=5)
+        assert [item.id for item in result] == ["F2"]
+
     async def test_near_identical_result_is_skipped(self, scene, memory):
         config(memory, "recency_weight", 0)
         memory.table = [
@@ -217,9 +345,10 @@ class TestSimilarityGate:
         ]
         with ActiveScene(scene):
             result = await memory.multi_query(["q"], iterate=5, filter=filtered)
-        # F9 (0.10 from F1) and e1 (0.05) pass the gate and, being wanted
-        # near-copies, the diversity check at its default keeps them
-        assert result == ["known fact", "twin fact", "history"]
+        # Diversity prefers the fresher F9 retelling over F1
+        # and the independently admitted history document.
+        assert [doc.raw for doc in result] == ["twin fact", "history"]
+        assert str(result[0]) == "(16 Minutes and 20 Seconds ago) twin fact"
         assert filtered.rejection(memory.table[1]) == "presence"
 
     async def test_revoked_hidden_and_offscreen_are_never_rescued(
@@ -240,7 +369,7 @@ class TestSimilarityGate:
         ]
         with ActiveScene(scene):
             result = await memory.multi_query(["q"], iterate=5, filter=filtered)
-        assert result == ["twin fact"]
+        assert [doc.raw for doc in result] == ["twin fact"]
         assert filtered.rejection(memory.table[0]) == "revoke"
         assert filtered.rejection(memory.table[2]) == "visibility"
         assert filtered.gateable(memory.table[1]) is False
@@ -262,7 +391,7 @@ class TestSimilarityGate:
         ]
         with ActiveScene(scene):
             result = await memory.multi_query(["q"], iterate=5, filter=filtered)
-        assert result == ["twin fact"]
+        assert [doc.raw for doc in result] == ["twin fact"]
 
     async def test_anchors_are_fetched_once_per_call(self, scene, memory, filtered):
         memory.table = [self.presence("F9", "twin fact", 0.25, [1.0, 0.1])]
@@ -286,7 +415,7 @@ class TestSimilarityGate:
         ]
         with ActiveScene(scene):
             result = await memory.multi_query(["q"], iterate=5, filter=filtered)
-        assert result == ["known fact"]
+        assert [doc.raw for doc in result] == ["known fact"]
 
     async def test_anchors_are_the_whole_bucket_not_the_query(
         self, scene, memory, filtered
@@ -295,7 +424,7 @@ class TestSimilarityGate:
         memory.table = [self.presence("F9", "twin fact", 0.25, [1.0, 0.1])]
         with ActiveScene(scene):
             result = await memory.multi_query(["q"], iterate=5, filter=filtered)
-        assert result == ["twin fact"]
+        assert [doc.raw for doc in result] == ["twin fact"]
 
     async def test_plain_callable_filter_has_no_gate(self, scene, memory, filtered):
         memory.table = [self.presence("F9", "twin fact", 0.25, [1.0, 0.1])]
@@ -326,6 +455,27 @@ class FakeReranker:
 
 
 class TestRerank:
+    async def test_reranker_owns_fact_order_and_budget(self, scene, memory):
+        config(memory, "recency_weight", 0)
+        config(memory, "rerank", True)
+        scene.ts = 100 * DAY
+        memory.table = [
+            doc("F2", "fresh candidate", 0.1, ts=99 * DAY, typ="fact", importance=3),
+            doc(
+                "F1",
+                "most relevant old candidate",
+                0.2,
+                ts=70 * DAY,
+                typ="fact",
+                importance=3,
+            ),
+        ]
+        memory._reranker = FakeReranker(memory.device)
+        with ActiveScene(scene):
+            result = await memory.multi_query(["q"], iterate=5, max_tokens=1)
+        assert [item.id for item in result] == ["F1"]
+        assert [item.id for item in memory._reranker.calls[0][1]] == ["F2", "F1"]
+
     async def test_off_by_default_leaves_the_merge_alone(self, scene, memory):
         config(memory, "recency_weight", 0)
         memory.table = [doc("A", "a", 0.2), doc("B", "b", 0.3)]

@@ -13,6 +13,7 @@ import structlog
 from talemate.instance import get_agent
 from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
 from talemate.knowledge.schema import Fact
+from talemate.knowledge.chronology import ranked_facts, render_fact
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -41,9 +42,6 @@ def _fact_number(fact: Fact) -> int:
 def fact_order(fact: Fact) -> tuple[int, int]:
     """Creation order: scene time, then the numeric part of the id (F10 after F2)."""
     return (fact.ts if fact.ts is not None else -1, _fact_number(fact))
-
-
-_fact_order = fact_order
 
 
 async def absence_facts(
@@ -76,8 +74,10 @@ async def absence_facts(
 
     recent = sorted(
         (f for f in world_state.facts.values() if f.source != "offscreen"),
-        key=_fact_order,
-    )[-window:]
+        key=fact_order,
+        reverse=True,
+    )[: max(0, window)]
+    recent = ranked_facts(scene, recent)
 
     # a fact marked false is never listed: in the bucket it is known, outside
     # it there is nothing to warn about
@@ -101,13 +101,12 @@ async def absence_facts(
             )
             unknown = [f for f in unknown if f.id not in retold]
 
-    unknown.sort(key=lambda f: (-f.restatements, *(-n for n in _fact_order(f))))
     log.debug(
         "absence_facts result", character=character, listed=[f.id for f in unknown]
     )
     return unknown[:limit]
 
 
-def render_absence_lines(facts: list[Fact]) -> list[str]:
+def render_absence_lines(facts: list[Fact], scene: "Scene") -> list[str]:
     """One line per fact: a newline inside a fact's text would break the bullet."""
-    return [" ".join(fact.text.split()) for fact in facts]
+    return [render_fact(scene, fact, include_id=False) for fact in facts]

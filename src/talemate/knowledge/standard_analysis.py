@@ -10,6 +10,7 @@ from talemate.knowledge.topics import known_facts
 from talemate.knowledge.advice import KnowledgeAnalysisType
 from talemate.knowledge.schema import Fact, KnownFact
 from talemate.util import count_tokens
+from talemate.knowledge.chronology import chronology_settings, render_fact
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -45,19 +46,25 @@ def standard_analysis_fingerprint(
         "dedupe": get_agent("summarizer").archive_fact_dedupe_distance,
         # Unknown-fact deduplication is skipped when memory is unavailable.
         "memory_ready": get_agent("memory").ready,
+        "chronology": chronology_settings(scene),
+        "scene_ts": scene.ts,
+        "active_characters": sorted(scene.active_characters),
     }
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
 
 def _bounded_lines(
-    facts: Sequence[KnownFact | Fact], budget: int, *, false_ids: set[str] | None = None
+    scene: "Scene",
+    facts: Sequence[KnownFact | Fact],
+    budget: int,
+    *,
+    false_ids: set[str] | None = None,
 ) -> list[str]:
     lines = []
     used = 0
     for fact in facts:
-        text = " ".join(fact.text.split())
         status = " (known to be false)" if false_ids and fact.id in false_ids else ""
-        line = f"- [{fact.id}]{status} {text}"
+        line = f"- [{fact.id}]{status} {render_fact(scene, fact, include_id=False)}"
         size = count_tokens(line + "\n")
         if used + size <= budget:
             lines.append(line)
@@ -79,15 +86,16 @@ async def standard_analysis_context(
         dedupe_distance=get_agent("summarizer").archive_fact_dedupe_distance,
     )
     known_lines = _bounded_lines(
+        scene,
         known,
         budget // 3,
         false_ids={fact.id for fact in scene.world_state.facts.values() if fact.false},
     )
-    unknown_lines = _bounded_lines(unknown, budget // 3)
+    unknown_lines = _bounded_lines(scene, unknown, budget // 3)
     if not known_lines and not unknown_lines:
         return None
     text = (
-        f"<|SECTION:KNOWN FACTS|>\nKnown facts for {character.name} (newest first, bounded):\n"
+        f"<|SECTION:KNOWN FACTS|>\nKnown facts for {character.name} (importance and recency ranked, bounded):\n"
         + (
             "\n".join(known_lines)
             or (

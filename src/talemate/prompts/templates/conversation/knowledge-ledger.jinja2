@@ -19,14 +19,15 @@ Override example:
 {% for name, facts in absence.items() %}
 <|SECTION:WHAT {{ name.upper() }} DOES NOT KNOW YET|>
 {% for fact in facts %}
-- [{{ fact.id }}] {{ fact.text }}
+- {{ render_fact(fact) }}
 {% endfor %}
 <|CLOSE_SECTION|>
 {% endfor %}
 {% if establish_facts and previous_facts -%}
 <|SECTION:KNOWN FACTS|>
+Record age is display metadata, not part of the fact text. Do not copy it into extracted facts.
 {% for fact in previous_facts %}
-- [{{ fact.id }}] {{ fact.text }}
+- {{ render_fact(fact, extraction=True) }}
 {% endfor %}
 <|CLOSE_SECTION|>
 {% endif -%}

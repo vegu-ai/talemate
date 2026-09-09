@@ -8,6 +8,7 @@ import structlog
 
 import talemate.world_state.templates as world_state_templates
 from talemate.knowledge.memory import invalidate_memory_audiences
+from talemate.knowledge.chronology import render_fact
 from talemate.agents.tts.util import get_voice
 from talemate.config import commit_config, get_config
 from talemate.config.schema import SceneAppearance, SceneToolShortcut
@@ -792,7 +793,9 @@ class WorldStateManager:
         for fact in self.world_state.facts.values():
             targets.append(
                 KnowledgeTarget(
-                    id=fact.id, label=f"fact: {fact.text[:60]}", kind="fact"
+                    id=fact.id,
+                    label=f"fact: {render_fact(self.scene, fact, include_id=False)[:100]}",
+                    kind="fact",
                 )
             )
         # Resolve collisions with the same precedence as graph and disclosure grants.

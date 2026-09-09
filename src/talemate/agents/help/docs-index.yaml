@@ -131,12 +131,11 @@
     pass or topic-awareness assertions.
 - path: user-guide/agents/conversation/settings.md
   title: Settings
-  summary: 'Conversation formats (including AI Aware), length, instructions, stop tokens, caching, story intent and writing
-    style controls; Character knowledge effort presets, Standard knowledge filtering, unknown-fact reminders, topic overview,
-    memory refinement and dialogue learning. Establish
-    facts from dialogue saves important facts after every character line using the same learning request, including player
-    lines and solo speakers; everyone present knows them, History supports importance edits and source inspection, and source
-    changes remove them; Perspectives replaces Standard controls.'
+  summary: 'Conversation formats including AI Aware, length, instructions, stop tokens, caching, story intent, writing style,
+    effort presets, knowledge filtering, topic overview and memory refinement; unknown-fact reminders rank eligible facts
+    within the newest-record pool. Establish facts from dialogue uses the learning request after every character line,
+    including player lines and solo speakers; everyone present knows the facts, History supports importance edits and source
+    inspection, source changes remove facts, and Perspectives replaces Standard controls.'
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Autocomplete partial text with Ctrl/Cmd+Enter in dialogue, message editing, attributes, details, descriptions,
@@ -221,10 +220,11 @@
     API automatically. Explains the client/status banner and reverting to a local embedding in Memory settings.
 - path: user-guide/agents/memory/settings.md
   title: Settings
-  summary: 'Memory settings: embeddings and CPU/CUDA switching, topic clustering/recluster thresholds and recorded-fact access.
-    Retrieval uses recency, diversity, entity lookup and optional local cross-encoder reranking; topic awareness and similarity
-    knowledge rescue are legacy-only. Names the OpenAI and OpenRouter API keys needed by hosted embeddings; live device
-    switching clears ChromaDB cache, frees GPU memory and reimports the active scene database.'
+  summary: 'Memory settings: embeddings, OpenAI/OpenRouter keys, live CPU/CUDA switching with ChromaDB cache cleanup, topic
+    clustering and thresholds, and Standard-only topic awareness and Match known facts. Retrieval owns relevance order through
+    recency weighting, diversity, entity lookup and local cross-encoder reranking; chronology filters fact eligibility and
+    adds time markers without reordering results, while Standard topic additions rank by chronology and Perspectives retains
+    audience-fact order.'
 - path: user-guide/agents/memory/testing.md
   title: Testing Embeddings
   summary: Test embeddings through Debug Tools → Memory by inspecting generation-time requests, result distances and selected
@@ -256,11 +256,11 @@
     investigation. Deep analysis can retrieve additional historical context but may add many prompts.'
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
-  summary: 'Summarizer thresholds, methods, time/presence boundaries and fact matching tolerance; Extract facts permits 0–12
-    continuity-relevant facts per chapter, assigns Routine (1), State (2) or Milestone (3) importance in the same request, and
-    defaults legacy facts to State. Covers layered history, Perspectives analysis repair, deep/cached scene analysis with
-    bounded Standard known/unknown facts, and Scene History budgets, Best Fit, dialogue limits, detail ratios and Enforce
-    Summary Boundary.'
+  summary: 'Summarizer thresholds, fact matching, 0–12 salient Routine/State/Milestone facts, layered history, Perspectives
+    repair, deep analysis, Scene History budgets, Best Fit and Enforce Summary Boundary. Chronology uses 90/14/2-day half-lives,
+    a 3-day window and floor 0.5: default cuts at 3/42/450 days unless a present character is mentioned; floor 0 disables cuts,
+    extraction inventories stay uncut, markers follow restatements, effort presets leave settings unchanged, and Standard
+    analysis cache inputs include chronology, scene time and presence.'
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
   summary: Legacy AUTOMATIC1111 text-to-image backend setup with API URL, steps, sampler, schedule, CFG, keyword/descriptive
@@ -919,9 +919,11 @@
     player_character, reason, prefix, ! command handling and abort_condition branches that interrupt the input loop.
 - path: user-guide/node-editor/reference/nodes/knowledge.md
   title: Knowledge Nodes
-  summary: Knowledge nodes query facts, current state, relationships, visibility and character reports. Perception reports
-    include disclosures and supported-fact access; revokes and awareness lines are legacy-only. Grant Knowledge establishes
-    disclosures, with mode-aware director callbacks and confirmation.
+  summary: Knowledge nodes query facts, current state, relationships, visibility and character reports; Facts About ranks
+    importance and recency, fact text outputs apply chronology selection and relative time markers, while Relationship
+    Timeline raw facts remain oldest first. Perception reports include disclosures and supported-fact access; revokes and
+    awareness lines are legacy-only, and Grant Knowledge establishes disclosures with mode-aware director callbacks and
+    confirmation.
 - path: user-guide/node-editor/reference/nodes/prompt.md
   title: Prompt Nodes
   summary: Prompt nodes build Jinja2 prompts with scene, character, memory, game state and dynamic context toggles; load templates
@@ -1217,9 +1219,10 @@
 - path: user-guide/world-editor/history/index.md
   title: History
   summary: World Editor History manages static backstory, archived summaries, layered history, presence chips and time-passage
-    chapters. Facts show Routine, State or Milestone importance, repeats and supersedes links; archived and Dialogue facts share
-    text/importance editing and the Known by filter, dialogue sources can be inspected, source changes remove their facts,
-    and failed archive extraction can be retried; also covers dated seed-guided entries and history regeneration.
+    chapters. Facts show Routine/State/Milestone importance, relative time such as (21 Days ago) since their latest restatement, repeats and supersedes
+    links; archived and Dialogue facts share text/importance editing and Known by filtering, source inspection and cleanup,
+    and failed extraction retries; History retains the full record despite prompt chronology cuts and supports dated
+    seed-guided entries and regeneration.
 - path: user-guide/world-editor/history/layered-history.md
   title: Layered History
   summary: Layered History compresses dialogue into base summaries and successively smaller layers to preserve a full-timeline
@@ -1227,12 +1230,11 @@
     tools and context-budget review.
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
-  summary: Choosing a mode comparison of Standard and Character perspectives with pros, cons and a pick-this-if table,
-    and the Character knowledge effort slider presets (Minimal to Ultra) per mode with their model expectations.
-    Known facts by topic rows expand to every fact a character knows with how and where. Character perspectives opt-in for new stories/card imports and empty-scene switching; disabling clears perspectives,
-    disclosures and derived audience memory. Covers costs, retries, author responsibilities, Known by visibility, durable
-    disclosures, supported-fact access, director/node tools, Standard-mode grant/revoke behavior and the World State
-    knowledge hub shortcut (newest known facts, rules, mode switch, agent toggles).
+  summary: Standard versus Character perspectives comparison, new-story/card-import opt-in and empty-scene switching,
+    Character knowledge effort presets and model expectations, costs/retries, Known by visibility, durable disclosures,
+    supported evidence and Standard Allow/Block rules. The knowledge hub ranks facts by importance and age with relative
+    time markers and recent/older selection; expanded Known facts by topic rows retain the full record and show how/where
+    each fact is known, without extra AI requests or changes to access or effort settings.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and
@@ -1285,15 +1287,8 @@
     Reinforcement clears accumulated generation data.
 - path: user-guide/world-state.md
   title: World State
-  summary: World panel shows durable character/object snapshots, tracked states, entity highlights with Look at/Add Detail,
-    knowledge-change dots and a per-character knowledge hub menu (newest known facts with topic labels, newest disclosures
-    or access rules with counts, Character perspectives switch, conversation/summarizer/memory knowledge toggles with cost
-    notes). Covers active/background/inactive characters, Make real name-overlap protection, narrated activation,
-    Ctrl/Cmd-guided refresh or wipe, cancellation, background cadence and Pin to context.
-    The knowledge hub Thoroughness section starts with the Character knowledge effort slider.
-    Adding one yourself explains how to select text in a scene message to add an entity the
-    snapshot missed, covering the Add to world state action on a drag or shift-click selection,
-    whole-word snapping, the 240-character cap, refusal when the selection names no
-    character/item/place, the entity popover for a selection inside an existing highlight, no
-    inline highlight from a message outside the current moment, and the pin that keeps a manual
-    entry from ageing out.
+  summary: World panel durable snapshots, tracked states, Look at/Add Detail highlights, Add to world state text selection,
+    knowledge-change dots, active/inactive/background characters and Make real name protection. The knowledge hub shows
+    chronology-selected facts ranked by importance and recency with time markers, topics and counts, disclosures/access rules,
+    Character perspectives and effort presets; also covers narrated activation, guided refresh/wipe, cancellation, background
+    cadence and Pin to context.

@@ -54,6 +54,7 @@ from .tts_utils import TTSUtilsMixin
 from .perceptions import PerceptionMixin
 from .audience_summaries import AudienceSummaryMixin
 from .source_facts import SourceFactMixin
+from .fact_chronology import FactChronologyMixin
 from talemate.knowledge.supported_facts import previous_audience_facts
 from talemate.knowledge.perspectives import source_reference
 
@@ -92,6 +93,7 @@ class SummarizeEmission(AgentTemplateEmission):
 
 @register()
 class SummarizeAgent(
+    FactChronologyMixin,
     SourceFactMixin,
     AudienceSummaryMixin,
     PerceptionMixin,
@@ -188,6 +190,7 @@ class SummarizeAgent(
         MemoryRAGMixin.add_actions(actions)
         SceneAnalyzationMixin.add_actions(actions)
         PerceptionMixin.add_actions(actions)
+        FactChronologyMixin.add_actions(actions)
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):

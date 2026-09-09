@@ -347,7 +347,7 @@ async def test_source_removed_during_memory_operation_leaves_no_fact(
         memory.delete.assert_awaited_once_with({"ids": ["F1"]})
 
 
-def test_toggle_off_renders_original_ledger_byte_for_byte(scene):
+def test_toggle_off_preserves_original_ledger_except_time_marker(scene):
     variables = {
         "scene": scene,
         "speaker": "Alice",
@@ -363,7 +363,9 @@ def test_toggle_off_renders_original_ledger_byte_for_byte(scene):
         before = Prompt.get("conversation.knowledge-ledger", vars=variables)
         before.template = original
         after = Prompt.get("conversation.knowledge-ledger", vars=variables)
-        assert after.render() == before.render()
+        rendered = after.render()
+        assert rendered.count("(Time unknown)") == 1
+        assert rendered.replace("(Time unknown) ", "") == before.render()
 
 
 def test_enabled_prompt_and_extractor_carry_both_blocks(scene):
@@ -380,7 +382,10 @@ def test_enabled_prompt_and_extractor_carry_both_blocks(scene):
                 "previous_facts": [Fact(id="F1", text="Edwin owns the lighthouse.")],
             },
         ).render()
-    assert "[F1] Edwin owns the lighthouse." in rendered
+    assert "[F1] Fact: Edwin owns the lighthouse." in rendered
+    assert "Record age (metadata, do not copy): Time unknown" in rendered
+    assert "Do not copy it into extracted facts." in rendered
+    assert "[F1] (Time unknown)" not in rendered
     assert "NEW LINE only" in rendered
     assert "first hug" in rendered
     assert '"importance": 2' in rendered

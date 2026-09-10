@@ -15,6 +15,7 @@ from talemate.client.context import (
     set_client_context_attribute,
     set_conversation_context_attribute,
 )
+from talemate.exceptions import ControlFlowException
 from talemate.prompts import Prompt
 from talemate.instance import get_agent
 from talemate.knowledge.mode import character_knowledge_enabled
@@ -56,12 +57,14 @@ class ConversationAgentEmission(AgentEmission):
         default_factory=list
     )
     avatar: str | None = None
+    message_ids: list[int] = pydantic.Field(default_factory=list)
 
 
 talemate.emit.async_signals.register(
     "agent.conversation.before_generate",
     "agent.conversation.inject_instructions",
     "agent.conversation.generated",
+    "agent.conversation.finalized",
 )
 
 
@@ -516,7 +519,38 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
             extra["asset_id"] = character.current_avatar
             extra["asset_type"] = "avatar"
         messages = [CharacterMessage(emission.response, **extra)]
+        messages[0]._avatar_pending = emit_signals
         return messages
+
+    async def finalize_message_avatar(self, message: CharacterMessage):
+        if not message._avatar_pending:
+            return
+        message._avatar_pending = False
+        scene = self.scene
+        character = scene.get_character(message.character_name)
+        if character is None:
+            return
+        emission = ConversationAgentEmission(
+            agent=self,
+            actor=character.actor,
+            character=character,
+            response=message.message,
+            message_ids=[message.id],
+        )
+        try:
+            await talemate.emit.async_signals.get("agent.conversation.finalized").send(
+                emission
+            )
+            if self.scene is not scene or scene.get_message(message.id) is not message:
+                return
+            if emission.avatar and emission.avatar != message.asset_id:
+                await scene.assets.update_message_asset(message.id, emission.avatar)
+        except ControlFlowException:
+            raise
+        except Exception:
+            log.exception(
+                "finalize_message_avatar: attachment failed", message_id=message.id
+            )
 
     def allow_repetition_break(
         self, kind: str, agent_function_name: str, auto: bool = False

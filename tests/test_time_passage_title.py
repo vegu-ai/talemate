@@ -217,15 +217,15 @@ class TestAdvanceTime:
         agent.scene = scene
 
         with (
-            patch.object(type(scene), "push_history", autospec=True),
+            patch.object(type(scene), "push_history", autospec=True) as push,
             patch.object(type(scene), "emit_status", autospec=True),
-            patch("talemate.agents.world_state.emit"),
         ):
             message = await WorldStateAgent.advance_time(
                 agent, 3600, title="The Reckoning"
             )
 
         assert message.title == "The Reckoning"
+        push.assert_awaited_once_with(scene, message, emit_message=True)
 
     def test_the_node_exposes_a_chapter_title(self):
         # `title` is reserved on a node (it names the node), so the socket is

@@ -11,6 +11,7 @@ from talemate.context import scene_is_loading
 
 from talemate.knowledge.memory import audience_documents
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.revision_browsing import defer_derived_jobs
 from talemate.knowledge.reinforcements import reinforcement_source_keys
 from talemate.knowledge.perspectives import PerspectiveReadContext, perspectives_changed
 
@@ -91,6 +92,7 @@ class AudienceMemoryMixin:
             or not self._ready_to_add
             or self.readonly
             or scene_is_loading.get()
+            or defer_derived_jobs.get()
         ):
             return
         try:

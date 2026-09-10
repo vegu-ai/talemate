@@ -83,27 +83,7 @@ class PushHistory(Node):
                 self, "message", "Input is not a SceneMessage instance"
             )
 
-        await scene.push_history(message)
-
-        if emit_message:
-            if isinstance(message, scene_message.CharacterMessage):
-                emit(
-                    "character",
-                    message,
-                    character=scene.get_character(message.character_name),
-                )
-            elif isinstance(message, scene_message.NarratorMessage):
-                emit("narrator", message)
-            elif isinstance(message, scene_message.ContextInvestigationMessage):
-                emit("context_investigation", message)
-            elif isinstance(message, scene_message.DirectorMessage):
-                emit(
-                    "director",
-                    message,
-                    character=scene.get_character(message.character_name)
-                    if message.character_name
-                    else None,
-                )
+        await scene.push_history(message, emit_message=emit_message)
 
         self.set_output_values({"message": message})
 

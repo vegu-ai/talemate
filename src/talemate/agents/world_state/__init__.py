@@ -9,7 +9,6 @@ import structlog
 
 import talemate.emit.async_signals
 import talemate.util as util
-from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.client import ClientBase
 from talemate.prompts import Prompt
@@ -131,10 +130,8 @@ class WorldStateAgent(
         message = TimePassageMessage(ts=duration, message=human_duration, title=title)
 
         log.debug("world_state.advance_time", message=message)
-        await self.scene.push_history(message)
+        await self.scene.push_history(message, emit_message=True)
         self.scene.emit_status()
-
-        emit("time", message)
 
         await talemate.emit.async_signals.get("agent.world_state.time").send(
             TimePassageEmission(

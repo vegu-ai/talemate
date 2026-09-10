@@ -359,6 +359,7 @@ class SceneMessage(PerspectiveSourceModel):
 
 
 class CharacterMessage(SceneMessage):
+    _avatar_pending: bool = pydantic.PrivateAttr(default=False)
     _supports_versions: ClassVar[bool] = True
 
     typ: str = "character"

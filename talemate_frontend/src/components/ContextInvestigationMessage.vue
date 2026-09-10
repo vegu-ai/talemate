@@ -29,7 +29,7 @@
         :message_content="message.text"
         :message_id="message.id"
       />
-      <RevisionNav v-if="isLastMessage" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" @navigate="(dir) => $emit('navigate-revision', dir)" />
+      <RevisionNav v-if="isLastMessage" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" :uncommitted="revisionUncommitted" @keep="$emit('keep-revision')" @navigate="(dir) => $emit('navigate-revision', dir)" />
       <div v-if="editing" class="position-relative context-investigation-editor">
         <v-textarea
           ref="textarea"
@@ -250,6 +250,7 @@ export default {
       type: String,
       default: null,
     },
+    revisionUncommitted: { type: Boolean, default: false },
     revisionBusy: {
       type: [Boolean, String],
       default: false,
@@ -259,7 +260,7 @@ export default {
       default: () => [],
     },
   },
-  emits: ['navigate-revision'],
+  emits: ['navigate-revision', 'keep-revision'],
   inject: ['requestDeleteMessage', 'getWebsocket', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor', 'isMessageVisualizing'],
   methods: {
     toggle() {

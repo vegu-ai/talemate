@@ -33,6 +33,25 @@ from talemate.scene_agent_settings import SceneAgentSettings
 from talemate.util.time import duration_to_human
 
 
+# These inputs contain formatted analysis, TTS chunks and archive entries.
+NON_FACT_TEXT = {
+    ("summarizer.analyze-scene-for-next-conversation", "standard_knowledge"),
+    ("summarizer.inject-audio-tags-for-tts", "entry"),
+    ("world_state.analyze-history-and-follow-instructions", "entry"),
+}
+DISCOVERY_LIMIT = (
+    "Discovery is limited to Fact-valued fixture binding names, render_fact/fact_time "
+    "calls, and literal .text, ['text'] or attr('text') access. Unbound inputs using "
+    "direct interpolation, coercion filters such as string, map(attribute='text'), "
+    "computed attributes, or other formatters may escape discovery. NON_FACT_TEXT "
+    "excludes standard_knowledge in summarizer.analyze-scene-for-next-conversation, "
+    "entry in summarizer.inject-audio-tags-for-tts, and entry in "
+    "world_state.analyze-history-and-follow-instructions because their production "
+    "bindings are not Facts. New input names need a Fact fixture binding; "
+    "use render_fact for output."
+)
+
+
 @pytest.fixture
 def clock_scene(scene):
     scene.ts = 1000 * DAY
@@ -245,35 +264,9 @@ async def test_prompt_selectors_share_cut_and_preserve_access(clock_scene, monke
     request.assert_not_awaited()
 
 
-FACT_INPUTS = {
-    "previous_facts",
-    "absence",
-    "facts",
-    "known_facts",
-    "absence_facts",
-    "fact",
-}
-
-
-def fact_templates():
-    paths = Path("src/talemate/prompts/templates")
-    environment = Environment(extensions=[CaptureContextExtension])
-    return [
-        str(path.relative_to(paths).with_suffix("")).replace("/", ".")
-        for path in sorted(paths.rglob("*.jinja2"))
-        if any(
-            node.name in FACT_INPUTS and node.ctx == "load"
-            for node in environment.parse(path.read_text()).find_all(nodes.Name)
-        )
-    ]
-
-
-@pytest.mark.parametrize("template", fact_templates())
-@pytest.mark.parametrize("audience", [False, True])
-def test_every_fact_template_renders_markers(clock_scene, template, audience):
-    fact = ago(clock_scene, "F1", 21, 3)
-    variables = dict(
-        scene=clock_scene,
+def fact_prompt_variables(scene, fact, audience=False):
+    return dict(
+        scene=scene,
         speaker="Alice",
         listeners="Bob",
         line="Alice: Hello.",
@@ -293,14 +286,150 @@ def test_every_fact_template_renders_markers(clock_scene, template, audience):
         extract_facts=True,
         audience_summary=("Alice", "Bob") if audience else None,
     )
+
+
+def contains_fact(value):
+    if isinstance(value, Fact):
+        return True
+    if isinstance(value, dict):
+        return any(contains_fact(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return any(contains_fact(item) for item in value)
+    return False
+
+
+def raw_text_owner(node):
+    if isinstance(node, nodes.Getattr) and node.attr == "text":
+        return node.node
+    if (
+        isinstance(node, nodes.Getitem)
+        and isinstance(node.arg, nodes.Const)
+        and node.arg.value == "text"
+    ):
+        return node.node
+    if (
+        isinstance(node, nodes.Filter)
+        and node.name == "attr"
+        and node.args
+        and isinstance(node.args[0], nodes.Const)
+        and node.args[0].value == "text"
+    ):
+        return node.node
+    return None
+
+
+def fact_templates(paths=Path("src/talemate/prompts/templates")):
+    environment = Environment(extensions=[CaptureContextExtension])
+    # Fixture values supply input types absent from the prompt loader itself.
+    typed_inputs = {
+        name
+        for name, value in fact_prompt_variables(
+            None, Fact(id="F1", text="probe")
+        ).items()
+        if contains_fact(value)
+    }
+    templates = []
+    for path in sorted(paths.rglob("*.jinja2")):
+        template = str(path.relative_to(paths).with_suffix("")).replace("/", ".")
+        tree = environment.parse(path.read_text())
+        for node in tree.find_all(nodes.Node):
+            known_input = (
+                isinstance(node, nodes.Name)
+                and node.ctx == "load"
+                and node.name in typed_inputs
+            )
+            formatter = (
+                isinstance(node, nodes.Call)
+                and isinstance(node.node, nodes.Name)
+                and node.node.name in {"render_fact", "fact_time"}
+            )
+            owner = raw_text_owner(node)
+            raw_text = (
+                owner is not None
+                and (template, getattr(owner, "name", None)) not in NON_FACT_TEXT
+            )
+            if known_input or formatter or raw_text:
+                templates.append(template)
+                break
+    return templates
+
+
+def assert_fact_markers(scene, template, rendered, fact):
+    lines = [line for line in rendered.splitlines() if fact.text in line]
+    assert lines, f"{template}: no fixture fact rendered. {DISCOVERY_LIMIT}"
+    assert all(fact_time(scene, fact) in line for line in lines), (
+        f"{template}: unmarked fact in {lines!r}. {DISCOVERY_LIMIT}"
+    )
+
+
+@pytest.mark.parametrize(
+    "expression", ["entry.text", "entry['text']", "entry|attr('text')"]
+)
+def test_renamed_fact_input_is_discovered_and_rejects_missing_marker(
+    clock_scene, tmp_path, expression
+):
+    source = "{% for entry in unexpected_records %}{{ " + expression + " }}{% endfor %}"
+    (tmp_path / "renamed.jinja2").write_text(source)
+    assert fact_templates(tmp_path) == ["renamed"]
+    fact = ago(clock_scene, "F1", 21, 3)
+    rendered = Environment().from_string(source).render(unexpected_records=[fact])
+    with pytest.raises(AssertionError, match="unmarked fact"):
+        assert_fact_markers(clock_scene, "renamed", rendered, fact)
+
+
+def test_renamed_formatter_input_is_discovered(clock_scene, tmp_path):
+    source = "{{ render_fact(unexpected_record) }}"
+    (tmp_path / "renamed.jinja2").write_text(source)
+    assert fact_templates(tmp_path) == ["renamed"]
+    fact = ago(clock_scene, "F1", 21, 3)
+    rendered = (
+        Environment()
+        .from_string(source)
+        .render(
+            unexpected_record=fact,
+            render_fact=lambda value: render_fact(clock_scene, value),
+        )
+    )
+    assert_fact_markers(clock_scene, "renamed", rendered, fact)
+
+
+def test_unbound_fact_fixture_reports_discovery_limit(clock_scene):
+    fact = ago(clock_scene, "F1", 21, 3)
+    with pytest.raises(
+        AssertionError, match="New input names need a Fact fixture binding"
+    ):
+        assert_fact_markers(clock_scene, "new-template", "No bound input", fact)
+
+
+def test_fact_typed_binding_discovers_direct_interpolation(
+    clock_scene, tmp_path, monkeypatch
+):
+    original_variables = fact_prompt_variables
+    monkeypatch.setitem(
+        globals(),
+        "fact_prompt_variables",
+        lambda scene, fact, audience=False: {
+            **original_variables(scene, fact, audience),
+            "unexpected_record": fact,
+        },
+    )
+    source = "{{ unexpected_record }}"
+    (tmp_path / "renamed.jinja2").write_text(source)
+    assert fact_templates(tmp_path) == ["renamed"]
+    fact = ago(clock_scene, "F1", 21, 3)
+    rendered = Environment().from_string(source).render(unexpected_record=fact)
+    with pytest.raises(AssertionError, match="unmarked fact"):
+        assert_fact_markers(clock_scene, "renamed", rendered, fact)
+
+
+@pytest.mark.parametrize("template", fact_templates())
+@pytest.mark.parametrize("audience", [False, True])
+def test_discovered_fact_templates_render_markers(clock_scene, template, audience):
+    fact = ago(clock_scene, "F1", 21, 3)
+    variables = fact_prompt_variables(clock_scene, fact, audience)
     with ActiveScene(clock_scene):
         rendered = Prompt.get(template, vars=variables).render()
-    lines = [line for line in rendered.splitlines() if fact.text in line]
-    assert lines
-    assert all(fact_time(clock_scene, fact) in line for line in lines), (
-        template,
-        lines,
-    )
+    assert_fact_markers(clock_scene, template, rendered, fact)
     if template in {"conversation.knowledge-ledger", "summarizer.summarize-dialogue"}:
         extraction_line = f"Fact: {fact.text} | Record age (metadata, do not copy): {fact_time(clock_scene, fact)}"
         assert extraction_line in rendered

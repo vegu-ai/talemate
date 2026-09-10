@@ -403,10 +403,9 @@ async def test_cancelled_passage_is_emitted_without_releasing_dependents(
     scene.signals["push_history.after"].connect(after)
     message = CharacterMessage(message="Alice: Preserved reader prose.")
     with pytest.raises(GenerationCancelled):
-        await scene.push_history(message)
+        await scene.push_history(message, emit_message=True)
     assert any(
-        args[0] == "character" and kwargs["message"] is message
-        for args, kwargs in emitted
+        args[0] == "character" and args[1] is message for args, kwargs in emitted
     )
     assert message.message == "Alice: Preserved reader prose."
     after.assert_not_awaited()

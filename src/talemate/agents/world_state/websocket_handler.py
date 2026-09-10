@@ -1,6 +1,5 @@
 import pydantic
 
-from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.scene_message import ContextInvestigationMessage
 from talemate.server.websocket_plugin import Plugin
@@ -132,6 +131,5 @@ class WorldStateWebsocketHandler(Plugin):
         # at regenerate time — preserves "same inputs, different output" if a
         # newer request_world_state has overwritten this entity since the click.
         message.set_source("world_state", "examine_entity", **payload.model_dump())
-        await self.scene.push_history(message)
-        emit("context_investigation", message=message)
+        await self.scene.push_history(message, emit_message=True)
         await self.signal_operation_done(allow_auto_save=False)

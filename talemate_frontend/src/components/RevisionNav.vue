@@ -1,5 +1,5 @@
 <template>
-  <span v-if="count > 1 || busy" class="revision-nav" :title="title">
+  <span v-if="count > 1 || busy" class="revision-nav" :title="title" @focusout="onFocusOut">
     <template v-if="count > 1">
       <v-btn size="x-small" icon variant="text" density="compact" class="revision-arrow" :disabled="index <= 0 || disabled || !!busy" @click.stop="$emit('navigate', -1)">
         <v-icon size="small">mdi-chevron-left</v-icon>
@@ -12,6 +12,9 @@
         <v-icon size="small" start>{{ sourceTag.icon }}</v-icon>
         {{ sourceLabel }}
       </v-chip>
+      <v-btn v-if="uncommitted" size="x-small" variant="text" color="primary" :disabled="disabled || !!busy" @click.stop="keep">
+        Keep this version
+      </v-btn>
     </template>
     <v-chip v-if="busy" size="small" variant="text" class="revision-busy-chip" :class="{ 'revision-busy-standalone': count <= 1 }" color="primary">
       <v-progress-circular indeterminate size="16" width="2" color="primary" class="mr-2" />
@@ -32,6 +35,7 @@ const SOURCE_TAGS = {
 export default {
   name: 'RevisionNav',
   props: {
+    uncommitted: { type: Boolean, default: false },
     count: {
       type: Number,
       required: true,
@@ -59,7 +63,17 @@ export default {
       default: false,
     },
   },
-  emits: ['navigate'],
+  emits: ['navigate', 'keep'],
+  methods: {
+    keep() {
+      if (this.uncommitted && !this.disabled && !this.busy) this.$emit('keep');
+    },
+    onFocusOut(event) {
+      // Reaching an end disables the focused arrow and blurs it to no target.
+      // That is still browsing; only focus moving elsewhere commits here.
+      if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) this.keep();
+    },
+  },
   computed: {
     busyLabel() {
       return typeof this.busy === 'string' ? this.busy : 'Regenerating';

@@ -27,14 +27,12 @@ Override example:
 
 {# SCENE CONTEXT #}
 {% set scene_context_text %}
-{% set scene_context = scene.context_history(stored_views=True,
+{% set scene_context = revision_context_history(character,
     budget=max_tokens-300-count_tokens(rendered_context)-count_tokens(volatile_context_text),
     min_dialogue=15,
     sections=False,
     keep_director=False,
-    chapter_labels=True,
-    perspective=history_perspective|default(none),
-    before_message_id=history_before if history_perspective else none
+    chapter_labels=True
     )
 -%}
 {% for scene_line in scene_context -%}

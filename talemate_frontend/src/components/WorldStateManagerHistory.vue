@@ -1,5 +1,6 @@
 <template>
     <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
+    <v-alert v-if="scene?.data?.pending_perception_messages?.length" color="warning" variant="tonal" density="compact" class="mb-3">Character knowledge is out of date for changed passages. Keep the selected version or continue the story to update it.</v-alert>
     <v-tabs v-model="tab" density="compact" color="secondary">
         <v-tab value="base">Base</v-tab>
         <v-tab v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">{{ layer.title }}</v-tab>

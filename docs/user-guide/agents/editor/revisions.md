@@ -20,6 +20,8 @@ Click the :material-message-text-outline: icon to open the Agent Messages dialog
 
 Which message types are revised automatically is controlled by the [Automatic Revision Targets](/talemate/user-guide/agents/editor/settings/#automatic-revision-targets) setting. Character and narrator messages are included by default; context-investigation messages (the results of **Look at**, **Investigate**, and **Query**) can be added by enabling their target, which is off by default.
 
+Automatic revision also runs when you regenerate a message, in both Standard and Character perspectives stories. If the history window needed for that revision is unavailable, the editor uses reader-visible scene history, which may include content the character does not know, without requesting a perception repair. Older failed views outside that window do not trigger this fallback. Cancelling revision keeps the unrevised text; other skipped revisions show a **Revision skipped: …** status with the reason. Finding nothing to fix leaves the text unchanged.
+
 ## Manual revision
 
 You can also trigger a revision yourself on the most recent message without waiting for automatic revision (or with automatic revision turned off entirely).

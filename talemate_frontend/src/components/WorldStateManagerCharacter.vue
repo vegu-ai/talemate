@@ -296,6 +296,7 @@
                                         <v-tabs-window-item value="knowledge">
                                             <WorldStateManagerCharacterKnowledge
                                             ref="knowledge"
+                                            :scene="scene"
                                             @require-scene-save="$emit('require-scene-save')"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>

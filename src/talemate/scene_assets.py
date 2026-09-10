@@ -1571,6 +1571,8 @@ class SceneAssets:
         self,
         message_id: int,
         asset_id: str,
+        *,
+        override_cadence: bool = False,
     ) -> scene_message.SceneMessage | None:
         """
         Update the asset_id and asset_type of a message in the scene history.
@@ -1578,6 +1580,7 @@ class SceneAssets:
         Args:
             message_id: The ID of the message to update
             asset_id: The new asset ID
+            override_cadence: Explicit manual selection may override avatar cadence
 
         Returns:
             The updated message object, or None if message not found
@@ -1637,6 +1640,7 @@ class SceneAssets:
                 "message_id": message_id,
                 "asset_id": asset_id,
                 "asset_type": asset_type,
+                "override_cadence": override_cadence,
             },
         )
 

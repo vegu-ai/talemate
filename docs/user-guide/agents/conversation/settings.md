@@ -126,7 +126,7 @@ Off by default. Uses **one more request before each generated character reply th
 
 ##### Track learning from dialogue
 
-Ask the AI what listeners learned from each character message and add those facts to their knowledge. **Turn on to track information shared in dialogue.** It checks recent recorded facts the listeners do not know, so it can recognize retold information rather than discover arbitrary new facts. Learned facts become available in memory and leave the unknown-fact reminders. The speaker does not learn from their own message; player messages are included.
+Ask the AI what listeners learned from each character message and add those facts to their knowledge. **Turn on to track information shared in dialogue.** It checks recent recorded facts the listeners do not know, so it can recognize retold information rather than discover arbitrary new facts. Learned facts become available in memory and leave the unknown-fact reminders. The speaker does not learn from their own message; player messages are included. Each learning grant takes effect immediately and can be revoked in the character’s **Knowledge** view. The ledger judges with recent dialogue and situational context and errs toward learning when the substance is conveyed, while hints, questions and merely related facts still do not count.
 
 Off by default. Uses **one more request after a character message when a listener has recent facts they do not know**, through the World State agent's client. No request is sent when every listener already knows those facts. Available in Standard mode only.
 

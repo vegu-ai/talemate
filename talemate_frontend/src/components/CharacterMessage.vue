@@ -5,7 +5,7 @@
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
-    <RevisionNav v-if="isLastMessage && (revisionsCount > 1 || revisionBusy)" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" @navigate="(dir) => $emit('navigate-revision', dir)" />
+    <RevisionNav v-if="isLastMessage && (revisionsCount > 1 || revisionBusy)" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" :uncommitted="revisionUncommitted" @keep="$emit('keep-revision')" @navigate="(dir) => $emit('navigate-revision', dir)" />
     <!-- Scene illustration (big) renders above message -->
     <MessageAssetImage
       v-if="messageAsset && isSceneIllustrationAbove"
@@ -203,6 +203,7 @@ export default {
       type: String,
       default: null,
     },
+    revisionUncommitted: { type: Boolean, default: false },
     revisionBusy: {
       type: [Boolean, String],
       default: false,
@@ -212,7 +213,7 @@ export default {
       default: () => [],
     },
   },
-  emits: ['navigate-revision'],
+  emits: ['navigate-revision', 'keep-revision'],
   inject: [
     'requestDeleteMessage',
     'getWebsocket',

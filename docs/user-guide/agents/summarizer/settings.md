@@ -175,10 +175,12 @@ Performs targeted memory retrieval based on the initial analysis, surfacing addi
 
 ##### Cache analysis
 
-Cache the analysis results for the scene. Enable this to prevent regenerationg the analysis when you regenerate the most recent output. 
+Reuse the analysis when you regenerate the most recent output, including directed regeneration or choosing a different version of that reply.
 
 !!! info
     This cache is anchored to the last message in the scene (excluding the current message). Editing that message will invalidate the cache.
+
+In Character perspectives mode, a new player line, an earlier passage edit, a disclosure, a fact change, or a change to the character's supplied evidence, scene description, intention or analysis context budget refreshes the analysis; browsing the reply and routine memory indexing do not.
 
 In Standard mode with Character Knowledge enabled, the cache fingerprint includes the target character, the knowledge record (including Allow/Block rules), the complete recorded facts, the analysis context budget, Conversation's **Recent facts to check** and **Unknown-fact reminders**, the Summarizer's **Fact matching tolerance**, and whether memory is ready. It also includes all five resolved **Fact chronology** settings (including scene overrides), the current scene time, and the sorted names of active characters. Changing any of these inputs invalidates the cached conversation analysis so the next analysis request uses current fact selection and time markers. Checking the fingerprint itself makes no AI request.
 

@@ -32,6 +32,8 @@ from talemate.knowledge.advice import (
     advice_character,
     advice_context,
     advice_fingerprint,
+    deep_analysis_fingerprint,
+    StaleAdvice,
     emission_character,
     emission_analysis_type,
     require_current_advice,
@@ -231,9 +233,17 @@ class SceneAnalyzationMixin:
 
         scene = self.scene
         character = emission_character(scene, emission)
-        fingerprint = advice_fingerprint(scene, character)
+        boundary, evidence_budget = self._analysis_evidence_key(
+            scene, character, emission_type
+        )
+        fingerprint = advice_fingerprint(
+            scene,
+            character,
+            boundary=boundary,
+            budget=evidence_budget,
+        )
         standard_fp = standard_analysis_fingerprint(
-            scene, character, emission_type, self.client.max_token_length // 2
+            scene, character, emission_type, self._analysis_evidence_budget
         )
         analysis = None
 
@@ -241,7 +251,11 @@ class SceneAnalyzationMixin:
         # cached analysis in scene states
 
         if self.cache_analysis:
-            analysis = await self.get_cached_analysis(emission_type, character)
+            analysis = await self.get_cached_analysis(
+                emission_type,
+                character,
+                evidence_key=(boundary, evidence_budget, fingerprint),
+            )
             if analysis:
                 await talemate.emit.async_signals.get(
                     "agent.summarization.scene_analysis.cached"
@@ -264,6 +278,7 @@ class SceneAnalyzationMixin:
                 emission_type,
                 character,
                 self.analysis_length,
+                evidence_key=(boundary, evidence_budget, fingerprint),
             )
 
             await self.set_cached_analysis(
@@ -272,17 +287,28 @@ class SceneAnalyzationMixin:
                 character,
                 evidence_fp=fingerprint,
                 standard_fp=standard_fp,
+                boundary=boundary,
+                evidence_budget=evidence_budget,
             )
 
         if not analysis:
             return
         if character_knowledge_enabled(scene):
-            require_current_advice(self, scene, character, fingerprint)
+            require_current_advice(
+                self,
+                scene,
+                character,
+                fingerprint,
+                boundary=boundary,
+                budget=evidence_budget,
+            )
         emission.dynamic_instructions.append(
             DynamicInstruction(title="Scene Analysis", content=analysis)
         )
 
-        self._inject_deep_analysis_context(emission)
+        self._inject_deep_analysis_context(
+            emission, evidence_key=(boundary, evidence_budget, fingerprint)
+        )
 
     async def on_inject_deep_analysis_context(self, emission):
         """
@@ -290,7 +316,7 @@ class SceneAnalyzationMixin:
         """
         self._inject_deep_analysis_context(emission)
 
-    def _inject_deep_analysis_context(self, emission):
+    def _inject_deep_analysis_context(self, emission, *, evidence_key=None):
         """
         Injects deep analysis context into the emission if available.
         """
@@ -298,18 +324,25 @@ class SceneAnalyzationMixin:
             return
 
         deep_analysis_context = self.get_scene_state("deep_analysis_context")
+        if not deep_analysis_context:
+            return
         if character_knowledge_enabled(self.scene):
             character = emission_character(self.scene, emission)
             record = self.get_scene_state("deep_analysis_evidence") or {}
             typ = emission_analysis_type(emission, character)
-            if not advice_record_is_current(self, record, character, typ):
+            if not self._analysis_record_is_current(
+                record, character, typ, evidence_key
+            ):
                 return
-        if deep_analysis_context:
-            emission.dynamic_instructions.append(
-                DynamicInstruction(
-                    title="Deep Analysis Context", content=deep_analysis_context
-                )
+            if record.get("retrieval_fp") != deep_analysis_fingerprint(
+                self.scene, character, record.get("evidence_boundary")
+            ):
+                return
+        emission.dynamic_instructions.append(
+            DynamicInstruction(
+                title="Deep Analysis Context", content=deep_analysis_context
             )
+        )
 
     async def on_rag_build_sub_instruction(
         self, emission: "RagBuildSubInstructionEmission"
@@ -337,8 +370,41 @@ class SceneAnalyzationMixin:
 
     # helpers
 
+    @property
+    def _analysis_evidence_budget(self):
+        return self.client.max_token_length // 2
+
+    def _analysis_evidence_key(self, scene, character, typ):
+        boundary = (
+            [message.id for message in scene.history]
+            if character_knowledge_enabled(scene)
+            and character is not None
+            and typ == "conversation"
+            else None
+        )
+        return boundary, self._analysis_evidence_budget
+
+    def _analysis_record_is_current(self, record, character, typ, evidence_key=None):
+        # Share an already computed fingerprint only for an identical key in this
+        # synchronous step. Never memoize across awaits or scene mutations.
+        fingerprint = ...
+        if evidence_key is not None:
+            boundary, budget, computed = evidence_key
+            if (record.get("evidence_boundary"), record.get("evidence_budget")) == (
+                boundary,
+                budget,
+            ):
+                fingerprint = computed
+        return advice_record_is_current(
+            self, record, character, typ, evidence_fp=fingerprint
+        )
+
     async def get_cached_analysis(
-        self, typ: KnowledgeAnalysisType, character: "Character | None" = None
+        self,
+        typ: KnowledgeAnalysisType,
+        character: "Character | None" = None,
+        *,
+        evidence_key=None,
     ) -> str | None:
         """
         Returns the cached analysis for the given type.
@@ -349,16 +415,24 @@ class SceneAnalyzationMixin:
         if not cached_analysis:
             return None
 
+        if (
+            cached_analysis.get("evidence_boundary") is not None
+            and cached_analysis.get("evidence_budget") != self._analysis_evidence_budget
+        ):
+            return None
+
         if cached_analysis.get(
             "standard_knowledge_fp"
         ) != standard_analysis_fingerprint(
-            self.scene, character, typ, self.client.max_token_length // 2
+            self.scene, character, typ, self._analysis_evidence_budget
         ):
             return None
 
         if character_knowledge_enabled(self.scene):
             character = advice_character(self.scene, character, typ=typ)
-            if not advice_record_is_current(self, cached_analysis, character, typ):
+            if not self._analysis_record_is_current(
+                cached_analysis, character, typ, evidence_key
+            ):
                 return None
         fingerprint = self.context_fingerprint()
 
@@ -382,16 +456,24 @@ class SceneAnalyzationMixin:
         *,
         evidence_fp: str | None = None,
         standard_fp: str | None | EllipsisType = ...,
+        boundary: list[int] | None = None,
+        evidence_budget: int | None = None,
     ):
         """
         Sets the cached analysis for the given type.
         """
 
         fingerprint = self.context_fingerprint()
+        if evidence_budget is None:
+            current_boundary, evidence_budget = self._analysis_evidence_key(
+                self.scene, character, typ
+            )
+            if boundary is None:
+                boundary = current_boundary
         # Preserve a captured disabled-state fingerprint if settings change mid-request.
         if standard_fp is ...:
             standard_fp = standard_analysis_fingerprint(
-                self.scene, character, typ, self.client.max_token_length // 2
+                self.scene, character, typ, self._analysis_evidence_budget
             )
 
         self.set_scene_states(
@@ -401,7 +483,12 @@ class SceneAnalyzationMixin:
                     "guidance": analysis,
                     "standard_knowledge_fp": standard_fp,
                     **advice_record_metadata(
-                        self, character, typ, evidence_fp=evidence_fp
+                        self,
+                        character,
+                        typ,
+                        evidence_fp=evidence_fp,
+                        boundary=boundary,
+                        budget=evidence_budget,
                     ),
                 }
             }
@@ -513,6 +600,8 @@ class SceneAnalyzationMixin:
         typ: KnowledgeAnalysisType,
         character: "Character | None" = None,
         length: int = 1024,
+        *,
+        evidence_key=None,
     ) -> str:
         """
         Analyzes the current scene progress and gives a suggestion for the next action.
@@ -521,14 +610,19 @@ class SceneAnalyzationMixin:
 
         scene = self.scene
         character = advice_character(scene, character, typ=typ)
-        fingerprint = advice_fingerprint(scene, character)
-        scoped = (
-            character_knowledge_enabled(scene)
-            and typ == "conversation"
-            and character is not None
-        )
+        if evidence_key is None:
+            boundary, evidence_budget = self._analysis_evidence_key(
+                scene, character, typ
+            )
+            fingerprint = advice_fingerprint(
+                scene, character, boundary=boundary, budget=evidence_budget
+            )
+        else:
+            boundary, evidence_budget, fingerprint = evidence_key
+        scoped = boundary is not None
         deep_context = ""
         deep_analysis = self.deep_analysis and self.long_term_memory_enabled
+        retrieval_fp = None
         analysis_sub_type = await self.analyze_scene_sub_type(typ)
 
         template_vars = {
@@ -536,13 +630,11 @@ class SceneAnalyzationMixin:
             "scene": self.scene,
             "character": character,
             "standard_knowledge": await standard_analysis_context(
-                scene, character, self.client.max_token_length // 2
+                scene, character, self._analysis_evidence_budget
             )
             if standard_analysis_enabled(scene, character, typ)
             else None,
-            "evidence": advice_context(
-                scene, character, self.client.max_token_length // 2
-            )
+            "evidence": advice_context(scene, character, self._analysis_evidence_budget)
             if scoped
             else None,
             "length": length,
@@ -599,6 +691,8 @@ class SceneAnalyzationMixin:
                     retrieval_method="questions",
                     include_raw_semantic=False,
                 )
+                if character_knowledge_enabled(scene):
+                    retrieval_fp = deep_analysis_fingerprint(scene, character, boundary)
                 if scoped:
                     rag_results = await self.rag_build(
                         character=character, **rag_options
@@ -625,12 +719,33 @@ class SceneAnalyzationMixin:
                 ).send(deep_emission)
 
         if character_knowledge_enabled(scene):
-            require_current_advice(self, scene, character, fingerprint)
+            require_current_advice(
+                self,
+                scene,
+                character,
+                fingerprint,
+                boundary=boundary,
+                budget=evidence_budget,
+            )
+            if deep_context and retrieval_fp != deep_analysis_fingerprint(
+                scene, character, boundary
+            ):
+                raise StaleAdvice(
+                    "Deep analysis sources changed during retrieval; retry"
+                )
             self.set_scene_states(
                 deep_analysis_context=deep_context,
-                deep_analysis_evidence=advice_record_metadata(
-                    self, character, typ, evidence_fp=fingerprint
-                ),
+                deep_analysis_evidence={
+                    **advice_record_metadata(
+                        self,
+                        character,
+                        typ,
+                        evidence_fp=fingerprint,
+                        boundary=boundary,
+                        budget=evidence_budget,
+                    ),
+                    "retrieval_fp": retrieval_fp,
+                },
             )
 
         await talemate.emit.async_signals.get(
@@ -646,7 +761,14 @@ class SceneAnalyzationMixin:
         )
 
         if character_knowledge_enabled(scene):
-            require_current_advice(self, scene, character, fingerprint)
+            require_current_advice(
+                self,
+                scene,
+                character,
+                fingerprint,
+                boundary=boundary,
+                budget=evidence_budget,
+            )
         self.set_context_states(scene_analysis=result)
         self.set_scene_states(scene_analysis=result)
 

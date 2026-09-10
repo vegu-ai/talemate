@@ -8,6 +8,7 @@ from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
 from talemate.knowledge.facts import fact_memory_document
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.revision_browsing import defer_derived_jobs
 from talemate.knowledge.evidence import extraction_evidence
 from talemate.knowledge.topics import prune_topics
 from talemate.knowledge.summaries import summary_entry, summary_inputs
@@ -105,7 +106,7 @@ class SourceFactMixin:
 
     def _queue_fact_work(self, scene, ids, run):
         self._fact_memory_dirty.setdefault(scene, set()).update(ids)
-        if self.scene is not scene:
+        if self.scene is not scene or defer_derived_jobs.get():
             return
         try:
             loop = asyncio.get_running_loop()

@@ -8,7 +8,6 @@ import pydantic
 import asyncio
 
 import talemate.game.engine.api.schema as schema
-from talemate.emit import emit
 from talemate.game.engine.api.base import ScopedAPI, run_async
 from talemate.game.engine.api.exceptions import UnknownAgentAction, UnknownCharacter
 from talemate.instance import get_agent
@@ -61,10 +60,9 @@ def create(scene: "Scene") -> "ScopedAPI":
 
             narrator_message = NarratorMessage(narration, meta=meta)
             loop = asyncio.get_event_loop()
-            loop.run_until_complete(scene.push_history(narrator_message))
-
-            if emit_message:
-                emit("narrator", narrator_message)
+            loop.run_until_complete(
+                scene.push_history(narrator_message, emit_message=emit_message)
+            )
 
             return schema.NarratorMessageSchema.from_message(narrator_message)
 

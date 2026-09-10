@@ -8,6 +8,7 @@ import zipfile
 import pydantic
 import traceback
 from pathlib import Path
+from collections.abc import Awaitable, Callable
 
 import structlog
 
@@ -197,12 +198,13 @@ async def load_scene(
     reset: bool = False,
     add_to_recent: bool = True,
     scene_initialization: SceneInitialization | None = None,
+    before_memory: Callable[[Scene], Awaitable[None]] | None = None,
 ):
     """
     Load the scene data from the given file path.
     """
 
-    exc = None
+    loaded_scene = None
 
     # Release the previous scene's reserved GPU memory before loading the next.
     # Local CUDA work (embedding re-commits, TTS) leaves PyTorch's caching
@@ -246,7 +248,8 @@ async def load_scene(
                 # user manually saves.
                 _ = scene.save_dir
 
-                return scene
+                loaded_scene = scene
+                return loaded_scene
 
             ext = os.path.splitext(file_path)[1].lower()
 
@@ -262,7 +265,7 @@ async def load_scene(
             # an image was uploaded, we don't have the scene data yet
             # go directly to loading a character card
             if ext in [".jpg", ".png", ".jpeg", ".webp"]:
-                return await load_scene_from_character_card(
+                loaded_scene = await load_scene_from_character_card(
                     scene,
                     file_path,
                     import_options=import_options,
@@ -271,10 +274,12 @@ async def load_scene(
                         and scene_initialization.character_knowledge
                     ),
                 )
+                return loaded_scene
 
             # a zip file was uploaded, extract and load complete scene
             if ext == ".zip":
-                return await load_scene_from_zip(scene, file_path, reset)
+                loaded_scene = await load_scene_from_zip(scene, file_path, reset)
+                return loaded_scene
 
             # a json file was uploaded, load the scene data
             with open(file_path, "r") as f:
@@ -290,7 +295,7 @@ async def load_scene(
                 ImportSpec.chara_card_v2,
                 ImportSpec.chara_card_v3,
             ]:
-                return await load_scene_from_character_card(
+                loaded_scene = await load_scene_from_character_card(
                     scene,
                     file_path,
                     import_options=import_options,
@@ -299,18 +304,23 @@ async def load_scene(
                         and scene_initialization.character_knowledge
                     ),
                 )
+                return loaded_scene
 
             # if it is a talemate scene, load it
-            return await load_scene_from_data(scene, scene_data, reset, name=file_path)
+            loaded_scene = await load_scene_from_data(
+                scene, scene_data, reset, name=file_path
+            )
+            return loaded_scene
     except Exception as e:
-        exc = e
         log.error("load_scene", error=traceback.format_exc())
         raise e
     finally:
-        if add_to_recent and not exc:
-            await scene.add_to_recent_scenes()
-        if not exc:
-            await scene.commit_to_memory()
+        if loaded_scene is not None:
+            if add_to_recent:
+                await loaded_scene.add_to_recent_scenes()
+            if before_memory is not None:
+                await before_memory(loaded_scene)
+            await loaded_scene.commit_to_memory()
 
 
 def _quarantine_and_resolve_rev(scene):

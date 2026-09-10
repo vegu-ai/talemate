@@ -1,0 +1,52 @@
+[
+  {
+    "name": "implicit-company-time",
+    "speaker": "Nora",
+    "listeners": "Mara",
+    "fact": "Elmer caught Nora watching TV sitcoms featuring cartoon animals on company time.",
+    "recent_lines": [
+      "Nora and Mara are at their desks during the afternoon office shift. Elmer has just returned to his office.",
+      "Mara: What did Elmer catch you doing at your desk?"
+    ],
+    "line": "Nora: Watching that sitcom with the cartoon animals. He walked right up behind me before I could close it.",
+    "expected": {
+      "Mara": [
+        "F1"
+      ]
+    }
+  },
+  {
+    "name": "genuine-hint",
+    "speaker": "Nora",
+    "listeners": "Mara",
+    "fact": "Elmer caught Nora watching TV sitcoms featuring cartoon animals on company time.",
+    "recent_lines": [
+      "Nora and Mara are at their desks during the afternoon office shift."
+    ],
+    "line": "Nora: Elmer saw something on my screen. Guess what?",
+    "expected": {}
+  },
+  {
+    "name": "merely-related",
+    "speaker": "Nora",
+    "listeners": "Mara",
+    "fact": "Elmer caught Nora watching TV sitcoms featuring cartoon animals on company time.",
+    "recent_lines": [
+      "Nora and Mara are talking at the office during their shift."
+    ],
+    "line": "Nora: I like sitcoms with cartoon animals.",
+    "expected": {}
+  },
+  {
+    "name": "essential-qualifier-unknown",
+    "speaker": "Nora",
+    "listeners": "Mara",
+    "fact": "Elmer caught Nora watching TV sitcoms featuring cartoon animals on company time.",
+    "recent_lines": [
+      "Nora and Mara are meeting on their day off. Mara knows Elmer caught Nora watching television, but not whether Nora was on duty.",
+      "Mara: Was that during your paid work hours, or on your own time?"
+    ],
+    "line": "Nora: I am not saying when. It was that sitcom with cartoon animals.",
+    "expected": {}
+  }
+]

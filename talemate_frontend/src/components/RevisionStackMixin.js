@@ -56,6 +56,13 @@ export default {
         revisionApplyServerState(message, versions, activeVersion) {
             if (!this.revisionSupportedType(message.type)) return;
             message.revisions = (versions || []).map(v => ({ ...v }));
+            message.revision_server_index = activeVersion ?? 0;
+            if (message.revision_target_index != null && message.revision_target_index !== activeVersion) {
+                message.revision_index = message.revision_target_index;
+                const entry = message.revisions[message.revision_index];
+                if (entry) message.text = this.revisionStripForDisplay(message.type, message.character, entry.message);
+                return;
+            }
             message.revision_index = activeVersion ?? 0;
         },
 
@@ -78,7 +85,12 @@ export default {
             if (!msg.revisions || msg.revisions.length < 2) return;
             const newIndex = (msg.revision_index ?? 0) + direction;
             if (newIndex < 0 || newIndex >= msg.revisions.length) return;
+            msg.revision_server_index ??= msg.revision_index ?? 0;
             msg.revision_index = newIndex;
+            msg.revision_target_index = newIndex;
+            msg.revision_swap_serial = (msg.revision_swap_serial || 0) + 1;
+            msg.revision_swap_request = `swap:${messageId}:${msg.revision_swap_serial}`;
+            msg.revision_uncommitted = true;
             const entry = msg.revisions[newIndex];
             msg.text = this.revisionStripForDisplay(msg.type, msg.character, entry.message);
             this.getWebsocket().send(JSON.stringify({
@@ -86,7 +98,54 @@ export default {
                 action: 'swap_revision',
                 id: messageId,
                 index: newIndex,
+                request_id: msg.revision_swap_request,
             }));
+        },
+
+        commitRevision(messageId) {
+            const msg = this.messages.find(message => message.id === messageId);
+            if (!msg?.revision_uncommitted) return;
+            const requestId = `revision:${messageId}:${msg.revision_index}:${Date.now()}`;
+            msg.revision_uncommitted = false;
+            msg.revision_commit = { requestId, index: msg.revision_index };
+            this.getWebsocket().send(JSON.stringify({
+                type: 'scene_message', action: 'commit_revision', id: messageId,
+                index: msg.revision_index, request_id: requestId,
+            }));
+        },
+
+        commitPendingRevisions() {
+            for (const message of this.messages) this.commitRevision(message.id);
+        },
+
+        handleRevisionCommit(data) {
+            if (data.type !== 'scene_message' || !data.request_id) return;
+            if (data.action === 'revision_swapped') {
+                const swapped = this.messages.find(message => message.revision_swap_request === data.request_id);
+                if (swapped) {
+                    swapped.revision_target_index = null;
+                    swapped.revision_swap_request = null;
+                }
+                return;
+            }
+            if (data.action === 'operation_done' && data.error && data.failed_action === 'swap_revision') {
+                const msg = this.messages.find(message => message.revision_swap_request === data.request_id);
+                if (!msg) return;
+                msg.revision_target_index = null;
+                msg.revision_swap_request = null;
+                msg.revision_uncommitted = false;
+                msg.revision_index = msg.revision_server_index ?? 0;
+                const entry = msg.revisions[msg.revision_index];
+                if (entry) msg.text = this.revisionStripForDisplay(msg.type, msg.character, entry.message);
+                return;
+            }
+            if (!['revision_committed', 'operation_done'].includes(data.action)) return;
+            const msg = this.messages.find(message => message.revision_commit?.requestId === data.request_id);
+            if (!msg) return;
+            if (data.error && msg.revision_index === msg.revision_commit.index) {
+                msg.revision_uncommitted = true;
+            }
+            msg.revision_commit = null;
         },
     },
 };

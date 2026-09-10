@@ -28,7 +28,6 @@ from talemate.agents.world_state import TimePassageEmission
 from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.agents.narrator.auto_narration import AutoNarrationMixin
 from talemate.agents.narrator.offscreen import OffscreenLifeMixin
-from talemate.emit import emit
 from talemate.prompts import Prompt
 from talemate.scene_message import NarratorMessage
 
@@ -434,8 +433,7 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, OffscreenLifeMixin, Agen
                 },
             },
         )
-        await self.scene.push_history(narrator_message)
-        emit("narrator", narrator_message)
+        await self.scene.push_history(narrator_message, emit_message=True)
 
     @set_processing
     @store_context_state(
@@ -831,10 +829,7 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, OffscreenLifeMixin, Agen
         narrator_message = NarratorMessage(
             narration, meta=self.action_to_meta(action_name, kwargs)
         )
-        await self.scene.push_history(narrator_message)
-
-        if emit_message:
-            emit("narrator", narrator_message)
+        await self.scene.push_history(narrator_message, emit_message=emit_message)
 
         return narrator_message
 

@@ -414,7 +414,9 @@ async def test_verbatim_repetition_survives_perception_paraphrasing(cast, mode):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("method", ["rewrite", "unslop"])
-async def test_revision_readiness_only_analyzes_its_prefix(cast, monkeypatch, method):
+async def test_revision_falls_back_without_repairing_its_prefix(
+    cast, monkeypatch, method
+):
     scene, mixed = cast
     summarizer = get_agent("summarizer")
     editor = get_agent("editor")
@@ -459,37 +461,28 @@ async def test_revision_readiness_only_analyzes_its_prefix(cast, monkeypatch, me
                 text=target.message, character=scene.character_data["Bob"]
             )
         )
-    assert analyzed == [mixed.id]
-    assert len(rendered) == 1 and PUBLIC_SCRIPT in rendered[0]
-    assert "Later failed passage" not in rendered[0]
+    assert analyzed == []
+    assert len(rendered) == 1
+    assert READER.split(": ", 1)[1] in rendered[0]
+    assert "Later failed passage" in rendered[0]
+    assert "UNSEEN-VAULT-CODE" in rendered[0]
+    assert mixed.knowledge.views[0].status == "failed"
     assert (
         target.knowledge.views[0].status == later.knowledge.views[0].status == "failed"
     )
 
 
 @pytest.mark.asyncio
-async def test_failed_prefix_blocks_revision_request(cast, monkeypatch):
-    scene, mixed = cast
-    target = CharacterMessage(message="Bob: A candidate response.")
-    scene.history.append(target)
-    set_source_perspectives(
-        scene, "message", mixed.id, [{"audience": ["Bob"], "status": "failed"}]
-    )
-    analyze = AsyncMock(side_effect=GenerationCancelled("Prefix retry cancelled"))
+async def test_removed_revision_boundary_uses_default_history(cast, monkeypatch):
+    scene, _ = cast
+    editor = get_agent("editor")
+    analyze = AsyncMock()
     monkeypatch.setattr(get_agent("summarizer"), "analyze_perceptions", analyze)
-    request = AsyncMock()
-    monkeypatch.setattr(Prompt, "request", request)
-    with (
-        RevisionContext(target.id),
-        pytest.raises(GenerationCancelled, match="Prefix retry"),
-    ):
-        await get_agent("editor").revision_unslop(
-            RevisionInformation(
-                text=target.message, character=scene.character_data["Bob"]
-            )
+    with RevisionContext(999999):
+        assert READER.split(": ", 1)[1] in "\n".join(
+            editor.revision_context_history(scene.character_data["Bob"], budget=1024)
         )
-    analyze.assert_awaited_once_with(scene, mixed)
-    request.assert_not_awaited()
+    analyze.assert_not_awaited()
 
 
 def test_bind_keeps_legacy_bucket_rule_in_perception_mode(cast):
@@ -699,8 +692,7 @@ async def test_revision_templates_never_render_matched_reader_text(cast, templat
         "dynamic_instructions": [],
         "max_tokens": 10000,
         "response_length": 128,
-        "history_perspective": "Bob",
-        "history_before": None,
+        "revision_context_history": editor.revision_context_history,
         "scene_analysis": "",
         "summarization_history": [PUBLIC],
         "context_type": "character detail",

@@ -6,7 +6,6 @@ import structlog
 
 import talemate.emit.async_signals
 from talemate.events import GameLoopEvent
-from talemate.exceptions import GenerationCancelled
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.reinforcements import (
     prepare_reinforcement_source,
@@ -267,15 +266,11 @@ class WorldStateReinforcementsMixin:
             )
             await write_reinforcement_entry(self.scene, reinforcement, source)
 
-        try:
-            if reinforcement.insert == "sequential":
-                await self.scene.push_history(message)
-            elif perception:
-                await get_agent("summarizer").finalize_perceptions(self.scene, [])
-        except GenerationCancelled:
-            # Show the saved author state even when its audience analysis is blocked.
-            self.scene.world_state.emit()
-            raise
+        self.scene.world_state.emit()
+        if reinforcement.insert == "sequential":
+            await self.scene.push_history(message)
+        elif perception:
+            await get_agent("summarizer").finalize_perceptions(self.scene, [])
 
         if not perception:
             if reinforcement.character:

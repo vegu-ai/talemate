@@ -1,6 +1,7 @@
 import hashlib
 import json
 from typing import TYPE_CHECKING, Any, Literal
+from types import EllipsisType
 
 from talemate.agents.context import active_agent
 from talemate.exceptions import GenerationCancelled
@@ -10,7 +11,11 @@ from talemate.knowledge.context import project_character_history
 from talemate.knowledge.memory import audience_documents
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import content_digest
-from talemate.knowledge.perspectives import PerspectiveReadContext
+from talemate.knowledge.perspectives import (
+    PerspectiveReadContext,
+    source_reference,
+    select_character_view,
+)
 from talemate.knowledge.snapshots import snapshot_for
 from talemate.util import count_tokens
 
@@ -19,6 +24,7 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
 
 KnowledgeAnalysisType = Literal["conversation", "narration"]
+ENTRY_SOURCE_KINDS = {"dialogue": "message", "archived": "summary", "layer": "summary"}
 
 
 class StaleAdvice(GenerationCancelled):
@@ -80,6 +86,8 @@ def advice_context(
     *,
     read: PerspectiveReadContext | None = None,
     documents: dict | None = None,
+    before_message_id: int | None = None,
+    entries: list[dict] | None = None,
 ) -> dict[str, Any]:
     """Select bounded audience evidence; pending history cancels actor generation.
 
@@ -119,19 +127,119 @@ def advice_context(
     return {
         "character": viewer,
         "history": project_character_history(
-            scene, viewer, budget=budget // 3, read=read
+            scene,
+            viewer,
+            budget=budget // 3,
+            read=read,
+            before_message_id=before_message_id,
+            entries=entries,
         ),
         "authored": authored,
         "snapshot": bounded_snapshot,
     }
 
 
+def analysis_evidence_fingerprint(
+    scene: "Scene", character: "Character", boundary: list[int], budget: int
+) -> str:
+    """Hash the rendered audience evidence at the saved pre-reply history boundary.
+
+    Index maintenance and later reply versions do not change these inputs. Keep
+    source/view revisions too: an earlier edit must invalidate even if its repaired
+    projection happens to use the same words. Knowledge edits remain invalidators.
+    """
+    prefix = scene.history[: len(boundary)]
+    if [message.id for message in prefix] != boundary:
+        return "removed-analysis-boundary"
+    before = (
+        scene.history[len(boundary)].id if len(scene.history) > len(boundary) else None
+    )
+    read = PerspectiveReadContext(scene)
+    entries = []
+    try:
+        evidence = advice_context(
+            scene,
+            character,
+            budget,
+            read=read,
+            before_message_id=before,
+            entries=entries,
+        )
+    except GenerationCancelled:
+        return "pending-analysis-evidence"
+    references = []
+    for entry in entries:
+        if entry["type"] == "disclosure":
+            continue  # Disclosures are included with their complete records below.
+        reference = source_reference(
+            scene,
+            ENTRY_SOURCE_KINDS.get(entry["type"], entry["type"]),
+            entry["id"],
+            layer=entry["layer"],
+            read=read,
+        )
+        if reference is not None:
+            view = select_character_view(scene, reference, character.name, read=read)
+            references.append(view.source.model_dump(mode="json"))
+    payload = {
+        "boundary": boundary,
+        "budget": budget,
+        "evidence": evidence,
+        "prefix": [
+            (
+                message.id,
+                content_digest(message.perception_text),
+                message.knowledge.revision if message.knowledge else None,
+            )
+            for message in prefix
+        ],
+        "sources": references,
+        "visibility": knowledge_digest(scene),
+        "disclosures": [
+            item.model_dump(mode="json") for item in read.disclosures.values()
+        ],
+        "facts": scene.world_state.model_dump(include={"facts"}, mode="json"),
+        "description": scene.description,
+        "intention": scene.intent_state.model_dump(mode="json"),
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
+def deep_analysis_fingerprint(scene, character, boundary):
+    """Cover the audience sources available to deep retrieval, beyond initial history.
+
+    Question-based RAG returns generated text, not document references. Until it
+    carries provenance, validate the full eligible source set rather than guessing
+    which documents its answer used. Later reply variants stay outside the boundary.
+    """
+    if boundary is None or character is None:
+        return advice_fingerprint(scene, character)
+    messages = set(boundary)
+    documents = audience_documents(scene)
+    eligible = sorted(
+        identity
+        for identity, document in documents.items()
+        if (document["group"][0] != "message" or document["group"][1] in messages)
+        and (
+            document["meta"]["knowledge_common"]
+            or character.name in document["meta"].get("knowledge_audience", ())
+        )
+    )
+    return hashlib.sha256(json.dumps(eligible).encode()).hexdigest()
+
+
 def advice_fingerprint(
-    scene: "Scene", character: "Character | None" = None
+    scene: "Scene",
+    character: "Character | None" = None,
+    *,
+    boundary: list[int] | None = None,
+    budget: int | None = None,
 ) -> str | None:
     """Identify the current structured evidence, visibility, cast and snapshot."""
     if not character_knowledge_enabled(scene):
         return None
+    if boundary is not None and character is not None:
+        return analysis_evidence_fingerprint(scene, character, boundary, budget)
     read = PerspectiveReadContext(scene)
     payload = [
         character.name if character else None,
@@ -173,15 +281,21 @@ def advice_record_metadata(
     typ: KnowledgeAnalysisType,
     *,
     evidence_fp: str | None = None,
+    boundary: list[int] | None = None,
+    budget: int | None = None,
 ) -> dict[str, Any]:
     """Stamp cached or directly inserted advice with its audience and freshness."""
     return {
         "character": character.name if character else None,
         "analysis_type": typ,
         "context_fp": agent.context_fingerprint(),
+        "evidence_boundary": boundary,
+        "evidence_budget": budget,
         "evidence_fp": evidence_fp
         if evidence_fp is not None
-        else advice_fingerprint(agent.scene, character),
+        else advice_fingerprint(
+            agent.scene, character, boundary=boundary, budget=budget
+        ),
     }
 
 
@@ -190,13 +304,27 @@ def advice_record_is_current(
     record: dict[str, Any],
     character: "Character | None",
     typ: KnowledgeAnalysisType | None,
+    *,
+    evidence_fp: str | None | EllipsisType = ...,
 ) -> bool:
     """Require the same target, analysis type, generation context and evidence."""
     return (
-        record.get("character") == (character.name if character else None)
+        record.get("evidence_fp")
+        not in {"pending-analysis-evidence", "removed-analysis-boundary"}
+        and record.get("character") == (character.name if character else None)
         and record.get("analysis_type") == typ
         and record.get("context_fp") == agent.context_fingerprint()
-        and record.get("evidence_fp") == advice_fingerprint(agent.scene, character)
+        and record.get("evidence_fp")
+        == (
+            advice_fingerprint(
+                agent.scene,
+                character,
+                boundary=record.get("evidence_boundary"),
+                budget=record.get("evidence_budget"),
+            )
+            if evidence_fp is ...
+            else evidence_fp
+        )
     )
 
 
@@ -205,7 +333,18 @@ def require_current_advice(
     scene: "Scene",
     character: "Character | None",
     fingerprint: str | None,
+    *,
+    boundary: list[int] | None = None,
+    budget: int | None = None,
 ) -> None:
     """Cancel stale generation before insertion or Focal callback execution."""
-    if agent.scene is not scene or advice_fingerprint(scene, character) != fingerprint:
+    if (
+        agent.scene is not scene
+        or (
+            boundary is not None
+            and [message.id for message in scene.history] != boundary
+        )
+        or advice_fingerprint(scene, character, boundary=boundary, budget=budget)
+        != fingerprint
+    ):
         raise StaleAdvice("Character evidence changed during advice generation; retry")

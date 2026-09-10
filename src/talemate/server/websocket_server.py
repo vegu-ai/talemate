@@ -233,6 +233,17 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
 
             scene.active = True
 
+            async def show_loaded_history(loaded_scene):
+                loaded_scene.emit_status()
+                self.queue_put(
+                    {
+                        "type": "system",
+                        "id": "scene.history_ready",
+                        "data": {"hidden": True},
+                    }
+                )
+                await loaded_scene.emit_history()
+
             with ActiveScene(scene):
                 try:
                     # Use input path directly
@@ -244,6 +255,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                         scene_initialization=SceneInitialization(**scene_initialization)
                         if scene_initialization
                         else None,
+                        before_memory=show_loaded_history,
                     )
                 except Exception as e:
                     self.scene = self.init_scene()
@@ -261,7 +273,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 await callback()
 
             with ActiveScene(scene):
-                await scene.start()
+                await scene.start(history_visible=True)
         except Exception:
             log.error("load_scene", error=traceback.format_exc())
         finally:

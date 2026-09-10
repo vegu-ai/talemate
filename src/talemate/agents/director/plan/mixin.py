@@ -6,7 +6,6 @@ to the director agent.
 import structlog
 
 from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
-from talemate.emit import emit
 import talemate.emit.async_signals
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.prompts import Prompt
@@ -116,14 +115,11 @@ class PlanMixin:
         if block["type"] == "narrator":
             content = await self._plan_revise_narrator_content(narrator, content)
             msg = NarratorMessage(content)
-            await scene.push_history(msg)
-            emit("narrator", msg)
+            await scene.push_history(msg, emit_message=True)
         elif block["type"] == "character":
             char_name = block.get("name", "Unknown")
             msg = CharacterMessage(f"{char_name}: {content}")
-            await scene.push_history(msg)
-            character = scene.get_character(char_name)
-            emit("character", message=msg, character=character)
+            await scene.push_history(msg, emit_message=True)
         else:
             return 0
 

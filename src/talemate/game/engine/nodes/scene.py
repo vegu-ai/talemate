@@ -30,7 +30,7 @@ from .event import (
     disconnect_auto_register_listeners,
 )
 import talemate.events as events
-from talemate.emit import emit, wait_for_input
+from talemate.emit import wait_for_input
 from talemate.exceptions import ActedAsCharacter, AbortWaitForInput, GenerationCancelled
 from talemate.context import active_scene, InteractionState
 from talemate.instance import get_agent, AGENTS
@@ -1207,8 +1207,7 @@ class WaitForInput(Node):
             action="user_direction",
             subtype="user_direction",
         )
-        await scene.push_history(message)
-        emit("director", message)
+        await scene.push_history(message, emit_message=True)
 
         await director.direction_append_message(
             UserInteractionMessage(user_input=text, is_direction=True)

@@ -44,7 +44,7 @@ from talemate.util.dedupe import (
 from talemate.util.diff import dmp_inline_diff
 from talemate.util import count_tokens
 from talemate.prompts import Prompt
-from talemate.prompts.response import ResponseSpec, AnchorExtractor
+from talemate.prompts.response import ResponseSpec, AnchorExtractor, RegexExtractor
 from talemate.exceptions import GenerationCancelled
 from talemate.status import LoadingStatus
 from talemate.world_state.templates.content import PhraseDetection
@@ -55,11 +55,33 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger()
 
+RevisionSkipReason = Literal[
+    "cancelled",
+    "error",
+    "min_issues",
+    "no_revision",
+    "too_long",
+    "disabled_by_context",
+    "too_short",
+]
+REVISION_SKIP_MESSAGES = {
+    "cancelled": "cancelled",
+    "error": "an error occurred; see the log for details",
+    "min_issues": "fewer issues than the configured minimum",
+    "no_revision": "the response contained no revision",
+    "too_long": "the revision exceeded the length limit",
+    "disabled_by_context": "disabled by the current context",
+    "too_short": "too little text remained after dedupe",
+}
+
 ## RESPONSE SPECS
 
 FIX_SPEC = ResponseSpec(
     extractors={
         "fix": AnchorExtractor(left="<FIX>", right="</FIX>"),
+        "no_fix": RegexExtractor(
+            pattern=r"<NO_FIX_REQUIRED\s*/>", flags=re.IGNORECASE, group=0
+        ),
     },
     required=[],  # Not required - we handle None case
 )
@@ -155,6 +177,7 @@ class RevisionInformation(pydantic.BaseModel):
         default_factory=LoadingStatus, exclude=True
     )
     summarization_history: list[str] | None = None
+    skip_reason: RevisionSkipReason | None = pydantic.Field(default=None, exclude=True)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -670,6 +693,7 @@ class RevisionMixin:
                 "maybe_revise_inplace: revision disabled through context",
                 message_id=message.id,
             )
+            self._emit_revision_skipped("disabled_by_context")
             return False
 
         character = None
@@ -699,21 +723,14 @@ class RevisionMixin:
         revision rewrites the text, a new ``"revision"`` version is appended
         to the message's stack — the original is already at index 0 from
         construction, so the wire emit picks up both atomically when
-        push_history returns.
+        push_history publishes it before derived work.
 
         Only the first matching message is processed — push_history events
         rarely batch revisable messages, and revision is a single-target
         operation.
 
-        Cancellation: the message is already committed to ``scene.history``
-        by the time this fires, and callers emit the wire message *after*
-        ``push_history`` returns. If a cancel escapes here, the trailing
-        ``push_history.after`` listeners (e.g. the summarizer's
-        ``build_archive``) would also re-raise off the still-set
-        ``scene.cancel_requested`` flag, stripping the wire emit and
-        leaving the message stranded in history but invisible in the UX.
-        Contain the cancel here so the original message still reaches the
-        UX — equivalent to "revision aborted, keep the original".
+        Contain cancellation here so push_history.after listeners do not re-raise
+        off the still-set scene.cancel_requested flag.
         """
         for message in event.messages:
             if not isinstance(
@@ -733,6 +750,7 @@ class RevisionMixin:
                     "revision_on_push: revision cancelled — keeping original",
                     message_id=message.id,
                 )
+                self._emit_revision_skipped("cancelled")
             # revision_revise catches GenerationCancelled internally and
             # returns the original text, but the scene-level cancel flag
             # stays set (client's poll_interrupt doesn't reset it). Clear
@@ -742,6 +760,13 @@ class RevisionMixin:
             return
 
     # helpers
+
+    def _emit_revision_skipped(self, reason: RevisionSkipReason) -> None:
+        emit(
+            "status",
+            message=f"Revision skipped: {REVISION_SKIP_MESSAGES[reason]}",
+            status="idle",
+        )
 
     async def revision_collect_repetition_range(self) -> list[str]:
         # Repetition detection is author output: compare exact reader prose in every
@@ -813,14 +838,18 @@ class RevisionMixin:
                 return await self.revision_unslop(info)
         except GenerationCancelled:
             log.warning("revision_revise: generation cancelled", text=info.text)
+            info.skip_reason = "cancelled"
             return info.text
         except Exception:
             import traceback
 
             log.error("revision_revise: error", error=traceback.format_exc())
+            info.skip_reason = "error"
             return info.text
         finally:
             info.loading_status.done()
+            if info.skip_reason:
+                self._emit_revision_skipped(info.skip_reason)
 
     async def _revision_evaluate_semantic_similarity(
         self, text: str, character: "Character | None" = None
@@ -1137,6 +1166,7 @@ class RevisionMixin:
         reduction = round((original_length - deduped_length) / original_length * 100, 2)
 
         if reduction > 90:
+            info.skip_reason = "too_short"
             log.warning(
                 "revision_dedupe: reduction is too high, reverting to original text",
                 original_text=original_text,
@@ -1187,15 +1217,30 @@ class RevisionMixin:
 
         return text
 
-    async def revision_history_perspective(
-        self, character: "Character | None"
-    ) -> str | None:
-        if character is None or not character_knowledge_enabled(self.scene):
-            return None
-        await get_agent("summarizer").ensure_perceptions(
-            self.scene, before_message_id=revision_context.get().message_id
-        )
-        return character.name
+    def revision_context_history(
+        self, character: "Character | None", *, budget: int, **kwargs
+    ) -> list[str]:
+        """Render the template's actual history window, falling back without repair."""
+        scene = self.scene
+        # A user cancel still stops revision. Optional history readiness must
+        # neither cancel it nor spend a request repairing perception views.
+        scene.continue_actions()
+        if character is not None and character_knowledge_enabled(scene):
+            try:
+                return scene.context_history(
+                    budget=budget,
+                    stored_views=True,
+                    perspective=character.name,
+                    before_message_id=revision_context.get().message_id,
+                    **kwargs,
+                )
+            except (GenerationCancelled, ValueError) as exc:
+                log.warning(
+                    "revision_context_history: using default history",
+                    character=character.name,
+                    reason=str(exc),
+                )
+        return scene.context_history(budget=budget, **kwargs)
 
     @set_processing
     async def revision_rewrite(
@@ -1213,7 +1258,6 @@ class RevisionMixin:
 
         original_text = info.text
         character = info.character
-        history_perspective = await self.revision_history_perspective(character)
         loading_status = info.loading_status
 
         text, had_character_prefix = _strip_character_prefix(original_text, character)
@@ -1226,6 +1270,7 @@ class RevisionMixin:
             return original_text
 
         if num_issues < self.revision_min_issues:
+            info.skip_reason = "min_issues"
             log.debug(
                 "revision_rewrite: not enough issues found, returning original text",
                 issues=num_issues,
@@ -1271,8 +1316,7 @@ class RevisionMixin:
             "dynamic_instructions": emission.dynamic_instructions,
             "context_type": info.context_type,
             "context_name": info.context_name,
-            "history_perspective": history_perspective,
-            "history_before": revision_context.get().message_id,
+            "revision_context_history": self.revision_context_history,
         }
 
         await async_signals.get("agent.editor.revision-revise.before").send(emission)
@@ -1296,6 +1340,7 @@ class RevisionMixin:
 
         revision = extracted["revision"]
         if not revision:
+            info.skip_reason = "no_revision"
             log.debug(
                 "revision_rewrite: no <REVISION> content in response, keeping original"
             )
@@ -1310,6 +1355,7 @@ class RevisionMixin:
             revision,
             REWRITE_MAX_LENGTH_RATIO,
         ):
+            info.skip_reason = "too_long"
             return original_text
 
         emission.response = revision
@@ -1347,7 +1393,6 @@ class RevisionMixin:
 
         original_text = info.text
         character = info.character
-        history_perspective = await self.revision_history_perspective(character)
 
         text, had_character_prefix = _strip_character_prefix(original_text, character)
 
@@ -1391,8 +1436,7 @@ class RevisionMixin:
             "dynamic_instructions": emission.dynamic_instructions,
             "context_type": info.context_type,
             "context_name": info.context_name,
-            "history_perspective": history_perspective,
-            "history_before": revision_context.get().message_id,
+            "revision_context_history": self.revision_context_history,
             "summarization_history": info.summarization_history,
         }
 
@@ -1409,6 +1453,8 @@ class RevisionMixin:
 
         fix = extracted["fix"]
         if not fix:
+            if not extracted.get("no_fix"):
+                info.skip_reason = "no_revision"
             log.debug(
                 "revision_unslop: no <FIX> content in response", response=response
             )
@@ -1422,6 +1468,7 @@ class RevisionMixin:
             fix,
             UNSLOP_MAX_LENGTH_RATIO,
         ):
+            info.skip_reason = "too_long"
             return original_text
 
         emission.response = fix

@@ -677,7 +677,9 @@ class Scene(Emitter):
 
         return recent_history
 
-    async def push_history(self, messages: list[SceneMessage]):
+    async def push_history(
+        self, messages: list[SceneMessage], *, emit_message: bool = False
+    ):
         """
         Adds one or more messages to the scene history
 
@@ -738,49 +740,35 @@ class Scene(Emitter):
 
         await self.signals["push_history"].send(event)
 
-        if character_knowledge_enabled(self):
-            try:
-                await get_agent("summarizer").finalize_perceptions(self, valid_messages)
-            except GenerationCancelled:
-                # Callers emit after push_history returns; a blocked turn must still show its saved prose.
-                for message in valid_messages:
-                    if (
-                        get_agent("summarizer").scene is self
-                        and any(entry is message for entry in self.history)
-                        and message.supports_perceptions
-                    ):
-                        emit(
-                            message.typ,
-                            message=message,
-                            **(
-                                {
-                                    "character": self.get_character(
-                                        message.character_name
-                                    )
-                                }
-                                if isinstance(message, CharacterMessage)
-                                else {}
-                            ),
-                        )
-                self.emit_status()
-                raise
+        if emit_message:
+            for message in valid_messages:
+                character_name = getattr(message, "character_name", None)
+                emit(
+                    message.typ,
+                    message,
+                    character=self.get_character(character_name)
+                    if character_name
+                    else None,
+                )
 
-        loop = asyncio.get_event_loop()
-        for message in valid_messages:
-            loop.run_until_complete(
-                self.signals["game_loop_new_message"].send(
+        try:
+            if character_knowledge_enabled(self):
+                await get_agent("summarizer").finalize_perceptions(self, valid_messages)
+
+            for message in valid_messages:
+                if isinstance(message, CharacterMessage):
+                    await get_agent("conversation").finalize_message_avatar(message)
+
+            for message in valid_messages:
+                await self.signals["game_loop_new_message"].send(
                     events.GameLoopNewMessageEvent(
                         scene=self, event_type="game_loop_new_message", message=message
                     )
                 )
-            )
 
-        await self.signals["push_history.after"].send(event)
-
-        # History changed — refresh scene status so UI affordances that
-        # depend on the tail (e.g. the regenerate buttons) stay in sync.
-        # emit_status is debounced, so bursts of pushes coalesce.
-        self.emit_status()
+            await self.signals["push_history.after"].send(event)
+        finally:
+            self.emit_status()
 
     def pop_message(self, message: SceneMessage | int) -> bool:
         """
@@ -1189,6 +1177,20 @@ class Scene(Emitter):
         emit("message_edited", target, id=message_id, data=None)
         self.log.info("Message active version swapped", index=index, id=message_id)
 
+    @property
+    def pending_perception_messages(self) -> list[int]:
+        if not character_knowledge_enabled(self):
+            return []
+        return [
+            message.id
+            for message in self.history
+            if message.knowledge is not None
+            and any(
+                view.status not in ("ready", "omitted")
+                for view in message.knowledge.views
+            )
+        ]
+
     async def add_actor(self, actor: Actor, commit_to_memory: bool = True):
         """
         Add an actor to the scene
@@ -1552,6 +1554,7 @@ class Scene(Emitter):
                 "active_pins": [pin.model_dump() for pin in self.active_pins],
                 "experimental": self.experimental,
                 "knowledge_eligibility": self.knowledge_eligibility,
+                "pending_perception_messages": self.pending_perception_messages,
                 "can_change_knowledge_eligibility": self.can_change_knowledge_eligibility,
                 "immutable_save": self.immutable_save,
                 "description": self.description,
@@ -1863,7 +1866,7 @@ class Scene(Emitter):
                 character = None
             emit(message.typ, message, character=character)
 
-    async def start(self):
+    async def start(self, *, history_visible: bool = False):
         """
         Start the scene
         """
@@ -1886,13 +1889,17 @@ class Scene(Emitter):
                             self.creative_nodes_filename, [self.save_dir]
                         )
                         await initialize_packages(self, self.creative_node_graph)
-                        await self._run_creative_loop(init=first_loop)
+                        await self._run_creative_loop(
+                            init=first_loop, history_visible=history_visible
+                        )
                     else:
                         self.node_graph, _ = load_graph(
                             self.nodes_filename, [self.save_dir]
                         )
                         await initialize_packages(self, self.node_graph)
-                        await self._run_game_loop(init=first_loop)
+                        await self._run_game_loop(
+                            init=first_loop, history_visible=history_visible
+                        )
             except ExitScene:
                 break
             except RestartSceneLoop:
@@ -1911,10 +1918,30 @@ class Scene(Emitter):
             events.SceneStateEvent(scene=self, event_type="scene_init")
         )
 
-    async def _run_game_loop(self, init: bool = True, node_graph=None):
+    def history_display_state(self):
+        """Snapshot the capped replay's visible content and revision controls."""
+        return self.get_intro(), [
+            (
+                message.id,
+                message.typ,
+                message.message,
+                message.source,
+                int(message.flags),
+                getattr(message, "asset_id", None),
+                getattr(message, "asset_type", None),
+                message.versions_payload(),
+            )
+            for message in self.history[-self.max_backscroll :]
+        ]
+
+    async def _run_game_loop(
+        self, init: bool = True, node_graph=None, *, history_visible: bool = False
+    ):
         if init:
+            initial_history = self.history_display_state() if history_visible else None
             await self._game_startup()
-            await self.emit_history()
+            if not history_visible or initial_history != self.history_display_state():
+                await self.emit_history()
 
         self.nodegraph_state = state = GraphState()
         state.data["continue_scene"] = True
@@ -1956,8 +1983,11 @@ class Scene(Emitter):
                 )
                 emit("system", status="error", message=f"Unhandled Error: {e}")
 
-    async def _run_creative_loop(self, init: bool = True):
-        await self.emit_history()
+    async def _run_creative_loop(
+        self, init: bool = True, *, history_visible: bool = False
+    ):
+        if not init or not history_visible:
+            await self.emit_history()
 
         self.nodegraph_state = state = GraphState()
         state.data["continue_scene"] = True

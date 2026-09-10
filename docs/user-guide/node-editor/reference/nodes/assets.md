@@ -268,6 +268,7 @@ Messages that aren't found are skipped rather than raising an error.
 | `state` | `any` | graph state (required) |
 | `message_ids` | `list` | (optional) List of message IDs to update |
 | `asset_id` | `str` | The new asset ID |
+| `override_cadence` | `bool` | (optional, default `False`) Show an explicit selection regardless of avatar cadence |
 
 **Outputs**
 

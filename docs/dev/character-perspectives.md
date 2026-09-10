@@ -128,16 +128,45 @@ new-message and archive hooks. It runs even when automatic archiving is disabled
 or its threshold has not been reached. In-place regeneration invokes the same
 entry point after the final canonical version is installed.
 
+Visible producers call `Scene.push_history(..., emit_message=True)`. Publication
+follows text-changing hooks and precedes perception analysis, automatic portraits,
+new-message hooks (including the dialogue ledger and voice preparation), and
+archiving. The call still awaits those passes before dependent generation. The
+default `False` preserves history-only pushes, including on cancellation.
+
+Automatic portraits use `agent.conversation.finalized` with the canonical response
+and recorded `message_ids`; `agent.conversation.generated` remains the
+pre-publication editing hook. Portraits update those messages through
+`message_asset_update`. In-place regeneration publishes its version first and
+attaches the portrait to the original message ID. Late automatic attachments rebuild
+avatar cadence in message order. Manual selection and Determine best avatar carry
+`override_cadence`. Clear Image removes the message asset and restores the default-avatar
+fallback under the configured cadence, both immediately and after reload. The shipped
+manual graph enables the `assets/UpdateMessageAsset` node's optional boolean
+`override_cadence` input (default `False`). Control-flow exceptions propagate;
+ordinary portrait failures are logged without skipping new-message hooks or archiving, and a
+finalized event with no avatar decision preserves the recorded asset.
+
+Scene loading exposes an optional `before_memory` callback after successful
+hydration. The websocket handler uses it to announce `scene.history_ready` and
+replay saved history before memory indexing. This opens the scene view while
+retaining the loading lock; `scene.loaded` and the scene loop wait for indexing.
+Failed or cancelled hydration does not publish history. An indexing failure clears
+the displayed history through the existing load-failure route.
+
 `SummarizeAgent.ensure_perceptions(scene, *, before_message_id=None)` finishes existing pending or failed
-message records before dependent conversation or narrator generation. Character
-revisions pass their target ID: only passages strictly before that target are
-registered or analyzed, and the boundary is rechecked after awaits. A later failed
-passage cannot block an earlier revision. Per-message cancellation counters retain
-every failure since a waiter's snapshot, so a later failure cannot mask an earlier
-cancellation inside its prefix, including repeated failures of the same message.
-A removed boundary cancels the operation. Explicit
-message edits/version changes schedule `rebuild_perceptions` using the existing
-background-task mechanism. The edit and save return to the websocket receive loop
+message records before dependent conversation or narrator generation. Its optional
+boundary remains available for callers that need a prefix: only passages strictly
+before that target are registered or analyzed, the boundary is rechecked after awaits,
+and a removed boundary cancels the operation. Per-message cancellation counters retain
+every failure since a waiter's snapshot, including repeated failures of the same message.
+Character revision does not call this repair API: `revision_context_history` renders
+stored views using the actual template budget and configured history cap. If that
+window cannot be projected, it logs once and uses reader-visible scene history,
+which may include content unknown to the character, without a repair request.
+Explicit message edits schedule `rebuild_perceptions` using the existing
+background-task mechanism. Browsing saved versions defers derived jobs until the
+kept version is committed or the next line catches up. The edit and save return to the websocket receive loop
 while re-analysis runs, so Retry/Cancel/Ignore frames remain dispatchable. Dependent
 generation still awaits required views. Untouched historical messages
 without records are not backfilled. An ordinary save/load retains incomplete
@@ -252,10 +281,11 @@ formatting. Only ready text enters the result; explicit omissions and unavailabl
 views, including untracked historical passages, contribute nothing. Pending,
 failed or stale passage views raise `GenerationCancelled` without reader fallback.
 An unavailable or stale summary descends to fresh lower-level summaries or source
-message views; it never contributes its reader text. Async
-conversation and character editor callers first await the summarizer's existing
-`ensure_perceptions` lifecycle, including its visible Retry/Cancel dialog. The
-projection performs no model request and stores no cache across reads.
+message views; it never contributes its reader text. Conversation and the editor's
+`add_detail` operation first await the summarizer's `ensure_perceptions` lifecycle,
+including its visible Retry/Cancel dialog. Rewrite and Unslop instead render optional
+history through `revision_context_history`, using the bounded reader-history fallback
+described above. The projection performs no model request and stores no cache across reads.
 
 The projection walks backward and budgets the replacement text, stopping before
 an entry would exceed the token budget or the returned-message limit. Hidden
@@ -285,7 +315,7 @@ Repetition detection is author output: its corpus remains exact reader prose in
 paraphrases cannot establish lexical repetition. Comparison diagnostics can include
 reader text for the author. Revision templates render only `text_a`, the candidate
 being revised, never `text_b`, the earlier reader text used for matching. The
-character revision's scene-history block still uses stored views.
+character revision's scene-history block uses stored views when its bounded window is ready; otherwise it falls back to reader-visible history as described above.
 Character unslop omits shared cached scene analysis until its producer supports
 character audiences. Narrator/author revisions retain their broader context.
 
@@ -304,11 +334,42 @@ The public creation opt-in is documented in [Saved scene format](scene-format.md
 
 ## Edits and invalidation notifications
 
+Conversation scene analysis records `evidence_boundary` (the pre-reply history IDs)
+and `evidence_budget` beside its existing advice metadata. Its fingerprint hashes
+that prefix, selected source/view revisions and the bounded audience evidence,
+plus authored description/intention, visibility, disclosures and recorded facts.
+It does not hash the global audience-index revision, the unrendered scene clock,
+or reader-only snapshot fields. The selected snapshot remains an input because
+the analysis prompt renders it. A concurrent history change still cancels an
+in-flight analysis; later cache checks exclude reply versions beyond the boundary.
+Deep analysis also records `retrieval_fp` for the full eligible audience source set
+at that boundary, including summaries outside the initial evidence budget. Question-based
+RAG returns generated strings without source references, so the check conservatively
+covers all eligible retrieval sources. A changed source rejects stale deep context
+at injection without invalidating the cached analysis text, whose prompt does not
+consume retrieved context. Empty deep context needs no retrieval-source check.
+Identical cache keys share their computed fingerprint
+within synchronous steps; checks after awaits recompute it to catch concurrent edits.
+Other advice producers retain their existing freshness checks.
+
 Message text assignment, `Scene.edit_message`, `Scene.append_message_version`
 and `Scene.set_message_active_version` advance the content revision when canonical
 text changes. Identical text and changelog `rev` changes do not.
 `update_history_entry` applies this to every summary layer; its edit payload cannot
 overwrite the stored knowledge envelope.
+
+The `scene_message/swap_revision` websocket action changes canonical text and
+invalidates evidence without starting derived jobs. `commit_revision` accepts
+the same `id`, `index` and optional `request_id`, repairs the kept text through
+the existing perception lock, and echoes `revision_committed` when done. Successful swaps echo `revision_swapped`;
+rejected swaps return a correlated `operation_done` error with `failed_action=swap_revision`
+so the client can release its optimistic selection. Pointer movement alone does not
+commit: Keep, keyboard focus leaving the navigator, a tab switch or the next line does.
+The next `push_history` also catches pending passages once. Browse invalidation
+retains dirty fact-memory and audience-index state while deferring their wakeups;
+ledger, TTS and avatar selection do not subscribe to swaps or `message_edited`.
+`scene_status.data.pending_perception_messages` lists messages with pending or
+failed views so History and Knowledge can show that their evidence is out of date.
 
 A reader-content edit invalidates all views of that source. A dependency edit
 invalidates only descendant views that depend on the changed view, transitively.

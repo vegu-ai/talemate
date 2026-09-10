@@ -241,7 +241,7 @@
             :config="appConfig" />
           </v-tabs-window-item>
           <!-- SCENE -->
-          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;">
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;" eager>
             <v-row no-gutters class="position-relative">
               <v-col ref="nodeEditorContainer" v-resize="onNodeEditorContainerResize" :xl="creativeMode ? (showSceneView ? 8 : 12) : 0" :cols="creativeMode ? (showSceneView ? 6 : 12) : 0" :class="{ 'd-none': !creativeMode }" class="position-relative">
                   <NodeEditor
@@ -801,6 +801,7 @@ export default {
 
         // Save scroll position when leaving main tab
         if(oldTab === 'main' && this.sceneActive) {
+          if (!this.loading) this.$refs.sceneMessages?.commitPendingRevisions();
           this.mainTabScrollPosition = window.scrollY;
         }
         
@@ -1295,7 +1296,11 @@ export default {
 
       // Scene loaded
       if (data.type === "system") {
-        if (data.id === 'scene.loaded') {
+        if (data.id === 'scene.history_ready') {
+          this.loading = true;
+          this.showSceneView = true;
+          this.tab = 'main';
+        } else if (data.id === 'scene.loaded') {
           this.loading = false;
           this.sceneActive = true;
           // a replay belongs to the scene it was started on: whatever the
@@ -1320,6 +1325,7 @@ export default {
           this.sceneActive = false;
           this.actAs = null;
           this.scene = {};
+          this.$refs.sceneMessages?.clear();
           this.clearUxInteractions(); // Clear any active UX interactions on load failure
           this.$refs.generationErrorDialog.closeAll(); // Backend cancelled the outgoing scene's pending generations
         } else if (data.id === 'load_scene_request') {
@@ -1581,6 +1587,7 @@ export default {
     },
 
     onInputSend({ text, actAs }) {
+      this.$refs.sceneMessages?.commitPendingRevisions();
       this.websocket.send(JSON.stringify({ type: 'interact', text, act_as: actAs }));
       this.inputDisabled = true;
       this.waitingForInput = false;

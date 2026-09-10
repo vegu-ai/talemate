@@ -495,6 +495,7 @@ class WorldState(BaseModel):
             if character_knowledge_enabled(self.scene):
                 source = prepare_reinforcement_source(self.scene, reinforcement)
                 await write_reinforcement_entry(self.scene, reinforcement, source)
+                self.emit()
                 await instance.get_agent("summarizer").finalize_perceptions(
                     self.scene, []
                 )
@@ -526,6 +527,7 @@ class WorldState(BaseModel):
 
         self.reinforce.append(reinforcement)
 
+        self.emit()
         if answer and character_knowledge_enabled(self.scene):
             await instance.get_agent("summarizer").finalize_perceptions(self.scene, [])
 

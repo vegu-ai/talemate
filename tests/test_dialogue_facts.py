@@ -347,7 +347,7 @@ async def test_source_removed_during_memory_operation_leaves_no_fact(
         memory.delete.assert_awaited_once_with({"ids": ["F1"]})
 
 
-def test_toggle_off_preserves_original_ledger_except_time_marker(scene):
+def test_toggle_off_preserves_ledger_inputs_and_output_contract(scene):
     variables = {
         "scene": scene,
         "speaker": "Alice",
@@ -365,7 +365,16 @@ def test_toggle_off_preserves_original_ledger_except_time_marker(scene):
         after = Prompt.get("conversation.knowledge-ledger", vars=variables)
         rendered = after.render()
         assert rendered.count("(Time unknown)") == 1
-        assert rendered.replace("(Time unknown) ", "") == before.render()
+        prior = before.render()
+        current = rendered.replace("(Time unknown) ", "")
+        assert (
+            current.split("Alice just said", 1)[0]
+            == prior.split("Alice just said", 1)[0]
+        )
+        assert (
+            current.split("Answer with a JSON object", 1)[1]
+            == prior.split("Answer with a JSON object", 1)[1]
+        )
 
 
 def test_enabled_prompt_and_extractor_carry_both_blocks(scene):

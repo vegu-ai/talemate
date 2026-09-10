@@ -1,6 +1,7 @@
 {#-
 Extractors:
   - fix: AnchorExtractor("<FIX>", "</FIX>")
+  - no_fix: RegexExtractor for the NO_FIX_REQUIRED self-closing tag
 
 Override example:
   {{ set_anchor_extractor("fix", "<MY_TAG>", "</MY_TAG>") }}

@@ -41,7 +41,9 @@ import {
   EFFORT_STOPS,
 } from '@/constants/knowledgeEffort';
 import { MODEL_TIERS } from '@/constants/modelExpectations';
-import { currentEffort, effortCost, effortPatch, effortValueOf, stopForMode } from '@/utils/knowledgeEffort';
+import { currentEffort, effortCost, effortPatch, effortPinPatch, effortValueOf, stopForMode } from '@/utils/knowledgeEffort';
+import { configOverrideActive, enabledOverrideActive } from '@/constants/sceneAgentSettings';
+import { resolveKnowledgeToggles, thoroughnessSummary } from '@/utils/knowledgeHub';
 
 const SEND_DEBOUNCE_MS = 250;
 // a stop the agents never echo back must not freeze the knob for good
@@ -59,6 +61,9 @@ export default {
     // false where the host writes a working copy it saves later: no status
     // frame answers such a write, so there is nothing to wait for
     immediate: { type: Boolean, default: true },
+    // the knowledge hub's scene-only writer pins the whole row as overrides,
+    // so the receipt has to be override presence, not a matching value
+    pin: { type: Boolean, default: false },
     disabled: { type: Boolean, default: false },
   },
   emits: ['apply'],
@@ -105,7 +110,14 @@ export default {
       return Math.max(0, this.stops.indexOf(this.shownStop));
     },
     cost() {
-      return this.shownStop ? effortCost(this.mode, this.shownStop).text + '.' : '';
+      if (!this.shownStop) return '';
+      // Custom is a value state: the nearest stop only places the thumb, so the
+      // cost line has to name what is actually on, not the nearest row's cost.
+      if (this.custom) {
+        const perspectives = this.mode === 'perception';
+        return thoroughnessSummary(resolveKnowledgeToggles(this.agents, { perspectives }), perspectives).text + '.';
+      }
+      return effortCost(this.mode, this.shownStop).text + '.';
     },
     modelLine() {
       const tier = EFFORT_MODEL_TIER[this.mode]?.[this.shownStop];
@@ -162,7 +174,9 @@ export default {
       // the host writes the agents this component reads, so the patch has to be
       // taken before the write, and an empty one owes no frame at all
       const awaited = this.immediate && this.value === null;
-      const patch = awaited ? effortPatch(this.agents, this.mode, stop) : [];
+      const patch = awaited
+        ? (this.pin ? effortPinPatch(this.agents, this.mode, stop) : effortPatch(this.agents, this.mode, stop))
+        : [];
       if (awaited && !patch.length) {
         this.release();
         return;
@@ -193,14 +207,24 @@ export default {
       if (answered && !this.awaiting.size) this.release();
     },
     reports(entry, data) {
+      const overlay = data.data?.scene_overrides || {};
       const reported = [{
         name: entry.agent,
         actions: data.data?.actions || {},
-        data: { scene_overrides: data.data?.scene_overrides || {} },
+        data: { scene_overrides: overlay },
       }];
       const value = (config) => effortValueOf(reported, `${entry.agent}.${entry.action}.${config}`);
-      if (entry.enabled !== undefined && value('enabled') !== entry.enabled) return false;
-      return Object.entries(entry.config).every(([config, sent]) => value(config) === sent);
+      // A pinned write is answered by the overlay carrying the key — a frame
+      // that merely repeats an equal global value is not the receipt.
+      if (entry.enabled !== undefined) {
+        if (value('enabled') !== entry.enabled) return false;
+        if (this.pin && !enabledOverrideActive(overlay, entry.action)) return false;
+      }
+      return Object.entries(entry.config).every(([config, sent]) => {
+        if (value(config) !== sent) return false;
+        if (this.pin && !configOverrideActive(overlay, entry.action, config)) return false;
+        return true;
+      });
     },
     clearReceipt() {
       clearTimeout(this.holdTimer);

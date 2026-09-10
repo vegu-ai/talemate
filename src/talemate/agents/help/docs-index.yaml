@@ -1246,7 +1246,9 @@
     the six Standard effort stops from Off (pre-feature behaviour, Standard track only) to Ultra, what an existing scene loads
     with, model expectations and repair costs. Covers live character-entry orientation and briefing controls, Known by visibility,
     disclosures, Allow/Block rules, opening audiences, subjects/aliases, per-viewer supersession, ranked facts, topic/fact
-    editing, Allow lifting an earlier Block, director/node operations and audience-scoped retrieval.
+    editing, Allow lifting an earlier Block, director/node operations and audience-scoped retrieval. The knowledge hub writes
+    scene overrides rather than globals, marks each value's origin, and offers per-group and whole-hub Use global settings
+    resets; the overrides live in an agent-settings file shared by the saves in one project.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and
@@ -1303,5 +1305,6 @@
   summary: World panel durable snapshots, tracked states, Look at/Add Detail highlights, Add to world state text selection,
     knowledge-change dots, active/inactive/background characters and Make real name protection. The knowledge hub shows chronology-selected
     facts ranked by importance and recency with time markers, topics and counts, disclosures/access rules, Character perspectives
-    with a Compare modes popover, effort presets and a closed Individual settings pane counting enabled switches; also covers
-    narrated activation, guided refresh/wipe, cancellation, background cadence and Pin to context.
+    with a Compare modes popover, effort presets and a closed Individual settings pane counting enabled switches; hub changes
+    are scene overrides with origin marks and per-group/whole-hub Use global settings resets, stored in a project-shared
+    agent-settings file. Also covers narrated activation, guided refresh/wipe, cancellation, background cadence and Pin to context.

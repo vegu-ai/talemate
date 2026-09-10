@@ -13,7 +13,7 @@ import {
 } from '@/constants/knowledgeEffort';
 import { KNOWLEDGE_TOGGLES, resolveKnowledgeToggles, thoroughnessSummary } from '@/utils/knowledgeHub';
 import { MODEL_TIERS } from '@/constants/modelExpectations';
-import { currentEffort, effortCost, effortPatch, effortValueOf, queueEffortAcrossSwitch, stopForMode } from '@/utils/knowledgeEffort';
+import { currentEffort, effortCost, effortPatch, effortPinPatch, effortValueOf, queueEffortAcrossSwitch, stopForMode } from '@/utils/knowledgeEffort';
 import { agentsAt, bool, number } from './helpers/effortAgents.js';
 
 const read = (relative) => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf-8');
@@ -332,6 +332,49 @@ describe('the docs page repeats the tables', () => {
     it('says Character perspectives has no Ultra and where a switch from Ultra lands', () => {
         expect(section).toMatch(/no Ultra/i);
         expect(section).toMatch(/Ultra lands on Thorough/);
+    });
+});
+
+describe('the pin patch of an explicit selection', () => {
+    it('pins every present key of the row, including one equal to the global', () => {
+        const agents = agentsAt('legacy', 'light');
+        const pinned = effortPinPatch(agents, 'legacy', 'light');
+        const conversation = pinned.find((entry) => entry.agent === 'conversation');
+        expect(conversation.config).toMatchObject({
+            perspective_filter: true,
+            absence_block: true,
+            awareness_line: true,
+            memory_pass: false,
+            ledger: false,
+            absence_limit: 5,
+            absence_window: 30,
+        });
+        expect(pinned.find((entry) => entry.agent === 'memory' && entry.action === 'topics')).toMatchObject({ enabled: true, config: {} });
+        // the ordinary patch has nothing to do here
+        expect(effortPatch(agents, 'legacy', 'light')).toEqual([]);
+    });
+
+    it('Off pins only its four contributors', () => {
+        const pinned = effortPinPatch(agentsAt('legacy', 'ultra'), 'legacy', 'off');
+        expect(pinned).toEqual([
+            { agent: 'conversation', action: 'character_knowledge', enabled: false, config: {} },
+            { agent: 'memory', action: 'topics', enabled: false, config: {} },
+            { agent: 'memory', action: 'retrieval', config: { similarity_gate: false } },
+            { agent: 'summarizer', action: 'archive', config: { extract_facts: false } },
+        ]);
+    });
+
+    it('does not manufacture a key the mode status stripped', () => {
+        const keys = effortPinPatch(agentsAt('perception', 'minimal'), 'perception', 'thorough')
+            .flatMap((entry) => Object.keys(entry.config));
+        expect(keys).not.toContain('ledger');
+    });
+
+    it('leaves a field the schema marks non-overridable alone', () => {
+        const agents = agentsAt('legacy', 'light');
+        agents[0].actions.character_knowledge.config.awareness_line.scene_overridable = false;
+        const conversation = effortPinPatch(agents, 'legacy', 'light').find((entry) => entry.agent === 'conversation');
+        expect(conversation.config).not.toHaveProperty('awareness_line');
     });
 });
 

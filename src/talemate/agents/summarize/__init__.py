@@ -230,7 +230,7 @@ class SummarizeAgent(
 
     @property
     def archive_extract_facts(self) -> bool:
-        return self.actions["archive"].config["extract_facts"].value
+        return bool(self.resolve_config("archive", "extract_facts"))
 
     @property
     def archive_fact_dedupe_distance(self) -> float:

@@ -197,9 +197,19 @@ labels, descriptions and cost notes as the agent settings:
 Group headers and toggles share one checkbox column; a group without a master checkbox keeps
 the space so its label lines up. A :material-plus-circle-outline: icon marks an option that adds
 a request; hover it to read the cost. An option under a group switch that is off costs nothing, so it
-carries no icon. The toggles write the same settings as the agent settings dialog, so both places stay in
-sync. When the loaded scene overrides a setting, the hub toggles the scene override and marks it
-**scene override**. Options that a Character perspectives story does not use are hidden, as they
+carries no icon. The toggles write **scene overrides** for this scene, not the global agent
+settings, so the globals are left untouched; the overrides file is shared by the saves in one
+project, so a Save As copy or restore point linked to the same file reads the change too
+([Per-Scene Agent Overrides](/talemate/user-guide/agents/scene-overrides/)). Use the agent settings
+dialog to change the globals. When a value comes from a scene override the hub marks it
+**scene override**, and a group whose settings are overridden offers **Use global settings**, which
+removes that group's overrides so they inherit from the globals again. A **Use global settings**
+action beside the effort slider removes every knowledge setting the hub owns — including ones the
+current mode hides — and leaves unrelated overrides alone. The effort chip above the slider says
+**Global settings** or **Scene override**, and its tooltip says whether every effort setting comes
+from this scene or is mixed with the globals. A scene that has not been saved yet cannot hold
+overrides, so the hub disables these controls and says to save the scene first. Options that a
+Character perspectives story does not use are hidden, as they
 are in the agent settings. Click a group name to open its section in the agent settings.
 
 ![knowledge hub in a perspectives story](/talemate/img/0.40.0/world-state-knowledge-hub-2.png)

@@ -24,7 +24,7 @@ function applyStop(agents, mode, stop) {
 
 let app, host, state, applied, handlers, vm;
 
-function mount({ immediate = true } = {}) {
+function mount({ immediate = true, pin = false } = {}) {
     state = reactive({ agents: agentsAt('legacy', 'minimal'), mode: 'legacy' });
     applied = [];
     handlers = [];
@@ -35,6 +35,7 @@ function mount({ immediate = true } = {}) {
             mode: state.mode,
             agents: state.agents,
             immediate,
+            pin,
             onApply: (stop) => {
                 applied.push(stop);
                 if (immediate) applyStop(state.agents, state.mode, stop);
@@ -302,5 +303,44 @@ describe('the effort slider against the status frames of its own write', () => {
         expect(vm.heldStop).toBe('ultra');
         vi.advanceTimersByTime(4000);
         expect(vm.heldStop).toBeNull();
+    });
+
+    it('prices a Custom state by what is actually on, not the nearest stop', async () => {
+        state.agents = agentsAt('legacy', 'thorough', { 'conversation.character_knowledge.ledger': false });
+        await nextTick();
+        expect(vm.custom).toBe(true);
+        expect(vm.cost).not.toContain('Track learning from dialogue');
+        expect(vm.cost).toContain('Refine memories with AI');
+    });
+
+    it('answers a pinned scene write by override presence, not a matching value', async () => {
+        app.unmount();
+        host.remove();
+        mount({ pin: true });
+        state.agents = agentsAt('legacy', 'light');
+        await nextTick();
+        dragTo('balanced');
+        expect(applied).toEqual(['balanced']);
+        expect([...vm.awaiting.keys()]).toContain('conversation.character_knowledge');
+
+        // the same values read off the globals are not the receipt
+        deliver('conversation');
+        await nextTick();
+        expect([...vm.awaiting.keys()]).toContain('conversation.character_knowledge');
+
+        const pinned = agentsAt('legacy', 'balanced');
+        pinned[0].data.scene_overrides = { actions: { character_knowledge: { enabled: true, config: {
+            perspective_filter: { value: true },
+            absence_block: { value: true },
+            awareness_line: { value: true },
+            absence_limit: { value: 5 },
+            absence_window: { value: 30 },
+            brief_characters_on_entry: { value: false },
+            memory_pass: { value: false },
+            ledger: { value: true },
+        } } } };
+        deliver('conversation', pinned);
+        await nextTick();
+        expect([...vm.awaiting.keys()]).not.toContain('conversation.character_knowledge');
     });
 });

@@ -96,7 +96,7 @@ const agents = () => ([
     },
 ]);
 
-const sceneData = { knowledge_eligibility: 'legacy', can_change_knowledge_eligibility: true };
+const sceneData = { knowledge_eligibility: 'legacy', can_change_knowledge_eligibility: true, filename: 'scene.json', project_name: 'proj' };
 
 function mount(component, props = {}, injections = {}) {
     host = document.createElement('div');
@@ -110,6 +110,9 @@ function mount(component, props = {}, injections = {}) {
     app.provide('toggleAgentAction', vi.fn());
     app.provide('toggleAgentConfig', injections.toggleAgentConfig || vi.fn());
     app.provide('applyAgentValues', vi.fn());
+    app.provide('applySceneAgentValues', injections.applySceneAgentValues || vi.fn());
+    app.provide('clearSceneAgentValues', vi.fn());
+    app.provide('sceneOverridesState', () => ({ busy: false, error: null }));
     app.provide('queueKnowledgeEffort', vi.fn());
     app.provide('openAgentSettings', vi.fn());
     for (const name of ['VCard', 'VCardItem', 'VCardTitle', 'VCardSubtitle', 'VCardText', 'VChip', 'VIcon', 'VDivider',
@@ -174,15 +177,17 @@ describe('the hub before anything is opened', () => {
         expect(host.textContent).not.toContain(SWITCH_LABELS[0]);
     });
 
-    it('hands a click on a leaf to the agent drawer', async () => {
-        const toggleAgentConfig = vi.fn();
-        const vm = mount(Hub, { name: 'Nora' }, { toggleAgentConfig });
+    it('hands a click on a leaf to the scene-only writer', async () => {
+        const applySceneAgentValues = vi.fn();
+        const vm = mount(Hub, { name: 'Nora' }, { applySceneAgentValues });
         vm.open = true;
         await nextTick();
         host.querySelector('.panel-title').click();
         await nextTick();
         host.querySelector('.knowledge-hub-toggle').click();
-        expect(toggleAgentConfig).toHaveBeenCalledWith('conversation', 'character_knowledge', 'perspective_filter');
+        expect(applySceneAgentValues).toHaveBeenCalledWith([
+            { agent: 'conversation', action: 'character_knowledge', config: { perspective_filter: false } },
+        ]);
     });
 
     it('shows one line for the story mode and no mode card', async () => {

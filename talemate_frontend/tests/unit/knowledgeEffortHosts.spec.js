@@ -8,6 +8,7 @@ import SceneSettingsComponent from '@/components/WorldStateManagerSceneSettings.
 import { lift, readSource } from './helpers/liftMethod.js';
 import { EFFORT_PRESETS } from '@/constants/knowledgeEffort';
 import { effortMode } from '@/utils/knowledgeEffort';
+import { sceneIdentityOf, SceneAgentOverridesCoordinator } from '@/utils/sceneAgentOverrides';
 import { perspectivesEnabled } from '@/utils/sceneSettings';
 
 const aiAgent = readSource(fileURLToPath(new URL('../../src/components/AIAgent.vue', import.meta.url)));
@@ -37,33 +38,41 @@ function standardAgents() {
     ];
 }
 
-function hub({ agents = standardAgents(), scene = { knowledge_eligibility: 'legacy', can_change_knowledge_eligibility: true } } = {}) {
+function hub({ agents = standardAgents(), scene = { knowledge_eligibility: 'legacy', can_change_knowledge_eligibility: true, filename: 'scene.json', project_name: 'proj' } } = {}) {
     const sent = [];
     const vm = {
         ...Hub.data(), name: 'Nora', sent,
         getWebsocket: () => ({ send: (payload) => sent.push(JSON.parse(payload)) }),
         scene: () => ({ data: scene }), getAgents: () => agents,
-        applyAgentValues: vi.fn(() => true), toggleAgentAction: vi.fn(), toggleAgentConfig: vi.fn(), openAgentSettings: vi.fn(), $emit: vi.fn(),
+        applySceneAgentValues: vi.fn(() => true), clearSceneAgentValues: vi.fn(() => true),
+        sceneOverridesState: () => ({ busy: false, error: null }),
+        openAgentSettings: vi.fn(), $emit: vi.fn(),
     };
     for (const [key, method] of Object.entries(Hub.methods)) vm[key] = method.bind(vm);
     for (const [key, getter] of Object.entries(Hub.computed)) Object.defineProperty(vm, key, { get: () => getter.call(vm) });
     return vm;
 }
 
-describe('the hub applies a stop through the drawer', () => {
-    it('writes only what differs, one call per agent action', () => {
+describe('the hub applies a stop through the scene-only writer', () => {
+    it('pins every present preset key as a scene override, one write for the batch', () => {
         const vm = hub();
         vm.applyEffort('thorough');
-        expect(vm.applyAgentValues).toHaveBeenCalledTimes(1);
-        expect(vm.applyAgentValues).toHaveBeenCalledWith('conversation', 'character_knowledge',
-            expect.objectContaining({ config: { ledger: true, memory_pass: true } }));
+        expect(vm.applySceneAgentValues).toHaveBeenCalledTimes(1);
+        const entries = vm.applySceneAgentValues.mock.calls[0][0];
+        const conversation = entries.find((entry) => entry.agent === 'conversation');
+        expect(conversation).toMatchObject({
+            action: 'character_knowledge',
+            config: expect.objectContaining({ ledger: true, memory_pass: true }),
+        });
+        expect(conversation.config).not.toHaveProperty('brief_characters_on_entry');
+        expect(entries.some((entry) => entry.agent === 'summarizer' && entry.config.extract_facts === true)).toBe(true);
     });
     it('queues the current stop on the drawer when the mode switch is flipped', () => {
         const vm = hub();
         vm.queueKnowledgeEffort = vi.fn();
         expect(vm.effortMode).toBe('legacy');
         vm.setPerspectives(true);
-        expect(vm.queueKnowledgeEffort).toHaveBeenCalledWith('light', 'perception');
+        expect(vm.queueKnowledgeEffort).toHaveBeenCalledWith('light', 'perception', { scope: 'scene' });
         expect(vm.sent[0]).toMatchObject({ action: 'update_scene_settings', knowledge_eligibility: 'perception' });
     });
     it('carries Standard Ultra to Thorough, the top stop the other table has', () => {
@@ -73,7 +82,7 @@ describe('the hub applies a stop through the drawer', () => {
         const vm = hub({ agents });
         vm.queueKnowledgeEffort = vi.fn();
         vm.setPerspectives(true);
-        expect(vm.queueKnowledgeEffort).toHaveBeenCalledWith('thorough', 'perception');
+        expect(vm.queueKnowledgeEffort).toHaveBeenCalledWith('thorough', 'perception', { scope: 'scene' });
     });
     it('does not carry a Custom state across the switch', () => {
         const agents = standardAgents();
@@ -128,12 +137,14 @@ describe('the drawer writes a batch in one save', () => {
     // the drawer's queue, driven the way the frames arrive
     function drawerHost() {
         const handleMessage = lift(aiAgent, 'handleMessage', 'AIAgent.vue', { effortMode, perspectivesEnabled, PENDING_EFFORT_TTL: 30000 });
-        const queueEffort = lift(aiAgent, 'queueEffort', 'AIAgent.vue', { PENDING_EFFORT_TTL: 30000 });
+        const queueEffort = lift(aiAgent, 'queueEffort', 'AIAgent.vue', { PENDING_EFFORT_TTL: 30000, sceneIdentityOf });
         const applyPendingEffort = lift(aiAgent, 'applyPendingEffort', 'AIAgent.vue', {
             EFFORT_AGENTS: ['conversation', 'summarizer', 'memory'],
             effortPatch: (agents, mode, stop) => [{ agent: 'conversation', action: 'character_knowledge', config: { ledger: stop === 'balanced' } }],
+            effortPinPatch: () => [{ agent: 'conversation', action: 'character_knowledge', config: { ledger: true } }],
+            sceneIdentityOf,
         });
-        const self = { pendingEffort: null, sceneMode: 'legacy', messages: {}, agentHasMessages: {}, state: { agents: standardAgents() }, applyActionValues: vi.fn() };
+        const self = { pendingEffort: null, sceneMode: 'legacy', scene: { data: { id: 'scene-A' } }, messages: {}, agentHasMessages: {}, state: { agents: standardAgents() }, applyActionValues: vi.fn(), applySceneAgentValues: vi.fn() };
         self.handleMessage = handleMessage.bind(self);
         self.queueEffort = queueEffort.bind(self);
         self.applyPendingEffort = applyPendingEffort.bind(self);
@@ -149,6 +160,30 @@ describe('the drawer writes a batch in one save', () => {
         expect(self.applyActionValues).not.toHaveBeenCalled();
         self.handleMessage(sceneStatus('perception'));
         expect(self.applyActionValues).toHaveBeenCalledTimes(1);
+        expect(self.pendingEffort).toBeNull();
+    });
+    it('a hub-origin scene-scope stop goes through the scene-only writer once', () => {
+        const self = drawerHost();
+        self.queueEffort('balanced', 'perception', { scope: 'scene' });
+        for (const name of ['conversation', 'memory', 'summarizer']) self.handleMessage(agentFrame(name));
+        self.handleMessage(sceneStatus('perception'));
+        expect(self.applySceneAgentValues).toHaveBeenCalledTimes(1);
+        expect(self.applyActionValues).not.toHaveBeenCalled();
+    });
+    it('a hub stop queued in scene A never applies after scene B loads in that mode', () => {
+        const self = drawerHost();
+        self.queueEffort('balanced', 'perception', { scope: 'scene' });
+        // a saved scene B is loaded in the carried mode
+        self.scene = { data: { id: 'scene-B' } };
+        self.handleMessage(sceneStatus('perception'));
+        for (const name of ['conversation', 'memory', 'summarizer']) self.handleMessage(agentFrame(name));
+        expect(self.applySceneAgentValues).not.toHaveBeenCalled();
+        expect(self.pendingEffort).toBeNull();
+    });
+    it('a scene-scope stop is dropped by scene.loaded instead of re-armed', () => {
+        const self = drawerHost();
+        self.queueEffort('balanced', 'perception', { scope: 'scene' });
+        self.handleMessage({ type: 'system', id: 'scene.loaded' });
         expect(self.pendingEffort).toBeNull();
     });
     it('a busy-idle trio before the switch does not fire it against the old mode', () => {
@@ -212,6 +247,54 @@ describe('the drawer writes a batch in one save', () => {
         expect(self.saveSceneOverrideSlice).not.toHaveBeenCalled();
         applyActionValues.call(self, agent, 'character_knowledge', { enabled: false });
         expect(self.saveSceneOverrideSlice).toHaveBeenCalledWith(agent, 'character_knowledge', expect.objectContaining({ enabled: false }));
+    });
+});
+
+describe('the drawer unregisters its message handler on unmount', () => {
+    // The actual `beforeUnmount` body, run with only the component's declared
+    // injections supplied. A helper the component calls but does not declare
+    // stays undefined here, so this pins the integration wiring rather than
+    // `coordinator.reset()` in isolation.
+    function declaredInjections() {
+        const match = /inject:\s*\[([\s\S]*?)\]/.exec(aiAgent);
+        expect(match, 'AIAgent.vue has no inject list').not.toBeNull();
+        return [...match[1].matchAll(/'([^']+)'/g)].map((entry) => entry[1]);
+    }
+
+    it('removes the registered handler and clears queued/in-flight/pending work', () => {
+        const beforeUnmount = lift(aiAgent, 'beforeUnmount', 'AIAgent.vue');
+        const resetSceneAgentOverrides = lift(aiAgent, 'resetSceneAgentOverrides', 'AIAgent.vue');
+        const handlers = new Set();
+        const provider = {
+            registerMessageHandler: (fn) => handlers.add(fn),
+            unregisterMessageHandler: (fn) => handlers.delete(fn),
+        };
+        const state = { busy: false, error: null };
+        const overrides = new SceneAgentOverridesCoordinator({
+            getWebsocket: () => ({ send: () => {} }),
+            scene: () => ({ data: { id: 'scene-A', filename: 'a.json', project_name: 'A' } }),
+            state,
+        });
+        // a patch in flight, a queued follow-up and a stop awaiting the scene
+        overrides.applySceneAgentValues([{ agent: 'conversation', action: 'character_knowledge', config: { ledger: true } }]);
+        overrides.queue.push({ agent: 'memory', patch: {}, identity: 'scene-A', requestId: 'queued' });
+        expect(overrides.busy).toBe(true);
+
+        const self = { overrides, pendingEffort: { stop: 'thorough', mode: 'perception', scope: 'scene' }, handleMessage: () => {} };
+        for (const name of declaredInjections()) self[name] = provider[name];
+        self.resetSceneAgentOverrides = resetSceneAgentOverrides.bind(self);
+        handlers.add(self.handleMessage);
+
+        beforeUnmount.call(self);
+
+        expect(handlers.has(self.handleMessage)).toBe(false);
+        expect(overrides.busy).toBe(false);
+        expect(state.busy).toBe(false);
+        expect(self.pendingEffort).toBeNull();
+    });
+
+    it('declares the unregister helper the hook calls', () => {
+        expect(declaredInjections()).toContain('unregisterMessageHandler');
     });
 });
 

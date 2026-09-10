@@ -105,6 +105,42 @@ export function effortPatch(agents, mode, stop) {
     return groups;
 }
 
+// Whether an explicit selection may pin this key as a scene override: the
+// field has to be declared overridable, and a container switch has to be one
+// the agent lets a scene disable at all.
+function pinnableField(agents, key) {
+    const { agent: agentName, action: actionName, config } = effortKey(key);
+    const agent = (agents || []).find((candidate) => candidate.name === agentName);
+    const action = agent?.actions?.[actionName];
+    if (!action) return false;
+    if (config === null) return !!action.can_be_disabled && action.enabled_scene_overridable !== false;
+    const field = action.config?.[config];
+    return !!field && field.scene_overridable !== false;
+}
+
+/**
+ * What an explicit stop selection pins, grouped per agent action like
+ * `effortPatch` — but every available key of the row, including one whose
+ * effective value already equals the target, so the chosen stop stays put
+ * when the global changes later. Keys the mode's status does not carry are
+ * left out rather than manufactured.
+ */
+export function effortPinPatch(agents, mode, stop) {
+    const groups = [];
+    for (const [key, value] of Object.entries(preset(mode, stop))) {
+        if (effortValueOf(agents, key) === undefined || !pinnableField(agents, key)) continue;
+        const { agent, action, config } = effortKey(key);
+        let group = groups.find((g) => g.agent === agent && g.action === action);
+        if (!group) {
+            group = { agent, action, config: {} };
+            groups.push(group);
+        }
+        if (config === null) group.enabled = value;
+        else group.config[config] = value;
+    }
+    return groups;
+}
+
 // What a stop costs per line, from the tables alone, so a mode the loaded
 // scene is not in can be priced as well.
 export function effortCost(mode, stop) {

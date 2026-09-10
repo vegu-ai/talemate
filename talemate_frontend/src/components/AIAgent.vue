@@ -147,8 +147,9 @@
 <script>
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
 import { countOverrides } from '@/utils/agentActionOverrides';
-import { effortMode, effortPatch } from '@/utils/knowledgeEffort';
+import { effortMode, effortPatch, effortPinPatch } from '@/utils/knowledgeEffort';
 import { perspectivesEnabled } from '@/utils/sceneSettings';
+import { SceneAgentOverridesCoordinator, sceneIdentityOf } from '@/utils/sceneAgentOverrides';
 import AgentMessages from './AgentMessages.vue';
 import {
     configOverrideActive,
@@ -171,6 +172,8 @@ export default {
     data() {
         return {
             pendingEffort: null,
+            // shared by every open hub: one scene-only writer, one busy flag
+            overridesState: { busy: false, error: null },
             // the story mode of the last scene status frame
             sceneMode: 'legacy',
             state: {
@@ -217,12 +220,21 @@ export default {
     inject: [
         'getWebsocket',
         'registerMessageHandler',
+        'unregisterMessageHandler',
         'isConnected',
         'getClients',
         'openAgentActionOverrides',
         'openAgentSettings',
     ],
     methods: {
+        // The hub's only write path. A sparse per-agent patch, so a delayed hub
+        // action never replaces an unrelated edit that landed first.
+        applySceneAgentValues(entries) {
+            this.overrides?.applySceneAgentValues(entries);
+        },
+        clearSceneAgentValues(entries) {
+            this.overrides?.clearSceneAgentValues(entries);
+        },
         sceneOverrideCount(agent) {
             return countSceneOverrides(agent?.data?.scene_overrides);
         },
@@ -430,11 +442,18 @@ export default {
         // from the New Story dialog (armed once it has loaded) or a story-mode
         // switch. It is written when the scene reports the target mode and the
         // three knowledge agents have reported since, refused when the change is
-        // rejected, and dropped unwritten after PENDING_EFFORT_TTL.
-        queueEffort(stop, mode, { afterLoad = false } = {}) {
+        // rejected, and dropped unwritten after PENDING_EFFORT_TTL. `scope`
+        // 'scene' sends it through the scene-only hub writer; the other hosts
+        // keep the mixed-scope writer they had.
+        queueEffort(stop, mode, { afterLoad = false, scope = null } = {}) {
             this.pendingEffort = {
                 stop,
                 mode,
+                scope,
+                // A hub stop belongs to the scene it was queued in; the
+                // generation it was composed for travels with it so a load can
+                // never apply it to the next scene.
+                sceneIdentity: scope === 'scene' ? sceneIdentityOf(this.scene) : null,
                 armed: !afterLoad,
                 seen: new Set(),
                 // a New Story stop starts its clock when the load arms it
@@ -449,12 +468,27 @@ export default {
                 return;
             }
             if (!pending.armed || this.sceneMode !== pending.mode) return;
+            if (pending.sceneIdentity && pending.sceneIdentity !== sceneIdentityOf(this.scene)) {
+                // the scene changed under a hub stop: drop it, never replay it
+                this.pendingEffort = null;
+                return;
+            }
             if (!EFFORT_AGENTS.every((name) => pending.seen.has(name))) return;
             this.pendingEffort = null;
+            if (pending.scope === 'scene') {
+                this.applySceneAgentValues(effortPinPatch(this.state.agents, pending.mode, pending.stop));
+                return;
+            }
             for (const entry of effortPatch(this.state.agents, pending.mode, pending.stop)) {
                 const agent = this.state.agents.find((candidate) => candidate.name === entry.agent);
                 this.applyActionValues(agent, entry.action, entry);
             }
+        },
+        // Transport teardown / unmount: drop the hub writer's queued and
+        // in-flight work and any stop still waiting for a scene to report.
+        resetSceneAgentOverrides() {
+            this.overrides?.reset();
+            this.pendingEffort = null;
         },
         getQuickToggleActions(agent) {
             const result = {};
@@ -498,13 +532,19 @@ export default {
             this.agentMessagesRefs[agentName].openDialog();
         },
         handleMessage(data) {
+            // The scene-only writer tracks its own requests and scene generation
+            this.overrides?.handleMessage(data);
 
             // When a new scene is loaded, clear the messages and agentHasMessages
             if (data.type === "system" && data.id === 'scene.loaded') {
                 this.messages = {};
                 this.agentHasMessages = {};
-                // the agents report after this frame; frames from the load itself do not count
-                if (this.pendingEffort) {
+                // a hub stop belongs to the scene it was queued in: a load is a
+                // different scene, so it is dropped rather than re-armed
+                if (this.pendingEffort?.scope === 'scene') {
+                    this.pendingEffort = null;
+                } else if (this.pendingEffort) {
+                    // the agents report after this frame; frames from the load itself do not count
                     this.pendingEffort.armed = true;
                     this.pendingEffort.seen = new Set();
                     this.pendingEffort.until = Date.now() + PENDING_EFFORT_TTL;
@@ -589,7 +629,16 @@ export default {
         }
     },
     created() {
+        this.overrides = new SceneAgentOverridesCoordinator({
+            getWebsocket: () => this.getWebsocket(),
+            scene: () => this.scene,
+            state: this.overridesState,
+        });
         this.registerMessageHandler(this.handleMessage);
+    },
+    beforeUnmount() {
+        this.unregisterMessageHandler(this.handleMessage);
+        this.resetSceneAgentOverrides();
     },
 }
 </script>

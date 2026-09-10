@@ -1065,6 +1065,9 @@ export default {
       toggleAgentAction: (agentName, actionName) => this.toggleAgentAction(agentName, actionName),
       toggleAgentConfig: (agentName, actionName, configName) => this.toggleAgentConfig(agentName, actionName, configName),
       applyAgentValues: (agentName, actionName, values) => this.applyAgentValues(agentName, actionName, values),
+      applySceneAgentValues: (entries) => this.applySceneAgentValues(entries),
+      clearSceneAgentValues: (entries) => this.clearSceneAgentValues(entries),
+      sceneOverridesState: () => this.$refs.aiAgent?.overridesState || { busy: false, error: null },
       queueKnowledgeEffort: (stop, mode, options) => this.$refs.aiAgent.queueEffort(stop, mode, options),
       openAgentSettings: this.openAgentSettings,
       openClientSettings: this.openClientSettings,
@@ -1232,6 +1235,9 @@ export default {
         // and tell each sender, or its in-flight state (the wizard's
         // finishing/waitingForClient) survives the socket it died on
         this.configSaveQueue.dropAll('The connection to the backend was lost before the save was answered.');
+        // The hub writer's in-flight patch and any queued follow-ups cannot be
+        // answered on a dead socket either.
+        this.$refs.aiAgent?.resetSceneAgentOverrides?.();
         this.connected = false;
         this.configReceivedThisConnection = false;
         this.connecting = false;
@@ -1795,6 +1801,14 @@ export default {
       const agent = this.getAgents().find((candidate) => candidate.name === agentName);
       if (!agent?.actions?.[actionName]) return false;
       return this.$refs.aiAgent.applyActionValues(agent, actionName, values);
+    },
+    // The knowledge hub's scene-only writer: sparse patches against the scene
+    // overlay, never the global agent values.
+    applySceneAgentValues(entries) {
+      this.$refs.aiAgent?.applySceneAgentValues(entries);
+    },
+    clearSceneAgentValues(entries) {
+      this.$refs.aiAgent?.clearSceneAgentValues(entries);
     },
     toggleAgentConfig(agentName, actionName, configName) {
       const agent = this.getAgents().find((candidate) => candidate.name === agentName);

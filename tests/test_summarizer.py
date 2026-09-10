@@ -734,3 +734,71 @@ class TestSummarizeViaPromptRequest:
 
         assert "[no content.]" not in result
         assert "twenty characters" in result
+
+
+# ---------------------------------------------------------------------------
+# archive_extract_facts resolves the scene overlay, not the global value
+# ---------------------------------------------------------------------------
+
+
+class TestArchiveExtractFactsResolvesSceneOverrides:
+    def _overlay(self, tmp_path, value):
+        from talemate.scene_agent_settings import SceneAgentSettings
+
+        overlay = SceneAgentSettings(filepath=tmp_path / "agent-settings.json")
+        overlay.set_value("summarizer", "archive", "extract_facts", value)
+        return overlay
+
+    def test_overlay_disables_a_global_on(self, summarizer_scene, tmp_path):
+        scene, summarizer = summarizer_scene
+        summarizer.actions["archive"].config["extract_facts"].value = True
+        scene.agent_overrides = self._overlay(tmp_path, False)
+        assert summarizer.archive_extract_facts is False
+
+    def test_overlay_enables_a_global_off(self, summarizer_scene, tmp_path):
+        scene, summarizer = summarizer_scene
+        summarizer.actions["archive"].config["extract_facts"].value = False
+        scene.agent_overrides = self._overlay(tmp_path, True)
+        assert summarizer.archive_extract_facts is True
+
+    def test_removing_the_override_restores_the_global(
+        self, summarizer_scene, tmp_path
+    ):
+        scene, summarizer = summarizer_scene
+        summarizer.actions["archive"].config["extract_facts"].value = True
+        scene.agent_overrides = self._overlay(tmp_path, False)
+        assert summarizer.archive_extract_facts is False
+        scene.agent_overrides.clear_value("summarizer", "archive", "extract_facts")
+        assert summarizer.archive_extract_facts is True
+
+    async def test_summarize_follows_the_effective_switch(
+        self, summarizer_scene, tmp_path
+    ):
+        from unittest.mock import AsyncMock
+
+        from talemate.prompts import Prompt
+
+        scene, summarizer = summarizer_scene
+        summarizer.actions["archive"].config["extract_facts"].value = True
+        scene.agent_overrides = self._overlay(tmp_path, False)
+
+        with patch.object(Prompt, "request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = (
+                "<SUMMARY>a summary.</SUMMARY>",
+                {"summary": "a summary."},
+            )
+            await summarizer.summarize("dialogue text here", return_facts=True)
+
+        assert mock_request.call_args.kwargs["vars"]["extract_facts"] is False
+
+        # inverting the two sides asks for the facts section again
+        summarizer.actions["archive"].config["extract_facts"].value = False
+        scene.agent_overrides.set_value("summarizer", "archive", "extract_facts", True)
+        with patch.object(Prompt, "request", new_callable=AsyncMock) as mock_request:
+            mock_request.return_value = (
+                "<SUMMARY>a summary.</SUMMARY>",
+                {"summary": "a summary."},
+            )
+            await summarizer.summarize("dialogue text here", return_facts=True)
+
+        assert mock_request.call_args.kwargs["vars"]["extract_facts"] is True

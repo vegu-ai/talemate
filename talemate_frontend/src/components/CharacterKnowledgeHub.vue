@@ -85,8 +85,21 @@
 
             <v-card-subtitle class="text-uppercase pt-3">Thoroughness</v-card-subtitle>
             <v-card-text class="pt-1 pb-0">
-                <KnowledgeEffortSlider :mode="effortMode" :agents="getAgents()" @apply="applyEffort" />
+                <div class="d-flex align-center mb-1">
+                    <v-tooltip :text="effortOriginTooltip" location="top" max-width="320">
+                        <template v-slot:activator="{ props: originProps }">
+                            <v-chip v-bind="originProps" size="x-small" label variant="outlined" :color="effortOrigin.any ? 'secondary' : 'muted'">
+                                {{ effortOrigin.any ? 'Scene override' : 'Global settings' }}
+                            </v-chip>
+                        </template>
+                    </v-tooltip>
+                    <v-spacer></v-spacer>
+                    <v-btn v-if="hubOverridden" size="x-small" variant="text" :disabled="settingsLocked" @click="clearHub">Use global settings</v-btn>
+                </div>
+                <KnowledgeEffortSlider :mode="effortMode" :agents="getAgents()" :pin="true" :disabled="settingsLocked" @apply="applyEffort" />
             </v-card-text>
+            <v-card-text v-if="!canPersist" class="pt-1 pb-0 text-body-small text-muted">Save the scene to change its knowledge settings.</v-card-text>
+            <v-card-text v-else-if="saveError" class="pt-1 pb-0 text-body-small text-error">{{ saveError }}</v-card-text>
             <v-card-text class="pt-1 pb-0 text-body-small text-muted">{{ summary.text }}</v-card-text>
             <v-card-text v-if="!groups.length" class="pt-1 text-body-small text-muted">Waiting for the agents to report.</v-card-text>
             <v-expansion-panels v-else :model-value="individualOpen" variant="accordion" class="knowledge-hub-individual mt-1" @update:model-value="setIndividualOpen">
@@ -106,6 +119,7 @@
                                         <v-checkbox-btn
                                             v-if="group.master"
                                             :model-value="group.enabled"
+                                            :disabled="settingsLocked"
                                             :aria-label="`${group.label} on or off`"
                                             density="compact"
                                             color="primary"
@@ -118,7 +132,17 @@
                                             {{ group.agentLabel }} / {{ group.label }}
                                         </v-btn>
                                         <v-chip v-if="group.master && group.enabledOverridden" size="x-small" label variant="outlined" color="secondary" class="ml-1">scene override</v-chip>
+                                        <v-chip v-else-if="group.ownedOverridden" size="x-small" label variant="outlined" color="secondary" class="ml-1">scene override</v-chip>
                                     </v-list-item-title>
+                                    <template v-slot:append>
+                                        <v-btn
+                                            v-if="group.ownedOverridden"
+                                            size="x-small"
+                                            variant="text"
+                                            :disabled="settingsLocked"
+                                            :aria-label="`Use global settings for ${group.agentLabel} / ${group.label}`"
+                                            @click.stop="clearGroup(group)">Use global</v-btn>
+                                    </template>
                                 </v-list-item>
                                 <!-- not :disabled - Vuetify drops pointer events on a disabled item, which
                                      takes the tooltips with it; the checkbox and the click guard carry the state -->
@@ -128,9 +152,9 @@
                                     density="compact"
                                     class="knowledge-hub-toggle"
                                     :class="{ 'knowledge-hub-toggle-off': !group.enabled }"
-                                    v-bind="group.enabled ? { onClick: () => toggleConfig(group, toggle) } : {}">
+                                    v-bind="group.enabled && !settingsLocked ? { onClick: () => toggleConfig(group, toggle) } : {}">
                                     <template v-slot:prepend>
-                                        <v-checkbox-btn :model-value="toggle.value" :disabled="!group.enabled" :aria-label="toggle.label" tabindex="-1" density="compact" color="primary" hide-details @click.stop="toggleConfig(group, toggle)"></v-checkbox-btn>
+                                        <v-checkbox-btn :model-value="toggle.value" :disabled="!group.enabled || settingsLocked" :aria-label="toggle.label" tabindex="-1" density="compact" color="primary" hide-details @click.stop="toggleConfig(group, toggle)"></v-checkbox-btn>
                                     </template>
                                     <v-list-item-title class="text-body-small">
                                         {{ toggle.label }}
@@ -164,9 +188,17 @@
 import { reactive } from 'vue';
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
 import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
-import { effortMode, effortPatch, queueEffortAcrossSwitch } from '@/utils/knowledgeEffort';
+import { effortMode, effortPinPatch, queueEffortAcrossSwitch } from '@/utils/knowledgeEffort';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { resolveKnowledgeToggles, switchTally, thoroughnessSummary } from '@/utils/knowledgeHub';
+import {
+    effortOverrideState,
+    groupClearEntries,
+    groupHasOwnedOverride,
+    hubClearEntries,
+    hubHasOverrides,
+} from '@/utils/knowledgeOverrideOwnership';
+import { sceneCanPersist } from '@/utils/sceneAgentOverrides';
 import {
     PERSPECTIVES_LOCKED_HINT,
     PERSPECTIVES_OPEN_HINT,
@@ -199,6 +231,9 @@ export default {
         'toggleAgentAction',
         'toggleAgentConfig',
         'applyAgentValues',
+        'applySceneAgentValues',
+        'clearSceneAgentValues',
+        'sceneOverridesState',
         'queueKnowledgeEffort',
         'openAgentSettings',
     ],
@@ -231,7 +266,37 @@ export default {
             return effortMode(this.perspectives);
         },
         groups() {
-            return resolveKnowledgeToggles(this.getAgents(), { perspectives: this.perspectives });
+            const agents = this.getAgents();
+            return resolveKnowledgeToggles(agents, { perspectives: this.perspectives }).map((group) => {
+                const overlay = agents.find((candidate) => candidate.name === group.agent)?.data?.scene_overrides || {};
+                return { ...group, ownedOverridden: groupHasOwnedOverride(overlay, group.agent, group.action) };
+            });
+        },
+        // A scene without an on-disk identity cannot store overrides; while a
+        // batch is in flight the hub's write controls are held.
+        canPersist() {
+            return sceneCanPersist(this.scene ? this.scene() : null);
+        },
+        saving() {
+            return !!this.sceneOverridesState?.()?.busy;
+        },
+        saveError() {
+            return this.sceneOverridesState?.()?.error || null;
+        },
+        settingsLocked() {
+            return !this.canPersist || this.saving;
+        },
+        effortOrigin() {
+            return effortOverrideState(this.getAgents(), this.effortMode);
+        },
+        effortOriginTooltip() {
+            if (!this.effortOrigin.any) return 'All effort settings come from your global agent settings.';
+            return this.effortOrigin.complete
+                ? 'All effort settings come from this scene.'
+                : 'Mix of scene overrides and global settings.';
+        },
+        hubOverridden() {
+            return hubHasOverrides(this.getAgents());
         },
         summary() {
             return thoroughnessSummary(this.groups, this.perspectives);
@@ -316,21 +381,34 @@ export default {
         setPerspectives(enabled) {
             const payload = perspectivesPayload(this.sceneData, enabled);
             if (!payload) return false;
-            queueEffortAcrossSwitch(this.getAgents(), enabled, this.queueKnowledgeEffort);
+            // a hub-origin switch carries the stop into the new mode as a
+            // scene override, not as a global write
+            queueEffortAcrossSwitch(this.getAgents(), enabled,
+                (stop, mode) => this.queueKnowledgeEffort(stop, mode, { scope: 'scene' }));
             this.getWebsocket().send(JSON.stringify(payload));
             return true;
         },
         applyEffort(stop) {
-            for (const entry of effortPatch(this.getAgents(), this.effortMode, stop)) {
-                this.applyAgentValues(entry.agent, entry.action, entry);
-            }
+            if (this.settingsLocked) return;
+            this.applySceneAgentValues(effortPinPatch(this.getAgents(), this.effortMode, stop));
+        },
+        clearGroup(group) {
+            if (this.settingsLocked) return;
+            this.clearSceneAgentValues(groupClearEntries(group.agent, group.action));
+        },
+        clearHub() {
+            if (this.settingsLocked) return;
+            this.clearSceneAgentValues(hubClearEntries());
         },
         toggleGroup(group) {
-            return this.toggleAgentAction(group.agent, group.action);
+            if (this.settingsLocked) return false;
+            this.applySceneAgentValues([{ agent: group.agent, action: group.action, enabled: !group.enabled, config: {} }]);
+            return true;
         },
         toggleConfig(group, toggle) {
-            if (!group.enabled) return false;
-            return this.toggleAgentConfig(group.agent, group.action, toggle.key);
+            if (!group.enabled || this.settingsLocked) return false;
+            this.applySceneAgentValues([{ agent: group.agent, action: group.action, config: { [toggle.key]: !toggle.value } }]);
+            return true;
         },
         handleMessage(data) {
             if (data.type === 'agent_status' && data.name === 'summarizer' && data.data?.actions?.fact_chronology) {

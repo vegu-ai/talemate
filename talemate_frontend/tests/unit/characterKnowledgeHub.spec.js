@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fileURLToPath, URL } from 'node:url';
 import Hub from '@/components/CharacterKnowledgeHub.vue';
 import { lift, readSource } from './helpers/liftMethod.js';
+import { agentsAt } from './helpers/effortAgents.js';
 import { perspectivesPayload } from '@/utils/sceneSettings';
 
 const worldState = readSource(
@@ -12,6 +13,8 @@ const talemateApp = readSource(
 const sceneData = {
     knowledge_eligibility: 'legacy',
     can_change_knowledge_eligibility: true,
+    filename: 'scene.json',
+    project_name: 'proj',
     experimental: false,
     immutable_save: false,
     writing_style_template: null,
@@ -32,6 +35,10 @@ function hub({ scene = sceneData, agents = [], open = false } = {}) {
         getWebsocket: () => ({ send: (payload) => sent.push(JSON.parse(payload)) }),
         scene: () => ({ data: scene }),
         getAgents: () => agents,
+        applyAgentValues: vi.fn(() => true),
+        applySceneAgentValues: vi.fn(() => true),
+        clearSceneAgentValues: vi.fn(() => true),
+        sceneOverridesState: () => ({ busy: false, error: null }),
         toggleAgentAction: vi.fn(() => true),
         toggleAgentConfig: vi.fn(() => true),
         openAgentSettings: vi.fn(),
@@ -228,18 +235,24 @@ const conversation = (config, enabled = true) => ({
 const ledgerField = { type: 'bool', label: 'Track learning from dialogue', value: false, note_on_value: { true: { text: 'One more request after a character message.' } } };
 
 describe('the thoroughness toggles', () => {
-    it('hands a toggle to the drawer write path', () => {
+    it('hands a toggle to the scene-only writer', () => {
         const vm = hub({ agents: [conversation({ ledger: ledgerField })] });
         const [group] = vm.groups;
         expect(vm.toggleConfig(group, group.toggles[0])).toBe(true);
-        expect(vm.toggleAgentConfig).toHaveBeenCalledWith('conversation', 'character_knowledge', 'ledger');
+        expect(vm.applySceneAgentValues).toHaveBeenCalledWith([
+            { agent: 'conversation', action: 'character_knowledge', config: { ledger: true } },
+        ]);
+        expect(vm.toggleAgentConfig).not.toHaveBeenCalled();
         expect(vm.toggleGroup(group)).toBe(true);
-        expect(vm.toggleAgentAction).toHaveBeenCalledWith('conversation', 'character_knowledge');
+        expect(vm.applySceneAgentValues).toHaveBeenLastCalledWith([
+            { agent: 'conversation', action: 'character_knowledge', enabled: false, config: {} },
+        ]);
+        expect(vm.toggleAgentAction).not.toHaveBeenCalled();
     });
 
     it('gives an off group no click handler, so its rows do not look clickable', () => {
         const source = readSource(fileURLToPath(new URL('../../src/components/CharacterKnowledgeHub.vue', import.meta.url)));
-        expect(source).toContain(`v-bind="group.enabled ? { onClick: () => toggleConfig(group, toggle) } : {}"`);
+        expect(source).toContain(`v-bind="group.enabled && !settingsLocked ? { onClick: () => toggleConfig(group, toggle) } : {}"`);
         expect(source).not.toMatch(/v-for="toggle in group\.toggles"[\s\S]{0,300}@click="toggleConfig/);
     });
 
@@ -326,6 +339,61 @@ describe('where the hub sits', () => {
     it('names the control for a screen reader', () => {
         expect(Hub.props.name.required).toBe(true);
         expect(Hub.emits).toEqual(['open-knowledge']);
+    });
+});
+
+describe('the hub origin indicators and resets', () => {
+    it('reads Global settings with no override and Scene override once one key is pinned', () => {
+        const vm = hub({ agents: agentsAt('legacy', 'light') });
+        expect(vm.effortOrigin.any).toBe(false);
+        expect(vm.effortOriginTooltip).toMatch(/global agent settings/);
+
+        const agents = agentsAt('legacy', 'light');
+        agents[1].data.scene_overrides = { actions: { archive: { config: { extract_facts: { value: true } } } } };
+        const mixed = hub({ agents });
+        expect(mixed.effortOrigin.any).toBe(true);
+        expect(mixed.effortOrigin.complete).toBe(false);
+        expect(mixed.effortOriginTooltip).toMatch(/Mix of scene overrides/);
+    });
+
+    it('clears one group\'s owned keys through the scene-only writer', () => {
+        const agents = agentsAt('legacy', 'light');
+        agents[1].data.scene_overrides = { actions: { archive: { config: { extract_facts: { value: true } } } } };
+        const vm = hub({ agents });
+        const group = vm.groups.find((g) => g.action === 'archive');
+        expect(group.ownedOverridden).toBe(true);
+        vm.clearGroup(group);
+        expect(vm.clearSceneAgentValues).toHaveBeenCalledWith([
+            { agent: 'summarizer', action: 'archive', config: 'extract_facts' },
+        ]);
+    });
+
+    it('clears the whole hub across both modes, hidden keys included', () => {
+        const agents = agentsAt('legacy', 'light');
+        agents[0].data.scene_overrides = { actions: { character_knowledge: { config: { absence_limit: { value: 7 } } } } };
+        const vm = hub({ agents });
+        expect(vm.hubOverridden).toBe(true);
+        vm.clearHub();
+        expect(vm.clearSceneAgentValues).toHaveBeenCalledWith(expect.arrayContaining([
+            { agent: 'conversation', action: 'character_knowledge', config: 'absence_limit' },
+            { agent: 'summarizer', action: 'perceptions', config: 'automatic_repair' },
+        ]));
+    });
+
+    it('locks the writer for an unsaved scene', () => {
+        const vm = hub({ scene: { ...sceneData, filename: null } });
+        expect(vm.canPersist).toBe(false);
+        expect(vm.settingsLocked).toBe(true);
+        vm.applyEffort('light');
+        expect(vm.applySceneAgentValues).not.toHaveBeenCalled();
+    });
+
+    it('holds the writer while a batch is in flight', () => {
+        const vm = hub();
+        vm.sceneOverridesState = () => ({ busy: true, error: null });
+        expect(vm.settingsLocked).toBe(true);
+        vm.toggleGroup({ agent: 'memory', action: 'topics', enabled: true });
+        expect(vm.applySceneAgentValues).not.toHaveBeenCalled();
     });
 });
 

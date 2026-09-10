@@ -87,7 +87,7 @@ When enabled, strictly enforces the boundary between dialogue and summary sectio
 
 The maximum number of tokens to allocate for scene history context (0-262144). Character previews use the Conversation client’s context window when set to 0, and cap a positive budget at that window. The shared Scene preview uses 8192 tokens when set to 0. The actual budget used during generation is determined by the client's context window minus other prompt components.
 
-Character perspectives selects stored views within this budget. The Best Fit, dialogue/detail ratio and boundary controls apply to the shared Scene view; they do not change how the character's stored views are selected.
+Character perspectives select stored views with the same controls. With Best Fit enabled, Min. Dialogue reserves that many recent visible stored message views even when the scan crosses a summary boundary. This floor can exceed the token budget; absent or unavailable passages are never invented to satisfy it. Max. Dialogue caps raw message detail. With Best Fit disabled, Dialogue Ratio, Summary Detail Ratio and Enforce Boundary divide the character's stored raw and summary views just as they do for the shared Scene view.
 
 ## Workflow
 

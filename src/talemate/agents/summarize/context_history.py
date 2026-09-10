@@ -32,6 +32,7 @@ from talemate.knowledge.diagnostics import ContextDiagnostics
 from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.context import ContextHistoryMessage, project_character_history
+from talemate.knowledge.history_selection import HistorySelectionPolicy
 from talemate.knowledge.presence import layer_entry_presence
 from talemate.util import count_tokens
 from talemate.util.prompt import condensed
@@ -266,9 +267,9 @@ class ContextHistoryMixin:
                         icon="mdi-information-outline",
                         color="primary",
                         text=(
-                            "This caps collection but does not move the summary "
-                            "boundary. If only 10 messages exist past the boundary, "
-                            "setting this to 100 won't increase dialogue rendered."
+                            "This limits raw messages across the initial recent "
+                            "window and later detail expansion. It is a cap, not "
+                            "a requested amount of dialogue."
                         ),
                     ),
                     value=250,
@@ -428,6 +429,30 @@ class ContextHistoryMixin:
             "context_history", summarized_to=summarized_to, history_len=history_len
         )
         return summarized_to
+
+    def _perspective_history_policy(
+        self,
+        scene: Scene,
+        *,
+        best_fit: bool,
+        min_dialogue: int,
+        max_dialogue: int,
+        dialogue_ratio: int,
+        summary_detail_ratio: int,
+        enforce_boundary: bool,
+        assured_dialogue_num: int,
+    ) -> HistorySelectionPolicy:
+        return HistorySelectionPolicy(
+            best_fit=best_fit,
+            min_dialogue=max(0, min_dialogue),
+            max_dialogue=max(0, max_dialogue),
+            dialogue_ratio=max(0, min(100, dialogue_ratio)),
+            summary_detail_ratio=max(0, min(100, summary_detail_ratio)),
+            enforce_boundary=enforce_boundary,
+            layered_history_available=self._has_layered_history(scene),
+            assured_dialogue_num=max(0, assured_dialogue_num),
+            summary_boundary=self._context_history_compute_summarized_to(scene),
+        )
 
     @staticmethod
     def _is_dialogue_qualifying(message, params: ContextHistoryParams) -> bool:
@@ -1791,6 +1816,16 @@ class ContextHistoryMixin:
             and params.perspective
             and character_knowledge_enabled(scene)
         ):
+            policy = self._perspective_history_policy(
+                scene,
+                best_fit=self.scene_history_best_fit,
+                min_dialogue=self.scene_history_best_fit_min_dialogue,
+                max_dialogue=self.scene_history_best_fit_max_dialogue,
+                dialogue_ratio=self.scene_history_dialogue_ratio,
+                summary_detail_ratio=self.scene_history_summary_detail_ratio,
+                enforce_boundary=self.scene_history_enforce_boundary,
+                assured_dialogue_num=params.assured_dialogue_num,
+            )
             return self._context_history_finalize(
                 [],
                 project_character_history(
@@ -1801,6 +1836,7 @@ class ContextHistoryMixin:
                     keep_director=params.keep_director,
                     show_hidden=params.show_hidden,
                     direction_mode=get_agent("director").actor_direction_mode,
+                    policy=policy,
                 ),
                 [],
             )
@@ -1905,7 +1941,18 @@ class ContextHistoryMixin:
             and params.perspective
             and character_knowledge_enabled(scene)
         ):
+            policy = self._perspective_history_policy(
+                scene,
+                best_fit=eff_best_fit,
+                min_dialogue=eff_best_fit_min_dialogue,
+                max_dialogue=eff_best_fit_max_dialogue,
+                dialogue_ratio=eff_dialogue_ratio,
+                summary_detail_ratio=eff_summary_detail_ratio,
+                enforce_boundary=eff_enforce_boundary,
+                assured_dialogue_num=params.assured_dialogue_num,
+            )
             entries = []
+            selection_result = []
             project_character_history(
                 scene,
                 params.perspective,
@@ -1916,7 +1963,10 @@ class ContextHistoryMixin:
                 direction_mode=get_agent("director").actor_direction_mode,
                 entries=entries,
                 diagnostics=params._diagnostics,
+                policy=policy,
+                selection_result=selection_result,
             )
+            selected = selection_result[0]
             sections = []
             labels = {
                 "intro": "Introduction",
@@ -1925,7 +1975,7 @@ class ContextHistoryMixin:
                 "layer": "Layered History",
                 "disclosure": "Disclosures",
             }
-            for entry in reversed(entries):
+            for entry in entries:
                 if not sections or (
                     sections[-1]["type"],
                     sections[-1].get("layer"),
@@ -1942,14 +1992,21 @@ class ContextHistoryMixin:
                     )
                 section = sections[-1]
                 section["entries"].append(entry["text"])
-                section["token_count"] += count_tokens(entry["text"])
+                section["token_count"] += entry["token_count"]
                 section["entry_count"] += 1
+            layer_allocations = [
+                allocation
+                for name, allocation in selected.allocations.items()
+                if name.startswith("layer_")
+            ]
             return {
                 "budget": {
                     "total": budget,
-                    "dialogue": budget,
-                    "archived": 0,
-                    "layers": [],
+                    "dialogue": selected.allocations.get("dialogue", 0),
+                    "archived": selected.allocations.get("archived", 0),
+                    "layers": layer_allocations,
+                    "used": selected.total_tokens,
+                    "overflow": selected.overflow_tokens,
                 },
                 "sections": sections,
                 "summary": {
@@ -1959,10 +2016,12 @@ class ContextHistoryMixin:
                     "max_budget": eff_max_budget,
                     "best_fit": eff_best_fit,
                     "best_fit_min_dialogue": eff_best_fit_min_dialogue,
-                    "best_fit_max_dialogue": eff_best_fit_max_dialogue,
+                    "best_fit_max_dialogue": policy.effective_max_dialogue,
                     "enforce_boundary": eff_enforce_boundary,
                     "dialogue_ratio": eff_dialogue_ratio,
                     "summary_detail_ratio": eff_summary_detail_ratio,
+                    "dialogue_messages": selected.raw_message_count,
+                    "overflow_tokens": selected.overflow_tokens,
                 },
             }
 

@@ -192,7 +192,7 @@ In Standard mode with Character Knowledge enabled, the cache fingerprint include
 
 ## Scene History
 
-Controls how scene history is split between actual dialogue and summarized content when generating context for AI prompts. These settings can also be adjusted and previewed through the [Scene Context tab](/talemate/user-guide/prompts/context-history-review/) in the Prompt Manager.
+Controls how scene history is split between actual dialogue and summarized content when generating context for AI prompts. The same controls apply to the reader-facing Scene view and to each character's stored views in Character perspectives mode. These settings can also be adjusted and previewed through the [Scene Context tab](/talemate/user-guide/prompts/context-history-review/) in the Prompt Manager.
 
 ##### Max. Budget
 
@@ -212,14 +212,14 @@ When best fit mode is enabled, two additional controls become available:
 
 ##### Min. Dialogue Messages
 
-Minimum number of recent dialogue messages guaranteed in best-fit mode, regardless of budget. Set to 0 to disable.
+Minimum number of recent eligible messages guaranteed in best-fit mode, regardless of budget. In Character perspectives mode, these are stored character views: the scan crosses summary boundaries when needed and skips passages the character did not witness or cannot read. The guaranteed window may exceed the token budget. Set to 0 to disable.
 
 - **Range**: 0 -- 15
 - **Default**: 5
 
 ##### Max. Dialogue Messages
 
-Maximum number of dialogue messages to consider in best-fit mode. Limits how far back the algorithm scans, improving performance on large scenes. This caps collection but does not move the summary boundary.
+Maximum number of raw messages selected in best-fit mode, including messages exposed by later detail expansion. This is a cap, not a requested amount of detail; summaries still cover older history when possible. An effective maximum lower than Min. Dialogue is raised to the minimum.
 
 - **Range**: 10 -- 500
 - **Default**: 250
@@ -228,14 +228,14 @@ When best fit mode is disabled, you have direct control over the budget distribu
 
 ##### Dialogue Ratio
 
-Percentage of context budget allocated to actual scene dialogue. Higher values preserve more recent conversation at the expense of summarized history.
+Percentage of context budget allocated to actual scene dialogue when Best Fit Mode is off. Higher values preserve more recent conversation at the expense of summarized history. Character perspectives applies the same allocation to stored message views.
 
 - **Range**: 10% -- 90%
 - **Default**: 50%
 
 ##### Summary Detail Ratio
 
-Percentage of remaining budget allocated to each successive summary layer. Higher values give more budget to recent, detailed summaries.
+Percentage of remaining budget allocated to each successive summary layer when Best Fit Mode is off. Higher values give more budget to recent, detailed summaries, including stored audience summaries in Character perspectives mode.
 
 - **Range**: 10% -- 90%
 - **Default**: 50%

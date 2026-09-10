@@ -84,6 +84,26 @@ describe('character context review', () => {
     expect(vm.sent[2].overrides.max_budget).toBe(512);
   });
 
+  it('adopts effective history controls for a character perspective', () => {
+    const vm = review();
+    vm.selectedCharacter = 'Bob';
+    vm.fetchPreview();
+    vm.receive(response(vm.sent[0], { summary: {
+      total_tokens: 45, max_budget: 1024, dialogue_ratio: 35,
+      summary_detail_ratio: 70, enforce_boundary: true, best_fit: true,
+      best_fit_min_dialogue: 7, best_fit_max_dialogue: 15,
+    } }));
+    expect(vm.overrides).toEqual({
+      dialogue_ratio: 35,
+      summary_detail_ratio: 70,
+      max_budget: 1024,
+      enforce_boundary: true,
+      best_fit: true,
+      best_fit_min_dialogue: 7,
+      best_fit_max_dialogue: 15,
+    });
+  });
+
   it('a stale response cannot replace the selected character preview', () => {
     const vm = review();
     vm.fetchPreview();

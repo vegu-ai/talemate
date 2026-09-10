@@ -202,10 +202,9 @@ async def test_summary_does_not_mark_its_underlying_messages_as_rendered(cast):
                 }
             ],
         )
-    else:
-        get_agent("summarizer").actions["manage_scene_history"].config[
-            "dialogue_ratio"
-        ].value = 30
+    get_agent("summarizer").actions["manage_scene_history"].config[
+        "dialogue_ratio"
+    ].value = 30
     selected = history(scene, 100)
     assert any("earlier lantern passages" in part for part in selected)
     assert identities(selected) == [message.id for message in scene.history[8:]]

@@ -263,7 +263,7 @@ this step adds no historical reconstruction or long-term perception retrieval.
 
 `talemate.knowledge.context.project_character_history(scene, character, *,
 budget=None, max_messages=None, before_message_id=None, keep_director=False,
-show_hidden=False, direction_mode="direction")` is the shared projection point
+show_hidden=False, direction_mode="direction", policy=None)` is the shared projection point
 for actor history and character-facing editor context, including stored base and
 layered audience summaries. Later supplemental-context steps should extend this
 function rather than introduce a second audience selector. It requires perception mode and a canonical character
@@ -287,9 +287,17 @@ including its visible Retry/Cancel dialog. Rewrite and Unslop instead render opt
 history through `revision_context_history`, using the bounded reader-history fallback
 described above. The projection performs no model request and stores no cache across reads.
 
-The projection walks backward and budgets the replacement text, stopping before
-an entry would exceed the token budget or the returned-message limit. Hidden
-messages are skipped unless requested. `before_message_id` excludes the revision
+Direct projection callers walk backward under a strict replacement-text budget and
+all-parts limit. Summarizer prompt history instead passes an explicit selection
+policy. With Best fit on, it guarantees the configured minimum number of distinct
+eligible stored message IDs across summary boundaries, even when that floor exceeds
+the token budget. It then represents older history with the most compressed
+admissible summaries and expands newer segments first while budget and the effective
+raw-message maximum allow. The maximum is raised to the minimum if a programmatic
+configuration contradicts the floor; it is a cap, not a target. With Best fit off,
+the dialogue ratio and recursive summary-detail allocations select stored message
+and summary views, and the boundary switch retains its existing assured-recent-message
+behavior. Hidden messages are skipped unless requested. `before_message_id` excludes the revision
 target and all later messages; a removed target cancels the read. Director guidance
 is included only when requested and addressed to the viewing character. The
 reader message objects and their formatting are unchanged.
@@ -306,8 +314,22 @@ audience summaries for fully covered older spans, preferring coarser summaries
 that fit, and keeps the unsummarized tail as message views. Spans crossing a
 revision boundary are excluded. A span containing hidden messages or requested
 director guidance descends to its sources so summarization cannot bypass those
-filters. The projection may return less than the requested budget. Reader/author calls without a perspective and legacy
-scenes retain their existing history assembly.
+filters.
+
+Min/Max Dialogue apply only in Best fit mode. Narration and investigation passage
+views count toward the floor; summaries, disclosures, introductions and director
+guidance do not. Absent, unavailable and omitted passages neither count nor acquire
+reader-text fallbacks. Disclosures keep their acquisition positions and are
+represented once, explicitly or through complete summary coverage. Both policies
+preserve stable raw message IDs for memory-overlap filtering and perform no model
+request.
+
+Production prompt history and its character context preview consume the same
+structured, chronological selection result. The preview reports effective settings,
+allocation, actual token cost and floor overflow; preview-local overrides never
+mutate saved agent settings. The projection may return less than the requested budget.
+Reader/author calls without a perspective and legacy scenes retain their existing
+history assembly.
 
 Character dialogue, add-detail, rewrite and unslop use the same history projection.
 Repetition detection is author output: its corpus remains exact reader prose in

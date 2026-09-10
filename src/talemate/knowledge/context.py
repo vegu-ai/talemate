@@ -23,6 +23,10 @@ from talemate.util import count_tokens
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
+    from talemate.knowledge.history_selection import (
+        HistorySelectionPolicy,
+        HistorySelectionResult,
+    )
 
 
 log = structlog.get_logger(__name__)
@@ -160,7 +164,41 @@ def project_character_history(
     read: PerspectiveReadContext | None = None,
     entries: list[dict] | None = None,
     diagnostics=None,
+    policy: "HistorySelectionPolicy | None" = None,
+    selection_result: list["HistorySelectionResult"] | None = None,
 ) -> list[str]:
+    if policy is not None:
+        from talemate.knowledge.history_selection import select_character_history
+
+        selected = select_character_history(
+            scene,
+            character,
+            budget=budget if budget is not None else 2**63 - 1,
+            policy=policy,
+            before_message_id=before_message_id,
+            keep_director=keep_director,
+            show_hidden=show_hidden,
+            direction_mode=direction_mode,
+            read=read,
+            diagnostics=diagnostics,
+        )
+        if selection_result is not None:
+            selection_result.append(selected)
+        if entries is not None:
+            entries.extend(
+                {
+                    "text": entry.text,
+                    "type": entry.type,
+                    "id": entry.id,
+                    "layer": entry.layer,
+                    "token_count": entry.token_count,
+                    "source_references": entry.source_references,
+                    "covered_message_ids": entry.covered_message_ids,
+                    "covered_disclosure_ids": entry.covered_disclosure_ids,
+                }
+                for entry in selected.entries
+            )
+        return selected.rendered()
     if not character_knowledge_enabled(scene):
         raise ValueError("Character history projection requires perception mode")
     if character not in scene.character_data:

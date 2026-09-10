@@ -52,10 +52,6 @@
               {{ preview.summary.history_tokens ?? preview.summary.total_tokens }} / {{ preview.budget.total }} history tokens
             </v-chip>
             <v-chip v-if="preview.summary.knowledge_tokens" size="small" variant="tonal" label class="mb-4">{{ preview.summary.knowledge_tokens }} knowledge tokens</v-chip>
-            <div v-if="selectedCharacter && preview.knowledge_mode === 'perception'" class="note-block text-body-small mb-4">
-              Character perspectives uses stored views. Budget limits this history preview; the other history controls apply to Scene view.
-            </div>
-
             <!-- Best Fit Mode -->
             <div class="sidebar-field mb-4">
               <v-checkbox

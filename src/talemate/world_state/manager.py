@@ -835,13 +835,15 @@ class WorldStateManager:
             known_facts=recent,
             known_facts_total=total,
             known_fact_ids=[fact.id for fact in known],
-            disclosures=[
-                item
-                for item in self.scene.knowledge.disclosures
-                if character_name in item.audience
-            ]
-            if self.scene.knowledge and character_knowledge_enabled(self.scene)
-            else [],
+            disclosures=(
+                [
+                    item
+                    for item in self.scene.knowledge.disclosures
+                    if character_name in item.audience
+                ]
+                if self.scene.knowledge and character_knowledge_enabled(self.scene)
+                else []
+            ),
             edges=edges,
             targets=self.knowledge_targets(),
             coverage=coverage(self.scene, character_name, known=known),
@@ -859,6 +861,36 @@ class WorldStateManager:
         return grant_disclosure(
             self.scene, character, target, text=text, whole_entry=whole_entry
         )
+
+    def character_entry_briefing(self, character: str, disclosure_id: str):
+        """Resolve one entry-briefing disclosure for its exact audience."""
+
+        from talemate.agents.conversation.entry_context import (
+            perspective_entry_briefing,
+        )
+
+        if not character_knowledge_enabled(self.scene):
+            raise ValueError(
+                "Character entry briefing controls require perception mode"
+            )
+        if self.scene.get_character(character) is None:
+            raise ValueError(f"Unknown character: {character}")
+        disclosure = perspective_entry_briefing(self.scene, character, disclosure_id)
+        if disclosure is None:
+            raise ValueError("Character entry briefing disclosure does not exist")
+        return disclosure
+
+    def remove_character_entry_briefing(
+        self, character: str, disclosure_id: str
+    ) -> Disclosure:
+        """Remove only a validated generated entry briefing disclosure."""
+
+        from talemate.agents.conversation.entry_context import (
+            remove_perspective_entry_briefing,
+        )
+
+        self.character_entry_briefing(character, disclosure_id)
+        return remove_perspective_entry_briefing(self.scene, character, disclosure_id)
 
     def grant_facts(self, name: str, fact_ids: list[str]) -> list[KnowledgeChange]:
         """Grant several facts at once; a grant lifts an earlier block on the same fact."""
@@ -964,9 +996,11 @@ class WorldStateManager:
                 reinforcement=(
                     reinforcement
                     if reinforcement is not None
-                    else existing.reinforcement
-                    if existing and existing.text == text
-                    else None
+                    else (
+                        existing.reinforcement
+                        if existing and existing.text == text
+                        else None
+                    )
                 ),
             )
         elif meta.get("typ") == "details":

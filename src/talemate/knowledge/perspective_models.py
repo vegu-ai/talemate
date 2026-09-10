@@ -201,12 +201,23 @@ class PerspectiveSourceModel(BaseModel):
 
 class Disclosure(AudienceRecord):
     origin: str | None = None
+    origin_scene_ts: int | None = Field(default=None, ge=0, strict=True)
+    away_scene_ts: int | None = Field(default=None, ge=0, strict=True)
     message_id_boundary: int = Field(ge=0, strict=True)
     id: str = Field(default_factory=lambda: uuid.uuid4().hex, min_length=1)
     revision: int = Field(default=1, ge=1, strict=True)
     text: StrictStr = Field(min_length=1)
     acquired: Acquisition
     provenance: tuple[SourceReference, ...] = ()
+
+    @model_serializer(mode="wrap")
+    def serialize_entry_scene_timestamps(self, handler):
+        data = handler(self)
+        if self.origin_scene_ts is None:
+            data.pop("origin_scene_ts", None)
+        if self.away_scene_ts is None:
+            data.pop("away_scene_ts", None)
+        return data
 
     @field_validator("text")
     @classmethod

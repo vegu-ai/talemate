@@ -19,7 +19,6 @@ from talemate.knowledge.perspective_models import (
     content_digest,
 )
 
-
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
     from talemate.scene_message import SceneMessage
@@ -319,9 +318,9 @@ def _fresh_depth(scene, reference, character, visited, *, readable, read, remain
             dependency,
             character,
             visited,
-            readable="summary"
-            if readable and reference.kind == "summary"
-            else readable,
+            readable=(
+                "summary" if readable and reference.kind == "summary" else readable
+            ),
             read=read,
             remaining=remaining - 1,
         )
@@ -509,10 +508,10 @@ def set_source_perspectives(
                     character,
                     set(),
                     readable=(
-                        "summary" if kind == "summary" else output.status == "ready"
-                    )
-                    if output.status in ("ready", "omitted")
-                    else False,
+                        ("summary" if kind == "summary" else output.status == "ready")
+                        if output.status in ("ready", "omitted")
+                        else False
+                    ),
                     read=read,
                 )
                 for character in output.audience
@@ -603,6 +602,9 @@ def add_disclosure(
     *,
     provenance: Iterable[SourceReference] = (),
     origin: str | None = None,
+    message_id_boundary: int | None = None,
+    origin_scene_ts: int | None = None,
+    away_scene_ts: int | None = None,
 ) -> Disclosure:
     _require_enabled(scene)
     disclosure = Disclosure(
@@ -611,9 +613,13 @@ def add_disclosure(
         acquired=_acquire(scene),
         provenance=provenance,
         origin=origin,
-        message_id_boundary=max(
-            (item.id for item in message_sources(scene)), default=0
+        message_id_boundary=(
+            max((item.id for item in message_sources(scene)), default=0)
+            if message_id_boundary is None
+            else message_id_boundary
         ),
+        origin_scene_ts=origin_scene_ts,
+        away_scene_ts=away_scene_ts,
     )
     _validate_audience(scene, disclosure.audience)
     for reference in disclosure.provenance:
@@ -645,6 +651,89 @@ def add_disclosure(
     )
     reference = source_reference(scene, "disclosure", disclosure.id)
     _notify(scene, reference, reference, "views")
+    return disclosure
+
+
+def replace_disclosure(
+    scene: "Scene",
+    disclosure_id: str,
+    text: str,
+    *,
+    preserve_boundary: bool = False,
+    message_id_boundary: int | None = None,
+    origin_scene_ts: int | None = None,
+    away_scene_ts: int | None = None,
+) -> Disclosure:
+    """Replace one disclosure in place and invalidate its derived knowledge."""
+
+    _require_enabled(scene)
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("Disclosure replacement text must be nonempty")
+    state = scene.knowledge or SceneKnowledge()
+    previous = next(
+        (item for item in state.disclosures if item.id == disclosure_id), None
+    )
+    if previous is None:
+        raise ValueError("Disclosure does not exist")
+    old = SourceReference(kind="disclosure", id=previous.id, revision=previous.revision)
+    acquired = _acquire(scene)
+    replacement = previous.model_copy(
+        update={
+            "text": text.strip(),
+            "revision": previous.revision + 1,
+            "acquired": acquired,
+            "message_id_boundary": (
+                message_id_boundary
+                if message_id_boundary is not None
+                else previous.message_id_boundary
+                if preserve_boundary
+                else max((item.id for item in message_sources(scene)), default=0)
+            ),
+            "origin_scene_ts": (
+                previous.origin_scene_ts if origin_scene_ts is None else origin_scene_ts
+            ),
+            "away_scene_ts": (
+                previous.away_scene_ts if preserve_boundary else away_scene_ts
+            ),
+        }
+    )
+    scene.knowledge = state.model_copy(
+        update={
+            "disclosures": tuple(
+                replacement if item.id == disclosure_id else item
+                for item in state.disclosures
+            )
+        }
+    )
+    _commit_order(scene, acquired)
+    new = SourceReference(
+        kind="disclosure", id=replacement.id, revision=replacement.revision
+    )
+    _notify(scene, old, new, "content")
+    return replacement
+
+
+def remove_disclosure(scene: "Scene", disclosure_id: str) -> Disclosure:
+    """Remove one disclosure and invalidate knowledge derived from it."""
+
+    _require_enabled(scene)
+    state = scene.knowledge or SceneKnowledge()
+    disclosure = next(
+        (item for item in state.disclosures if item.id == disclosure_id), None
+    )
+    if disclosure is None:
+        raise ValueError("Disclosure does not exist")
+    scene.knowledge = state.model_copy(
+        update={
+            "disclosures": tuple(
+                item for item in state.disclosures if item.id != disclosure_id
+            )
+        }
+    )
+    reference = SourceReference(
+        kind="disclosure", id=disclosure.id, revision=disclosure.revision
+    )
+    _notify(scene, reference, None, "deleted")
     return disclosure
 
 

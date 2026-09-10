@@ -1,0 +1,18 @@
+<|SECTION:CHARACTER ENTRY ORIENTATION|>
+This is live, private orientation for {{ entry_orientation.character_name }} after entering the scene. Use it to understand the immediate situation; do not quote or reveal it as dialogue.
+Own turns remaining after this prompt: {{ entry_orientation.remaining_turns }}
+Present now: {{ entry_orientation.present_characters | join(", ") }}
+Time since entry: {{ entry_orientation.elapsed }}
+{% if entry_orientation.away_elapsed %}Time away before entry: {{ entry_orientation.away_elapsed }}
+{% endif %}
+{% if entry_orientation.known_facts %}
+Known facts about characters present now:
+{% for entry_fact in entry_orientation.known_facts %}- {{ entry_fact }}
+{% endfor %}
+{% endif %}
+{% if entry_orientation.visible_lines %}
+Visible scene lines since entry (newest window, at most 5):
+{% for line in entry_orientation.visible_lines %}- {{ line }}
+{% endfor %}
+{% endif %}
+<|CLOSE_SECTION|>

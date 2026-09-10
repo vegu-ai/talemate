@@ -4,10 +4,16 @@ Response specifications for the conversation agent's knowledge opt-ins.
 
 import re
 
-from talemate.prompts.response import AnchorExtractor, Extractor, ResponseSpec
+from talemate.prompts.response import (
+    AnchorExtractor,
+    Extractor,
+    ResponseSpec,
+    StrictAnchorExtractor,
+)
 
 __all__ = [
     "ItemBlockExtractor",
+    "ENTRY_BRIEFING_SPEC",
     "MEMORY_PASS_SPEC",
     "KNOWLEDGE_LEDGER_SPEC",
     "KNOWLEDGE_LEDGER_FACTS_SPEC",
@@ -40,6 +46,21 @@ class ItemBlockExtractor(Extractor):
         ]
 
 
+class IsolatedStrictAnchorExtractor(StrictAnchorExtractor):
+    """Strict extraction that rejects markup from a sibling response section."""
+
+    forbidden_anchors: tuple[str, ...] = ()
+
+    def extract(self, text: str) -> str | None:
+        content = super().extract(text)
+        if content is None:
+            return None
+        lowered = content.lower()
+        if any(anchor.lower() in lowered for anchor in self.forbidden_anchors):
+            return None
+        return content
+
+
 MEMORY_PASS_SPEC = ResponseSpec(
     extractors={
         "answer": ITEMS_CONTAINER,
@@ -59,6 +80,22 @@ KNOWLEDGE_LEDGER_FACTS_SPEC = ResponseSpec(
     extractors={
         **KNOWLEDGE_LEDGER_SPEC.extractors,
         "facts": AnchorExtractor(left="<FACTS>", right="</FACTS>"),
+    },
+    required=[],
+)
+
+ENTRY_BRIEFING_SPEC = ResponseSpec(
+    extractors={
+        "briefing": IsolatedStrictAnchorExtractor(
+            left="<BRIEFING>",
+            right="</BRIEFING>",
+            forbidden_anchors=("<OFFSCREEN", "</OFFSCREEN", "</BRIEFING"),
+        ),
+        "offscreen": IsolatedStrictAnchorExtractor(
+            left="<OFFSCREEN>",
+            right="</OFFSCREEN>",
+            forbidden_anchors=("<BRIEFING", "</BRIEFING", "</OFFSCREEN"),
+        ),
     },
     required=[],
 )

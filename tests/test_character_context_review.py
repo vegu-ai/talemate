@@ -9,6 +9,9 @@ from talemate.agents.summarize.context_history import (
 )
 from talemate.agents.context import ActiveAgent
 from talemate.agents.summarize.websocket_handler import SummarizeWebsocketHandler
+from talemate.agents.conversation.entry_context import (
+    store_perspective_entry_briefing,
+)
 from talemate.character import Character
 from talemate.context import ActiveScene
 from talemate.instance import get_agent
@@ -20,6 +23,7 @@ from talemate.knowledge.supported_facts import contributions_for_source
 from talemate.prompts import Prompt
 from talemate.scene_message import NarratorMessage
 from talemate.tale_mate import Actor
+from talemate.events import CharacterActivatedEvent
 
 
 @pytest.fixture(params=["legacy", "perception"])
@@ -72,9 +76,12 @@ def history_lines(preview):
 
 def handler(scene):
     frames = []
-    return SummarizeWebsocketHandler(
-        SimpleNamespace(scene=scene, queue_put=frames.append)
-    ), frames
+    return (
+        SummarizeWebsocketHandler(
+            SimpleNamespace(scene=scene, queue_put=frames.append)
+        ),
+        frames,
+    )
 
 
 @pytest.mark.asyncio
@@ -127,6 +134,97 @@ async def test_character_preview_matches_conversation_history_and_reports_absenc
         item["id"] == scene.history[0].id and item["reason"] == expected
         for item in preview["exclusions"]
     )
+    Prompt.request.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_character_preview_includes_same_scoped_entry_orientation(review_scene):
+    scene = review_scene
+    conversation = get_agent("conversation")
+    bob = scene.character_data["Bob"]
+    scene.description = "READER-ONLY SCENE DESCRIPTION"
+    await conversation.on_character_activated(
+        CharacterActivatedEvent(
+            scene=scene,
+            character=bob,
+            event_type="character.activated",
+        )
+    )
+    private = NarratorMessage("Alice studies a private note.", present=["Alice"])
+    visible = NarratorMessage("Footsteps cross the square.", present=["Alice", "Bob"])
+    scene.history.extend([private, visible])
+    if scene.knowledge_eligibility == "perception":
+        set_source_perspectives(
+            scene,
+            "message",
+            private.id,
+            [{"audience": ["Alice"], "status": "ready", "text": str(private)}],
+        )
+        set_source_perspectives(
+            scene,
+            "message",
+            visible.id,
+            [{"audience": ["Bob"], "status": "ready", "text": str(visible)}],
+        )
+
+    preview = await character_context_review(scene, bob)
+
+    entry = next(
+        section
+        for section in preview["sections"]
+        if section["label"] == "Character entry orientation"
+    )
+    text = "\n".join(entry["entries"])
+    assert "Footsteps cross the square" in text
+    assert "private note" not in text
+    assert "READER-ONLY SCENE DESCRIPTION" not in text
+    assert text == conversation.character_entry_context(bob)
+    Prompt.request.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_character_preview_shows_stored_entry_briefing(review_scene):
+    scene = review_scene
+    conversation = get_agent("conversation")
+    bob = scene.character_data["Bob"]
+    conversation.set_scene_states(
+        character_entry_windows={
+            "Bob": {
+                "boundary_message_id": scene.history[-1].id,
+                "entry_scene_time": scene.ts,
+                "remaining_turns": 2,
+            }
+        }
+    )
+    if scene.knowledge_eligibility == "perception":
+        from talemate.agents.conversation.entry_context import (
+            bind_entry_disclosure,
+            entry_windows,
+        )
+
+        disclosure = store_perspective_entry_briefing(
+            scene,
+            "Bob",
+            "I recognize the sundial and Alice.",
+            window=entry_windows(conversation)["Bob"],
+        )
+        bind_entry_disclosure(conversation, "Bob", disclosure.id)
+    else:
+        conversation.set_scene_states(
+            character_entry_briefings={"Bob": "I recognize the sundial and Alice."}
+        )
+
+    preview = await character_context_review(scene, bob)
+
+    entry = next(
+        section
+        for section in preview["sections"]
+        if section["label"] == "Character entry orientation"
+    )
+    text = "\n".join(entry["entries"])
+    assert "Character entry briefing" in text
+    assert "I recognize the sundial and Alice." in text
+    assert "Known facts about characters present now" not in text
     Prompt.request.assert_not_awaited()
 
 

@@ -22,10 +22,10 @@
     Documents cache invalidation, index revisions, retryable failures and memory_viewer template enforcement.'
 - path: dev/character-perspectives.md
   title: Character perspective records
-  summary: 'intro_knowledge, SourceReference intro, intro_present, opening audience derivation on load; scoped graph memory
-    access. Stored views, audience summaries, context_review, push_history, agent.conversation.finalized, portrait cadence, before_memory,
-    scene.history_ready, revision fallback, evidence_boundary/evidence_budget, deep retrieval, swap_revision/commit_revision,
-    pending_perception_messages. FactContribution competitor vetoes, duplicate suppression.'
+  summary: intro_knowledge, SourceReference intro, intro_present, opening audience derivation on load; scoped graph memory
+    access. Stored views, audience summaries, context_review, push_history, agent.conversation.finalized, portrait cadence,
+    before_memory, scene.history_ready, revision fallback, evidence_boundary/evidence_budget, deep retrieval, swap_revision/commit_revision,
+    pending_perception_messages. FactContribution competitor vetoes, duplicate suppression.
 - path: dev/howto/add-a-worldstate-template-type.md
   title: Adding a new world-state template
   summary: 'Developer walkthrough for adding a world-state template type using Writing Style phrase detection: register a
@@ -83,15 +83,15 @@
 - path: getting-started/connect-a-client.md
   title: Connect a client
   summary: Add and save local or hosted LLM clients through Settings → Connections → Clients, choose the API/client type,
-    and assign the first client to agents automatically or use Assign to all agents. Explains readiness indicators and links
-    individual provider setup guides. A Which model note links the Model expectations page before the add-client steps.
+    and assign the first client automatically or use Assign to all agents. Explains readiness indicators, links provider setup
+    guides, and points to Model expectations before setup.
 - path: getting-started/installation/docker.md
-  title: Docker installation
+  title: Docker
   summary: Install Talemate with Docker Compose using prebuilt images or manual builds; the default CUDA configuration requires
     NVIDIA Container Toolkit, while docker-compose.cpu.yml runs without a GPU. Covers config.yaml preparation, CUDA verification,
     host.docker.internal and bundled Pi Bridge configuration.
 - path: getting-started/installation/linux.md
-  title: Linux installation
+  title: Linux
   summary: Linux installation using Python, uv, install.sh and start.sh, with optional CUDA PyTorch and an automatically downloaded
     Node.js 22 runtime. Also covers manual virtualenv/dependency setup and separate backend/frontend commands with Corepack
     pnpm.
@@ -101,7 +101,7 @@
     accidentally created config.yaml directories and runtime WebSocket URLs. Includes CPU-only Compose, NVIDIA Toolkit checks
     and nginx HTTPS reverse-proxy WebSocket upgrade configuration.
 - path: getting-started/installation/windows.md
-  title: Windows installation
+  title: Windows
   summary: Windows installation from a release ZIP using start.bat, which downloads portable Python and Node.js 22, installs
     dependencies and builds the frontend. Lists install.bat, install-cuda.bat and update.bat maintenance scripts and the localhost:8082
     browser address.
@@ -119,9 +119,8 @@
 - path: getting-started/setup-wizard.md
   title: Setup Wizard
   summary: First-run Setup Wizard for selecting hosted or self-hosted AI, adding a client, choosing Better/Standard embeddings
-    and CPU/CUDA, and optionally configuring Google/OpenRouter visuals. Shows the What Talemate expects from your model panel
-    and a pointer to the Model expectations page. Explains Apply & finish, skipping setup, reasoning defaults and where to
-    change settings later.
+    and CPU/CUDA, and optionally configuring Google/OpenRouter visuals. Covers the model-expectations panel, Apply & finish,
+    skipping setup, reasoning defaults and where to change settings later.
 - path: index.md
   title: Talemate Documentation
   summary: Talemate documentation landing page for AI roleplay with narration and world/game-state tracking, linking Windows,
@@ -133,13 +132,10 @@
     pass or topic-awareness assertions.
 - path: user-guide/agents/conversation/settings.md
   title: Settings
-  summary: Conversation formats including AI Aware, length, instructions, stop tokens, caching, story intent, writing style,
-    effort presets, knowledge filtering, topic overview and memory refinement; unknown-fact reminders rank eligible facts
-    within the newest-record pool. Establish facts from dialogue uses the learning request after every character line, including
-    player lines and solo speakers; everyone present knows the facts, History supports importance edits and source inspection,
-    source changes remove facts, and Perspectives replaces Standard controls. Track learning judges the substance with situational
-    context and errs toward learning without counting hints or merely related facts; grants apply immediately and are revocable
-    in the character Knowledge view.
+  summary: Conversation settings cover dialogue format and length, instructions, caching, story intent, writing style, effort
+    presets and long-term memory. Character Knowledge controls filtering, topic/reminder context, durable live entry orientation
+    and optional NPC entry briefings that combine with Offscreen Life; Perspectives exposes regenerate/remove,
+    while dialogue learning records revocable facts and AI memory refinement adds focused requests.
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Autocomplete partial text with Ctrl/Cmd+Enter in dialogue, message editing, attributes, details, descriptions,
@@ -185,10 +181,8 @@
 - path: user-guide/agents/editor/revisions.md
   title: Revisions
   summary: Automatic and manual Editor revisions detect repetition and unwanted prose; view changes through Agent Messages
-    or use the latest message's Revise chip. Covers Dedupe, Unslop and Targeted Rewrite labels, context-investigation targets
-    and preserving originals as navigable message versions. Automatic revision also runs on regeneration in both story modes,
-    uses the actual rendered history budget, falls back to reader-visible history when that window is unavailable, and reports
-    skipped revisions with a reason.
+    or use the latest message’s Revise chip. Covers Dedupe, Unslop and Targeted Rewrite, context-investigation targets, navigable
+    originals, regeneration in both story modes, history fallback and skipped-revision statuses.
 - path: user-guide/agents/editor/settings.md
   title: Settings
   summary: Editor settings for formatting cleanup, incomplete sentences, added detail and automatic revision targets including
@@ -211,27 +205,24 @@
     scenes.'
 - path: user-guide/agents/memory/embeddings.md
   title: Embeddings
-  summary: Manage built-in and custom presets for local sentence transformers, hosted OpenAI and OpenRouter drivers, and Client
-    API. Covers each driver's model or client input, model downloads, INSTRUCTOR removal, Trust Remote Code, CPU/CUDA switching,
-    distance functions, Distance Mod/Search Strictness and model-dependent Topic Threshold. The Local flag hides Device and
-    GPU Recommendation for hosted models; Fast and GPU Recommendation tags are also covered.
+  summary: Manage built-in and custom presets for local sentence transformers, hosted OpenAI/OpenRouter drivers and Client
+    API. Covers model/client inputs, downloads, trust/device controls, distance/search/topic thresholds, and the Local/Fast/GPU
+    Recommendation flags.
 - path: user-guide/agents/memory/index.md
   title: Overview
-  summary: Memory agent manages long-term memory with embeddings and the ChromaDB backend. Cached memory refreshes after edits
-    or deletions for the next prompt, even without new story messages, with or without Character perspectives. Explains how
-    retrieval already in progress can finish with earlier context without caching it for the next prompt, and obsolete cached
-    retrievals are released on memory writes. Deletions finishing after an interruption still refresh character audiences.
+  summary: Memory agent manages long-term memory with embeddings and ChromaDB. Cached retrievals refresh after edits or deletions
+    for the next prompt, even without new story messages; in-flight reads may finish with older context but are not recached,
+    and interrupted deletions still refresh character audiences.
 - path: user-guide/agents/memory/koboldcpp.md
   title: KoboldCpp Embeddings
   summary: Use an embedding GGUF loaded in KoboldCpp with --embeddingsmodel; the Memory agent detects it and switches to Client
     API automatically. Explains the client/status banner and reverting to a local embedding in Memory settings.
 - path: user-guide/agents/memory/settings.md
   title: Settings
-  summary: 'Memory settings: embeddings, OpenAI/OpenRouter keys, live CPU/CUDA switching with ChromaDB cache cleanup, topic
-    clustering and thresholds, and Standard-only topic awareness and Match known facts. Retrieval owns relevance order through
-    recency weighting, diversity, entity lookup and local cross-encoder reranking; chronology filters fact eligibility and
-    adds time markers without reordering results, while Standard topic additions rank by chronology and Perspectives retains
-    audience-fact order. Final diversity also applies to admitted copies; fresher facts replace every redundant selected slot.'
+  summary: Memory settings configure embeddings and live CPU/CUDA switching, API keys, topic clustering, and Standard-only
+    topic awareness and known-fact matching. Retrieval uses recency, diversity, entity lookup and optional reranking; chronology
+    filters eligibility without reordering, while Standard topic additions and Perspectives audience facts preserve their
+    respective ordering.
 - path: user-guide/agents/memory/testing.md
   title: Testing Embeddings
   summary: Test embeddings through Debug Tools → Memory by inspecting generation-time requests, result distances and selected
@@ -264,8 +255,8 @@
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
   summary: 'Configure summarization thresholds, methods and fact extraction: Fact matching tolerance on normalized embeddings,
-    chronology, subject aliases and formerly clauses. Summarization settings cover perspective repair, layered history,
-    scene analysis caching across regeneration, and scene-history token budgets, Best Fit, dialogue ratios and summary boundaries.'
+    chronology, subject aliases and formerly clauses. Summarization settings cover perspective repair, layered history, scene
+    analysis caching across regeneration, and scene-history token budgets, Best Fit, dialogue ratios and summary boundaries.'
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
   summary: Legacy AUTOMATIC1111 text-to-image backend setup with API URL, steps, sampler, schedule, CFG, keyword/descriptive
@@ -404,7 +395,7 @@
   summary: Obtain a Cohere API key from its dashboard, enter it under Settings → Connections → API Keys → Cohere and save
     to enable text generation.
 - path: user-guide/apis/elevenlabs.md
-  title: ElevenLabs API Setup
+  title: ElevenLabs
   summary: Create an ElevenLabs account, obtain its API key and save it under Settings → Connections → API Keys → ElevenLabs.
     Links the Voice agent setup for TTS configuration.
 - path: user-guide/apis/google.md
@@ -489,10 +480,9 @@
     Click the same button to reactivate a client instead of deleting and recreating it.
 - path: user-guide/clients/index.md
   title: Overview
-  summary: Overview of local and hosted AI clients and assigning different models to specialized agents or using one client
-    for everything. Links supported provider setup guides, OpenAI-compatible services and the bundled Model Testing Harness
-    for checking a new model. Opens with what Talemate expects from a model (reasoning-capable, reliable JSON and tool calls,
-    16k context) and links the Model expectations page.
+  summary: Overview of local and hosted AI clients, assigning specialized models to agents or sharing one client, and supported
+    provider/OpenAI-compatible setup guides. States the reasoning, structured-output and context expectations for models and
+    links the bundled Model Testing Harness for qualification.
 - path: user-guide/clients/model-testing-harness.md
   title: Model Testing Harness
   summary: 'Bundled Model Testing Harness scene runs six minimum-viability checks on assigned agent clients: tagged instructions,
@@ -681,7 +671,7 @@
     on context-investigation messages and image click shortcuts. Covers auto-attachment, render cadence/size, Scene Backdrop,
     Auto Backdrop and the Immersive toggle.
 - path: user-guide/integrations/runpod.md
-  title: RunPod Integration
+  title: Runpod
   summary: 'Legacy RunPod integration guide for remotely hosted Text-Generation-WebUI: API keys, Community/Secure Cloud, storage,
     TheBloke template and pod-name discovery. Notes the RunPod settings category no longer exists and explains dashboard status,
     stopping pods and connecting to port 7860.'
@@ -867,7 +857,8 @@
 - path: user-guide/node-editor/reference/nodes/assets.md
   title: Asset Nodes
   summary: Scene asset nodes to add base64 image data, fetch or list assets, check partial asset IDs, remove assets, set character
-    avatars and scene or character cover images, and update message asset attachments with optional override_cadence for manual choices.
+    avatars and scene or character cover images, and update message asset attachments with optional override_cadence for manual
+    choices.
 - path: user-guide/node-editor/reference/nodes/context-id.md
   title: Context ID Nodes
   summary: 'Context IDs address scene context entries generically: Path to Context ID, Context ID Get/Set Value, Character
@@ -1021,7 +1012,8 @@
   title: Scene Context History Review
   summary: Scene Context in Prompt Manager previews Scene or an active character using Conversation history selection. Covers
     eligible facts, false markers, existing analysis, archive/layer and fact exclusion reasons with counts and capped samples,
-    intro/summary rules, budget cuts, the client context-window default, Refresh and scene-wide Apply; previews make no AI requests.
+    intro/summary rules, budget cuts, the client context-window default, Refresh and scene-wide Apply; previews make no AI
+    requests.
 - path: user-guide/prompts/deduplication.md
   title: Prompt Deduplication
   summary: Prompt deduplication removes near-duplicate long lines but is off by default because it can damage structured content
@@ -1217,6 +1209,13 @@
   summary: Browse and search the Memory Agent context database using embedding relevance; adjust Search Strictness from 0.1
     to 2.0 via the active preset distance_mod. Covers persisted search tuning, preferred World/Characters editing and Reset
     reimport with loss of manually added database-only entries.
+- path: user-guide/world-editor/facts.md
+  title: Facts
+  summary: World Editor Facts tab lists every recorded fact with source, topic, audience (who knows it and how), supersedes
+    arrows and a False chip. Combinable filters (text, character knows/does not know/is a subject, topic, importance, source,
+    superseded, false, latest chapter), sorting and paging; row actions (edit, mark false, set or clear supersedes, grant
+    or block in Standard mode, inspect source, remove) and selection actions (delete, mark false or true, grant) as one request
+    each.
 - path: user-guide/world-editor/generation-settings.md
   title: Generation Settings
   summary: World Editor Generation Settings apply one-off Ctrl/Cmd-click instructions, Alt-click rewrites, Ctrl+Alt guided
@@ -1234,28 +1233,19 @@
   summary: Layered History compresses dialogue into base summaries and successively smaller layers to preserve a full-timeline
     detail gradient. Covers compression statistics, token thresholds, layer limits, chunking/analyzation settings, edit/regenerate/inspect
     tools and context-budget review.
-- path: user-guide/world-editor/facts.md
-  title: Facts
-  summary: World Editor Facts tab lists every recorded fact with source, topic, audience (who knows it and how), supersedes
-    arrows and a False chip. Combinable filters (text, character knows/does not know/is a subject, topic, importance, source,
-    superseded, false, latest chapter), sorting and paging; row actions (edit, mark false, set or clear supersedes, grant or
-    block in Standard mode, inspect source, remove) and selection actions (delete, mark false or true, grant) as one request each.
 - path: user-guide/world-editor/knowledge-how-it-works.md
   title: How character knowledge works
-  summary: 'Five diagrams explain reply inputs, presence, perceptions, disclosures, shared facts, chronology and effort,
-    with stops from Off to Ultra. Covers citation not supported, private competitor vetoes, public citations, regenerate
-    old views, Scene Context, memory ranking and exclusion, intro audiences, browsing revisions before keeping a version,
-    and a mode decision tree that weighs model, secrets, cast size and cost.'
+  summary: Five diagrams explain reply inputs, presence, perceptions, disclosures, shared facts, chronology and effort, with
+    stops from Off to Ultra. Covers citation not supported, private competitor vetoes, public citations, regenerate old views,
+    Scene Context, memory ranking and exclusion, intro audiences, browsing revisions before keeping a version, live character-entry
+    orientation and briefing/Offscreen Life coordination, and a mode decision tree that weighs model, secrets, cast size and cost.
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
-  summary: Standard versus Character perspectives weighed by model, secrets and cast size, creation opt-in, empty-scene
-    switching, the six Standard effort stops from Off (pre-feature behaviour, Standard track only) to Ultra, what an existing
-    scene loads with, model expectations
-    and repair costs. Covers Known by visibility, disclosures and Allow/Block rules, opening audiences and old-save derivation,
-    subjects/aliases, per-viewer supersession and Show formerly clause, ranked hub facts, full topic inspection with editing
-    (double-click a topic row to edit a fact's text and importance, or remove it; a fact is one record wherever it is shown,
-    an author edit replaces merged per-view wordings), Allow lifting an earlier Block, director/node operations and
-    audience-scoped retrieval.
+  summary: Standard versus Character perspectives weighed by model, secrets and cast size, creation opt-in, empty-scene switching,
+    the six Standard effort stops from Off (pre-feature behaviour, Standard track only) to Ultra, what an existing scene loads
+    with, model expectations and repair costs. Covers live character-entry orientation and briefing controls, Known by visibility,
+    disclosures, Allow/Block rules, opening audiences, subjects/aliases, per-viewer supersession, ranked facts, topic/fact
+    editing, Allow lifting an earlier Block, director/node operations and audience-scoped retrieval.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and
@@ -1286,8 +1276,8 @@
   title: Settings
   summary: Scene Settings control Character perspectives while history and archived history are empty, with a Compare modes
     popover holding the two mode cards; disabling clears stored perspectives and disclosures. Covers writing style, locked-save
-    and experimental flags, restore points, and per-scene Agent settings file Auto-link, None or explicit project-shared
-    overrides included in exports.
+    and experimental flags, restore points, and per-scene Agent settings file Auto-link, None or explicit project-shared overrides
+    included in exports.
 - path: user-guide/world-editor/scene/shared-context.md
   title: Shared World & Episodes
   summary: Shared World links scenes to shared-context JSON files and synchronizes characters, selected attributes/details,
@@ -1310,8 +1300,7 @@
 - path: user-guide/world-state.md
   title: World State
   summary: World panel durable snapshots, tracked states, Look at/Add Detail highlights, Add to world state text selection,
-    knowledge-change dots, active/inactive/background characters and Make real name protection. The knowledge hub shows
-    chronology-selected facts ranked by importance and recency with time markers, topics and counts, disclosures/access rules,
-    Character perspectives with a Compare modes popover, effort presets and a closed Individual settings pane
-    counting enabled switches; also covers narrated activation, guided refresh/wipe, cancellation, background
-    cadence and Pin to context.
+    knowledge-change dots, active/inactive/background characters and Make real name protection. The knowledge hub shows chronology-selected
+    facts ranked by importance and recency with time markers, topics and counts, disclosures/access rules, Character perspectives
+    with a Compare modes popover, effort presets and a closed Individual settings pane counting enabled switches; also covers
+    narrated activation, guided refresh/wipe, cancellation, background cadence and Pin to context.

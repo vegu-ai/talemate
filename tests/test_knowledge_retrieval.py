@@ -17,6 +17,11 @@ from talemate.agents.conversation.knowledge import (
     parse_ledger,
     pass_items,
 )
+from talemate.agents.conversation.entry_context import (
+    ENTRY_BRIEFING_TOKEN_ALLOWANCE,
+    entry_briefings,
+    entry_windows,
+)
 from talemate.agents.conversation.response_specs import MEMORY_PASS_SPEC
 from talemate.agents.memory.rerank import (
     CrossEncoderReranker,
@@ -29,6 +34,7 @@ from talemate.agents.memory.schema import MemoryDocument
 from talemate.character import Character, activate_character
 from talemate.context import ActiveScene, SceneIsLoading
 from talemate.events import ArchiveEvent, CharacterActivatedEvent
+from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
 from talemate.knowledge.absence import absence_facts
 from talemate.knowledge.bucket import KnowledgeIndex
@@ -1410,6 +1416,163 @@ class TestOffscreenLife:
             assert "F2" not in [f.id for f in await absence_facts(scene, "Mara")]
             assert "F2" not in [f.id for f in await absence_facts(scene, "Zed")]
 
+    @pytest.mark.parametrize(
+        "receiver_order",
+        [("conversation", "narrator"), ("narrator", "conversation")],
+    )
+    async def test_entry_briefing_combines_offscreen_request_in_any_receiver_order(
+        self, scene, offscreen, receiver_order
+    ):
+        narrator, zed = offscreen
+        conversation = get_agent("conversation")
+        conversation.actions["character_knowledge"].config[
+            "brief_characters_on_entry"
+        ].value = True
+        event = activation(scene, zed)
+        handlers = {
+            "conversation": conversation.on_character_activated,
+            "narrator": narrator.on_character_activated,
+        }
+        with (
+            ActiveScene(scene),
+            patch.object(
+                scene,
+                "context_history",
+                return_value=["Zed remembers the old harbor."],
+            ),
+            patch.object(
+                conversation,
+                "absence_block",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            request.return_value = (
+                "",
+                {
+                    "briefing": "I recognize Mara and the old hiding place.",
+                    "offscreen": "Zed sailed to the mainland and sold the cargo.",
+                },
+            )
+            for receiver in receiver_order:
+                await handlers[receiver](event)
+
+        request.assert_awaited_once()
+        assert request.call_args.args[0] == "conversation.character-entry-briefing"
+        assert request.call_args.args[1] is narrator.client
+        assert request.call_args.args[2] == (
+            f"narrate_{narrator.offscreen_life_length + ENTRY_BRIEFING_TOKEN_ALLOWANCE}"
+        )
+        assert (
+            int(request.call_args.args[2].removeprefix("narrate_"))
+            > narrator.offscreen_life_length
+        )
+        variables = request.call_args.kwargs["vars"]
+        assert variables["combined_offscreen"] is True
+        assert "missed" not in variables
+        assert variables["scene"] is scene
+        assert variables["knowledge_index"] is not None
+        assert variables["extra_instructions"] == narrator.extra_instructions
+        assert variables["response_length"] == narrator.offscreen_life_length
+        assert "Zed" in entry_briefings(conversation)
+        fact = scene.world_state.facts["F2"]
+        assert fact.source == "offscreen"
+        assert fact.present == ["Zed"]
+        assert "sailed to the mainland" in fact.text
+
+    async def test_unreadable_combined_offscreen_retries_without_losing_briefing(
+        self, scene, offscreen
+    ):
+        narrator, zed = offscreen
+        conversation = get_agent("conversation")
+        conversation.actions["character_knowledge"].config[
+            "brief_characters_on_entry"
+        ].value = True
+        with (
+            ActiveScene(scene),
+            patch.object(scene, "context_history", return_value=[]),
+            patch.object(
+                conversation,
+                "absence_block",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+            patch("talemate.agents.conversation.knowledge.emit"),
+        ):
+            request.side_effect = [
+                ("", {"briefing": "I scan the room.", "offscreen": None}),
+                ("", {"response": "Zed repaired the boat while away."}),
+            ]
+            await conversation.on_character_activated(activation(scene, zed))
+
+        assert request.await_count == 2
+        assert request.await_args_list[1].args[0] == "narrator.offscreen-life"
+        assert entry_briefings(conversation)["Zed"] == "I scan the room."
+        assert scene.world_state.facts["F2"].source == "offscreen"
+
+    async def test_unreadable_briefing_keeps_readable_combined_offscreen(
+        self, scene, offscreen
+    ):
+        _, zed = offscreen
+        conversation = get_agent("conversation")
+        conversation.actions["character_knowledge"].config[
+            "brief_characters_on_entry"
+        ].value = True
+        with (
+            ActiveScene(scene),
+            patch.object(scene, "context_history", return_value=[]),
+            patch.object(
+                conversation,
+                "absence_block",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+            patch("talemate.agents.conversation.knowledge.emit"),
+        ):
+            request.return_value = (
+                "",
+                {"briefing": None, "offscreen": "Zed repaired the boat."},
+            )
+            await conversation.on_character_activated(activation(scene, zed))
+
+        request.assert_awaited_once()
+        assert "Zed" not in entry_briefings(conversation)
+        assert scene.world_state.facts["F2"].source == "offscreen"
+
+    async def test_cancelled_combined_request_does_not_start_offscreen_fallback(
+        self, scene, offscreen
+    ):
+        _, zed = offscreen
+        conversation = get_agent("conversation")
+        conversation.actions["character_knowledge"].config[
+            "brief_characters_on_entry"
+        ].value = True
+        with (
+            ActiveScene(scene),
+            patch.object(scene, "context_history", return_value=[]),
+            patch.object(
+                conversation,
+                "absence_block",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(
+                Prompt,
+                "request",
+                new_callable=AsyncMock,
+                side_effect=GenerationCancelled("cancelled"),
+            ) as request,
+            patch("talemate.agents.conversation.knowledge.emit"),
+        ):
+            await conversation.on_character_activated(activation(scene, zed))
+
+        request.assert_awaited_once()
+        assert "Zed" not in entry_briefings(conversation)
+        assert list(scene.world_state.facts) == ["F1"]
+
     async def test_never_present_character_gets_no_account(self, scene, offscreen):
         narrator, zed = offscreen
         mira = Character(name="Mira")
@@ -1626,6 +1789,285 @@ class TestOffscreenLifeDeferral:
         request.assert_called_once()
         assert "Zed" not in narrator.pending_returns
         assert scene.world_state.facts["F2"].source == "offscreen"
+
+    async def test_combined_entry_briefing_waits_for_final_archive_cut(
+        self, scene, offscreen
+    ):
+        narrator, zed = offscreen
+        conversation = get_agent("conversation")
+        conversation.actions["character_knowledge"].config[
+            "brief_characters_on_entry"
+        ].value = True
+        scene.ts = 173800
+        scene.archived_history = [scene.archived_history[0]]
+        scene.history = [
+            CharacterMessage(message=f"Mara: line {i}", present=["Mara"])
+            for i in range(14)
+        ]
+        event = activation(scene, zed)
+        with (
+            ActiveScene(scene),
+            patch.object(
+                scene,
+                "context_history",
+                return_value=["Zed remembers the harbor."],
+            ),
+            patch.object(
+                conversation,
+                "absence_block",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            request.return_value = (
+                "",
+                {
+                    "briefing": "I return to Mara's side.",
+                    "offscreen": "Zed worked passage on a merchant ship.",
+                },
+            )
+            await conversation.on_character_activated(event)
+            await narrator.on_character_activated(event)
+            request.assert_not_awaited()
+            assert narrator.pending_returns["Zed"].combined_entry_briefing is True
+
+            actor = Actor(character=zed, agent=conversation)
+            actor.scene = scene
+            scene.actors.append(actor)
+            scene.active_characters.append("Zed")
+            scene.history.append(
+                CharacterMessage(message="Zed: back", present=["Mara", "Zed"])
+            )
+            scene.archived_history.append(
+                {
+                    "id": "a2",
+                    "text": "First absence chunk.",
+                    "ts": 1000,
+                    "present": ["Mara"],
+                    "start": 0,
+                    "end": 11,
+                }
+            )
+            await narrator.on_archive_add_offscreen(
+                ArchiveEvent(
+                    scene=scene,
+                    event_type="archive_add",
+                    text="First absence chunk.",
+                    memory_id="a2",
+                    ts=1000,
+                    present=["Mara"],
+                )
+            )
+            request.assert_not_awaited()
+
+            scene.ts = 260200
+            scene.archived_history.append(
+                {
+                    "id": "a3",
+                    "text": "Final absence chunk.",
+                    "ts": 4500,
+                    "present": ["Mara"],
+                    "start": 12,
+                    "end": 13,
+                }
+            )
+            await narrator.on_archive_add_offscreen(
+                ArchiveEvent(
+                    scene=scene,
+                    event_type="archive_add",
+                    text="Final absence chunk.",
+                    memory_id="a3",
+                    ts=4500,
+                    present=["Mara"],
+                )
+            )
+
+        request.assert_awaited_once()
+        assert request.call_args.args[0] == "conversation.character-entry-briefing"
+        variables = request.call_args.kwargs["vars"]
+        assert variables["elapsed"] == "2 Days"
+        assert "Time away before entry: 2 Days" in variables["arrival"]
+        assert "3 Days" not in variables["arrival"]
+        assert "Zed" not in narrator.pending_returns
+        assert entry_briefings(conversation)["Zed"] == "I return to Mara's side."
+        assert scene.world_state.facts["F2"].source == "offscreen"
+
+    async def test_deferred_entry_backfills_away_time_from_first_missed_entry(
+        self, scene, offscreen
+    ):
+        narrator, zed = offscreen
+        conversation = get_agent("conversation")
+        conversation.actions["character_knowledge"].config[
+            "brief_characters_on_entry"
+        ].value = True
+        scene.ts = 173800
+        scene.archived_history = [
+            {
+                "id": "legacy",
+                "text": "An older scene without presence metadata.",
+                "ts": 500,
+                "start": 0,
+                "end": -1,
+            }
+        ]
+        scene.history = [
+            CharacterMessage(message="Zed: I should go.", present=["Mara", "Zed"]),
+            *[
+                CharacterMessage(message=f"Mara: line {index}", present=["Mara"])
+                for index in range(1, 7)
+            ],
+        ]
+        event = activation(scene, zed)
+        with (
+            ActiveScene(scene),
+            patch.object(scene, "context_history", return_value=[]),
+            patch.object(
+                conversation,
+                "absence_block",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            request.return_value = (
+                "",
+                {
+                    "briefing": "I return to Mara.",
+                    "offscreen": "Zed worked passage on a merchant ship.",
+                },
+            )
+            await conversation.on_character_activated(event)
+            await narrator.on_character_activated(event)
+            request.assert_not_awaited()
+            assert entry_windows(conversation)["Zed"].away_scene_time is None
+
+            actor = Actor(character=zed, agent=conversation)
+            actor.scene = scene
+            scene.actors.append(actor)
+            scene.active_characters.append("Zed")
+            scene.archived_history.append(
+                {
+                    "id": "a2",
+                    "text": "Mara waited while Zed was away.",
+                    "ts": 1000,
+                    "present": ["Mara"],
+                    "start": 1,
+                    "end": 6,
+                }
+            )
+            await narrator.on_archive_add_offscreen(
+                ArchiveEvent(
+                    scene=scene,
+                    event_type="archive_add",
+                    text="Mara waited while Zed was away.",
+                    memory_id="a2",
+                    ts=1000,
+                    present=["Mara"],
+                )
+            )
+
+        request.assert_awaited_once()
+        variables = request.call_args.kwargs["vars"]
+        assert variables["elapsed"] == "2 Days"
+        assert entry_windows(conversation)["Zed"].away_scene_time == 1000
+        assert scene.world_state.facts["F2"].source == "offscreen"
+
+    @pytest.mark.parametrize("disabled", ["briefing", "offscreen", "window"])
+    async def test_deferred_combined_request_rechecks_enable_flags(
+        self, scene, offscreen, disabled, monkeypatch
+    ):
+        narrator, zed = offscreen
+        conversation = get_agent("conversation")
+        conversation.actions["character_knowledge"].config[
+            "brief_characters_on_entry"
+        ].value = True
+        scene.archived_history = [scene.archived_history[0]]
+        scene.history = [
+            CharacterMessage(message=f"Mara: line {index}", present=["Mara"])
+            for index in range(6)
+        ]
+        event = activation(scene, zed)
+        with (
+            ActiveScene(scene),
+            patch.object(scene, "context_history", return_value=[]),
+            patch.object(
+                conversation,
+                "absence_block",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(Prompt, "request", new_callable=AsyncMock) as request,
+        ):
+            await conversation.on_character_activated(event)
+            actor = Actor(character=zed, agent=conversation)
+            actor.scene = scene
+            scene.actors.append(actor)
+            scene.active_characters.append("Zed")
+            if disabled == "briefing":
+                monkeypatch.setattr(
+                    type(conversation),
+                    "knowledge_brief_characters_on_entry",
+                    property(lambda self: False),
+                )
+                request.return_value = (
+                    "",
+                    {"response": "Zed repaired the boat while away."},
+                )
+            else:
+                if disabled == "offscreen":
+                    monkeypatch.setattr(
+                        type(narrator),
+                        "offscreen_life_enabled",
+                        property(lambda self: False),
+                    )
+                    request.return_value = (
+                        "",
+                        {"briefing": "I return to Mara.", "offscreen": None},
+                    )
+                else:
+                    from talemate.agents.conversation.entry_context import (
+                        consume_entry_turn,
+                    )
+
+                    for _ in range(conversation.knowledge_character_entry_turns):
+                        consume_entry_turn(conversation, zed.name)
+                    request.return_value = (
+                        "",
+                        {"response": "Zed repaired the boat while away."},
+                    )
+            scene.archived_history.append(
+                {
+                    "id": "a2",
+                    "text": "Mara waited.",
+                    "ts": 3000,
+                    "present": ["Mara"],
+                    "start": 0,
+                    "end": 5,
+                }
+            )
+            await narrator.on_archive_add_offscreen(
+                ArchiveEvent(
+                    scene=scene,
+                    event_type="archive_add",
+                    text="Mara waited.",
+                    memory_id="a2",
+                    ts=3000,
+                    present=["Mara"],
+                )
+            )
+
+        if disabled in ("briefing", "window"):
+            request.assert_awaited_once()
+            assert request.call_args.args[0] == "narrator.offscreen-life"
+            assert scene.world_state.facts["F2"].source == "offscreen"
+        else:
+            request.assert_awaited_once()
+            assert request.call_args.args[0] == "conversation.character-entry-briefing"
+            assert request.call_args.kwargs["vars"]["combined_offscreen"] is False
+            assert entry_briefings(conversation)["Zed"] == "I return to Mara."
+            assert "F2" not in scene.world_state.facts
+        assert "Zed" not in narrator.pending_returns
 
     async def test_archive_that_covers_the_character_clears_the_wait(
         self, scene, offscreen

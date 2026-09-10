@@ -22,7 +22,6 @@ from talemate.knowledge.perspectives import (
 )
 from talemate.scene_message import CharacterMessage, DirectorMessage, NarratorMessage
 
-
 CASES = json.loads(
     (Path(__file__).parent / "data/perceptions/passages.json").read_text()
 )
@@ -1116,7 +1115,11 @@ async def test_public_mode_replaces_learning_even_with_legacy_ledger_enabled(
     public = conversation.config_options(agent=conversation)["actions"][
         "character_knowledge"
     ]
-    assert set(public["config"]) == {"memory_pass"}
+    assert set(public["config"]) == {
+        "brief_characters_on_entry",
+        "character_entry_turns",
+        "memory_pass",
+    }
     assert (
         "similarity_gate"
         not in get_agent("memory").config_options(agent=get_agent("memory"))["actions"][
@@ -1170,7 +1173,11 @@ async def test_status_payload_hides_retired_controls_and_restores_legacy(
     public = emitted[-1]["data"]["actions"][action]
     assert not hidden.intersection(public["config"])
     if agent_name == "conversation":
-        assert set(public["config"]) == {"memory_pass"}
+        assert set(public["config"]) == {
+            "brief_characters_on_entry",
+            "character_entry_turns",
+            "memory_pass",
+        }
     scene.knowledge_eligibility = "legacy"
     await agent._do_emit_status()
     assert emitted[-1]["data"]["actions"] == original

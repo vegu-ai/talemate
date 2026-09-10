@@ -17,6 +17,12 @@ export const KNOWLEDGE_TOGGLES = Object.freeze([
     { agent: 'conversation', action: 'character_knowledge', config: 'perspective_filter' },
     { agent: 'conversation', action: 'character_knowledge', config: 'absence_block' },
     { agent: 'conversation', action: 'character_knowledge', config: 'awareness_line' },
+    {
+        agent: 'conversation',
+        action: 'character_knowledge',
+        config: 'brief_characters_on_entry',
+        costLabel: 'Brief characters on entry (one request per NPC activation; account retry can add one)',
+    },
     { agent: 'conversation', action: 'character_knowledge', config: 'memory_pass' },
     { agent: 'conversation', action: 'character_knowledge', config: 'ledger' },
     { agent: 'summarizer', action: 'archive', config: 'extract_facts' },
@@ -84,6 +90,7 @@ export function resolveKnowledgeToggles(agents, { perspectives = true } = {}) {
             value: !!effectiveConfigValue(agent.actions, overlay, `${spec.action}.config.${spec.config}`),
             overridden: configOverrideActive(overlay, spec.action, spec.config),
             costNote: costNote(field),
+            ...(spec.costLabel ? { costLabel: spec.costLabel } : {}),
         });
     }
     return groups.filter((group) => group.master || group.toggles.length);
@@ -99,7 +106,7 @@ export function thoroughnessSummary(groups, perspectives) {
         if (!group.enabled) continue;
         if (!perspectives && PERSPECTIVES_ONLY_ACTIONS.has(`${group.agent}.${group.action}`)) continue;
         for (const toggle of group.toggles) {
-            if (toggle.costNote && toggle.value) extras.push(toggle.label);
+            if (toggle.costNote && toggle.value) extras.push(toggle.costLabel || toggle.label);
         }
     }
     return {

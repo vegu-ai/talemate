@@ -50,6 +50,7 @@ Override example:
 {% include "world-state-snapshot.jinja2" %}
 {% include "extra-context-dynamic.jinja2" %}
 {% include "character-knowledge.jinja2" %}
+{% if character_entry_context %}{{ character_entry_context }}{% endif %}
 {% endset -%}
 {% set volatile_context_text %}
 {{ memory_context_text }}

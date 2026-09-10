@@ -1,0 +1,37 @@
+You are privately orienting {{ character.name }} as they enter a continuing scene.
+
+Write a concise, present-tense perception in {{ character.name }}'s own voice. Use only the scoped material below. Do not invent knowledge from the reader's wider story view.
+
+<ARRIVAL_ORIENTATION>
+{{ arrival }}
+</ARRIVAL_ORIENTATION>
+
+{% if character_facts %}<KNOWN_FACTS>
+{% for known_entry in character_facts %}- {{ known_entry }}
+{% endfor %}</KNOWN_FACTS>
+{% endif %}
+{% if combined_offscreen %}<OFFSCREEN_CHARACTER_CONTEXT>
+{{ knowledge_index.sheet(scene, character, character.name, "description") }}
+{{ knowledge_index.description(scene, character, character.name) }}
+</OFFSCREEN_CHARACTER_CONTEXT>
+{% endif %}
+{% if perceived_history %}<PERCEIVED_HISTORY>
+{% for history_entry in perceived_history %}{{ history_entry }}
+{% endfor %}</PERCEIVED_HISTORY>
+{% endif %}
+{% if unknown_fact_reminders %}<UNKNOWN_FACTS_DO_NOT_REVEAL>
+The following reminders identify information {{ character.name }} does not know. Do not mention, imply, or use their contents in either result:
+{% for unknown_entry in unknown_fact_reminders %}- {{ unknown_entry }}
+{% endfor %}</UNKNOWN_FACTS_DO_NOT_REVEAL>
+{% endif %}
+{% if combined_offscreen %}<OFFSCREEN_REQUIREMENTS>
+{% if extra_instructions %}Apply these Narrator instructions only to the OFFSCREEN account: {{ extra_instructions }}
+{% endif %}
+{% include "response-length.jinja2" %}
+</OFFSCREEN_REQUIREMENTS>
+{% endif %}
+
+Return exactly:
+<BRIEFING>one short present-tense perception in {{ character.name }}'s voice</BRIEFING>
+{% if combined_offscreen %}<OFFSCREEN>a short account of what {{ character.name }} did during the {{ elapsed }} absence, consistent only with their own knowledge</OFFSCREEN>
+{% endif %}

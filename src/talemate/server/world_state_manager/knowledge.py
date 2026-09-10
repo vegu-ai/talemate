@@ -1,6 +1,7 @@
 import pydantic
 import structlog
 
+from talemate.exceptions import GenerationCancelled
 from talemate.history import HistoryEntry
 from talemate.instance import get_agent
 from talemate.knowledge.catalog import FactQuery, list_facts
@@ -28,6 +29,11 @@ class DisclosurePayload(pydantic.BaseModel):
     target: str
     information: str | None = None
     whole_entry: pydantic.StrictBool = False
+
+
+class EntryBriefingPayload(pydantic.BaseModel):
+    name: str
+    disclosure_id: str
 
 
 class KnowledgeEdgePayload(pydantic.BaseModel):
@@ -128,6 +134,13 @@ class KnowledgeMixin:
         payload = CharacterKnowledgePayload(**data)
         await self._send_character_knowledge(payload.name)
 
+    async def _persist_failed_entry_briefing_mutation(self):
+        if self.scene.auto_save:
+            await self.scene.save(auto=True)
+        else:
+            self.scene.saved = False
+            self.scene.emit_status()
+
     async def handle_get_topic_facts(self, data):
         payload = TopicFactsPayload(**data)
         rows = self.world_state_manager.get_topics_facts(
@@ -189,6 +202,85 @@ class KnowledgeMixin:
                 }
             )
             await self.signal_operation_done()
+
+    @background_task("Regenerating character entry briefing")
+    async def handle_regenerate_entry_briefing(self, data):
+        scene = self.scene
+        request_id = data.get("request_id")
+        try:
+            payload = EntryBriefingPayload(**data)
+            disclosure = self.world_state_manager.character_entry_briefing(
+                payload.name, payload.disclosure_id
+            )
+            character = scene.get_character(payload.name)
+            conversation = get_agent("conversation")
+            from talemate.agents.conversation.entry_context import restart_entry_window
+
+            restart_entry_window(conversation, character, disclosure)
+            briefing = await conversation.generate_entry_briefing(
+                character,
+                replace_disclosure_id=payload.disclosure_id,
+            )
+        except (GenerationCancelled, ValueError) as exc:
+            await self.signal_operation_failed(
+                str(exc),
+                failed_action="regenerate_entry_briefing",
+                request_id=request_id,
+                extra={"data": {"name": data.get("name")}},
+            )
+            return
+        if briefing is None:
+            await self.signal_operation_failed(
+                f"Character entry briefing for {payload.name} failed.",
+                emit_status=False,
+                failed_action="regenerate_entry_briefing",
+                request_id=request_id,
+                extra={"data": {"name": payload.name}},
+            )
+            await self._persist_failed_entry_briefing_mutation()
+            await self._send_character_knowledge(payload.name, request_id=request_id)
+            return
+        disclosure = self.world_state_manager.character_entry_briefing(
+            payload.name, payload.disclosure_id
+        )
+        await self._send_character_knowledge(payload.name, request_id=request_id)
+        await self.signal_operation_done(allow_auto_save=False, request_id=request_id)
+        status = await get_agent("summarizer").rebuild_supported_facts(
+            scene, [source_reference(scene, "disclosure", disclosure.id)]
+        )
+        if self.scene is scene:
+            await self._send_character_knowledge(payload.name, request_id=request_id)
+            self.websocket_handler.queue_put(
+                {
+                    "type": "world_state_manager",
+                    "action": "entry_briefing_indexed",
+                    "request_id": request_id,
+                    "data": {
+                        "name": payload.name,
+                        "id": disclosure.id,
+                        "facts_status": status,
+                    },
+                }
+            )
+            await self.signal_operation_done(request_id=request_id)
+
+    async def handle_remove_entry_briefing(self, data):
+        request_id = data.get("request_id")
+        try:
+            payload = EntryBriefingPayload(**data)
+            self.world_state_manager.remove_character_entry_briefing(
+                payload.name, payload.disclosure_id
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(
+                str(exc),
+                failed_action="remove_entry_briefing",
+                request_id=request_id,
+                extra={"data": {"name": data.get("name")}},
+            )
+            return
+        await self._send_character_knowledge(payload.name, request_id=request_id)
+        await self.signal_operation_done(request_id=request_id)
 
     async def handle_set_knowledge_edge(self, data):
         payload = KnowledgeEdgePayload(**data)

@@ -13,6 +13,18 @@ Browse a line's versions freely, then choose **Keep this version**, move keyboar
 - **Known by.** Every sheet entry and world entry is known by everyone, only its owner (**Nobody** for a world entry), or specific characters. See [Visibility](/talemate/user-guide/world-editor/knowledge/#visibility).
 - **The character's knowledge.** All of the above plus what the story taught them; the [Knowledge tab](/talemate/user-guide/world-editor/knowledge/#topics-and-coverage) lists it.
 
+## A character enters
+
+Explicitly activating a character or bringing one back starts a private arrival window for that character. Loading a save with the character already active does not. The window lasts for **Character entry turns** of that character's own completed dialogue (3 by default); prompt retries and everyone else's lines leave it alone, and a save/reload resumes the remaining count.
+
+Before each reply in that window, Talemate rebuilds a zero-request orientation from the character's knowledge at that moment: up to twelve ranked known facts about the characters present now, the current roster, no more than five character-visible lines since entry, time since entry, and—on a return—the time since the character was last known to be present. The whole orientation has a fixed prompt-token ceiling. The entry boundary stays fixed while facts, presence and visible lines update live. Raw scene description and reader-only history are excluded. Talemate does not infer a clock time; a time of day appears only when the character knows a fact that states one. Player-controlled characters receive this orientation in context preview and AI-driven turns too.
+
+With **Brief characters on entry** on, a non-player character's activation normally sends one request through the World State client. A readable result replaces the live orientation for the rest of the same window. Failure or cancellation does not undo the entry: the zero-request orientation remains and no briefing is saved. A player character never sends this request.
+
+Standard stores that temporary briefing only in the Conversation prompt state. Character perspectives stores it as a disclosure to the entering character, visible under **Characters → Knowledge**. **Regenerate** replaces only that disclosure and starts a fresh turn window; **Remove** deletes only it, revealing the live orientation if the original window still has turns. Once the window has expired, removing the disclosure restores no prompt block.
+
+If Narrator **Offscreen Life** also applies to a return, one combined request through the Narrator client produces both results and honors Offscreen Life's length and extra instructions. Its account and fact keep the same shape as usual. If only one section is readable, Talemate keeps that result and retries a missing offscreen account through its ordinary path. That fallback makes the return cost two requests. Regenerating or removing the entry briefing never changes that paired fact.
+
 ## Standard mode: one line is said
 
 Knowledge follows presence. Two switches add learning from dialogue; the chapter summary records facts.
@@ -155,19 +167,19 @@ flowchart LR
         direction TB
         P1["Minimal<br/>The analysis after each passage"] --> P2["Light<br/>+ Topics"]
         P2 --> P3["Balanced<br/>+ Extract facts<br/>+ Automatically repair analysis"]
-        P3 --> P4["Thorough<br/>+ Refine memories with AI"]
+        P3 --> P4["Thorough<br/>+ Refine memories with AI<br/>+ Brief characters on entry"]
     end
     subgraph Standard
         direction TB
         S0["Off<br/>Character Knowledge off<br/>The full scene history for everyone"] --> S1["Minimal<br/>Character Knowledge<br/>Limit to character knowledge"]
         S1 --> S2["Light<br/>+ Remind about unknown facts<br/>+ Topic knowledge overview<br/>+ Topics<br/>+ Match known facts<br/>+ Extract facts"]
         S2 --> S3["Balanced<br/>+ Track learning from dialogue<br/>(one request)"]
-        S3 --> S4["Thorough<br/>+ Refine memories with AI<br/>(two requests)"]
+        S3 --> S4["Thorough<br/>+ Refine memories with AI<br/>+ Brief characters on entry<br/>(two per applicable line,<br/>normally one per NPC activation;<br/>account retry can add one)"]
         S4 --> S5["Ultra<br/>Unknown-fact reminders 10<br/>Recent facts to check 100"]
     end
 ```
 
-In Standard mode, Off is Talemate before character knowledge: every character sees the full scene history. Light adds every helper that costs no request, Balanced one request, Thorough two, and Ultra wider reminders. In Character perspectives mode the analysis is mandatory, so Minimal is the floor and there is no Off and no Ultra; a Standard scene on Off that switches modes lands on Minimal. A new story starts on Balanced; switching modes carries the stop over, and Ultra lands on Thorough. The [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets) tables list every switch and the model each stop asks for.
+In Standard mode, Off is Talemate before character knowledge: every character sees the full scene history. Light adds every helper that costs no request, Balanced one request per applicable line, Thorough two per applicable line plus normally one per non-player character activation, and Ultra wider reminders. A combined Offscreen Life fallback can add one more request to a return. In Character perspectives mode the analysis is mandatory, so Minimal is the floor and there is no Off and no Ultra; Thorough adds both memory refinement and the activation briefing. A Standard scene on Off that switches modes lands on Minimal. A new story starts on Balanced; switching modes carries the stop over, and Ultra lands on Thorough. The [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets) tables list every switch and the model each stop asks for.
 
 ## Which mode to pick
 

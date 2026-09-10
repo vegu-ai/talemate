@@ -20,10 +20,14 @@ function agentsAt(mode, stop, overrides = {}) {
             absence_limit: number('Unknown-fact reminders', v(`${ck}.absence_limit`)),
             absence_window: number('Recent facts to check', v(`${ck}.absence_window`)),
             awareness_line: bool('Topic knowledge overview', v(`${ck}.awareness_line`)),
+            brief_characters_on_entry: bool('Brief characters on entry', v(`${ck}.brief_characters_on_entry`), 'One request per character activation.'),
             memory_pass: bool('Refine memories with AI', v(`${ck}.memory_pass`), 'One more request before each reply.'),
             ledger: bool('Track learning from dialogue', v(`${ck}.ledger`), 'One more request after a character message.'),
         }
-        : { memory_pass: bool('Refine memories with AI', v(`${ck}.memory_pass`), 'One more request before each reply.') };
+        : {
+            brief_characters_on_entry: bool('Brief characters on entry', v(`${ck}.brief_characters_on_entry`), 'One request per character activation.'),
+            memory_pass: bool('Refine memories with AI', v(`${ck}.memory_pass`), 'One more request before each reply.'),
+        };
     return [
         { name: 'conversation', label: 'Conversation', data: { scene_overrides: {} }, actions: {
             character_knowledge: { enabled: v(`${ck}.enabled`), can_be_disabled: true, label: 'Character Knowledge', config: characterKnowledge },

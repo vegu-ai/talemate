@@ -68,6 +68,15 @@ async def character_context_review(scene, character, overrides=None):
     preview["knowledge_mode"] = scene.knowledge_eligibility
 
     if perception or conversation.character_knowledge_enabled:
+        entry_context = conversation.character_entry_context(character)
+        if entry_context:
+            preview["sections"].append(
+                section(
+                    "knowledge",
+                    "Character entry orientation",
+                    [entry_context],
+                )
+            )
         bucket = known_bucket(scene, character.name)
         fact_exclusions(scene, bucket, diagnostics)
         known, _ = known_facts(

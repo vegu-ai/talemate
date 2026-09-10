@@ -76,6 +76,19 @@ describe('the preset tables', () => {
         expect(requestCount('perception', 'minimal')).toBe(1);
         expect(requestCount('perception', 'light')).toBe(1);
     });
+    it('enables entry briefings only at Standard Thorough and Ultra and Perspectives Thorough', () => {
+        const key = 'conversation.character_knowledge.brief_characters_on_entry';
+        expect(EFFORT_PRESETS.legacy.off[key]).toBeUndefined();
+        expect(EFFORT_PRESETS.legacy.minimal[key]).toBe(false);
+        expect(EFFORT_PRESETS.legacy.light[key]).toBe(false);
+        expect(EFFORT_PRESETS.legacy.balanced[key]).toBe(false);
+        expect(EFFORT_PRESETS.legacy.thorough[key]).toBe(true);
+        expect(EFFORT_PRESETS.legacy.ultra[key]).toBe(true);
+        expect(EFFORT_PRESETS.perception.minimal[key]).toBe(false);
+        expect(EFFORT_PRESETS.perception.light[key]).toBe(false);
+        expect(EFFORT_PRESETS.perception.balanced[key]).toBe(false);
+        expect(EFFORT_PRESETS.perception.thorough[key]).toBe(true);
+    });
     it('Standard Ultra raises the reminder knobs', () => {
         expect(EFFORT_PRESETS.legacy.ultra['conversation.character_knowledge.absence_limit']).toBe(10);
         expect(EFFORT_PRESETS.legacy.ultra['conversation.character_knowledge.absence_window']).toBe(100);
@@ -128,7 +141,11 @@ describe('carrying a stop to the other table', () => {
         expect(queue).not.toHaveBeenCalled();
     });
     it('prices a stop from the tables, so the other mode costs the same anywhere', () => {
-        expect(effortCost('legacy', 'thorough').extras).toEqual(['Refine memories with AI', 'Track learning from dialogue']);
+        expect(effortCost('legacy', 'thorough').extras).toEqual([
+            'Refine memories with AI',
+            'Track learning from dialogue',
+            'Brief characters on entry (one request per NPC activation; account retry can add one)',
+        ]);
         expect(effortCost('perception', 'minimal').extras).toEqual(['Summarizer analysis after each passage']);
         expect(effortCost('legacy', 'minimal').text).toBe('No extra requests per line');
         expect(effortCost('legacy', 'off').text).toBe('No extra requests per line');
@@ -224,7 +241,7 @@ describe('the patch to reach a stop', () => {
     it('lists only the keys that differ, grouped per agent action', () => {
         const patch = effortPatch(agentsAt('legacy', 'light'), 'legacy', 'thorough');
         expect(patch).toEqual([
-            { agent: 'conversation', action: 'character_knowledge', config: { ledger: true, memory_pass: true } },
+            { agent: 'conversation', action: 'character_knowledge', config: { ledger: true, memory_pass: true, brief_characters_on_entry: true } },
         ]);
         expect(effortPatch(agentsAt('legacy', 'light'), 'legacy', 'light')).toEqual([]);
     });
@@ -256,6 +273,7 @@ describe('the docs page repeats the tables', () => {
         'conversation.character_knowledge.perspective_filter': 'Limit to character knowledge',
         'conversation.character_knowledge.absence_block': 'Remind about unknown facts',
         'conversation.character_knowledge.awareness_line': 'Topic knowledge overview',
+        'conversation.character_knowledge.brief_characters_on_entry': 'Brief characters on entry',
         'conversation.character_knowledge.ledger': 'Track learning from dialogue',
         'conversation.character_knowledge.memory_pass': 'Refine memories with AI',
         'conversation.character_knowledge.absence_limit': 'Unknown-fact reminders',

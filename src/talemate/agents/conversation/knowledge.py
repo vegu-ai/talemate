@@ -15,10 +15,14 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.agents.conversation.response_specs import (
+    ENTRY_BRIEFING_SPEC,
     KNOWLEDGE_LEDGER_SPEC,
     KNOWLEDGE_LEDGER_FACTS_SPEC,
     MEMORY_PASS_SPEC,
 )
+from talemate.emit import emit
+from talemate.exceptions import GenerationCancelled
+from talemate.context import scene_is_loading
 from talemate.instance import get_agent
 from talemate.knowledge.absence import (
     ABSENCE_LIMIT,
@@ -28,10 +32,11 @@ from talemate.knowledge.absence import (
 )
 from talemate.knowledge.bucket import KnowledgeIndex
 from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
+from talemate.knowledge.chronology import ranked_facts, render_fact
 from talemate.knowledge.schema import KnowledgeEdge
 from talemate.knowledge.facts import parse_facts, previous_facts, store_facts
 from talemate.knowledge.perspective_models import content_digest
-from talemate.knowledge.topics import refresh_topics
+from talemate.knowledge.topics import known_bucket, refresh_topics
 from talemate.knowledge.mode import (
     character_knowledge_enabled as perception_mode_enabled,
 )
@@ -42,7 +47,7 @@ from talemate.util.data import extract_json
 import talemate.emit.async_signals as async_signals
 
 if TYPE_CHECKING:
-    from talemate.events import GameLoopNewMessageEvent
+    from talemate.events import CharacterActivatedEvent, GameLoopNewMessageEvent
     from talemate.tale_mate import Character
 
 __all__ = [
@@ -160,6 +165,27 @@ class CharacterKnowledgeMixin:
                     description="Give the AI a short overview of which topics the character knows about. Turn on for topic-level reminders; requires Topics in the Memory agent.",
                     value=True,
                 ),
+                "character_entry_turns": AgentActionConfig(
+                    type="number",
+                    label="Character entry turns",
+                    description="Keep a private arrival orientation in the character's prompt for this many of their committed lines. Prompt retries do not consume a turn.",
+                    value=3,
+                    min=1,
+                    max=10,
+                    step=1,
+                ),
+                "brief_characters_on_entry": AgentActionConfig(
+                    type="bool",
+                    label="Brief characters on entry",
+                    description="Generate a short private perception when a non-player character enters or returns.",
+                    value=False,
+                    note_on_value={
+                        True: AgentActionNote(
+                            color="primary",
+                            text="Normally one request per non-player character activation. When Narrator Offscreen Life also applies, an unreadable account section is retried and adds one request.",
+                        ),
+                    },
+                ),
                 "memory_pass": AgentActionConfig(
                     type="bool",
                     label="Refine memories with AI",
@@ -217,7 +243,12 @@ class CharacterKnowledgeMixin:
             action["config"] = {
                 key: value
                 for key, value in action["config"].items()
-                if key == "memory_pass"
+                if key
+                in (
+                    "character_entry_turns",
+                    "brief_characters_on_entry",
+                    "memory_pass",
+                )
             }
         return config
 
@@ -249,6 +280,23 @@ class CharacterKnowledgeMixin:
     def knowledge_awareness_line(self) -> bool:
         return self.character_knowledge_enabled and bool(
             self.resolve_config("character_knowledge", "awareness_line")
+        )
+
+    @property
+    def knowledge_character_entry_turns(self) -> int:
+        return int(self.resolve_config("character_knowledge", "character_entry_turns"))
+
+    def character_entry_context(self, character: "Character") -> str | None:
+        from talemate.agents.conversation.entry_context import (
+            render_entry_orientation,
+        )
+
+        return render_entry_orientation(self, character)
+
+    @property
+    def knowledge_brief_characters_on_entry(self) -> bool:
+        return self.character_knowledge_enabled and bool(
+            self.resolve_config("character_knowledge", "brief_characters_on_entry")
         )
 
     async def awareness_line(self, character: "Character | None") -> str | None:
@@ -293,12 +341,47 @@ class CharacterKnowledgeMixin:
         # the ledger runs on every character line the scene records, the
         # player's included: listeners learn from what is said to them
         async_signals.get("game_loop_new_message").connect(self.on_new_message)
+        async_signals.get("character.activated").connect(self.on_character_activated)
+
+    async def on_character_activated(self, event: "CharacterActivatedEvent"):
+        if event.scene is not self.scene:
+            return
+        if scene_is_loading.get() is event.scene:
+            return
+        from talemate.agents.conversation.entry_context import start_entry_window
+
+        character = event.character
+        narrator = get_agent("narrator")
+        window = start_entry_window(
+            self,
+            character,
+            away_scene_time=narrator.away_scene_time(character),
+        )
+        if (
+            window is None
+            or character.is_player
+            or not self.knowledge_brief_characters_on_entry
+        ):
+            return
+        coordination = narrator.coordinate_entry_briefing(character)
+        if coordination.deferred:
+            return
+        await self.generate_entry_briefing(
+            character,
+            missed=list(coordination.missed),
+            elapsed=coordination.elapsed,
+        )
 
     async def on_new_message(self, event: "GameLoopNewMessageEvent"):
-        if not self.knowledge_ledger or event.scene is not self.scene:
+        if event.scene is not self.scene:
             return
         message = event.message
         if not isinstance(message, CharacterMessage):
+            return
+        from talemate.agents.conversation.entry_context import consume_entry_turn
+
+        consume_entry_turn(self, message.character_name)
+        if not self.knowledge_ledger:
             return
         character = self.scene.get_character(message.character_name)
         if character is None:
@@ -307,6 +390,211 @@ class CharacterKnowledgeMixin:
             await self.record_learned_facts(character, str(message), message=message)
         else:
             await self.record_learned_facts(character, str(message))
+
+    @set_processing
+    async def generate_entry_briefing(
+        self,
+        character: "Character",
+        *,
+        missed: list[dict] | None = None,
+        elapsed: str = "",
+        replace_disclosure_id: str | None = None,
+    ) -> str | None:
+        """Generate one scoped briefing, optionally with an offscreen account."""
+
+        from talemate.agents.conversation.entry_context import (
+            ENTRY_BRIEFING_TOKEN_ALLOWANCE,
+            ENTRY_FACT_LIMIT,
+            bind_entry_disclosure,
+            build_entry_orientation,
+            clear_entry_briefing,
+            entry_windows,
+            perspective_entry_briefing,
+            remove_perspective_entry_briefing,
+            render_entry_block,
+            set_entry_briefing,
+            store_perspective_entry_briefing,
+        )
+
+        clear_entry_briefing(self, character.name)
+        if character.is_player:
+            return None
+        perspectives = perception_mode_enabled(self.scene)
+
+        def fail_entry_briefing(error: Exception | str) -> None:
+            clear_entry_briefing(self, character.name)
+            if perspectives:
+                if replace_disclosure_id is not None:
+                    remove_perspective_entry_briefing(
+                        self.scene,
+                        character.name,
+                        replace_disclosure_id,
+                    )
+                bind_entry_disclosure(self, character.name, None)
+            log.warning(
+                "entry briefing failed",
+                character=character.name,
+                error=str(error),
+            )
+            emit(
+                "status",
+                status="error",
+                message=f"Character entry briefing for {character.name} failed.",
+            )
+
+        if (
+            replace_disclosure_id is not None
+            and perspective_entry_briefing(
+                self.scene, character.name, replace_disclosure_id
+            )
+            is None
+        ):
+            raise ValueError("Character entry briefing disclosure does not exist")
+        try:
+            orientation = build_entry_orientation(self, character)
+            if orientation is None:
+                return None
+            window = entry_windows(self)[character.name]
+            narrator = get_agent("narrator") if missed else None
+            client = (
+                narrator.client
+                if narrator is not None
+                else self.knowledge_analysis_client
+            )
+            if client is None:
+                fail_entry_briefing("no client configured")
+                return None
+            length = narrator.offscreen_life_length if narrator is not None else None
+            known = known_bucket(self.scene, character.name)
+            known = (
+                ranked_facts(
+                    self.scene,
+                    known,
+                    character=character.name,
+                    superseders=known,
+                    limit=ENTRY_FACT_LIMIT,
+                )
+                if known
+                else []
+            )
+            history_budget = max(256, int(client.max_token_length * 0.35))
+            history = (
+                await self.history_context(
+                    character, budget=history_budget, keep_director=False
+                )
+                if perspectives
+                else self.scene.context_history(
+                    budget=history_budget,
+                    perspective=character.name,
+                    keep_director=False,
+                )
+            )
+            request_vars = {
+                "max_tokens": client.max_token_length,
+                "character": character,
+                "arrival": render_entry_block(orientation),
+                "character_facts": [
+                    render_fact(self.scene, fact, include_id=False) for fact in known
+                ],
+                "unknown_fact_reminders": await self.absence_block(character),
+                "perceived_history": history,
+                "combined_offscreen": bool(missed),
+                "elapsed": elapsed or orientation.away_elapsed or orientation.elapsed,
+            }
+            if narrator is not None:
+                request_vars.update(
+                    {
+                        "scene": self.scene,
+                        "knowledge_index": KnowledgeIndex.from_scene(self.scene),
+                        "extra_instructions": narrator.extra_instructions,
+                        "response_length": length,
+                    }
+                )
+        except GenerationCancelled as exc:
+            fail_entry_briefing(exc)
+            return None
+
+        request_error = None
+        try:
+            _, extracted = await Prompt.request(
+                "conversation.character-entry-briefing",
+                client,
+                (
+                    f"narrate_{length + ENTRY_BRIEFING_TOKEN_ALLOWANCE}"
+                    if narrator is not None
+                    else "analyze_freeform"
+                ),
+                vars=request_vars,
+                response_spec=ENTRY_BRIEFING_SPEC,
+            )
+        except Exception as exc:
+            request_error = exc
+            extracted = {}
+
+        briefing = (extracted.get("briefing") or "").strip().strip("*").strip()
+        offscreen = (extracted.get("offscreen") or "").strip().strip("*").strip()
+        if narrator is not None and not isinstance(request_error, GenerationCancelled):
+            offscreen = narrator.clean_result(
+                offscreen,
+                ensure_dialog_format=False,
+                force_narrative=False,
+            )
+            try:
+                if offscreen:
+                    await narrator.store_offscreen_life(character, offscreen, missed)
+                else:
+                    log.warning(
+                        "combined offscreen response unreadable; retrying standalone",
+                        character=character.name,
+                    )
+                    await narrator._offscreen_life_if_enough(character, missed)
+            except Exception as exc:
+                log.warning(
+                    "offscreen life fallback failed",
+                    character=character.name,
+                    error=str(exc),
+                )
+                emit(
+                    "status",
+                    status="error",
+                    message=f"Offscreen life for {character.name} failed.",
+                )
+
+        if not briefing:
+            fail_entry_briefing(request_error or "response was unreadable")
+            return None
+
+        if character.name not in entry_windows(self):
+            log.debug(
+                "entry briefing window expired before storage",
+                character=character.name,
+            )
+            return None
+        try:
+            if perspectives:
+                disclosure = store_perspective_entry_briefing(
+                    self.scene,
+                    character.name,
+                    briefing,
+                    window=window,
+                    disclosure_id=replace_disclosure_id,
+                )
+                bind_entry_disclosure(self, character.name, disclosure.id)
+            elif not set_entry_briefing(self, character.name, briefing):
+                log.debug(
+                    "entry briefing window expired before storage",
+                    character=character.name,
+                )
+                return None
+        except (TypeError, ValueError) as exc:
+            fail_entry_briefing(exc)
+            return None
+        log.debug(
+            "entry briefing",
+            character=character.name,
+            combined_offscreen=bool(missed),
+        )
+        return briefing
 
     def rag_knowledge_viewer(self, character: "Character | None") -> str | None:
         """
@@ -446,11 +734,13 @@ class CharacterKnowledgeMixin:
                 "scene_history": scene_history,
                 "knowledge_index": KnowledgeIndex.from_scene(self.scene),
                 "character_retrieval": scoped,
-                "memory_character_context": await get_agent(
-                    "memory"
-                ).audience_character_context(viewer, [character.name])
-                if scoped
-                else "",
+                "memory_character_context": (
+                    await get_agent("memory").audience_character_context(
+                        viewer, [character.name]
+                    )
+                    if scoped
+                    else ""
+                ),
             },
             response_spec=MEMORY_PASS_SPEC,
         )
@@ -586,9 +876,11 @@ class CharacterKnowledgeMixin:
                 "line": line,
                 "recent_lines": recent,
                 "speaker": character.name,
-                "listeners": (", ".join(listeners) or "no listeners")
-                if establish
-                else ", ".join(absence.keys()),
+                "listeners": (
+                    (", ".join(listeners) or "no listeners")
+                    if establish
+                    else ", ".join(absence.keys())
+                ),
                 "absence": absence,
                 **(
                     {"establish_facts": True, "previous_facts": previous_facts(scene)}
@@ -596,9 +888,9 @@ class CharacterKnowledgeMixin:
                     else {}
                 ),
             },
-            response_spec=KNOWLEDGE_LEDGER_FACTS_SPEC
-            if establish
-            else KNOWLEDGE_LEDGER_SPEC,
+            response_spec=(
+                KNOWLEDGE_LEDGER_FACTS_SPEC if establish else KNOWLEDGE_LEDGER_SPEC
+            ),
         )
         if establish and not await self._store_dialogue_facts(
             scene,

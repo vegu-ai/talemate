@@ -54,8 +54,8 @@ The knowledge settings of three agents decide how much work each line costs. The
 | **Minimal** | Character Knowledge on, Limit to character knowledge on; everything else off | None | Works with any model. |
 | **Light** | Minimal + Remind about unknown facts, Topic knowledge overview, Memory Topics, Match known facts, Extract facts | None | Works with any model. |
 | **Balanced** (the Create New Story default) | Light + Track learning from dialogue | One after a character message when a listener has unknown facts | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
-| **Thorough** | Balanced + Refine memories with AI | Two | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
-| **Ultra** | Thorough with Unknown-fact reminders 10 and Recent facts to check 100 | Two | Current frontier / reasoning model recommended; expect frequent retries on anything less. |
+| **Thorough** | Balanced + Refine memories with AI + Brief characters on entry | Two per applicable line, plus one per non-player character activation; a combined Offscreen Life fallback can add one | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
+| **Ultra** | Thorough with Unknown-fact reminders 10 and Recent facts to check 100 | Two per applicable line, plus one per non-player character activation; a combined Offscreen Life fallback can add one | Current frontier / reasoning model recommended; expect frequent retries on anything less. |
 
 **Off** is how Talemate worked before character knowledge: every character sees the full scene history, and nothing costs a request. It is on the Standard track only. Character perspectives builds each character's views whatever the Character Knowledge switch holds, so an Off stop there would still leave the analysis after each passage and the character filtering running, and it could not deliver the pre-feature behaviour; carrying Off across to Character perspectives lands on Minimal instead.
 
@@ -66,7 +66,7 @@ The knowledge settings of three agents decide how much work each line costs. The
 | **Minimal** | The analysis after each passage only; Automatic repair, Extract facts, Memory Topics and Refine memories off | The mandatory analysis | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. The analysis after each passage is mandatory in this mode, so this is the floor. |
 | **Light** | Minimal + Memory Topics | The analysis | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
 | **Balanced** (the Create New Story default) | Light + Extract facts + Automatically repair analysis | The analysis, plus a repair when a view is invalid | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
-| **Thorough** | Balanced + Refine memories with AI | The analysis, repairs, and one before each reply with memories | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
+| **Thorough** | Balanced + Refine memories with AI + Brief characters on entry | The analysis, repairs, one before each reply with memories, and one per non-player character activation; a combined Offscreen Life fallback can add one | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
 
 ### What an existing scene loads with
 
@@ -109,6 +109,16 @@ In Character perspectives mode, that audience shares the same opening text. Tale
 For a scene saved before introduction audiences existed, loading derives the audience once from the first narrative message's recorded presence. If that message has no presence record, or there is no narrative history, it uses the restored active roster. The result is saved with the scene, including an explicitly empty audience. This is a load convention, not a reconstruction of who actually witnessed an older opening.
 
 If the first summary's audience includes someone outside the opening audience, the introduction stays separate from that summary and its extracted facts. Characters can still receive their own dialogue and summaries without acquiring the opening.
+
+## Character entry orientation
+
+When Character Knowledge is on, explicitly activating or returning a character gives their next **Character entry turns** (3 by default) a private, zero-request orientation. It is rebuilt for every prompt from that character's current knowledge: up to twelve ranked facts about the characters present now, the current roster, at most five visible post-entry lines, elapsed time since entry, and the fixed time they spent away before a return. The complete block has a 1024-token ceiling. It excludes raw scene description and reader-only history and never guesses the time of day. Only the entering character's completed lines consume the window; retries and other characters' turns do not, and saving preserves the remaining count. Loading an already active cast does not start new windows.
+
+**Brief characters on entry** optionally replaces that block with a generated perception for a non-player character. It is off by default and normally costs one World State client request per activation. Player characters keep the zero-request block and cause no briefing request. A failed, cancelled or unreadable result leaves the entry active with the zero-request fallback and saves no generated briefing.
+
+In Standard mode, the briefing is prompt-only state, visible in the character preview under **Prompt Manager → Scene Context**. It has no Knowledge-tab actions. In Character perspectives mode, it is an origin-tagged disclosure to that character. Its row in **Characters → Knowledge** has **Regenerate**, which replaces only the briefing and starts a fresh turn window, and **Remove**, which deletes it. Remove reveals the zero-request orientation only if its existing window still has turns.
+
+When Narrator **Offscreen Life** also applies, a single combined request through the Narrator client normally produces both the briefing and the ordinary offscreen account/fact. Each readable section is kept independently. If the account section is unreadable, its ordinary Narrator path retries it, so that return costs two requests; an unreadable briefing does not discard a readable account. Regenerate and Remove never alter that paired offscreen fact. The [turn-by-turn explanation](/talemate/user-guide/world-editor/knowledge-how-it-works/#a-character-enters) shows the full lifecycle.
 
 ## Fact relevance
 

@@ -49,6 +49,101 @@ def history_prefix(
     raise GenerationCancelled(f"History boundary {before_message_id} was removed")
 
 
+def _project_character_message(
+    scene: "Scene",
+    character: str,
+    message: SceneMessage,
+    *,
+    read: PerspectiveReadContext | None,
+    select,
+    keep_director: bool | str = False,
+    show_hidden: bool = False,
+    direction_mode: Literal["direction", "internal_monologue"] = "direction",
+    diagnostics=None,
+) -> str | None:
+    """Apply the shared audience, readiness, and formatting rules to one message."""
+
+    if message.hidden and not show_hidden:
+        if diagnostics is not None:
+            diagnostics.exclude("message", message.id, str(message), "hidden")
+        return None
+    if isinstance(message, DirectorMessage):
+        if not keep_director or message.character_name != character:
+            return None
+        return message.as_format(scene.conversation_format, mode=direction_mode)
+    if not message.supports_perceptions:
+        return None
+    if not character_knowledge_enabled(scene):
+        if message.present is not None and character not in message.present:
+            return None
+        return message.as_format(scene.conversation_format)
+    reference = source_reference(scene, "message", message.id, read=read)
+    if reference is None:
+        if diagnostics is not None:
+            diagnostics.exclude("message", message.id, str(message), "not_in_audience")
+        log.debug(
+            "character_history.skip",
+            message_id=message.id,
+            viewer=character,
+            status="unavailable",
+        )
+        return None
+    view = select(reference)
+    if view.status in ("pending", "failed"):
+        raise GenerationCancelled(
+            f"Perception for passage {message.id} is {view.status}; "
+            "retry perception analysis before character generation"
+        )
+    if view.status != "ready":
+        log.debug(
+            "character_history.skip",
+            message_id=message.id,
+            viewer=character,
+            status=view.status,
+        )
+        return None
+    return format_message_view(message, view.text, scene.conversation_format)
+
+
+def project_recent_character_lines(
+    scene: "Scene",
+    character: str,
+    *,
+    after_message_id: int,
+    max_messages: int,
+) -> list[str]:
+    """Newest visible raw messages after a durable boundary, oldest first."""
+
+    if max_messages <= 0:
+        return []
+    read = PerspectiveReadContext(scene) if character_knowledge_enabled(scene) else None
+    views = {}
+
+    def select(reference):
+        if reference not in views:
+            views[reference] = select_character_view(
+                scene, reference, character, read=read
+            )
+        return views[reference]
+
+    lines = []
+    for message in reversed(scene.history):
+        if message.id <= after_message_id:
+            break
+        text = _project_character_message(
+            scene,
+            character,
+            message,
+            read=read,
+            select=select,
+        )
+        if text:
+            lines.append(text.strip())
+        if len(lines) >= max_messages:
+            break
+    return list(reversed(lines))
+
+
 def project_character_history(
     scene: "Scene",
     character: str,
@@ -229,45 +324,17 @@ def project_character_history(
         if selected:
             continue
         cursor -= 1
-        if message.hidden and not show_hidden:
-            if diagnostics is not None:
-                diagnostics.exclude("message", message.id, str(message), "hidden")
-            continue
-        if isinstance(message, DirectorMessage):
-            if not keep_director or message.character_name != character:
-                continue
-            text = message.as_format(scene.conversation_format, mode=direction_mode)
-        elif message.supports_perceptions:
-            reference = source_reference(scene, "message", message.id, read=read)
-            if reference is None:
-                if diagnostics is not None:
-                    diagnostics.exclude(
-                        "message", message.id, str(message), "not_in_audience"
-                    )
-                log.debug(
-                    "character_history.skip",
-                    message_id=message.id,
-                    viewer=character,
-                    status="unavailable",
-                )
-                continue
-            view = select(reference)
-            if view.status in ("pending", "failed"):
-                raise GenerationCancelled(
-                    f"Perception for passage {message.id} is {view.status}; "
-                    "retry perception analysis before character generation"
-                )
-            if view.status != "ready":
-                log.debug(
-                    "character_history.skip",
-                    message_id=message.id,
-                    viewer=character,
-                    status=view.status,
-                )
-                continue
-            text = format_message_view(message, view.text, scene.conversation_format)
-        else:
-            continue
+        text = _project_character_message(
+            scene,
+            character,
+            message,
+            read=read,
+            select=select,
+            keep_director=keep_director,
+            show_hidden=show_hidden,
+            direction_mode=direction_mode,
+            diagnostics=diagnostics,
+        )
         if not text:
             continue
         size = count_tokens(text)

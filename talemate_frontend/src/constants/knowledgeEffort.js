@@ -36,6 +36,7 @@ const standard = (overrides) => ({
     [`${CK}.awareness_line`]: false,
     [`${CK}.ledger`]: false,
     [`${CK}.memory_pass`]: false,
+    [`${CK}.brief_characters_on_entry`]: false,
     [`${CK}.absence_limit`]: 5,
     [`${CK}.absence_window`]: 30,
     'memory.topics.enabled': false,
@@ -47,6 +48,7 @@ const standard = (overrides) => ({
 const perspectives = (overrides) => ({
     [`${CK}.enabled`]: true,
     [`${CK}.memory_pass`]: false,
+    [`${CK}.brief_characters_on_entry`]: false,
     'summarizer.perceptions.automatic_repair': false,
     'summarizer.archive.extract_facts': false,
     'memory.topics.enabled': false,
@@ -76,11 +78,17 @@ export const EFFORT_PRESETS = Object.freeze({
         minimal: standard({}),
         light: standard(STANDARD_LIGHT),
         balanced: standard({ ...STANDARD_LIGHT, [`${CK}.ledger`]: true }),
-        thorough: standard({ ...STANDARD_LIGHT, [`${CK}.ledger`]: true, [`${CK}.memory_pass`]: true }),
+        thorough: standard({
+            ...STANDARD_LIGHT,
+            [`${CK}.ledger`]: true,
+            [`${CK}.memory_pass`]: true,
+            [`${CK}.brief_characters_on_entry`]: true,
+        }),
         ultra: standard({
             ...STANDARD_LIGHT,
             [`${CK}.ledger`]: true,
             [`${CK}.memory_pass`]: true,
+            [`${CK}.brief_characters_on_entry`]: true,
             [`${CK}.absence_limit`]: 10,
             [`${CK}.absence_window`]: 100,
         }),
@@ -98,6 +106,7 @@ export const EFFORT_PRESETS = Object.freeze({
             'summarizer.archive.extract_facts': true,
             'summarizer.perceptions.automatic_repair': true,
             [`${CK}.memory_pass`]: true,
+            [`${CK}.brief_characters_on_entry`]: true,
         }),
     },
 });
@@ -126,5 +135,6 @@ export const EFFORT_DESCRIPTIONS = Object.freeze({
 export const REQUEST_TOGGLES = Object.freeze({
     [`${CK}.memory_pass`]: 'Refine memories with AI',
     [`${CK}.ledger`]: 'Track learning from dialogue',
+    [`${CK}.brief_characters_on_entry`]: 'Brief characters on entry (one request per NPC activation; account retry can add one)',
     'summarizer.perceptions.automatic_repair': 'Automatically repair analysis',
 });

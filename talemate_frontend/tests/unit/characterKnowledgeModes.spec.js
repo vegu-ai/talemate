@@ -44,6 +44,12 @@ describe('the shared constant', () => {
         expect(characterKnowledgeMode(false)).toBe(mode('legacy'));
         expect(characterKnowledgeMode(undefined).title).toBe('Standard');
     });
+    it('both cards weigh the cast size, in the pick-this-if line and the summary', () => {
+        expect(mode('legacy').pickIf).toContain('the scene is mostly you and one character');
+        expect(mode('legacy').summary).toContain('a small cast');
+        expect(mode('perception').pickIf).toContain('several characters are active who know different things');
+        expect(mode('perception').summary).toContain('several active characters who know different things');
+    });
     it('the perspectives card names the lock once and links the model guidance', () => {
         const perception = mode('perception');
         const lockMentions = [...perception.pros, ...perception.cons, perception.summary, perception.pickIf]
@@ -75,6 +81,7 @@ describe('every point of choice shows the comparison from the constant', () => {
         expect(cards).toMatch(/mode\.pros/);
         expect(cards).toMatch(/mode\.cons/);
         expect(cards).toMatch(/mode\.pickIf/);
+        // where the callout lands is pinned on the rendered DOM, in characterKnowledgeModeCards.spec.js
         const wrapper = read('../../src/components/CharacterKnowledgeModeComparison.vue');
         expect(wrapper).toContain('CHARACTER_KNOWLEDGE_MODES_COMPARE_LABEL');
         expect(wrapper).toContain('CHARACTER_KNOWLEDGE_MODES_COMPARE_TITLE');
@@ -108,10 +115,11 @@ describe('the Choosing a mode docs section repeats the constant', () => {
         }
         expect(section).toContain(`Pick this if: ${mode.pickIf}`);
     });
-    it('carries the three-row pick-this-if table and the model guidance link', () => {
+    it('carries the four-row pick-this-if table, the cast row included, and the model guidance link', () => {
         const section = docsPage.slice(docsPage.indexOf('## Choosing a mode'), docsPage.indexOf('## Character perspectives (opt-in)'));
         const rows = section.split('\n').filter((line) => /^\| Your /.test(line));
-        expect(rows.length).toBe(3);
+        expect(rows.length).toBe(4);
+        expect(rows.find((row) => row.startsWith('| Your cast |'))).toBeTruthy();
         expect(section).toContain('/talemate/getting-started/model-expectations/');
     });
 });

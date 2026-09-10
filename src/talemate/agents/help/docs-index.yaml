@@ -1236,12 +1236,15 @@
     tools and context-budget review.
 - path: user-guide/world-editor/knowledge-how-it-works.md
   title: How character knowledge works
-  summary: 'Five diagrams explain reply inputs, presence, perceptions, disclosures, shared facts, chronology and effort.
-    Covers citation not supported, private competitor vetoes, public citations, regenerate old views, Scene Context,
-    memory ranking and exclusion, intro audiences, and browsing revisions before keeping a version.'
+  summary: 'Five diagrams explain reply inputs, presence, perceptions, disclosures, shared facts, chronology and effort,
+    with stops from Off to Ultra. Covers citation not supported, private competitor vetoes, public citations, regenerate
+    old views, Scene Context, memory ranking and exclusion, intro audiences, browsing revisions before keeping a version,
+    and a mode decision tree that weighs model, secrets, cast size and cost.'
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
-  summary: Standard versus Character perspectives, creation opt-in, empty-scene switching, effort presets, model expectations
+  summary: Standard versus Character perspectives weighed by model, secrets and cast size, creation opt-in, empty-scene
+    switching, the six Standard effort stops from Off (pre-feature behaviour, Standard track only) to Ultra, what an existing
+    scene loads with, model expectations
     and repair costs. Covers Known by visibility, disclosures and Allow/Block rules, opening audiences and old-save derivation,
     subjects/aliases, per-viewer supersession and Show formerly clause, ranked hub facts, full topic inspection, director/node
     operations and audience-scoped retrieval.

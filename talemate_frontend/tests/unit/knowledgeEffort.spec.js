@@ -3,9 +3,11 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import {
     DEFAULT_EFFORT,
+    EFFORT_DESCRIPTIONS,
     EFFORT_LABELS,
     EFFORT_MODEL_TIER,
     EFFORT_NOTES,
+    EFFORT_ORDER,
     EFFORT_PRESETS,
     EFFORT_STOPS,
 } from '@/constants/knowledgeEffort';
@@ -21,11 +23,35 @@ const requestCount = (mode, stop) => effortCost(mode, stop).extras.length;
 
 
 describe('the preset tables', () => {
-    it('offer five stops in Standard and four in Character perspectives', () => {
-        expect(EFFORT_STOPS.legacy).toEqual(['minimal', 'light', 'balanced', 'thorough', 'ultra']);
+    it('offer six stops in Standard and four in Character perspectives', () => {
+        expect(EFFORT_STOPS.legacy).toEqual(['off', 'minimal', 'light', 'balanced', 'thorough', 'ultra']);
         expect(EFFORT_STOPS.perception).toEqual(['minimal', 'light', 'balanced', 'thorough']);
         expect(EFFORT_STOPS.legacy).toContain(DEFAULT_EFFORT);
         expect(EFFORT_STOPS.perception).toContain(DEFAULT_EFFORT);
+    });
+    it('keeps Off off the Character perspectives track, where the master switch does not lift the filtering', () => {
+        expect(EFFORT_STOPS.perception).not.toContain('off');
+        expect(EFFORT_PRESETS.perception.off).toBeUndefined();
+        expect(() => effortCost('perception', 'off')).toThrow(/Unknown effort stop/);
+        expect(EFFORT_ORDER.indexOf('off')).toBeLessThan(EFFORT_ORDER.indexOf('minimal'));
+    });
+    // what makes the clamp in stopForMode sound
+    it.each(['legacy', 'perception'])('%s: every stop is ranked, and the track follows that ranking', (mode) => {
+        const ranks = EFFORT_STOPS[mode].map((stop) => EFFORT_ORDER.indexOf(stop));
+        expect(ranks).not.toContain(-1);
+        expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+    });
+    it('Off turns the master and the three switches outside it off, and states nothing about the inert ones', () => {
+        expect(EFFORT_PRESETS.legacy.off).toEqual({
+            'conversation.character_knowledge.enabled': false,
+            'memory.topics.enabled': false,
+            'memory.retrieval.similarity_gate': false,
+            'summarizer.archive.extract_facts': false,
+        });
+        expect(requestCount('legacy', 'off')).toBe(0);
+        expect(EFFORT_MODEL_TIER.legacy.off).toBe('any');
+        expect(EFFORT_LABELS.off).toBe('Off');
+        expect(EFFORT_DESCRIPTIONS.off).toMatch(/before character knowledge/);
     });
     it.each(['legacy', 'perception'])('%s: every key is a hub toggle or one of the two reminder knobs', (mode) => {
         const known = new Set(KNOWLEDGE_TOGGLES.map((t) => `${t.agent}.${t.action}.${t.config ?? 'enabled'}`));
@@ -71,10 +97,17 @@ describe('the preset tables', () => {
 });
 
 describe('carrying a stop to the other table', () => {
-    it('keeps a stop both tables hold and lands an absent one on the top stop', () => {
+    it('keeps a stop both tables hold and lands an absent one on the nearest stop that table has', () => {
         expect(stopForMode('balanced', 'perception')).toBe('balanced');
         expect(stopForMode('ultra', 'perception')).toBe('thorough');
+        expect(stopForMode('off', 'perception')).toBe('minimal');
         expect(stopForMode('thorough', 'legacy')).toBe('thorough');
+        expect(stopForMode('off', 'legacy')).toBe('off');
+    });
+    it('lands a stop the ranking does not know on the default, never on an end of the track', () => {
+        expect(stopForMode('extreme', 'legacy')).toBe(DEFAULT_EFFORT);
+        expect(stopForMode('extreme', 'perception')).toBe(DEFAULT_EFFORT);
+        expect(EFFORT_ORDER).not.toContain('extreme');
     });
     it('refuses to price or patch an unknown stop', () => {
         expect(() => effortCost('perception', 'ultra')).toThrow(/Unknown effort stop/);
@@ -88,6 +121,9 @@ describe('carrying a stop to the other table', () => {
         expect(queueEffortAcrossSwitch(agentsAt('perception', 'light'), false, queue)).toBe('light');
         expect(queue).toHaveBeenCalledWith('light', 'legacy');
         queue.mockClear();
+        expect(queueEffortAcrossSwitch(agentsAt('legacy', 'off'), true, queue)).toBe('minimal');
+        expect(queue).toHaveBeenCalledWith('minimal', 'perception');
+        queue.mockClear();
         expect(queueEffortAcrossSwitch(agentsAt('legacy', 'balanced', { 'conversation.character_knowledge.awareness_line': false }), true, queue)).toBeNull();
         expect(queue).not.toHaveBeenCalled();
     });
@@ -95,6 +131,63 @@ describe('carrying a stop to the other table', () => {
         expect(effortCost('legacy', 'thorough').extras).toEqual(['Refine memories with AI', 'Track learning from dialogue']);
         expect(effortCost('perception', 'minimal').extras).toEqual(['Summarizer analysis after each passage']);
         expect(effortCost('legacy', 'minimal').text).toBe('No extra requests per line');
+        expect(effortCost('legacy', 'off').text).toBe('No extra requests per line');
+    });
+});
+
+// AIAgent.applyActionValues, as far as the tables are concerned
+function applyStop(agents, mode, stop) {
+    for (const entry of effortPatch(agents, mode, stop)) {
+        const action = agents.find((agent) => agent.name === entry.agent).actions[entry.action];
+        if (entry.enabled !== undefined) action.enabled = entry.enabled;
+        for (const [key, value] of Object.entries(entry.config)) action.config[key].value = value;
+    }
+}
+
+describe('the chip at Off', () => {
+    it('reads Off the moment the master is unticked by hand at Minimal', () => {
+        const agents = agentsAt('legacy', 'minimal');
+        expect(currentEffort(agents, 'legacy').stop).toBe('minimal');
+        agents[0].actions.character_knowledge.enabled = false;
+        expect(currentEffort(agents, 'legacy')).toEqual({ stop: 'off', nearest: 'off' });
+    });
+    it('reads the previous stop again when re-ticking the master restores it exactly', () => {
+        // from Minimal the Off patch writes the master alone, so the round trip is lossless
+        const agents = agentsAt('legacy', 'minimal');
+        expect(effortPatch(agents, 'legacy', 'off')).toEqual([
+            { agent: 'conversation', action: 'character_knowledge', enabled: false, config: {} },
+        ]);
+        applyStop(agents, 'legacy', 'off');
+        expect(currentEffort(agents, 'legacy').stop).toBe('off');
+        agents[0].actions.character_knowledge.enabled = true;
+        expect(currentEffort(agents, 'legacy').stop).toBe('minimal');
+    });
+    it('reads Custom while the switches outside the master are still on', () => {
+        const agents = agentsAt('legacy', 'light');
+        agents[0].actions.character_knowledge.enabled = false;
+        expect(currentEffort(agents, 'legacy').stop).toBe('custom');
+    });
+    it('leaves the switches under the master alone, so re-enabling it reads Custom', () => {
+        const agents = agentsAt('legacy', 'ultra');
+        const patch = effortPatch(agents, 'legacy', 'off');
+        expect(patch).toEqual([
+            { agent: 'conversation', action: 'character_knowledge', enabled: false, config: {} },
+            { agent: 'memory', action: 'topics', enabled: false, config: {} },
+            { agent: 'memory', action: 'retrieval', config: { similarity_gate: false } },
+            { agent: 'summarizer', action: 'archive', config: { extract_facts: false } },
+        ]);
+        applyStop(agents, 'legacy', 'off');
+        expect(currentEffort(agents, 'legacy').stop).toBe('off');
+
+        const config = agents[0].actions.character_knowledge.config;
+        expect([config.ledger.value, config.memory_pass.value, config.absence_limit.value]).toEqual([true, true, 10]);
+        // the two request-costing switches are still on under the disabled master:
+        // both cost lines have to read them as costing nothing
+        expect(thoroughnessSummary(resolveKnowledgeToggles(agents, { perspectives: false }), false).extras).toEqual([]);
+        expect(effortCost('legacy', 'off').extras).toEqual([]);
+
+        agents[0].actions.character_knowledge.enabled = true;
+        expect(currentEffort(agents, 'legacy').stop).toBe('custom');
     });
 });
 
@@ -187,7 +280,9 @@ describe('the docs page repeats the tables', () => {
             const row = rowOf(tables[mode], stops[i]);
             const previous = EFFORT_PRESETS[mode][stops[i - 1]];
             for (const [key, value] of Object.entries(EFFORT_PRESETS[mode][stops[i]])) {
-                if (previous[key] === value) continue;
+                // Off states nothing about the switches under the master, so no
+                // row below states a change for them
+                if (!(key in previous) || previous[key] === value) continue;
                 expect(row, `${mode} ${stops[i]} row lacks ${LABELS[key]}`).toContain(LABELS[key]);
                 if (typeof value === 'number') expect(row).toContain(String(value));
             }
@@ -197,6 +292,24 @@ describe('the docs page repeats the tables', () => {
         for (const [key, value] of Object.entries(EFFORT_PRESETS[mode][stops[0]])) {
             if (value === true && key !== 'conversation.character_knowledge.enabled') expect(first).toContain(LABELS[key]);
         }
+    });
+    it('the Standard Off row names all four switches it turns off, and Minimal names the two it turns on', () => {
+        const off = rowOf(tables.legacy, 'off');
+        for (const key of Object.keys(EFFORT_PRESETS.legacy.off)) expect(off, `Off row lacks ${LABELS[key]}`).toContain(LABELS[key]);
+        expect(off).toContain('None');
+        const minimal = rowOf(tables.legacy, 'minimal');
+        expect(minimal).toContain(LABELS['conversation.character_knowledge.enabled']);
+        expect(minimal).toContain(LABELS['conversation.character_knowledge.perspective_filter']);
+    });
+    it('says Off is on the Standard track only, and why', () => {
+        expect(section).toMatch(/Standard track only/);
+        expect(section).toMatch(/carrying Off across to Character perspectives lands on Minimal/);
+    });
+    it('states what an existing scene loads with and how to reach Off', () => {
+        const defaults = docsPage.slice(docsPage.indexOf('### What an existing scene loads with'), docsPage.indexOf('## Character perspectives (opt-in)'));
+        expect(defaults).toMatch(/loads in \*\*Standard\*\* mode/);
+        expect(defaults).toMatch(/not stored with the scene/);
+        expect(defaults).toMatch(/drag the slider to \*\*Off\*\*/);
     });
     it('says Character perspectives has no Ultra and where a switch from Ultra lands', () => {
         expect(section).toMatch(/no Ultra/i);

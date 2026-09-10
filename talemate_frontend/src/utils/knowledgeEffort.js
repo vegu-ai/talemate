@@ -4,18 +4,24 @@
 // and every patch.
 import { characterKnowledgeMode } from '@/constants/characterKnowledgeModes';
 import { effectiveActionEnabled, effectiveConfigValue } from '@/constants/sceneAgentSettings';
-import { EFFORT_PRESETS, EFFORT_STOPS, REQUEST_TOGGLES } from '@/constants/knowledgeEffort';
+import { DEFAULT_EFFORT, EFFORT_ORDER, EFFORT_PRESETS, EFFORT_STOPS, REQUEST_TOGGLES } from '@/constants/knowledgeEffort';
 import { PERSPECTIVES_ANALYSIS_COST } from '@/utils/knowledgeHub';
 
 export function effortMode(perspectives) {
     return characterKnowledgeMode(perspectives).key;
 }
 
-// A stop the target table lacks (Standard Ultra in Character perspectives)
-// lands on that table's top stop.
+// A stop the target table lacks lands on the nearest stop that table has:
+// Standard Ultra on Thorough, Standard Off on Minimal. A stop the ranking does
+// not know at all lands on the default rather than on an end of the track,
+// where it would silently switch character knowledge off.
 export function stopForMode(stop, mode) {
     const stops = EFFORT_STOPS[mode];
-    return stops.includes(stop) ? stop : stops[stops.length - 1];
+    if (stops.includes(stop)) return stop;
+    const rank = EFFORT_ORDER.indexOf(stop);
+    if (rank === -1) return stopForMode(DEFAULT_EFFORT, mode);
+    const distance = (candidate) => Math.abs(EFFORT_ORDER.indexOf(candidate) - rank);
+    return stops.reduce((best, candidate) => (distance(candidate) < distance(best) ? candidate : best));
 }
 
 function preset(mode, stop) {

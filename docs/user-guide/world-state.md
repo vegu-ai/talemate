@@ -174,7 +174,7 @@ leaves the menu open behind it; press Escape or click outside to close it.
 
 The count line under the ranked facts is a link to the character's Knowledge tab, where every known fact is listed by topic.
 
-The menu header shows the story mode. **Thoroughness** starts with the **Character knowledge effort** slider (see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets)): one drag sets the settings in the pane below to a tuned stop, with the stop's extra requests and model expectation under it; a manual change to any setting shows **Custom**.
+The menu header shows the story mode. **Thoroughness** starts with the **Character knowledge effort** slider (see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets)): one drag sets the settings in the pane below to a tuned stop, with the stop's extra requests and model expectation under it; a manual change shows whichever stop the settings then match, and **Custom** when they match none.
 
 ![knowledge hub effort slider](/talemate/img/0.40.0/world-state-knowledge-hub-effort.png)
 
@@ -196,7 +196,8 @@ labels, descriptions and cost notes as the agent settings:
 
 Group headers and toggles share one checkbox column; a group without a master checkbox keeps
 the space so its label lines up. A :material-plus-circle-outline: icon marks an option that adds
-a request; hover it to read the cost. The toggles write the same settings as the agent settings dialog, so both places stay in
+a request; hover it to read the cost. An option under a group switch that is off costs nothing, so it
+carries no icon. The toggles write the same settings as the agent settings dialog, so both places stay in
 sync. When the loaded scene overrides a setting, the hub toggles the scene override and marks it
 **scene override**. Options that a Character perspectives story does not use are hidden, as they
 are in the agent settings. Click a group name to open its section in the agent settings.

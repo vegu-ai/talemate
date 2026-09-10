@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath, URL } from 'node:url';
 import {
     KNOWLEDGE_TOGGLES,
     PERSPECTIVES_ANALYSIS_COST,
@@ -134,6 +136,23 @@ describe('resolveKnowledgeToggles', () => {
         expect(repair.costNote).toMatch(/One more Summarizer request/);
         expect(thoroughnessSummary(groups, true).extras).toEqual([PERSPECTIVES_ANALYSIS_COST]);
         expect(resolveKnowledgeToggles(agents()).some((g) => g.action === 'perceptions')).toBe(false);
+    });
+
+    it('keeps the cost of a switch under a disabled group out of both cost lines and off the row', () => {
+        const off = agents();
+        // Off leaves the switches under the master where they were: still on, now inert
+        const action = off.find((agent) => agent.name === 'conversation').actions.character_knowledge;
+        action.enabled = false;
+        action.config.ledger.value = true;
+        action.config.memory_pass.value = true;
+        const groups = resolveKnowledgeToggles(off);
+        const conversation = groups.find((g) => g.action === 'character_knowledge');
+        expect(conversation.enabled).toBe(false);
+        expect(conversation.toggles.some((toggle) => toggle.costNote && toggle.value)).toBe(true);
+        expect(thoroughnessSummary(groups, false).extras).toEqual([]);
+        // the badge in the pane has to agree with the line above it
+        const hub = readFileSync(fileURLToPath(new URL('../../src/components/CharacterKnowledgeHub.vue', import.meta.url)), 'utf-8');
+        expect(hub).toMatch(/v-if="toggle\.costNote && group\.enabled"/);
     });
 
     it('offers only bool fields and only the listed ones', () => {

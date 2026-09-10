@@ -6,6 +6,7 @@
 // and a unit test checks every row: edit both.
 
 export const EFFORT_LABELS = Object.freeze({
+    off: 'Off',
     minimal: 'Minimal',
     light: 'Light',
     balanced: 'Balanced',
@@ -15,11 +16,16 @@ export const EFFORT_LABELS = Object.freeze({
 
 export const DEFAULT_EFFORT = 'balanced';
 
-// Character perspectives has no Ultra: nothing is left to raise past Thorough
+// Character perspectives has no Ultra: nothing is left to raise past Thorough,
+// and no Off: its views are built whatever the Character Knowledge switch holds,
+// so the stop would promise a pre-feature scene it cannot deliver
 export const EFFORT_STOPS = Object.freeze({
-    legacy: ['minimal', 'light', 'balanced', 'thorough', 'ultra'],
+    legacy: ['off', 'minimal', 'light', 'balanced', 'thorough', 'ultra'],
     perception: ['minimal', 'light', 'balanced', 'thorough'],
 });
+
+// Every stop, lowest first, for carrying one to a table that lacks it
+export const EFFORT_ORDER = Object.freeze(['off', 'minimal', 'light', 'balanced', 'thorough', 'ultra']);
 
 const CK = 'conversation.character_knowledge';
 
@@ -55,8 +61,18 @@ const STANDARD_LIGHT = {
     'summarizer.archive.extract_facts': true,
 };
 
+// A disabled master makes every switch under it inert, so Off leaves those
+// alone: a master unticked by hand reads as Off without clearing them first.
+const OFF = {
+    [`${CK}.enabled`]: false,
+    'memory.topics.enabled': false,
+    'memory.retrieval.similarity_gate': false,
+    'summarizer.archive.extract_facts': false,
+};
+
 export const EFFORT_PRESETS = Object.freeze({
     legacy: {
+        off: OFF,
         minimal: standard({}),
         light: standard(STANDARD_LIGHT),
         balanced: standard({ ...STANDARD_LIGHT, [`${CK}.ledger`]: true }),
@@ -87,7 +103,7 @@ export const EFFORT_PRESETS = Object.freeze({
 });
 
 export const EFFORT_MODEL_TIER = Object.freeze({
-    legacy: { minimal: 'any', light: 'any', balanced: 'structured', thorough: 'reasoning', ultra: 'frontier' },
+    legacy: { off: 'any', minimal: 'any', light: 'any', balanced: 'structured', thorough: 'reasoning', ultra: 'frontier' },
     perception: { minimal: 'structured', light: 'structured', balanced: 'structured', thorough: 'reasoning' },
 });
 
@@ -98,6 +114,7 @@ export const EFFORT_NOTES = Object.freeze({
 });
 
 export const EFFORT_DESCRIPTIONS = Object.freeze({
+    off: 'How Talemate worked before character knowledge: every character sees the full scene history.',
     minimal: 'No optional work.',
     light: 'Zero-request helpers only.',
     balanced: 'The best-value extra request for this mode.',

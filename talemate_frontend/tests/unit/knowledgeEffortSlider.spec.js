@@ -87,7 +87,41 @@ function dragTo(stop) {
 describe('the effort slider against the status frames of its own write', () => {
     it('starts on the stop the agents report', () => {
         expect(vm.shownStop).toBe('minimal');
-        expect(vm.index).toBe(0);
+        expect(vm.index).toBe(index('minimal'));
+        expect(vm.stops[0]).toBe('off');
+    });
+
+    it('writes the Off stop and holds until the agents report it', async () => {
+        dragTo('off');
+        expect(applied).toEqual(['off']);
+        await nextTick();
+        expect(vm.shownStop).toBe('off');
+        expect(vm.custom).toBe(false);
+        expect(vm.cost).toBe('No extra requests per line.');
+        deliver('conversation');
+        deliver('memory');
+        deliver('summarizer');
+        await nextTick();
+        expect(vm.heldStop).toBeNull();
+        expect(vm.shownStop).toBe('off');
+    });
+
+    it('has no Off stop in Character perspectives', async () => {
+        state.mode = 'perception';
+        await nextTick();
+        expect(vm.stops).toEqual(EFFORT_STOPS.perception);
+        expect(vm.shownStop).not.toBe('off');
+        expect(() => vm.cost).not.toThrow();
+    });
+
+    it('carries an Off pick that is still in its debounce to Minimal, the nearest stop the other table has', async () => {
+        vi.useFakeTimers();
+        state.agents = agentsAt('legacy', 'ultra');
+        await nextTick();
+        vm.pick(index('off'));
+        state.mode = 'perception';
+        await nextTick();
+        expect(applied, 'the Off pick was dropped, or landed on the top stop').toEqual(['minimal']);
     });
 
     it('holds the knob where the drag left it while a stale frame arrives', async () => {

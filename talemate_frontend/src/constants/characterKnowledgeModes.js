@@ -7,7 +7,7 @@ export const CHARACTER_KNOWLEDGE_MODES = [
     {
         key: 'legacy',
         title: 'Standard',
-        summary: 'Characters know what they were present for and what you allow. No extra requests. You manage exceptions by hand with Allow / Block rules and the knowledge switches in Conversation settings. Good for most stories, any model, and stories without many secrets.',
+        summary: 'Characters know what they were present for and what you allow. No extra requests. You manage exceptions by hand with Allow / Block rules and the knowledge switches in Conversation settings. Good for most stories, any model, a small cast, and stories without many secrets.',
         pros: [
             'No extra requests',
             'Works with any model',
@@ -19,12 +19,12 @@ export const CHARACTER_KNOWLEDGE_MODES = [
             'Leaks are yours to catch and fix by hand',
             'The reminder and limit switches are approximate',
         ],
-        pickIf: 'Your model is small or older, or the story has few secrets.',
+        pickIf: 'Your model is small or older, the story has few secrets, or the scene is mostly you and one character.',
     },
     {
         key: 'perception',
         title: 'Character perspectives',
-        summary: 'After every passage the AI writes what each character actually perceived, and their replies are grounded in that. Hands-off for you: keep secrets out of the shared description, mark private entries, hand out knowledge with a disclosure when needed. One extra analytical request per passage; needs a strong, reliable model. Best for stories with secrets.',
+        summary: 'After every passage the AI writes what each character actually perceived, and their replies are grounded in that. Hands-off for you: keep secrets out of the shared description, mark private entries, hand out knowledge with a disclosure when needed. One extra analytical request per passage; needs a strong, reliable model. Best for stories with secrets and several active characters who know different things.',
         pros: [
             'Characters only know what they actually perceived',
             'Secrets hold without hand-tuning',
@@ -37,7 +37,7 @@ export const CHARACTER_KNOWLEDGE_MODES = [
             'Cannot be turned off once the story has history',
             'No forget or block of already acquired knowledge',
         ],
-        pickIf: 'Your model is current and reliable, and the story depends on who knows what.',
+        pickIf: 'Your model is current and reliable, the story depends on who knows what, and several characters are active who know different things.',
         modelGuidanceUrl: MODEL_EXPECTATIONS_DOCS_URL,
     },
 ];

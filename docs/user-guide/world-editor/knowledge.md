@@ -8,7 +8,7 @@ Every story runs in one of two character knowledge modes. You choose when you cr
 
 ![Create New Story dialog with the two modes side by side](/talemate/img/0.40.0/create-new-story-modes.png)
 
-**Standard** — Characters know what they were present for and what you allow. No extra requests. You manage exceptions by hand with Allow / Block rules and the knowledge switches in Conversation settings. Good for most stories, any model, and stories without many secrets.
+**Standard** — Characters know what they were present for and what you allow. No extra requests. You manage exceptions by hand with Allow / Block rules and the knowledge switches in Conversation settings. Good for most stories, any model, a small cast, and stories without many secrets.
 
 - Pros:
     - No extra requests
@@ -19,9 +19,9 @@ Every story runs in one of two character knowledge modes. You choose when you cr
     - A present character sees the full reader prose, private thoughts included
     - Leaks are yours to catch and fix by hand
     - The reminder and limit switches are approximate
-- Pick this if: Your model is small or older, or the story has few secrets.
+- Pick this if: Your model is small or older, the story has few secrets, or the scene is mostly you and one character.
 
-**Character perspectives** — After every passage the AI writes what each character actually perceived, and their replies are grounded in that. Hands-off for you: keep secrets out of the shared description, mark private entries, hand out knowledge with a disclosure when needed. One extra analytical request per passage; needs a strong, reliable model. Best for stories with secrets. **Cannot be changed once the story has history.**
+**Character perspectives** — After every passage the AI writes what each character actually perceived, and their replies are grounded in that. Hands-off for you: keep secrets out of the shared description, mark private entries, hand out knowledge with a disclosure when needed. One extra analytical request per passage; needs a strong, reliable model. Best for stories with secrets and several active characters who know different things. **Cannot be changed once the story has history.**
 
 - Pros:
     - Characters only know what they actually perceived
@@ -33,27 +33,31 @@ Every story runs in one of two character knowledge modes. You choose when you cr
     - Needs a strong, reliable model, or analyses fail and pause generation
     - Cannot be turned off once the story has history
     - No forget or block of already acquired knowledge
-- Pick this if: Your model is current and reliable, and the story depends on who knows what.
+- Pick this if: Your model is current and reliable, the story depends on who knows what, and several characters are active who know different things.
 
 | Pick this if | Standard | Character perspectives |
 |---|---|---|
 | Your model | is small or older, or you want any model to work | is current and reliable; see [Model expectations](/talemate/getting-started/model-expectations/) for what that means |
 | Your story | has few secrets | depends on who knows what |
 | Your workflow | you manage exceptions by hand with Allow / Block rules | hands-off once set up, with disclosures when needed |
+| Your cast | is mostly you and one character | has several active characters who know different things |
 
 ### Effort presets
 
-The knowledge settings of three agents decide how much work each line costs. The **Character knowledge effort** slider sets them together: drag it in the knowledge hub's **Thoroughness** section, in the Create New Story dialog next to the mode choice, or in the Conversation agent's **Character Knowledge** settings. Each stop states its extra requests and what it asks of your model; the model lines come from the [Model expectations](/talemate/getting-started/model-expectations/) page. A stop writes the same settings the individual switches do; change one switch afterwards and the slider shows **Custom** instead of overwriting your choice. A scene created without the dialog reads whatever its agents hold: with the shipped settings a Standard scene sits on Light and a Character perspectives scene on Balanced. Switching the story mode re-applies the current stop from the other table; a Standard scene on Ultra lands on Thorough, the top stop Character perspectives has.
+The knowledge settings of three agents decide how much work each line costs. The **Character knowledge effort** slider sets them together: drag it in the knowledge hub's **Thoroughness** section, in the Create New Story dialog next to the mode choice, or in the Conversation agent's **Character Knowledge** settings. Each stop states its extra requests and what it asks of your model; the model lines come from the [Model expectations](/talemate/getting-started/model-expectations/) page. A stop writes the same settings the individual switches do; change one afterwards and the slider shows the stop the settings now match, or **Custom** when they match none, instead of overwriting your choice. A scene created without the dialog reads whatever its agents hold: with the shipped settings a Standard scene sits on Light and a Character perspectives scene on Balanced. Switching the story mode re-applies the current stop from the other table; a Standard scene on Ultra lands on Thorough, the top stop Character perspectives has.
 
-**Standard** (five stops):
+**Standard** (six stops):
 
 | Stop | Toggles | Extra requests | Model |
 |---|---|---|---|
+| **Off** | Character Knowledge off, Memory Topics off, Match known facts off, Extract facts off | None | Works with any model. |
 | **Minimal** | Character Knowledge on, Limit to character knowledge on; everything else off | None | Works with any model. |
 | **Light** | Minimal + Remind about unknown facts, Topic knowledge overview, Memory Topics, Match known facts, Extract facts | None | Works with any model. |
 | **Balanced** (the Create New Story default) | Light + Track learning from dialogue | One after a character message when a listener has unknown facts | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
 | **Thorough** | Balanced + Refine memories with AI | Two | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
 | **Ultra** | Thorough with Unknown-fact reminders 10 and Recent facts to check 100 | Two | Current frontier / reasoning model recommended; expect frequent retries on anything less. |
+
+**Off** is how Talemate worked before character knowledge: every character sees the full scene history, and nothing costs a request. It is on the Standard track only. Character perspectives builds each character's views whatever the Character Knowledge switch holds, so an Off stop there would still leave the analysis after each passage and the character filtering running, and it could not deliver the pre-feature behaviour; carrying Off across to Character perspectives lands on Minimal instead.
 
 **Character perspectives** (four stops; there is no Ultra, because nothing is left to raise past Thorough):
 
@@ -63,6 +67,12 @@ The knowledge settings of three agents decide how much work each line costs. The
 | **Light** | Minimal + Memory Topics | The analysis | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
 | **Balanced** (the Create New Story default) | Light + Extract facts + Automatically repair analysis | The analysis, plus a repair when a view is invalid | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
 | **Thorough** | Balanced + Refine memories with AI | The analysis, repairs, and one before each reply with memories | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
+
+### What an existing scene loads with
+
+A scene saved before this release loads in **Standard** mode. Its effort is not stored with the scene: the slider reads the global Conversation, Summarizer and Memory settings, unless the scene carries an agent override for one of them.
+
+To get the behaviour Talemate had before character knowledge, drag the slider to **Off**, its first stop. The slider is in the knowledge hub's **Thoroughness** section, in the **Create New Story** dialog and in the Conversation agent's **Character Knowledge** settings. Off writes the Character Knowledge switch itself and the three switches outside it. The switches under that master keep the values they held, because a master that is off makes every one of them inert; turning the master back on by hand brings those values back, and the slider reads the stop they match, or **Custom** when they match none.
 
 The rest of this page is the reference for both modes.
 

@@ -7,6 +7,10 @@
           <v-chip v-if="mode.key === selectedKey" size="x-small" label variant="tonal" color="primary" class="ml-2">{{ selectedLabel }}</v-chip>
         </v-card-title>
         <v-card-text class="text-body-small">
+          <div class="mode-pick text-body-medium mb-3">
+            <span class="mode-pick-label text-mutedheader">Pick this if</span>
+            {{ mode.pickIf }}
+          </div>
           <p class="mb-2">{{ mode.summary }}</p>
           <div class="text-mutedheader">Pros</div>
           <ul class="mode-list mb-2">
@@ -20,7 +24,6 @@
               <v-icon size="x-small" color="delete" class="mr-1 mt-1">mdi-minus-circle</v-icon><span>{{ item }}</span>
             </li>
           </ul>
-          <p class="mb-0"><strong>Pick this if:</strong> {{ mode.pickIf }}</p>
           <a v-if="mode.modelGuidanceUrl" :href="mode.modelGuidanceUrl" target="_blank" rel="noopener noreferrer" class="text-primary d-inline-block mt-1">
             What a strong model means <v-icon size="x-small">mdi-open-in-new</v-icon>
           </a>
@@ -67,5 +70,21 @@ export default {
 .mode-list {
   list-style: none;
   padding-left: 0;
+}
+
+.mode-pick {
+  border-left: 3px solid rgb(var(--v-theme-primary));
+  background: rgba(var(--v-theme-primary), 0.08);
+  border-radius: 2px;
+  padding: 8px 10px;
+  font-weight: 500;
+}
+
+.mode-pick-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 </style>

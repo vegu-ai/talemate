@@ -137,7 +137,8 @@
                                         <v-chip v-if="toggle.overridden" size="x-small" label variant="outlined" color="secondary" class="ml-1">scene override</v-chip>
                                     </v-list-item-title>
                                     <template v-slot:append>
-                                        <v-tooltip v-if="toggle.costNote" :text="toggle.costNote" max-width="320" location="start">
+                                        <!-- a switch under a disabled group costs nothing; at Off the slider says so right above it -->
+                                        <v-tooltip v-if="toggle.costNote && group.enabled" :text="toggle.costNote" max-width="320" location="start">
                                             <template v-slot:activator="{ props: costProps }">
                                                 <v-icon v-bind="costProps" size="small" color="primary" class="mr-1" tabindex="0" role="img" aria-label="Adds a request">mdi-plus-circle-outline</v-icon>
                                             </template>

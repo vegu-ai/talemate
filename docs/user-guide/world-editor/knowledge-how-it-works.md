@@ -147,7 +147,7 @@ A fact scores its importance divided by one plus its age over its half-life: **M
 
 ## The effort slider and what it switches
 
-The **Character knowledge effort** slider sets the knowledge switches of the Conversation, Summarizer and Memory agents together; each stop adds to the one below it. It sits in the knowledge hub's **Thoroughness** section, the **Create New Story** dialog and the Conversation agent's settings. In the hub the switches it drives are in the **Individual settings** pane under it, which starts closed and counts how many are on. Change a switch by hand and the slider shows **Custom**.
+The **Character knowledge effort** slider sets the knowledge switches of the Conversation, Summarizer and Memory agents together; each stop adds to the one below it. It sits in the knowledge hub's **Thoroughness** section, the **Create New Story** dialog and the Conversation agent's settings. In the hub the switches it drives are in the **Individual settings** pane under it, which starts closed and counts how many are on. Change a switch by hand and the slider moves to the stop the settings then match, or shows **Custom** when they match none.
 
 ```mermaid
 flowchart LR
@@ -159,14 +159,15 @@ flowchart LR
     end
     subgraph Standard
         direction TB
-        S1["Minimal<br/>Character Knowledge<br/>Limit to character knowledge"] --> S2["Light<br/>+ Remind about unknown facts<br/>+ Topic knowledge overview<br/>+ Topics<br/>+ Match known facts<br/>+ Extract facts"]
+        S0["Off<br/>Character Knowledge off<br/>The full scene history for everyone"] --> S1["Minimal<br/>Character Knowledge<br/>Limit to character knowledge"]
+        S1 --> S2["Light<br/>+ Remind about unknown facts<br/>+ Topic knowledge overview<br/>+ Topics<br/>+ Match known facts<br/>+ Extract facts"]
         S2 --> S3["Balanced<br/>+ Track learning from dialogue<br/>(one request)"]
         S3 --> S4["Thorough<br/>+ Refine memories with AI<br/>(two requests)"]
         S4 --> S5["Ultra<br/>Unknown-fact reminders 10<br/>Recent facts to check 100"]
     end
 ```
 
-In Standard mode, Light adds every helper that costs no request, Balanced one request, Thorough two, and Ultra wider reminders. In Character perspectives mode the analysis is mandatory, so Minimal is the floor and there is no Ultra. A new story starts on Balanced; switching modes carries the stop over, and Ultra lands on Thorough. The [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets) tables list every switch and the model each stop asks for.
+In Standard mode, Off is Talemate before character knowledge: every character sees the full scene history. Light adds every helper that costs no request, Balanced one request, Thorough two, and Ultra wider reminders. In Character perspectives mode the analysis is mandatory, so Minimal is the floor and there is no Off and no Ultra; a Standard scene on Off that switches modes lands on Minimal. A new story starts on Balanced; switching modes carries the stop over, and Ultra lands on Thorough. The [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets) tables list every switch and the model each stop asks for.
 
 ## Which mode to pick
 
@@ -177,9 +178,11 @@ flowchart TD
     Q1{"Is your model current and reliable?<br/>Structured output, a usable context<br/>of 16k tokens or more"} -- "no" --> STD["Standard<br/>Works with any model.<br/>Fix leaks by hand with Allow / Block rules."]
     Q1 -- "yes" --> Q2{"Does the story depend on<br/>who knows what?"}
     Q2 -- "no, few secrets" --> STD
-    Q2 -- "yes" --> Q3{"Are you fine with one extra<br/>request per passage?"}
+    Q2 -- "yes" --> Q2b{"Are several characters active<br/>who know different things?"}
+    Q2b -- "no, mostly you and one character" --> STD
+    Q2b -- "yes" --> Q3{"Are you fine with one extra<br/>request per passage?"}
     Q3 -- "no" --> STD
     Q3 -- "yes" --> CP["Character perspectives<br/>Secrets hold without hand-tuning.<br/>Cannot be turned off once<br/>the story has history."]
 ```
 
-**Standard** costs nothing extra, works with any model and locks nothing in; a present character sees the full reader prose, so leaks are yours to catch with Allow / Block rules. **Character perspectives** grounds every reply in what the character perceived, so secrets hold; it costs one request per passage, needs a [strong model](/talemate/getting-started/model-expectations/) and cannot be turned off once the story has history. [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode) has the full comparison, and **Compare modes** shows the same two cards wherever the mode is named in the interface.
+**Standard** costs nothing extra, works with any model and locks nothing in; a present character sees the full reader prose, so leaks are yours to catch with Allow / Block rules. It is the mode to keep when the scene is mostly you and one character, where a second view of every passage buys almost nothing. **Character perspectives** grounds every reply in what the character perceived, so secrets hold; it earns its cost when several characters are active who know different things. It costs one request per passage, needs a [strong model](/talemate/getting-started/model-expectations/) and cannot be turned off once the story has history. [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode) has the full comparison, and **Compare modes** shows the same two cards wherever the mode is named in the interface.

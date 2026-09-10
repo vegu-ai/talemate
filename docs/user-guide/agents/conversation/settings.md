@@ -138,6 +138,13 @@ Ask the AI to rewrite and select retrieved memories for the next character reply
 
 Off by default. Uses **one more request before each generated character reply that has retrieved memories**, through the World State agent's client. The request uses the character's story context within that client's budget. If the answer cannot be read, the original retrieved memories are kept.
 
+When **Cache RAG results** is enabled on Long Term Memory, regenerating a reply can
+reuse this refinement together with its cached retrieval when the story before the
+reply and the available memory sources are unchanged. Changing the refinement model,
+client settings or resolved inference preset runs it again. Standard semantic-only
+retrieval does not publish a shared cached result, so there is no refinement to reuse
+in that configuration.
+
 ##### Track learning from dialogue
 
 Ask the AI what listeners learned from each character message and add those facts to their knowledge. **Turn on to track information shared in dialogue.** It checks recent recorded facts the listeners do not know, so it can recognize retold information rather than discover arbitrary new facts. Learned facts become available in memory and leave the unknown-fact reminders. The speaker does not learn from their own message; player messages are included. Each learning grant takes effect immediately and can be revoked in the character’s **Knowledge** view. The ledger judges with recent dialogue and situational context and errs toward learning when the substance is conveyed, while hints, questions and merely related facts still do not count.

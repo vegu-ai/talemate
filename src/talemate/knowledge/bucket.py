@@ -130,13 +130,28 @@ class KnowledgeItem(pydantic.BaseModel):
         return cls(id=doc_id, kind="world_entry", owner=owner)
 
 
-def knowledge_digest(scene: "Scene") -> str:
-    """Short digest of every stored input to the predicate: edges and visibility."""
+def knowledge_digest(
+    scene: "Scene",
+    *,
+    viewer: str | None = None,
+    boundary_ids: set[int] | None = None,
+) -> str:
+    """Digest predicate inputs, optionally limited to one viewer and boundary."""
+    edges = scene.world_state.knowledge
+    if viewer is not None:
+        edges = [
+            edge
+            for edge in edges
+            if edge.character == viewer
+            and (
+                boundary_ids is None
+                or edge.message_id is None
+                or edge.message_id in boundary_ids
+            )
+        ]
     payload = {
         "intro": [getattr(scene, "intro", ""), getattr(scene, "intro_present", None)],
-        "edges": sorted(
-            (e.character, e.target, e.kind) for e in scene.world_state.knowledge
-        ),
+        "edges": sorted({(edge.character, edge.target, edge.kind) for edge in edges}),
         "sheets": {
             name: {k: v.model_dump() for k, v in sorted(c.visibility.items())}
             for name, c in sorted(scene.character_data.items())

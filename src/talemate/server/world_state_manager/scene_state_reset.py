@@ -5,7 +5,7 @@ import structlog
 
 from talemate.instance import get_agent
 from talemate.knowledge.facts import drop_facts_for_entries
-from talemate.knowledge.dialogue_facts import prune_dialogue_facts
+from talemate.knowledge.dialogue_facts import prune_invalid_dialogue_facts
 from talemate.knowledge.perspectives import reset_perspectives
 
 log = structlog.get_logger("talemate.server.world_state_manager.scene_state_reset")
@@ -90,7 +90,7 @@ class SceneStateResetMixin:
             scene.history = []
             scene.layered_history = []
             removed = reset_perspectives(scene)
-            removed.update(prune_dialogue_facts(scene.world_state))
+            removed.update(prune_invalid_dialogue_facts(scene))
             if removed:
                 await get_agent("memory").delete({"ids": sorted(removed)})
 

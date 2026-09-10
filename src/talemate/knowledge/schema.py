@@ -69,6 +69,7 @@ class KnowledgeEdge(pydantic.BaseModel):
     target: str
     kind: EdgeKind = "grant"
     source: EdgeSource = "manual"
+    message_id: int | None = None
     ts: int | None = None
     note: str | None = None
 

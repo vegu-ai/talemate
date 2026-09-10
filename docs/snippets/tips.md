@@ -83,13 +83,21 @@ The maximum response length of the generated answers.
 
 ##### Cache
 
-Enables the agent wide cache of the long term memory retrieval. That means any agents that share the same long term memory settings will share the same cache. This can be useful to reduce the number of queries to the memory agent.
+Enables the agent-wide cache of long term memory retrieval. Agents that share the
+same long term memory settings share the cache. AI-assisted retrieval publishes a
+cached result; character-scoped retrieval in Character perspectives mode can also
+cache semantic-only results. Standard semantic-only retrieval remains uncached.
 
-Cached long term memory is refreshed after edits to world entries, character details,
-or other stored memories, including deletions. The next prompt uses the updated
-memory even when no story message has been added. This applies with and without
-Character perspectives enabled. A retrieval already in progress can finish with
-its earlier context; that context will not be reused by the next prompt.
+Regenerating a reply reuses a published result only when the story before that reply,
+the memory sources available to the retrieval, and its settings are unchanged. New or
+edited world entries, character details, facts and archives refresh affected cached
+results, as do relevant knowledge visibility, topic and memory-collection changes.
+When retrieval is limited to character knowledge, new dialogue facts and learning
+edges tied to the reply being regenerated do not count as earlier sources. Without
+that limit, learning edges do not affect retrieval. Changes to older retained facts
+or learning edges, including a fact restatement, still refresh affected results.
+A retrieval already in progress can finish with its earlier context. A result built
+before one of those inputs changed is not reused after the change.
 
 <!--- --8<-- [end:agent_long_term_memory_settings] -->
 

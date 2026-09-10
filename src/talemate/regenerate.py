@@ -482,7 +482,8 @@ async def regenerate(scene: "Scene") -> list[SceneMessage]:
         if character_knowledge_enabled(scene):
             await get_agent("summarizer").finalize_perceptions(scene, [message])
         if isinstance(message, CharacterMessage):
-            await get_agent("conversation").finalize_message_avatar(message)
+            conversation = get_agent("conversation")
+            await conversation.finalize_message_avatar(message)
     except BaseException:
         if any(entry is message for entry in scene.history):
             scene.history.extend(reversed(popped_reinforcement_messages))

@@ -624,13 +624,20 @@ async def test_wipe_history_removes_dialogue_facts_before_reindex(
         ),
         "F2": Fact(id="F2", text="The house is old.", source="manual"),
     }
-    scene.world_state.knowledge = [KnowledgeEdge(character="Bob", target="F1")]
+    retained = KnowledgeEdge(
+        character="Bob", target="F2", message_id=scene.history[0].id
+    )
+    scene.world_state.knowledge = [
+        KnowledgeEdge(character="Bob", target="F1"),
+        retained,
+    ]
     memory = get_agent("memory")
     monkeypatch.setattr(memory, "delete", AsyncMock())
 
     async def reindex():
         assert set(scene.world_state.facts) == {"F2"}
-        assert scene.world_state.knowledge == []
+        assert scene.world_state.knowledge == [retained]
+        assert retained.message_id is None
 
     scene.commit_to_memory.side_effect = reindex
     with ActiveScene(scene):
@@ -638,6 +645,7 @@ async def test_wipe_history_removes_dialogue_facts_before_reindex(
             {"wipe_history": True, "reset_context_db": reset_context_db}
         )
     assert set(scene.world_state.facts) == {"F2"}
-    assert scene.world_state.knowledge == []
+    assert scene.world_state.knowledge == [retained]
+    assert retained.message_id is None
     memory.delete.assert_awaited_once_with({"ids": ["F1"]})
     assert scene.commit_to_memory.await_count == int(reset_context_db)

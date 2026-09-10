@@ -54,7 +54,7 @@ from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import GameStatePathSettings, ScenePerspectives
 from talemate.history import emit_archive_add, ArchiveEntry
-from talemate.knowledge.dialogue_facts import prune_dialogue_facts
+from talemate.knowledge.dialogue_facts import prune_invalid_dialogue_facts
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.memory import invalidate_memory_audiences
 from talemate.knowledge.facts import fact_memory_document, prune_summary_facts
@@ -196,6 +196,7 @@ class Scene(Emitter):
         self._creative_nodes_filename = ""
         self.memory_id = str(uuid.uuid4())[:10]
         self.memory_revision = 0
+        self.memory_writes_in_flight = 0
         self.saved_memory_session_id = None
         self.memory_session_id = str(uuid.uuid4())[:10]
         self.restore_from = None
@@ -2226,7 +2227,7 @@ class Scene(Emitter):
         # remove messages
         self.history = []
         dropped_facts = reset_perspectives(self)
-        dropped_facts.update(prune_dialogue_facts(self.world_state))
+        dropped_facts.update(prune_invalid_dialogue_facts(self))
 
         # clear out archived history, but keep pre-established history
         summarized_ids = {

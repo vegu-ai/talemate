@@ -1,19 +1,25 @@
 import asyncio
+import json
 import threading
 from unittest.mock import AsyncMock, Mock
 
 import numpy as np
 import pytest
-
 import test_memory_audiences
-from talemate.character import Character
+
 from talemate.agents.context import ActiveAgent
+from talemate.agents.memory.schema import MemoryDocument
+from talemate.character import Character
+from talemate.config import get_config
+from talemate.history import ArchiveEntry
 from talemate.instance import get_agent
 from talemate.knowledge.disclosures import grant_disclosure
+from talemate.knowledge.facts import update_fact
 from talemate.knowledge.perspectives import set_source_perspectives, source_reference
-from talemate.knowledge.schema import EntryVisibility, ParsedFact, Topic
+from talemate.knowledge.schema import EntryVisibility, KnowledgeEdge, ParsedFact, Topic
 from talemate.knowledge.supported_facts import replace_source_facts
 from talemate.prompts import Prompt
+from talemate.regenerate import regenerate
 from talemate.scene_message import DirectorMessage, NarratorMessage
 from talemate.tale_mate import Scene
 from talemate.world_state import Reinforcement
@@ -431,7 +437,51 @@ async def test_rag_retry_budget_covers_queries_and_memory_pass(rag, monkeypatch)
         ]
         * 2
     )
-    assert not scene.rag_cache
+    assert await conversation.rag_get_cache(scene.character_data["Elmer"]) is None
+
+
+async def test_scoped_cache_hit_stays_behind_audience_index_guard(rag, monkeypatch):
+    scene, memory, _, conversation = rag
+    config = conversation.actions["use_long_term_memory"].config
+    monkeypatch.setattr(config["cache"], "value", True)
+    monkeypatch.setattr(config["retrieval_method"], "value", "direct")
+    character = scene.character_data["Elmer"]
+    await conversation.rag_set_cache(["Guarded context."], character)
+    monkeypatch.setattr(
+        memory,
+        "ensure_audience_index",
+        AsyncMock(side_effect=RuntimeError("audience index unavailable")),
+    )
+
+    with pytest.raises(RuntimeError, match="audience index unavailable"):
+        await conversation.rag_build(character)
+
+
+async def test_cache_hit_is_refused_while_memory_write_is_in_flight(rag, monkeypatch):
+    scene, memory, _, conversation = rag
+    character = await configure_cached_rag(
+        rag, monkeypatch, "legacy", "character", "queries"
+    )
+    await conversation.rag_set_cache(["Earlier context."], character)
+    started = asyncio.Event()
+    release = threading.Event()
+    loop = asyncio.get_running_loop()
+    original = memory._add
+
+    def blocked(*args, **kwargs):
+        loop.call_soon_threadsafe(started.set)
+        assert release.wait(timeout=5)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(memory, "_add", blocked)
+    pending = asyncio.create_task(memory.add("A concurrent edit.", uid="concurrent"))
+    await asyncio.wait_for(started.wait(), timeout=5)
+    try:
+        assert await conversation.rag_get_cache(character) is None
+    finally:
+        release.set()
+        await asyncio.wait_for(pending, timeout=5)
+    assert await conversation.rag_get_cache(character) is None
 
 
 async def test_topic_data_reused_across_queries_and_invalidated(rag, monkeypatch):
@@ -699,6 +749,378 @@ async def configure_cached_rag(rag, monkeypatch, mode, viewer, method):
     return None if viewer == "author" else scene.character_data["Elmer"]
 
 
+async def cached_reply_turn(
+    rag, monkeypatch, mode, *, archive_during_push=False, ledger_grant=False
+):
+    scene, memory, _, conversation = rag
+    character = await configure_cached_rag(
+        rag, monkeypatch, mode, "character", "queries"
+    )
+    monkeypatch.setattr(
+        conversation.actions["character_knowledge"].config["memory_pass"],
+        "value",
+        True,
+    )
+    monkeypatch.setattr(
+        conversation,
+        "semantic_context",
+        AsyncMock(
+            return_value=[
+                MemoryDocument(
+                    "The harbor closes at dusk.",
+                    {"typ": "world_state"},
+                    "harbor",
+                    "The harbor closes at dusk.",
+                )
+            ]
+        ),
+    )
+    query = AsyncMock(return_value=["The tide is rising."])
+    monkeypatch.setattr(
+        get_agent("world_state"),
+        "analyze_text_and_extract_context_via_queries",
+        query,
+    )
+    if mode == "legacy":
+        monkeypatch.setattr(
+            conversation.actions["character_knowledge"].config["ledger"],
+            "value",
+            True,
+        )
+        monkeypatch.setattr(
+            conversation.actions["character_knowledge"].config["establish_facts"],
+            "value",
+            True,
+        )
+    calls = {}
+    dialogue_prompts = []
+    reply = 0
+
+    async def send_prompt(prompt, *args, **kwargs):
+        nonlocal reply
+        calls[prompt.uid] = calls.get(prompt.uid, 0) + 1
+        if prompt.uid == "conversation.memory-pass":
+            return '<ITEMS><ITEM n="1">The harbor will close at dusk.</ITEM></ITEMS>'
+        if prompt.uid == "conversation.knowledge-ledger":
+            return (
+                '<LEDGER>{"Marie": ["F1"]}</LEDGER>'
+                if ledger_grant
+                else "<LEDGER>{}</LEDGER>"
+            ) + (
+                '<FACTS>[{"text": "Elmer says the tide is '
+                'rising.", "importance": 2, "subjects": ["Elmer", "tide"], '
+                '"known_by": ["Marie"], "supersedes": null}]</FACTS>'
+            )
+        if prompt.uid == "summarizer.perceptions":
+            views = [
+                {
+                    "audience": [item["name"]],
+                    "status": "ready",
+                    "text": f"{item['name']} hears Elmer reply.",
+                    "knowledge_ids": [],
+                    "passage_ids": [],
+                    "evidence_spans": [],
+                }
+                for item in prompt.vars["context"]["cast"]
+            ]
+            return json.dumps({"views": views})
+        if prompt.uid.startswith("conversation.dialogue-"):
+            dialogue_prompts.append(prompt.prompt)
+            reply += 1
+            return f"Elmer: Reply {reply}."
+        raise AssertionError(f"Unexpected LLM request: {prompt.uid}")
+
+    monkeypatch.setattr(scene.mock_client, "send_prompt", send_prompt)
+    if mode == "perception":
+
+        async def sync_reply_index(event):
+            if event.scene is scene:
+                await memory.ensure_audience_index(scene)
+
+        scene.signals["push_history.after"].connect(sync_reply_index)
+    if archive_during_push:
+        wrote_archive = False
+
+        async def archive_after_reply(event):
+            nonlocal wrote_archive
+            if event.scene is scene and not wrote_archive:
+                wrote_archive = True
+                await scene.push_archive(ArchiveEntry(text="A new harbor archive."))
+
+        scene.signals["push_history.after"].connect(archive_after_reply)
+
+    original = (await conversation.converse(character.actor))[0]
+    await scene.push_history(original)
+    return original, query, calls, dialogue_prompts
+
+
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
+async def test_regenerate_reuses_query_and_memory_pass(rag, monkeypatch, mode):
+    scene, _, _, _ = rag
+    original, query, calls, dialogue_prompts = await cached_reply_turn(
+        rag, monkeypatch, mode
+    )
+
+    assert await regenerate(scene) == [original]
+    assert query.await_count == 1
+    assert calls["conversation.memory-pass"] == 1
+    assert len(dialogue_prompts) == 2
+    assert all(
+        "The harbor will close at dusk." in prompt for prompt in dialogue_prompts
+    )
+
+
+async def test_standard_regenerate_ignores_reply_ledger_grant(rag, monkeypatch):
+    scene, _, _, _ = rag
+    original, query, calls, _ = await cached_reply_turn(
+        rag, monkeypatch, "legacy", ledger_grant=True
+    )
+    grant = next(
+        edge
+        for edge in scene.world_state.knowledge
+        if edge.character == "Marie"
+        and edge.target == "F1"
+        and edge.source == "inferred"
+    )
+    assert grant.message_id == original.id
+
+    assert await regenerate(scene) == [original]
+    assert query.await_count == 1
+    assert calls["conversation.memory-pass"] == 1
+
+
+async def test_standard_regenerate_ignores_ledger_when_knowledge_filter_is_off(
+    rag, monkeypatch
+):
+    scene, _, _, conversation = rag
+    monkeypatch.setattr(
+        conversation.actions["character_knowledge"].config["perspective_filter"],
+        "value",
+        False,
+    )
+    original, query, calls, _ = await cached_reply_turn(
+        rag, monkeypatch, "legacy", ledger_grant=True
+    )
+    assert conversation.rag_knowledge_viewer(scene.character_data["Elmer"]) is None
+    assert any(
+        edge.character == "Marie"
+        and edge.target == "F1"
+        and edge.source == "inferred"
+        and edge.message_id == original.id
+        for edge in scene.world_state.knowledge
+    )
+
+    assert await regenerate(scene) == [original]
+    assert query.await_count == 1
+    assert calls["conversation.memory-pass"] == 1
+
+
+async def test_viewerless_regenerate_refreshes_after_intro_edit(rag, monkeypatch):
+    scene, _, message, conversation = rag
+    assert scene.pop_message(message)
+    scene.set_intro("The harbor opens under a clear sky.")
+    monkeypatch.setattr(
+        conversation.actions["character_knowledge"].config["perspective_filter"],
+        "value",
+        False,
+    )
+    original, query, calls, _ = await cached_reply_turn(rag, monkeypatch, "legacy")
+
+    scene.set_intro("The harbor opens under a violent storm.")
+    assert await regenerate(scene) == [original]
+    assert query.await_count == 2
+    assert calls["conversation.memory-pass"] == 2
+
+
+async def test_viewerless_dependencies_accept_none_intro(rag, monkeypatch):
+    scene, _, _, conversation = rag
+    monkeypatch.setattr(conversation, "rag_knowledge_viewer", lambda _: None)
+    boundary = conversation.rag_history_boundary()
+    scene.intro = None
+    without_intro = conversation.rag_cache_dependencies(None, boundary)
+    scene.intro = ""
+
+    assert conversation.rag_cache_dependencies(None, boundary) == without_intro
+
+
+async def test_removing_retained_edge_from_deleted_message_refreshes_regenerate(
+    rag, monkeypatch
+):
+    scene, _, message, _ = rag
+    edge = KnowledgeEdge(
+        character="Elmer",
+        target="lore",
+        source="inferred",
+        message_id=message.id,
+    )
+    scene.world_state.knowledge.append(edge)
+    assert scene.pop_message(message)
+    assert edge.message_id is None
+    original, query, calls, _ = await cached_reply_turn(rag, monkeypatch, "legacy")
+
+    await scene.world_state_manager.remove_knowledge_edge(edge.id)
+    assert await regenerate(scene) == [original]
+    assert query.await_count == 2
+    assert calls["conversation.memory-pass"] == 2
+
+
+async def test_disabling_memory_pass_does_not_serve_cached_refinement(rag, monkeypatch):
+    scene, _, _, conversation = rag
+    _, query, calls, dialogue_prompts = await cached_reply_turn(
+        rag, monkeypatch, "legacy"
+    )
+    scene.history.pop()
+    monkeypatch.setattr(
+        conversation.actions["character_knowledge"].config["memory_pass"],
+        "value",
+        False,
+    )
+
+    await conversation.converse(scene.get_character("Elmer").actor)
+    assert query.await_count == 1
+    assert calls["conversation.memory-pass"] == 1
+    assert "The harbor will close at dusk." in dialogue_prompts[0]
+    assert "The harbor will close at dusk." not in dialogue_prompts[-1]
+    assert "The harbor closes at dusk." in dialogue_prompts[-1]
+
+
+async def test_disabling_rag_cache_disables_refinement_lookup_and_store(
+    rag, monkeypatch
+):
+    scene, _, _, conversation = rag
+    _, query, calls, _ = await cached_reply_turn(rag, monkeypatch, "legacy")
+    entry = next(iter(scene.rag_cache.values()))
+    processed_before = dict(entry["processed"])
+
+    class ObservedProcessed(dict):
+        writes = 0
+
+        def __setitem__(self, key, value):
+            self.writes += 1
+            return super().__setitem__(key, value)
+
+    entry["processed"] = observed = ObservedProcessed(entry["processed"])
+    scene.history.pop()
+    monkeypatch.setattr(
+        conversation.actions["use_long_term_memory"].config["cache"],
+        "value",
+        False,
+    )
+
+    actor = scene.get_character("Elmer").actor
+    await conversation.converse(actor)
+    assert query.await_count == 2
+    assert calls["conversation.memory-pass"] == 2
+    assert dict(observed) == processed_before
+    assert observed.writes == 0
+    assert entry in scene.rag_cache.values()
+
+
+async def test_rag_boundary_ignores_message_storage_stamps(rag):
+    scene, _, message, conversation = rag
+    before = conversation.rag_history_boundary()
+    message.rev += 1
+    message.asset_id = "portrait"
+    message.asset_type = "avatar"
+    assert conversation.rag_history_boundary() == before
+    message.hide()
+    assert conversation.rag_history_boundary() != before
+    message.unhide()
+    assert conversation.rag_history_boundary() == before
+    message.message = f"{message.message} Changed."
+    assert conversation.rag_history_boundary() != before
+
+
+async def test_rag_dependency_digest_is_memoized_per_memory_revision(rag, monkeypatch):
+    scene, memory, _, conversation = rag
+    scene.knowledge_eligibility = "legacy"
+    get = type(memory.db).get
+    digest_reads = 0
+
+    def observed(db, *args, **kwargs):
+        nonlocal digest_reads
+        if kwargs.get("include") == ["documents", "metadatas"]:
+            digest_reads += 1
+        return get(db, *args, **kwargs)
+
+    monkeypatch.setattr(type(memory.db), "get", observed)
+    boundary = conversation.rag_history_boundary()
+    character = scene.character_data["Elmer"]
+    for _ in range(5):
+        conversation.rag_cache_dependencies(character, boundary)
+    assert digest_reads == 1
+    scene.memory_revision += 1
+    conversation.rag_cache_dependencies(character, boundary)
+    assert digest_reads == 2
+
+
+@pytest.mark.parametrize("viewer", ["author", "shared", "character"])
+async def test_non_scoped_rag_cache_tracks_settings_and_collection_generation(
+    rag, monkeypatch, viewer
+):
+    scene, memory, _, conversation = rag
+    character = await configure_cached_rag(
+        rag, monkeypatch, "legacy", viewer, "queries"
+    )
+    before_key = conversation.long_term_memory_cache_key_for(character)
+    before_dependencies = conversation.rag_cache_dependencies(
+        character, conversation.rag_history_boundary()
+    )
+    recency = memory.actions["retrieval"].config["recency_weight"]
+    monkeypatch.setattr(recency, "value", recency.value + 0.1)
+    assert conversation.long_term_memory_cache_key_for(character) != before_key
+    memory._db_generation += 1
+    assert (
+        conversation.rag_cache_dependencies(
+            character, conversation.rag_history_boundary()
+        )
+        != before_dependencies
+    )
+
+
+async def test_memory_pass_cache_tracks_resolved_preset_values(rag, monkeypatch):
+    scene, _, _, conversation = rag
+    _, query, calls, _ = await cached_reply_turn(rag, monkeypatch, "legacy")
+    scene.history.pop()
+    analytical = get_config().presets.inference.analytical
+    monkeypatch.setattr(analytical, "temperature", analytical.temperature + 0.1)
+
+    await conversation.converse(scene.get_character("Elmer").actor)
+    assert query.await_count == 1
+    assert calls["conversation.memory-pass"] == 2
+
+
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
+@pytest.mark.parametrize("change", ["manual_fact", "archive"])
+async def test_unrelated_write_invalidates_query_and_memory_pass(
+    rag, monkeypatch, mode, change
+):
+    scene, _, _, _ = rag
+    _, query, calls, _ = await cached_reply_turn(rag, monkeypatch, mode)
+    if change == "manual_fact":
+        await update_fact(scene, "F1", text="The lantern was extinguished.")
+    else:
+        await scene.push_archive(ArchiveEntry(text="A new harbor archive."))
+
+    assert await regenerate(scene)
+    assert query.await_count == 2
+    assert calls["conversation.memory-pass"] == 2
+
+
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
+async def test_archive_written_inside_push_history_invalidates_reply_cache(
+    rag, monkeypatch, mode
+):
+    scene, _, _, _ = rag
+    _, query, calls, _ = await cached_reply_turn(
+        rag, monkeypatch, mode, archive_during_push=True
+    )
+
+    assert await regenerate(scene)
+    assert query.await_count == 2
+    assert calls["conversation.memory-pass"] == 2
+
+
 @pytest.mark.parametrize("mode", ["legacy", "perception"])
 @pytest.mark.parametrize("viewer", ["author", "shared", "character"])
 @pytest.mark.parametrize("method", ["queries", "questions"])
@@ -838,6 +1260,65 @@ async def test_perception_memory_edit_during_retrieval_retries_once(
     assert ai.await_count == 2
 
 
+async def test_audience_cache_digest_follows_built_document_revision(rag, monkeypatch):
+    scene, memory, _, conversation = rag
+    character = await configure_cached_rag(
+        rag, monkeypatch, "perception", "character", "questions"
+    )
+    monkeypatch.setattr(conversation, "semantic_context", AsyncMock(return_value=[]))
+    question_started = asyncio.Event()
+    question_release = asyncio.Event()
+    answers = 0
+
+    async def answer(*args, **kwargs):
+        nonlocal answers
+        answers += 1
+        if answers == 1:
+            question_started.set()
+            await asyncio.wait_for(question_release.wait(), timeout=5)
+            return "Stale rain lore."
+        return "Fresh restricted lore."
+
+    monkeypatch.setattr(
+        get_agent("world_state"), "analyze_text_and_extract_context", answer
+    )
+    sync_started = asyncio.Event()
+    sync_release = threading.Event()
+    loop = asyncio.get_running_loop()
+    sync = memory._sync_audience_documents
+    block_once = True
+
+    def blocked_sync(db, documents, fingerprints):
+        nonlocal block_once
+        if block_once:
+            block_once = False
+            loop.call_soon_threadsafe(sync_started.set)
+            assert sync_release.wait(timeout=5)
+        return sync(db, documents, fingerprints)
+
+    monkeypatch.setattr(memory, "_sync_audience_documents", blocked_sync)
+    pending = asyncio.create_task(conversation.rag_build(character))
+    await asyncio.wait_for(question_started.wait(), timeout=5)
+    memory.invalidate_audience_index(scene, groups={("authored",)})
+    await asyncio.wait_for(sync_started.wait(), timeout=5)
+    scene.world_state.manual_context.pop("lore")
+    memory.invalidate_audience_index(scene)
+    question_release.set()
+    try:
+        for _ in range(100):
+            if scene.rag_cache:
+                break
+            await asyncio.sleep(0)
+        assert scene.rag_cache
+    finally:
+        sync_release.set()
+    result = await asyncio.wait_for(pending, timeout=5)
+
+    assert answers == 2
+    assert "Fresh restricted lore." in result
+    assert "Stale rain lore." not in result
+
+
 @pytest.mark.parametrize("method", ["queries", "questions"])
 async def test_scene_rebind_during_retrieval_does_not_publish(rag, monkeypatch, method):
     scene, _, _, conversation = rag
@@ -955,7 +1436,9 @@ async def test_cache_tracks_distance_and_collection_generation(
     )
     assert await conversation.rag_build(elmer)
     assert memory._audience_state(scene).collection_revision == generation + 1
-    assert conversation.long_term_memory_cache_key_for(elmer) != key
+    assert conversation.long_term_memory_cache_key_for(elmer) == key
+    cache = scene.rag_cache[key]
+    assert cache["dependencies"]["audience_collection_revision"] == generation + 1
 
 
 async def test_scoped_metadata_rejects_legacy_and_id_lists_filter_sources(
@@ -973,24 +1456,29 @@ async def test_scoped_metadata_rejects_legacy_and_id_lists_filter_sources(
         memory._get_documents_by_meta({"typ": "fact"}, viewer="Elmer")
 
 
-async def test_memory_writes_evict_rotating_perception_cache_entries(rag, monkeypatch):
+async def test_memory_writes_leave_bounded_invalid_perception_entries(rag, monkeypatch):
     scene, memory, message, conversation = rag
     config = conversation.actions["use_long_term_memory"].config
     monkeypatch.setattr(config["cache"], "value", True)
     viewers = [scene.character_data[name] for name in ("Elmer", "Marie")]
     fingerprint = message.fingerprint
-    previous_keys = set()
+    previous_keys = None
     for number in range(10):
-        await memory.add(f"Stored update {number}.", uid="rolling-update")
+        await scene.world_state_manager.save_world_entry(
+            "rolling-update", f"Stored update {number}.", {}
+        )
         await memory.ensure_audience_index(scene)
-        assert scene.rag_cache == {}
+        if previous_keys is not None:
+            for viewer in viewers:
+                assert await conversation.rag_get_cache(viewer) is None
         keys = set()
         for viewer in viewers:
             await conversation.rag_set_cache([f"Context {number}"], viewer)
             keys.add(conversation.long_term_memory_cache_key_for(viewer))
             assert await conversation.rag_get_cache(viewer) == [f"Context {number}"]
-        assert keys.isdisjoint(previous_keys)
         assert set(scene.rag_cache) == keys
+        if previous_keys is not None:
+            assert keys == previous_keys
         previous_keys = keys
     assert message.fingerprint == fingerprint
 

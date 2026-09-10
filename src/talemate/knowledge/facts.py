@@ -418,6 +418,7 @@ async def store_facts(
                         target=fact.id,
                         kind="grant",
                         source="told",
+                        message_id=message_id,
                         ts=ts,
                     )
                 )

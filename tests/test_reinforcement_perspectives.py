@@ -322,7 +322,8 @@ async def test_real_index_updates_generated_entries_and_cache_then_removes_sourc
     documents = await memory.get_document(QUESTION, viewer="Elmer")
     assert documents and all("go dark" in doc for doc in documents.values())
     assert all("poison" not in doc for doc in documents.values())
-    assert conversation.long_term_memory_cache_key_for(elmer) != key
+    assert conversation.long_term_memory_cache_key_for(elmer) == key
+    assert await conversation.rag_get_cache(elmer) is None
     assert "go dark" in render_inserts(scene, "Elmer")
     await scene.world_state.remove_reinforcement(0)
     assert source_reference(scene, "message", source.id) is None

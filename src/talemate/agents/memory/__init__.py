@@ -748,14 +748,17 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         # Executor queues and retries can outlive the scene that requested the write.
         if self.scene is not scene:
             return
-        scene.memory_revision += 1
-        scene.rag_cache = {}
+        with self._db_lock:
+            # A source digest cannot see a write that has started but not landed.
+            scene.memory_writes_in_flight += 1
+            scene.memory_revision += 1
         try:
             return operation(*args, **kwargs)
         finally:
             # The executor can finish a write after its awaiting task is cancelled.
-            scene.memory_revision += 1
-            scene.rag_cache = {}
+            with self._db_lock:
+                scene.memory_revision += 1
+                scene.memory_writes_in_flight -= 1
 
     @set_processing
     async def add(self, text, character=None, uid=None, ts: int = None, **kwargs):

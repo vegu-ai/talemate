@@ -1,4 +1,4 @@
-from talemate.knowledge.processing import evidence_writer
+import hashlib
 import json
 import re
 import weakref
@@ -6,24 +6,26 @@ from typing import TYPE_CHECKING
 
 import structlog
 
-from talemate.agents.context import active_agent
-from talemate.agents.memory.schema import MemoryDocument
+import talemate.emit.async_signals as async_signals
 from talemate.agents.base import (
     AgentAction,
+    AgentActionConditional,
     AgentActionConfig,
     AgentActionNote,
-    AgentActionConditional,
     set_processing,
 )
+from talemate.agents.context import active_agent
 from talemate.agents.conversation.response_specs import (
     ENTRY_BRIEFING_SPEC,
-    KNOWLEDGE_LEDGER_SPEC,
     KNOWLEDGE_LEDGER_FACTS_SPEC,
+    KNOWLEDGE_LEDGER_SPEC,
     MEMORY_PASS_SPEC,
 )
+from talemate.agents.memory.schema import MemoryDocument
+from talemate.client import presets
+from talemate.context import scene_is_loading
 from talemate.emit import emit
 from talemate.exceptions import GenerationCancelled
-from talemate.context import scene_is_loading
 from talemate.instance import get_agent
 from talemate.knowledge.absence import (
     ABSENCE_LIMIT,
@@ -34,18 +36,18 @@ from talemate.knowledge.absence import (
 from talemate.knowledge.bucket import KnowledgeIndex
 from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 from talemate.knowledge.chronology import ranked_facts, render_fact
-from talemate.knowledge.schema import KnowledgeEdge
 from talemate.knowledge.facts import parse_facts, previous_facts, store_facts
-from talemate.knowledge.perspective_models import content_digest
-from talemate.knowledge.topics import known_bucket, refresh_topics
 from talemate.knowledge.mode import (
     character_knowledge_enabled as perception_mode_enabled,
 )
+from talemate.knowledge.perspective_models import content_digest
+from talemate.knowledge.processing import evidence_writer
+from talemate.knowledge.schema import KnowledgeEdge
 from talemate.knowledge.topics import awareness_line as topic_awareness_line
+from talemate.knowledge.topics import known_bucket, refresh_topics
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage
 from talemate.util.data import extract_json
-import talemate.emit.async_signals as async_signals
 
 if TYPE_CHECKING:
     from talemate.events import CharacterActivatedEvent, GameLoopNewMessageEvent
@@ -387,10 +389,7 @@ class CharacterKnowledgeMixin:
         character = self.scene.get_character(message.character_name)
         if character is None:
             return
-        if self.knowledge_establish_facts:
-            await self.record_learned_facts(character, str(message), message=message)
-        else:
-            await self.record_learned_facts(character, str(message))
+        await self.record_learned_facts(character, str(message), message=message)
 
     @set_processing
     @evidence_writer
@@ -723,27 +722,64 @@ class CharacterKnowledgeMixin:
                 perspective=viewer,
             )
         )
+        memory_character_context = (
+            await get_agent("memory").audience_character_context(
+                viewer, [character.name]
+            )
+            if scoped
+            else ""
+        )
+        prompt_vars = {
+            "scene": self.scene,
+            "max_tokens": client.max_token_length,
+            "character": character,
+            "viewer": viewer,
+            "candidates": candidates,
+            "scene_history": scene_history,
+            "knowledge_index": KnowledgeIndex.from_scene(self.scene),
+            "character_retrieval": scoped,
+            "memory_character_context": memory_character_context,
+        }
+        rendered = Prompt.get(
+            "conversation.memory-pass",
+            {**prompt_vars, "decensor": client.decensor_enabled},
+        ).render()
+        client_config = getattr(client, "client_config", None)
+        client_settings = (
+            client_config.model_dump(exclude={"api_key"})
+            if client_config is not None
+            else {}
+        )
+        inference_settings = presets.configure(
+            {}, "analyze_long", client.max_token_length, client
+        )
+        cache_key = hashlib.sha256(
+            json.dumps(
+                (
+                    rendered,
+                    getattr(client, "name", None),
+                    getattr(client, "model_name", None),
+                    client.max_token_length,
+                    client_settings,
+                    inference_settings,
+                ),
+                sort_keys=True,
+                default=str,
+            ).encode()
+        ).hexdigest()
+        rag_cache = (
+            self.rag_cache_entry(character) if self.long_term_memory_cache else None
+        )
+        processed = rag_cache.get("processed", {}) if rag_cache is not None else {}
+        if cache_key in processed:
+            log.debug("Using cached memory pass", character=character.name)
+            return list(processed[cache_key])
+
         _, extracted = await Prompt.request(
             "conversation.memory-pass",
             client,
             "analyze_long",
-            vars={
-                "scene": self.scene,
-                "max_tokens": client.max_token_length,
-                "character": character,
-                "viewer": viewer,
-                "candidates": candidates,
-                "scene_history": scene_history,
-                "knowledge_index": KnowledgeIndex.from_scene(self.scene),
-                "character_retrieval": scoped,
-                "memory_character_context": (
-                    await get_agent("memory").audience_character_context(
-                        viewer, [character.name]
-                    )
-                    if scoped
-                    else ""
-                ),
-            },
+            vars=prompt_vars,
             response_spec=MEMORY_PASS_SPEC,
         )
         items = pass_items(extracted.get("items"))
@@ -756,7 +792,13 @@ class CharacterKnowledgeMixin:
             and re.match(r"^none\b", answer, re.IGNORECASE)
         ):
             log.debug("memory pass: none", character=character.name)
-            return []
+            passed = []
+            current_cache = (
+                self.rag_cache_entry(character) if self.long_term_memory_cache else None
+            )
+            if current_cache is rag_cache and current_cache is not None:
+                current_cache.setdefault("processed", {})[cache_key] = passed
+            return passed
         # the number alone says keep and where
         passed = []
         for number, text in items:
@@ -783,7 +825,7 @@ class CharacterKnowledgeMixin:
                 answer=answer,
                 items=items,
             )
-            return candidates
+            passed = candidates
         log.debug(
             "memory pass",
             character=character.name,
@@ -791,6 +833,11 @@ class CharacterKnowledgeMixin:
             candidates=len(candidates),
             kept=len(passed),
         )
+        current_cache = (
+            self.rag_cache_entry(character) if self.long_term_memory_cache else None
+        )
+        if current_cache is rag_cache and current_cache is not None:
+            current_cache.setdefault("processed", {})[cache_key] = list(passed)
         return passed
 
     # the signal path (a player line) has no active agent; the request needs one
@@ -938,6 +985,7 @@ class CharacterKnowledgeMixin:
                         target=fact.id,
                         kind="grant",
                         source="inferred",
+                        message_id=message.id if message is not None else None,
                         ts=scene.ts,
                         note=f"learned from {character.name}",
                     )

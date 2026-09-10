@@ -62,6 +62,7 @@ class TestModels:
         loaded = WorldState(**ws.model_dump())
         assert loaded.knowledge[0].target == "F1"
         assert loaded.knowledge[0].source == "manual"
+        assert loaded.knowledge[0].message_id is None
         assert loaded.knowledge[0].id
 
     def test_manual_context_visibility_default(self):
@@ -440,10 +441,9 @@ class TestRetrieval:
             assert await conversation.rag_get_cache() == ["shared"]
 
         assert "-Alice-" in conversation.long_term_memory_cache_key_for(alice)
-        assert (
-            conversation.long_term_memory_cache_key_for(None)
-            == conversation.long_term_memory_cache_key
-        )
+        author_key = conversation.long_term_memory_cache_key_for(None)
+        assert author_key != conversation.long_term_memory_cache_key
+        assert author_key.endswith("-author")
 
 
 # ---------------------------------------------------------------------------
@@ -528,6 +528,20 @@ class TestEntryClassification:
         assert after_edge != before
         populated.visibility["eyes"] = EntryVisibility(mode="owner")
         assert knowledge_digest(scene) != after_edge
+
+    def test_viewer_digest_excludes_other_viewers_and_later_edges(self, scene):
+        before = knowledge_digest(scene, viewer="Alice", boundary_ids={1})
+        scene.world_state.knowledge.extend(
+            [
+                KnowledgeEdge(character="Bob", target="w1", message_id=1),
+                KnowledgeEdge(character="Alice", target="w2", message_id=2),
+            ]
+        )
+        assert knowledge_digest(scene, viewer="Alice", boundary_ids={1}) == before
+        scene.world_state.knowledge.append(
+            KnowledgeEdge(character="Alice", target="w3", message_id=1)
+        )
+        assert knowledge_digest(scene, viewer="Alice", boundary_ids={1}) != before
 
 
 class TestVisibilityLifecycle:

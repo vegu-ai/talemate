@@ -28,6 +28,7 @@ class AudienceIndexState:
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     task: asyncio.Task | None = None
     documents: dict = field(default_factory=dict)
+    documents_revision: int = -1
     fact_sources: dict = field(default_factory=dict)
     dirty: set | None = None
     collection_revision: int = 0
@@ -159,6 +160,7 @@ class AudienceMemoryMixin:
                     state.collection_revision += 1
                     state.topics.clear()
                     state.applied = -1
+                    state.documents_revision = -1
                     state.fingerprints = None
                     state.dirty = None
                 read = PerspectiveReadContext(scene)
@@ -218,6 +220,7 @@ class AudienceMemoryMixin:
                 )
                 documents.update(updated)
                 state.documents = documents
+                state.documents_revision = revision
                 state.dirty = set()
                 operation = asyncio.create_task(
                     asyncio.to_thread(

@@ -24,12 +24,18 @@ def prune_dialogue_facts(world_state, fact_ids=None):
 
 
 def prune_invalid_dialogue_facts(scene):
+    sources = {message.id: message for message in scene.history}
+    # Ledger edges can outlive the dialogue message that originally inferred them.
+    # Once that source is permanently deleted, keep the edge but stop treating it as
+    # a transient reply-side write when cache dependencies take a history boundary.
+    for edge in scene.world_state.knowledge:
+        if edge.message_id is not None and edge.message_id not in sources:
+            edge.message_id = None
     facts = [
         fact for fact in scene.world_state.facts.values() if fact.source == "dialogue"
     ]
     if not facts:
         return set()
-    sources = {message.id: message for message in scene.history}
     invalid = {
         fact.id
         for fact in facts

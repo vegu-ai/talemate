@@ -12,7 +12,10 @@ from talemate.agents.memory import MemoryAgent
 @pytest.fixture
 def memory():
     agent = object.__new__(MemoryAgent)
-    agent.scene = SimpleNamespace(memory_revision=0, rag_cache={"old": {}})
+    agent.scene = SimpleNamespace(
+        memory_revision=0, memory_writes_in_flight=0, rag_cache={"old": {}}
+    )
+    agent._db_lock = threading.Lock()
     agent._ready_to_add = True
     agent.invalidate_audience_writes = Mock()
     agent.invalidate_audience_index = Mock()
@@ -29,10 +32,13 @@ def memory():
     ],
 )
 @pytest.mark.parametrize("fails", [False, True])
-async def test_memory_write_invalidates_on_completion(memory, operation, args, fails):
+async def test_memory_write_keeps_entries_but_advances_revision(
+    memory, operation, args, fails
+):
     def persist(*args, **kwargs):
         assert memory.scene.memory_revision == 1
-        assert memory.scene.rag_cache == {}
+        assert memory.scene.memory_writes_in_flight == 1
+        assert memory.scene.rag_cache == {"old": {}}
         memory.scene.rag_cache["during-write"] = {"memory_revision": 1}
         if fails:
             raise RuntimeError("partial write")
@@ -47,7 +53,11 @@ async def test_memory_write_invalidates_on_completion(memory, operation, args, f
         await call(memory, *args)
     assert write.call_count == 1
     assert memory.scene.memory_revision == 2
-    assert memory.scene.rag_cache == {}
+    assert memory.scene.memory_writes_in_flight == 0
+    assert memory.scene.rag_cache == {
+        "old": {},
+        "during-write": {"memory_revision": 1},
+    }
 
 
 @pytest.mark.asyncio

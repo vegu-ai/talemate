@@ -153,6 +153,10 @@ The maximum length of the response that the summarizer agent will generate.
 
 When enabled scene analysis will be performed during conversation and narration tasks. This analysis will be used to provide additional context to other agents, which should hopefully improve the quality of the generated content.
 
+In Character Perspectives mode, scene analysis waits for knowledge updates already running before it takes its inputs: snapshots, summaries, perceptions, facts, character-detail **Refresh State** and world-entry **Reset State Reinforcement** operations, and memory indexing. Refreshes started by applying a template, or by creating or saving a state with an immediate update, are not covered by this wait. The status line shows **Waiting for knowledge updates before scene analysis**; Scene Direction and the director chat use the same wait before they run the chosen actions. Cancel releases the wait even if background work is still finishing. Waiting starts no update or AI request. Standard mode does not use this wait.
+
+An update that starts after the inputs were taken can still make them outdated and stop generation. A warning explains that stop, or reports unavailable character knowledge, so you can retry. User cancellation, including loading another scene, does not produce this system-abort warning.
+
 ##### Length of analysis
 
 The maximum number of tokens for the response. (e.g., how long should the analysis be).
@@ -176,6 +180,8 @@ Performs targeted memory retrieval based on the initial analysis, surfacing addi
 ##### Cache analysis
 
 Reuse the analysis when you regenerate the most recent output, including directed regeneration or choosing a different version of that reply.
+
+A completed analysis is also kept if a later step stops the turn. With caching enabled, retrying reuses it as long as its inputs are still current. If Deep analysis was interrupted, retry repeats its unfinished memory retrieval using the saved investigation, without requesting the initial analysis again. This retrieval can make its usual memory requests; an interrupted attempt does not count as completed context.
 
 !!! info
     This cache is anchored to the last message in the scene (excluding the current message). Editing that message will invalidate the cache.

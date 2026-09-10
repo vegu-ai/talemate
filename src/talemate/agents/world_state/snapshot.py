@@ -25,6 +25,7 @@ from talemate.knowledge.snapshots import (
 from talemate.prompts import Prompt
 from talemate.prompts.response import AnchorExtractor, ResponseSpec
 from talemate.scene_message import SceneMessage, TimePassageMessage
+from talemate.knowledge.processing import evidence_writer, track_evidence_task
 from talemate.world_state import WorldStateResponse
 from talemate.world_state.merge import (
     apply_bucket_patch,
@@ -440,6 +441,7 @@ class WorldStateSnapshotMixin:
             cancel_in_flight=cancel_in_flight,
             error_handler=self.on_world_state_error,
         )
+        track_evidence_task(self.scene, task)
         return task is not None
 
     def cancel_world_state_update(self) -> bool:
@@ -502,6 +504,7 @@ class WorldStateSnapshotMixin:
             cancel_in_flight=True,
             error_handler=self.on_add_snapshot_entity_error,
         )
+        track_evidence_task(self.scene, task)
         return task is not None
 
     async def on_add_snapshot_entity_error(self, error: Exception):
@@ -546,6 +549,7 @@ class WorldStateSnapshotMixin:
             )
 
     @set_processing
+    @evidence_writer
     async def add_snapshot_entity(
         self, message_id: int, text: str
     ) -> SnapshotEntityAddition:
@@ -877,6 +881,7 @@ class WorldStateSnapshotMixin:
             audience_context=audience_context,
         )
 
+    @evidence_writer
     async def apply_snapshot_update(
         self, world_state: "WorldState", instructions: str = ""
     ):

@@ -1,3 +1,4 @@
+from talemate.knowledge.processing import evidence_writer, track_evidence_task
 import asyncio
 import weakref
 from typing import Literal
@@ -93,6 +94,7 @@ class AudienceSummaryMixin:
         )
         set_source_perspectives(scene, "summary", identity, outputs, layer=layer)
 
+    @evidence_writer
     async def ensure_summary_views(
         self, scene, identity, layer=0, *, generation_options=None, audiences=None
     ):
@@ -440,7 +442,9 @@ class AudienceSummaryMixin:
             return
         task = await self.rebuild_audience_summaries(scene)
         self._summary_rebuild_tasks[scene] = task
+        track_evidence_task(scene, task)
 
+    @evidence_writer
     @background_task("Updating character summaries")
     async def rebuild_audience_summaries(self, scene):
         while True:

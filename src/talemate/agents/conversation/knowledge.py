@@ -1,3 +1,4 @@
+from talemate.knowledge.processing import evidence_writer
 import json
 import re
 import weakref
@@ -392,6 +393,7 @@ class CharacterKnowledgeMixin:
             await self.record_learned_facts(character, str(message))
 
     @set_processing
+    @evidence_writer
     async def generate_entry_briefing(
         self,
         character: "Character",
@@ -793,6 +795,7 @@ class CharacterKnowledgeMixin:
 
     # the signal path (a player line) has no active agent; the request needs one
     @set_processing
+    @evidence_writer
     async def record_learned_facts(
         self,
         character: "Character",

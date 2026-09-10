@@ -36,13 +36,29 @@ active_scene = ContextVar("active_scene", default=None)
 interaction = ContextVar("interaction", default=InteractionState())
 
 
-def handle_generation_cancelled(exc: GenerationCancelled):
-    # set cancel_requested to False on the active_scene
+def handle_generation_cancelled(exc: GenerationCancelled, *, scene=None):
+    from talemate.emit import emit
 
-    scene = active_scene.get()
-
-    if scene:
-        scene.cancel_requested = False
+    scene = scene if scene is not None else active_scene.get()
+    if scene is None:
+        return
+    exc.by_user = exc.by_user or scene.cancel_requested
+    scene.cancel_requested = False
+    if exc.by_user or exc.reported:
+        return
+    exc.reported = True
+    reason = str(exc) or "Generation stopped before completion."
+    details = {
+        key: value
+        for key, value in {
+            "message_id": exc.message_id,
+            "view_status": exc.view_status,
+            "character": exc.character,
+        }.items()
+        if value is not None
+    }
+    log.warning("Generation aborted", reason=reason, **details)
+    emit("status", status="warning", message=reason, data=details)
 
 
 class SceneIsLoading:

@@ -182,6 +182,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         does not inherit the released scene's per-scene overrides.
         """
         if self.scene:
+            self.scene.interrupt()
             # before the fallible close: `active` is the abort gate in-flight
             # work polls, so it must drop even when the teardown fails
             self.scene.active = False

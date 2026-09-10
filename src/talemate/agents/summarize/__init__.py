@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from talemate.knowledge.processing import evidence_writer
+
 import re
 
 import structlog
@@ -316,6 +318,7 @@ class SummarizeAgent(
     # SUMMARIZE
 
     @set_processing
+    @evidence_writer
     async def build_archive(
         self,
         scene,
@@ -653,6 +656,7 @@ class SummarizeAgent(
             return None
         return "ok" if parsed_facts is not None else "failed"
 
+    @evidence_writer
     async def summarize_with_facts(
         self,
         text: str,
@@ -692,6 +696,7 @@ class SummarizeAgent(
         await refresh_topics(self.scene, force=True)
         return summarized, self._facts_status(parsed_facts)
 
+    @evidence_writer
     async def regenerate_facts(self, entry: "HistoryEntry") -> FactsStatus | None:
         """
         Re-run the summary call for one base entry and replace only its facts.

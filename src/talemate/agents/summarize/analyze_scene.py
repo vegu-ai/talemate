@@ -11,6 +11,7 @@ from talemate.agents.base import (
     DynamicInstruction,
 )
 from talemate.prompts import Prompt
+from talemate.knowledge.processing import wait_for_evidence_writers
 from talemate.prompts.response import ResponseSpec, AnchorExtractor
 from talemate.util import strip_partial_sentences
 import talemate.emit.async_signals
@@ -232,6 +233,7 @@ class SceneAnalyzationMixin:
             return
 
         scene = self.scene
+        await wait_for_evidence_writers(scene, agent=self)
         character = emission_character(scene, emission)
         boundary, evidence_budget = self._analysis_evidence_key(
             scene, character, emission_type
@@ -257,6 +259,22 @@ class SceneAnalyzationMixin:
                 evidence_key=(boundary, evidence_budget, fingerprint),
             )
             if analysis:
+                cached = self.get_scene_state(f"cached_analysis_{emission_type}") or {}
+                deep = cached.get("deep_analysis") or {}
+                if (
+                    self.deep_analysis
+                    and self.long_term_memory_enabled
+                    and deep.get("pending")
+                ):
+                    await self._complete_deep_analysis(
+                        scene,
+                        emission_type,
+                        character,
+                        analysis,
+                        cached,
+                        emission.dynamic_instructions,
+                        (boundary, evidence_budget, fingerprint),
+                    )
                 await talemate.emit.async_signals.get(
                     "agent.summarization.scene_analysis.cached"
                 ).send(
@@ -279,16 +297,7 @@ class SceneAnalyzationMixin:
                 character,
                 self.analysis_length,
                 evidence_key=(boundary, evidence_budget, fingerprint),
-            )
-
-            await self.set_cached_analysis(
-                emission_type,
-                analysis,
-                character,
-                evidence_fp=fingerprint,
                 standard_fp=standard_fp,
-                boundary=boundary,
-                evidence_budget=evidence_budget,
             )
 
         if not analysis:
@@ -594,6 +603,89 @@ class SceneAnalyzationMixin:
 
     # actions
 
+    async def _complete_deep_analysis(
+        self, scene, typ, character, result, cached, dynamic_instructions, evidence_key
+    ):
+        boundary, evidence_budget, fingerprint = evidence_key
+        scoped = boundary is not None
+        deep = cached["deep_analysis"]
+        investigate = deep["investigate"]
+        deep_context = ""
+        retrieval_fp = None
+
+        if investigate:
+            deep_emission = SceneAnalysisDeepAnalysisEmission(
+                agent=self,
+                analysis=result,
+                analysis_type=typ,
+                analysis_sub_type=deep["analysis_sub_type"],
+                character=character,
+                investigate=investigate,
+                dynamic_instructions=dynamic_instructions,
+            )
+
+            await talemate.emit.async_signals.get(
+                "agent.summarization.scene_analysis.before_deep_analysis"
+            ).send(deep_emission)
+
+            rag_options = dict(
+                sub_instruction=investigate,
+                retrieval_method="questions",
+                include_raw_semantic=False,
+            )
+            if character_knowledge_enabled(scene):
+                retrieval_fp = deep_analysis_fingerprint(scene, character, boundary)
+            if scoped:
+                rag_results = await self.rag_build(character=character, **rag_options)
+            else:
+                rag_results = await self.rag_build_for_author(
+                    prompt=result, **rag_options
+                )
+
+            if rag_results:
+                deep_analysis_context = "\n---\n".join(str(r) for r in rag_results)
+                deep_emission.deep_analysis_context = deep_analysis_context
+                deep_context = deep_analysis_context
+
+            await talemate.emit.async_signals.get(
+                "agent.summarization.scene_analysis.after_deep_analysis"
+            ).send(deep_emission)
+
+        if character_knowledge_enabled(scene):
+            require_current_advice(
+                self,
+                scene,
+                character,
+                fingerprint,
+                boundary=boundary,
+                budget=evidence_budget,
+            )
+            if deep_context and retrieval_fp != deep_analysis_fingerprint(
+                scene, character, boundary
+            ):
+                raise StaleAdvice(
+                    "Deep analysis sources changed during retrieval; retry"
+                )
+            self.set_scene_states(
+                deep_analysis_context=deep_context,
+                deep_analysis_evidence={
+                    **advice_record_metadata(
+                        self,
+                        character,
+                        typ,
+                        evidence_fp=fingerprint,
+                        boundary=boundary,
+                        budget=evidence_budget,
+                    ),
+                    "retrieval_fp": retrieval_fp,
+                },
+            )
+
+        else:
+            self.set_scene_states(deep_analysis_context=deep_context)
+            self.set_context_states(deep_analysis_context=deep_context)
+        deep["pending"] = False
+
     @set_processing
     async def analyze_scene_for_next_action(
         self,
@@ -602,6 +694,7 @@ class SceneAnalyzationMixin:
         length: int = 1024,
         *,
         evidence_key=None,
+        standard_fp: str | None | EllipsisType = ...,
     ) -> str:
         """
         Analyzes the current scene progress and gives a suggestion for the next action.
@@ -609,6 +702,8 @@ class SceneAnalyzationMixin:
         """
 
         scene = self.scene
+        if evidence_key is None:
+            await wait_for_evidence_writers(scene, agent=self)
         character = advice_character(scene, character, typ=typ)
         if evidence_key is None:
             boundary, evidence_budget = self._analysis_evidence_key(
@@ -619,10 +714,12 @@ class SceneAnalyzationMixin:
             )
         else:
             boundary, evidence_budget, fingerprint = evidence_key
+        if standard_fp is ...:
+            standard_fp = standard_analysis_fingerprint(
+                scene, character, typ, self._analysis_evidence_budget
+            )
         scoped = boundary is not None
-        deep_context = ""
         deep_analysis = self.deep_analysis and self.long_term_memory_enabled
-        retrieval_fp = None
         analysis_sub_type = await self.analyze_scene_sub_type(typ)
 
         template_vars = {
@@ -667,57 +764,6 @@ class SceneAnalyzationMixin:
         if not result.strip():
             return result
 
-        if deep_analysis:
-            # Use the <INVESTIGATE> block as sub_instruction for targeted RAG
-            investigate = (extracted.get("investigate") or "").strip()
-
-            if investigate:
-                deep_emission = SceneAnalysisDeepAnalysisEmission(
-                    agent=self,
-                    analysis=result,
-                    analysis_type=typ,
-                    analysis_sub_type=analysis_sub_type,
-                    character=character,
-                    investigate=investigate,
-                    dynamic_instructions=emission.dynamic_instructions,
-                )
-
-                await talemate.emit.async_signals.get(
-                    "agent.summarization.scene_analysis.before_deep_analysis"
-                ).send(deep_emission)
-
-                rag_options = dict(
-                    sub_instruction=investigate,
-                    retrieval_method="questions",
-                    include_raw_semantic=False,
-                )
-                if character_knowledge_enabled(scene):
-                    retrieval_fp = deep_analysis_fingerprint(scene, character, boundary)
-                if scoped:
-                    rag_results = await self.rag_build(
-                        character=character, **rag_options
-                    )
-                else:
-                    rag_results = await self.rag_build_for_author(
-                        prompt=result, **rag_options
-                    )
-
-                if rag_results:
-                    deep_analysis_context = "\n---\n".join(str(r) for r in rag_results)
-                    deep_emission.deep_analysis_context = deep_analysis_context
-                    deep_context = deep_analysis_context
-                    if not character_knowledge_enabled(scene):
-                        self.set_scene_states(
-                            deep_analysis_context=deep_analysis_context
-                        )
-                        self.set_context_states(
-                            deep_analysis_context=deep_analysis_context
-                        )
-
-                await talemate.emit.async_signals.get(
-                    "agent.summarization.scene_analysis.after_deep_analysis"
-                ).send(deep_emission)
-
         if character_knowledge_enabled(scene):
             require_current_advice(
                 self,
@@ -727,26 +773,33 @@ class SceneAnalyzationMixin:
                 boundary=boundary,
                 budget=evidence_budget,
             )
-            if deep_context and retrieval_fp != deep_analysis_fingerprint(
-                scene, character, boundary
-            ):
-                raise StaleAdvice(
-                    "Deep analysis sources changed during retrieval; retry"
-                )
-            self.set_scene_states(
-                deep_analysis_context=deep_context,
-                deep_analysis_evidence={
-                    **advice_record_metadata(
-                        self,
-                        character,
-                        typ,
-                        evidence_fp=fingerprint,
-                        boundary=boundary,
-                        budget=evidence_budget,
-                    ),
-                    "retrieval_fp": retrieval_fp,
-                },
-            )
+        await self.set_cached_analysis(
+            typ,
+            result,
+            character,
+            evidence_fp=fingerprint,
+            standard_fp=standard_fp,
+            boundary=boundary,
+            evidence_budget=evidence_budget,
+        )
+        self.set_scene_states(deep_analysis_context="", deep_analysis_evidence={})
+        cached = self.get_scene_state(f"cached_analysis_{typ}")
+        cached["deep_analysis"] = {
+            "investigate": (extracted.get("investigate") or "").strip()
+            if deep_analysis
+            else "",
+            "analysis_sub_type": analysis_sub_type,
+            "pending": True,
+        }
+        await self._complete_deep_analysis(
+            scene,
+            typ,
+            character,
+            result,
+            cached,
+            emission.dynamic_instructions,
+            (boundary, evidence_budget, fingerprint),
+        )
 
         await talemate.emit.async_signals.get(
             "agent.summarization.scene_analysis.after"

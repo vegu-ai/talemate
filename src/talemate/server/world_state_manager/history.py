@@ -2,6 +2,7 @@ import pydantic
 import asyncio
 import structlog
 
+from talemate.knowledge.processing import track_evidence_task
 from talemate.instance import get_agent
 from talemate.history import (
     history_with_relative_time,
@@ -138,6 +139,8 @@ class HistoryMixin:
                 generation_options=payload.generation_options,
             )
         )
+
+        track_evidence_task(self.scene, task)
 
         async def done():
             self.websocket_handler.queue_put(
@@ -361,6 +364,7 @@ class HistoryMixin:
             self.scene.layered_history = []
 
         task = asyncio.create_task(summarizer.summarize_to_layered_history())
+        track_evidence_task(self.scene, task)
 
         async def done():
             self.websocket_handler.queue_put(

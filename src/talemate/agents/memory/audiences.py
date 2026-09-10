@@ -11,6 +11,7 @@ from talemate.context import scene_is_loading
 
 from talemate.knowledge.memory import audience_documents
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.processing import evidence_writer, track_evidence_task
 from talemate.knowledge.revision_browsing import defer_derived_jobs
 from talemate.knowledge.reinforcements import reinforcement_source_keys
 from talemate.knowledge.perspectives import PerspectiveReadContext, perspectives_changed
@@ -101,6 +102,7 @@ class AudienceMemoryMixin:
             return
         if state.task is None or state.task.done():
             state.task = loop.create_task(self.ensure_audience_index(scene))
+            track_evidence_task(scene, state.task)
             state.task.add_done_callback(self._audience_update_done)
 
     @staticmethod
@@ -136,6 +138,7 @@ class AudienceMemoryMixin:
                     state.dirty = None
             self._audience_states.pop(scene, None)
 
+    @evidence_writer
     async def ensure_audience_index(self, scene):
         if not character_knowledge_enabled(scene):
             return

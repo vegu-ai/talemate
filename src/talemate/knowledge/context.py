@@ -92,7 +92,10 @@ def _project_character_message(
     if view.status in ("pending", "failed"):
         raise GenerationCancelled(
             f"Perception for passage {message.id} is {view.status}; "
-            "retry perception analysis before character generation"
+            "retry perception analysis before character generation",
+            message_id=message.id,
+            view_status=view.status,
+            character=character,
         )
     if view.status != "ready":
         log.debug(

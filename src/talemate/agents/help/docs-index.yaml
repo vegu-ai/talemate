@@ -254,9 +254,10 @@
     investigation. Deep analysis can retrieve additional historical context but may add many prompts.'
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
-  summary: 'Configure summarization thresholds, methods and fact extraction: Fact matching tolerance on normalized embeddings,
-    chronology, subject aliases and formerly clauses. Summarization settings cover perspective repair, layered history, scene
-    analysis caching across regeneration, and scene-history token budgets, Best Fit, dialogue ratios and summary boundaries.'
+  summary: 'Summarization settings: thresholds, methods, fact extraction, matching tolerance with normalized embeddings,
+    chronology, subject aliases, formerly clauses, perspective repair and layered history. Covers scene analysis caching
+    for regeneration, resuming interrupted Deep Analysis Context retrieval, cancellable Waiting for knowledge updates in Character
+    Perspectives, system-abort warnings, and scene-history token budgets, Best Fit, dialogue ratios and summary boundaries.'
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
   summary: Legacy AUTOMATIC1111 text-to-image backend setup with API URL, steps, sampler, schedule, CFG, keyword/descriptive

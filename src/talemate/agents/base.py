@@ -24,6 +24,7 @@ from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
+from talemate.exceptions import GenerationCancelled
 from talemate.ux.schema import SECRET_FIELD_TYPES, Action, Condition, Note
 from talemate.ux.schema import Field as UxField
 from talemate.config import get_config, Config
@@ -374,6 +375,7 @@ def set_processing(fn):
 
             if scene:
                 scene.continue_actions()
+            cancel_sequence = scene.cancel_sequence if scene else None
 
             with ActiveAgent(self, fn, args, kwargs) as active_agent_context:
                 actions = self.__dict__.setdefault("_processing_actions", {})
@@ -417,6 +419,11 @@ def set_processing(fn):
                     )
                     with override_ctx:
                         return await fn(self, *args, **kwargs)
+                except GenerationCancelled as exc:
+                    exc.by_user = exc.by_user or bool(
+                        scene and scene.cancel_sequence != cancel_sequence
+                    )
+                    raise
                 finally:
                     try:
                         actions.pop(action_token, None)

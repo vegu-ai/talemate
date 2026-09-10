@@ -1,3 +1,4 @@
+from talemate.knowledge.processing import evidence_writer
 import asyncio
 import json
 import re
@@ -386,6 +387,7 @@ class PerceptionMixin:
         self._perception_locks = WeakKeyDictionary()
         self._perception_deferred = WeakKeyDictionary()
         self._perception_failures = WeakKeyDictionary()
+        self._perception_cancelled_by_user = WeakKeyDictionary()
 
     def _perception_status(
         self,
@@ -458,6 +460,7 @@ class PerceptionMixin:
                     continue
                 self._perception_status(scene, message, "pending")
 
+    @evidence_writer
     async def finalize_perceptions(
         self, scene: "Scene", messages: list[SceneMessage]
     ) -> None:
@@ -480,6 +483,7 @@ class PerceptionMixin:
                 "Finalized perception source was removed or reset"
             )
 
+    @evidence_writer
     @background_task("Updating character perceptions")
     async def rebuild_perceptions(self, scene: "Scene") -> None:
         await self.ensure_perceptions(scene)
@@ -487,6 +491,7 @@ class PerceptionMixin:
         if self.scene is scene:
             await scene.attempt_auto_save()
 
+    @evidence_writer
     async def ensure_perceptions(
         self, scene: "Scene", *, before_message_id: int | None = None
     ) -> None:
@@ -511,6 +516,7 @@ class PerceptionMixin:
         lock = self._perception_locks.setdefault(scene, asyncio.Lock())
         failures = self._perception_failures.setdefault(scene, {})
         failure_snapshot = failures.copy()
+        cancelled_by_user = self._perception_cancelled_by_user.setdefault(scene, {})
         async with lock:
             # A prefix revision can be queued behind unrelated later cancellations.
             prefix_ids = (
@@ -524,7 +530,13 @@ class PerceptionMixin:
                 if prefix_ids is None or message_id in prefix_ids
             ):
                 raise GenerationCancelled(
-                    "Prerequisite perception analysis was cancelled"
+                    "Prerequisite perception analysis was cancelled",
+                    by_user=any(
+                        cancelled_by_user.get(message_id, False)
+                        for message_id, count in failures.items()
+                        if count != failure_snapshot.get(message_id, 0)
+                        and (prefix_ids is None or message_id in prefix_ids)
+                    ),
                 )
             while True:
                 if self.scene is not scene or not character_knowledge_enabled(scene):
@@ -550,8 +562,9 @@ class PerceptionMixin:
                 )
                 try:
                     await self.analyze_perceptions(scene, message)
-                except (GenerationCancelled, asyncio.CancelledError):
+                except (GenerationCancelled, asyncio.CancelledError) as exc:
                     failures[message.id] = failures.get(message.id, 0) + 1
+                    cancelled_by_user[message.id] = getattr(exc, "by_user", False)
                     raise
                 if (
                     reinforcement is not None
@@ -631,6 +644,7 @@ class PerceptionMixin:
         self._perception_status(scene, message, "failed")
 
     @set_processing
+    @evidence_writer
     async def analyze_perceptions(self, scene: "Scene", message: SceneMessage) -> None:
         if not relevant_audiences(scene, message):
             raise GenerationCancelled(
@@ -714,7 +728,7 @@ class PerceptionMixin:
             )
             if action != "retry":
                 raise GenerationCancelled(
-                    "Perception analysis requires a successful retry"
+                    "Perception analysis requires a successful retry", by_user=True
                 )
             return
         set_source_perspectives(

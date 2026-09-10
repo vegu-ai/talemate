@@ -1,3 +1,4 @@
+from talemate.knowledge.processing import evidence_writer, track_evidence_task
 import asyncio
 from weakref import WeakKeyDictionary
 
@@ -115,6 +116,7 @@ class SourceFactMixin:
         task = self._fact_wakeup_tasks.get(scene)
         if task is None or task.done():
             task = loop.create_task(run(scene))
+            track_evidence_task(scene, task)
             self._fact_wakeup_tasks[scene] = task
             task.add_done_callback(self._fact_wakeup_done)
 
@@ -166,6 +168,7 @@ class SourceFactMixin:
         for disclosure in scene.knowledge.disclosures if scene.knowledge else ():
             yield source_reference(scene, "disclosure", disclosure.id, read=read)
 
+    @evidence_writer
     async def rebuild_supported_facts(self, scene, sources=None):
         if not character_knowledge_enabled(scene):
             raise ValueError("Source fact rebuilds require perception mode")

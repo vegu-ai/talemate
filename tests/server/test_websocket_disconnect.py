@@ -507,3 +507,15 @@ async def test_loaded_history_precedes_indexing_but_ready_and_start_wait(
     indexed.set()
     await asyncio.wait_for(task, timeout=5)
     assert order == ["history", "indexed", "ready", "start"]
+
+
+@pytest.mark.asyncio
+async def test_release_signals_user_interruption_before_rebinding(wired):
+    handler, scene, agent, _ = wired
+    sequence = scene.cancel_sequence
+    interrupted = scene.interrupt_signal
+    handler.release_scene()
+    assert interrupted.done()
+    assert scene.cancel_sequence == sequence + 1
+    assert scene.cancel_requested
+    assert agent.scene is not scene

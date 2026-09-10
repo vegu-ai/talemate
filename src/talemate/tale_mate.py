@@ -20,7 +20,7 @@ import talemate.util as util
 import talemate.world_state.templates as world_state_templates
 from talemate.knowledge.intro import initialize_intro_audience, sync_intro_knowledge
 from talemate.config import Config, get_config
-from talemate.context import interaction
+from talemate.context import interaction, handle_generation_cancelled
 from talemate.emit import Emitter, emit
 from talemate.exceptions import (
     ExitScene,
@@ -245,6 +245,8 @@ class Scene(Emitter):
         # if self.cancel_requested is True self.continue_actions() will raise
         # a GenerationCancelled exception
         self.cancel_requested = False
+        self._cancel_sequence = 0
+        self._interrupt_signal = None
 
         self.signals = {
             "ai_message": signal("ai_message"),
@@ -1949,11 +1951,10 @@ class Scene(Emitter):
         while state.data["continue_scene"] and self.active:
             try:
                 await self.node_graph.execute(state)
-            except GenerationCancelled:
+            except GenerationCancelled as exc:
                 state.shared["signal_game_loop"] = False
                 state.shared["skip_to_player"] = True
-                self.cancel_requested = False
-                self.log.warning("Generation cancelled, skipping to player")
+                handle_generation_cancelled(exc, scene=self)
             except TalemateInterrupt:
                 raise
             except LLMAccuracyError as e:
@@ -1995,8 +1996,8 @@ class Scene(Emitter):
         while state.data["continue_scene"] and self.active:
             try:
                 await self.creative_node_graph.execute(state)
-            except GenerationCancelled:
-                self.cancel_requested = False
+            except GenerationCancelled as exc:
+                handle_generation_cancelled(exc, scene=self)
                 continue
             except TalemateInterrupt:
                 raise
@@ -2388,10 +2389,26 @@ class Scene(Emitter):
     def json(self):
         return save.scene_data_dumps(self.serialize)
 
+    @property
+    def cancel_sequence(self) -> int:
+        """User interruption marker that survives consuming ``cancel_requested``."""
+        return self._cancel_sequence
+
+    @property
+    def interrupt_signal(self) -> asyncio.Future:
+        """Shared signal for the next interruption; observers must not cancel it."""
+        if self._interrupt_signal is None:
+            self._interrupt_signal = asyncio.get_running_loop().create_future()
+        return self._interrupt_signal
+
     def interrupt(self):
+        self._cancel_sequence += 1
         self.cancel_requested = True
+        if self._interrupt_signal is not None:
+            self._interrupt_signal.set_result(None)
+            self._interrupt_signal = None
 
     def continue_actions(self):
         if self.cancel_requested:
             self.cancel_requested = False
-            raise GenerationCancelled("action cancelled")
+            raise GenerationCancelled("action cancelled", by_user=True)

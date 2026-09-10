@@ -32,7 +32,7 @@ from .event import (
 import talemate.events as events
 from talemate.emit import wait_for_input
 from talemate.exceptions import ActedAsCharacter, AbortWaitForInput, GenerationCancelled
-from talemate.context import active_scene, InteractionState
+from talemate.context import active_scene, InteractionState, handle_generation_cancelled
 from talemate.instance import get_agent, AGENTS
 from talemate.knowledge.perspectives import validate_character_rename
 from talemate.character import (
@@ -1920,6 +1920,7 @@ class SceneLoop(Loop):
         elif isinstance(exc, GenerationCancelled):
             state.shared["skip_to_player"] = True
             state.shared["signal_game_loop"] = False
+            handle_generation_cancelled(exc, scene=scene)
             raise LoopBreak()
 
         await async_signals.get("scene_loop_error").send(self.scene_loop_event)

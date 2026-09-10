@@ -14,6 +14,7 @@ from talemate.instance import emit_agents_status, get_agent
 from talemate.world_state.manager import WorldStateManager, Suggestion
 from talemate.scene.schema import ScenePerspectives
 from talemate.knowledge.mode import KnowledgeEligibility
+from talemate.knowledge.processing import evidence_writer
 from talemate.status import LoadingLabel, background_task, set_loading
 import talemate.game.focal as focal
 from talemate.config import save_config, get_config, commit_config
@@ -441,6 +442,7 @@ class WorldStateManagerPlugin(
         await self.handle_get_character_details({"name": payload.name})
         await self.signal_operation_done()
 
+    @evidence_writer
     @background_task("Refreshing reinforcement")
     async def handle_run_character_detail_reinforcement(self, data):
         payload = CharacterDetailReinforcementPayload(**data)
@@ -640,6 +642,7 @@ class WorldStateManagerPlugin(
         await self.handle_get_world({})
         await self.signal_operation_done()
 
+    @evidence_writer
     @background_task("Refreshing world state")
     async def handle_run_world_state_reinforcement(self, data):
         payload = WorldEntryReinforcementPayload(**data)

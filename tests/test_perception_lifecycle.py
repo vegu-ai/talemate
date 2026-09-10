@@ -861,6 +861,7 @@ async def test_cancellation_stops_existing_dependent_waiters(setup):
         asyncio.gather(producer, dependent, return_exceptions=True), 3
     )
     assert all(isinstance(outcome, GenerationCancelled) for outcome in outcomes)
+    assert all(outcome.by_user for outcome in outcomes)
     assert request.await_count == 1
 
 
@@ -1182,3 +1183,53 @@ async def test_status_payload_hides_retired_controls_and_restores_legacy(
     await agent._do_emit_status()
     assert emitted[-1]["data"]["actions"] == original
     assert {key: value.model_dump() for key, value in agent.actions.items()} == original
+
+
+@pytest.mark.asyncio
+async def test_consumed_background_cancel_does_not_warn_for_dependent_perception(
+    setup, monkeypatch
+):
+    from talemate.context import handle_generation_cancelled
+    from talemate.status import set_loading
+    from structlog.testing import capture_logs
+
+    scene, summarizer, request = setup
+    message = CharacterMessage(message="Alice: Hello.")
+    entered, release = asyncio.Event(), asyncio.Event()
+    emitted = []
+    monkeypatch.setattr("talemate.emit.emit", lambda typ, **data: emitted.append(data))
+
+    async def cancelled(*args, **kwargs):
+        entered.set()
+        await release.wait()
+        scene.interrupt()
+        exc = GenerationCancelled("User stopped perception", by_user=True)
+        handle_generation_cancelled(exc)
+        assert not scene.cancel_requested
+        raise exc
+
+    request.side_effect = cancelled
+    producer = asyncio.create_task(
+        set_loading("Perception")(scene.push_history)(message)
+    )
+    dependent = None
+    try:
+        await asyncio.wait_for(entered.wait(), 2)
+        dependent = asyncio.create_task(summarizer.ensure_perceptions(scene))
+        await asyncio.sleep(0)
+        with capture_logs() as logs:
+            release.set()
+            outcomes = await asyncio.wait_for(
+                asyncio.gather(producer, dependent, return_exceptions=True), 2
+            )
+            for exc in outcomes:
+                assert isinstance(exc, GenerationCancelled)
+                assert exc.by_user
+                handle_generation_cancelled(exc)
+        assert not any(entry["log_level"] == "warning" for entry in logs)
+        assert not any(entry.get("status") == "warning" for entry in emitted)
+    finally:
+        release.set()
+        await asyncio.gather(
+            producer, *([dependent] if dependent else []), return_exceptions=True
+        )

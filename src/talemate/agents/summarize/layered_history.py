@@ -1,3 +1,4 @@
+from talemate.knowledge.processing import evidence_writer
 import structlog
 from typing import TYPE_CHECKING
 from talemate.agents.base import (
@@ -605,6 +606,7 @@ class LayeredHistoryMixin:
         return compiled
 
     @set_processing
+    @evidence_writer
     async def summarize_to_layered_history(
         self, generation_options: GenerationOptions | None = None
     ):

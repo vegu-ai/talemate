@@ -70,7 +70,20 @@ class GenerationCancelled(TalemateInterrupt):
     Interrupt current scene and return action to the user
     """
 
-    pass
+    def __init__(
+        self,
+        *args,
+        by_user: bool = False,
+        message_id: int | None = None,
+        view_status: str | None = None,
+        character: str | None = None,
+    ):
+        super().__init__(*args)
+        self.by_user = by_user
+        self.message_id = message_id
+        self.view_status = view_status
+        self.character = character
+        self.reported = False
 
 
 class GenerationProcessingError(TalemateError):

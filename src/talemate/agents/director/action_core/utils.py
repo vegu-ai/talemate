@@ -29,6 +29,7 @@ from talemate.util.prompt import (
 from talemate.instance import get_agent
 from talemate.knowledge.advice import advice_fingerprint, require_current_advice
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.processing import wait_for_evidence_writers
 from talemate.agents.director.response_specs import (
     MESSAGE_SPEC,
     DECISION_SPEC,
@@ -765,6 +766,9 @@ async def execute_actions(
         if on_action_complete:
             await on_action_complete(action_msg)
 
+    await wait_for_evidence_writers(
+        scene, agent=get_agent("director"), purpose="scene direction"
+    )
     fingerprint = advice_fingerprint(scene)
 
     check_evidence = character_knowledge_enabled(scene)

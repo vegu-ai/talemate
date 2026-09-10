@@ -115,8 +115,11 @@ def test_nonready_projection_blocks_without_reader_fallback(cast, status):
     set_source_perspectives(
         scene, "message", mixed.id, [{"audience": ["Bob"], "status": status}]
     )
-    with pytest.raises(GenerationCancelled, match=status):
+    with pytest.raises(GenerationCancelled, match=status) as raised:
         scene.context_history(stored_views=True, budget=1000, perspective="Bob")
+    assert raised.value.message_id == mixed.id
+    assert raised.value.view_status == status
+    assert raised.value.character == "Bob"
 
 
 def test_stale_projection_blocks(cast):

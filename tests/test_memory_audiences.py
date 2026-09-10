@@ -932,3 +932,41 @@ async def test_cancelled_direct_delete_removes_stale_audience_projection(
     assert "Common rain lore." not in await contents(memory)
     stored = memory.db.get(where={"knowledge_index": True}, include=["documents"])
     assert "Common rain lore." not in stored["documents"]
+
+
+async def test_scheduled_audience_index_is_an_evidence_writer(
+    indexed_scene, monkeypatch
+):
+    from talemate.knowledge.processing import wait_for_evidence_writers
+
+    scene, memory, _ = indexed_scene
+    state = memory._audience_state(scene)
+    if state.task is not None:
+        await state.task
+    entered, release, waiting = asyncio.Event(), asyncio.Event(), asyncio.Event()
+
+    async def update(scene):
+        entered.set()
+        await release.wait()
+        state.revision += 1
+
+    def status(typ, **data):
+        if data.get("message") == "Waiting for knowledge updates before scene analysis":
+            waiting.set()
+
+    monkeypatch.setattr(memory, "ensure_audience_index", AsyncMock(side_effect=update))
+    monkeypatch.setattr("talemate.status.emit", status)
+    memory.invalidate_audience_index(scene)
+    initial_revision = state.revision
+    waiter = asyncio.create_task(wait_for_evidence_writers(scene, agent=memory))
+    try:
+        await asyncio.wait_for(entered.wait(), 2)
+        await asyncio.wait_for(waiting.wait(), 2)
+        assert not waiter.done()
+        release.set()
+        await asyncio.wait_for(waiter, 2)
+        assert state.revision == initial_revision + 1
+        memory.ensure_audience_index.assert_awaited_once_with(scene)
+    finally:
+        release.set()
+        await asyncio.gather(waiter, state.task, return_exceptions=True)

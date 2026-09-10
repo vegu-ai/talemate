@@ -529,3 +529,86 @@ def test_config_round_trip():
     assert defaults.retry_empty_response == 0
     assert defaults.retry_rate_limit == 0
     assert defaults.retry_missing_reasoning == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("during_backoff", [False, True])
+async def test_consumed_placeholder_cancel_keeps_user_identity(
+    scripted_env, during_backoff
+):
+    make_client, _, scene = scripted_env
+    client = make_client([])
+    scene.active = False
+    scene.cancel_requested = not during_backoff
+
+    def abort(*args, **kwargs):
+        scene.cancel_requested = True
+
+    with patch.object(client, "_emit_auto_retry", abort):
+        with pytest.raises(GenerationCancelled) as raised:
+            await client._auto_retry_or_prompt(
+                "rate_limit", "retry", {"rate_limit": 0}, 1, "gid"
+            )
+    assert raised.value.by_user
+    assert not scene.cancel_requested
+
+
+@pytest.mark.asyncio
+async def test_scene_exit_during_backoff_remains_system_abort(scripted_env):
+    make_client, _, scene = scripted_env
+    client = make_client([])
+
+    async def scene_exited(*args, **kwargs):
+        scene.active = False
+        return False
+
+    with patch.object(client, "_auto_retry_backoff_wait", scene_exited):
+        with pytest.raises(GenerationCancelled) as raised:
+            await client._auto_retry_or_prompt(
+                "rate_limit", "retry", {"rate_limit": 0}, 1, "gid"
+            )
+    assert not raised.value.by_user
+
+
+@pytest.mark.asyncio
+async def test_poll_interrupt_preserves_user_identity_before_flag_cleanup(scripted_env):
+    make_client, _, scene = scripted_env
+    client = make_client([])
+    scene.cancel_requested = True
+    with ClientContext(requires_active_scene=True):
+        exc = await asyncio.wait_for(client._poll_interrupt(), 2)
+    scene.cancel_requested = False
+    assert exc.by_user
+
+
+@pytest.mark.asyncio
+async def test_poll_interrupt_observes_cancel_after_another_sink_clears_flag(
+    scripted_env,
+):
+    make_client, _, scene = scripted_env
+    client = make_client([])
+    with ClientContext(requires_active_scene=True):
+        task = client._poll_interrupt()
+    scene.interrupt()
+    scene.cancel_requested = False
+    exc = await asyncio.wait_for(task, 1)
+    assert exc.by_user
+
+
+@pytest.mark.asyncio
+async def test_user_scene_release_during_backoff_stays_silent(scripted_env):
+    make_client, _, scene = scripted_env
+    client = make_client([])
+
+    async def released(*args, **kwargs):
+        scene.interrupt()
+        scene.cancel_requested = False
+        scene.active = False
+        return False
+
+    with patch.object(client, "_auto_retry_backoff_wait", released):
+        with pytest.raises(GenerationCancelled) as raised:
+            await client._auto_retry_or_prompt(
+                "rate_limit", "retry", {"rate_limit": 0}, 1, "gid"
+            )
+    assert raised.value.by_user

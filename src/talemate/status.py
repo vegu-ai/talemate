@@ -157,7 +157,6 @@ class set_loading:
                     emit("status", message="", status="idle")
                 return result
             except GenerationCancelled as e:
-                log.warning("Generation cancelled", args=args, kwargs=kwargs)
                 if self.set_error:
                     loading.emit("idle", suffix=": Cancelled")
                 else:

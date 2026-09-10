@@ -850,3 +850,82 @@ async def test_chat_retains_action_inserted_message(advice, monkeypatch, mode, o
     else:
         assert len(results) == 1
     assert decisions.await_count == (2 if outcome == "complete" else 1)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
+async def test_director_waits_for_existing_evidence_before_action_arguments(
+    advice, monkeypatch, mode
+):
+    from talemate.knowledge.processing import evidence_writer
+
+    scene, _ = advice
+    scene.knowledge_eligibility = mode
+    director = get_agent("director")
+    node = DirectorChatAction()
+    monkeypatch.setattr(action_utils, "get_node", lambda registry: lambda: node)
+    wrapper = AsyncMock(return_value="executed")
+    wrapper.get_argument_nodes = AsyncMock(return_value=[])
+    monkeypatch.setattr(action_utils, "FunctionWrapper", lambda *args: wrapper)
+    scene.nodegraph_state = GraphState()
+    scene.nodegraph_state.shared["_director_chat_actions"] = {
+        "direct_actor": "test/action"
+    }
+    release, started, waiting = asyncio.Event(), asyncio.Event(), asyncio.Event()
+
+    @evidence_writer
+    async def update(scene):
+        started.set()
+        await release.wait()
+        scene.world_state.location = "The new harbor"
+
+    def status(typ, **data):
+        if (
+            data.get("message")
+            == "Waiting for knowledge updates before scene direction"
+        ):
+            waiting.set()
+
+    async def request(*args, **kwargs):
+        assert scene.world_state.location == (
+            "The new harbor" if mode == "perception" else None
+        )
+        return (
+            '```json\n{"function": "direct_actor", "arguments": {"character": "Bob", "direction": "Current advice"}}\n```',
+            {},
+        )
+
+    request = AsyncMock(side_effect=request)
+    monkeypatch.setattr(Prompt, "request", request)
+    monkeypatch.setattr("talemate.status.emit", status)
+    writer = asyncio.create_task(update(scene))
+    action = None
+    try:
+        await asyncio.wait_for(started.wait(), 2)
+        with ActiveAgent(
+            director, test_director_waits_for_existing_evidence_before_action_arguments
+        ):
+            action = asyncio.create_task(
+                action_utils.execute_actions(
+                    director.client,
+                    scene,
+                    [{"name": "direct_actor"}],
+                    [],
+                    Mock(return_value="result"),
+                )
+            )
+            if mode == "perception":
+                await asyncio.wait_for(waiting.wait(), 2)
+                request.assert_not_awaited()
+                release.set()
+            assert await asyncio.wait_for(action, 2) == ["result"]
+        request.assert_awaited_once()
+        wrapper.assert_awaited_once_with(character="Bob", direction="Current advice")
+        if mode == "legacy":
+            assert not writer.done()
+            assert not waiting.is_set()
+    finally:
+        release.set()
+        await asyncio.gather(
+            writer, *([action] if action else []), return_exceptions=True
+        )

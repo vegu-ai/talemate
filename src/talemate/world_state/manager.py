@@ -42,6 +42,7 @@ from talemate.knowledge.schema import (
     TopicFact,
 )
 from talemate.knowledge.changes import (
+    KnowledgeChange,
     edge_change,
     edge_changes_knowledge,
     emit_knowledge_changes,
@@ -859,8 +860,49 @@ class WorldStateManager:
             self.scene, character, target, text=text, whole_entry=whole_entry
         )
 
+    def grant_facts(self, name: str, fact_ids: list[str]) -> list[KnowledgeChange]:
+        """Grant several facts at once; a grant lifts an earlier block on the same fact."""
+        if character_knowledge_enabled(self.scene):
+            raise ValueError(
+                "Grants are unavailable in perception mode; a character knows a fact through what they perceived or were given."
+            )
+        world_state = self.world_state
+        changes = []
+        for fact_id in dict.fromkeys(fact_ids):
+            if fact_id not in world_state.facts:
+                continue
+            before = list(world_state.knowledge)
+            self._lift_block(name, fact_id)
+            edge = KnowledgeEdge(
+                character=name,
+                target=fact_id,
+                kind="grant",
+                source="manual",
+                ts=self.scene.ts,
+            )
+            world_state.knowledge.append(edge)
+            if edge_changes_knowledge(edge, before, world_state.knowledge):
+                changes.append(edge_change(edge))
+            else:
+                world_state.knowledge = before
+        if changes:
+            emit_knowledge_changes(self.scene, changes)
+        return changes
+
+    def _lift_block(self, name: str, target: str):
+        """An explicit Allow after a Block on the same target lifts the block."""
+        self.world_state.knowledge = [
+            edge
+            for edge in self.world_state.knowledge
+            if not (
+                edge.character == name
+                and edge.target == target
+                and edge.kind == "revoke"
+            )
+        ]
+
     async def set_knowledge_edge(self, edge: KnowledgeEdge) -> KnowledgeEdge:
-        """Upsert by id; a new edge takes the scene time."""
+        """Upsert by id; a new edge takes the scene time; a new grant lifts a block."""
         if edge.kind == "revoke" and character_knowledge_enabled(self.scene):
             raise ValueError(
                 "Revokes are unavailable in perception mode; knowledge cannot be erased."
@@ -874,6 +916,8 @@ class WorldStateManager:
                 if edge_changes_knowledge(edge, previous, self.world_state.knowledge):
                     emit_knowledge_changes(self.scene, [edge_change(edge)])
                 return edge
+        if edge.kind == "grant":
+            self._lift_block(edge.character, edge.target)
         self.world_state.knowledge.append(edge)
         if edge_changes_knowledge(edge, previous, self.world_state.knowledge):
             emit_knowledge_changes(self.scene, [edge_change(edge)])

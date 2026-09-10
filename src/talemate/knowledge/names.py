@@ -7,6 +7,12 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 
+def numeric_id(value: str) -> int:
+    """The number inside an id such as F12 or T3; 0 when it has none."""
+    digits = "".join(ch for ch in value if ch.isdigit())
+    return int(digits) if digits else 0
+
+
 def aliases_for(scene: "Scene", entity: str) -> set[str]:
     """Return the normalized name and aliases in its character mapping group."""
     entity = entity.strip().casefold()

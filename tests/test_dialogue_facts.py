@@ -443,14 +443,14 @@ async def test_history_payload_source_lookup_and_importance_edit(
         "text": str(message),
     }
     await history_handler.handle_update_fact(
-        {"fact": {**fact.model_dump(), "importance": 1}}
+        {"fact_id": fact.id, "text": fact.text, "importance": 1}
     )
     assert scene.world_state.facts[fact.id].importance == 1
     assert history_handler.sent[-1]["action"] == "fact_updated"
     assert history_handler.sent[-1]["data"]["importance"] == 1
     with pytest.raises(pydantic.ValidationError):
         await history_handler.handle_update_fact(
-            {"fact": {**fact.model_dump(), "importance": 4}}
+            {"fact_id": fact.id, "text": fact.text, "importance": 4}
         )
     assert scene.world_state.facts[fact.id].importance == 1
 
@@ -465,7 +465,9 @@ async def test_removed_fact_source_and_stale_edit_are_refused(
     scene.delete_message(message.id)
     await history_handler.handle_get_fact_source({"fact_id": fact.id})
     assert history_handler.sent[-1]["data"]["text"] is None
-    await history_handler.handle_update_fact({"fact": fact.model_dump()})
+    await history_handler.handle_update_fact(
+        {"fact_id": fact.id, "text": fact.text, "importance": fact.importance}
+    )
     assert fact.id not in scene.world_state.facts
     assert not any(frame["action"] == "fact_updated" for frame in history_handler.sent)
     await get_agent("summarizer").flush_fact_memory(scene)

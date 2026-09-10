@@ -714,10 +714,9 @@ class TestMutationPathsRecluster:
         ):
             await handler.handle_delete_fact({"fact_id": "F12"})
             assert "F12" not in topical.world_state.facts
-            updated = topical.world_state.facts["F1"].model_copy(
-                update={"text": "edited"}
+            await handler.handle_update_fact(
+                {"fact_id": "F1", "text": "edited", "importance": 2}
             )
-            await handler.handle_update_fact({"fact": updated.model_dump()})
         assert refresh.await_count == 2
         assert all(c.kwargs.get("force") is True for c in refresh.await_args_list)
 

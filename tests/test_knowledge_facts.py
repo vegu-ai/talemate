@@ -564,9 +564,10 @@ class TestLifecycle:
         from talemate.knowledge.facts import update_fact
 
         scene.world_state.facts = {"F1": Fact(id="F1", text="a")}
-        assert await update_fact(scene, Fact(id="F1", text="edited")) is True
+        assert await update_fact(scene, "F1", text="edited", importance=3) is not None
         assert scene.world_state.facts["F1"].text == "edited"
-        assert await update_fact(scene, Fact(id="F9", text="ghost")) is False
+        assert scene.world_state.facts["F1"].importance == 3
+        assert await update_fact(scene, "F9", text="ghost", importance=2) is None
         assert "F9" not in scene.world_state.facts
 
     def test_reset_drops_summary_facts_and_their_edges(self, scene):

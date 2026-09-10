@@ -357,7 +357,14 @@ export default {
                 if (this.open && mine) this.request();
                 return;
             }
-            if (data.type !== 'world_state_manager' || data.action !== 'character_knowledge') return;
+            if (data.type !== 'world_state_manager') return;
+            if (data.action === 'fact_updated' || data.action === 'fact_deleted') {
+                // the listed text carries the rendered formerly clause and the
+                // ranking follows importance, so the payload is fetched again
+                if (this.open) this.request();
+                return;
+            }
+            if (data.action !== 'character_knowledge') return;
             if (data.data?.name !== this.name) return;
             this.knowledge = data.data;
             this.loading = false;

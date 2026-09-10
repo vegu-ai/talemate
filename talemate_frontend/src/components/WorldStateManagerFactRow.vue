@@ -1,6 +1,7 @@
 <template>
-    <v-list-item class="px-0 fact-row" :data-fact-id="fact.id">
+    <v-list-item class="px-0 fact-row" :class="{ 'fact-row-false': fact.false }" :data-fact-id="fact.id">
         <template #prepend>
+            <v-checkbox-btn v-if="selectable" :model-value="selected" density="compact" class="fact-select mr-1" :disabled="locked" @update:model-value="$emit('update:selected', $event)" />
             <v-chip size="x-small" variant="tonal" color="muted" class="mr-2">{{ fact.id }}</v-chip>
         </template>
         <div v-if="!editing" class="d-flex align-center flex-wrap ga-2">
@@ -9,6 +10,10 @@
             <v-chip size="x-small" variant="tonal" :color="importance.color" @click="startEdit">
                 {{ importance.title }}
                 <v-tooltip activator="parent" location="top">{{ importance.description }}</v-tooltip>
+            </v-chip>
+            <v-chip v-if="fact.false" size="x-small" variant="tonal" color="delete" prepend-icon="mdi-cancel" class="fact-false">
+                False
+                <v-tooltip activator="parent" location="top">Marked false by the author: prompts leave it out, characters who learned it still hold it</v-tooltip>
             </v-chip>
         </div>
         <div v-else class="py-1" @keydown.esc.stop="editing = false">
@@ -20,6 +25,7 @@
             </div>
         </div>
         <div class="text-body-small text-medium-emphasis">
+            <slot name="details"></slot>
             <span v-if="fact.subjects?.length">{{ fact.subjects.join(', ') }}</span>
             <v-chip v-for="(kind, name) in fact.known_by" :key="name" size="x-small" variant="tonal" color="secondary" class="ml-1" prepend-icon="mdi-account-voice">
                 {{ name }}
@@ -33,9 +39,24 @@
                 {{ fact.supersedes }}
                 <v-tooltip activator="parent" location="top">Supersedes fact {{ fact.supersedes }}</v-tooltip>
             </v-chip>
+            <v-chip v-for="id in fact.superseded_by || []" :key="id" size="x-small" variant="text" class="ml-1 fact-superseded-by" prepend-icon="mdi-arrow-right-bold">
+                {{ id }}
+                <v-tooltip activator="parent" location="top">Superseded by fact {{ id }}</v-tooltip>
+            </v-chip>
+            <v-chip v-if="audience" size="x-small" variant="text" class="ml-1 fact-audience" prepend-icon="mdi-account-group-outline">
+                {{ audience.count }} {{ audience.count === 1 ? 'knows' : 'know' }}
+                <v-tooltip activator="parent" location="top">
+                    <div v-for="line in audience.lines" :key="line">{{ line }}</div>
+                </v-tooltip>
+            </v-chip>
+            <v-chip v-else-if="fact.audience" size="x-small" variant="text" class="ml-1 fact-audience" prepend-icon="mdi-account-off-outline">
+                Nobody knows
+                <v-tooltip activator="parent" location="top">No character holds this fact</v-tooltip>
+            </v-chip>
             <v-btn v-if="fact.message_id != null" size="x-small" variant="text" color="primary" prepend-icon="mdi-message-text-outline" @click="$emit('source', fact)">Source message {{ fact.message_id }}</v-btn>
         </div>
         <template #append>
+            <slot name="actions"></slot>
             <v-btn icon="mdi-close" size="x-small" variant="text" color="delete" :disabled="locked" @click="remove">
                 <v-icon icon="mdi-close"></v-icon>
                 <v-tooltip activator="parent" location="top">Remove this fact</v-tooltip>
@@ -45,6 +66,8 @@
 </template>
 
 <script>
+const HOW = { witnessed: 'present', told: 'told in dialogue', granted: 'allowed or given', inferred: 'learned' };
+
 const levels = [
     { value: 1, title: 'Routine', color: 'muted', description: 'Importance 1: a smaller detail worth remembering for continuity.' },
     { value: 2, title: 'State', color: 'secondary', description: 'Importance 2: a durable state change.' },
@@ -53,15 +76,20 @@ const levels = [
 
 export default {
     name: 'WorldStateManagerFactRow',
-    props: { fact: { type: Object, required: true }, locked: Boolean },
+    props: { fact: { type: Object, required: true }, locked: Boolean, selectable: Boolean, selected: Boolean },
     inject: ['getWebsocket'],
-    emits: ['updated', 'deleted', 'source'],
+    emits: ['updated', 'deleted', 'source', 'update:selected'],
     data() {
         return { editing: false, textDraft: '', importanceDraft: 2, levels };
     },
     computed: {
         importance() {
             return levels.find((level) => level.value === (this.fact.importance ?? 2)) || levels[1];
+        },
+        audience() {
+            const names = Object.keys(this.fact.audience || {});
+            if (!names.length) return null;
+            return { count: names.length, lines: names.map((name) => `${name} (${HOW[this.fact.audience[name]] || this.fact.audience[name]})`) };
         },
     },
     methods: {
@@ -76,10 +104,14 @@ export default {
             const text = this.textDraft.trim();
             if (!text || ![1, 2, 3].includes(this.importanceDraft)) return;
             this.editing = false;
-            if (text === this.fact.text && this.importanceDraft === (this.fact.importance ?? 2)) return;
-            const fact = { ...this.fact, text, importance: this.importanceDraft };
-            this.getWebsocket().send(JSON.stringify({ type: 'world_state_manager', action: 'update_fact', fact }));
-            this.$emit('updated', fact);
+            const importance = this.importanceDraft;
+            // a field goes out only when it differs from what the row showed: present means authored
+            const payload = { type: 'world_state_manager', action: 'update_fact', fact_id: this.fact.id };
+            if (text !== this.fact.text) payload.text = text;
+            if (importance !== (this.fact.importance ?? 2)) payload.importance = importance;
+            if (!('text' in payload) && !('importance' in payload)) return;
+            this.getWebsocket().send(JSON.stringify(payload));
+            this.$emit('updated', { ...this.fact, text, importance });
         },
         remove() {
             if (this.locked) return;
@@ -89,3 +121,10 @@ export default {
     },
 };
 </script>
+
+<style scoped>
+.fact-row-false .fact-text {
+    text-decoration: line-through;
+    opacity: var(--v-medium-emphasis-opacity);
+}
+</style>

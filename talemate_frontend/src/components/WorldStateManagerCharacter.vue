@@ -298,6 +298,9 @@
                                             ref="knowledge"
                                             :scene="scene"
                                             @require-scene-save="$emit('require-scene-save')"
+                                            :app-busy="appBusy"
+                                            :app-ready="appReady"
+                                            :visible="page === 'knowledge'"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
                                     </v-tabs-window>

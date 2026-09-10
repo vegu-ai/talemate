@@ -162,11 +162,14 @@ async def test_metadata_and_id_paths_return_only_supported_variants(rag):
     assert await memory.get_document("Zed.description.0", viewer="Elmer") == {}
     fact = scene.world_state.facts["F1"]
     fact.text = "Author correction: Marie has no lantern."
+    fact.text_edited = True
     fact.false = True
     memory.invalidate_audience_index()
     documents = await memory.get_document("F1", viewer="Elmer")
     assert len(documents) == 1
-    assert next(iter(documents.values())).raw.endswith("Marie carries a lantern.")
+    assert next(iter(documents.values())).raw.endswith(
+        "Author correction: Marie has no lantern."
+    )
     assert all(identity.startswith("knowledge:") for identity in documents)
     assert await memory.get_document("F1", viewer="Marie") == {}
     assert any("Reader secret" in doc.raw for doc in await memory.get("lantern"))

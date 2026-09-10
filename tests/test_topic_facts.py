@@ -94,7 +94,7 @@ class TestTopicFacts:
 
 
 @pytest.mark.asyncio
-async def test_perception_rows_show_the_character_view_not_the_author_text(
+async def test_perception_rows_show_the_one_record_with_the_character_evidence(
     supported_scene,  # noqa: F811
 ):
     scene, _, _ = supported_scene
@@ -106,12 +106,15 @@ async def test_perception_rows_show_the_character_view_not_the_author_text(
     )[0]
     canonical = scene.world_state.facts[fact.id]
     canonical.text = "AUTHOR CORRECTION: the ledger is in the cabinet."
+    canonical.text_edited = True
+    canonical.importance = 3
     canonical.archive_id = "A-author"
     scene.world_state.topics = {"T1": Topic(id="T1", name="ledger", fact_ids=[fact.id])}
 
     (bob_row,) = topic_facts(scene, "Bob", "T1")
     assert bob_row.known and bob_row.how == "inferred"
-    assert bob_row.text == "The ledger is under the bed."
+    assert bob_row.text == "AUTHOR CORRECTION: the ledger is in the cabinet."
+    assert bob_row.importance == 3 and bob_row.subjects == ["ledger"]
     assert bob_row.ts == 10
     assert bob_row.source_id != "A-author"
 

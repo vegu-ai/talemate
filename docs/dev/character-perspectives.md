@@ -703,8 +703,8 @@ also expose an optional character input; an empty string means the global query.
 silently returning an unscoped chain. `bucket(scene, character)` is scoped.
 In the new mode these queries select current supporting contributions before
 entity matching and return that character's text and acquisition evidence only.
-A global author correction, `false` flag, or inaccessible superseding update cannot
-replace their last-known evidence. A later witnessed update carries its own time
+A `false` flag or an inaccessible superseding update cannot
+replace their last-known evidence; an author edit of the record's text does, for every character (`Fact.text_edited`). An authored link (`Fact.link_edited`) holds the record's `supersedes` through rebuilds, while a character view always takes its chain from its own contributions. A later witnessed update carries its own time
 and order; disclosure time stays independent of its historical provenance. Hidden
 passages are excluded through their derived facts too. Facts without supported
 contributions are absent from this scoped derived index. Authored entries use visibility,
@@ -736,7 +736,7 @@ The director module uses Grant Knowledge Metadata and Grant Knowledge Confirmati
 
 ## Searchable effective audiences
 
-In opted-in perception scenes, `knowledge.memory.audience_documents(scene)` builds a derived character index in the existing memory collection. It reuses `select_character_view`, `character_fact`, independent disclosures and authored `EntryVisibility`. Ready audience views replace reader prose; hidden, pending, failed, omitted and unsupported content is not indexed for characters. Fact documents use each character's supported wording, preserving last-known evidence despite a different author correction. Authored sheets, world entries and static history follow their author-managed visibility. An event known to the entire current cast is still audience-limited, not common lore for future characters. Legacy edges do not authorize these records.
+In opted-in perception scenes, `knowledge.memory.audience_documents(scene)` builds a derived character index in the existing memory collection. It reuses `select_character_view`, `character_fact`, independent disclosures and authored `EntryVisibility`. Ready audience views replace reader prose; hidden, pending, failed, omitted and unsupported content is not indexed for characters. Fact documents use each character's supported wording until the author edits the record's text (`Fact.text_edited`); an edited text replaces every character's wording, while the `false` mark and each character's own supersession chain stay per view (`Fact.link_edited` protects only the record's own link). Authored sheets, world entries and static history follow their author-managed visibility. An event known to the entire current cast is still audience-limited, not common lore for future characters. Legacy edges do not authorize these records.
 
 Canonical reader/author memory documents remain available. Managed character variants have derived `knowledge:` IDs and the following metadata:
 

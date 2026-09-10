@@ -263,14 +263,22 @@ async def test_global_updates_do_not_replace_character_last_known_evidence(
     scene.world_state.facts[
         old.id
     ].text = "AUTHOR CORRECTION: the ledger is in the cabinet."
+    scene.world_state.facts[old.id].text_edited = True
     scene.world_state.facts[old.id].subjects = ["cabinet"]
     assert current_state(scene, "ledger").id == latest.id
     known = current_state(scene, "ledger", character="Bob")
     assert known.id == old.id and not known.false
-    assert known.text == "The ledger is under the bed."
+    assert known.text == "AUTHOR CORRECTION: the ledger is in the cabinet."
+    assert known.subjects == ["cabinet"]
     assert known.ts == 10
-    assert [fact.id for fact in facts_about(scene, "bed", character="Bob")] == [old.id]
-    assert relationship_timeline(scene, "ledger", "cabinet", character="Bob") == []
+    assert facts_about(scene, "bed", character="Bob") == []
+    assert [fact.id for fact in facts_about(scene, "cabinet", character="Bob")] == [
+        old.id
+    ]
+    assert [
+        fact.id
+        for fact in relationship_timeline(scene, "ledger", "cabinet", character="Bob")
+    ] == [old.id]
 
     _, witnessed = passage(scene, "Bob sees the ledger in the cabinet.", ("Bob",), 30)
     await store(
@@ -856,6 +864,7 @@ async def test_rename_preserves_author_edits_on_related_and_unrelated_facts(
         _, source = passage(scene, f"{name} has a key.", (name,))
         fact = (await store(scene, source, (name,), f"{name} has a key."))[0]
         fact.text = "AUTHOR CORRECTION"
+        fact.text_edited = True
         fact.subjects = ["authored subject"]
         fact.known_by = {"Bob": "granted"}
         before[name] = fact.model_copy(deep=True)
@@ -1051,14 +1060,19 @@ async def test_known_facts_carry_the_character_view_in_the_character_order(
     key = (await store(scene, first, ("Alice",), "Alice has a key."))[0]
     _, second = passage(scene, "The lamp is lit.", audience=("Alice", "Bob"), ts=2)
     lamp = (await store(scene, second, ("Alice", "Bob"), "The lamp is lit."))[0]
-    # the author's correction is not evidence Alice received
+    # the author's false flag is not evidence Alice received; the text is the one record
+    key = scene.world_state.facts[key.id]
     key.false = True
     key.text = "AUTHOR: Alice never had a key."
+    key.text_edited = True
 
     recent, total = known_facts(scene, "Alice")
     assert total == 2
     assert [fact.id for fact in recent] == [lamp.id, key.id]
-    assert [fact.text for fact in recent] == ["The lamp is lit.", "Alice has a key."]
+    assert [fact.text for fact in recent] == [
+        "The lamp is lit.",
+        "AUTHOR: Alice never had a key.",
+    ]
     assert [fact.ts for fact in recent] == [2, 1]
 
     recent, total = known_facts(scene, "Bob")
@@ -1074,8 +1088,12 @@ async def test_global_false_current_state_keeps_author_semantics(supported_scene
     fact = (await store(scene, source, ("Alice",), "Alice has a key."))[0]
     fact.false = True
     fact.text = "AUTHOR: Alice never had a key."
+    fact.text_edited = True
     assert current_state(scene, "key") == fact
-    assert current_state(scene, "key", character="Alice").text == "Alice has a key."
+    assert (
+        current_state(scene, "key", character="Alice").text
+        == "AUTHOR: Alice never had a key."
+    )
     assert current_state(scene, "key", character="Alice").false is False
 
 
@@ -1225,6 +1243,7 @@ async def test_one_view_rebuild_preserves_edited_two_contribution_record(
     fact = next(iter(scene.world_state.facts.values()))
     assert len(fact.contributions) == 2
     fact.text = "AUTHOR CORRECTION: the key is a decoy."
+    fact.text_edited = True
     fact.subjects = ["decoy"]
     fact.known_by = {"Bob": "told"}
     scene.world_state.facts["manual"] = Fact(id="manual", text="An author predecessor.")
@@ -1245,8 +1264,8 @@ async def test_one_view_rebuild_preserves_edited_two_contribution_record(
     assert any(
         doc["text"] == original.text for doc in memory.add_many.call_args.args[0]
     )
-    assert current_state(scene, "key", character="Alice").text == text
-    assert current_state(scene, "key", character="Bob").text == text
+    assert current_state(scene, "key", character="Alice").text == original.text
+    assert current_state(scene, "key", character="Bob").text == original.text
 
 
 @pytest.mark.asyncio

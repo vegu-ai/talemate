@@ -25,6 +25,7 @@ from talemate.knowledge.schema import (
     TopicFact,
 )
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.names import numeric_id
 from talemate.knowledge.perspectives import PerspectiveReadContext
 from talemate.knowledge.chronology import ranked_facts, fact_time, prompt_fact_text
 
@@ -324,6 +325,8 @@ def topic_facts(
             TopicFact(
                 id=fact_id,
                 text=view.text,
+                importance=view.importance,
+                subjects=list(view.subjects),
                 known=kind is not None,
                 how=kind,
                 source=FACT_SOURCE_LABELS[canonical.source],
@@ -426,8 +429,7 @@ def known_facts(
 
 
 def _topic_number(topic_id: str) -> int:
-    digits = "".join(ch for ch in topic_id if ch.isdigit())
-    return int(digits) if digits else 0
+    return numeric_id(topic_id)
 
 
 def awareness_line(scene: "Scene", character: str) -> str | None:

@@ -147,6 +147,27 @@ def _item(fact: Fact) -> KnowledgeItem:
     return KnowledgeItem(id=fact.id, kind="fact", present=fact.present)
 
 
+def perception_kind(view: Fact) -> KnownKind:
+    return (
+        "granted"
+        if all(item.source.kind == "disclosure" for item in view.contributions)
+        else "inferred"
+    )
+
+
+def standard_kind(
+    index: KnowledgeIndex, character: str, fact: Fact
+) -> KnownKind | None:
+    """How the character knows the fact under the access rules; None when they do not."""
+    if not index.in_bucket(character, _item(fact)):
+        return None
+    if fact.present and character in fact.present:
+        return "witnessed"
+    if fact.present is None and not index.granted(character, fact.id):
+        return "witnessed"
+    return fact.known_by.get(character, "granted")
+
+
 def bucket(scene: "Scene", character: str) -> list[tuple[Fact, KnownKind]]:
     """Every fact the character knows, with how they know it."""
     if character_knowledge_enabled(scene):
@@ -156,14 +177,7 @@ def bucket(scene: "Scene", character: str) -> list[tuple[Fact, KnownKind]]:
         for fact in scene.world_state.facts.values():
             view = character_fact(scene, fact, character, read=read, cache=cache)
             if view is not None:
-                kind = (
-                    "granted"
-                    if all(
-                        item.source.kind == "disclosure" for item in view.contributions
-                    )
-                    else "inferred"
-                )
-                known.append((view, kind))
+                known.append((view, perception_kind(view)))
         return sorted(
             known,
             key=lambda pair: max(item.acquired.order for item in pair[0].contributions),
@@ -171,13 +185,7 @@ def bucket(scene: "Scene", character: str) -> list[tuple[Fact, KnownKind]]:
     index = KnowledgeIndex.from_scene(scene)
     known: list[tuple[Fact, KnownKind]] = []
     for fact in _ordered(list(scene.world_state.facts.values()), scene):
-        if not index.in_bucket(character, _item(fact)):
-            continue
-        if fact.present and character in fact.present:
-            kind: KnownKind = "witnessed"
-        elif fact.present is None and not index.granted(character, fact.id):
-            kind = "witnessed"
-        else:
-            kind = fact.known_by.get(character, "granted")
-        known.append((fact, kind))
+        kind = standard_kind(index, character, fact)
+        if kind is not None:
+            known.append((fact, kind))
     return known

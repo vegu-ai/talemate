@@ -348,16 +348,16 @@ async def test_unchanged_and_unrelated_documents_are_not_reembedded(
     assert calls and all(meta["knowledge_source"] == "lore" for meta in calls)
 
 
-async def test_author_fact_edit_does_not_replace_character_evidence(indexed_scene):
+async def test_author_fact_edit_reaches_the_character_projection(indexed_scene):
     from talemate.knowledge.facts import update_fact
 
     scene, memory, _ = indexed_scene
     fact = next(iter(scene.world_state.facts.values()))
     await update_fact(
-        scene, fact.model_copy(update={"text": "A later private author correction."})
+        scene, fact.id, text="A later author correction.", importance=fact.importance
     )
-    assert await contents(memory, typ="fact") == {"Marie carries a lantern."}
-    assert "A later private author correction." in await contents(
+    assert await contents(memory, typ="fact") == {"A later author correction."}
+    assert "A later author correction." in await contents(
         memory, viewer=None, typ="fact"
     )
 

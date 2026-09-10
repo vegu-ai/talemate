@@ -3,11 +3,12 @@ import structlog
 
 from talemate.history import HistoryEntry
 from talemate.instance import get_agent
-from talemate.knowledge.facts import update_fact
+from talemate.knowledge.catalog import FactQuery, list_facts
+from talemate.knowledge.facts import UNSET, fact_memory_document, update_fact
 from talemate.knowledge.chronology import fact_display
 from talemate.knowledge.perspectives import source_reference
 from talemate.knowledge.topics import refresh_topics
-from talemate.knowledge.schema import EntryVisibility, Fact, KnowledgeEdge
+from talemate.knowledge.schema import EntryVisibility, FactImportance, KnowledgeEdge
 from talemate.status import background_task
 
 log = structlog.get_logger("talemate.server.world_state_manager.knowledge")
@@ -49,12 +50,40 @@ class WorldEntryVisibilityPayload(pydantic.BaseModel):
     visibility: EntryVisibility
 
 
-class FactPayload(pydantic.BaseModel):
-    fact: Fact
+class UpdateFactPayload(pydantic.BaseModel):
+    """A patch: a field that is present is authored, an absent one is left alone."""
+
+    fact_id: str
+    text: str | None = None
+    importance: FactImportance | None = None
+    false: pydantic.StrictBool | None = None
+    supersedes: str | None = None
+
+    @pydantic.field_validator("text")
+    @classmethod
+    def _text(cls, value):
+        if value is None:
+            return None
+        value = " ".join(value.split())
+        if not value:
+            raise ValueError("Fact text must not be empty")
+        return value
 
 
 class FactIdPayload(pydantic.BaseModel):
     fact_id: str
+
+
+class FactIdsPayload(pydantic.BaseModel):
+    fact_ids: list[str] = pydantic.Field(min_length=1)
+
+
+class FactsFalsePayload(FactIdsPayload):
+    false: pydantic.StrictBool
+
+
+class GrantFactsPayload(FactIdsPayload):
+    name: str
 
 
 class RegenerateFactsPayload(pydantic.BaseModel):
@@ -195,44 +224,125 @@ class KnowledgeMixin:
         await self.handle_get_world({})
         await self.signal_operation_done()
 
-    async def handle_update_fact(self, data):
-        payload = FactPayload(**data)
-        fact = payload.fact
-        if not await update_fact(self.scene, fact):
-            log.warning("update_fact: unknown fact id", fact_id=fact.id)
-            await self.signal_operation_done()
-            return
-        await refresh_topics(self.scene, force=True)
+    def _emit_fact(self, action, fact):
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
-                "action": "fact_updated",
+                "action": action,
                 "data": fact_display(self.scene, fact),
             }
         )
+
+    async def handle_list_facts(self, data):
+        query = FactQuery(**{k: v for k, v in data.items() if k != "request_id"})
+        page = list_facts(self.scene, query)
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "facts",
+                **(
+                    {"request_id": data["request_id"]}
+                    if data.get("request_id") is not None
+                    else {}
+                ),
+                "data": page.model_dump(),
+            }
+        )
+
+    async def handle_update_fact(self, data):
+        payload = UpdateFactPayload(**data)
+        try:
+            fact = await update_fact(
+                self.scene,
+                payload.fact_id,
+                text=payload.text if payload.text is not None else UNSET,
+                importance=payload.importance
+                if payload.importance is not None
+                else UNSET,
+                false=payload.false if payload.false is not None else UNSET,
+                supersedes=payload.supersedes
+                if "supersedes" in payload.model_fields_set
+                else UNSET,
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(str(exc), failed_action="update_fact")
+            return
+        if fact is None:
+            log.warning("update_fact: unknown fact id", fact_id=payload.fact_id)
+            await self.signal_operation_done()
+            return
+        await refresh_topics(self.scene, force=True)
+        self._emit_fact("fact_updated", fact)
         await self.signal_operation_done()
 
-    async def handle_delete_fact(self, data):
-        payload = FactIdPayload(**data)
+    def _remove_fact(self, fact_id):
         world_state = self.scene.world_state
-        fact = world_state.facts.pop(payload.fact_id, None)
+        fact = world_state.facts.pop(fact_id, None)
         if fact is None:
-            return
+            return None
         world_state.knowledge = [
             edge for edge in world_state.knowledge if edge.target != fact.id
         ]
         for other in world_state.facts.values():
             if other.supersedes == fact.id:
                 other.supersedes = None
-        await get_agent("memory").delete({"ids": [fact.id]})
+        return fact
+
+    async def _finish_deleting(self, removed):
+        await get_agent("memory").delete({"ids": [fact.id for fact in removed]})
         await refresh_topics(self.scene, force=True)
-        self.websocket_handler.queue_put(
-            {
-                "type": "world_state_manager",
-                "action": "fact_deleted",
-                "data": {"fact_id": fact.id, "archive_id": fact.archive_id},
-            }
-        )
+        for fact in removed:
+            self.websocket_handler.queue_put(
+                {
+                    "type": "world_state_manager",
+                    "action": "fact_deleted",
+                    "data": {"fact_id": fact.id, "archive_id": fact.archive_id},
+                }
+            )
+        await self.signal_operation_done()
+
+    async def handle_delete_fact(self, data):
+        payload = FactIdPayload(**data)
+        fact = self._remove_fact(payload.fact_id)
+        if fact is None:
+            await self.signal_operation_done()
+            return
+        await self._finish_deleting([fact])
+
+    async def handle_delete_facts(self, data):
+        payload = FactIdsPayload(**data)
+        removed = [
+            fact
+            for fact in (self._remove_fact(fact_id) for fact_id in payload.fact_ids)
+            if fact is not None
+        ]
+        if not removed:
+            await self.signal_operation_done()
+            return
+        await self._finish_deleting(removed)
+
+    async def handle_set_facts_false(self, data):
+        payload = FactsFalsePayload(**data)
+        facts = self.scene.world_state.facts
+        changed = [facts[fact_id] for fact_id in payload.fact_ids if fact_id in facts]
+        for fact in changed:
+            fact.false = payload.false
+        if changed:
+            await get_agent("memory").add_many(
+                [fact_memory_document(fact) for fact in changed]
+            )
+        for fact in changed:
+            self._emit_fact("fact_updated", fact)
+        await self.signal_operation_done()
+
+    async def handle_grant_facts(self, data):
+        payload = GrantFactsPayload(**data)
+        try:
+            self.world_state_manager.grant_facts(payload.name, payload.fact_ids)
+        except ValueError as exc:
+            await self.signal_operation_failed(str(exc), failed_action="grant_facts")
+            return
+        await self._send_character_knowledge(payload.name)
         await self.signal_operation_done()
 
     @background_task("Regenerating facts")

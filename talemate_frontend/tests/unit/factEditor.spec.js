@@ -17,16 +17,16 @@ describe('shared fact editor', () => {
         expect(Entry.components.WorldStateManagerFactRow).toBe(Row);
         expect(History.components.WorldStateManagerFactRow).toBe(Row);
     });
-    it('saves an importance-only edit and preserves source fields', () => {
+    it('saves an importance-only edit as a patch of the importance alone and echoes the whole fact', () => {
         const vm = editor();
         vm.startEdit();
         vm.importanceDraft = 1;
         vm.save();
-        expect(vm.sent).toEqual([{ type: 'world_state_manager', action: 'update_fact', fact: {
-            id: 'F1', text: 'Mara moved in.', importance: 1, message_id: 42, source: 'dialogue',
-        } }]);
+        expect(vm.sent).toEqual([{ type: 'world_state_manager', action: 'update_fact', fact_id: 'F1', importance: 1 }]);
         expect(vm.fact.importance).toBe(3);
-        expect(vm.$emit).toHaveBeenCalledWith('updated', vm.sent[0].fact);
+        expect(vm.$emit).toHaveBeenCalledWith('updated', {
+            id: 'F1', text: 'Mara moved in.', importance: 1, message_id: 42, source: 'dialogue',
+        });
         vm.save();
         expect(vm.sent).toHaveLength(1);
     });
@@ -36,7 +36,14 @@ describe('shared fact editor', () => {
         vm.textDraft = ' Mara plans to move in. ';
         vm.importanceDraft = 2;
         vm.save();
-        expect(vm.sent[0].fact).toMatchObject({ text: 'Mara plans to move in.', importance: 2 });
+        expect(vm.sent[0]).toEqual({ type: 'world_state_manager', action: 'update_fact', fact_id: 'F1', text: 'Mara plans to move in.', importance: 2 });
+    });
+    it('saves a text-only edit without the importance', () => {
+        const vm = editor();
+        vm.startEdit();
+        vm.textDraft = 'Mara moved into the house.';
+        vm.save();
+        expect(vm.sent).toEqual([{ type: 'world_state_manager', action: 'update_fact', fact_id: 'F1', text: 'Mara moved into the house.' }]);
     });
     it('defaults old facts to State and does not save an unchanged edit', () => {
         const vm = editor({ id: 'F1', text: 'Old fact.' });

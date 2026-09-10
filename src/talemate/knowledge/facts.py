@@ -14,7 +14,7 @@ from talemate.instance import get_agent
 from talemate.knowledge.chronology import ranked_facts
 from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 from talemate.knowledge.presence import presence_metadata
-from talemate.knowledge.schema import Fact, KnowledgeEdge, ParsedFact
+from talemate.knowledge.schema import Fact, FactImportance, KnowledgeEdge, ParsedFact
 from talemate.knowledge.supported_facts import (
     prune_contributions,
     aggregate_fact,
@@ -40,6 +40,13 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.knowledge.facts")
+
+
+class _Unset:
+    """A field the caller did not name; None is a value of its own."""
+
+
+UNSET = _Unset()
 
 
 def _strip_record_age(text: str) -> str:
@@ -236,13 +243,52 @@ async def drop_facts_for_entries(scene: "Scene", archive_ids: set[str]):
         prune_topics(scene.world_state)
 
 
-async def update_fact(scene: "Scene", fact: Fact) -> bool:
-    """Replace a stored fact; a fact that is no longer stored is refused."""
-    if fact.id not in scene.world_state.facts:
-        return False
-    scene.world_state.facts[fact.id] = fact
+async def update_fact(
+    scene: "Scene",
+    fact_id: str,
+    *,
+    text: str | _Unset = UNSET,
+    importance: FactImportance | _Unset = UNSET,
+    false: bool | _Unset = UNSET,
+    supersedes: str | None | _Unset = UNSET,
+) -> Fact | None:
+    """
+    Patch the author-editable fields of a stored fact; None when it is no
+    longer stored. An omitted field is left alone. A text or link that is
+    passed is authored whatever its value, since the editor sends a field only
+    when the author saved it: it wins over the contributions from then on,
+    `supersedes=None` records an authored clear, and the marks alone touch
+    neither flag.
+    """
+    facts = scene.world_state.facts
+    fact = facts.get(fact_id)
+    if fact is None:
+        return None
+    if supersedes is not UNSET and supersedes is not None:
+        if supersedes == fact_id:
+            raise ValueError("A fact cannot supersede itself")
+        if supersedes not in facts:
+            raise ValueError(f"Unknown fact: {supersedes}")
+    if supersedes is not UNSET and supersedes != fact.supersedes:
+        previous = {**facts, fact_id: fact.model_copy()}
+        fact.supersedes = supersedes
+        # existing links win, so only the new link can be dropped
+        sanitize_fact_links(facts, previous)
+        fact = facts[fact_id]
+        if fact.supersedes != supersedes:
+            facts[fact_id] = previous[fact_id]
+            raise ValueError("That link would close a supersession loop")
+    if supersedes is not UNSET:
+        fact.link_edited = True
+    if text is not UNSET:
+        fact.text = " ".join(text.split())
+        fact.text_edited = True
+    if importance is not UNSET:
+        fact.importance = importance
+    if false is not UNSET:
+        fact.false = bool(false)
     await get_agent("memory").add_many([fact_memory_document(fact)])
-    return True
+    return fact
 
 
 async def _near_duplicate(

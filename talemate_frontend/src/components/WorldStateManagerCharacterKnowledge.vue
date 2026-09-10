@@ -107,16 +107,14 @@
                         <v-expansion-panel-text>
                             <v-progress-linear v-if="!topicFacts[row.id]" indeterminate color="primary" height="2"></v-progress-linear>
                             <v-list v-else density="compact" slim class="bg-transparent py-0">
-                                <v-list-item v-for="fact in visibleFacts(row.id)" :key="fact.id" class="px-0" :class="{ 'topic-fact-unknown': !fact.known }">
-                                    <template v-slot:prepend>
-                                        <v-chip size="x-small" variant="tonal" color="muted" class="mr-2">{{ fact.id }}</v-chip>
-                                    </template>
-                                    <div class="text-body-medium"><span class="text-medium-emphasis fact-time mr-1">({{ fact.time || 'Time unknown' }})</span>{{ fact.text }}</div>
-                                    <div class="text-body-small text-medium-emphasis">
+                                <div v-if="!locked && visibleFacts(row.id).length" class="text-body-small text-medium-emphasis mb-1">Double-click a fact to edit it</div>
+                                <WorldStateManagerFactRow v-for="fact in visibleFacts(row.id)" :key="fact.id" :fact="fact" :locked="locked"
+                                    :class="{ 'topic-fact-unknown': !fact.known }" @updated="patchFact" @deleted="removeRow">
+                                    <template #details>
                                         <span>{{ fact.reason || (fact.known ? howLabel(fact.how) : `${character.name} does not know this`) }}</span>
-                                        <span class="ml-2">via {{ fact.source_id ? `${fact.source} ${fact.source_id}` : fact.source }}</span>
-                                    </div>
-                                </v-list-item>
+                                        <span class="ml-2 mr-2">via {{ fact.source_id ? `${fact.source} ${fact.source_id}` : fact.source }}</span>
+                                    </template>
+                                </WorldStateManagerFactRow>
                                 <v-list-item v-if="!visibleFacts(row.id).length" class="px-0 text-body-small text-medium-emphasis">No facts match the filter.</v-list-item>
                             </v-list>
                         </v-expansion-panel-text>
@@ -129,14 +127,18 @@
 
 <script>
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import WorldStateManagerFactRow from './WorldStateManagerFactRow.vue';
 import { newUuid } from '@/utils/uuid';
 
 export default {
     name: 'WorldStateManagerCharacterKnowledge',
-    components: { ConfirmActionInline },
+    components: { ConfirmActionInline, WorldStateManagerFactRow },
     props: {
         scene: Object,
         immutableCharacter: Object,
+        appBusy: Boolean,
+        appReady: { type: Boolean, default: true },
+        visible: { type: Boolean, default: true },
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
     emits: ['require-scene-save'],
@@ -164,6 +166,7 @@ export default {
             newNote: '',
             busy: false,
             sceneTs: null,
+            refetchTimer: null,
             kinds: [
                 { label: 'Allow', value: 'grant' },
                 { label: 'Block', value: 'revoke' },
@@ -183,10 +186,17 @@ export default {
         allOpen() {
             return this.coverage.length > 0 && this.coverage.every((row) => this.openTopics.includes(row.id));
         },
+        locked() {
+            return this.appBusy || !this.appReady || this.busy;
+        },
     },
     watch: {
         openTopics(ids) {
             this.requestTopicFacts(ids.filter((id) => !this.topicFacts[id]));
+        },
+        // the pane stays mounted while hidden and skips its refetches then
+        visible(value) {
+            if (value) this.refetchTopics();
         },
         immutableCharacter: {
             immediate: true,
@@ -242,6 +252,36 @@ export default {
             const facts = this.topicFacts[topicId] || [];
             if (!this.filterText) return facts;
             return facts.filter((fact) => fact.text.toLowerCase().includes(this.filterText));
+        },
+        patchFact(fact) {
+            const topics = {};
+            for (const [topicId, facts] of Object.entries(this.topicFacts)) {
+                topics[topicId] = facts.map((row) => row.id === fact.id
+                    ? { ...row, text: fact.text, importance: fact.importance, subjects: fact.subjects ?? row.subjects }
+                    : row);
+            }
+            this.topicFacts = topics;
+        },
+        removeRow(id) {
+            const topics = {};
+            for (const [topicId, facts] of Object.entries(this.topicFacts)) {
+                topics[topicId] = facts.filter((row) => row.id !== id);
+            }
+            this.topicFacts = topics;
+        },
+        // an edit or a delete reclusters the topics, which renumbers them, so
+        // the cached rows are dropped and the coverage and the open rows are
+        // fetched again behind the patch; a bulk action sends one frame per
+        // fact, hence the debounce
+        refetchTopics() {
+            if (!this.visible || !this.character) return;
+            clearTimeout(this.refetchTimer);
+            this.refetchTimer = setTimeout(() => {
+                const open = new Set(this.openTopics);
+                this.topicFacts = Object.fromEntries(Object.entries(this.topicFacts).filter(([id]) => open.has(id)));
+                this.request();
+                this.requestTopicFacts([...this.openTopics]);
+            }, 250);
         },
         howLabel(how) {
             const labels = this.perceptionMode
@@ -323,6 +363,16 @@ export default {
                     ? 'The information is saved, but its searchable facts could not be recorded. Retry the failed request if it is still open; otherwise see Knowledge in the user guide for recovery steps.'
                     : null;
             }
+            if (message.action === 'fact_updated') {
+                this.patchFact(message.data);
+                this.refetchTopics();
+                return;
+            }
+            if (message.action === 'fact_deleted') {
+                this.removeRow(message.data.fact_id);
+                this.refetchTopics();
+                return;
+            }
             if (message.action === 'topic_facts') {
                 if (!this.character || message.data.name !== this.character.name) return;
                 this.topicFacts = { ...this.topicFacts, ...message.data.topics };
@@ -356,6 +406,7 @@ export default {
         this.registerMessageHandler(this.handleMessage);
     },
     unmounted() {
+        clearTimeout(this.refetchTimer);
         this.unregisterMessageHandler(this.handleMessage);
     },
 }

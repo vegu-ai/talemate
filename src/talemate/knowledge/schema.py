@@ -132,6 +132,8 @@ class KnownFact(pydantic.BaseModel):
 class TopicFact(pydantic.BaseModel):
     id: str
     text: str
+    importance: FactImportance = 2
+    subjects: list[str] = pydantic.Field(default_factory=list)
     known: bool
     how: KnownKind | None = None
     source: str
@@ -220,6 +222,10 @@ class Fact(pydantic.BaseModel):
     restatements: int = 0
     last_seen_ts: int | None = None
     source: FactSource = "summary"
+    # set by the author's editor, one per field it protects: the record's own
+    # text or link then wins over what its contributions carry
+    text_edited: bool = False
+    link_edited: bool = False
 
     contributions: tuple[FactContribution, ...] = ()
 
@@ -228,6 +234,9 @@ class Fact(pydantic.BaseModel):
         data = handler(self)
         if not self.contributions:
             data.pop("contributions", None)
+        for key in ("text_edited", "link_edited"):
+            if not getattr(self, key):
+                data.pop(key, None)
         for key in ("message_id", "message_digest"):
             if data.get(key) is None:
                 data.pop(key, None)

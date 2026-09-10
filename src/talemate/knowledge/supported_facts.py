@@ -54,16 +54,29 @@ def supported_contributions(scene, fact, character=None, *, read=None, cache=Non
     return tuple(result)
 
 
-def aggregate_fact(fact, contributions):
-    ordered = sorted(
+def _ordered(contributions):
+    return sorted(
         contributions,
         key=lambda item: (item.acquired.order, item.inferred_from is not None),
     )
+
+
+def contribution_link(ordered):
+    """The link the contributions carry: the last direct one, else the last."""
+    return next(
+        (item.supersedes for item in reversed(ordered) if item.inferred_from is None),
+        ordered[-1].supersedes,
+    )
+
+
+def aggregate_fact(fact, contributions):
+    ordered = _ordered(contributions)
     first, last = ordered[0], ordered[-1]
+    # an authored text or link stays; otherwise the contributions decide, so
+    # each view keeps its own wording
     return fact.model_copy(
         update={
-            "text": first.text,
-            "subjects": list(first.subjects),
+            "text": fact.text if fact.text_edited else first.text,
             "ts": first.acquired.ts,
             "last_seen_ts": last.acquired.ts,
             "archive_id": next(
@@ -72,14 +85,9 @@ def aggregate_fact(fact, contributions):
             ),
             "present": sorted({name for item in ordered for name in item.audience}),
             "known_by": {},
-            "supersedes": next(
-                (
-                    item.supersedes
-                    for item in reversed(ordered)
-                    if item.inferred_from is None
-                ),
-                last.supersedes,
-            ),
+            "supersedes": fact.supersedes
+            if fact.link_edited
+            else contribution_link(ordered),
             "restatements": len(ordered) - 1,
             "contributions": tuple(ordered),
         }
@@ -94,8 +102,14 @@ def character_fact(scene, fact, character, *, read=None, cache=None):
     )
     if not contributions:
         return None
-    # Author corrections are not evidence the character received.
-    return aggregate_fact(fact, contributions).model_copy(update={"false": False})
+    # The false mark is an author judgement, and the chain a character holds
+    # runs through their own contributions.
+    return aggregate_fact(fact, contributions).model_copy(
+        update={
+            "false": False,
+            "supersedes": contribution_link(_ordered(contributions)),
+        }
+    )
 
 
 def previous_audience_facts(scene, audience, limit=30, *, prompt=True):
@@ -345,19 +359,23 @@ def _replace_contributions(facts, sources, replacements, counter):
         identity = exact.get(contribution.equivalence_key)
         if identity is None:
             identity = reusable.get(contribution.equivalence_key)
-            if identity is None or identity in updated:
+            if identity is not None and identity not in updated:
+                # the same evidence returned: the author's record survives
+                fact = facts[identity].model_copy(update={"contributions": ()})
+            else:
                 counter += 1
                 while f"F{counter}" in facts or f"F{counter}" in updated:
                     counter += 1
                 identity = f"F{counter}"
-            fact = Fact(
-                id=identity,
-                text=contribution.text,
-                importance=contribution.importance,
-                source="disclosure"
-                if contribution.source.kind == "disclosure"
-                else "perspective",
-            )
+                fact = Fact(
+                    id=identity,
+                    text=contribution.text,
+                    importance=contribution.importance,
+                    subjects=list(contribution.subjects),
+                    source="disclosure"
+                    if contribution.source.kind == "disclosure"
+                    else "perspective",
+                )
             exact[contribution.equivalence_key] = identity
         else:
             fact = updated[identity]

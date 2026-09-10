@@ -110,7 +110,7 @@ async def test_storage_edit_and_restatement_preserve_importance(
         )[0]
         assert first.importance == 3
         edited = first.model_copy(update={"importance": 1})
-        assert await update_fact(scene, edited)
+        assert await update_fact(scene, first.id, text=first.text, importance=1)
         monkeypatch.setattr(
             fact_memory,
             "get",

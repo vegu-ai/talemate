@@ -20,6 +20,8 @@ from talemate.knowledge.perspectives import (
     set_source_perspectives,
     source_reference,
 )
+from talemate.knowledge.revision_browsing import defer_revision_work
+from talemate.knowledge.revision_refresh import catch_up_revisions
 from talemate.scene_message import CharacterMessage, DirectorMessage, NarratorMessage
 
 CASES = json.loads(
@@ -291,7 +293,7 @@ async def test_dialog_cannot_bypass_failed_analysis(setup, action):
 
 
 @pytest.mark.asyncio
-async def test_edit_discards_inflight_response_and_analyzes_latest_revision(setup):
+async def test_manual_edit_discards_inflight_response_until_next_send(setup):
     scene, summarizer, request = setup
     started, release = asyncio.Event(), asyncio.Event()
 
@@ -309,9 +311,13 @@ async def test_edit_discards_inflight_response_and_analyzes_latest_revision(setu
     await started.wait()
     acquired = message.knowledge.acquired
     revision = message.knowledge.revision
-    scene.edit_message(message.id, "Alice: Revised.")
+    with defer_revision_work():
+        scene.edit_message(message.id, "Alice: Revised.")
     release.set()
-    await asyncio.wait_for(task, 3)
+    with pytest.raises(GenerationCancelled):
+        await asyncio.wait_for(task, 3)
+    assert request.await_count == 1
+    await catch_up_revisions(scene)
     assert request.await_count == 2
     assert message.knowledge.revision == revision + 1
     assert message.knowledge.acquired == acquired
@@ -445,16 +451,20 @@ async def test_saved_incomplete_source_resumes_without_backfill(setup, status):
 
 
 @pytest.mark.asyncio
-async def test_edit_while_retry_dialog_is_open_uses_latest_source(setup):
+async def test_manual_edit_while_retry_dialog_is_open_defers_new_source(setup):
     scene, summarizer, request = setup
     request.side_effect = [result("malformed"), result(answer("Revised.", "Revised."))]
     message = CharacterMessage(message="Alice: Original.")
     task = asyncio.create_task(scene.push_history(message))
     try:
         rid = await wait_for_dialog()
-        scene.edit_message(message.id, "Alice: Revised.")
+        with defer_revision_work():
+            scene.edit_message(message.id, "Alice: Revised.")
         resolve_generation_error(rid, "retry")
-        await asyncio.wait_for(task, 3)
+        with pytest.raises(GenerationCancelled):
+            await asyncio.wait_for(task, 3)
+        assert request.await_count == 1
+        await catch_up_revisions(scene)
         assert (
             request.await_args.kwargs["vars"]["context"]["passage"]["text"]
             == "Alice: Revised."
@@ -611,7 +621,7 @@ async def test_reset_discards_inflight_result_without_recreating_records(setup):
 
 
 @pytest.mark.asyncio
-async def test_websocket_edit_schedules_rebuild_and_save(setup, monkeypatch):
+async def test_websocket_edit_defers_rebuild_and_saves(setup, monkeypatch):
     scene, summarizer, request = setup
     message = NarratorMessage(message="The bell rings.")
     await scene.push_history(message)
@@ -621,7 +631,8 @@ async def test_websocket_edit_schedules_rebuild_and_save(setup, monkeypatch):
     plugin = SceneMessagePlugin(handler)
     await plugin.handle_edit({"id": message.id, "text": "The bell stops."})
     await asyncio.sleep(0)
-    await summarizer.ensure_perceptions(scene)
+    assert request.await_count == 1
+    await catch_up_revisions(scene)
     assert request.await_count == 2
     assert message.knowledge.revision == 2
     assert all(view.status == "ready" for view in message.knowledge.views)
@@ -743,7 +754,9 @@ async def test_omission_tracks_unperceived_physical_passage(setup):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("action", ["retry", "cancel", "ignore"])
-async def test_dispatcher_remains_free_to_answer_edit_retry(setup, monkeypatch, action):
+async def test_dispatcher_remains_free_to_answer_explicit_analysis_retry(
+    setup, monkeypatch, action
+):
     scene, summarizer, request = setup
     message = NarratorMessage(message="The bell rings.")
     await scene.push_history(message)
@@ -770,6 +783,14 @@ async def test_dispatcher_remains_free_to_answer_edit_retry(setup, monkeypatch, 
             "action": "edit",
             "id": message.id,
             "text": "The bell stops.",
+        }
+    )
+    await received.put(
+        {
+            "type": "scene_message",
+            "action": "commit_revision",
+            "id": message.id,
+            "index": message.active_version,
         }
     )
     try:

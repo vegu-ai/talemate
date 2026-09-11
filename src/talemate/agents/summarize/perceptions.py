@@ -210,6 +210,21 @@ def relevant_audiences(scene: "Scene", message: SceneMessage) -> tuple[str, ...]
     )
 
 
+def perception_results_current(scene, message, *, read=None) -> bool:
+    """Verify exact selected-source results for every currently required audience."""
+    if message.knowledge is None:
+        return False
+    if message.knowledge.content_digest != content_digest(message.perception_text):
+        return False
+    read = read or PerspectiveReadContext(scene)
+    reference = source_reference(scene, "message", message.id, read=read)
+    return reference is not None and all(
+        select_character_view(scene, reference, name, read=read).status
+        in ("ready", "omitted")
+        for name in relevant_audiences(scene, message)
+    )
+
+
 def passage_provenance(message: SceneMessage) -> PassageProvenance:
     return PassageProvenance(
         message_id=message.id,
@@ -439,16 +454,7 @@ class PerceptionMixin:
     ) -> bool:
         if not eligible_passage(message) or message.knowledge is None:
             return False
-        read = read or PerspectiveReadContext(scene)
-        reference = source_reference(scene, "message", message.id, read=read)
-        return message.knowledge.content_digest != content_digest(
-            message.perception_text
-        ) or any(
-            select_character_view(scene, reference, name, read=read).status
-            not in ("ready", "omitted")
-            for view in message.knowledge.views
-            for name in view.audience
-        )
+        return not perception_results_current(scene, message, read=read)
 
     def _register_perception_sources(
         self, scene: "Scene", messages: list[SceneMessage]
@@ -471,7 +477,36 @@ class PerceptionMixin:
         if self.scene is not scene:
             raise GenerationCancelled("Perception scene changed")
         self._register_perception_sources(scene, messages)
-        await self.ensure_perceptions(scene)
+        from talemate.knowledge.revision_refresh import refresh_revision
+
+        def selection(message):
+            return (
+                message.revision_digest(),
+                message.active_version,
+                message.revision_state.serial if message.revision_state else 0,
+            )
+
+        accepted = [(message, selection(message)) for message in messages]
+
+        def still_current():
+            sources = {id(entry) for entry in message_sources(scene)}
+            if any(id(message) not in sources for message, _ in accepted):
+                raise GenerationCancelled(
+                    "Finalized perception source was removed or reset"
+                )
+            return all(selection(message) == selected for message, selected in accepted)
+
+        # Revision hooks have already installed the final accepted text. Use the
+        # shared job to publish its results and baseline under the same ownership.
+        for message in messages:
+            if (
+                message.revision_state is not None
+                and not message.revision_matches_baseline
+            ):
+                await refresh_revision(scene, message)
+        # Keep ownership through the handoff out of the revision job as well:
+        # a manual save there must not be picked up by this automatic finalizer.
+        await self.ensure_perceptions(scene, still_current=still_current)
         await self.schedule_audience_summaries(scene)
         if any(
             eligible_passage(message)
@@ -495,7 +530,11 @@ class PerceptionMixin:
 
     @evidence_writer
     async def ensure_perceptions(
-        self, scene: "Scene", *, before_message_id: int | None = None
+        self,
+        scene: "Scene",
+        *,
+        before_message_id: int | None = None,
+        still_current=None,
     ) -> None:
         if not character_knowledge_enabled(scene):
             return
@@ -541,6 +580,10 @@ class PerceptionMixin:
                     ),
                 )
             while True:
+                if still_current is not None and not still_current():
+                    raise GenerationCancelled(
+                        "The selected version changed during analysis"
+                    )
                 if self.scene is not scene or not character_knowledge_enabled(scene):
                     raise GenerationCancelled("Perception scene changed")
                 read = PerspectiveReadContext(scene)

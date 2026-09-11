@@ -107,10 +107,10 @@ class SceneMessagePlugin(Plugin):
                 strip_partial=not editor.allow_incomplete_sentences,
             )
 
-        self.scene.edit_message(payload.id, new_text)
-        if character_knowledge_enabled(self.scene):
-            await instance.get_agent("summarizer").rebuild_perceptions(self.scene)
+        with defer_revision_work():
+            self.scene.edit_message(payload.id, new_text)
         await self.scene.attempt_auto_save()
+        self.scene.emit_status()
         await self.signal_operation_done(signal_only=True)
 
     async def handle_append_version(self, data: dict):

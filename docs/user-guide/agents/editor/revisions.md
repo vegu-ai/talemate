@@ -4,6 +4,8 @@ Please see the [settings](/talemate/user-guide/agents/editor/settings/#revision)
 
 ## Automatic revision
 
+In Character perspectives stories, perception analysis runs after automatic revision and uses the final accepted text. Successful analysis makes that version ready immediately. Saving a manual text edit instead defers analysis until **Analyze perceptions** or your next send/choice.
+
 Once automatic revisions are enabled, if the editor finds an issue in a message you will see the following status updates:
 
 ![Editor revision status](/talemate/img/0.30.0/editor-revision-issue-identified.png)

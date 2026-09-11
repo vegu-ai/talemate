@@ -15,6 +15,8 @@ from talemate.config.schema import Agent as AgentConfig
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
 from talemate.knowledge.perspectives import set_source_perspectives
+from talemate.knowledge.revision_browsing import defer_revision_work
+from talemate.knowledge.revision_refresh import catch_up_revisions
 from talemate.scene_message import CharacterMessage, NarratorMessage
 
 
@@ -311,7 +313,9 @@ async def test_cancelled_repair_preserves_valid_views_and_propagates(analysis):
     dialog.assert_not_awaited()
 
 
-async def test_edit_during_repair_discards_all_old_views(analysis):
+async def test_manual_edit_during_repair_defers_new_source_and_discards_old_views(
+    analysis,
+):
     scene, _, request, dialog = analysis
     message = NarratorMessage(message="Old bell.")
 
@@ -319,7 +323,8 @@ async def test_edit_during_repair_discards_all_old_views(analysis):
         if request.await_count == 1:
             return result(response(("Alice",)))
         if request.await_count == 2:
-            scene.edit_message(message.id, "New bell.")
+            with defer_revision_work():
+                scene.edit_message(message.id, "New bell.")
             return result(response(("Bob",)))
         payload = response()
         for view in payload["views"]:
@@ -327,7 +332,11 @@ async def test_edit_during_repair_discards_all_old_views(analysis):
         return result(payload)
 
     request.side_effect = respond
-    await asyncio.wait_for(scene.push_history(message), 3)
+    with pytest.raises(GenerationCancelled):
+        await asyncio.wait_for(scene.push_history(message), 3)
+    assert request.await_count == 2
+    assert all(view.status != "ready" for view in message.knowledge.views)
+    await catch_up_revisions(scene)
     assert request.await_count == 3
     assert {view.text for view in message.knowledge.views} == {"New bell."}
     dialog.assert_not_awaited()

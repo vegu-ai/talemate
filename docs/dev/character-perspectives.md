@@ -128,6 +128,8 @@ new-message and archive hooks. It runs even when automatic archiving is disabled
 or its threshold has not been reached. In-place regeneration invokes the same
 entry point after the final canonical version is installed.
 
+Changed automatically finalized versions use the same guarded revision-refresh job as explicit analysis and next-send catch-up. The job registers missing selected-source records, validates current audience views and commits the baseline only after its required phases and persistence succeed. The per-text `perceptions` receipt remains separate from the coordinator's `refresh:perceptions` receipt. A selection change stops an old job before it can analyze the newer text or acknowledge completion for it.
+
 Visible producers call `Scene.push_history(..., emit_message=True)`. Publication
 follows text-changing hooks and precedes perception analysis, automatic portraits,
 new-message hooks (including the dialogue ledger and voice preparation), and
@@ -164,10 +166,10 @@ Character revision does not call this repair API: `revision_context_history` ren
 stored views using the actual template budget and configured history cap. If that
 window cannot be projected, it logs once and uses reader-visible scene history,
 which may include content unknown to the character, without a repair request.
-Explicit message edits schedule `rebuild_perceptions` using the existing
-background-task mechanism. Browsing saved versions defers derived jobs until the
-kept version is committed or the next line catches up. The edit and save return to the websocket receive loop
-while re-analysis runs, so Retry/Cancel/Ignore frames remain dispatchable. Dependent
+Explicit message edits and saved-version browsing defer derived jobs until the
+selected version is committed through the action or the next send/choice catches up.
+Manual save retains edited text and masks stale evidence without scheduling a rebuild.
+Explicit analysis uses the background-task mechanism, so Retry/Cancel/Ignore frames remain dispatchable. Dependent
 generation still awaits required views. Untouched historical messages
 without records are not backfilled. An ordinary save/load retains incomplete
 records so the next dependent generation can retry them. A finalized passage with
@@ -538,9 +540,10 @@ start a background snackbar or autosave on every turn. A cancelled branch is rem
 automatic retry; the shared cancellation handler consumes the scene cancellation
 flag before its sibling groups continue, and an unrelated audience edit
 does not restart its request or reset its failed status. Explicit
-regeneration can retry that branch. Message-edit background
-perception repair continues into summary repair; finalized perception work and
-manual summary edits/regeneration schedule summary repair through
+regeneration can retry that branch. Explicit revision analysis and next-send
+catch-up continue perception repair into summary repair; manual message saves
+defer this work. Automatic perception finalization and manual summary
+edits/regeneration schedule summary repair through
 `schedule_audience_summaries`, which coalesces active work. These background tasks
 leave the websocket receive loop available for Retry/Cancel responses.
 

@@ -170,7 +170,7 @@ def _receipts_current(
     if state is None:
         return False
     expected = (
-        ("perceptions", "perceptions", operations.perceptions),
+        ("perceptions", "refresh:perceptions", operations.perceptions),
         ("extract", "refresh:extract", operations.extract_facts),
         ("learn", "refresh:learn", operations.learn_facts),
     )
@@ -182,9 +182,30 @@ def _receipts_current(
     )
 
 
+def revision_requires_refresh(scene, message, operations=None) -> bool:
+    """Include missing revised-source results without backfilling pristine history."""
+    if not message.revision_matches_baseline:
+        return True
+    if (
+        message.revision_state.refresh_journal is not None
+        and message.revision_state.status in ("running", "failed")
+    ):
+        return True
+    if not character_knowledge_enabled(scene) or (
+        len(message.versions) <= 1 and message.revision_state.serial == 0
+    ):
+        return False
+    operations = operations or revision_operations(scene, message)
+    if operations.perceptions:
+        from talemate.agents.summarize.perceptions import perception_results_current
+
+        return not perception_results_current(scene, message)
+    return False
+
+
 def revision_refresh_payload(scene, message) -> dict:
     operations = revision_operations(scene, message)
-    dirty = not message.revision_matches_baseline
+    dirty = revision_requires_refresh(scene, message, operations)
     status = message.revision_state.status if message.revision_state else "clean"
     if operations.perceptions:
         label = "Analyze perceptions"
@@ -1078,6 +1099,8 @@ async def reconcile_revision_archive_vectors(scene, journal) -> bool:
 
 
 async def _refresh(scene, message, identity: str, operations: RevisionOperations):
+    from talemate.agents.summarize.perceptions import perception_results_current
+
     summarizer = get_agent("summarizer")
     begin_revision_transaction(scene, message)
     await reconcile_revision_archive_vectors(scene, None)
@@ -1086,14 +1109,28 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
     recent, present, ts = _historical_context(scene, message)
     rollback_journal = None
     try:
-        perception_identity = _phase_identity(scene, message, "perceptions", recent)
-        if (
-            operations.perceptions
-            and message.revision_state.phase_receipts.get("perceptions")
-            != perception_identity
-        ):
+        if operations.perceptions:
             with revision_phase(scene, message, "perceptions"):
-                await summarizer.ensure_perceptions(scene)
+                summarizer._register_perception_sources(scene, [message])
+        perception_identity = _phase_identity(scene, message, "perceptions", recent)
+        if operations.perceptions and (
+            message.revision_state.phase_receipts.get("refresh:perceptions")
+            != perception_identity
+            or not perception_results_current(scene, message)
+        ):
+            receipts = dict(message.revision_state.phase_receipts)
+            # Missing source results revoke completion of the whole phase, even
+            # when its inputs match an older successful run. A later repair
+            # failure must remain retryable after source analysis succeeds.
+            receipts.pop("refresh:perceptions", None)
+            message.set_revision_status("running", phase_receipts=receipts)
+            with revision_phase(scene, message, "perceptions"):
+                await summarizer.ensure_perceptions(
+                    scene,
+                    still_current=lambda: _current(
+                        scene, message, identity, operations
+                    ),
+                )
             if not _current(scene, message, identity, operations):
                 raise GenerationCancelled(
                     "The selected version changed during analysis"
@@ -1108,9 +1145,13 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
                 )
             if _phase_identity(scene, message, "perceptions") != perception_identity:
                 raise GenerationCancelled("Perception inputs changed during analysis")
+            if not perception_results_current(scene, message):
+                raise GenerationCancelled(
+                    "Selected-source perception results are not ready"
+                )
             receipts = {
                 **message.revision_state.phase_receipts,
-                "perceptions": perception_identity,
+                "refresh:perceptions": perception_identity,
             }
             message.set_revision_status("running", phase_receipts=receipts)
 
@@ -1238,8 +1279,13 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
             message.set_revision_status("running", phase_receipts=receipts)
 
         def transaction_current():
-            return _current(scene, message, identity, operations) and _receipts_current(
-                scene, message, operations
+            return (
+                _current(scene, message, identity, operations)
+                and _receipts_current(scene, message, operations)
+                and (
+                    not operations.perceptions
+                    or perception_results_current(scene, message)
+                )
             )
 
         await summarizer.flush_fact_memory(scene)
@@ -1263,6 +1309,9 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
             raise
         if not (
             _current(scene, message, identity, operations)
+            and (
+                not operations.perceptions or perception_results_current(scene, message)
+            )
             and _receipts_current(
                 scene,
                 message,
@@ -1311,7 +1360,7 @@ _jobs = WeakKeyDictionary()
 
 async def refresh_revision(scene, message):
     """Run or join the one scene-local job for this canonical revision."""
-    if message.revision_matches_baseline:
+    if not revision_requires_refresh(scene, message):
         return revision_refresh_payload(scene, message)
     operations = revision_operations(scene, message)
     if not operations.any:
@@ -1386,5 +1435,7 @@ async def refresh_revision(scene, message):
 async def catch_up_revisions(scene) -> None:
     """Await every pending revision in history order before new generation."""
     for message in list(scene.history):
-        if message.revision_state is not None and not message.revision_matches_baseline:
+        if message.revision_state is not None and revision_requires_refresh(
+            scene, message
+        ):
             await refresh_revision(scene, message)

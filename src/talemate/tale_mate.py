@@ -1194,12 +1194,14 @@ class Scene(Emitter):
     def pending_perception_messages(self) -> list[int]:
         if not character_knowledge_enabled(self):
             return []
+        from talemate.knowledge.revision_refresh import revision_requires_refresh
+
         return [
             message.id
             for message in self.history
             if (
                 message.revision_state is not None
-                and message.revision_state.status != "clean"
+                and revision_requires_refresh(self, message)
             )
             or (
                 message.knowledge is not None

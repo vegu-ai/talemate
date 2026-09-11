@@ -247,6 +247,7 @@ def test_find_docs_real_index_smoke():
             "user-guide/node-editor/core-concepts/collector_nodes.md",
         ),
         ("character card import", "user-guide/character-card-import.md"),
+        ("pytest compose test exclusions", "dev/testing.md"),
         # a thorough summary must keep its phrase bonus: this page is the only
         # one about the pi coding agent, and competes with node-reference
         # pages that match nothing but the token "agent"

@@ -16,6 +16,9 @@ client was refused with no way forward.
 
 from __future__ import annotations
 
+from types import NoneType
+from typing import get_args
+
 import pydantic
 import pytest
 
@@ -36,6 +39,36 @@ def add_client_payload(client_type: str) -> dict:
         "name": f"{meta.get('name_prefix') or client_type}",
         "enabled": True,
     }
+
+
+def _annotation_allows_none(annotation) -> bool:
+    return annotation is NoneType or any(
+        _annotation_allows_none(arg) for arg in get_args(annotation)
+    )
+
+
+def _null_rejection_cases():
+    cases = []
+    for client_type in CLIENT_TYPES:
+        client_cls = CLIENT_CLASSES[client_type]
+        meta = client_cls.Meta().model_dump()
+        defaults = meta.get("defaults") or {}
+        config_cls = getattr(client_cls, "config_cls", None)
+        if not config_cls:
+            continue
+        non_nullable = [
+            name
+            for name in (meta.get("extra_fields") or {})
+            if name not in defaults
+            and name in config_cls.model_fields
+            and not _annotation_allows_none(config_cls.model_fields[name].annotation)
+        ]
+        if non_nullable:
+            cases.append(pytest.param(client_type, non_nullable, id=client_type))
+    return cases
+
+
+NULL_REJECTION_CASES = _null_rejection_cases()
 
 
 @pytest.mark.parametrize("client_type", CLIENT_TYPES)
@@ -72,47 +105,26 @@ def test_extra_fields_without_defaults_are_omittable(client_type: str):
         assert hasattr(client, name) or name not in client.model_fields_set
 
 
-@pytest.mark.parametrize("client_type", CLIENT_TYPES)
-def test_null_seeded_extra_fields_are_rejected(client_type: str):
+def test_clients_with_non_nullable_extra_fields_are_found():
+    assert NULL_REJECTION_CASES
+
+
+@pytest.mark.parametrize(("client_type", "non_nullable"), NULL_REJECTION_CASES)
+def test_null_seeded_extra_fields_are_rejected(
+    client_type: str, non_nullable: list[str]
+):
     """Documents WHY the UI must omit rather than null-seed unknown extras.
 
     Not every client type has a non-nullable extra field, so this only asserts
     the failure where one exists — the point is that null-seeding is unsafe as
     a class, which is what the previous implementation did for all types.
     """
-    client_cls = CLIENT_CLASSES[client_type]
-    meta = client_cls.Meta().model_dump()
-    defaults = meta.get("defaults") or {}
-    config_cls = getattr(client_cls, "config_cls", None)
-    if not config_cls:
-        pytest.skip(f"{client_type} has no custom config model")
-
-    non_nullable = [
-        name
-        for name in (meta.get("extra_fields") or {})
-        if name not in defaults
-        and name in config_cls.model_fields
-        and not _accepts_none(config_cls, name)
-    ]
-    if not non_nullable:
-        pytest.skip(f"{client_type} has no non-nullable extra field without a default")
-
     payload = add_client_payload(client_type)
     for name in non_nullable:
         payload[name] = None
 
     with pytest.raises(pydantic.ValidationError):
         Config(clients={"test-client": payload})
-
-
-def _accepts_none(config_cls: type[pydantic.BaseModel], field: str) -> bool:
-    try:
-        config_cls.__pydantic_validator__.validate_assignment(
-            config_cls.model_construct(), field, None
-        )
-    except pydantic.ValidationError:
-        return False
-    return True
 
 
 def test_openrouter_concurrent_inference_is_the_known_case():

@@ -7,8 +7,9 @@
     with @register, a WorldStateManagerTemplate*.vue component, then wiring it into WorldStateManagerTemplates.vue - iconForTemplate,
     helpMessages and templateTypes.'
 - path: dev/index.md
-  title: Coming soon
-  summary: Placeholder page stating that the developer documentation section has not been written yet.
+  title: Developer documentation
+  summary: Landing page for developer references covering deterministic test setup and exclusions, Jinja2 prompt templates,
+    and the generated node registry glossary.
 - path: dev/nodes-glossary.md
   title: Node reference glossary
   summary: The node reference pages under docs/user-guide/node-editor/reference/nodes/ are generated from the live node registry.
@@ -19,6 +20,10 @@
   summary: 'Older reference for Talemate''s Jinja2 prompt templates: section tags, overriding a default by dropping a same-named
     file into ./templates/prompts/{agent}/, the creator naming convention, extending with {% extends %} and blocks, and the
     Jinja helpers.'
+- path: dev/testing.md
+  title: Testing
+  summary: Developer test setup with uv and NLTK, the full default pytest suite, Docker Compose config checks and their explicit
+    requires_compose exclusion, plus isolation from active config.yaml, local scenes and user templates.
 - path: dev/third-party-reference.md
   title: Third Party API docs
   summary: Bare link list to the upstream chat-completion API references for Anthropic, Cohere, Google AI, Groq, KoboldCpp,

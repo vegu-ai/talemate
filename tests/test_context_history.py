@@ -2422,8 +2422,9 @@ class TestBestFit:
         """At least _BEST_FIT_MIN_DIALOGUE messages are included regardless of budget."""
         from talemate.agents.summarize.context_history import _BEST_FIT_MIN_DIALOGUE
 
-        if _BEST_FIT_MIN_DIALOGUE <= 0:
-            pytest.skip("min dialogue guarantee is disabled")
+        assert _BEST_FIT_MIN_DIALOGUE > 0, (
+            "minimum-dialogue guarantee tests require an enabled default"
+        )
 
         self._enable_best_fit(summarizer)
 
@@ -2461,8 +2462,9 @@ class TestBestFit:
         """Min dialogue guarantee works even when budget is exhausted."""
         from talemate.agents.summarize.context_history import _BEST_FIT_MIN_DIALOGUE
 
-        if _BEST_FIT_MIN_DIALOGUE <= 0:
-            pytest.skip("min dialogue guarantee is disabled")
+        assert _BEST_FIT_MIN_DIALOGUE > 0, (
+            "minimum-dialogue guarantee tests require an enabled default"
+        )
 
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data)
@@ -2535,8 +2537,9 @@ class TestBestFit:
         """
         from talemate.agents.summarize.context_history import _BEST_FIT_MIN_DIALOGUE
 
-        if _BEST_FIT_MIN_DIALOGUE <= 0:
-            pytest.skip("min dialogue guarantee is disabled")
+        assert _BEST_FIT_MIN_DIALOGUE > 0, (
+            "minimum-dialogue guarantee tests require an enabled default"
+        )
 
         self._enable_best_fit(summarizer)
 

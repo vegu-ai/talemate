@@ -167,6 +167,9 @@ asyncio_mode = "auto"
 # `--capture=no` or readable output. (`--pdb` needs no flag — xdist disables
 # distribution for it by itself.)
 addopts = "-n auto --dist worksteal"
+markers = [
+    "requires_compose: renders shipped Compose files with the Docker Compose CLI (no daemon required)",
+]
 
 [tool.coverage.run]
 source = ["src/talemate"]

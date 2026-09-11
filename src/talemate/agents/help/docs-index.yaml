@@ -32,8 +32,9 @@
     Pydantic schema, build a Vue editor with immutableTemplate and update/save handling, then register its rendering, icon,
     color, help text and type selector in WorldStateManagerTemplates.'
 - path: dev/index.md
-  title: Coming soon
-  summary: Placeholder for forthcoming developer documentation.
+  title: Developer documentation
+  summary: Landing page for developer references covering deterministic test setup and exclusions, Jinja2 prompt templates,
+    and the generated node registry glossary.
 - path: dev/nodes-glossary.md
   title: Node reference glossary
   summary: Regenerate the node reference glossary from the live registry with the node tools CLI glossary --write, and detect
@@ -55,9 +56,14 @@
     model compliance determines semantic support, and snapshots do not grant knowledge.'
 - path: dev/templates.md
   title: Template Overrides
-  summary: Legacy developer guide to Jinja2 prompt overrides in templates/prompts/{agent}, template inheritance, creator attribute/detail/dialogue
-    template sets and SECTION tags. Lists prompt helpers for prepared responses, JSON output, scene queries, memory retrieval
-    and token counting.
+  summary: 'Older reference for Talemate''s Jinja2 prompt templates: section tags, overriding a default by dropping a same-named
+    file into ./templates/prompts/{agent}/, template inheritance, the creator attribute/detail/dialogue naming conventions
+    and template sets, extending with {% extends %} and blocks, and helpers for prepared responses, JSON output, scene queries,
+    memory retrieval and token counting.'
+- path: dev/testing.md
+  title: Testing
+  summary: Developer test setup with uv and NLTK, the full default pytest suite, Docker Compose config checks and their explicit
+    requires_compose exclusion, plus isolation from active config.yaml, local scenes and user templates.
 - path: dev/third-party-reference.md
   title: Third-party reference
   summary: Links to third-party chat-completion API references for Anthropic, Cohere, Google, Groq, KoboldCpp, LMStudio, Mistral,

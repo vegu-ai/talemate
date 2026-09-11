@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -13,7 +13,9 @@ from talemate.knowledge.supported_facts import replace_source_facts
 from talemate.scene_message import NarratorMessage
 
 supported_scene = test_supported_facts.supported_scene
-minilm = test_fact_citation_embeddings.minilm
+deterministic_citation_embeddings = (
+    test_fact_citation_embeddings.deterministic_citation_embeddings
+)
 
 
 def message_view(scene, text, alice_spans, bob_spans, present=None):
@@ -38,7 +40,7 @@ def message_view(scene, text, alice_spans, bob_spans, present=None):
 
 @pytest.mark.asyncio
 async def test_summary_private_competitor_from_another_message_vetoes_transfer(
-    supported_scene, minilm, monkeypatch
+    supported_scene, deterministic_citation_embeddings, monkeypatch
 ):
     from structlog.testing import capture_logs
 
@@ -64,7 +66,7 @@ async def test_summary_private_competitor_from_another_message_vetoes_transfer(
             for name in ("Alice", "Bob")
         ],
     )
-    embed = Mock(side_effect=minilm)
+    embed = deterministic_citation_embeddings
     test_fact_citation_embeddings.real_comparisons(memory, embed, monkeypatch)
 
     async def summarize(text, *, audience, **kwargs):
@@ -109,11 +111,11 @@ async def test_summary_private_competitor_from_another_message_vetoes_transfer(
     ],
 )
 async def test_public_pronoun_citation_accepts_model_choice(
-    supported_scene, minilm, monkeypatch, text, fact, span
+    supported_scene, deterministic_citation_embeddings, monkeypatch, text, fact, span
 ):
     scene, _, memory = supported_scene
     source = message_view(scene, text, [0, 1, 2], [0, 1, 2])
-    embed = Mock(side_effect=minilm)
+    embed = deterministic_citation_embeddings
     test_fact_citation_embeddings.real_comparisons(memory, embed, monkeypatch)
     await replace_source_facts(
         scene,
@@ -141,7 +143,7 @@ def test_stored_vector_dedupe_uses_unit_distance():
 
 @pytest.mark.asyncio
 async def test_extraction_drops_a_citation_with_an_unoffered_competitor(
-    supported_scene, minilm, monkeypatch
+    supported_scene, deterministic_citation_embeddings, monkeypatch
 ):
     from talemate.knowledge.supported_facts import contributions_for_source
 
@@ -149,7 +151,9 @@ async def test_extraction_drops_a_citation_with_an_unoffered_competitor(
     source = message_view(
         scene, "Alice rings the bell. Bob privately fears the signal.", [0], [0, 1]
     )
-    test_fact_citation_embeddings.real_comparisons(memory, minilm, monkeypatch)
+    test_fact_citation_embeddings.real_comparisons(
+        memory, deterministic_citation_embeddings, monkeypatch
+    )
     (item,) = await contributions_for_source(
         scene,
         source,
@@ -163,7 +167,7 @@ async def test_extraction_drops_a_citation_with_an_unoffered_competitor(
 
 @pytest.mark.asyncio
 async def test_competitor_certificate_survives_save_and_checks_current_views(
-    supported_scene, minilm, monkeypatch
+    supported_scene, deterministic_citation_embeddings, monkeypatch
 ):
     from talemate.knowledge.schema import Fact
 
@@ -174,7 +178,9 @@ async def test_competitor_certificate_survives_save_and_checks_current_views(
         [0, 1, 2],
         [0, 1, 2],
     )
-    test_fact_citation_embeddings.real_comparisons(memory, minilm, monkeypatch)
+    test_fact_citation_embeddings.real_comparisons(
+        memory, deterministic_citation_embeddings, monkeypatch
+    )
     await replace_source_facts(
         scene,
         [

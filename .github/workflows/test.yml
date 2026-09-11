@@ -48,23 +48,6 @@ jobs:
       run: |
         uv run python -c "import nltk; nltk.download('punkt_tab')"
 
-    - name: Cache citation regression embedding model
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/huggingface/hub/models--sentence-transformers--all-MiniLM-L6-v2
-        key: ${{ runner.os }}-citation-minilm-1110a243fdf4706b3f48f1d95db1a4f5529b4d41
-
-    - name: Provision citation regression embedding model
-      run: |
-        .venv/bin/python - <<'PY'
-        from huggingface_hub import snapshot_download
-        snapshot_download(
-            repo_id="sentence-transformers/all-MiniLM-L6-v2",
-            revision="1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
-            allow_patterns=["*.json", "*.txt", "*.safetensors"],
-        )
-        PY
-
     - name: Run tests
       run: |
         uv run pytest tests/ -p no:warnings

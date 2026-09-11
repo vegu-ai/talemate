@@ -14,7 +14,7 @@ Each overridden field is independent. You can override the conversation length f
 
 **Create New Story** and **Character Card Import** pin their selected knowledge effort as scene overrides. Selected values stay pinned even if they already match global settings. Each creation gets a separate settings file, so reusing a project name does not change a previous story's overrides. Unrelated inherited settings remain intact.
 
-A blank story keeps its normal unsaved state until you save it; that save stores the settings link. Imported cards save the link during import. Once the story is saved, the knowledge hub shows the override origins and **Use global settings** restores inheritance for a group or the whole hub.
+A blank story keeps its normal unsaved state until you save it; that save stores the settings link. Imported cards save the link during import. Once the story is saved, the knowledge hub marks overrides with :material-movie-open-cog-outline:. Activate the icon beside one setting to restore that setting's global value, the icon beside a group to restore the whole group, or the **Scene override** label and icon above the effort slider to restore every knowledge setting owned by the hub. Each action leaves unrelated scene overrides intact.
 
 ## Editing overrides: the Global / Scene switch
 

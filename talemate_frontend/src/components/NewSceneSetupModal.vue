@@ -66,14 +66,14 @@
           </v-col>
         </v-row>
 
-        <v-checkbox
-          v-model="characterKnowledge"
-          label="Character perspectives"
-          color="primary"
-          hide-details
-        />
-        <CharacterKnowledgeModeComparison :perspectives="characterKnowledge" class="mt-2" />
         <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :agents="getAgents()" :value="effortForMode" class="mt-4" @apply="effort = $event" />
+        <CharacterKnowledgeModeComparison
+          :key="knowledgeUiVersion"
+          :perspectives="characterKnowledge"
+          selectable
+          collapse-details
+          class="mt-4"
+          @update:perspectives="characterKnowledge = $event" />
         <p class="text-body-small mt-2">You can change this in Scene Settings while the scene has no history or archived history. Keep secrets out of the shared scene description and story intention.</p>
         <v-divider class="mt-4 mb-4"></v-divider>
 
@@ -123,6 +123,7 @@ export default {
       sceneName: '',
       characterKnowledge: false,
       effort: DEFAULT_EFFORT,
+      knowledgeUiVersion: 0,
       assistWithSetup: false,
       selectedWritingStyle: null,
       selectedDirectorPersona: null,
@@ -134,6 +135,7 @@ export default {
         this.sceneName = '';
         this.characterKnowledge = false;
         this.effort = DEFAULT_EFFORT;
+        this.knowledgeUiVersion += 1;
         this.assistWithSetup = false;
         this.selectedWritingStyle = null;
         this.selectedDirectorPersona = null;

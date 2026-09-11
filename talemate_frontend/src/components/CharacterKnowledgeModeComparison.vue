@@ -19,12 +19,23 @@
           <v-btn size="x-small" variant="text" icon="mdi-close" aria-label="Close the comparison" @click="open = false"></v-btn>
         </v-card-title>
         <v-card-text>
-          <CharacterKnowledgeModeCards :perspectives="perspectives" :selected-label="selectedLabel" />
+          <CharacterKnowledgeModeCards
+            :perspectives="perspectives"
+            :selected-label="selectedLabel"
+            :selectable="selectable"
+            :collapse-details="collapseDetails"
+            @select="selectMode" />
         </v-card-text>
       </v-card>
     </v-menu>
   </div>
-  <CharacterKnowledgeModeCards v-else :perspectives="perspectives" :selected-label="selectedLabel" />
+  <CharacterKnowledgeModeCards
+    v-else
+    :perspectives="perspectives"
+    :selected-label="selectedLabel"
+    :selectable="selectable"
+    :collapse-details="collapseDetails"
+    @select="selectMode" />
 </template>
 
 <script>
@@ -51,7 +62,16 @@ export default {
       type: Boolean,
       default: false,
     },
+    selectable: {
+      type: Boolean,
+      default: false,
+    },
+    collapseDetails: {
+      type: Boolean,
+      default: false,
+    },
   },
+  emits: ['update:perspectives'],
   data() {
     return {
       open: false,
@@ -74,6 +94,9 @@ export default {
     },
   },
   methods: {
+    selectMode(key) {
+      if (this.selectable) this.$emit('update:perspectives', key === 'perception');
+    },
     // afterLeave, so the focus is not handed back while the overlay's focus
     // trap is still up to take it again
     restoreFocus() {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import {
@@ -7,6 +7,7 @@ import {
     CHARACTER_KNOWLEDGE_MODES_COMPARE_TITLE,
     characterKnowledgeMode,
 } from '@/constants/characterKnowledgeModes';
+import Comparison from '@/components/CharacterKnowledgeModeComparison.vue';
 import { MODEL_EXPECTATIONS_DOCS_URL } from '@/constants/modelExpectations';
 
 const read = (relative) => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), 'utf-8');
@@ -99,6 +100,42 @@ describe('every point of choice shows the comparison from the constant', () => {
         const compact = wrapper.slice(wrapper.indexOf('v-if="compact"'), wrapper.indexOf('</v-menu>'));
         expect(compact).toContain('<CharacterKnowledgeModeCards');
         expect(compact).toContain(':close-on-content-click="false"');
+    });
+
+    it('keeps selection and collapsed details opt-in at the shared wrapper', () => {
+        const wrapper = read('../../src/components/CharacterKnowledgeModeComparison.vue');
+        expect(wrapper).toContain(':selectable="selectable"');
+        expect(wrapper).toContain(':collapse-details="collapseDetails"');
+        expect(wrapper).toContain("default: false");
+        expect(wrapper).toContain("this.$emit('update:perspectives', key === 'perception')");
+    });
+
+    it('enables selection and collapsed details at only the two creation callers', () => {
+        for (const file of ['NewSceneSetupModal.vue', 'CharacterCardImport.vue']) {
+            const source = read(`../../src/components/${file}`);
+            const tag = source.match(/<CharacterKnowledgeModeComparison[\s\S]*?\/>/)[0];
+            expect(tag).toContain('selectable');
+            expect(tag).toContain('collapse-details');
+        }
+        for (const file of ['WorldStateManagerSceneSettings.vue', 'CharacterKnowledgeHub.vue', 'WorldStateManagerSceneSharedWorld.vue']) {
+            const source = read(`../../src/components/${file}`);
+            const tag = source.match(/<CharacterKnowledgeModeComparison[^>]*>/)[0];
+            expect(tag).not.toContain('selectable');
+            expect(tag).not.toContain('collapse-details');
+        }
+    });
+
+    it('maps shared card keys back to the existing boolean host state', () => {
+        const vm = { selectable: true, $emit: vi.fn() };
+        Comparison.methods.selectMode.call(vm, 'legacy');
+        Comparison.methods.selectMode.call(vm, 'perception');
+        expect(vm.$emit.mock.calls).toEqual([
+            ['update:perspectives', false],
+            ['update:perspectives', true],
+        ]);
+        vm.selectable = false;
+        Comparison.methods.selectMode.call(vm, 'perception');
+        expect(vm.$emit).toHaveBeenCalledTimes(2);
     });
 });
 

@@ -97,6 +97,10 @@ export function groupClearEntries(agent, action) {
     ));
 }
 
+export function settingClearEntry(agent, action, config) {
+    return { agent, action, config };
+}
+
 /** The clear entries that drop the whole hub's owned overrides across both modes. */
 export function hubClearEntries() {
     return Object.values(HUB_OWNED_OVERRIDES).flatMap(({ agent, action }) => groupClearEntries(agent, action));

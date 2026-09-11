@@ -9,6 +9,7 @@ import {
     hubHasOverrides,
     ownedKeys,
     overriddenOwnedKeys,
+    settingClearEntry,
 } from '@/utils/knowledgeOverrideOwnership';
 import { agentsAt } from './helpers/effortAgents.js';
 
@@ -113,6 +114,12 @@ describe('the effort origin state', () => {
 });
 
 describe('the reset lists', () => {
+    it('names exactly one config key for an individual setting', () => {
+        expect(settingClearEntry('summarizer', 'archive', 'extract_facts')).toEqual({
+            agent: 'summarizer', action: 'archive', config: 'extract_facts',
+        });
+    });
+
     it('names the enable key and each config key for a group', () => {
         expect(groupClearEntries('memory', 'topics')).toEqual([{ agent: 'memory', action: 'topics' }]);
         expect(groupClearEntries('summarizer', 'archive'))

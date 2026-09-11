@@ -21,10 +21,12 @@ describe('character perspectives creation choice', () => {
         const vm = setup();
         expect(vm.characterKnowledge).toBe(false);
         vm.characterKnowledge = true;
+        const firstKnowledgeUi = vm.knowledgeUiVersion;
         Setup.methods.cancel.call(vm);
         expect(vm.$emit).not.toHaveBeenCalledWith('create', expect.anything());
         Setup.watch.modelValue.call(vm, true);
         expect(vm.characterKnowledge).toBe(false);
+        expect(vm.knowledgeUiVersion).toBe(firstKnowledgeUi + 1);
     });
     it.each([false, true])('forwards the explicit choice %s through the real creation payload', (enabled) => {
         const vm = setup();

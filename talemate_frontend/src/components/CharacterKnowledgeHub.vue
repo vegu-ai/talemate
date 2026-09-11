@@ -24,7 +24,7 @@
                     <v-icon size="small" class="mr-1">mdi-head-lightbulb-outline</v-icon>
                     {{ name }}
                     <v-spacer></v-spacer>
-                    <v-chip size="x-small" label variant="tonal" :color="perspectives ? 'primary' : 'mutedheader'">{{ summary.mode }}</v-chip>
+                    <v-chip v-if="canChange" size="x-small" label variant="tonal" :color="perspectives ? 'primary' : 'mutedheader'">{{ summary.mode }}</v-chip>
                 </v-card-title>
             </v-card-item>
 
@@ -67,16 +67,20 @@
 
             <v-card-subtitle class="text-uppercase pt-3">Story mode</v-card-subtitle>
             <v-card-text class="pt-0 pb-2">
-                <v-switch
-                    :model-value="perspectives"
-                    :disabled="!canChange"
-                    label="Character perspectives"
-                    color="primary"
-                    density="compact"
-                    :hint="canChange ? PERSPECTIVES_OPEN_HINT : PERSPECTIVES_LOCKED_HINT"
-                    persistent-hint
-                    @update:model-value="setPerspectives"></v-switch>
-                <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" compact class="mt-2" />
+                <template v-if="canChange">
+                    <v-switch
+                        :model-value="perspectives"
+                        label="Character perspectives"
+                        color="primary"
+                        density="compact"
+                        :hint="PERSPECTIVES_OPEN_HINT"
+                        persistent-hint
+                        @update:model-value="setPerspectives"></v-switch>
+                    <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" compact class="mt-2" />
+                </template>
+                <v-alert v-else color="primary" variant="tonal" density="compact" icon="mdi-lock-outline" class="mt-1 knowledge-mode-locked">
+                    {{ summary.mode }} is locked for this scene because it already has history.
+                </v-alert>
             </v-card-text>
 
             <v-divider></v-divider>
@@ -86,15 +90,17 @@
             <v-card-subtitle class="text-uppercase pt-3">Thoroughness</v-card-subtitle>
             <v-card-text class="pt-1 pb-0">
                 <div class="d-flex align-center mb-1">
-                    <v-tooltip :text="effortOriginTooltip" location="top" max-width="320">
+                    <SceneOverrideResetControl
+                        v-if="hubOverridden"
+                        label="Scene override"
+                        aria-label="Use global settings for all character knowledge settings"
+                        :disabled="settingsLocked"
+                        @reset="clearHub" />
+                    <v-tooltip v-else :text="effortOriginTooltip" location="top" max-width="320">
                         <template v-slot:activator="{ props: originProps }">
-                            <v-chip v-bind="originProps" size="x-small" label variant="outlined" :color="effortOrigin.any ? 'secondary' : 'muted'">
-                                {{ effortOrigin.any ? 'Scene override' : 'Global settings' }}
-                            </v-chip>
+                            <v-chip v-bind="originProps" size="x-small" label variant="outlined" color="muted">Global settings</v-chip>
                         </template>
                     </v-tooltip>
-                    <v-spacer></v-spacer>
-                    <v-btn v-if="hubOverridden" size="x-small" variant="text" :disabled="settingsLocked" @click="clearHub">Use global settings</v-btn>
                 </div>
                 <KnowledgeEffortSlider :mode="effortMode" :agents="getAgents()" :pin="true" :disabled="settingsLocked" @apply="applyEffort" />
             </v-card-text>
@@ -131,18 +137,13 @@
                                         <v-btn size="x-small" variant="text" class="px-0 text-body-small" append-icon="mdi-open-in-new" @click="openSettings(group)">
                                             {{ group.agentLabel }} / {{ group.label }}
                                         </v-btn>
-                                        <v-chip v-if="group.master && group.enabledOverridden" size="x-small" label variant="outlined" color="secondary" class="ml-1">scene override</v-chip>
-                                        <v-chip v-else-if="group.ownedOverridden" size="x-small" label variant="outlined" color="secondary" class="ml-1">scene override</v-chip>
-                                    </v-list-item-title>
-                                    <template v-slot:append>
-                                        <v-btn
+                                        <SceneOverrideResetControl
                                             v-if="group.ownedOverridden"
-                                            size="x-small"
-                                            variant="text"
-                                            :disabled="settingsLocked"
+                                            class="ml-1"
                                             :aria-label="`Use global settings for ${group.agentLabel} / ${group.label}`"
-                                            @click.stop="clearGroup(group)">Use global</v-btn>
-                                    </template>
+                                            :disabled="settingsLocked"
+                                            @reset="clearGroup(group)" />
+                                    </v-list-item-title>
                                 </v-list-item>
                                 <!-- not :disabled - Vuetify drops pointer events on a disabled item, which
                                      takes the tooltips with it; the checkbox and the click guard carry the state -->
@@ -158,7 +159,12 @@
                                     </template>
                                     <v-list-item-title class="text-body-small">
                                         {{ toggle.label }}
-                                        <v-chip v-if="toggle.overridden" size="x-small" label variant="outlined" color="secondary" class="ml-1">scene override</v-chip>
+                                        <SceneOverrideResetControl
+                                            v-if="toggle.overridden"
+                                            class="ml-1"
+                                            :aria-label="`Use global settings for ${group.agentLabel} / ${group.label} / ${toggle.label}`"
+                                            :disabled="settingsLocked"
+                                            @reset="clearToggle(group, toggle)" />
                                     </v-list-item-title>
                                     <template v-slot:append>
                                         <!-- a switch under a disabled group costs nothing; at Off the slider says so right above it -->
@@ -188,6 +194,7 @@
 import { reactive } from 'vue';
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
 import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
+import SceneOverrideResetControl from './SceneOverrideResetControl.vue';
 import { effortMode, effortPinPatch, queueEffortAcrossSwitch } from '@/utils/knowledgeEffort';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
 import { resolveKnowledgeToggles, switchTally, thoroughnessSummary } from '@/utils/knowledgeHub';
@@ -197,10 +204,10 @@ import {
     groupHasOwnedOverride,
     hubClearEntries,
     hubHasOverrides,
+    settingClearEntry,
 } from '@/utils/knowledgeOverrideOwnership';
 import { sceneCanPersist } from '@/utils/sceneAgentOverrides';
 import {
-    PERSPECTIVES_LOCKED_HINT,
     PERSPECTIVES_OPEN_HINT,
     canChangePerspectives,
     perspectivesEnabled,
@@ -216,7 +223,7 @@ const individualPane = reactive({ open: false });
 
 export default {
     name: 'CharacterKnowledgeHub',
-    components: { CharacterKnowledgeModeComparison, KnowledgeEffortSlider },
+    components: { CharacterKnowledgeModeComparison, KnowledgeEffortSlider, SceneOverrideResetControl },
     props: {
         name: { type: String, required: true },
         variant: { type: String, default: 'tonal' },
@@ -240,7 +247,6 @@ export default {
     emits: ['open-knowledge'],
     data() {
         return {
-            PERSPECTIVES_LOCKED_HINT,
             PERSPECTIVES_OPEN_HINT,
             open: false,
             loading: false,
@@ -395,6 +401,10 @@ export default {
         clearGroup(group) {
             if (this.settingsLocked) return;
             this.clearSceneAgentValues(groupClearEntries(group.agent, group.action));
+        },
+        clearToggle(group, toggle) {
+            if (this.settingsLocked) return;
+            this.clearSceneAgentValues([settingClearEntry(group.agent, group.action, toggle.key)]);
         },
         clearHub() {
             if (this.settingsLocked) return;

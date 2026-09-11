@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import Landing from '@/components/SceneLanding.vue';
 import Card from '@/components/CharacterCardImport.vue';
 import Setup from '@/components/NewSceneSetupModal.vue';
+import { fileURLToPath, URL } from 'node:url';
+import { readSource } from './helpers/liftMethod.js';
 import { EFFORT_PRESETS, EFFORT_STOPS } from '@/constants/knowledgeEffort';
 import { creationEffortSettings } from '@/utils/knowledgeEffort';
 
@@ -52,6 +54,22 @@ describe('complete creation snapshots', () => {
 });
 
 describe('both creation dialogs', () => {
+    it.each([
+        ['NewSceneSetupModal.vue', 'New Story'],
+        ['CharacterCardImport.vue', 'card import'],
+    ])('%s puts effort before selectable cards and has no separate mode checkbox', (file) => {
+        const source = readSource(fileURLToPath(new URL(`../../src/components/${file}`, import.meta.url)));
+        const effort = source.indexOf('<KnowledgeEffortSlider');
+        const cards = source.indexOf('<CharacterKnowledgeModeComparison');
+        expect(effort).toBeGreaterThan(-1);
+        expect(cards).toBeGreaterThan(effort);
+        const comparison = source.slice(cards, source.indexOf('/>', cards));
+        expect(comparison).toContain('selectable');
+        expect(comparison).toContain('collapse-details');
+        expect(comparison).toContain('@update:perspectives="characterKnowledge = $event"');
+        expect(source).not.toMatch(/<v-checkbox[\s\S]{0,180}label="Character perspectives"/);
+    });
+
     it('flushes the last slider choice before submitting New Story', () => {
         const vm = model(Setup);
         vm.$refs.effortSlider = { send: () => { vm.effort = 'ultra'; } };
@@ -79,10 +97,12 @@ describe('both creation dialogs', () => {
         const first = vm.open('data:image/png;base64,x', null, 'old.png');
         const oldId = vm.analysisRequestId;
         vm.effort = 'ultra';
+        const firstKnowledgeUi = vm.knowledgeUiVersion;
         vm.cancel();
         expect(await first).toEqual({ confirmed: false });
         const second = vm.open('data:image/png;base64,y', null, 'new.png');
         expect(vm.effort).toBe('balanced');
+        expect(vm.knowledgeUiVersion).toBe(firstKnowledgeUi + 1);
         vm.handleMessage({ type: 'character_card_analysis', request_id: oldId, data: { detected_character_names: ['Old'] } });
         expect(vm.analysis).toBeNull();
         vm.handleMessage({ type: 'character_card_analysis', request_id: vm.analysisRequestId, data: { detected_character_names: ['New'] } });

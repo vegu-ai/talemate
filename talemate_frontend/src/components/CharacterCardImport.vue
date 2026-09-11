@@ -83,14 +83,14 @@
                   Story mode
                 </v-card-title>
                 <v-card-text>
-                  <v-checkbox
-                    v-model="characterKnowledge"
-                    label="Character perspectives"
-                    color="primary"
-                    hide-details
-                  />
-                  <CharacterKnowledgeModeComparison :perspectives="characterKnowledge" class="mt-2" />
-                  <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :value="effortForMode" class="mt-4" @apply="effort = $event" />
+                  <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :value="effortForMode" class="mt-2" @apply="effort = $event" />
+                  <CharacterKnowledgeModeComparison
+                    :key="knowledgeUiVersion"
+                    :perspectives="characterKnowledge"
+                    selectable
+                    collapse-details
+                    class="mt-4"
+                    @update:perspectives="characterKnowledge = $event" />
                   <p class="text-body-small mt-2">Controls ongoing knowledge work for this story. Import generation options below are independent.</p>
                 </v-card-text>
               </v-card>
@@ -584,6 +584,7 @@ export default {
       options: defaultOptions(),
       characterKnowledge: false,
       effort: DEFAULT_EFFORT,
+      knowledgeUiVersion: 0,
       analysisRequestId: null,
       showGenerationOptions: false,
       resolveCallback: null,
@@ -638,6 +639,7 @@ export default {
       // Reset to defaults
       this.options = defaultOptions();
       this.characterKnowledge = false;
+      this.knowledgeUiVersion += 1;
       this.showGenerationOptions = false;
       this.analysis = null;
       this.analysisError = null;

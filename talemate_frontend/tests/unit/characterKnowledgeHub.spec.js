@@ -226,6 +226,29 @@ describe('the story mode switch', () => {
         expect(vm.perspectives).toBe(true);
         expect(vm.summary.mode).toBe('Character perspectives');
     });
+
+    it.each([
+        ['legacy', 'Standard'],
+        ['perception', 'Character perspectives'],
+    ])('names locked %s mode from the scene status', (knowledgeEligibility, title) => {
+        const vm = hub({ scene: { ...sceneData, knowledge_eligibility: knowledgeEligibility, can_change_knowledge_eligibility: false } });
+        expect(vm.canChange).toBe(false);
+        expect(vm.summary.mode).toBe(title);
+    });
+
+    it('renders the unlocked controls separately from the one locked note', () => {
+        const source = readSource(fileURLToPath(new URL('../../src/components/CharacterKnowledgeHub.vue', import.meta.url)));
+        const header = source.slice(source.indexOf('<v-card-title'), source.indexOf('</v-card-title>'));
+        const story = source.slice(source.indexOf('<!-- STORY MODE -->'), source.indexOf('<!-- THOROUGHNESS -->'));
+        const unlocked = story.slice(story.indexOf('<template v-if="canChange">'), story.indexOf('</template>'));
+        const locked = story.slice(story.indexOf('<v-alert v-else'), story.indexOf('</v-alert>'));
+        expect(header).toContain('<v-chip v-if="canChange"');
+        expect(unlocked).toContain('<v-switch');
+        expect(unlocked).toContain('<CharacterKnowledgeModeComparison');
+        expect(locked).toContain('{{ summary.mode }} is locked for this scene because it already has history.');
+        expect(locked).not.toContain('CharacterKnowledgeModeComparison');
+        expect(story).not.toContain(':disabled="!canChange"');
+    });
 });
 
 const conversation = (config, enabled = true) => ({
@@ -368,6 +391,18 @@ describe('the hub origin indicators and resets', () => {
         ]);
     });
 
+    it('clears only one setting through its own reset control', () => {
+        const agents = agentsAt('legacy', 'light');
+        agents[1].data.scene_overrides = { actions: { archive: { config: { extract_facts: { value: true } } } } };
+        const vm = hub({ agents });
+        const group = vm.groups.find((g) => g.action === 'archive');
+        const toggle = group.toggles.find((item) => item.key === 'extract_facts');
+        vm.clearToggle(group, toggle);
+        expect(vm.clearSceneAgentValues).toHaveBeenCalledWith([
+            { agent: 'summarizer', action: 'archive', config: 'extract_facts' },
+        ]);
+    });
+
     it('clears the whole hub across both modes, hidden keys included', () => {
         const agents = agentsAt('legacy', 'light');
         agents[0].data.scene_overrides = { actions: { character_knowledge: { config: { absence_limit: { value: 7 } } } } };
@@ -394,6 +429,17 @@ describe('the hub origin indicators and resets', () => {
         expect(vm.settingsLocked).toBe(true);
         vm.toggleGroup({ agent: 'memory', action: 'topics', enabled: true });
         expect(vm.applySceneAgentValues).not.toHaveBeenCalled();
+    });
+
+    it('uses one icon reset component at hub, group and setting scope without separate reset buttons', () => {
+        const source = readSource(fileURLToPath(new URL('../../src/components/CharacterKnowledgeHub.vue', import.meta.url)));
+        const thoroughness = source.slice(source.indexOf('<!-- THOROUGHNESS -->'), source.indexOf('<div class="pb-2"></div>'));
+        expect(thoroughness.match(/<SceneOverrideResetControl/g)).toHaveLength(3);
+        expect(thoroughness).toContain('label="Scene override"');
+        expect(thoroughness).toContain('@reset="clearHub"');
+        expect(thoroughness).toContain('@reset="clearGroup(group)"');
+        expect(thoroughness).toContain('@reset="clearToggle(group, toggle)"');
+        expect(thoroughness).not.toMatch(/>Use global(?: settings)?<\/v-btn>/);
     });
 });
 

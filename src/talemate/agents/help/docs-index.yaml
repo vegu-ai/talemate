@@ -247,7 +247,7 @@
   title: Per-Scene Agent Overrides
   summary: Sparse agent overrides, Global/Scene editing, link icons, Save/Discard, quick toggles and settings-file selection.
     New Story and card import pin knowledge effort even when equal to globals; independent creations use separate files, saves
-    sharing a link share overrides, and hub resets restore inheritance.
+    sharing a link share overrides, and hub setting/group/all reset icons restore exact inheritance scopes.
 - path: user-guide/agents/summarizer/index.md
   title: Overview
   summary: 'Summarizer overview: dialogue summaries, progressively compressed layered history, scene analysis and context
@@ -454,7 +454,7 @@
   summary: Import TavernAI Chara Card V0–V3 PNG/JPG/WebP or JSON through the home dropzone or Scene Library. Covers cast
     detection/manual selection, player templates/actors/scene transfers, case-insensitive name collisions, lore-book
     metadata, alternate greetings, titled episodes, shared world.json, writing styles, cover assets and failed analysis;
-    mode-specific knowledge effort pins ongoing scene settings without changing globals, separately from per-step AI
+    effort-first selectable mode cards pin ongoing scene settings without changing globals, separately from per-step AI
     enrichment, Full/Minimal presets, director attribute limits, card-data fallback and cancel/reopen resets.
 - path: user-guide/clients/auto-retry.md
   title: Auto Retry
@@ -607,9 +607,9 @@
     choices, type-matched controls, path subtitles and three routes to the Game State editor.'
 - path: user-guide/howto/create-a-new-scene/create-empty-scene.md
   title: Create an empty scene
-  summary: Create New Story from Home, name it and optionally choose writing style, director persona, default-off Character
-    perspectives or Director assistance. Set the outline and save; perspectives can also change in Scene Settings while history
-    and archived history are empty, with analysis costs and retry behavior linked.
+  summary: Create New Story from Home, name it, choose writing style/director persona, set knowledge effort, select Standard or
+    Character perspectives from compact cards, and optionally request Director assistance. Set the outline and save; mode can
+    change in Scene Settings only while history and archived history are empty.
 - path: user-guide/howto/create-a-new-scene/create-npc.md
   title: Add an AI controlled character
   summary: Add an AI-controlled NPC through Create Character with AI Generation Instructions and optional example dialogue.
@@ -1299,9 +1299,7 @@
     Reinforcement clears accumulated generation data.
 - path: user-guide/world-state.md
   title: World State
-  summary: World panel durable snapshots, tracked states, Look at/Add Detail highlights, Add to world state text selection,
-    knowledge-change dots, active/inactive/background characters and Make real name protection. The knowledge hub shows chronology-selected
-    facts ranked by importance and recency with time markers, topics and counts, disclosures/access rules, Character perspectives
-    with a Compare modes popover, effort presets and a closed Individual settings pane counting enabled switches; hub changes
-    are scene overrides with origin marks and per-group/whole-hub Use global settings resets, stored in a project-shared
-    agent-settings file. Also covers narrated activation, guided refresh/wipe, cancellation, background cadence and Pin to context.
+  summary: World panel snapshots, tracked states, text-selection details, knowledge-change dots, character states and name
+    protection. The knowledge hub shows ranked/time-marked facts, topics, disclosures/access rules, an unlocked mode comparison
+    or locked story mode note, knowledge effort and individual settings. Hub changes use scene overrides with exact setting/group/all
+    reset icons in a project-shared settings file. Also covers refresh/wipe, activation, cadence and Pin to context.

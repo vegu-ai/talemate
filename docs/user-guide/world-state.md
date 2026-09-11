@@ -160,15 +160,15 @@ character's **Disclosures** in a Character perspectives story or **Entry access 
 the full lists and the known facts by topic table, and where you establish knowledge or adjust
 rules.
 
-**Story mode** shows the **Character perspectives** switch. It can be changed while the scene
-has no history and no archived history, exactly as in
-[Scene Settings](/talemate/user-guide/world-editor/scene/settings/); once history exists the
-switch is disabled and the reason is shown. Save the scene to keep a change. Under the switch
-one line names the current mode and offers **Compare modes**, which opens the two mode cards
-side by side in a popover over the panel, with the **current** chip on the mode the story runs
-in — the same comparison the Create New Story dialog shows, described in
-[Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode). The popover
-leaves the menu open behind it; press Escape or click outside to close it.
+**Story mode** shows the **Character perspectives** switch while the scene has no history and no
+archived history, exactly as in [Scene Settings](/talemate/user-guide/world-editor/scene/settings/).
+Save the scene to keep a change. **Compare modes** opens the two mode cards side by side in a
+popover over the panel, with the **current** chip on the mode the story runs in and Pros and Cons
+shown directly — the same comparison described in
+[Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode). The popover leaves
+the menu open behind it; press Escape or click outside to close it. Once history exists, the switch
+and comparison are replaced by one note naming the current mode and explaining that it is locked
+for the scene.
 
 ![knowledge hub mode comparison](/talemate/img/0.40.0/world-state-knowledge-hub-compare.png)
 
@@ -201,14 +201,14 @@ carries no icon. The toggles write **scene overrides** for this scene, not the g
 settings, so the globals are left untouched; the overrides file is shared by the saves in one
 project, so a Save As copy or restore point linked to the same file reads the change too
 ([Per-Scene Agent Overrides](/talemate/user-guide/agents/scene-overrides/)). Use the agent settings
-dialog to change the globals. When a value comes from a scene override the hub marks it
-**scene override**, and a group whose settings are overridden offers **Use global settings**, which
-removes that group's overrides so they inherit from the globals again. A **Use global settings**
-action beside the effort slider removes every knowledge setting the hub owns — including ones the
-current mode hides — and leaves unrelated overrides alone. The effort chip above the slider says
-**Global settings** or **Scene override**, and its tooltip says whether every effort setting comes
-from this scene or is mixed with the globals. A scene that has not been saved yet cannot hold
-overrides, so the hub disables these controls and says to save the scene first. Options that a
+dialog to change the globals. A :material-movie-open-cog-outline: icon marks a scene override. The
+icon beside one setting restores only that setting's inherited global value, and the icon beside a
+group restores every hub-owned setting in that group. Above the effort slider, the clickable
+**Scene override** label and icon restore every knowledge setting the hub owns — including ones the
+current mode hides — while leaving unrelated overrides alone. Hover any reset control for its
+**Use global settings** tooltip. With no override, the label reads **Global settings**. A scene that
+has not been saved yet cannot hold overrides, so the hub disables these controls and says to save
+the scene first. Options that a
 Character perspectives story does not use are hidden, as they
 are in the agent settings. Click a group name to open its section in the agent settings.
 

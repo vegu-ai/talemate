@@ -1,6 +1,5 @@
 import copy
 import os
-import sys
 import types
 
 import pytest
@@ -9,6 +8,7 @@ from unittest.mock import patch
 
 from cryptography.fernet import Fernet
 
+from talemate.util import encryption as encryption_mod
 from talemate.util.encryption import (
     ENC_PREFIX,
     _key_file_path,
@@ -435,16 +435,22 @@ class TestKeyFilePath:
 
 
 # ---------------------------------------------------------------------------
-# File permissions (Linux only)
+# File permissions
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="Unix permissions only")
 class TestFilePermissions:
     def test_key_file_permissions(self, fresh_fernet):
-        get_fernet()  # triggers key generation
-        stat = fresh_fernet.stat()
-        assert oct(stat.st_mode & 0o777) == "0o600"
+        real_open = os.open
+        with (
+            patch.object(encryption_mod.sys, "platform", "linux"),
+            patch.object(encryption_mod.os, "open", wraps=real_open) as secure_open,
+        ):
+            get_fernet()
+
+        secure_open.assert_called_once()
+        assert secure_open.call_args.args[2] == 0o600
+        assert fresh_fernet.read_bytes()
 
 
 # ---------------------------------------------------------------------------

@@ -38,23 +38,15 @@ jobs:
 
     - name: Install dependencies
       run: |
-        uv venv
-        source .venv/bin/activate
-        uv pip install -e ".[dev]"
+        uv sync --extra dev --locked
 
     - name: Run linting
       run: |
-        source .venv/bin/activate
         uv run pre-commit run --all-files
-
-    - name: Setup configuration file
-      run: |
-        cp config.example.yaml config.yaml
 
     - name: Download NLTK data
       run: |
-        source .venv/bin/activate
-        python -c "import nltk; nltk.download('punkt_tab')"
+        uv run python -c "import nltk; nltk.download('punkt_tab')"
 
     - name: Cache citation regression embedding model
       uses: actions/cache@v4
@@ -75,5 +67,4 @@ jobs:
 
     - name: Run tests
       run: |
-        source .venv/bin/activate
-        pytest tests/ -p no:warnings 
+        uv run pytest tests/ -p no:warnings

@@ -8,6 +8,30 @@ from structlog.testing import capture_logs
 from talemate.agents.visual.backends.comfyui import Backend, Workflow
 
 
+SHIPPED_PROMPT_NODES = {
+    "default-sd15.json": {
+        "4": ("Talemate Positive Prompt", "text"),
+        "5": ("Talemate Negative Prompt", "text"),
+    },
+    "default-sdxl.json": {
+        "4": ("Talemate Positive Prompt", "text"),
+        "5": ("Talemate Negative Prompt", "text"),
+    },
+    "qwen_image.json": {
+        "6": ("Talemate Positive Prompt", "text"),
+        "7": ("Talemate Negative Prompt", "text"),
+    },
+    "qwen_image_edit.json": {
+        "110": ("Talemate Negative Prompt", "prompt"),
+        "111": ("Talemate Positive Prompt", "prompt"),
+    },
+    "z_image_turbo.json": {
+        "51": ("Talemate Positive Prompt", "text"),
+    },
+}
+PROMPT_TITLES = {"Talemate Positive Prompt", "Talemate Negative Prompt"}
+
+
 def prompt_node(title, class_type, inputs):
     return {
         "inputs": inputs,
@@ -186,22 +210,33 @@ def test_set_prompt_warns_when_prompt_node_has_no_receiver():
     ]
 
 
-def test_shipped_prompt_nodes_keep_their_named_receivers():
-    workflows_dir = Path("templates/comfyui-workflows")
-    prompt_nodes = []
+def assert_shipped_prompt_receivers(
+    workflows_dir: Path,
+    workflow_name: str,
+    expected_nodes: dict[str, tuple[str, str]],
+):
+    workflow_path = workflows_dir / workflow_name
+    assert workflow_path.is_file(), f"Shipped workflow is missing: {workflow_name}"
 
-    for workflow_path in sorted(workflows_dir.glob("*.json")):
-        nodes = json.loads(workflow_path.read_text(encoding="utf-8"))
-        for node_id, node in nodes.items():
-            title = node.get("_meta", {}).get("title")
-            if title in ("Talemate Positive Prompt", "Talemate Negative Prompt"):
-                prompt_nodes.append((workflow_path, node_id, title, node))
+    nodes = json.loads(workflow_path.read_text(encoding="utf-8"))
+    actual_nodes = {
+        node_id: node.get("_meta", {}).get("title")
+        for node_id, node in nodes.items()
+        if node.get("_meta", {}).get("title") in PROMPT_TITLES
+    }
+    expected_titles = {node_id: title for node_id, (title, _) in expected_nodes.items()}
+    assert actual_nodes == expected_titles, (
+        f"{workflow_name}: named prompt node inventory changed; "
+        f"expected {expected_titles}, got {actual_nodes}"
+    )
 
-    assert len(prompt_nodes) == 9
-
-    for workflow_path, node_id, title, node in prompt_nodes:
-        receiver = "text" if "text" in node["inputs"] else "prompt"
-        prompt = f"{workflow_path.name}:{node_id}:{title}"
+    for node_id, (title, receiver) in expected_nodes.items():
+        node = nodes[node_id]
+        assert receiver in node["inputs"], (
+            f"{workflow_name}:{node_id}:{title} is missing its expected "
+            f"'{receiver}' receiver"
+        )
+        prompt = f"{workflow_name}:{node_id}:{title}"
         workflow = Workflow(
             nodes={node_id: node},
             mtime=workflow_path.stat().st_mtime,
@@ -219,3 +254,81 @@ def test_shipped_prompt_nodes_keep_their_named_receivers():
             workflow.set_prompt("positive", prompt)
 
         assert workflow.nodes[node_id]["inputs"][receiver] == prompt
+
+
+@pytest.mark.parametrize(
+    ("workflow_name", "expected_nodes"),
+    SHIPPED_PROMPT_NODES.items(),
+    ids=SHIPPED_PROMPT_NODES,
+)
+def test_shipped_prompt_nodes_keep_their_named_receivers(workflow_name, expected_nodes):
+    assert_shipped_prompt_receivers(
+        Path("templates/comfyui-workflows"), workflow_name, expected_nodes
+    )
+
+
+@pytest.fixture
+def copied_shipped_workflows(tmp_path):
+    source = Path("templates/comfyui-workflows")
+    for workflow_name in SHIPPED_PROMPT_NODES:
+        (tmp_path / workflow_name).write_bytes((source / workflow_name).read_bytes())
+    return tmp_path
+
+
+def test_missing_shipped_workflow_fails_with_its_name(copied_shipped_workflows):
+    workflow_name = "default-sd15.json"
+    (copied_shipped_workflows / workflow_name).unlink()
+
+    with pytest.raises(
+        AssertionError, match=f"Shipped workflow is missing: {workflow_name}"
+    ):
+        assert_shipped_prompt_receivers(
+            copied_shipped_workflows,
+            workflow_name,
+            SHIPPED_PROMPT_NODES[workflow_name],
+        )
+
+
+def test_missing_expected_prompt_node_fails_with_template_inventory(
+    copied_shipped_workflows,
+):
+    workflow_name = "default-sd15.json"
+    workflow_path = copied_shipped_workflows / workflow_name
+    nodes = json.loads(workflow_path.read_text(encoding="utf-8"))
+    del nodes["4"]
+    workflow_path.write_text(json.dumps(nodes), encoding="utf-8")
+
+    with pytest.raises(AssertionError, match="named prompt node inventory changed"):
+        assert_shipped_prompt_receivers(
+            copied_shipped_workflows,
+            workflow_name,
+            SHIPPED_PROMPT_NODES[workflow_name],
+        )
+
+
+def test_broken_expected_prompt_receiver_fails_with_node_name(
+    copied_shipped_workflows,
+):
+    workflow_name = "default-sd15.json"
+    workflow_path = copied_shipped_workflows / workflow_name
+    nodes = json.loads(workflow_path.read_text(encoding="utf-8"))
+    nodes["4"]["inputs"]["content"] = nodes["4"]["inputs"].pop("text")
+    workflow_path.write_text(json.dumps(nodes), encoding="utf-8")
+
+    with pytest.raises(AssertionError, match="default-sd15.json:4:.*'text' receiver"):
+        assert_shipped_prompt_receivers(
+            copied_shipped_workflows,
+            workflow_name,
+            SHIPPED_PROMPT_NODES[workflow_name],
+        )
+
+
+def test_unlisted_malformed_user_workflow_is_not_parsed(copied_shipped_workflows):
+    (copied_shipped_workflows / "user-workflow.json").write_text(
+        "not valid JSON", encoding="utf-8"
+    )
+
+    for workflow_name, expected_nodes in SHIPPED_PROMPT_NODES.items():
+        assert_shipped_prompt_receivers(
+            copied_shipped_workflows, workflow_name, expected_nodes
+        )

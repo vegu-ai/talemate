@@ -1,3 +1,4 @@
+import builtins
 import os
 import json
 import glob
@@ -6,8 +7,10 @@ import shutil
 import pytest
 from datetime import datetime, timezone
 
-from _changelog_test_helpers import persist_test_mutation, make_changelog_scene
+import talemate.changelog as changelog_mod
 from talemate.scene_message import NarratorMessage
+
+from _changelog_test_helpers import persist_test_mutation, make_changelog_scene
 from talemate.changelog import (
     save_changelog,
     reconstruct_scene_data,
@@ -2957,8 +2960,9 @@ async def test_rebase_failure_after_flush_restores_staged_deltas(
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(os.geteuid() == 0, reason="root reads through mode 0o000")
-async def test_rebase_unreadable_segment_refuses_without_deleting_it(mock_scene):
+async def test_rebase_unreadable_segment_refuses_without_deleting_it(
+    mock_scene, monkeypatch
+):
     """An unreadable segment makes the chain unverifiable — hence eligible for
     repair — but the flush snapshot cannot promise to restore a file it could
     not read, so the repair refuses instead of rolling back over it."""
@@ -2974,23 +2978,95 @@ async def test_rebase_unreadable_segment_refuses_without_deleting_it(mock_scene)
         _, log_path = _get_latest_changelog_file(mock_scene)
         with open(log_path, "rb") as f:
             segment_before = f.read()
+        before = _changelog_dir_contents(mock_scene)
 
-        os.chmod(log_path, 0o000)
-        try:
-            with pytest.raises(PermissionError):
+        real_open = builtins.open
+        real_commit = changelog.commit
+        target_read_modes = []
+        flush_started = False
+
+        def unreadable_segment(file, mode="r", *args, **kwargs):
+            if os.path.abspath(os.fspath(file)) == os.path.abspath(
+                log_path
+            ) and mode in {
+                "r",
+                "rb",
+            }:
+                target_read_modes.append(mode)
+                raise PermissionError(f"controlled unreadable segment: {file}")
+            return real_open(file, mode, *args, **kwargs)
+
+        async def tracked_commit(*args, **kwargs):
+            nonlocal flush_started
+            flush_started = True
+            return await real_commit(*args, **kwargs)
+
+        with monkeypatch.context() as patch:
+            patch.setattr(builtins, "open", unreadable_segment)
+            patch.setattr(changelog, "commit", tracked_commit)
+            with pytest.raises(PermissionError, match="controlled unreadable segment"):
                 await rebase_changelog_chain(mock_scene)
 
-            assert os.path.exists(log_path)
-        finally:
-            if os.path.exists(log_path):
-                os.chmod(log_path, 0o644)
-
+        assert target_read_modes == ["r", "rb"]
+        assert not flush_started
+        assert _changelog_dir_contents(mock_scene) == before
+        assert os.path.exists(log_path)
         with open(log_path, "rb") as f:
             assert f.read() == segment_before
         assert [entry["meta"] for entry in changelog.pending_deltas] == [
             {"action": "staged"}
         ]
         assert mock_scene.rev == 2
+
+
+@pytest.mark.asyncio
+async def test_rebase_unreadable_segment_snapshot_guard_is_required(
+    mock_scene, monkeypatch
+):
+    """Bypassing the snapshot guard reaches the staged flush, proving that the
+    refusal above is enforced at the transaction boundary rather than during
+    eligibility."""
+    _make_diverged_chain(mock_scene)
+    mock_scene.serialize = {"history": [_full_message(0)], "x": 2}
+    mock_scene.rev = 2
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        mock_scene._changelog = changelog
+        mock_scene.serialize = {"history": [_full_message(0)], "x": 3}
+        assert await changelog.append_delta({"action": "staged"}) == 3
+
+        _, log_path = _get_latest_changelog_file(mock_scene)
+        real_open = builtins.open
+        target_read_modes = []
+        flush_started = False
+
+        def unreadable_segment(file, mode="r", *args, **kwargs):
+            if os.path.abspath(os.fspath(file)) == os.path.abspath(
+                log_path
+            ) and mode in {"r", "rb"}:
+                target_read_modes.append(mode)
+                raise PermissionError(f"controlled unreadable segment: {file}")
+            return real_open(file, mode, *args, **kwargs)
+
+        async def detect_flush(*args, **kwargs):
+            nonlocal flush_started
+            flush_started = True
+            raise AssertionError("staged flush reached after snapshot guard bypass")
+
+        with monkeypatch.context() as patch:
+            patch.setattr(builtins, "open", unreadable_segment)
+            patch.setattr(
+                changelog_mod,
+                "_snapshot_changelog_flush",
+                lambda scene: lambda: None,
+            )
+            patch.setattr(changelog, "commit", detect_flush)
+
+            with pytest.raises(AssertionError, match="snapshot guard bypass"):
+                await rebase_changelog_chain(mock_scene)
+
+            assert target_read_modes == ["r"]
+            assert flush_started
 
 
 @pytest.mark.asyncio

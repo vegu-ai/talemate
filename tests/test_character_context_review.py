@@ -244,12 +244,11 @@ async def test_scene_preview_retains_reader_history_and_no_character_exclusions(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("review_scene", ["perception"], indirect=True)
 async def test_analysis_reports_prefix_cutoff_separately_from_selected_history(
     review_scene,
 ):
     scene = review_scene
-    if scene.knowledge_eligibility != "perception":
-        pytest.skip("analysis evidence boundary applies to perspective review")
     outside = NarratorMessage(
         message="Alice studies a private final note.", present=["Alice"]
     )
@@ -274,10 +273,9 @@ async def test_analysis_reports_prefix_cutoff_separately_from_selected_history(
     assert f"passage #{outside.id}" in analysis["entries"][0]
 
 
+@pytest.mark.parametrize("review_scene", ["perception"], indirect=True)
 def test_pending_selected_source_cannot_be_reported_ready(review_scene):
     scene = review_scene
-    if scene.knowledge_eligibility != "perception":
-        pytest.skip("typed perception readiness applies to perspective mode")
     message = scene.history[-1]
     message.present = ["Alice"]
 
@@ -375,9 +373,8 @@ async def test_fact_audience_chronology_and_supersession_exclusions(review_scene
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("review_scene", ["perception"], indirect=True)
 async def test_analysis_review_references_history_without_repeating_it(review_scene):
-    if review_scene.knowledge_eligibility != "perception":
-        pytest.skip("compact perspective evidence applies to perception mode")
     preview = await character_context_review(
         review_scene, review_scene.character_data["Bob"]
     )
@@ -407,11 +404,10 @@ async def test_analysis_review_references_history_without_repeating_it(review_sc
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("review_scene", ["perception"], indirect=True)
 async def test_context_review_returns_correlated_deferred_and_running_status(
     review_scene,
 ):
-    if review_scene.knowledge_eligibility != "perception":
-        pytest.skip("perception readiness applies to perception mode")
     message = review_scene.history[-1]
     set_source_perspectives(
         review_scene,

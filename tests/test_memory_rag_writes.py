@@ -165,7 +165,7 @@ async def test_add_retry_keeps_original_revision_scene(memory, monkeypatch):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("cancel", [False, True])
 @pytest.mark.parametrize("operation", ["add_many", "delete"])
-async def test_queued_write_refused_after_scene_rebind(
+async def test_queued_write_refused_without_invalidation_after_scene_rebind(
     memory, monkeypatch, cancel, operation
 ):
     original = memory.scene
@@ -216,15 +216,13 @@ async def test_queued_write_refused_after_scene_rebind(
         finally:
             release.set()
             if pending is not None and not pending.cancelled():
-                await asyncio.wait_for(pending, timeout=5)
-        await asyncio.wait_for(invalidated.wait(), timeout=5)
+                assert await asyncio.wait_for(pending, timeout=5) is False
         blocker.result()
+        await asyncio.sleep(0)
     write.assert_not_called()
     assert original.memory_revision == replacement.memory_revision == 0
-    if operation == "add_many":
-        invalidation.assert_called_once_with(payload, scene=original)
-    else:
-        invalidation.assert_called_once_with(scene=original, reconcile=True)
+    assert not invalidated.is_set()
+    invalidation.assert_not_called()
 
 
 def test_cancelled_write_completion_consumes_exception(memory, monkeypatch):

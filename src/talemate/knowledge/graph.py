@@ -13,6 +13,7 @@ from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspectives import PerspectiveReadContext
 from talemate.knowledge.supported_facts import character_fact
 from talemate.knowledge.names import aliases_for, mentions
+from talemate.knowledge.revision_browsing import current_facts, fact_current
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -41,7 +42,7 @@ def _facts_about(
 ) -> list[Fact]:
     """Facts that mention the entity, oldest first, optionally as one character knows them."""
     aliases = aliases_for(scene, entity)
-    facts = list(known) if known is not None else list(scene.world_state.facts.values())
+    facts = list(known) if known is not None else current_facts(scene)
     if known is None and character is not None:
         if character_knowledge_enabled(scene):
             facts = [fact for fact, _ in bucket(scene, character)]
@@ -65,7 +66,7 @@ def facts_about(
     scene: "Scene", entity: str, character: str | None = None
 ) -> list[Fact]:
     if not character_knowledge_enabled(scene) and not any(
-        fact.supersedes for fact in scene.world_state.facts.values()
+        fact.supersedes for fact in current_facts(scene)
     ):
         # No supersession needs unrelated facts: preserve Standard's cheap
         # entity filter before checking knowledge membership.
@@ -74,7 +75,7 @@ def facts_about(
     known = (
         [fact for fact, _ in bucket(scene, character)]
         if character is not None
-        else list(scene.world_state.facts.values())
+        else current_facts(scene)
     )
     return ranked_facts(
         scene,
@@ -102,7 +103,7 @@ def current_state(
 ) -> Fact | None:
     """The newest fact about the entity that no other fact supersedes."""
     facts = _facts_about(scene, entity, character=character)
-    superseders = facts if character is not None else scene.world_state.facts.values()
+    superseders = facts if character is not None else current_facts(scene)
     superseded = {f.supersedes for f in superseders if f.supersedes}
     candidates = [
         f
@@ -122,6 +123,8 @@ def superseded_chain(
     seen = {fact_id}
     chain: list[Fact] = []
     current = scene.world_state.facts.get(fact_id)
+    if current is not None and not fact_current(scene, current):
+        current = None
     if (
         character is not None
         and character_knowledge_enabled(scene)
@@ -130,6 +133,8 @@ def superseded_chain(
         current = character_fact(scene, current, character)
     while current is not None and current.supersedes and len(chain) < hops:
         current = scene.world_state.facts.get(current.supersedes)
+        if current is not None and not fact_current(scene, current):
+            current = None
         if (
             current is not None
             and character is not None
@@ -174,7 +179,7 @@ def bucket(scene: "Scene", character: str) -> list[tuple[Fact, KnownKind]]:
         read = PerspectiveReadContext(scene)
         cache = {}
         known = []
-        for fact in scene.world_state.facts.values():
+        for fact in current_facts(scene):
             view = character_fact(scene, fact, character, read=read, cache=cache)
             if view is not None:
                 known.append((view, perception_kind(view)))
@@ -184,7 +189,7 @@ def bucket(scene: "Scene", character: str) -> list[tuple[Fact, KnownKind]]:
         )
     index = KnowledgeIndex.from_scene(scene)
     known: list[tuple[Fact, KnownKind]] = []
-    for fact in _ordered(list(scene.world_state.facts.values()), scene):
+    for fact in _ordered(current_facts(scene), scene):
         kind = standard_kind(index, character, fact)
         if kind is not None:
             known.append((fact, kind))

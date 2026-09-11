@@ -96,13 +96,16 @@ def prompt_fact_text(fact) -> str:
 
 def superseded_fact_ids(scene, *, character=None, superseders=None) -> set[str]:
     if superseders is None:
+        from talemate.knowledge.revision_browsing import current_facts
+
+        current = current_facts(scene)
         if not any(
             fact.supersedes or any(item.supersedes for item in fact.contributions)
-            for fact in scene.world_state.facts.values()
+            for fact in current
         ):
             return set()
         if character is None:
-            superseders = scene.world_state.facts.values()
+            superseders = current
         else:
             from talemate.knowledge.topics import known_bucket
 
@@ -216,6 +219,17 @@ def render_fact_document(scene, document, *, fact=None, predecessor=None):
 
 
 def ranked_fact_documents(scene, documents, *, character=None):
+    from talemate.knowledge.revision_browsing import (
+        has_stale_revisions,
+        memory_document_current,
+    )
+
+    if has_stale_revisions(scene):
+        documents = [
+            document
+            for document in documents
+            if memory_document_current(scene, document)
+        ]
     if not any(
         getattr(document, "meta", {}).get("typ") == "fact" for document in documents
     ):

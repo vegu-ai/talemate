@@ -26,7 +26,7 @@
         :message_content="text"
         :message_id="message_id"
       />
-      <RevisionNav v-if="isLastMessage" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" :uncommitted="revisionUncommitted" @keep="$emit('keep-revision')" @navigate="(dir) => $emit('navigate-revision', dir)" />
+      <RevisionNav v-if="isLastMessage" :count="revisionsCount" :index="revisionIndex" :source="revisionSource" :reason="revisionReason" :disabled="uxLocked" :busy="revisionBusy" :uncommitted="revisionUncommitted" :refresh="revisionRefresh" @keep="$emit('keep-revision')" @navigate="(dir) => $emit('navigate-revision', dir)" />
       <div v-if="editing" class="position-relative narrator-editor">
         <v-textarea
           ref="textarea"
@@ -192,6 +192,7 @@ export default {
       default: null,
     },
     revisionUncommitted: { type: Boolean, default: false },
+    revisionRefresh: { type: Object, default: null },
     revisionBusy: {
       type: [Boolean, String],
       default: false,

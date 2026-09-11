@@ -7,6 +7,8 @@ import functools
 import hashlib
 import threading
 import traceback
+from contextlib import contextmanager
+from contextvars import ContextVar
 import numpy as np
 from typing import Callable, Literal
 
@@ -47,6 +49,7 @@ from talemate.knowledge.chronology import (
     ranked_fact_documents,
     render_fact_document,
 )
+
 from talemate.agents.memory.rerank import (
     CrossEncoderReranker,
     RERANK_MODEL,
@@ -77,6 +80,19 @@ TOPIC_FACTS_PER_QUERY = 3
 OPENROUTER_EMBEDDINGS_BASE_URL = "https://openrouter.ai/api/v1"
 
 HostedEmbeddingsProvider = Literal["OpenAI", "OpenRouter"]
+
+_expected_write_scene = ContextVar("memory_expected_write_scene", default=None)
+
+
+@contextmanager
+def memory_write_scene(scene):
+    """Fence a shared memory-agent write to the scene selected by its caller."""
+    token = _expected_write_scene.set(scene)
+    try:
+        yield
+    finally:
+        _expected_write_scene.reset(token)
+
 
 if not chromadb:
     log.info("ChromaDB not found, disabling Chroma agent")
@@ -445,8 +461,12 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             return []
         facts = self.scene.world_state.facts
         seen = {getattr(doc, "id", None) for doc in accepted}
+        from talemate.knowledge.revision_browsing import fact_current
+
         candidates = {
-            i: facts[i] for i in topic.fact_ids if i in facts and i not in seen
+            i: facts[i]
+            for i in topic.fact_ids
+            if i in facts and i not in seen and fact_current(self.scene, facts[i])
         }
         visible = (
             {fact.id: fact for fact in known_bucket(self.scene, ranking_viewer)}
@@ -747,13 +767,14 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
     def _write_memory(self, scene, operation, *args, **kwargs):
         # Executor queues and retries can outlive the scene that requested the write.
         if self.scene is not scene:
-            return
+            return False
         with self._db_lock:
             # A source digest cannot see a write that has started but not landed.
             scene.memory_writes_in_flight += 1
             scene.memory_revision += 1
         try:
-            return operation(*args, **kwargs)
+            operation(*args, **kwargs)
+            return True
         finally:
             # The executor can finish a write after its awaiting task is cancelled.
             with self._db_lock:
@@ -762,15 +783,19 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
 
     @set_processing
     async def add(self, text, character=None, uid=None, ts: int = None, **kwargs):
+        scene = _expected_write_scene.get() or self.scene
+        if self.scene is not scene:
+            return False
         if not text:
-            return
+            return False
         if self.readonly:
             log.debug("memory agent", status="readonly")
-            return
+            return False
 
         if not await self._wait_until_ready():
-            return
-        scene = self.scene
+            return False
+        if self.scene is not scene:
+            return False
 
         log.debug(
             "memory agent add",
@@ -782,9 +807,10 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         )
 
         loop = asyncio.get_running_loop()
+        attempted = False
 
         try:
-            await loop.run_in_executor(
+            completed = await loop.run_in_executor(
                 None,
                 functools.partial(
                     self._write_memory,
@@ -798,6 +824,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                 ),
             )
         except AttributeError as e:
+            attempted = True
             # not sure how this sometimes happens.
             # chromadb model None
             # race condition because we are forcing async context onto it?
@@ -814,7 +841,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
             )
             await asyncio.sleep(1.0)
             try:
-                await loop.run_in_executor(
+                completed = await loop.run_in_executor(
                     None,
                     functools.partial(
                         self._write_memory,
@@ -838,8 +865,11 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                     ts=ts,
                     **kwargs,
                 )
+                completed = False
 
-        self.invalidate_audience_writes([{"id": uid, "meta": kwargs}], scene=scene)
+        if completed or attempted:
+            self.invalidate_audience_writes([{"id": uid, "meta": kwargs}], scene=scene)
+        return completed
 
     def _add(self, text, character=None, ts: int = None, **kwargs):
         raise NotImplementedError()
@@ -847,45 +877,60 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
     @set_processing
     async def add_many(self, objects: list[dict]):
         """An empty batch refreshes authored audiences without a store write."""
+        scene = _expected_write_scene.get() or self.scene
+        if self.scene is not scene:
+            return False
         if self.readonly:
             log.debug("memory agent", status="readonly")
-            return
+            return False
         if not objects:
-            self.invalidate_audience_writes(objects, scene=self.scene)
-            return
+            self.invalidate_audience_writes(objects, scene=scene)
+            return True
 
         if not await self._wait_until_ready():
-            return
+            return False
+        if self.scene is not scene:
+            return False
 
         log.debug("memory agent add many", len=len(objects))
 
-        scene = self.scene
         loop = asyncio.get_running_loop()
         operation = loop.run_in_executor(
             None,
             functools.partial(self._write_memory, scene, self._add_many, objects),
         )
-        await self._shielded_write(
+        return await self._shielded_write(
             operation,
             functools.partial(self.invalidate_audience_writes, objects, scene=scene),
         )
 
     async def _shielded_write(self, operation, invalidate):
         try:
-            await asyncio.shield(operation)
-        finally:
+            completed = await asyncio.shield(operation)
+        except asyncio.CancelledError:
             if operation.done():
-                invalidate()
+                self._complete_cancelled_write(invalidate, operation)
             else:
                 operation.add_done_callback(
                     functools.partial(self._complete_cancelled_write, invalidate)
                 )
+            raise
+        except BaseException:
+            invalidate()
+            raise
+        if completed:
+            invalidate()
+        return completed
 
     def _complete_cancelled_write(self, invalidate, operation):
+        if operation.cancelled() is True:
+            return
         error = operation.exception()
         if error is not None:
             log.warning("memory write failed after cancellation", error=str(error))
-        invalidate()
+            invalidate()
+        elif operation.result():
+            invalidate()
 
     def _add_many(self, objects: list[dict]):
         """
@@ -898,19 +943,23 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
         """
         Delete an object from the memory
         """
+        scene = _expected_write_scene.get() or self.scene
+        if self.scene is not scene:
+            return False
         if self.readonly:
             log.debug("memory agent", status="readonly")
-            return
+            return False
 
         if not await self._wait_until_ready():
-            return
+            return False
+        if self.scene is not scene:
+            return False
 
-        scene = self.scene
         loop = asyncio.get_running_loop()
         operation = loop.run_in_executor(
             None, functools.partial(self._write_memory, scene, self._delete, meta)
         )
-        await self._shielded_write(
+        return await self._shielded_write(
             operation,
             functools.partial(
                 self.invalidate_audience_index, scene=scene, reconcile=True

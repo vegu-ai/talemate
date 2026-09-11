@@ -1,6 +1,6 @@
 <template>
     <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
-    <v-alert v-if="scene?.data?.pending_perception_messages?.length" color="warning" variant="tonal" density="compact" class="mb-3">Character knowledge is out of date for changed passages. Keep the selected version or continue the story to update it.</v-alert>
+    <v-alert v-if="pendingRefreshes.length" color="warning" variant="tonal" density="compact" class="mb-3">{{ refreshNotice }}</v-alert>
     <v-tabs v-model="tab" density="compact" color="secondary">
         <v-tab value="base">Base</v-tab>
         <v-tab v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">{{ layer.title }}</v-tab>
@@ -236,6 +236,17 @@ export default {
         },
     },
     computed: {
+        pendingRefreshes() {
+            return (this.scene?.data?.revision_refreshes || [])
+                .map((item) => item.revision_refresh)
+                .filter((item) => item?.required);
+        },
+        refreshNotice() {
+            const perception = this.pendingRefreshes.some((item) => item.operations?.includes('perceptions'));
+            return perception
+                ? 'Changed passages need perception analysis. Use Analyze perceptions on the passage, or send your next line or choice.'
+                : 'Changed passages need fact refresh. Use Refresh facts on the passage, or send your next line or choice.';
+        },
         shownDialogueFacts() {
             if (this.knownFactIds === null) return this.dialogueFacts;
             const known = new Set(this.knownFactIds);

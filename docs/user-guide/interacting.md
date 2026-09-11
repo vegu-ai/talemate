@@ -93,7 +93,7 @@ Character and narrator messages (and context investigation results) keep a histo
 The paginator shows:
 
 - **Left / right arrows** to step between versions.
-- **Keep this version** to update character knowledge for the selected text.
+- **Analyze perceptions** in a Character perspectives story, or **Refresh facts** in Standard mode, when the selected text needs its derived knowledge updated. The tooltip explains what is pending and notes that sending your next line runs the same work automatically.
 - A **counter** (for example `2/3`) telling you which version you are viewing and how many exist in total.
 - A **tag** describing where the version you are currently looking at came from:
     - **Original** -- the message as it was first generated.
@@ -101,9 +101,11 @@ The paginator shows:
     - **Revised** -- a version that the [Editor agent](/talemate/user-guide/agents/editor) automatically rewrote.
     - **Continued** -- a version created by continuing the message (see below).
 
-Browsing changes the active text immediately without running analysis. History and Knowledge mark changed passages as out of date until you choose **Keep this version**, move keyboard focus out of the navigator, change tabs, or send your next line. Moving the pointer away to read or scroll does not commit a version.
+Browsing changes the active text immediately without running analysis. The arrows wait for the server to acknowledge each selection before the displayed text changes, so delayed replies cannot leave the counter and text on different versions. History and Knowledge mark changed passages as out of date until you choose **Analyze perceptions** or **Refresh facts**, or send your next line. Reading, scrolling, moving keyboard focus and changing tabs do not start a request.
 
-The paginator only appears on the **most recent** message, and only once that message has more than one version.
+Character perspectives analyzes the chosen passage and repairs dependent summaries. Standard mode re-extracts facts when archive fact extraction is enabled and re-evaluates what listeners learned from a character line when dialogue learning is enabled. The refresh uses the message's historical speaker, presence and preceding lines. A failed later phase can be retried without repeating an already successful extraction; selecting the original baseline restores its retained evidence. When neither relevant feature is enabled, the selection is final immediately and no refresh button or model request appears.
+
+Revision controls appear on the **most recent** supported message. The arrows and counter appear once it has more than one version; a required analysis or fact-refresh action also appears after an in-place edit with only one version.
 
 !!! note "The version you view is the one that sticks"
     Whichever version you have selected in the paginator becomes the message's active text. That is the version saved with the scene, and the version the AI builds on when it continues the scene. Browsing to an earlier version and leaving it selected effectively rolls the message back to that version.

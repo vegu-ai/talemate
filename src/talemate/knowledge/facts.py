@@ -14,7 +14,14 @@ from talemate.instance import get_agent
 from talemate.knowledge.chronology import ranked_facts
 from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 from talemate.knowledge.presence import presence_metadata
-from talemate.knowledge.schema import Fact, FactImportance, KnowledgeEdge, ParsedFact
+from talemate.knowledge.schema import (
+    ArchiveFactSupport,
+    DialogueFactSupport,
+    Fact,
+    FactImportance,
+    KnowledgeEdge,
+    ParsedFact,
+)
 from talemate.knowledge.supported_facts import (
     prune_contributions,
     aggregate_fact,
@@ -132,6 +139,7 @@ def facts_for_entry(scene: "Scene", archive_id: str) -> list[Fact]:
         fact
         for fact in scene.world_state.facts.values()
         if fact.archive_id == archive_id
+        or any(source.archive_id == archive_id for source in fact.archive_sources)
         or any(
             item.source.kind == "summary" and item.source.id == archive_id
             for item in fact.contributions
@@ -140,8 +148,10 @@ def facts_for_entry(scene: "Scene", archive_id: str) -> list[Fact]:
 
 
 def previous_facts(scene: "Scene", limit: int = 30) -> list[Fact]:
+    from talemate.knowledge.revision_browsing import current_facts
+
     return ranked_facts(
-        scene, scene.world_state.facts.values(), limit=limit, tiers=False, prompt=False
+        scene, current_facts(scene), limit=limit, tiers=False, prompt=False
     )
 
 
@@ -160,11 +170,38 @@ def prune_summary_facts(world_state, archive_ids: set[str]) -> set[str]:
     }
     prune_contributions(world_state, references)
     removed = before - world_state.facts.keys()
-    removed.update(
-        fact_id
-        for fact_id, fact in world_state.facts.items()
-        if not fact.contributions and fact.archive_id in archive_ids
-    )
+    for fact_id, fact in list(world_state.facts.items()):
+        explicit = bool(fact.archive_sources)
+        sources = tuple(
+            source
+            for source in fact.archive_sources
+            if source.archive_id not in archive_ids
+        )
+        removed_count = sum(
+            source.count
+            for source in fact.archive_sources
+            if source.archive_id in archive_ids
+        )
+        affected_primary = fact.archive_id in archive_ids
+        if not explicit and affected_primary:
+            removed_count = max(removed_count, 1)
+        if not removed_count and not affected_primary:
+            continue
+        fact.archive_sources = sources
+        fact.restatements = max(0, fact.restatements - removed_count)
+        if affected_primary:
+            fact.archive_id = sources[0].archive_id if sources else None
+        if sources or fact.dialogue_sources or fact.contributions:
+            if fact.archive_id is None and fact.dialogue_sources:
+                fact.source = "dialogue"
+                if fact.message_id is None:
+                    fact.message_id = fact.dialogue_sources[0].message_id
+                    fact.message_digest = fact.dialogue_sources[0].message_digest
+            continue
+        if fact.text_edited or fact.link_edited or fact.source == "manual":
+            fact.source = "manual"
+            continue
+        removed.add(fact_id)
     if not removed:
         return removed
     for fact_id in removed:
@@ -199,9 +236,34 @@ def prune_serialized_facts(
                 facts[identity] = aggregate_fact(fact, kept).model_dump(mode="json")
             else:
                 removed.add(identity)
-        elif values.get("archive_id") in archive_ids or (
-            reset_sources and values.get("source") == "dialogue"
-        ):
+        else:
+            archive_sources = [
+                source
+                for source in values.get("archive_sources", ())
+                if source.get("archive_id") not in archive_ids
+            ]
+            affected_archive = values.get("archive_id") in archive_ids
+            affected_dialogue = reset_sources and values.get("source") == "dialogue"
+            if not affected_archive and not affected_dialogue:
+                continue
+            if archive_sources or (
+                not reset_sources and values.get("dialogue_sources")
+            ):
+                values["archive_sources"] = archive_sources
+                if affected_archive:
+                    values["archive_id"] = (
+                        archive_sources[0]["archive_id"] if archive_sources else None
+                    )
+                if affected_dialogue:
+                    values.pop("message_id", None)
+                    values.pop("message_digest", None)
+                    values["dialogue_sources"] = []
+                    values["source"] = "summary"
+                    values["restatements"] = max(
+                        0,
+                        sum(source.get("count", 1) for source in archive_sources) - 1,
+                    )
+                continue
             removed.add(identity)
     if not removed:
         return removed
@@ -230,7 +292,10 @@ async def drop_facts_for_entries(scene: "Scene", archive_ids: set[str]):
             for item in fact.contributions
         )
     }
-    removed = prune_summary_facts(scene.world_state, archive_ids)
+    from talemate.knowledge.revision_refresh import capture_revision_mutations
+
+    with capture_revision_mutations(scene):
+        removed = prune_summary_facts(scene.world_state, archive_ids)
     retained = affected - removed
     if retained:
         await get_agent("memory").add_many(
@@ -337,6 +402,8 @@ async def store_facts(
     fact becomes a restatement of it instead.
     """
     world_state = scene.world_state
+    from talemate.agents.memory import memory_write_scene
+
     stored: list[Fact] = []
     # keyed by fact id: a merge updates the stored fact's document, not a second copy
     documents: dict[str, dict] = {}
@@ -344,6 +411,38 @@ async def store_facts(
     staged: dict[str, Fact] = {}
     restatements: dict[str, int] = {}
     grants: list[KnowledgeEdge] = []
+
+    def add_dialogue_support(fact: Fact) -> None:
+        if message_id is None or message_digest is None:
+            return
+        sources = list(fact.dialogue_sources)
+        for index, support in enumerate(sources):
+            if (
+                support.message_id == message_id
+                and support.message_digest == message_digest
+            ):
+                sources[index] = support.model_copy(update={"count": support.count + 1})
+                break
+        else:
+            sources.append(
+                DialogueFactSupport(
+                    message_id=message_id,
+                    message_digest=message_digest,
+                )
+            )
+        fact.dialogue_sources = tuple(sources)
+
+    def add_archive_support(fact: Fact) -> None:
+        if archive_id is None:
+            return
+        sources = list(fact.archive_sources)
+        for index, support in enumerate(sources):
+            if support.archive_id == archive_id:
+                sources[index] = support.model_copy(update={"count": support.count + 1})
+                break
+        else:
+            sources.append(ArchiveFactSupport(archive_id=archive_id))
+        fact.archive_sources = tuple(sources)
 
     for item in parsed:
         item = item.model_copy(update={"text": _strip_record_age(item.text)})
@@ -362,6 +461,8 @@ async def store_facts(
                 if existing.id in restatements:
                     restatements[existing.id] += 1
             existing.restatements += 1
+            add_dialogue_support(existing)
+            add_archive_support(existing)
             existing.last_seen_ts = ts
             fact = existing
             # the restating entry's audience learned the stored fact
@@ -384,13 +485,28 @@ async def store_facts(
                 source="dialogue" if message_id is not None else "summary",
                 present=present,
                 subjects=item.subjects,
-                known_by={
-                    name: "told" for name in item.known_by if name in (present or [])
-                }
-                if message_id is not None
-                else {},
+                known_by=(
+                    {name: "told" for name in item.known_by if name in (present or [])}
+                    if message_id is not None
+                    else {}
+                ),
                 supersedes=supersedes,
                 last_seen_ts=ts,
+                dialogue_sources=(
+                    (
+                        DialogueFactSupport(
+                            message_id=message_id,
+                            message_digest=message_digest,
+                        ),
+                    )
+                    if message_id is not None and message_digest is not None
+                    else ()
+                ),
+                archive_sources=(
+                    (ArchiveFactSupport(archive_id=archive_id),)
+                    if archive_id is not None
+                    else ()
+                ),
             )
             if still_current is None:
                 world_state.facts[fact.id] = fact
@@ -426,7 +542,8 @@ async def store_facts(
         documents[fact.id] = fact_memory_document(fact)
 
     if documents:
-        await get_agent("memory").add_many(list(documents.values()))
+        with memory_write_scene(scene):
+            await get_agent("memory").add_many(list(documents.values()))
 
     if still_current is not None:
         if not still_current():
@@ -438,31 +555,73 @@ async def store_facts(
             ]
             removed = staged.keys() - world_state.facts.keys()
             if restore:
-                await memory.add_many(restore)
+                with memory_write_scene(scene):
+                    await memory.add_many(restore)
             if removed:
-                await memory.delete({"ids": sorted(removed)})
+                with memory_write_scene(scene):
+                    await memory.delete({"ids": sorted(removed)})
             return []
-        removed = restatements.keys() - world_state.facts.keys()
-        for identity, fact in staged.items():
-            if identity not in restatements:
-                world_state.facts[identity] = fact
-            elif identity not in removed:
-                live = world_state.facts[identity]
-                live.restatements += restatements[identity]
-                times = [
-                    value for value in (live.last_seen_ts, ts) if value is not None
-                ]
-                live.last_seen_ts = max(times) if times else None
-        for grant in grants:
-            live = world_state.facts.get(grant.target)
-            if live is None:
-                continue
-            if grant.target in restatements:
-                if grant.character in live.known_by:
+        from talemate.knowledge.revision_refresh import capture_revision_mutations
+
+        with capture_revision_mutations(scene):
+            removed = restatements.keys() - world_state.facts.keys()
+            for identity, fact in staged.items():
+                if identity not in restatements:
+                    world_state.facts[identity] = fact
+                elif identity not in removed:
+                    live = world_state.facts[identity]
+                    count = restatements[identity]
+                    live.restatements += count
+                    if message_id is not None and message_digest is not None:
+                        sources = list(live.dialogue_sources)
+                        for index, support in enumerate(sources):
+                            if (
+                                support.message_id == message_id
+                                and support.message_digest == message_digest
+                            ):
+                                sources[index] = support.model_copy(
+                                    update={"count": support.count + count}
+                                )
+                                break
+                        else:
+                            sources.append(
+                                DialogueFactSupport(
+                                    message_id=message_id,
+                                    message_digest=message_digest,
+                                    count=count,
+                                )
+                            )
+                        live.dialogue_sources = tuple(sources)
+                        if live.message_id is None:
+                            live.message_id = message_id
+                            live.message_digest = message_digest
+                    if archive_id is not None:
+                        sources = list(live.archive_sources)
+                        for index, support in enumerate(sources):
+                            if support.archive_id == archive_id:
+                                sources[index] = support.model_copy(
+                                    update={"count": support.count + count}
+                                )
+                                break
+                        else:
+                            sources.append(
+                                ArchiveFactSupport(archive_id=archive_id, count=count)
+                            )
+                        live.archive_sources = tuple(sources)
+                    times = [
+                        value for value in (live.last_seen_ts, ts) if value is not None
+                    ]
+                    live.last_seen_ts = max(times) if times else None
+            for grant in grants:
+                live = world_state.facts.get(grant.target)
+                if live is None:
                     continue
-                live.known_by[grant.character] = "told"
-            world_state.knowledge.append(grant)
-        changes = [change for change in changes if change.target not in removed]
+                if grant.target in restatements:
+                    if grant.character in live.known_by:
+                        continue
+                    live.known_by[grant.character] = "told"
+                world_state.knowledge.append(grant)
+            changes = [change for change in changes if change.target not in removed]
         repair = [
             fact_memory_document(world_state.facts[identity])
             for identity in restatements.keys() - removed
@@ -470,9 +629,11 @@ async def store_facts(
         ]
         memory = get_agent("memory")
         if repair:
-            await memory.add_many(repair)
+            with memory_write_scene(scene):
+                await memory.add_many(repair)
         if removed:
-            await memory.delete({"ids": sorted(removed)})
+            with memory_write_scene(scene):
+                await memory.delete({"ids": sorted(removed)})
 
     if notify:
         emit_knowledge_changes(scene, changes)

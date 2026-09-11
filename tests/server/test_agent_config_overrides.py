@@ -40,12 +40,13 @@ class _Scene:
         self.saved = True
         self._agent_settings_opted_out = False
         self.saves = 0
+        self.status_emissions = 0
 
     async def save(self, auto=False):
         self.saves += 1
 
     def emit_status(self, **kwargs):
-        pass
+        self.status_emissions += 1
 
 
 class _WebsocketHandler:
@@ -102,12 +103,15 @@ async def test_repeat_save_does_not_touch_the_scene(wired):
     await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))
     scene.saves = 0
 
+    status_before = scene.status_emissions
     # what a quick-toggle chip flip sends: no filename, overlay already linked
     await plugin.handle_save_scene_overrides(_payload(True))
 
     assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is True
     assert scene.saves == 0
     assert scene.saved is True
+    assert scene.status_emissions == status_before + 1
+    assert handler.messages[-1]["action"] == "operation_done"
 
 
 @pytest.mark.asyncio

@@ -6,11 +6,25 @@ from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 
 
 def prune_dialogue_facts(world_state, fact_ids=None):
-    removed = {
-        fact.id
-        for fact in world_state.facts.values()
-        if fact.source == "dialogue" and (fact_ids is None or fact.id in fact_ids)
-    }
+    removed = set()
+    for fact in world_state.facts.values():
+        if fact.source != "dialogue" or (
+            fact_ids is not None and fact.id not in fact_ids
+        ):
+            continue
+        if fact.archive_sources or fact.contributions:
+            fact.dialogue_sources = ()
+            fact.restatements = max(
+                0, sum(source.count for source in fact.archive_sources) - 1
+            )
+            fact.message_id = None
+            fact.message_digest = None
+            fact.archive_id = (
+                fact.archive_sources[0].archive_id if fact.archive_sources else None
+            )
+            fact.source = "summary"
+            continue
+        removed.add(fact.id)
     if not removed:
         return removed
     for identity in removed:
@@ -36,13 +50,61 @@ def prune_invalid_dialogue_facts(scene):
     ]
     if not facts:
         return set()
-    invalid = {
-        fact.id
-        for fact in facts
-        if fact.message_id not in sources
-        or fact.message_digest
-        != content_digest(sources[fact.message_id].perception_text)
-    }
+
+    def source_digest_current(message_id, message_digest):
+        message = sources.get(message_id)
+        if message is None:
+            return False
+        digest = content_digest(message.perception_text)
+        if message_digest == digest:
+            return True
+        state = getattr(message, "revision_state", None)
+        return bool(
+            state
+            and not message.revision_matches_baseline
+            and message_digest
+            in {
+                state.baseline_digest,
+                (state.refresh_journal or {}).get("baseline_content_digest"),
+            }
+        )
+
+    invalid = set()
+    for fact in facts:
+        if not fact.dialogue_sources:
+            if not source_digest_current(fact.message_id, fact.message_digest):
+                invalid.add(fact.id)
+            continue
+
+        retained = tuple(
+            support
+            for support in fact.dialogue_sources
+            if source_digest_current(support.message_id, support.message_digest)
+        )
+        removed_count = sum(
+            support.count
+            for support in fact.dialogue_sources
+            if support not in retained
+        )
+        if retained:
+            fact.dialogue_sources = retained
+            fact.restatements = max(0, fact.restatements - removed_count)
+            if not source_digest_current(fact.message_id, fact.message_digest):
+                fact.message_id = retained[0].message_id
+                fact.message_digest = retained[0].message_digest
+            continue
+
+        fact.dialogue_sources = ()
+        fact.restatements = max(0, fact.restatements - removed_count)
+        fact.message_id = None
+        fact.message_digest = None
+        if fact.archive_sources or fact.contributions:
+            fact.archive_id = (
+                fact.archive_sources[0].archive_id if fact.archive_sources else None
+            )
+            fact.source = "summary"
+        else:
+            invalid.add(fact.id)
     return prune_dialogue_facts(scene.world_state, invalid)
 
 

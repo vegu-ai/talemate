@@ -63,6 +63,7 @@ __all__ = [
 log = structlog.get_logger("talemate.agents.conversation.knowledge")
 
 LEDGER_FACTS_PER_CHARACTER = 20
+HISTORICAL_UNSET = object()
 
 
 def pass_items(blocks: list[dict] | None) -> list[tuple[int, str]]:
@@ -849,7 +850,15 @@ class CharacterKnowledgeMixin:
         line: str,
         *,
         message: CharacterMessage | None = None,
-    ) -> dict[str, list[str]]:
+        present_override=HISTORICAL_UNSET,
+        recent_lines_override: list[str] | None = None,
+        ts_override: int | None = None,
+        establish_override: bool | None = None,
+        still_current=None,
+        replace_message_evidence: bool = False,
+        replace_facts: bool = True,
+        require_validated_result: bool = False,
+    ) -> dict[str, list[str]] | None:
         """
         Track listener learning and optionally establish sourced dialogue facts.
         Both outputs share one request; fact extraction runs on every character line.
@@ -858,31 +867,50 @@ class CharacterKnowledgeMixin:
             return {}
 
         scene = self.scene
-        establish = self.knowledge_establish_facts
+        establish = (
+            self.knowledge_establish_facts
+            if establish_override is None
+            else establish_override
+        )
         if establish and (
             message is None or scene.get_message(message.id) is not message
         ):
             return {}
         present = (
-            list(
-                dict.fromkeys(
-                    [
-                        character.name,
-                        *(
-                            message.present
-                            if message.present is not None
-                            else scene.active_characters
-                        ),
-                    ]
+            present_override
+            if present_override is not HISTORICAL_UNSET
+            else (
+                list(
+                    dict.fromkeys(
+                        [
+                            character.name,
+                            *(
+                                message.present
+                                if message.present is not None
+                                else scene.active_characters
+                            ),
+                        ]
+                    )
                 )
+                if establish
+                else scene.active_characters
             )
-            if establish
-            else scene.active_characters
         )
-        listeners = [name for name in present if name != character.name]
+        witnesses = present if present is not None else scene.active_characters
+        listeners = [name for name in witnesses if name != character.name]
         if not listeners and not establish:
+            if still_current is not None and not still_current():
+                raise GenerationCancelled(
+                    "The selected version changed during fact learning"
+                )
+            if replace_message_evidence and message is not None:
+                from talemate.knowledge.revision_refresh import (
+                    _remove_message_evidence,
+                )
+
+                _remove_message_evidence(scene, message, facts=replace_facts)
             return {}
-        ts = scene.ts
+        ts = scene.ts if ts_override is None else ts_override
         digest = content_digest(message.perception_text) if establish else None
         if establish:
             message._knowledge_scene = weakref.ref(scene)
@@ -893,6 +921,7 @@ class CharacterKnowledgeMixin:
                     and self.knowledge_establish_facts
                     and scene.get_message(message.id) is message
                     and content_digest(message.perception_text) == digest
+                    and (still_current is None or still_current())
                 )
 
         dedupe = get_agent("summarizer").archive_fact_dedupe_distance
@@ -910,9 +939,23 @@ class CharacterKnowledgeMixin:
 
         if not absence and not establish:
             log.debug("ledger skipped: every listener knows the recent facts")
+            if still_current is not None and not still_current():
+                raise GenerationCancelled(
+                    "The selected version changed during fact learning"
+                )
+            if replace_message_evidence and message is not None:
+                from talemate.knowledge.revision_refresh import (
+                    _remove_message_evidence,
+                )
+
+                _remove_message_evidence(scene, message, facts=replace_facts)
             return {}
 
-        recent = self._recent_lines()
+        recent = (
+            list(recent_lines_override)
+            if recent_lines_override is not None
+            else self._recent_lines()
+        )
         # the line is already in the history when the signal arrives
         if recent and recent[-1] == line:
             recent = recent[:-1]
@@ -942,6 +985,25 @@ class CharacterKnowledgeMixin:
                 KNOWLEDGE_LEDGER_FACTS_SPEC if establish else KNOWLEDGE_LEDGER_SPEC
             ),
         )
+        if still_current is not None and not still_current():
+            raise GenerationCancelled(
+                "The selected version changed during fact learning"
+            )
+        ledger = parse_ledger(extracted.get("ledger"))
+        facts_valid = not establish or parse_facts(extracted.get("facts")) is not None
+        if require_validated_result and (ledger is None or not facts_valid):
+            log.warning(
+                "ledger: answer not readable, no grants made",
+                speaker=character.name,
+                answer=extracted.get("ledger"),
+            )
+            return None
+        if replace_message_evidence and message is not None:
+            from talemate.knowledge.revision_refresh import _remove_message_evidence
+
+            removed = _remove_message_evidence(scene, message, facts=replace_facts)
+            if removed:
+                get_agent("summarizer").queue_fact_memory(scene, removed)
         if establish and not await self._store_dialogue_facts(
             scene,
             message,
@@ -954,7 +1016,6 @@ class CharacterKnowledgeMixin:
             source_current,
         ):
             return {}
-        ledger = parse_ledger(extracted.get("ledger"))
         if ledger is None:
             log.warning(
                 "ledger: answer not readable, no grants made",
@@ -962,35 +1023,39 @@ class CharacterKnowledgeMixin:
                 answer=extracted.get("ledger"),
             )
             return {}
+        from talemate.knowledge.revision_refresh import capture_revision_mutations
 
         learned: dict[str, list[str]] = {}
-        for name, fact_ids in ledger.items():
-            offered = {fact.id: fact for fact in absence.get(name, [])}
-            for fact_id in fact_ids:
-                fact = (
-                    scene.world_state.facts.get(fact_id) if fact_id in offered else None
-                )
-                if fact is None:
-                    log.warning(
-                        "ledger: fact id not among the listener's unknown facts",
-                        listener=name,
-                        fact_id=fact_id,
-                        offered=list(offered),
+        with capture_revision_mutations(scene):
+            for name, fact_ids in ledger.items():
+                offered = {fact.id: fact for fact in absence.get(name, [])}
+                for fact_id in fact_ids:
+                    fact = (
+                        scene.world_state.facts.get(fact_id)
+                        if fact_id in offered
+                        else None
                     )
-                    continue
-                fact.known_by[name] = "inferred"
-                scene.world_state.knowledge.append(
-                    KnowledgeEdge(
-                        character=name,
-                        target=fact.id,
-                        kind="grant",
-                        source="inferred",
-                        message_id=message.id if message is not None else None,
-                        ts=scene.ts,
-                        note=f"learned from {character.name}",
+                    if fact is None:
+                        log.warning(
+                            "ledger: fact id not among the listener's unknown facts",
+                            listener=name,
+                            fact_id=fact_id,
+                            offered=list(offered),
+                        )
+                        continue
+                    fact.known_by[name] = "inferred"
+                    scene.world_state.knowledge.append(
+                        KnowledgeEdge(
+                            character=name,
+                            target=fact.id,
+                            kind="grant",
+                            source="inferred",
+                            message_id=message.id if message is not None else None,
+                            ts=scene.ts,
+                            note=f"learned from {character.name}",
+                        )
                     )
-                )
-                learned.setdefault(name, []).append(fact.id)
+                    learned.setdefault(name, []).append(fact.id)
 
         emit_knowledge_changes(
             scene,

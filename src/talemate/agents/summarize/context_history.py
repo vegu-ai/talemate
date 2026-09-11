@@ -2009,6 +2009,20 @@ class ContextHistoryMixin:
                     "overflow": selected.overflow_tokens,
                 },
                 "sections": sections,
+                "history_selection": [
+                    {
+                        "type": entry["type"],
+                        "id": entry["id"],
+                        "layer": entry["layer"],
+                        "text": entry["text"],
+                        "token_count": entry["token_count"],
+                        "covered_message_ids": sorted(entry["covered_message_ids"]),
+                        "covered_disclosure_ids": sorted(
+                            entry["covered_disclosure_ids"]
+                        ),
+                    }
+                    for entry in entries
+                ],
                 "summary": {
                     "total_tokens": sum(section["token_count"] for section in sections),
                     "summarized_to": summarized_to,

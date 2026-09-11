@@ -540,6 +540,10 @@ class AgentConfigPlugin(Plugin):
                     status_agents.append(other)
         for status_agent in status_agents:
             await status_agent.emit_status()
+        # Effective knowledge eligibility is scene-derived, so an already-linked
+        # overlay write must publish the scene status even though it does not
+        # rewrite the scene file.
+        scene.emit_status()
         # Overrides live in their own file, so the scene itself only needs
         # persisting when this save linked one: the auto-save writes the
         # `agent_settings_file` reference so the link survives reload. Repeat

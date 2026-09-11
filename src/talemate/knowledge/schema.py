@@ -204,6 +204,21 @@ class FactContribution(AudienceRecord):
         )
 
 
+class DialogueFactSupport(pydantic.BaseModel):
+    """One dialogue revision's independently removable support for a fact."""
+
+    message_id: int
+    message_digest: str
+    count: int = pydantic.Field(default=1, ge=1)
+
+
+class ArchiveFactSupport(pydantic.BaseModel):
+    """One archive entry's independently removable support for a fact."""
+
+    archive_id: str
+    count: int = pydantic.Field(default=1, ge=1)
+
+
 class Fact(pydantic.BaseModel):
     id: str
     text: str
@@ -229,12 +244,18 @@ class Fact(pydantic.BaseModel):
     link_edited: bool = False
 
     contributions: tuple[FactContribution, ...] = ()
+    dialogue_sources: tuple[DialogueFactSupport, ...] = ()
+    archive_sources: tuple[ArchiveFactSupport, ...] = ()
 
     @pydantic.model_serializer(mode="wrap")
     def serialize_contributions(self, handler):
         data = handler(self)
         if not self.contributions:
             data.pop("contributions", None)
+        if not self.dialogue_sources:
+            data.pop("dialogue_sources", None)
+        if not self.archive_sources:
+            data.pop("archive_sources", None)
         for key in ("text_edited", "link_edited"):
             if not getattr(self, key):
                 data.pop(key, None)

@@ -22,6 +22,7 @@ from talemate.util import count_tokens
 from talemate.prompts.response import CodeBlockExtractorMixin
 from talemate.status import background_task
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.readiness import emit_perception_status, perception_readiness
 from talemate.knowledge.evidence import passage_spans
 from talemate.knowledge.reinforcements import prepare_reinforcement_source
 from talemate.knowledge.perspective_models import (
@@ -388,6 +389,7 @@ class PerceptionMixin:
         self._perception_deferred = WeakKeyDictionary()
         self._perception_failures = WeakKeyDictionary()
         self._perception_cancelled_by_user = WeakKeyDictionary()
+        self._perception_running = WeakKeyDictionary()
 
     def _perception_status(
         self,
@@ -561,11 +563,25 @@ class PerceptionMixin:
                     None,
                 )
                 try:
+                    running = self._perception_running.setdefault(scene, set())
+                    running.add(message.id)
+                    emit_perception_status(scene, message, "running")
                     await self.analyze_perceptions(scene, message)
                 except (GenerationCancelled, asyncio.CancelledError) as exc:
                     failures[message.id] = failures.get(message.id, 0) + 1
                     cancelled_by_user[message.id] = getattr(exc, "by_user", False)
+                    running.discard(message.id)
+                    readiness = perception_readiness(scene, message, "failed")
+                    if readiness != "running":
+                        emit_perception_status(scene, message, readiness)
                     raise
+                else:
+                    running.discard(message.id)
+                    readiness = perception_readiness(scene, message)
+                    if readiness != "running":
+                        emit_perception_status(scene, message, readiness)
+                finally:
+                    running.discard(message.id)
                 if (
                     reinforcement is not None
                     and reinforcement in scene.world_state.reinforce

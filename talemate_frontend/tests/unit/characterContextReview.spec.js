@@ -5,11 +5,11 @@ import Review from '@/components/SceneContextReviewInline.vue';
 import PromptsView from '@/components/prompts/PromptsView.vue';
 import { createApp, defineComponent, h, nextTick, reactive } from 'vue';
 
-function review() {
+function review({ sceneId = 'scene-1' } = {}) {
   const sent = [];
   const handlers = new Set();
   const vm = {
-    ...Review.data(), visible: true, sent, handlers,
+    ...Review.data(), visible: true, connected: true, sceneId, sent, handlers,
     getWebsocket: () => ({ send: text => sent.push(JSON.parse(text)) }),
     registerMessageHandler: vi.fn(fn => handlers.add(fn)),
     unregisterMessageHandler: vi.fn(fn => handlers.delete(fn)),
@@ -65,7 +65,7 @@ describe('character context review', () => {
     vm.receive(response(vm.sent[0]));
     expect(vm.characterOptions).toEqual([{ title: 'Scene (default)', value: null }, { title: 'Alice', value: 'Alice' }, { title: 'Bob', value: 'Bob' }]);
     expect(vm.loading).toBe(false);
-    expect(vm.handlers.size).toBe(0);
+    expect(vm.handlers.size).toBe(1);
   });
 
   it('selection and refresh preserve the character and budget edits', () => {
@@ -110,12 +110,42 @@ describe('character context review', () => {
     const first = vm.sent[0];
     vm.selectedCharacter = 'Bob';
     Review.watch.selectedCharacter.call(vm);
-    expect(vm.handlers.size).toBe(1);
+    expect(vm.handlers.size).toBe(2);
     vm.receive(response(first));
     expect(vm.preview).toBeNull();
     expect(vm.loading).toBe(true);
     vm.receive(response(vm.sent[1]));
     expect(vm.preview.perspective).toBe('Bob');
+  });
+
+  it('releases old request ownership and refetches on scene switch', () => {
+    const vm = review();
+    vm.preview = { perspective: null, sections: [], summary: {} };
+    vm.fetchPreview();
+    const old = vm.sent[0];
+    vm.sceneId = 'scene-2';
+    Review.watch.sceneId.call(vm);
+    expect(vm.preview).toBeNull();
+    expect(vm.loading).toBe(true);
+    expect(vm.sent).toHaveLength(2);
+    vm.receive(response(old));
+    expect(vm.preview).toBeNull();
+    vm.receive(response(vm.sent[1]));
+    expect(vm.preview).not.toBeNull();
+    expect(vm.loading).toBe(false);
+  });
+
+  it('settles on disconnect and starts one fresh request on reconnect', () => {
+    const vm = review();
+    vm.fetchPreview();
+    vm.connected = false;
+    Review.watch.connected.call(vm, false);
+    expect(vm.loading).toBe(false);
+    expect(vm.preview).toBeNull();
+    vm.connected = true;
+    Review.watch.connected.call(vm, true);
+    expect(vm.sent).toHaveLength(2);
+    expect(vm.loading).toBe(true);
   });
 
   it('Apply sends only scene-wide budget settings', () => {
@@ -137,7 +167,7 @@ describe('character context review', () => {
     expect(vm.error).toBe('Select an active character');
     expect(vm.selectedCharacter).toBe('Bob');
     expect(vm.loading).toBe(false);
-    expect(vm.handlers.size).toBe(0);
+    expect(vm.handlers.size).toBe(1);
   });
 
   it('unmount removes the pending response handler', () => {
@@ -145,6 +175,50 @@ describe('character context review', () => {
     vm.fetchPreview();
     Review.beforeUnmount.call(vm);
     expect(vm.handlers.size).toBe(0);
+  });
+
+  it('shows typed deferred status without clearing a previous preview', () => {
+    const vm = review();
+    vm.selectedCharacter = 'Bob';
+    vm.preview = { sections: [], summary: {} };
+    vm.fetchPreview();
+    vm.receive({
+      type: 'summarizer', action: 'context_review_status', request_id: vm.sent[0].request_id,
+      data: { scene_id: 'scene-1', message_id: 7, character: 'Bob', state: 'deferred', message: 'Analyze perceptions now.' },
+    });
+    expect(vm.preview).not.toBeNull();
+    expect(vm.perceptionStatus.state).toBe('deferred');
+    expect(vm.waitingPerceptionMessageId).toBe(7);
+    expect(vm.loading).toBe(false);
+  });
+
+  it('refreshes once for the correlated completion and ignores stale sources', () => {
+    const vm = review();
+    vm.selectedCharacter = 'Bob';
+    vm.fetchPreview();
+    vm.receive({
+      type: 'summarizer', action: 'context_review_status', request_id: vm.sent[0].request_id,
+      data: { scene_id: 'scene-1', message_id: 7, character: 'Bob', state: 'running', message: 'Still running.' },
+    });
+    const complete = { type: 'perception_status', data: { scene_id: 'scene-1', message_id: 7, audiences: ['Bob'], state: 'ready', message: 'Ready.' } };
+    vm.receive({ ...complete, data: { ...complete.data, scene_id: 'old-scene' } });
+    vm.receive({ ...complete, data: { ...complete.data, message_id: 8 } });
+    vm.receive({ ...complete, data: { ...complete.data, audiences: ['Alice'] } });
+    expect(vm.sent).toHaveLength(1);
+    vm.receive(complete);
+    expect(vm.sent).toHaveLength(2);
+    vm.receive(complete);
+    expect(vm.sent).toHaveLength(2);
+    expect(vm.sent[1].character).toBe('Bob');
+  });
+
+  it('expands full evidence locally without sending a request', () => {
+    const vm = review();
+    vm.toggleFullEvidence(3);
+    expect(vm.fullEvidenceOpen[3]).toBe(true);
+    vm.toggleFullEvidence(3);
+    expect(vm.fullEvidenceOpen[3]).toBe(false);
+    expect(vm.sent).toEqual([]);
   });
 
   it('labels the exclusion reasons for readers', () => {

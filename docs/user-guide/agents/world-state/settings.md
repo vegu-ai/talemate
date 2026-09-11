@@ -36,6 +36,8 @@ How long an **Add Detail** result can be. Shorter lengths keep the generated des
 
 When on, the snapshot is pinned into the conversation, narrator, and scene-analysis prompts as live scene notes, so the tracked entities can inform dialogue, narration, and planning. Off by default. See [Pinning the snapshot to the scene](/talemate/user-guide/world-state/#pinning-the-snapshot-to-the-scene).
 
+The pinned snapshot may include outdated information until the next update. Enable **Update world state** and set **Turns** to 1 to refresh it every turn.
+
 ###### Durable snapshot
 
 When on (the default), each refresh updates only what has changed and carries the rest of the snapshot forward, instead of rebuilding it from scratch every time. This lets the snapshot accumulate detail over the course of a scene. When off, every refresh starts fresh. See [How the snapshot carries forward](/talemate/user-guide/world-state/#how-the-snapshot-carries-forward).

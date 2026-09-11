@@ -21,9 +21,15 @@ import talemate.instance as instance
 from talemate.scene_message import VersionSource
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.revision_browsing import defer_revision_work
+from talemate.knowledge.revision_refresh import (
+    reconcile_revision_archive_vectors,
+    refresh_revision,
+    restore_revision_baseline,
+    revision_operations,
+)
+from talemate.knowledge.topics import refresh_topics
 from talemate.server.websocket_plugin import Plugin
 from talemate.status import background_task
-from talemate.exceptions import GenerationCancelled
 
 log = structlog.get_logger("talemate.server.scene_message")
 
@@ -46,6 +52,9 @@ class SwapRevisionPayload(pydantic.BaseModel):
     id: int
     index: int
     request_id: str | None = None
+    scene_id: str | None = None
+    selection_digest: str | None = None
+    selection_serial: int | None = None
 
 
 class DeletePayload(pydantic.BaseModel):
@@ -158,6 +167,24 @@ class SceneMessagePlugin(Plugin):
                 failed_action="swap_revision",
             )
             return
+        message = self.scene.get_message(payload.id)
+        journal = (
+            message.revision_state.refresh_journal
+            if message.revision_state is not None
+            else None
+        )
+        restored = restore_revision_baseline(self.scene, message)
+        if restored:
+            await reconcile_revision_archive_vectors(self.scene, journal)
+            summarizer = instance.get_agent("summarizer")
+            await summarizer.flush_fact_memory(self.scene)
+            await refresh_topics(self.scene)
+        if (
+            not restored
+            and not message.revision_matches_baseline
+            and not revision_operations(self.scene, message).any
+        ):
+            await refresh_revision(self.scene, message)
         await self.scene.attempt_auto_save()
         self.scene.emit_status()
         self.websocket_handler.queue_put(
@@ -171,34 +198,46 @@ class SceneMessagePlugin(Plugin):
 
     @background_task("Updating kept version")
     async def handle_commit_revision(self, data: dict):
-        """Analyze the kept canonical text; the normal perception lock deduplicates catch-up."""
+        """Run or join the authoritative refresh for the selected canonical text."""
         payload = SwapRevisionPayload(**data)
         scene = self.scene
         message = scene.get_message(payload.id)
-        if message is None or message.active_version != payload.index:
+        if (
+            message is None
+            or message.active_version != payload.index
+            or (payload.scene_id is not None and payload.scene_id != scene.id)
+            or (
+                payload.selection_digest is not None
+                and payload.selection_digest != message.revision_digest()
+            )
+            or (
+                payload.selection_serial is not None
+                and (
+                    message.revision_state is None
+                    or payload.selection_serial != message.revision_state.serial
+                )
+            )
+        ):
             await self.signal_operation_failed(
                 "The selected version changed; choose a version to keep again.",
                 request_id=payload.request_id,
                 failed_action="commit_revision",
             )
             return
-        text = message.message
-        summarizer = instance.get_agent("summarizer")
         try:
-            if character_knowledge_enabled(scene):
-                await summarizer.ensure_perceptions(scene)
-                await summarizer.repair_summary_views(scene)
-            await summarizer.flush_fact_memory(scene)
+            selection_digest = message.revision_digest()
+            selection_serial = message.revision_state.serial
+            selection_active = scene.active
+            refresh = await refresh_revision(scene, message)
             if (
                 self.scene is not scene
+                or scene.active != selection_active
                 or scene.get_message(payload.id) is not message
                 or message.active_version != payload.index
-                or message.message != text
+                or message.revision_digest() != selection_digest
+                or message.revision_state.serial != selection_serial
             ):
-                raise GenerationCancelled(
-                    "The selected version changed during analysis"
-                )
-            await scene.attempt_auto_save()
+                return
             self.websocket_handler.queue_put(
                 {
                     "type": self.router,
@@ -206,6 +245,7 @@ class SceneMessagePlugin(Plugin):
                     "id": payload.id,
                     "index": payload.index,
                     "request_id": payload.request_id,
+                    **refresh,
                 }
             )
             await self.signal_operation_done(signal_only=True)

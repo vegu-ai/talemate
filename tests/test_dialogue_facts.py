@@ -13,9 +13,21 @@ from talemate.knowledge.dialogue_facts import (
     invalidate_dialogue_facts,
     prune_invalid_dialogue_facts,
 )
-from talemate.knowledge.facts import prune_serialized_facts, store_facts
+from talemate.knowledge.facts import (
+    prune_serialized_facts,
+    prune_summary_facts,
+    store_facts,
+)
+from talemate.knowledge.revision_browsing import current_facts
 from talemate.knowledge.graph import bucket
-from talemate.knowledge.schema import Fact, ParsedFact, KnowledgeEdge
+from talemate.knowledge.perspective_models import content_digest
+from talemate.knowledge.schema import (
+    ArchiveFactSupport,
+    DialogueFactSupport,
+    Fact,
+    ParsedFact,
+    KnowledgeEdge,
+)
 from talemate.agents.memory.schema import MemoryDocument
 from talemate.agents.conversation.response_specs import (
     KNOWLEDGE_LEDGER_FACTS_SPEC,
@@ -200,6 +212,84 @@ async def test_malformed_ledger_does_not_discard_valid_new_facts(dialogue):
 
 
 @pytest.mark.asyncio
+async def test_revision_learning_malformed_preserves_old_grant(dialogue, monkeypatch):
+    scene, conversation, _, request = dialogue
+    conversation.actions["character_knowledge"].config["establish_facts"].value = False
+    message = CharacterMessage(
+        message="Alice: The key is silver.", present=list(scene.active_characters)
+    )
+    scene.history.append(message)
+    fact = Fact(id="F1", text="The key is brass.")
+    edge = KnowledgeEdge(
+        character="Edwin",
+        target=fact.id,
+        source="inferred",
+        message_id=message.id,
+    )
+    scene.world_state.facts[fact.id] = fact
+    scene.world_state.knowledge.append(edge)
+    monkeypatch.setattr(
+        "talemate.agents.conversation.knowledge.absence_facts",
+        AsyncMock(return_value=[fact]),
+    )
+    request.return_value = ("", {"ledger": "unreadable"})
+
+    learned = await conversation.record_learned_facts(
+        scene.character_data["Alice"],
+        str(message),
+        message=message,
+        establish_override=False,
+        replace_message_evidence=True,
+        replace_facts=False,
+        require_validated_result=True,
+    )
+
+    assert learned is None
+    assert scene.world_state.knowledge == [edge]
+
+
+@pytest.mark.asyncio
+async def test_revision_learning_valid_empty_removes_old_exclusive_grant(
+    dialogue, monkeypatch
+):
+    scene, conversation, _, request = dialogue
+    conversation.actions["character_knowledge"].config["establish_facts"].value = False
+    message = CharacterMessage(
+        message="Alice: Nothing new.", present=list(scene.active_characters)
+    )
+    scene.history.append(message)
+    fact = Fact(id="F1", text="The key is brass.", known_by={"Edwin": "inferred"})
+    scene.world_state.facts[fact.id] = fact
+    scene.world_state.knowledge.append(
+        KnowledgeEdge(
+            character="Edwin",
+            target=fact.id,
+            source="inferred",
+            message_id=message.id,
+        )
+    )
+    monkeypatch.setattr(
+        "talemate.agents.conversation.knowledge.absence_facts",
+        AsyncMock(return_value=[]),
+    )
+
+    learned = await conversation.record_learned_facts(
+        scene.character_data["Alice"],
+        str(message),
+        message=message,
+        establish_override=False,
+        replace_message_evidence=True,
+        replace_facts=False,
+        require_validated_result=True,
+    )
+
+    assert learned == {}
+    assert scene.world_state.knowledge == []
+    assert "Edwin" not in fact.known_by
+    request.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_narrator_line_is_left_to_archive(dialogue):
     scene, conversation, _, request = dialogue
     message = NarratorMessage(message="Alice moved in.")
@@ -262,9 +352,14 @@ async def test_source_lifecycle_removes_dialogue_fact_and_knowledge_links(
         scene.pop_history("character")
     else:
         assert fact.id in scene.reset()
-    assert fact.id not in scene.world_state.facts
-    assert scene.world_state.knowledge == []
-    if mutation != "reset":
+    if mutation == "version":
+        assert fact.id in scene.world_state.facts
+        assert current_facts(scene) == [fact]
+        assert scene.world_state.knowledge[-1].source == "manual"
+    else:
+        assert fact.id not in scene.world_state.facts
+        assert scene.world_state.knowledge == []
+    if mutation not in ("reset", "edit", "version"):
         await get_agent("summarizer").flush_fact_memory(scene)
         assert any(
             fact.id in call.args[0]["ids"] for call in memory.delete.await_args_list
@@ -299,6 +394,10 @@ async def test_archive_restatement_uses_existing_dialogue_fact(dialogue, monkeyp
     assert fact.importance == 3
     assert fact.message_id == message.id
     assert fact.archive_id is None
+    assert fact.archive_sources == (ArchiveFactSupport(archive_id="archive-1"),)
+    assert prune_summary_facts(scene.world_state, {"archive-1"}) == set()
+    assert fact.archive_sources == ()
+    assert fact.message_id == message.id
 
 
 @pytest.mark.asyncio
@@ -312,6 +411,48 @@ async def test_reset_export_and_missing_source_prune_dialogue_facts(dialogue):
     assert identity in scene.world_state.facts
     scene.history.clear()
     assert prune_invalid_dialogue_facts(scene) == {identity}
+
+
+@pytest.mark.asyncio
+async def test_missing_source_prunes_only_its_shared_fact_support(dialogue):
+    scene, _, _, _ = dialogue
+    first = await record(dialogue)
+    second = CharacterMessage(
+        message="Edwin: Alice moved into the lighthouse.",
+        source="ai",
+        present=list(scene.active_characters),
+    )
+    scene.history.append(second)
+    fact = next(iter(scene.world_state.facts.values()))
+    first_digest = content_digest(first.perception_text)
+    second_digest = content_digest(second.perception_text)
+    fact.dialogue_sources = (
+        DialogueFactSupport(
+            message_id=first.id,
+            message_digest=first_digest,
+        ),
+        DialogueFactSupport(
+            message_id=second.id,
+            message_digest=second_digest,
+        ),
+    )
+    fact.restatements = 1
+
+    scene.history.remove(first)
+
+    assert prune_invalid_dialogue_facts(scene) == set()
+    assert scene.world_state.facts[fact.id] is fact
+    assert fact.dialogue_sources == (
+        DialogueFactSupport(
+            message_id=second.id,
+            message_digest=second_digest,
+        ),
+    )
+    assert (fact.message_id, fact.message_digest, fact.restatements) == (
+        second.id,
+        second_digest,
+        0,
+    )
 
 
 def test_toggle_default_and_visibility_contract(scene):

@@ -770,12 +770,26 @@ class MemoryRAGMixin:
         return character.name if character is not None else None
 
     def rag_knowledge_filter(self, character: "Character | None"):
-        viewer = self.rag_knowledge_viewer(character)
-        if viewer is None or character_knowledge_enabled(self.scene):
-            return None
-        return KnowledgeIndex.from_scene(self.scene).retrieval_filter(
-            self.scene, viewer
+        from talemate.knowledge.revision_browsing import (
+            has_stale_revisions,
+            memory_document_current,
         )
+
+        viewer = self.rag_knowledge_viewer(character)
+        knowledge_filter = (
+            KnowledgeIndex.from_scene(self.scene).retrieval_filter(self.scene, viewer)
+            if viewer is not None and not character_knowledge_enabled(self.scene)
+            else None
+        )
+        if knowledge_filter is None and not has_stale_revisions(self.scene):
+            return None
+
+        def current(document):
+            return memory_document_current(self.scene, document) and (
+                knowledge_filter is None or knowledge_filter(document)
+            )
+
+        return current
 
     async def semantic_context(
         self,

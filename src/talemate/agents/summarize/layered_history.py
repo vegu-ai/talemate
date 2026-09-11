@@ -503,6 +503,8 @@ class LayeredHistoryMixin:
         include_base_layer: bool = False,
         max: int = None,
         base_layer_end_id: str | None = None,
+        *,
+        scene=None,
     ) -> list[str]:
         """
         Starts at the last layer and compiles the layered history into a single
@@ -513,7 +515,8 @@ class LayeredHistoryMixin:
         Each preceeding layer starts from the end of the the next layer.
         """
 
-        layered_history = self.scene.layered_history
+        scene = scene or self.scene
+        layered_history = scene.layered_history
         compiled = []
         next_layer_start = None
 
@@ -536,7 +539,7 @@ class LayeredHistoryMixin:
             ]:
                 if base_layer_end_id:
                     contained = entry_contained(
-                        self.scene,
+                        scene,
                         base_layer_end_id,
                         HistoryEntry(index=0, layer=i + 1, **layered_history_entry),
                     )
@@ -582,7 +585,7 @@ class LayeredHistoryMixin:
 
             entry_num = 1
 
-            for ah in self.scene.archived_history[next_layer_start or 0 :]:
+            for ah in scene.archived_history[next_layer_start or 0 :]:
                 if base_layer_end_id and ah["id"] == base_layer_end_id:
                     break
 

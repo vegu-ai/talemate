@@ -59,12 +59,13 @@ from .source_facts import SourceFactMixin
 from .fact_chronology import FactChronologyMixin
 from talemate.knowledge.supported_facts import previous_audience_facts
 from talemate.knowledge.perspectives import source_reference
+from talemate.exceptions import GenerationCancelled
 
 import talemate.agents.summarize.nodes  # noqa: F401
 from talemate.agents.summarize.websocket_handler import SummarizeWebsocketHandler
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Character
+    from talemate.tale_mate import Character, Scene
 
 
 log = structlog.get_logger("talemate.agents.summarize")
@@ -234,7 +235,7 @@ class SummarizeAgent(
 
     @property
     def archive_fact_dedupe_distance(self) -> float:
-        return float(self.actions["archive"].config["fact_dedupe_distance"].value)
+        return float(self.resolve_config("archive", "fact_dedupe_distance"))
 
     @property
     def archive_instructions(self):
@@ -284,16 +285,15 @@ class SummarizeAgent(
 
     # SUMMARIZATION HELPERS
 
-    async def previous_summaries(self, entry: ArchiveEntry) -> list[str]:
+    async def previous_summaries(
+        self, entry: ArchiveEntry, *, scene: "Scene | None" = None
+    ) -> list[str]:
+        scene = scene or self.scene
         num_previous = self.archive_include_previous
 
         # find entry by .id
         entry_index = next(
-            (
-                i
-                for i, e in enumerate(self.scene.archived_history)
-                if e["id"] == entry.id
-            ),
+            (i for i, e in enumerate(scene.archived_history) if e["id"] == entry.id),
             None,
         )
         if entry_index is None:
@@ -305,12 +305,14 @@ class SummarizeAgent(
         if entry and num_previous > 0:
             if self.layered_history_available:
                 previous_summaries = self.compile_layered_history(
-                    include_base_layer=True, base_layer_end_id=entry.id
+                    include_base_layer=True,
+                    base_layer_end_id=entry.id,
+                    scene=scene,
                 )[-num_previous:]
             else:
                 previous_summaries = [
                     entry["text"]
-                    for entry in self.scene.archived_history[end - num_previous : end]
+                    for entry in scene.archived_history[end - num_previous : end]
                 ]
 
         return previous_summaries
@@ -649,10 +651,10 @@ class SummarizeAgent(
 
         return result
 
-    def _facts_status(self, parsed_facts) -> FactsStatus | None:
+    def _facts_status(self, parsed_facts, *, scene=None) -> FactsStatus | None:
         if not self.archive_extract_facts:
             return None
-        if character_knowledge_enabled(self.scene):
+        if character_knowledge_enabled(scene or self.scene):
             return None
         return "ok" if parsed_facts is not None else "failed"
 
@@ -663,38 +665,62 @@ class SummarizeAgent(
         entry: ArchiveEntry,
         extra_context: str = None,
         generation_options: GenerationOptions | None = None,
+        *,
+        scene=None,
+        still_current=None,
     ) -> tuple[str, FactsStatus | None]:
         """
         Re-summarize an existing base entry and replace its facts.
 
         With fact extraction off the facts of the entry are left alone.
         """
-        if character_knowledge_enabled(self.scene) or not self.archive_extract_facts:
+        target_scene = scene or self.scene
+        if still_current is not None and not still_current():
+            raise GenerationCancelled("The scene changed during history refresh")
+        if character_knowledge_enabled(target_scene) or not self.archive_extract_facts:
             summarized = await self.summarize(
                 text, extra_context=extra_context, generation_options=generation_options
             )
+            if self.scene is not target_scene or (
+                still_current is not None and not still_current()
+            ):
+                raise GenerationCancelled("The scene changed during history refresh")
             return summarized, (
-                None if character_knowledge_enabled(self.scene) else entry.facts_status
+                None
+                if character_knowledge_enabled(target_scene)
+                else entry.facts_status
             )
 
+        dedupe_distance = self.archive_fact_dedupe_distance
         summarized, parsed_facts = await self.summarize(
             text,
             extra_context=extra_context,
             generation_options=generation_options,
             return_facts=True,
         )
-        await drop_facts_for_entries(self.scene, {entry.id})
+        if self.scene is not target_scene or (
+            still_current is not None and not still_current()
+        ):
+            raise GenerationCancelled("The scene changed during history refresh")
+        await drop_facts_for_entries(target_scene, {entry.id})
+        if still_current is not None and not still_current():
+            raise GenerationCancelled("The scene changed during history refresh")
         if parsed_facts:
             await store_facts(
-                self.scene,
+                target_scene,
                 entry.id,
                 entry.present,
                 entry.ts,
                 parsed_facts,
-                self.archive_fact_dedupe_distance,
+                dedupe_distance,
+                still_current=still_current,
             )
-        await refresh_topics(self.scene, force=True)
-        return summarized, self._facts_status(parsed_facts)
+        if still_current is not None and not still_current():
+            raise GenerationCancelled("The scene changed during history refresh")
+        await refresh_topics(target_scene, force=True, still_current=still_current)
+        if still_current is not None and not still_current():
+            raise GenerationCancelled("The scene changed during history refresh")
+        return summarized, self._facts_status(parsed_facts, scene=target_scene)
 
     @evidence_writer
     async def regenerate_facts(self, entry: "HistoryEntry") -> FactsStatus | None:

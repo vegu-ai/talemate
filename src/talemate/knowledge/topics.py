@@ -28,6 +28,7 @@ from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.names import numeric_id
 from talemate.knowledge.perspectives import PerspectiveReadContext
 from talemate.knowledge.chronology import ranked_facts, fact_time, prompt_fact_text
+from talemate.knowledge.revision_browsing import current_facts, fact_current
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -212,18 +213,28 @@ def prune_topics(world_state) -> bool:
     return changed
 
 
-async def refresh_topics(scene: "Scene", force: bool = False) -> bool:
+async def refresh_topics(
+    scene: "Scene", force: bool = False, *, still_current=None
+) -> bool:
     """
     Recluster when the fact count moved by the recluster step in either
     direction since the last run, or when forced (every fact mutation the
     user makes forces it). Returns True when the topics were rebuilt.
     """
     memory = get_agent("memory")
+    if still_current is not None and not still_current():
+        from talemate.exceptions import GenerationCancelled
+
+        raise GenerationCancelled("The scene changed during topic refresh")
     if not memory.topics_enabled:
         return False
     world_state = scene.world_state
-    facts = list(world_state.facts.values())
+    facts = current_facts(scene)
     if not facts:
+        if still_current is not None and not still_current():
+            from talemate.exceptions import GenerationCancelled
+
+            raise GenerationCancelled("The scene changed during topic refresh")
         if world_state.topics:
             world_state.topics = {}
             world_state.topics_fact_count = 0
@@ -238,6 +249,10 @@ async def refresh_topics(scene: "Scene", force: bool = False) -> bool:
         return False
 
     vectors = await memory.get_embeddings([f.id for f in facts])
+    if still_current is not None and not still_current():
+        from talemate.exceptions import GenerationCancelled
+
+        raise GenerationCancelled("The scene changed during topic refresh")
     if not vectors:
         log.debug("topics: no fact vectors stored yet")
         return False
@@ -320,6 +335,8 @@ def topic_facts(
         canonical = facts.get(fact_id)
         if canonical is None:
             continue
+        if not fact_current(scene, canonical):
+            continue
         view, kind = views.get(fact_id, (canonical, None))
         rows.append(
             TopicFact(
@@ -386,7 +403,11 @@ def coverage(
     facts = scene.world_state.facts
     rows: list[TopicCoverage] = []
     for topic in scene.world_state.topics.values():
-        members = [facts[i] for i in topic.fact_ids if i in facts]
+        members = [
+            facts[i]
+            for i in topic.fact_ids
+            if i in facts and fact_current(scene, facts[i])
+        ]
         if not members:
             continue
         rows.append(

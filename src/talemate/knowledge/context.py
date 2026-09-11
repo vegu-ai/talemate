@@ -10,6 +10,7 @@ from talemate.knowledge.summaries import (
 )
 from talemate.knowledge.disclosures import disclosure_positions, disclosure_text
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.readiness import perception_readiness, perception_status_message
 from talemate.knowledge.perspectives import (
     PerspectiveReadContext,
     select_character_view,
@@ -95,8 +96,10 @@ def _project_character_message(
     view = select(reference)
     if view.status in ("pending", "failed"):
         raise GenerationCancelled(
-            f"Perception for passage {message.id} is {view.status}; "
-            "retry perception analysis before character generation",
+            perception_status_message(
+                perception_readiness(scene, message, view.status, character=character),
+                message.id,
+            ),
             message_id=message.id,
             view_status=view.status,
             character=character,

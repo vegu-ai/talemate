@@ -1,22 +1,25 @@
 <template>
-  <span v-if="count > 1 || busy" class="revision-nav" :title="title" @focusout="onFocusOut">
+  <span v-if="count > 1 || isBusy || refresh?.required" class="revision-nav" :title="title">
     <template v-if="count > 1">
-      <v-btn size="x-small" icon variant="text" density="compact" class="revision-arrow" :disabled="index <= 0 || disabled || !!busy" @click.stop="$emit('navigate', -1)">
+      <v-btn size="x-small" icon variant="text" density="compact" class="revision-arrow" :disabled="index <= 0 || disabled || isBusy" @click.stop="$emit('navigate', -1)">
         <v-icon size="small">mdi-chevron-left</v-icon>
       </v-btn>
       <span class="revision-counter">{{ index + 1 }}/{{ count }}</span>
-      <v-btn size="x-small" icon variant="text" density="compact" class="revision-arrow" :disabled="index >= count - 1 || disabled || !!busy" @click.stop="$emit('navigate', 1)">
+      <v-btn size="x-small" icon variant="text" density="compact" class="revision-arrow" :disabled="index >= count - 1 || disabled || isBusy" @click.stop="$emit('navigate', 1)">
         <v-icon size="small">mdi-chevron-right</v-icon>
       </v-btn>
       <v-chip v-if="sourceTag" size="small" variant="text" :color="sourceTag.color" class="revision-source-chip">
         <v-icon size="small" start>{{ sourceTag.icon }}</v-icon>
         {{ sourceLabel }}
       </v-chip>
-      <v-btn v-if="uncommitted" size="x-small" variant="text" color="primary" :disabled="disabled || !!busy" @click.stop="keep">
-        Keep this version
-      </v-btn>
     </template>
-    <v-chip v-if="busy" size="small" variant="text" class="revision-busy-chip" :class="{ 'revision-busy-standalone': count <= 1 }" color="primary">
+    <v-btn v-if="refresh?.required" size="x-small" variant="text" color="primary" :disabled="disabled || isBusy" @click.stop="keep">
+      {{ refresh.label }}
+    </v-btn>
+    <span v-if="refresh?.required && refresh.explanation" class="revision-explanation">
+      {{ refresh.explanation }}
+    </span>
+    <v-chip v-if="isBusy" size="small" variant="text" class="revision-busy-chip" :class="{ 'revision-busy-standalone': count <= 1 }" color="primary">
       <v-progress-circular indeterminate size="16" width="2" color="primary" class="mr-2" />
       {{ busyLabel }}
     </v-chip>
@@ -36,6 +39,7 @@ export default {
   name: 'RevisionNav',
   props: {
     uncommitted: { type: Boolean, default: false },
+    refresh: { type: Object, default: null },
     count: {
       type: Number,
       required: true,
@@ -66,16 +70,15 @@ export default {
   emits: ['navigate', 'keep'],
   methods: {
     keep() {
-      if (this.uncommitted && !this.disabled && !this.busy) this.$emit('keep');
-    },
-    onFocusOut(event) {
-      // Reaching an end disables the focused arrow and blurs it to no target.
-      // That is still browsing; only focus moving elsewhere commits here.
-      if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) this.keep();
+      if (this.refresh?.required && !this.disabled && !this.isBusy) this.$emit('keep');
     },
   },
   computed: {
+    isBusy() {
+      return !!this.busy || this.refresh?.status === 'running';
+    },
     busyLabel() {
+      if (this.refresh?.status === 'running') return this.refresh.running_label;
       return typeof this.busy === 'string' ? this.busy : 'Regenerating';
     },
     sourceTag() {
@@ -89,7 +92,10 @@ export default {
       return this.reason ? `${this.sourceTag.label} — ${this.reason}` : this.sourceTag.label;
     },
     title() {
-      if (this.busy) return `${this.busyLabel}…`;
+      if (this.isBusy) return this.busyLabel;
+      if (this.refresh?.required) {
+        return [this.refresh.explanation, this.refresh.deferred_hint].filter(Boolean).join(' ');
+      }
       const base = `Revision ${this.index + 1} of ${this.count}`;
       return this.sourceTag ? `${base} (${this.sourceLabel})` : base;
     },
@@ -127,6 +133,11 @@ export default {
 
 .revision-busy-chip {
   margin-left: 4px;
+}
+
+.revision-explanation {
+  margin-left: 6px;
+  color: rgb(var(--v-theme-muted));
 }
 
 /* When no pagination is present the busy chip is the only element, so drop

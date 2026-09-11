@@ -621,7 +621,7 @@ async def test_manual_determine_avatar_route_overrides_cadence(
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "change,expected",
-    [("knowledge", 0), ("outside", 0), ("asset", 1), ("text", 1), ("version", 1)],
+    [("knowledge", 1), ("outside", 0), ("asset", 1), ("text", 1), ("version", 1)],
 )
 async def test_startup_replay_compares_only_visible_window(
     publication_scene, monkeypatch, change, expected

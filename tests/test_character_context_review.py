@@ -18,6 +18,7 @@ from talemate.instance import get_agent
 from talemate.knowledge.chronology import DAY
 from talemate.knowledge.perspectives import set_source_perspectives, source_reference
 from talemate.knowledge.review import character_context_review
+from talemate.knowledge.readiness import perception_readiness
 from talemate.knowledge.schema import Fact, ParsedFact
 from talemate.knowledge.supported_facts import contributions_for_source
 from talemate.prompts import Prompt
@@ -243,6 +244,49 @@ async def test_scene_preview_retains_reader_history_and_no_character_exclusions(
 
 
 @pytest.mark.asyncio
+async def test_analysis_reports_prefix_cutoff_separately_from_selected_history(
+    review_scene,
+):
+    scene = review_scene
+    if scene.knowledge_eligibility != "perception":
+        pytest.skip("analysis evidence boundary applies to perspective review")
+    outside = NarratorMessage(
+        message="Alice studies a private final note.", present=["Alice"]
+    )
+    scene.history.append(outside)
+    set_source_perspectives(
+        scene,
+        "message",
+        outside.id,
+        [{"audience": ["Alice"], "status": "ready", "text": str(outside)}],
+    )
+
+    preview = await character_context_review(scene, scene.character_data["Bob"])
+    analysis = next(
+        section
+        for section in preview["sections"]
+        if section["label"] == "Analysis evidence"
+    )
+
+    assert analysis["boundary_message_id"] == outside.id
+    assert analysis["selected_boundary_message_id"] != outside.id
+    assert "selected entries" in analysis["entries"][0]
+    assert f"passage #{outside.id}" in analysis["entries"][0]
+
+
+def test_pending_selected_source_cannot_be_reported_ready(review_scene):
+    scene = review_scene
+    if scene.knowledge_eligibility != "perception":
+        pytest.skip("typed perception readiness applies to perspective mode")
+    message = scene.history[-1]
+    message.present = ["Alice"]
+
+    assert (
+        perception_readiness(scene, message, "pending", character="Bob") == "deferred"
+    )
+
+
+@pytest.mark.asyncio
 async def test_overrides_do_not_mutate_scene_settings(review_scene):
     summ = get_agent("summarizer")
     before = summ.actions["manage_scene_history"].model_dump()
@@ -326,6 +370,85 @@ async def test_fact_audience_chronology_and_supersession_exclusions(review_scene
     assert "[F1]" not in text and "[F2]" not in text and "[F3]" not in text
     assert any(
         item["type"] == "analysis" and item["entries"] for item in preview["sections"]
+    )
+    Prompt.request.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_analysis_review_references_history_without_repeating_it(review_scene):
+    if review_scene.knowledge_eligibility != "perception":
+        pytest.skip("compact perspective evidence applies to perception mode")
+    preview = await character_context_review(
+        review_scene, review_scene.character_data["Bob"]
+    )
+    analysis = next(
+        item for item in preview["sections"] if item["label"] == "Analysis evidence"
+    )
+    visible = "\n".join(analysis["entries"])
+    history = "\n".join(history_lines(preview))
+    assert (
+        "history selection" in visible.lower()
+        or "history as shown above" in visible.lower()
+    )
+    assert "Analysis budget:" in visible
+    assert history not in visible
+    assert "Bob arrives in the square" in analysis["full_evidence"]
+    assert analysis["full_token_count"] > 0
+    assert (
+        analysis["analysis_budget"]
+        == get_agent("summarizer").client.max_token_length // 2
+    )
+    assert preview["summary"]["knowledge_tokens"] == sum(
+        item["token_count"]
+        for item in preview["sections"]
+        if item["type"] in ("knowledge", "analysis")
+    )
+    Prompt.request.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_context_review_returns_correlated_deferred_and_running_status(
+    review_scene,
+):
+    if review_scene.knowledge_eligibility != "perception":
+        pytest.skip("perception readiness applies to perception mode")
+    message = review_scene.history[-1]
+    set_source_perspectives(
+        review_scene,
+        "message",
+        message.id,
+        [{"audience": ["Bob"], "status": "pending"}],
+    )
+    plugin, frames = handler(review_scene)
+    await plugin.handle_context_review({"character": "Bob", "request_id": "deferred"})
+    assert frames[-1] == {
+        "type": "summarizer",
+        "action": "context_review_status",
+        "data": {
+            "scene_id": review_scene.id,
+            "message_id": message.id,
+            "selection_index": message.active_version,
+            "selection_digest": message.revision_digest(),
+            "selection_serial": message.revision_state.serial,
+            "character": "Bob",
+            "audiences": ["Alice", "Bob"],
+            "state": "deferred",
+            "message": (
+                "Perception analysis for this version has not run yet. "
+                "Analyze perceptions now, or send your next line."
+            ),
+        },
+        "request_id": "deferred",
+    }
+
+    summarizer = get_agent("summarizer")
+    summarizer._perception_running.setdefault(review_scene, set()).add(message.id)
+    await plugin.handle_context_review({"character": "Bob", "request_id": "running"})
+    assert frames[-1]["request_id"] == "running"
+    assert frames[-1]["data"]["state"] == "running"
+    assert frames[-1]["data"]["message"] == (
+        f"Perception analysis for passage {message.id} is still running; "
+        "the preview updates when it finishes."
     )
     Prompt.request.assert_not_awaited()
 

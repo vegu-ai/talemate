@@ -283,6 +283,7 @@ async def test_saved_grant_survives_fact_regeneration_and_deleted_boundary(
         project_character_history(restored, "Bob", before_message_id=new.id)
     )
     summarizer.connect(restored)
+    memory.connect(restored)
     with ActiveScene(restored):
         assert await summarizer.rebuild_supported_facts(restored, [reference]) == "ok"
     assert facts_about(restored, "ledger", character="Bob")[0].text == LOCATION

@@ -233,10 +233,18 @@ def source_reference(
     return source.reference() if source and source.knowledge else None
 
 
-def _passages_fresh(scene, provenance, read=None):
+def _passages_fresh(scene, provenance, read=None, *, allow_message_id=None):
     for item in provenance:
         source = _find(scene, ("message", item.message_id, 0), read)
         if source is None or content_digest(source.text) != item.content_digest:
+            return False
+        if (
+            item.message_id != allow_message_id
+            and source.kind == "message"
+            and source.owner.revision_state is not None
+            and not source.owner.revision_matches_baseline
+            and not source.owner.revision_feature_current("perceptions")
+        ):
             return False
         if item.revision is not None and (
             source.knowledge is None or source.knowledge.revision != item.revision
@@ -288,6 +296,13 @@ def _fresh_depth(scene, reference, character, visited, *, readable, read, remain
     if not source or not source.knowledge:
         return None
     knowledge = source.knowledge
+    if (
+        source.kind == "message"
+        and source.owner.revision_state is not None
+        and not source.owner.revision_matches_baseline
+        and not source.owner.revision_feature_current("perceptions")
+    ):
+        return None
     if (
         knowledge.revision != reference.revision
         or knowledge.content_digest != content_digest(source.text)
@@ -469,7 +484,7 @@ def _notify(scene, old, replacement, reason, *, changes=None):
     return event
 
 
-def set_source_perspectives(
+def _set_source_perspectives(
     scene: "Scene",
     kind: Literal["message", "summary", "intro"],
     source_id: str | int,
@@ -498,7 +513,12 @@ def set_source_perspectives(
                 raise ValueError(
                     "Evidence must reference an offered span of this message"
                 )
-        if not _passages_fresh(scene, output.passage_provenance, read):
+        if not _passages_fresh(
+            scene,
+            output.passage_provenance,
+            read,
+            allow_message_id=source_id if kind == "message" else None,
+        ):
             raise ValueError("Analytical passage provenance is stale or unresolved")
         for dependency in output.sources:
             if dependency.key == source.key or not all(
@@ -576,6 +596,12 @@ def set_source_perspectives(
                 if by_id.get(view.id) != view
             ]
     source.knowledge = knowledge
+    if (
+        kind == "message"
+        and parsed
+        and all(output.status in ("ready", "omitted") for output in parsed)
+    ):
+        source.owner.mark_revision_feature("perceptions")
     if previous and not content_changed:
         old_ids = {view.id for view in previous.views}
         changes.extend(
@@ -593,6 +619,21 @@ def set_source_perspectives(
         changes=changes if previous else None,
     )
     return source.reference()
+
+
+def set_source_perspectives(
+    scene: "Scene",
+    kind: Literal["message", "summary", "intro"],
+    source_id: str | int,
+    outputs: Iterable[PerspectiveOutput | dict],
+    *,
+    layer: int = 0,
+) -> SourceReference:
+    from talemate.knowledge.revision_refresh import capture_revision_mutations
+
+    target = scene.get_message(source_id) if kind == "message" else None
+    with capture_revision_mutations(scene, message=target):
+        return _set_source_perspectives(scene, kind, source_id, outputs, layer=layer)
 
 
 def add_disclosure(
@@ -737,7 +778,7 @@ def remove_disclosure(scene: "Scene", disclosure_id: str) -> Disclosure:
     return disclosure
 
 
-def source_content_changed(
+def _source_content_changed(
     scene: "Scene",
     kind: Literal["message", "summary"],
     source_id: str | int,
@@ -777,6 +818,20 @@ def source_content_changed(
     return _notify(scene, old, source.reference(), "content")
 
 
+def source_content_changed(
+    scene: "Scene",
+    kind: Literal["message", "summary"],
+    source_id: str | int,
+    *,
+    layer: int = 0,
+) -> PerspectiveInvalidation | None:
+    from talemate.knowledge.revision_refresh import capture_revision_mutations
+
+    target = scene.get_message(source_id) if kind == "message" else None
+    with capture_revision_mutations(scene, message=target):
+        return _source_content_changed(scene, kind, source_id, layer=layer)
+
+
 def source_deleted(
     scene: "Scene", reference: SourceReference | None, *, message_id: int | None = None
 ) -> PerspectiveInvalidation | None:
@@ -791,7 +846,19 @@ def source_deleted(
 
 
 def message_content_changed(message: "SceneMessage") -> None:
+    from talemate.knowledge.revision_browsing import defer_derived_jobs
+
     scene = message._knowledge_scene() if message._knowledge_scene else None
+    if defer_derived_jobs.get() and scene is not None:
+        return
+    if (
+        scene is not None
+        and message.revision_state is not None
+        and not message.revision_matches_baseline
+    ):
+        from talemate.knowledge.revision_refresh import begin_revision_transaction
+
+        begin_revision_transaction(scene, message)
     if scene is not None and any(item is message for item in message_sources(scene)):
         source_content_changed(scene, "message", message.id)
     elif (
@@ -801,12 +868,17 @@ def message_content_changed(message: "SceneMessage") -> None:
         message.knowledge = message.knowledge.invalidated(message.perception_text)
 
 
-def bind_perspective_sources(scene: "Scene") -> None:
+def bind_message_source(scene: "Scene", message: "SceneMessage") -> None:
+    """Bind one live history message to its scene-aware knowledge lifecycle."""
     from talemate.scene_message import advance_message_id
 
+    message._knowledge_scene = weakref.ref(scene)
+    advance_message_id(message.id)
+
+
+def bind_perspective_sources(scene: "Scene") -> None:
     for message in message_sources(scene):
-        message._knowledge_scene = weakref.ref(scene)
-        advance_message_id(message.id)
+        bind_message_source(scene, message)
 
 
 def validate_saved_knowledge(data: dict) -> SceneKnowledge | None:

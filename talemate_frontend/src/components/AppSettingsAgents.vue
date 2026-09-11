@@ -809,6 +809,7 @@ export default {
 
         sceneSectionProps(actionKey) {
             return {
+                actionKey,
                 action: this.mergedActions[actionKey],
                 actionSchema: this.schemaActions[actionKey],
                 overrides: this.sceneOverlay.actions[actionKey] || {},

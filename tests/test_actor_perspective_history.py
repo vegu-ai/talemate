@@ -115,7 +115,8 @@ def test_nonready_projection_blocks_without_reader_fallback(cast, status):
     set_source_perspectives(
         scene, "message", mixed.id, [{"audience": ["Bob"], "status": status}]
     )
-    with pytest.raises(GenerationCancelled, match=status) as raised:
+    expected = "failed" if status == "failed" else "not run yet"
+    with pytest.raises(GenerationCancelled, match=expected) as raised:
         scene.context_history(stored_views=True, budget=1000, perspective="Bob")
     assert raised.value.message_id == mixed.id
     assert raised.value.view_status == status
@@ -125,7 +126,7 @@ def test_nonready_projection_blocks_without_reader_fallback(cast, status):
 def test_stale_projection_blocks(cast):
     scene, mixed = cast
     scene.edit_message(mixed.id, "Alice: Changed reader text.")
-    with pytest.raises(GenerationCancelled, match="pending"):
+    with pytest.raises(GenerationCancelled, match="not run yet"):
         project_character_history(scene, "Bob")
 
 

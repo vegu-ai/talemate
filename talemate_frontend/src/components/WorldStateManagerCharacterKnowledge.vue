@@ -1,6 +1,6 @@
 <template>
     <div v-if="character">
-        <v-alert v-if="scene?.data?.pending_perception_messages?.length" color="warning" variant="tonal" density="compact" class="mb-3">Character knowledge is out of date for changed passages. Keep the selected version or continue the story to update it.</v-alert>
+        <v-alert v-if="pendingRefreshes.length" color="warning" variant="tonal" density="compact" class="mb-3">{{ refreshNotice }}</v-alert>
         <v-alert v-if="!perceptionMode" variant="text" density="compact" icon="mdi-head-lightbulb-outline" class="text-medium-emphasis mb-2">
             What {{ character.name }} knows follows from where they were present, what belongs to them, and what is shared with everyone.
             To change access to an entry, choose Allow to add it to their knowledge or Block to keep it out.
@@ -179,6 +179,17 @@ export default {
         }
     },
     computed: {
+        pendingRefreshes() {
+            return (this.scene?.data?.revision_refreshes || [])
+                .map((item) => item.revision_refresh)
+                .filter((item) => item?.required);
+        },
+        refreshNotice() {
+            const perception = this.pendingRefreshes.some((item) => item.operations?.includes('perceptions'));
+            return perception
+                ? 'Changed passages need perception analysis. Use Analyze perceptions on the passage, or send your next line or choice.'
+                : 'Changed passages need fact refresh. Use Refresh facts on the passage, or send your next line or choice.';
+        },
         filterText() {
             return (this.factFilter || '').trim().toLowerCase();
         },

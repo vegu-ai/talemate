@@ -680,8 +680,8 @@
   title: Interacting with the scene
   summary: 'Scene interaction syntax and shortcuts: quoted dialogue, asterisk actions, Tab act-as, @ quick actions, #/## director
     nudges and Ctrl+Enter autocomplete. Covers auto progress, cancellation, Continue, and selecting Original/Regenerated/Revised/Continued
-    message versions that become active scene text. Keep this version updates stale knowledge; pointer movement stays browsing,
-    while keyboard focus leaving, tab changes and the next line commit the selected version.'
+    message versions that become active scene text. Analyze perceptions (Character perspectives) or Refresh facts (Standard),
+    the next sent line, or a choice updates stale knowledge; pointer movement, keyboard focus and tab changes stay browsing.'
 - path: user-guide/node-editor/core-concepts/collector_nodes.md
   title: Collector Nodes
   summary: Dict/List Collector nodes aggregate dynamic inputs with key inference or Make Key-Value Pair tuples, ordered lists

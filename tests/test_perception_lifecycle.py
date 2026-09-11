@@ -106,6 +106,19 @@ async def test_finalized_source_kinds_and_no_duplicate_processing(setup, kind, s
 
 
 @pytest.mark.asyncio
+async def test_perception_job_emits_running_then_ready(setup, monkeypatch):
+    scene, _, _ = setup
+    statuses = []
+    monkeypatch.setattr(
+        "talemate.agents.summarize.perceptions.emit_perception_status",
+        lambda _, message, state: statuses.append((message.id, state)),
+    )
+    message = CharacterMessage(message="Alice: Hello.")
+    await scene.push_history(message)
+    assert statuses == [(message.id, "running"), (message.id, "ready")]
+
+
+@pytest.mark.asyncio
 async def test_editor_finalization_precedes_analysis_and_archive(setup):
     scene, summarizer, request = setup
     summarizer.actions["archive"].enabled = False
@@ -711,7 +724,12 @@ async def test_omission_tracks_unperceived_physical_passage(setup):
     ] == [message.id, prior.id]
     scene.edit_message(prior.id, "Bob sits awake, watching the room.")
     assert message.knowledge.views[0] == alice
-    assert message.knowledge.views[1].status == "pending"
+    assert (
+        select_character_view(
+            scene, source_reference(scene, "message", message.id), "Bob"
+        ).status
+        == "pending"
+    )
     request.return_value = result(answer(bob="Bob hears the password swordfish."))
     await summarizer.ensure_perceptions(scene)
     assert (

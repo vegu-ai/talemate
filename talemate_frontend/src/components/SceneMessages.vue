@@ -304,7 +304,7 @@
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :data-message-type="message.type" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === visibleMessages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :revisionUncommitted="message.revision_uncommitted || false" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="revisionIsLatestMessage(message)" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="revisionBusyState(message)" :revisionUncommitted="message.revision_uncommitted || false" :revisionRefresh="message.revision_refresh" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -346,7 +346,7 @@
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`" :data-message-type="message.type">
-                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === visibleMessages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :revisionUncommitted="message.revision_uncommitted || false" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="revisionIsLatestMessage(message)" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="revisionBusyState(message)" :revisionUncommitted="message.revision_uncommitted || false" :revisionRefresh="message.revision_refresh" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
@@ -371,7 +371,7 @@
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="context-investigation-message"  :id="`message-${message.id}`" :data-message-type="message.type">
-                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === visibleMessages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="message.regenerating || false" :revisionUncommitted="message.revision_uncommitted || false" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
+                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="revisionIsLatestMessage(message)" :editorRevisionsEnabled="editorRevisionsEnabled" :editorRevisionMethod="editorRevisionMethod" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" :revisionsCount="(message.revisions && message.revisions.length) || 0" :revisionIndex="message.revision_index || 0" :revisionSource="revisionCurrentSource(message)" :revisionReason="revisionCurrentReason(message)" :revisionBusy="revisionBusyState(message)" :revisionUncommitted="message.revision_uncommitted || false" :revisionRefresh="message.revision_refresh" @keep-revision="commitRevision(message.id)" :entityMentions="getEntityMentionsForMessage(message.id)" @navigate-revision="(dir) => navigateRevision(message.id, dir)" />
                 </div>
             </div>
 
@@ -1166,7 +1166,6 @@ export default {
                 text = message.selectedChoices;
             }
 
-            this.commitPendingRevisions();
             // Send all selected choices to the server
             this.getWebsocket().send(JSON.stringify({ type: 'interact', text: text }));
             // Clear the selectedChoices array
@@ -2089,6 +2088,8 @@ export default {
                             msg,
                             data.versions,
                             data.active_version,
+                            data.revision_refresh,
+                            data.revision_uncommitted,
                         );
                         // Any in-flight spinner (manual editor revision or
                         // in-place regenerate) clears on the echo — the
@@ -2175,7 +2176,7 @@ export default {
                         disable_avatar_fallback: disableAvatarFallback,
                         rev: data.rev || 0
                     };
-                    this.revisionApplyServerState(charMsg, data.versions, data.active_version);
+                    this.revisionApplyServerState(charMsg, data.versions, data.active_version, data.revision_refresh, data.revision_uncommitted);
                     this.messages.push(charMsg);
                 } else if (data.type === 'director') {
                     this.messages.push(
@@ -2202,7 +2203,7 @@ export default {
                         asset_id: data.asset_id,
                         asset_type: data.asset_type,
                     };
-                    this.revisionApplyServerState(ctxMsg, data.versions, data.active_version);
+                    this.revisionApplyServerState(ctxMsg, data.versions, data.active_version, data.revision_refresh, data.revision_uncommitted);
                     this.messages.push(ctxMsg);
                 } else if (data.type === 'narrator') {
                     const narratorMsg = {
@@ -2215,7 +2216,7 @@ export default {
                         asset_id: data.asset_id || null,
                         asset_type: data.asset_type || null,
                     };
-                    this.revisionApplyServerState(narratorMsg, data.versions, data.active_version);
+                    this.revisionApplyServerState(narratorMsg, data.versions, data.active_version, data.revision_refresh, data.revision_uncommitted);
                     this.messages.push(narratorMsg);
                 } else if (data.type === 'player_choice') {
                     console.log('player_choice', data);
@@ -2236,7 +2237,7 @@ export default {
                         asset_id: data.asset_id || null,
                         asset_type: data.asset_type || null,
                     };
-                    this.revisionApplyServerState(genericMsg, data.versions, data.active_version);
+                    this.revisionApplyServerState(genericMsg, data.versions, data.active_version, data.revision_refresh, data.revision_uncommitted);
                     this.messages.push(genericMsg);
                 } else if (data.type === 'status' && data.data && data.data.as_scene_message === true) {
 
@@ -2271,6 +2272,24 @@ export default {
         }
     },
     watch: {
+        'scene.data.revision_refreshes': {
+            immediate: true,
+            deep: true,
+            handler(refreshes) {
+                const statuses = new Map(
+                    (refreshes || []).map((item) => [item.id, item.revision_refresh]),
+                );
+                for (const message of this.messages) {
+                    if (!statuses.has(message.id)) continue;
+                    const refresh = statuses.get(message.id);
+                    message.revision_refresh = refresh ? { ...refresh } : null;
+                    message.revision_uncommitted = !!refresh?.required;
+                    if (!refresh?.required && message.revision_commit) {
+                        message.revision_commit = null;
+                    }
+                }
+            },
+        },
         revealCount(next, previous) {
             // Stepping back shrinks the list and the browser clamps the scroll
             // for us; stepping forward grows it, and the message just revealed

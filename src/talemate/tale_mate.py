@@ -61,6 +61,7 @@ from talemate.knowledge.facts import fact_memory_document, prune_summary_facts
 from talemate.knowledge.topics import topics_on_load
 from talemate.knowledge.perspective_models import SceneKnowledge
 from talemate.knowledge.perspectives import (
+    bind_message_source,
     remove_perspective_audiences,
     reset_perspectives,
     source_deleted,
@@ -695,6 +696,13 @@ class Scene(Emitter):
         if isinstance(messages, SceneMessage):
             messages = [messages]
 
+        # A selected historical revision must become authoritative before a
+        # new line can trigger learning, archive extraction, or downstream
+        # history listeners. The same coordinator also serves the UI button.
+        from talemate.knowledge.revision_refresh import catch_up_revisions
+
+        await catch_up_revisions(self)
+
         if self.intro and self.intro_present is None:
             initialize_intro_audience(self)
 
@@ -734,6 +742,8 @@ class Scene(Emitter):
             valid_messages.append(message)
 
         self.history.extend(valid_messages)
+        for message in valid_messages:
+            bind_message_source(self, message)
 
         event: events.HistoryEvent = events.HistoryEvent(
             scene=self,
@@ -1187,11 +1197,27 @@ class Scene(Emitter):
         return [
             message.id
             for message in self.history
-            if message.knowledge is not None
-            and any(
-                view.status not in ("ready", "omitted")
-                for view in message.knowledge.views
+            if (
+                message.revision_state is not None
+                and message.revision_state.status != "clean"
             )
+            or (
+                message.knowledge is not None
+                and any(
+                    view.status not in ("ready", "omitted")
+                    for view in message.knowledge.views
+                )
+            )
+        ]
+
+    @property
+    def revision_refreshes(self) -> list[dict]:
+        from talemate.knowledge.revision_refresh import revision_refresh_payload
+
+        return [
+            {"id": message.id, **revision_refresh_payload(self, message)}
+            for message in self.history
+            if message.revision_state is not None
         ]
 
     async def add_actor(self, actor: Actor, commit_to_memory: bool = True):
@@ -1558,6 +1584,7 @@ class Scene(Emitter):
                 "experimental": self.experimental,
                 "knowledge_eligibility": self.knowledge_eligibility,
                 "pending_perception_messages": self.pending_perception_messages,
+                "revision_refreshes": self.revision_refreshes,
                 "can_change_knowledge_eligibility": self.can_change_knowledge_eligibility,
                 "immutable_save": self.immutable_save,
                 "description": self.description,

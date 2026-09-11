@@ -381,17 +381,37 @@ text changes. Identical text and changelog `rev` changes do not.
 overwrite the stored knowledge envelope.
 
 The `scene_message/swap_revision` websocket action changes canonical text and
-invalidates evidence without starting derived jobs. `commit_revision` accepts
-the same `id`, `index` and optional `request_id`, repairs the kept text through
-the existing perception lock, and echoes `revision_committed` when done. Successful swaps echo `revision_swapped`;
-rejected swaps return a correlated `operation_done` error with `failed_action=swap_revision`
-so the client can release its optimistic selection. Pointer movement alone does not
-commit: Keep, keyboard focus leaving the navigator, a tab switch or the next line does.
-The next `push_history` also catches pending passages once. Browse invalidation
-retains dirty fact-memory and audience-index state while deferring their wakeups;
-ledger, TTS and avatar selection do not subscribe to swaps or `message_edited`.
-`scene_status.data.pending_perception_messages` lists messages with pending or
-failed views so History and Knowledge can show that their evidence is out of date.
+masks stale evidence without starting derived jobs. The client renders the new pointer and
+text only from the authoritative `message_edited` echo. `commit_revision` accepts the same
+`id`, `index` and optional `request_id`, plus the selected scene, digest and serial used to
+reject obsolete receipts; its explicit button and next-send catch-up join one scene-local
+coordinator job. Selection ownership covers the live agent scene, active state, message,
+canonical digest and metadata, active index and serial. Each phase separately receipts the
+history, facts, settings and perspective dependencies it consumes. Every publication,
+index and persistence await revalidates the applicable identity. Successful swaps echo `revision_swapped`;
+rejected swaps return a correlated `operation_done` error with `failed_action=swap_revision`.
+
+In Character perspectives mode the coordinator uses the perception lock, repairs dependent
+summaries, flushes fact memory and then publishes completion. In Standard mode it reruns
+fact extraction against either the selected unarchived passage or every archive summary
+whose source range contains it, then runs the dialogue ledger against its historical
+speaker, presence, timestamp and preceding lines. Extraction and learning have separate
+persisted receipts, so retrying a failed learning phase does not repeat successful extraction
+unless one of that extraction's own inputs changed. A transaction journal records baseline
+records and each phase's last writes; returning to the baseline restores only writes the
+transaction still owns. Dialogue facts separately record each message revision's support,
+so removing one revision does not remove another restatement, authored correction, summary
+contribution or manual grant. With no eligible operation, selection removes stale derived
+archive/fact material deterministically and becomes final without a model call.
+
+Pointer movement, focus changes and tab switches never commit. `server/api.py` catches up
+before accepting a line or choice, `ConversationAgent.converse` guards direct generation,
+the Narrator's common generation wrapper guards direct actions and auto-narration, and
+`Scene.push_history` is the final common boundary before a new message is recorded.
+Browse invalidation retains dirty fact-memory and audience-index state while deferring their
+wakeups; ledger, TTS and avatar selection do not subscribe to swaps or `message_edited`.
+`scene_status.data.revision_refreshes` publishes each message's effective, mode-specific
+operation and correlated selection state so the chat, History and Knowledge surfaces agree.
 
 A reader-content edit invalidates all views of that source. A dependency edit
 invalidates only descendant views that depend on the changed view, transitively.

@@ -231,7 +231,7 @@ async def test_investigations_review_titles_and_distinguish_actual_learning(
         "narrator", "narrate_query", query="What is the secret antidote?"
     )
     assert message.knowledge.revision > revision
-    with pytest.raises(GenerationCancelled, match="pending"):
+    with pytest.raises(GenerationCancelled, match="not run yet"):
         project_character_history(scene, "Alice")
     await summarizer.ensure_perceptions(scene)
     assert "antidote" in request.call_args.kwargs["vars"]["context"]["passage"]["text"]

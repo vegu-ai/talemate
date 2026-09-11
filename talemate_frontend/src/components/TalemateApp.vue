@@ -398,7 +398,7 @@
           </v-tabs-window-item>
           <!-- PROMPTS -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
-            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" :app-config="appConfig" ref="promptsView" v-model:main-tab="promptsMainTab" @clear-prompts="onClearPrompts" />
+            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" :app-config="appConfig" :connected="connected" ref="promptsView" v-model:main-tab="promptsMainTab" @clear-prompts="onClearPrompts" />
           </v-tabs-window-item>
           <!-- SETTINGS -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="settings">
@@ -801,7 +801,6 @@ export default {
 
         // Save scroll position when leaving main tab
         if(oldTab === 'main' && this.sceneActive) {
-          if (!this.loading) this.$refs.sceneMessages?.commitPendingRevisions();
           this.mainTabScrollPosition = window.scrollY;
         }
         
@@ -1593,7 +1592,6 @@ export default {
     },
 
     onInputSend({ text, actAs }) {
-      this.$refs.sceneMessages?.commitPendingRevisions();
       this.websocket.send(JSON.stringify({ type: 'interact', text, act_as: actAs }));
       this.inputDisabled = true;
       this.waitingForInput = false;

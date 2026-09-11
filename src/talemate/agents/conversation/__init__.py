@@ -421,6 +421,10 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
 
         character = actor.character
 
+        from talemate.knowledge.revision_refresh import catch_up_revisions
+
+        await catch_up_revisions(self.scene)
+
         if character_knowledge_enabled(self.scene):
             await get_agent("summarizer").ensure_perceptions(self.scene)
 

@@ -67,6 +67,9 @@ async def _narration(self, fn, args, kwargs, emit_generated: bool = True):
     writing style, the injected instructions, and (for scene narration) the
     generated signal with the response.
     """
+    from talemate.knowledge.revision_refresh import catch_up_revisions
+
+    await catch_up_revisions(self.scene)
     if character_knowledge_enabled(self.scene):
         await get_agent("summarizer").ensure_perceptions(self.scene)
     agent_context = active_agent.get()

@@ -6,7 +6,7 @@ Characters know what they were in the scene for, what you allow them to know, an
 
 Your finished line appears at once, with the spinner naming any perception or learning pass still running; the next reply waits for those passes to finish.
 
-Browse a line's versions freely, then choose **Keep this version**, move keyboard focus out of the navigator, change tabs, or send your next line to update character knowledge for the kept text; History and Knowledge mark changed passages as out of date until that update finishes.
+Browse a line's versions freely. For changed text, choose **Analyze perceptions** in Character perspectives mode or **Refresh facts** in Standard mode, or send your next line or choice to run the same required update first. History and Knowledge mark changed passages as out of date until it finishes. Reading, moving keyboard focus and changing tabs never start it.
 
 - **Presence.** Every line records who was in the scene; a chapter summary records everyone who was there for any part of it.
 - **Facts.** Short statements the Summarizer records from a chapter, each **Routine (1)**, **State (2)** or **Milestone (3)**. Edit them in [History](/talemate/user-guide/world-editor/history/#facts), or list, filter and manage them all in the [Facts tab](/talemate/user-guide/world-editor/facts/).

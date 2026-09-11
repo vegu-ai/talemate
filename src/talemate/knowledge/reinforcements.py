@@ -200,12 +200,12 @@ def source_context(
     reference = source_reference(scene, "message", source.id, read=read)
     if reference is None:
         raise GenerationCancelled(
-            "Reinforcement perception is pending; retry perception analysis"
+            "Reinforcement perception has not run yet; send the next line to analyze it"
         )
     selected = select_character_view(scene, reference, viewer, read=read)
     if selected.status in ("pending", "failed"):
         raise GenerationCancelled(
-            f"Reinforcement perception is {selected.status}; retry perception analysis"
+            f"Reinforcement perception is {selected.status}; it runs again on the next turn"
         )
     return selected.text if selected.status == "ready" else ""
 
@@ -232,6 +232,6 @@ def reinforcement_context(
         or source.question != reinforcement.question
     ):
         raise GenerationCancelled(
-            "Reinforcement perception is stale; retry perception analysis"
+            "Reinforcement perception is stale; it runs again on the next turn"
         )
     return source_context(scene, source, viewer, read=read)

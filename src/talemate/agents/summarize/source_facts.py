@@ -78,6 +78,9 @@ class SourceFactMixin:
             while dirty:
                 if self.scene is not scene:
                     return False
+                memory = get_agent("memory")
+                if getattr(memory, "scene", scene) is not scene:
+                    return False
                 keys = dirty.copy()
                 dirty.difference_update(keys)
                 try:
@@ -87,14 +90,26 @@ class SourceFactMixin:
                         if key in scene.world_state.facts
                     ]
                     if documents:
-                        await get_agent("memory").add_many(documents)
-                    if self.scene is not scene:
+                        from talemate.agents.memory import memory_write_scene
+
+                        with memory_write_scene(scene):
+                            stored = await memory.add_many(documents)
+                        if stored is False:
+                            dirty.update(keys)
+                            return False
+                    if self.scene is not scene or memory.scene is not scene:
                         dirty.update(keys)
                         return False
                     removed = keys - scene.world_state.facts.keys()
                     if removed:
-                        await get_agent("memory").delete({"ids": sorted(removed)})
-                    if self.scene is not scene:
+                        from talemate.agents.memory import memory_write_scene
+
+                        with memory_write_scene(scene):
+                            deleted = await memory.delete({"ids": sorted(removed)})
+                        if deleted is False:
+                            dirty.update(keys)
+                            return False
+                    if self.scene is not scene or memory.scene is not scene:
                         dirty.update(keys)
                         return False
                 except BaseException:

@@ -31,7 +31,7 @@ __all__ = [
     "canonical_entry_id",
 ]
 
-Rejection = Literal["revoke", "visibility", "presence"]
+Rejection = Literal["revoke", "visibility", "presence", "stale"]
 
 ItemKind = Literal[
     "history", "fact", "attribute", "detail", "description", "world_entry", "static"
@@ -175,9 +175,11 @@ class KnowledgeIndex:
 
     @classmethod
     def from_scene(cls, scene: "Scene") -> "KnowledgeIndex":
+        from talemate.knowledge.revision_browsing import current_edges
+
         grants: set[tuple[str, str]] = set()
         revokes: set[tuple[str, str]] = set()
-        for edge in scene.world_state.knowledge:
+        for edge in current_edges(scene):
             if edge.kind == "revoke" and character_knowledge_enabled(scene):
                 continue
             bucket = grants if edge.kind == "grant" else revokes
@@ -294,6 +296,11 @@ class RetrievalFilter:
         self.character = character
 
     def rejection(self, doc) -> Rejection | None:
+        from talemate.knowledge.revision_browsing import fact_current
+
+        fact = self.scene.world_state.facts.get(getattr(doc, "id", None))
+        if fact is not None and not fact_current(self.scene, fact):
+            return "stale"
         return self.index.rejection(
             self.character, KnowledgeItem.from_memory_document(doc, self.scene)
         )
@@ -303,9 +310,12 @@ class RetrievalFilter:
 
     def known_fact_ids(self) -> list[str]:
         """The facts in the character's bucket (the gate's anchors)."""
+        from talemate.knowledge.revision_browsing import fact_current
+
         return [
             fact.id
             for fact in self.scene.world_state.facts.values()
+            if fact_current(self.scene, fact)
             if self.index.in_bucket(
                 self.character,
                 KnowledgeItem(id=fact.id, kind="fact", present=fact.present),

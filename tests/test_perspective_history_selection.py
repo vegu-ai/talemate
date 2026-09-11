@@ -372,7 +372,7 @@ def test_pending_inside_minimum_reports_passage(perspective_history_scene, fixed
         [{"audience": ["Bob"], "status": "pending"}],
     )
 
-    with pytest.raises(GenerationCancelled, match="pending") as raised:
+    with pytest.raises(GenerationCancelled, match="not run yet") as raised:
         _project(
             scene,
             30,

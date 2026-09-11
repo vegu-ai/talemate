@@ -14,6 +14,7 @@ from talemate.instance import get_agent
 from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
 from talemate.knowledge.schema import Fact
 from talemate.knowledge.chronology import ranked_facts, render_fact
+from talemate.knowledge.revision_browsing import current_facts
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -58,14 +59,14 @@ async def absence_facts(
     sits within `dedupe_distance` of it: someone told them later, and the
     retold fact sits next to the original.
     """
-    world_state = scene.world_state
+    facts = current_facts(scene)
     index = KnowledgeIndex.from_scene(scene)
 
     # the whole bucket, not only the window: the near-duplicate step needs
     # every fact the character knows
     bucket_ids = [
         f.id
-        for f in world_state.facts.values()
+        for f in facts
         if index.in_bucket(
             character, KnowledgeItem(id=f.id, kind="fact", present=f.present)
         )
@@ -73,12 +74,12 @@ async def absence_facts(
     bucket = set(bucket_ids)
 
     recent = sorted(
-        (f for f in world_state.facts.values() if f.source != "offscreen"),
+        (f for f in facts if f.source != "offscreen"),
         key=fact_order,
         reverse=True,
     )[: max(0, window)]
     # This warning describes current author-state facts the viewer does not know.
-    recent = ranked_facts(scene, recent, superseders=world_state.facts.values())
+    recent = ranked_facts(scene, recent, superseders=facts)
 
     # a fact marked false is never listed: in the bucket it is known, outside
     # it there is nothing to warn about

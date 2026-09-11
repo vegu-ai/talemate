@@ -8,7 +8,9 @@ afterEach(() => { app?.unmount(); host?.remove(); });
 describe('stale knowledge notices', () => {
     for (const [name, component] of [['History', History], ['Knowledge', Knowledge]]) {
         it(`marks ${name} out of date until the kept passage is analyzed`, async () => {
-            const scene = reactive({ data: { pending_perception_messages: [9] } });
+            const scene = reactive({ data: { revision_refreshes: [{ id: 9, revision_refresh: {
+                required: true, operations: ['perceptions'], label: 'Analyze perceptions',
+            } }] } });
             host = document.createElement('div'); document.body.appendChild(host);
             app = createApp(component, { scene, immutableCharacter: { name: 'Mara' } });
             const errors = [];
@@ -20,10 +22,10 @@ describe('stale knowledge notices', () => {
             for (const tag of ['VAlert','VCard','VCardText','VCardTitle','VCardActions','VRow','VCol','VTabs','VTab','VWindow','VWindowItem','VSheet','VBtn','VTooltip','VChip']) app.component(tag, container);
             app.mount(host);
             expect(errors).toEqual([]);
-            expect(host.textContent).toContain('Character knowledge is out of date');
-            scene.data.pending_perception_messages = [];
+            expect(host.textContent).toContain('Changed passages need perception analysis');
+            scene.data.revision_refreshes = [];
             await nextTick();
-            expect(host.textContent).not.toContain('Character knowledge is out of date');
+            expect(host.textContent).not.toContain('Changed passages need perception analysis');
             expect(errors).toEqual([]);
         });
     }

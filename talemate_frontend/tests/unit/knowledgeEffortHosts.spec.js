@@ -316,7 +316,7 @@ describe('the app delegates the batch write', () => {
 
 describe('the New Story dialog carries the stop', () => {
     function dialog() {
-        const vm = { ...Setup.data(), $emit: vi.fn(), getAgents: () => [] };
+        const vm = { ...Setup.data(), $refs: {}, $emit: vi.fn(), getAgents: () => [] };
         for (const [key, getter] of Object.entries(Setup.computed)) Object.defineProperty(vm, key, { get: () => getter.call(vm) });
         return vm;
     }
@@ -336,14 +336,14 @@ describe('the New Story dialog carries the stop', () => {
         vm.characterKnowledge = true;
         expect(vm.effortForMode).toBe('thorough');
     });
-    it('the landing queues the stop for the new scene', () => {
-        const send = vi.fn();
-        const queue = vi.fn();
-        Landing.methods.createNewScene.call({ $emit: vi.fn(), getWebsocket: () => ({ send }), queueKnowledgeEffort: queue },
+    it('the landing carries the selected settings in the creation request', () => {
+        const sendCreation = vi.fn();
+        Landing.methods.createNewScene.call({ sendCreation },
             { sceneName: 's', characterKnowledge: true, effort: 'thorough' });
-        expect(queue).toHaveBeenCalledWith('thorough', 'perception', { afterLoad: true });
-        Landing.methods.createNewScene.call({ $emit: vi.fn(), getWebsocket: () => ({ send }), queueKnowledgeEffort: queue }, {});
-        expect(queue).toHaveBeenCalledTimes(1);
+        expect(sendCreation.mock.calls[0][1]).toMatchObject({
+            character_knowledge: true,
+            agent_settings: { conversation: { actions: { character_knowledge: { enabled: true, config: { memory_pass: { value: true } } } } } },
+        });
     });
 });
 

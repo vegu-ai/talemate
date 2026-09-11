@@ -31,6 +31,7 @@ from talemate.util.colors import unique_random_colors
 from talemate.agents.base import DynamicInstruction
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene_assets import AssetTransfer
+from talemate.scene_agent_settings import resolve_link_on_load
 from talemate.world_state import ManualContext
 from talemate.agents.visual.schema import VIS_TYPE
 from talemate.shared_context import SharedContext
@@ -1592,6 +1593,7 @@ async def load_scene_from_character_card(
     import_options: CharacterCardImportOptions | None = None,
     *,
     character_knowledge: bool = False,
+    creation_settings=None,
 ):
     """
     Load a character card (tavern etc.) from the given file path.
@@ -1610,10 +1612,6 @@ async def load_scene_from_character_card(
     scene.knowledge_eligibility = "perception" if character_knowledge else "legacy"
 
     file_ext = os.path.splitext(file_path)[1].lower()
-
-    # Player Character Setup
-
-    await _setup_player_character_from_options(scene, import_options)
 
     # Extract Character Data from File
 
@@ -1642,6 +1640,15 @@ async def load_scene_from_character_card(
         selected_names = [original_character.name] if original_character.name else []
 
     characters = _create_characters_from_names(selected_names, original_character)
+    scene_name = _extract_scene_name_from_spec(raw_data_or_metadata)
+    first_character = characters[0]
+    scene.name = scene_name if scene_name else first_character.name
+
+    if creation_settings is not None:
+        await resolve_link_on_load(scene, {})
+        creation_settings.install(scene)
+
+    await _setup_player_character_from_options(scene, import_options)
 
     # every name is known here, before the import spends a request or writes
     # the character book: the player was set up above, and the selected cards
@@ -1670,11 +1677,6 @@ async def load_scene_from_character_card(
         has_character_book=has_character_book,
         num_episodes=num_episodes,
     )
-
-    scene_name = _extract_scene_name_from_spec(raw_data_or_metadata)
-    first_character = characters[0]
-
-    scene.name = scene_name if scene_name else first_character.name
 
     if import_options.writing_style_template:
         scene.writing_style_template = import_options.writing_style_template

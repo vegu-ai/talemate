@@ -105,6 +105,19 @@ export function effortPatch(agents, mode, stop) {
     return groups;
 }
 
+// Creation has no target-scene status yet; carry the complete selected row.
+export function creationEffortSettings(mode, stop) {
+    const agents = {};
+    for (const [key, value] of Object.entries(preset(mode, stopForMode(stop, mode)))) {
+        const { agent, action, config } = effortKey(key);
+        const actions = (agents[agent] ??= { actions: {} }).actions;
+        const slice = (actions[action] ??= {});
+        if (config === null) slice.enabled = value;
+        else (slice.config ??= {})[config] = { value };
+    }
+    return agents;
+}
+
 // Whether an explicit selection may pin this key as a scene override: the
 // field has to be declared overridable, and a container switch has to be one
 // the agent lets a scene disable at all.

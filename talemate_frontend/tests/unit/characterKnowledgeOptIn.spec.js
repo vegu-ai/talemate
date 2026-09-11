@@ -5,8 +5,14 @@ import CardImport from '@/components/CharacterCardImport.vue';
 import SceneSettings from '@/components/WorldStateManagerSceneSettings.vue';
 import SharedWorld from '@/components/WorldStateManagerSceneSharedWorld.vue';
 
+function landing(values) {
+    const vm = { ...Landing.data(), $refs: {}, ...values };
+    for (const [name, method] of Object.entries(Landing.methods)) vm[name] ??= method.bind(vm);
+    return vm;
+}
+
 function setup() {
-    const vm = { ...Setup.data(), $emit: vi.fn() };
+    const vm = { ...Setup.data(), $refs: {}, $emit: vi.fn() };
     return vm;
 }
 
@@ -26,19 +32,19 @@ describe('character perspectives creation choice', () => {
         Setup.methods.create.call(vm);
         const payload = vm.$emit.mock.calls.find(([type]) => type === 'create')[1];
         const send = vi.fn();
-        Landing.methods.createNewScene.call({ $emit: vi.fn(), getWebsocket: () => ({ send }) }, payload);
+        Landing.methods.createNewScene.call(landing({ $emit: vi.fn(), getWebsocket: () => ({ send }) }), payload);
         expect(JSON.parse(send.mock.calls[0][0])).toMatchObject({
             type: 'load_scene', file_path: '$NEW_SCENE$', scene_initialization: { character_knowledge: enabled },
         });
     });
     it('an omitted choice stays off for existing callers', () => {
         const send = vi.fn();
-        Landing.methods.createNewScene.call({ $emit: vi.fn(), getWebsocket: () => ({ send }) }, {});
+        Landing.methods.createNewScene.call(landing({ $emit: vi.fn(), getWebsocket: () => ({ send }) }), {});
         expect(JSON.parse(send.mock.calls[0][0]).scene_initialization.character_knowledge).toBe(false);
     });
     it('loading an existing file does not send an activation override', () => {
         const emit = vi.fn();
-        Landing.methods.requestSceneLoad.call({ confirmUnsaved: () => true, $emit: emit }, 'legacy.json');
+        Landing.methods.requestSceneLoad.call(landing({ confirmUnsaved: () => true, $emit: emit }), 'legacy.json');
         expect(emit).toHaveBeenCalledWith('request-scene-load', 'legacy.json');
     });
     it.each(['legacy', 'perception'])('shared-world continuation preserves %s mode in its creation payload', (mode) => {
@@ -58,7 +64,7 @@ describe('character perspectives creation choice', () => {
 
 
 function cardModel() {
-    const vm = { ...CardImport.data(), appConfig: () => ({}), getWebsocket: () => ({ send: vi.fn() }) };
+    const vm = { ...CardImport.data(), $refs: {}, appConfig: () => ({}), getWebsocket: () => ({ send: vi.fn() }) };
     for (const [name, method] of Object.entries(CardImport.methods)) vm[name] = method.bind(vm);
     return vm;
 }
@@ -92,14 +98,14 @@ describe('card import character perspectives', () => {
     it.each([false, true])('forwards choice %s from uploaded and path-based JSON cards', async enabled => {
         for (const upload of [false, true]) {
             const send = vi.fn();
-            const vm = { isCharacterCardJson: () => true, showCharacterCardImportModal: async () => ({ confirmed: true, options: {}, characterKnowledge: enabled }), getWebsocket: () => ({ send }), $emit: vi.fn() };
+            const vm = landing({ isCharacterCardJson: () => true, showCharacterCardImportModal: async () => ({ confirmed: true, options: {}, characterKnowledge: enabled }), getWebsocket: () => ({ send }), $emit: vi.fn() });
             await Landing.methods.processJsonFile.call(vm, {}, upload ? null : 'card.json', upload ? 'data:application/json;base64,e30=' : null, 'card.json');
-            expect(JSON.parse(send.mock.calls[0][0]).scene_initialization).toEqual({ character_knowledge: enabled, character_card_import_options: {} });
+            expect(JSON.parse(send.mock.calls[0][0]).scene_initialization).toMatchObject({ character_knowledge: enabled, character_card_import_options: {} });
         }
     });
     it.each([false, true])('forwards choice %s from path-based image cards', async enabled => {
         const send = vi.fn();
-        const vm = { confirmUnsaved: () => true, showCharacterCardImportModal: async () => ({ confirmed: true, options: {}, characterKnowledge: enabled }), getWebsocket: () => ({ send }), $emit: vi.fn() };
+        const vm = landing({ confirmUnsaved: () => true, showCharacterCardImportModal: async () => ({ confirmed: true, options: {}, characterKnowledge: enabled }), getWebsocket: () => ({ send }), $emit: vi.fn() });
         await Landing.methods.loadFromPath.call(vm, 'card.webp');
         expect(JSON.parse(send.mock.calls[0][0]).scene_initialization.character_knowledge).toBe(enabled);
     });
@@ -111,9 +117,10 @@ describe('card import character perspectives', () => {
             readAsDataURL() {}
         });
         try {
-            const vm = { confirmUnsaved: () => true, showCharacterCardImportModal: async () => ({ confirmed: true, options: {}, characterKnowledge: enabled }), getWebsocket: () => ({ send }), $emit: vi.fn() };
-            Landing.methods.loadFromFile.call(vm, { type: 'image/png', name: 'card.png' });
-            await reader.onload();
+            const vm = landing({ confirmUnsaved: () => true, showCharacterCardImportModal: async () => ({ confirmed: true, options: {}, characterKnowledge: enabled }), getWebsocket: () => ({ send }), $emit: vi.fn() });
+            const loaded = Landing.methods.loadFromFile.call(vm, { type: 'image/png', name: 'card.png' });
+            reader.onload();
+            await loaded;
             expect(JSON.parse(send.mock.calls[0][0]).scene_initialization.character_knowledge).toBe(enabled);
         } finally {
             vi.unstubAllGlobals();

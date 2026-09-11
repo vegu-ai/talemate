@@ -43,6 +43,8 @@ The character card import dialog is divided into several sections:
 
 **Character perspectives** is off by default. The two modes are compared under the checkbox, with their pros and cons and a "pick this if" line; [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode) has the same comparison. Enable it to give characters audience-specific context in the imported story. It adds Summarizer analyses and pauses dependent character generation if an analysis fails. Cancelling or reopening the import resets the checkbox. See [Knowledge](/talemate/user-guide/world-editor/knowledge/#character-perspectives-opt-in) for costs and retry behavior.
 
+The **Character knowledge effort** slider below the mode choice starts at **Balanced** and offers the same [mode-specific choices](/talemate/user-guide/world-editor/knowledge/#effort-presets) as Create New Story. Its settings are pinned to the imported scene, even when they match global defaults, and apply before the scene's knowledge work begins. Your global agent settings do not change. The **AI Generation** options below independently control the import itself; lowering ongoing effort does not disable those import options. Canceling or reopening the dialog resets the effort choice.
+
 ### Analysis Information
 
 At the top of the dialog, you'll see chips displaying:

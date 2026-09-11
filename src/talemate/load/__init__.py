@@ -59,6 +59,7 @@ from talemate.changelog import (
 from talemate.shared_context import SharedContext
 from talemate.scene_agent_settings import AGENT_SETTINGS_DIRNAME, resolve_link_on_load
 from talemate.load.character_card import CharacterCardImportOptions
+from talemate.load.creation_agent_settings import CreationAgentSettings
 from talemate.scene_assets import AssetTransfer
 
 # Import character card functions
@@ -104,6 +105,7 @@ def load_scene_perspectives(scene_data: dict) -> ScenePerspectives:
 
 
 class SceneInitialization(pydantic.BaseModel):
+    agent_settings: dict[str, dict] | None = None
     character_knowledge: pydantic.StrictBool = False
     project_name: str | None = None
     content_classification: str | None = None
@@ -199,12 +201,18 @@ async def load_scene(
     add_to_recent: bool = True,
     scene_initialization: SceneInitialization | None = None,
     before_memory: Callable[[Scene], Awaitable[None]] | None = None,
+    is_current: Callable[[], bool] = lambda: True,
 ):
     """
     Load the scene data from the given file path.
     """
 
     loaded_scene = None
+    creation_settings = (
+        CreationAgentSettings(scene_initialization.agent_settings, is_current)
+        if scene_initialization and scene_initialization.agent_settings
+        else None
+    )
 
     # Release the previous scene's reserved GPU memory before loading the next.
     # Local CUDA work (embedding re-commits, TTS) leaves PyTorch's caching
@@ -240,7 +248,11 @@ async def load_scene(
                     scene_data["name"] = ""
 
                 scene = await load_scene_from_data(
-                    scene, scene_data, reset=True, empty=True
+                    scene,
+                    scene_data,
+                    reset=True,
+                    empty=True,
+                    creation_settings=creation_settings,
                 )
 
                 # Create the scene directory on disk so assets are
@@ -269,6 +281,7 @@ async def load_scene(
                     scene,
                     file_path,
                     import_options=import_options,
+                    creation_settings=creation_settings,
                     character_knowledge=bool(
                         scene_initialization
                         and scene_initialization.character_knowledge
@@ -278,6 +291,10 @@ async def load_scene(
 
             # a zip file was uploaded, extract and load complete scene
             if ext == ".zip":
+                if creation_settings is not None:
+                    raise ValueError(
+                        "Creation settings require a new scene or character card"
+                    )
                 loaded_scene = await load_scene_from_zip(scene, file_path, reset)
                 return loaded_scene
 
@@ -299,12 +316,18 @@ async def load_scene(
                     scene,
                     file_path,
                     import_options=import_options,
+                    creation_settings=creation_settings,
                     character_knowledge=bool(
                         scene_initialization
                         and scene_initialization.character_knowledge
                     ),
                 )
                 return loaded_scene
+
+            if creation_settings is not None:
+                raise ValueError(
+                    "Creation settings require a new scene or character card"
+                )
 
             # if it is a talemate scene, load it
             loaded_scene = await load_scene_from_data(
@@ -321,6 +344,8 @@ async def load_scene(
             if before_memory is not None:
                 await before_memory(loaded_scene)
             await loaded_scene.commit_to_memory()
+            if creation_settings is not None:
+                await creation_settings.persist(loaded_scene)
 
 
 def _quarantine_and_resolve_rev(scene):
@@ -356,6 +381,7 @@ async def load_scene_from_data(
     reset: bool = False,
     name: str | None = None,
     empty: bool = False,
+    creation_settings=None,
 ) -> Scene:
     metadata = read_scene_format(scene_data)
     knowledge = validate_saved_knowledge(scene_data)
@@ -434,6 +460,8 @@ async def load_scene_from_data(
         scene.shared_context = None
 
     await resolve_link_on_load(scene, scene_data)
+    if creation_settings is not None:
+        creation_settings.install(scene)
 
     import_scene_node_definitions(scene)
 

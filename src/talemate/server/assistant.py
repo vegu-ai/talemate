@@ -337,6 +337,7 @@ class AssistantPlugin(Plugin):
             self.websocket_handler.queue_put(
                 {
                     "type": "character_card_analysis",
+                    "request_id": data.get("request_id"),
                     "error": "No file path provided",
                 }
             )
@@ -346,6 +347,7 @@ class AssistantPlugin(Plugin):
                 self.websocket_handler.queue_put(
                     {
                         "type": "character_card_analysis",
+                        "request_id": data.get("request_id"),
                         "data": analysis.model_dump(),
                     }
                 )
@@ -358,6 +360,7 @@ class AssistantPlugin(Plugin):
                 self.websocket_handler.queue_put(
                     {
                         "type": "character_card_analysis",
+                        "request_id": data.get("request_id"),
                         "error": str(e),
                     }
                 )

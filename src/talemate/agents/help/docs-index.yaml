@@ -45,9 +45,9 @@
     associations, authored visibility, pin and memory projections, invalidation and shared-data export behavior.
 - path: dev/scene-format.md
   title: Saved scene format
-  summary: Saved scene format_version and knowledge_eligibility validation, compatibility, saves, exports and forks. Covers
-    new-story/card-import SceneInitialization opt-in, the empty-history can_change_knowledge_eligibility predicate and settings
-    API, clearing perspective records and audience-index rows when disabling, and character_knowledge_enabled.
+  summary: 'Saved format_version and knowledge_eligibility validation, creation opt-in, empty-history mode switching, saves,
+    exports and forks. Documents request-owned scene_initialization.agent_settings: explicit pins before character initialization,
+    success-only persistence, scene settings links, unchanged globals and correlated lifecycle frames.'
 - path: dev/snapshot-perspectives.md
   title: Audience-targeted snapshots
   summary: 'Audience-targeted world-state snapshots in perception scenes: evidence budgets, entity views and location_views,
@@ -245,9 +245,9 @@
     accounts scoped to a returning character's evidence and minimum missed summaries.
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
-  summary: Per-scene agent overrides use sparse fields in the Agents settings Global/Scene view, with link icons, Save/Discard
-    and immediate quick toggles. Documents gated settings, excluded secrets, project-shared agent-settings JSON files, export
-    behavior and auto-link/specific-file/None selection.
+  summary: Sparse agent overrides, Global/Scene editing, link icons, Save/Discard, quick toggles and settings-file selection.
+    New Story and card import pin knowledge effort even when equal to globals; independent creations use separate files, saves
+    sharing a link share overrides, and hub resets restore inheritance.
 - path: user-guide/agents/summarizer/index.md
   title: Overview
   summary: 'Summarizer overview: dialogue summaries, progressively compressed layered history, scene analysis and context
@@ -451,11 +451,11 @@
     static copy.
 - path: user-guide/character-card-import.md
   title: Character Card Import
-  summary: Import TavernAI-style Chara Card V0–V3 from PNG/JPG/WebP or JSON via the home dropzone or Scene Library. Covers
-    default-off Character perspectives, cancel/reopen reset, detection/manual cast selection, per-step AI Generation with
-    card-data fallback, Full/Minimal presets, director attribute limits, lore-book entries and metadata, alternate greetings
-    as titled episodes, shared world.json, writing style templates, player setup from a template, detected actor or another
-    scene, case-insensitive name collisions, cover assets and failed analysis troubleshooting.
+  summary: Import TavernAI Chara Card V0–V3 PNG/JPG/WebP or JSON through the home dropzone or Scene Library. Covers cast
+    detection/manual selection, player templates/actors/scene transfers, case-insensitive name collisions, lore-book
+    metadata, alternate greetings, titled episodes, shared world.json, writing styles, cover assets and failed analysis;
+    mode-specific knowledge effort pins ongoing scene settings without changing globals, separately from per-step AI
+    enrichment, Full/Minimal presets, director attribute limits, card-data fallback and cancel/reopen resets.
 - path: user-guide/clients/auto-retry.md
   title: Auto Retry
   summary: Per-client automatic retries for empty responses, HTTP 429 rate limits with exponential backoff, and missing reasoning
@@ -1242,13 +1242,10 @@
     orientation and briefing/Offscreen Life coordination, and a mode decision tree that weighs model, secrets, cast size and cost.
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
-  summary: Standard versus Character perspectives weighed by model, secrets and cast size, creation opt-in, empty-scene switching,
-    the six Standard effort stops from Off (pre-feature behaviour, Standard track only) to Ultra, what an existing scene loads
-    with, model expectations and repair costs. Covers live character-entry orientation and briefing controls, Known by visibility,
-    disclosures, Allow/Block rules, opening audiences, subjects/aliases, per-viewer supersession, ranked facts, topic/fact
-    editing, Allow lifting an earlier Block, director/node operations and audience-scoped retrieval. The knowledge hub writes
-    scene overrides rather than globals, marks each value's origin, and offers per-group and whole-hub Use global settings
-    resets; the overrides live in an agent-settings file shared by the saves in one project.
+  summary: Standard versus Character perspectives, mode-specific effort stops and costs, creation scene pins, entry orientation,
+    visibility, disclosures, Allow/Block rules, topics and retrieval. Covers mode selection in New Story/card import, origins
+    and group/whole-hub Use global settings resets; saves share overrides by settings-file link, while independent creations
+    can use different files within a project.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and

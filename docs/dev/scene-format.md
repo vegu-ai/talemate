@@ -52,6 +52,27 @@ configuration, modifies its input, or validates the entire scene document.
 copies that metadata directly; serialization and changelog snapshots do not apply
 process policy. Reconstruction validates its source before applying overrides, and overrides cannot change either metadata field.
 
+## Agent settings during creation
+
+The websocket `load_scene` request accepts `scene_initialization.agent_settings`
+for New Story and character-card creation only. Its shape is a sparse mapping
+from agent names to `{actions: {action: {enabled?, config?: {key: {value}}}}}`.
+Every supplied value is an explicit override, including values equal to global
+defaults. Missing keys inherit normally. Unknown agents, actions and fields,
+and fields that are not scene-overridable, reject the creation.
+
+The loader installs these settings on its owned scene after establishing
+`knowledge_eligibility` and before character initialization. The provisional
+overlay cannot be saved by live settings callers. Only a successful, current
+load persists it, in a separate `creation-<uuid>.json` file under the project's
+`agent-settings/` directory. Scene serialization stores the normal
+`agent_settings_file` link; no effort label or global config mutation is needed.
+A blank New Story remains unsaved until the user saves it.
+
+`load_scene` lifecycle frames and character-card analysis/file-inspection replies
+echo the caller's optional `request_id`. Creation settings are part of the load
+request itself and do not wait for or act on frontend status frames.
+
 ## Public opt-in
 
 All character-knowledge routes use the single predicate:

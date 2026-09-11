@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import Landing from "@/components/SceneLanding.vue";
 import { fileURLToPath, URL } from "node:url";
 import { lift, readSource } from "./helpers/liftMethod.js";
 
@@ -136,13 +137,15 @@ describe("leaving the mode when the scene is replaced", () => {
 
     it("announces the new-scene load before it sends it", () => {
         const calls = [];
-        const createNewScene = lift(sceneLanding, "createNewScene", "SceneLanding.vue");
+        const createNewScene = Landing.methods.createNewScene;
         const host = {
             $emit: (event) => calls.push(`emit:${event}`),
             getWebsocket: () => ({
                 send: (frame) => calls.push(`send:${JSON.parse(frame).type}`),
             }),
         };
+        Object.assign(host, Landing.data(), { $refs: {} });
+        for (const [key, method] of Object.entries(Landing.methods)) host[key] = method.bind(host);
         createNewScene.call(host, { assistWithSetup: true });
         expect(calls).toEqual(["emit:loading", "send:load_scene"]);
     });

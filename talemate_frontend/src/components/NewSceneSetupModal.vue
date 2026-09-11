@@ -73,7 +73,7 @@
           hide-details
         />
         <CharacterKnowledgeModeComparison :perspectives="characterKnowledge" class="mt-2" />
-        <KnowledgeEffortSlider :mode="effortMode" :agents="getAgents()" :value="effortForMode" class="mt-4" @apply="effort = $event" />
+        <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :agents="getAgents()" :value="effortForMode" class="mt-4" @apply="effort = $event" />
         <p class="text-body-small mt-2">You can change this in Scene Settings while the scene has no history or archived history. Keep secrets out of the shared scene description and story intention.</p>
         <v-divider class="mt-4 mb-4"></v-divider>
 
@@ -173,6 +173,7 @@ export default {
       this.$emit('update:modelValue', false);
     },
     create() {
+      this.$refs.effortSlider?.send();
       this.$emit('create', {
         sceneName: this.sceneName || null,
         writingStyle: this.selectedWritingStyle || null,

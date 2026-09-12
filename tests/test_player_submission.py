@@ -46,7 +46,7 @@ def submission(scene, monkeypatch, isolate_signals, tmp_path):
         order.append("dispatch")
         ready_at_dispatch.append(previous.revision_matches_baseline)
 
-    def emit(typ, message, **kwargs):
+    def emit(typ, message=None, **kwargs):
         if typ in ("character", "narrator"):
             visible.append((message.id, str(message)))
             order.append("visible")

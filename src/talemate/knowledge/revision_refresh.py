@@ -1444,6 +1444,10 @@ async def catch_up_revisions(scene) -> None:
         _catch_up_owners[scene] = asyncio.current_task()
         try:
             for message in list(scene.history):
+                if message.revision_state is not None and revision_requires_refresh(
+                    scene, message
+                ):
+                    await refresh_revision(scene, message)
                 if message.history_dispatch_pending:
                     if not any(entry is message for entry in scene.history):
                         continue
@@ -1452,11 +1456,8 @@ async def catch_up_revisions(scene) -> None:
                     try:
                         await scene.dispatch_history([message])
                         message.history_dispatch_pending = False
+                        message.history_dispatch_completed.clear()
                     finally:
                         await scene.attempt_auto_save()
-                elif message.revision_state is not None and revision_requires_refresh(
-                    scene, message
-                ):
-                    await refresh_revision(scene, message)
         finally:
             _catch_up_owners.pop(scene, None)

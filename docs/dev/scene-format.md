@@ -52,6 +52,32 @@ configuration, modifies its input, or validates the entire scene document.
 copies that metadata directly; serialization and changelog snapshots do not apply
 process policy. Reconstruction validates its source before applying overrides, and overrides cannot change either metadata field.
 
+## Accepted player message dispatch
+
+A player character or narrator message enters history before deferred fact refresh.
+While its history processing is unfinished, its serialized message includes
+`history_dispatch_pending: true` and `history_dispatch_completed`, a list of
+completed listener and finalizer keys. The normal auto-save policy persists both;
+manual saves include them as well. Completion clears the list and omits both fields
+from subsequent saves. No format migration is needed for these optional fields.
+
+Revision refresh and history dispatch are independent obligations: an edited
+pending message must finish its revision refresh before resuming dispatch and
+before the next generation prompt is built. Retry does not append or emit it again.
+
+`AsyncSignal.send(..., completed=keys)` opts into resumable, ordered delivery.
+It records successful named receivers as `signal:module.qualname`, skips recorded
+receivers, and propagates the first failure so unfinished work can be retried.
+Bound receiver owners can provide a stable `signal_receiver_key` to distinguish
+instances of the same method. Node listeners use their persisted node ID, or their
+registry name for the one automatically registered instance. Other receivers in
+this mode must have stable, distinct module-qualified names within their signal.
+Ordinary sends retain their existing failure-collection behavior.
+Perception and avatar finalizers have separate completion keys; the conversation
+listener also records synchronous entry-turn consumption before awaiting learning.
+These checkpoints preserve completed work across cancellation and saved reload;
+an interrupted receiver remains responsible for retrying its own unfinished work.
+
 ## Agent settings during creation
 
 The websocket `load_scene` request accepts `scene_initialization.agent_settings`

@@ -772,34 +772,53 @@ class Scene(Emitter):
     async def dispatch_history(
         self, messages: list[SceneMessage], *, emit_message: bool = False
     ):
+        completed = (
+            messages[0].history_dispatch_completed
+            if len(messages) == 1 and messages[0].history_dispatch_pending
+            else None
+        )
+
+        async def send(name, event):
+            if completed is None:
+                await self.signals[name].send(event)
+            else:
+                await self.signals[name].send(event, completed=completed)
+
         event: events.HistoryEvent = events.HistoryEvent(
             scene=self,
             event_type="push_history",
             messages=messages,
         )
 
-        await self.signals["push_history"].send(event)
+        await send("push_history", event)
 
         if emit_message:
             for message in messages:
                 self.emit_history_message(message)
 
         try:
-            if character_knowledge_enabled(self):
-                await get_agent("summarizer").finalize_perceptions(self, messages)
+            if completed is None or "perceptions" not in completed:
+                if character_knowledge_enabled(self):
+                    await get_agent("summarizer").finalize_perceptions(self, messages)
+                if completed is not None:
+                    completed.append("perceptions")
+
+            if completed is None or "avatar" not in completed:
+                for message in messages:
+                    if isinstance(message, CharacterMessage):
+                        await get_agent("conversation").finalize_message_avatar(message)
+                if completed is not None:
+                    completed.append("avatar")
 
             for message in messages:
-                if isinstance(message, CharacterMessage):
-                    await get_agent("conversation").finalize_message_avatar(message)
-
-            for message in messages:
-                await self.signals["game_loop_new_message"].send(
+                await send(
+                    "game_loop_new_message",
                     events.GameLoopNewMessageEvent(
                         scene=self, event_type="game_loop_new_message", message=message
-                    )
+                    ),
                 )
 
-            await self.signals["push_history.after"].send(event)
+            await send("push_history.after", event)
         finally:
             self.emit_status()
 

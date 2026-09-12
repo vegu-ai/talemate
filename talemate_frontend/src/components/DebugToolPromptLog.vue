@@ -6,13 +6,16 @@
         </v-card-text>
         <v-card-actions class="justify-center">
             <v-btn color="primary" variant="tonal" @click="dumpPromptLog" prepend-icon="mdi-download">Dump to file</v-btn>
-            <v-btn color="delete" variant="tonal" @click="$emit('clear-prompts')" prepend-icon="mdi-close">Clear</v-btn>
+            <v-btn color="delete" variant="tonal" @click="$emit('clear-prompts')" prepend-icon="mdi-close">
+                Clear
+                <v-tooltip activator="parent">Clear finished requests; keep active requests.</v-tooltip>
+            </v-btn>
         </v-card-actions>
     </v-card>
 
     <PromptLogItem
-        v-for="(prompt, index) in prompts"
-        :key="index"
+        v-for="prompt in prompts"
+        :key="prompt.request_id"
         :prompt="prompt"
         @click="openPromptView(prompt)"
     />

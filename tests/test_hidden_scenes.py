@@ -4,39 +4,18 @@ from unittest import mock
 
 import pytest
 
-import talemate.instance as instance
 from _changelog_test_helpers import make_changelog_scene, persist_test_mutation
-from conftest import MockScene, bootstrap_scene
 from talemate.changelog import fork_scene_at_revision
 from talemate.config.schema import Config, RecentScene, RecentScenes
 from talemate.config.state import cleanup_removed_recent_scenes
 from talemate.load import load_scene_from_data
-from talemate.tale_mate import Scene
-
-
-async def _noop(*args, **kwargs):
-    return None
-
-
-async def _no_documents(*args, **kwargs):
-    return {}
 
 
 @pytest.fixture
-def scene_env(tmp_path, monkeypatch):
+def scene_env(persistence_scene_factory):
     """Agent stack and scenes directory a scene can be loaded and saved in."""
-    scene = MockScene()
-    bootstrap_scene(scene)
-    monkeypatch.setattr(
-        Scene, "scenes_dir", classmethod(lambda cls: str(tmp_path)), raising=True
-    )
+    scene = persistence_scene_factory()
     scene.project_name = "deprecated-project"
-
-    memory = instance.get_agent("memory")
-    monkeypatch.setattr(memory, "set_db", _noop, raising=False)
-    monkeypatch.setattr(memory, "get_document", _no_documents, raising=False)
-    # the abstract MemoryAgent's close_db takes no scene, the real one does
-    monkeypatch.setattr(memory, "close_db", lambda *args, **kwargs: None)
 
     return scene
 
@@ -86,13 +65,7 @@ async def test_save_as_clears_the_browser_flags(scene_env):
     scene_env.deprecated = True
     scene_env.immutable_save = True
 
-    with (
-        mock.patch(
-            "talemate.tale_mate.Scene.add_to_recent_scenes", new=mock.AsyncMock()
-        ),
-        mock.patch("talemate.tale_mate.Scene.commit_to_memory", new=mock.AsyncMock()),
-    ):
-        await scene_env.save(copy_name="my-playthrough.json")
+    await scene_env.save(copy_name="my-playthrough.json")
 
     assert scene_env.hidden is False
     assert scene_env.deprecated is False

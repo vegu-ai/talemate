@@ -1,51 +1,51 @@
 <template>
-    <v-list-item density="compact" @click="$emit('click', prompt)">
+    <v-list-item density="compact" :data-request-id="prompt.request_id" @click="$emit('click', prompt)">
         <v-list-item-title class="text-body-small">
-            <v-row>
-                <v-col cols="2" class="text-info">#{{ prompt.num }}</v-col>
-                <v-col cols="10" class="text-right">
-                    <v-chip
-                        v-if="prompt.prefix_cache_ratio != null"
-                        size="x-small"
-                        class="mr-1"
-                        variant="text"
-                        label
-                        :color="prompt.prefix_cache_ratio >= 0.3 ? 'success' : 'error'"
-                    >
-                        {{ Math.round(prompt.prefix_cache_ratio * 100) }}%
-                        <v-icon size="14" class="ml-1">mdi-cached</v-icon>
-                    </v-chip>
-                    <v-chip
-                        size="x-small"
-                        class="mr-1"
-                        color="primary"
-                        variant="text"
-                        label
-                    >
-                        {{ prompt.prompt_tokens || 0 }}
-                        <v-icon size="14" class="ml-1">mdi-arrow-down-bold</v-icon>
-                    </v-chip>
-                    <v-chip
-                        size="x-small"
-                        class="mr-1"
-                        color="secondary"
-                        variant="text"
-                        label
-                    >
-                        {{ prompt.response_tokens || 0 }}
-                        <v-icon size="14" class="ml-1">mdi-arrow-up-bold</v-icon>
-                    </v-chip>
-                    <v-chip
-                        size="x-small"
-                        variant="text"
-                        label
-                        color="muted"
-                    >
-                        {{ prompt.time || 0 }}s
-                        <v-icon size="14" class="ml-1">mdi-clock</v-icon>
-                    </v-chip>
-                </v-col>
-            </v-row>
+            <div class="d-flex align-center flex-wrap ga-1">
+                <span class="text-info">#{{ prompt.num }}</span>
+                <PromptStatus :status="prompt.status" />
+                <v-spacer />
+                <v-chip
+                    v-if="prompt.prefix_cache_ratio != null"
+                    size="x-small"
+                    class="mr-1"
+                    variant="text"
+                    label
+                    :color="prompt.prefix_cache_ratio >= 0.3 ? 'success' : 'error'"
+                >
+                    {{ Math.round(prompt.prefix_cache_ratio * 100) }}%
+                    <v-icon size="14" class="ml-1">mdi-cached</v-icon>
+                </v-chip>
+                <v-chip
+                    size="x-small"
+                    class="mr-1"
+                    color="primary"
+                    variant="text"
+                    label
+                >
+                    {{ promptMetric(prompt.prompt_tokens, prompt.status) }}
+                    <v-icon size="14" class="ml-1">mdi-arrow-down-bold</v-icon>
+                </v-chip>
+                <v-chip
+                    size="x-small"
+                    class="mr-1"
+                    color="secondary"
+                    variant="text"
+                    label
+                >
+                    {{ promptMetric(prompt.response_tokens, prompt.status) }}
+                    <v-icon size="14" class="ml-1">mdi-arrow-up-bold</v-icon>
+                </v-chip>
+                <v-chip
+                    size="x-small"
+                    variant="text"
+                    label
+                    color="muted"
+                >
+                    {{ promptMetric(prompt.time == null ? null : Math.floor(prompt.time), prompt.status, 's') }}
+                    <v-icon size="14" class="ml-1">mdi-clock</v-icon>
+                </v-chip>
+            </div>
         </v-list-item-title>
         <v-list-item-subtitle class="text-body-small">
             <v-chip
@@ -86,8 +86,13 @@
 </template>
 
 <script>
+import PromptStatus from './PromptStatus.vue';
+import { promptMetric } from '@/utils/promptLog';
+
 export default {
     name: 'PromptLogItem',
+    components: { PromptStatus },
+    methods: { promptMetric },
     props: {
         prompt: {
             type: Object,

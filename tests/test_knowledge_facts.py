@@ -711,8 +711,13 @@ class TestRegenerateFacts:
         scene.world_state.fact_counter = 1
 
         async def stub(
-            text, extra_context=None, generation_options=None, return_facts=False
+            text,
+            extra_context=None,
+            generation_options=None,
+            return_facts=False,
+            include_previous_facts=True,
         ):
+            assert include_previous_facts
             return "NEW SUMMARY", parse_facts('[{"text": "fresh"}]')
 
         summarizer.summarize = stub
@@ -748,8 +753,13 @@ class TestRegenerateFacts:
         scene.world_state.facts = {"F1": Fact(id="F1", text="stale", archive_id="e1")}
 
         async def stub(
-            text, extra_context=None, generation_options=None, return_facts=False
+            text,
+            extra_context=None,
+            generation_options=None,
+            return_facts=False,
+            include_previous_facts=True,
         ):
+            assert include_previous_facts
             return "NEW SUMMARY", None
 
         summarizer.summarize = stub

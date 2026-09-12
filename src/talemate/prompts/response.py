@@ -915,6 +915,10 @@ class BlockListExtractor(Extractor):
 
     Consecutive blocks of the same type and named groups are merged.
     Tag matching is case-insensitive.
+
+    Blocks form a flat sequence: a missing closing anchor is recovered at
+    the next configured opening anchor, or at the end of the response for
+    the final block.
     """
 
     blocks: list[tuple[str, str, str]] = []
@@ -940,43 +944,41 @@ class BlockListExtractor(Extractor):
         if not text or not self.blocks:
             return []
 
-        # Find all block matches with their positions for ordering
-        found: list[tuple[int, dict]] = []
-        text_lower = text.lower()
-
+        openings = []
         for block_type, left_pattern, right_literal in self.blocks:
-            right_lower = right_literal.lower()
+            right_pattern = re.compile(re.escape(right_literal), re.IGNORECASE)
+            for match in re.finditer(left_pattern, text, re.IGNORECASE):
+                openings.append((match, block_type, right_pattern))
+        openings.sort(key=lambda item: item[0].start())
 
-            for left_match in re.finditer(left_pattern, text, re.IGNORECASE):
-                content_start = left_match.end()
+        blocks = []
 
-                # Find the closing anchor (case-insensitive) after this opening
-                right_pos = text_lower.find(right_lower, content_start)
-                if right_pos < 0:
-                    continue
+        for index, (left_match, block_type, right_pattern) in enumerate(openings):
+            content_start = left_match.end()
+            next_start = (
+                openings[index + 1][0].start()
+                if index + 1 < len(openings)
+                else len(text)
+            )
+            right_match = right_pattern.search(text, content_start, next_start)
+            if right_match is None:
+                right_pos = next_start
+            else:
+                right_pos = right_match.start()
 
-                content = text[content_start:right_pos]
-                if self.trim:
-                    content = content.strip()
+            content = text[content_start:right_pos]
+            if self.trim:
+                content = content.strip()
 
-                # Build block dict with type and content
-                block = {"type": block_type, "content": content}
+            block = {"type": block_type, "content": content}
+            named_groups = left_match.groupdict()
+            block.update(named_groups)
 
-                # Add any named capture groups from the left regex
-                named_groups = left_match.groupdict()
-                block.update(named_groups)
-
-                # Strip name prefix from content if a "name" group was captured
-                if named_groups.get("name") and content:
-                    block["content"] = self._strip_name_prefix(
-                        content, named_groups["name"]
-                    )
-
-                found.append((left_match.start(), block))
-
-        # Sort by position in text
-        found.sort(key=lambda x: x[0])
-        blocks = [b for _, b in found]
+            if named_groups.get("name") and content:
+                block["content"] = self._strip_name_prefix(
+                    content, named_groups["name"]
+                )
+            blocks.append(block)
 
         # Merge consecutive blocks with same type and same named groups
         if not blocks:

@@ -115,6 +115,10 @@ These extractors are also available as node editor nodes for building extraction
 
 The **Prompts** tab lists all prompts that have been sent to the LLM during the current session. Each entry shows the agent name, action, inference preset, token counts (prompt and response), execution time, cache ratio, and which client was used.
 
+Requests appear as **Active** as soon as they start, including when you open the tab during generation. You can inspect the available prompt details immediately; response and final usage/timing stay pending until known. The entry updates to **Completed**, **Failed** or **Cancelled**, with retries kept together in the same entry. Ignoring a generation error leaves the request marked Failed.
+
+**Clear** removes finished entries while keeping active requests and their eventual results. Both this viewer and Debug Tools share the same list. Open details update as results arrive, preserving local prompt and parameter edits. **Test Changes** becomes available after the request ends.
+
 ![Prompts tab showing recent activity](../../img/0.36.0/prompt-manager-prompts-tab.png)
 
 ### Prompt Detail View

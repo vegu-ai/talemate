@@ -7,28 +7,63 @@
   "ts": "P1Y",
   "archived_history": [
     {
-      "text": "Captain Elmer and Kaira first met during their rigorous training for the Infinity Quest mission. Their initial interactions were marked by a sense of mutual respect and curiosity.",
-      "ts": "P1M"
+      "text": "Elmer and Kaira met during flight training for the Starlight Nomad's first deep-space survey contract. The ship still had military labels on half its panels. When Elmer handed her the sensor checklist, Kaira asked for the raw readings instead. She found a channel wired to the wrong display; he opened the panel while she traced the cable. They finished the inspection sitting on the deck, comparing the old wiring diagram with what was actually in front of them.",
+      "ts": "P1M",
+      "id": "iq-prelude-1",
+      "present": [
+        "Elmer",
+        "Kaira"
+      ],
+      "facts_status": "ok"
     },
     {
-      "text": "Over the course of several months, as they trained together, Elmer and Kaira developed a strong bond. They often spent their free time discussing their dreams of exploring the cosmos.",
-      "ts": "P3M"
+      "text": "Over the next two months, Elmer and Kaira settled into a routine of survey drills, repairs and long watches. Kaira checked the sensor array before breakfast; Elmer brought his coffee to the console and worked through the fuel figures beside her. Off duty, they compared human and Altrusian star charts. Elmer wanted a route nobody had flown before. Kaira wanted measurements good enough that the next crew could follow it without trusting their luck.",
+      "ts": "P3M",
+      "id": "iq-prelude-2",
+      "present": [
+        "Elmer",
+        "Kaira"
+      ],
+      "facts_status": "ok"
     },
     {
-      "text": "During a simulated mission, the Starlight Nomad encountered a sudden system malfunction. Elmer and Kaira worked tirelessly together to resolve the issue and avert a potential disaster. This incident strengthened their trust in each other's abilities.",
-      "ts": "P6M"
+      "text": "During a simulator drill, the Nomad's oxygen-scrubber failure alarm sounded at the same time as a navigation fault. Elmer began checking the navigation readings again. Kaira pointed to the falling oxygen figure and told him which breaker to pull. He switched to manual power while she isolated the simulated short, then brought the scrubber back online. In the debrief, Elmer made her write the revised emergency checklist. Neither of them treated the drill as a clean pass.",
+      "ts": "P6M",
+      "id": "iq-prelude-3",
+      "present": [
+        "Elmer",
+        "Kaira"
+      ],
+      "facts_status": "ok"
     },
     {
-      "text": "As they ventured further into uncharted space, the crew faced a perilous encounter with a hostile alien species. Elmer and Kaira's coordinated efforts were instrumental in negotiating a peaceful resolution and avoiding conflict.",
-      "ts": "P8M"
+      "text": "An alien patrol intercepted the Starlight Nomad near the edge of a survey area and demanded that it turn back. Elmer cut the active scan and held position instead of reaching for the weapons controls. Kaira transmitted their survey logs with the ship's course marked on them, then worked through the reply one repeated signal at a time. The patrol eventually opened a route away from its territory. The Nomad left by that route without firing a shot; Elmer marked the boundary on both sets of charts.",
+      "ts": "P8M",
+      "id": "iq-prelude-4",
+      "present": [
+        "Elmer",
+        "Kaira"
+      ],
+      "facts_status": "ok"
     },
     {
-      "text": "One memorable evening, while gazing at the stars through the ship's observation deck, Elmer and Kaira shared personal stories from their past. This intimate conversation deepened their connection and understanding of each other.",
-      "ts": "P11M"
+      "text": "After a late survey watch, Elmer and Kaira stayed in the darkened cockpit with the displays dimmed. Elmer admitted that when he could not sleep, he checked the fuel reserves again even though the figures had not changed. Kaira described how unfamiliar the stars had looked when she first arrived in human space, and how she had made her own chart just to put names to them. They talked until the next diagnostic cycle lit the console. For once, neither reached for the readings immediately.",
+      "ts": "P11M",
+      "id": "iq-prelude-5",
+      "present": [
+        "Elmer",
+        "Kaira"
+      ],
+      "facts_status": "ok"
     },
     {
-      "text": "You awaken on board of your ship, disoriented.",
-      "ts": "P12M"
+      "text": "Elmer woke in the pilot seat with his helmet sealed and no memory of the last six hours. Three amber fault lights were on. His last flight-recorder entry placed Kaira in the sensor bay running a deep scan, then broke off in static. The navigation computer would not accept the ship's coordinates. Elmer unstrapped and stood in the dark bridge, listening for Kaira in the corridor.",
+      "ts": "P12M",
+      "id": "iq-prelude-6",
+      "present": [
+        "Elmer"
+      ],
+      "facts_status": "ok"
     }
   ],
   "active_characters": [
@@ -118,7 +153,260 @@
   "goal": null,
   "goals": [],
   "context": "an epic sci-fi adventure aimed at an adult audience.",
-  "world_state": {},
+  "world_state": {
+    "facts": {
+      "F1": {
+        "id": "F1",
+        "text": "Elmer and Kaira met during flight training for the Starlight Nomad's first deep-space survey contract.",
+        "importance": 3,
+        "ts": 2592000,
+        "archive_id": "iq-prelude-1",
+        "present": [
+          "Elmer",
+          "Kaira"
+        ],
+        "subjects": [
+          "Elmer",
+          "Kaira",
+          "Starlight Nomad"
+        ],
+        "last_seen_ts": 2592000,
+        "archive_sources": [
+          {
+            "archive_id": "iq-prelude-1"
+          }
+        ]
+      },
+      "F2": {
+        "id": "F2",
+        "text": "Elmer and Kaira compared human and Altrusian star charts off duty.",
+        "importance": 1,
+        "ts": 7776000,
+        "archive_id": "iq-prelude-2",
+        "present": [
+          "Elmer",
+          "Kaira"
+        ],
+        "subjects": [
+          "Elmer",
+          "Kaira",
+          "star charts"
+        ],
+        "last_seen_ts": 7776000,
+        "archive_sources": [
+          {
+            "archive_id": "iq-prelude-2"
+          }
+        ]
+      },
+      "F3": {
+        "id": "F3",
+        "text": "Elmer wanted a route nobody had flown before.",
+        "ts": 7776000,
+        "archive_id": "iq-prelude-2",
+        "present": [
+          "Elmer",
+          "Kaira"
+        ],
+        "subjects": [
+          "Elmer",
+          "survey"
+        ],
+        "last_seen_ts": 7776000,
+        "archive_sources": [
+          {
+            "archive_id": "iq-prelude-2"
+          }
+        ]
+      },
+      "F4": {
+        "id": "F4",
+        "text": "During a simulator drill, the Nomad's oxygen-scrubber failure alarm sounded at the same time as a navigation fault.",
+        "ts": 15552000,
+        "archive_id": "iq-prelude-3",
+        "present": [
+          "Elmer",
+          "Kaira"
+        ],
+        "subjects": [
+          "Starlight Nomad",
+          "emergency drill"
+        ],
+        "last_seen_ts": 15552000,
+        "archive_sources": [
+          {
+            "archive_id": "iq-prelude-3"
+          }
+        ]
+      },
+      "F5": {
+        "id": "F5",
+        "text": "After the emergency drill, Elmer asked Kaira to write the revised emergency checklist.",
+        "ts": 15552000,
+        "archive_id": "iq-prelude-3",
+        "present": [
+          "Elmer",
+          "Kaira"
+        ],
+        "subjects": [
+          "Elmer",
+          "Kaira",
+          "emergency checklist"
+        ],
+        "last_seen_ts": 15552000,
+        "archive_sources": [
+          {
+            "archive_id": "iq-prelude-3"
+          }
+        ]
+      },
+      "F6": {
+        "id": "F6",
+        "text": "An alien patrol intercepted the Starlight Nomad near the edge of a survey area and demanded that it turn back.",
+        "ts": 20736000,
+        "archive_id": "iq-prelude-4",
+        "present": [
+          "Elmer",
+          "Kaira"
+        ],
+        "subjects": [
+          "Starlight Nomad",
+          "alien patrol"
+        ],
+        "last_seen_ts": 20736000,
+        "archive_sources": [
+          {
+            "archive_id": "iq-prelude-4"
+          }
+        ]
+      },
+      "F7": {
+        "id": "F7",
+        "text": "The Starlight Nomad left the alien patrol territory without firing a shot; Elmer marked the boundary on both sets of charts.",
+        "ts": 20736000,
+        "archive_id": "iq-prelude-4",
+        "present": [
+          "Elmer",
+          "Kaira"
+        ],
+        "subjects": [
+          "Elmer",
+          "Kaira",
+          "alien patrol",
+          "star charts"
+        ],
+        "last_seen_ts": 20736000,
+        "archive_sources": [
+          {
+            "archive_id": "iq-prelude-4"
+          }
+        ]
+      },
+      "F8": {
+        "id": "F8",
+        "text": "Elmer admitted that when he could not sleep, he checked the fuel reserves again even though the figures had not changed.",
+        "importance": 1,
+        "ts": 28512000,
+        "archive_id": "iq-prelude-5",
+        "present": [
+          "Elmer",
+          "Kaira"
+        ],
+        "subjects": [
+          "Elmer",
+          "Kaira"
+        ],
+        "last_seen_ts": 28512000,
+        "archive_sources": [
+          {
+            "archive_id": "iq-prelude-5"
+          }
+        ]
+      },
+      "F9": {
+        "id": "F9",
+        "text": "Kaira described how unfamiliar the stars had looked when she first arrived in human space, and how she had made her own chart just to put names to them.",
+        "ts": 28512000,
+        "archive_id": "iq-prelude-5",
+        "present": [
+          "Elmer",
+          "Kaira"
+        ],
+        "subjects": [
+          "Kaira",
+          "Elmer",
+          "star charts"
+        ],
+        "last_seen_ts": 28512000,
+        "archive_sources": [
+          {
+            "archive_id": "iq-prelude-5"
+          }
+        ]
+      },
+      "F10": {
+        "id": "F10",
+        "text": "Elmer woke in the pilot seat with his helmet sealed and no memory of the last six hours.",
+        "importance": 3,
+        "ts": 31104000,
+        "archive_id": "iq-prelude-6",
+        "present": [
+          "Elmer"
+        ],
+        "subjects": [
+          "Elmer",
+          "Starlight Nomad"
+        ],
+        "last_seen_ts": 31104000,
+        "archive_sources": [
+          {
+            "archive_id": "iq-prelude-6"
+          }
+        ]
+      },
+      "F11": {
+        "id": "F11",
+        "text": "Elmer's last flight-recorder entry placed Kaira in the sensor bay running a deep scan, then broke off in static.",
+        "ts": 31104000,
+        "archive_id": "iq-prelude-6",
+        "present": [
+          "Elmer"
+        ],
+        "subjects": [
+          "Elmer",
+          "Kaira",
+          "flight recorder",
+          "sensor bay"
+        ],
+        "last_seen_ts": 31104000,
+        "archive_sources": [
+          {
+            "archive_id": "iq-prelude-6"
+          }
+        ]
+      },
+      "F12": {
+        "id": "F12",
+        "text": "The navigation computer would not accept the ship's coordinates.",
+        "ts": 31104000,
+        "archive_id": "iq-prelude-6",
+        "present": [
+          "Elmer"
+        ],
+        "subjects": [
+          "Starlight Nomad",
+          "navigation"
+        ],
+        "last_seen_ts": 31104000,
+        "archive_sources": [
+          {
+            "archive_id": "iq-prelude-6"
+          }
+        ]
+      }
+    },
+    "fact_counter": 12
+  },
   "assets": {
     "cover_image": "8b22f95f2d03c4f453fba5c2129255649b77cf06c27998bdca8563287800eb3c"
   },

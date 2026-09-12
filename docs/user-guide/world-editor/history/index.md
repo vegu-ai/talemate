@@ -36,6 +36,16 @@ Each fact also shows a relative time marker based on scene time and its latest r
 
 Double-click a fact or select its importance chip to edit its text and importance, then select **Save**. The same editor is on the topic rows of a character's [Knowledge tab](/talemate/user-guide/world-editor/knowledge/#topics-and-coverage) and in the [Facts tab](/talemate/user-guide/world-editor/facts/), which lists every fact with filters; any place changes the one record. A later restatement preserves the original fact's importance, including a manual correction. Use the :material-close: button to remove a fact. When the model's facts output could not be read, the summary is still stored and the entry shows a **facts failed** chip; **:material-format-list-checks: Regenerate facts** asks for the facts again and keeps the entry text. Regenerating the entry itself replaces its facts too. The summarizer's **Extract facts** setting turns the archive extraction off.
 
+#### Facts from predefined history
+
+Static entries also offer **Generate facts**, or **Regenerate facts** after an extraction attempt or when facts already exist. This reads the saved entry text without rewriting it, adding messages, or advancing scene time. The Summarizer's **Extract facts** setting must be enabled.
+
+In **Standard** mode, facts keep the entry's recorded presence and the existing knowledge rules. An older entry with unknown presence remains shared; generation does not guess a restricted audience. Regeneration replaces the entry's facts through the same source and duplicate handling used for summarized history. Saving and reloading keeps the associations.
+
+In **Character perspectives**, extraction uses each saved character view, preserving its audience and replacement text. An entry with missing or unfinished perspectives shows why extraction is unavailable; its full reader text is never substituted for a missing character view.
+
+Predefined history still locks the scene's knowledge mode. You do not need to change modes or remove history to generate its facts.
+
 #### Dialogue facts
 
 With the Conversation agent's [Establish facts from dialogue](/talemate/user-guide/agents/conversation/settings/#establish-facts-from-dialogue) option enabled, new facts appear here as soon as a character line establishes them, before a chapter is summarized. This section uses the same importance chip and editor as archived facts, and the **Known by** filter applies to both. **Source message** opens the original dialogue for inspection. Facts retain their message source when a later archive restates them; editing or removing that source removes its facts.

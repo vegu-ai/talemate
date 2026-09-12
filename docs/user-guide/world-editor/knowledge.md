@@ -88,6 +88,8 @@ You can also turn the mode on or off in **World Editor → Scene → Settings** 
 
 Saves, reloads and forks preserve the mode. **Scene → Shared World → New Scene** inherits it for the next episode. Stories with history cannot be converted by resaving, resetting or forking; past perceptions are not reconstructed. Turning Character perspectives off on an empty scene clears its stored perspectives and disclosures, along with the derived audience memory index. Turning it back on does not restore those records.
 
+Predefined static history also keeps the mode locked. Use [History → Generate facts](history/index.md#facts-from-predefined-history) to extract facts from those entries in their current mode, without adding story progress.
+
 The reader keeps the complete prose. Characters receive stored replacement views of passages, audience summaries, disclosures and accessible memories. Missing or failed views never substitute the reader's private text. Narration and author planning can retain broader reader context; character guidance and analysis use the character evidence appropriate to their task.
 
 ### Cost and recovery

@@ -37,15 +37,22 @@ export default {
             prompt: null,
             dialog: false,
             busy: false,
-            index: null,
             prompts: [],
         }
     },
     computed: {
+        index() {
+            return this.prompts.findIndex(prompt => prompt.request_id === this.prompt?.request_id);
+        },
+    },
+    watch: {
+        index(value) {
+            if (value < 0) this.close();
+        },
     },
     methods: {
         hasPreviousPrompt() {
-            return this.index < this.prompts.length - 1;
+            return this.index >= 0 && this.index < this.prompts.length - 1;
         },
 
         hasNextPrompt() {
@@ -54,23 +61,19 @@ export default {
 
         loadPreviousPrompt() {
             if (this.index < this.prompts.length - 1) {
-                this.index++;
-                this.prompt = this.prompts[this.index];
+                this.prompt = this.prompts[this.index + 1];
             }
         },
 
         loadNextPrompt() {
             if (this.index > 0) {
-                this.index--;
-                this.prompt = this.prompts[this.index];
+                this.prompt = this.prompts[this.index - 1];
             }
         },
 
         open(prompt, prompts) {
             this.prompt = prompt;
             this.prompts = prompts;
-
-            this.index = this.prompts.indexOf(prompt);
 
             this.dialog = true;
             this.busy = false;
@@ -88,4 +91,3 @@ export default {
     },
 }
 </script>
-

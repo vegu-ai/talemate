@@ -183,6 +183,26 @@ class SourceFactMixin:
         for disclosure in scene.knowledge.disclosures if scene.knowledge else ():
             yield source_reference(scene, "disclosure", disclosure.id, read=read)
 
+    def fact_source_unavailable_reason(self, scene, entry):
+        if not entry.text.strip():
+            return "This entry has no text to extract facts from."
+        if not character_knowledge_enabled(scene):
+            return None
+        if entry.knowledge is None or not entry.knowledge.views:
+            return (
+                "This entry has no saved character perspectives to extract facts from."
+            )
+        read = PerspectiveReadContext(scene)
+        reference = source_reference(scene, "summary", entry.id, read=read)
+        if reference is None or any(
+            select_character_view(scene, reference, name, read=read).status
+            not in ("ready", "omitted")
+            for view in entry.knowledge.views
+            for name in view.audience
+        ):
+            return "This entry's character perspectives must be ready before extracting facts."
+        return None
+
     @evidence_writer
     async def rebuild_supported_facts(self, scene, sources=None):
         if not character_knowledge_enabled(scene):
@@ -217,10 +237,20 @@ class SourceFactMixin:
                         )
                         if source is None:
                             raise ValueError("Requested fact source was removed")
+                        include_previous_facts = True
                         if source.kind == "disclosure":
                             audiences = [read.disclosures[source.id].audience]
                         else:
                             owner = read.sources[source.key][0]
+                            # Static entries have no earlier story range. Existing facts
+                            # can come from this entry or later ones, so exclude them
+                            # just as Standard-mode static extraction does.
+                            include_previous_facts = not (
+                                source.kind == "summary"
+                                and source.layer == 0
+                                and owner.owner.get("start") is None
+                                and owner.owner.get("end") is None
+                            )
                             audiences = [
                                 view.audience
                                 for view in owner.knowledge.views
@@ -243,11 +273,14 @@ class SourceFactMixin:
                             text = extraction_text(
                                 scene, view.source, audience[0], read=read
                             )
-                            requests.append((view.source, audience, text))
-                    for source, audience, text in requests:
+                            requests.append(
+                                (view.source, audience, text, include_previous_facts)
+                            )
+                    for source, audience, text, include_previous_facts in requests:
                         _, parsed = await self.summarize(
                             text,
                             audience=audience,
+                            include_previous_facts=include_previous_facts,
                             extra_context=[],
                             return_facts=True,
                             skip_author_hooks=True,

@@ -740,7 +740,7 @@ class SummarizeAgent(
             reference = source_reference(scene, "summary", archive_entry.id)
             status = (
                 await self.rebuild_supported_facts(scene, [reference])
-                if reference
+                if not self.fact_source_unavailable_reason(scene, archive_entry)
                 else "failed"
             )
             for stored in scene.archived_history:
@@ -749,14 +749,24 @@ class SummarizeAgent(
                     break
             return status
 
-        sources = collect_source_entries(self.scene, entry)
-        if not sources:
+        static = archive_entry.start is None and archive_entry.end is None
+        if static:
+            text = archive_entry.text
+        else:
+            sources = collect_source_entries(self.scene, entry)
+            if not sources:
+                return archive_entry.facts_status
+            text = "\n".join(map(str, sources))
+        if not text.strip():
             return archive_entry.facts_status
 
         _, parsed_facts = await self.summarize(
-            "\n".join(map(str, sources)),
-            extra_context=await self.previous_summaries(archive_entry),
+            text,
+            extra_context=[]
+            if static
+            else await self.previous_summaries(archive_entry),
             return_facts=True,
+            include_previous_facts=not static,
         )
         await drop_facts_for_entries(self.scene, {archive_entry.id})
         if parsed_facts:
@@ -789,6 +799,7 @@ class SummarizeAgent(
         audience: tuple[str, ...] | None = None,
         skip_author_hooks: bool = False,
         fact_evidence: list[dict] | None = None,
+        include_previous_facts: bool = True,
     ):
         """
         Summarize the given text
@@ -827,7 +838,7 @@ class SummarizeAgent(
                 if audience
                 else previous_facts(self.scene)
             )
-            if extract_facts
+            if extract_facts and include_previous_facts
             else [],
         }
 

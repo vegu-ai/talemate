@@ -8,6 +8,7 @@ from talemate.history import (
     history_with_relative_time,
     rebuild_history,
     HistoryEntry,
+    ArchiveEntry,
     update_history_entry,
     regenerate_history_entry,
     collect_source_entries,
@@ -85,15 +86,17 @@ class HistoryMixin:
         history = history_with_relative_time(
             self.scene.archived_history, self.scene.ts, layer=0
         )
-        for row in history:
+        summarizer = get_agent("summarizer")
+        for row, stored in zip(history, self.scene.archived_history):
             row["facts"] = [
                 fact_display(self.scene, fact)
                 for fact in facts_for_entry(self.scene, row["id"])
             ]
+            row["facts_unavailable_reason"] = summarizer.fact_source_unavailable_reason(
+                self.scene, ArchiveEntry(**stored)
+            )
 
         layered_history = []
-
-        summarizer = get_agent("summarizer")
 
         if summarizer.layered_history_enabled:
             for index, layer in enumerate(self.scene.layered_history):

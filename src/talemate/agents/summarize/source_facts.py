@@ -183,6 +183,26 @@ class SourceFactMixin:
         for disclosure in scene.knowledge.disclosures if scene.knowledge else ():
             yield source_reference(scene, "disclosure", disclosure.id, read=read)
 
+    def fact_source_unavailable_reason(self, scene, entry):
+        if not entry.text.strip():
+            return "This entry has no text to extract facts from."
+        if not character_knowledge_enabled(scene):
+            return None
+        if entry.knowledge is None or not entry.knowledge.views:
+            return (
+                "This entry has no saved character perspectives to extract facts from."
+            )
+        read = PerspectiveReadContext(scene)
+        reference = source_reference(scene, "summary", entry.id, read=read)
+        if reference is None or any(
+            select_character_view(scene, reference, name, read=read).status
+            not in ("ready", "omitted")
+            for view in entry.knowledge.views
+            for name in view.audience
+        ):
+            return "This entry's character perspectives must be ready before extracting facts."
+        return None
+
     @evidence_writer
     async def rebuild_supported_facts(self, scene, sources=None):
         if not character_knowledge_enabled(scene):

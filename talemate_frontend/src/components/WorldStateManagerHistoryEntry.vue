@@ -41,9 +41,9 @@
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(isPrimaryModifier(ev))">Regenerate</v-btn>
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="toggleSourceEntries">{{ entry.source_entries ? 'Collapse' : 'Inspect' }}</v-btn>
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-clock-plus-outline" color="primary" @click="insertingTimePassage = true">Time Passage</v-btn>
-                <v-btn v-if="hasSourceEntries && entry.layer === 0" :disabled="editing || locked" prepend-icon="mdi-format-list-checks" color="primary" @click="regenerateFacts">
-                    Regenerate facts
-                    <v-tooltip activator="parent" location="top">Ask the summarizer for this entry's facts again. The entry text is kept.</v-tooltip>
+                <v-btn v-if="entry.layer === 0" :disabled="editing || locked || !!entry.facts_unavailable_reason" prepend-icon="mdi-format-list-checks" color="primary" @click="regenerateFacts">
+                    {{ entry.facts_status || entry.facts?.length ? 'Regenerate facts' : 'Generate facts' }}
+                    <v-tooltip activator="parent" location="top">Extract facts from this entry without changing its text or advancing the story.</v-tooltip>
                 </v-btn>
                 <ConfirmActionInline
                     v-if="deletable"
@@ -68,6 +68,10 @@
                 @generate="content => { entry.text = content; updateEntry(entry); }"
             />
         </v-card-actions>
+
+        <div v-if="entry.layer === 0 && entry.facts_unavailable_reason" class="px-4 pb-3 text-body-small text-medium-emphasis">
+            {{ entry.facts_unavailable_reason }}
+        </div>
 
         <div v-if="insertingTimePassage" class="d-flex align-center px-4 pb-2">
             <v-number-input v-model="insertAmount" :min="1" label="Amount"

@@ -1235,7 +1235,8 @@
     chapters. Facts show Routine/State/Milestone importance, relative time such as (21 Days ago) since their latest restatement,
     repeats and supersedes links; archived and Dialogue facts share text/importance editing and Known by filtering, source
     inspection and cleanup, and failed extraction retries; History retains the full record despite prompt chronology cuts
-    and supports dated seed-guided entries and regeneration.
+    and supports dated seed-guided entries and regeneration. Generate or regenerate facts from predefined static history
+    without advancing the story; Standard keeps existing presence rules, while Character perspectives requires saved views.
 - path: user-guide/world-editor/history/layered-history.md
   title: Layered History
   summary: Layered History compresses dialogue into base summaries and successively smaller layers to preserve a full-timeline

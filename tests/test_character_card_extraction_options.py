@@ -1134,8 +1134,9 @@ async def test_load_scene_skips_guarded_steps_when_disabled(
 
 
 @pytest.mark.parametrize("source", ["json", "image"])
+@pytest.mark.parametrize("character_knowledge", [False, True])
 async def test_load_scene_persists_normalized_intro_from_supported_sources(
-    tmp_path, monkeypatch, pipeline_recorders, source
+    tmp_path, monkeypatch, pipeline_recorders, source, character_knowledge
 ):
     class PersistedScene(MockScene):
         @classmethod
@@ -1153,14 +1154,23 @@ async def test_load_scene_persists_normalized_intro_from_supported_sources(
     monkeypatch.setattr(scene, "add_to_recent_scenes", AsyncMock())
     pipeline_recorders["_save_scene_files"].side_effect = _SAVE_SCENE_FILES
 
+    async def activate(scene, greeting):
+        scene.active_characters = ["Hero"]
+
+    pipeline_recorders["_activate_characters_from_greeting"].side_effect = activate
+
     await load_scene_from_character_card(
         scene,
         _write_card(tmp_path, greeting=greeting, source=source),
         _options_all_disabled(),
+        character_knowledge=character_knowledge,
     )
 
     assert scene.intro == expected
     assert scene.character_data["Hero"].greeting_text == greeting
+    assert scene.intro_present == ["Hero"]
+    if character_knowledge:
+        assert scene.intro_knowledge.views[0].text == expected
     pipeline_recorders["_activate_characters_from_greeting"].assert_awaited_once_with(
         scene, expected
     )

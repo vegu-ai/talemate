@@ -237,10 +237,20 @@ class SourceFactMixin:
                         )
                         if source is None:
                             raise ValueError("Requested fact source was removed")
+                        include_previous_facts = True
                         if source.kind == "disclosure":
                             audiences = [read.disclosures[source.id].audience]
                         else:
                             owner = read.sources[source.key][0]
+                            # Static entries have no earlier story range. Existing facts
+                            # can come from this entry or later ones, so exclude them
+                            # just as Standard-mode static extraction does.
+                            include_previous_facts = not (
+                                source.kind == "summary"
+                                and source.layer == 0
+                                and owner.owner.get("start") is None
+                                and owner.owner.get("end") is None
+                            )
                             audiences = [
                                 view.audience
                                 for view in owner.knowledge.views
@@ -263,11 +273,14 @@ class SourceFactMixin:
                             text = extraction_text(
                                 scene, view.source, audience[0], read=read
                             )
-                            requests.append((view.source, audience, text))
-                    for source, audience, text in requests:
+                            requests.append(
+                                (view.source, audience, text, include_previous_facts)
+                            )
+                    for source, audience, text, include_previous_facts in requests:
                         _, parsed = await self.summarize(
                             text,
                             audience=audience,
+                            include_previous_facts=include_previous_facts,
                             extra_context=[],
                             return_facts=True,
                             skip_author_hooks=True,

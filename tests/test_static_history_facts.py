@@ -9,10 +9,16 @@ import test_supported_facts
 from talemate.history import ArchiveEntry, HistoryEntry, validate_history
 from talemate.knowledge.facts import facts_for_entry
 from talemate.knowledge.graph import bucket
-from talemate.knowledge.perspectives import set_source_perspectives
+from talemate.knowledge.perspectives import (
+    select_character_view,
+    set_source_perspectives,
+    source_reference,
+)
+from talemate.knowledge.supported_facts import previous_audience_facts
 from talemate.knowledge.schema import Fact, ParsedFact
 from talemate.load import load_scene_from_data
 from talemate.prompts import Prompt
+from talemate.scene_message import NarratorMessage
 from talemate.tale_mate import Scene
 
 supported_scene = test_supported_facts.supported_scene
@@ -206,6 +212,7 @@ async def test_static_perception_views_preserve_private_audiences(
     for _ in range(2):
         assert await summarizer.regenerate_facts(row(scene)) == "ok"
         assert len(scene.world_state.facts) == 2
+
         for name, text in views:
             assert [fact.text for fact, _ in bucket(scene, name)] == [text]
     assert scene.archived_history[0]["knowledge"] == before
@@ -220,6 +227,135 @@ async def test_static_perception_views_preserve_private_audiences(
             assert [fact.text for fact, _ in bucket(scene, name)] == [text]
         assert await summarizer.regenerate_facts(row(scene)) == "ok"
         assert len(scene.world_state.facts) == 2
+
+
+@pytest.mark.parametrize("route", ["history", "source", "all"])
+@pytest.mark.parametrize("static", [True, False])
+async def test_perception_rebuild_prompt_context_per_source(
+    static_scene, monkeypatch, route, static
+):
+    scene, summarizer, _ = static_scene
+    scene.knowledge_eligibility = "perception"
+    opening = {"Alice": "Alice repaired the radio.", "Bob": "Bob found a chart."}
+    later = {"Alice": "Alice lost the radio.", "Bob": "Bob burned the chart."}
+    scene.archived_history[0]["text"] = "Reader-only secret."
+    if not static:
+        message = NarratorMessage(
+            message="Alice repaired the radio. Bob found a chart. Reader-only secret."
+        )
+        scene.history = [message]
+        set_source_perspectives(
+            scene,
+            "message",
+            message.id,
+            [
+                {
+                    "audience": [name],
+                    "status": "ready",
+                    "text": text,
+                    "evidence_spans": [index],
+                }
+                for index, (name, text) in enumerate(opening.items())
+            ],
+        )
+        scene.archived_history[0].update(start=0, end=0)
+    scene.archived_history.append(
+        ArchiveEntry(id="later", text="Later reader-only secret.", ts=400).model_dump(
+            exclude_none=True
+        )
+    )
+    references = {}
+    for identity, texts in (("opening", opening), ("later", later)):
+        outputs = []
+        for name, text in texts.items():
+            sources = []
+            if identity == "opening" and not static:
+                sources = [
+                    select_character_view(
+                        scene, source_reference(scene, "message", message.id), name
+                    ).source
+                ]
+            outputs.append(
+                {
+                    "audience": [name],
+                    "status": "ready",
+                    "text": text,
+                    "sources": sources,
+                }
+            )
+        references[identity] = set_source_perspectives(
+            scene, "summary", identity, outputs
+        )
+        for name, text in texts.items():
+            source = select_character_view(scene, references[identity], name).source
+            await test_supported_facts.store(scene, source, (name,), text)
+    for name in opening:
+        assert {fact.text for fact in previous_audience_facts(scene, (name,))} == {
+            opening[name],
+            later[name],
+        }
+    before_history = deepcopy(scene.archived_history)
+    before_messages = list(scene.history)
+    before_time = scene.ts
+    prompts = []
+
+    async def request(*args, **kwargs):
+        values = kwargs["vars"]
+        prompts.append(values)
+        (name,) = values["audience_summary"]
+        text = next(
+            text for text in (opening[name], later[name]) if text in values["dialogue"]
+        )
+        own_recorded = any(fact.text == text for fact in values["previous_facts"])
+        return "SUMMARY: Unused", {
+            "summary": "Unused",
+            "facts": json.dumps([] if own_recorded else [{"text": text}]),
+        }
+
+    monkeypatch.setattr(Prompt, "request", AsyncMock(side_effect=request))
+    for _ in range(2):
+        prompts.clear()
+        if route == "history":
+            status = await summarizer.regenerate_facts(row(scene))
+        else:
+            status = await summarizer.rebuild_supported_facts(
+                scene, None if route == "all" else [references["opening"]]
+            )
+        assert status == "ok"
+        assert len(prompts) == (4 if route == "all" else 2)
+        for values in prompts:
+            (name,) = values["audience_summary"]
+            assert "Reader-only" not in values["dialogue"]
+            other = "Bob" if name == "Alice" else "Alice"
+            assert other not in values["dialogue"]
+            is_opening = opening[name] in values["dialogue"]
+            if static or not is_opening:
+                assert values["previous_facts"] == []
+            else:
+                assert values["previous_facts"]
+                assert all(other not in fact.text for fact in values["previous_facts"])
+            assert values["extra_context"] == ""
+            if not static and is_opening:
+                assert values["fact_evidence"].endswith(": " + opening[name])
+                assert other not in values["fact_evidence"]
+                assert "Reader-only" not in values["fact_evidence"]
+            else:
+                assert values["fact_evidence"] == ""
+        if not static:
+            break
+        assert len(scene.world_state.facts) == 4
+        for name in opening:
+            assert {fact.text for fact, _ in bucket(scene, name)} == {
+                opening[name],
+                later[name],
+            }
+            for fact, _ in bucket(scene, name):
+                assert all(part.audience == (name,) for part in fact.contributions)
+    assert scene.history == before_messages and scene.ts == before_time
+    assert [entry["knowledge"] for entry in scene.archived_history] == [
+        entry["knowledge"] for entry in before_history
+    ]
+    assert not scene.can_change_knowledge_eligibility
 
 
 async def assert_saved_reload(scene, memory, monkeypatch, tmp_path):

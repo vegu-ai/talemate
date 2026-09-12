@@ -27,6 +27,7 @@
                 distance: float = 1.5
                 distance_mod: int = 1
                 distance_function: str = "l2"
+                topic_threshold: float = 0.5
                 fast: bool = True
                 gpu_recommendation: bool = False
                 local: bool = True
@@ -92,6 +93,8 @@
                             <v-slider :disabled="busy" thumb-label="always" density="compact" v-model="config.embeddings[selected[0]].distance_mod" min="0.1" max="2.0" step="0.1" label="Distance Mod" @update:model-value="setPresetChanged(selected[0])"></v-slider>
 
                             <v-select :disabled="busy" v-model="config.embeddings[selected[0]].distance_function" :items="distanceFunctions" label="Distance Function" @update:model-value="setPresetChanged(selected[0])"></v-select>
+
+                            <v-slider :disabled="busy" thumb-label="always" density="compact" class="mt-6" v-model="config.embeddings[selected[0]].topic_threshold" min="0.1" max="0.99" step="0.01" label="Topic Threshold" hint="Cosine similarity at which two facts share a topic. Depends on the model." persistent-hint @update:model-value="setPresetChanged(selected[0])"></v-slider>
 
 
                             <v-row>
@@ -256,6 +259,7 @@ export default {
                 distance: 1.0,
                 distance_mod: 1.0,
                 distance_function: 'cosine',
+                topic_threshold: 0.5,
                 fast: true,
                 gpu_recommendation: false,
                 local: true,

@@ -36,6 +36,8 @@ How long an **Add Detail** result can be. Shorter lengths keep the generated des
 
 When on, the snapshot is pinned into the conversation, narrator, and scene-analysis prompts as live scene notes, so the tracked entities can inform dialogue, narration, and planning. Off by default. See [Pinning the snapshot to the scene](/talemate/user-guide/world-state/#pinning-the-snapshot-to-the-scene).
 
+The pinned snapshot may include outdated information until the next update. Enable **Update world state** and set **Turns** to 1 to refresh it every turn.
+
 ###### Durable snapshot
 
 When on (the default), each refresh updates only what has changed and carries the rest of the snapshot forward, instead of rebuilding it from scratch every time. This lets the snapshot accumulate detail over the course of a scene. When off, every refresh starts fresh. See [How the snapshot carries forward](/talemate/user-guide/world-state/#how-the-snapshot-carries-forward).
@@ -46,9 +48,13 @@ The two settings below only apply when **Durable snapshot** is on.
 
 The maximum number of items the snapshot can hold at once. When a refresh would exceed this, the stalest items are dropped first. Set to `0` for no limit.
 
+An item you [added by hand](/talemate/user-guide/world-state/#adding-one-yourself) is never the one dropped, but it does keep its slot in the limit — pin ten items with the limit at ten and the snapshot has no room left for the items a refresh finds.
+
 ###### Auto-evict stale entries
 
 Automatically drops a snapshot entry that the agent leaves unchanged for this many refreshes in a row. This guards against stale entries lingering when the agent fails to remove them on its own. Set to `0` to disable.
+
+An entry you [added by hand](/talemate/user-guide/world-state/#adding-one-yourself) never ages out this way — the story dropping it, a time jump, or wiping the snapshot removes it.
 
 ##### Update state reinforcements
 

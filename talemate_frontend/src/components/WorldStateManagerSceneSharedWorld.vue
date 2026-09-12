@@ -86,6 +86,8 @@
                 Create New Scene
             </v-card-title>
             <v-card-text>
+                <p class="mb-2">The new scene keeps the current story's character knowledge mode.</p>
+                <CharacterKnowledgeModeComparison :perspectives="perspectives" selected-label="current" compact class="mb-4" />
                 <v-alert v-if="!scene?.data?.saved && !creatingNewScene" color="muted" variant="text" density="compact" class="mb-4">
                     <template v-slot:prepend>
                         <v-icon color="warning">mdi-alert-circle-outline</v-icon>
@@ -178,6 +180,8 @@
 <script>
 import WorldStateManagerSceneEpisodes from './WorldStateManagerSceneEpisodes.vue';
 import WorldStateManagerSceneSharedContext from './WorldStateManagerSceneSharedContext.vue';
+import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
+import { perspectivesEnabled } from '@/utils/sceneSettings';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 export default {
@@ -195,6 +199,7 @@ export default {
         'stopPlaythrough',
     ],
     components: {
+        CharacterKnowledgeModeComparison,
         WorldStateManagerSceneEpisodes,
         WorldStateManagerSceneSharedContext,
     },
@@ -313,6 +318,7 @@ export default {
             }
             
             const scene_initialization = {
+                character_knowledge: perspectivesEnabled(currentScene),
                 content_classification: currentScene.context || null,
                 agent_persona_templates: currentScene.agent_persona_templates || null,
                 writing_style_template: currentScene.writing_style_template || null,
@@ -400,6 +406,9 @@ export default {
         }
     },
     computed: {
+        perspectives() {
+            return perspectivesEnabled(this.scene?.data);
+        },
         availableCharacters() {
             // If world sharing is on, show only shared characters
             // If world sharing is off, show all characters
@@ -432,4 +441,3 @@ export default {
     }
 }
 </script>
-

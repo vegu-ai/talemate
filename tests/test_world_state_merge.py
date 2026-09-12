@@ -14,6 +14,7 @@ from talemate.scene_message import (
 from talemate.world_state import CharacterState, ObjectState, PlaceState
 from talemate.world_state.merge import (
     apply_bucket_patch,
+    cap_bucket,
     has_time_passage_boundary,
 )
 
@@ -347,3 +348,98 @@ class TestHasTimePassageBoundary:
         cut = TimePassageMessage(ts=3600, message="hour earlier")
         anchored = NarratorMessage(message="anchor")
         assert not has_time_passage_boundary([cut, anchored], [anchored.id])
+
+
+# ---------------------------------------------------------------------------
+# Manual entries — pinned against aging and the cap
+# ---------------------------------------------------------------------------
+
+
+class TestManualEntries:
+    def test_mark_manual_stamps_touched_entries(self):
+        merged = apply_bucket_patch(
+            {},
+            {"Beacon": {"snapshot": "still blinking"}},
+            ObjectState,
+            mark_manual=True,
+        )
+        assert merged["Beacon"].manual is True
+
+    def test_patch_cannot_stamp_manual_on_its_own(self):
+        merged = apply_bucket_patch(
+            {}, {"Beacon": {"snapshot": "blinking", "manual": True}}, ObjectState
+        )
+        assert merged["Beacon"].manual is False
+
+    def test_manual_survives_a_later_model_update(self):
+        prior = {"Beacon": ObjectState(snapshot="blinking", manual=True)}
+        merged = apply_bucket_patch(
+            prior, {"Beacon": {"snapshot": "dark"}}, ObjectState
+        )
+        assert merged["Beacon"].manual is True
+        assert merged["Beacon"].snapshot == "dark"
+
+    def test_manual_entry_never_ages(self):
+        bucket = {"Beacon": ObjectState(snapshot="blinking", manual=True)}
+        for _ in range(5):
+            bucket = apply_bucket_patch(bucket, {}, ObjectState, eviction_threshold=2)
+        assert bucket["Beacon"].misses == 0
+
+    def test_model_entries_still_age_beside_a_manual_one(self):
+        bucket = {
+            "Beacon": ObjectState(snapshot="blinking", manual=True),
+            "Crate": ObjectState(snapshot="sealed"),
+        }
+        bucket = apply_bucket_patch(bucket, {}, ObjectState, eviction_threshold=2)
+        bucket = apply_bucket_patch(bucket, {}, ObjectState, eviction_threshold=2)
+        assert "Crate" not in bucket
+        assert "Beacon" in bucket
+
+    def test_explicit_drop_removes_a_manual_entry(self):
+        prior = {"Beacon": ObjectState(snapshot="blinking", manual=True)}
+        merged = apply_bucket_patch(prior, {"Beacon": None}, ObjectState)
+        assert "Beacon" not in merged
+
+
+# ---------------------------------------------------------------------------
+# cap_bucket
+# ---------------------------------------------------------------------------
+
+
+class TestCapBucket:
+    def test_no_cap_when_disabled(self):
+        bucket = {name: ObjectState(snapshot=name) for name in ("a", "b", "c")}
+        assert cap_bucket(bucket, 0) is bucket
+
+    def test_drops_the_stalest_first(self):
+        bucket = {
+            "Fresh": ObjectState(snapshot="fresh", misses=0),
+            "Stale": ObjectState(snapshot="stale", misses=4),
+        }
+        capped = cap_bucket(bucket, 1)
+        assert set(capped) == {"Fresh"}
+
+    def test_manual_entry_is_never_dropped(self):
+        bucket = {
+            "Pinned": ObjectState(snapshot="pinned", misses=9, manual=True),
+            "Fresh": ObjectState(snapshot="fresh", misses=0),
+        }
+        capped = cap_bucket(bucket, 1)
+        assert set(capped) == {"Pinned"}
+
+    def test_manual_entries_consume_the_budget(self):
+        bucket = {
+            "Pinned": ObjectState(snapshot="pinned", manual=True),
+            "Also Pinned": ObjectState(snapshot="pinned too", manual=True),
+            "Model": ObjectState(snapshot="model"),
+        }
+        capped = cap_bucket(bucket, 2)
+        assert set(capped) == {"Pinned", "Also Pinned"}
+
+    def test_kept_entries_preserve_insertion_order(self):
+        bucket = {
+            "First": ObjectState(snapshot="first", misses=0),
+            "Second": ObjectState(snapshot="second", misses=3),
+            "Third": ObjectState(snapshot="third", misses=0),
+        }
+        assert list(cap_bucket(bucket, 2)) == ["First", "Third"]

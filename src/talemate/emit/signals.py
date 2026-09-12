@@ -39,6 +39,8 @@ SceneStatus = signal("scene_status")
 SceneIntent = signal("scene_intent")
 CommandStatus = signal("command_status")
 WorldState = signal("world_state")
+KnowledgeChanged = signal("knowledge_changed")
+PerceptionStatus = signal("perception_status")
 ArchivedHistory = signal("archived_history")
 
 AudioQueue = signal("audio_queue")
@@ -98,6 +100,8 @@ handlers = {
     "scene_intent": SceneIntent,
     "command_status": CommandStatus,
     "world_state": WorldState,
+    "knowledge_changed": KnowledgeChanged,
+    "perception_status": PerceptionStatus,
     "archived_history": ArchivedHistory,
     "message_edited": MessageEdited,
     "message_revs": MessageRevs,

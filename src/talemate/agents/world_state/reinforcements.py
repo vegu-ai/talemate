@@ -6,6 +6,12 @@ import structlog
 
 import talemate.emit.async_signals
 from talemate.events import GameLoopEvent
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.reinforcements import (
+    prepare_reinforcement_source,
+    write_reinforcement_entry,
+)
+from talemate.instance import get_agent
 from talemate.prompts import Prompt
 from talemate.prompts.response import AnchorExtractor, ResponseSpec
 from talemate.scene_message import ReinforcementMessage
@@ -128,7 +134,7 @@ class WorldStateReinforcementsMixin:
         ]
 
         async def generate(item: PreparedReinforcement) -> str:
-            return await self._generate_reinforcement(item.reinforcement, reset)
+            return await self.generate_reinforcement(item.reinforcement, reset)
 
         async def apply(item: PreparedReinforcement, answer: str):
             await self._apply_reinforcement(
@@ -169,7 +175,7 @@ class WorldStateReinforcementsMixin:
             return
 
         message = self._prepare_reinforcement(reinforcement, reset)
-        answer = await self._generate_reinforcement(reinforcement, reset)
+        answer = await self.generate_reinforcement(reinforcement, reset)
         return await self._apply_reinforcement(reinforcement, message, answer, reset)
 
     def _prepare_reinforcement(
@@ -190,7 +196,8 @@ class WorldStateReinforcementsMixin:
 
         return message
 
-    async def _generate_reinforcement(
+    @set_processing
+    async def generate_reinforcement(
         self, reinforcement: "Reinforcement", reset: bool
     ) -> str:
         if reinforcement.insert == "sequential":
@@ -235,6 +242,7 @@ class WorldStateReinforcementsMixin:
         answer: str,
         reset: bool,
     ) -> ReinforcementMessage:
+        changed = answer != reinforcement.answer
         reinforcement.answer = answer
         reinforcement.due = reinforcement.interval
 
@@ -245,25 +253,33 @@ class WorldStateReinforcementsMixin:
                 typ="reinforcement", meta_hash=message.meta_hash, max_iterations=10
             )
 
+        perception = character_knowledge_enabled(self.scene)
         if reinforcement.insert == "sequential":
-            # insert the reinforcement message at the current position
             message.message = answer
-            log.debug("update_reinforcement", message=message, reset=reset)
-            await self.scene.push_history(message)
-
-        # if reinforcement has a character name set, update the character detail
-        if reinforcement.character:
-            character = self.scene.get_character(reinforcement.character)
-            await character.set_detail(reinforcement.question, answer)
-
-        else:
-            # set world entry
-            await self.scene.world_state_manager.save_world_entry(
-                reinforcement.question,
-                reinforcement.as_context_line,
-                {},
+        if perception:
+            source = (
+                message
+                if reinforcement.insert == "sequential"
+                else prepare_reinforcement_source(
+                    self.scene, reinforcement, new_answer=changed
+                )
             )
+            await write_reinforcement_entry(self.scene, reinforcement, source)
 
+        self.scene.world_state.emit()
+        if reinforcement.insert == "sequential":
+            await self.scene.push_history(message)
+        elif perception:
+            await get_agent("summarizer").finalize_perceptions(self.scene, [])
+
+        if not perception:
+            if reinforcement.character:
+                character = self.scene.get_character(reinforcement.character)
+                await character.set_detail(reinforcement.question, answer)
+            else:
+                await self.scene.world_state_manager.save_world_entry(
+                    reinforcement.question, reinforcement.as_context_line, {}
+                )
         self.scene.world_state.emit()
 
         return message

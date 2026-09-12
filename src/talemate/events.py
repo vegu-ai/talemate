@@ -13,6 +13,7 @@ __all__ = [
     "HistoryEvent",
     "ArchiveEvent",
     "CharacterStateEvent",
+    "CharacterActivatedEvent",
     "SceneStateEvent",
     "GameLoopBase",
     "GameLoopEvent",
@@ -53,6 +54,13 @@ class ArchiveEvent(Event):
     text: str
     memory_id: str
     ts: int | None = None
+    present: list[str] | None = None
+
+
+class CharacterActivatedEvent(Event):
+    """Sent by `activate_character` once the character is back in the scene."""
+
+    character: "Character"
 
 
 class CharacterStateEvent(Event):

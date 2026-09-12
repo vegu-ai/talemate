@@ -10,6 +10,12 @@ Overrides are **sparse**: only the specific fields you choose to override are st
 
 Each overridden field is independent. You can override the conversation length for a scene while leaving its format, client, and every other setting on the global value.
 
+## Knowledge effort during creation
+
+**Create New Story** and **Character Card Import** pin their selected knowledge effort as scene overrides. Selected values stay pinned even if they already match global settings. Each creation gets a separate settings file, so reusing a project name does not change a previous story's overrides. Unrelated inherited settings remain intact.
+
+A blank story keeps its normal unsaved state until you save it; that save stores the settings link. Imported cards save the link during import. Once the story is saved, the knowledge hub marks overrides with :material-movie-open-cog-outline:. Activate the icon beside one setting to restore that setting's global value, the icon beside a group to restore the whole group, or the **Scene override** label and icon above the effort slider to restore every knowledge setting owned by the hub. Each action leaves unrelated scene overrides intact.
+
 ## Editing overrides: the Global / Scene switch
 
 Overrides are edited in the same place as global settings — the **Agents settings page** at **Settings → Connections → Agents**. Clicking an agent in the agent panel opens it there directly.
@@ -72,7 +78,7 @@ Per-scene overrides are stored in a JSON file inside an `agent-settings/` folder
 
 A few things worth knowing:
 
-- **Overrides are project-level.** The `agent-settings/` folder lives with the project, so every save file in the same project (including **Save As** copies and restore points) shares the same overrides. Different projects have completely independent overrides.
+- **Sharing follows the settings-file link.** The `agent-settings/` folder lives with the project, so save files that link the same settings file (including **Save As** copies and restore points) share its overrides. Different projects have completely independent overrides.
 - **Overrides travel with exports.** When you export a scene, the `agent-settings/` folder is included, so your overrides survive being shared with or imported on another system.
 - **Bad files fall back safely.** If an overrides file is missing or can't be read, the scene simply falls back to your global configuration and the link is cleared.
 

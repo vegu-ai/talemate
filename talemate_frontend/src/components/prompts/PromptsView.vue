@@ -172,8 +172,10 @@
                 <!-- Context Review Tab -->
                 <v-window-item value="context-review">
                     <SceneContextReviewInline
-                        :visible="mainTab === 'context-review'"
+                        :visible="visible && effectiveMainTab === 'context-review'"
                         :agent-status="agentStatus"
+                        :scene-id="currentSceneId"
+                        :connected="connected"
                     />
                 </v-window-item>
             </v-window>
@@ -268,6 +270,10 @@ export default {
         appConfig: {
             type: Object,
             default: () => ({})
+        },
+        connected: {
+            type: Boolean,
+            default: true
         }
     },
     emits: ['clear-prompts', 'update:mainTab'],
@@ -311,6 +317,10 @@ export default {
         },
         effectiveMainTab() {
             return this.internalMainTab || this.mainTab;
+        },
+        currentSceneId() {
+            const value = typeof this.scene === 'function' ? this.scene() : this.scene;
+            return value?.data?.id ?? value?.id ?? null;
         },
         editableGroups() {
             // Filter out scene and default, return user + custom groups

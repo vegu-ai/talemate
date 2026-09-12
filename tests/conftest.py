@@ -374,6 +374,9 @@ class MockMemoryAgent(talemate.agents.memory.MemoryAgent):
     def _get_document(self, id):
         return {}
 
+    def _get_documents_by_meta(self, meta: dict):
+        return {}
+
 
 class MockScene(Scene):
     """Real Scene subclass with auto_progress forced on."""
@@ -429,6 +432,17 @@ def director(scene):
 
 
 @pytest.fixture
+def activation_signal():
+    """Own the ``character.activated`` receivers for the duration of a test."""
+    signal = async_signals.get("character.activated")
+    saved = list(signal.receivers)
+    signal.receivers.clear()
+    yield signal
+    signal.receivers.clear()
+    signal.receivers.extend(saved)
+
+
+@pytest.fixture
 def persistence_scene_factory(tmp_path, monkeypatch):
     """Real scene file I/O with empty memory storage, confined to tmp_path.
 
@@ -440,6 +454,9 @@ def persistence_scene_factory(tmp_path, monkeypatch):
     def create():
         scene = MockScene()
         bootstrap_scene(scene)
+        monkeypatch.setattr(
+            instance.get_agent("memory"), "rebuild_audience_index", AsyncMock()
+        )
         monkeypatch.setattr(scene, "add_to_recent_scenes", AsyncMock())
         return scene
 

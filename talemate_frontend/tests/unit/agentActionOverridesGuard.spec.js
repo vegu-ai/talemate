@@ -2,10 +2,6 @@ import { describe, it, expect } from "vitest";
 import { fileURLToPath } from "node:url";
 import { lift, readSource } from "./helpers/liftMethod.js";
 
-// Every writer of an agent action override sits behind the settings page's
-// unsaved-edits guard, and turning an override off clears it rather than
-// storing an inert one.
-
 function source(path) {
     return readSource(fileURLToPath(new URL(path, import.meta.url)));
 }

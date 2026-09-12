@@ -91,11 +91,22 @@
             <v-window-item value="history">
                 <WorldStateManagerHistory ref="history" 
                 :scene="scene"
+                :character-list="characterList"
                 :generation-options="generationOptions"
                 :app-busy="appBusy"
                 :app-ready="appReady"
                 :app-config="appConfig"
                 :visible="tab === 'history'"
+                />
+            </v-window-item>
+
+            <!-- FACTS -->
+
+            <v-window-item value="facts">
+                <WorldStateManagerFacts ref="facts"
+                :app-busy="appBusy"
+                :app-ready="appReady"
+                :visible="tab === 'facts'"
                 />
             </v-window-item>
 
@@ -143,6 +154,7 @@ import WorldStateManagerContextDB from './WorldStateManagerContextDB.vue';
 import WorldStateManagerPins from './WorldStateManagerPins.vue';
 import WorldStateManagerScene from './WorldStateManagerScene.vue';
 import WorldStateManagerHistory from './WorldStateManagerHistory.vue';
+import WorldStateManagerFacts, { FACTS_TAB_TITLE } from './WorldStateManagerFacts.vue';
 import WorldStateManagerSuggestions from './WorldStateManagerSuggestions.vue';
 import GenerationOptions from './GenerationOptions.vue';
 import RequestInput from './RequestInput.vue';
@@ -158,6 +170,7 @@ export default {
         WorldStateManagerPins,
         WorldStateManagerScene,
         WorldStateManagerHistory,
+        WorldStateManagerFacts,
         WorldStateManagerSuggestions,
         GenerationOptions,
         RequestInput,
@@ -210,6 +223,11 @@ export default {
                     name: "history",
                     title: "History",
                     icon: "mdi-clock",
+                },
+                {
+                    name: "facts",
+                    title: FACTS_TAB_TITLE,
+                    icon: "mdi-format-list-checks",
                 },
                 {
                     name: "contextdb",
@@ -379,6 +397,8 @@ export default {
                 tool = this.$refs.contextdb;
             } else if(tab === 'history') {
                 tool = this.$refs.history;
+            } else if(tab === 'facts') {
+                tool = this.$refs.facts;
             } else if(tab === 'pins') {
                 tool = this.$refs.pins;
             } else if(tab === 'suggestions') {

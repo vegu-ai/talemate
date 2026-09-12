@@ -32,7 +32,7 @@ JSON_OBJECT_RESPONSE_MODELS = []
 
 
 class Defaults(EndpointOverride, pydantic.BaseModel):
-    max_token_length: int = 8192
+    max_token_length: int = 16384
     model: str = "moonshotai/kimi-k2-instruct"
 
 

@@ -15,7 +15,11 @@ is exactly where the real thread is parked when the disconnect lands.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import threading
+from concurrent.futures import ThreadPoolExecutor
+from types import MethodType
+from unittest.mock import Mock
 
 import pytest
 
@@ -23,6 +27,7 @@ import chromadb.errors
 
 import talemate.agents.memory as memory
 from talemate.agents.memory import ChromaDBMemoryAgent
+from talemate.knowledge import revision_refresh
 
 
 class _FakeCollection:
@@ -93,9 +98,13 @@ class _FakeScene:
         saved_memory_session_id=None,
     ):
         self.memory_id = memory_id
+        self.memory_revision = 0
+        self.memory_writes_in_flight = 0
         self.saved = saved
         self.memory_session_id = memory_session_id
         self.saved_memory_session_id = saved_memory_session_id
+        self.archived_history = []
+        self.layered_history = []
 
 
 @pytest.fixture(autouse=True)
@@ -328,6 +337,99 @@ def test_drop_db_deletes_the_installed_collection(agent):
     assert agent._ready_to_add is False
     assert agent._db_generation == generation + 1
     assert agent.db_client.deleted == [collection_name]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("operation", ["add", "add_many", "delete"])
+async def test_expected_scene_fence_survives_memory_readiness_await(
+    agent, monkeypatch, operation
+):
+    captured = agent.scene
+    replacement = _FakeScene(memory_id="scene-2")
+
+    async def ready():
+        agent.scene = replacement
+        return True
+
+    monkeypatch.setattr(agent, "_wait_until_ready", ready)
+    monkeypatch.setattr(agent, "_add", Mock())
+    monkeypatch.setattr(agent, "_add_many", Mock())
+    monkeypatch.setattr(agent, "_delete", Mock())
+    raw = inspect.unwrap(getattr(type(agent), operation))
+    args = {
+        "add": ("old scene text",),
+        "add_many": ([{"id": "F1", "text": "old scene fact"}],),
+        "delete": ({"ids": ["F1"]},),
+    }[operation]
+
+    with memory.memory_write_scene(captured):
+        completed = await raw(agent, *args)
+
+    assert completed is False
+    assert agent._add.call_count == 0
+    assert agent._add_many.call_count == 0
+    assert agent._delete.call_count == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("archive_exists", [True, False])
+async def test_archive_reconciliation_retries_executor_refusal(
+    agent, monkeypatch, archive_exists
+):
+    captured = agent.scene
+    replacement = _FakeScene(memory_id="scene-2")
+    if archive_exists:
+        captured.archived_history = [{"id": "A1", "text": "Restored archive", "ts": 1}]
+    agent._ready_to_add = True
+    agent.add = MethodType(inspect.unwrap(type(agent).add), agent)
+    agent.delete = MethodType(inspect.unwrap(type(agent).delete), agent)
+    monkeypatch.setattr(agent, "_add", Mock())
+    monkeypatch.setattr(agent, "_delete", Mock())
+    monkeypatch.setattr(agent, "invalidate_audience_writes", Mock())
+    monkeypatch.setattr(agent, "invalidate_audience_index", Mock())
+    monkeypatch.setattr(revision_refresh, "get_agent", lambda name: agent)
+
+    loop = asyncio.get_running_loop()
+    executor = ThreadPoolExecutor(max_workers=1)
+    run_in_executor = loop.run_in_executor
+
+    def use_bounded_executor(selected, function, *args):
+        return run_in_executor(
+            executor if selected is None else selected, function, *args
+        )
+
+    monkeypatch.setattr(loop, "run_in_executor", use_bounded_executor)
+    parked = threading.Event()
+    release = threading.Event()
+
+    def block_executor():
+        parked.set()
+        release.wait(5)
+
+    blocker = loop.run_in_executor(None, block_executor)
+    while not parked.is_set():
+        await asyncio.sleep(0)
+    journal = {"mutations": [{"group": "archives", "identity": "base:A1"}]}
+    job = asyncio.create_task(
+        revision_refresh.reconcile_revision_archive_vectors(captured, journal)
+    )
+    await asyncio.sleep(0)
+    agent.scene = replacement
+    release.set()
+    assert await job is False
+    await blocker
+    assert revision_refresh._archive_vector_repairs[captured] == {"base:A1"}
+    assert agent._add.call_count == 0
+    assert agent._delete.call_count == 0
+
+    agent.scene = captured
+    assert await revision_refresh.reconcile_revision_archive_vectors(captured, None)
+    expected = agent._add if archive_exists else agent._delete
+    refused = agent._delete if archive_exists else agent._add
+    assert expected.call_count == 1
+    assert refused.call_count == 0
+    assert revision_refresh._archive_vector_repairs[captured] == set()
+    executor.shutdown()
 
 
 def test_drop_db_survives_a_missing_collection(agent):

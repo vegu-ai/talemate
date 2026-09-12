@@ -73,6 +73,29 @@
           </v-card>
         </v-container>
         <v-container v-if="analysis && !analyzing" fluid>
+          <!-- the story mode choice gets the full width so the two cards sit
+               side by side; the import options keep their three columns -->
+          <v-row>
+            <v-col cols="12">
+              <v-card elevation="0">
+                <v-card-title class="text-body-large">
+                  <v-icon class="mr-2" size="small">mdi-head-lightbulb-outline</v-icon>
+                  Story mode
+                </v-card-title>
+                <v-card-text>
+                  <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :value="effortForMode" class="mt-2" @apply="effort = $event" />
+                  <CharacterKnowledgeModeComparison
+                    :key="knowledgeUiVersion"
+                    :perspectives="characterKnowledge"
+                    selectable
+                    collapse-details
+                    class="mt-4"
+                    @update:perspectives="characterKnowledge = $event" />
+                  <p class="text-body-small mt-2">Controls ongoing knowledge work for this story. Import generation options below are independent.</p>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
           <v-row>
             <v-col cols="12" md="4">
               <v-card elevation="0">
@@ -506,6 +529,12 @@
 </template>
 
 <script>
+import { v4 as uuidv4 } from 'uuid';
+import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
+import { DEFAULT_EFFORT } from '@/constants/knowledgeEffort';
+import { effortMode, stopForMode } from '@/utils/knowledgeEffort';
+import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
+
 const GENERATION_OPTION_KEYS = [
   'determine_content_context',
   'extract_description',
@@ -538,10 +567,11 @@ function defaultOptions() {
 
 export default {
   name: 'CharacterCardImport',
+  components: { CharacterKnowledgeModeComparison, KnowledgeEffortSlider },
   props: {
     templates: Object,
   },
-  inject: ['getWebsocket', 'registerMessageHandler', 'appConfig'],
+  inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'appConfig'],
   data() {
     return {
       showModal: false,
@@ -552,6 +582,10 @@ export default {
       selectedCharacterNames: [],
       newCharacterName: '',
       options: defaultOptions(),
+      characterKnowledge: false,
+      effort: DEFAULT_EFFORT,
+      knowledgeUiVersion: 0,
+      analysisRequestId: null,
       showGenerationOptions: false,
       resolveCallback: null,
       fileData: null,
@@ -599,8 +633,13 @@ export default {
   },
   methods: {
     async open(fileData = null, filePath = null, filename = null) {
+      this.cancel();
+      this.effort = DEFAULT_EFFORT;
+      const result = new Promise((resolve) => { this.resolveCallback = resolve; });
       // Reset to defaults
       this.options = defaultOptions();
+      this.characterKnowledge = false;
+      this.knowledgeUiVersion += 1;
       this.showGenerationOptions = false;
       this.analysis = null;
       this.analysisError = null;
@@ -651,17 +690,17 @@ export default {
         await this.analyzeCharacterCard();
       }
       
-      return new Promise((resolve) => {
-        this.resolveCallback = resolve;
-      });
+      return result;
     },
     async analyzeCharacterCard() {
       this.analyzing = true;
       this.analysisError = null;
+      this.analysisRequestId = uuidv4();
       
       const message = {
         type: 'assistant',
         action: 'analyze_character_card',
+        request_id: this.analysisRequestId,
       };
       
       if (this.fileData && this.filename) {
@@ -679,6 +718,7 @@ export default {
     },
     handleMessage(data) {
       if (data.type === 'character_card_analysis') {
+        if (!this.showModal || data.request_id !== this.analysisRequestId) return;
         this.analyzing = false;
         if (data.error) {
           this.analysisError = data.error;
@@ -763,6 +803,7 @@ export default {
         }
       }
       
+      this.$refs.effortSlider?.send();
       this.showModal = false;
       if (this.resolveCallback) {
         this.options.selected_character_names = [...this.selectedCharacterNames];
@@ -782,13 +823,14 @@ export default {
           };
         }
         
-        this.resolveCallback({ confirmed: true, options: { ...this.options } });
+        this.resolveCallback({ confirmed: true, options: { ...this.options }, characterKnowledge: this.characterKnowledge, effort: this.effortForMode });
         this.resolveCallback = null;
       }
     },
     onDialogClose(value) {
       // When dialog is closed (value becomes false), treat it as cancel
       if (!value) {
+        this.characterKnowledge = false;
         // Only cancel if we have a callback (dialog was actually open)
         if (this.resolveCallback) {
           this.resolveCallback({ confirmed: false });
@@ -797,6 +839,9 @@ export default {
       }
     },
     cancel() {
+      this.analysisRequestId = null;
+      this.effort = DEFAULT_EFFORT;
+      this.characterKnowledge = false;
       this.showModal = false;
       if (this.resolveCallback) {
         this.resolveCallback({ confirmed: false });
@@ -805,6 +850,8 @@ export default {
     },
   },
   computed: {
+    effortMode() { return effortMode(this.characterKnowledge); },
+    effortForMode() { return stopForMode(this.effort, this.effortMode); },
     generationPreset: {
       get() {
         if (GENERATION_OPTION_KEYS.every(key => this.options[key] === true)) return 'full';
@@ -862,6 +909,11 @@ export default {
       return items;
     },
   },
+  beforeUnmount() {
+    this.cancel();
+    this.unregisterMessageHandler(this.handleMessage);
+    clearTimeout(this.searchTimeout);
+  },
   created() {
     this.registerMessageHandler(this.handleMessage);
   },
@@ -873,4 +925,3 @@ export default {
   cursor: pointer;
 }
 </style>
-

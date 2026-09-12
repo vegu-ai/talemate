@@ -51,6 +51,9 @@ def mock_conversation_agent_for_registry():
     conv.content_use_writing_style = True
     # rag_build is called by templates - needs to be an async function
     conv.rag_build = AsyncMock(return_value=[])
+    conv.knowledge_perspective = AsyncMock(return_value=None)
+    conv.absence_block = AsyncMock(return_value=[])
+    conv.awareness_line = AsyncMock(return_value=None)
     return conv
 
 
@@ -63,12 +66,15 @@ def conversation_agent(mock_llm_client, mock_scene):
 
 
 @pytest.fixture
-def setup_agents(mock_conversation_agent_for_registry):
+def setup_agents(mock_conversation_agent_for_registry, conversation_agent):
     """Set up the agent registry with mocked agents."""
     # Save original AGENTS dict
     original_agents = instance.AGENTS.copy()
 
     # Set up mock agents in the registry
+    mock_conversation_agent_for_registry.history_context = (
+        conversation_agent.history_context
+    )
     instance.AGENTS["conversation"] = mock_conversation_agent_for_registry
 
     yield
@@ -101,6 +107,19 @@ class TestConverseMethod:
     """
 
     @pytest.mark.asyncio
+    async def test_converse_projects_history_once(
+        self, active_context, mock_scene, monkeypatch
+    ):
+        agent = active_context
+        projection = AsyncMock(wraps=agent.history_context)
+        monkeypatch.setattr(agent, "history_context", projection)
+        monkeypatch.setattr(
+            instance.AGENTS["conversation"], "history_context", projection
+        )
+        await agent.converse(mock_scene.get_character("Elena").actor)
+        projection.assert_awaited_once()
+
+    @pytest.mark.asyncio
     async def test_converse_calls_client(self, active_context, mock_scene):
         """Test that converse calls the LLM client with rendered prompt."""
         agent = active_context
@@ -123,6 +142,29 @@ class TestConverseMethod:
 
         # Verify the prompt contains expected content
         assert len(prompt_text) > 0
+
+    @pytest.mark.asyncio
+    async def test_converse_includes_live_character_entry_orientation(
+        self, active_context, mock_scene
+    ):
+        agent = active_context
+        character = mock_scene.get_character("Elena")
+        agent.set_scene_states(
+            character_entry_windows={
+                "Elena": {
+                    "boundary_message_id": 0,
+                    "entry_scene_time": mock_scene.ts,
+                    "remaining_turns": 3,
+                }
+            }
+        )
+        assert agent.character_entry_context(character)
+
+        await agent.converse(character.actor)
+
+        prompt_text = str(agent.client.send_prompt.call_args.args[0])
+        assert "## Character entry orientation" in prompt_text
+        assert "private orientation for Elena" in prompt_text
 
     @pytest.mark.asyncio
     async def test_converse_with_instruction(self, active_context, mock_scene):

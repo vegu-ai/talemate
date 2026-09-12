@@ -1,8 +1,3 @@
-"""
-Agent action overrides: the learned-action registry, its websocket plumbing
-and the config handlers that set and clear an override.
-"""
-
 from __future__ import annotations
 
 import pytest

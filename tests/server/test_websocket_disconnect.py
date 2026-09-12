@@ -400,7 +400,7 @@ async def test_cancelled_load_with_parked_test_module_keeps_new_scene_active(
             module_started.set()
             await asyncio.Event().wait()
 
-    async def fake_start(self):
+    async def fake_start(self, *, history_visible=False):
         scenes_started.append(self)
         if len(scenes_started) == 1:
             # first scene: park inside RunModule the way the creative loop
@@ -457,7 +457,7 @@ async def test_load_frame_exit_deactivates_its_scene(wired, monkeypatch):
     inactive."""
     handler, scene, agent, memory = wired
 
-    async def fake_start(self):
+    async def fake_start(self, *, history_visible=False):
         return
 
     async def fake_load(scene, *args, **kwargs):
@@ -469,3 +469,53 @@ async def test_load_frame_exit_deactivates_its_scene(wired, monkeypatch):
     await handler.load_scene("a.json")
 
     assert handler.scene.active is False
+
+
+async def test_loaded_history_precedes_indexing_but_ready_and_start_wait(
+    wired, monkeypatch
+):
+    handler, scene, agent, memory = wired
+    indexing = asyncio.Event()
+    indexed = asyncio.Event()
+    order = []
+
+    async def fake_history(self):
+        order.append("history")
+
+    async def fake_load(scene, *args, before_memory, **kwargs):
+        await before_memory(scene)
+        indexing.set()
+        await indexed.wait()
+        order.append("indexed")
+        return scene
+
+    async def ready():
+        order.append("ready")
+
+    async def fake_start(self, *, history_visible=False):
+        assert history_visible
+        order.append("start")
+
+    monkeypatch.setattr(Scene, "emit_history", fake_history)
+    monkeypatch.setattr(Scene, "start", fake_start)
+    monkeypatch.setattr(websocket_server, "load_scene", fake_load)
+    task = asyncio.create_task(handler.load_scene("loaded.json", callback=ready))
+    await asyncio.wait_for(indexing.wait(), timeout=5)
+    assert order == ["history"]
+    assert any(frame.get("id") == "scene.history_ready" for frame in handler.queued)
+    assert not task.done()
+    indexed.set()
+    await asyncio.wait_for(task, timeout=5)
+    assert order == ["history", "indexed", "ready", "start"]
+
+
+@pytest.mark.asyncio
+async def test_release_signals_user_interruption_before_rebinding(wired):
+    handler, scene, agent, _ = wired
+    sequence = scene.cancel_sequence
+    interrupted = scene.interrupt_signal
+    handler.release_scene()
+    assert interrupted.done()
+    assert scene.cancel_sequence == sequence + 1
+    assert scene.cancel_requested
+    assert agent.scene is not scene

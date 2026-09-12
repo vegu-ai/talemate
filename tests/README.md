@@ -21,14 +21,16 @@ it deliberately clears history and does not restore saved world state.
 
 [test_scene_persistence_fixture.py](test_scene_persistence_fixture.py) exercises
 save-as, actual serialization and disk reads, fresh-instance canonical reload,
-history reset, empty-pin cleanup and a second saved copy. The JSON/PNG import
+history reset, empty-pin cleanup and a second saved copy in both knowledge modes. The JSON/PNG import
 round trips in [test_character_card_extraction_options.py](test_character_card_extraction_options.py)
 also use this fixture. Keep their persisted-content assertions on real files;
 do not stub `Scene.save`, `serialize`, `commit_to_memory`, `load_scene_from_data`
 or pin cleanup to repair a missing mock method.
 
 `MockMemoryAgent` has empty, non-persistent storage: writes/drop/close/setup are
-no-ops, and document lookup returns an empty mapping. Missing-memory pins therefore
+no-ops, and document lookup returns an empty mapping. The persistence factory also
+stubs audience-index rebuilding on its memory instance; general memory tests still
+exercise the real audience index. Missing-memory pins therefore
 disappear on real cleanup. This fixture proves scene **file** persistence, not
 embedding/database persistence or retention of populated memory pins. For those,
 use a focused memory-agent fixture such as [test_memory_set_db_race.py](test_memory_set_db_race.py).

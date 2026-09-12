@@ -1,0 +1,57 @@
+{#-
+Extractors:
+  - ledger: AnchorExtractor("<LEDGER>", "</LEDGER>")
+  - facts (when establish_facts): AnchorExtractor("<FACTS>", "</FACTS>")
+
+Override example:
+  {{ set_anchor_extractor("ledger", "<MY_TAG>", "</MY_TAG>") }}
+-#}
+{% if recent_lines %}
+<|SECTION:RECENT LINES|>
+{% for entry in recent_lines %}
+{{ entry }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif %}
+<|SECTION:NEW LINE|>
+{{ line }}
+<|CLOSE_SECTION|>
+{% for name, facts in absence.items() %}
+<|SECTION:WHAT {{ name.upper() }} DOES NOT KNOW YET|>
+{% for fact in facts %}
+- {{ render_fact(fact) }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endfor %}
+{% if establish_facts and previous_facts -%}
+<|SECTION:KNOWN FACTS|>
+Record age is display metadata, not part of the fact text. Do not copy it into extracted facts.
+{% for fact in previous_facts %}
+- {{ render_fact(fact, extraction=True) }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif -%}
+<|SECTION:TASK|>
+{{ speaker }} just said the new line above, with {{ listeners }} present. For each listener, decide which of the facts they did not know yet the new line reveals to them. A listener learns a fact when the new line conveys its substance to them. Judge with the RECENT LINES and the situation (speaker, setting, and what is being discussed), not the line in isolation. A detail left implicit does not block learning unless that detail is the point of the fact. Lean toward learning when the substance is conveyed and the context makes the omitted detail plain; do not invent unsupported details. A hint, a question, or a merely related fact still does not count.
+
+Learned example: F1 says "Elmer caught Nora watching TV sitcoms featuring cartoon animals on company time." Nora and Mara are at their desks during their office shift, discussing what Elmer caught Nora doing. Nora tells Mara, "I was watching that sitcom with cartoon animals. Elmer walked up behind me before I could close it." Mara learns F1: Nora conveys its substance and the setting makes company time plain even though she does not repeat that qualifier. Answer: <LEDGER>{"Mara": ["F1"]}</LEDGER>.
+
+Not learned example: With the same F1 and office setting, Nora only tells Mara, "Elmer saw something on my screen. Guess what?" This is a hint and a question; it does not convey what Nora was watching. Mara does not learn F1. Answer: <LEDGER>{}</LEDGER>.
+
+Answer with a JSON object inside the tags: one key per listener, the value the list of fact ids they learned. Leave a listener out when they learned nothing. Answer <LEDGER>{}</LEDGER> when nobody learned anything.
+
+Example: <LEDGER>{"Mara": ["F12"], "Edwin": []}</LEDGER>
+{% if establish_facts %}
+
+Also extract the new facts established by the NEW LINE only. Recent lines and known facts are context, not additional material to extract. Preserve what {{ speaker }} says as attributed speech when it is a report or claim. Do not turn a claim into world truth. Do not repeat an already recorded fact; use supersedes only for a new fact that changes or replaces an earlier fact, never for an unchanged restatement.
+
+{% include "fact-extraction-instructions.jinja2" %}
+
+After </LEDGER>, return a second block:
+<FACTS>
+[{"text": "one self-contained statement, names spelled out, no pronouns", "importance": 2, "subjects": ["characters, items or places the fact is about"], "known_by": ["listeners who learned the fact"], "supersedes": null}]
+</FACTS>
+Choose importance 1, 2, or 3 using the rules above. Name only the listeners supplied above in known_by. Everyone present knows the attributed fact; known_by describes learning and does not restrict the audience. Reference only supplied known fact IDs in supersedes. Between 0 and 12 items. Return <FACTS>[]</FACTS> when the line establishes nothing worth keeping. Output both blocks, without another response or request.
+{% endif -%}
+<|CLOSE_SECTION|>
+{{ set_prepared_response("<LEDGER>") }}

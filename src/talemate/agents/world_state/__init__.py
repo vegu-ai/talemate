@@ -1,12 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
+
+from talemate.knowledge.bucket import KnowledgeIndex
+from talemate.knowledge.mode import character_knowledge_enabled
 
 import structlog
 
 import talemate.emit.async_signals
 import talemate.util as util
-from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.client import ClientBase
 from talemate.prompts import Prompt
@@ -128,10 +130,8 @@ class WorldStateAgent(
         message = TimePassageMessage(ts=duration, message=human_duration, title=title)
 
         log.debug("world_state.advance_time", message=message)
-        await self.scene.push_history(message)
+        await self.scene.push_history(message, emit_message=True)
         self.scene.emit_status()
-
-        emit("time", message)
 
         await talemate.emit.async_signals.get("agent.world_state.time").send(
             TimePassageEmission(
@@ -153,6 +153,8 @@ class WorldStateAgent(
         response_length=1024,
         num_queries=1,
         extra_context: list[str] = [],
+        filter: Callable | None = None,
+        viewer: str | None = None,
     ):
         response, extracted = await Prompt.request(
             "world_state.analyze-text-and-extract-context",
@@ -167,6 +169,12 @@ class WorldStateAgent(
                 "response_length": response_length,
                 "num_queries": num_queries,
                 "extra_context": extra_context,
+                "memory_filter": filter,
+                "knowledge_index": KnowledgeIndex.from_scene(self.scene),
+                "knowledge_viewer": viewer,
+                **await self.retrieval_perspective_vars(
+                    viewer, include_character_context
+                ),
             },
         )
 
@@ -185,6 +193,8 @@ class WorldStateAgent(
         response_length=1024,
         num_queries=1,
         extra_context: list[str] = [],
+        filter: Callable | None = None,
+        viewer: str | None = None,
     ) -> list[str]:
         response, extracted = await Prompt.request(
             "world_state.analyze-text-and-generate-rag-queries",
@@ -199,6 +209,11 @@ class WorldStateAgent(
                 "response_length": response_length,
                 "num_queries": num_queries,
                 "extra_context": extra_context,
+                "knowledge_index": KnowledgeIndex.from_scene(self.scene),
+                "knowledge_viewer": viewer,
+                **await self.retrieval_perspective_vars(
+                    viewer, include_character_context
+                ),
             },
         )
 
@@ -206,7 +221,18 @@ class WorldStateAgent(
 
         memory_agent = get_agent("memory")
 
-        context = await memory_agent.multi_query(queries, iterate=3)
+        context = await memory_agent.multi_query(
+            queries,
+            iterate=3,
+            filter=filter,
+            over_fetch=3 if filter else 1,
+            ranking_viewer=viewer,
+            **(
+                {"viewer": viewer}
+                if viewer is not None and character_knowledge_enabled(self.scene)
+                else {}
+            ),
+        )
 
         # log.debug(
         #    "analyze_text_and_extract_context_via_queries",
@@ -217,6 +243,19 @@ class WorldStateAgent(
         # )
 
         return context
+
+    async def retrieval_perspective_vars(self, viewer, include_character_context):
+        if viewer is None or not character_knowledge_enabled(self.scene):
+            return {}
+        memory = get_agent("memory")
+        memory.validate_audience_viewer(viewer)
+        return {
+            "memory_viewer": viewer,
+            "character_retrieval": True,
+            "memory_character_context": await memory.audience_character_context(viewer)
+            if include_character_context
+            else "",
+        }
 
     @set_processing
     async def analyze_and_follow_instruction(

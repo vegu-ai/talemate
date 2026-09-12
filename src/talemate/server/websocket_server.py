@@ -182,6 +182,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         does not inherit the released scene's per-scene overrides.
         """
         if self.scene:
+            self.scene.interrupt()
             # before the fallible close: `active` is the abort gate in-flight
             # work polls, so it must drop even when the teardown fails
             self.scene.active = False
@@ -226,12 +227,30 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         callback=None,
         file_name=None,
         scene_initialization: dict | None = None,
+        request_id: str | None = None,
     ):
         owned_scene = None
         try:
             scene = owned_scene = self.release_scene()
 
             scene.active = True
+
+            def is_current():
+                task = asyncio.current_task()
+                return self.scene is owned_scene and not task.cancelling()
+
+            async def show_loaded_history(loaded_scene):
+                if not is_current():
+                    raise asyncio.CancelledError()
+                loaded_scene.emit_status()
+                self.queue_put(
+                    {
+                        "type": "system",
+                        "id": "scene.history_ready",
+                        "data": {"hidden": True},
+                    }
+                )
+                await loaded_scene.emit_history()
 
             with ActiveScene(scene):
                 try:
@@ -244,38 +263,55 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                         scene_initialization=SceneInitialization(**scene_initialization)
                         if scene_initialization
                         else None,
+                        before_memory=show_loaded_history,
+                        is_current=is_current,
                     )
                 except Exception as e:
-                    self.scene = self.init_scene()
-                    return await self.load_scene_failure(e)
+                    if not is_current():
+                        return
+                    self.release_scene()
+                    return await self.load_scene_failure(e, request_id)
+
+            if not is_current():
+                return
 
             if not scene:
                 # if scene is None at this point then load scene failed, likely with
                 # a warning. This usually happens when generation cancel was triggered.
                 # TODO: more explicit handling
+                self.release_scene()
                 return await self.load_scene_failure(
-                    Exception("Scene loading interrupted")
+                    Exception("Scene loading interrupted"), request_id
                 )
 
             if callback:
                 await callback()
+            if not is_current():
+                return
 
             with ActiveScene(scene):
-                await scene.start()
+                await scene.start(history_visible=True)
         except Exception:
             log.error("load_scene", error=traceback.format_exc())
         finally:
             # a newer load_scene frame may already own `self.scene` by the time
             # a cancelled frame unwinds here - only deactivate this frame's scene
             if owned_scene is not None and self.scene is owned_scene:
-                owned_scene.active = False
+                if (
+                    owned_scene.agent_overrides is not None
+                    and owned_scene.agent_overrides.pending
+                ):
+                    self.release_scene()
+                else:
+                    owned_scene.active = False
 
-    async def load_scene_failure(self, error: Exception):
+    async def load_scene_failure(self, error: Exception, request_id: str | None = None):
         emit("status", message=str(error), status="error")
         await self.out_queue.put(
             {
                 "type": "system",
                 "id": "scene.load_failure",
+                "request_id": request_id,
                 "data": {
                     "hidden": True,
                 },
@@ -576,7 +612,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 "name": emission.id,
                 "status": emission.status,
                 "data": emission.data,
-                "max_token_length": client.max_token_length if client else 8192,
+                "max_token_length": client.max_token_length if client else 16384,
                 "api_url": getattr(client, "api_url", None) if client else None,
                 "api_key": getattr(client, "api_key", None)
                 if enable_api_auth
@@ -729,7 +765,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
     async def request_client_status(self):
         await instance.emit_clients_status()
 
-    def request_file_image_data(self, file_path: str):
+    def request_file_image_data(self, file_path: str, request_id: str | None = None):
         """
         Read an image file from the given path and return it as a base64 data URL.
         Used for displaying image previews when loading character cards from file paths.
@@ -739,6 +775,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 self.queue_put(
                     {
                         "type": "file_image_data",
+                        "request_id": request_id,
                         "file_path": file_path,
                         "error": f"File not found: {file_path}",
                     }
@@ -751,6 +788,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 self.queue_put(
                     {
                         "type": "file_image_data",
+                        "request_id": request_id,
                         "file_path": file_path,
                         "error": str(e),
                     }
@@ -766,6 +804,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             self.queue_put(
                 {
                     "type": "file_image_data",
+                    "request_id": request_id,
                     "file_path": file_path,
                     "image_data": data_url,
                     "media_type": media_type,
@@ -776,6 +815,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             self.queue_put(
                 {
                     "type": "file_image_data",
+                    "request_id": request_id,
                     "file_path": file_path,
                     "error": traceback.format_exc(),
                 }

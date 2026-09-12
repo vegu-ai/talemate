@@ -94,6 +94,18 @@ Drag any slider to set its weight; the other two redistribute proportionally to 
 
 Default on. When the [director's Scene Direction](/talemate/user-guide/agents/director/scene-direction) is enabled — either via the agent toggle or a scene-level always-on override — Auto Narration is skipped. Turn this off if you want both systems running at once.
 
+## :material-account-clock-outline: Offscreen Life
+
+When a character returns to the scene after missing at least one summarized history entry, the narrator writes what the character did while away, given their sheet and the time that passed. The prompt's history, memory block, character sheets and pinned entries are rendered from the returning character's own point of view (their bucket), so the span they missed is never in front of the model. Legacy scenes inject the shared world state snapshot when pinning is enabled; opted-in perception scenes inject only the returning character's snapshot replacements, omitting missing or stale views. The result is stored as a fact with the source `offscreen` that only the returning character was present for: it retrieves for that character alone, is never listed in an absence block, and is not added to the scene text. A character new to the scene was not away and gets no account; when part of the absence is not summarized yet, the account waits for that summary so it spans the whole absence. Loading a scene produces no account either, even when the load brings a character back into it: an account is a turn you ask for, not a side effect of opening a scene. Normally this is +1 request per return. When it shares a combined request with **Brief characters on entry**, an unreadable account section is retried through this ordinary path and makes the return cost two requests total. Off by default.
+
+##### Minimum missed entries
+
+The offscreen life is written only when the character missed at least this many summarized history entries (default 1).
+
+##### Length
+
+Token length for the offscreen life narration (default 192).
+
 ## :material-brain: Long Term Memory
 
 --8<-- "docs/snippets/tips.md:agent_long_term_memory_settings"

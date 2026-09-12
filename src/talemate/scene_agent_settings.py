@@ -7,10 +7,9 @@ filename from the scene's main JSON via ``agent_settings_file``. Storage is
 everything else falls through to the global agent config at access time via
 ``Agent.resolve_config`` / ``Agent.resolve_enabled``.
 
-Granularity is **project-level**, not save-file-level: ``save_dir`` is
-derived from ``project_name``, so every save file (Save As copies, restore
-points, etc.) inside the same project shares the same ``agent-settings/``
-folder. Scenes in different projects have independent overlays. The scene
+Files live in a project-wide folder; saves share overrides only when they
+link the same file. Independent creations can use separate files in the same
+project. Scenes in different projects have independent overlays. The scene
 ZIP export/import flow packages the whole ``agent-settings/`` folder so
 overlays survive cross-system transfer (see ``talemate.export`` and
 ``talemate.load``).
@@ -98,6 +97,7 @@ class SceneAgentSettings(pydantic.BaseModel):
     """
 
     filepath: Path = pydantic.Field(exclude=True)
+    pending: bool = pydantic.Field(default=False, exclude=True)
     agents: dict[str, AgentOverride] = pydantic.Field(default_factory=dict)
 
     @property
@@ -119,6 +119,8 @@ class SceneAgentSettings(pydantic.BaseModel):
         return self
 
     async def write_to_file(self) -> None:
+        if self.pending:
+            raise OSError("Scene creation is still in progress")
         # Prune empty containers so the file stays clean even when callers
         # clear the last override in an action / agent.
         self._prune_empty()

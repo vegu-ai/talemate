@@ -4,6 +4,7 @@ Utilities for managing the scene history.
 Most of these currently exist as mehtods on the Scene object, but i am in the process of moving them here.
 """
 
+from talemate.knowledge.processing import evidence_writer
 import pydantic
 import asyncio
 from typing import TYPE_CHECKING, Callable
@@ -27,6 +28,14 @@ from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
 from talemate.context import handle_generation_cancelled
 from talemate.events import ArchiveEvent
+from talemate.knowledge.facts import drop_facts_for_entries, facts_for_entry
+from talemate.knowledge.schema import Fact, FactsStatus
+from talemate.knowledge.perspective_models import PerspectiveSourceModel
+from talemate.knowledge.perspectives import (
+    source_content_changed,
+    source_deleted,
+    source_reference,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -60,12 +69,15 @@ class UnregeneratableEntryError(Exception):
     pass
 
 
-class ArchiveEntry(pydantic.BaseModel):
+class ArchiveEntry(PerspectiveSourceModel):
     text: str
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:8])
     start: int | None = None
     end: int | None = None
     ts: int = 0
+    present: list[str] | None = None
+    intro_included: bool | None = None
+    facts_status: FactsStatus | None = None
 
 
 class LayeredArchiveEntry(ArchiveEntry):
@@ -73,7 +85,7 @@ class LayeredArchiveEntry(ArchiveEntry):
     ts_end: int | None = None
 
 
-class HistoryEntry(pydantic.BaseModel):
+class HistoryEntry(PerspectiveSourceModel):
     text: str
     ts: int
     index: int
@@ -86,6 +98,10 @@ class HistoryEntry(pydantic.BaseModel):
     time_end: str | None = None
     start: int | None = None
     end: int | None = None
+    present: list[str] | None = None
+    intro_included: bool | None = None
+    facts_status: FactsStatus | None = None
+    facts: list[Fact] = pydantic.Field(default_factory=list)
 
     @property
     def is_static(self) -> bool:
@@ -126,6 +142,7 @@ async def emit_archive_add(scene: "Scene", entry: ArchiveEntry):
             text=entry.text,
             ts=entry.ts,
             memory_id=entry.id,
+            present=entry.present,
         )
     )
 
@@ -399,6 +416,10 @@ def history_with_relative_time(
             time_end=diff_to_human(scene_time, entry.get("ts_end", None)),
             start=entry.get("start", None),
             end=entry.get("end", None),
+            present=entry.get("present", None),
+            facts_status=entry.get("facts_status", None),
+            knowledge=entry.get("knowledge"),
+            intro_included=entry.get("intro_included"),
         ).model_dump()
         for index, entry in enumerate(history)
     ]
@@ -608,6 +629,7 @@ async def static_history(scene: "Scene") -> list[ArchiveEntry]:
     ]
 
 
+@evidence_writer
 async def rebuild_history(
     scene: "Scene",
     callback: Callable | None = None,
@@ -619,6 +641,14 @@ async def rebuild_history(
     summarizer = get_agent("summarizer")
 
     # clear out archived history, but keep pre-established history
+    await drop_facts_for_entries(
+        scene,
+        {
+            ah.get("id")
+            for ah in scene.archived_history
+            if ah.get("end") is not None and ah.get("id")
+        },
+    )
     scene.archived_history = [
         ah for ah in scene.archived_history if ah.get("end") is None
     ]
@@ -732,34 +762,67 @@ async def character_activity(
     )
 
 
+@evidence_writer
 async def update_history_entry(
-    scene: "Scene", entry: HistoryEntry
+    scene: "Scene", entry: HistoryEntry, *, still_current=None
 ) -> LayeredArchiveEntry | ArchiveEntry:
     """
     Updates a history entry in the scene's archived history
     """
 
+    if still_current is not None and not still_current():
+        raise GenerationCancelled("The scene changed during history refresh")
+    from talemate.knowledge.revision_refresh import capture_revision_mutations
+
+    # fields the payload does not carry (or carries as None) stay as stored
     if entry.layer == 0:
         # base layer
-        archive_entry = ArchiveEntry(**entry.model_dump())
-        scene.archived_history[entry.index] = archive_entry.model_dump(
-            exclude_none=True
+        archive_entry = ArchiveEntry(
+            **{
+                **scene.archived_history[entry.index],
+                **entry.model_dump(exclude_none=True, exclude={"facts", "knowledge"}),
+            }
         )
+        with capture_revision_mutations(scene):
+            scene.archived_history[entry.index] = archive_entry.model_dump(
+                exclude_none=True
+            )
+            source_content_changed(scene, "summary", archive_entry.id)
+        archive_entry = ArchiveEntry(**scene.archived_history[entry.index])
         await emit_archive_add(scene, archive_entry)
+        if still_current is not None and not still_current():
+            raise GenerationCancelled("The scene changed during history refresh")
         return archive_entry
     else:
-        # layered history
-        layered_entry = LayeredArchiveEntry(**entry.model_dump())
-        scene.layered_history[entry.layer - 1][entry.index] = layered_entry.model_dump(
-            exclude_none=True
+        # layered history; presence is computed from the sources, never stored
+        payload = entry.model_dump(exclude_none=True, exclude={"knowledge"})
+        payload.pop("present", None)
+        layered_entry = LayeredArchiveEntry(
+            **{
+                **scene.layered_history[entry.layer - 1][entry.index],
+                **payload,
+            }
+        )
+        with capture_revision_mutations(scene):
+            scene.layered_history[entry.layer - 1][entry.index] = (
+                layered_entry.model_dump(exclude_none=True)
+            )
+            source_content_changed(
+                scene, "summary", layered_entry.id, layer=entry.layer
+            )
+        layered_entry = LayeredArchiveEntry(
+            **scene.layered_history[entry.layer - 1][entry.index]
         )
         return layered_entry
 
 
+@evidence_writer
 async def regenerate_history_entry(
     scene: "Scene",
     entry: HistoryEntry,
     generation_options: GenerationOptions | None = None,
+    *,
+    still_current=None,
 ) -> LayeredArchiveEntry | ArchiveEntry:
     """
     Regenerates a history entry in the scene's archived history
@@ -792,6 +855,10 @@ async def regenerate_history_entry(
             entry.end,
             generation_options=generation_options,
         )
+        if summarizer.scene is not scene or (
+            still_current is not None and not still_current()
+        ):
+            raise GenerationCancelled("The scene changed during history refresh")
 
         if not new_archive_entries:
             raise UnregeneratableEntryError("Summarization produced no output")
@@ -800,15 +867,33 @@ async def regenerate_history_entry(
         summarized = "\n\n".join(entry.text for entry in new_archive_entries)
 
     elif isinstance(archive_entry, ArchiveEntry):
-        summarized = await summarizer.summarize(
+        summarized, facts_status = await summarizer.summarize_with_facts(
             "\n".join(map(str, entries)),
-            extra_context=await summarizer.previous_summaries(archive_entry),
+            archive_entry,
+            extra_context=await summarizer.previous_summaries(
+                archive_entry, scene=scene
+            ),
             generation_options=generation_options,
+            scene=scene,
+            still_current=still_current,
         )
+        entry.facts_status = facts_status
+        entry.facts = facts_for_entry(scene, entry.id)
+        if archive_entry.intro_included is not None:
+            entry.intro_included = False
 
     entry.text = summarized
 
-    await update_history_entry(scene, entry)
+    if still_current is not None and not still_current():
+        raise GenerationCancelled("The scene changed during history refresh")
+    await update_history_entry(scene, entry, still_current=still_current)
+    if still_current is not None and not still_current():
+        raise GenerationCancelled("The scene changed during history refresh")
+    await summarizer.queue_summary_views(
+        scene, entry.id, entry.layer, generation_options=generation_options
+    )
+    if still_current is not None and not still_current():
+        raise GenerationCancelled("The scene changed during history refresh")
 
     return entry
 
@@ -1016,7 +1101,9 @@ async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEn
     if remove_idx is None:
         raise ValueError("Entry not found.")
 
+    reference = source_reference(scene, "summary", entry.id)
     removed_raw = scene.archived_history.pop(remove_idx)
+    source_deleted(scene, reference)
     removed_entry = ArchiveEntry(**removed_raw)
 
     if is_oldest_entry:

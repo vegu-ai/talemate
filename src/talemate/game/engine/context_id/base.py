@@ -244,6 +244,11 @@ class ContextIDItem(pydantic.BaseModel):
     def memory_id(self) -> str | None:
         return None
 
+    @property
+    def knowledge_id(self) -> str | None:
+        """The id a knowledge edge or a visibility setting addresses."""
+        return self.memory_id
+
     async def get(self, scene: "Scene") -> Any:
         raise NotImplementedError("Subclasses must implement this method")
 

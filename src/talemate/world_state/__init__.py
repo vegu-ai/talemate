@@ -3,13 +3,33 @@ from enum import Enum
 from typing import Any, Union
 
 import structlog
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
 
 import talemate.instance as instance
 from talemate.emit import emit
 from talemate.prompts import Prompt
 import talemate.game.focal.schema as focal_schema
 from talemate.game.schema import ConditionGroup
+from talemate.knowledge.schema import (
+    EntryVisibility,
+    Fact,
+    KnowledgeEdge,
+    Topic,
+    ReinforcementEntry,
+)
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.snapshot_models import SnapshotPerspectives
+from talemate.knowledge.snapshots import snapshot_for
+from talemate.scene_message import ReinforcementMessage
+from talemate.knowledge.perspectives import source_reference, source_deleted
+from talemate.knowledge.reinforcements import (
+    reinforcement_context,
+    entry_binding,
+    reinforcement_entry_context,
+    prepare_reinforcement_sources,
+    prepare_reinforcement_source,
+    write_reinforcement_entry,
+)
 from talemate.world_state.schema import (
     CharacterState,
     ObjectState,
@@ -50,6 +70,7 @@ class WorldStateResponse(BaseModel):
 
     world_state: Union[dict, None] = None
     anchor_message_ids: list[int] = Field(default_factory=list)
+    audience_context: dict | None = Field(default=None, exclude=True)
 
 
 class InsertionMode(str, Enum):
@@ -68,6 +89,31 @@ class Reinforcement(BaseModel):
     instructions: Union[str, None] = None
     insert: str = "sequential"
     require_active: bool = True
+    perspective_source: ReinforcementMessage | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_perspective_source(self, handler):
+        data = handler(self)
+        if self.perspective_source is None:
+            data.pop("perspective_source", None)
+        return data
+
+    def source_for(self, scene):
+        if self.insert == "sequential":
+            return next(
+                (
+                    message
+                    for message in reversed(scene.history)
+                    if isinstance(message, ReinforcementMessage)
+                    and message.character_name == self.character
+                    and message.question == self.question
+                ),
+                None,
+            )
+        return self.perspective_source
+
+    def context_for(self, scene, viewer=None):
+        return reinforcement_context(scene, self, viewer)
 
     @property
     def as_context_line(self) -> str:
@@ -88,6 +134,15 @@ class ManualContext(BaseModel):
     text: str
     meta: dict[str, Any] = {}
     shared: bool = False
+    visibility: EntryVisibility = Field(default_factory=EntryVisibility)
+    reinforcement: ReinforcementEntry | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_reinforcement(self, handler):
+        data = handler(self)
+        if self.reinforcement is None:
+            data.pop("reinforcement", None)
+        return data
 
 
 class ContextPin(BaseModel):
@@ -142,6 +197,36 @@ class WorldState(BaseModel):
 
     # location description
     location: Union[str, None] = None
+    location_perspectives: SnapshotPerspectives | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_snapshot_perspectives(self, handler):
+        data = handler(self)
+        if self.location_perspectives is None:
+            data.pop("location_perspectives", None)
+        return data
+
+    def snapshot_for(self, viewer=None):
+        return snapshot_for(self.scene, viewer, world_state=self)
+
+    def clear_snapshot_perspectives(self):
+        self.location_perspectives = None
+        for bucket in (self.characters, self.items, self.places):
+            for entity in bucket.values():
+                entity.perspectives = None
+
+    def validate_snapshot_audiences(self, names):
+        records = [self.location_perspectives]
+        records.extend(
+            entity.perspectives
+            for bucket in (self.characters, self.items, self.places)
+            for entity in bucket.values()
+        )
+        for record in records:
+            if record and any(
+                not set(view.audience) <= set(names) for view in record.views
+            ):
+                raise ValueError("Unresolved snapshot audience")
 
     # ids of the scene history messages the snapshot was generated against;
     # every one of these can render inline entity highlights in the UI.
@@ -149,6 +234,15 @@ class WorldState(BaseModel):
 
     # reinforcers
     reinforce: list[Reinforcement] = []
+
+    def prepare_reinforcement_perspectives(self):
+        return prepare_reinforcement_sources(self.scene)
+
+    def is_reinforcement_entry(self, entry_id):
+        return entry_binding(self.scene, entry_id) is not None
+
+    def reinforcement_entry_context(self, entry_id, viewer):
+        return reinforcement_entry_context(self.scene, entry_id, viewer)
 
     # pins
     pins: dict[str, ContextPin] = {}
@@ -159,6 +253,15 @@ class WorldState(BaseModel):
     character_name_mappings: dict[str, list[str]] = {}
 
     suggestions: list[Suggestion] = Field(default_factory=list)
+
+    # grant / revoke edges: the only per-character knowledge state that is stored
+    knowledge: list[KnowledgeEdge] = Field(default_factory=list)
+
+    facts: dict[str, Fact] = Field(default_factory=dict)
+    fact_counter: int = 0
+    # topics over the facts (part E); the fact count at the last clustering
+    topics: dict[str, Topic] = Field(default_factory=dict)
+    topics_fact_count: int = 0
 
     @property
     def agent(self):
@@ -231,6 +334,7 @@ class WorldState(BaseModel):
         self.items = {}
         self.places = {}
         self.location = None
+        self.location_perspectives = None
         self.anchor_message_ids = []
 
     def emit(self, status="update"):
@@ -349,6 +453,12 @@ class WorldState(BaseModel):
         idx, reinforcement = await self.find_reinforcement(question, character)
 
         if reinforcement:
+            previous_source = reinforcement.source_for(self.scene)
+            previous_reference = (
+                source_reference(self.scene, "message", previous_source.id)
+                if previous_source
+                else None
+            )
             # update the reinforcement object
 
             reinforcement.instructions = instructions
@@ -359,20 +469,21 @@ class WorldState(BaseModel):
             old_insert_method = reinforcement.insert
 
             reinforcement.insert = insert
+            if old_insert_method != insert and insert == "sequential":
+                reinforcement.perspective_source = None
+                source_deleted(self.scene, previous_reference)
 
             # find the reinforcement message i nthe scene history and update the answer
             if old_insert_method == "sequential":
-                message = self.agent.scene.find_message(
-                    typ="reinforcement",
-                    character_name=character,
-                    question=question,
-                )
+                message = previous_source
 
                 if old_insert_method != insert and message:
                     # if it used to be sequential we need to remove its ReinforcmentMessage
                     # from the scene history
 
-                    self.scene.pop_history(typ="reinforcement", source=message.source)
+                    self.scene.pop_history(
+                        typ="reinforcement", meta_hash=message.meta_hash
+                    )
 
                 elif message:
                     message.message = answer
@@ -381,8 +492,14 @@ class WorldState(BaseModel):
                 # next loop
                 reinforcement.due = 0
 
-            # update the character detail if character name is specified
-            if character:
+            if character_knowledge_enabled(self.scene):
+                source = prepare_reinforcement_source(self.scene, reinforcement)
+                await write_reinforcement_entry(self.scene, reinforcement, source)
+                self.emit()
+                await instance.get_agent("summarizer").finalize_perceptions(
+                    self.scene, []
+                )
+            elif character:
                 character = self.agent.scene.get_character(character)
                 await character.set_detail(question, answer)
 
@@ -409,6 +526,10 @@ class WorldState(BaseModel):
         )
 
         self.reinforce.append(reinforcement)
+
+        self.emit()
+        if answer and character_knowledge_enabled(self.scene):
+            await instance.get_agent("summarizer").finalize_perceptions(self.scene, [])
 
         return reinforcement
 
@@ -470,6 +591,15 @@ class WorldState(BaseModel):
         # and remove them
 
         reinforcement = self.reinforce[idx]
+        # knowledge.memory reaches this module through instance/facts.
+        from talemate.knowledge.memory import invalidate_memory_audiences
+
+        direct_source = reinforcement.perspective_source
+        direct_reference = (
+            source_reference(self.scene, "message", direct_source.id)
+            if direct_source
+            else None
+        )
 
         self.agent.scene.pop_history(
             typ="reinforcement",
@@ -485,9 +615,16 @@ class WorldState(BaseModel):
                 await character.set_detail(reinforcement.question, None)
         else:
             if reinforcement.question in self.manual_context:
-                del self.manual_context[reinforcement.question]
+                if character_knowledge_enabled(self.scene):
+                    await self.scene.world_state_manager.delete_context_db_entry(
+                        reinforcement.question
+                    )
+                else:
+                    del self.manual_context[reinforcement.question]
 
         self.reinforce.pop(idx)
+        source_deleted(self.scene, direct_reference)
+        invalidate_memory_audiences(self.scene)
 
     def render(self):
         """

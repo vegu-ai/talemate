@@ -41,7 +41,9 @@ class SharedContext(pydantic.BaseModel):
         # world entries
         self.world_state = WorldState(
             manual_context={
-                id: ManualContext(**manual_context.model_dump())
+                id: ManualContext(
+                    **manual_context.model_dump(exclude={"reinforcement"})
+                )
                 for id, manual_context in scene.world_state.manual_context.items()
                 if manual_context.shared
             },
@@ -68,7 +70,9 @@ class SharedContext(pydantic.BaseModel):
         # world entries
         for id, manual_context in scene.world_state.manual_context.items():
             if manual_context.shared:
-                self.world_state.manual_context[id] = manual_context
+                self.world_state.manual_context[id] = ManualContext(
+                    **manual_context.model_dump(exclude={"reinforcement"})
+                )
 
         # static history
         if self.share_static_history:
@@ -99,20 +103,27 @@ class SharedContext(pydantic.BaseModel):
             scene_character: Character | None = scene.character_data.get(name)
             if not scene_character:
                 # character does not exist in scene, add it
-                scene.character_data[name] = character_data
-            else:
-                # character exists in scene, update it
-                await scene_character.apply_shared_context(character_data)
+                scene_character = Character(name=character_data.name)
+                scene.character_data[name] = scene_character
+            await scene_character.apply_shared_context(character_data)
         for id, manual_context in list(self.world_state.manual_context.items()):
             if manual_context.shared:
-                scene.world_state.manual_context[id] = manual_context
+                existing = scene.world_state.manual_context.get(id)
+                scene.world_state.manual_context[id] = ManualContext(
+                    **manual_context.model_dump(exclude={"reinforcement"}),
+                    reinforcement=(
+                        existing.reinforcement
+                        if existing and existing.text == manual_context.text
+                        else None
+                    ),
+                )
 
         # handle characters removed from shared context
         for character in list(scene.character_data.values()):
             if character.shared and character.name not in self.character_data:
                 # We dont ever want to remove a character once its been added
                 # to a scene, so we just make sure it is no longer shared
-                await scene_character.set_shared(False)
+                await character.set_shared(False)
 
         # handle world entries removed from shared context
         for id, world_entry in list(scene.world_state.manual_context.items()):

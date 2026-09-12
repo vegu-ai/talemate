@@ -30,10 +30,12 @@ from .event import (
     disconnect_auto_register_listeners,
 )
 import talemate.events as events
-from talemate.emit import emit, wait_for_input
+from talemate.emit import wait_for_input
 from talemate.exceptions import ActedAsCharacter, AbortWaitForInput, GenerationCancelled
-from talemate.context import active_scene, InteractionState
+from talemate.context import active_scene, InteractionState, handle_generation_cancelled
 from talemate.instance import get_agent, AGENTS
+from talemate.knowledge.perspectives import validate_character_rename
+from talemate.knowledge.revision_refresh import catch_up_revisions
 from talemate.character import (
     activate_character,
     deactivate_character,
@@ -230,7 +232,7 @@ class MakeCharacter(Node):
     Outputs:
 
     - character: The character object
-    - actor: The actor object
+    - actor: The actor object, or None when the character is not active in the scene
     """
 
     class Fields:
@@ -337,18 +339,19 @@ class MakeCharacter(Node):
         else:
             ActorCls = scene.Actor
 
-        actor = ActorCls(character, get_agent("conversation"))
-
         log.warning(
             "Make character",
             character=character,
             add_to_scene=add_to_scene,
             is_active=is_active,
         )
+        actor = None
         if add_to_scene:
+            actor = ActorCls(character, get_agent("conversation"))
             await scene.add_actor(actor)
-            if is_active:
-                await activate_character(scene, character)
+            if not is_active:
+                await deactivate_character(scene, character)
+                actor = None
         self.set_output_values({"actor": actor, "character": character})
 
 
@@ -590,6 +593,10 @@ class UpdateCharacterData(Node):
         details = self.get_input_value("details")
         description = self.get_input_value("description")
         name = self.get_input_value("name")
+
+        scene = active_scene.get()
+        if self.is_set(name) and scene is not None:
+            validate_character_rename(scene, character, name)
 
         if self.is_set(base_attributes):
             character.update(base_attributes=base_attributes)
@@ -1097,6 +1104,7 @@ class WaitForInput(Node):
             await self._handle_director_input(scene, state, text_message)
 
         if allow_commands and text_message.startswith("!"):
+            await catch_up_revisions(scene)
             command_state = {}
             node_cmd_executed = False
             await scene.commands.execute(
@@ -1201,8 +1209,7 @@ class WaitForInput(Node):
             action="user_direction",
             subtype="user_direction",
         )
-        await scene.push_history(message)
-        emit("director", message)
+        await scene.push_history(message, emit_message=True)
 
         await director.direction_append_message(
             UserInteractionMessage(user_input=text, is_direction=True)
@@ -1915,6 +1922,7 @@ class SceneLoop(Loop):
         elif isinstance(exc, GenerationCancelled):
             state.shared["skip_to_player"] = True
             state.shared["signal_game_loop"] = False
+            handle_generation_cancelled(exc, scene=scene)
             raise LoopBreak()
 
         await async_signals.get("scene_loop_error").send(self.scene_loop_event)

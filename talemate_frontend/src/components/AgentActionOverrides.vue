@@ -143,7 +143,6 @@ export default {
       type: Object,
       default: () => ({})
     },
-    // the backend's learned actions (`config/agent_actions`)
     agentActions: {
       type: Array,
       default: () => []

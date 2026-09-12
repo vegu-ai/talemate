@@ -35,6 +35,7 @@ def mock_conversation_agent():
     """Create a mock conversation agent."""
     conv = Mock()
     conv.conversation_format = "default"
+    conv.character_knowledge_enabled = False
     return conv
 
 

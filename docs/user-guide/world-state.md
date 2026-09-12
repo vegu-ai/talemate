@@ -37,6 +37,55 @@ From the popover you can take two actions:
 
 :material-cog-outline: **Configure highlights** opens the [World State Agent settings](/talemate/user-guide/agents/world-state/settings/) where the highlight behavior is controlled.
 
+### Adding one yourself
+
+The snapshot decides what to highlight, and it does not always pick the thing you
+care about. Select the text yourself to add it.
+
+Drag across a span of text in a scene message — a character message, a narrator
+message, or a Look at / Add Detail message when **Include Look at / Add Detail**
+is on — and a small **Add to world state** action appears next to the selection.
+A shift-click selection works the same way. A double click still opens the
+message editor, as it always has, so use a drag when you want the action.
+
+The action is offered only while the World State Agent can serve it. Turn the
+agent off, leave it without a client, or turn its **Update world state** action
+off, and no action appears.
+
+Clicking it sends the selected text to the World State Agent, which resolves it
+into a single snapshot entry: a character, an item or a place, with the short
+description the popover shows. It is one request, it runs in the background like
+a manual refresh, and the :material-close: cancel icon stops it.
+
+The new entry appears in the snapshot, and the selected words become a highlight
+in the message, so the normal **Look at** and **Add Detail** actions work on it
+straight away.
+
+A few things to know:
+
+- Your selection is widened to whole words, and it can be at most 240 characters
+  long. The action says so when a selection is too long.
+- Select something the story names — a person, an object, a place. A selection
+  that names no such thing is refused rather than turned into an entry, and
+  Talemate tells you so.
+- Select inside an existing highlight and the entity popover opens instead, where
+  **Add Detail** expands the entry you already have.
+- The message has to be part of the current moment to show an inline highlight.
+  Add from an older message and the entry still joins the snapshot; Talemate tells
+  you that it carries no highlight.
+- An entry you add by hand is marked with a :material-pin: pin on its row in the
+  World panel. It never ages out as a stale entry and the item limit never drops
+  it, so it stays until the story drops it, a time jump cuts the scene, or you
+  wipe the snapshot. It does keep its slot in **Max items tracked**, so pinning
+  items leaves fewer slots for the ones a refresh finds. With **Durable
+  snapshot** off, every refresh rebuilds the snapshot from scratch, so a manual
+  entry lives until the next refresh like any other.
+- The panel lists characters and items, so a place you add shows as a highlight
+  and in its popover rather than as a row of its own.
+- In a Character perspectives story the new entry is written for every audience
+  in the same pass, like the entries a refresh produces, so it carries no reader
+  detail into a character's view.
+
 ### Controlling the highlights
 
 Entity highlighting follows the world state snapshot, so it shares the snapshot's settings in the [World State Agent configuration](/talemate/user-guide/agents/world-state/settings/):
@@ -55,9 +104,115 @@ from the narrative — people the story refers to who are not characters in thei
 
 Each entry displays the current emotional state next to the character's name.
 
-When expanded it will also show a description of what the character is currently doing.
+Active character rows have a subtle accent in the current theme's primary color.
+Background rows use the theme's secondary color, and the **Inactive** section header
+has a muted accent.
+
+Expand an entry to see what the character is currently doing and a small kind label:
+
+- **character**: "A real character, present in the scene"
+- **background**: "Picked up by the world state snapshot, not yet a character."
+
+Hover over or focus the label to read its tooltip. When **Make real** is available on
+that row, the background tooltip also says "Use Make real to promote."
 
 ![world state 2](/talemate/img/0.40.0/world-state-snapshot-2.png)
+
+### Knowledge changes
+
+A small dot beside a character marks new knowledge grants or revocations, or new facts
+attributed to them when a section of the story is summarized. Several changes share one
+dot. Hover over it or focus it with the keyboard to see the affected facts and entries,
+labelled **Added** or **Revoked**. Click it to open that character's **Knowledge** tab.
+
+The dot fades after eight seconds; hovering or focusing pauses that timer. Inactive
+characters can have a dot beside their name in the **Inactive** section too. When that
+section is collapsed, its header shows a dot listing the affected characters; click it
+to expand the section. The Knowledge tab refreshes when new changes arrive.
+
+Ordinary messages, snapshot refreshes, loading a scene and playthrough do not trigger the
+dot. Regenerating or deleting old facts and removing existing knowledge edges stay silent.
+These notifications add no AI requests.
+
+### Knowledge hub
+
+Expand an active character and click the :material-head-lightbulb-outline: icon in its action
+row to open the **knowledge hub**, a menu that gathers what the system does for that character's
+knowledge. In the **Inactive** section, the same icon sits at the right edge of each character's
+row, beside the call-into-scene button.
+[How character knowledge works](/talemate/user-guide/world-editor/knowledge-how-it-works/) shows what these settings do, with diagrams. Background characters have no hub, since they are not characters yet. The menu stays open while
+you click inside it; press Escape or click elsewhere to close it. It adds no AI requests: it
+reads the current state and writes settings.
+
+![world state knowledge hub](/talemate/img/0.40.0/world-state-knowledge-hub-1.png)
+
+**What the character knows** lists eligible facts ranked by importance and recency, as the character holds
+them (in a Character perspectives story that is their own view of a passage, not the author's
+record), each with its topic while [Topics](/talemate/user-guide/agents/memory/settings/#topics)
+is enabled, a relative time marker such as **(21 Days ago)**, and a count of all the facts they know.
+The Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology)
+settings keep recent facts and select older ones by score or mention of a present character.
+This selection leaves the character's knowledge intact. It is followed by the newest of the
+character's **Disclosures** in a Character perspectives story or **Entry access rules**
+(Allow / Block) in a Standard story, again with the count. Both lists show at most five entries.
+**Open Knowledge tab** jumps to the character's
+[Knowledge tab](/talemate/user-guide/world-editor/knowledge/) in the World Editor, which holds
+the full lists and the known facts by topic table, and where you establish knowledge or adjust
+rules.
+
+**Story mode** shows the **Character perspectives** switch while the scene has no history and no
+archived history, exactly as in [Scene Settings](/talemate/user-guide/world-editor/scene/settings/).
+Save the scene to keep a change. **Compare modes** opens the two mode cards side by side in a
+popover over the panel, with the **current** chip on the mode the story runs in and Pros and Cons
+shown directly — the same comparison described in
+[Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode). The popover leaves
+the menu open behind it; press Escape or click outside to close it. Once history exists, the switch
+and comparison are replaced by one note naming the current mode and explaining that it is locked
+for the scene.
+
+![knowledge hub mode comparison](/talemate/img/0.40.0/world-state-knowledge-hub-compare.png)
+
+The count line under the ranked facts is a link to the character's Knowledge tab, where every known fact is listed by topic.
+
+The menu header shows the story mode. **Thoroughness** starts with the **Character knowledge effort** slider (see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets)): one drag sets the settings in the pane below to a tuned stop, with the stop's extra requests and model expectation under it; a manual change shows whichever stop the settings then match, and **Custom** when they match none.
+
+![knowledge hub effort slider](/talemate/img/0.40.0/world-state-knowledge-hub-effort.png)
+
+Then comes a summary line naming the
+options that add a request and are on ("No extra requests per line" when none is). Below it sits
+**Individual settings**, a pane that is closed when the application loads and counts the switches
+it holds, for example "7 of 9 on". The count is over every switch the pane draws, the group
+switches and the settings under them alike, and a setting under a group switch that is off counts
+as off. Opening the pane on one character leaves it open on the others until the page is
+reloaded. Open it for the settings that shape knowledge keeping, grouped by agent, with the same
+labels, descriptions and cost notes as the agent settings:
+
+- Conversation → Character Knowledge: the group switch, Limit to character knowledge, Remind
+  about unknown facts, Topic knowledge overview, Refine memories with AI, Track learning from
+  dialogue
+- Summarizer → Summarization: Extract facts
+- Memory → Retrieval: Match known facts
+- Memory → Topics: the group switch
+
+Group headers and toggles share one checkbox column; a group without a master checkbox keeps
+the space so its label lines up. A :material-plus-circle-outline: icon marks an option that adds
+a request; hover it to read the cost. An option under a group switch that is off costs nothing, so it
+carries no icon. The toggles write **scene overrides** for this scene, not the global agent
+settings, so the globals are left untouched; the overrides file is shared by the saves in one
+project, so a Save As copy or restore point linked to the same file reads the change too
+([Per-Scene Agent Overrides](/talemate/user-guide/agents/scene-overrides/)). Use the agent settings
+dialog to change the globals. A :material-movie-open-cog-outline: icon marks a scene override. The
+icon beside one setting restores only that setting's inherited global value, and the icon beside a
+group restores every hub-owned setting in that group. Above the effort slider, the clickable
+**Scene override** label and icon restore every knowledge setting the hub owns — including ones the
+current mode hides — while leaving unrelated overrides alone. Hover any reset control for its
+**Use global settings** tooltip. With no override, the label reads **Global settings**. A scene that
+has not been saved yet cannot hold overrides, so the hub disables these controls and says to save
+the scene first. Options that a
+Character perspectives story does not use are hidden, as they
+are in the agent settings. Click a group name to open its section in the agent settings.
+
+![knowledge hub in a perspectives story](/talemate/img/0.40.0/world-state-knowledge-hub-2.png)
 
 ### Who is in the scene
 
@@ -96,6 +251,8 @@ Beneath the description there are additional shortcuts.
 :material-eye: **Look at** Will cause the [Narrator Agent](/talemate/user-guide/agents/narrator/) to describe the character.
 
 :material-book-open-page-variant: **Manage Character** will take you to the [character editor](/talemate/user-guide/world-editor/characters) for that character, where you can view and edit all of the character's details.
+
+:material-head-lightbulb-outline: **Knowledge** opens the [knowledge hub](#knowledge-hub) for that character.
 
 :material-exit-run: **Take out of the scene** removes an active character from the scene, as described in [Taking a character out of the scene](#taking-a-character-out-of-the-scene).
 

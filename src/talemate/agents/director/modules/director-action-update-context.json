@@ -664,7 +664,7 @@
       "title": "Jinja2 Format",
       "id": "b62ffa05-640b-4de1-a71f-fa8b265a80e3",
       "properties": {
-        "template": "Analyze the instruction and route it to the appropriate function(s).\n\nYour only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nYou MUST pass along this context ID in your instructions.\n{% if target.context_id.context_type in context_id_types and target.context_id.__str__() not in allowed_for_direct_update -%}\nYOU MUST NOT USE THE `direct_context_update` FUNCTION HERE.\n{%- endif %}\n{% endif %}\n\nINSTRUCTIONS:\n```\n{{ instructions }}\n```"
+        "template": "Analyze the instruction and route it to the appropriate function(s).\n\nYour only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if character_knowledge_enabled(scene) %}\nUse `set_known_by` for authored visibility and `grant_knowledge` for an explicit disclosure. Revocation and forgetting are unavailable. Do not route a revoke request to another function or edit history to simulate it.\n{% else %}\nChanges to who knows an entry (its Known by visibility, or a character's grant or revoke of an entry) are applied here directly with `set_known_by`, `grant_knowledge` and `revoke_knowledge`. Do NOT route them to the other functions.\n{% endif %}\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nYou MUST pass along this context ID in your instructions.\n{% if target.context_id.context_type in context_id_types and target.context_id.__str__() not in allowed_for_direct_update -%}\nYOU MUST NOT USE THE `direct_context_update` FUNCTION HERE.\n{%- endif %}\n{% endif %}\n\nINSTRUCTIONS:\n```\n{{ instructions }}\n```"
       },
       "x": 675,
       "y": 496,
@@ -688,6 +688,10 @@
         },
         {
           "name": "item3",
+          "type": "*"
+        },
+        {
+          "name": "item4",
           "type": "*"
         }
       ],
@@ -1325,6 +1329,1058 @@
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
       "base_type": "core/Node"
+    },
+    "2cd5c53d-bb74-457a-a43c-ecbc23eee863": {
+      "title": "context_id",
+      "id": "2cd5c53d-bb74-457a-a43c-ecbc23eee863",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact Context ID of the entry: a character sheet entry (`character.description:<name>`, `character.attribute:<name>.<hash|attribute name>`, `character.detail:<name>.<hash|detail name>`) or a world entry (`world_entry.manual:<hash|title>`). If you do not know the hashed part, put the exact attribute name, detail name or title in its place."
+      },
+      "x": -2000,
+      "y": 2100,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "ba6efb30-6f9a-452b-84b4-eb7ec5a84063": {
+      "title": "Validate Value Is Set",
+      "id": "ba6efb30-6f9a-452b-84b4-eb7ec5a84063",
+      "properties": {
+        "error_message": "`context_id` is required.",
+        "blank_string_is_unset": true
+      },
+      "x": -1760,
+      "y": 2100,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "696afcc8-c3b5-43e5-b387-fd199c9f5775": {
+      "title": "Validate Context ID Item",
+      "id": "696afcc8-c3b5-43e5-b387-fd199c9f5775",
+      "properties": {
+        "error_message": ""
+      },
+      "x": -1520,
+      "y": 2100,
+      "width": 210,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateContextIDItem",
+      "base_type": "core/Node"
+    },
+    "eb5095d2-445f-4706-b7d8-d8708042a758": {
+      "title": "known_by",
+      "id": "eb5095d2-445f-4706-b7d8-d8708042a758",
+      "properties": {
+        "name": "known_by",
+        "typ": "str",
+        "instructions": "Who knows the entry. Always give one of `everyone` (common lore), `owner` (only the character the entry belongs to; a world entry with this setting is known to nobody until a grant names someone), or `list` (the owner plus the characters in `characters`)."
+      },
+      "x": -2000,
+      "y": 2310,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "18c49e0d-3d3a-48e6-96bb-e6fa39b5db08": {
+      "title": "characters",
+      "id": "18c49e0d-3d3a-48e6-96bb-e6fa39b5db08",
+      "properties": {
+        "name": "characters",
+        "typ": "list",
+        "instructions": "The exact names of the characters that know the entry. Required when `known_by` is `list`, leave empty otherwise."
+      },
+      "x": -2000,
+      "y": 2470,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "a1ced36e-3586-4c52-938d-cbfe966ed6af": {
+      "title": "Describe",
+      "id": "a1ced36e-3586-4c52-938d-cbfe966ed6af",
+      "properties": {
+        "template": "Set who knows `{{ name }}` (Context ID `{{ context_id }}`) to: **{{ value|trim|lower }}**{% if value|trim|lower == 'list' %} \u2014 {{ result or 'no characters given' }}{% endif %}"
+      },
+      "x": -1280,
+      "y": 2100,
+      "width": 210,
+      "height": 170,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "296596e5-9216-4836-8ca1-f7bc2a05c2da": {
+      "title": "Confirm Action",
+      "id": "296596e5-9216-4836-8ca1-f7bc2a05c2da",
+      "properties": {
+        "name": "set_known_by",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": -1040,
+      "y": 2100,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "4915aa92-b140-4f07-b598-523012908f06": {
+      "title": "SetEntryVisibility",
+      "id": "4915aa92-b140-4f07-b598-523012908f06",
+      "properties": {
+        "mode": "everyone"
+      },
+      "x": -800,
+      "y": 2100,
+      "width": 210,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "knowledge/SetEntryVisibility",
+      "base_type": "core/Node"
+    },
+    "570e9a6d-a49f-463c-891c-f7c9e2657b71": {
+      "title": "Summarize",
+      "id": "570e9a6d-a49f-463c-891c-f7c9e2657b71",
+      "properties": {
+        "template": "Set who knows `{name}` (Context ID `{context_id}`).\n{text}"
+      },
+      "x": -560,
+      "y": 2100,
+      "width": 210,
+      "height": 170,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "0a382fb0-7982-45ad-b9f3-1e5333c20961": {
+      "title": "Return",
+      "id": "0a382fb0-7982-45ad-b9f3-1e5333c20961",
+      "properties": {},
+      "x": -320,
+      "y": 2100,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "521d4926-9bc8-492b-8377-99ba3813dd7b": {
+      "title": "AI Function Callback Metadata",
+      "id": "521d4926-9bc8-492b-8377-99ba3813dd7b",
+      "properties": {
+        "instructions": "Set the Known by visibility of a character sheet entry (description, attribute, detail) or a world entry: common lore for everyone, private to its owner, or known only to specific characters. It cannot be used on history entries; use the available knowledge callbacks for those. Visibility changes do not erase acquired disclosures.",
+        "examples": [
+          {
+            "context_id": "world_entry.manual:Hidden Door",
+            "known_by": "list",
+            "characters": [
+              "Bob"
+            ]
+          },
+          {
+            "context_id": "character.detail:Dr. Chen.73649cbdef73",
+            "known_by": "owner",
+            "characters": []
+          },
+          {
+            "context_id": "world_entry.manual:662b3b63ec0d",
+            "known_by": "everyone",
+            "characters": []
+          }
+        ]
+      },
+      "x": -1040,
+      "y": 2310,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "3562486f-df4b-4f77-b511-268e9ee14405": {
+      "title": "DEF set_known_by",
+      "id": "3562486f-df4b-4f77-b511-268e9ee14405",
+      "properties": {
+        "name": "set_known_by"
+      },
+      "x": -320,
+      "y": 2310,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "b4a76b0e-c8f6-402f-8798-41f11d532820": {
+      "title": "context_id",
+      "id": "b4a76b0e-c8f6-402f-8798-41f11d532820",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact Context ID of the entry: a character sheet entry (`character.description:<name>`, `character.attribute:<name>.<hash|attribute name>`, `character.detail:<name>.<hash|detail name>`), a world entry (`world_entry.manual:<hash|title>`) or a history entry (`history_entry.static:<id>`, `history_entry.dynamic:layer.<layer>.id.<id>`). If you do not know the hashed part, put the exact attribute name, detail name or title in its place."
+      },
+      "x": -2000,
+      "y": 2680,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "4dcb5a99-91c7-4caf-8580-09183e22bb9a": {
+      "title": "Validate Value Is Set",
+      "id": "4dcb5a99-91c7-4caf-8580-09183e22bb9a",
+      "properties": {
+        "error_message": "`context_id` is required.",
+        "blank_string_is_unset": true
+      },
+      "x": -1760,
+      "y": 2680,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "8eb5e464-936b-49b2-83b0-c7e54b4d6b42": {
+      "title": "Validate Context ID Item",
+      "id": "8eb5e464-936b-49b2-83b0-c7e54b4d6b42",
+      "properties": {
+        "error_message": ""
+      },
+      "x": -1520,
+      "y": 2680,
+      "width": 210,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateContextIDItem",
+      "base_type": "core/Node"
+    },
+    "c53de8a6-979e-4dce-a90f-a3567d580517": {
+      "title": "character",
+      "id": "c53de8a6-979e-4dce-a90f-a3567d580517",
+      "properties": {
+        "name": "character",
+        "typ": "str",
+        "instructions": "The exact name of the character, as the system knows it."
+      },
+      "x": -2000,
+      "y": 2890,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "8ad7692b-c939-4e5d-abec-cc466b1bec20": {
+      "title": "note",
+      "id": "8ad7692b-c939-4e5d-abec-cc466b1bec20",
+      "properties": {
+        "name": "note",
+        "typ": "str",
+        "instructions": "Optional short note on why the character knows, or no longer knows, the entry."
+      },
+      "x": -2000,
+      "y": 3050,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "f79a28e7-eeb5-4316-aa39-c90633350fe5": {
+      "title": "Validate Character",
+      "id": "f79a28e7-eeb5-4316-aa39-c90633350fe5",
+      "properties": {
+        "error_message": "Character `{value}` does not exist.",
+        "character_status": "all"
+      },
+      "x": -1760,
+      "y": 2890,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateCharacter",
+      "base_type": "core/Node"
+    },
+    "00f9caa5-c93e-48b1-967c-56025f02d647": {
+      "title": "Describe",
+      "id": "00f9caa5-c93e-48b1-967c-56025f02d647",
+      "properties": {
+        "template": "Grant `{character}` knowledge of `{name}` (Context ID `{context_id}`)",
+        "perception_template": "Establish knowledge for `{character}` from `{name}` (Context ID `{context_id}`). Whole entry: {whole_entry} (true gives ALL entry content; false gives only the text below). Selected information: {information}."
+      },
+      "x": -1280,
+      "y": 2680,
+      "width": 210,
+      "height": 170,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "knowledge/GrantKnowledgeConfirmation",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        },
+        {
+          "name": "item4",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "f033213a-e24b-4a10-a2d3-9a1957205b57": {
+      "title": "Confirm Action",
+      "id": "f033213a-e24b-4a10-a2d3-9a1957205b57",
+      "properties": {
+        "name": "grant_knowledge",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": -1040,
+      "y": 2680,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "6e554977-b152-45b8-949c-1f1feea22a95": {
+      "title": "GrantKnowledge",
+      "id": "6e554977-b152-45b8-949c-1f1feea22a95",
+      "properties": {
+        "note": "",
+        "source": "director",
+        "replace": true
+      },
+      "x": -800,
+      "y": 2680,
+      "width": 210,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "knowledge/GrantKnowledge",
+      "base_type": "core/Node"
+    },
+    "133178ce-ad01-4bd9-9b48-3ae7192a6303": {
+      "title": "Summarize",
+      "id": "133178ce-ad01-4bd9-9b48-3ae7192a6303",
+      "properties": {
+        "template": "Granted `{character}` knowledge of `{name}` (Context ID `{context_id}`).\n{text}"
+      },
+      "x": -560,
+      "y": 2680,
+      "width": 210,
+      "height": 190,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "fae0fcf8-d09b-4a15-8102-209edf8bc030": {
+      "title": "Return",
+      "id": "fae0fcf8-d09b-4a15-8102-209edf8bc030",
+      "properties": {},
+      "x": -320,
+      "y": 2680,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "7bf23a31-8362-4753-88df-09450433babf": {
+      "title": "AI Function Callback Metadata",
+      "id": "7bf23a31-8362-4753-88df-09450433babf",
+      "properties": {
+        "instructions": "Grant a character knowledge of an entry they were not present for or that is hidden from them: a character sheet entry, a world entry or a history entry. A grant adds the entry to what the character knows; a later `revoke_knowledge` on the same entry removes it again.",
+        "examples": [
+          {
+            "character": "Alice",
+            "context_id": "world_entry.manual:Hidden Door",
+            "note": "She found it behind the cupboard."
+          },
+          {
+            "character": "Marcus",
+            "context_id": "character.detail:Elena.Physical condition",
+            "note": ""
+          },
+          {
+            "character": "Sarah",
+            "context_id": "history_entry.dynamic:layer.0.id.4b29fc83",
+            "note": "Tom told her what happened at the docks."
+          }
+        ],
+        "perception_instructions": "Explicitly establish selected knowledge for a character from a resolved sheet, world or history entry. In perception mode information is saved as an independent disclosure at the current acquisition point; the containing entry is not unlocked. Default whole_entry=false. Set whole_entry=true only for an explicit request for ALL selected entry content. Do not invent a conversation or event to explain acquisition.",
+        "perception_examples": [
+          {
+            "character": "Sarah",
+            "context_id": "history_entry.dynamic:layer.0.id.4b29fc83",
+            "information": "The ledger is under the bed.",
+            "whole_entry": false,
+            "note": ""
+          },
+          {
+            "character": "Marcus",
+            "context_id": "character.detail:Elena.Physical condition",
+            "information": "",
+            "whole_entry": true,
+            "note": ""
+          }
+        ]
+      },
+      "x": -1040,
+      "y": 2890,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "knowledge/GrantKnowledgeMetadata",
+      "base_type": "core/Node"
+    },
+    "654f2998-9248-4655-94f9-b9eed45fcf04": {
+      "title": "DEF grant_knowledge",
+      "id": "654f2998-9248-4655-94f9-b9eed45fcf04",
+      "properties": {
+        "name": "grant_knowledge"
+      },
+      "x": -320,
+      "y": 2890,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "8d44437e-c9b1-41ba-b2be-71507bd2f17d": {
+      "title": "context_id",
+      "id": "8d44437e-c9b1-41ba-b2be-71507bd2f17d",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact Context ID of the entry: a character sheet entry (`character.description:<name>`, `character.attribute:<name>.<hash|attribute name>`, `character.detail:<name>.<hash|detail name>`), a world entry (`world_entry.manual:<hash|title>`) or a history entry (`history_entry.static:<id>`, `history_entry.dynamic:layer.<layer>.id.<id>`). If you do not know the hashed part, put the exact attribute name, detail name or title in its place."
+      },
+      "x": -2000,
+      "y": 3260,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "b5b1ed92-d544-4c8c-9dbd-8e72adc4a407": {
+      "title": "Validate Value Is Set",
+      "id": "b5b1ed92-d544-4c8c-9dbd-8e72adc4a407",
+      "properties": {
+        "error_message": "`context_id` is required.",
+        "blank_string_is_unset": true
+      },
+      "x": -1760,
+      "y": 3260,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "5640674e-3b03-4d7f-8a96-09421aa57a77": {
+      "title": "Validate Context ID Item",
+      "id": "5640674e-3b03-4d7f-8a96-09421aa57a77",
+      "properties": {
+        "error_message": ""
+      },
+      "x": -1520,
+      "y": 3260,
+      "width": 210,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateContextIDItem",
+      "base_type": "core/Node"
+    },
+    "6699601c-b279-4718-8201-e5b97298c5bd": {
+      "title": "character",
+      "id": "6699601c-b279-4718-8201-e5b97298c5bd",
+      "properties": {
+        "name": "character",
+        "typ": "str",
+        "instructions": "The exact name of the character, as the system knows it."
+      },
+      "x": -2000,
+      "y": 3470,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "87be05dd-87e9-4a81-ac18-a5c7461c05bf": {
+      "title": "note",
+      "id": "87be05dd-87e9-4a81-ac18-a5c7461c05bf",
+      "properties": {
+        "name": "note",
+        "typ": "str",
+        "instructions": "Optional short note on why the character knows, or no longer knows, the entry."
+      },
+      "x": -2000,
+      "y": 3630,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "a87832b3-29e4-43d5-acec-8503c8a0d5f2": {
+      "title": "Validate Character",
+      "id": "a87832b3-29e4-43d5-acec-8503c8a0d5f2",
+      "properties": {
+        "error_message": "Character `{value}` does not exist.",
+        "character_status": "all"
+      },
+      "x": -1760,
+      "y": 3470,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateCharacter",
+      "base_type": "core/Node"
+    },
+    "4c0d6e22-1b51-411c-9e82-a417b44ed114": {
+      "title": "Describe",
+      "id": "4c0d6e22-1b51-411c-9e82-a417b44ed114",
+      "properties": {
+        "template": "Revoke `{character}` knowledge of `{name}` (Context ID `{context_id}`)"
+      },
+      "x": -1280,
+      "y": 3260,
+      "width": 210,
+      "height": 170,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "3a987017-3868-44ad-a9e9-999cabee4494": {
+      "title": "Confirm Action",
+      "id": "3a987017-3868-44ad-a9e9-999cabee4494",
+      "properties": {
+        "name": "revoke_knowledge",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": -1040,
+      "y": 3260,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "27a9d387-97b4-4e6d-bcf6-a6f70ae3198e": {
+      "title": "RevokeKnowledge",
+      "id": "27a9d387-97b4-4e6d-bcf6-a6f70ae3198e",
+      "properties": {
+        "note": "",
+        "source": "director",
+        "replace": true
+      },
+      "x": -800,
+      "y": 3260,
+      "width": 210,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "knowledge/RevokeKnowledge",
+      "base_type": "core/Node"
+    },
+    "6ccb2cc0-2c58-4ccc-804f-7e37b812c234": {
+      "title": "Summarize",
+      "id": "6ccb2cc0-2c58-4ccc-804f-7e37b812c234",
+      "properties": {
+        "template": "Revoked `{character}` knowledge of `{name}` (Context ID `{context_id}`).\n{text}"
+      },
+      "x": -560,
+      "y": 3260,
+      "width": 210,
+      "height": 190,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "cef0699c-1872-4ea3-b5ba-f6ad3c2e5156": {
+      "title": "Return",
+      "id": "cef0699c-1872-4ea3-b5ba-f6ad3c2e5156",
+      "properties": {},
+      "x": -320,
+      "y": 3260,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "e8c79959-bcaf-497a-803c-b17989847ad5": {
+      "title": "AI Function Callback Metadata",
+      "id": "e8c79959-bcaf-497a-803c-b17989847ad5",
+      "properties": {
+        "instructions": "Revoke a character's knowledge of an entry they would otherwise know: a character sheet entry, a world entry or a history entry. A revoke beats presence, visibility and grants; a later `grant_knowledge` on the same entry restores it.",
+        "examples": [
+          {
+            "character": "Carol",
+            "context_id": "character.attribute:Bob.00df696235df",
+            "note": "She never learned it."
+          },
+          {
+            "character": "Alice",
+            "context_id": "world_entry.manual:Hidden Door",
+            "note": "The memory was wiped."
+          },
+          {
+            "character": "Marcus",
+            "context_id": "history_entry.static:4b29fc83",
+            "note": ""
+          }
+        ]
+      },
+      "x": -1040,
+      "y": 3470,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "9431968b-dfc8-4562-8cbf-fe34870a4003": {
+      "title": "DEF revoke_knowledge",
+      "id": "9431968b-dfc8-4562-8cbf-fe34870a4003",
+      "properties": {
+        "name": "revoke_knowledge"
+      },
+      "x": -320,
+      "y": 3470,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "1dc17802-3dd3-4a37-b4e8-6c123af30edc": {
+      "title": "Knowledge Callbacks",
+      "id": "1dc17802-3dd3-4a37-b4e8-6c123af30edc",
+      "properties": {},
+      "x": 700,
+      "y": 3330,
+      "width": 210,
+      "height": 140,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "knowledge/KnowledgeCallbacks",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "7eb20b77-5bac-413d-860a-0e91067c91bb": {
+      "title": "FN set_known_by",
+      "id": "7eb20b77-5bac-413d-860a-0e91067c91bb",
+      "properties": {
+        "name": "set_known_by"
+      },
+      "x": 120,
+      "y": 3180,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "b1b90526-5122-47c4-a23d-3ea24f665826": {
+      "title": "AI Function Callback",
+      "id": "b1b90526-5122-47c4-a23d-3ea24f665826",
+      "properties": {
+        "name": "set_known_by",
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
+      },
+      "x": 400,
+      "y": 3180,
+      "width": 214,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "a0447abc-0b66-47ec-b033-1ed6c5427433": {
+      "title": "FN grant_knowledge",
+      "id": "a0447abc-0b66-47ec-b033-1ed6c5427433",
+      "properties": {
+        "name": "grant_knowledge"
+      },
+      "x": 120,
+      "y": 3330,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "e35fc7ce-1bec-4986-bbcd-c9810f86e4b1": {
+      "title": "AI Function Callback",
+      "id": "e35fc7ce-1bec-4986-bbcd-c9810f86e4b1",
+      "properties": {
+        "name": "grant_knowledge",
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
+      },
+      "x": 400,
+      "y": 3330,
+      "width": 214,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "ee0c56a3-3cd2-42ce-9c3c-23f3cb623c13": {
+      "title": "FN revoke_knowledge",
+      "id": "ee0c56a3-3cd2-42ce-9c3c-23f3cb623c13",
+      "properties": {
+        "name": "revoke_knowledge"
+      },
+      "x": 120,
+      "y": 3480,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "8ddc72b1-b870-4cdd-9331-e60c884cf6fc": {
+      "title": "AI Function Callback",
+      "id": "8ddc72b1-b870-4cdd-9331-e60c884cf6fc",
+      "properties": {
+        "name": "revoke_knowledge",
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
+      },
+      "x": 400,
+      "y": 3480,
+      "width": 214,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "b8666b0c-665b-4af0-8dd6-571a7db64ae7": {
+      "title": "[Update Context] Character Knowledge",
+      "id": "b8666b0c-665b-4af0-8dd6-571a7db64ae7",
+      "properties": {
+        "group": "Update Context",
+        "action_id": "update_context.knowledge",
+        "action_title": "Character Knowledge",
+        "description_chat": "Change who knows an entry: set the Known by visibility of a character sheet entry or a world entry (everyone, only the owner, specific characters), or grant / revoke a single character's knowledge of a sheet entry, a world entry or a history entry.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Only Bob knows the world entry 'Hidden Door'.",
+          "Alice now knows about the hidden door; she found it behind the cupboard.",
+          "Carol no longer knows Bob's secret."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 1000,
+      "y": 3180,
+      "width": 317,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "a24748ec-2b29-4c6a-be0b-24ca69787a0b": {
+      "title": "All Callbacks",
+      "id": "a24748ec-2b29-4c6a-be0b-24ca69787a0b",
+      "properties": {
+        "create_copy": true
+      },
+      "x": 1420,
+      "y": 2330,
+      "width": 210,
+      "height": 113,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/CombineLists",
+      "dynamic_inputs": [
+        {
+          "name": "list0",
+          "type": "list"
+        },
+        {
+          "name": "list1",
+          "type": "list"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "84b26c5f-752c-4908-a479-3866764d2fe5": {
+      "title": "Validate Value Is Set",
+      "id": "84b26c5f-752c-4908-a479-3866764d2fe5",
+      "properties": {
+        "error_message": "`known_by` is required.",
+        "blank_string_is_unset": true
+      },
+      "x": -1760,
+      "y": 2310,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "78cfdb3a-af8a-46e1-8d9b-1bc8c360f6da": {
+      "title": "Empty List",
+      "id": "78cfdb3a-af8a-46e1-8d9b-1bc8c360f6da",
+      "properties": {
+        "item_type": "str",
+        "items": []
+      },
+      "x": -1760,
+      "y": 2470,
+      "width": 210,
+      "height": 90,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeList",
+      "base_type": "core/Node"
+    },
+    "50fd6921-aca5-4911-bcb2-1c66919dd51f": {
+      "title": "Coallesce",
+      "id": "50fd6921-aca5-4911-bcb2-1c66919dd51f",
+      "properties": {},
+      "x": -1520,
+      "y": 2470,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "176ab689-3eb7-4001-8d02-133c716efaf7": {
+      "title": "Join",
+      "id": "176ab689-3eb7-4001-8d02-133c716efaf7",
+      "properties": {
+        "delimiter": ", "
+      },
+      "x": -1280,
+      "y": 2470,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Join",
+      "base_type": "core/Node"
+    },
+    "e767d988-749f-4740-9f51-8ca3399cd021": {
+      "title": "information",
+      "id": "e767d988-749f-4740-9f51-8ca3399cd021",
+      "properties": {
+        "name": "information",
+        "typ": "str",
+        "instructions": "Only for a disclosure request: exact selected information, preserving attribution and uncertainty. Leave empty for ordinary entry grants or explicit whole-entry copying. Never invent dialogue or events."
+      },
+      "x": -2000,
+      "y": 3230,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "7dba269e-1f5c-4bc2-ac0a-2128d8b63021": {
+      "title": "whole_entry",
+      "id": "7dba269e-1f5c-4bc2-ac0a-2128d8b63021",
+      "properties": {
+        "name": "whole_entry",
+        "typ": "bool",
+        "instructions": "For a disclosure request, false gives only information; true requires an explicit request for ALL source content, including private details. Leave false for ordinary entry grants."
+      },
+      "x": -2000,
+      "y": 3410,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "4a8f086e-a1ef-46e1-8c56-470065a59489": {
+      "title": "Get Scene State",
+      "id": "4a8f086e-a1ef-46e1-8c56-470065a59489",
+      "properties": {},
+      "x": 400,
+      "y": 1100,
+      "width": 210,
+      "height": 170,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetSceneState"
     }
   },
   "edges": {
@@ -1545,14 +2601,211 @@
     "80265d56-f041-4b26-9468-2a0b38f886a2.callback": [
       "d4071915-492a-41ac-b4f9-54e48a167c5c.state"
     ],
-    "e9460323-7f9c-484b-a993-e351e8fd2762.list": [
-      "f5e3af1d-3da3-4813-b89d-a719384c79ae.callbacks"
-    ],
     "b6e0f644-176c-4503-8f5f-511700a77bac.value": [
       "f16b6be4-f755-4999-ba41-64e630e4bb61.is_player"
     ],
     "d4071915-492a-41ac-b4f9-54e48a167c5c.state": [
       "e9460323-7f9c-484b-a993-e351e8fd2762.item2"
+    ],
+    "2cd5c53d-bb74-457a-a43c-ecbc23eee863.value": [
+      "ba6efb30-6f9a-452b-84b4-eb7ec5a84063.value"
+    ],
+    "ba6efb30-6f9a-452b-84b4-eb7ec5a84063.value": [
+      "696afcc8-c3b5-43e5-b387-fd199c9f5775.value"
+    ],
+    "696afcc8-c3b5-43e5-b387-fd199c9f5775.name": [
+      "a1ced36e-3586-4c52-938d-cbfe966ed6af.item0",
+      "570e9a6d-a49f-463c-891c-f7c9e2657b71.item0"
+    ],
+    "696afcc8-c3b5-43e5-b387-fd199c9f5775.context_id": [
+      "a1ced36e-3586-4c52-938d-cbfe966ed6af.item1",
+      "570e9a6d-a49f-463c-891c-f7c9e2657b71.item1"
+    ],
+    "a1ced36e-3586-4c52-938d-cbfe966ed6af.result": [
+      "296596e5-9216-4836-8ca1-f7bc2a05c2da.description"
+    ],
+    "696afcc8-c3b5-43e5-b387-fd199c9f5775.context_id_item": [
+      "296596e5-9216-4836-8ca1-f7bc2a05c2da.state"
+    ],
+    "296596e5-9216-4836-8ca1-f7bc2a05c2da.accepted": [
+      "4915aa92-b140-4f07-b598-523012908f06.state",
+      "4915aa92-b140-4f07-b598-523012908f06.context_id_item"
+    ],
+    "18c49e0d-3d3a-48e6-96bb-e6fa39b5db08.value": [
+      "4915aa92-b140-4f07-b598-523012908f06.characters",
+      "50fd6921-aca5-4911-bcb2-1c66919dd51f.a"
+    ],
+    "4915aa92-b140-4f07-b598-523012908f06.text": [
+      "570e9a6d-a49f-463c-891c-f7c9e2657b71.item2"
+    ],
+    "570e9a6d-a49f-463c-891c-f7c9e2657b71.result": [
+      "0a382fb0-7982-45ad-b9f3-1e5333c20961.value"
+    ],
+    "0a382fb0-7982-45ad-b9f3-1e5333c20961.value": [
+      "521d4926-9bc8-492b-8377-99ba3813dd7b.state"
+    ],
+    "521d4926-9bc8-492b-8377-99ba3813dd7b.state": [
+      "3562486f-df4b-4f77-b511-268e9ee14405.nodes"
+    ],
+    "b4a76b0e-c8f6-402f-8798-41f11d532820.value": [
+      "4dcb5a99-91c7-4caf-8580-09183e22bb9a.value"
+    ],
+    "4dcb5a99-91c7-4caf-8580-09183e22bb9a.value": [
+      "8eb5e464-936b-49b2-83b0-c7e54b4d6b42.value"
+    ],
+    "c53de8a6-979e-4dce-a90f-a3567d580517.value": [
+      "f79a28e7-eeb5-4316-aa39-c90633350fe5.value",
+      "00f9caa5-c93e-48b1-967c-56025f02d647.item0",
+      "133178ce-ad01-4bd9-9b48-3ae7192a6303.item0"
+    ],
+    "8eb5e464-936b-49b2-83b0-c7e54b4d6b42.name": [
+      "00f9caa5-c93e-48b1-967c-56025f02d647.item1",
+      "133178ce-ad01-4bd9-9b48-3ae7192a6303.item1"
+    ],
+    "8eb5e464-936b-49b2-83b0-c7e54b4d6b42.context_id": [
+      "00f9caa5-c93e-48b1-967c-56025f02d647.item2",
+      "133178ce-ad01-4bd9-9b48-3ae7192a6303.item2"
+    ],
+    "00f9caa5-c93e-48b1-967c-56025f02d647.result": [
+      "f033213a-e24b-4a10-a2d3-9a1957205b57.description"
+    ],
+    "8eb5e464-936b-49b2-83b0-c7e54b4d6b42.context_id_item": [
+      "f033213a-e24b-4a10-a2d3-9a1957205b57.state"
+    ],
+    "f033213a-e24b-4a10-a2d3-9a1957205b57.accepted": [
+      "6e554977-b152-45b8-949c-1f1feea22a95.state",
+      "6e554977-b152-45b8-949c-1f1feea22a95.context_id_item"
+    ],
+    "f79a28e7-eeb5-4316-aa39-c90633350fe5.character": [
+      "6e554977-b152-45b8-949c-1f1feea22a95.character"
+    ],
+    "8ad7692b-c939-4e5d-abec-cc466b1bec20.value": [
+      "6e554977-b152-45b8-949c-1f1feea22a95.note"
+    ],
+    "6e554977-b152-45b8-949c-1f1feea22a95.text": [
+      "133178ce-ad01-4bd9-9b48-3ae7192a6303.item3"
+    ],
+    "133178ce-ad01-4bd9-9b48-3ae7192a6303.result": [
+      "fae0fcf8-d09b-4a15-8102-209edf8bc030.value"
+    ],
+    "fae0fcf8-d09b-4a15-8102-209edf8bc030.value": [
+      "7bf23a31-8362-4753-88df-09450433babf.state"
+    ],
+    "7bf23a31-8362-4753-88df-09450433babf.state": [
+      "654f2998-9248-4655-94f9-b9eed45fcf04.nodes"
+    ],
+    "8d44437e-c9b1-41ba-b2be-71507bd2f17d.value": [
+      "b5b1ed92-d544-4c8c-9dbd-8e72adc4a407.value"
+    ],
+    "b5b1ed92-d544-4c8c-9dbd-8e72adc4a407.value": [
+      "5640674e-3b03-4d7f-8a96-09421aa57a77.value"
+    ],
+    "6699601c-b279-4718-8201-e5b97298c5bd.value": [
+      "a87832b3-29e4-43d5-acec-8503c8a0d5f2.value",
+      "4c0d6e22-1b51-411c-9e82-a417b44ed114.item0",
+      "6ccb2cc0-2c58-4ccc-804f-7e37b812c234.item0"
+    ],
+    "5640674e-3b03-4d7f-8a96-09421aa57a77.name": [
+      "4c0d6e22-1b51-411c-9e82-a417b44ed114.item1",
+      "6ccb2cc0-2c58-4ccc-804f-7e37b812c234.item1"
+    ],
+    "5640674e-3b03-4d7f-8a96-09421aa57a77.context_id": [
+      "4c0d6e22-1b51-411c-9e82-a417b44ed114.item2",
+      "6ccb2cc0-2c58-4ccc-804f-7e37b812c234.item2"
+    ],
+    "4c0d6e22-1b51-411c-9e82-a417b44ed114.result": [
+      "3a987017-3868-44ad-a9e9-999cabee4494.description"
+    ],
+    "5640674e-3b03-4d7f-8a96-09421aa57a77.context_id_item": [
+      "3a987017-3868-44ad-a9e9-999cabee4494.state"
+    ],
+    "3a987017-3868-44ad-a9e9-999cabee4494.accepted": [
+      "27a9d387-97b4-4e6d-bcf6-a6f70ae3198e.state",
+      "27a9d387-97b4-4e6d-bcf6-a6f70ae3198e.context_id_item"
+    ],
+    "a87832b3-29e4-43d5-acec-8503c8a0d5f2.character": [
+      "27a9d387-97b4-4e6d-bcf6-a6f70ae3198e.character"
+    ],
+    "87be05dd-87e9-4a81-ac18-a5c7461c05bf.value": [
+      "27a9d387-97b4-4e6d-bcf6-a6f70ae3198e.note"
+    ],
+    "27a9d387-97b4-4e6d-bcf6-a6f70ae3198e.text": [
+      "6ccb2cc0-2c58-4ccc-804f-7e37b812c234.item3"
+    ],
+    "6ccb2cc0-2c58-4ccc-804f-7e37b812c234.result": [
+      "cef0699c-1872-4ea3-b5ba-f6ad3c2e5156.value"
+    ],
+    "cef0699c-1872-4ea3-b5ba-f6ad3c2e5156.value": [
+      "e8c79959-bcaf-497a-803c-b17989847ad5.state"
+    ],
+    "e8c79959-bcaf-497a-803c-b17989847ad5.state": [
+      "9431968b-dfc8-4562-8cbf-fe34870a4003.nodes"
+    ],
+    "7eb20b77-5bac-413d-860a-0e91067c91bb.fn": [
+      "b1b90526-5122-47c4-a23d-3ea24f665826.fn"
+    ],
+    "7eb20b77-5bac-413d-860a-0e91067c91bb.name": [
+      "b1b90526-5122-47c4-a23d-3ea24f665826.name"
+    ],
+    "b1b90526-5122-47c4-a23d-3ea24f665826.callback": [
+      "1dc17802-3dd3-4a37-b4e8-6c123af30edc.item0"
+    ],
+    "a0447abc-0b66-47ec-b033-1ed6c5427433.fn": [
+      "e35fc7ce-1bec-4986-bbcd-c9810f86e4b1.fn"
+    ],
+    "a0447abc-0b66-47ec-b033-1ed6c5427433.name": [
+      "e35fc7ce-1bec-4986-bbcd-c9810f86e4b1.name"
+    ],
+    "e35fc7ce-1bec-4986-bbcd-c9810f86e4b1.callback": [
+      "1dc17802-3dd3-4a37-b4e8-6c123af30edc.item1"
+    ],
+    "ee0c56a3-3cd2-42ce-9c3c-23f3cb623c13.fn": [
+      "8ddc72b1-b870-4cdd-9331-e60c884cf6fc.fn"
+    ],
+    "ee0c56a3-3cd2-42ce-9c3c-23f3cb623c13.name": [
+      "8ddc72b1-b870-4cdd-9331-e60c884cf6fc.name"
+    ],
+    "8ddc72b1-b870-4cdd-9331-e60c884cf6fc.callback": [
+      "1dc17802-3dd3-4a37-b4e8-6c123af30edc.item2"
+    ],
+    "1dc17802-3dd3-4a37-b4e8-6c123af30edc.list": [
+      "b8666b0c-665b-4af0-8dd6-571a7db64ae7.state"
+    ],
+    "e9460323-7f9c-484b-a993-e351e8fd2762.list": [
+      "a24748ec-2b29-4c6a-be0b-24ca69787a0b.list0"
+    ],
+    "b8666b0c-665b-4af0-8dd6-571a7db64ae7.state": [
+      "a24748ec-2b29-4c6a-be0b-24ca69787a0b.list1"
+    ],
+    "a24748ec-2b29-4c6a-be0b-24ca69787a0b.list": [
+      "f5e3af1d-3da3-4813-b89d-a719384c79ae.callbacks"
+    ],
+    "eb5095d2-445f-4706-b7d8-d8708042a758.value": [
+      "84b26c5f-752c-4908-a479-3866764d2fe5.value"
+    ],
+    "84b26c5f-752c-4908-a479-3866764d2fe5.value": [
+      "4915aa92-b140-4f07-b598-523012908f06.mode",
+      "a1ced36e-3586-4c52-938d-cbfe966ed6af.item2"
+    ],
+    "78cfdb3a-af8a-46e1-8d9b-1bc8c360f6da.list": [
+      "50fd6921-aca5-4911-bcb2-1c66919dd51f.b"
+    ],
+    "50fd6921-aca5-4911-bcb2-1c66919dd51f.value": [
+      "176ab689-3eb7-4001-8d02-133c716efaf7.strings"
+    ],
+    "176ab689-3eb7-4001-8d02-133c716efaf7.result": [
+      "a1ced36e-3586-4c52-938d-cbfe966ed6af.item3"
+    ],
+    "e767d988-749f-4740-9f51-8ca3399cd021.value": [
+      "6e554977-b152-45b8-949c-1f1feea22a95.information",
+      "00f9caa5-c93e-48b1-967c-56025f02d647.item3"
+    ],
+    "7dba269e-1f5c-4bc2-ac0a-2128d8b63021.value": [
+      "6e554977-b152-45b8-949c-1f1feea22a95.whole_entry",
+      "00f9caa5-c93e-48b1-967c-56025f02d647.item4"
+    ],
+    "4a8f086e-a1ef-46e1-8c56-470065a59489.scene": [
+      "b62ffa05-640b-4de1-a71f-fa8b265a80e3.item4"
     ]
   },
   "groups": [
@@ -1571,7 +2824,7 @@
       "x": 10,
       "y": 238,
       "width": 2765,
-      "height": 2904,
+      "height": 3420,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1633,6 +2886,36 @@
       "width": 1919,
       "height": 767,
       "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "FN - set_known_by",
+      "x": -2020,
+      "y": 2060,
+      "width": 2000,
+      "height": 560,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "FN - grant_knowledge",
+      "x": -2020,
+      "y": 2640,
+      "width": 2000,
+      "height": 560,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "FN - revoke_knowledge",
+      "x": -2020,
+      "y": 3220,
+      "width": 2000,
+      "height": 560,
+      "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     }

@@ -77,6 +77,11 @@ import glob
 import uuid
 
 from talemate.save import SceneEncoder
+from talemate.scene.format import (
+    SceneFormatError,
+    normalize_scene_format,
+    read_scene_format,
+)
 from talemate.path import SCENES_DIR
 from talemate.util.data import coerce_forced_list
 from talemate.util.time import migrate_scene_time
@@ -1146,6 +1151,15 @@ async def write_reconstructed_scene(
         if precomputed_data is not None
         else await reconstruct_scene_data(scene, to_rev=to_rev)
     )
+
+    read_scene_format(reconstructed)
+    if overrides and {"format_version", "knowledge_eligibility"}.intersection(
+        overrides
+    ):
+        raise SceneFormatError(
+            "Reconstruction overrides cannot change scene format metadata."
+        )
+    reconstructed = normalize_scene_format(reconstructed)
 
     if zero_message_revs:
         for entry in reconstructed.get("history", []):

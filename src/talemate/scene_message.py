@@ -1,9 +1,13 @@
 import enum
+import hashlib
+import json
 import re
 import structlog
 from typing import ClassVar, Literal
 
 import pydantic
+from talemate.knowledge.perspective_models import PerspectiveSourceModel
+from talemate.knowledge.perspectives import message_content_changed
 
 log = structlog.get_logger("talemate.scene_message")
 
@@ -16,6 +20,7 @@ __all__ = [
     "ReinforcementMessage",
     "ContextInvestigationMessage",
     "MessageVersion",
+    "MessageRevisionState",
     "VersionSource",
     "EMPTY_VERSIONS_PAYLOAD",
     "versions_payload_for",
@@ -86,7 +91,23 @@ class MessageVersion(pydantic.BaseModel):
     reason: str | None = None
 
 
-class SceneMessage(pydantic.BaseModel):
+class MessageRevisionState(pydantic.BaseModel):
+    baseline_index: int = 0
+    baseline_digest: str = ""
+    serial: int = 0
+    status: Literal["clean", "deferred", "running", "failed"] = "clean"
+    completed_features: tuple[str, ...] = ()
+    phase_receipts: dict[str, str] = pydantic.Field(default_factory=dict)
+    refresh_journal: dict | None = None
+
+    @pydantic.model_validator(mode="after")
+    def defer_interrupted_work(self):
+        if self.status == "running":
+            self.status = "deferred"
+        return self
+
+
+class SceneMessage(PerspectiveSourceModel):
     """
     Base class for all messages that are sent to the scene.
     """
@@ -113,13 +134,21 @@ class SceneMessage(pydantic.BaseModel):
 
     rev: int = 0
 
-    # Transient revision stack; seeded on opt-in subclasses, excluded
-    # from to_dict / persistence.
-    versions: list[MessageVersion] = pydantic.Field(
-        default_factory=list, exclude=True, repr=False
-    )
+    history_dispatch_pending: bool = False
+    history_dispatch_completed: list[str] = pydantic.Field(default_factory=list)
 
-    active_version: int = pydantic.Field(default=0, exclude=True, repr=False)
+    # active characters at push time; None when the scene never recorded it
+    present: list[str] | None = None
+
+    _knowledge_scene: object = pydantic.PrivateAttr(default=None)
+
+    versions: list[MessageVersion] = pydantic.Field(default_factory=list, repr=False)
+
+    active_version: int = pydantic.Field(default=0, repr=False)
+
+    revision_state: MessageRevisionState | None = pydantic.Field(
+        default=None, repr=False
+    )
 
     @pydantic.model_validator(mode="after")
     def _seed_initial_version(self):
@@ -133,12 +162,128 @@ class SceneMessage(pydantic.BaseModel):
                 [MessageVersion(message=self.message, source="original")],
             )
             object.__setattr__(self, "active_version", 0)
+        if self._supports_versions and self.revision_state is None:
+            object.__setattr__(
+                self,
+                "revision_state",
+                MessageRevisionState(
+                    baseline_index=self.active_version,
+                    baseline_digest=self.revision_digest(),
+                ),
+            )
         return self
+
+    def revision_digest(self) -> str:
+        payload = {
+            "text": self.perception_text,
+            "source": self.source,
+            "meta": self.meta,
+            "present": self.present,
+            "sub_type": getattr(self, "sub_type", None),
+            "from_choice": getattr(self, "from_choice", None),
+        }
+        return hashlib.sha256(
+            json.dumps(payload, sort_keys=True, default=str).encode()
+        ).hexdigest()
+
+    @property
+    def revision_matches_baseline(self) -> bool:
+        state = self.revision_state
+        return bool(state and self.revision_digest() == state.baseline_digest)
+
+    def mark_revision_committed(self, features: tuple[str, ...] = ()) -> None:
+        if not self._supports_versions:
+            return
+        state = self.revision_state or MessageRevisionState()
+        object.__setattr__(
+            self,
+            "revision_state",
+            state.model_copy(
+                update={
+                    "baseline_index": self.active_version,
+                    "baseline_digest": self.revision_digest(),
+                    "status": "clean",
+                    "completed_features": tuple(dict.fromkeys(features)),
+                    "refresh_journal": None,
+                }
+            ),
+        )
+
+    def set_revision_status(self, status: str, **updates) -> None:
+        """Update coordinator-owned state without changing the selection serial."""
+        if not self._supports_versions or self.revision_state is None:
+            return
+        object.__setattr__(
+            self,
+            "revision_state",
+            self.revision_state.model_copy(update={"status": status, **updates}),
+        )
+
+    def mark_revision_feature(self, feature: str) -> None:
+        if not self._supports_versions or self.revision_state is None:
+            return
+        state = self.revision_state
+        receipts = {**state.phase_receipts, feature: self.revision_digest()}
+        features = tuple(dict.fromkeys((*state.completed_features, feature)))
+        object.__setattr__(
+            self,
+            "revision_state",
+            state.model_copy(
+                update={
+                    "completed_features": features,
+                    "phase_receipts": receipts,
+                }
+            ),
+        )
+
+    def revision_feature_current(self, feature: str) -> bool:
+        return bool(
+            self.revision_state
+            and self.revision_state.phase_receipts.get(feature)
+            == self.revision_digest()
+        )
+
+    def remap_revision_digest(self, previous: str) -> None:
+        if not self._supports_versions or self.revision_state is None:
+            return
+        current = self.revision_digest()
+        state = self.revision_state
+        baseline = (
+            current if state.baseline_digest == previous else state.baseline_digest
+        )
+        receipts = {
+            feature: current if digest == previous else digest
+            for feature, digest in state.phase_receipts.items()
+        }
+        status = "clean" if baseline == current else state.status
+        object.__setattr__(
+            self,
+            "revision_state",
+            state.model_copy(
+                update={
+                    "baseline_digest": baseline,
+                    "phase_receipts": receipts,
+                    "status": status,
+                }
+            ),
+        )
+
+    def mark_revision_changed(self) -> None:
+        if not self._supports_versions or self.revision_state is None:
+            return
+        state = self.revision_state
+        status = "clean" if self.revision_matches_baseline else "deferred"
+        object.__setattr__(
+            self,
+            "revision_state",
+            state.model_copy(update={"serial": state.serial + 1, "status": status}),
+        )
 
     def __setattr__(self, name, value):
         # Keep `versions[active]` in lockstep with bare writes to
         # `.message` so streaming / in-flight cleanup don't drift the
         # canonical away from its stack entry.
+        old_value = getattr(self, name, None)
         super().__setattr__(name, value)
         if (
             name == "message"
@@ -147,6 +292,39 @@ class SceneMessage(pydantic.BaseModel):
             and 0 <= self.active_version < len(self.versions)
         ):
             self.versions[self.active_version].message = value
+        if (
+            name in ("message", "meta", "source", "sub_type", "present", "from_choice")
+            and value != old_value
+            and self._supports_versions
+            and self.revision_state is not None
+        ):
+            if self.knowledge is not None or self._knowledge_scene:
+                self.mark_revision_changed()
+            else:
+                self.mark_revision_committed()
+        if (
+            name == "message"
+            and value != old_value
+            and (self.knowledge is not None or self._knowledge_scene)
+        ):
+            message_content_changed(self)
+        elif name in ("meta", "source", "sub_type", "present", "from_choice") and (
+            self.knowledge is not None or self._knowledge_scene
+        ):
+            message_content_changed(self)
+
+    @property
+    def perception_text(self) -> str:
+        return self.message
+
+    @property
+    def supports_perceptions(self) -> bool:
+        return self.typ in (
+            "character",
+            "narrator",
+            "reinforcement",
+            "context_investigation",
+        )
 
     def append_version(
         self,
@@ -166,6 +344,12 @@ class SceneMessage(pydantic.BaseModel):
         # wrote versions[-1].message and don't want to overwrite it.
         object.__setattr__(self, "active_version", len(self.versions) - 1)
         object.__setattr__(self, "message", message)
+        if self.knowledge is None and not self._knowledge_scene:
+            self.mark_revision_committed()
+        else:
+            self.mark_revision_changed()
+        if self.knowledge is not None or self._knowledge_scene:
+            message_content_changed(self)
         return version
 
     def set_active_version(self, index: int) -> None:
@@ -178,6 +362,12 @@ class SceneMessage(pydantic.BaseModel):
             )
         object.__setattr__(self, "active_version", index)
         object.__setattr__(self, "message", self.versions[index].message)
+        if self.knowledge is not None or self._knowledge_scene:
+            self.mark_revision_changed()
+        else:
+            self.mark_revision_committed()
+        if self.knowledge is not None or self._knowledge_scene:
+            message_content_changed(self)
 
     def versions_payload(self) -> dict:
         """
@@ -188,10 +378,23 @@ class SceneMessage(pydantic.BaseModel):
         """
         if not self._supports_versions:
             return EMPTY_VERSIONS_PAYLOAD
-        return {
+        payload = {
             "versions": [v.model_dump() for v in self.versions],
             "active_version": self.active_version,
+            "revision_state": self.revision_state.model_dump()
+            if self.revision_state
+            else None,
+            "revision_uncommitted": not self.revision_matches_baseline,
+            "revision_status": self.revision_state.status
+            if self.revision_state
+            else "clean",
         }
+        scene = self._knowledge_scene() if self._knowledge_scene else None
+        if scene is not None:
+            from talemate.knowledge.revision_refresh import revision_refresh_payload
+
+            payload.update(revision_refresh_payload(scene, self))
+        return payload
 
     def __init__(self, message: str | None = None, **data):
         # Preserve the positional `message` construction style from the
@@ -231,6 +434,25 @@ class SceneMessage(pydantic.BaseModel):
 
         if self.meta:
             rv["meta"] = self.meta
+
+        if self.history_dispatch_pending:
+            rv["history_dispatch_pending"] = True
+            rv["history_dispatch_completed"] = list(self.history_dispatch_completed)
+
+        if self.present is not None:
+            rv["present"] = list(self.present)
+
+        if self.knowledge is not None:
+            rv["knowledge"] = self.knowledge.model_dump(mode="json")
+
+        if self._supports_versions:
+            rv.update(
+                versions=[version.model_dump() for version in self.versions],
+                active_version=self.active_version,
+                revision_state=self.revision_state.model_dump(mode="json")
+                if self.revision_state
+                else None,
+            )
 
         return rv
 
@@ -283,9 +505,17 @@ class SceneMessage(pydantic.BaseModel):
 
     def hide(self):
         self.flags |= Flags.HIDDEN
+        self._audience_visibility_changed()
 
     def unhide(self):
         self.flags &= ~Flags.HIDDEN
+        self._audience_visibility_changed()
+
+    def _audience_visibility_changed(self):
+        from talemate.context import active_scene
+        from talemate.knowledge.memory import invalidate_memory_audiences
+
+        invalidate_memory_audiences(active_scene.get())
 
     def as_format(self, format: str, **kwargs) -> str:
         if format in ("movie_script", "ai_aware"):
@@ -300,14 +530,22 @@ class SceneMessage(pydantic.BaseModel):
         self.meta["agent"] = agent
         self.meta["function"] = function
         self.meta["arguments"] = kwargs
+        if self.knowledge is not None or self._knowledge_scene:
+            self.mark_revision_changed()
+        else:
+            self.mark_revision_committed()
+        message_content_changed(self)
 
     def set_meta(self, **kwargs):
         if not self.meta:
             self.meta = {}
         self.meta.update(kwargs)
+        self.mark_revision_changed()
+        message_content_changed(self)
 
 
 class CharacterMessage(SceneMessage):
+    _avatar_pending: bool = pydantic.PrivateAttr(default=False)
     _supports_versions: ClassVar[bool] = True
 
     typ: str = "character"
@@ -426,8 +664,10 @@ class NarratorMessage(SceneMessage):
 
     def migrate_source_to_meta(self):
         if self.source and not self.meta:
+            previous_digest = self.revision_digest()
             try:
                 self.meta = self.source_to_meta()
+                self.remap_revision_digest(previous_digest)
             except Exception as e:
                 log.debug(
                     "migrate_narrator_source_to_meta failed", error=e, msg=self.id
@@ -565,6 +805,10 @@ class ReinforcementMessage(SceneMessage):
     source: str = "ai"
 
     @property
+    def perception_text(self) -> str:
+        return str(self)
+
+    @property
     def character_name(self):
         return self.source_arguments.get("character", "character")
 
@@ -607,6 +851,10 @@ class ContextInvestigationMessage(SceneMessage):
     sub_type: str | None = None
     asset_id: str | None = None
     asset_type: Literal["avatar", "card", "scene_illustration"] | None = None
+
+    @property
+    def perception_text(self) -> str:
+        return str(self)
 
     @property
     def character(self) -> str:

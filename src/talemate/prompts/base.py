@@ -30,6 +30,7 @@ from talemate.config import get_config
 from talemate.context import regeneration_context, active_scene
 from talemate.emit import emit
 from talemate.exceptions import LLMAccuracyError, RenderPromptError
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.util import (
     count_tokens,
     limit_tokens,
@@ -534,6 +535,7 @@ class Prompt(pydantic.BaseModel):
         env = self.template_env()
 
         ctx = {
+            "character_knowledge_enabled": character_knowledge_enabled,
             "bot_token": "<|BOT|>",
             "thematic_generator": thematic_generators.ThematicGenerator(),
             "regeneration_context": regeneration_context.get(),
@@ -574,6 +576,7 @@ class Prompt(pydantic.BaseModel):
         env.globals["volatile_context_placement"] = self.volatile_context_placement
         env.globals["retrieve_memories"] = self.retrieve_memories
         env.globals["time_diff"] = self.time_diff
+        env.globals["render_fact"] = self.render_fact
         env.globals["system_time"] = self.system_time
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
@@ -964,13 +967,20 @@ class Prompt(pydantic.BaseModel):
         loop = asyncio.get_event_loop()
         memory = instance.get_agent("memory")
         query = query.format(**self.vars)
+        if self.vars.get("memory_viewer") is not None:
+            kwargs["viewer"] = self.vars["memory_viewer"]
+        if self.vars.get("knowledge_viewer") is not None:
+            kwargs["ranking_viewer"] = self.vars["knowledge_viewer"]
 
         exclude_history = kwargs.pop("exclude_history", False)
         if exclude_history:
-            base_filter = kwargs.get("filter", lambda x: True)
+            base_filter = kwargs.get("filter") or (lambda x: True)
             kwargs["filter"] = lambda m: (
                 getattr(m, "meta", {}).get("typ") != "history" and base_filter(m)
             )
+        elif kwargs.get("filter") is not None:
+            # a knowledge filter narrows the pool, so fetch more candidates
+            kwargs.setdefault("over_fetch", 3)
 
         if not kwargs.get("iterate"):
             if not as_question_answer:
@@ -1009,13 +1019,30 @@ class Prompt(pydantic.BaseModel):
             return response
 
     def retrieve_memories(self, lines: list[str], goal: str = None):
+        """Retrieve from supplied author lines, or the prompt viewer's projection."""
         loop = asyncio.get_event_loop()
         world_state = instance.get_agent("world_state")
+        viewer = self.vars.get("memory_viewer")
 
-        lines = [str(line) for line in lines]
+        async def retrieve(_collection=None):
+            context = (
+                world_state.rag_projected_history(
+                    viewer,
+                    budget=int(world_state.client.max_token_length * 0.75),
+                )
+                if viewer is not None
+                else [str(line) for line in lines]
+            )
+            return await world_state.analyze_text_and_extract_context(
+                "\n".join(context),
+                goal=goal,
+                **({"viewer": viewer} if viewer is not None else {}),
+            )
 
         return loop.run_until_complete(
-            world_state.analyze_text_and_extract_context("\n".join(lines), goal=goal)
+            instance.get_agent("memory").audience_operation(viewer, retrieve)
+            if viewer is not None
+            else retrieve()
         )
 
     def agent_config(self, config_path: str):
@@ -1072,6 +1099,14 @@ class Prompt(pydantic.BaseModel):
         except ValueError:
             return ""
         return diff_to_human(ts, scene.ts)
+
+    def render_fact(self, fact, *, extraction=False):
+        # instance imports clients and prompts before chronology can use get_agent.
+        from talemate.knowledge.chronology import render_fact
+
+        return render_fact(
+            self.vars.get("scene") or active_scene.get(), fact, extraction=extraction
+        )
 
     def system_time(
         self, format: Literal["full", "date", "time", "iso", "datetime"] = "full"

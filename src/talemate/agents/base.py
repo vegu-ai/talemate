@@ -24,6 +24,7 @@ from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
+from talemate.exceptions import GenerationCancelled
 from talemate.ux.schema import SECRET_FIELD_TYPES, Action, Condition, Note
 from talemate.ux.schema import Field as UxField
 from talemate.config import get_config, Config
@@ -348,6 +349,13 @@ def suppress_agent_busy_status():
         background_processing.reset(token)
 
 
+def _processing_action_name(actions):
+    for name, background in reversed(actions.values()):
+        if not background:
+            return name
+    return next(reversed(actions.values()))[0] if actions else None
+
+
 def set_processing(fn):
     """
     decorator that emits the agent status as processing while the function
@@ -367,14 +375,18 @@ def set_processing(fn):
 
             if scene:
                 scene.continue_actions()
+            cancel_sequence = scene.cancel_sequence if scene else None
 
             with ActiveAgent(self, fn, args, kwargs) as active_agent_context:
+                actions = self.__dict__.setdefault("_processing_actions", {})
+                action_token = object()
                 try:
                     action_name = fn.__name__
                     if action_name == "delegate":
                         action_name = args[0].__name__
 
-                    self._current_action = action_name
+                    actions[action_token] = (action_name, is_background)
+                    self._current_action = _processing_action_name(actions)
                     if not is_background:
                         await self.emit_status(processing=True)
 
@@ -407,9 +419,15 @@ def set_processing(fn):
                     )
                     with override_ctx:
                         return await fn(self, *args, **kwargs)
+                except GenerationCancelled as exc:
+                    exc.by_user = exc.by_user or bool(
+                        scene and scene.cancel_sequence != cancel_sequence
+                    )
+                    raise
                 finally:
                     try:
-                        self._current_action = None
+                        actions.pop(action_token, None)
+                        self._current_action = _processing_action_name(actions)
                         if not is_background:
                             await self.emit_status(processing=False)
                     except RuntimeError as exc:
@@ -459,12 +477,7 @@ class Agent(ABC):
             "requires_llm_client": cls.requires_llm_client,
             "scene_overrides": cls._scene_overrides_payload(agent),
         }
-        actions = getattr(agent, "actions", None)
-
-        if actions:
-            config_options["actions"] = {k: v.model_dump() for k, v in actions.items()}
-        else:
-            config_options["actions"] = {}
+        config_options["actions"] = agent.sanitized_action_config if agent else {}
 
         return config_options
 

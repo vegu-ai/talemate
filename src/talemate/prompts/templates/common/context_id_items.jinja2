@@ -1,17 +1,24 @@
 {% for item in items -%}
+{% set known = known_by.get(item.context_id|string) if known_by else None -%}
 {% if display_mode == "normal" -%}
 {{item.context_id.context_type_label}}: `{{item.name}}`
 Context ID: `{{item.context_id}}`
 {{item.value|condensed}}
+{% if known %}{{ known }}
+{% endif -%}
 ---
 {%- elif display_mode == "compact" -%}
 Context ID: `{{item.context_id}}`
 {{item.value|condensed}}
+{% if known %}{{ known }}
+{% endif -%}
 ---
 {%- else -%}
 ### {{item.name}}
 Context ID: `{{item.context_id}}`
 {{item.value|condensed}}
+{% if known %}{{ known }}
+{% endif -%}
 ---
 {%- endif %}
 {% endfor %}

@@ -43,7 +43,7 @@ class Client(pydantic.BaseModel):
     api_url: Union[str, None] = None
     api_key: Union[str, None] = None
     # max input tokens to send with a generation request
-    max_token_length: int = 8192
+    max_token_length: int = 16384
 
     # prefill text for ALL requests
     double_coercion: Union[str, None] = None
@@ -351,6 +351,8 @@ class EmbeddingFunctionPreset(pydantic.BaseModel):
     distance: float = 1.5
     distance_mod: float = 1.0
     distance_function: str = "l2"
+    # cosine similarity at which two facts share a topic; model dependent
+    topic_threshold: float = 0.5
     fast: bool = True
     gpu_recommendation: bool = False
     local: bool = True

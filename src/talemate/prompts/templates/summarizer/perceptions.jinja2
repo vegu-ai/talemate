@@ -1,0 +1,26 @@
+<|SECTION:TASK|>
+Analyze the finalized passage below. Do not continue the story. Produce complete replacement prose for each named character's perspective of THIS passage, or explicitly omit it when they perceive nothing of it.
+
+Use only supported events. Prior physical context is author evidence, not knowledge shared by the cast. Established knowledge belongs only to its named character. Authored descriptions and details are background, not proof of witnessing a new event. Preserve attribution, uncertainty and established beliefs: hearing a claim does not make it true. Do not invent beliefs, observations, disclosure, an arrival, awakening, or an opportunity to overhear. You have no authority to activate or deactivate characters.
+
+Presence is a contextual hint, never proof of attention, consciousness, audibility or access to private thought. A speaker knows their own stated private thought; other characters do not gain it from adjacent public speech. Whispered words reach only supported recipients. An unconscious bystander does not witness a passage merely because they are listed as present. A named but absent character gets an omission unless the supplied events explicitly support perception. Unknown presence is not permission to invent access.
+
+The passage sub_type identifies the reader operation (query, visual-scene, visual-character, or examine); subject_character is the character being described, not an initiating investigator. These fields do not establish an in-world action. Reinforcements are author-maintained state, not speech or a discovery event. Investigations may reveal information only to the reader: a query, visual description or examination does not by itself establish that a character investigated or learned its answer. Only a supported in-world action or established knowledge can justify a character's view. Omit reader-only findings when no such evidence exists. Titles and questions are part of the supplied passage: replace or omit secret-bearing headings as well as answers. A character named in a heading is not automatically its audience.
+
+Each ready view must be standalone replacement prose containing everything this character can perceive of the current passage, without revealing inaccessible content or naming withheld secrets. Do not output the full reader passage with a private annotation. Do not restate unrelated earlier events as new learning. When nothing is perceived, use omitted and null text. Leave the reader's prose untouched.
+
+The host supplies numbered evidence_spans from the current passage. Return evidence_spans as an array of their integer IDs that this character FULLY perceives, including all qualifications and attribution. A span containing any inaccessible private thought, whisper, reader-only finding, or unperceived action must be excluded in its entirety, even if the character perceives another part of it. Presence or being the subject never overrides this rule. Use [] for omitted views, partially perceived spans, and views with no fully perceived span. These IDs authorize sharing facts backed by that exact evidence; never include a span merely because its topic is familiar. The replacement prose may still contain the parts this character perceives.
+
+Return ONLY a JSON object with a views array. Exactly one entry per character in cast, using their exact name. Fields: audience (one-element array), status (ready or omitted), text (nonempty replacement prose for ready, null for omitted), knowledge_ids (array of supplied established-knowledge IDs actually used for this view), passage_ids (array of prior physical-context message IDs actually used for this view), evidence_spans (array of fully perceived current-passage span IDs). All three ID arrays are required; use [] when there are no citations for that array. Cite only decisive inputs, not every available context item. For an omission caused by an earlier passage (for example, unconsciousness), cite that passage even though the character did not perceive it. Do not include the current passage ID in passage_ids: the host always records it itself, and ignores any citation of it. Never invent IDs or cite another audience's knowledge. No other fields, explanation or surrounding prose.
+Example shape: {"views": [{"audience": ["Alice"], "status": "ready", "text": "Alice hears Bob say the road is closed.", "knowledge_ids": [], "passage_ids": [], "evidence_spans": [0]}, {"audience": ["Bob"], "status": "omitted", "text": null, "knowledge_ids": [], "passage_ids": [12], "evidence_spans": []}]}
+<|CLOSE_SECTION|>
+{% if validation_error %}
+<|SECTION:REPAIR|>
+The previous response failed validation: {{ validation_error }}
+Return valid views for every character in the cast below. Valid views for other characters have already been kept; do not repeat or replace them.
+<|CLOSE_SECTION|>
+{% endif %}
+<|SECTION:ANALYTICAL CONTEXT AND FINALIZED PASSAGE|>
+{{ context | tojson(indent=2) }}
+<|CLOSE_SECTION|>
+{{ bot_token }}

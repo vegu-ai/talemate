@@ -1063,7 +1063,7 @@
       "title": "On Message Set Avatar",
       "id": "19963b5e-e2c1-4970-a0c4-fde30195e2b4",
       "properties": {
-        "event_name": "agent.conversation.generated"
+        "event_name": "agent.conversation.finalized"
       },
       "x": -332,
       "y": 193,

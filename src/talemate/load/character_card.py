@@ -10,9 +10,13 @@ import pydantic
 import structlog
 
 import talemate.instance as instance
-from talemate import Character, Player
+from talemate import Character
 from talemate.agents.creator.character import CharacterGenerationRequest
-from talemate.character import activate_character
+from talemate.character import (
+    activate_character,
+    NAME_EXISTS_MESSAGE,
+    name_is_taken,
+)
 from talemate.exceptions import GenerationCancelled, LLMAccuracyError, UnknownDataSpec
 from talemate.files import identify_character_card_spec
 from talemate.status import LoadingStatus
@@ -27,6 +31,7 @@ from talemate.util.colors import unique_random_colors
 from talemate.agents.base import DynamicInstruction
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene_assets import AssetTransfer
+from talemate.scene_agent_settings import resolve_link_on_load
 from talemate.world_state import ManualContext
 from talemate.agents.visual.schema import VIS_TYPE
 from talemate.shared_context import SharedContext
@@ -56,6 +61,10 @@ __all__ = [
     "load_from_image_metadata",
     "create_manual_context_from_character_book",
 ]
+
+CARD_NAME_EXISTS_MESSAGE = (
+    NAME_EXISTS_MESSAGE + " Choose a different player character name for this import."
+)
 
 
 class RelevantCharacterInfo(pydantic.BaseModel):
@@ -1196,17 +1205,14 @@ async def _setup_player_character_from_options(
 
         player_color = config.game.default_player_character.color
 
-        player = Player(
-            Character(
-                name=template.name,
-                description=template.description or "",
-                greeting_text="",
-                color=player_color,
-            ),
-            None,
+        player = Character(
+            name=template.name,
+            description=template.description or "",
+            greeting_text="",
+            color=player_color,
+            is_player=True,
         )
-        await scene.add_actor(player)
-        await activate_character(scene, player.character)
+        await activate_character(scene, player)
         return True
     elif import_options.player_character_existing:
         return True
@@ -1442,6 +1448,12 @@ async def _process_characters_for_import(
     max_attrs = director.cm_max_attributes or None
 
     for character in characters:
+        # this write goes around add_actor, so the one-name-one-object rule is
+        # enforced here too - the player character was set up first and its
+        # name can clash with a character on the card
+        if name_is_taken(scene, character.name, character):
+            raise ValueError(CARD_NAME_EXISTS_MESSAGE.format(name=character.name))
+
         # Add character to character_data without activating
         # Characters will be activated later by _activate_characters_from_greeting
         # based on whether they appear in the greeting text
@@ -1581,6 +1593,9 @@ async def load_scene_from_character_card(
     scene,
     file_path,
     import_options: CharacterCardImportOptions | None = None,
+    *,
+    character_knowledge: bool = False,
+    creation_settings=None,
 ):
     """
     Load a character card (tavern etc.) from the given file path.
@@ -1596,11 +1611,9 @@ async def load_scene_from_character_card(
     if import_options is None:
         import_options = CharacterCardImportOptions()
 
+    scene.knowledge_eligibility = "perception" if character_knowledge else "legacy"
+
     file_ext = os.path.splitext(file_path)[1].lower()
-
-    # Player Character Setup
-
-    await _setup_player_character_from_options(scene, import_options)
 
     # Extract Character Data from File
 
@@ -1631,6 +1644,28 @@ async def load_scene_from_character_card(
         selected_names = [original_character.name] if original_character.name else []
 
     characters = _create_characters_from_names(selected_names, original_character)
+    scene_name = _extract_scene_name_from_spec(raw_data_or_metadata)
+    first_character = characters[0]
+    scene.name = scene_name if scene_name else first_character.name
+
+    if creation_settings is not None:
+        await resolve_link_on_load(scene, {})
+        creation_settings.install(scene)
+
+    await _setup_player_character_from_options(scene, import_options)
+
+    # every name is known here, before the import spends a request or writes
+    # the character book: the player was set up above, and the selected cards
+    # can also collide with each other - the list is not de-duplicated and the
+    # dialog refuses only an exact repeat
+    selected_so_far: set[str] = set()
+    for character in characters:
+        if name_is_taken(scene, character.name, character):
+            raise ValueError(CARD_NAME_EXISTS_MESSAGE.format(name=character.name))
+        folded = character.name.casefold()
+        if folded in selected_so_far:
+            raise ValueError(NAME_EXISTS_MESSAGE.format(name=character.name))
+        selected_so_far.add(folded)
 
     # Initialize Loading Status and Scene Setup
 
@@ -1646,11 +1681,6 @@ async def load_scene_from_character_card(
         has_character_book=has_character_book,
         num_episodes=num_episodes,
     )
-
-    scene_name = _extract_scene_name_from_spec(raw_data_or_metadata)
-    first_character = characters[0]
-
-    scene.name = scene_name if scene_name else first_character.name
 
     if import_options.writing_style_template:
         scene.writing_style_template = import_options.writing_style_template
@@ -1696,6 +1726,7 @@ async def load_scene_from_character_card(
     # Activate Characters from Greeting Text
 
     await _activate_characters_from_greeting(scene, original_greeting_text)
+    scene.set_intro(original_greeting_text)
 
     # Add Alternate Greetings as Episodes
 

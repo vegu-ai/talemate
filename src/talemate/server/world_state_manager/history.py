@@ -2,11 +2,13 @@ import pydantic
 import asyncio
 import structlog
 
+from talemate.knowledge.processing import track_evidence_task
 from talemate.instance import get_agent
 from talemate.history import (
     history_with_relative_time,
     rebuild_history,
     HistoryEntry,
+    ArchiveEntry,
     update_history_entry,
     regenerate_history_entry,
     collect_source_entries,
@@ -17,6 +19,9 @@ from talemate.history import (
     compute_layer_stats,
     collect_time_passages,
 )
+from talemate.knowledge.facts import facts_for_entry
+from talemate.knowledge.chronology import fact_display
+from talemate.knowledge.presence import layer_entry_presence
 from talemate.scene_message import TimePassageMessage
 from talemate.server.world_state_manager import world_state_templates
 from talemate.status import background_task
@@ -81,16 +86,24 @@ class HistoryMixin:
         history = history_with_relative_time(
             self.scene.archived_history, self.scene.ts, layer=0
         )
+        summarizer = get_agent("summarizer")
+        for row, stored in zip(history, self.scene.archived_history):
+            row["facts"] = [
+                fact_display(self.scene, fact)
+                for fact in facts_for_entry(self.scene, row["id"])
+            ]
+            row["facts_unavailable_reason"] = summarizer.fact_source_unavailable_reason(
+                self.scene, ArchiveEntry(**stored)
+            )
 
         layered_history = []
 
-        summarizer = get_agent("summarizer")
-
         if summarizer.layered_history_enabled:
             for index, layer in enumerate(self.scene.layered_history):
-                layered_history.append(
-                    history_with_relative_time(layer, self.scene.ts, layer=index + 1)
-                )
+                rows = history_with_relative_time(layer, self.scene.ts, layer=index + 1)
+                for row, entry in zip(rows, layer):
+                    row["present"] = layer_entry_presence(self.scene, index, entry)
+                layered_history.append(rows)
 
         time_passages = collect_time_passages(self.scene)
 
@@ -102,6 +115,11 @@ class HistoryMixin:
                     "history": history,
                     "layered_history": layered_history,
                     "time_passages": time_passages,
+                    "dialogue_facts": [
+                        fact_display(self.scene, fact)
+                        for fact in self.scene.world_state.facts.values()
+                        if fact.source == "dialogue"
+                    ],
                 },
             }
         )
@@ -125,6 +143,8 @@ class HistoryMixin:
             )
         )
 
+        track_evidence_task(self.scene, task)
+
         async def done():
             self.websocket_handler.queue_put(
                 {
@@ -144,6 +164,7 @@ class HistoryMixin:
         payload = HistoryEntryPayload(**data)
 
         entry = await update_history_entry(self.scene, payload.entry)
+        await get_agent("summarizer").schedule_audience_summaries(self.scene)
 
         self.websocket_handler.queue_put(
             {
@@ -346,6 +367,7 @@ class HistoryMixin:
             self.scene.layered_history = []
 
         task = asyncio.create_task(summarizer.summarize_to_layered_history())
+        track_evidence_task(self.scene, task)
 
         async def done():
             self.websocket_handler.queue_put(

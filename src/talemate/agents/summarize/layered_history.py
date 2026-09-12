@@ -1,3 +1,4 @@
+from talemate.knowledge.processing import evidence_writer
 import structlog
 from typing import TYPE_CHECKING
 from talemate.agents.base import (
@@ -185,6 +186,9 @@ class LayeredHistoryMixin:
         chunks: list[dict],
         extra_context: str,
         generation_options: GenerationOptions | None = None,
+        *,
+        audience: tuple[str, ...] | None = None,
+        skip_author_hooks: bool = False,
     ) -> list[str]:
         """
         Split chunks based on max_process_tokens and summarize each part.
@@ -222,7 +226,11 @@ class LayeredHistoryMixin:
                 response_length=self.layered_history_response_length,
                 analyze_chunks=self.layered_history_analyze_chunks,
                 chunk_size=self.layered_history_chunk_size,
+                audience=audience,
+                skip_author_hooks=skip_author_hooks,
             )
+            if audience and not summary_text.strip():
+                raise ValueError("An audience summary chunk was empty")
             summaries.append(summary_text)
 
         return summaries
@@ -355,13 +363,18 @@ class LayeredHistoryMixin:
         ).model_dump(exclude_none=True)
 
         next_layer.append(entry)
-
         emit(
             "status",
             status="busy",
             message=f"Updating layered history - layer {next_layer_index} - {num_entries_in_layer + 1} / {estimated_entries}",
         )
 
+        await self.queue_summary_views(
+            self.scene,
+            entry["id"],
+            next_layer_index + 1,
+            generation_options=generation_options,
+        )
         return entry
 
     async def _lh_summarize_layer(
@@ -490,6 +503,8 @@ class LayeredHistoryMixin:
         include_base_layer: bool = False,
         max: int = None,
         base_layer_end_id: str | None = None,
+        *,
+        scene=None,
     ) -> list[str]:
         """
         Starts at the last layer and compiles the layered history into a single
@@ -500,7 +515,8 @@ class LayeredHistoryMixin:
         Each preceeding layer starts from the end of the the next layer.
         """
 
-        layered_history = self.scene.layered_history
+        scene = scene or self.scene
+        layered_history = scene.layered_history
         compiled = []
         next_layer_start = None
 
@@ -523,7 +539,7 @@ class LayeredHistoryMixin:
             ]:
                 if base_layer_end_id:
                     contained = entry_contained(
-                        self.scene,
+                        scene,
                         base_layer_end_id,
                         HistoryEntry(index=0, layer=i + 1, **layered_history_entry),
                     )
@@ -569,7 +585,7 @@ class LayeredHistoryMixin:
 
             entry_num = 1
 
-            for ah in self.scene.archived_history[next_layer_start or 0 :]:
+            for ah in scene.archived_history[next_layer_start or 0 :]:
                 if base_layer_end_id and ah["id"] == base_layer_end_id:
                     break
 
@@ -593,6 +609,7 @@ class LayeredHistoryMixin:
         return compiled
 
     @set_processing
+    @evidence_writer
     async def summarize_to_layered_history(
         self, generation_options: GenerationOptions | None = None
     ):

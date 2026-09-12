@@ -8,7 +8,15 @@ Override example:
 -#}
 {# BUILD QUERY CONTEXT #}
 {% set character_context %}
+{% if character_retrieval %}
+{% if memory_character_context %}
+<|SECTION:CHARACTERS|>
+{{ memory_character_context }}
+<|CLOSE_SECTION|>
+{% endif %}
+{% else %}
 {% if include_character_context %}{% include "character-context.jinja2" %}{% endif %}
+{% endif %}
 {% endset %}
 
 {% set passthrough_context %}
@@ -52,14 +60,16 @@ Your response must be a brief analysis of the scene followed by your "+to_str(nu
 
 {# RENDERED CONTEXT #}
 {% set rendered_context -%}
+{% if not character_retrieval %}
 {% include "extra-context-static.jinja2" %}
 {% include "extra-context-dynamic.jinja2" %}
+{% endif %}
 {% endset %}
 {# END RENDERED CONTEXT #}
 
 {# VOLATILE CONTEXT (for budget calculation) #}
 {% set volatile_context_text %}
-{%- with memory_query=join(questions, "\n"), iterate=5 -%}
+{%- with memory_query=join(questions, "\n"), iterate=5, memory_filter=memory_filter|default(none) -%}
 {% include "memory-query.jinja2" %}
 {% endwith %}
 {% endset %}

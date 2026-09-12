@@ -10,6 +10,10 @@ Talemate supports and encourages use of multiple clients. We believe it makes se
 
 It is, however, perfectly fine to just use a single client for all tasks if you prefer.
 
+## What Talemate expects from a model
+
+Talemate expects a current reasoning-capable model with reliable JSON and tool-call output and a usable context of 16k tokens or more. The [Model expectations](/talemate/getting-started/model-expectations/) page states the bar, lists known good examples for hosted and self-hosted setups, and describes the symptoms of a model below it.
+
 ## Checking a model
 
 The bundled [Model Testing Harness](model-testing-harness.md) scene runs a fixed suite of minimum-viability tests against the clients assigned to your agents. Load it after configuring a new client to confirm the model can handle what Talemate will ask of it.

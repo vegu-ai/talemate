@@ -18,6 +18,7 @@ Override example:
     {% endif -%}
 {% endif -%}
 {% set rendered_context_content -%}
+{% include "character-evidence-planning.jinja2" %}
 {% with include_dialogue_instructions=True %}{% include "character-context.jinja2" %}{% endwith %}
 {% endset %}
 {% set volatile_context_text %}{% include "dynamic-instructions.jinja2" %}

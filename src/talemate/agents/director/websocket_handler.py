@@ -12,7 +12,7 @@ from .action_core.gating import (
     extract_all_callback_descriptors,
 )
 from talemate.context import interaction, handle_generation_cancelled
-from talemate.status import set_loading
+from talemate.status import LoadingLabel, set_loading
 from talemate.exceptions import GenerationCancelled, GenerationProcessingError
 from .scene_direction.schema import UserInteractionMessage
 from .character_management import PersistCharacterRequest
@@ -90,6 +90,15 @@ class SetDisabledSubActionsPayload(pydantic.BaseModel):
     disabled_action_ids: list[str]
 
 
+def _dynamic_choices_label(handler, data: dict) -> LoadingLabel | str:
+    character = CharacterPayload(**data).character
+    return (
+        LoadingLabel("Generating actions for {}", character)
+        if character
+        else "Generating dynamic actions"
+    )
+
+
 class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
     """
     Handles director actions
@@ -161,7 +170,7 @@ class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
 
         await self.signal_operation_done(emit_status_message=message)
 
-    @set_loading("Generating dynamic actions", cancellable=True, as_async=True)
+    @set_loading(_dynamic_choices_label, cancellable=True, as_async=True)
     async def handle_request_dynamic_choices(self, data: dict):
         """
         Generate clickable actions for the user
@@ -211,24 +220,38 @@ class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
         )
 
         async def handle_task_done(task):
-            if task.exception():
-                exc = task.exception()
-                log.error("Error persisting character", error=exc)
+            exc = task.exception()
 
-                # Handle GenerationCancelled properly to reset cancel_requested flag
-                if isinstance(exc, GenerationCancelled):
-                    handle_generation_cancelled(exc)
-
-                await self.signal_operation_failed(f"Error persisting character: {exc}")
-            else:
-                self.websocket_handler.queue_put(
-                    {
-                        "type": self.router,
-                        "action": "character_persisted",
-                        "character": task.result(),
-                    }
-                )
+            if isinstance(exc, GenerationCancelled):
+                # a cancel is not a failure: persist_character already reported
+                # it, so this only clears the frontend's busy state
+                handle_generation_cancelled(exc)
                 await self.signal_operation_done()
+                return
+
+            if exc:
+                log.error("Error persisting character", error=exc)
+                await self.signal_operation_failed(f"Error persisting character: {exc}")
+                return
+
+            character = task.result()
+            if character is None:
+                # persist_character reports the error itself, so the envelope
+                # goes without a second status - the frontend reads .name off
+                # the success payload and a None cannot go on the wire
+                await self.signal_operation_failed(
+                    "Character creation failed", emit_status=False
+                )
+                return
+
+            self.websocket_handler.queue_put(
+                {
+                    "type": self.router,
+                    "action": "character_persisted",
+                    "character": character,
+                }
+            )
+            await self.signal_operation_done()
 
         task.add_done_callback(lambda task: asyncio.create_task(handle_task_done(task)))
 

@@ -8,12 +8,19 @@ import zipfile
 import pydantic
 import traceback
 from pathlib import Path
+from collections.abc import Awaitable, Callable
 
 import structlog
 
 import talemate.instance as instance
 from talemate import Actor, Character, Player, Scene
-from talemate.character import deactivate_character, activate_character
+from talemate.knowledge.intro import initialize_intro_audience
+from talemate.character import (
+    deactivate_character,
+    activate_character,
+    NAME_EXISTS_MESSAGE,
+    name_is_taken,
+)
 from talemate.config import get_config, Config
 from talemate.config.schema import GamePlayerCharacter
 from talemate.context import SceneIsLoading
@@ -33,6 +40,13 @@ from talemate.world_state import WorldState
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import ScenePerspectives, load_game_state_path_settings
+from talemate.scene.format import CURRENT_SCENE_FORMAT_VERSION, read_scene_format
+from talemate.knowledge.dialogue_facts import prune_invalid_dialogue_facts
+from talemate.knowledge.reinforcements import reinforcement_source_keys
+from talemate.knowledge.perspectives import (
+    bind_perspective_sources,
+    validate_saved_knowledge,
+)
 from talemate.history import validate_history
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
@@ -45,6 +59,7 @@ from talemate.changelog import (
 from talemate.shared_context import SharedContext
 from talemate.scene_agent_settings import AGENT_SETTINGS_DIRNAME, resolve_link_on_load
 from talemate.load.character_card import CharacterCardImportOptions
+from talemate.load.creation_agent_settings import CreationAgentSettings
 from talemate.scene_assets import AssetTransfer
 
 # Import character card functions
@@ -90,6 +105,8 @@ def load_scene_perspectives(scene_data: dict) -> ScenePerspectives:
 
 
 class SceneInitialization(pydantic.BaseModel):
+    agent_settings: dict[str, dict] | None = None
+    character_knowledge: pydantic.StrictBool = False
     project_name: str | None = None
     content_classification: str | None = None
     agent_persona_templates: dict[str, str | None] | None = None
@@ -183,12 +200,19 @@ async def load_scene(
     reset: bool = False,
     add_to_recent: bool = True,
     scene_initialization: SceneInitialization | None = None,
+    before_memory: Callable[[Scene], Awaitable[None]] | None = None,
+    is_current: Callable[[], bool] = lambda: True,
 ):
     """
     Load the scene data from the given file path.
     """
 
-    exc = None
+    loaded_scene = None
+    creation_settings = (
+        CreationAgentSettings(scene_initialization.agent_settings, is_current)
+        if scene_initialization and scene_initialization.agent_settings
+        else None
+    )
 
     # Release the previous scene's reserved GPU memory before loading the next.
     # Local CUDA work (embedding re-commits, TTS) leaves PyTorch's caching
@@ -224,7 +248,11 @@ async def load_scene(
                     scene_data["name"] = ""
 
                 scene = await load_scene_from_data(
-                    scene, scene_data, reset=True, empty=True
+                    scene,
+                    scene_data,
+                    reset=True,
+                    empty=True,
+                    creation_settings=creation_settings,
                 )
 
                 # Create the scene directory on disk so assets are
@@ -232,7 +260,8 @@ async def load_scene(
                 # user manually saves.
                 _ = scene.save_dir
 
-                return scene
+                loaded_scene = scene
+                return loaded_scene
 
             ext = os.path.splitext(file_path)[1].lower()
 
@@ -248,15 +277,26 @@ async def load_scene(
             # an image was uploaded, we don't have the scene data yet
             # go directly to loading a character card
             if ext in [".jpg", ".png", ".jpeg", ".webp"]:
-                return await load_scene_from_character_card(
+                loaded_scene = await load_scene_from_character_card(
                     scene,
                     file_path,
                     import_options=import_options,
+                    creation_settings=creation_settings,
+                    character_knowledge=bool(
+                        scene_initialization
+                        and scene_initialization.character_knowledge
+                    ),
                 )
+                return loaded_scene
 
             # a zip file was uploaded, extract and load complete scene
             if ext == ".zip":
-                return await load_scene_from_zip(scene, file_path, reset)
+                if creation_settings is not None:
+                    raise ValueError(
+                        "Creation settings require a new scene or character card"
+                    )
+                loaded_scene = await load_scene_from_zip(scene, file_path, reset)
+                return loaded_scene
 
             # a json file was uploaded, load the scene data
             with open(file_path, "r") as f:
@@ -272,23 +312,40 @@ async def load_scene(
                 ImportSpec.chara_card_v2,
                 ImportSpec.chara_card_v3,
             ]:
-                return await load_scene_from_character_card(
+                loaded_scene = await load_scene_from_character_card(
                     scene,
                     file_path,
                     import_options=import_options,
+                    creation_settings=creation_settings,
+                    character_knowledge=bool(
+                        scene_initialization
+                        and scene_initialization.character_knowledge
+                    ),
+                )
+                return loaded_scene
+
+            if creation_settings is not None:
+                raise ValueError(
+                    "Creation settings require a new scene or character card"
                 )
 
             # if it is a talemate scene, load it
-            return await load_scene_from_data(scene, scene_data, reset, name=file_path)
+            loaded_scene = await load_scene_from_data(
+                scene, scene_data, reset, name=file_path
+            )
+            return loaded_scene
     except Exception as e:
-        exc = e
         log.error("load_scene", error=traceback.format_exc())
         raise e
     finally:
-        if add_to_recent and not exc:
-            await scene.add_to_recent_scenes()
-        if not exc:
-            await scene.commit_to_memory()
+        if loaded_scene is not None:
+            if add_to_recent:
+                await loaded_scene.add_to_recent_scenes()
+            if before_memory is not None:
+                await before_memory(loaded_scene)
+            await loaded_scene.commit_to_memory()
+            if creation_settings is not None:
+                await creation_settings.persist(loaded_scene)
 
 
 def _quarantine_and_resolve_rev(scene):
@@ -324,7 +381,10 @@ async def load_scene_from_data(
     reset: bool = False,
     name: str | None = None,
     empty: bool = False,
+    creation_settings=None,
 ) -> Scene:
+    metadata = read_scene_format(scene_data)
+    knowledge = validate_saved_knowledge(scene_data)
     loading_status = LoadingStatus(1)
     reset_message_id()
     config: Config = get_config()
@@ -335,8 +395,11 @@ async def load_scene_from_data(
     migrate_director_chat_state(scene_data)
     migrate_scene_time(scene_data)
 
+    scene.knowledge_eligibility = metadata.knowledge_eligibility
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
+    scene.intro_present = None
+    scene.intro_knowledge = None
     scene.name = scene_data.get("name", "Unknown Scene")
     scene.environment = scene_data.get("environment", "scene")
     scene.filename = None
@@ -356,7 +419,11 @@ async def load_scene_from_data(
         name: Character(**character_data)
         for name, character_data in scene_data.get("character_data", {}).items()
     }
-    scene.active_characters = scene_data.get("active_characters", [])
+    # a de-duplicated copy of the saved list: from here on the scene's own list
+    # is maintained by add_actor / remove_actor, one entry per actor
+    scene.active_characters = list(
+        dict.fromkeys(scene_data.get("active_characters") or [])
+    )
     scene.context = scene_data.get("context", "")
     scene.perspectives = load_scene_perspectives(scene_data)
     scene.project_name = scene_data.get("project_name")
@@ -364,6 +431,14 @@ async def load_scene_from_data(
     scene.history = _load_history(scene_data["history"])
     scene.archived_history = scene_data["archived_history"]
     scene.layered_history = scene_data.get("layered_history", [])
+    scene.knowledge = knowledge
+    if knowledge:
+        advance_message_id(
+            max(
+                (item.message_id_boundary for item in knowledge.disclosures),
+                default=0,
+            )
+        )
 
     # load shared context
     shared_context_file = scene_data.get("shared_context", "")
@@ -385,6 +460,8 @@ async def load_scene_from_data(
         scene.shared_context = None
 
     await resolve_link_on_load(scene, scene_data)
+    if creation_settings is not None:
+        creation_settings.install(scene)
 
     import_scene_node_definitions(scene)
 
@@ -395,6 +472,7 @@ async def load_scene_from_data(
         scene.saved_memory_session_id = scene_data.get("saved_memory_session_id", None)
         scene.memory_session_id = scene_data.get("memory_session_id", None)
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
+        scene.world_state.validate_snapshot_audiences(scene.character_data)
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
         scene.game_state_watch_paths = scene_data.get("game_state_watch_paths", [])
@@ -412,7 +490,14 @@ async def load_scene_from_data(
         scene.history = []
         scene.archived_history = []
         scene.layered_history = []
+        scene.knowledge = None
         scene.intent_state.reset()
+
+    bind_perspective_sources(scene)
+    # Orphaned entry associations must not attach to a future reused message ID.
+    advance_message_id(
+        max((key[1] for key in reinforcement_source_keys(scene)), default=0)
+    )
 
     asset_data = scene_data.get("assets", {})
     scene.assets.cover_image = asset_data.get("cover_image", None)
@@ -427,6 +512,9 @@ async def load_scene_from_data(
     loading_status("Initializing long-term memory...")
 
     await memory.set_db()
+    removed_dialogue_facts = prune_invalid_dialogue_facts(scene)
+    if removed_dialogue_facts:
+        await memory.delete({"ids": sorted(removed_dialogue_facts)})
     # await memory.remove_unsaved_memory()
 
     await scene.world_state_manager.remove_all_empty_pins()
@@ -439,13 +527,14 @@ async def load_scene_from_data(
 
     # Activate active characters
     # Only activate characters that exist in character_data
-    for character_name in scene_data["active_characters"]:
+    for character_name in list(scene.active_characters):
         if character_name not in scene.character_data:
             log.warning(
                 "Character not found in character_data, skipping activation",
                 character_name=character_name,
                 available_characters=list(scene.character_data.keys()),
             )
+            scene.active_characters.remove(character_name)
             continue
 
         character = scene.character_data[character_name]
@@ -478,6 +567,8 @@ async def load_scene_from_data(
     # Initialize intro and title for new scenes
     await _initialize_scene_intro(scene, scene_data, empty)
 
+    initialize_intro_audience(scene, {} if reset else scene_data)
+
     return scene
 
 
@@ -505,14 +596,14 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
                     "ZIP archive does not contain required scene.json file"
                 )
 
+            with zipf.open("scene.json") as scene_file:
+                scene_data = json.load(scene_file)
+            read_scene_format(scene_data)
+            validate_saved_knowledge(scene_data)
+
             # Extract all files
             zipf.extractall(temp_path)
             log.debug("Extracted ZIP contents", files=len(zipf.namelist()))
-
-        # Load scene.json
-        scene_json_path = temp_path / "scene.json"
-        with open(scene_json_path, "r", encoding="utf-8") as f:
-            scene_data = json.load(f)
 
         log.debug(
             "Loaded scene JSON from ZIP", scene_name=scene_data.get("name", "Unknown")
@@ -793,6 +884,11 @@ async def transfer_character(
         # Create a Character object from the character data
         character = Character(**character_data)
 
+        # refuse before any asset is copied - add_actor would refuse anyway,
+        # and the copy leaves the assets behind in the target scene
+        if name_is_taken(scene, character.name):
+            raise ValueError(NAME_EXISTS_MESSAGE.format(name=character.name))
+
         # Store original asset IDs before we potentially modify them
         original_cover_image = character.cover_image
         has_avatar_assets = character.avatar or character.current_avatar
@@ -863,11 +959,22 @@ async def handle_no_player_character(
         log.warning("No player character found")
         return
 
-    await scene.add_actor(player)
-    await activate_character(scene, player.character)
+    # the scene may already hold a character under the configured name - adopt
+    # it instead of shadowing it with a blank default, but only when the scene
+    # itself calls it the player: turning an NPC into one is written into the
+    # next save and the user has to repair it by hand
+    existing = name_is_taken(scene, player.name)
+    if existing is not None:
+        if not existing.is_player:
+            log.warning("Default player character name is taken", name=player.name)
+            return
+        await activate_character(scene, existing)
+        return
+
+    await activate_character(scene, player)
 
 
-def default_player_character() -> Player | None:
+def default_player_character() -> Character | None:
     """
     Return a default player character.
     :return: Default player character.
@@ -883,14 +990,12 @@ def default_player_character() -> Player | None:
     color = default_player_character.color
     description = default_player_character.description
 
-    return Player(
-        Character(
-            name=name,
-            description=description,
-            greeting_text="",
-            color=color,
-        ),
-        None,
+    return Character(
+        name=name,
+        description=description,
+        greeting_text="",
+        color=color,
+        is_player=True,
     )
 
 
@@ -992,7 +1097,16 @@ def new_scene(
     }
 
     if scene_initialization:
-        scene_data.update(scene_initialization.model_dump(exclude_none=True))
+        scene_data.update(
+            scene_initialization.model_dump(
+                exclude_none=True, exclude={"character_knowledge"}
+            )
+        )
+        if scene_initialization.character_knowledge:
+            scene_data.update(
+                format_version=CURRENT_SCENE_FORMAT_VERSION,
+                knowledge_eligibility="perception",
+            )
 
     return scene_data
 

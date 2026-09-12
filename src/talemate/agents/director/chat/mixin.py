@@ -4,6 +4,7 @@ from typing import Any, Literal, TYPE_CHECKING, Callable, Awaitable
 import talemate.instance as instance
 from talemate.agents.base import set_processing, AgentAction, AgentActionConfig
 from talemate.emit import emit
+from talemate.exceptions import GenerationCancelled
 from talemate.game.engine.nodes.core import GraphState
 
 from talemate.agents.director.action_core import utils as action_utils
@@ -621,6 +622,8 @@ class DirectorChatMixin:
 
             try:
                 await self._chat_execute_actions(chat_id, actions_selected, on_update)
+            except GenerationCancelled:
+                raise
             except UnknownAction as e:
                 log.error("director.chat.actions.execute.unknown_action", error=e)
                 await self.chat_append_message(
@@ -813,6 +816,7 @@ class DirectorChatMixin:
 
     # === Title generation ===
 
+    @set_processing
     async def chat_generate_title(self, chat_id: str) -> str | None:
         """Generate a title for the chat based on its initial messages."""
         chat = self.chat_get(chat_id)
@@ -890,12 +894,9 @@ class DirectorChatMixin:
         | None = None,
     ) -> None:
         """Execute selected actions via FOCAL, append results to chat."""
-        chat = self.chat_get(chat_id)
 
         async def on_action_complete(action_msg: DirectorChatActionResultMessage):
-            if on_update:
-                await on_update(chat_id, [action_msg])
-            chat.messages.append(action_msg)
+            await self.chat_append_message(chat_id, action_msg, on_update=on_update)
 
         await action_utils.execute_actions(
             client=self.client,
@@ -905,8 +906,6 @@ class DirectorChatMixin:
             create_result=self._create_chat_result,
             on_action_complete=on_action_complete,
         )
-
-        self._chat_save(chat)
 
     # === Send message ===
 

@@ -25,6 +25,7 @@ Roleplay with AI with a focus on strong narration and consistent world and game 
 ## Documentation
 
 - [Installation and Getting started](https://vegu-ai.github.io/talemate/)
+- [Model expectations](https://vegu-ai.github.io/talemate/getting-started/model-expectations/) - what Talemate needs from your model
 - [User Guide](https://vegu-ai.github.io/talemate/user-guide/interacting/)
 
 ## Discord Community

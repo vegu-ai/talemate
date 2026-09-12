@@ -25,6 +25,7 @@ from talemate.tale_mate import Actor, Scene
 from talemate.emit.base import Emission
 from talemate.events import (
     ArchiveEvent,
+    CharacterActivatedEvent,
     CharacterStateEvent,
     Event,
     GameLoopActorIterEvent,
@@ -63,6 +64,7 @@ for _model in (
     Event,
     HistoryEvent,
     ArchiveEvent,
+    CharacterActivatedEvent,
     CharacterStateEvent,
     SceneStateEvent,
     GameLoopBase,

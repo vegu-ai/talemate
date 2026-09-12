@@ -318,11 +318,13 @@ class TestCreatorContextualGenerateBaselines:
         creator = active_context
         creator.client.send_prompt.return_value = "<ATTRIBUTE>healer</ATTRIBUTE>"
 
-        # Mock rag_build on the registry agent (used by agent_action in templates)
+        # Mock author retrieval on the registry agent used by the template.
         mock_memory = Mock(name="mock.memory.herbalism_skill")
         mock_memory.text = "Elena is skilled in herbalism and natural remedies."
         mock_memory.context_id = "memory_001"
-        instance.AGENTS["creator"].rag_build = AsyncMock(return_value=[mock_memory])
+        instance.AGENTS["creator"].rag_build_for_author = AsyncMock(
+            return_value=[mock_memory]
+        )
 
         generation_context = ContentGenerationContext(
             context="character attribute:occupation",

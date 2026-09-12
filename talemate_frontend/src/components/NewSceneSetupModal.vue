@@ -1,5 +1,5 @@
 <template>
-  <v-dialog :model-value="modelValue" max-width="640" @update:model-value="$emit('update:modelValue', $event)">
+  <v-dialog :model-value="modelValue" max-width="900" @update:model-value="$emit('update:modelValue', $event)">
     <v-card>
       <v-card-title class="text-title-large">
         <v-icon class="mr-2">mdi-script</v-icon>
@@ -66,6 +66,15 @@
           </v-col>
         </v-row>
 
+        <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :agents="getAgents()" :value="effortForMode" class="mt-4" @apply="effort = $event" />
+        <CharacterKnowledgeModeComparison
+          :key="knowledgeUiVersion"
+          :perspectives="characterKnowledge"
+          selectable
+          collapse-details
+          class="mt-4"
+          @update:perspectives="characterKnowledge = $event" />
+        <p class="text-body-small mt-2">You can change this in Scene Settings while the scene has no history or archived history. Keep secrets out of the shared scene description and story intention.</p>
         <v-divider class="mt-4 mb-4"></v-divider>
 
         <v-row>
@@ -89,8 +98,14 @@
 </template>
 
 <script>
+import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
+import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
+import { DEFAULT_EFFORT } from '@/constants/knowledgeEffort';
+import { effortMode, stopForMode } from '@/utils/knowledgeEffort';
+
 export default {
   name: 'NewSceneSetupModal',
+  components: { CharacterKnowledgeModeComparison, KnowledgeEffortSlider },
   props: {
     modelValue: {
       type: Boolean,
@@ -102,10 +117,13 @@ export default {
     },
   },
   emits: ['update:modelValue', 'create'],
-  inject: ['openWorldStateManager'],
+  inject: ['openWorldStateManager', 'getAgents'],
   data() {
     return {
       sceneName: '',
+      characterKnowledge: false,
+      effort: DEFAULT_EFFORT,
+      knowledgeUiVersion: 0,
       assistWithSetup: false,
       selectedWritingStyle: null,
       selectedDirectorPersona: null,
@@ -115,6 +133,9 @@ export default {
     modelValue(val) {
       if (val) {
         this.sceneName = '';
+        this.characterKnowledge = false;
+        this.effort = DEFAULT_EFFORT;
+        this.knowledgeUiVersion += 1;
         this.assistWithSetup = false;
         this.selectedWritingStyle = null;
         this.selectedDirectorPersona = null;
@@ -122,6 +143,12 @@ export default {
     },
   },
   computed: {
+    effortMode() {
+      return effortMode(this.characterKnowledge);
+    },
+    effortForMode() {
+      return stopForMode(this.effort, this.effortMode);
+    },
     hasWritingStyles() {
       return !!(this.templates && this.templates.by_type && this.templates.by_type.writing_style && Object.keys(this.templates.by_type.writing_style).length);
     },
@@ -148,11 +175,14 @@ export default {
       this.$emit('update:modelValue', false);
     },
     create() {
+      this.$refs.effortSlider?.send();
       this.$emit('create', {
         sceneName: this.sceneName || null,
         writingStyle: this.selectedWritingStyle || null,
         directorPersona: this.selectedDirectorPersona || null,
         assistWithSetup: this.assistWithSetup,
+        characterKnowledge: this.characterKnowledge,
+        effort: this.effortForMode,
       });
       this.$emit('update:modelValue', false);
     },

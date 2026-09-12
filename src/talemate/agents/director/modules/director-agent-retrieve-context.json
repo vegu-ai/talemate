@@ -127,7 +127,7 @@
       "title": "Advanced Format",
       "id": "c3e1908f-3f66-4ac3-8619-409107dfe04e",
       "properties": {
-        "template": "### {context_id_item.human_id}\nContext ID: `{context_id_item.context_id}`\n\n```\n{value}\n```"
+        "template": "### {context_id_item.human_id}\nContext ID: `{context_id_item.context_id}`\n\n```\n{value}\n```\n{text}"
       },
       "x": 577,
       "y": 371,
@@ -143,6 +143,10 @@
         },
         {
           "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
           "type": "*"
         }
       ],
@@ -195,6 +199,19 @@
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
       "base_type": "core/Node"
+    },
+    "b854c7da-62d4-48f4-8309-61e81278cb41": {
+      "title": "Entry Knowledge",
+      "id": "b854c7da-62d4-48f4-8309-61e81278cb41",
+      "properties": {},
+      "x": 267,
+      "y": 520,
+      "width": 210,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "knowledge/EntryKnowledge",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -208,7 +225,8 @@
       "f94ca43f-5d0d-4edf-85ef-93010ae67732.context_id_item"
     ],
     "f94ca43f-5d0d-4edf-85ef-93010ae67732.context_id_item": [
-      "c3e1908f-3f66-4ac3-8619-409107dfe04e.item0"
+      "c3e1908f-3f66-4ac3-8619-409107dfe04e.item0",
+      "b854c7da-62d4-48f4-8309-61e81278cb41.context_id_item"
     ],
     "f94ca43f-5d0d-4edf-85ef-93010ae67732.value": [
       "c3e1908f-3f66-4ac3-8619-409107dfe04e.item1"
@@ -227,6 +245,9 @@
     ],
     "95050b18-0009-4ed7-80f3-b9092af87283.state": [
       "51fc6efe-df09-4e32-9066-ba9163f8a555.value"
+    ],
+    "b854c7da-62d4-48f4-8309-61e81278cb41.text": [
+      "c3e1908f-3f66-4ac3-8619-409107dfe04e.item2"
     ]
   },
   "groups": [

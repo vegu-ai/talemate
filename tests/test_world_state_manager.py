@@ -38,6 +38,13 @@ from talemate.world_state.manager import (
     HistoryEntry,
     World,
 )
+from talemate.scene_message import NarratorMessage
+from talemate.knowledge.perspective_models import (
+    Acquisition,
+    Disclosure,
+    SceneKnowledge,
+)
+from talemate.server.world_state_manager import WorldStateManagerPlugin
 
 
 # ---------------------------------------------------------------------------
@@ -463,7 +470,7 @@ class TestWorldEntryCRUD:
     async def test_update_context_db_entry_details_writes_to_character(
         self, scene, manager_with_memory
     ):
-        manager, _ = manager_with_memory
+        manager, tracking = manager_with_memory
         ch = make_actor(scene, "Alice")
         await manager.update_context_db_entry(
             "Alice.detail.mood",
@@ -471,6 +478,65 @@ class TestWorldEntryCRUD:
             {"typ": "details", "character": "Alice", "detail": "mood"},
         )
         assert ch.details["mood"] == "happy"
+        assert tracking.add_many_calls[-1][0]["text"] == "Alice - mood: happy"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("submitted", "value"),
+        [
+            ("Alice - mood: happy", "happy"),
+            ("Alice - mood: ", ""),
+            (
+                "Alice - mood: calm: for now\nStill watchful.",
+                "calm: for now\nStill watchful.",
+            ),
+            (
+                "Alice - mood: Alice - mood: quoted heading",
+                "Alice - mood: quoted heading",
+            ),
+            ("Bob - mood: happy", "Bob - mood: happy"),
+            ("Text before Alice - mood: happy", "Text before Alice - mood: happy"),
+            ("Alice - mood:  padded \n", " padded \n"),
+        ],
+    )
+    async def test_context_db_detail_strips_one_exact_heading(
+        self, scene, manager_with_memory, submitted, value
+    ):
+        manager, tracking = manager_with_memory
+        character = make_actor(scene, "Alice")
+        meta = {
+            "typ": "details",
+            "character": "Alice",
+            "detail": "mood",
+            "custom": "retained",
+        }
+        entry_id = "custom-detail-id"
+
+        await manager.update_context_db_entry(entry_id, submitted, meta)
+
+        assert character.details["mood"] == value
+        assert tracking.add_many_calls[-1] == [
+            {"id": entry_id, "text": f"Alice - mood: {value}", "meta": meta}
+        ]
+
+    @pytest.mark.asyncio
+    async def test_context_db_detail_repeated_save_and_memory_commit(
+        self, scene, manager_with_memory
+    ):
+        manager, tracking = manager_with_memory
+        character = make_actor(scene, "Alice")
+        meta = {"typ": "details", "character": "Alice", "detail": "mood"}
+        document = "Alice - mood: happy"
+        for _ in range(3):
+            await manager.update_context_db_entry("Alice.detail.mood", document, meta)
+            assert character.details["mood"] == "happy"
+            document = tracking.add_many_calls[-1][0]["text"]
+            assert document == "Alice - mood: happy"
+
+        await character.commit_to_memory(tracking)
+        assert tracking.add_many_calls[-1] == [
+            {"id": "Alice.detail.mood", "text": "Alice - mood: happy", "meta": meta}
+        ]
 
     @pytest.mark.asyncio
     async def test_delete_context_db_entry_removes_manual_context_and_pin(
@@ -1099,3 +1165,269 @@ class TestApplyTemplateDispatch:
 
         result = await manager.apply_template(Fake(name="x"))
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# Knowledge: visibility and edges
+# ---------------------------------------------------------------------------
+
+
+class TestKnowledge:
+    async def test_character_details_carry_visibility(self, manager, scene):
+        from talemate.knowledge.schema import EntryVisibility
+
+        character = make_actor(scene, "Alice")
+        character.details["secret"] = "x"
+        await manager.set_character_entry_visibility(
+            "Alice", "detail.secret", EntryVisibility(mode="owner")
+        )
+        details = await manager.get_character_details("Alice")
+        assert details.visibility["detail.secret"].mode == "owner"
+
+    async def test_everyone_visibility_is_not_stored(self, manager, scene):
+        from talemate.knowledge.schema import EntryVisibility
+
+        character = make_actor(scene, "Alice")
+        character.details["secret"] = "x"
+        await manager.set_character_entry_visibility(
+            "Alice", "detail.secret", EntryVisibility(mode="owner")
+        )
+        await manager.set_character_entry_visibility(
+            "Alice", "detail.secret", EntryVisibility(mode="everyone")
+        )
+        assert character.visibility == {}
+
+    async def test_world_entry_visibility(self, manager, world_state):
+        from talemate.knowledge.schema import EntryVisibility
+
+        world_state.manual_context["w1"] = ManualContext(id="w1", text="lore")
+        await manager.set_world_entry_visibility(
+            "w1", EntryVisibility(mode="list", characters=["Alice"])
+        )
+        assert world_state.manual_context["w1"].visibility.characters == ["Alice"]
+
+    async def test_targets_catalogue(self, manager, scene, world_state):
+        character = make_actor(scene, "Alice")
+        character.base_attributes = {"age": "30", "_hidden": "x"}
+        character.details = {"secret": "y"}
+        character.description = "A surveyor."
+        world_state.manual_context["w1"] = ManualContext(id="w1", text="lore")
+        scene.archived_history = [
+            {"id": "s0", "text": "static", "ts": 0},
+            {"id": "e1", "text": "summary text", "ts": 0, "start": 0, "end": 1},
+        ]
+        ids = {t.id: t.kind for t in manager.knowledge_targets()}
+        assert ids == {
+            "Alice.description": "description",
+            "Alice.age": "attribute",
+            "Alice.detail.secret": "detail",
+            "w1": "world_entry",
+            "s0": "static",
+            "e1": "history",
+        }
+        labels = {t.id: t.label for t in manager.knowledge_targets()}
+        assert labels["s0"].startswith("static history:") and labels["e1"].startswith(
+            "history:"
+        )
+
+    async def test_legacy_picker_keeps_standalone_detail_prefix_attribute(
+        self, manager, scene
+    ):
+        from talemate.knowledge.entry import entry_knowledge
+
+        scene.knowledge_eligibility = "legacy"
+        character = make_actor(scene, "Alice")
+        character.base_attributes["detail.secret"] = "A literal attribute."
+        targets = [
+            item
+            for item in manager.knowledge_targets()
+            if item.id == "Alice.detail.secret"
+        ]
+        assert len(targets) == 1 and targets[0].kind == "attribute"
+        assert entry_knowledge(scene, targets[0].id).kind == "attribute"
+        character.details["secret"] = "A real detail."
+        targets = [
+            item
+            for item in manager.knowledge_targets()
+            if item.id == "Alice.detail.secret"
+        ]
+        assert len(targets) == 1 and targets[0].kind == "detail"
+
+    async def test_targets_do_not_duplicate_a_description_attribute(
+        self, manager, scene
+    ):
+        character = make_actor(scene, "Alice")
+        character.description = "A surveyor."
+        character.base_attributes = {"description": "A surveyor.", "age": "30"}
+        ids = [t.id for t in manager.knowledge_targets()]
+        assert ids.count("Alice.description") == 1
+
+    async def test_world_entry_keeps_visibility_when_saved(self, manager, world_state):
+        from talemate.knowledge.schema import EntryVisibility
+
+        await manager.save_world_entry("w1", "lore", {})
+        await manager.set_world_entry_visibility(
+            "w1", EntryVisibility(mode="list", characters=["Alice"])
+        )
+        await manager.save_world_entry("w1", "edited lore", {})
+        entry = world_state.manual_context["w1"]
+        assert entry.text == "edited lore"
+        assert entry.visibility.characters == ["Alice"]
+
+    async def test_edges_upsert_and_remove(self, manager, scene, world_state):
+        from talemate.knowledge.schema import KnowledgeEdge
+
+        scene.ts = 500
+        edge = await manager.set_knowledge_edge(
+            KnowledgeEdge(character="Alice", target="e1", kind="grant")
+        )
+        assert edge.ts == 500
+        edge.kind = "revoke"
+        await manager.set_knowledge_edge(edge)
+        assert len(world_state.knowledge) == 1
+        assert world_state.knowledge[0].kind == "revoke"
+
+        knowledge = await manager.get_character_knowledge("Alice")
+        assert [e.id for e in knowledge.edges] == [edge.id]
+        assert (await manager.get_character_knowledge("Bob")).edges == []
+
+        await manager.remove_knowledge_edge(edge.id)
+        assert world_state.knowledge == []
+
+
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
+@pytest.mark.parametrize("history_kind", ["empty", "current", "archived"])
+async def test_character_knowledge_switch_guard(scene, manager, mode, history_kind):
+    scene.knowledge = SceneKnowledge(
+        last_order=1,
+        disclosures=(
+            Disclosure(
+                audience=("Alice",),
+                message_id_boundary=0,
+                text="The key is brass.",
+                acquired=Acquisition(order=1, ts=0),
+            ),
+        ),
+    )
+    scene.knowledge_eligibility = mode
+    scene.history = [NarratorMessage("A passage.")] if history_kind == "current" else []
+    scene.archived_history = (
+        [{"text": "Earlier events."}] if history_kind == "archived" else []
+    )
+    target = "legacy" if mode == "perception" else "perception"
+    knowledge = scene.knowledge.model_dump(mode="json")
+    assert scene.can_change_knowledge_eligibility is (history_kind == "empty")
+    if history_kind == "empty":
+        await manager.update_scene_settings(knowledge_eligibility=target)
+        assert scene.knowledge_eligibility == target
+    else:
+        scene.experimental = False
+        with pytest.raises(ValueError, match="no history or archived history"):
+            await manager.update_scene_settings(
+                knowledge_eligibility=target, experimental=True
+            )
+        assert scene.knowledge_eligibility == mode
+        assert scene.experimental is False
+    if history_kind == "empty" and target == "legacy":
+        assert scene.knowledge is None
+    else:
+        assert scene.knowledge.model_dump(mode="json") == knowledge
+
+
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
+@pytest.mark.parametrize("include_mode", [False, True])
+async def test_played_scene_accepts_unrelated_settings(
+    scene, manager, mode, include_mode
+):
+    scene.knowledge_eligibility = mode
+    scene.history = [NarratorMessage("A passage.")]
+    kwargs = {"knowledge_eligibility": mode} if include_mode else {}
+    await manager.update_scene_settings(experimental=True, **kwargs)
+    assert scene.experimental is True
+    assert scene.knowledge_eligibility == mode
+
+
+async def test_intro_does_not_lock_character_knowledge(scene, manager):
+    scene.intro = "An opening scene."
+    make_actor(scene, "Alice")
+    assert scene.can_change_knowledge_eligibility
+    await manager.update_scene_settings(knowledge_eligibility="perception")
+    assert scene.knowledge_eligibility == "perception"
+
+
+@pytest.mark.parametrize("mode", ["invalid", True, 1])
+async def test_invalid_character_knowledge_mode_does_not_mutate(scene, manager, mode):
+    with pytest.raises(ValueError, match="legacy or perception"):
+        await manager.update_scene_settings(
+            knowledge_eligibility=mode, experimental=True
+        )
+    assert scene.knowledge_eligibility == "legacy"
+    assert scene.experimental is False
+
+
+@pytest.mark.parametrize("blocked", [False, True])
+async def test_settings_websocket_mode_update(scene, blocked):
+    scene.history = [NarratorMessage("A passage.")] if blocked else []
+    scene.emit_status = MagicMock()
+    handler = MagicMock(scene=scene)
+    plugin = WorldStateManagerPlugin(handler)
+    await plugin.handle_update_scene_settings({"knowledge_eligibility": "perception"})
+    messages = [call.args[0] for call in handler.queue_put.call_args_list]
+    if blocked:
+        assert scene.knowledge_eligibility == "legacy"
+        assert len(messages) == 1
+        assert "no history or archived history" in messages[0]["error"]["message"]
+    else:
+        assert scene.knowledge_eligibility == "perception"
+        assert messages[0]["action"] == "scene_settings_updated"
+        assert messages[1]["action"] == "operation_done"
+        assert scene.saved is False
+        scene.emit_status.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "history, mode, refreshed",
+    [
+        ([], "perception", True),
+        ([], "legacy", False),
+        ([NarratorMessage("A passage.")], "perception", False),
+    ],
+)
+async def test_settings_websocket_mode_change_refreshes_agent_status(
+    scene, monkeypatch, history, mode, refreshed
+):
+    scene.history = history
+    scene.emit_status = MagicMock()
+    emitted = MagicMock()
+    monkeypatch.setattr(
+        "talemate.server.world_state_manager.emit_agents_status", emitted
+    )
+    plugin = WorldStateManagerPlugin(MagicMock(scene=scene))
+    await plugin.handle_update_scene_settings({"knowledge_eligibility": mode})
+    assert emitted.call_count == (1 if refreshed else 0)
+
+
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
+@pytest.mark.parametrize("invalid_setting", ["restore_from", "agent_settings_file"])
+async def test_rejected_settings_preserve_mode_and_records(
+    scene, manager, mode, invalid_setting
+):
+    scene.knowledge_eligibility = mode
+    knowledge = SceneKnowledge()
+    scene.knowledge = knowledge if mode == "perception" else None
+    before = scene.knowledge
+    scene.saved = True
+    with pytest.raises(ValueError, match="not found|does not exist"):
+        await manager.update_scene_settings(
+            knowledge_eligibility="legacy" if mode == "perception" else "perception",
+            experimental=True,
+            immutable_save=True,
+            writing_style_template="changed",
+            **{invalid_setting: "missing-settings.json"},
+        )
+    assert scene.knowledge_eligibility == mode
+    assert scene.knowledge is before
+    assert scene.experimental is False
+    assert scene.immutable_save is False
+    assert scene.writing_style_template is None
+    assert scene.saved is True

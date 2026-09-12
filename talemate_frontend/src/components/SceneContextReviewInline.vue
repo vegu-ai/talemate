@@ -1,5 +1,27 @@
 <template>
   <div>
+    <div class="d-flex align-center ga-3 mb-4 px-2 pt-2">
+      <v-select
+        v-model="selectedCharacter"
+        :items="characterOptions"
+        label="View context for"
+        variant="outlined"
+        density="compact"
+        hide-details
+        style="max-width: 320px"
+      />
+      <v-btn variant="text" prepend-icon="mdi-refresh" :loading="loading" @click="fetchPreview">Refresh</v-btn>
+    </div>
+    <v-alert
+      v-if="perceptionStatus"
+      :type="perceptionStatus.state === 'failed' ? 'warning' : 'info'"
+      variant="outlined"
+      density="compact"
+      class="mx-2 mb-3"
+    >
+      {{ perceptionStatus.message }}
+      <div v-if="preview" class="text-body-small mt-1">Showing the previous preview.</div>
+    </v-alert>
     <div v-if="loading && !preview" class="text-center py-8">
       <v-progress-circular indeterminate color="primary" />
       <div class="text-body-small mt-2">Building context preview...</div>
@@ -27,7 +49,8 @@
 
     <template v-else>
       <v-card variant="text" class="text-body-small text-muted mb-4 px-2">
-        This is a preview of how the scene history will be rendered into context for AI prompts. Adjust the settings below to change how the context budget is distributed, then click Refresh to see the effect.
+        <template v-if="selectedCharacter">History follows {{ selectedCharacter }}'s Conversation settings. Knowledge sections show eligible facts and existing analysis. Refresh never generates analysis.</template>
+        <template v-else>This is a preview of how the scene history will be rendered into context for AI prompts. Adjust the settings below to change how the context budget is distributed, then click Refresh to see the effect.</template>
       </v-card>
 
       <v-row no-gutters>
@@ -36,9 +59,9 @@
         <v-col class="sidebar-col" style="flex: 0 0 320px; max-width: 320px;">
           <div class="sidebar-content pa-4">
             <v-chip v-if="preview" size="small" variant="tonal" label class="mb-4">
-              {{ preview.summary.total_tokens }} / {{ preview.budget.total }} tokens used
+              {{ preview.summary.history_tokens ?? preview.summary.total_tokens }} / {{ preview.budget.total }} history tokens
             </v-chip>
-
+            <v-chip v-if="preview.summary.knowledge_tokens" size="small" variant="tonal" label class="mb-4">{{ preview.summary.knowledge_tokens }} knowledge tokens</v-chip>
             <!-- Best Fit Mode -->
             <div class="sidebar-field mb-4">
               <v-checkbox
@@ -189,9 +212,24 @@
                 block
               >
                 Apply
-                <v-tooltip activator="parent" location="top">Apply settings to the summarization agent</v-tooltip>
+                <v-tooltip activator="parent" location="top">Apply history settings scene-wide, for every character</v-tooltip>
               </v-btn>
             </div>
+            <v-expansion-panels v-if="selectedCharacter" class="mt-4" :model-value="0" variant="accordion">
+              <v-expansion-panel>
+                <v-expansion-panel-title>Excluded ({{ preview.exclusion_total ?? preview.exclusions?.length ?? 0 }})</v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div v-for="(count, reason) in preview.exclusion_counts" :key="reason" class="text-body-small mb-1">{{ exclusionReason(reason) }}: {{ count }}</div>
+                  <div v-if="preview.exclusion_total > preview.exclusions?.length" class="text-body-small text-medium-emphasis mb-2">Showing up to 20 samples per reason; passage text is shortened.</div>
+                  <div v-if="!preview.exclusions?.length" class="text-body-small">No presence, audience or chronology exclusions.</div>
+                  <div v-for="item in preview.exclusions" :key="`${item.kind}:${item.id}:${item.layer}:${item.reason}`" class="exclusion-entry py-2">
+                    <v-chip size="x-small" color="warning" variant="tonal">{{ exclusionReason(item.reason) }}</v-chip>
+                    <div class="text-body-small text-medium-emphasis mt-1">{{ item.section }} · {{ item.id }}<template v-if="item.layer != null && item.kind === 'layer'"> · layer {{ item.layer }}</template></div>
+                    <div class="text-body-small exclusion-text">{{ item.text }}</div>
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
           </div>
         </v-col>
 
@@ -235,6 +273,17 @@
                 >
                   <div class="entry-text" v-html="renderEntry(entry)"></div>
                 </div>
+                <div v-if="section.full_evidence" class="pb-2">
+                  <v-btn
+                    variant="text"
+                    size="small"
+                    prepend-icon="mdi-code-tags"
+                    @click="toggleFullEvidence(idx)"
+                  >
+                    {{ fullEvidenceOpen[idx] ? 'Hide full analysis evidence' : 'Show full analysis evidence' }}
+                  </v-btn>
+                  <pre v-if="fullEvidenceOpen[idx]" class="full-evidence">{{ section.full_evidence }}</pre>
+                </div>
               </div>
 
             </template>
@@ -248,23 +297,34 @@
 
 <script>
 import { SceneTextParser } from '../utils/sceneMessageRenderer.js';
+import { v4 as uuidv4 } from 'uuid';
 
 const SECTION_COLORS = {
   layer: '#B39DDB',
   archived: '#FF8A65',
   dialogue: '#4FC3F7',
+  intro: '#64B5F6',
+  disclosure: '#AED581',
+  knowledge: '#AED581',
+  analysis: '#80CBC4',
 };
 
 const SECTION_ICONS = {
   layer: 'mdi-layers',
   archived: 'mdi-archive-outline',
   dialogue: 'mdi-message-text-outline',
+  intro: 'mdi-book-open-page-variant',
+  disclosure: 'mdi-account-voice',
+  knowledge: 'mdi-lightbulb-outline',
+  analysis: 'mdi-head-lightbulb-outline',
 };
 
 export default {
   props: {
     visible: Boolean,
     agentStatus: Object,
+    sceneId: { type: [String, Number], default: null },
+    connected: { type: Boolean, default: true },
   },
   inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'appConfig'],
   data() {
@@ -273,6 +333,15 @@ export default {
       applying: false,
       error: null,
       preview: null,
+      selectedCharacter: null,
+      activeCharacters: [],
+      previewHandler: null,
+      statusHandler: null,
+      perceptionStatus: null,
+      waitingPerceptionMessageId: null,
+      readyPerceptionMessages: new Set(),
+      refetchedPerceptionMessages: new Set(),
+      fullEvidenceOpen: {},
       overrides: {
         dialogue_ratio: 50,
         summary_detail_ratio: 50,
@@ -287,6 +356,9 @@ export default {
     };
   },
   computed: {
+    characterOptions() {
+      return [{ title: 'Scene (default)', value: null }, ...this.activeCharacters.map(name => ({ title: name, value: name }))];
+    },
     nonEmptySections() {
       if (!this.preview) return [];
       return this.preview.sections.filter(s => s.entries.length > 0);
@@ -339,28 +411,116 @@ export default {
     },
   },
   watch: {
+    selectedCharacter() {
+      if (this.visible) {
+        this.resetRequestOwnership({ clearPreview: true });
+        this.fetchPreview();
+      }
+    },
+    sceneId() {
+      this.resetRequestOwnership({ clearPreview: true });
+      this.activeCharacters = [];
+      if (this.visible && this.connected) this.fetchPreview();
+    },
+    connected(value) {
+      this.resetRequestOwnership({ clearPreview: !value });
+      if (value && this.visible) this.fetchPreview();
+    },
     visible: {
       immediate: true,
       handler(val) {
         if (val) {
           this.fetchPreview();
         } else {
+          this.clearPreviewHandler();
+          this.clearStatusHandler();
           this.preview = null;
+          this.selectedCharacter = null;
           this.error = null;
           this.overridesInitialized = false;
           this.savedValues = null;
+          this.perceptionStatus = null;
+          this.waitingPerceptionMessageId = null;
+          this.readyPerceptionMessages.clear();
+          this.refetchedPerceptionMessages.clear();
+          this.fullEvidenceOpen = {};
+          this.loading = false;
         }
       },
     },
   },
+  beforeUnmount() {
+    this.clearPreviewHandler();
+    this.clearStatusHandler();
+  },
   methods: {
+    perceptionKey(status) {
+      return [status.scene_id, status.message_id, status.selection_index,
+        status.selection_digest, status.selection_serial, this.selectedCharacter || 'scene'].join(':');
+    },
+    resetRequestOwnership({ clearPreview = false } = {}) {
+      this.clearPreviewHandler();
+      this.clearStatusHandler();
+      this.loading = false;
+      this.waitingPerceptionMessageId = null;
+      this.perceptionStatus = null;
+      this.readyPerceptionMessages.clear();
+      this.refetchedPerceptionMessages.clear();
+      if (clearPreview) this.preview = null;
+    },
+    clearPreviewHandler() {
+      if (this.previewHandler) this.unregisterMessageHandler(this.previewHandler);
+      this.previewHandler = null;
+    },
+    clearStatusHandler() {
+      if (this.statusHandler) this.unregisterMessageHandler(this.statusHandler);
+      this.statusHandler = null;
+    },
+    ensureStatusHandler() {
+      if (this.statusHandler) return;
+      this.statusHandler = (frame) => {
+        if (frame.type !== 'perception_status' || !this.visible || !this.connected) return;
+        const status = frame.data || {};
+        if (this.sceneId != null && status.scene_id !== this.sceneId) return;
+        if (this.selectedCharacter && !status.audiences?.includes(this.selectedCharacter)) return;
+        const key = this.perceptionKey(status);
+        if (status.state === 'ready') this.readyPerceptionMessages.add(key);
+        if (status.message_id !== this.waitingPerceptionMessageId) return;
+        this.perceptionStatus = status;
+        if (status.state !== 'ready') {
+          this.loading = false;
+          return;
+        }
+        this.waitingPerceptionMessageId = null;
+        this.readyPerceptionMessages.delete(key);
+        this.perceptionStatus = null;
+        if (!this.loading && !this.refetchedPerceptionMessages.has(key)) {
+          this.refetchedPerceptionMessages.add(key);
+          this.fetchPreview();
+        }
+      };
+      this.registerMessageHandler(this.statusHandler);
+    },
     fetchPreview() {
+      if (!this.connected) {
+        this.loading = false;
+        return;
+      }
+      this.clearPreviewHandler();
+      this.ensureStatusHandler();
       this.loading = true;
       this.error = null;
+      this.perceptionStatus = null;
+      const requestId = uuidv4();
+      const requestedCharacter = this.selectedCharacter;
+      const requestedSceneId = this.sceneId;
 
       const handler = (data) => {
+        if (data.request_id !== requestId) return;
+        if (this.selectedCharacter !== requestedCharacter || this.sceneId !== requestedSceneId) return;
         if (data.type === 'summarizer' && data.action === 'context_review') {
           this.preview = data.data;
+          this.activeCharacters = data.data.characters || [];
           if (!this.overridesInitialized) {
             this.overrides.dialogue_ratio = data.data.summary.dialogue_ratio ?? this.overrides.dialogue_ratio;
             this.overrides.summary_detail_ratio = data.data.summary.summary_detail_ratio ?? this.overrides.summary_detail_ratio;
@@ -373,19 +533,37 @@ export default {
             this.overridesInitialized = true;
           }
           this.loading = false;
-          this.unregisterMessageHandler(handler);
+          this.waitingPerceptionMessageId = null;
+          this.perceptionStatus = null;
+          this.clearPreviewHandler();
+        } else if (data.type === 'summarizer' && data.action === 'context_review_status') {
+          this.perceptionStatus = data.data;
+          this.waitingPerceptionMessageId = data.data.message_id;
+          this.loading = false;
+          this.clearPreviewHandler();
+          const key = this.perceptionKey(data.data);
+          if (this.readyPerceptionMessages.has(key) && !this.refetchedPerceptionMessages.has(key)) {
+            this.readyPerceptionMessages.delete(key);
+            this.refetchedPerceptionMessages.add(key);
+            this.waitingPerceptionMessageId = null;
+            this.perceptionStatus = null;
+            this.fetchPreview();
+          }
         } else if (data.type === 'summarizer' && data.action === 'operation_done' && data.error) {
           this.error = data.error.message || 'Failed to load context review';
           this.loading = false;
-          this.unregisterMessageHandler(handler);
+          this.clearPreviewHandler();
         }
       };
 
+      this.previewHandler = handler;
       this.registerMessageHandler(handler);
 
       const message = {
         type: 'summarizer',
         action: 'context_review',
+        character: this.selectedCharacter,
+        request_id: requestId,
       };
 
       if (this.overridesInitialized) {
@@ -398,7 +576,7 @@ export default {
       } else {
         this.error = 'WebSocket not connected';
         this.loading = false;
-        this.unregisterMessageHandler(handler);
+        this.clearPreviewHandler();
       }
     },
 
@@ -423,6 +601,10 @@ export default {
       return SECTION_COLORS[section.type] || '#9E9E9E';
     },
 
+    exclusionReason(reason) {
+      return { budget: 'Over token budget', absent: 'Absent', not_in_audience: 'Not in audience', chronology_floor: 'Below chronology floor', superseded: 'Superseded', hidden: 'Hidden', blocked: 'Blocked', pending: 'Perspective pending', failed: 'Perspective failed', omitted: 'View omitted' }[reason] || reason;
+    },
+
     sectionIcon(section) {
       return SECTION_ICONS[section.type] || 'mdi-text';
     },
@@ -433,6 +615,12 @@ export default {
 
     renderEntry(text) {
       return this.sceneParser.parse(text);
+    },
+    toggleFullEvidence(index) {
+      this.fullEvidenceOpen = {
+        ...this.fullEvidenceOpen,
+        [index]: !this.fullEvidenceOpen[index],
+      };
     },
   },
 };
@@ -450,6 +638,9 @@ export default {
   border-bottom: 1px solid rgba(var(--v-theme-primary), 0.05);
   padding-bottom: 12px;
 }
+
+.exclusion-entry + .exclusion-entry { border-top: 1px solid rgba(var(--v-theme-primary), 0.1); }
+.exclusion-text { white-space: normal; overflow-wrap: anywhere; }
 
 .note-block {
   padding: 4px 8px;
@@ -513,5 +704,13 @@ export default {
   border-radius: 4px;
   color: rgb(var(--v-theme-muted));
   background-color: transparent;
+}
+
+.full-evidence {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: rgba(var(--v-theme-primary), 0.06);
+  border-radius: 6px;
+  padding: 12px;
 }
 </style>

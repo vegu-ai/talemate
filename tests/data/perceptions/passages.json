@@ -1,0 +1,146 @@
+[
+  {
+    "name": "private-thought-public-speech",
+    "kind": "character",
+    "source": "player",
+    "prior": "Alice and Bob sit at the table. Cara is unconscious on the couch. Dan is in another town.",
+    "present": [
+      "Alice",
+      "Bob",
+      "Cara"
+    ],
+    "passage": "Alice: *Privately, Alice thinks of the sapphire hidden in her boot; she gives no outward sign.* \"The rain has stopped,\" she says clearly to Bob.",
+    "cast": {
+      "Alice": "Alice is awake.",
+      "Bob": "Bob is awake.",
+      "Cara": "Cara is in the room.",
+      "Dan": "Dan is away in another town."
+    },
+    "views": [
+      {
+        "audience": [
+          "Alice"
+        ],
+        "status": "ready",
+        "text": "Alice privately thinks of the sapphire hidden in her boot and tells Bob the rain has stopped."
+      },
+      {
+        "audience": [
+          "Bob"
+        ],
+        "status": "ready",
+        "text": "Alice tells Bob the rain has stopped."
+      },
+      {
+        "audience": [
+          "Cara"
+        ],
+        "status": "omitted",
+        "text": null
+      },
+      {
+        "audience": [
+          "Dan"
+        ],
+        "status": "omitted",
+        "text": null
+      }
+    ]
+  },
+  {
+    "name": "whisper",
+    "kind": "character",
+    "source": "ai",
+    "prior": "Alice sits beside Bob. Cara watches from across the room, too far away to hear a whisper. Dan is in another town.",
+    "present": [
+      "Alice",
+      "Bob",
+      "Cara"
+    ],
+    "passage": "Alice: *She leans to Bob and whispers too quietly for Cara to hear,* \"The key is inside the blue vase.\" *Cara can see Alice lean toward Bob, but cannot make out any words.*",
+    "cast": {
+      "Alice": "Alice is awake.",
+      "Bob": "Bob is awake.",
+      "Cara": "Cara is in the room.",
+      "Dan": "Dan is away in another town."
+    },
+    "views": [
+      {
+        "audience": [
+          "Alice"
+        ],
+        "status": "ready",
+        "text": "Alice whispers to Bob that the key is inside the blue vase."
+      },
+      {
+        "audience": [
+          "Bob"
+        ],
+        "status": "ready",
+        "text": "Alice whispers to Bob that the key is inside the blue vase."
+      },
+      {
+        "audience": [
+          "Cara"
+        ],
+        "status": "ready",
+        "text": "Cara sees Alice lean toward Bob but cannot make out any words."
+      },
+      {
+        "audience": [
+          "Dan"
+        ],
+        "status": "omitted",
+        "text": null
+      }
+    ]
+  },
+  {
+    "name": "unconscious-bystander",
+    "kind": "narrator",
+    "source": "narrate_scene",
+    "prior": "Alice and Bob are awake beside the couch. Cara remains deeply unconscious and cannot hear or see. Dan is in another town.",
+    "present": [
+      "Alice",
+      "Bob",
+      "Cara"
+    ],
+    "passage": "Bob speaks clearly to Alice: \"The courier said the north bridge collapsed, but I have not checked.\" Cara stays unconscious on the couch throughout.",
+    "cast": {
+      "Alice": "Alice is awake.",
+      "Bob": "Bob is awake.",
+      "Cara": "Cara is in the room.",
+      "Dan": "Dan is away in another town."
+    },
+    "views": [
+      {
+        "audience": [
+          "Alice"
+        ],
+        "status": "ready",
+        "text": "Bob tells Alice the courier said the north bridge collapsed, adding that he has not checked. Cara remains unconscious."
+      },
+      {
+        "audience": [
+          "Bob"
+        ],
+        "status": "ready",
+        "text": "Bob tells Alice the courier reported the north bridge collapsed and that he has not checked. Cara remains unconscious."
+      },
+      {
+        "audience": [
+          "Cara"
+        ],
+        "status": "omitted",
+        "text": null
+      },
+      {
+        "audience": [
+          "Dan"
+        ],
+        "status": "omitted",
+        "text": null
+      }
+    ]
+  }
+]

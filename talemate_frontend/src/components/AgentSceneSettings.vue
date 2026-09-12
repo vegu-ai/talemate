@@ -35,7 +35,7 @@
     <div v-for="(action_config, config_key) in actionSchema.config" :key="config_key">
       <div v-if="action_config.scene_overridable && (fieldConditionMet(action_config) || isOverrideActive(config_key))">
         <UxField
-          :field="action_config"
+          :field="displayField(config_key, action_config)"
           :model-value="effectiveValue(config_key)"
           :readonly="!isOverrideActive(config_key)"
           :templates="templates"
@@ -70,12 +70,14 @@
 
 <script>
 import { actionHasOverridable, effectiveConditionMet, hasEnabledOverride } from '@/constants/sceneAgentSettings';
+import { worldStatePinField } from '@/utils/worldStatePinWarning';
 import UxField from './UxField.vue';
 import SceneOverrideToggle from './SceneOverrideToggle.vue';
 
 export default {
   components: { UxField, SceneOverrideToggle },
   props: {
+    actionKey: { type: String, required: true },
     // Live mutable global action (deep clone owned by the modal). Read for
     // global values; NOT mutated by this component.
     action: { type: Object, required: true },
@@ -128,6 +130,16 @@ export default {
         return this.overrides.config[configKey].value;
       }
       return this.action?.config?.[configKey]?.value;
+    },
+    displayField(configKey, field) {
+      return worldStatePinField({
+        actionKey: this.actionKey,
+        configKey,
+        field,
+        enabled: !!this.effectiveEnabled,
+        pin: this.effectiveValue('inject_as_scene_memory'),
+        turns: this.effectiveValue('turns'),
+      });
     },
     // ------------------------------------------------------------------
     // Mutation helpers — every change emits update:overrides with a fresh

@@ -88,11 +88,13 @@ class FakeScene:
         # n-th @set_processing entry raises GenerationCancelled
         self.cancel_on_action = cancel_on_action
         self.action_count = 0
+        self.cancel_sequence = 0
 
     def continue_actions(self):
         self.action_count += 1
         if self.cancel_on_action and self.action_count >= self.cancel_on_action:
-            raise GenerationCancelled("action cancelled")
+            self.cancel_sequence += 1
+            raise GenerationCancelled("action cancelled", by_user=True)
 
     def emit_status(self):
         pass

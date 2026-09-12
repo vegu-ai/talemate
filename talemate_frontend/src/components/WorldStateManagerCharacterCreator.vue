@@ -248,6 +248,9 @@ export default {
             // Handle director responses
             if (message.type === 'director' && message.action === 'character_persisted') {
                 this.busy = false;
+                if (!message.character) {
+                    return;
+                }
                 this.$emit('character-created', message.character)
                 if(this.character.created) {
                     this.character.created(message.character);

@@ -3,10 +3,9 @@ import structlog
 import random
 from typing import TYPE_CHECKING
 
-from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
-from talemate.status import set_loading
+from talemate.status import LoadingLabel, set_loading, set_loading_label
 from talemate.scene_message import DirectorMessage
 
 if TYPE_CHECKING:
@@ -60,14 +59,15 @@ class ConversationWebsocketHandler(Plugin):
             actor = random.choice(npcs).actor
             character = actor.character
 
+        set_loading_label(LoadingLabel("Generating {}'s next action", character.name))
+
         if payload.instructions_through_director:
             director_message = DirectorMessage(
                 payload.instructions,
                 source="player",
                 meta={"character": character.name},
             )
-            emit("director", message=director_message, character=character)
-            await self.scene.push_history(director_message)
+            await self.scene.push_history(director_message, emit_message=True)
             generated_messages = await self.agent.converse(
                 actor, emit_signals=payload.emit_signals
             )
@@ -79,5 +79,4 @@ class ConversationWebsocketHandler(Plugin):
             )
 
         for message in generated_messages:
-            await self.scene.push_history(message)
-            emit("character", message=message, character=character)
+            await self.scene.push_history(message, emit_message=True)

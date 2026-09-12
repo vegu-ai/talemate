@@ -1,6 +1,6 @@
 [project]
 name = "talemate"
-version = "0.40.0.dev2"
+version = "0.40.0.dev3"
 description = "AI-backed roleplay and narrative tools"
 authors = [{name = "VeguAITools"}]
 license = {text = "GNU Affero General Public License v3.0"}
@@ -48,7 +48,7 @@ dependencies = [
     "sseclient-py>=1.8.0",
     "ollama>=0.5.1",
     # ChromaDB
-    "chromadb>=1.0.12",
+    "chromadb>=1.5.0",
     "torch>=2.7.1",
     "torchaudio>=2.7.1",
     "sentence_transformers>=2.7.0",

@@ -8,6 +8,7 @@ Override example:
 -#}
 {# RENDERED CONTEXT #}
 {% set rendered_context -%}
+{% include "character-evidence-planning.jinja2" %}
 <|SECTION:Conversation Context|>
 This is a chat between you ({% if persona_name %}{{ persona_name }}, {% else %}the Director{% endif %}) and the user about a fictional scene in a dynamic storytelling/roleplaying text-based experience provided through a system called Talemate. 
 

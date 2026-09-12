@@ -1,11 +1,15 @@
+import asyncio
 import os
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, Union
+from typing import TYPE_CHECKING, Any, Callable, Union, get_args
 
 import pydantic
 import structlog
 
 import talemate.world_state.templates as world_state_templates
+from talemate.knowledge.intro import initialize_intro_audience
+from talemate.knowledge.memory import invalidate_memory_audiences
+from talemate.knowledge.chronology import render_fact
 from talemate.agents.tts.util import get_voice
 from talemate.config import commit_config, get_config
 from talemate.config.schema import SceneAppearance, SceneToolShortcut
@@ -23,6 +27,33 @@ from talemate.character import (
 from talemate.instance import get_agent
 from talemate.emit import emit
 from talemate.util import replace_smart_quotes
+from talemate.knowledge.disclosures import grant_disclosure
+from talemate.knowledge.entry import _item_from_id, SHEET_KINDS
+from talemate.knowledge.perspective_models import Disclosure
+from talemate.knowledge.mode import KnowledgeEligibility, character_knowledge_enabled
+from talemate.knowledge.perspectives import clear_perspective_records
+from talemate.knowledge.schema import (
+    EntryVisibility,
+    KnowledgeEdge,
+    TopicCoverage,
+    ReinforcementEntry,
+    is_memory_attribute,
+    KnownFact,
+    TopicFact,
+)
+from talemate.knowledge.changes import (
+    KnowledgeChange,
+    edge_change,
+    edge_changes_knowledge,
+    emit_knowledge_changes,
+)
+from talemate.knowledge.topics import (
+    awareness_line,
+    coverage,
+    known_bucket,
+    known_facts,
+    topics_facts,
+)
 from talemate.world_state import (
     ContextPin,
     ManualContext,
@@ -132,6 +163,26 @@ class CharacterDetails(pydantic.BaseModel):
     shared_attributes: list[str] = []
     shared_details: list[str] = []
     folder: str | None = None
+    visibility: dict[str, EntryVisibility] = {}
+
+
+class KnowledgeTarget(pydantic.BaseModel):
+    id: str
+    label: str
+    kind: str
+
+
+class CharacterKnowledge(pydantic.BaseModel):
+    perception_mode: bool = False
+    disclosures: list[Disclosure] = []
+    name: str
+    edges: list[KnowledgeEdge] = []
+    targets: list[KnowledgeTarget] = []
+    coverage: list[TopicCoverage] = []
+    known_facts: list[KnownFact] = []
+    known_facts_total: int = 0
+    known_fact_ids: list[str] = []
+    awareness: str | None = None
 
 
 class World(pydantic.BaseModel):
@@ -264,6 +315,7 @@ class WorldStateManager:
             shared_attributes=character.shared_attributes,
             shared_details=character.shared_details,
             folder=character.folder,
+            visibility=character.visibility,
         )
 
         # sorted base attributes
@@ -638,7 +690,13 @@ class WorldStateManager:
         self.world_state.emit()
 
     async def save_world_entry(
-        self, entry_id: str, text: str, meta: dict, pin: bool = False
+        self,
+        entry_id: str,
+        text: str,
+        meta: dict,
+        pin: bool = False,
+        *,
+        reinforcement: ReinforcementEntry | None = None,
     ):
         """
         Saves a manual world entry with specified text and metadata.
@@ -650,10 +708,257 @@ class WorldStateManager:
         """
         meta["source"] = "manual"
         meta["typ"] = "world_state"
-        await self.update_context_db_entry(entry_id, text, meta)
+        await self.update_context_db_entry(
+            entry_id, text, meta, reinforcement=reinforcement
+        )
 
         if pin:
             await self.set_pin(entry_id, active=True)
+
+    async def set_world_entry_visibility(
+        self, entry_id: str, visibility: EntryVisibility
+    ):
+        self.world_state.manual_context[entry_id].visibility = visibility
+        invalidate_memory_audiences(self.scene)
+
+    async def set_character_entry_visibility(
+        self, character_name: str, key: str, visibility: EntryVisibility
+    ):
+        """
+        `key` is the memory storage key of the entry: "description", an
+        attribute name, or "detail.<name>". An `everyone` setting is the
+        default and is removed rather than stored.
+        """
+        character = self.scene.get_character(character_name)
+        if visibility.mode == "everyone":
+            character.visibility.pop(key, None)
+        else:
+            character.visibility[key] = visibility
+        invalidate_memory_audiences(self.scene)
+
+    def knowledge_targets(self) -> list[KnowledgeTarget]:
+        """Everything a knowledge edge can point at, by memory document id."""
+        targets: list[KnowledgeTarget] = []
+        for character in self.scene.character_data.values():
+            name = character.name
+            if character.description and "description" not in character.base_attributes:
+                targets.append(
+                    KnowledgeTarget(
+                        id=f"{name}.description",
+                        label=f"{name}: description",
+                        kind="description",
+                    )
+                )
+            for attr in sorted(character.base_attributes):
+                if not is_memory_attribute(attr):
+                    continue
+                targets.append(
+                    KnowledgeTarget(
+                        id=f"{name}.{attr}",
+                        label=f"{name}: {attr}",
+                        kind="description" if attr == "description" else "attribute",
+                    )
+                )
+            for key in sorted(character.details):
+                targets.append(
+                    KnowledgeTarget(
+                        id=f"{name}.detail.{key}", label=f"{name}: {key}", kind="detail"
+                    )
+                )
+        for entry in self.world_state.manual_context.values():
+            targets.append(
+                KnowledgeTarget(id=entry.id, label=entry.id, kind="world_entry")
+            )
+        for entry in self.scene.archived_history:
+            if not entry.get("id"):
+                continue
+            text = entry.get("text", "")
+            static = entry.get("end") is None
+            targets.append(
+                KnowledgeTarget(
+                    id=entry["id"],
+                    label=f"{'static history' if static else 'history'}: {text[:60]}",
+                    kind="static" if static else "history",
+                )
+            )
+        for layer_index, layer in enumerate(self.scene.layered_history or [], start=1):
+            for entry in layer:
+                if not entry.get("id"):
+                    continue
+                targets.append(
+                    KnowledgeTarget(
+                        id=entry["id"],
+                        label=f"history (layer {layer_index}): {entry.get('text', '')[:60]}",
+                        kind="history",
+                    )
+                )
+        for fact in self.world_state.facts.values():
+            targets.append(
+                KnowledgeTarget(
+                    id=fact.id,
+                    label=f"fact: {render_fact(self.scene, fact, include_id=False)[:100]}",
+                    kind="fact",
+                )
+            )
+        # Resolve collisions with the same precedence as graph and disclosure grants.
+        grouped = {}
+        for target in targets:
+            grouped.setdefault(target.id, []).append(target)
+        offered = []
+        for identity, candidates in grouped.items():
+            if len(candidates) == 1 and candidates[0].kind not in SHEET_KINDS:
+                offered.append(candidates[0])
+                continue
+            item = _item_from_id(self.scene, identity)
+            if item:
+                target = next(
+                    (entry for entry in candidates if entry.kind == item.kind), None
+                )
+                if target:
+                    offered.append(target)
+        return offered
+
+    async def get_character_knowledge(self, character_name: str) -> CharacterKnowledge:
+        edges = [
+            edge
+            for edge in self.world_state.knowledge
+            if edge.character == character_name
+            and not (edge.kind == "revoke" and character_knowledge_enabled(self.scene))
+        ]
+        known = known_bucket(self.scene, character_name)
+        recent, total = known_facts(
+            self.scene, character_name, known=known, prompt=False
+        )
+        return CharacterKnowledge(
+            name=character_name,
+            perception_mode=character_knowledge_enabled(self.scene),
+            known_facts=recent,
+            known_facts_total=total,
+            known_fact_ids=[fact.id for fact in known],
+            disclosures=(
+                [
+                    item
+                    for item in self.scene.knowledge.disclosures
+                    if character_name in item.audience
+                ]
+                if self.scene.knowledge and character_knowledge_enabled(self.scene)
+                else []
+            ),
+            edges=edges,
+            targets=self.knowledge_targets(),
+            coverage=coverage(self.scene, character_name, known=known),
+            awareness=awareness_line(self.scene, character_name),
+        )
+
+    def get_topics_facts(
+        self, character_name: str, topic_ids: list[str]
+    ) -> dict[str, list[TopicFact]]:
+        return topics_facts(self.scene, character_name, topic_ids)
+
+    def grant_character_disclosure(
+        self, character, target, *, text=None, whole_entry=False
+    ):
+        return grant_disclosure(
+            self.scene, character, target, text=text, whole_entry=whole_entry
+        )
+
+    def character_entry_briefing(self, character: str, disclosure_id: str):
+        """Resolve one entry-briefing disclosure for its exact audience."""
+
+        from talemate.agents.conversation.entry_context import (
+            perspective_entry_briefing,
+        )
+
+        if not character_knowledge_enabled(self.scene):
+            raise ValueError(
+                "Character entry briefing controls require perception mode"
+            )
+        if self.scene.get_character(character) is None:
+            raise ValueError(f"Unknown character: {character}")
+        disclosure = perspective_entry_briefing(self.scene, character, disclosure_id)
+        if disclosure is None:
+            raise ValueError("Character entry briefing disclosure does not exist")
+        return disclosure
+
+    def remove_character_entry_briefing(
+        self, character: str, disclosure_id: str
+    ) -> Disclosure:
+        """Remove only a validated generated entry briefing disclosure."""
+
+        from talemate.agents.conversation.entry_context import (
+            remove_perspective_entry_briefing,
+        )
+
+        self.character_entry_briefing(character, disclosure_id)
+        return remove_perspective_entry_briefing(self.scene, character, disclosure_id)
+
+    def grant_facts(self, name: str, fact_ids: list[str]) -> list[KnowledgeChange]:
+        """Grant several facts at once; a grant lifts an earlier block on the same fact."""
+        if character_knowledge_enabled(self.scene):
+            raise ValueError(
+                "Grants are unavailable in perception mode; a character knows a fact through what they perceived or were given."
+            )
+        world_state = self.world_state
+        changes = []
+        for fact_id in dict.fromkeys(fact_ids):
+            if fact_id not in world_state.facts:
+                continue
+            before = list(world_state.knowledge)
+            self._lift_block(name, fact_id)
+            edge = KnowledgeEdge(
+                character=name,
+                target=fact_id,
+                kind="grant",
+                source="manual",
+                ts=self.scene.ts,
+            )
+            world_state.knowledge.append(edge)
+            if edge_changes_knowledge(edge, before, world_state.knowledge):
+                changes.append(edge_change(edge))
+            else:
+                world_state.knowledge = before
+        if changes:
+            emit_knowledge_changes(self.scene, changes)
+        return changes
+
+    def _lift_block(self, name: str, target: str):
+        """An explicit Allow after a Block on the same target lifts the block."""
+        self.world_state.knowledge = [
+            edge
+            for edge in self.world_state.knowledge
+            if not (
+                edge.character == name
+                and edge.target == target
+                and edge.kind == "revoke"
+            )
+        ]
+
+    async def set_knowledge_edge(self, edge: KnowledgeEdge) -> KnowledgeEdge:
+        """Upsert by id; a new edge takes the scene time; a new grant lifts a block."""
+        if edge.kind == "revoke" and character_knowledge_enabled(self.scene):
+            raise ValueError(
+                "Revokes are unavailable in perception mode; knowledge cannot be erased."
+            )
+        if edge.ts is None:
+            edge.ts = self.scene.ts
+        previous = list(self.world_state.knowledge)
+        for idx, existing in enumerate(self.world_state.knowledge):
+            if existing.id == edge.id:
+                self.world_state.knowledge[idx] = edge
+                if edge_changes_knowledge(edge, previous, self.world_state.knowledge):
+                    emit_knowledge_changes(self.scene, [edge_change(edge)])
+                return edge
+        if edge.kind == "grant":
+            self._lift_block(edge.character, edge.target)
+        self.world_state.knowledge.append(edge)
+        if edge_changes_knowledge(edge, previous, self.world_state.knowledge):
+            emit_knowledge_changes(self.scene, [edge_change(edge)])
+        return edge
+
+    async def remove_knowledge_edge(self, edge_id: str):
+        self.world_state.knowledge = [
+            edge for edge in self.world_state.knowledge if edge.id != edge_id
+        ]
 
     async def set_world_entry_shared(self, entry_id: str, shared: bool):
         """
@@ -661,7 +966,14 @@ class WorldStateManager:
         """
         self.world_state.manual_context[entry_id].shared = shared
 
-    async def update_context_db_entry(self, entry_id: str, text: str, meta: dict):
+    async def update_context_db_entry(
+        self,
+        entry_id: str,
+        text: str,
+        meta: dict,
+        *,
+        reinforcement: ReinforcementEntry | None = None,
+    ):
         """
         Updates an entry in the context database with new text and metadata.
 
@@ -680,13 +992,41 @@ class WorldStateManager:
                 meta=meta,
                 id=entry_id,
                 shared=existing.shared if existing else False,
+                visibility=existing.visibility if existing else EntryVisibility(),
+                reinforcement=(
+                    reinforcement
+                    if reinforcement is not None
+                    else (
+                        existing.reinforcement
+                        if existing and existing.text == text
+                        else None
+                    )
+                ),
             )
         elif meta.get("typ") == "details":
             # character detail needs to be mirrored to the
             # character object in the scene
             character_name = meta.get("character")
             character = self.scene.get_character(character_name)
-            character.details[meta.get("detail")] = text
+            detail = meta.get("detail")
+            if detail in character.reinforcement_entries:
+                binding = character.reinforcement_entries[detail]
+                detail_text = character.details.get(detail)
+                # The context DB editor submits the stored document, including
+                # its heading, rather than the character's raw detail value.
+                documents = await self.memory_agent.get_document(entry_id)
+                if (
+                    character.reinforcement_entries.get(detail) is not binding
+                    or character.details.get(detail) != detail_text
+                ):
+                    log.debug("update_context_db_entry.stale_detail", entry_id=entry_id)
+                    return
+                previous = documents.get(entry_id)
+                if previous is None or previous.raw != text:
+                    character.reinforcement_entries.pop(detail, None)
+            heading = f"{character.name} - {detail}: "
+            character.details[detail] = text.removeprefix(heading)
+            text = f"{heading}{character.details[detail]}"
 
         await self.memory_agent.add_many([{"id": entry_id, "text": text, "meta": meta}])
 
@@ -697,10 +1037,21 @@ class WorldStateManager:
         Arguments:
             entry_id: The identifier of the world entry to be deleted.
         """
+        # A running store deletion cannot be cancelled. Finish removing its
+        # authored source before audience reconciliation can recreate it.
+        operation = asyncio.create_task(self._delete_context_db_entry(entry_id))
+        try:
+            await asyncio.shield(operation)
+        except asyncio.CancelledError:
+            await asyncio.shield(operation)
+            raise
+
+    async def _delete_context_db_entry(self, entry_id: str):
         await self.memory_agent.delete({"ids": entry_id})
 
         if entry_id in self.world_state.manual_context:
             del self.world_state.manual_context[entry_id]
+        invalidate_memory_audiences(self.scene)
 
         await self.remove_pin(entry_id)
 
@@ -1314,6 +1665,20 @@ class WorldStateManager:
 
         return scene
 
+    def _validate_knowledge_eligibility(self, value):
+        if value is None:
+            return
+        if value not in get_args(KnowledgeEligibility):
+            raise ValueError("Character knowledge mode must be legacy or perception.")
+        if (
+            value != self.scene.knowledge_eligibility
+            and not self.scene.can_change_knowledge_eligibility
+        ):
+            raise ValueError(
+                "Character perspectives can only be changed when the scene "
+                "has no history or archived history."
+            )
+
     async def update_scene_settings(
         self,
         immutable_save: bool = False,
@@ -1322,22 +1687,15 @@ class WorldStateManager:
         agent_persona_templates: dict[str, str] | None = None,
         visual_style_template: str | None = None,
         restore_from: str | None = None,
+        knowledge_eligibility: KnowledgeEligibility | None = None,
         **agent_settings_kwargs,
     ) -> "Scene":
         scene = self.scene
-        scene.immutable_save = immutable_save
-        scene.experimental = experimental
-        scene.writing_style_template = writing_style_template
-        scene.visual_style_template = visual_style_template
-        if agent_persona_templates is not None:
-            scene.agent_persona_templates = agent_persona_templates or {}
-
+        self._validate_knowledge_eligibility(knowledge_eligibility)
         if restore_from and restore_from not in scene.save_files:
             raise ValueError(
                 f"Restore file {restore_from} not found in scene save files."
             )
-
-        scene.restore_from = restore_from
 
         # Caller strips agent_settings_* keys from kwargs when the inbound
         # payload didn't set them (see handle_update_scene_settings). Their
@@ -1352,6 +1710,28 @@ class WorldStateManager:
             filename=link_filename,
             opted_out_clear=opted_out_clear,
         )
+
+        if (
+            knowledge_eligibility is not None
+            and knowledge_eligibility != scene.knowledge_eligibility
+        ):
+            self._validate_knowledge_eligibility(knowledge_eligibility)
+            if knowledge_eligibility == "legacy":
+                await self.memory_agent.purge_audience_index(scene)
+                self._validate_knowledge_eligibility(knowledge_eligibility)
+                clear_perspective_records(scene)
+            scene.knowledge_eligibility = knowledge_eligibility
+            if knowledge_eligibility == "perception":
+                initialize_intro_audience(scene)
+            invalidate_memory_audiences(scene)
+
+        scene.immutable_save = immutable_save
+        scene.experimental = experimental
+        scene.writing_style_template = writing_style_template
+        scene.visual_style_template = visual_style_template
+        if agent_persona_templates is not None:
+            scene.agent_persona_templates = agent_persona_templates or {}
+        scene.restore_from = restore_from
 
         return scene
 

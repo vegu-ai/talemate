@@ -1,0 +1,8 @@
+{% if character_knowledge_enabled(scene) %}
+{% set cast_evidence = agent_action("director", "guidance_context", budget=max_tokens // 3) %}
+{% for evidence in cast_evidence %}{% include "character-evidence-context.jinja2" %}{% endfor %}
+<|SECTION:AUTHOR PLANNING BOUNDARY|>
+You may use the broader reader context to discuss or plan the story. It is not shared character knowledge. When directing a character, use only that character's evidence above for what motivates their behavior or what they can act on. If their evidence is unavailable, do not infer it from the reader story. You may plan a future disclosure, but the character cannot act on it until it has occurred and entered their evidence.
+<|CLOSE_SECTION|>
+{% include "character-evidence-rules.jinja2" %}
+{% endif %}

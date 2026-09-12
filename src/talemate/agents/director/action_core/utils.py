@@ -27,6 +27,9 @@ from talemate.util.prompt import (
     auto_close_tags,
 )
 from talemate.instance import get_agent
+from talemate.knowledge.advice import advice_fingerprint, require_current_advice
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.processing import wait_for_evidence_writers
 from talemate.agents.director.response_specs import (
     MESSAGE_SPEC,
     DECISION_SPEC,
@@ -655,6 +658,13 @@ async def execute_actions(
 
         async def _make_fn(wrapper, action_name: str):
             async def _call(**kwargs):
+                nonlocal batch_admitted
+                if check_evidence and not batch_admitted:
+                    require_current_advice(
+                        get_agent("director"), scene, None, fingerprint
+                    )
+                    # A generated batch may change its own evidence after admission.
+                    batch_admitted = True
                 try:
                     return await wrapper(**kwargs)
                 except ActionRejected:
@@ -740,6 +750,7 @@ async def execute_actions(
         ordered_reasons=selection_instructions,
         ordered_argument_usage=ordered_argument_usage,
         has_character_callback=has_character_callback,
+        trim_action_history=reverse_trim_history,
     )
 
     async def on_call_complete(call: focal.Call):
@@ -754,6 +765,14 @@ async def execute_actions(
         result_messages.append(action_msg)
         if on_action_complete:
             await on_action_complete(action_msg)
+
+    await wait_for_evidence_writers(
+        scene, agent=get_agent("director"), purpose="scene direction"
+    )
+    fingerprint = advice_fingerprint(scene)
+
+    check_evidence = character_knowledge_enabled(scene)
+    batch_admitted = False
 
     with focal.FocalContext() as focal_context:
         focal_context.hooks_after_call.append(on_call_complete)

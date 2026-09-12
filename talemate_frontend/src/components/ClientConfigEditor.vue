@@ -63,6 +63,7 @@
           <v-combobox v-if="meta.manual_model && modelChoices" v-model="values.model" :items="modelChoices" label="Model" density="compact"></v-combobox>
           <v-text-field v-else-if="meta.manual_model" v-model="values.model" label="Manually specify model name" density="compact"
             hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>
+          <ModelExpectationsPanel compact class="mb-2" />
 
           <!-- EXTRA FIELDS WITHOUT A GROUP -->
           <UxField v-for="field in generalExtraFields" :key="field.name" :field="field"
@@ -71,6 +72,9 @@
           <v-row class="mt-1">
             <v-col cols="4" data-setting-anchor="max_token_length">
               <v-number-input v-model="values.max_token_length" label="Context Length" :rules="rulesMaxTokenLength" :step="64"></v-number-input>
+            </v-col>
+            <v-col v-if="contextLengthWarning" cols="12" class="pt-0">
+              <v-alert type="warning" variant="tonal" density="compact" icon="mdi-alert-outline">{{ contextLengthWarning }}</v-alert>
             </v-col>
 
             <!-- PROMPT TEMPLATE -->
@@ -342,9 +346,11 @@ import { markRaw } from 'vue';
 import { conditionMet } from '@/utils/uxConditions';
 import { countOverrides } from '@/utils/agentActionOverrides';
 import { TOKEN_GRADUATIONS } from '@/utils/clientPresets';
+import { contextLengthWarning } from '@/constants/modelExpectations';
 import AppConfigPresetsSystemPrompts from './AppConfigPresetsSystemPrompts.vue';
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
 import GraduatedSlider from './GraduatedSlider.vue';
+import ModelExpectationsPanel from './ModelExpectationsPanel.vue';
 import UxField from './UxField.vue';
 
 // Sections that exist as hardcoded panels — extra fields whose group name
@@ -370,6 +376,7 @@ export default {
     AppConfigPresetsSystemPrompts,
     ConfigWidgetUnifiedApiKey,
     GraduatedSlider,
+    ModelExpectationsPanel,
     UxField,
   },
   props: {
@@ -474,6 +481,9 @@ export default {
     },
     modelName() {
       return this.status?.model_name || this.values.model;
+    },
+    contextLengthWarning() {
+      return contextLengthWarning(this.values.max_token_length);
     },
     // runtime capabilities — only the live client knows these, the defaults
     // below are what a not-yet-instantiated client would report

@@ -16,6 +16,7 @@ Roleplay with AI with a focus on strong narration and consistent world and game 
 ### First steps
 
 - [Setup Wizard](getting-started/setup-wizard.md) - Initial configuration on first launch
+- [Model expectations](getting-started/model-expectations.md) - What Talemate needs from your model
 - [Connect a client](getting-started/connect-a-client.md)
 - [Load a scene](getting-started/load-a-scene.md)
 - [Interact with the scene](user-guide/interacting)

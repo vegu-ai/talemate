@@ -1,0 +1,375 @@
+{
+  "title": "Director Action Assess Visibility",
+  "id": "ee6a849b-5187-4183-9afd-777684fd7616",
+  "properties": {
+    "name": "assess_visibility",
+    "description": "Only on an explicit user request, assess Known by visibility for all attributes or all details of one character, or selected world entries. Best effort; preserve intentional restrictions unless the user explicitly requests reassessment. Report mixed public/private entries for manual splitting. Never use as an automatic sweep.",
+    "instructions": "Assess only the scope the user requested. Use scope=attributes or details with one character, or scope=world_entries with explicit world entry names/Context IDs. Maximum 32 eligible entries per action (restricted and empty entries are excluded first). Carry the user goal and relevant supplied context in instructions. Set reassess=true only if the user explicitly asks to reconsider existing restrictions; otherwise false. Do not grant knowledge or make anyone forget. This action runs one assessment request and uses the normal batch write confirmation.",
+    "example_json": "[{\"scope\": \"attributes\", \"character\": \"Alice\", \"world_entries\": [], \"instructions\": \"Assess which attributes are common knowledge and which are private.\", \"reassess\": false}]",
+    "allow_concurrent": false
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/chat/directorActionAssessVisibility",
+  "nodes": {
+    "9d28e5a4-d222-4362-95ac-18affcf118d8": {
+      "id": "9d28e5a4-d222-4362-95ac-18affcf118d8",
+      "title": "Start",
+      "registry": "core/MakeBool",
+      "properties": {
+        "value": true
+      },
+      "x": 0,
+      "y": 0,
+      "width": 230,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "base_type": "core/Node"
+    },
+    "f30a625b-f8ee-4693-ba87-2fa7750d24a1": {
+      "id": "f30a625b-f8ee-4693-ba87-2fa7750d24a1",
+      "title": "Visibility assessment",
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "properties": {
+        "group": "Update Context",
+        "action_id": "assess_visibility.assess",
+        "action_title": "Assess Visibility",
+        "description_chat": "Only on an explicit user request, assess Known by visibility for all attributes or all details of one character, or selected world entries. Best effort; preserve intentional restrictions unless the user explicitly requests reassessment. Report mixed public/private entries for manual splitting. Never use as an automatic sweep.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Assess all attributes of Alice for public or private knowledge.",
+          "Assess the world entries Hidden Door and Town Square. Preserve intentional restrictions.",
+          "Reassess all details of Alice, including existing restrictions."
+        ],
+        "availability": "chat",
+        "force_enabled": false
+      },
+      "x": 300,
+      "y": 0,
+      "width": 230,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "base_type": "core/Node"
+    },
+    "582b3d58-fe52-4792-99fc-9c1da16c041a": {
+      "id": "582b3d58-fe52-4792-99fc-9c1da16c041a",
+      "title": "Assess",
+      "registry": "agents/director/AssessEntryVisibility",
+      "properties": {},
+      "x": 650,
+      "y": 0,
+      "width": 230,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "base_type": "core/Node"
+    },
+    "fc1ae136-6ff7-4c76-bcaa-794f8fd60c1d": {
+      "id": "fc1ae136-6ff7-4c76-bcaa-794f8fd60c1d",
+      "title": "Confirm",
+      "registry": "agents/director/chat/ActionConfirm",
+      "properties": {
+        "name": "assess_visibility",
+        "raise_on_reject": true
+      },
+      "x": 950,
+      "y": 0,
+      "width": 230,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "base_type": "core/Node"
+    },
+    "c8fe0523-90c1-405f-a6d5-2ae73eefe43c": {
+      "id": "c8fe0523-90c1-405f-a6d5-2ae73eefe43c",
+      "title": "Apply",
+      "registry": "agents/director/ApplyVisibilityAssessment",
+      "properties": {},
+      "x": 1250,
+      "y": 0,
+      "width": 230,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "base_type": "core/Node"
+    },
+    "eb0e8b66-0c74-4ed5-97bf-a0e1cc2ae832": {
+      "id": "eb0e8b66-0c74-4ed5-97bf-a0e1cc2ae832",
+      "title": "Result",
+      "registry": "core/Coallesce",
+      "properties": {},
+      "x": 1850,
+      "y": 0,
+      "width": 230,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "base_type": "core/Node"
+    },
+    "924a712c-79eb-4574-9c1a-e913341cd969": {
+      "id": "924a712c-79eb-4574-9c1a-e913341cd969",
+      "title": "Return",
+      "registry": "core/functions/Return",
+      "properties": {},
+      "x": 2150,
+      "y": 0,
+      "width": 230,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "base_type": "core/Node"
+    },
+    "cff1d8dc-c1a2-4574-9f73-f8b1e07fa22e": {
+      "id": "cff1d8dc-c1a2-4574-9f73-f8b1e07fa22e",
+      "title": "scope",
+      "registry": "agents/director/chat/ActionArgument",
+      "properties": {
+        "name": "scope",
+        "typ": "str",
+        "instructions": "Required: attributes, details, or world_entries. Never infer all world entries from an empty selection."
+      },
+      "x": 0,
+      "y": 350,
+      "width": 230,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "base_type": "core/Node"
+    },
+    "3b60da7a-1fc2-4f32-a626-47be038c9495": {
+      "id": "3b60da7a-1fc2-4f32-a626-47be038c9495",
+      "title": "character",
+      "registry": "agents/director/chat/ActionArgument",
+      "properties": {
+        "name": "character",
+        "typ": "str",
+        "instructions": "Existing character name for attributes/details; null for world_entries."
+      },
+      "x": 300,
+      "y": 350,
+      "width": 230,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "base_type": "core/Node"
+    },
+    "b3cceaa6-f3a5-4385-bb4e-d3fc4184fc61": {
+      "id": "b3cceaa6-f3a5-4385-bb4e-d3fc4184fc61",
+      "title": "world_entries",
+      "registry": "agents/director/chat/ActionArgument",
+      "properties": {
+        "name": "world_entries",
+        "typ": "list",
+        "instructions": "For world_entries, explicit world entry names or Context IDs; [] for character scopes."
+      },
+      "x": 600,
+      "y": 350,
+      "width": 230,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "base_type": "core/Node"
+    },
+    "477dc7c9-03a6-49ca-a287-716fdae3bd70": {
+      "id": "477dc7c9-03a6-49ca-a287-716fdae3bd70",
+      "title": "instructions",
+      "registry": "agents/director/chat/ActionArgument",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "The user-requested assessment goal and relevant context; no invented reassessment authorization."
+      },
+      "x": 900,
+      "y": 350,
+      "width": 230,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "base_type": "core/Node"
+    },
+    "50adc16b-3372-4eca-9bce-ab0da57e9130": {
+      "id": "50adc16b-3372-4eca-9bce-ab0da57e9130",
+      "title": "reassess",
+      "registry": "agents/director/chat/ActionArgument",
+      "properties": {
+        "name": "reassess",
+        "typ": "bool",
+        "instructions": "False unless the user explicitly requests reassessment of existing intentional restrictions."
+      },
+      "x": 1200,
+      "y": 350,
+      "width": 230,
+      "height": 180,
+      "collapsed": false,
+      "inherited": false,
+      "base_type": "core/Node"
+    },
+    "92f91b55-3696-43c0-8867-4961685e8108": {
+      "title": "Emit World Editor Sync",
+      "id": "92f91b55-3696-43c0-8867-4961685e8108",
+      "properties": {},
+      "x": 1550,
+      "y": 0,
+      "width": 185,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitWorldEditorSync",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "cff1d8dc-c1a2-4574-9f73-f8b1e07fa22e.value": [
+      "582b3d58-fe52-4792-99fc-9c1da16c041a.scope"
+    ],
+    "3b60da7a-1fc2-4f32-a626-47be038c9495.value": [
+      "582b3d58-fe52-4792-99fc-9c1da16c041a.character"
+    ],
+    "b3cceaa6-f3a5-4385-bb4e-d3fc4184fc61.value": [
+      "582b3d58-fe52-4792-99fc-9c1da16c041a.world_entries"
+    ],
+    "477dc7c9-03a6-49ca-a287-716fdae3bd70.value": [
+      "582b3d58-fe52-4792-99fc-9c1da16c041a.instructions"
+    ],
+    "50adc16b-3372-4eca-9bce-ab0da57e9130.value": [
+      "582b3d58-fe52-4792-99fc-9c1da16c041a.reassess"
+    ],
+    "9d28e5a4-d222-4362-95ac-18affcf118d8.value": [
+      "f30a625b-f8ee-4693-ba87-2fa7750d24a1.state"
+    ],
+    "f30a625b-f8ee-4693-ba87-2fa7750d24a1.state": [
+      "582b3d58-fe52-4792-99fc-9c1da16c041a.state"
+    ],
+    "582b3d58-fe52-4792-99fc-9c1da16c041a.plan": [
+      "fc1ae136-6ff7-4c76-bcaa-794f8fd60c1d.state"
+    ],
+    "582b3d58-fe52-4792-99fc-9c1da16c041a.description": [
+      "fc1ae136-6ff7-4c76-bcaa-794f8fd60c1d.description"
+    ],
+    "fc1ae136-6ff7-4c76-bcaa-794f8fd60c1d.accepted": [
+      "c8fe0523-90c1-405f-a6d5-2ae73eefe43c.plan"
+    ],
+    "c8fe0523-90c1-405f-a6d5-2ae73eefe43c.result": [
+      "92f91b55-3696-43c0-8867-4961685e8108.state"
+    ],
+    "582b3d58-fe52-4792-99fc-9c1da16c041a.unchanged": [
+      "eb0e8b66-0c74-4ed5-97bf-a0e1cc2ae832.b"
+    ],
+    "eb0e8b66-0c74-4ed5-97bf-a0e1cc2ae832.value": [
+      "924a712c-79eb-4574-9c1a-e913341cd969.value"
+    ],
+    "92f91b55-3696-43c0-8867-4961685e8108.state": [
+      "eb0e8b66-0c74-4ed5-97bf-a0e1cc2ae832.a"
+    ]
+  },
+  "groups": [],
+  "comments": [],
+  "extends": null,
+  "base_type": "agents/director/DirectorChatAction",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "af480e2b-b458-43f8-b6d1-5b055bb465e3",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    },
+    {
+      "id": "35f819dc-1a05-476f-bd58-dec8e6e6ef85",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "4461c3b6-a329-4930-929b-0cecb0875a72",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "87ef9dea-d65f-4f58-9d44-fa54ee857d03",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
+    }
+  ],
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the action",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "description": {
+      "name": "description",
+      "description": "The description of the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "instructions": {
+      "name": "instructions",
+      "description": "The instructions for the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "example_json": {
+      "name": "example_json",
+      "description": "An example JSON payload for the action",
+      "type": "text",
+      "default": null,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "allow_concurrent": {
+      "name": "allow_concurrent",
+      "description": "Whether the action can be called concurrently",
+      "type": "bool",
+      "default": false,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

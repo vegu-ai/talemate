@@ -411,7 +411,9 @@ class SceneAssetsPlugin(Plugin):
                     return
 
             # Update the message's asset
-            message = await self.scene.assets.update_message_asset(message_id, asset_id)
+            message = await self.scene.assets.update_message_asset(
+                message_id, asset_id, override_cadence=True
+            )
             if message is None:
                 await self.signal_operation_failed(
                     f"Message not found or invalid: {message_id}"

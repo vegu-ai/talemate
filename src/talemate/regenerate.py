@@ -7,6 +7,7 @@ import talemate.emit.async_signals as async_signals
 from talemate.agents.editor.revision import RevisionContext
 from talemate.context import regeneration_context
 from talemate.exceptions import GenerationCancelled
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.scene_message import (
     SceneMessage,
     CharacterMessage,
@@ -162,8 +163,7 @@ async def regenerate_character_message(
     character, messages = result
 
     for message in messages:
-        await scene.push_history(message)
-        emit("character", message=message, character=character)
+        await scene.push_history(message, emit_message=True)
 
     return messages
 
@@ -270,8 +270,7 @@ async def regenerate_message(
         messages = new_messages
         for new_message in messages:
             if not isinstance(new_message, (ReinforcementMessage,)):
-                await scene.push_history(new_message)
-                emit(new_message.typ, message=new_message)
+                await scene.push_history(new_message, emit_message=True)
 
     for message in messages:
         await async_signals.get(f"regenerate.msg.{message.typ}").send(
@@ -333,11 +332,12 @@ async def _regenerate_inplace(
 
     # Auto-revision normally runs at push_history time, but in-place
     # regenerate skips push_history. Invoke the editor's in-place hook
-    # directly so the same gating + behavior applies. Scope the revision
-    # context to the original message slot (still in history) so the
-    # repetition range excludes it — new_message isn't in history yet.
+    # directly so the same gating + behavior applies. The original slot
+    # was already popped: remaining history is exactly the revision prefix.
+    # A removed message id would cancel perspective history and truncate
+    # the repetition range.
     editor = get_agent("editor")
-    with RevisionContext(message.id):
+    with RevisionContext():
         canonical_was_revised = await editor.maybe_revise_inplace(new_message)
 
     versions_to_append: list[tuple[str, VersionSource]] = []
@@ -349,6 +349,9 @@ async def _regenerate_inplace(
     # No-op: raw regen matched prior canonical and revision didn't fire.
     if not versions_to_append:
         return None
+
+    if isinstance(message, CharacterMessage):
+        message._avatar_pending = new_message._avatar_pending
 
     # Fire the regenerate.msg.* signals for downstream consumers (e.g.
     # avatar/asset hooks) — matches the previous push-emit flow.
@@ -474,6 +477,17 @@ async def regenerate(scene: "Scene") -> list[SceneMessage]:
     scene.history.append(message)
     for text, source in versions_to_append:
         scene.append_message_version(message.id, text, source=source)
+
+    try:
+        if character_knowledge_enabled(scene):
+            await get_agent("summarizer").finalize_perceptions(scene, [message])
+        if isinstance(message, CharacterMessage):
+            conversation = get_agent("conversation")
+            await conversation.finalize_message_avatar(message)
+    except BaseException:
+        if any(entry is message for entry in scene.history):
+            scene.history.extend(reversed(popped_reinforcement_messages))
+        raise
 
     regenerated_messages.append(message)
 

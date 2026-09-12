@@ -25,7 +25,9 @@ Choose this if you want to use a cloud-based AI service. This requires an API ke
 - Anthropic
 - And others
 
-![Setup wizard step 1 - choose provider type](../img/0.35.0/setup-wizard-step1-provider-type.png)
+Below the two options, the wizard shows **What Talemate expects from your model**: the bar a model has to meet for the full experience, known good examples for each provider type, and what still works without it. Read it before you pick a model; the [Model expectations](model-expectations.md) page has the details and the symptoms of a model below the bar.
+
+![Setup wizard step 1 - choose provider type](../img/0.40.0/setup-wizard-step1-provider-type.png)
 
 ## Step 2: Add Your Client
 
@@ -34,6 +36,8 @@ After selecting your provider type, you will choose a specific client to configu
 For **Hosted API** users, OpenRouter is selected by default. For **Self-hosted** users, KoboldCpp is selected by default.
 
 Select your preferred client from the dropdown. The essential settings for that client type — its name, API URL and key, and the model — appear right below the dropdown. Fill them in and click **Add Client** to create the client.
+
+A one-line pointer above the settings links to the [Model expectations](model-expectations.md) page. A new client starts with a Context Length of 16384 tokens. The wizard does not show that setting; the editor on **Settings → Connections → Clients** shows the value and warns when it sits below the floor.
 
 ![Setup wizard step 2 - add client](../img/0.40.0/setup-wizard-step2-add-client.png)
 

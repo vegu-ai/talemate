@@ -6,7 +6,7 @@ Covers:
 - _plan_revise_narrator_content: signal-driven revision pass.
 - _plan_push_and_emit_block: dispatch by block type, narrator vs character,
   empty content skip.
-- _plan_critique_expanded_blocks: replaces or falls back to original blocks
+- plan_critique_expanded_blocks: replaces or falls back to original blocks
   based on Prompt.request output.
 - plan_expand_beats: full pipeline orchestration. Prompt.request is stubbed
   with deterministic responses keyed per-template (`narrator.arc-expand`
@@ -183,7 +183,7 @@ class TestPlanPushAndEmitBlock:
 
 
 # ---------------------------------------------------------------------------
-# _plan_critique_expanded_blocks
+# plan_critique_expanded_blocks
 # ---------------------------------------------------------------------------
 
 
@@ -201,7 +201,7 @@ class TestPlanCritiqueExpandedBlocks:
             }
         )
         original = [{"type": "narrator", "content": "original"}]
-        result = await director._plan_critique_expanded_blocks(original, narrator)
+        result = await director.plan_critique_expanded_blocks(original, narrator)
         assert result == revised_blocks
 
     @pytest.mark.asyncio
@@ -216,7 +216,7 @@ class TestPlanCritiqueExpandedBlocks:
             }
         )
         original = [{"type": "narrator", "content": "keep me"}]
-        result = await director._plan_critique_expanded_blocks(original, narrator)
+        result = await director.plan_critique_expanded_blocks(original, narrator)
         assert result == original
 
     @pytest.mark.asyncio
@@ -228,7 +228,7 @@ class TestPlanCritiqueExpandedBlocks:
                 ]
             }
         )
-        await director._plan_critique_expanded_blocks(
+        await director.plan_critique_expanded_blocks(
             [{"type": "narrator", "content": "y"}], narrator, close_arc=True
         )
         assert stub.calls[0]["vars"]["close_arc"] is True
@@ -244,7 +244,7 @@ class TestPlanCritiqueExpandedBlocks:
                 ]
             }
         )
-        await director._plan_critique_expanded_blocks(
+        await director.plan_critique_expanded_blocks(
             [{"type": "narrator", "content": "y"}], narrator
         )
         assert stub.calls[0]["vars"]["close_arc"] is False

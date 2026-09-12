@@ -13,7 +13,7 @@ import pytest
 import structlog
 from unittest.mock import AsyncMock, MagicMock
 
-from talemate.character import Character
+from talemate.character import Character, deactivate_character
 from talemate.context import ActiveScene, InteractionState
 from talemate.game.engine.nodes.core import (
     GraphContext,
@@ -106,8 +106,6 @@ async def _add_character(
     )
     actor = scene.Player(character, None) if is_player else scene.Actor(character, None)
     await scene.add_actor(actor, commit_to_memory=False)
-    if name not in scene.active_characters:
-        scene.active_characters.append(name)
     return character
 
 
@@ -230,6 +228,49 @@ async def test_make_character_player_uses_player_actor_class(scene):
 
 
 @pytest.mark.asyncio
+async def test_make_character_inactive_keeps_the_character_out_of_the_roster(scene):
+    """is_active=False adds the character without leaving an actor behind."""
+    node = MakeCharacter()
+    node.set_property("name", "Barry")
+    node.set_property("color", "#123456")
+    node.set_property("base_attributes", {})
+    node.set_property("is_player", False)
+    node.set_property("add_to_scene", True)
+    node.set_property("is_active", False)
+
+    out = await _run_node(node, scene)
+
+    assert "Barry" in scene.character_data
+    assert "Barry" not in scene.character_names
+    assert "Barry" not in scene.active_characters
+    assert "Barry" in scene.inactive_characters
+    # an inactive character has no actor, so the node reports none
+    assert out["actor"] is None
+
+
+@pytest.mark.asyncio
+async def test_make_character_refuses_a_name_the_scene_already_has(scene):
+    """A second character object under one name would give the scene two
+    actors and one name, which puts the character in both rosters."""
+    existing = await _add_character(scene, "Barry")
+
+    node = MakeCharacter()
+    node.set_property("name", "Barry")
+    node.set_property("color", "#123456")
+    node.set_property("base_attributes", {})
+    node.set_property("is_player", False)
+    node.set_property("add_to_scene", True)
+    node.set_property("is_active", True)
+
+    with pytest.raises(ValueError, match='Name "Barry" already exists.'):
+        await _run_node(node, scene)
+
+    assert scene.character_data["Barry"] is existing
+    assert [actor.character for actor in scene.actors] == [existing]
+    assert scene.active_characters == ["Barry"]
+
+
+@pytest.mark.asyncio
 async def test_make_character_does_not_add_when_add_to_scene_false(scene):
     """add_to_scene=False must keep the character out of the scene."""
     node = MakeCharacter()
@@ -245,6 +286,7 @@ async def test_make_character_does_not_add_when_add_to_scene_false(scene):
     assert out["character"].name == "Lurker"
     assert "Lurker" not in scene.character_data
     assert "Lurker" not in scene.active_characters
+    assert out["actor"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -280,9 +322,7 @@ async def test_get_player_character_returns_first_player_actor(scene):
 async def _two_chars_one_inactive(scene):
     await _add_character(scene, "Alice")
     await _add_character(scene, "Bob")
-    bob = scene.character_data["Bob"]
-    await scene.remove_actor(bob.actor)
-    scene.active_characters.remove("Bob")
+    await deactivate_character(scene, "Bob")
 
 
 @pytest.mark.asyncio
@@ -441,6 +481,40 @@ async def test_update_character_data_skips_unset_fields(scene):
     assert char.description == "Original"
     assert char.base_attributes == {"age": "30"}
     assert char.color == "#abc"
+
+
+@pytest.mark.parametrize("name", ["Bob", "bob"])
+async def test_update_character_data_rejected_rename_leaves_all_fields_unchanged(
+    scene, name
+):
+    char = await _add_character(
+        scene,
+        "Alice",
+        description="Original",
+        base_attributes={"age": "30"},
+        details={"city": "Home"},
+        color="#abc",
+    )
+    other = await _add_character(scene, "Bob", description="Other character")
+    original = char.model_dump()
+    original_scene = scene.json
+    with pytest.raises(ValueError, match="another character"):
+        await _run_node(
+            UpdateCharacterData(),
+            scene,
+            inputs={
+                "character": char,
+                "base_attributes": {"age": "31"},
+                "details": {"city": "Elsewhere"},
+                "description": "Replacement",
+                "name": name,
+                "color": "#ff00ff",
+            },
+        )
+    assert char.model_dump() == original
+    assert scene.json == original_scene
+    assert scene.character_data["Alice"] is char
+    assert scene.character_data["Bob"] is other
 
 
 # ---------------------------------------------------------------------------

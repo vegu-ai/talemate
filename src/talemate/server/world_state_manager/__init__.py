@@ -10,10 +10,12 @@ import structlog
 import talemate.world_state.templates as world_state_templates
 from talemate.game.schema import ConditionGroup
 from talemate.export import ExportOptions, export
-from talemate.instance import get_agent
+from talemate.instance import emit_agents_status, get_agent
 from talemate.world_state.manager import WorldStateManager, Suggestion
 from talemate.scene.schema import ScenePerspectives
-from talemate.status import background_task, set_loading
+from talemate.knowledge.mode import KnowledgeEligibility
+from talemate.knowledge.processing import evidence_writer
+from talemate.status import LoadingLabel, background_task, set_loading
 import talemate.game.focal as focal
 from talemate.config import save_config, get_config, commit_config
 from talemate.server.websocket_plugin import Plugin
@@ -24,6 +26,7 @@ from .character import CharacterMixin
 from .shared_context import SharedContextMixin
 from .episodes import EpisodesMixin
 from .scene_state_reset import SceneStateResetMixin
+from .knowledge import KnowledgeMixin
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -189,6 +192,7 @@ class SceneOutlinePayload(pydantic.BaseModel):
 
 
 class SceneSettingsPayload(pydantic.BaseModel):
+    knowledge_eligibility: KnowledgeEligibility | None = None
     experimental: bool = False
     immutable_save: bool = False
     writing_style_template: str | None = None
@@ -247,6 +251,7 @@ class WorldStateManagerPlugin(
     SharedContextMixin,
     EpisodesMixin,
     SceneStateResetMixin,
+    KnowledgeMixin,
     Plugin,
 ):
     router = "world_state_manager"
@@ -437,6 +442,7 @@ class WorldStateManagerPlugin(
         await self.handle_get_character_details({"name": payload.name})
         await self.signal_operation_done()
 
+    @evidence_writer
     @background_task("Refreshing reinforcement")
     async def handle_run_character_detail_reinforcement(self, data):
         payload = CharacterDetailReinforcementPayload(**data)
@@ -636,6 +642,7 @@ class WorldStateManagerPlugin(
         await self.handle_get_world({})
         await self.signal_operation_done()
 
+    @evidence_writer
     @background_task("Refreshing world state")
     async def handle_run_world_state_reinforcement(self, data):
         payload = WorldEntryReinforcementPayload(**data)
@@ -1152,11 +1159,14 @@ class WorldStateManagerPlugin(
         if "agent_settings_opted_out" not in payload.model_fields_set:
             kwargs.pop("agent_settings_opted_out", None)
 
+        mode_before = self.scene.knowledge_eligibility
         try:
             await self.world_state_manager.update_scene_settings(**kwargs)
         except ValueError as exc:
             log.warning("update_scene_settings rejected", error=str(exc))
-            await self.signal_operation_failed(str(exc))
+            await self.signal_operation_failed(
+                str(exc), failed_action="update_scene_settings"
+            )
             return
 
         self.websocket_handler.queue_put(
@@ -1166,6 +1176,11 @@ class WorldStateManagerPlugin(
                 "data": payload.model_dump(),
             }
         )
+        # The agents describe their settings for the scene's mode (a
+        # Character perspectives scene hides the Standard-only controls), so a
+        # mode change has to refresh what every settings view shows.
+        if self.scene.knowledge_eligibility != mode_before:
+            emit_agents_status()
 
         await self.signal_operation_done(allow_auto_save=False)
 
@@ -1291,7 +1306,7 @@ class WorldStateManagerPlugin(
                     focal_context.hooks_after_call.append(send_suggestion)
 
                 @set_loading(
-                    "Analyzing character development",
+                    LoadingLabel("Analyzing {}'s development", character.name),
                     cancellable=True,
                     set_success=True,
                     set_error=True,

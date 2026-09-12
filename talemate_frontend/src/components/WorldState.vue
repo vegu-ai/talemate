@@ -30,14 +30,20 @@
             <!-- CHARACTERS -->
 
             <v-expansion-panels density="compact" v-for="row in characterRoster" :key="row.name">
-                <v-expansion-panel rounded="0" density="compact">
+                <v-expansion-panel rounded="0" density="compact" class="character-row" :class="{ 'character-row-active': row.active, 'character-row-background': !row.active }">
 
                     <!-- TITLE: CHARACTER NAME -->
 
                     <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         {{ row.name }}
+                        <v-tooltip v-if="row.manual" :text="manualEntryTooltip">
+                            <template v-slot:activator="{ props }">
+                                <v-icon v-bind="props" size="x-small" class="ml-1" color="muted">mdi-pin</v-icon>
+                            </template>
+                        </v-tooltip>
                         <span class="text-body-small ml-1 text-muted">{{ row.emotion }}</span>
                         <template v-slot:actions>
+                            <span v-if="row.active" class="knowledge-marker-space"></span>
                             <v-icon v-if="characterSuggestions(row.name)" color="highlight5" class="mr-1">mdi-lightbulb-on</v-icon>
                             <div v-else-if="getCharacterAvatar(row.name)" class="character-avatar-square mr-1">
                                 <v-img :src="getCharacterAvatarSrc(row.name)" cover />
@@ -46,9 +52,29 @@
                         </template>
                     </v-expansion-panel-title>
 
+                    <Transition name="knowledge-marker">
+                        <KnowledgeChangeMarker
+                            v-if="row.active && !playthroughActive && knowledgeChanges.has(row.name)"
+                            class="active-knowledge-marker"
+                            :name="row.name"
+                            :changes="knowledgeChanges.get(row.name)"
+                            @pause="(reason, paused) => knowledgeNotifications.pause(row.name, reason, paused)"
+                            @open="openWorldStateManager('characters', row.name, 'knowledge')"
+                        />
+                    </Transition>
+
                     <!-- SNAPSHOT: CHARACTER -->
                             
                     <v-expansion-panel-text class="text-body-medium">
+                        <div class="mb-2">
+                            <v-tooltip :text="characterKindTooltip(row)">
+                                <template v-slot:activator="{ props }">
+                                    <v-chip v-bind="props" class="character-kind" size="x-small" variant="tonal" :color="row.active ? 'primary' : 'secondary'" label tabindex="0">
+                                        {{ row.active ? 'character' : 'background' }}
+                                    </v-chip>
+                                </template>
+                            </v-tooltip>
+                        </div>
                         {{ row.snapshot }}
 
                         <!-- ACTIONS: LOOK AT, PERSIST, MANAGE, TAKE OUT OF SCENE -->
@@ -66,7 +92,7 @@
 
                                 </template>
                             </v-tooltip>
-                            <v-tooltip v-if="!row.active && !mayBeExistingCharacter(row.name) && !isPlaythroughActive()" text="Make this character real, adding it to the scene as an actor.">
+                            <v-tooltip v-if="canMakeReal(row)" text="Make this character real, adding it to the scene as an actor.">
                                 <template v-slot:activator="{ props }">
                                     <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="persistCharacter(row.name)" icon="mdi-human-greeting"></v-btn>
 
@@ -78,6 +104,7 @@
 
                                 </template>
                             </v-tooltip>
+                            <CharacterKnowledgeHub v-if="row.active && !isPlaythroughActive()" :name="row.name" @open-knowledge="openWorldStateManager('characters', row.name, 'knowledge')" />
                             <v-tooltip v-if="row.active && !isPlaythroughActive()" :text="deactivateTooltip(row.name)">
                                 <template v-slot:activator="{ props }">
                                     <v-btn :disabled="busy" :aria-label="deactivateLabel(row.name)" size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="deactivateCharacter($event, row.name)" icon="mdi-exit-run"></v-btn>
@@ -124,18 +151,40 @@
 
             <!-- INACTIVE CHARACTERS -->
 
-            <v-expansion-panels density="compact" v-if="showInactiveCharacters">
-                <v-expansion-panel rounded="0" density="compact">
+            <v-expansion-panels density="compact" v-if="showInactiveCharacters" v-model="inactivePanel">
+                <v-expansion-panel rounded="0" density="compact" class="character-section-inactive">
                     <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         Inactive ({{ inactiveCharacters.length }})
                         <template v-slot:actions>
+                            <span class="knowledge-marker-space"></span>
                             <v-icon icon="mdi-account-off"></v-icon>
                         </template>
                     </v-expansion-panel-title>
+                    <Transition name="knowledge-marker">
+                        <KnowledgeChangeMarker
+                            v-if="inactivePanel !== 0 && inactiveKnowledgeChanges.length"
+                            class="active-knowledge-marker"
+                            name="inactive characters"
+                            action-label="Knowledge changed for inactive characters. Expand Inactive section"
+                            :changes="inactiveKnowledgeChanges"
+                            @pause="pauseInactiveKnowledge"
+                            @open="inactivePanel = 0"
+                        />
+                    </Transition>
                     <v-expansion-panel-text>
                         <div class="d-flex align-center" v-for="name in inactiveCharacters" :key="name">
                             <span class="text-body-small text-muted">{{ name }}</span>
+                            <Transition name="knowledge-marker">
+                                <KnowledgeChangeMarker
+                                    v-if="knowledgeChanges.has(name)"
+                                    :name="name"
+                                    :changes="knowledgeChanges.get(name)"
+                                    @pause="(reason, paused) => knowledgeNotifications.pause(name, reason, paused)"
+                                    @open="openWorldStateManager('characters', name, 'knowledge')"
+                                />
+                            </Transition>
                             <v-spacer></v-spacer>
+                            <CharacterKnowledgeHub :name="name" variant="text" color="secondary" @open-knowledge="openWorldStateManager('characters', name, 'knowledge')" />
                             <v-tooltip :text="activateTooltip(name)">
                                 <template v-slot:activator="{ props }">
                                     <v-btn :disabled="busy" :aria-label="activateLabel(name)" size="x-small" color="secondary" v-bind="props" variant="text" density="comfortable" rounded="sm" @click.stop="activateCharacter($event, name)" icon="mdi-human-greeting"></v-btn>
@@ -153,6 +202,11 @@
                 <v-expansion-panel rounded="0" density="compact">
                     <v-expansion-panel-title class="text-title-small" diable-icon-rotate>
                         {{ name}}
+                        <v-tooltip v-if="obj.manual" :text="manualEntryTooltip">
+                            <template v-slot:activator="{ props }">
+                                <v-icon v-bind="props" size="x-small" class="ml-1" color="muted">mdi-pin</v-icon>
+                            </template>
+                        </v-tooltip>
                         <template v-slot:actions>
                             <v-icon icon="mdi-cube"></v-icon>
                         </template>
@@ -258,6 +312,9 @@
 <script>
 
 import WorldStateRefreshDialog from './WorldStateRefreshDialog.vue';
+import KnowledgeChangeMarker from './KnowledgeChangeMarker.vue';
+import CharacterKnowledgeHub from './CharacterKnowledgeHub.vue';
+import { createKnowledgeChanges } from '@/utils/knowledgeChanges';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import {
     dispatchActivateCharacter,
@@ -267,6 +324,11 @@ import {
     isKnownSceneCharacter,
 } from '@/utils/entityActions';
 import { isPrimaryModifier, primaryModifierLabel } from '@/utils/keyboardModifiers';
+
+const MANUAL_ENTRY_TOOLTIP =
+    'Added by hand from a scene message. While the snapshot is durable it never ages out as a '
+    + 'stale entry and the item limit never drops it — though it keeps its slot in that limit — '
+    + 'until the story drops it, a time jump cuts the scene, or the snapshot is wiped.';
 
 // snapshot.py canonicalizes a key against the actors of the pass that wrote
 // it, so most keys arrive canonical - but one written while a character was
@@ -291,6 +353,8 @@ export default {
     name: 'WorldState',
     components: {
         WorldStateRefreshDialog,
+        KnowledgeChangeMarker,
+        CharacterKnowledgeHub,
     },
     mixins: [VisualAssetsMixin],
     data() {
@@ -305,6 +369,9 @@ export default {
             activePins: [],
             worldStateMaxHeight: null,
             hasAnyWorldState: false,
+            knowledgeChanges: new Map(),
+            inactivePanel: null,
+            inactiveKnowledgePauses: new Map(),
         }
     },
 
@@ -315,6 +382,7 @@ export default {
     inject: [
         'getWebsocket',
         'registerMessageHandler',
+        'unregisterMessageHandler',
         'setWaitingForInput',
         'isInputDisabled',
         'formatWorldStateTemplateString',
@@ -329,6 +397,20 @@ export default {
     ],
 
     computed: {
+        inactiveKnowledgeChanges() {
+            return this.inactiveCharacters.flatMap(name =>
+                (this.knowledgeChanges.get(name) || []).map(change => ({
+                    ...change,
+                    target: JSON.stringify([name, change.target]),
+                    label: `${name}: ${change.label}`,
+                })));
+        },
+        knowledgeSceneId() {
+            return this.sceneData?.data?.id;
+        },
+        playthroughActive() {
+            return this.isPlaythroughActive();
+        },
         sceneData() {
             return this.scene ? this.scene() : null;
         },
@@ -350,6 +432,9 @@ export default {
                 ...this.inactiveCharacters,
             ];
         },
+        manualEntryTooltip() {
+            return MANUAL_ENTRY_TOOLTIP;
+        },
         characterRoster() {
             const snapshot = this.characters || {};
             const keys = Object.keys(snapshot);
@@ -361,6 +446,7 @@ export default {
                     name: character.name,
                     emotion: entry?.emotion || '',
                     snapshot: entry?.snapshot || '',
+                    manual: entry?.manual || false,
                     active: true,
                 });
             }
@@ -371,6 +457,7 @@ export default {
                     name: key,
                     emotion: snapshot[key].emotion,
                     snapshot: snapshot[key].snapshot,
+                    manual: snapshot[key].manual || false,
                     active: false,
                 });
             }
@@ -389,6 +476,12 @@ export default {
     },
 
     watch: {
+        knowledgeSceneId() {
+            this.knowledgeNotifications.clear();
+        },
+        playthroughActive() {
+            this.knowledgeNotifications.clear();
+        },
         persistableCharacters: {
             handler(names) {
                 this.$emit('passive-characters', names);
@@ -398,6 +491,28 @@ export default {
     },
 
     methods: {
+        canMakeReal(row) {
+            return !row.active && !this.mayBeExistingCharacter(row.name) && !this.isPlaythroughActive();
+        },
+        characterKindTooltip(row) {
+            if (row.active) return 'A real character, present in the scene';
+            const description = 'Picked up by the world state snapshot, not yet a character.';
+            return this.canMakeReal(row) ? `${description} Use Make real to promote.` : description;
+        },
+        pauseInactiveKnowledge(reason, paused) {
+            const names = this.inactiveKnowledgePauses.get(reason) || new Set();
+            if (paused) {
+                this.inactiveKnowledgePauses.set(reason, names);
+                for (const name of this.inactiveCharacters) {
+                    if (this.knowledgeChanges.has(name)) names.add(name);
+                }
+            } else {
+                this.inactiveKnowledgePauses.delete(reason);
+            }
+            for (const name of names) {
+                this.knowledgeNotifications.pause(name, `inactive:${reason}`, paused);
+            }
+        },
         onResize() {
             this.worldStateMaxHeight = this.availableHeight();
         },
@@ -609,6 +724,16 @@ export default {
         },
 
         handleMessage(data) {
+            if (data.type === 'knowledge_changed') {
+                if (data.data.scene_id === this.knowledgeSceneId && !this.playthroughActive) {
+                    this.knowledgeNotifications.add(data.data.changes, this.rosterNames);
+                }
+                return;
+            }
+            if ((data.type === 'system' && data.id === 'scene.loaded') ||
+                (data.type === 'scene_status' && data.data.restored)) {
+                this.knowledgeNotifications.clear();
+            }
             // Handle scene_asset messages using mixin method
             this.handleSceneAssetMessage(data);
             
@@ -656,12 +781,59 @@ export default {
     },
 
     created() {
+        this.knowledgeNotifications = createKnowledgeChanges((changes) => {
+            this.knowledgeChanges = changes;
+            if (!changes.size) this.inactiveKnowledgePauses.clear();
+            for (const reason of this.inactiveKnowledgePauses.keys()) {
+                this.pauseInactiveKnowledge(reason, true);
+            }
+        });
         this.registerMessageHandler(this.handleMessage);
+    },
+    beforeUnmount() {
+        this.unregisterMessageHandler(this.handleMessage);
+        this.knowledgeNotifications.clear();
     },
 }
 </script>
 
 <style scoped>
+.character-row, .character-section-inactive {
+    position: relative;
+}
+.character-row-active > .v-expansion-panel-title {
+    border-inline-start: 2px solid rgba(var(--v-theme-primary), 0.65);
+    background-color: rgba(var(--v-theme-primary), 0.06);
+}
+.character-row-background > .v-expansion-panel-title {
+    border-inline-start: 2px solid rgba(var(--v-theme-secondary), 0.65);
+    background-color: rgba(var(--v-theme-secondary), 0.06);
+}
+.character-section-inactive > .v-expansion-panel-title {
+    border-inline-start: 2px solid rgba(var(--v-theme-mutedheader), 0.45);
+    background-color: rgba(var(--v-theme-mutedheader), 0.04);
+}
+.knowledge-marker-space {
+    flex: 0 0 28px;
+}
+.active-knowledge-marker {
+    position: absolute;
+    inset-inline-end: 64px;
+    top: 12px;
+    z-index: 1;
+}
+.knowledge-marker-leave-active {
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.knowledge-marker-leave-to {
+    opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+    .knowledge-marker-leave-active {
+        transition: none;
+    }
+}
 .pre-wrap {
     white-space: pre-wrap;
 }

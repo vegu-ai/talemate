@@ -241,7 +241,7 @@
             :config="appConfig" />
           </v-tabs-window-item>
           <!-- SCENE -->
-          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;">
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;" eager>
             <v-row no-gutters class="position-relative">
               <v-col ref="nodeEditorContainer" v-resize="onNodeEditorContainerResize" :xl="creativeMode ? (showSceneView ? 8 : 12) : 0" :cols="creativeMode ? (showSceneView ? 6 : 12) : 0" :class="{ 'd-none': !creativeMode }" class="position-relative">
                   <NodeEditor
@@ -398,7 +398,7 @@
           </v-tabs-window-item>
           <!-- PROMPTS -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
-            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" :app-config="appConfig" ref="promptsView" v-model:main-tab="promptsMainTab" @clear-prompts="onClearPrompts" />
+            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" :app-config="appConfig" :connected="connected" ref="promptsView" v-model:main-tab="promptsMainTab" @clear-prompts="onClearPrompts" />
           </v-tabs-window-item>
           <!-- SETTINGS -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="settings">
@@ -707,7 +707,6 @@ export default {
       worldStateTemplates: {},
       // busy status of agents
       agentStatus: {},
-      // agent actions the backend has seen send a request (`config/agent_actions`)
       agentActions: [],
       // scene state of agents
       agentState: {},
@@ -1063,6 +1062,13 @@ export default {
       scene: () => this.scene,
       getClients: () => this.getClients(),
       getAgents: () => this.getAgents(),
+      toggleAgentAction: (agentName, actionName) => this.toggleAgentAction(agentName, actionName),
+      toggleAgentConfig: (agentName, actionName, configName) => this.toggleAgentConfig(agentName, actionName, configName),
+      applyAgentValues: (agentName, actionName, values) => this.applyAgentValues(agentName, actionName, values),
+      applySceneAgentValues: (entries) => this.applySceneAgentValues(entries),
+      clearSceneAgentValues: (entries) => this.clearSceneAgentValues(entries),
+      sceneOverridesState: () => this.$refs.aiAgent?.overridesState || { busy: false, error: null },
+      queueKnowledgeEffort: (stop, mode, options) => this.$refs.aiAgent.queueEffort(stop, mode, options),
       openAgentSettings: this.openAgentSettings,
       openClientSettings: this.openClientSettings,
       requestSceneAssets: (asset_ids) => this.requestSceneAssets(asset_ids),
@@ -1229,6 +1235,9 @@ export default {
         // and tell each sender, or its in-flight state (the wizard's
         // finishing/waitingForClient) survives the socket it died on
         this.configSaveQueue.dropAll('The connection to the backend was lost before the save was answered.');
+        // The hub writer's in-flight patch and any queued follow-ups cannot be
+        // answered on a dead socket either.
+        this.$refs.aiAgent?.resetSceneAgentOverrides?.();
         this.connected = false;
         this.configReceivedThisConnection = false;
         this.connecting = false;
@@ -1293,7 +1302,11 @@ export default {
 
       // Scene loaded
       if (data.type === "system") {
-        if (data.id === 'scene.loaded') {
+        if (data.id === 'scene.history_ready') {
+          this.loading = true;
+          this.showSceneView = true;
+          this.tab = 'main';
+        } else if (data.id === 'scene.loaded') {
           this.loading = false;
           this.sceneActive = true;
           // a replay belongs to the scene it was started on: whatever the
@@ -1318,6 +1331,7 @@ export default {
           this.sceneActive = false;
           this.actAs = null;
           this.scene = {};
+          this.$refs.sceneMessages?.clear();
           this.clearUxInteractions(); // Clear any active UX interactions on load failure
           this.$refs.generationErrorDialog.closeAll(); // Backend cancelled the outgoing scene's pending generations
         } else if (data.id === 'load_scene_request') {
@@ -1689,9 +1703,14 @@ export default {
             client = null;
           }
 
+          const actions = Object.fromEntries(Object.entries(agent.actions || {}).map(([key, action]) => [key, {
+            ...action,
+            // Status hides legacy controls, but a drawer save must preserve their values.
+            config: { ...config.agents?.[agent.name]?.actions?.[key]?.config, ...action.config },
+          }]));
           return {
             enabled: agent.enabled,
-            actions: agent.actions,
+            actions: actions,
             client: client,
           }
         });
@@ -1767,6 +1786,35 @@ export default {
         return [];
       }
       return this.$refs.aiAgent.state.agents;
+    },
+    // The agent drawer's quick-toggle chips are the one write path for a
+    // single agent setting; the World State knowledge hub goes through them.
+    toggleAgentAction(agentName, actionName) {
+      const agent = this.getAgents().find((candidate) => candidate.name === agentName);
+      const action = agent?.actions?.[actionName];
+      if (!action) return false;
+      this.$refs.aiAgent.toggleAction(agent, actionName, action);
+      return true;
+    },
+    applyAgentValues(agentName, actionName, values) {
+      const agent = this.getAgents().find((candidate) => candidate.name === agentName);
+      if (!agent?.actions?.[actionName]) return false;
+      return this.$refs.aiAgent.applyActionValues(agent, actionName, values);
+    },
+    // The knowledge hub's scene-only writer: sparse patches against the scene
+    // overlay, never the global agent values.
+    applySceneAgentValues(entries) {
+      this.$refs.aiAgent?.applySceneAgentValues(entries);
+    },
+    clearSceneAgentValues(entries) {
+      this.$refs.aiAgent?.clearSceneAgentValues(entries);
+    },
+    toggleAgentConfig(agentName, actionName, configName) {
+      const agent = this.getAgents().find((candidate) => candidate.name === agentName);
+      const config = agent?.actions?.[actionName]?.config?.[configName];
+      if (!config) return false;
+      this.$refs.aiAgent.toggleSubConfig(agent, actionName, configName, config);
+      return true;
     },
     activeClientName() {
       if (!this.$refs.aiClient) {

@@ -333,6 +333,8 @@ class TestFinalizePromptRequest:
         monkeypatch.setattr(finalize.Prompt, "request", fake_request)
 
         class FakeClient:
+            name = "finalizer-test"
+            current_status = "idle"
             max_token_length = 8192
 
         agent.client = FakeClient()
@@ -368,6 +370,8 @@ class TestFinalizePromptRequest:
         monkeypatch.setattr(finalize.Prompt, "request", fake_request)
 
         class FakeClient:
+            name = "finalizer-test"
+            current_status = "idle"
             max_token_length = 8192
             supports_concurrent_inference = True
 
@@ -400,6 +404,8 @@ class TestFinalizePromptRequest:
         monkeypatch.setattr(finalize.Prompt, "request", fake_request)
 
         class FakeClient:
+            name = "finalizer-test"
+            current_status = "idle"
             max_token_length = 8192
             supports_concurrent_inference = False
 
@@ -431,6 +437,8 @@ class TestFinalizePromptRequest:
         monkeypatch.setattr(finalize.Prompt, "request", fake_request)
 
         class FakeClient:
+            name = "finalizer-test"
+            current_status = "idle"
             max_token_length = 8192
             supports_concurrent_inference = True
 

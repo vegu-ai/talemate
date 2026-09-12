@@ -1,0 +1,19 @@
+{% if character_knowledge_enabled(scene) %}
+{% include "character-evidence-rules.jinja2" %}
+{% else %}{% set awareness = agent_action("conversation", "awareness_line", character=talking_character) -%}
+{% set absence_lines = agent_action("conversation", "absence_block", character=talking_character) -%}
+{% if awareness -%}
+<|SECTION:WHAT {{ talking_character.name.upper() }} IS AWARE OF|>
+{{ awareness }}.
+<|CLOSE_SECTION|>
+{% endif -%}
+{% if absence_lines -%}
+<|SECTION:WHAT {{ talking_character.name.upper() }} DOES NOT KNOW|>
+{{ talking_character.name }} has not learned any of the following. Do not let {{ talking_character.name }} act on, refer to, or react to these:
+{%- for line in absence_lines %}
+- {{ line }}
+{%- endfor %}
+<|CLOSE_SECTION|>
+{% endif -%}
+
+{% endif %}

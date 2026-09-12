@@ -48,7 +48,7 @@
           </div>
 
           <UxField
-            :field="field"
+            :field="displayField(configKey, field)"
             :model-value="valueOf(configKey)"
             :templates="templates"
             :app-config="appConfig"
@@ -63,6 +63,7 @@
 <script>
 import { getProperty } from 'dot-prop';
 import { agentActionConditionMet, conditionMet } from '@/utils/uxConditions';
+import { worldStatePinField } from '@/utils/worldStatePinWarning';
 import UxField from './UxField.vue';
 
 // Renders one AgentAction on the Agents settings page.
@@ -110,6 +111,16 @@ export default {
   methods: {
     valueOf(configKey) {
       return this.values.config?.[configKey]?.value;
+    },
+    displayField(configKey, field) {
+      return worldStatePinField({
+        actionKey: this.actionKey,
+        configKey,
+        field,
+        enabled: !!this.values.enabled,
+        pin: this.valueOf('inject_as_scene_memory'),
+        turns: this.valueOf('turns'),
+      });
     },
     testConfigConditional(field) {
       const value = field.condition

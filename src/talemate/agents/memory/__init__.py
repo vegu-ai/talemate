@@ -7,6 +7,8 @@ import functools
 import hashlib
 import threading
 import traceback
+from contextlib import contextmanager
+from contextvars import ContextVar
 import numpy as np
 from typing import Callable, Literal
 
@@ -14,6 +16,11 @@ import structlog
 from chromadb.config import Settings
 
 import talemate.events as events
+from talemate.knowledge.presence import presence_metadata
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.knowledge.topics import known_bucket
+from talemate.knowledge.memory import audience_where
+from talemate.agents.memory.audiences import AudienceMemoryMixin
 import talemate.util as util
 from talemate.client import ClientBase
 import talemate.instance as instance
@@ -21,6 +28,7 @@ from talemate.agents.base import (
     Agent,
     AgentAction,
     AgentActionConfig,
+    AgentActionNote,
     AgentDetail,
     set_processing,
 )
@@ -34,6 +42,20 @@ from talemate.agents.memory.exceptions import (
     SetDBError,
 )
 from talemate.agents.memory.schema import MemoryDocument
+from talemate.knowledge.chronology import (
+    fact_timestamp,
+    memory_fact,
+    ranked_facts,
+    ranked_fact_documents,
+    render_fact_document,
+)
+
+from talemate.agents.memory.rerank import (
+    CrossEncoderReranker,
+    RERANK_MODEL,
+    RERANK_CANDIDATES,
+    RERANK_KEEP,
+)
 from talemate.util.gpu import release_cuda_cache
 
 import talemate.agents.memory.nodes  # noqa: F401
@@ -53,15 +75,30 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger("talemate.agents.memory")
 
+# how many of the nearest topic's facts join a query's results
+TOPIC_FACTS_PER_QUERY = 3
 OPENROUTER_EMBEDDINGS_BASE_URL = "https://openrouter.ai/api/v1"
 
 HostedEmbeddingsProvider = Literal["OpenAI", "OpenRouter"]
+
+_expected_write_scene = ContextVar("memory_expected_write_scene", default=None)
+
+
+@contextmanager
+def memory_write_scene(scene):
+    """Fence a shared memory-agent write to the scene selected by its caller."""
+    token = _expected_write_scene.set(scene)
+    try:
+        yield
+    finally:
+        _expected_write_scene.reset(token)
+
 
 if not chromadb:
     log.info("ChromaDB not found, disabling Chroma agent")
 
 
-class MemoryAgent(Agent):
+class MemoryAgent(AudienceMemoryMixin, Agent):
     """
     An agent that can be used to maintain and access a memory of the world
     using vector databases
@@ -103,15 +140,99 @@ class MemoryAgent(Agent):
                     ),
                 },
             ),
+            "topics": AgentAction(
+                enabled=True,
+                container=True,
+                can_be_disabled=True,
+                icon="mdi-shape-outline",
+                label="Topics",
+                description="Group recorded facts by subject to show each character's knowledge and find related memories. Turn on for the Known facts by topic table and topic-based memory retrieval; no extra text-generation request. Standard mode can also use the Conversation agent's Topic knowledge overview.",
+                config={
+                    "recluster_step": AgentActionConfig(
+                        type="number",
+                        label="Facts between topic updates",
+                        description="Regroup topics when the fact count changes by this many. Lower for more frequent updates; raise to regroup less often. Editing, deleting or regenerating facts, or changing the embedding preset, updates topics immediately.",
+                        value=20,
+                        min=1,
+                        max=200,
+                        step=1,
+                    ),
+                    "similarity_threshold": AgentActionConfig(
+                        type="number",
+                        label="Topic similarity",
+                        description="Set how closely facts must match to share a topic, and how closely a topic must match a memory search. Raise for tighter, smaller groups; lower for broader groups. Set to 0 to use the embedding preset.",
+                        note_on_value={
+                            0: AgentActionNote(
+                                color="primary",
+                                text="Use embedding preset: 0 uses its Topic Threshold instead of a custom value.",
+                            ),
+                        },
+                        value=0,
+                        min=0,
+                        max=0.99,
+                        step=0.01,
+                    ),
+                },
+            ),
+            "retrieval": AgentAction(
+                enabled=True,
+                container=True,
+                icon="mdi-filter-variant",
+                label="Retrieval",
+                description="How similarity results are ranked and merged before they reach a prompt. Nothing in this group adds a request; the cross-encoder runs a local model.",
+                config={
+                    "recency_weight": AgentActionConfig(
+                        type="number",
+                        label="Recency weight",
+                        description="Newer results rank higher: each result's score is its distance plus this weight times its age (0 = newest, 1 = oldest in the result set). 0 turns the term off.",
+                        value=0.1,
+                        min=0.0,
+                        max=1.0,
+                        step=0.05,
+                    ),
+                    "mmr_threshold": AgentActionConfig(
+                        type="number",
+                        label="Diversity threshold",
+                        description="A result whose embedding is more similar than this (cosine) to one already selected is skipped. 1 turns the check off.",
+                        value=0.92,
+                        min=0.5,
+                        max=1.0,
+                        step=0.01,
+                    ),
+                    "entity_lookup": AgentActionConfig(
+                        type="bool",
+                        label="Entity lookup",
+                        description="When the recent lines name a character who is not in the scene (a name with a capital must appear as written), fetch that character's description from the memory store and add it ahead of the similarity results.",
+                        value=True,
+                    ),
+                    "similarity_gate": AgentActionConfig(
+                        type="bool",
+                        label="Match known facts",
+                        description="Allow a memory of an event the character missed when it closely matches a fact they know. Turn on to recognize retold information; turn off for stricter access filtering. Uses the Summarizer's Fact matching tolerance and cannot override entry visibility or blocked knowledge.",
+                        value=True,
+                    ),
+                    "rerank": AgentActionConfig(
+                        type="bool",
+                        label="Cross-encoder rerank",
+                        description=f"Score the top {RERANK_CANDIDATES} merged results against the queries with a local cross-encoder and keep the best {RERANK_KEEP}. No request; the model runs on the embeddings device.",
+                        note=f"Downloads {RERANK_MODEL} on first use. When the model fails to load, retrieval carries on without the rerank and the agent shows the error.",
+                        value=False,
+                    ),
+                },
+            ),
         }
         return actions
 
     def __init__(self, **kwargs):
         self.db = None
+        self.init_audience_index()
         self.memory_tracker = {}
         self._ready_to_add = False
         self._db_generation = 0
         self._db_lock = threading.Lock()
+        self._reranker: CrossEncoderReranker | None = None
+        # topic centroids (unit vectors) by topic id; rebuilt on load
+        self.topic_centroids: dict[str, np.ndarray] = {}
 
         async_signals.get("config.changed").connect(self.on_config_changed)
 
@@ -225,6 +346,265 @@ class MemoryAgent(Agent):
             return False
 
     @property
+    def retrieval_recency_weight(self) -> float:
+        return float(self.resolve_config("retrieval", "recency_weight"))
+
+    @property
+    def retrieval_mmr_threshold(self) -> float:
+        return float(self.resolve_config("retrieval", "mmr_threshold"))
+
+    @property
+    def retrieval_entity_lookup(self) -> bool:
+        return bool(self.resolve_config("retrieval", "entity_lookup"))
+
+    @property
+    def sanitized_action_config(self):
+        config = super().sanitized_action_config
+        if (
+            character_knowledge_enabled(getattr(self, "scene", None))
+            and "retrieval" in config
+        ):
+            config["retrieval"]["config"].pop("similarity_gate", None)
+        return config
+
+    @property
+    def retrieval_similarity_gate(self) -> bool:
+        return bool(self.resolve_config("retrieval", "similarity_gate"))
+
+    @property
+    def retrieval_rerank(self) -> bool:
+        return bool(self.resolve_config("retrieval", "rerank"))
+
+    # topics
+
+    @property
+    def topics_enabled(self) -> bool:
+        return self.resolve_enabled("topics")
+
+    @property
+    def topics_recluster_step(self) -> int:
+        return int(self.resolve_config("topics", "recluster_step"))
+
+    @property
+    def topics_similarity_threshold(self) -> float:
+        """The Topics setting when set (> 0), else the embedding preset's model-dependent value."""
+        value = float(self.resolve_config("topics", "similarity_threshold") or 0)
+        if value > 0:
+            return value
+        preset = self.embeddings_config
+        if preset is None:
+            return 0.5
+        return float(preset.topic_threshold)
+
+    async def rebuild_topic_centroids(self, scene):
+        """Centroids from the stored fact vectors of every topic's members."""
+        topics = scene.world_state.topics
+        ids = [i for topic in topics.values() for i in topic.fact_ids]
+        centroids: dict[str, np.ndarray] = {}
+        if ids and self.ready:
+            vectors = await self.get_embeddings(ids)
+            for topic in topics.values():
+                members = [vectors[i] for i in topic.fact_ids if i in vectors]
+                if not members:
+                    continue
+                units = []
+                for vector in members:
+                    vector = np.asarray(vector, dtype=float)
+                    norm = np.linalg.norm(vector)
+                    units.append(vector / norm if norm > 0 else vector)
+                centroid = np.mean(np.stack(units), axis=0)
+                norm = np.linalg.norm(centroid)
+                centroids[topic.id] = centroid / norm if norm > 0 else centroid
+        self.topic_centroids = centroids
+        return centroids
+
+    async def embed_text(self, text: str) -> np.ndarray | None:
+        """The query embedding, or None when no embedding function is set."""
+        try:
+            embed_fn = self.embedding_function
+        except RuntimeError:
+            return None
+        vectors = await asyncio.to_thread(embed_fn, [text])
+        if vectors is None or len(vectors) == 0:
+            return None
+        vector = np.asarray(vectors[0], dtype=float)
+        norm = np.linalg.norm(vector)
+        return vector / norm if norm > 0 else vector
+
+    def nearest_topic(self, vector: np.ndarray) -> str | None:
+        """The topic whose centroid is closest to the vector, at or above the threshold."""
+        if not self.topic_centroids or vector is None:
+            return None
+        best_id, best = None, self.topics_similarity_threshold
+        for topic_id, centroid in self.topic_centroids.items():
+            score = float(np.dot(vector, centroid))
+            if score >= best:
+                best_id, best = topic_id, score
+        return best_id
+
+    async def _topic_first(
+        self, query: str, accepted: list, filter, *, viewer=None, ranking_viewer=None
+    ) -> list:
+        """
+        The nearest topic's highest-scoring eligible facts that the similarity search
+        did not return, ahead of that query's results.
+        """
+        if viewer is not None:
+            return await self._audience_topic_first(query, accepted, filter, viewer)
+        if not self.topics_enabled or not self.topic_centroids or not self.scene:
+            return []
+        topic_id = self.nearest_topic(await self.embed_text(query))
+        if topic_id is None:
+            return []
+        topic = self.scene.world_state.topics.get(topic_id)
+        if topic is None:
+            return []
+        facts = self.scene.world_state.facts
+        seen = {getattr(doc, "id", None) for doc in accepted}
+        from talemate.knowledge.revision_browsing import fact_current
+
+        candidates = {
+            i: facts[i]
+            for i in topic.fact_ids
+            if i in facts and i not in seen and fact_current(self.scene, facts[i])
+        }
+        visible = (
+            {fact.id: fact for fact in known_bucket(self.scene, ranking_viewer)}
+            if ranking_viewer is not None
+            and any(fact.supersedes for fact in candidates.values())
+            else None
+        )
+        predecessors = {
+            identity: fact
+            for identity, fact in candidates.items()
+            if visible is None or identity in visible
+        }
+        members = ranked_facts(
+            self.scene,
+            candidates.values(),
+            character=ranking_viewer,
+            superseders=visible.values() if visible is not None else None,
+            predecessors=predecessors,
+        )
+        selected = {f.id: f for f in members[:TOPIC_FACTS_PER_QUERY]}
+        ids = list(selected)
+        log.debug("topic first matched", topic=topic_id, candidates=ids)
+        if not ids:
+            return []
+        documents = await self.get_document(ids)
+        found = [documents[i] for i in ids if i in documents]
+        if filter is not None:
+            found = [doc for doc in found if filter(doc)]
+        log.debug("topic first", topic=topic_id, added=[d.id for d in found])
+        return [
+            render_fact_document(
+                self.scene,
+                doc,
+                fact=selected[doc.id],
+                predecessor=predecessors.get(selected[doc.id].supersedes),
+            )
+            for doc in found
+        ]
+
+    @staticmethod
+    def _audience_topic_groups(topics, documents, vectors, filter=None):
+        by_source = {}
+        for doc in documents.values():
+            if doc.id in vectors and (filter is None or filter(doc)):
+                by_source.setdefault(doc.meta["knowledge_id"], []).append(doc)
+        groups = []
+        for topic in topics.values():
+            candidates = [
+                doc
+                for identity in topic.fact_ids
+                for doc in by_source.get(identity, ())
+            ]
+            units = []
+            for doc in candidates:
+                vector = np.asarray(vectors[doc.id], dtype=float)
+                norm = np.linalg.norm(vector)
+                if norm:
+                    units.append(vector / norm)
+            if not units:
+                continue
+            centroid = np.mean(units, axis=0)
+            norm = np.linalg.norm(centroid)
+            if not norm:
+                continue
+            candidates.sort(
+                key=lambda doc: (
+                    -doc.meta.get("restatements", 0),
+                    -doc.meta.get("ts", 0),
+                )
+            )
+            groups.append((centroid / norm, candidates))
+        return groups
+
+    async def _audience_topic_first(self, query, accepted, filter, viewer):
+        if not self.topics_enabled or not self.scene.world_state.topics:
+            return []
+        scene = self.scene
+        await self.ensure_audience_index(scene)
+        state = self._audience_state(scene)
+        topics = scene.world_state.topics
+        key = (
+            state.collection_revision,
+            state.revision,
+            tuple(
+                (identity, tuple(topic.fact_ids)) for identity, topic in topics.items()
+            ),
+        )
+        cached = state.topics.get(viewer)
+        if cached is None or cached[0] != key:
+            documents = await self.get_documents_by_meta({"typ": "fact"}, viewer=viewer)
+            # Cache source text; relative ages must be rendered against the current time.
+            documents = {
+                identity: MemoryDocument(doc.raw, doc.meta, doc.id, doc.raw)
+                for identity, doc in documents.items()
+            }
+            vectors = await self.get_embeddings(list(documents)) if documents else {}
+            groups = self._audience_topic_groups(topics, documents, vectors)
+            cached = (key, documents, vectors, groups)
+            # An outer audience_operation retries if this build raced an edit.
+            if (state.collection_revision, state.revision) == key[:2]:
+                state.topics[viewer] = cached
+        _, documents, vectors, groups = cached
+        if filter is not None:
+            # Arbitrary caller filters may change independently of index state.
+            # Reuse the fetched variants/vectors, but narrow before topic selection.
+            current_documents = {
+                identity: self._dated_document(doc.raw, doc.meta, doc.id)
+                for identity, doc in documents.items()
+            }
+            groups = self._audience_topic_groups(
+                topics, current_documents, vectors, filter
+            )
+        query_vector = await self.embed_text(query)
+        if query_vector is None:
+            return []
+        best, members = self.topics_similarity_threshold, []
+        for centroid, candidates in groups:
+            score = float(np.dot(query_vector, centroid))
+            if score >= best:
+                best, members = score, candidates
+        seen = {doc.id for doc in accepted}
+        selected = ranked_fact_documents(
+            scene, [doc for doc in members if doc.id not in seen], character=viewer
+        )[:TOPIC_FACTS_PER_QUERY]
+        return selected
+
+    @property
+    def reranker(self) -> CrossEncoderReranker:
+        """The cross-encoder for the current device, created on first access."""
+        if self._reranker is None or self._reranker.device != self.device:
+            self._reranker = CrossEncoderReranker(device=self.device)
+        return self._reranker
+
+    @property
+    def rerank_error(self) -> str | None:
+        return self._reranker.error if self._reranker else None
+
+    @property
     def fingerprint(self) -> str:
         """
         Returns a unique fingerprint for the current configuration
@@ -264,6 +644,10 @@ class MemoryAgent(Agent):
 
         self.close_db(scene)
         emit("status", "Re-importing context database", status="busy")
+        # topics were grouped in the old vector space: rebuilt on import
+        scene.world_state.topics = {}
+        scene.world_state.topics_fact_count = 0
+        self.topic_centroids = {}
         await scene.commit_to_memory()
         if not scene.immutable_save:
             await scene.save(auto=True)
@@ -338,6 +722,7 @@ class MemoryAgent(Agent):
         loop = asyncio.get_running_loop()
         try:
             await loop.run_in_executor(None, self._set_db)
+            self.invalidate_audience_index(reconcile=True)
         except EmbeddingsModelLoadError:
             raise
         except Exception as e:
@@ -379,16 +764,38 @@ class MemoryAgent(Agent):
 
         return True
 
+    def _write_memory(self, scene, operation, *args, **kwargs):
+        # Executor queues and retries can outlive the scene that requested the write.
+        if self.scene is not scene:
+            return False
+        with self._db_lock:
+            # A source digest cannot see a write that has started but not landed.
+            scene.memory_writes_in_flight += 1
+            scene.memory_revision += 1
+        try:
+            operation(*args, **kwargs)
+            return True
+        finally:
+            # The executor can finish a write after its awaiting task is cancelled.
+            with self._db_lock:
+                scene.memory_revision += 1
+                scene.memory_writes_in_flight -= 1
+
     @set_processing
     async def add(self, text, character=None, uid=None, ts: int = None, **kwargs):
+        scene = _expected_write_scene.get() or self.scene
+        if self.scene is not scene:
+            return False
         if not text:
-            return
+            return False
         if self.readonly:
             log.debug("memory agent", status="readonly")
-            return
+            return False
 
         if not await self._wait_until_ready():
-            return
+            return False
+        if self.scene is not scene:
+            return False
 
         log.debug(
             "memory agent add",
@@ -400,13 +807,24 @@ class MemoryAgent(Agent):
         )
 
         loop = asyncio.get_running_loop()
+        attempted = False
 
         try:
-            await loop.run_in_executor(
+            completed = await loop.run_in_executor(
                 None,
-                functools.partial(self._add, text, character, uid=uid, ts=ts, **kwargs),
+                functools.partial(
+                    self._write_memory,
+                    scene,
+                    self._add,
+                    text,
+                    character,
+                    uid=uid,
+                    ts=ts,
+                    **kwargs,
+                ),
             )
         except AttributeError as e:
+            attempted = True
             # not sure how this sometimes happens.
             # chromadb model None
             # race condition because we are forcing async context onto it?
@@ -423,10 +841,17 @@ class MemoryAgent(Agent):
             )
             await asyncio.sleep(1.0)
             try:
-                await loop.run_in_executor(
+                completed = await loop.run_in_executor(
                     None,
                     functools.partial(
-                        self._add, text, character, uid=uid, ts=ts, **kwargs
+                        self._write_memory,
+                        scene,
+                        self._add,
+                        text,
+                        character,
+                        uid=uid,
+                        ts=ts,
+                        **kwargs,
                     ),
                 )
             except Exception as e:
@@ -440,23 +865,72 @@ class MemoryAgent(Agent):
                     ts=ts,
                     **kwargs,
                 )
+                completed = False
+
+        if completed or attempted:
+            self.invalidate_audience_writes([{"id": uid, "meta": kwargs}], scene=scene)
+        return completed
 
     def _add(self, text, character=None, ts: int = None, **kwargs):
         raise NotImplementedError()
 
     @set_processing
     async def add_many(self, objects: list[dict]):
+        """An empty batch refreshes authored audiences without a store write."""
+        scene = _expected_write_scene.get() or self.scene
+        if self.scene is not scene:
+            return False
         if self.readonly:
             log.debug("memory agent", status="readonly")
-            return
+            return False
+        if not objects:
+            self.invalidate_audience_writes(objects, scene=scene)
+            return True
 
         if not await self._wait_until_ready():
-            return
+            return False
+        if self.scene is not scene:
+            return False
 
         log.debug("memory agent add many", len=len(objects))
 
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._add_many, objects)
+        operation = loop.run_in_executor(
+            None,
+            functools.partial(self._write_memory, scene, self._add_many, objects),
+        )
+        return await self._shielded_write(
+            operation,
+            functools.partial(self.invalidate_audience_writes, objects, scene=scene),
+        )
+
+    async def _shielded_write(self, operation, invalidate):
+        try:
+            completed = await asyncio.shield(operation)
+        except asyncio.CancelledError:
+            if operation.done():
+                self._complete_cancelled_write(invalidate, operation)
+            else:
+                operation.add_done_callback(
+                    functools.partial(self._complete_cancelled_write, invalidate)
+                )
+            raise
+        except BaseException:
+            invalidate()
+            raise
+        if completed:
+            invalidate()
+        return completed
+
+    def _complete_cancelled_write(self, invalidate, operation):
+        if operation.cancelled() is True:
+            return
+        error = operation.exception()
+        if error is not None:
+            log.warning("memory write failed after cancellation", error=str(error))
+            invalidate()
+        elif operation.result():
+            invalidate()
 
     def _add_many(self, objects: list[dict]):
         """
@@ -469,15 +943,28 @@ class MemoryAgent(Agent):
         """
         Delete an object from the memory
         """
+        scene = _expected_write_scene.get() or self.scene
+        if self.scene is not scene:
+            return False
         if self.readonly:
             log.debug("memory agent", status="readonly")
-            return
+            return False
 
         if not await self._wait_until_ready():
-            return
+            return False
+        if self.scene is not scene:
+            return False
 
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, self._delete, meta)
+        operation = loop.run_in_executor(
+            None, functools.partial(self._write_memory, scene, self._delete, meta)
+        )
+        return await self._shielded_write(
+            operation,
+            functools.partial(
+                self.invalidate_audience_index, scene=scene, reconcile=True
+            ),
+        )
 
     def _delete(self, meta: dict):
         """
@@ -486,9 +973,13 @@ class MemoryAgent(Agent):
         raise NotImplementedError()
 
     @set_processing
-    async def get(self, text, character=None, **query):
+    async def get(self, text, character=None, *, viewer=None, **query):
         with MemoryRequest(query=text, query_params=query) as active_memory_request:
             active_memory_request.max_distance = self.max_distance
+            if viewer is not None:
+                return await self.audience_query(text, character, viewer, query)
+            if character_knowledge_enabled(self.scene):
+                await self.prepare_author_index()
             return await asyncio.to_thread(self._get, text, character, **query)
             # return await loop.run_in_executor(
             #    None, functools.partial(self._get, text, character, **query)
@@ -498,15 +989,120 @@ class MemoryAgent(Agent):
         raise NotImplementedError()
 
     @set_processing
-    async def get_document(self, id):
+    async def get_document(self, id, *, viewer=None):
+        if viewer is not None:
+            self.validate_audience_viewer(viewer)
+            ids = [id] if isinstance(id, str) else id
+            return (
+                await self.get_documents_by_meta(
+                    {"knowledge_id": {"$in": [str(identity) for identity in ids]}},
+                    viewer=viewer,
+                )
+                if ids
+                else {}
+            )
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._get_document, id)
 
     def _get_document(self, id):
         raise NotImplementedError()
 
+    async def get_documents_by_meta(self, meta: dict, *, viewer=None) -> dict:
+        """Documents whose metadata carries every given key/value, by id."""
+        if viewer is not None:
+            return await self.audience_read(
+                self._get_documents_by_meta, meta, viewer=viewer
+            )
+        if not meta or not self.db:
+            return {}
+        await self.prepare_author_index()
+        if not self.db:
+            return {}
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_documents_by_meta, meta)
+
+    def _get_documents_by_meta(self, meta: dict) -> dict:
+        raise NotImplementedError()
+
+    async def get_embeddings(self, ids: list[str]) -> dict[str, list[float]]:
+        """
+        Stored embedding vectors by document id (missing ids are absent).
+
+        A read path: like `get` and `get_document` it never waits for the
+        write gate, and an unset store answers with nothing.
+        """
+        if not ids or not self.db:
+            return {}
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self._get_embeddings, ids)
+
+    def _get_embeddings(self, ids: list[str]) -> dict[str, list[float]]:
+        raise NotImplementedError()
+
+    async def near_duplicates(
+        self, ids: list[str], against: list[str], max_distance: float
+    ) -> set[str]:
+        """
+        The ids among `ids` whose stored embedding sits within `max_distance`
+        (euclidean) of any stored embedding among `against`. One fetch and one
+        distance matrix; an id without a stored vector is never a duplicate.
+        """
+        ids = [i for i in ids if i]
+        against = [i for i in against if i]
+        if not ids or not against:
+            return set()
+        vectors = await self.get_embeddings(list(dict.fromkeys(ids + against)))
+        return self._near_duplicates_in(
+            ids, {i: vectors[i] for i in against if i in vectors}, vectors, max_distance
+        )
+
+    async def near_duplicates_against(
+        self, ids: list[str], anchors: dict[str, list[float]], max_distance: float
+    ) -> set[str]:
+        """Like `near_duplicates`, with the anchor vectors already in hand."""
+        ids = [i for i in ids if i]
+        if not ids or not anchors:
+            return set()
+        vectors = await self.get_embeddings(ids)
+        return self._near_duplicates_in(ids, anchors, vectors, max_distance)
+
+    @staticmethod
+    def _near_duplicates_in(
+        ids: list[str],
+        anchors: dict[str, list[float]],
+        vectors: dict[str, list[float]],
+        max_distance: float,
+    ) -> set[str]:
+        rows = [i for i in ids if i in vectors]
+        cols = list(anchors)
+        if not rows or not cols:
+            return set()
+        vecs_a = np.asarray([vectors[i] for i in rows], dtype=float)
+        vecs_b = np.asarray([anchors[i] for i in cols], dtype=float)
+        norms_a = np.linalg.norm(vecs_a, axis=1, keepdims=True)
+        norms_b = np.linalg.norm(vecs_b, axis=1, keepdims=True)
+        vecs_a = np.divide(
+            vecs_a, norms_a, out=np.zeros_like(vecs_a), where=norms_a != 0
+        )
+        vecs_b = np.divide(
+            vecs_b, norms_b, out=np.zeros_like(vecs_b), where=norms_b != 0
+        )
+        a_squared = np.sum(vecs_a**2, axis=1).reshape(-1, 1)
+        b_squared = np.sum(vecs_b**2, axis=1).reshape(1, -1)
+        distances = np.sqrt(
+            np.maximum(a_squared + b_squared - 2 * np.dot(vecs_a, vecs_b.T), 0.0)
+        )
+        nearest = distances.min(axis=1)
+        return {rows[i] for i in range(len(rows)) if nearest[i] <= max_distance}
+
     async def on_archive_add(self, event: events.ArchiveEvent):
-        await self.add(event.text, uid=event.memory_id, ts=event.ts, typ="history")
+        await self.add(
+            event.text,
+            uid=event.memory_id,
+            ts=event.ts,
+            typ="history",
+            **presence_metadata(event.present),
+        )
 
     def connect(self, scene):
         super().connect(scene)
@@ -528,7 +1124,10 @@ class MemoryAgent(Agent):
         if not query:
             return memory_context
 
-        for memory in await self.get(query):
+        for memory in await self.get(
+            query,
+            **({"viewer": name} if character_knowledge_enabled(self.scene) else {}),
+        ):
             if memory in memory_context:
                 continue
 
@@ -546,7 +1145,7 @@ class MemoryAgent(Agent):
         self,
         query: str,
         max_tokens: int = 1000,
-        filter: Callable = lambda x: True,
+        filter: Callable | None = None,
         **where,
     ) -> str | None:
         """
@@ -568,15 +1167,68 @@ class MemoryAgent(Agent):
         queries: list[str],
         iterate: int = 1,
         max_tokens: int = 1000,
-        filter: Callable = lambda x: True,
+        filter: Callable | None = None,
         formatter: Callable = lambda x: x,
         limit: int = 10,
         return_docs: bool = False,
+        over_fetch: int = 1,
+        topic_first: bool = False,
+        viewer: str | None = None,
+        ranking_viewer: str | None = None,
+        **where,
+    ):
+        async def retrieve(_collection=None):
+            return await self._multi_query(
+                queries,
+                iterate=iterate,
+                max_tokens=max_tokens,
+                filter=filter,
+                formatter=formatter,
+                limit=limit,
+                return_docs=return_docs,
+                over_fetch=over_fetch,
+                topic_first=topic_first,
+                viewer=viewer,
+                ranking_viewer=ranking_viewer,
+                **where,
+            )
+
+        if viewer is not None:
+            return await self.audience_operation(viewer, retrieve)
+        return await retrieve()
+
+    async def _multi_query(
+        self,
+        queries: list[str],
+        iterate: int = 1,
+        max_tokens: int = 1000,
+        filter: Callable | None = None,
+        formatter: Callable = lambda x: x,
+        limit: int = 10,
+        return_docs: bool = False,
+        over_fetch: int = 1,
+        topic_first: bool = False,
+        viewer: str | None = None,
+        ranking_viewer: str | None = None,
         **where,
     ):
         """
         Get the character memory context for a given character
+
+        `over_fetch` widens the vector search (limit × over_fetch) for callers
+        whose filter drops many candidates. `topic_first` lets the nearest
+        topic contribute its highest-scoring eligible facts (prompt retrieval only; a
+        metadata condition in `where` turns it off).
+
+        Per query the candidates pass the filter (and the similarity knowledge
+        gate), are re-ranked by distance plus the recency term, and are cut
+        to `iterate`. The per-query lists are merged round-robin, skipping
+        near-identical results (diversity threshold), optionally reranked by
+        the cross-encoder, and cut to the token budget.
         """
+
+        ranking_viewer = viewer if ranking_viewer is None else ranking_viewer
+        limit = limit * max(1, over_fetch)
 
         # First, collect results for each individual query (respecting the
         # per-query `iterate` limit) so that we have them available before we
@@ -584,6 +1236,16 @@ class MemoryAgent(Agent):
         # monopolising the token budget.
 
         per_query_results: list[list[str]] = []
+        # D23: perception access is decided by the backend audience condition;
+        # even a caller-supplied bucket filter can only narrow that eligible set.
+        gate_distance = (
+            self._similarity_gate_distance()
+            if filter and not character_knowledge_enabled(self.scene)
+            else None
+        )
+        # the gate's anchors (the character's known facts and their vectors)
+        # do not change between the queries of one call: fetched once
+        anchors = await self._gate_anchors(filter) if gate_distance is not None else {}
 
         for query in queries:
             # Skip empty queries so that we keep indexing consistent for the
@@ -593,81 +1255,278 @@ class MemoryAgent(Agent):
                 continue
 
             # Fetch potential memories for this query.
-            raw_results = await self.get(formatter(query), limit=limit, **where)
+            raw_results = await self.get(
+                formatter(query),
+                limit=limit,
+                **({"viewer": viewer} if viewer is not None else {}),
+                **where,
+            )
 
-            # Apply filter and respect the `iterate` limit for this query.
-            accepted: list[str] = []
-            for memory in raw_results:
-                if filter and not filter(memory):
-                    continue
+            accepted = await self._apply_filter(
+                raw_results, filter, gate_distance, anchors
+            )
+            accepted = ranked_fact_documents(
+                self.scene, self._rank_by_recency(accepted), character=ranking_viewer
+            )
+            # only a caller without a metadata condition asks for topic-first
+            # facts: `where` is not applied to a fetch by id
+            topic_docs = (
+                await self._topic_first(
+                    formatter(query),
+                    accepted,
+                    filter,
+                    ranking_viewer=ranking_viewer,
+                    **({"viewer": viewer} if viewer is not None else {}),
+                )
+                if topic_first and not where
+                else []
+            )
+            per_query_results.append(
+                (topic_docs + accepted)[: iterate + len(topic_docs)]
+            )
 
+        # a reranker that already failed to load is not asked again: the
+        # plain, token-budgeted merge is the answer then
+        rerank = (
+            self.retrieval_rerank
+            and bool([q for q in queries if q])
+            and not self.reranker.error
+        )
+        merged = self._merge_round_robin(per_query_results)
+        merged = ranked_fact_documents(self.scene, merged, character=ranking_viewer)
+
+        if rerank:
+            reranked = await self.rerank(
+                [q for q in queries if q], merged[:RERANK_CANDIDATES]
+            )
+            if self.reranker.error:
+                # A failed reranker keeps the filtered relevance order.
+                return self._cut_to_budget(merged, max_tokens)
+            merged = ranked_fact_documents(
+                self.scene, reranked, character=ranking_viewer
+            )
+
+        return self._cut_to_budget(merged, max_tokens)
+
+    def _similarity_gate_distance(self) -> float | None:
+        """The near-duplicate distance the gate uses, or None when it is off."""
+        if not self.retrieval_similarity_gate:
+            return None
+        return float(instance.get_agent("summarizer").archive_fact_dedupe_distance)
+
+    async def _gate_anchors(self, filter: Callable | None) -> dict[str, list[float]]:
+        """The stored vectors of the facts in the filter's bucket, by id."""
+        known_fact_ids = getattr(filter, "known_fact_ids", None)
+        if known_fact_ids is None:
+            return {}
+        ids = known_fact_ids()
+        return await self.get_embeddings(ids) if ids else {}
+
+    async def _apply_filter(
+        self,
+        raw_results: list,
+        filter: Callable | None,
+        gate_distance: float | None,
+        anchors: dict[str, list[float]] | None = None,
+    ) -> list:
+        """
+        The knowledge filter, then the similarity knowledge gate: a result
+        rejected for presence alone passes when a fact in the character's
+        bucket is a near-duplicate of it (its vector against the anchors).
+        Admission does not exempt a result from duplicates in the final merge.
+        """
+        if not filter:
+            return list(raw_results)
+
+        accepted = []
+        rejected = []
+        for memory in raw_results:
+            if filter(memory):
                 accepted.append(memory)
-                if len(accepted) >= iterate:
-                    break
+            else:
+                rejected.append(memory)
 
-            per_query_results.append(accepted)
+        if gate_distance is None or not rejected or not anchors:
+            return accepted
 
-        # Now interleave the results in a round-robin fashion so that each
-        # query gets a fair chance to contribute, until we hit the token
-        # budget.
+        gateable = getattr(filter, "gateable", None)
+        if gateable is None:
+            return accepted
 
-        memory_context: list[str] = []
+        candidates = [doc for doc in rejected if gateable(doc)]
+        if not candidates:
+            return accepted
+
+        retold = await self.near_duplicates_against(
+            [doc.id for doc in candidates], anchors, gate_distance
+        )
+        passed = []
+        for doc in candidates:
+            if doc.id in retold:
+                passed.append(doc)
+                log.debug("similarity gate passed", id=doc.id)
+
+        if not passed:
+            return accepted
+
+        # keep the store's distance order across the two groups
+        order = {id(doc): i for i, doc in enumerate(raw_results)}
+        return sorted(accepted + passed, key=lambda doc: order.get(id(doc), 0))
+
+    def _rank_by_recency(self, docs: list) -> list:
+        """Stable re-rank by distance + recency_weight × normalised age."""
+        weight = self.retrieval_recency_weight
+        scene_ts = self.scene.ts if self.scene else None
+        if weight <= 0 or scene_ts is None or len(docs) < 2:
+            return list(docs)
+
+        ages: list[int | None] = []
+        for doc in docs:
+            ts = (getattr(doc, "meta", None) or {}).get("ts")
+            try:
+                ages.append(None if ts is None else int(scene_ts) - util.coerce_ts(ts))
+            except (TypeError, ValueError):
+                ages.append(None)
+
+        known = [age for age in ages if age is not None]
+        if not known:
+            return list(docs)
+        span = max(1, max(known))
+
+        def score(item):
+            index, doc = item
+            age = ages[index]
+            age_norm = 0.5 if age is None else min(1.0, max(0.0, age / span))
+            distance = doc.distance if doc.distance is not None else 0.0
+            return (float(distance) + weight * age_norm, index)
+
+        return [doc for _, doc in sorted(enumerate(docs), key=score)]
+
+    def _is_fresher_fact(self, candidate, selected) -> bool:
+        candidate_fact = memory_fact(self.scene, candidate)
+        selected_fact = memory_fact(self.scene, selected)
+        if candidate_fact is None or selected_fact is None:
+            return False
+        candidate_ts = fact_timestamp(candidate_fact)
+        selected_ts = fact_timestamp(selected_fact)
+        return (
+            candidate_ts is not None
+            and selected_ts is not None
+            and candidate_ts > selected_ts
+        )
+
+    def _merge_round_robin(self, per_query_results: list[list]) -> list:
+        threshold = self.retrieval_mmr_threshold
+        memory_context: list = []
+        selected_vectors: dict = {}
         idx = 0
         while True:
-            added_any = False
+            # a skipped result (duplicate, near-identical) still counts as
+            # progress: the lists are exhausted only when no list has an
+            # item at this depth
+            progressed = False
 
             for result_list in per_query_results:
                 if idx >= len(result_list):
                     # No more items remaining for this query at this depth.
                     continue
 
+                progressed = True
                 memory = result_list[idx]
 
                 # Avoid duplicates in the final context.
                 if memory in memory_context:
                     continue
 
+                vector = getattr(memory, "embedding", None)
+                if vector is not None and threshold < 1.0:
+                    vector = np.asarray(vector, dtype=float)
+                    norm = np.linalg.norm(vector)
+                    if norm > 0:
+                        unit = vector / norm
+                        duplicates = [
+                            position
+                            for position, other in selected_vectors.items()
+                            if float(np.dot(unit, other)) > threshold
+                        ]
+                        replacement = (
+                            min(duplicates)
+                            if duplicates
+                            and all(
+                                self._is_fresher_fact(memory, memory_context[position])
+                                for position in duplicates
+                            )
+                            else None
+                        )
+                        if replacement is not None:
+                            # Preserve the selected fact's relevance slot before the budget cut.
+                            for position in duplicates:
+                                log.debug(
+                                    "diversity skip",
+                                    id=getattr(memory_context[position], "id", None),
+                                    reason="duplicate",
+                                    replacement_id=getattr(memory, "id", None),
+                                )
+                                if position != replacement:
+                                    memory_context[position] = None
+                                    del selected_vectors[position]
+                            memory_context[replacement] = memory
+                            selected_vectors[replacement] = unit
+                            continue
+                        if duplicates:
+                            log.debug(
+                                "diversity skip",
+                                id=getattr(memory, "id", None),
+                                reason="duplicate",
+                            )
+                            continue
+                        selected_vectors[len(memory_context)] = unit
+
                 memory_context.append(memory)
-                added_any = True
 
-                # Check token budget after each addition.
-                if util.count_tokens(memory_context) >= max_tokens:
-                    return memory_context
-
-            if not added_any:
-                # We iterated over all query result lists without adding
-                # anything. That means we have exhausted all available
-                # memories.
+            if not progressed:
+                # every list is exhausted at this depth
                 break
 
             idx += 1
 
-        return memory_context
+        return [memory for memory in memory_context if memory is not None]
+
+    def _cut_to_budget(self, docs: list, max_tokens: int) -> list:
+        kept: list = []
+        for doc in docs:
+            kept.append(doc)
+            if util.count_tokens(kept) >= max_tokens:
+                break
+        return kept
+
+    async def rerank(self, queries: list[str], docs: list) -> list:
+        """Cross-encoder rerank of the merged candidates; unchanged on a load failure."""
+        if not docs:
+            return docs
+        reranker = self.reranker
+        result = await asyncio.to_thread(reranker.rerank, queries, docs, RERANK_KEEP)
+        if reranker.error:
+            return docs
+        return result
 
     @property
     def embedding_function(self) -> Callable:
         raise NotImplementedError()
 
+    async def embed_texts(self, texts: list[str]) -> np.ndarray:
+        vectors = np.asarray(
+            await asyncio.to_thread(self.embedding_function, texts), dtype=float
+        )
+        norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+        return np.divide(vectors, norms, out=np.zeros_like(vectors), where=norms != 0)
+
     async def compare_strings(self, string1: str, string2: str) -> dict:
-        """
-        Compare two strings using the current embedding function without touching the database.
-
-        Returns a dictionary with 'cosine_similarity' and 'euclidean_distance'.
-        """
-
-        embed_fn = self.embedding_function
-
-        # Embed the two strings
-        vec1 = np.array(embed_fn([string1])[0])
-        vec2 = np.array(embed_fn([string2])[0])
-
-        # Compute cosine similarity
-        cosine_sim = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-
-        # Compute Euclidean distance
-        euclidean_dist = np.linalg.norm(vec1 - vec2)
-
-        return {"cosine_similarity": cosine_sim, "euclidean_distance": euclidean_dist}
+        vec1, vec2 = await self.embed_texts([string1, string2])
+        return {
+            "cosine_similarity": np.dot(vec1, vec2),
+            "euclidean_distance": np.linalg.norm(vec1 - vec2),
+        }
 
     async def compare_string_lists(
         self,
@@ -685,15 +1544,6 @@ class MemoryAgent(Agent):
             - 'similarity_matches': list of (i, j, score) (filtered if threshold set, otherwise all)
             - 'distance_matches': list of (i, j, distance) (filtered if threshold set, otherwise all)
         """
-        if (
-            not self.db
-            or not hasattr(self.db, "_embedding_function")
-            or self.db._embedding_function is None
-        ):
-            raise RuntimeError(
-                "Embedding function is not initialized. Make sure the database is set."
-            )
-
         if not list_a or not list_b:
             return {
                 "cosine_similarity_matrix": np.array([]),
@@ -702,28 +1552,17 @@ class MemoryAgent(Agent):
                 "distance_matches": [],
             }
 
-        embed_fn = self.db._embedding_function
-
-        # Batch embed all strings
-        embeddings_a = embed_fn(list_a)
-        embeddings_b = embed_fn(list_b)
-
-        vecs_a = np.array(embeddings_a)  # shape: (len(list_a), embedding_dim)
-        vecs_b = np.array(embeddings_b)  # shape: (len(list_b), embedding_dim)
-
-        # Normalize for cosine similarity
-        vecs_a_norm = vecs_a / np.linalg.norm(vecs_a, axis=1, keepdims=True)
-        vecs_b_norm = vecs_b / np.linalg.norm(vecs_b, axis=1, keepdims=True)
-
-        # Cosine similarity matrix
-        cosine_similarity_matrix = np.dot(vecs_a_norm, vecs_b_norm.T)
-
-        # Euclidean distance matrix
-        a_squared = np.sum(vecs_a**2, axis=1).reshape(-1, 1)
-        b_squared = np.sum(vecs_b**2, axis=1).reshape(1, -1)
-        euclidean_distance_matrix = np.sqrt(
-            a_squared + b_squared - 2 * np.dot(vecs_a, vecs_b.T)
+        texts = list(dict.fromkeys((*list_a, *list_b)))
+        vectors = dict(zip(texts, await self.embed_texts(texts)))
+        vecs_a = np.array([vectors[text] for text in list_a])
+        vecs_b = np.array([vectors[text] for text in list_b])
+        cosine_similarity_matrix = np.dot(vecs_a, vecs_b.T)
+        squared = (
+            np.sum(vecs_a**2, axis=1)[:, None]
+            + np.sum(vecs_b**2, axis=1)[None, :]
+            - 2 * cosine_similarity_matrix
         )
+        euclidean_distance_matrix = np.sqrt(np.maximum(squared, 0))
 
         # Prepare matches
         similarity_matches = []
@@ -836,6 +1675,21 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 value=self.device,
                 description="The device to use for embeddings.",
             ).model_dump()
+
+        if self.retrieval_rerank:
+            if self.rerank_error:
+                details["rerank"] = AgentDetail(
+                    icon="mdi-alert",
+                    value="Rerank model failed to load",
+                    description=f"{RERANK_MODEL}: {self.rerank_error}. Retrieval runs without the rerank.",
+                    color="warning",
+                ).model_dump()
+            else:
+                details["rerank"] = AgentDetail(
+                    icon="mdi-sort-variant",
+                    value=RERANK_MODEL,
+                    description="The cross-encoder used to rerank retrieval results.",
+                ).model_dump()
 
         missing_provider = self.missing_hosted_embeddings_provider
         if missing_provider:
@@ -1219,6 +2073,8 @@ class ChromaDBMemoryAgent(MemoryAgent):
         release_cuda_cache()
 
     def _add(self, text, character=None, uid=None, ts: int = None, **kwargs):
+        if character_knowledge_enabled(self.scene):
+            kwargs["knowledge_index"] = False
         metadatas = []
         ids = []
         scene = self.scene
@@ -1277,7 +2133,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
             seen_ids.add(obj["id"])
 
             documents.append(obj["text"])
-            meta = obj.get("meta", {})
+            meta = dict(obj.get("meta", {}))
+            if character_knowledge_enabled(scene):
+                meta["knowledge_index"] = False
             source = meta.get("source", "talemate")
             character = meta.get("character", "__narrator__")
             self.memory_tracker.setdefault(character, 0)
@@ -1306,14 +2164,23 @@ class ChromaDBMemoryAgent(MemoryAgent):
         self.db.delete(where=where)
         log.debug("chromadb agent delete", meta=meta, where=where)
 
-    def _get(self, text, character=None, limit: int = 15, **kwargs):
+    def _get(
+        self,
+        text,
+        character=None,
+        limit: int = 15,
+        *,
+        viewer=None,
+        _collection=None,
+        **kwargs,
+    ):
         where = {}
 
-        # this doesn't work because chromadb currently doesn't match
-        # non existing fields with $ne (or so it seems)
-        # where.setdefault("$and", [{"pin_only": {"$ne": True}}])
-
         where.setdefault("$and", [])
+        if character_knowledge_enabled(self.scene):
+            where["$and"].extend(audience_where(viewer))
+        elif viewer is not None:
+            raise ValueError("A memory viewer requires perception mode")
 
         character_filtered = False
 
@@ -1334,9 +2201,16 @@ class ChromaDBMemoryAgent(MemoryAgent):
         log.debug("crhomadb agent get", text=text, where=where)
 
         try:
-            _results = self.db.query(query_texts=[text], where=where, n_results=limit)
+            _results = (_collection if _collection is not None else self.db).query(
+                query_texts=[text],
+                where=where,
+                n_results=limit,
+                include=["documents", "metadatas", "distances", "embeddings"],
+            )
         except Exception as e:
             log.error("chromadb agent", error="failed to query", details=e)
+            if viewer is not None:
+                raise
             return []
 
         # import json
@@ -1351,11 +2225,17 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
         active_memory_request = memory_request.get()
 
+        embeddings = _results.get("embeddings")
+        embeddings = embeddings[0] if embeddings is not None else None
+
         for i in range(len(_results["distances"][0])):
             distance = _results["distances"][0][i]
 
             doc = _results["documents"][0][i]
             meta = _results["metadatas"][0][i]
+            embedding = None
+            if embeddings is not None and i < len(embeddings):
+                embedding = [float(x) for x in embeddings[i]]
 
             active_memory_request.add_result(doc, distance, meta)
 
@@ -1380,7 +2260,15 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 if date_prefix:
                     doc = f"{date_prefix}: {doc}"
 
-                doc = MemoryDocument(doc, meta, _results["ids"][0][i], raw)
+                doc = MemoryDocument(
+                    doc,
+                    meta,
+                    _results["ids"][0][i],
+                    raw,
+                    distance=distance,
+                    embedding=embedding,
+                )
+                doc = render_fact_document(self.scene, doc)
 
                 results.append(doc)
                 active_memory_request.accept_result(str(doc), distance, meta)
@@ -1413,24 +2301,49 @@ class ChromaDBMemoryAgent(MemoryAgent):
             )
             return None
 
+    def _get_embeddings(self, ids: list[str]) -> dict[str, list[float]]:
+        result = self.db.get(ids=list(ids), include=["embeddings"])
+        embeddings = result.get("embeddings")
+        if embeddings is None:
+            return {}
+        return {
+            doc_id: np.asarray(vector, dtype=float).tolist()
+            for doc_id, vector in zip(result.get("ids", []), embeddings)
+        }
+
     def _get_document(self, id) -> dict:
         if not id:
             return {}
 
         result = self.db.get(ids=[id] if isinstance(id, str) else id)
+        return self._documents_from(result)
+
+    def _get_documents_by_meta(
+        self, meta: dict, *, viewer=None, _collection=None
+    ) -> dict:
+        clauses = [{key: value} for key, value in meta.items()]
+        if character_knowledge_enabled(self.scene):
+            clauses.extend(audience_where(viewer))
+        elif viewer is not None:
+            raise ValueError("A memory viewer requires perception mode")
+        where = clauses[0] if len(clauses) == 1 else {"$and": clauses}
+        db = self.db if _collection is None else _collection
+        return self._documents_from(db.get(where=where))
+
+    def _documents_from(self, result) -> dict:
         documents = {}
-
         for idx, doc in enumerate(result["documents"]):
-            date_prefix = self.convert_ts_to_date_prefix(
-                result["metadatas"][idx].get("ts")
+            documents[result["ids"][idx]] = self._dated_document(
+                doc, result["metadatas"][idx], result["ids"][idx]
             )
-            if date_prefix:
-                doc = f"{date_prefix}: {doc}"
-            documents[result["ids"][idx]] = MemoryDocument(
-                doc, result["metadatas"][idx], result["ids"][idx], doc
-            )
-
         return documents
+
+    def _dated_document(self, raw, meta, identity):
+        date_prefix = self.convert_ts_to_date_prefix(meta.get("ts"))
+        text = f"{date_prefix}: {raw}" if date_prefix else raw
+        return render_fact_document(
+            self.scene, MemoryDocument(text, meta, identity, raw)
+        )
 
     @set_processing
     async def remove_unsaved_memory(self):

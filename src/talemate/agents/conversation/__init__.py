@@ -15,8 +15,11 @@ from talemate.client.context import (
     set_client_context_attribute,
     set_conversation_context_attribute,
 )
+from talemate.exceptions import ControlFlowException
 from talemate.prompts import Prompt
-from talemate.scene_message import CharacterMessage, DirectorMessage
+from talemate.instance import get_agent
+from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.scene_message import CharacterMessage
 from talemate.agents.utils import handle_empty_response_limit
 
 from talemate.agents.base import (
@@ -33,6 +36,8 @@ from talemate.agents.base import (
 )
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
+from talemate.knowledge.bucket import KnowledgeIndex
+from talemate.agents.conversation.knowledge import CharacterKnowledgeMixin
 from talemate.agents.context import active_agent
 
 from .websocket_handler import ConversationWebsocketHandler
@@ -52,17 +57,19 @@ class ConversationAgentEmission(AgentEmission):
         default_factory=list
     )
     avatar: str | None = None
+    message_ids: list[int] = pydantic.Field(default_factory=list)
 
 
 talemate.emit.async_signals.register(
     "agent.conversation.before_generate",
     "agent.conversation.inject_instructions",
     "agent.conversation.generated",
+    "agent.conversation.finalized",
 )
 
 
 @register()
-class ConversationAgent(MemoryRAGMixin, Agent):
+class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
     """
     An agent that can be used to have a conversation with the AI
 
@@ -184,6 +191,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             ),
         }
         MemoryRAGMixin.add_actions(actions)
+        CharacterKnowledgeMixin.add_actions(actions)
         return actions
 
     def __init__(
@@ -287,19 +295,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         """
         Builds the prompt that drives the AI's conversational response
         """
-        # the amount of tokens we can use
-        # we subtract 200 to account for the response
-
         scene = character.actor.scene
-
-        total_token_budget = self.client.max_token_length - 200
-        scene_and_dialogue_budget = total_token_budget - 500
-
-        scene_and_dialogue = scene.context_history(
-            budget=scene_and_dialogue_budget,
-            keep_director=True,
-            sections=False,
-        )
 
         main_character = scene.main_character.character
 
@@ -320,11 +316,6 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         else:
             formatted_names = character_names[0] if character_names else ""
 
-        try:
-            director_message = isinstance(scene_and_dialogue[-1], DirectorMessage)
-        except IndexError:
-            director_message = False
-
         inject_instructions_emission = ConversationAgentEmission(
             agent=self,
             response="",
@@ -341,29 +332,32 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         )
 
         conversation_format = self.conversation_format
+        character_entry_context = self.character_entry_context(character)
         prompt = Prompt.get(
             f"conversation.dialogue-{conversation_format}",
             vars={
                 "scene": scene,
                 "max_tokens": self.client.max_token_length,
-                "scene_and_dialogue_budget": scene_and_dialogue_budget,
-                "scene_and_dialogue": scene_and_dialogue,
                 "memory": None,  # DEPRECATED VARIABLE
                 "characters": list(scene.get_characters()),
                 "main_character": main_character,
                 "formatted_names": formatted_names,
                 "talking_character": character,
+                "knowledge_index": KnowledgeIndex.from_scene(scene),
+                "knowledge_viewer": self.rag_knowledge_viewer(character),
+                "character_entry_context": character_entry_context,
                 "partial_message": char_message,
-                "director_message": director_message,
                 "extra_instructions": self.generation_settings_task_instructions,  # backward compatibility
                 "task_instructions": self.generation_settings_task_instructions,
                 "actor_instructions": self.generation_settings_actor_instructions,
                 "actor_instructions_offset": self.generation_settings_actor_instructions_offset,
                 "direct_instruction": instruction,
                 "decensor": self.client.decensor_enabled,
-                "response_length": self.generation_settings_response_length
-                if self.generation_settings_override_enabled
-                else None,
+                "response_length": (
+                    self.generation_settings_response_length
+                    if self.generation_settings_override_enabled
+                    else None
+                ),
             },
         )
 
@@ -426,6 +420,13 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         """
 
         character = actor.character
+
+        from talemate.knowledge.revision_refresh import catch_up_revisions
+
+        await catch_up_revisions(self.scene)
+
+        if character_knowledge_enabled(self.scene):
+            await get_agent("summarizer").ensure_perceptions(self.scene)
 
         emission = ConversationAgentEmission(
             agent=self, response="", actor=actor, character=character
@@ -506,6 +507,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         response = total_result
 
         log.debug("conversation agent", response=response)
+
         emission = ConversationAgentEmission(
             agent=self,
             actor=actor,
@@ -525,7 +527,38 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             extra["asset_id"] = character.current_avatar
             extra["asset_type"] = "avatar"
         messages = [CharacterMessage(emission.response, **extra)]
+        messages[0]._avatar_pending = emit_signals
         return messages
+
+    async def finalize_message_avatar(self, message: CharacterMessage):
+        if not message._avatar_pending:
+            return
+        message._avatar_pending = False
+        scene = self.scene
+        character = scene.get_character(message.character_name)
+        if character is None:
+            return
+        emission = ConversationAgentEmission(
+            agent=self,
+            actor=character.actor,
+            character=character,
+            response=message.message,
+            message_ids=[message.id],
+        )
+        try:
+            await talemate.emit.async_signals.get("agent.conversation.finalized").send(
+                emission
+            )
+            if self.scene is not scene or scene.get_message(message.id) is not message:
+                return
+            if emission.avatar and emission.avatar != message.asset_id:
+                await scene.assets.update_message_asset(message.id, emission.avatar)
+        except ControlFlowException:
+            raise
+        except Exception:
+            log.exception(
+                "finalize_message_avatar: attachment failed", message_id=message.id
+            )
 
     def allow_repetition_break(
         self, kind: str, agent_function_name: str, auto: bool = False

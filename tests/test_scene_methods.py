@@ -21,6 +21,7 @@ import talemate.emit.async_signals as async_signals
 from conftest import MockScene, bootstrap_scene
 from talemate.character import Character
 from talemate.exceptions import GenerationCancelled
+from talemate.knowledge.schema import Fact, KnowledgeEdge
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
@@ -176,6 +177,73 @@ class TestAddActorAndCharacterLookups:
         assert real_scene.actors == [a2]
 
     @pytest.mark.asyncio
+    async def test_add_actor_refuses_a_second_object_under_one_name(self, real_scene):
+        # `actors` counts by object and `active_characters` by name, so two
+        # objects under one name give two actors and one name.
+        first = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=first, agent=None), commit_to_memory=False
+        )
+
+        with pytest.raises(ValueError, match='Name "Alice" already exists.'):
+            await real_scene.add_actor(
+                Actor(character=Character(name="Alice"), agent=None),
+                commit_to_memory=False,
+            )
+
+        assert real_scene.character_data["Alice"] is first
+        assert [actor.character for actor in real_scene.actors] == [first]
+        assert real_scene.active_characters == ["Alice"]
+
+    @pytest.mark.asyncio
+    async def test_add_actor_refuses_a_second_object_for_an_inactive_name(
+        self, real_scene
+    ):
+        first = Character(name="Alice")
+        actor = Actor(character=first, agent=None)
+        await real_scene.add_actor(actor, commit_to_memory=False)
+        await real_scene.remove_actor(actor)
+
+        with pytest.raises(ValueError, match='Name "Alice" already exists.'):
+            await real_scene.add_actor(
+                Actor(character=Character(name="Alice"), agent=None),
+                commit_to_memory=False,
+            )
+
+        assert real_scene.character_data["Alice"] is first
+
+    @pytest.mark.asyncio
+    async def test_add_actor_refuses_a_name_that_differs_only_in_case(self, real_scene):
+        # `get_character` resolves without case, so a scene holding Alice and
+        # alice has two records its own lookup cannot tell apart
+        first = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=first, agent=None), commit_to_memory=False
+        )
+
+        with pytest.raises(ValueError, match='Name "alice" already exists.'):
+            await real_scene.add_actor(
+                Actor(character=Character(name="alice"), agent=None),
+                commit_to_memory=False,
+            )
+
+        assert list(real_scene.character_data) == ["Alice"]
+        assert real_scene.active_characters == ["Alice"]
+
+    @pytest.mark.asyncio
+    async def test_add_actor_swaps_the_actor_of_a_character_it_holds(self, real_scene):
+        # the Actor/Player swap in `set_character_is_player` depends on this
+        char = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=char, agent=None), commit_to_memory=False
+        )
+        player = Player(character=char, agent=None)
+        await real_scene.add_actor(player, commit_to_memory=False)
+
+        assert real_scene.actors == [player]
+        assert real_scene.active_characters == ["Alice"]
+
+    @pytest.mark.asyncio
     async def test_add_actor_marks_player_character_is_player(self, real_scene):
         char = Character(name="Player", is_player=False)
         player = Player(character=char, agent=None)
@@ -219,14 +287,31 @@ class TestAddActorAndCharacterLookups:
         assert real_scene.intro == "Pre-existing intro"
 
     @pytest.mark.asyncio
+    async def test_add_actor_marks_the_character_active(self, real_scene):
+        char = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=char, agent=None), commit_to_memory=False
+        )
+        assert real_scene.active_characters == ["Alice"]
+        assert "Alice" not in real_scene.inactive_characters
+
+    @pytest.mark.asyncio
+    async def test_add_actor_twice_marks_the_character_once(self, real_scene):
+        char = Character(name="Alice")
+        await real_scene.add_actor(
+            Actor(character=char, agent=None), commit_to_memory=False
+        )
+        await real_scene.add_actor(
+            Actor(character=char, agent=None), commit_to_memory=False
+        )
+        assert real_scene.active_characters == ["Alice"]
+
+    @pytest.mark.asyncio
     async def test_remove_character_clears_state(self, real_scene):
         char = Character(name="Alice")
         await real_scene.add_actor(
             Actor(character=char, agent=None), commit_to_memory=False
         )
-        # add_actor populates character_data; active_characters is managed
-        # separately (e.g. via load_scene). Manually mark active for this test.
-        real_scene.active_characters.append("Alice")
 
         await real_scene.remove_character(char, purge_from_memory=False)
         assert "Alice" not in real_scene.character_data
@@ -241,6 +326,21 @@ class TestAddActorAndCharacterLookups:
         await real_scene.remove_actor(actor)
         assert actor not in real_scene.actors
         assert actor.character is None
+        assert "Alice" not in real_scene.active_characters
+
+    @pytest.mark.asyncio
+    async def test_remove_all_actors_clears_the_active_list(self, real_scene):
+        await real_scene.add_actor(
+            Actor(character=Character(name="Alice"), agent=None),
+            commit_to_memory=False,
+        )
+        await real_scene.add_actor(
+            Actor(character=Character(name="Bob"), agent=None),
+            commit_to_memory=False,
+        )
+        await real_scene.remove_all_actors()
+        assert real_scene.actors == []
+        assert real_scene.active_characters == []
 
     @pytest.mark.asyncio
     async def test_remove_all_actors_clears_actors_list(self, real_scene):
@@ -618,6 +718,41 @@ class TestHistoryAccessors:
         real_scene.history = [_char_msg("c"), NarratorMessage(message="n", source="ai")]
         assert real_scene.find_message("narrator", max_iterations=1) is None
 
+    def test_find_message_skips_filter_mismatches(self, real_scene):
+        older = _char_msg("older", character="Alice", source="player")
+        match = _char_msg("match", character="Alice", source="player")
+        real_scene.history = [
+            older,
+            match,
+            _char_msg("wrong character", character="Bob", source="player"),
+            _char_msg("wrong source", character="Alice", source="ai"),
+            NarratorMessage(message="wrong type", source="player"),
+        ]
+
+        assert (
+            real_scene.find_message(
+                "character", source="player", character_name="Alice"
+            )
+            is match
+        )
+
+    def test_find_message_returns_none_when_all_filters_mismatch(self, real_scene):
+        real_scene.history = [_char_msg("first"), _char_msg("last")]
+        assert real_scene.find_message("character", source="player") is None
+        assert real_scene.find_message("character", missing_attribute="value") is None
+
+    def test_find_message_filters_respect_iteration_limit(self, real_scene):
+        match = _char_msg("match", source="player")
+        real_scene.history = [match, _char_msg("later"), _char_msg("latest")]
+        assert (
+            real_scene.find_message("character", max_iterations=3, source="player")
+            is None
+        )
+        assert (
+            real_scene.find_message("character", max_iterations=4, source="player")
+            is match
+        )
+
     def test_message_index_finds_id(self, real_scene):
         a = _char_msg("a")
         b = _char_msg("b")
@@ -913,19 +1048,45 @@ class TestPopMessage:
         assert real_scene.pop_message(a) is True
         assert real_scene.history == [b]
 
-    def test_pop_by_int_returns_false_when_no_typ_match(self, real_scene):
-        # The int branch calls find_message(message) treating the int as a typ
-        # filter. Since message.typ is always a string, no message will match
-        # and pop_message returns False without mutating history.
+    def test_pop_by_missing_id_returns_false(self, real_scene):
         a = _char_msg("a")
         real_scene.history = [a]
         assert real_scene.pop_message(123) is False
         assert real_scene.history == [a]
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("index", [0, 1, 2])
+    async def test_pop_by_id_removes_only_requested_message(
+        self, real_scene, index, monkeypatch
+    ):
+        messages = [_char_msg("first"), _char_msg("middle"), _char_msg("last")]
+        real_scene.history = list(messages)
+        status = MagicMock()
+        monkeypatch.setattr(real_scene, "emit_status", status)
+
+        assert real_scene.pop_message(messages[index].id) is True
+
+        assert real_scene.history == messages[:index] + messages[index + 1 :]
+        status.assert_called_once_with()
+        assert real_scene.pop_message(messages[index].id) is False
+        status.assert_called_once_with()
+
     def test_pop_nonexistent_returns_false(self, real_scene):
         ghost = _char_msg("ghost")
         real_scene.history = [_char_msg("a")]
         assert real_scene.pop_message(ghost) is False
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("by_id", [False, True])
+    async def test_pop_empty_message_by_object_or_id(self, real_scene, by_id):
+        empty = NarratorMessage(message="", source="ai")
+        other = _char_msg("keep this message")
+        real_scene.history = [empty, other]
+
+        assert real_scene.pop_message(empty.id if by_id else empty) is True
+
+        assert real_scene.history == [other]
+        assert real_scene.get_message(empty.id) is None
 
     def test_pop_invalid_type_raises_value_error(self, real_scene):
         with pytest.raises(ValueError):
@@ -1198,6 +1359,22 @@ class TestReset:
         ]
         real_scene.reset()
         assert real_scene.archived_history == [{"text": "intro", "end": None}]
+
+    def test_reset_detaches_retained_edges_from_wiped_messages(self, real_scene):
+        message = _char_msg("I learned the route.")
+        real_scene.history = [message]
+        real_scene.world_state.facts = {
+            "F1": Fact(id="F1", text="The route is safe.", source="manual")
+        }
+        edge = KnowledgeEdge(
+            character="Bob", target="F1", message_id=message.id, source="inferred"
+        )
+        real_scene.world_state.knowledge = [edge]
+
+        real_scene.reset()
+
+        assert real_scene.world_state.knowledge == [edge]
+        assert edge.message_id is None
 
 
 class TestSerialize:

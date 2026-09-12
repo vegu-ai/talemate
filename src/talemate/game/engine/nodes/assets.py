@@ -1516,6 +1516,7 @@ class UpdateMessageAsset(Node):
     - state: graph state (required)
     - message_ids: List of message IDs to update
     - asset_id: The new asset ID
+    - override_cadence: Show an explicit selection regardless of avatar cadence
 
     Outputs:
 
@@ -1524,6 +1525,14 @@ class UpdateMessageAsset(Node):
     - message_ids: List of message IDs (passthrough)
     - asset_id: The asset ID (passthrough)
     """
+
+    class Fields:
+        override_cadence = PropertyField(
+            name="override_cadence",
+            description="Show an explicit selection regardless of avatar cadence",
+            type="bool",
+            default=False,
+        )
 
     @pydantic.computed_field(description="Node style")
     @property
@@ -1541,6 +1550,9 @@ class UpdateMessageAsset(Node):
         self.add_input("state")
         self.add_input("message_ids", socket_type="list", optional=True)
         self.add_input("asset_id", socket_type="str")
+
+        self.add_input("override_cadence", socket_type="bool", optional=True)
+        self.set_property("override_cadence", False)
 
         self.add_output("state")
         self.add_output("messages", socket_type="list")
@@ -1566,6 +1578,7 @@ class UpdateMessageAsset(Node):
                 message = await scene.assets.update_message_asset(
                     message_id=message_id,
                     asset_id=asset_id,
+                    override_cadence=self.get_input_value("override_cadence"),
                 )
                 # Skip messages that aren't found
                 if message is not None:

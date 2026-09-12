@@ -236,6 +236,52 @@ def test_find_docs_real_index_smoke():
 
 
 @pytest.mark.parametrize(
+    "query",
+    [
+        "commit_revision",
+        "pending_perception_messages",
+        "scene.history_ready",
+        "agent.conversation.finalized",
+        "evidence_boundary evidence_budget",
+        "intro_knowledge",
+        "SourceReference intro",
+        "opening audience derivation on load",
+        "scoped graph memory access",
+        "intro_present",
+        "FactContribution competitor vetoes",
+    ],
+)
+def test_find_docs_scene_processing_api_routes(query):
+    assert "dev/character-perspectives.md" in [
+        entry["path"] for entry in docs.find_docs(query)
+    ]
+
+
+@pytest.mark.parametrize(
+    "query,expected",
+    [
+        ("summarization settings", "user-guide/agents/summarizer/settings.md"),
+        (
+            "configure summarization thresholds",
+            "user-guide/agents/summarizer/settings.md",
+        ),
+        ("scene analysis caching", "user-guide/agents/summarizer/settings.md"),
+        ("stored views", "dev/character-perspectives.md"),
+        ("audience summaries", "dev/character-perspectives.md"),
+        ("duplicate suppression", "dev/character-perspectives.md"),
+        ("portrait cadence", "dev/character-perspectives.md"),
+        ("shared facts", "user-guide/world-editor/knowledge-how-it-works.md"),
+        ("citation not supported", "user-guide/world-editor/knowledge-how-it-works.md"),
+        ("regenerate old views", "user-guide/world-editor/knowledge-how-it-works.md"),
+        ("five diagrams", "user-guide/world-editor/knowledge-how-it-works.md"),
+        ("reply inputs", "user-guide/world-editor/knowledge-how-it-works.md"),
+    ],
+)
+def test_find_docs_preserves_parent_knowledge_routes(query, expected):
+    assert expected in [entry["path"] for entry in docs.find_docs(query)]
+
+
+@pytest.mark.parametrize(
     "query,expected",
     [
         ("koboldcpp client setup", "user-guide/clients/types/koboldcpp.md"),
@@ -293,10 +339,9 @@ BLOATED_PATH = "user-guide/character-card-import.md"
 )
 def test_find_docs_long_summary_cannot_displace_better_matches(query, monkeypatch):
     # #169: padding a summary with topics the page only mentions in passing
-    # must not buy it rank. It may still reach the last slot - the words are
-    # genuinely there, and a page whose token score plus its diluted phrase
-    # bonus still earns that slot keeps it - but it may never take a slot
-    # above the one it enters at.
+    # must not buy it a slot above the last result. The corpus-wide IDF and
+    # average summary length also change, so unrelated relevant pages may
+    # reorder; that is not promotion of the padded page.
     index = docs.load_docs_index()
     assert any(entry["path"] == BLOATED_PATH for entry in index)
     bloated_index = [
@@ -311,11 +356,7 @@ def test_find_docs_long_summary_cannot_displace_better_matches(query, monkeypatc
     bloated = [entry["path"] for entry in docs.find_docs(query)]
 
     assert BLOATED_PATH not in trimmed
-    if BLOATED_PATH in bloated:
-        assert bloated[-1] == BLOATED_PATH
-        assert bloated[:-1] == trimmed[:-1]
-    else:
-        assert bloated == trimmed
+    assert BLOATED_PATH not in bloated[:-1]
 
 
 def test_find_docs_summary_phrase_bonus_is_diluted(monkeypatch):

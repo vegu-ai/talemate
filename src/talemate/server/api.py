@@ -166,6 +166,7 @@ async def websocket_endpoint(websocket):
                         {
                             "type": "system",
                             "id": "scene.loading",
+                            "request_id": data.get("request_id"),
                             "status": "loading",
                         }
                     )
@@ -175,6 +176,7 @@ async def websocket_endpoint(websocket):
                             {
                                 "type": "system",
                                 "id": "scene.loaded",
+                                "request_id": data.get("request_id"),
                                 "status": "success",
                                 "data": {
                                     "hidden": True,
@@ -198,6 +200,7 @@ async def websocket_endpoint(websocket):
                             reset=reset,
                             callback=scene_loading_done,
                             scene_initialization=scene_initialization,
+                            request_id=data.get("request_id"),
                         )
                     )
 
@@ -221,7 +224,9 @@ async def websocket_endpoint(websocket):
                     handler.request_scene_assets(data.get("asset_ids"))
                 elif action_type == "request_file_image_data":
                     log.info("request_file_image_data", data=data)
-                    handler.request_file_image_data(data.get("file_path"))
+                    handler.request_file_image_data(
+                        data.get("file_path"), data.get("request_id")
+                    )
                 elif action_type == "upload_scene_asset":
                     log.info("upload_scene_asset")
                     await handler.add_scene_asset(data=data)

@@ -23,9 +23,9 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Creator Agent Nodes](agents-creator.md) | 9 | Contextual content generation: character attributes, dialogue instructions, content context and thematic lists. |
 | [Data Nodes](data.md) | 11 | General value handling: get/set, conditionals, sorting, selection, UUIDs, JSON, object updates and length/capping helpers. |
 | [Dict And List Nodes](data-collections.md) | 14 | Dictionaries and lists: make, get, set, update, pop, append, combine and collect. |
-| [Director Agent Nodes](agents-director.md) | 15 | Director operations: scene direction, character persistence, voice assignment, dice rolls, narrator/actor direction functions and websocket handlers. |
+| [Director Agent Nodes](agents-director.md) | 17 | Director operations: scene direction, character persistence, voice assignment, dice rolls, narrator/actor direction functions and websocket handlers. |
 | [Director Auto-Direction Nodes](agents-director-auto.md) | 6 | Automatic scene direction: candidates, scene intent, instruction cadence and auto-direction generation. |
-| [Director Chat Actions](agents-director-chat-actions.md) | 10 | The director chat's action modules: direct the scene, update context/gamestate/story arc, create images, query, prompt or yield to the user. |
+| [Director Chat Actions](agents-director-chat-actions.md) | 11 | The director chat's action modules: direct the scene, update context/gamestate/story arc, create images, query, prompt or yield to the user. |
 | [Director Chat Instructors](agents-director-chat-instructors.md) | 10 | The director chat's instructor modules: instruct characters, the narrator, world/history/story updates and character creation. |
 | [Director Chat Nodes](agents-director-chat.md) | 13 | Director chat plumbing: chat context, action arguments, confirmation and sub-actions, plus context/query modules. |
 | [Director Planning Nodes](agents-director-plan.md) | 13 | Director plans: create, update, advance and complete plans and their tasks. |
@@ -34,6 +34,7 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Flow Exception Nodes](raise.md) | 3 | Stop graph execution or raise errors: Stop, input value errors and acted-as-character signals. |
 | [Function Nodes](core-functions.md) | 11 | Callable node modules: define, get and call functions, for-each calls, returns, error handlers, breakpoints and scoped API functions. |
 | [Input Nodes](input.md) | 2 | Process and wait for player input in the scene loop. |
+| [Knowledge Nodes](knowledge.md) | 11 | The fact record and who knows what: facts about an entity, an entity's current state, the timeline between two entities, an entry's Known by line, a character's knowledge report, entry visibility, disclosures and grant/revoke knowledge edges. Grant Knowledge Metadata and Grant Knowledge Confirmation select the director wording for the scene's knowledge mode. |
 | [Logic Nodes](core-logic.md) | 12 | Branching and comparison: switches, routers, boolean logic and conditional routing. |
 | [Memory Agent Nodes](agents-memory.md) | 2 | Query the long-term memory context database and unpack memory documents. |
 | [Narrator Agent Nodes](agents-narrator.md) | 12 | Generate narration messages: progress, scene, environment, query, character entry/exit and time narration. |

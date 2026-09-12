@@ -10,14 +10,22 @@ saves the updated agent config to disk, and re-emits the agent status so the
 frontend re-renders with the new section list.
 """
 
+import copy
+
 import structlog
 
 from talemate.config import commit_config, get_config
 from talemate.instance import AGENTS
 from talemate.scene_agent_settings import (
     SceneAgentSettings,
+    _safe_init_overlay,
     agent_settings_dir,
     is_safe_settings_filename,
+)
+from talemate.scene_agent_settings_patch import (
+    SceneOverridePatchError,
+    plan_scene_override_patch,
+    apply_scene_override_plan,
 )
 from talemate.util import slugify
 
@@ -47,6 +55,14 @@ def strip_non_overridable_fields(agent, override: dict) -> list[str]:
                 config_override.pop(config_key)
                 stripped.append(f"{action_key}.{config_key}")
     return stripped
+
+
+def _scene_identity(scene) -> str | None:
+    """The loaded-scene generation a patch was composed for, when known."""
+    if scene is None:
+        return None
+    scene_id = getattr(scene, "id", None)
+    return str(scene_id) if scene_id else None
 
 
 class AgentConfigPlugin(Plugin):
@@ -213,24 +229,76 @@ class AgentConfigPlugin(Plugin):
         """Persist a sparse per-agent override set into the scene's
         agent-settings JSON file.
 
-        Required: ``agent_type``, ``override`` (sparse AgentOverride dict).
+        Required: ``agent_type``, plus exactly one of ``override`` (replacement
+        sparse AgentOverride dict) or ``patch`` (a sparse
+        ``{set: {actions: ...}, clear: [{action, config?}]}`` merge).
         Optional: ``filename`` (creates / re-links the file when supplied;
         the Agents settings page sends it with the first slice of a save for
-        a scene that has no agent-settings file yet).
+        a scene that has no agent-settings file yet), ``scene_identity`` (the
+        scene generation the patch was composed for), ``request_id``.
         """
         agent_type = data.get("agent_type")
         override = data.get("override")
+        patch = data.get("patch")
         filename = data.get("filename")
+
+        if override is not None and patch is not None:
+            await self._refuse(data, "Provide either 'override' or 'patch', not both")
+            return
 
         agent = AGENTS.get(agent_type) if agent_type else None
         if not agent:
             await self._refuse(data, f"Agent '{agent_type}' not found")
             return
 
+        # The sparse patch is validated as a whole before any live/link state is
+        # touched: a malformed or unknown entry refuses the request instead of
+        # applying the entries that came before it, and an invented action or
+        # config never reaches disk.
+        plan = None
+        if patch is not None:
+            try:
+                plan = plan_scene_override_patch(agent, patch)
+            except SceneOverridePatchError as exc:
+                log.warning(
+                    "scene-overrides patch refused",
+                    agent_type=agent_type,
+                    error=str(exc),
+                )
+                await self._refuse_scene_overrides(
+                    agent, data, f"Invalid scene-override patch: {exc}"
+                )
+                return
+
         scene = getattr(agent, "scene", None)
+        # A patch carries the scene generation it was composed for: refuse one
+        # that crossed a scene load rather than write into the new scene.
+        scene_identity = data.get("scene_identity")
+        if (
+            patch is not None
+            and scene_identity is not None
+            and scene_identity != _scene_identity(scene)
+        ):
+            log.warning(
+                "scene-overrides patch refused: scene identity changed",
+                agent_type=agent_type,
+                sent=scene_identity,
+                current=_scene_identity(scene),
+            )
+            await self._refuse_scene_overrides(
+                agent, data, "The scene changed; the settings change was not saved."
+            )
+            return
+
         if scene is None:
             await self._refuse_scene_overrides(
                 agent, data, f"Agent '{agent_type}' is not connected to a scene"
+            )
+            return
+
+        if scene.agent_overrides is not None and scene.agent_overrides.pending:
+            await self._refuse_scene_overrides(
+                agent, data, "Scene creation is still in progress."
             )
             return
 
@@ -264,27 +332,24 @@ class AgentConfigPlugin(Plugin):
 
         # Everything below mutates in-memory state that agents resolve their
         # settings from; snapshot it so a failed write can be undone instead of
-        # leaving the running scene on values that never reached disk.
-        previous_overlay = scene.agent_overrides
+        # leaving the running scene on values that never reached disk. The
+        # snapshot must be an independent copy: the patch mutates the live
+        # slice in place, so a reference would be reinstalled already changed.
+        previous_overlay = (
+            copy.deepcopy(scene.agent_overrides)
+            if scene.agent_overrides is not None
+            else None
+        )
         previous_settings_file = scene.agent_settings_file
         # Linking clears the opt-out; leaving it cleared after a failed write
         # would silently re-arm the load-time auto-link for a scene the user
         # opted out of.
         previous_opted_out = scene._agent_settings_opted_out
-        previous_slice = (
-            previous_overlay.agents.get(agent_type) if previous_overlay else None
-        )
 
         def rollback() -> None:
             scene.agent_overrides = previous_overlay
             scene.agent_settings_file = previous_settings_file
             scene._agent_settings_opted_out = previous_opted_out
-            if previous_overlay is None:
-                return
-            if previous_slice is None:
-                previous_overlay.agents.pop(agent_type, None)
-            else:
-                previous_overlay.agents[agent_type] = previous_slice
 
         # Resolve target file. If the scene already has an overlay we write
         # into it; otherwise the caller MUST supply a filename so we know
@@ -292,6 +357,9 @@ class AgentConfigPlugin(Plugin):
         # scene itself (it stores `agent_settings_file`), and so the only one
         # that needs the scene persisted afterwards.
         linked_file = False
+        # A first link can load other agents' overrides out of an existing
+        # file; those agents' effective settings change too.
+        loaded_existing_overlay = False
         if scene.agent_overrides is None:
             if not filename:
                 await self._refuse_scene_overrides(
@@ -299,10 +367,27 @@ class AgentConfigPlugin(Plugin):
                 )
                 return
             target_path = agent_settings_dir(scene.save_dir) / filename
-            scene.agent_overrides = SceneAgentSettings(filepath=target_path)
-            scene.agent_settings_file = filename
-            scene._agent_settings_opted_out = False
-            linked_file = True
+            if patch is not None and target_path.exists():
+                # A sparse hub patch merges, so an existing file's other agent
+                # and action overrides have to be loaded first; a file that
+                # cannot be read fails instead of being overwritten.
+                if not await _safe_init_overlay(scene, target_path, filename):
+                    rollback()
+                    await self._refuse_scene_overrides(
+                        agent,
+                        data,
+                        f"Failed to load agent settings file {filename}; "
+                        "check the JSON is valid.",
+                    )
+                    return
+                scene._agent_settings_opted_out = False
+                linked_file = True
+                loaded_existing_overlay = True
+            else:
+                scene.agent_overrides = SceneAgentSettings(filepath=target_path)
+                scene.agent_settings_file = filename
+                scene._agent_settings_opted_out = False
+                linked_file = True
         elif filename and filename != scene.agent_overrides.filename:
             # Caller wants to switch which file we write to. No current sender
             # reaches this — they only attach a filename while the scene has
@@ -318,8 +403,14 @@ class AgentConfigPlugin(Plugin):
             scene.agent_settings_file = filename
             linked_file = True
 
-        override = override or {}
-        stripped = strip_non_overridable_fields(agent, override)
+        if plan is not None:
+            stripped = apply_scene_override_plan(
+                scene.agent_overrides, agent_type, plan
+            )
+        else:
+            override = override or {}
+            stripped = strip_non_overridable_fields(agent, override)
+            scene.agent_overrides.replace_agent_overrides(agent_type, override)
         if stripped:
             log.warning(
                 "scene-overrides save dropped non-overridable fields",
@@ -327,7 +418,6 @@ class AgentConfigPlugin(Plugin):
                 fields=stripped,
             )
 
-        scene.agent_overrides.replace_agent_overrides(agent_type, override)
         try:
             await scene.agent_overrides.write_to_file()
         except OSError as exc:
@@ -346,8 +436,22 @@ class AgentConfigPlugin(Plugin):
             return
 
         # Re-emit agent + scene status so the frontend re-renders with the
-        # newly-resolved values and the updated linked-file display.
-        await agent.emit_status()
+        # newly-resolved values and the updated linked-file display. A first
+        # link can have loaded other agents' overrides into the live scene, so
+        # those agents report too — otherwise the hub keeps showing global
+        # values and the wrong reset state.
+        status_agents = [agent]
+        if loaded_existing_overlay:
+            for other_name in list(scene.agent_overrides.agents.keys()):
+                other = AGENTS.get(other_name)
+                if other is not None and other is not agent:
+                    status_agents.append(other)
+        for status_agent in status_agents:
+            await status_agent.emit_status()
+        # Effective knowledge eligibility is scene-derived, so an already-linked
+        # overlay write must publish the scene status even though it does not
+        # rewrite the scene file.
+        scene.emit_status()
         # Overrides live in their own file, so the scene itself only needs
         # persisting when this save linked one: the auto-save writes the
         # `agent_settings_file` reference so the link survives reload. Repeat

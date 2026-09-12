@@ -7,6 +7,7 @@ leave both the running scene and the frontend on the stored values.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -31,6 +32,7 @@ class _Scene:
         self.save_dir = str(save_dir)
         self.filename = filename
         self.project_name = project_name
+        self.id = "scene-1"
         self.name = "Test Scene"
         self.agent_overrides = None
         self.agent_settings_file = None
@@ -38,12 +40,13 @@ class _Scene:
         self.saved = True
         self._agent_settings_opted_out = False
         self.saves = 0
+        self.status_emissions = 0
 
     async def save(self, auto=False):
         self.saves += 1
 
     def emit_status(self, **kwargs):
-        pass
+        self.status_emissions += 1
 
 
 class _WebsocketHandler:
@@ -100,12 +103,15 @@ async def test_repeat_save_does_not_touch_the_scene(wired):
     await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))
     scene.saves = 0
 
+    status_before = scene.status_emissions
     # what a quick-toggle chip flip sends: no filename, overlay already linked
     await plugin.handle_save_scene_overrides(_payload(True))
 
     assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is True
     assert scene.saves == 0
     assert scene.saved is True
+    assert scene.status_emissions == status_before + 1
+    assert handler.messages[-1]["action"] == "operation_done"
 
 
 @pytest.mark.asyncio
@@ -235,3 +241,386 @@ class TestStripNonOverridableFields:
         override = {}
         assert strip_non_overridable_fields(self._agent(), override) == []
         assert override == {}
+
+
+def _patch(
+    patch: dict, *, filename: str | None = None, scene_identity: str | None = None
+) -> dict:
+    data = {"agent_type": AGENT_TYPE, "patch": patch}
+    if filename:
+        data["filename"] = filename
+    if scene_identity:
+        data["scene_identity"] = scene_identity
+    return data
+
+
+@pytest.mark.asyncio
+async def test_patch_merges_the_named_keys_and_keeps_the_rest(wired):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(_payload(True, "agent-settings.json"))
+
+    await plugin.handle_save_scene_overrides(
+        _patch(
+            {
+                "set": {
+                    "actions": {"container": {"config": {"fmt": {"value": "patched"}}}}
+                },
+            }
+        )
+    )
+
+    assert scene.agent_overrides.get_value(AGENT_TYPE, "container", "fmt") == "patched"
+    # the enable override the replacement save installed is still there
+    assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is True
+    assert not _errors(handler)
+
+
+@pytest.mark.asyncio
+async def test_patch_clear_drops_only_the_named_keys(wired):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(_payload(True, "agent-settings.json"))
+
+    await plugin.handle_save_scene_overrides(
+        _patch(
+            {
+                "clear": [{"action": "container", "config": "fmt"}],
+            }
+        )
+    )
+
+    # fmt goes back to inheriting the global; the enable override stays
+    assert scene.agent_overrides.get_value(AGENT_TYPE, "container", "fmt") is UNSET
+    assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is True
+
+
+@pytest.mark.asyncio
+async def test_patch_clear_without_config_drops_the_enable_override_only(wired):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))
+    await plugin.handle_save_scene_overrides(
+        _patch(
+            {
+                "set": {
+                    "actions": {"container": {"config": {"fmt": {"value": "kept"}}}}
+                },
+            }
+        )
+    )
+
+    await plugin.handle_save_scene_overrides(
+        _patch({"clear": [{"action": "container"}]})
+    )
+
+    assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is UNSET
+    assert scene.agent_overrides.get_value(AGENT_TYPE, "container", "fmt") == "kept"
+
+
+@pytest.mark.asyncio
+async def test_patch_drops_non_overridable_fields(wired):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(
+        _patch(
+            {
+                "set": {
+                    "actions": {
+                        "container": {"config": {"api_key": {"value": "scene-key"}}}
+                    }
+                },
+            },
+            filename="agent-settings.json",
+        )
+    )
+
+    assert scene.agent_overrides.get_value(AGENT_TYPE, "container", "api_key") is UNSET
+    assert not _errors(handler)
+
+
+@pytest.mark.asyncio
+async def test_patch_and_override_are_mutually_exclusive(wired):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(
+        {
+            "agent_type": AGENT_TYPE,
+            "override": {"actions": {}},
+            "patch": {"set": {"actions": {}}},
+        }
+    )
+    assert _errors(handler)
+
+
+@pytest.mark.asyncio
+async def test_patch_refuses_a_scene_identity_from_another_generation(wired):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(
+        _patch(
+            {
+                "set": {
+                    "actions": {"container": {"config": {"fmt": {"value": "patched"}}}}
+                },
+            },
+            filename="agent-settings.json",
+            scene_identity="some-other-scene",
+        )
+    )
+
+    assert scene.agent_overrides is None
+    assert _errors(handler)
+
+
+@pytest.mark.asyncio
+async def test_patch_accepts_the_current_scene_identity(wired):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(
+        _patch(
+            {
+                "set": {
+                    "actions": {"container": {"config": {"fmt": {"value": "patched"}}}}
+                },
+            },
+            filename="agent-settings.json",
+            scene_identity="scene-1",
+        )
+    )
+
+    assert scene.agent_overrides.get_value(AGENT_TYPE, "container", "fmt") == "patched"
+    assert not _errors(handler)
+
+
+@pytest.mark.asyncio
+async def test_patch_first_link_preserves_the_existing_file(wired, tmp_path: Path):
+    plugin, scene, agent, handler = wired
+    settings_dir = tmp_path / "agent-settings"
+    settings_dir.mkdir()
+    (settings_dir / "agent-settings.json").write_text(
+        json.dumps(
+            {
+                "agents": {
+                    "other": {"actions": {"thing": {"enabled": False}}},
+                    AGENT_TYPE: {
+                        "actions": {
+                            "container": {"config": {"fmt": {"value": "existing"}}}
+                        }
+                    },
+                }
+            }
+        )
+    )
+
+    await plugin.handle_save_scene_overrides(
+        _patch(
+            {
+                "set": {
+                    "actions": {"container": {"config": {"fmt": {"value": "patched"}}}}
+                }
+            },
+            filename="agent-settings.json",
+        )
+    )
+
+    assert scene.agent_overrides.get_value(AGENT_TYPE, "container", "fmt") == "patched"
+    # the other agent's override was loaded first and survives the merge
+    assert scene.agent_overrides.get_enabled("other", "thing") is False
+    assert not _errors(handler)
+
+
+@pytest.mark.asyncio
+async def test_patch_first_link_refuses_a_corrupt_existing_file(wired, tmp_path: Path):
+    plugin, scene, agent, handler = wired
+    settings_dir = tmp_path / "agent-settings"
+    settings_dir.mkdir()
+    corrupt = settings_dir / "agent-settings.json"
+    corrupt.write_text("{not json")
+
+    await plugin.handle_save_scene_overrides(
+        _patch(
+            {
+                "set": {
+                    "actions": {"container": {"config": {"fmt": {"value": "patched"}}}}
+                }
+            },
+            filename="agent-settings.json",
+        )
+    )
+
+    assert scene.agent_overrides is None
+    assert scene.agent_settings_file is None
+    assert corrupt.read_text() == "{not json"
+    assert _errors(handler)
+
+
+# ---------------------------------------------------------------------------
+# Round-1 review regressions: independent rollback, whole-patch validation and
+# first-link status refresh.
+# ---------------------------------------------------------------------------
+
+
+def _failing_write(monkeypatch):
+    async def boom(self):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(SceneAgentSettings, "write_to_file", boom)
+
+
+@pytest.mark.asyncio
+async def test_patch_failed_set_rolls_back_an_existing_slice(wired, monkeypatch):
+    """A failed sparse set must not leave the live slice mutated: the rollback
+    snapshot has to be an independent copy of the overlay."""
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))
+    on_disk_before = Path(scene.agent_overrides.filepath).read_text()
+    _failing_write(monkeypatch)
+
+    await plugin.handle_save_scene_overrides(
+        _patch({"set": {"actions": {"container": {"enabled": True}}}})
+    )
+
+    assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is False
+    assert Path(scene.agent_overrides.filepath).read_text() == on_disk_before
+    assert _errors(handler)
+
+
+@pytest.mark.asyncio
+async def test_patch_failed_clear_rolls_back_an_existing_slice(wired, monkeypatch):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))
+    _failing_write(monkeypatch)
+
+    await plugin.handle_save_scene_overrides(
+        _patch({"clear": [{"action": "container"}]})
+    )
+
+    assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is False
+    assert _errors(handler)
+
+
+@pytest.mark.asyncio
+async def test_patch_malformed_later_entry_is_refused_before_any_mutation(wired):
+    """The whole patch is validated first, so an early valid entry is not
+    applied when a later one is malformed."""
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))
+
+    await plugin.handle_save_scene_overrides(
+        _patch(
+            {
+                "set": {
+                    "actions": {
+                        "container": {
+                            "config": {"fmt": {"value": "early"}, "api_key": 1}
+                        }
+                    }
+                }
+            }
+        )
+    )
+
+    assert scene.agent_overrides.get_value(AGENT_TYPE, "container", "fmt") is UNSET
+    assert _errors(handler)
+
+
+@pytest.mark.asyncio
+async def test_patch_unknown_action_is_refused_and_not_written(wired):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))
+
+    await plugin.handle_save_scene_overrides(
+        _patch({"set": {"actions": {"ghost": {"config": {"x": {"value": 1}}}}}})
+    )
+
+    assert "ghost" not in scene.agent_overrides.agents
+    assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is False
+    assert _errors(handler)
+
+
+@pytest.mark.asyncio
+async def test_patch_unknown_config_is_refused(wired):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))
+
+    await plugin.handle_save_scene_overrides(
+        _patch({"set": {"actions": {"container": {"config": {"ghost": {"value": 1}}}}}})
+    )
+
+    assert scene.agent_overrides.get_value(AGENT_TYPE, "container", "ghost") is UNSET
+    assert _errors(handler)
+
+
+@pytest.mark.asyncio
+async def test_patch_refusal_carries_the_request_id(wired):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(
+        {
+            "agent_type": AGENT_TYPE,
+            "request_id": "req-546",
+            "patch": {"set": {"actions": {"ghost": {}}}},
+        }
+    )
+
+    failures = [m for m in handler.messages if "error" in m]
+    assert failures and failures[-1]["request_id"] == "req-546"
+
+
+@pytest.mark.asyncio
+async def test_first_link_refreshes_every_agent_it_loaded(wired, tmp_path: Path):
+    """Loading an existing file on first link changes other agents' effective
+    settings; each of them has to re-emit its status."""
+    plugin, scene, agent, handler = wired
+    other = _OverrideAgent(scene)
+    instance.AGENTS["override-test-other"] = other
+    try:
+        settings_dir = tmp_path / "agent-settings"
+        settings_dir.mkdir()
+        (settings_dir / "agent-settings.json").write_text(
+            json.dumps(
+                {
+                    "agents": {
+                        "override-test-other": {
+                            "actions": {"container": {"enabled": False}}
+                        }
+                    }
+                }
+            )
+        )
+        agent.emitted = 0
+        other.emitted = 0
+
+        await plugin.handle_save_scene_overrides(
+            _patch(
+                {
+                    "set": {
+                        "actions": {
+                            "container": {"config": {"fmt": {"value": "patched"}}}
+                        }
+                    }
+                },
+                filename="agent-settings.json",
+            )
+        )
+
+        assert agent.emitted >= 1
+        assert other.emitted == 1
+        # the loaded agent's override is live and preserved on disk
+        assert (
+            scene.agent_overrides.get_enabled("override-test-other", "container")
+            is False
+        )
+        on_disk = await SceneAgentSettings(
+            filepath=Path(scene.agent_overrides.filepath)
+        ).init_from_file()
+        assert on_disk.get_enabled("override-test-other", "container") is False
+    finally:
+        instance.AGENTS.pop("override-test-other", None)
+
+
+@pytest.mark.asyncio
+async def test_already_linked_patch_keeps_the_narrow_status_update(wired):
+    """An ordinary patch on an already-linked scene refreshes only its agent."""
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))
+    agent.emitted = 0
+
+    await plugin.handle_save_scene_overrides(
+        _patch({"set": {"actions": {"container": {"enabled": True}}}})
+    )
+
+    assert agent.emitted == 1

@@ -12,8 +12,12 @@ from talemate.world_state import ContextPin
 
 
 @pytest.mark.parametrize("reset", [False, True])
-async def test_real_save_as_and_reload(persistence_scene_factory, monkeypatch, reset):
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
+async def test_real_save_as_and_reload(
+    persistence_scene_factory, monkeypatch, reset, mode
+):
     scene = persistence_scene_factory()
+    scene.knowledge_eligibility = mode
     scene.name = "Persistence fixture"
     scene.project_name = "persistence-fixture"
     scene.intro = '"Saved intro."\nSecond line.'
@@ -38,6 +42,7 @@ async def test_real_save_as_and_reload(persistence_scene_factory, monkeypatch, r
     saved_path = Path(scene.full_path)
     saved_data = json.loads(saved_path.read_text())
     assert saved_data["intro"] == '"Saved intro."\nSecond line.'
+    assert saved_data["knowledge_eligibility"] == mode
     assert saved_data["history"][0]["message"] == "Saved history"
     assert "missing" in saved_data["world_state"]["pins"]
     scene.intro = "Unsaved edit"
@@ -49,6 +54,7 @@ async def test_real_save_as_and_reload(persistence_scene_factory, monkeypatch, r
     await load_scene_from_data(reloaded, saved_data, reset=reset, name=str(saved_path))
 
     assert reloaded is not scene
+    assert reloaded.knowledge_eligibility == mode
     assert reloaded.intro == '"Saved intro."\nSecond line.'
     assert reloaded.character_data["Hero"].greeting_text == "Raw greeting"
     assert [message.message for message in reloaded.history] == (
@@ -67,3 +73,4 @@ async def test_real_save_as_and_reload(persistence_scene_factory, monkeypatch, r
     await load_scene_from_data(third, second_data, name=str(second_path))
     assert third.intro == "Second saved intro"
     assert third.filename == "second.json"
+    assert third.knowledge_eligibility == mode

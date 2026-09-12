@@ -3,6 +3,8 @@
 !!! note
     We no longer maintain a list of recommended models. Below are some other resources that may help you find a model that works for you.
 
+[Model expectations](/talemate/getting-started/model-expectations/) states what Talemate needs from a model and names the smallest local models that run the full agentic workflow reliably.
+
 Any of the top models in any of the size classes here should work well.
 
 [https://oobabooga.github.io/benchmark.html](https://oobabooga.github.io/benchmark.html)

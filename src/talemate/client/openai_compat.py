@@ -29,7 +29,7 @@ ToggleableParametersConfig = toggleable_parameters_config(TOGGLEABLE_PARAMETERS)
 class Defaults(ToggleableParametersConfig, ApiHandlesPromptTemplateConfig):
     api_url: str = "http://localhost:5000"
     api_key: str = ""
-    max_token_length: int = 8192
+    max_token_length: int = 16384
     model: str = ""
     double_coercion: str = None
     rate_limit: int | None = None

@@ -1,7 +1,24 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
+  "$comment": "Compatibility contract: dev/scene-format.md.",
+  "if": {
+    "properties": {"knowledge_eligibility": {"const": "perception"}},
+    "required": ["knowledge_eligibility"]
+  },
+  "then": {"required": ["format_version"]},
   "properties": {
+    "format_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Saved representation version. Absence means legacy format 0."
+    },
+    "knowledge_eligibility": {
+      "type": "string",
+      "enum": ["legacy", "perception"],
+      "default": "legacy",
+      "description": "Knowledge compatibility, not feature activation. Absence means legacy."
+    },
     "description": {
       "type": "string"
     },
@@ -27,6 +44,13 @@
           },
           "source": {
             "type": "string"
+          },
+          "present": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names of the characters active in the scene when this was recorded. Absent in scenes saved before presence tracking; absent means unknown, which every character treats as witnessed."
           }
         },
         "required": ["message", "id", "typ", "source"]
@@ -45,6 +69,18 @@
           },
           "ts": {
             "type": "string"
+          },
+          "present": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Names of the characters active in the scene when this was recorded. Absent in scenes saved before presence tracking; absent means unknown, which every character treats as witnessed."
+          },
+          "facts_status": {
+            "type": "string",
+            "enum": ["ok", "failed"],
+            "description": "Whether the summary call's facts output parsed. Absent when facts were never extracted."
           }
         },
         "required": ["text", "ts"]
@@ -75,6 +111,17 @@
           },
           "details": {
             "type": "object"
+          },
+          "visibility": {
+            "type": "object",
+            "description": "Known-by setting per sheet entry, keyed by the memory storage key (description, <attribute>, detail.<name>). Absent means everyone.",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "mode": {"type": "string", "enum": ["everyone", "owner", "list"]},
+                "characters": {"type": "array", "items": {"type": "string"}}
+              }
+            }
           },
           "gender": {
             "type": "string"
@@ -119,6 +166,58 @@
     "world_state": {
       "type": "object",
       "properties": {
+        "facts": {
+          "type": "object",
+          "description": "Atomic facts keyed by id (F<n>), extracted by the summary call; the memory store mirrors them.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "text": {"type": "string"},
+              "ts": {"type": ["integer", "null"]},
+              "archive_id": {"type": ["string", "null"], "description": "The summarized history entry the fact came from."},
+              "present": {"type": ["array", "null"], "items": {"type": "string"}},
+              "subjects": {"type": "array", "items": {"type": "string"}},
+              "known_by": {"type": "object", "additionalProperties": {"type": "string", "enum": ["told", "granted", "inferred"]}},
+              "supersedes": {"type": ["string", "null"]},
+              "false": {"type": "boolean"},
+              "restatements": {"type": "integer"},
+              "last_seen_ts": {"type": ["integer", "null"]},
+              "source": {"type": "string", "enum": ["summary", "manual", "offscreen"]}
+            }
+          }
+        },
+        "fact_counter": {"type": "integer"},
+        "topics": {
+          "type": "object",
+          "description": "Facts clustered by embedding, keyed by topic id (T<n>); centroids are not stored.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "name": {"type": "string", "description": "The most frequent subject among the topic's facts, or topic N."},
+              "named": {"type": "boolean", "description": "False when no subject named the topic and name is a placeholder."},
+              "fact_ids": {"type": "array", "items": {"type": "string"}}
+            }
+          }
+        },
+        "topics_fact_count": {"type": "integer", "description": "The fact count at the last clustering."},
+        "knowledge": {
+          "type": "array",
+          "description": "Grant and revoke edges: the only per-character knowledge state that is stored.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "character": {"type": "string"},
+              "target": {"type": "string", "description": "Memory document id: <name>.<attr>, <name>.detail.<key>, <name>.description, a world entry id or a summarized history entry id."},
+              "kind": {"type": "string", "enum": ["grant", "revoke"]},
+              "source": {"type": "string", "enum": ["told", "granted", "inferred", "manual"]},
+              "ts": {"type": ["integer", "null"]},
+              "note": {"type": ["string", "null"]}
+            }
+          }
+        },
         "characters": {
           "type": "object",
           "additionalProperties": {

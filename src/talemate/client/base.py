@@ -221,7 +221,7 @@ class CommonDefaults(pydantic.BaseModel):
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
-    max_token_length: int = 8192
+    max_token_length: int = 16384
     double_coercion: str = None
     lock_template: bool = False
 
@@ -1418,16 +1418,30 @@ class ClientBase:
         """
 
         requires_active_scene = client_context_attribute("requires_active_scene")
+        initial_scene = active_scene.get()
+        cancel_sequence = initial_scene.cancel_sequence if initial_scene else None
 
         async def poll():
             while True:
                 scene = active_scene.get()
                 if requires_active_scene and (
-                    not scene or not scene.active or scene.cancel_requested
+                    not scene
+                    or not scene.active
+                    or scene.cancel_requested
+                    or scene.cancel_sequence != cancel_sequence
                 ):
                     break
                 await asyncio.sleep(0.3)
-            return GenerationCancelled("Generation cancelled")
+            return GenerationCancelled(
+                "Generation cancelled",
+                by_user=bool(
+                    scene
+                    and (
+                        scene.cancel_requested
+                        or scene.cancel_sequence != cancel_sequence
+                    )
+                ),
+            )
 
         return asyncio.create_task(poll())
 
@@ -1632,7 +1646,7 @@ class ClientBase:
 
         if auto_retries[issue] < limit:
             if self._auto_retry_cancelled(generation_id):
-                raise GenerationCancelled("Generation cancelled")
+                raise GenerationCancelled("Generation cancelled", by_user=True)
             auto_retries[issue] += 1
             wait = (
                 min(2 ** auto_retries[issue], AUTO_RETRY_MAX_BACKOFF)
@@ -1642,15 +1656,22 @@ class ClientBase:
             self._emit_auto_retry(
                 issue, auto_retries[issue], limit, generation_id, wait=wait
             )
+            scene = active_scene.get()
+            scene_was_active = bool(scene and scene.active)
+            cancel_sequence = scene.cancel_sequence if scene else None
             if wait and not await self._auto_retry_backoff_wait(wait, generation_id):
-                raise GenerationCancelled("Generation cancelled")
+                raise GenerationCancelled(
+                    "Generation cancelled",
+                    by_user=bool(scene and scene.cancel_sequence != cancel_sequence)
+                    or not (scene_was_active and not scene.active),
+                )
             return "retry"
 
         action = await self._prompt_generation_error(
             error_message, status_code=status_code, generation_id=generation_id
         )
         if action == "cancel":
-            raise GenerationCancelled("Generation cancelled by user")
+            raise GenerationCancelled("Generation cancelled by user", by_user=True)
         if action == "ignore" and request:
             request.failed = True
         return action

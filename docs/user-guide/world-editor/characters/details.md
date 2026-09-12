@@ -86,3 +86,7 @@ Details will be generated one by one and added to the list. The interface is loc
 Depending on how many details are generated, this can take a moment.
 
 --8<-- "docs/snippets/tips.md:generation_templates_and_settings"
+
+## Known by
+
+Every detail has a **Known by** setting: **Everyone** (the default), **Only [character]**, or **Specific characters**. Other characters cannot draw on an entry they may not know; the character always can. See [Visibility](/talemate/user-guide/world-editor/knowledge/#visibility) and [How character knowledge works](/talemate/user-guide/world-editor/knowledge-how-it-works/).

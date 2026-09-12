@@ -27,7 +27,7 @@ Override example:
 
 {# SCENE CONTEXT #}
 {% set scene_context_text %}
-{% set scene_context = scene.context_history(
+{% set scene_context = revision_context_history(character,
     budget=max_tokens-300-count_tokens(rendered_context)-count_tokens(volatile_context_text),
     min_dialogue=15,
     sections=False,

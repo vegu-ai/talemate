@@ -83,7 +83,21 @@ The maximum response length of the generated answers.
 
 ##### Cache
 
-Enables the agent wide cache of the long term memory retrieval. That means any agents that share the same long term memory settings will share the same cache. This can be useful to reduce the number of queries to the memory agent.
+Enables the agent-wide cache of long term memory retrieval. Agents that share the
+same long term memory settings share the cache. AI-assisted retrieval publishes a
+cached result; character-scoped retrieval in Character perspectives mode can also
+cache semantic-only results. Standard semantic-only retrieval remains uncached.
+
+Regenerating a reply reuses a published result only when the story before that reply,
+the memory sources available to the retrieval, and its settings are unchanged. New or
+edited world entries, character details, facts and archives refresh affected cached
+results, as do relevant knowledge visibility, topic and memory-collection changes.
+When retrieval is limited to character knowledge, new dialogue facts and learning
+edges tied to the reply being regenerated do not count as earlier sources. Without
+that limit, learning edges do not affect retrieval. Changes to older retained facts
+or learning edges, including a fact restatement, still refresh affected results.
+A retrieval already in progress can finish with its earlier context. A result built
+before one of those inputs changed is not reused after the change.
 
 <!--- --8<-- [end:agent_long_term_memory_settings] -->
 
@@ -100,3 +114,16 @@ You will be taken to the world editor suggestions tab where you can view the pro
 
 ![Character change proposal expanded](/talemate/img/0.29.0/world-editor-suggestions-1.png)
 <!--- --8<-- [end:character_change_proposals] -->
+
+<!-- --8<-- [start:character_evidence_guidance] -->
+## Character evidence in perception scenes
+
+In opted-in perception scenes, actor guidance and conversation analysis use
+the character’s stored evidence and last-known context. Cached advice is reused only
+for the same audience and unchanged evidence. Reader planning remains available,
+but its advice must not assume that characters know private reader information.
+Actor prompts omit the legacy unknown-fact lists and topic-awareness assertions.
+See [Character evidence in guidance and analysis](/talemate/dev/character-evidence-guidance/)
+for the development boundary and model-compliance limits. Legacy scenes retain the
+settings behavior described above.
+<!-- --8<-- [end:character_evidence_guidance] -->

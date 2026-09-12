@@ -37,7 +37,18 @@ function host({ active = [], inactive = [], snapshot = {} } = {}) {
 describe("the world panel character roster", () => {
     it("lists an active character the snapshot never mentioned", () => {
         const rows = host({ active: [{ name: "Emma" }] }).characterRoster;
-        expect(rows).toEqual([{ name: "Emma", emotion: "", snapshot: "", active: true }]);
+        expect(rows).toEqual([{ name: "Emma", emotion: "", snapshot: "", manual: false, active: true }]);
+    });
+
+    it("carries the manual flag onto both an active and a background row", () => {
+        const rows = host({
+            active: [{ name: "Emma" }],
+            snapshot: {
+                Emma: { emotion: "focused", snapshot: "reading", manual: true },
+                April: { emotion: "terrified", snapshot: "hiding", manual: true },
+            },
+        }).characterRoster;
+        expect(rows.map((row) => row.manual)).toEqual([true, true]);
     });
 
     it("keeps the actor order and puts background characters last", () => {
@@ -58,7 +69,7 @@ describe("the world panel character roster", () => {
             snapshot: { Emma: { emotion: "focused", snapshot: "reading a letter" } },
         }).characterRoster;
         expect(rows[0]).toEqual({
-            name: "Emma", emotion: "focused", snapshot: "reading a letter", active: true,
+            name: "Emma", emotion: "focused", snapshot: "reading a letter", manual: false, active: true,
         });
     });
 
@@ -71,8 +82,8 @@ describe("the world panel character roster", () => {
             snapshot: { "Emma's mother": { emotion: "furious", snapshot: "storming down the hall" } },
         });
         expect(self.characterRoster).toEqual([
-            { name: "Emma", emotion: "", snapshot: "", active: true },
-            { name: "Emma's mother", emotion: "furious", snapshot: "storming down the hall", active: false },
+            { name: "Emma", emotion: "", snapshot: "", manual: false, active: true },
+            { name: "Emma's mother", emotion: "furious", snapshot: "storming down the hall", manual: false, active: false },
         ]);
         // the row stays, but the creative menu must not offer to introduce her
         expect(persistableCharacters.call(self)).toEqual([]);
@@ -86,8 +97,8 @@ describe("the world panel character roster", () => {
             snapshot: { "Emma Watson": { emotion: "furious", snapshot: "storming down the hall" } },
         });
         expect(self.characterRoster).toEqual([
-            { name: "Emma", emotion: "", snapshot: "", active: true },
-            { name: "Emma Watson", emotion: "furious", snapshot: "storming down the hall", active: false },
+            { name: "Emma", emotion: "", snapshot: "", manual: false, active: true },
+            { name: "Emma Watson", emotion: "furious", snapshot: "storming down the hall", manual: false, active: false },
         ]);
     });
 
@@ -98,8 +109,8 @@ describe("the world panel character roster", () => {
             snapshot: { "Ana Blackwood": { emotion: "cold", snapshot: "at the window" } },
         });
         expect(self.characterRoster).toEqual([
-            { name: "Emma", emotion: "", snapshot: "", active: true },
-            { name: "Ana Blackwood", emotion: "cold", snapshot: "at the window", active: false },
+            { name: "Emma", emotion: "", snapshot: "", manual: false, active: true },
+            { name: "Ana Blackwood", emotion: "cold", snapshot: "at the window", manual: false, active: false },
         ]);
         expect(persistableCharacters.call(self)).toEqual([]);
     });
@@ -115,8 +126,8 @@ describe("the world panel character roster", () => {
             },
         }).characterRoster;
         expect(rows).toEqual([
-            { name: "Emma", emotion: "focused", snapshot: "reading", active: true },
-            { name: "Emma Watson", emotion: "furious", snapshot: "storming down the hall", active: false },
+            { name: "Emma", emotion: "focused", snapshot: "reading", manual: false, active: true },
+            { name: "Emma Watson", emotion: "furious", snapshot: "storming down the hall", manual: false, active: false },
         ]);
     });
 
@@ -184,8 +195,10 @@ describe("offering to make a background character real", () => {
     });
 
     it("gates the button on it", () => {
-        expect(worldState).toContain(
-            'v-if="!row.active && !mayBeExistingCharacter(row.name) && !isPlaythroughActive()"');
+        expect(worldState).toContain('v-if="canMakeReal(row)"');
+        const canMakeReal = lift(worldState, "canMakeReal", "WorldState.vue");
+        const self = { mayBeExistingCharacter: () => true, isPlaythroughActive: () => false };
+        expect(canMakeReal.call(self, { name: "Jason", active: false })).toBe(false);
     });
 
     // The panel button is not the only surface that sends persist_character:

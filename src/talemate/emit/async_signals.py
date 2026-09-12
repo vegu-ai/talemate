@@ -1,17 +1,19 @@
 import structlog
 import traceback
 
-from talemate.exceptions import ControlFlowException
+from talemate.exceptions import ControlFlowException, GenerationCancelled
 
 __all__ = [
     "register",
     "get",
     "handlers",
+    "DEFERRED",
 ]
 
 log = structlog.get_logger("talemate.emit.async_signals")
 
 handlers = {}
+DEFERRED = object()
 
 
 class AsyncSignal:
@@ -30,11 +32,31 @@ class AsyncSignal:
         except ValueError:
             pass
 
-    async def send(self, emission) -> list[tuple]:
+    async def send(
+        self, emission, *, completed: list[str] | None = None
+    ) -> list[tuple]:
+        """Optionally checkpoint receivers, propagating failures and deferred work."""
         failures = []
         for receiver in self.receivers:
+            if completed is not None:
+                function = (
+                    receiver
+                    if hasattr(receiver, "__qualname__")
+                    else type(receiver).__call__
+                )
+                key = f"{self.name}:{function.__module__}.{function.__qualname__}"
+                owner = getattr(receiver, "__self__", receiver)
+                owner_key = getattr(owner, "signal_receiver_key", None)
+                if owner_key is not None:
+                    key = f"{key}:{owner_key}"
+                if key in completed:
+                    continue
             try:
-                await receiver(emission)
+                result = await receiver(emission)
+                if completed is not None and result is DEFERRED:
+                    raise GenerationCancelled(
+                        "A scene action has not finished yet. Retry to continue."
+                    )
             except ControlFlowException:
                 raise
             except Exception as exc:
@@ -44,7 +66,12 @@ class AsyncSignal:
                     receiver=repr(receiver),
                     error=traceback.format_exc(),
                 )
+                if completed is not None:
+                    raise
                 failures.append((receiver, exc))
+            else:
+                if completed is not None:
+                    completed.append(key)
         return failures
 
 

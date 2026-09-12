@@ -23,7 +23,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, call, patch
 
 import pytest
 
@@ -61,6 +61,8 @@ from talemate.agents.director.websocket_handler import (
 )
 from talemate.agents.tts.schema import Voice  # noqa: F401
 from talemate.character import Character
+from talemate.context import ActiveScene
+from talemate.exceptions import GenerationCancelled
 from talemate.world_state import CharacterState
 
 
@@ -558,6 +560,278 @@ class TestPersistCharacterEarlyErrorPath:
 
 
 # ---------------------------------------------------------------------------
+# persist_character — cleanup after a cancelled or failed creation
+# ---------------------------------------------------------------------------
+
+
+class TestPersistCharacterCleanup:
+    """A creation that does not finish leaves nothing behind.
+
+    The character is in `character_data` from the moment its actor is added,
+    and an inactive creation has no actor left to remove, so removing the
+    actor alone left the half-built character in the Inactive list.
+    """
+
+    def _request(self, active: bool) -> PersistCharacterRequest:
+        return PersistCharacterRequest(
+            name="Halfling",
+            description="Never finished.",
+            generate=False,
+            determine_name=False,
+            active=active,
+        )
+
+    async def _persist(self, director, request):
+        """persist_character re-raises a cancel so its caller can tell one from
+        a failure; an ordinary error still returns None."""
+        with contextlib.suppress(GenerationCancelled):
+            return await director.persist_character(request)
+        return None
+
+    @pytest.mark.parametrize("active", [True, False])
+    @pytest.mark.parametrize("error", [GenerationCancelled, RuntimeError])
+    @pytest.mark.asyncio
+    async def test_a_failed_memory_commit_leaves_no_character(
+        self, scene, director, active, error
+    ):
+        """add_actor writes character_data and then commits the character to
+        memory through the memory agent. A cancel or a failure there is the
+        first thing that can leave a character behind, so it has to be inside
+        the protected region."""
+        with patch.object(
+            Character, "commit_to_memory", autospec=True, side_effect=error("stop")
+        ):
+            result = await self._persist(director, self._request(active))
+
+        assert result is None
+        assert "Halfling" not in scene.character_data
+        assert "Halfling" not in scene.active_characters
+        assert [actor.character.name for actor in scene.actors] == []
+
+    @pytest.mark.parametrize("active", [True, False])
+    @pytest.mark.parametrize("error", [GenerationCancelled, RuntimeError])
+    @pytest.mark.asyncio
+    async def test_an_unfinished_creation_leaves_no_character(
+        self, scene, director, active, error
+    ):
+        with patch.object(
+            type(director),
+            "_apply_base_attributes",
+            autospec=True,
+            side_effect=error("stop"),
+        ):
+            result = await self._persist(director, self._request(active))
+
+        assert result is None
+        assert "Halfling" not in scene.character_data
+        assert "Halfling" not in scene.active_characters
+        assert [actor.character.name for actor in scene.actors] == []
+        assert "Halfling" not in scene.inactive_characters
+
+    @pytest.mark.parametrize("error", [GenerationCancelled, RuntimeError])
+    @pytest.mark.asyncio
+    async def test_the_purge_runs_with_a_cancel_still_pending(
+        self, scene, director, error
+    ):
+        """A raised cancel flag stops the purge: it reaches the memory agent,
+        whose set_processing gate turns the pending cancel into another
+        GenerationCancelled. The stub gates on the flag the same way, and the
+        flag is put back afterwards for whoever else is watching it."""
+        purged = []
+
+        def cancel_and_raise(*args, **kwargs):
+            scene.cancel_requested = True
+            raise error("stop")
+
+        async def gated_purge(character):
+            scene.continue_actions()
+            purged.append(character.name)
+
+        with (
+            ActiveScene(scene),
+            patch.object(
+                Character, "purge_from_memory", autospec=True, side_effect=gated_purge
+            ),
+            patch.object(
+                type(director),
+                "_apply_base_attributes",
+                autospec=True,
+                side_effect=cancel_and_raise,
+            ),
+        ):
+            await self._persist(director, self._request(True))
+
+        assert purged == ["Halfling"]
+        assert "Halfling" not in scene.character_data
+
+    @pytest.mark.asyncio
+    async def test_the_cleanup_puts_a_foreign_cancel_back(self, scene, director):
+        """The flag is scene-wide. A cancel that belongs to another generation
+        is lowered for the purge and put back, not consumed."""
+
+        def cancel_and_raise(*args, **kwargs):
+            scene.cancel_requested = True
+            raise RuntimeError("stop")
+
+        with (
+            ActiveScene(scene),
+            patch.object(
+                type(director),
+                "_apply_base_attributes",
+                autospec=True,
+                side_effect=cancel_and_raise,
+            ),
+        ):
+            await self._persist(director, self._request(True))
+
+        assert scene.cancel_requested is True
+
+    @pytest.mark.asyncio
+    async def test_a_cancelled_creation_re_raises(self, scene, director):
+        """A cancel leaves through the exception, which is the only thing that
+        tells the caller a cancel from a failure: both return None otherwise.
+        The cleanup still runs before it leaves."""
+
+        def cancel_and_raise(*args, **kwargs):
+            scene.cancel_requested = True
+            raise GenerationCancelled("stop")
+
+        with (
+            ActiveScene(scene),
+            patch.object(
+                type(director),
+                "_apply_base_attributes",
+                autospec=True,
+                side_effect=cancel_and_raise,
+            ),
+            pytest.raises(GenerationCancelled),
+        ):
+            await director.persist_character(self._request(True))
+
+        assert "Halfling" not in scene.character_data
+        assert [actor.character.name for actor in scene.actors] == []
+
+    @pytest.mark.asyncio
+    async def test_a_cancel_before_the_creation_still_reports_it(self, scene, director):
+        """The generation that determines the name runs before the character
+        exists, and its snackbar carries the cancel button. That cancel has to
+        report a terminal status too: the frontend clears its busy lock on a
+        status message, and the operation_done envelope carries none."""
+        with (
+            ActiveScene(scene),
+            patch(
+                "talemate.agents.director.character_management.emit", autospec=True
+            ) as emitted,
+            patch.object(
+                type(director),
+                "_determine_split_name",
+                autospec=True,
+                side_effect=GenerationCancelled("stop"),
+            ),
+            pytest.raises(GenerationCancelled),
+        ):
+            await director.persist_character(
+                PersistCharacterRequest(name="", generate=True, determine_name=True)
+            )
+
+        assert emitted.call_args_list == [
+            call("status", message="Character creation cancelled", status="idle")
+        ]
+        assert scene.character_data == {}
+
+    @pytest.mark.asyncio
+    async def test_a_cancel_during_the_creation_reports_it_once(self, scene, director):
+        """The same one terminal status for the other window, so a cancel that
+        arrives after the character exists does not report twice."""
+
+        def cancel_and_raise(*args, **kwargs):
+            scene.cancel_requested = True
+            raise GenerationCancelled("stop")
+
+        with (
+            ActiveScene(scene),
+            patch(
+                "talemate.agents.director.character_management.emit", autospec=True
+            ) as emitted,
+            patch.object(
+                type(director),
+                "_apply_base_attributes",
+                autospec=True,
+                side_effect=cancel_and_raise,
+            ),
+            pytest.raises(GenerationCancelled),
+        ):
+            await director.persist_character(self._request(True))
+
+        assert emitted.call_args_list == [
+            call("status", message="Character creation cancelled", status="idle")
+        ]
+
+    @pytest.mark.asyncio
+    async def test_an_error_does_not_re_raise(self, scene, director):
+        """An ordinary error still returns None, so the caller reports a
+        failure rather than unwinding the request."""
+        with (
+            ActiveScene(scene),
+            patch.object(
+                type(director),
+                "_apply_base_attributes",
+                autospec=True,
+                side_effect=RuntimeError("stop"),
+            ),
+        ):
+            assert await director.persist_character(self._request(True)) is None
+
+    @pytest.mark.asyncio
+    async def test_a_cancelled_creation_lowers_the_scene_cancel_flag(
+        self, scene, director
+    ):
+        """persist_character lowers the flag itself, so a caller that does not
+        handle the raise does not leave the next action cancelled on
+        arrival."""
+
+        def cancel_and_raise(*args, **kwargs):
+            scene.cancel_requested = True
+            raise GenerationCancelled("stop")
+
+        with (
+            ActiveScene(scene),
+            patch.object(
+                type(director),
+                "_apply_base_attributes",
+                autospec=True,
+                side_effect=cancel_and_raise,
+            ),
+        ):
+            await self._persist(director, self._request(True))
+
+        assert scene.cancel_requested is False
+        assert "Halfling" not in scene.character_data
+
+    @pytest.mark.asyncio
+    async def test_a_failing_cleanup_does_not_replace_the_original_error(
+        self, scene, director
+    ):
+        with (
+            patch.object(
+                type(director),
+                "_apply_base_attributes",
+                autospec=True,
+                side_effect=RuntimeError("stop"),
+            ),
+            patch.object(
+                type(scene),
+                "remove_character",
+                autospec=True,
+                side_effect=RuntimeError("cleanup blew up"),
+            ),
+        ):
+            result = await director.persist_character(self._request(True))
+
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
 # persist_character — generation modes (manual / split / fast)
 # ---------------------------------------------------------------------------
 
@@ -623,6 +897,96 @@ class TestPersistCharacterGenerationModes:
         assert not character.dialogue_instructions
         assert not character.example_dialogue
         assert scene.get_character("Manual Bob") is not None
+
+    @pytest.mark.asyncio
+    async def test_inactive_character_is_listed_only_as_inactive(self, scene, director):
+        """A character created inactive belongs to one list, not to both.
+
+        The World State sidebar reads `characters` and `inactive_characters`
+        from the scene status, so a stray actor puts the new character in both.
+        """
+        await scene.add_actor(
+            scene.Actor(Character(name="Nora"), None), commit_to_memory=False
+        )
+
+        await director.persist_character(
+            PersistCharacterRequest(
+                name="Barry Largo",
+                description="A newcomer who waits outside.",
+                generate=False,
+                determine_name=False,
+                active=False,
+            )
+        )
+
+        assert "Barry Largo" in scene.inactive_characters
+        assert "Barry Largo" not in scene.character_names
+        assert "Barry Largo" not in scene.active_characters
+
+        scene.active = True
+        with patch("talemate.tale_mate.emit") as emit:
+            scene._do_emit_status()
+
+        (status,) = [
+            call for call in emit.call_args_list if call.args[0] == "scene_status"
+        ]
+        data = status.kwargs["data"]
+        assert data["inactive_characters"] == ["Barry Largo"]
+        assert [character["name"] for character in data["characters"]] == ["Nora"]
+
+    @pytest.mark.asyncio
+    async def test_inactive_character_is_not_active_while_it_is_built(
+        self, scene, director
+    ):
+        """Generation can take minutes, and the scene plays on meanwhile.
+
+        An active character is stamped into the presence of every message the
+        scene produces and written into every save, so a character that is
+        being built to stay out of the scene must not be active for that time.
+        """
+        await scene.add_actor(
+            scene.Actor(Character(name="Nora"), None), commit_to_memory=False
+        )
+        seen = {}
+
+        async def record(self, character, request, **kwargs):
+            seen["active"] = list(scene.active_characters)
+            seen["actors"] = list(scene.character_names)
+            return False
+
+        with patch.object(
+            type(director),
+            "_apply_generation_templates",
+            autospec=True,
+            side_effect=record,
+        ):
+            await director.persist_character(
+                PersistCharacterRequest(
+                    name="Barry Largo",
+                    generate=False,
+                    determine_name=False,
+                    active=False,
+                )
+            )
+
+        assert seen["active"] == ["Nora"]
+        assert seen["actors"] == ["Nora"]
+
+    @pytest.mark.asyncio
+    async def test_active_character_gets_an_actor(self, scene, director):
+        await director.persist_character(
+            PersistCharacterRequest(
+                name="Elmer",
+                description="A newcomer who stays.",
+                generate=False,
+                determine_name=False,
+                active=True,
+            )
+        )
+
+        assert "Elmer" in scene.character_names
+        assert scene.active_characters == ["Elmer"]
+        assert "Elmer" not in scene.inactive_characters
 
     @pytest.mark.asyncio
     async def test_manual_mode_requires_name(self, scene, director):
@@ -1315,6 +1679,72 @@ class TestPersistCharacterWebsocketHandler:
             await asyncio.sleep(0)
 
         return mock_persist.await_args.args[0]
+
+    async def _run_done_callback(self, scene, director, result=None, error=None):
+        """Drive handle_persist_character to completion with persist_character
+        returning `result` or raising `error`; returns the handler and its
+        websocket stub."""
+        ws = SimpleNamespace(scene=scene, queue_put=Mock())
+        handler = DirectorWebsocketHandler(websocket_handler=ws)
+        handler.signal_operation_done = AsyncMock()
+        handler.signal_operation_failed = AsyncMock()
+
+        kwargs = {"side_effect": error} if error else {"return_value": result}
+        # the route this callback runs under is wrapped in ActiveScene, which
+        # is where handle_generation_cancelled looks for the scene
+        with (
+            ActiveScene(scene),
+            patch.object(director, "persist_character", autospec=True, **kwargs),
+        ):
+            await handler.handle_persist_character(
+                {"name": "X", "generate": False, "narrate_entry": False}
+            )
+            for _ in range(3):
+                await asyncio.sleep(0)
+
+        return handler, ws
+
+    @pytest.mark.asyncio
+    async def test_a_created_character_is_sent_to_the_frontend(self, scene, director):
+        character = Character(name="X")
+        handler, ws = await self._run_done_callback(scene, director, result=character)
+
+        ws.queue_put.assert_called_once()
+        assert ws.queue_put.call_args.args[0]["character"] is character
+        handler.signal_operation_done.assert_awaited_once()
+        handler.signal_operation_failed.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_a_creation_that_made_nothing_reports_a_failure(
+        self, scene, director
+    ):
+        """An ordinary error is reported by persist_character and returns None,
+        so the task raises nothing. The envelope carries the character the
+        frontend reads `.name` off, so None cannot go on the wire."""
+        handler, ws = await self._run_done_callback(scene, director, result=None)
+
+        ws.queue_put.assert_not_called()
+        handler.signal_operation_done.assert_not_awaited()
+        # persist_character emitted the error itself; a second status would
+        # paint the same message twice
+        handler.signal_operation_failed.assert_awaited_once_with(
+            "Character creation failed", emit_status=False
+        )
+
+    @pytest.mark.asyncio
+    async def test_a_cancelled_creation_reports_no_error(self, scene, director):
+        """A cancel is not a failure. persist_character re-raises it, and the
+        user has already been told the creation was cancelled — an error here
+        paints a red message over that one."""
+        scene.cancel_requested = True
+        handler, ws = await self._run_done_callback(
+            scene, director, error=GenerationCancelled("cancelled")
+        )
+
+        handler.signal_operation_failed.assert_not_awaited()
+        handler.signal_operation_done.assert_awaited_once_with()
+        ws.queue_put.assert_not_called()
+        assert scene.cancel_requested is False
 
     @pytest.mark.asyncio
     async def test_manual_npc_activated_when_no_active_npcs(self, scene, director):

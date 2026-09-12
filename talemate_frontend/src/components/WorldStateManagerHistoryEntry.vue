@@ -5,12 +5,31 @@
                 {{ entry.id }}
             </span>
             <span v-if="!editing && !locked && hovered" class="text-body-small text-muted ml-2"><v-icon size="small" icon="mdi-pencil"></v-icon> double-click to edit</span>
+            <span v-if="entry.present" class="ml-2">
+                <v-chip v-for="name in entry.present" :key="name" size="x-small" color="primary" variant="tonal" class="mr-1" prepend-icon="mdi-account">
+                    {{ name }}
+                    <v-tooltip activator="parent" location="top">Present while this happened</v-tooltip>
+                </v-chip>
+            </span>
+            <v-chip v-if="entry.facts_status === 'failed'" size="x-small" color="warning" variant="tonal" class="ml-2" prepend-icon="mdi-alert-outline">
+                facts failed
+                <v-tooltip activator="parent" location="top">The summary was stored, but the facts list the model returned could not be read. Regenerate facts to try again.</v-tooltip>
+            </v-chip>
         </v-card-title>
         <v-card-text>
             <div v-if="!editing" class="history-entry text-medium-emphasis text-body-large" @dblclick="setEditing(true)" @mouseenter="hovered = true" @mouseleave="hovered = false">
                 {{ entry.text }}
             </div>
             <v-textarea v-else rows="1" auto-grow v-model="entry.text" @blur="setEditing(false)" @keydown.esc="setEditing(false)" ref="textarea" hint="Press Escape to cancel, Shift+Enter for new line, Enter to save" @keydown.enter="handleEnter" />
+
+            <div v-if="shownFacts.length" class="mt-3">
+                <div class="text-body-small text-medium-emphasis mb-1"><v-icon size="small" icon="mdi-format-list-checks" class="mr-1"></v-icon>Facts</div>
+                <div v-if="!locked" class="text-body-small text-medium-emphasis mb-1">Double-click a fact to edit it</div>
+                <v-list density="compact" slim class="bg-transparent py-0">
+                    <WorldStateManagerFactRow v-for="fact in shownFacts" :key="fact.id" :fact="fact" :locked="locked"
+                        @updated="updateFact" @deleted="removeFact" @source="$emit('source', $event)" />
+                </v-list>
+            </div>
         </v-card-text>
 
         <v-card-actions>
@@ -22,6 +41,10 @@
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(isPrimaryModifier(ev))">Regenerate</v-btn>
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="toggleSourceEntries">{{ entry.source_entries ? 'Collapse' : 'Inspect' }}</v-btn>
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-clock-plus-outline" color="primary" @click="insertingTimePassage = true">Time Passage</v-btn>
+                <v-btn v-if="entry.layer === 0" :disabled="editing || locked || !!entry.facts_unavailable_reason" prepend-icon="mdi-format-list-checks" color="primary" @click="regenerateFacts">
+                    {{ entry.facts_status || entry.facts?.length ? 'Regenerate facts' : 'Generate facts' }}
+                    <v-tooltip activator="parent" location="top">Extract facts from this entry without changing its text or advancing the story.</v-tooltip>
+                </v-btn>
                 <ConfirmActionInline
                     v-if="deletable"
                     :disabled="locked"
@@ -45,6 +68,10 @@
                 @generate="content => { entry.text = content; updateEntry(entry); }"
             />
         </v-card-actions>
+
+        <div v-if="entry.layer === 0 && entry.facts_unavailable_reason" class="px-4 pb-3 text-body-small text-medium-emphasis">
+            {{ entry.facts_unavailable_reason }}
+        </div>
 
         <div v-if="insertingTimePassage" class="d-flex align-center px-4 pb-2">
             <v-number-input v-model="insertAmount" :min="1" label="Amount"
@@ -87,6 +114,9 @@ class HistoryEntry(pydantic.BaseModel):
     time_end: str | None = None
     start: int | None = None
     end: int | None = None
+    present: list[str] | None = None
+    facts_status: "ok" | "failed" | None = None
+    facts: list[Fact] = []
 */
 
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
@@ -94,11 +124,15 @@ import { isPrimaryModifier } from '@/utils/keyboardModifiers';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 import ContextualGenerate from './ContextualGenerate.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import WorldStateManagerFactRow from './WorldStateManagerFactRow.vue';
 
 export default {
     name: 'WorldStateManagerHistoryEntry',
     props: {
         entry: Object,
+        // the History tab's Known by filter: only these fact ids are listed;
+        // null lists every fact
+        knownFactIds: { type: Array, default: null },
         appBusy: Boolean,
         appReady: {
             type: Boolean,
@@ -124,8 +158,14 @@ export default {
     inject:[
         'getWebsocket',
     ],
-    emits: ['busy', 'collapse'],
+    emits: ['busy', 'collapse', 'source'],
     computed: {
+        shownFacts() {
+            const facts = this.entry?.facts || [];
+            if (this.knownFactIds === null) return facts;
+            const known = new Set(this.knownFactIds);
+            return facts.filter((fact) => known.has(fact.id));
+        },
         locked() {
             return this.appBusy || !this.appReady || this.busy;
         },
@@ -208,6 +248,20 @@ export default {
                 this.collapseSourceEntries();
             }
         },
+        regenerateFacts() {
+            this.$emit('busy', this.entry.id);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'regenerate_facts',
+                entry: this.entry,
+            }));
+        },
+        updateFact(fact) {
+            this.entry.facts = this.entry.facts.map((existing) => existing.id === fact.id ? fact : existing);
+        },
+        removeFact(id) {
+            this.entry.facts = this.entry.facts.filter((fact) => fact.id !== id);
+        },
         deleteEntry(){
             const entry = this.entry;
             this.pendingDelete = true;
@@ -233,6 +287,7 @@ export default {
         },
     },
     components: {
+        WorldStateManagerFactRow,
         ConfirmActionInline,
         ContextualGenerate,
     },

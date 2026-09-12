@@ -5,8 +5,7 @@ to the director agent.
 
 import structlog
 
-from talemate.agents.base import AgentAction, AgentActionConfig
-from talemate.emit import emit
+from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
 import talemate.emit.async_signals
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.prompts import Prompt
@@ -116,20 +115,18 @@ class PlanMixin:
         if block["type"] == "narrator":
             content = await self._plan_revise_narrator_content(narrator, content)
             msg = NarratorMessage(content)
-            await scene.push_history(msg)
-            emit("narrator", msg)
+            await scene.push_history(msg, emit_message=True)
         elif block["type"] == "character":
             char_name = block.get("name", "Unknown")
             msg = CharacterMessage(f"{char_name}: {content}")
-            await scene.push_history(msg)
-            character = scene.get_character(char_name)
-            emit("character", message=msg, character=character)
+            await scene.push_history(msg, emit_message=True)
         else:
             return 0
 
         return len(content.split())
 
-    async def _plan_critique_expanded_blocks(
+    @set_processing
+    async def plan_critique_expanded_blocks(
         self, blocks: list[dict], narrator, close_arc: bool = False
     ) -> list[dict]:
         """
@@ -160,6 +157,7 @@ class PlanMixin:
         log.info("expand.critique.done", original=len(blocks), revised=len(revised))
         return revised
 
+    @set_processing
     async def plan_expand_beats(
         self,
         scene,
@@ -274,7 +272,7 @@ class PlanMixin:
         # Post-expansion critique pass
         do_critique = critique if critique is not None else self.plan_expand_critique
         if do_critique and len(chunks) > 1 and all_blocks:
-            all_blocks = await self._plan_critique_expanded_blocks(
+            all_blocks = await self.plan_critique_expanded_blocks(
                 all_blocks, narrator, close_arc=close_arc
             )
 

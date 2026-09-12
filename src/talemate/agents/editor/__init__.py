@@ -7,6 +7,8 @@ import structlog
 import talemate.emit.async_signals
 import talemate.util as util
 from talemate.client import ClientBase
+from talemate.instance import get_agent
+from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.prompts import Prompt
 
 from talemate.agents.base import (
@@ -305,6 +307,11 @@ class EditorAgent(
         if not self.add_detail_enabled:
             return content
 
+        history_perspective = None
+        if character_knowledge_enabled(self.scene):
+            await get_agent("summarizer").ensure_perceptions(self.scene)
+            history_perspective = character.name
+
         response, extracted = await Prompt.request(
             "editor.add-detail",
             self.client,
@@ -312,6 +319,7 @@ class EditorAgent(
             vars={
                 "content": content,
                 "character": character,
+                "history_perspective": history_perspective,
                 "scene": self.scene,
                 "max_length": self.client.max_token_length,
             },

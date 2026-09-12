@@ -2,13 +2,13 @@
 {# active characters #}{% for character in characters|default(scene.characters) %}
 {% if not skip_characters or character.name not in skip_characters %}
 ### {{ character.name }}
-{% if not skip_sheet %}{{ character.sheet_filtered("description") }}{% endif %}
+{% if not skip_sheet %}{% if knowledge_index is defined %}{{ knowledge_index.sheet(scene, character, knowledge_viewer|default(none), "description") }}{% else %}{{ character.sheet_filtered("description") }}{% endif %}{% endif %}
 
 {% if query_personality -%}
 {{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
 {% endif -%}
 
-{{ character.description }}
+{% if knowledge_index is defined %}{{ knowledge_index.description(scene, character, knowledge_viewer|default(none)) }}{% else %}{{ character.description }}{% endif %}
 
 {% if include_dialogue_instructions and character.dialogue_instructions %}
 #### General character guide for {{ character.name }}
@@ -20,7 +20,7 @@
 {# mentioned characters #}{% if mentioned_characters -%}
 {% for character in mentioned_characters -%}
 ### {{ character.name }}
-{{ character.description }}
+{% if knowledge_index is defined %}{{ knowledge_index.description(scene, character, knowledge_viewer|default(none)) }}{% else %}{{ character.description }}{% endif %}
 {% endfor %}
 {% endif %}
 <|CLOSE_SECTION|>

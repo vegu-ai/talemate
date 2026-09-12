@@ -10,6 +10,46 @@ There are three types of historical entries:
 
 ![History](/talemate/img/0.31.0/history.png)
 
+### Presence
+
+Every entry generated from a summary carries the characters that were active in the scene while its source messages were written. They show as chips next to the entry time. Layered entries show the union over the entries they summarize.
+
+The summarizer starts a new entry whenever the active character list changes, the same way a time passage does, so a summarized entry never mixes two known sets of present characters. An entry that contains a message without presence records unknown presence as a whole. This is the record the per-character knowledge features build on.
+
+Scenes saved before presence tracking carry no presence on their old messages, and entries built from them show no chips. Unknown presence is never guessed from who spoke: an entry without chips counts as witnessed by everyone.
+
+### Facts
+
+When the summarizer writes a summary entry it asks, in the same request, for the atomic facts the chapter established: one self-contained statement each, with the characters, items and places it is about, the characters who learned it during the chapter, and the earlier fact it replaces, if any. The facts are listed under the entry with their id (`F1`, `F2`, ...). A chip next to a fact names a character who learned it without being present; a repeat counter shows how often later chapters restated it; an arrow names the fact it supersedes.
+
+Facts are stored in the scene file and mirrored into the long term memory with the presence of their entry, so a character retrieves only the facts they know (see [Knowledge](/talemate/user-guide/world-editor/knowledge/)). A new fact that is a near-duplicate of a stored one is not stored again; the stored fact's repeat counter goes up instead.
+
+The **Known by** selector above the entries narrows the listed facts to those a chosen character knows, through the same knowledge record the [Knowledge tab](/talemate/user-guide/world-editor/knowledge/#topics-and-coverage) uses; presence-based knowledge counts, not only the chip cases. Clear it to list every fact again.
+
+![history known by filter](/talemate/img/0.40.0/world-editor-history-known-by.png)
+
+![history facts with importance and time markers](/talemate/img/0.40.0/world-editor-history-facts.png)
+
+The importance chip shows **Routine (1)** for a smaller continuity-relevant detail, **State (2)** for a durable change, or **Milestone (3)** for firsts, revelations, deaths, and story-changing decisions. Hover it for an explanation. The extraction prompt asks the model to omit trivia and allows an empty facts list: a first hug may matter, while another routine hug does not. Facts saved before importance was added load as State (2).
+
+Each fact also shows a relative time marker based on scene time and its latest restatement, such as **(21 Days ago)**. History keeps the full fact record; the Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology) settings select and rank context facts without a separate AI request. [How character knowledge works](/talemate/user-guide/world-editor/knowledge-how-it-works/#standard-mode-one-line-is-said) shows how facts are recorded, restated and aged.
+
+Double-click a fact or select its importance chip to edit its text and importance, then select **Save**. The same editor is on the topic rows of a character's [Knowledge tab](/talemate/user-guide/world-editor/knowledge/#topics-and-coverage) and in the [Facts tab](/talemate/user-guide/world-editor/facts/), which lists every fact with filters; any place changes the one record. A later restatement preserves the original fact's importance, including a manual correction. Use the :material-close: button to remove a fact. When the model's facts output could not be read, the summary is still stored and the entry shows a **facts failed** chip; **:material-format-list-checks: Regenerate facts** asks for the facts again and keeps the entry text. Regenerating the entry itself replaces its facts too. The summarizer's **Extract facts** setting turns the archive extraction off.
+
+#### Facts from predefined history
+
+Static entries also offer **Generate facts**, or **Regenerate facts** after an extraction attempt or when facts already exist. This reads the saved entry text without rewriting it, adding messages, or advancing scene time. The Summarizer's **Extract facts** setting must be enabled.
+
+In **Standard** mode, facts keep the entry's recorded presence and the existing knowledge rules. An older entry with unknown presence remains shared; generation does not guess a restricted audience. Regeneration replaces the entry's facts through the same source and duplicate handling used for summarized history. Saving and reloading keeps the associations.
+
+In **Character perspectives**, extraction uses each saved character view, preserving its audience and replacement text. An entry with missing or unfinished perspectives shows why extraction is unavailable; its full reader text is never substituted for a missing character view.
+
+Predefined history still locks the scene's knowledge mode. You do not need to change modes or remove history to generate its facts.
+
+#### Dialogue facts
+
+With the Conversation agent's [Establish facts from dialogue](/talemate/user-guide/agents/conversation/settings/#establish-facts-from-dialogue) option enabled, new facts appear here as soon as a character line establishes them, before a chapter is summarized. This section uses the same importance chip and editor as archived facts, and the **Known by** filter applies to both. **Source message** opens the original dialogue for inspection. Facts retain their message source when a later archive restates them; editing or removing that source removes its facts.
+
 ### Managing entries
 
 - **All entries** can be edited by double-clicking the text.

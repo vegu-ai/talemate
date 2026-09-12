@@ -34,10 +34,20 @@
 
     <SpiceAppliedNotification :uids="['wsm.character_description']"></SpiceAppliedNotification>
 
+    <div class="d-flex justify-end mt-2">
+        <EntryVisibilitySelect
+            :model-value="visibility"
+            :character-names="otherCharacterNames"
+            :owner-label="character.name"
+            :disabled="busy"
+            @update:model-value="setVisibility" />
+    </div>
+
 </template>
 <script>
 
 import ContextualGenerate from './ContextualGenerate.vue';
+import EntryVisibilitySelect from './EntryVisibilitySelect.vue';
 import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 import AutocompleteRedoChip from './AutocompleteRedoChip.vue';
 import { createAutocompleteField } from '@/utils/autocompleteField';
@@ -45,11 +55,16 @@ import { createAutocompleteField } from '@/utils/autocompleteField';
 export default {
     name: 'WorldStateManagerCharacterDescription',
     components: {
+        EntryVisibilitySelect,
         ContextualGenerate,
         SpiceAppliedNotification,
         AutocompleteRedoChip,
     },
     props: {
+        characterNames: {
+            type: Array,
+            default: () => [],
+        },
         immutableCharacter: Object,
         templates: Object,
         generationOptions: Object,
@@ -104,7 +119,24 @@ export default {
             this.descriptionAutocompleteField?.onValueChange();
         },
     },
+    computed: {
+        visibility() {
+            return (this.character?.visibility || {})['description'] || null;
+        },
+        otherCharacterNames() {
+            return this.characterNames.filter(name => name !== this.character?.name);
+        },
+    },
     methods: {
+        setVisibility(visibility) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_character_entry_visibility',
+                name: this.character.name,
+                key: 'description',
+                visibility: visibility,
+            }));
+        },
         update(only_if_dirty = false) {
 
             if(only_if_dirty && !this.dirty) {

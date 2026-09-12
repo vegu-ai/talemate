@@ -17,12 +17,15 @@ __all__ = [
 
 
 class MemoryDocument(str):
-    def __new__(cls, text, meta, id, raw):
+    def __new__(cls, text, meta, id, raw, distance=None, embedding=None):
         inst = super().__new__(cls, text)
 
         inst.meta = meta
         inst.id = id
         inst.raw = raw
+        # set by a similarity query; None for documents fetched by id
+        inst.distance = distance
+        inst.embedding = embedding
 
         return inst
 

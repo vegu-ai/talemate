@@ -24,7 +24,7 @@ Include scene history with budget control:
 
 Retrieve relevant memories based on context:
 ```
-{% set memory_stack = agent_action("narrator", "rag_build", prompt=memory_prompt, sub_instruction=memory_goal) %}
+{% set memory_stack = agent_action("narrator", "rag_build_for_author", prompt=memory_prompt, sub_instruction=memory_goal) %}
 {% if memory_stack %}
 <|SECTION:POTENTIALLY RELEVANT INFORMATION|>
 {%- for memory in memory_stack -%}
@@ -40,7 +40,15 @@ Retrieve relevant memories based on context:
 - `memory_goal` - Optional specific goal for memory retrieval
 - `agent_action()` - Built-in function to call agent actions
 
-**Reusable template:** Include `memory-context.jinja2` for standard memory inclusion.
+For a character, derive retrieval input from their perspective instead of supplying raw history:
+
+```jinja2
+{% set memory_stack = agent_action("conversation", "rag_build", character=talking_character, sub_instruction=memory_goal) %}
+```
+
+`memory_goal` is authored/director guidance, never an excerpt of shared history. `rag_build_for_author` accepts raw context in both legacy and perception scenes; `rag_build` has no `prompt` parameter.
+
+**Reusable template:** Include `memory-context.jinja2` for standard memory inclusion. A `memory_prompt` override supplies raw retrieval input in legacy scenes and preserves the `talking_character` bucket filter, analysis viewer and optional memory pass. Direct calls to `rag_build_for_author` can pass `character=talking_character` for this legacy behavior. In perception scenes, a `talking_character` selects projected character retrieval and the raw override is not used; passing a perception character to `rag_build_for_author` raises `ValueError`.
 
 ### Character Context Inclusion
 

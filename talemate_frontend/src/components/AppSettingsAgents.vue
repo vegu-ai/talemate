@@ -127,7 +127,14 @@
                                 actions-disabled-reason="Save your changes first — this runs against the saved configuration."
                             />
 
-                            <AgentConfigSection v-else-if="mode === 'global' && !section.registry" v-bind="sectionProps(section.key)" />
+                            <template v-else-if="mode === 'global' && !section.registry">
+                                <!-- one stop writes three agents, so the slider is not part of the section -->
+                                <!-- immediate=false: the page writes its working copy and saves later,
+                                     so no agent status frame answers the change -->
+                                <KnowledgeEffortSlider v-if="selectedName === 'conversation' && section.key === 'character_knowledge'"
+                                    :mode="effortMode" :agents="effortAgents" :immediate="false" class="mb-4" @apply="applyEffort" />
+                                <AgentConfigSection v-bind="sectionProps(section.key)" />
+                            </template>
 
                             <!-- scene mode has no registry management: adding or removing
                                  a backend is global configuration, not a per-scene value -->
@@ -158,6 +165,9 @@ import { countOverrides } from '@/utils/agentActionOverrides';
 import { hasOwnName } from '@/utils/nameKeyedMap';
 import AgentConfigSection from './AgentConfigSection.vue';
 import AgentSceneSettings from './AgentSceneSettings.vue';
+import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
+import { effortMode, effortPatch } from '@/utils/knowledgeEffort';
+import { perspectivesEnabled } from '@/utils/sceneSettings';
 import DynamicAgentRegistry from './DynamicAgentRegistry.vue';
 import RequestInput from './RequestInput.vue';
 import TTSOpenAICompatibleBackends from './TTSOpenAICompatibleBackends.vue';
@@ -224,6 +234,7 @@ export default {
         AgentConfigSection,
         AgentSceneSettings,
         DynamicAgentRegistry,
+        KnowledgeEffortSlider,
         RequestInput,
         TTSOpenAICompatibleBackends,
     },
@@ -302,6 +313,27 @@ export default {
         },
         schemaActions() {
             return this.selectedAgent?.data?.actions || {};
+        },
+        effortMode() {
+            return effortMode(perspectivesEnabled(this.sceneData));
+        },
+        // the three knowledge agents in agent_status shape, valued from the
+        // working copy so the slider reads unsaved edits
+        effortAgents() {
+            return ['conversation', 'summarizer', 'memory']
+                .filter((name) => this.liveAgents[name])
+                .map((name) => {
+                    const effective = this.effectiveActionsFor(name);
+                    const actions = {};
+                    for (const [key, action] of Object.entries(this.liveAgents[name].data?.actions || {})) {
+                        const config = {};
+                        for (const [configKey, field] of Object.entries(action.config || {})) {
+                            config[configKey] = { ...field, value: effective[key]?.config?.[configKey]?.value ?? field.value };
+                        }
+                        actions[key] = { ...action, enabled: effective[key]?.enabled ?? action.enabled, config };
+                    }
+                    return { name, label: this.liveAgents[name].label, data: { scene_overrides: {} }, actions };
+                });
         },
         // schema ⊕ effective values, the single-object action shape the
         // scene-mode renderer and the shared override helpers expect (they
@@ -724,6 +756,15 @@ export default {
             this.entryAction(agentType, actionKey).config[configKey] = { value: value };
         },
 
+        applyEffort(stop) {
+            for (const entry of effortPatch(this.effortAgents, this.effortMode, stop)) {
+                if (entry.enabled !== undefined) this.setActionEnabled(entry.agent, entry.action, entry.enabled);
+                for (const [configKey, value] of Object.entries(entry.config)) {
+                    this.setConfigValue(entry.agent, entry.action, configKey, value);
+                }
+            }
+        },
+
         // ------------------------------------------------------------------
         // scene mode — the per-scene overlay
         //
@@ -768,6 +809,7 @@ export default {
 
         sceneSectionProps(actionKey) {
             return {
+                actionKey,
                 action: this.mergedActions[actionKey],
                 actionSchema: this.schemaActions[actionKey],
                 overrides: this.sceneOverlay.actions[actionKey] || {},

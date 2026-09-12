@@ -497,6 +497,7 @@ class ConfigPlugin(Plugin):
             {
                 "type": "config",
                 "action": "set_llm_template_complete",
+                "request_id": data.get("request_id"),
                 "data": {
                     "prompt_template_example": prompt_template_example,
                     "has_prompt_template": True if prompt_template_example else False,
@@ -535,11 +536,12 @@ class ConfigPlugin(Plugin):
         else:
             await self.handle_set_llm_template(
                 {
+                    "request_id": data.get("request_id"),
                     "data": {
                         "template_file": template,
                         "model": payload.model,
                         "client_name": payload.client_name,
-                    }
+                    },
                 }
             )
 
@@ -547,6 +549,7 @@ class ConfigPlugin(Plugin):
             {
                 "type": "config",
                 "action": "determine_llm_template_complete",
+                "request_id": data.get("request_id"),
                 "data": {
                     "template": template,
                 },

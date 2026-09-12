@@ -2419,6 +2419,15 @@ class Listen(Graph):
 
     _failed: float | None = None
 
+    @property
+    def signal_receiver_key(self) -> str:
+        # Registry listeners are instantiated afresh; placed nodes retain saved IDs.
+        return (
+            self._registry
+            if self._registry and self.get_property("auto_register")
+            else self.id
+        )
+
     class Fields:
         event_name = PropertyField(
             name="event_name",
@@ -2466,7 +2475,7 @@ class Listen(Graph):
                 f"EVENT FAIL SAFE TRIGGERED: Event node {self.title} failed previously, skipping in order to avoid infinite loops of failures."
             )
             self._failed = None
-            return
+            return async_signals.DEFERRED
 
         try:
             state: GraphState = graph_state.get()
@@ -2478,7 +2487,7 @@ class Listen(Graph):
                 state = scene.nodegraph_state
             else:
                 log.error("Event node executed outside of active graph state")
-                return
+                return async_signals.DEFERRED
 
         node_state = await self.node_state_push(self, state)
         try:

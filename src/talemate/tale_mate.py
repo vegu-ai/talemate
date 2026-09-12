@@ -36,6 +36,7 @@ from talemate.scene_assets import SceneAssets
 from talemate.scene.episodes import EpisodesManager
 from talemate.scene_message import (
     CharacterMessage,
+    NarratorMessage,
     DirectorMessage,
     VersionSource,
     ReinforcementMessage,
@@ -696,12 +697,15 @@ class Scene(Emitter):
         if isinstance(messages, SceneMessage):
             messages = [messages]
 
-        # A selected historical revision must become authoritative before a
-        # new line can trigger learning, archive extraction, or downstream
-        # history listeners. The same coordinator also serves the UI button.
         from talemate.knowledge.revision_refresh import catch_up_revisions
 
-        await catch_up_revisions(self)
+        player_submission = bool(messages) and all(
+            message.source == "player"
+            and isinstance(message, (CharacterMessage, NarratorMessage))
+            for message in messages
+        )
+        if not player_submission:
+            await catch_up_revisions(self)
 
         if self.intro and self.intro_present is None:
             initialize_intro_audience(self)
@@ -745,41 +749,76 @@ class Scene(Emitter):
         for message in valid_messages:
             bind_message_source(self, message)
 
+        if player_submission:
+            self.saved = False
+            for message in valid_messages:
+                message.history_dispatch_pending = True
+                if emit_message:
+                    self.emit_history_message(message)
+            await self.attempt_auto_save()
+            await catch_up_revisions(self)
+            return
+
+        await self.dispatch_history(valid_messages, emit_message=emit_message)
+
+    def emit_history_message(self, message: SceneMessage):
+        character_name = getattr(message, "character_name", None)
+        emit(
+            message.typ,
+            message,
+            character=self.get_character(character_name) if character_name else None,
+        )
+
+    async def dispatch_history(
+        self, messages: list[SceneMessage], *, emit_message: bool = False
+    ):
+        completed = (
+            messages[0].history_dispatch_completed
+            if len(messages) == 1 and messages[0].history_dispatch_pending
+            else None
+        )
+
+        async def send(name, event):
+            if completed is None:
+                await self.signals[name].send(event)
+            else:
+                await self.signals[name].send(event, completed=completed)
+
         event: events.HistoryEvent = events.HistoryEvent(
             scene=self,
             event_type="push_history",
-            messages=valid_messages,
+            messages=messages,
         )
 
-        await self.signals["push_history"].send(event)
+        await send("push_history", event)
 
         if emit_message:
-            for message in valid_messages:
-                character_name = getattr(message, "character_name", None)
-                emit(
-                    message.typ,
-                    message,
-                    character=self.get_character(character_name)
-                    if character_name
-                    else None,
-                )
+            for message in messages:
+                self.emit_history_message(message)
 
         try:
-            if character_knowledge_enabled(self):
-                await get_agent("summarizer").finalize_perceptions(self, valid_messages)
+            if completed is None or "perceptions" not in completed:
+                if character_knowledge_enabled(self):
+                    await get_agent("summarizer").finalize_perceptions(self, messages)
+                if completed is not None:
+                    completed.append("perceptions")
 
-            for message in valid_messages:
-                if isinstance(message, CharacterMessage):
-                    await get_agent("conversation").finalize_message_avatar(message)
+            if completed is None or "avatar" not in completed:
+                for message in messages:
+                    if isinstance(message, CharacterMessage):
+                        await get_agent("conversation").finalize_message_avatar(message)
+                if completed is not None:
+                    completed.append("avatar")
 
-            for message in valid_messages:
-                await self.signals["game_loop_new_message"].send(
+            for message in messages:
+                await send(
+                    "game_loop_new_message",
                     events.GameLoopNewMessageEvent(
                         scene=self, event_type="game_loop_new_message", message=message
-                    )
+                    ),
                 )
 
-            await self.signals["push_history.after"].send(event)
+            await send("push_history.after", event)
         finally:
             self.emit_status()
 

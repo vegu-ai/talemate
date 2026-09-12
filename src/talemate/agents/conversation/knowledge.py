@@ -15,6 +15,7 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.agents.context import active_agent
+from talemate.agents.conversation.entry_context import consume_entry_turn
 from talemate.agents.conversation.response_specs import (
     ENTRY_BRIEFING_SPEC,
     KNOWLEDGE_LEDGER_FACTS_SPEC,
@@ -42,6 +43,7 @@ from talemate.knowledge.mode import (
 )
 from talemate.knowledge.perspective_models import content_digest
 from talemate.knowledge.processing import evidence_writer
+from talemate.knowledge.revision_refresh import _historical_context
 from talemate.knowledge.schema import KnowledgeEdge
 from talemate.knowledge.topics import awareness_line as topic_awareness_line
 from talemate.knowledge.topics import known_bucket, refresh_topics
@@ -382,15 +384,30 @@ class CharacterKnowledgeMixin:
         message = event.message
         if not isinstance(message, CharacterMessage):
             return
-        from talemate.agents.conversation.entry_context import consume_entry_turn
-
-        consume_entry_turn(self, message.character_name)
+        if (
+            not message.history_dispatch_pending
+            or "entry_turn" not in message.history_dispatch_completed
+        ):
+            consume_entry_turn(self, message.character_name)
+            if message.history_dispatch_pending:
+                # Learning may be cancelled after the synchronous turn consumption.
+                message.history_dispatch_completed.append("entry_turn")
         if not self.knowledge_ledger:
             return
         character = self.scene.get_character(message.character_name)
         if character is None:
             return
-        await self.record_learned_facts(character, str(message), message=message)
+        kwargs = {}
+        if message.history_dispatch_pending:
+            recent, present, ts = _historical_context(self.scene, message)
+            kwargs = {
+                "recent_lines_override": recent,
+                "present_override": present,
+                "ts_override": ts,
+            }
+        await self.record_learned_facts(
+            character, str(message), message=message, **kwargs
+        )
 
     @set_processing
     @evidence_writer

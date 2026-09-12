@@ -105,6 +105,8 @@ Browsing changes the active text immediately without running analysis. The arrow
 
 Double-clicking a message, editing its text and pressing Enter saves the edit without starting analysis. The action or your next send/choice updates the edited passage. Unchanged edits and canceled edits require no new analysis.
 
+Your submitted character or narrator line appears immediately while any required refresh runs. The next response still waits for that work. If refreshing fails or is cancelled, your line stays in history; retrying resumes the pending work without adding the line again. Auto-save saves the accepted line before refreshing; with auto-save disabled, save the scene yourself before closing it.
+
 Automatic revision completes before Character perspectives analyzes the generated message. It analyzes the final accepted text once and marks that version ready; sending your next line does not repeat successful analysis of that unchanged version. Failed analysis leaves the action available for retry.
 
 Character perspectives analyzes the chosen passage and repairs dependent summaries. Standard mode re-extracts facts when archive fact extraction is enabled and re-evaluates what listeners learned from a character line when dialogue learning is enabled. The refresh uses the message's historical speaker, presence and preceding lines. A failed later phase can be retried without repeating an already successful extraction; selecting the original baseline restores its retained evidence. When neither relevant feature is enabled, the selection is final immediately and no refresh button or model request appears.

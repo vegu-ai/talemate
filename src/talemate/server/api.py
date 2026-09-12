@@ -209,11 +209,6 @@ async def websocket_endpoint(websocket):
                     text = data.get("text")
                     with Interaction(act_as=data.get("act_as")):
                         if handler.waiting_for_input:
-                            from talemate.knowledge.revision_refresh import (
-                                catch_up_revisions,
-                            )
-
-                            await catch_up_revisions(handler.scene)
                             handler.send_input(text)
 
                 elif action_type == "request_scenes_list":

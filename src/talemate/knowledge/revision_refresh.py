@@ -19,6 +19,8 @@ from talemate.scene_message import CharacterMessage
 
 _active_transaction = ContextVar("revision_refresh_transaction", default=None)
 _archive_vector_repairs = WeakKeyDictionary()
+_catch_up_locks = WeakKeyDictionary()
+_catch_up_owners = WeakKeyDictionary()
 
 
 @dataclass(frozen=True)
@@ -1434,8 +1436,28 @@ async def refresh_revision(scene, message):
 
 async def catch_up_revisions(scene) -> None:
     """Await every pending revision in history order before new generation."""
-    for message in list(scene.history):
-        if message.revision_state is not None and revision_requires_refresh(
-            scene, message
-        ):
-            await refresh_revision(scene, message)
+    # History listeners may push another message from inside this dispatch.
+    if _catch_up_owners.get(scene) is asyncio.current_task():
+        return
+    lock = _catch_up_locks.setdefault(scene, asyncio.Lock())
+    async with lock:
+        _catch_up_owners[scene] = asyncio.current_task()
+        try:
+            for message in list(scene.history):
+                if message.revision_state is not None and revision_requires_refresh(
+                    scene, message
+                ):
+                    await refresh_revision(scene, message)
+                if message.history_dispatch_pending:
+                    if not any(entry is message for entry in scene.history):
+                        continue
+                    # Acceptance is durable before refresh; dispatch must not append
+                    # or emit the player's line again after an interrupted refresh.
+                    try:
+                        await scene.dispatch_history([message])
+                        message.history_dispatch_pending = False
+                        message.history_dispatch_completed.clear()
+                    finally:
+                        await scene.attempt_auto_save()
+        finally:
+            _catch_up_owners.pop(scene, None)

@@ -80,7 +80,11 @@
             <!-- PROMPT TEMPLATE -->
             <v-col cols="8" v-if="promptTemplateAvailable" data-setting-anchor="prompt_template">
               <v-autocomplete ref="promptTemplateComboBox" :label="'Prompt Template for ' + modelName"
-                :model-value="templateInfo.template_file" @update:model-value="setPromptTemplate" :items="promptTemplates"></v-autocomplete>
+                :model-value="templateInfo.template_file" @update:model-value="setPromptTemplate" :items="promptTemplates">
+                <template #selection="{ item }">
+                  <span class="text-truncate">{{ item }}</span>
+                </template>
+              </v-autocomplete>
               <v-card elevation="3" :color="(templateInfo.has_prompt_template ? 'primary' : 'warning')" variant="tonal">
                 <v-card-text v-if="!waitingForTemplateSelection">
                   <div class="text-body-small" v-if="!templateInfo.has_prompt_template">No matching LLM prompt template found. Using default.</div>
@@ -337,6 +341,8 @@
 
 <script>
 
+import { v4 as uuidv4 } from 'uuid';
+import { markRaw } from 'vue';
 import { conditionMet } from '@/utils/uxConditions';
 import { countOverrides } from '@/utils/agentActionOverrides';
 import { TOKEN_GRADUATIONS } from '@/utils/clientPresets';
@@ -411,6 +417,7 @@ export default {
       // prompt template state applied by the template RPCs, layered over the
       // live status data — none of it belongs in the working copy
       templateState: {},
+      pendingTemplateRequest: null,
       waitingForTemplateSelection: false,
       tokenGraduations: TOKEN_GRADUATIONS,
       rules: {
@@ -501,6 +508,15 @@ export default {
     templateInfo() {
       return { ...(this.status?.data || {}), ...this.templateState };
     },
+    templateScope() {
+      return JSON.stringify([
+        this.client?.name,
+        this.client?.type,
+        !!this.values.lock_template,
+        this.values.lock_template ? null : this.modelName,
+        !!this.values.api_handles_prompt_template,
+      ]);
+    },
     promptTemplateAvailable() {
       return !!this.status
         && this.meta.requires_prompt_template
@@ -579,6 +595,22 @@ export default {
     },
   },
   watch: {
+    templateScope: {
+      flush: 'sync',
+      handler() {
+        this.templateState = {};
+        this.clearPendingTemplateRequest();
+        this.waitingForTemplateSelection = false;
+      },
+    },
+    status() {
+      // A draft lock uses a different template file until Save applies it.
+      if (this.pendingTemplateRequest || this.waitingForTemplateSelection
+        || !!this.status?.data?.lock_template !== !!this.values.lock_template) {
+        return;
+      }
+      this.templateState = {};
+    },
     client: {
       immediate: true,
       handler(newVal, oldVal) {
@@ -592,6 +624,7 @@ export default {
         // another client selected — drop the previous client's local state
         this.nameDraft = newVal ? newVal.name : '';
         this.templateState = {};
+        this.clearPendingTemplateRequest();
         this.waitingForTemplateSelection = false;
         this.openPanels = ['general'];
       },
@@ -648,30 +681,54 @@ export default {
         this.determineBestTemplate();
       }
     },
-    sendRequest(action, data) {
+    sendRequest(action, data, requestId) {
       this.getWebsocket().send(JSON.stringify({
         type: 'config',
         action: action,
         data: data,
+        request_id: requestId,
       }));
     },
     requestStdTemplates() {
       this.sendRequest('request_std_llm_templates', {});
     },
     determineBestTemplate() {
-      this.sendRequest('determine_llm_template', {
-        model: this.modelName,
-        client_name: (this.values.lock_template ? this.client.name : null),
-      });
+      this.requestTemplate('determine_llm_template');
     },
     setPromptTemplate(templateFile) {
       this.templateState = { ...this.templateState, template_file: templateFile };
-      this.sendRequest('set_llm_template', {
-        template_file: templateFile,
+      this.requestTemplate('set_llm_template', { template_file: templateFile });
+      this.$refs.promptTemplateComboBox.blur();
+    },
+    clearPendingTemplateRequest() {
+      const pending = this.pendingTemplateRequest;
+      if (pending) {
+        pending.socket.removeEventListener('close', pending.onClose);
+        this.pendingTemplateRequest = null;
+      }
+    },
+    requestTemplate(action, data = {}) {
+      this.clearPendingTemplateRequest();
+      const socket = this.getWebsocket();
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        this.templateState = {};
+        this.waitingForTemplateSelection = false;
+        return;
+      }
+      const requestId = uuidv4();
+      const onClose = () => {
+        if (this.pendingTemplateRequest?.id !== requestId) return;
+        this.clearPendingTemplateRequest();
+        this.templateState = {};
+        this.waitingForTemplateSelection = false;
+      };
+      this.pendingTemplateRequest = { id: requestId, scope: this.templateScope, socket: markRaw(socket), onClose };
+      socket.addEventListener('close', onClose);
+      this.sendRequest(action, {
+        ...data,
         model: this.modelName,
         client_name: (this.values.lock_template ? this.client.name : null),
-      });
-      this.$refs.promptTemplateComboBox.blur();
+      }, requestId);
     },
     handleMessage(message) {
       if (message.type !== 'config') {
@@ -679,6 +736,20 @@ export default {
       }
       if (message.action === 'std_llm_templates') {
         this.promptTemplates = message.data.templates;
+        return;
+      }
+      if (!this.pendingTemplateRequest
+        || message.request_id !== this.pendingTemplateRequest.id
+        || this.pendingTemplateRequest.scope !== this.templateScope
+        || this.pendingTemplateRequest.socket !== this.getWebsocket()
+        || this.pendingTemplateRequest.socket.readyState !== WebSocket.OPEN) {
+        return;
+      }
+      if ((message.action === 'determine_llm_template_complete' && !message.data.template)
+        || (message.action === 'operation_done' && message.error)) {
+        this.clearPendingTemplateRequest();
+        this.templateState = {};
+        this.waitingForTemplateSelection = false;
         return;
       }
       if (message.action === 'set_llm_template_complete') {
@@ -698,6 +769,7 @@ export default {
           }
         }
         this.templateState = { ...this.templateState, ...state };
+        this.clearPendingTemplateRequest();
         this.waitingForTemplateSelection = false;
       }
     },
@@ -707,6 +779,7 @@ export default {
     this.requestStdTemplates();
   },
   unmounted() {
+    this.clearPendingTemplateRequest();
     this.unregisterMessageHandler(this.handleMessage);
   },
 }

@@ -1136,22 +1136,11 @@ async def test_load_scene_skips_guarded_steps_when_disabled(
 @pytest.mark.parametrize("source", ["json", "image"])
 @pytest.mark.parametrize("character_knowledge", [False, True])
 async def test_load_scene_persists_normalized_intro_from_supported_sources(
-    tmp_path, monkeypatch, pipeline_recorders, source, character_knowledge
+    tmp_path, persistence_scene_factory, pipeline_recorders, source, character_knowledge
 ):
-    class PersistedScene(MockScene):
-        @classmethod
-        def scenes_dir(cls):
-            return str(tmp_path)
-
     greeting = '“Hello,” she said.\n“Mixed closing" and ‘single quotes’ stay.”'
     expected = '"Hello," she said.\n"Mixed closing" and ‘single quotes’ stay."'
-    scene = PersistedScene()
-    bootstrap_scene(scene)
-    monkeypatch.setattr(
-        instance.get_agent("memory"), "close_db", lambda *args, **kwargs: None
-    )
-    monkeypatch.setattr(scene, "commit_to_memory", AsyncMock())
-    monkeypatch.setattr(scene, "add_to_recent_scenes", AsyncMock())
+    scene = persistence_scene_factory()
     pipeline_recorders["_save_scene_files"].side_effect = _SAVE_SCENE_FILES
 
     async def activate(scene, greeting):
@@ -1178,20 +1167,12 @@ async def test_load_scene_persists_normalized_intro_from_supported_sources(
     saved_data = json.loads(saved_path.read_text())
     assert saved_data["intro"] == expected
 
-    reloaded = PersistedScene()
-    bootstrap_scene(reloaded)
-    monkeypatch.setattr(instance.get_agent("memory"), "set_db", AsyncMock())
-    monkeypatch.setattr(
-        type(reloaded.world_state_manager), "remove_all_empty_pins", AsyncMock()
-    )
-    monkeypatch.setattr("talemate.load.handle_no_player_character", AsyncMock())
-    monkeypatch.setattr(
-        "talemate.load.voice_library.load_scene_voice_library",
-        AsyncMock(return_value=reloaded.voice_library),
-    )
-    monkeypatch.setattr("talemate.load._quarantine_and_resolve_rev", lambda scene: None)
+    reloaded = persistence_scene_factory()
     await load_scene_from_data(reloaded, saved_data, reset=True, name=str(saved_path))
     assert reloaded.intro == expected
+    assert reloaded.character_data["Hero"].greeting_text == greeting
+    if character_knowledge:
+        assert reloaded.intro_knowledge.views[0].text == expected
 
 
 @pytest.mark.parametrize(

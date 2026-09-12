@@ -1786,6 +1786,162 @@ STANDARD_BLOCKS = [
 class TestBlockListExtractor:
     """Tests for the BlockListExtractor class."""
 
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            pytest.param(
+                "<NARRATOR>The wind rose.\n<NARRATOR>Rain followed.</NARRATOR>",
+                [{"type": "narrator", "content": "The wind rose.\nRain followed."}],
+                id="same-type-merge",
+            ),
+            pytest.param(
+                '<CHARACTER name="Mara">Hello.\n'
+                '<CHARACTER name="Edwin">Hi.</CHARACTER>',
+                [
+                    {"type": "character", "name": "Mara", "content": "Hello."},
+                    {"type": "character", "name": "Edwin", "content": "Hi."},
+                ],
+                id="different-character-names",
+            ),
+            pytest.param(
+                '<CHARACTER name="Mara">Mara: Hello.\n'
+                '<CHARACTER name="Mara">Mara: Again.</CHARACTER>',
+                [{"type": "character", "name": "Mara", "content": "Hello.\nAgain."}],
+                id="same-character-prefix-and-merge",
+            ),
+            pytest.param(
+                '<NARRATOR>Wind.\n<CHARACTER name="Mara">Hello.</CHARACTER>'
+                "<NARRATOR>Rain.</NARRATOR>",
+                [
+                    {"type": "narrator", "content": "Wind."},
+                    {"type": "character", "name": "Mara", "content": "Hello."},
+                    {"type": "narrator", "content": "Rain."},
+                ],
+                id="other-type-before-later-matching-closer",
+            ),
+            pytest.param(
+                '<CHARACTER name="Mara">Hello.<NARRATOR>Wind.</NARRATOR></CHARACTER>',
+                [
+                    {"type": "character", "name": "Mara", "content": "Hello."},
+                    {"type": "narrator", "content": "Wind."},
+                ],
+                id="late-closer-after-other-type",
+            ),
+            pytest.param(
+                '<nArRaToR>Wind.<ChArAcTeR name="Mara">Hello.</cHaRaCtEr>',
+                [
+                    {"type": "narrator", "content": "Wind."},
+                    {"type": "character", "name": "Mara", "content": "Hello."},
+                ],
+                id="mixed-case-boundary-without-matching-closer",
+            ),
+            pytest.param(
+                '<NARRATOR>Wind.<CHARACTER name="Mara">Hello.'
+                "<NARRATOR>Rain.</NARRATOR>",
+                [
+                    {"type": "narrator", "content": "Wind."},
+                    {"type": "character", "name": "Mara", "content": "Hello."},
+                    {"type": "narrator", "content": "Rain."},
+                ],
+                id="multiple-missing-closers",
+            ),
+        ],
+    )
+    def test_missing_closer_recovers_at_next_opener(self, text, expected):
+        extractor = BlockListExtractor(blocks=STANDARD_BLOCKS)
+        assert extractor.extract(text) == expected
+
+    @pytest.mark.parametrize(
+        ("text", "expected"),
+        [
+            (
+                "<NARRATOR>Unfinished.",
+                [{"type": "narrator", "content": "Unfinished."}],
+            ),
+            (
+                "<NARRATOR>Complete.</NARRATOR><NARRATOR>Unfinished.",
+                [{"type": "narrator", "content": "Complete.\nUnfinished."}],
+            ),
+            (
+                '<NARRATOR>Recovered.<CHARACTER name="Mara">Unfinished.',
+                [
+                    {"type": "narrator", "content": "Recovered."},
+                    {"type": "character", "name": "Mara", "content": "Unfinished."},
+                ],
+            ),
+            (
+                '<CHARACTER name="Mara">  Mara: Hello. \n',
+                [{"type": "character", "name": "Mara", "content": "Hello."}],
+            ),
+            (
+                "<NARRATOR>Text.\nTrailing prose <OTHER>stays.",
+                [
+                    {
+                        "type": "narrator",
+                        "content": "Text.\nTrailing prose <OTHER>stays.",
+                    }
+                ],
+            ),
+            (
+                "<NARRATOR> \n",
+                [{"type": "narrator", "content": ""}],
+            ),
+        ],
+    )
+    def test_unclosed_final_block_recovers_through_end(self, text, expected):
+        extractor = BlockListExtractor(blocks=STANDARD_BLOCKS)
+        assert extractor.extract(text) == expected
+
+    @pytest.mark.parametrize("closer", ["", "</CHARACTER>"])
+    def test_missing_closer_preserves_whitespace_when_trim_disabled(self, closer):
+        extractor = BlockListExtractor(blocks=STANDARD_BLOCKS, trim=False)
+        text = f'<NARRATOR>  Wind. \n<CHARACTER name="Mara"> Hello. {closer}'
+        assert extractor.extract(text) == [
+            {"type": "narrator", "content": "  Wind. \n"},
+            {"type": "character", "name": "Mara", "content": " Hello. "},
+        ]
+
+    def test_unclosed_final_block_preserves_custom_named_groups(self):
+        extractor = BlockListExtractor(
+            blocks=[
+                (
+                    "line",
+                    r"\[line speaker=(?P<speaker>\w+) mood=(?P<mood>\w+)\]",
+                    "[/line]",
+                ),
+            ]
+        )
+        assert extractor.extract("[line speaker=Mara mood=calm]Hello.") == [
+            {"type": "line", "speaker": "Mara", "mood": "calm", "content": "Hello."},
+        ]
+
+    def test_missing_closer_uses_custom_patterns_and_preserves_all_groups(self):
+        extractor = BlockListExtractor(
+            blocks=[
+                (
+                    "line",
+                    r"\[line speaker=(?P<speaker>\w+) mood=(?P<mood>\w+)\]",
+                    "[/line]",
+                ),
+                ("note", r"\[note\]", "[/note]"),
+            ]
+        )
+        assert extractor.extract(
+            "[line speaker=Mara mood=calm]Hello.[note]Wind.[/note]"
+        ) == [
+            {"type": "line", "speaker": "Mara", "mood": "calm", "content": "Hello."},
+            {"type": "note", "content": "Wind."},
+        ]
+
+    @pytest.mark.parametrize("closer", ["", "</NARRATOR>"])
+    def test_boundaries_use_original_unicode_offsets(self, closer):
+        extractor = BlockListExtractor(blocks=STANDARD_BLOCKS)
+        text = f'İ<NARRATOR>İstanbul.{closer}<CHARACTER name="Mara">Hi.</CHARACTER>'
+        assert extractor.extract(text) == [
+            {"type": "narrator", "content": "İstanbul."},
+            {"type": "character", "name": "Mara", "content": "Hi."},
+        ]
+
     def test_basic_narrator_block(self):
         """Test extracting a single narrator block."""
         extractor = BlockListExtractor(blocks=STANDARD_BLOCKS)

@@ -193,17 +193,12 @@ class TextGeneratorWebuiClient(
             )
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
-        loop = asyncio.get_event_loop()
         if self.api_handles_prompt_template:
-            # assemble on the event loop - the executor thread cannot see the
-            # active_scene contextvar, which would drop persona instructions
             messages, coercion_prompt = self.chat_messages_for_coercion(prompt, kind)
-            return await loop.run_in_executor(
-                None, self._generate_chat, messages, coercion_prompt, parameters
+            return await asyncio.to_thread(
+                self._generate_chat, messages, coercion_prompt, parameters
             )
-        return await loop.run_in_executor(
-            None, self._generate, prompt, parameters, kind
-        )
+        return await asyncio.to_thread(self._generate, prompt, parameters, kind)
 
     def _generate_chat(
         self, messages: list[dict], coercion_prompt: str | None, parameters: dict

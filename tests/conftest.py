@@ -12,6 +12,7 @@ import os
 import tempfile
 from collections import deque
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import pytest
 import yaml
@@ -361,6 +362,18 @@ class MockMemoryAgent(talemate.agents.memory.MemoryAgent):
     async def delete(self, filters: dict):
         pass
 
+    def close_db(self, scene, remove_unsaved_memory: bool = True):
+        pass
+
+    def drop_db(self):
+        pass
+
+    def _set_db(self):
+        pass
+
+    def _get_document(self, id):
+        return {}
+
 
 class MockScene(Scene):
     """Real Scene subclass with auto_progress forced on."""
@@ -413,6 +426,24 @@ def scene():
 @pytest.fixture
 def director(scene):
     return instance.get_agent("director")
+
+
+@pytest.fixture
+def persistence_scene_factory(tmp_path, monkeypatch):
+    """Real scene file I/O with empty memory storage, confined to tmp_path.
+
+    Each call rebinds the global agent stack to the new scene; use the returned
+    scenes sequentially. Memory persistence and the global recents list are excluded.
+    """
+    monkeypatch.setattr(Scene, "scenes_dir", classmethod(lambda cls: str(tmp_path)))
+
+    def create():
+        scene = MockScene()
+        bootstrap_scene(scene)
+        monkeypatch.setattr(scene, "add_to_recent_scenes", AsyncMock())
+        return scene
+
+    return create
 
 
 def bootstrap_scene(mock_scene):

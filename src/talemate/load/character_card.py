@@ -33,6 +33,8 @@ from talemate.shared_context import SharedContext
 
 log = structlog.get_logger("talemate.load.character_card")
 
+_INTRO_DOUBLE_QUOTE_TRANSLATION = str.maketrans({"“": '"', "”": '"'})
+
 __all__ = [
     # Classes
     "RelevantCharacterInfo",
@@ -1610,7 +1612,9 @@ async def load_scene_from_character_card(
         raw_data_or_metadata,
     ) = _extract_character_data_from_file(file_path, file_ext)
 
-    original_greeting_text = original_character.greeting_text
+    original_greeting_text = original_character.greeting_text.translate(
+        _INTRO_DOUBLE_QUOTE_TRANSLATION
+    )
     card_description = original_character.description
     original_dialogue_examples_text = _extract_dialogue_examples_from_metadata(
         raw_data_or_metadata

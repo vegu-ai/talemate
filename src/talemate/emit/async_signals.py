@@ -1,17 +1,19 @@
 import structlog
 import traceback
 
-from talemate.exceptions import ControlFlowException
+from talemate.exceptions import ControlFlowException, GenerationCancelled
 
 __all__ = [
     "register",
     "get",
     "handlers",
+    "DEFERRED",
 ]
 
 log = structlog.get_logger("talemate.emit.async_signals")
 
 handlers = {}
+DEFERRED = object()
 
 
 class AsyncSignal:
@@ -33,7 +35,7 @@ class AsyncSignal:
     async def send(
         self, emission, *, completed: list[str] | None = None
     ) -> list[tuple]:
-        """Optionally resume named receivers, stopping at the first unfinished one."""
+        """Optionally checkpoint receivers, propagating failures and deferred work."""
         failures = []
         for receiver in self.receivers:
             if completed is not None:
@@ -50,7 +52,11 @@ class AsyncSignal:
                 if key in completed:
                     continue
             try:
-                await receiver(emission)
+                result = await receiver(emission)
+                if completed is not None and result is DEFERRED:
+                    raise GenerationCancelled(
+                        "A scene action has not finished yet. Retry to continue."
+                    )
             except ControlFlowException:
                 raise
             except Exception as exc:

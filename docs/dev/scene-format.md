@@ -73,6 +73,10 @@ instances of the same method. Node listeners use their persisted node ID, or the
 registry name for the one automatically registered instance. Other receivers in
 this mode must have stable, distinct module-qualified names within their signal.
 Ordinary sends retain their existing failure-collection behavior.
+Receivers that skip unfinished work return `async_signals.DEFERRED`. Resumable
+delivery then raises `GenerationCancelled` without recording completion, so the
+message remains pending for retry. Node cooldown and unavailable graph state use
+this result; ordinary delivery still skips them without interrupting the signal.
 Perception and avatar finalizers have separate completion keys; the conversation
 listener also records synchronous entry-turn consumption before awaiting learning.
 These checkpoints preserve completed work across cancellation and saved reload;

@@ -2475,7 +2475,7 @@ class Listen(Graph):
                 f"EVENT FAIL SAFE TRIGGERED: Event node {self.title} failed previously, skipping in order to avoid infinite loops of failures."
             )
             self._failed = None
-            return
+            return async_signals.DEFERRED
 
         try:
             state: GraphState = graph_state.get()
@@ -2487,7 +2487,7 @@ class Listen(Graph):
                 state = scene.nodegraph_state
             else:
                 log.error("Event node executed outside of active graph state")
-                return
+                return async_signals.DEFERRED
 
         node_state = await self.node_state_push(self, state)
         try:

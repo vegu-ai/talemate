@@ -46,9 +46,10 @@
     associations, authored visibility, pin and memory projections, invalidation and shared-data export behavior.
 - path: dev/scene-format.md
   title: Saved scene format
-  summary: 'Saved format_version and knowledge_eligibility validation, creation opt-in, empty-history mode switching, saves,
-    exports and forks. Documents request-owned scene_initialization.agent_settings: explicit pins before character initialization,
-    success-only persistence, scene settings links, unchanged globals and correlated lifecycle frames.'
+  summary: Saved format_version and knowledge_eligibility validation, creation opt-in, empty-history mode switching, saves,
+    exports, forks and request-owned scene_initialization.agent_settings with explicit pins, success-only persistence and correlated
+    lifecycle frames. Accepted player dispatch uses history_dispatch_pending/history_dispatch_completed, persisted receiver checkpoints,
+    stable node identity, deferred cooldown retries and refresh-before-generation ordering.
 - path: dev/snapshot-perspectives.md
   title: Audience-targeted snapshots
   summary: 'Audience-targeted world-state snapshots in perception scenes: evidence budgets, entity views and location_views,

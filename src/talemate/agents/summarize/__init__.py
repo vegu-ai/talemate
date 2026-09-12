@@ -766,6 +766,7 @@ class SummarizeAgent(
             if static
             else await self.previous_summaries(archive_entry),
             return_facts=True,
+            include_previous_facts=not static,
         )
         await drop_facts_for_entries(self.scene, {archive_entry.id})
         if parsed_facts:
@@ -798,6 +799,7 @@ class SummarizeAgent(
         audience: tuple[str, ...] | None = None,
         skip_author_hooks: bool = False,
         fact_evidence: list[dict] | None = None,
+        include_previous_facts: bool = True,
     ):
         """
         Summarize the given text
@@ -836,7 +838,7 @@ class SummarizeAgent(
                 if audience
                 else previous_facts(self.scene)
             )
-            if extract_facts
+            if extract_facts and include_previous_facts
             else [],
         }
 

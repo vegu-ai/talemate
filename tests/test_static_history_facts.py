@@ -12,6 +12,7 @@ from talemate.knowledge.graph import bucket
 from talemate.knowledge.perspectives import set_source_perspectives
 from talemate.knowledge.schema import Fact, ParsedFact
 from talemate.load import load_scene_from_data
+from talemate.prompts import Prompt
 from talemate.tale_mate import Scene
 
 supported_scene = test_supported_facts.supported_scene
@@ -55,7 +56,10 @@ async def test_standard_static_generation_without_progress(
     assert not scene.can_change_knowledge_eligibility
     assert await summarizer.regenerate_facts(payload) == "ok"
     extraction.assert_awaited_once_with(
-        original["text"], extra_context=[], return_facts=True
+        original["text"],
+        extra_context=[],
+        return_facts=True,
+        include_previous_facts=False,
     )
     assert scene.history == [] and scene.ts == 500
     assert scene.knowledge_eligibility == "legacy" and scene.knowledge is None
@@ -92,6 +96,33 @@ async def test_static_regeneration_replaces_only_its_facts(static_scene, monkeyp
         "Alice replaced the radio antenna."
     ]
     assert scene.history == []
+
+
+async def test_static_prompt_does_not_label_its_own_or_future_facts_as_prior(
+    static_scene, monkeypatch
+):
+    scene, summarizer, _ = static_scene
+    scene.world_state.facts = {
+        "F1": Fact(
+            id="F1", text="Alice repaired the radio.", archive_id="opening", ts=10
+        ),
+        "F2": Fact(id="F2", text="The radio broke again.", archive_id="later", ts=500),
+    }
+    scene.world_state.fact_counter = 2
+    request = AsyncMock(
+        return_value=(
+            "SUMMARY: Unused",
+            {"summary": "Unused", "facts": '[{"text": "Alice repaired the radio."}]'},
+        )
+    )
+    monkeypatch.setattr(Prompt, "request", request)
+    assert await summarizer.regenerate_facts(row(scene)) == "ok"
+    prompt_vars = request.call_args.kwargs["vars"]
+    assert prompt_vars["dialogue"] == "Alice repaired the radio."
+    assert prompt_vars["previous_facts"] == []
+    assert prompt_vars["extra_context"] == ""
+    assert len(facts_for_entry(scene, "opening")) == 1
+    assert scene.world_state.facts["F2"].text == "The radio broke again."
 
 
 async def test_static_extraction_respects_disabled_setting(static_scene, monkeypatch):

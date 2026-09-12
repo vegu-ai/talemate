@@ -1103,6 +1103,9 @@ class WaitForInput(Node):
             await self._handle_director_input(scene, state, text_message)
 
         if allow_commands and text_message.startswith("!"):
+            from talemate.knowledge.revision_refresh import catch_up_revisions
+
+            await catch_up_revisions(scene)
             command_state = {}
             node_cmd_executed = False
             await scene.commands.execute(

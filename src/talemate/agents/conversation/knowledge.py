@@ -390,7 +390,19 @@ class CharacterKnowledgeMixin:
         character = self.scene.get_character(message.character_name)
         if character is None:
             return
-        await self.record_learned_facts(character, str(message), message=message)
+        kwargs = {}
+        if message.history_dispatch_pending:
+            from talemate.knowledge.revision_refresh import _historical_context
+
+            recent, present, ts = _historical_context(self.scene, message)
+            kwargs = {
+                "recent_lines_override": recent,
+                "present_override": present,
+                "ts_override": ts,
+            }
+        await self.record_learned_facts(
+            character, str(message), message=message, **kwargs
+        )
 
     @set_processing
     @evidence_writer

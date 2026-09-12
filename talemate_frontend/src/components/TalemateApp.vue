@@ -519,6 +519,7 @@ import Templates from './Templates.vue';
 import TemplatesMenu from './TemplatesMenu.vue';
 import OnboardingWizard from './OnboardingWizard.vue';
 import PromptsView from './prompts/PromptsView.vue';
+import { capturePrompt, clearFinishedPrompts } from '@/utils/promptLog';
 import PromptsMenu from './prompts/PromptsMenu.vue';
 import ThemeSwitcher from './ThemeSwitcher.vue';
 // import debounce
@@ -2115,74 +2116,14 @@ export default {
       this.activeUxInteractionIds = [];
     },
 
-    // Compute character-level prefix match ratio between two strings
-    computePrefixMatchRatio(a, b) {
-      const len = Math.min(a.length, b.length);
-      let i = 0;
-      while (i < len && a[i] === b[i]) i++;
-      return a.length > 0 ? i / a.length : 0;
-    },
-
-    // Handle prompt_sent messages (capture prompts for PromptsMenu)
     handlePromptSent(data) {
-      // agent_name here is the verbose display name (from agent_stack); the
-      // canonical type+action come straight from the server now.
-      let agent = null;
-      let agentName = null;
-      let agentAction = data.agent_action || null;
-
-      if (data.agent_stack && data.agent_stack.length > 0) {
-        agent = data.agent_stack[data.agent_stack.length - 1];
-        agentName = agent.split('.')[0];
-      }
-
-      // Compute prefix cache ratio against previous prompt with same template_uid + client_name
-      let prefixCacheRatio = null;
-      if (data.template_uid && data.client_name && data.prompt) {
-        const previous = this.prompts.find(
-          p => p.template_uid === data.template_uid && p.client_name === data.client_name
-        );
-        if (previous && previous.prompt) {
-          prefixCacheRatio = this.computePrefixMatchRatio(data.prompt, previous.prompt);
-        }
-      }
-
-      this.prompts.unshift({
-        prompt: data.prompt,
-        response: data.response,
-        kind: data.kind,
-        response_tokens: data.response_tokens,
-        prompt_tokens: data.prompt_tokens,
-        agent_stack: data.agent_stack,
-        agent: agent,
-        agent_name: agentName,
-        agent_type: data.agent_type || null,
-        agent_action: agentAction,
-        client_name: data.client_name,
-        client_type: data.client_type,
-        time: parseInt(data.time),
-        num: this.promptTotal++,
-        generation_parameters: data.generation_parameters,
-        inference_preset: data.inference_preset,
-        original_generation_parameters: JSON.parse(JSON.stringify(data.generation_parameters)),
-        original_prompt: data.prompt,
-        original_response: data.response,
-        reasoning: data.reasoning,
-        template_uid: data.template_uid,
-        prefix_cache_ratio: prefixCacheRatio,
-      });
-
-      // Truncate if exceeds max
-      while (this.prompts.length > this.maxPrompts) {
-        this.prompts.pop();
-      }
+      capturePrompt(this, data);
     },
 
-    // Clear prompts
     clearPrompts() {
-      this.prompts = [];
-      this.promptTotal = 0;
+      clearFinishedPrompts(this.prompts);
     }
+
   }
 }
 </script>

@@ -12,6 +12,10 @@ The Debug Tools panel slides in from the right side of the screen and contains s
 
 The Prompts tab shows a log of all AI prompts that have been sent during your session. Click on any prompt to inspect its full content. This is useful for understanding what information is being sent to the AI and debugging unexpected AI responses.
 
+Requests appear immediately as **Active**, even if you open the viewer after generation starts. Available prompt text, agent/action and parameters can be inspected while the response is pending. The same entry becomes **Completed**, **Failed** or **Cancelled** when the logical request ends. Retries stay in that entry; ignoring a generation failure leaves it marked Failed.
+
+**Clear** removes finished entries and keeps active requests. **Dump to file** exports the current list, including active entries with pending values. The Prompt Manager uses the same log and status indicators.
+
 For headless captures or longer-running debug sessions, the same prompt records can also be streamed to a file — see [Prompt Logging](../getting-started/advanced/prompt-logging.md).
 
 The prompt detail view also lets you force reasoning off for the specific agent action that produced a prompt, using the **Reasoning: client default** button next to the action. The full list of actions and their overrides lives in the **Agent action overrides** dialog — see [Forcing Reasoning Off for Specific Actions](clients/reasoning.md#forcing-reasoning-off-for-specific-actions).

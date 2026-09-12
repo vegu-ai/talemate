@@ -11,6 +11,9 @@ import time
 import traceback
 import asyncio
 import uuid
+from contextvars import ContextVar
+from copy import deepcopy
+from dataclasses import dataclass, field
 from typing import Callable, Union, Literal, TYPE_CHECKING
 
 import pydantic
@@ -78,22 +81,59 @@ class ClientDisabledError(OSError):
 
 
 class PromptData(pydantic.BaseModel):
+    request_id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
+    status: Literal["active", "completed", "failed", "cancelled"] = "completed"
+    started_at: float = pydantic.Field(default_factory=time.time)
+    attempts: int = 0
+    error: str | None = None
     kind: str
     prompt: str
-    response: str
-    prompt_tokens: int
-    response_tokens: int
+    response: str | None = None
+    prompt_tokens: int | None = None
+    response_tokens: int | None = None
     client_name: str
     client_type: str
-    time: Union[float, int]
+    time: float | None = None
     agent_stack: list[str] = pydantic.Field(default_factory=list)
     agent_type: str | None = None
     agent_action: str | None = None
     generation_parameters: dict = pydantic.Field(default_factory=dict)
-    inference_preset: str = None
+    inference_preset: str | None = None
     preset_group: str | None = None
     reasoning: str | None = None
     template_uid: str | None = None
+
+
+@dataclass
+class PromptRequest:
+    data: PromptData | None = None
+    parameters: dict | None = None
+    values: dict = field(default_factory=dict)
+    started: float = field(default_factory=time.monotonic)
+    failed: bool = False
+
+
+class RequestValue:
+    """Share provider-task writes with its caller without crossing logical requests."""
+
+    def __set_name__(self, owner, name):
+        self.name = name
+
+    def __get__(self, client, owner=None):
+        if client is None:
+            return self
+        context = getattr(client, "_prompt_request", None)
+        request = context.get() if context else None
+        if request is not None:
+            return request.values.get(self.name)
+        return client.__dict__.get(self.name)
+
+    def __set__(self, client, value):
+        context = getattr(client, "_prompt_request", None)
+        request = context.get() if context else None
+        if request is not None:
+            request.values[self.name] = value
+        client.__dict__[self.name] = value
 
 
 class ErrorAction(pydantic.BaseModel):
@@ -321,7 +361,10 @@ class ClientBase:
     auto_determine_prompt_template: bool = False
     finalizers: list[str] = []
     client_type = "base"
-    request_information: RequestInformation | None = None
+    request_information = RequestValue()
+    _returned_prompt_tokens = RequestValue()
+    _returned_response_tokens = RequestValue()
+    _reasoning_response = RequestValue()
     status_request_timeout: int = 2
     # last resort bound on one status probe, applied by the status sweep in
     # talemate.instance and set well above every client's own request timeout:
@@ -359,6 +402,9 @@ class ClientBase:
         self._status_failures = 0
         self._auto_retry_aborts: set[str] = set()
         self._auto_retry_live_ids: set[str] = set()
+        self._prompt_request: ContextVar[PromptRequest | None] = ContextVar(
+            "prompt_request", default=None
+        )
         self.log = structlog.get_logger(f"client.{self.client_type}")
 
     def __str__(self):
@@ -1401,16 +1447,18 @@ class ClientBase:
         task_poll = self._poll_interrupt()
         task_generate = self._generate_task(prompt, parameters, kind)
 
-        done, pending = await asyncio.wait(
-            [task_poll, task_generate], return_when=asyncio.FIRST_COMPLETED
-        )
-
-        # cancel the remaining task
-        for task in pending:
-            task.cancel()
-
-        # return the result of the completed task
-        return done.pop().result()
+        try:
+            done, pending = await asyncio.wait(
+                [task_poll, task_generate], return_when=asyncio.FIRST_COMPLETED
+            )
+            if task_poll in done:
+                return task_poll.result()
+            return task_generate.result()
+        finally:
+            for task in (task_poll, task_generate):
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(task_poll, task_generate, return_exceptions=True)
 
     async def abort_generation(self):
         """
@@ -1577,6 +1625,11 @@ class ClientBase:
         Returns "retry" or "ignore". Raises GenerationCancelled when the
         generation was aborted or the user cancelled.
         """
+        request = self._prompt_request.get()
+        if request and request.data:
+            request.data.error = error_message
+            self._emit_prompt_request()
+
         if auto_retries[issue] < limit:
             if self._auto_retry_cancelled(generation_id):
                 raise GenerationCancelled("Generation cancelled")
@@ -1598,6 +1651,8 @@ class ClientBase:
         )
         if action == "cancel":
             raise GenerationCancelled("Generation cancelled by user")
+        if action == "ignore" and request:
+            request.failed = True
         return action
 
     async def _generate_with_error_handling(
@@ -1616,6 +1671,15 @@ class ClientBase:
         try:
             while True:
                 self.new_request()
+                self._returned_prompt_tokens = None
+                self._returned_response_tokens = None
+                self._reasoning_response = None
+                request = self._prompt_request.get()
+                if request and request.data:
+                    request.failed = False
+                    request.data.attempts += 1
+                    request.data.error = None
+                    self._emit_prompt_request()
 
                 try:
                     response = await self._cancelable_generate(
@@ -1862,13 +1926,61 @@ class ClientBase:
         :return: The AI's response text.
         """
 
+        request = PromptRequest()
+        token = self._prompt_request.set(request)
         try:
-            return await self._send_prompt(
+            response = await self._send_prompt(
                 prompt, kind, finalize, retries, data_expected
             )
-        except GenerationCancelled:
+            if request.data:
+                request.data.response = response
+                request.data.status = "failed" if request.failed else "completed"
+                if not request.failed:
+                    request.data.response_tokens = (
+                        self._returned_response_tokens
+                        if self._returned_response_tokens is not None
+                        else self.count_tokens(response)
+                    )
+            return response
+        except (GenerationCancelled, asyncio.CancelledError):
+            if request.data:
+                request.data.status = "cancelled"
+                request.data.error = "Generation cancelled"
+            if self.request_information and self.request_information.end_time is None:
+                self.request_information.cancelled = True
+                self.end_request()
             await self.abort_generation()
             raise
+        except Exception as exc:
+            if request.data:
+                request.data.status = "failed"
+                request.data.error = getattr(exc, "user_message", None) or (
+                    get_error_message(self._extract_status_code(exc))
+                    if self._extract_status_code(exc) is not None
+                    else type(exc).__name__
+                )
+            raise
+        finally:
+            try:
+                if request.data:
+                    request.data.time = time.monotonic() - request.started
+                    if self._returned_prompt_tokens is not None:
+                        request.data.prompt_tokens = self._returned_prompt_tokens
+                    if self._returned_response_tokens is not None:
+                        request.data.response_tokens = self._returned_response_tokens
+                    request.data.reasoning = self._reasoning_response
+                    self._emit_prompt_request()
+                    if os.environ.get("TALEMATE_LOG_PROMPTS"):
+                        self._log_prompt_to_file(request.data)
+            finally:
+                self._prompt_request.reset(token)
+
+    def _emit_prompt_request(self):
+        request = self._prompt_request.get()
+        if request and request.data:
+            if request.parameters is not None:
+                request.data.generation_parameters = deepcopy(request.parameters)
+            emit("prompt_sent", data=request.data.model_dump())
 
     async def _send_prompt(
         self,
@@ -1888,6 +2000,24 @@ class ClientBase:
         has_response_length = getattr(prompt, "response_length_instructions", False)
         response_length_mod = getattr(prompt, "response_length_mod", 0)
         prompt = str(prompt)
+
+        request = self._prompt_request.get()
+        agent_context = active_agent.get()
+        if request:
+            request.data = PromptData(
+                status="active",
+                kind=kind,
+                prompt=prompt,
+                agent_stack=agent_context.agent_stack if agent_context else [],
+                agent_type=agent_context.agent.agent_type if agent_context else None,
+                agent_action=agent_context.action if agent_context else None,
+                client_name=self.name,
+                client_type=self.client_type,
+                inference_preset=client_context_attribute("inference_preset"),
+                preset_group=self.preset_group,
+                template_uid=active_template_uid.get(),
+            )
+            self._emit_prompt_request()
 
         try:
             self.rate_limit_update()
@@ -2010,7 +2140,6 @@ class ClientBase:
 
             token_length = self.count_tokens(finalized_prompt)
 
-            time_start = time.time()
             extra_stopping_strings = prompt_param.pop("extra_stopping_strings", [])
 
             self.clean_prompt_parameters(prompt_param)
@@ -2035,6 +2164,15 @@ class ClientBase:
                     error=traceback.format_exc(),
                 )
 
+            if request and request.data:
+                request.data.prompt = finalized_prompt
+                request.data.prompt_tokens = token_length
+                request.parameters = prompt_param
+                request.data.inference_preset = client_context_attribute(
+                    "inference_preset"
+                )
+                self._emit_prompt_request()
+
             response = await self._generate_with_reasoning_handling(
                 finalized_prompt, prompt_param, kind
             )
@@ -2049,8 +2187,6 @@ class ClientBase:
             if REPLACE_SMART_QUOTES:
                 response = util.replace_smart_quotes(response)
 
-            time_end = time.time()
-
             # stopping strings sometimes get appended to the end of the response anyways
             # cut the response at the earliest occurrence of any stopping string
 
@@ -2063,34 +2199,6 @@ class ClientBase:
             if cut_indices:
                 response = response[: min(cut_indices)]
 
-            agent_context = active_agent.get()
-
-            prompt_data = PromptData(
-                kind=kind,
-                prompt=finalized_prompt,
-                response=response,
-                prompt_tokens=self._returned_prompt_tokens or token_length,
-                response_tokens=self._returned_response_tokens
-                or self.count_tokens(response),
-                agent_stack=agent_context.agent_stack if agent_context else [],
-                agent_type=agent_context.agent.agent_type if agent_context else None,
-                agent_action=agent_context.action if agent_context else None,
-                client_name=self.name,
-                client_type=self.client_type,
-                time=time_end - time_start,
-                generation_parameters=prompt_param,
-                inference_preset=client_context_attribute("inference_preset"),
-                preset_group=self.preset_group,
-                reasoning=self._reasoning_response,
-                template_uid=active_template_uid.get(),
-            )
-
-            emit("prompt_sent", data=prompt_data.model_dump())
-
-            # File-based prompt logging for test scripts
-            if os.environ.get("TALEMATE_LOG_PROMPTS"):
-                self._log_prompt_to_file(prompt_data)
-
             return response
         except GenerationCancelled:
             # Finalize request timing so the token rate doesn't decay to ~0 after cancellation.
@@ -2100,15 +2208,15 @@ class ClientBase:
                 self.end_request()
             raise
         except GenerationProcessingError as e:
+            if request:
+                request.failed = True
+                request.data.error = str(e)
             self.log.error("send_prompt error", e=e)
             emit("status", message=str(e), status="error")
             return ""
 
         finally:
             self.emit_status(processing=False)
-            self._returned_prompt_tokens = None
-            self._returned_response_tokens = None
-
             if self.rate_limit_counter:
                 self.rate_limit_counter.increment()
 

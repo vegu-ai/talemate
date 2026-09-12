@@ -407,9 +407,8 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
         if self.is_openai:
             return await self._generate_openai(prompt, parameters, kind)
         else:
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(
-                None, self._generate_kcpp_stream, prompt, parameters, kind
+            return await asyncio.to_thread(
+                self._generate_kcpp_stream, prompt, parameters, kind
             )
 
     def _generate_kcpp_stream(self, prompt: str, parameters: dict, kind: str):

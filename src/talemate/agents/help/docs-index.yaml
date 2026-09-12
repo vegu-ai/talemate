@@ -44,9 +44,10 @@
     TALEMATE_ENCRYPTION_KEY_DIR and the Docker Compose passthroughs.'
 - path: getting-started/advanced/prompt-logging.md
   title: Prompt Logging
-  summary: Set TALEMATE_LOG_PROMPTS=1 to append every prompt and response to logs/prompt_log.jsonl. Documents the record schema
-    - kind, prompt, response, token counts, client_name, agent_stack, generation_parameters, inference_preset, reasoning,
-    template_uid.
+  summary: Set TALEMATE_LOG_PROMPTS=1 to append one terminal JSONL record per logical request, including Completed, Failed
+    and Cancelled outcomes with retries grouped by request_id. Covers attempts, errors, prompt/response, usage, client/agent
+    metadata, effective parameters and reasoning; distinguishes active snapshots with pending fields in Debug Tools Dump to
+    file.
 - path: getting-started/connect-a-client.md
   title: Connect a client
   summary: 'Adding an LLM client and assigning agents. Client types: OpenAI, Anthropic, Mistral, Cohere, DeepSeek, Groq, Gemini,
@@ -584,12 +585,10 @@
     failures, and wrong templates.
 - path: user-guide/debug-tools.md
   title: Debug Tools
-  summary: 'The bug-icon Debug Tools panel with its Prompts, Memory and Vars tabs: inspecting sent prompts (and forcing reasoning
-    off per action), watching memory retrieval, and editing game state variables. Covers the Pinned Variables manager''s independent
-    Debug Vars and Scene toolbar targets, shared per-path control settings (label, description shown as a tooltip on the
-    control, order, read-only, number bounds and slider, string choices) and the limits they place on every edit, Debug Vars
-    path subtitles, type-matched toolbar knobs, slash-separated paths, the three ways to open the Game State Editor including
-    the tune button at the left end of the knob toolbar, and the full state JSON editor.'
+  summary: 'Debug Tools Prompts, Memory and Vars: inspect Active requests and Completed/Failed/Cancelled outcomes, grouped
+    retries, Clear retaining active entries, Dump to file and per-action reasoning overrides. Covers memory retrieval, pinned
+    Debug Vars/Scene toolbar targets, shared labels/tooltips/order/read-only settings, type-matched bounds/sliders/choices,
+    path subtitles, slash paths, Game State Editor entry points and full JSON editing.'
 - path: user-guide/howto/create-a-new-scene/create-empty-scene.md
   title: Create an empty scene
   summary: Walkthrough for starting a blank scene from the Home screen's Create new scene card and the New scene setup dialog
@@ -1003,9 +1002,9 @@
     Template node''s property.'
 - path: user-guide/prompts/index.md
   title: Prompt Manager
-  summary: 'Overview of the Prompt Manager and its Prompts, Template Files, LLM Prompt Templates and Scene Context tabs: Jinja2
-    template groups (default, user, scene, custom) and their priority, the resolved template tree with override indicators,
-    and Test Changes.'
+  summary: Prompt Manager tabs for prompt inspection, Template Files, LLM Prompt Templates and Scene Context; Jinja2 template
+    groups, priority and resolved override indicators. Covers immediate Active entries, Completed/Failed/Cancelled outcomes,
+    grouped retries, Clear retaining active requests, live details preserving edits and Test Changes after completion.
 - path: user-guide/prompts/llm-prompt-templates.md
   title: LLM Prompt Templates
   summary: 'The Prompt Manager tab for base chat-format templates (ChatML, Llama3, Mistral, Gemma4): built-in templates/llm-prompt/std/

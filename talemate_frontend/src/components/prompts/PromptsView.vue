@@ -131,7 +131,7 @@
                         <v-tabs v-model="activePromptIndex" color="secondary">
                             <v-tab
                                 v-for="(prompt, index) in openPrompts"
-                                :key="prompt.num"
+                                :key="prompt.request_id"
                                 :value="index"
                             >
                                 <span class="mr-2">#{{ prompt.num }}</span>
@@ -151,7 +151,7 @@
                         <v-window v-model="activePromptIndex">
                             <v-window-item
                                 v-for="(prompt, index) in openPrompts"
-                                :key="prompt.num"
+                                :key="prompt.request_id"
                                 :value="index"
                             >
                                 <PromptDetailView
@@ -306,6 +306,9 @@ export default {
         };
     },
     computed: {
+        promptIds() {
+            return this.prompts.map(prompt => prompt.request_id);
+        },
         effectiveMainTab() {
             return this.internalMainTab || this.mainTab;
         },
@@ -320,6 +323,11 @@ export default {
         }
     },
     watch: {
+        promptIds(ids) {
+            const active = this.openPrompts[this.activePromptIndex];
+            this.openPrompts = this.openPrompts.filter(prompt => ids.includes(prompt.request_id));
+            this.activePromptIndex = Math.max(0, this.openPrompts.indexOf(active));
+        },
         visible: {
             immediate: true,
             handler(newVal) {
@@ -355,7 +363,7 @@ export default {
         // Handle opening a prompt from PromptsMenu
         handleOpenPrompt(prompt) {
             // Check if prompt is already open
-            const existingIndex = this.openPrompts.findIndex(p => p.num === prompt.num);
+            const existingIndex = this.openPrompts.findIndex(p => p.request_id === prompt.request_id);
             if (existingIndex >= 0) {
                 // Already open, just switch to it
                 this.activePromptIndex = existingIndex;

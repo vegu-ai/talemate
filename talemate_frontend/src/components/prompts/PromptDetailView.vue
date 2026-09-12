@@ -1,8 +1,9 @@
 <template>
-    <v-container fluid class="pa-0">
+    <v-container fluid class="pa-0" :data-request-id="prompt.request_id">
         <!-- Header with prompt metadata -->
         <div class="d-flex align-center flex-wrap mb-2">
             <span class="text-title-large mr-2">#{{ prompt.num }}</span>
+            <PromptStatus :status="prompt.status" class="mr-2" />
             <v-chip color="mutedheader" variant="text">{{ prompt.agent_name }}</v-chip>
             <v-chip size="small" label class="mr-1" color="primary" variant="tonal">
                 <strong class="mr-1">action</strong>{{ prompt.agent_action }}
@@ -38,14 +39,15 @@
                 <strong class="mr-1">preset</strong> {{ prompt.inference_preset }}
             </v-chip>
             <v-chip size="small" color="primary" variant="text" label>
-                {{ prompt.prompt_tokens }}<v-icon size="14" class="ml-1">mdi-arrow-down-bold</v-icon>
+                {{ promptMetric(prompt.prompt_tokens, prompt.status) }}<v-icon size="14" class="ml-1">mdi-arrow-down-bold</v-icon>
             </v-chip>
             <v-chip size="small" color="secondary" variant="text" label>
-                {{ prompt.response_tokens }}<v-icon size="14" class="ml-1">mdi-arrow-up-bold</v-icon>
+                {{ promptMetric(prompt.response_tokens, prompt.status) }}<v-icon size="14" class="ml-1">mdi-arrow-up-bold</v-icon>
             </v-chip>
             <v-chip size="small" variant="text" label color="muted">
-                {{ prompt.time }}s<v-icon size="14" class="ml-1">mdi-clock</v-icon>
+                {{ promptMetric(prompt.time == null ? null : Math.floor(prompt.time), prompt.status, 's') }}<v-icon size="14" class="ml-1">mdi-clock</v-icon>
             </v-chip>
+            <v-chip v-if="prompt.attempts > 1" size="small" variant="text">{{ prompt.attempts }} attempts</v-chip>
             <v-chip color="muted" variant="text" prepend-icon="mdi-network-outline">
                 {{ prompt.client_name }}
             </v-chip>
@@ -177,6 +179,9 @@
                                 >Reset</v-btn>
                             </v-card-title>
                             <v-card-text :style="{ opacity: busy ? 0.6 : 1 }">
+                                <p v-if="prompt.status === 'active'" role="status">Response pending.</p>
+                                <p v-else-if="localPrompt.response == null">No response received.</p>
+                                <p v-if="prompt.error" class="text-error">{{ prompt.error }}</p>
                                 <div class="prompt-view">{{ localPrompt.response }}</div>
                             </v-card-text>
                         </v-card>
@@ -200,7 +205,7 @@
         >
             <template v-slot:activator="{ props }">
                 <v-btn
-                    :disabled="busy"
+                    :disabled="busy || prompt.status === 'active'"
                     color="warning"
                     variant="text"
                     @click.stop="testChanges"
@@ -220,11 +225,14 @@ import { Codemirror } from 'vue-codemirror'
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { codeEditorExtensions } from '@/utils/codeEditorTheme.js'
+import { promptMetric, syncPromptDraft } from '@/utils/promptLog';
+import PromptStatus from './PromptStatus.vue';
 
 export default {
     name: 'PromptDetailView',
     components: {
         Codemirror,
+        PromptStatus,
     },
     props: {
         prompt: {
@@ -297,10 +305,10 @@ export default {
     watch: {
         prompt: {
             immediate: true,
+            deep: true,
             handler(newPrompt) {
                 if (newPrompt) {
-                    // Create a deep copy to avoid mutating the original prop
-                    this.localPrompt = JSON.parse(JSON.stringify(newPrompt));
+                    this.localPrompt = syncPromptDraft(this.localPrompt, newPrompt);
                 }
             },
         },
@@ -311,11 +319,13 @@ export default {
     inject: [
         "getWebsocket",
         'registerMessageHandler',
+        'unregisterMessageHandler',
         // the settings page's unsaved-edits state: this button writes the
         // applied config, which a later save of that page would overwrite
         'settingsDirty',
     ],
     methods: {
+        promptMetric,
         parameterType(name) {
             if (!this.localPrompt?.original_generation_parameters) return 'text';
             const typ = typeof this.localPrompt.original_generation_parameters[name];
@@ -415,6 +425,9 @@ export default {
     },
     created() {
         this.registerMessageHandler(this.handleMessage);
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
     },
     setup() {
         const extensions = codeEditorExtensions(

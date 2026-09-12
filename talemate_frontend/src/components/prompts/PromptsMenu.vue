@@ -29,11 +29,11 @@
                     variant="text"
                     color="error"
                     @click="clearPrompts"
-                >Clear</v-btn>
+                >Clear<v-tooltip activator="parent">Clear finished requests; keep active requests.</v-tooltip></v-btn>
 
                 <PromptLogItem
-                    v-for="(prompt, index) in prompts"
-                    :key="index"
+                    v-for="prompt in prompts"
+                    :key="prompt.request_id"
                     :prompt="prompt"
                     :show-client="true"
                     @click="openPrompt(prompt)"

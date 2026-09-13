@@ -34,11 +34,15 @@ export function sceneCanPersist(scene) {
 }
 
 export class SceneAgentOverridesCoordinator {
-    constructor({ getWebsocket, scene, state, onError } = {}) {
+    constructor({ getWebsocket, scene, state, onError, requestSave } = {}) {
         this.getWebsocket = getWebsocket || (() => null);
         this.getScene = scene || (() => null);
         this.state = state || null;
         this.onError = onError || (() => {});
+        this.requestSave = requestSave;
+        this.awaitingSave = false;
+        this.saveRequired = false;
+        this.confirmedSaveIdentity = null;
         this.queue = [];
         this.inFlight = null;
         this.identity = sceneIdentityOf(this.getScene());
@@ -62,7 +66,11 @@ export class SceneAgentOverridesCoordinator {
     }
 
     syncState() {
-        if (this.state) this.state.busy = this.busy;
+        if (!this.state) return;
+        this.state.busy = this.busy;
+        this.state.pendingSave = this.saveRequired && this.queue.length > 0;
+        this.state.savingScene = this.awaitingSave;
+        this.state.pendingLabel = this.queue[0]?.label || null;
     }
 
     /**
@@ -71,6 +79,9 @@ export class SceneAgentOverridesCoordinator {
      * `scene_status` binds the new generation.
      */
     reset() {
+        this.awaitingSave = false;
+        this.saveRequired = false;
+        this.confirmedSaveIdentity = null;
         this.queue = [];
         this.inFlight = null;
         this.identity = null;
@@ -89,13 +100,12 @@ export class SceneAgentOverridesCoordinator {
         const identity = sceneIdentityOfData(data);
         if (!identity) return;
         if (this.identity !== identity) {
-            this.queue = [];
-            this.inFlight = null;
-            this.failed = false;
-            if (this.state) this.state.error = null;
+            this.reset();
             this.identity = identity;
         }
         this.reconcileLink(data?.agent_settings_file || null);
+        if (!data.filename || !data.project_name) this.confirmedSaveIdentity = null;
+        this.syncState();
     }
 
     /** Follow the scene's confirmed link state, keeping a just-sent link alive. */
@@ -112,7 +122,7 @@ export class SceneAgentOverridesCoordinator {
     }
 
     /** entries: [{ agent, action, enabled?, config: { key: value } }] */
-    applySceneAgentValues(entries) {
+    applySceneAgentValues(entries, label = null) {
         this.enqueueGroups(entries, (group, entry) => {
             const action = { config: {} };
             if (entry.enabled !== undefined) action.enabled = entry.enabled;
@@ -123,7 +133,7 @@ export class SceneAgentOverridesCoordinator {
                 ...action,
                 config: { ...(existing.config || {}), ...action.config },
             };
-        });
+        }, label);
     }
 
     /** entries: [{ agent, action, config? }] — no config clears the enable override. */
@@ -133,13 +143,14 @@ export class SceneAgentOverridesCoordinator {
         });
     }
 
-    enqueueGroups(entries, add) {
+    enqueueGroups(entries, add, label = null) {
         const scene = this.getScene();
-        if (!sceneCanPersist(scene)) {
+        if (!sceneCanPersist(scene) && !this.requestSave) {
             this.report('Save the scene to change its knowledge settings.');
             return;
         }
         const identity = sceneIdentityOf(scene);
+        if (!identity || this.saveRequired) return;
         if (this.identity === null) this.identity = identity;
         if (identity !== this.identity) return;
 
@@ -155,7 +166,7 @@ export class SceneAgentOverridesCoordinator {
             groups.set(entry.agent, group);
         }
         for (const [agent, patch] of groups) {
-            this.queue.push({ agent, patch, identity, requestId: nextRequestId() });
+            this.queue.push({ agent, patch, identity, label, requestId: nextRequestId() });
         }
         this.syncState();
         this.dispatch();
@@ -167,13 +178,19 @@ export class SceneAgentOverridesCoordinator {
             return;
         }
         const scene = this.getScene();
-        const op = this.queue.shift();
-        if (!sceneCanPersist(scene) || sceneIdentityOf(scene) !== op.identity) {
+        const op = this.queue[0];
+        if (sceneIdentityOf(scene) !== op.identity) {
             // the scene moved on while this waited — never write into the next one
-            this.syncState();
-            this.dispatch();
+            this.reset();
             return;
         }
+        if (this.saveRequired) return;
+        if (!sceneCanPersist(scene) && this.confirmedSaveIdentity !== op.identity) {
+            this.saveRequired = true;
+            this.retrySave();
+            return;
+        }
+        this.queue.shift();
         const payload = {
             type: 'agent_config',
             action: 'save_scene_overrides',
@@ -194,6 +211,40 @@ export class SceneAgentOverridesCoordinator {
         this.inFlight = op;
         this.syncState();
         this.getWebsocket().send(JSON.stringify(payload));
+    }
+
+    async retrySave() {
+        const op = this.queue[0];
+        if (!op || !this.saveRequired || this.awaitingSave) return;
+        this.awaitingSave = true;
+        this.report(null);
+        this.syncState();
+        let result;
+        try {
+            result = await this.requestSave();
+        } catch (error) {
+            result = { status: 'failed', message: error.message };
+        }
+        if (this.queue[0] !== op) return;
+        this.awaitingSave = false;
+        if (sceneIdentityOf(this.getScene()) !== op.identity) {
+            this.reset();
+            return;
+        }
+        if (result?.status === 'saved' && result.identity === op.identity) {
+            this.confirmedSaveIdentity = op.identity;
+            this.saveRequired = false;
+            this.dispatch();
+        } else {
+            this.report(result?.status === 'failed' ? result.message : 'Save cancelled. Your knowledge change is still pending.');
+        }
+        this.syncState();
+    }
+
+    discardPendingSave() {
+        if (!this.saveRequired || this.awaitingSave) return;
+        this.reset();
+        this.bindScene(this.getScene()?.data);
     }
 
     report(message) {

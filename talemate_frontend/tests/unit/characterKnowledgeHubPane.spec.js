@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createApp, defineComponent, h, inject, nextTick, provide, watch } from 'vue';
+import { createApp, defineComponent, h, inject, nextTick, provide, reactive, watch } from 'vue';
 import Comparison from '@/components/CharacterKnowledgeModeComparison.vue';
 import { CHARACTER_KNOWLEDGE_MODES } from '@/constants/characterKnowledgeModes';
 
@@ -112,12 +112,14 @@ function mount(component, props = {}, injections = {}) {
     app.provide('applyAgentValues', vi.fn());
     app.provide('applySceneAgentValues', injections.applySceneAgentValues || vi.fn());
     app.provide('clearSceneAgentValues', vi.fn());
-    app.provide('sceneOverridesState', () => ({ busy: false, error: null }));
+    app.provide('sceneOverridesState', injections.sceneOverridesState || (() => ({ busy: false, error: null })));
+    app.provide('retrySceneOverrides', injections.retrySceneOverrides || vi.fn());
+    app.provide('discardSceneOverrides', injections.discardSceneOverrides || vi.fn());
     app.provide('queueKnowledgeEffort', vi.fn());
     app.provide('openAgentSettings', vi.fn());
     for (const name of ['VCard', 'VCardItem', 'VCardTitle', 'VCardSubtitle', 'VCardText', 'VChip', 'VIcon', 'VDivider',
         'VSpacer', 'VProgressLinear', 'VTooltip', 'VSwitch', 'VList', 'VListItem', 'VListItemTitle',
-        'VCheckboxBtn', 'VSlider', 'VRow', 'VCol']) {
+        'VCheckboxBtn', 'VSlider', 'VRow', 'VCol', 'VAlert']) {
         app.component(name, Container);
     }
     app.component('VBtn', VBtnStub);
@@ -187,7 +189,28 @@ describe('the hub before anything is opened', () => {
         host.querySelector('.knowledge-hub-toggle').click();
         expect(applySceneAgentValues).toHaveBeenCalledWith([
             { agent: 'conversation', action: 'character_knowledge', config: { perspective_filter: false } },
-        ]);
+        ], 'Limit to character knowledge: Off');
+    });
+
+    it('shows the retained choice and wires retry and discard after a cancelled save', async () => {
+        const state = reactive({ busy: true, pendingSave: true, savingScene: false, pendingLabel: 'Topics: Off', error: 'Save cancelled.' });
+        const retrySceneOverrides = vi.fn();
+        const discardSceneOverrides = vi.fn();
+        const vm = mount(Hub, { name: 'Nora' }, { sceneOverridesState: () => state, retrySceneOverrides, discardSceneOverrides });
+        vm.open = true;
+        await nextTick();
+        expect(host.textContent).toContain('Pending: Topics: Off');
+        expect(host.textContent).toContain('Save cancelled.');
+        const retry = [...host.querySelectorAll('button')].find(button => button.textContent === 'Save and apply');
+        retry.click();
+        expect(retrySceneOverrides).toHaveBeenCalledOnce();
+        state.savingScene = true;
+        await nextTick();
+        expect(retry.disabled).toBe(true);
+        state.savingScene = false;
+        await nextTick();
+        [...host.querySelectorAll('button')].find(button => button.textContent === 'Discard change').click();
+        expect(discardSceneOverrides).toHaveBeenCalledOnce();
     });
 
     it('shows one line for the story mode and no mode card', async () => {

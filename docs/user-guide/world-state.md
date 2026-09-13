@@ -206,10 +206,11 @@ icon beside one setting restores only that setting's inherited global value, and
 group restores every hub-owned setting in that group. Above the effort slider, the clickable
 **Scene override** label and icon restore every knowledge setting the hub owns — including ones the
 current mode hides — while leaving unrelated overrides alone. Hover any reset control for its
-**Use global settings** tooltip. With no override, the label reads **Global settings**. A scene that
-has not been saved yet cannot hold overrides, so the hub disables these controls and says to save
-the scene first. Options that a
-Character perspectives story does not use are hidden, as they
+**Use global settings** tooltip. With no override, the label reads **Global settings**. When a scene has
+no save file, changing a hub setting opens **Save Scene** and continues the pending change after
+saving succeeds. Cancellation or a failed save preserves the change and entered name; see
+[first-save continuation, retry and discard](/talemate/user-guide/agents/scene-overrides/#saving-a-knowledge-hub-change-for-the-first-time).
+Options that a Character perspectives story does not use are hidden, as they
 are in the agent settings. Click a group name to open its section in the agent settings.
 
 ![knowledge hub in a perspectives story](/talemate/img/0.40.0/world-state-knowledge-hub-2.png)

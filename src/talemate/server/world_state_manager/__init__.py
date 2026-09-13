@@ -209,6 +209,8 @@ class SceneSettingsPayload(pydantic.BaseModel):
 class SaveScenePayload(pydantic.BaseModel):
     save_as: str | None = None
     project_name: str | None = None
+    request_id: str | None = None
+    scene_identity: str | None = None
 
 
 class GenerateSuggestionPayload(pydantic.BaseModel):
@@ -1217,16 +1219,38 @@ class WorldStateManagerPlugin(
 
     async def handle_save_scene(self, data):
         payload = SaveScenePayload(**data)
+        scene = self.scene
+        if payload.scene_identity is not None and payload.scene_identity != str(
+            scene.id
+        ):
+            await self.signal_operation_failed(
+                "The scene changed; the save was cancelled.",
+                request_id=payload.request_id,
+                failed_action="save_scene",
+            )
+            return
 
-        log.debug("Save scene", copy=payload.save_as, project_name=payload.project_name)
-
-        if not self.scene.filename:
-            # scene has never been saved before
-            # specify project name (directory name)
-            self.scene.name = payload.project_name
-
-        await self.scene.save(auto=False, force=True, copy_name=payload.save_as)
-        self.scene.emit_status()
+        previous_name, previous_filename = scene.name, scene.filename
+        previous_protection = scene.immutable_save, scene.hidden, scene.deprecated
+        try:
+            if not scene.filename:
+                scene.name = payload.project_name or scene.name
+            await scene.save(auto=False, force=True, copy_name=payload.save_as)
+        except Exception:
+            scene.name, scene.filename = previous_name, previous_filename
+            scene.immutable_save, scene.hidden, scene.deprecated = previous_protection
+            scene.saved = False
+            scene.emit_status()
+            raise
+        scene.emit_status()
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "scene_saved",
+                "request_id": payload.request_id,
+                "scene_identity": str(scene.id),
+            }
+        )
 
     # Suggestions
 

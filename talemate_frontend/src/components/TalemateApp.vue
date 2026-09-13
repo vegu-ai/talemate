@@ -1,5 +1,7 @@
 <template>
   <v-app>
+    <SceneSaveDialog ref="sceneSaveDialog" :scene="scene" />
+    <SceneLeaveWarning :active="connected && sceneActive && !loading" :saved="scene.saved" />
 
     <!-- system bar -->
     <v-system-bar>
@@ -489,6 +491,8 @@ import AgentActionOverrides from './AgentActionOverrides.vue';
 import SceneLanding from './SceneLanding.vue';
 import GameStateKnobs from './GameStateKnobs.vue';
 import SceneTools from './SceneTools.vue';
+import SceneSaveDialog from './SceneSaveDialog.vue';
+import SceneLeaveWarning from './SceneLeaveWarning.vue';
 import SceneMessages from './SceneMessages.vue';
 import SceneMessageInput from './SceneMessageInput.vue';
 import PlaythroughTools from './PlaythroughTools.vue';
@@ -546,6 +550,8 @@ export default {
     SceneLanding,
     GameStateKnobs,
     SceneTools,
+    SceneSaveDialog,
+    SceneLeaveWarning,
     SceneMessages,
     SceneMessageInput,
     PlaythroughTools,
@@ -1065,9 +1071,12 @@ export default {
       toggleAgentAction: (agentName, actionName) => this.toggleAgentAction(agentName, actionName),
       toggleAgentConfig: (agentName, actionName, configName) => this.toggleAgentConfig(agentName, actionName, configName),
       applyAgentValues: (agentName, actionName, values) => this.applyAgentValues(agentName, actionName, values),
-      applySceneAgentValues: (entries) => this.applySceneAgentValues(entries),
+      applySceneAgentValues: (entries, label) => this.applySceneAgentValues(entries, label),
       clearSceneAgentValues: (entries) => this.clearSceneAgentValues(entries),
       sceneOverridesState: () => this.$refs.aiAgent?.overridesState || { busy: false, error: null },
+      requestSceneSave: () => this.$refs.sceneSaveDialog.open(),
+      retrySceneOverrides: () => this.$refs.aiAgent?.overrides?.retrySave(),
+      discardSceneOverrides: () => this.$refs.aiAgent?.overrides?.discardPendingSave(),
       queueKnowledgeEffort: (stop, mode, options) => this.$refs.aiAgent.queueEffort(stop, mode, options),
       openAgentSettings: this.openAgentSettings,
       openClientSettings: this.openClientSettings,
@@ -1238,6 +1247,7 @@ export default {
         // The hub writer's in-flight patch and any queued follow-ups cannot be
         // answered on a dead socket either.
         this.$refs.aiAgent?.resetSceneAgentOverrides?.();
+        this.$refs.sceneSaveDialog?.reset();
         this.connected = false;
         this.configReceivedThisConnection = false;
         this.connecting = false;
@@ -1277,6 +1287,11 @@ export default {
 
       this.messageHandlers.forEach(handler => handler(data));
 
+      if (data.type === 'world_state_manager' && data.action === 'scene_saved'
+          && data.scene_identity === String(this.scene?.data?.id)) {
+        this.scene.saved = true;
+      }
+
       // Handle prompt_sent messages (capture prompts for PromptsMenu)
       if (data.type === 'prompt_sent') {
         this.handlePromptSent(data.data);
@@ -1302,7 +1317,10 @@ export default {
 
       // Scene loaded
       if (data.type === "system") {
-        if (data.id === 'scene.history_ready') {
+        if (data.id === 'scene.loading') {
+          this.loading = true;
+          this.sceneActive = false;
+        } else if (data.id === 'scene.history_ready') {
           this.loading = true;
           this.showSceneView = true;
           this.tab = 'main';
@@ -1326,7 +1344,7 @@ export default {
             this.tab = 'main';
             debounce(this.onNodeEditorContainerResize, 500)();
           });
-        } else if(data.id === 'scene.load_failure') {
+        } else if(data.id === 'scene.load_failure' || data.id === 'scene.closed') {
           this.loading = false;
           this.sceneActive = false;
           this.actAs = null;
@@ -1803,8 +1821,8 @@ export default {
     },
     // The knowledge hub's scene-only writer: sparse patches against the scene
     // overlay, never the global agent values.
-    applySceneAgentValues(entries) {
-      this.$refs.aiAgent?.applySceneAgentValues(entries);
+    applySceneAgentValues(entries, label) {
+      this.$refs.aiAgent?.applySceneAgentValues(entries, label);
     },
     clearSceneAgentValues(entries) {
       this.$refs.aiAgent?.clearSceneAgentValues(entries);

@@ -16,6 +16,12 @@ Each overridden field is independent. You can override the conversation length f
 
 A blank story keeps its normal unsaved state until you save it; that save stores the settings link. Imported cards save the link during import. Once the story is saved, the knowledge hub marks overrides with :material-movie-open-cog-outline:. Activate the icon beside one setting to restore that setting's global value, the icon beside a group to restore the whole group, or the **Scene override** label and icon above the effort slider to restore every knowledge setting owned by the hub. Each action leaves unrelated scene overrides intact.
 
+## Saving a knowledge-hub change for the first time
+
+Changing a setting in a character's knowledge hub opens **Save Scene** when the scene has no save file yet. After the save succeeds, Talemate applies the pending knowledge change automatically. Scenes with a save file and project name apply hub changes directly, including read-only stock scenes.
+
+Cancelling the dialog or a failed save keeps the exact change pending. Use **Save and apply** in the hub to retry with the entered save name, or **Discard change** to drop it. Loading another scene discards the pending change so it cannot affect a different story. The pending notice is not confirmation that the settings were saved.
+
 ## Editing overrides: the Global / Scene switch
 
 Overrides are edited in the same place as global settings — the **Agents settings page** at **Settings → Connections → Agents**. Clicking an agent in the agent panel opens it there directly.
@@ -78,7 +84,7 @@ Per-scene overrides are stored in a JSON file inside an `agent-settings/` folder
 
 A few things worth knowing:
 
-- **Sharing follows the settings-file link.** The `agent-settings/` folder lives with the project, so save files that link the same settings file (including **Save As** copies and restore points) share its overrides. Different projects have completely independent overrides.
+- **Overrides are project-scoped.** Every save in a project, including stock scenes, **Save As** copies and restore points, shares its default overrides through automatic linking. Read-only stock scenes can edit these overrides directly. Explicitly choosing another settings file or opting out changes what that save uses (see below). Different projects have completely independent overrides.
 - **Overrides travel with exports.** When you export a scene, the `agent-settings/` folder is included, so your overrides survive being shared with or imported on another system.
 - **Bad files fall back safely.** If an overrides file is missing or can't be read, the scene simply falls back to your global configuration and the link is cleared.
 

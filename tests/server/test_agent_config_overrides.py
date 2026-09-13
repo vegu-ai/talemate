@@ -85,12 +85,16 @@ def _errors(handler: _WebsocketHandler) -> list[str]:
     return [m["error"]["message"] for m in handler.messages if "error" in m]
 
 
+@pytest.mark.parametrize("immutable", [False, True])
 @pytest.mark.asyncio
-async def test_first_save_links_file_and_saves_the_scene(wired):
+async def test_first_save_links_file_and_saves_the_scene(wired, immutable):
     plugin, scene, agent, handler = wired
+    scene.immutable_save = immutable
 
     await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))
 
+    assert not _errors(handler)
+    assert (Path(scene.save_dir) / "agent-settings" / "agent-settings.json").is_file()
     assert scene.agent_settings_file == "agent-settings.json"
     assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is False
     # linking writes `agent_settings_file` into the scene, so it is persisted

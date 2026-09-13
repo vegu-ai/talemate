@@ -1,5 +1,5 @@
 <template>
-    <v-menu v-model="open" :close-on-content-click="false" location="bottom" max-width="400" min-width="340" @update:model-value="onToggle">
+    <v-menu v-model="open" :close-on-content-click="false" :persistent="pendingSave" location="bottom" max-width="400" min-width="340" @update:model-value="onToggle">
         <template v-slot:activator="{ props: menuProps }">
             <v-tooltip :text="`Knowledge of ${name}`">
                 <template v-slot:activator="{ props: tooltipProps }">
@@ -73,6 +73,7 @@
                         label="Character perspectives"
                         color="primary"
                         density="compact"
+                        :disabled="saving"
                         :hint="PERSPECTIVES_OPEN_HINT"
                         persistent-hint
                         @update:model-value="setPerspectives"></v-switch>
@@ -104,8 +105,12 @@
                 </div>
                 <KnowledgeEffortSlider :mode="effortMode" :agents="getAgents()" :pin="true" :disabled="settingsLocked" @apply="applyEffort" />
             </v-card-text>
-            <v-card-text v-if="!canPersist" class="pt-1 pb-0 text-body-small text-muted">Save the scene to change its knowledge settings.</v-card-text>
-            <v-card-text v-else-if="saveError" class="pt-1 pb-0 text-body-small text-error">{{ saveError }}</v-card-text>
+            <v-card-text v-if="pendingSave" class="pt-1 pb-0 text-body-small">
+                <div>Pending: {{ pendingLabel || 'Knowledge settings change' }}. Save the scene to apply it.</div>
+                <v-btn size="small" variant="text" :disabled="savingScene" @click="retrySceneOverrides">Save and apply</v-btn>
+                <v-btn size="small" variant="text" :disabled="savingScene" @click="discardSceneOverrides">Discard change</v-btn>
+            </v-card-text>
+            <v-card-text v-if="saveError" class="pt-1 pb-0 text-body-small text-error">{{ saveError }}</v-card-text>
             <v-card-text v-if="!groups.length" class="pt-1 text-body-small text-muted">Waiting for the agents to report.</v-card-text>
             <v-expansion-panels v-else :model-value="individualOpen" variant="accordion" class="knowledge-hub-individual mt-1" @update:model-value="setIndividualOpen">
                 <v-expansion-panel value="individual">
@@ -203,7 +208,7 @@ import {
     hubHasOverrides,
     settingClearEntry,
 } from '@/utils/knowledgeOverrideOwnership';
-import { sceneCanPersist } from '@/utils/sceneAgentOverrides';
+import { EFFORT_LABELS } from '@/constants/knowledgeEffort';
 import {
     PERSPECTIVES_OPEN_HINT,
     canChangePerspectives,
@@ -238,6 +243,8 @@ export default {
         'applySceneAgentValues',
         'clearSceneAgentValues',
         'sceneOverridesState',
+        'retrySceneOverrides',
+        'discardSceneOverrides',
         'queueKnowledgeEffort',
         'openAgentSettings',
     ],
@@ -275,10 +282,14 @@ export default {
                 return { ...group, ownedOverridden: groupHasOwnedOverride(overlay, group.agent, group.action) };
             });
         },
-        // A scene without an on-disk identity cannot store overrides; while a
-        // batch is in flight the hub's write controls are held.
-        canPersist() {
-            return sceneCanPersist(this.scene ? this.scene() : null);
+        pendingSave() {
+            return !!this.sceneOverridesState?.()?.pendingSave;
+        },
+        pendingLabel() {
+            return this.sceneOverridesState?.()?.pendingLabel;
+        },
+        savingScene() {
+            return !!this.sceneOverridesState?.()?.savingScene;
         },
         saving() {
             return !!this.sceneOverridesState?.()?.busy;
@@ -287,7 +298,7 @@ export default {
             return this.sceneOverridesState?.()?.error || null;
         },
         settingsLocked() {
-            return !this.canPersist || this.saving;
+            return this.saving;
         },
         effortOrigin() {
             return effortOverrideState(this.getAgents(), this.effortMode);
@@ -382,6 +393,7 @@ export default {
             }));
         },
         setPerspectives(enabled) {
+            if (this.saving) return false;
             const payload = perspectivesPayload(this.sceneData, enabled);
             if (!payload) return false;
             // a hub-origin switch carries the stop into the new mode as a
@@ -393,7 +405,7 @@ export default {
         },
         applyEffort(stop) {
             if (this.settingsLocked) return;
-            this.applySceneAgentValues(effortPinPatch(this.getAgents(), this.effortMode, stop));
+            this.applySceneAgentValues(effortPinPatch(this.getAgents(), this.effortMode, stop), `Character knowledge effort: ${EFFORT_LABELS[stop]}`);
         },
         clearGroup(group) {
             if (this.settingsLocked) return;
@@ -409,12 +421,12 @@ export default {
         },
         toggleGroup(group) {
             if (this.settingsLocked) return false;
-            this.applySceneAgentValues([{ agent: group.agent, action: group.action, enabled: !group.enabled, config: {} }]);
+            this.applySceneAgentValues([{ agent: group.agent, action: group.action, enabled: !group.enabled, config: {} }], `${group.label}: ${group.enabled ? 'Off' : 'On'}`);
             return true;
         },
         toggleConfig(group, toggle) {
             if (!group.enabled || this.settingsLocked) return false;
-            this.applySceneAgentValues([{ agent: group.agent, action: group.action, config: { [toggle.key]: !toggle.value } }]);
+            this.applySceneAgentValues([{ agent: group.agent, action: group.action, config: { [toggle.key]: !toggle.value } }], `${toggle.label}: ${toggle.value ? 'Off' : 'On'}`);
             return true;
         },
         handleMessage(data) {

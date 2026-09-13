@@ -58,7 +58,7 @@ Make sure to then also activate both characters. Click on each name in the chara
 
 When working on a scene you should always do two things:
 
-1. Lock the save file - this will prevent auto-saving of any progress in the scene that may happen during testing. When a save is locked a save outside of the world editor will always trigger a `Save As` dialog, forcing you to save the scene under a new name.
+1. Lock the save file - this will prevent auto-saving of any progress in the scene that may happen during testing. When a save is locked a save outside of the world editor will always trigger a **Save Scene** dialog, forcing you to save the scene under a new name.
 2. Set a restoration file - set this to the file we just saved at `infinity-quest-dynamic.json`.
 
 Head over to **Scene**, then **Settings** and set both fields accordingly:

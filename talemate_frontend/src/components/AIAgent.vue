@@ -225,12 +225,13 @@ export default {
         'getClients',
         'openAgentActionOverrides',
         'openAgentSettings',
+        'requestSceneSave',
     ],
     methods: {
         // The hub's only write path. A sparse per-agent patch, so a delayed hub
         // action never replaces an unrelated edit that landed first.
-        applySceneAgentValues(entries) {
-            this.overrides?.applySceneAgentValues(entries);
+        applySceneAgentValues(entries, label) {
+            this.overrides?.applySceneAgentValues(entries, label);
         },
         clearSceneAgentValues(entries) {
             this.overrides?.clearSceneAgentValues(entries);
@@ -633,6 +634,7 @@ export default {
             getWebsocket: () => this.getWebsocket(),
             scene: () => this.scene,
             state: this.overridesState,
+            requestSave: () => this.requestSceneSave(),
         });
         this.registerMessageHandler(this.handleMessage);
     },

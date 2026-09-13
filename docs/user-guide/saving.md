@@ -8,6 +8,14 @@ When you save a scene, Talemate also records the changes in an automatic version
 
 Saves can also serve as **restore points**. By designating one save file as the restoration source in the [scene settings](/talemate/user-guide/world-editor/scene/settings), you can quickly reset a scene back to that state whenever needed — useful for testing or creating repeatable starting points.
 
+## Leaving a scene with unsaved progress
+
+Talemate asks your browser to warn before closing the tab, reloading, or navigating away when the active scene has unsaved changes. Saving successfully clears the warning until the next edit. Clean scenes and explicit scene changes inside Talemate do not trigger it.
+
+The browser supplies the warning text and requires that you have interacted with the page first. It may not show a warning when a mobile browser discards a tab, the browser crashes, or the process is killed. Closing the tab still disconnects and unloads the scene if you choose to leave; reopening loads only what you saved. This warning does not keep a scene running in memory, save it automatically, or protect against backend shutdown. Save regularly.
+
+Browser restrictions are described in [MDN's beforeunload documentation](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event/).
+
 ## Saving from the scene
 
 To save while looking at the scene, click the :material-content-save: **Save** button on the right of the [Scene tools](/talemate/user-guide/scenario-tools) toolbar.

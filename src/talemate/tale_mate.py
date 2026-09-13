@@ -2203,13 +2203,13 @@ class Scene(Emitter):
         # Create a dictionary to store the scene data
         scene_data = self.serialize
 
-        if not auto:
-            emit("status", status="success", message="Saved scene")
-
         with open(filepath, "w") as f:
             f.write(save.scene_data_dumps(scene_data))
 
         self.saved = True
+
+        if not auto:
+            emit("status", status="success", message="Saved scene")
 
         if hasattr(self, "_save_files"):
             delattr(self, "_save_files")

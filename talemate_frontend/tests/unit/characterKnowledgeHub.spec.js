@@ -264,12 +264,12 @@ describe('the thoroughness toggles', () => {
         expect(vm.toggleConfig(group, group.toggles[0])).toBe(true);
         expect(vm.applySceneAgentValues).toHaveBeenCalledWith([
             { agent: 'conversation', action: 'character_knowledge', config: { ledger: true } },
-        ]);
+        ], `${group.toggles[0].label}: On`);
         expect(vm.toggleAgentConfig).not.toHaveBeenCalled();
         expect(vm.toggleGroup(group)).toBe(true);
         expect(vm.applySceneAgentValues).toHaveBeenLastCalledWith([
             { agent: 'conversation', action: 'character_knowledge', enabled: false, config: {} },
-        ]);
+        ], `${group.label}: Off`);
         expect(vm.toggleAgentAction).not.toHaveBeenCalled();
     });
 
@@ -415,12 +415,11 @@ describe('the hub origin indicators and resets', () => {
         ]));
     });
 
-    it('locks the writer for an unsaved scene', () => {
-        const vm = hub({ scene: { ...sceneData, filename: null } });
-        expect(vm.canPersist).toBe(false);
-        expect(vm.settingsLocked).toBe(true);
+    it('hands an unsaved scene change to the save-and-resume writer', () => {
+        const vm = hub({ scene: { ...sceneData, filename: null }, agents: agentsAt('legacy', 'light') });
+        expect(vm.settingsLocked).toBe(false);
         vm.applyEffort('light');
-        expect(vm.applySceneAgentValues).not.toHaveBeenCalled();
+        expect(vm.applySceneAgentValues).toHaveBeenCalledOnce();
     });
 
     it('holds the writer while a batch is in flight', () => {

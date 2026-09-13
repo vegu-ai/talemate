@@ -255,9 +255,9 @@
     accounts scoped to a returning character's evidence and minimum missed summaries.
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
-  summary: Sparse agent overrides, Global/Scene editing, link icons, Save/Discard, quick toggles and settings-file selection.
-    New Story and card import pin knowledge effort even when equal to globals; independent creations use separate files, saves
-    sharing a link share overrides, and hub setting/group/all reset icons restore exact inheritance scopes.
+  summary: 'Sparse agent overrides: Global/Scene editing, Save/Discard, quick toggles, settings-file links and hub reset icons.
+    Covers creation knowledge-effort pins, project-scoped sharing including stock scenes, separate override files, and the first-save hub flow: Save
+    Scene continues the pending change; cancellation or failure preserves input for Save and apply retry or Discard change.'
 - path: user-guide/agents/summarizer/index.md
   title: Overview
   summary: 'Summarizer overview: dialogue summaries, progressively compressed layered history, scene analysis and context
@@ -1061,9 +1061,9 @@
     with archived old deltas, and historical world-state reconstruction limits.
 - path: user-guide/saving.md
   title: Saving
-  summary: Save scenes as JSON files within a project from scene tools or World Editor, toggle Auto Save, unlock a read-only
-    starting save, and create checkpoints with Save As. Includes automatic changelog history, restore-point saves and message
-    Fork opening the Timeline.
+  summary: Scene JSON saves, Auto Save, locked starting saves, Save As checkpoints, restore points and Timeline forks. Dirty-scene
+    warnings before tab close, reload or navigation clear after saving; browser interaction is required, and mobile tab discard,
+    crashes and backend shutdown remain unprotected.
 - path: user-guide/scenario-tools.md
   title: Scene Tools
   summary: Scene toolbar reference for agent activity, regenerate/nuke with Ctrl or Ctrl+Alt direction, Actor/Director/Narrator
@@ -1259,8 +1259,8 @@
   title: Knowledge
   summary: Standard versus Character perspectives, mode-specific effort stops and costs, creation scene pins, entry orientation,
     visibility, disclosures, Allow/Block rules, topics and retrieval. Covers mode selection in New Story/card import, origins
-    and group/whole-hub Use global settings resets; saves share overrides by settings-file link, while independent creations
-    can use different files within a project.
+    and group/whole-hub Use global settings resets; project-scoped overrides shared by stock scenes and other saves,
+    settings-file choices, and first-save continuation with retry/discard for unsaved stories.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and

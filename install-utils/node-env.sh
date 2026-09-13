@@ -3,10 +3,10 @@
 #   install_embedded_node   - download + extract + activate (install.sh)
 #   activate_embedded_node  - put it on PATH if present     (update.sh, start-frontend.sh)
 #
-# pnpm 11 (pinned via talemate_frontend/package.json "packageManager") needs
-# Node.js >= 22.13. Rather than depend on whatever Node is on the system,
-# install.sh downloads a portable Node into ./embedded_node and the update /
-# start scripts reuse it. This mirrors what install.bat does on Windows.
+# The pnpm version is pinned via talemate_frontend/package.json "packageManager".
+# Rather than depend on whatever Node is on the system, install.sh downloads a
+# compatible portable Node into ./embedded_node and the update / start scripts
+# reuse it. This mirrors what install.bat does on Windows.
 
 # Pinned Node.js version for the portable runtime.
 EMBEDDED_NODE_VERSION="22.22.3"

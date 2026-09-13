@@ -12,9 +12,12 @@ Covers:
 """
 
 import datetime
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
 import os
 import re
 import textwrap
+import threading
 
 import huggingface_hub
 
@@ -23,6 +26,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 from talemate.client.model_prompts import (
+    HF_REQUEST_TIMEOUT,
     ModelPrompt,
     PromptSpec,
     STD_TEMPLATE_PATH,
@@ -32,6 +36,88 @@ from talemate.client.model_prompts import (
 BASELINES_DIR = (
     Path(__file__).parent / "data" / "prompts" / "baselines" / "model_prompts"
 )
+
+
+def test_huggingface_client_uses_bounded_timeout():
+    huggingface_hub.close_session()
+    client = huggingface_hub.get_session()
+
+    assert client.timeout.connect == HF_REQUEST_TIMEOUT.connect == 10
+    assert client.timeout.read == HF_REQUEST_TIMEOUT.read == 30
+    assert client.timeout.write == HF_REQUEST_TIMEOUT.write == 30
+    assert client.timeout.pool == HF_REQUEST_TIMEOUT.pool == 30
+    assert client.follow_redirects is True
+
+
+@pytest.fixture
+def hf_model_server():
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_args):
+            pass
+
+        def do_GET(self):
+            if self.path.startswith("/api/models"):
+                second_page = "page=2" in self.path
+                payload = json.dumps(
+                    [{"id": "review/page-two" if second_page else "review/page-one"}]
+                ).encode()
+                if not second_page:
+                    endpoint = f"http://127.0.0.1:{self.server.server_port}"
+                    self.send_response(200)
+                    self.send_header(
+                        "Link", f'<{endpoint}/api/models?page=2>; rel="next"'
+                    )
+                else:
+                    self.send_response(200)
+            else:
+                payload = b"ok"
+                self.send_response(200)
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_port}"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
+def test_huggingface_model_listing_bounds_every_page(hf_model_server, monkeypatch):
+    huggingface_hub.close_session()
+    client = huggingface_hub.get_session()
+    outgoing_timeouts = []
+
+    def record_timeout(request):
+        if str(request.url).startswith(f"{hf_model_server}/"):
+            outgoing_timeouts.append(request.extensions["timeout"])
+
+    monkeypatch.setitem(
+        client.event_hooks,
+        "request",
+        [*client.event_hooks["request"], record_timeout],
+    )
+
+    models = list(
+        huggingface_hub.HfApi(endpoint=hf_model_server, token=False).list_models(
+            search="review"
+        )
+    )
+    client.get(f"{hf_model_server}/finite", timeout=0.25)
+
+    assert [model.id for model in models] == ["review/page-one", "review/page-two"]
+    assert len(outgoing_timeouts) == 3
+    assert outgoing_timeouts[:2] == [HF_REQUEST_TIMEOUT.as_dict()] * 2
+    assert outgoing_timeouts[2] == {
+        "connect": 0.25,
+        "read": 0.25,
+        "write": 0.25,
+        "pool": 0.25,
+    }
 
 
 # ---------------------------------------------------------------------------

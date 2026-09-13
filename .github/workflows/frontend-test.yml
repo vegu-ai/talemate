@@ -13,8 +13,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # before setup-node, so its pnpm cache resolves the version pinned in
-    # talemate_frontend/package.json (`packageManager`)
+    # before setup-node, so it can query pnpm for the cache directory. The
+    # frontend steps run beside package.json, where Corepack enforces its pin.
     - name: Enable corepack
       run: corepack enable
 
@@ -24,6 +24,10 @@ jobs:
         node-version: '24'
         cache: 'pnpm'
         cache-dependency-path: talemate_frontend/pnpm-lock.yaml
+
+    - name: Verify pnpm version
+      working-directory: talemate_frontend
+      run: test "$(pnpm --version)" = "12.4.1"
 
     - name: Install dependencies
       working-directory: talemate_frontend

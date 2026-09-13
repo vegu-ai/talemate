@@ -7,29 +7,31 @@ import pydantic
 from typing import Any
 
 import huggingface_hub
-import requests
+import httpx
 import structlog
 from jinja2 import Environment, FileSystemLoader
 
 __all__ = ["model_prompt", "PromptSpec"]
 
-# (connect, read) timeout in seconds applied to every huggingface_hub request.
-# Some HF calls (notably HfApi.list_models) issue requests without any timeout,
-# so a network issue reaching huggingface.co would otherwise hang indefinitely.
-HF_REQUEST_TIMEOUT = (10, 30)
+# HfApi.list_models otherwise inherits huggingface-hub's unbounded timeout.
+HF_REQUEST_TIMEOUT = httpx.Timeout(connect=10, read=30, write=30, pool=30)
 
 
-class _TimeoutHTTPSession(requests.Session):
-    """requests.Session that applies a default timeout to every request."""
+class _BoundedHFClient(httpx.Client):
+    def request(self, method: str, url: httpx.URL | str, **kwargs) -> httpx.Response:
+        # Hub pagination passes timeout=None explicitly, which disables HTTPX's
+        # client default. Treat only that unbounded value as the safe default;
+        # callers' finite per-request overrides still pass through unchanged.
+        if kwargs.get("timeout") is None:
+            kwargs["timeout"] = HF_REQUEST_TIMEOUT
+        return super().request(method, url, **kwargs)
 
-    def request(self, *args, **kwargs):
-        kwargs.setdefault("timeout", HF_REQUEST_TIMEOUT)
-        return super().request(*args, **kwargs)
+
+def _build_hf_http_client() -> httpx.Client:
+    return _BoundedHFClient(timeout=HF_REQUEST_TIMEOUT, follow_redirects=True)
 
 
-# Ensure all huggingface_hub HTTP requests fail fast on connection issues
-# instead of hanging forever. Calls that pass their own timeout are unaffected.
-huggingface_hub.configure_http_backend(backend_factory=_TimeoutHTTPSession)
+huggingface_hub.set_client_factory(_build_hf_http_client)
 
 BASE_TEMPLATE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -370,9 +372,9 @@ class ModelPrompt:
         branch_name = "main"
 
         try:
-            models = list(api.list_models(model_name=model_name))
+            models = list(api.list_models(search=model_name))
             if not models and model_name_alt:
-                models = list(api.list_models(model_name=model_name_alt))
+                models = list(api.list_models(search=model_name_alt))
         except Exception as e:
             log.warning(
                 "query_hf_for_prompt_template_suggestion: "

@@ -1,4 +1,4 @@
-export const FRONTEND_VERSION = "0.40.0.dev3";
+export const FRONTEND_VERSION = "0.40.0.dev4";
 
 export function versionsMatch(backendVersion) {
   return FRONTEND_VERSION === backendVersion;

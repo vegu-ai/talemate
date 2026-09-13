@@ -1942,6 +1942,9 @@ class ChromaDBMemoryAgent(MemoryAgent):
                 trust_remote_code=self.trust_remote_code,
                 device=device,
             )
+            from .embedding_compat import restore_gte_buffers
+
+            restore_gte_buffers(ef, model_name)
         except ValueError as e:
             if "`trust_remote_code=True` to remove this error" in str(e):
                 raise EmbeddingsModelLoadError(

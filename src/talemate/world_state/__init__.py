@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any, Union
 
 import structlog
-from pydantic import BaseModel, Field, model_serializer
+from pydantic import BaseModel, Field, PrivateAttr, model_serializer
 
 import talemate.instance as instance
 from talemate.emit import emit
@@ -35,6 +35,7 @@ from talemate.world_state.schema import (
     ObjectState,
     PlaceState,
 )
+from talemate.world_state.snapshot_revision import SnapshotProvenance, SnapshotRevision
 
 __all__ = [
     "CharacterState",
@@ -66,11 +67,15 @@ class WorldStateResponse(BaseModel):
     inline-highlight target. The list is empty when the snapshot was
     generated against the scene intro (intro is not a real message and has
     no id, so highlights don't render inline in that case).
+
+    `provenance` verifies the history supplied by the rendered template,
+    which can extend beyond the focus after an asynchronous memory lookup.
     """
 
     world_state: Union[dict, None] = None
     anchor_message_ids: list[int] = Field(default_factory=list)
     audience_context: dict | None = Field(default=None, exclude=True)
+    provenance: SnapshotProvenance | None = Field(default=None, exclude=True)
 
 
 class InsertionMode(str, Enum):
@@ -232,6 +237,11 @@ class WorldState(BaseModel):
     # every one of these can render inline entity highlights in the UI.
     anchor_message_ids: list[int] = Field(default_factory=list)
 
+    snapshot_provenance: SnapshotProvenance | None = None
+    previous_snapshot: SnapshotRevision | None = None
+    _snapshot_epoch: int = PrivateAttr(default=0)
+    _snapshot_regenerating: bool = PrivateAttr(default=False)
+
     # reinforcers
     reinforce: list[Reinforcement] = []
 
@@ -336,6 +346,9 @@ class WorldState(BaseModel):
         self.location = None
         self.location_perspectives = None
         self.anchor_message_ids = []
+        self.snapshot_provenance = None
+        self.previous_snapshot = None
+        self._snapshot_epoch += 1
 
     def emit(self, status="update"):
         """

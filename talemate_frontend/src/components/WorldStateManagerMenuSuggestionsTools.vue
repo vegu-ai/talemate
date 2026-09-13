@@ -37,17 +37,17 @@ export default {
         tool: Object,
         tool_state: Object,
     },
-    watch: {
-        selected: {
-            immediate: true,
-            handler(selected) {
-                console.log("TOOL", this.tool);
-                if(selected && selected.length > 0 && this.tool)
-                    this.tool.selectSuggestion(selected[0]);
-            }
-        }
-    },
     computed: {
+        selected: {
+            get() {
+                return this.tool?.selectedSuggestionId ? [this.tool.selectedSuggestionId] : [];
+            },
+            set(selected) {
+                if (selected.length && this.tool) {
+                    this.tool.selectSuggestion(selected[0]);
+                }
+            },
+        },
         suggestionObjects() {
             if(!this.tool || !this.tool.queue) {
                 return [];
@@ -64,7 +64,6 @@ export default {
     ],
     data() {
         return {
-            selected: null,
             busy: false,
         }
     },
@@ -72,9 +71,6 @@ export default {
         'world-state-manager-navigate'
     ],
     methods: {
-        openSuggestion(suggestion) {
-            this.manager.selectSuggestion(suggestion.uid);
-        },
         handleMessage(message) {
             if(message.type !== 'world_state_manager') {
                 return;
@@ -82,13 +78,6 @@ export default {
 
             if(message.action === 'generate_suggestions') {
                 this.busy = true;
-            } else if (message.action === 'suggest') {
-                // select the suggestion if nothing is selected
-                if(!this.selected) {
-                    this.$nextTick(() => {
-                        this.selected = [message.id];
-                    });
-                }
             } else if (message.action === 'operation_done') {
                 this.busy = false;
             }

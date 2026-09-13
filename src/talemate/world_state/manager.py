@@ -1749,6 +1749,9 @@ class WorldStateManager:
         Adds a suggestion to the scene.
         """
 
+        if not suggestion.proposals:
+            return
+
         existing: Suggestion = await self.get_suggestion_by_id(suggestion.id)
 
         log.debug(

@@ -116,7 +116,7 @@ A refusal is the same shape with `resolved: false` and no other fields.
 {% set custom_instructions_text_tokens = count_tokens(custom_instructions_text) %}
 {% set writing_style_text_tokens = count_tokens(writing_style_text) %}
 {% set background_budget = max_tokens - 2500 - rendered_context_tokens - volatile_context_tokens - selection_text_tokens - tracked_text_tokens - example_text_tokens - audience_context_tokens - custom_instructions_text_tokens - writing_style_text_tokens %}
-{% set background_history = scene.context_history(budget=background_budget) %}
+{% set background_history = snapshot_request.context_history(budget=background_budget) if snapshot_request is defined else scene.context_history(budget=background_budget) %}
 {% set background_text %}
 {% if background_history -%}
 <|SECTION:STORY SO FAR|>

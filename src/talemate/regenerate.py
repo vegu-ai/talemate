@@ -1,3 +1,4 @@
+import asyncio
 import structlog
 from typing import TYPE_CHECKING
 from talemate.instance import get_agent
@@ -8,6 +9,7 @@ from talemate.agents.editor.revision import RevisionContext
 from talemate.context import regeneration_context
 from talemate.exceptions import GenerationCancelled
 from talemate.knowledge.mode import character_knowledge_enabled
+from talemate.world_state.snapshot_revision import regeneration_snapshot
 from talemate.scene_message import (
     SceneMessage,
     CharacterMessage,
@@ -392,6 +394,14 @@ async def _restore_history_after_failed_regenerate(
 
 
 async def regenerate(scene: "Scene") -> list[SceneMessage]:
+    message = regenerate_target_message(scene)
+    if message is None or not can_regenerate(scene):
+        return []
+    with regeneration_snapshot(scene, message):
+        return await _regenerate(scene)
+
+
+async def _regenerate(scene: "Scene") -> list[SceneMessage]:
     """
     In-place regenerate the most recent AI response (the tail of
     ``scene.history``, skipping trailing reinforcement messages): keep
@@ -442,7 +452,7 @@ async def regenerate(scene: "Scene") -> list[SceneMessage]:
 
     try:
         outcome = await _regenerate_inplace(message, scene)
-    except GenerationCancelled:
+    except (GenerationCancelled, asyncio.CancelledError):
         # User-initiated interrupt — not a failure. Restore history, report
         # the cancellation as a normal (non-error) status, then re-raise so
         # the task done-callback posts the regenerate_failed envelope and

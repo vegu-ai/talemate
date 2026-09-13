@@ -1,6 +1,6 @@
 import copy
 import json
-from unittest.mock import AsyncMock
+from unittest.mock import DEFAULT, AsyncMock
 
 import pytest
 
@@ -88,6 +88,13 @@ async def prepared(setup, monkeypatch):
         AsyncMock(side_effect=AssertionError("unexpected analysis error")),
     )
     request.reset_mock()
+
+    def capture_inputs(*args, **kwargs):
+        if snapshot_request := kwargs.get("vars", {}).get("snapshot_request"):
+            snapshot_request.context_history(budget=0)
+        return DEFAULT
+
+    request.side_effect = capture_inputs
     return scene, world, request, message
 
 
@@ -261,13 +268,16 @@ async def test_disclosures_and_inflight_source_edits_are_checked(prepared):
     assert "The bottle is medicine" in str(context["cast"][0])
 
     async def change_during_request(*args, **kwargs):
+        kwargs["vars"]["snapshot_request"].context_history(budget=0)
         message.message += " Changed during generation."
         return "response", payload()
 
     request.side_effect = change_during_request
     await prepared[1].apply_snapshot_update(scene.world_state)
     assert not snapshot_for(scene, "Alice")["characters"]
-    assert SECRET in render(scene)
+    # A response based on the replaced source cannot publish even reader data.
+    assert not render(scene).strip()
+    assert scene.world_state.snapshot_provenance is None
 
 
 async def test_scene_switch_cannot_apply_snapshot_to_new_scene(prepared, monkeypatch):
@@ -275,6 +285,7 @@ async def test_scene_switch_cannot_apply_snapshot_to_new_scene(prepared, monkeyp
     old = scene.world_state.model_dump()
 
     async def switch_scene(*args, **kwargs):
+        kwargs["vars"]["snapshot_request"].context_history(budget=0)
         monkeypatch.setattr(world, "scene", object())
         return "response", payload()
 

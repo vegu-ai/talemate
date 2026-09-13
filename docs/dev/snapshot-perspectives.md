@@ -12,6 +12,21 @@ The text is a complete display replacement, including any safe name, emotion or 
 
 The host checks assignment shape and audience identity, rejects model-assigned source references or digests, and checks evidence presence and freshness. It attaches the references supplied in the request and a digest of the canonical name, snapshot and emotion (or the location string). If evidence changes during generation, affected ready assignments become pending. These checks do **not** establish that the generated text follows from its evidence: semantic support and private-content containment depend on the generating model's compliance. A well-formed ready assertion can pass host checks even when its content is unsupported. There is no separate awareness request or semantic verifier.
 
+## Snapshot input provenance
+
+Both `world_state/request-world-state-v2.jinja2` and `world_state/add-snapshot-entity.jinja2` receive a host-owned `snapshot_request`. After rendering memory retrieval and other context that can await agent actions, obtain and render broad history through this object:
+
+```jinja2
+{% set background_history = snapshot_request.context_history(budget=background_budget) %}
+{% for line in background_history %}
+{{ line }}
+{% endfor %}
+```
+
+This call delegates to `scene.context_history` and records the history boundary at that read. It verifies that the earlier inputs are still an unchanged prefix, so a message arriving during memory retrieval can become the source while edits or deletions invalidate the request. Use the returned history in the prompt; do not replace the call with `scene.context_history`, precompute it before memory retrieval, or substitute highlight/focus IDs for broad-history provenance.
+
+A missing binding identifies an incompatible override and produces an update/reset notice naming the template. Its result is not published, regardless of Pin to context. Genuine cancellation and stale inputs remain quiet. No compatibility shim or automatic retry is provided. See [World snapshot overrides](/talemate/user-guide/prompts/#world-snapshot-overrides) for repair steps.
+
 ## Stored fields and durable updates
 
 Character, item and place records optionally carry `perspectives: SnapshotPerspectives`; the world state optionally carries `location_perspectives`. Each contains `content_digest` and existing `PerspectiveOutput` records. Missing metadata is omitted from serialization. Loading validates canonical audience names; renaming or deleting a character clears snapshot classifications for the next normal refresh.

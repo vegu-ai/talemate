@@ -50,6 +50,12 @@ class WorldStateWebsocketHandler(Plugin):
 
     async def handle_request_update(self, data: dict):
         payload = RequestUpdatePayload(**data)
+        if self.scene.world_state._snapshot_regenerating:
+            await self.signal_operation_failed(
+                "Wait for message regeneration before refreshing the snapshot."
+            )
+            self.scene.world_state.emit()
+            return
 
         if payload.reset:
             self.scene.world_state.reset()

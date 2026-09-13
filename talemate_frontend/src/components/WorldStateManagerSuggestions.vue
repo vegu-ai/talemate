@@ -24,12 +24,15 @@ export default {
         return {
             open: false,
             queue: [],
-            selectedSuggestion: null,
+            selectedSuggestionId: null,
             busy: false,
             MAX_CONTENT_WIDTH,
         }
     },
     computed: {
+        selectedSuggestion() {
+            return this.queue.find(item => item.id === this.selectedSuggestionId) || null;
+        },
         suggestionsAvailable() {
             // queue needs to have at least one item in it where suggestions are available
             return this.queue.some(item => item.proposals.length > 0);
@@ -57,37 +60,13 @@ export default {
             state.tool_state = tool_state;
         },
 
-        removeEmptySuggestions() {
-            this.queue = this.queue.filter(item => item.proposals.length > 0);
-            if(this.selectedSuggestion && this.selectedSuggestion.proposals.length === 0) {
-                this.selectedSuggestion = null;
-            }
-        },
-
-        removeEmptyProposals() {
-            if(!this.selectedSuggestion) {
-                return;
-            }
-            this.selectedSuggestion.proposals = this.selectedSuggestion.proposals.filter(proposal => proposal.result !== "");
-        },
-
         selectSuggestion(id) {
-            this.selectedSuggestion = this.queue.find(item => item.id === id);
-            console.log("DEBUG: selectSuggestion", id, this.selectedSuggestion, this.queue);
+            this.selectedSuggestionId = id;
         },
 
-        selectSuggestionViaMenu(id, retries = 5) {
-            if(this.menu) {
-                this.menu.selected = [id];
-            } else {
-                if(retries <= 0) {
-                    console.error("Could not select suggestion via menu", id);
-                    return;
-                }
-                setTimeout(() => {
-                    this.selectSuggestionViaMenu(id, retries-1);
-                }, 500);
-            }
+        selectSuggestionViaMenu(id) {
+            this.selectSuggestion(id);
+            this.requestSuggestions();
         },
 
         onDeleteProposals(suggestion_id) {
@@ -99,7 +78,6 @@ export default {
         },
 
         onDeleteProposal(suggestion_id, proposal_uid) {
-            console.log("DEBUG: onDeleteProposal", suggestion_id, proposal_uid);
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'remove_suggestion',
@@ -132,31 +110,18 @@ export default {
             if(message.action === 'generate_suggestions') {
                 this.busy = true;
             } else if (message.action === 'request_suggestions') {
-                console.log("DEBUG: request_suggestions", message.data);
-                this.queue = message.data;
-                if(!this.queue.length)
-                    this.selectedSuggestion = null;
+                this.queue = message.data.filter(item => item.proposals.length > 0);
             } else if (message.action === 'suggestion_removed') {
-                console.log("DEBUG: suggestion_removed", message.data);
-                if(message.data.proposal_uid) {
-                    // specific proposal removed from a suggestion
-                    let suggestion = this.queue.find(item => item.id === message.data.id);
-                    console.log("DEBUG: suggestion_removed (1)", suggestion);
-                    if(suggestion) {
-                        suggestion.proposals = suggestion.proposals.filter(proposal => proposal.uid !== message.data.proposal_uid);
-                        if(this.selectedSuggestion && this.selectedSuggestion.id === message.data.id) {
-                            this.selectedSuggestion = suggestion;
-                        }
-                    }
-                } else {
-                    // entire suggestion removed
+                const suggestion = this.queue.find(item => item.id === message.data.id);
+                if (suggestion && message.data.proposal_uid) {
+                    suggestion.proposals = suggestion.proposals.filter(proposal => proposal.uid !== message.data.proposal_uid);
+                }
+                if (!message.data.proposal_uid || (suggestion && !suggestion.proposals.length)) {
                     this.queue = this.queue.filter(item => item.id !== message.data.id);
-                    if(this.selectedSuggestion && this.selectedSuggestion.id === message.data.id) {
-                        this.selectedSuggestion = null;
+                    if (this.selectedSuggestionId === message.data.id) {
+                        this.selectedSuggestionId = null;
                     }
                 }
-                this.removeEmptySuggestions();
-
             } else if (message.action === 'suggest') {
                 let suggestion = this.queue.find(item => item.id === message.id);
                 if(suggestion) {
@@ -182,9 +147,11 @@ export default {
                     })
                 }
 
+                if (!this.selectedSuggestionId) {
+                    this.selectSuggestion(message.id);
+                }
             } else if (message.action === 'operation_done') {
                 this.busy = false;
-                this.removeEmptyProposals();
             }
         }
     },

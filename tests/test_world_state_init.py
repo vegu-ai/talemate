@@ -574,6 +574,7 @@ class TestRequestUpdatePreservesSnapshotOnPartialPatch:
     async def test_omitted_snapshot_is_preserved(self, world_state):
         import talemate.instance as instance
         from talemate.world_state import WorldStateResponse
+        from talemate.world_state.snapshot_revision import SnapshotProvenance
 
         agent = instance.get_agent("world_state")
         assert agent.update_world_state_durable_snapshot is True
@@ -601,6 +602,7 @@ class TestRequestUpdatePreservesSnapshotOnPartialPatch:
                     "location": None,
                 },
                 anchor_message_ids=[],
+                provenance=SnapshotProvenance.capture(agent.scene),
             )
 
         agent.request_world_state = fake_request_world_state

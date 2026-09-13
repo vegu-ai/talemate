@@ -3,7 +3,7 @@
         {{ suggestionState.name }}
     </v-card-title>
     <v-card-text>
-        <v-card v-for="proposal, idx in suggestionState.proposals" :key="idx" class="mb-2" elevation="3">
+        <v-card v-for="proposal in suggestionState.proposals" :key="proposal.uid" class="mb-2" elevation="3">
             <v-card-text>
                 <div v-if="proposal.name === 'add_attribute' || proposal.name === 'update_attribute'">
                     <v-alert color="muted" density="compact" elevation="3" variant="outlined" class="mb-2" icon="mdi-script">
@@ -52,7 +52,7 @@
                     Discard
                 </v-btn>
                 <v-spacer></v-spacer>
-                <v-btn variant="text" color="primary" :disabled="busy" prepend-icon="mdi-check-circle-outline" @click="applyProposal(proposal)">
+                <v-btn variant="text" color="primary" :disabled="busy || !canApplyProposal(proposal)" prepend-icon="mdi-check-circle-outline" @click="applyProposal(proposal)">
                     Apply
                 </v-btn>
             </v-card-actions>
@@ -63,7 +63,7 @@
             Discard all
         </v-btn>
         <v-spacer></v-spacer>
-        <v-btn variant="text" color="primary" :disabled="busy" prepend-icon="mdi-check-circle-outline" @click="applyAllProposals">
+        <v-btn variant="text" color="primary" :disabled="busy || !suggestionState.proposals.some(canApplyProposal)" prepend-icon="mdi-check-circle-outline" @click="applyAllProposals">
             Apply all
         </v-btn>
     </v-card-actions>
@@ -73,11 +73,8 @@
 export default {
     name: 'WorldStateManagerSuggestionsCharacter',
     props: {
-        // current selected suggestion state
-        // holds the label of the character and the suggestions
         suggestionState: Object,
 
-        // whether the component is busy or not
         busy: Boolean,
     },
     emits: ['delete-proposal', 'delete-proposals'],
@@ -85,22 +82,22 @@ export default {
         'getWebsocket',
     ],
     methods: {
+        canApplyProposal(proposal) {
+            const attributeOperation = ['add_attribute', 'update_attribute', 'remove_attribute'].includes(proposal.name);
+            const attributeName = proposal.arguments?.name;
+            if (attributeOperation && (typeof attributeName !== 'string' || !attributeName.trim())) return false;
+            if (proposal.name === 'remove_attribute') return true;
+            return (attributeOperation || proposal.name === 'update_description')
+                && proposal.called === true
+                && typeof proposal.result === 'string'
+                && proposal.result.trim().length > 0;
+        },
 
-        /**
-         * Applies the suggested removal of an attribute
-         * @method removeAttribute
-         * @param {string} attribute_name - The name of the attribute to remove
-         */
         removeAttribute(attribute_name) {
             this.applyAttribute(attribute_name, "");
         },
 
 
-        /**
-         * Applies the suggested addition or update of an attribute
-         * @method applyAttribute
-         * @param {string} attribute_name - The name of the attribute to add or update
-         */
         applyAttribute(attribute_name, attribute_value) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
@@ -111,11 +108,6 @@ export default {
             }));
         },
 
-        /**
-         * Applies the suggested update of the character description
-         * @method updateDescription
-         * @param {string} description - The new description
-         */
         updateDescription(description) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
@@ -126,23 +118,14 @@ export default {
             }));
         },
 
-        /**
-         * Applies all suggestions
-         * @method applyAllProposals
-         */
         applyAllProposals() {
-            for(let suggestion in this.suggestionState.proposals) {
+            for(const suggestion of this.suggestionState.proposals) {
                 this.applyProposal(suggestion);
             }
-            this.deleteAllProposals();
         },
         
-        /**
-         * Applies a single suggestion
-         * @method applyProposal
-         * @param {Object} proposal - The suggestion to apply
-         */
         applyProposal(proposal) {
+            if (!this.canApplyProposal(proposal)) return;
             if(proposal.name === 'add_attribute') {
                 this.applyAttribute(proposal.arguments.name, proposal.result);
             } else if(proposal.name === 'update_attribute') {
@@ -151,23 +134,16 @@ export default {
                 this.removeAttribute(proposal.arguments.name);
             } else if(proposal.name === 'update_description') {
                 this.updateDescription(proposal.result);
+            } else {
+                return;
             }
             this.deleteProposal(proposal);
         },
 
-        /**
-         * Deletes all suggestions
-         * @method deleteAllProposals
-         */
         deleteAllProposals() {
             this.$emit('delete-proposals', this.suggestionState.id);
         },
 
-        /**
-         * Deletes a single suggestion
-         * @method deleteProposal
-         * @param {number} idx - The index of the suggestion to delete
-         */
         deleteProposal(proposal) {
             this.$emit('delete-proposal', this.suggestionState.id, proposal.uid);
         }

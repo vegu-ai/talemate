@@ -668,7 +668,7 @@ export default {
 
         characterSuggestions(name) {
             for(let suggestion of this.suggestions) {
-                if(suggestion.name === name && suggestion.type === 'character') {
+                if(suggestion.name === name && suggestion.type === 'character' && suggestion.proposals.length > 0) {
                     return true;
                 }
             }

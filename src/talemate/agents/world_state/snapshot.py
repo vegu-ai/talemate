@@ -34,6 +34,13 @@ from talemate.world_state.merge import (
 )
 from talemate.util.prompt import condensed
 from talemate.world_state.schema import CharacterState, ObjectState, PlaceState
+from talemate.world_state.snapshot_revision import (
+    IncompatibleSnapshotTemplate,
+    SnapshotRequest,
+    SnapshotRevision,
+    can_publish,
+    retain_previous,
+)
 
 from talemate.agents.base import (
     AgentAction,
@@ -80,6 +87,7 @@ class SnapshotEntityAddition(pydantic.BaseModel):
     """Outcome of a manual snapshot add, for the caller to report."""
 
     resolved: bool = False
+    waiting_for_regeneration: bool = False
     name: str = ""
     kind: Literal["", "character", "item", "place"] = ""
     in_moment: bool = False
@@ -481,6 +489,9 @@ class WorldStateSnapshotMixin:
         world_state.anchor_message_ids = [
             message.id for message in self.current_moment_messages()
         ]
+        world_state.snapshot_provenance = None
+        world_state.previous_snapshot = None
+        world_state._snapshot_epoch += 1
         return True
 
     @property
@@ -512,12 +523,23 @@ class WorldStateSnapshotMixin:
         # the refresh path swallows the same exception.
         if isinstance(error, (GenerationCancelled, asyncio.CancelledError)):
             return
+        if isinstance(error, IncompatibleSnapshotTemplate):
+            emit("status", str(error), status="error")
+            return
         emit("status", "Adding to the world state failed.", status="error")
         log.error("add_snapshot_entity", error=error)
 
     async def add_and_report_snapshot_entity(self, message_id: int, text: str):
         """Run the manual add and tell the user what came of it."""
         result = await self.add_snapshot_entity(message_id, text)
+
+        if result.waiting_for_regeneration:
+            emit(
+                "status",
+                "Wait for message regeneration to finish before adding to the world snapshot.",
+                status="info",
+            )
+            return
 
         if not result.resolved:
             emit(
@@ -564,6 +586,10 @@ class WorldStateSnapshotMixin:
         back unresolved and nothing is written.
         """
         scene = self.scene
+        world_state = scene.world_state
+        if world_state._snapshot_regenerating:
+            world_state.emit()
+            return SnapshotEntityAddition(waiting_for_regeneration=True)
         selection = normalize_snapshot_selection(text)
 
         if not selection:
@@ -578,7 +604,13 @@ class WorldStateSnapshotMixin:
         if message is None:
             raise ValueError(f"No scene message with id {message_id}")
 
-        world_state = scene.world_state
+        before = SnapshotRevision.capture(world_state)
+        snapshot_request = SnapshotRequest(
+            scene,
+            template="world_state/add-snapshot-entity.jinja2",
+            includes_director=self.long_term_memory_enabled
+            or message.typ == "director",
+        )
         perception = character_knowledge_enabled(scene)
         audience_context = (
             snapshot_audience_context(
@@ -599,13 +631,14 @@ class WorldStateSnapshotMixin:
         # and the next refresh cuts both it and the rest away.
         if in_moment:
             self.cut_snapshot_at_time_passage(world_state)
+        epoch = world_state._snapshot_epoch
 
         # The panel raises its spinner and its cancel button on the "requested"
         # status and lowers them on the next frame, so every exit from here has
         # to emit one.
         world_state.emit(status="requested")
         try:
-            return await self._resolve_and_merge_snapshot_entity(
+            result = await self._resolve_and_merge_snapshot_entity(
                 scene,
                 world_state,
                 message,
@@ -613,7 +646,14 @@ class WorldStateSnapshotMixin:
                 perception,
                 audience_context,
                 in_moment,
+                epoch,
+                snapshot_request,
             )
+            if result.resolved:
+                retain_previous(
+                    world_state, before, snapshot_request.verified_provenance(), scene
+                )
+            return result
         finally:
             world_state.emit()
 
@@ -626,6 +666,8 @@ class WorldStateSnapshotMixin:
         perception: bool,
         audience_context: dict | None,
         in_moment: bool,
+        epoch: int,
+        snapshot_request: SnapshotRequest,
     ) -> SnapshotEntityAddition:
         _, response = await Prompt.request(
             "world_state.add-snapshot-entity",
@@ -633,6 +675,7 @@ class WorldStateSnapshotMixin:
             "analyze",
             vars={
                 "scene": scene,
+                "snapshot_request": snapshot_request,
                 "max_tokens": self.client.max_token_length,
                 "message_text": message_body(message),
                 "selection": selection,
@@ -651,7 +694,9 @@ class WorldStateSnapshotMixin:
             },
         )
 
-        if self.scene is not scene or scene.world_state is not world_state:
+        if self.scene is not scene or not can_publish(
+            world_state, scene, epoch, snapshot_request.verified_provenance()
+        ):
             raise GenerationCancelled("Scene changed while adding a snapshot entity")
 
         entity = (response or {}).get("entity") if isinstance(response, dict) else None
@@ -772,6 +817,11 @@ class WorldStateSnapshotMixin:
     @set_processing
     async def request_world_state(self, instructions: str = "") -> WorldStateResponse:
         scene = self.scene
+        snapshot_request = SnapshotRequest(
+            scene,
+            template="world_state/request-world-state-v2.jinja2",
+            includes_director=self.long_term_memory_enabled,
+        )
         focus_messages = self.current_moment_messages()
 
         # Fall back to the scene intro only on a fresh scene (no live history).
@@ -845,6 +895,7 @@ class WorldStateSnapshotMixin:
             "analyze_long",
             vars={
                 "scene": self.scene,
+                "snapshot_request": snapshot_request,
                 "max_tokens": self.client.max_token_length,
                 "object_type": "character",
                 "object_type_plural": "characters",
@@ -879,6 +930,7 @@ class WorldStateSnapshotMixin:
             world_state=world_state,
             anchor_message_ids=anchor_message_ids,
             audience_context=audience_context,
+            provenance=snapshot_request.verified_provenance(),
         )
 
     @evidence_writer
@@ -896,6 +948,11 @@ class WorldStateSnapshotMixin:
         """
         scene = self.scene
 
+        if world_state._snapshot_regenerating:
+            world_state.emit()
+            return
+        before = SnapshotRevision.capture(world_state)
+        epoch = world_state._snapshot_epoch
         # TimePassageMessage past the prior anchors is a scene cut: wipe the
         # snapshot before showing it to the LLM so the next pass extracts
         # fresh against an empty baseline. Durable mode only — legacy
@@ -915,6 +972,10 @@ class WorldStateSnapshotMixin:
 
         try:
             response = await self.request_world_state(instructions=instructions)
+        except IncompatibleSnapshotTemplate as error:
+            world_state.emit()
+            emit("status", str(error), status="error")
+            return
         except GenerationCancelled:
             world_state.emit()
             return
@@ -937,7 +998,10 @@ class WorldStateSnapshotMixin:
             world_state.emit()
             return
 
-        if self.scene is not scene or scene.world_state is not world_state:
+        provenance = response.provenance
+        if self.scene is not scene or not can_publish(
+            world_state, scene, epoch, provenance
+        ):
             world_state.emit()
             return
 
@@ -1076,6 +1140,7 @@ class WorldStateSnapshotMixin:
             )
 
         world_state.anchor_message_ids = list(response.anchor_message_ids)
+        retain_previous(world_state, before, provenance, scene)
 
         world_state.emit()
 

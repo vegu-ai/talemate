@@ -87,7 +87,10 @@ def scene_export_json(scene: Scene, options: ExportOptions) -> str:
             places={},
             location=None,
             anchor_message_ids=[],
+            snapshot_provenance=None,
+            previous_snapshot=None,
         )
+        data["world_state"].pop("location_perspectives", None)
 
     return save.scene_data_dumps(data)
 

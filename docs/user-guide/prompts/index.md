@@ -89,6 +89,14 @@ To create a customized version of a default template:
 
 Templates are standard Jinja2 files with access to Talemate's template context variables and functions. For developer-level template documentation, see the [Developer Templates Guide](/talemate/dev/templates/).
 
+### World snapshot overrides
+
+World snapshot overrides must use `snapshot_request.context_history(...)` to supply their broad story history after memory retrieval. Older copies of `world_state/request-world-state-v2.jinja2` that call only `scene.context_history(...)` cannot establish the inputs needed for safe snapshot regeneration. This also applies to `world_state/add-snapshot-entity.jinja2` overrides.
+
+If Talemate reports an incompatible snapshot prompt, open **Template Files → Active** in the Prompt Manager and locate the template named in the notice. Compare it with the current default and update your override, or delete the override to restore the default. An incompatible result is not applied; Talemate makes no automatic retry. The existing outdated-override indicator can help identify copies that need review.
+
+See the [snapshot input contract](/talemate/dev/snapshot-perspectives/#snapshot-input-provenance) for the required call and its placement.
+
 ## Response Extraction Directives
 
 !!! info "Advanced Feature"

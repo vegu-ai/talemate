@@ -326,3 +326,11 @@ If the agent's text-generation client supports running more than one request at 
 The world state snapshot can optionally be **pinned into the prompts** that drive dialogue, narration, and scene planning. When pinning is enabled, the snapshot's tracked characters, items, and places are shared with the [Conversation Agent](/talemate/user-guide/agents/conversation/), the [Narrator Agent](/talemate/user-guide/agents/narrator/), and scene analysis, so what the snapshot is tracking can inform what those agents produce.
 
 This is **off by default**. You can enable it with the [Pin to context](/talemate/user-guide/agents/world-state/settings/#pin-to-context) setting in the World State Agent settings.
+
+### Regenerating the snapshot's source message
+
+When you regenerate the message that a pinned snapshot was based on, Talemate restores a verified earlier snapshot before generating the replacement. If no suitable earlier snapshot is available, it clears the snapshot and shows a notice. **Pin to context** stays enabled, and the panel and inline highlights show the effective snapshot.
+
+After successful regeneration, the earlier or empty snapshot stays in place until the next normal automatic refresh or a refresh you request. Regeneration does not make an extra snapshot request. If regeneration fails or is cancelled before replacing the message, the original message and snapshot are restored together.
+
+Talemate retains only one previous snapshot, including across saves. Refreshing repeatedly at the same message preserves the earlier candidate. A snapshot based on an earlier, unaffected message stays in place; an unpinned snapshot is unchanged by regeneration. Wiping the snapshot also discards its retained revision.

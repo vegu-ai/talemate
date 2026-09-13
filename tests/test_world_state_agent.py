@@ -27,6 +27,10 @@ from _world_state_helpers import (
 import talemate.instance as instance_module
 import talemate.agents.world_state as world_state_module
 import talemate.agents.world_state.snapshot as snapshot_module
+from talemate.world_state.snapshot_revision import (
+    IncompatibleSnapshotTemplate,
+    SnapshotProvenance,
+)
 from talemate.agents.world_state import (
     SNAPSHOT_TASK,
     TimePassageEmission,
@@ -990,7 +994,11 @@ def _stub_entity_response(monkeypatch, entity: dict) -> AsyncMock:
     """Answer the manual-add prompt with `entity`, bypassing the template."""
     from talemate.prompts import Prompt
 
-    request = AsyncMock(return_value=("", {"entity": entity}))
+    async def respond(*args, vars, **kwargs):
+        vars["snapshot_request"].context_history(budget=0)
+        return "", {"entity": entity}
+
+    request = AsyncMock(side_effect=respond)
     monkeypatch.setattr(Prompt, "request", request)
     return request
 
@@ -1727,7 +1735,11 @@ class TestManualEntriesThroughARefresh:
             agent,
             "request_world_state",
             AsyncMock(
-                return_value=WorldStateResponse(world_state=raw, anchor_message_ids=[1])
+                return_value=WorldStateResponse(
+                    world_state=raw,
+                    anchor_message_ids=[1],
+                    provenance=SnapshotProvenance.capture(scene),
+                )
             ),
         )
         await agent.apply_snapshot_update(scene.world_state)
@@ -1893,6 +1905,17 @@ class TestAddSnapshotEntityErrors:
         await agent.on_add_snapshot_entity_error(RuntimeError("boom"))
 
         assert messages and messages[0][1] == "error"
+
+    @pytest.mark.asyncio
+    async def test_incompatible_manual_add_override_reports_repair(
+        self, scene, monkeypatch
+    ):  # noqa: F811
+        agent = instance_module.get_agent("world_state")
+        messages = _capture_status(monkeypatch)
+        error = IncompatibleSnapshotTemplate("world_state/add-snapshot-entity.jinja2")
+        await agent.on_add_snapshot_entity_error(error)
+        assert messages == [(str(error), "error")]
+        assert "Prompt Manager" in messages[0][0]
 
 
 class TestAddSnapshotEntityHandler:

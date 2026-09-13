@@ -105,6 +105,11 @@ EXCLUDE_FROM_DELTAS = [
     "root['world_state']['characters']",
     "root['world_state']['items']",
     "root['world_state']['location']",
+    "root['world_state']['places']",
+    "root['world_state']['location_perspectives']",
+    "root['world_state']['anchor_message_ids']",
+    "root['world_state']['snapshot_provenance']",
+    "root['world_state']['previous_snapshot']",
     # TODO move these to agent modules
     "root['agent_state']['director']['cached_guidance']",
     "root['agent_state']['summarizer']['cached_analysis_conversation']",

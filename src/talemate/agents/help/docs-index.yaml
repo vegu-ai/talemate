@@ -53,8 +53,9 @@
 - path: dev/snapshot-perspectives.md
   title: Audience-targeted snapshots
   summary: 'Audience-targeted world-state snapshots in perception scenes: evidence budgets, entity views and location_views,
-    stored SnapshotPerspectives, durable updates and snapshot_for(viewer) rendering. Missing or stale replacements are omitted;
-    model compliance determines semantic support, and snapshots do not grant knowledge.'
+    stored SnapshotPerspectives, durable updates and snapshot_for(viewer) rendering; missing/stale replacements are omitted,
+    model compliance determines semantic support, and snapshots do not grant knowledge. Documents snapshot_request.context_history
+    after memory retrieval, source provenance, incompatible override notices and quiet cancellation/stale-input handling.'
 - path: dev/templates.md
   title: Template Overrides
   summary: 'Older reference for Talemate''s Jinja2 prompt templates: section tags, overriding a default by dropping a same-named
@@ -1037,8 +1038,9 @@
 - path: user-guide/prompts/index.md
   title: Prompt Manager
   summary: Prompt Manager tabs for prompt inspection, Template Files, LLM Prompt Templates and Scene Context; Jinja2 template
-    groups, priority, resolved override indicators and outdated override warnings. Covers immediate Active entries, Completed/Failed/Cancelled outcomes,
-    grouped retries, Clear retaining active requests, live details preserving edits and Test Changes after completion.
+    groups, priority, resolved override indicators and outdated override warnings. Covers immediate Active entries, Completed/Failed/Cancelled
+    outcomes, grouped retries, Clear retaining active requests, live details preserving edits, Test Changes after completion,
+    and updating/resetting incompatible world snapshot overrides with the snapshot_request.context_history contract.
 - path: user-guide/prompts/llm-prompt-templates.md
   title: LLM Prompt Templates
   summary: 'Manage local-model chat-format wrappers such as ChatML, Llama3, Mistral and Gemma4 in LLM Prompt Templates: create
@@ -1320,7 +1322,8 @@
     Reinforcement clears accumulated generation data.
 - path: user-guide/world-state.md
   title: World State
-  summary: World panel snapshots, tracked states, text-selection details, knowledge-change dots, character states and name
-    protection. The knowledge hub shows ranked/time-marked facts, topics, disclosures/access rules, an unlocked mode comparison
-    or locked story mode note, knowledge effort and individual settings. Hub changes use scene overrides with exact setting/group/all
-    reset icons in a project-shared settings file. Also covers refresh/wipe, activation, cadence and Pin to context.
+  summary: World panel snapshots, entity highlights/manual additions, tracked states, character activation, name protection
+    and knowledge-change dots; knowledge hub ranked facts/topics, disclosures/access rules, knowledge effort slider, locked
+    story mode note or unlocked mode comparison, scene overrides with setting/group/all resets. Covers durable refresh/wipe,
+    cadence and Pin to context; pinned snapshot regeneration restores a verified previous snapshot or clears snapshot content
+    with a notice (snapshot cleared until normal refresh; failure/cancel restores the original, no extra request).

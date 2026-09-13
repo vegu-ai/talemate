@@ -46,8 +46,25 @@ When the **Allow changes to settings** permission is on, it can also **change** 
 
 - Agent settings, either globally or as a [per-scene override](/talemate/user-guide/agents/scene-overrides) for the currently loaded scene - it can also remove a scene override so the setting falls back to the global value again.
 - Application settings in the game, appearance, and creator sections.
+- Inference parameters for one action preset or every preset in an existing inference group, including advanced sampling and stopping strings.
 
-So things like "switch the conversation format to Narrative", "lower the editor revision to only run on dialogue", "turn off auto save" or "override the visualizer style for this scene only" can be done right from the chat. Changes are applied immediately, the chat records exactly what changed (old and new value), and an open settings view picks them up live.
+So things like "switch the conversation format to Narrative", "lower the editor revision to only run on dialogue", "turn off auto save" or "override the visualizer style for this scene only" can be done right from the chat. Changes are applied immediately, the tool result records the applied values, and an open settings view picks them up live.
+
+### Inference presets
+
+Name the group and the action preset you want to change, or explicitly ask for **all presets in that group**. For example:
+
+> Set all presets in my Qwen 3.8 group to temperature 1.0, top_p 0.95, top_k 20, min_p 0.0, and the rest at defaults.
+
+An ordinary update leaves other parameters alone. **The rest at defaults** resets unspecified parameters to each selected action preset's own application defaults, so analytical and creative presets can retain different default values. Help does not invent model-specific defaults. It reads the target and valid parameters, announces the scope and reset intent, then applies the change under your settings permission. There is no separate approval dialog for each write.
+
+Help can inspect defaults and edit the same parameter types, ranges and steps as the preset editor. It asks for clarification when the group or preset is unclear; it cannot create, delete or rename groups. Client support still varies: saving a parameter does not make a client support it. Applied values appear in Settings and the pinned inference editor and are saved for reopening. A save failure is reported as unconfirmed persistence, even if values changed in memory.
+
+### Focused configuration reads
+
+Help can inspect a single nested setting, preset or group without bringing unrelated configuration into the chat. Large reads return a compact index with follow-up navigation; larger individual values can be retrieved in full through explicit chunks. An index is a list of available entries, not a claim that omitted values are missing or at defaults. API keys and passwords remain hidden throughout.
+
+Ask for all the relevant entries when that is what you need. The agent can make further tool calls to retrieve them. If it reaches its configured [tool call round limit](settings.md#tool-call-rounds), it must say what remains unread; you can ask it to continue or increase that limit.
 
 Some things are intentionally out of reach:
 

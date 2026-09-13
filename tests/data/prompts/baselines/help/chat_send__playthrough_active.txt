@@ -37,29 +37,6 @@ user-guide/agents | 1 pages | Every agent's settings and behavior: conversation,
 
 Individual pages are NOT listed here - locate them with the find_docs function before reading them.
 
-## User's current view
-A snapshot of what the user is currently looking at in the Talemate interface. Use it to resolve ambiguous questions like "what does this setting do?":
-
-active_tab: main
-app_ready: true
-app_settings_modal: null
-open_drawers:
-- scene
-playthrough_active: true
-scene_active: true
-scene_environment: scene
-templates_view:
-  dirty: false
-  selected: null
-  tab: templates
-  template_type: null
-waiting_for_input: false
-
-## Playthrough mode is running
-The user is replaying their scene in playthrough mode. The scene is revealed one message at a time and NOTHING is added to it while the mode runs - the way onward is the toolbar's "Fork from here", which makes a scene of their own out of the story up to the message they are on.
-
-The interface has put away what would add to the story: the message input, the scene tools, the director console and its chat, the node editor and the Mods tab are gone, the world panel no longer offers to update the world state or to make one of its characters real, and the per-message actions are disabled. Do NOT walk the user through any of them, and do NOT link the director console. Say that the playthrough has put it away and that leaving the mode - Exit in the toolbar, or Escape - brings it back.
-
 Call the following functions to execute your tasks. Each function is explained by documentation and some examples. Understand the schema and then use the examples to execute your tasks.
 
 You are allowed to make up to 5 function calls.It is recommended to use fewer calls.
@@ -229,7 +206,7 @@ You may call this function multiple times.
 
 ### Read App Config (read_app_config)
 
-Read an application config section. Available sections: game, appearance, creator, presets, prompts.
+Read exact application settings with an 8192-byte response bound. Start with the narrowest known path/fields; broad reads return a structural index when too large. An index omits values, NOT settings: navigate or page to obtain them. If the user requests all entries, continue until every required value is retrieved. No separate summarization is needed.
 
 You may call this function multiple times. 
 
@@ -239,7 +216,13 @@ You may call this function multiple times.
 {
   "function": "read_app_config",
   "arguments": {
-    "section": "str - Section name."
+    "section": "str - game, appearance, creator, presets or prompts; omit to list sections.",
+    "path": "list - Optional list of exact nested keys or array indexes, relative to section. Keys containing dots/spaces are single list elements. Append an index entry's key to reach it.",
+    "fields": "list - Optional list of existing fields to return from the selected object; omit for all fields.",
+    "mode": "str - auto (default): exact values if small, otherwise paged index or JSON chunk. index: keys/types only. value: complete serialized JSON in chunks, including oversized individual fields.",
+    "offset": "int - Start at 0. For subsequent pages/chunks use next.offset, keeping section/path/fields unchanged.",
+    "limit": "int - Index entries per page, 1-100; default 20.",
+    "revision": "str - Use next.revision for subsequent pages/chunks. If changed, restart at offset 0 without revision. For chunks, concatenate all chunk strings then decode JSON to recover exact types/values."
   }
 }
 ```
@@ -250,7 +233,26 @@ You may call this function multiple times.
 {
   "function": "read_app_config",
   "arguments": {
-    "section": "game"
+    "section": "game",
+    "path": [
+      "general"
+    ],
+    "fields": [
+      "auto_save"
+    ]
+  }
+}
+```
+
+```json
+{
+  "function": "read_app_config",
+  "arguments": {
+    "section": "presets",
+    "path": [
+      "inference_groups"
+    ],
+    "mode": "index"
   }
 }
 ```
@@ -275,6 +277,30 @@ You may call this function multiple times.
 ```json
 {
   "function": "read_clients",
+  "arguments": {}
+}
+```
+
+### Describe Inference Parameters (describe_inference_parameters)
+
+Describe every inference parameter supported by the preset editor, including advanced sampling, types, ranges and steps, existing action preset keys, and paths to authoritative defaults. Presets are editable only through update_inference_presets when the settings permission is on; update_app_config remains restricted to game, appearance and creator.
+
+You may call this function multiple times. 
+
+#### describe_inference_parameters arguments
+
+```json
+{
+  "function": "describe_inference_parameters",
+  "arguments": {}
+}
+```
+
+#### describe_inference_parameters examples
+
+```json
+{
+  "function": "describe_inference_parameters",
   "arguments": {}
 }
 ```
@@ -439,6 +465,29 @@ writing_style - A writing style handed to the AI, plus phrases to detect as unwa
 
 [#1] [user] How do I open the director chat?
 ---
+
+## User's current view
+A snapshot of what the user is currently looking at in the Talemate interface. Use it to resolve ambiguous questions like "what does this setting do?":
+
+active_tab: main
+app_ready: true
+app_settings_modal: null
+open_drawers:
+- scene
+playthrough_active: true
+scene_active: true
+scene_environment: scene
+templates_view:
+  dirty: false
+  selected: null
+  tab: templates
+  template_type: null
+waiting_for_input: false
+
+## Playthrough mode is running
+The user is replaying their scene in playthrough mode. The scene is revealed one message at a time and NOTHING is added to it while the mode runs - the way onward is the toolbar's "Fork from here", which makes a scene of their own out of the story up to the message they are on.
+
+The interface has put away what would add to the story: the message input, the scene tools, the director console and its chat, the node editor and the Mods tab are gone, the world panel no longer offers to update the world state or to make one of its characters real, and the per-message actions are disabled. Do NOT walk the user through any of them, and do NOT link the director console. Say that the playthrough has put it away and that leaving the mode - Exit in the toolbar, or Escape - brings it back.
 
 ## Task
 Respond to the user's latest message.

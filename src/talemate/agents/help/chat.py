@@ -1,4 +1,4 @@
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, Literal
 
 import structlog
 
@@ -18,6 +18,7 @@ from talemate.game.focal.util import strip_call_blocks
 
 from . import docs
 from . import settings
+from . import inference_presets
 from . import templates
 from . import themes
 from .schema import (
@@ -411,8 +412,18 @@ class HelpChatMixin:
                 agent, action, setting, app_settings_dirty=app_settings_dirty
             )
 
-        async def read_app_config(section: str):
-            return settings.read_app_config(section)
+        async def read_app_config(
+            section: str = "",
+            path: list | None = None,
+            fields: list | None = None,
+            mode: Literal["auto", "index", "value"] = "auto",
+            offset: int = 0,
+            limit: int = 20,
+            revision: str | None = None,
+        ):
+            return settings.read_app_config(
+                section, path, fields, mode, offset, limit, revision
+            )
 
         async def update_app_config(path: str, value):
             gone = revoked(self.allow_settings_changes, SETTINGS_PERMISSION)
@@ -425,6 +436,25 @@ class HelpChatMixin:
         async def read_clients():
             return settings.read_clients()
 
+        async def update_inference_presets(
+            group: str,
+            preset: str,
+            parameters: dict,
+            reset_rest: bool = False,
+            group_is_key: bool = False,
+        ):
+            gone = revoked(self.allow_settings_changes, SETTINGS_PERMISSION)
+            if gone:
+                return gone
+            return await inference_presets.update_inference_presets(
+                group,
+                preset,
+                parameters,
+                reset_rest,
+                app_settings_dirty=app_settings_dirty,
+                group_is_key=group_is_key,
+            )
+
         # reads may run concurrently; writes stay sequential so config
         # mutations never race each other
         callbacks = [
@@ -436,7 +466,15 @@ class HelpChatMixin:
             ),
             focal.Callback(
                 name="read_app_config",
-                arguments=[focal.Argument(name="section", type="str")],
+                arguments=[
+                    focal.Argument(name="section", type="str"),
+                    focal.Argument(name="path", type="list"),
+                    focal.Argument(name="fields", type="list"),
+                    focal.Argument(name="mode", type="str"),
+                    focal.Argument(name="offset", type="int"),
+                    focal.Argument(name="limit", type="int"),
+                    focal.Argument(name="revision", type="str"),
+                ],
                 fn=read_app_config,
                 concurrent=True,
             ),
@@ -446,12 +484,29 @@ class HelpChatMixin:
                 fn=read_clients,
                 concurrent=True,
             ),
+            focal.Callback(
+                name="describe_inference_parameters",
+                arguments=[],
+                fn=inference_presets.describe_inference_parameters,
+                concurrent=True,
+            ),
         ]
 
         if not self.allow_settings_changes:
             return callbacks
 
         return callbacks + [
+            focal.Callback(
+                name="update_inference_presets",
+                arguments=[
+                    focal.Argument(name="group", type="str"),
+                    focal.Argument(name="preset", type="str"),
+                    focal.Argument(name="parameters", type="dict"),
+                    focal.Argument(name="reset_rest", type="bool"),
+                    focal.Argument(name="group_is_key", type="bool"),
+                ],
+                fn=update_inference_presets,
+            ),
             focal.Callback(
                 name="update_agent_setting",
                 arguments=[

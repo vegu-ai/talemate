@@ -1,5 +1,6 @@
 0.40.0.dev:
   features:
+  - "Help chat: Added permission-gated inference preset editing with exact group-key selection, and focused configuration reads with complete paging that preserves values across key reordering."
   - "Voice: Added opt-in Chatterbox Turbo with voice cloning, supported sampling controls and native sound tags."
   - "Scene Creation: New Story and character-card import now keep selected knowledge effort in scene overrides without changing global agent settings. Card import includes the mode-specific effort slider."
   - "Character Entry Orientation: Activating or returning a character now gives their first configurable turns a private, live orientation built from their own known facts, the current cast, visible post-entry lines and elapsed scene time, without copying the raw scene description or adding a request. An optional Brief characters on entry setting normally generates a short perception for non-player characters in one request; when Offscreen Life also applies, that request normally produces both results, with an unreadable account section retried through the ordinary Offscreen Life path. Standard keeps the briefing prompt-only, while Character perspectives exposes it as a disclosure with Regenerate and Remove actions that never change the paired offscreen fact. The Thorough effort stops enable generated briefings; lower stops keep them off."
@@ -90,6 +91,7 @@
   - "Dependencies: Updated the pinned package manager from pnpm 11.15.1 to 12.4.1. The lock now records the exact pnpm runtime and platform executables required by pnpm 12, and frontend CI verifies the selected version before linting and tests; application packages are unchanged."
   - "Simulation Suite: The original Simulation Suite is gone from the Scene Library and from Quick load — Simulation Suite V2 replaces it for new stories. A scene that ships with Talemate can now be marked hidden and deprecated in its scene file, which takes it and the project it lives in out of both listings. Saves of your own are never hidden: one save in the project brings the project back with all of its saves listed, the deprecated one carrying a chip, so a playthrough you already started stays loadable and forkable. The library also stops listing a project's agent-settings and shared-context files as if they were saves — they are not loadable."
   fixes:
+  - "Help chat: Preserved reusable prompt prefixes across changing views and final tool-result continuations."
   - "Client reasoning: Template patterns remain inherited across model changes without overwriting custom values, and the strip and validation fields align."
   - "Inference presets: Added exact number entry beside settings sliders and compact number-only editing in the pinned panel."
   - "Character knowledge: Spaced global-settings controls and condensed effort explanations into effective request costs, conditional retries and potential benefits."

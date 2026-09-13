@@ -199,13 +199,15 @@
 - path: user-guide/agents/help/index.md
   title: Overview
   summary: Help chat searches bundled docs and reads configuration, clients and scene/UI context; optional permissions allow
-    settings, themes and world-state template changes. Covers per-scene overrides, unsaved-edit protection, theme color/contrast
+    settings, inference preset parameters, themes and world-state template changes. Covers partial updates versus per-preset
+    default resets, focused and paged configuration reads, per-scene overrides, unsaved-edit protection, theme color/contrast
     diagnostics, template restrictions, persistent multiple chats and background responses.
 - path: user-guide/agents/help/settings.md
   title: Settings
   summary: Help agent response and tool-round budgets, concurrent reads, custom instructions and default-off Allow changes
-    to settings/templates permissions. Applying themes requires both permissions; manual appearance color overrides survive
-    until Restore from theme.
+    to settings/templates permissions. Configuration tool paths, fields, bounded indexes, complete JSON chunk retrieval,
+    inference preset writes and prompt-cache conditions. Applying themes requires both permissions; manual appearance color
+    overrides survive until Restore from theme.
 - path: user-guide/agents/index.md
   title: Overview
   summary: 'Overview of Talemate agents and responsibilities: Conversation, Creator, Director, Editor, Help, Memory, Narrator,

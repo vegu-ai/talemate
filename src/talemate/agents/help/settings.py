@@ -31,6 +31,8 @@ from talemate.scene_agent_settings import (
 from talemate.util.encryption import SENSITIVE_FIELD_NAMES
 from talemate.ux.schema import SECRET_FIELD_TYPES
 
+from .config_read import read_value
+
 if TYPE_CHECKING:
     from talemate.agents.base import Agent, AgentAction, AgentActionConfig
 
@@ -547,12 +549,24 @@ async def clear_agent_setting_scene_override(
 # ---------------------------------------------------------------------------
 
 
-def read_app_config(section: str) -> dict | str:
-    """Return one application config section (secrets redacted)."""
+def read_app_config(
+    section: str = "",
+    path: list[str | int] | None = None,
+    fields: list[str] | None = None,
+    mode: Literal["auto", "index", "value"] = "auto",
+    offset: int = 0,
+    limit: int = 20,
+    revision: str | None = None,
+) -> dict | str:
+    """Read exact config values or a bounded, explicitly navigable page."""
+    if not isinstance(section, str):
+        return {"error": "Section must be a string."}
     section = (section or "").strip().lower()
+    if not section:
+        return {"sections": list(READABLE_CONFIG_SECTIONS)}
     if section not in READABLE_CONFIG_SECTIONS:
         return (
-            f"Unknown or unavailable config section '{section}'. "
+            "Unknown or unavailable config section. "
             f"Readable sections: {', '.join(READABLE_CONFIG_SECTIONS)}. "
             "Use read_agent_settings for agents and read_clients for clients."
         )
@@ -560,17 +574,16 @@ def read_app_config(section: str) -> dict | str:
     config = get_config()
     data = getattr(config, section).model_dump()
 
-    if section == "presets":
-        # the *_defaults entries mirror the shipped defaults and double the
-        # payload without adding information
-        data.pop("inference_defaults", None)
-        data.pop("embeddings_defaults", None)
-
-    return {
-        "section": section,
-        "writable": section in WRITABLE_CONFIG_SECTIONS,
-        "values": _redact_sensitive(data),
-    }
+    return read_value(
+        _redact_sensitive(data),
+        path=path,
+        fields=fields,
+        mode=mode,
+        offset=offset,
+        limit=limit,
+        revision=revision,
+        metadata={"section": section, "writable": section in WRITABLE_CONFIG_SECTIONS},
+    )
 
 
 def _walk_to_leaf(data: dict, keys: list[str]) -> "tuple[dict, str] | str":

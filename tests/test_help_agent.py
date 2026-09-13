@@ -1138,8 +1138,14 @@ def test_read_app_config(settings_env):
 
     presets = help_settings.read_app_config("presets")
     assert presets["writable"] is False
-    assert "inference_defaults" not in presets["values"]
-    assert "embeddings_defaults" not in presets["values"]
+    assert presets["mode"] == "index"
+    assert {"inference_defaults", "embeddings_defaults"} <= {
+        entry["key"] for entry in presets["entries"]
+    }
+    defaults = help_settings.read_app_config(
+        "presets", ["inference_defaults", "analytical"]
+    )
+    assert defaults["values"]["temperature"] == 0.7
 
     result = help_settings.read_app_config("clients")
     assert isinstance(result, str)

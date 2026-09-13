@@ -25,8 +25,14 @@ SETTINGS_WRITES = {
     "update_agent_setting",
     "clear_agent_setting_scene_override",
     "update_app_config",
+    "update_inference_presets",
 }
-SETTINGS_READS = {"read_agent_settings", "read_app_config", "read_clients"}
+SETTINGS_READS = {
+    "read_agent_settings",
+    "read_app_config",
+    "read_clients",
+    "describe_inference_parameters",
+}
 
 TEMPLATE_WRITES = {
     "create_template",

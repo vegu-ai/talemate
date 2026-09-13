@@ -47,6 +47,8 @@ The bundled documentation, grouped by section as `path prefix | pages | contents
 Individual pages are NOT listed here - locate them with the find_docs function before reading them.
 <|CLOSE_SECTION|>
 {% endif %}
+{%- endset %}
+{% set dynamic_context -%}
 {% if ux_snapshot %}
 <|SECTION:User's Current View|>
 A snapshot of what the user is currently looking at in the Talemate interface. Use it to resolve ambiguous questions like "what does this setting do?":
@@ -81,7 +83,6 @@ Recent scene progress:
 {% endif %}
 {%- endset %}
 {% set tools_text -%}
-{% if not final_round %}
 {{ focal.render_instructions() }}
 {% if docs_available %}
 
@@ -129,14 +130,33 @@ Recent scene progress:
 ) }}
 
 {{ focal.callbacks.read_app_config.render(
-    "Read an application config section. Available sections: game, appearance, creator, presets, prompts.",
-    section="Section name.",
+    "Read exact application settings with an 8192-byte response bound. Start with the narrowest known path/fields; broad reads return a structural index when too large. An index omits values, NOT settings: navigate or page to obtain them. If the user requests all entries, continue until every required value is retrieved. No separate summarization is needed.",
+    section="game, appearance, creator, presets or prompts; omit to list sections.",
+    path="Optional list of exact nested keys or array indexes, relative to section. Keys containing dots/spaces are single list elements. Append an index entry's key to reach it.",
+    fields="Optional list of existing fields to return from the selected object; omit for all fields.",
+    mode="auto (default): exact values if small, otherwise paged index or JSON chunk. index: keys/types only. value: complete serialized JSON in chunks, including oversized individual fields.",
+    offset="Start at 0. For subsequent pages/chunks use next.offset, keeping section/path/fields unchanged.",
+    limit="Index entries per page, 1-100; default 20.",
+    revision="Use next.revision for subsequent pages/chunks. If changed, restart at offset 0 without revision. For chunks, concatenate all chunk strings then decode JSON to recover exact types/values.",
     examples=[
-        {"section": "game"},
+        {"section": "game", "path": ["general"], "fields": ["auto_save"]},
+        {"section": "presets", "path": ["inference_groups"], "mode": "index"},
     ]
 ) }}
 
 {% if allow_settings_changes %}
+{{ focal.callbacks.update_inference_presets.render(
+    "Change inference parameters of ONE existing action preset or ALL presets in ONE existing group. Read the group/preset and describe_inference_parameters first. Announce the exact group, selected preset(s), requested values and reset intent before the call. Clarify ambiguous/missing targets; never choose another group or create one. Only report success after an applied=true result; report persistence errors honestly.",
+    group="Existing group name, or exact key when group_is_key=true. Empty string explicitly means built-in Default.",
+    group_is_key="Set true only for an exact key obtained from the group index after resolving the user's intended target. Keys are case-sensitive and are never matched against display names. With false/default, ambiguous names require clarification. A named Default group is distinct from the built-in empty key.",
+    preset="Existing action preset key from describe_inference_parameters, or all only when the user requested the whole group.",
+    parameters="Object of supported parameter names to new values; numbers must match editor ranges and steps. Internal changed flags and arbitrary config paths are forbidden.",
+    reset_rest="false/default preserves every unspecified parameter. true only for an explicit request such as 'the rest at defaults': resets each selected preset to its OWN authoritative defaults before applying parameters. Never invent model-specific defaults.",
+    examples=[
+        {"group": "Qwen 3.8", "group_is_key": true, "preset": "all", "parameters": {"temperature": 1.0, "top_p": 0.95, "top_k": 20, "min_p": 0.0}, "reset_rest": true},
+    ]
+) }}
+
 {{ focal.callbacks.update_agent_setting.render(
     "Change one agent setting. Use setting 'enabled' to toggle the action itself on or off. Scope 'global' changes the value for all scenes; scope 'scene' writes a per-scene override for the currently loaded scene.",
     agent="Agent type.",
@@ -177,6 +197,11 @@ Recent scene progress:
     examples=[
         {},
     ]
+) }}
+
+{{ focal.callbacks.describe_inference_parameters.render(
+    "Describe every inference parameter supported by the preset editor, including advanced sampling, types, ranges and steps, existing action preset keys, and paths to authoritative defaults. Presets are editable only through update_inference_presets when the settings permission is on; update_app_config remains restricted to game, appearance and creator.",
+    examples=[{}]
 ) }}
 
 {{ focal.callbacks.list_themes.render(
@@ -290,7 +315,6 @@ The slots a theme carries and what each one paints. These names are the ONLY val
 {% for area, slots in theme_slots.colors.items() %}{% for slot, paints in slots.items() %}{{ area }}.{{ slot }} - {{ paints }}
 {% endfor %}{% endfor %}appearance: {{ join(theme_slots.appearance, ", ") }}
 {% endif %}
-{% endif %}
 {%- endset %}
 {% set instructions_text -%}
 <|SECTION:Task|>
@@ -299,11 +323,11 @@ Respond to the user's latest message.
 {% if not final_round -%}
 If you need information from the documentation or the user's configuration to answer accurately - or the user asked you to change a setting - call the functions; their results will be appended to the chat and you will be prompted again to continue. Once you have what you need (or if the question needs no lookup), just write your answer WITHOUT calling any functions.
 {%- else -%}
-Write your answer now using the information already present in this chat. Do NOT call any functions.
+Write your answer now using the information already present in this chat. Do NOT call any functions. If required detail remains unread, say what is still missing and that the user can ask you to continue; never claim to have inspected omitted values.
 {%- endif %}
 <|CLOSE_SECTION|>
 {%- endset %}
-{% set reserved_tokens = count_tokens(rendered_context + tools_text + instructions_text) + 512 %}
+{% set reserved_tokens = count_tokens(rendered_context + tools_text + dynamic_context + instructions_text) + 512 %}
 {% set trimmed_history = history_trim(history, max_tokens - reserved_tokens) %}
 {{ rendered_context }}
 {{ tools_text }}
@@ -319,5 +343,6 @@ Result: {{ json(m.result) }}
 {% endif %}
 {% endfor %}
 <|CLOSE_SECTION|>
+{{ dynamic_context }}
 {{ instructions_text }}
 {{ bot_token }}

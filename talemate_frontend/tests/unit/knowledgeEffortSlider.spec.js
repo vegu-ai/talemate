@@ -98,7 +98,7 @@ describe('the effort slider against the status frames of its own write', () => {
         await nextTick();
         expect(vm.shownStop).toBe('off');
         expect(vm.custom).toBe(false);
-        expect(vm.cost).toBe('No extra requests per line.');
+        expect(vm.cost).toBe('No extra requests.');
         deliver('conversation');
         deliver('memory');
         deliver('summarizer');
@@ -309,8 +309,8 @@ describe('the effort slider against the status frames of its own write', () => {
         state.agents = agentsAt('legacy', 'thorough', { 'conversation.character_knowledge.ledger': false });
         await nextTick();
         expect(vm.custom).toBe(true);
-        expect(vm.cost).not.toContain('Track learning from dialogue');
-        expect(vm.cost).toContain('Refine memories with AI');
+        expect(vm.cost).not.toContain('after a character line');
+        expect(vm.cost).toContain('uncached retrieved memories');
     });
 
     it('answers a pinned scene write by override presence, not a matching value', async () => {

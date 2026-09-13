@@ -106,7 +106,6 @@
             </v-card-text>
             <v-card-text v-if="!canPersist" class="pt-1 pb-0 text-body-small text-muted">Save the scene to change its knowledge settings.</v-card-text>
             <v-card-text v-else-if="saveError" class="pt-1 pb-0 text-body-small text-error">{{ saveError }}</v-card-text>
-            <v-card-text class="pt-1 pb-0 text-body-small text-muted">{{ summary.text }}</v-card-text>
             <v-card-text v-if="!groups.length" class="pt-1 text-body-small text-muted">Waiting for the agents to report.</v-card-text>
             <v-expansion-panels v-else :model-value="individualOpen" variant="accordion" class="knowledge-hub-individual mt-1" @update:model-value="setIndividualOpen">
                 <v-expansion-panel value="individual">
@@ -133,13 +132,12 @@
                                             @click.stop="toggleGroup(group)"></v-checkbox-btn>
                                         <v-checkbox-btn v-else class="knowledge-hub-checkbox-placeholder" density="compact" hide-details aria-hidden="true" tabindex="-1" disabled></v-checkbox-btn>
                                     </template>
-                                    <v-list-item-title class="text-body-small">
+                                    <v-list-item-title class="text-body-small knowledge-setting-label">
                                         <v-btn size="x-small" variant="text" class="px-0 text-body-small" append-icon="mdi-open-in-new" @click="openSettings(group)">
                                             {{ group.agentLabel }} / {{ group.label }}
                                         </v-btn>
                                         <SceneOverrideResetControl
                                             v-if="group.ownedOverridden"
-                                            class="ml-1"
                                             :aria-label="`Use global settings for ${group.agentLabel} / ${group.label}`"
                                             :disabled="settingsLocked"
                                             @reset="clearGroup(group)" />
@@ -157,11 +155,10 @@
                                     <template v-slot:prepend>
                                         <v-checkbox-btn :model-value="toggle.value" :disabled="!group.enabled || settingsLocked" :aria-label="toggle.label" tabindex="-1" density="compact" color="primary" hide-details @click.stop="toggleConfig(group, toggle)"></v-checkbox-btn>
                                     </template>
-                                    <v-list-item-title class="text-body-small">
-                                        {{ toggle.label }}
+                                    <v-list-item-title class="text-body-small knowledge-setting-label">
+                                        <span>{{ toggle.label }}</span>
                                         <SceneOverrideResetControl
                                             v-if="toggle.overridden"
-                                            class="ml-1"
                                             :aria-label="`Use global settings for ${group.agentLabel} / ${group.label} / ${toggle.label}`"
                                             :disabled="settingsLocked"
                                             @reset="clearToggle(group, toggle)" />
@@ -468,6 +465,24 @@ export default {
 </script>
 
 <style scoped>
+.knowledge-setting-label {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    white-space: normal;
+    overflow: visible;
+}
+.knowledge-setting-label > :deep(.v-btn) {
+    max-width: 100%;
+    height: auto;
+    min-height: 24px;
+    white-space: normal;
+}
+.knowledge-setting-label > :deep(.v-btn .v-btn__content) {
+    white-space: normal;
+}
+
 /* the switches keep the spacing they have outside the pane, and the row does
    not grow by Vuetify's taller active title when it opens */
 .knowledge-hub-individual :deep(.v-expansion-panel-text__wrapper) {

@@ -56,7 +56,7 @@
                         </v-card-title>
 
                         <v-card-text overflow-y-visible>
-                            <InferenceParamsForm :preset="selectedPreset" @change="setPresetChanged()" />
+                            <InferenceParamsForm :key="JSON.stringify([group, selected[0], resetVersion])" :preset="selectedPreset" @change="setPresetChanged()" />
                         </v-card-text>
                     </v-card>
                 </v-form>
@@ -127,6 +127,7 @@ export default {
     data() {
         return {
             selected: [],
+            resetVersion: 0,
             config: {
                 inference: {},
             },
@@ -148,6 +149,7 @@ export default {
         },
 
         reset() {
+            this.resetVersion += 1;
             this.scope[this.selected[0]] = deepCopy(this.immutableConfig.presets.inference_defaults[this.selected[0]])
         },
 

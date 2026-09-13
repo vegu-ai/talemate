@@ -57,6 +57,13 @@ Talemate provides quick-access buttons that fill in the **Strip pattern** and th
 - **◁think▷** - For models using arrow-style thinking delimiters
 - **&lt;think&gt;** - For models using XML-style think tags
 
+Empty fields inherit from the current model’s prompt template. The placeholder and
+**Template default** indicator show that inherited value; it is not saved as a
+custom override. Changing models updates inherited patterns together. A custom
+value remains yours until you clear it, including through scene loading and
+unrelated settings saves. In-flight responses keep the patterns of the template
+that rendered their request.
+
 ### Custom Patterns
 
 You can also specify a custom regular expression pattern that matches your model's reasoning format. This pattern will be used to strip the thinking tokens from the response before displaying it to the user.

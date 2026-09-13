@@ -25,8 +25,10 @@
       @end="finish"
       @update:model-value="pick"></v-slider>
     <div v-if="shownStop" class="text-body-small knowledge-effort-lines">
-      <div class="text-muted">{{ descriptions[shownStop] }} {{ cost }}</div>
-      <div class="text-medium-emphasis">{{ modelLine }}</div>
+      <div class="text-muted"><strong>Requests:</strong> {{ explanation.cost }}</div>
+      <div v-if="explanation.retries" class="text-muted"><strong>Retries:</strong> {{ explanation.retries }}</div>
+      <div class="text-muted"><strong>Benefit:</strong> {{ explanation.benefit }}</div>
+      <div v-if="explanation.caveat" class="text-medium-emphasis">{{ explanation.caveat }}</div>
     </div>
   </div>
 </template>
@@ -34,16 +36,11 @@
 <script>
 import {
   DEFAULT_EFFORT,
-  EFFORT_DESCRIPTIONS,
   EFFORT_LABELS,
-  EFFORT_MODEL_TIER,
-  EFFORT_NOTES,
   EFFORT_STOPS,
 } from '@/constants/knowledgeEffort';
-import { MODEL_TIERS } from '@/constants/modelExpectations';
-import { currentEffort, effortCost, effortPatch, effortPinPatch, effortValueOf, stopForMode } from '@/utils/knowledgeEffort';
+import { currentEffort, effortExplanation, effortPatch, effortPinPatch, effortValueOf, stopForMode } from '@/utils/knowledgeEffort';
 import { configOverrideActive, enabledOverrideActive } from '@/constants/sceneAgentSettings';
-import { resolveKnowledgeToggles, thoroughnessSummary } from '@/utils/knowledgeHub';
 
 const SEND_DEBOUNCE_MS = 250;
 // a stop the agents never echo back must not freeze the knob for good
@@ -74,7 +71,6 @@ export default {
   data() {
     return {
       labels: EFFORT_LABELS,
-      descriptions: EFFORT_DESCRIPTIONS,
       dragging: false,
       heldStop: null,
       // agent -> the patch entry whose values that agent still owes in a frame
@@ -109,20 +105,12 @@ export default {
     index() {
       return Math.max(0, this.stops.indexOf(this.shownStop));
     },
-    cost() {
-      if (!this.shownStop) return '';
-      // Custom is a value state: the nearest stop only places the thumb, so the
-      // cost line has to name what is actually on, not the nearest row's cost.
-      if (this.custom) {
-        const perspectives = this.mode === 'perception';
-        return thoroughnessSummary(resolveKnowledgeToggles(this.agents, { perspectives }), perspectives).text + '.';
-      }
-      return effortCost(this.mode, this.shownStop).text + '.';
+    explanation() {
+      const preview = this.value !== null || this.heldStop !== null || this.live.stop === null;
+      return effortExplanation(this.mode, this.shownStop, this.agents, preview);
     },
-    modelLine() {
-      const tier = EFFORT_MODEL_TIER[this.mode]?.[this.shownStop];
-      const note = EFFORT_NOTES[this.mode]?.[this.shownStop];
-      return [MODEL_TIERS[tier], note].filter(Boolean).join(' ');
+    cost() {
+      return this.explanation.cost;
     },
   },
   watch: {

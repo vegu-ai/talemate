@@ -256,8 +256,8 @@
                 <v-btn @click.stop="applyReasoningPreset('.*?◁/think▷', '◁think▷')" size="small" color="primary" variant="text">{{ '◁think▷' }}</v-btn>
                 <v-btn @click.stop="applyReasoningPreset('.*?</think>', '<think>')" size="small" color="primary" variant="text">{{ '<think>' }}</v-btn>
               </v-sheet>
-              <v-row>
-                <v-col cols="12" md="6">
+              <div class="reasoning-pattern-fields">
+                <div class="reasoning-pattern-default">
                   <v-chip v-if="templateInfo.reason_response_pattern_from_template && !values.reason_response_pattern"
                     size="small" label color="primary" variant="text" prepend-icon="mdi-file-cog-outline" class="mb-1">
                     Template default: {{ templateInfo.reason_response_pattern_default }}
@@ -265,9 +265,10 @@
                       This strip pattern is provided by the model's prompt template{{ templateInfo.template_file ? ' (' + templateInfo.template_file + ')' : '' }} and is currently in effect because you haven't set a custom value. Enter a pattern below to override it.
                     </v-tooltip>
                   </v-chip>
-                  <v-text-field v-model="values.reason_response_pattern" label="Strip pattern" hint="Regular expression used to strip the thinking tokens out of the response." :placeholder="templateInfo.reason_response_pattern_default || '.*?</think>'"></v-text-field>
-                </v-col>
-                <v-col cols="12" md="6">
+                </div>
+                <v-text-field v-model="values.reason_response_pattern" label="Strip pattern" hint="Regular expression used to strip the thinking tokens out of the response." :placeholder="templateInfo.reason_response_pattern_default || '.*?</think>'"></v-text-field>
+
+                <div class="reasoning-pattern-default">
                   <v-chip v-if="templateInfo.reason_validation_pattern_from_template && !values.reason_validation_pattern"
                     size="small" label color="primary" variant="text" prepend-icon="mdi-file-cog-outline" class="mb-1">
                     Template default: {{ templateInfo.reason_validation_pattern_default }}
@@ -275,9 +276,10 @@
                       This validation pattern is provided by the model's prompt template{{ templateInfo.template_file ? ' (' + templateInfo.template_file + ')' : '' }} and is currently in effect because you haven't set a custom value. Enter a pattern below to override it.
                     </v-tooltip>
                   </v-chip>
-                  <v-text-field v-model="values.reason_validation_pattern" label="Validation pattern (reasoning start)" hint="Optional. Matches the START of the reasoning tokens. If set and not found in the response (and not prefilled), the model never reasoned and the response is returned as-is instead of failing." :placeholder="templateInfo.reason_validation_pattern_default || ''"></v-text-field>
-                </v-col>
-              </v-row>
+                </div>
+                <v-text-field v-model="values.reason_validation_pattern" label="Validation pattern (reasoning start)" hint="Optional. Matches the START of the reasoning tokens. If set and not found in the response (and not prefilled), the model never reasoned and the response is returned as-is instead of failing." :placeholder="templateInfo.reason_validation_pattern_default || ''"></v-text-field>
+
+              </div>
             </v-col>
           </v-row>
           <v-row v-if="values.reason_enabled && requiresReasoningPattern">
@@ -786,6 +788,33 @@ export default {
 </script>
 
 <style scoped>
+.reasoning-pattern-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 24px;
+}
+.reasoning-pattern-default:nth-child(3) {
+  grid-column: 2;
+  grid-row: 1;
+}
+.reasoning-pattern-fields > :nth-child(2),
+.reasoning-pattern-fields > :nth-child(4) {
+  grid-row: 2;
+  min-width: 0;
+}
+.reasoning-pattern-default {
+  min-width: 0;
+}
+@media (max-width: 959px) {
+  .reasoning-pattern-fields {
+    display: flex;
+    flex-direction: column;
+  }
+  .reasoning-pattern-fields > :nth-child(2) {
+    margin-bottom: 12px;
+  }
+}
+
 .prompt-template-preview {
   white-space: pre-wrap;
   font-family: monospace;

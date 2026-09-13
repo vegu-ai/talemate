@@ -111,6 +111,7 @@ class PromptRequest:
     values: dict = field(default_factory=dict)
     started: float = field(default_factory=time.monotonic)
     failed: bool = False
+    reasoning_patterns: tuple[str, str | None] | None = None
 
 
 class RequestValue:
@@ -519,13 +520,33 @@ class ClientBase:
 
     @property
     def reason_response_pattern(self) -> str:
-        return self.client_config.reason_response_pattern or DEFAULT_REASONING_PATTERN
+        return self.effective_reasoning_patterns()[0]
 
     @property
     def reason_validation_pattern(self) -> str | None:
-        # No default - validation is opt-in. When unset, reasoning is never
-        # treated as "did not happen" based on a start pattern.
-        return self.client_config.reason_validation_pattern
+        return self.effective_reasoning_patterns()[1]
+
+    def effective_reasoning_patterns(self) -> tuple[str, str | None]:
+        context = getattr(self, "_prompt_request", None)
+        request = context.get() if context else None
+        if request is not None and request.reasoning_patterns is not None:
+            return request.reasoning_patterns
+        spec = PromptSpec()
+        if self.Meta().requires_prompt_template and not getattr(
+            self, "api_handles_prompt_template", False
+        ):
+            spec = self.prompt_template_example()[2]
+        return self._resolve_reasoning_patterns(spec)
+
+    def _resolve_reasoning_patterns(self, spec: PromptSpec) -> tuple[str, str | None]:
+        return (
+            self.client_config.reason_response_pattern
+            or spec.reasoning_pattern
+            or DEFAULT_REASONING_PATTERN,
+            self.client_config.reason_validation_pattern
+            or spec.reasoning_validation_pattern
+            or None,
+        )
 
     @property
     def reason_prefill(self) -> str:
@@ -869,31 +890,11 @@ class ClientBase:
             spec=spec,
         )[0]
 
-        self._apply_spec_pattern(
-            spec.reasoning_pattern, "reason_response_pattern", spec
-        )
-        self._apply_spec_pattern(
-            spec.reasoning_validation_pattern, "reason_validation_pattern", spec
-        )
+        request = self._prompt_request.get()
+        if request is not None:
+            request.reasoning_patterns = self._resolve_reasoning_patterns(spec)
 
         return prompt
-
-    def _apply_spec_pattern(
-        self, spec_value: str | None, config_attr: str, spec: PromptSpec
-    ):
-        """
-        Applies a reasoning pattern determined by the prompt template to the
-        client config, overriding the configured value when the template
-        provides a different one.
-        """
-        if spec_value and spec_value != getattr(self.client_config, config_attr):
-            log.info(
-                "reasoning pattern determined from prompt template",
-                attr=config_attr,
-                value=spec_value,
-                spec=spec,
-            )
-            setattr(self.client_config, config_attr, spec_value)
 
     def prompt_template_example(self) -> tuple[str | None, str | None, PromptSpec]:
         if not getattr(self, "model_name", None):
@@ -2154,6 +2155,11 @@ class ClientBase:
             finalized_prompt = self.prompt_template(
                 self.get_system_message(kind), prompt
             ).strip(" ")
+
+            if request is not None and request.reasoning_patterns is None:
+                request.reasoning_patterns = self._resolve_reasoning_patterns(
+                    PromptSpec()
+                )
 
             finalized_prompt = self.finalize(prompt_param, finalized_prompt)
 

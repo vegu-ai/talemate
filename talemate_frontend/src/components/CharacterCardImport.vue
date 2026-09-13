@@ -83,7 +83,7 @@
                   Story mode
                 </v-card-title>
                 <v-card-text>
-                  <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :value="effortForMode" class="mt-2" @apply="effort = $event" />
+                  <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :agents="effortAgents" :value="effortForMode" class="mt-2" @apply="effort = $event" />
                   <CharacterKnowledgeModeComparison
                     :key="knowledgeUiVersion"
                     :perspectives="characterKnowledge"
@@ -532,7 +532,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
 import { DEFAULT_EFFORT } from '@/constants/knowledgeEffort';
-import { effortMode, stopForMode } from '@/utils/knowledgeEffort';
+import { effortMode, globalEffortAgents, stopForMode } from '@/utils/knowledgeEffort';
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
 
 const GENERATION_OPTION_KEYS = [
@@ -850,6 +850,7 @@ export default {
     },
   },
   computed: {
+    effortAgents() { return globalEffortAgents(this.appConfig()); },
     effortMode() { return effortMode(this.characterKnowledge); },
     effortForMode() { return stopForMode(this.effort, this.effortMode); },
     generationPreset: {

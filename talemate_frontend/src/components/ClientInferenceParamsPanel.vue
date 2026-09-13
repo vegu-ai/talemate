@@ -55,7 +55,7 @@
                 class="mb-4"
             ></v-select>
 
-            <InferenceParamsForm narrow collapsible-advanced :preset="draft" @change="scheduleSave" />
+            <InferenceParamsForm :key="JSON.stringify([clientName, groupKey, presetKey])" narrow number-only collapsible-advanced :preset="draft" @change="scheduleSave" />
 
             <v-btn variant="text" size="x-small" color="primary" prepend-icon="mdi-cog" @click="openInSettings">Open in settings</v-btn>
         </v-card-text>

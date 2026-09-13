@@ -499,9 +499,10 @@
     execution, result banners, failure diagnosis and rerunning by reloading.'
 - path: user-guide/clients/presets.md
   title: Inference Configuration
-  summary: Inference preset categories and per-client groups; temperature, top-p/top-k/min-p, penalties, Extra Stopping Strings,
-    XTC, DRY, smoothing and Adaptive-P with backend support. Covers Apply to all/Reset, group assignment and copying, plus
-    the pinned inference parameter panel for automatic saving during play.
+  summary: Inference preset categories, client groups, temperature/top-p/top-k/min-p, penalties, stop strings and advanced
+    XTC/DRY/smoothing/Adaptive-P controls, with client support and Apply to all/Reset. Exact numeric entry uses synchronized
+    sliders plus number fields in settings and number-only pinned controls with autosave; Enter or blur commits valid values,
+    blank/out-of-range/off-step values are rejected, and Escape restores the last valid value.
 - path: user-guide/clients/prompt-templates.md
   title: Prompt Templates
   summary: Select and troubleshoot model-specific prompt templates for local clients, including the yellow Alpaca fallback

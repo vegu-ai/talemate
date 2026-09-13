@@ -134,7 +134,19 @@ Different clients support different subsets of these parameters:
 
 Select a preset from the list on the left to load its parameters into the editor on the right. Adjust the sliders, tabs and checkbox to change the values for that preset.
 
-In the upper right of the editor there are two actions that apply to the preset you currently have selected:
+The editor provides exact numeric entry and actions for copying or resetting the selected preset.
+
+### Exact numeric entry
+
+Every numeric parameter in application settings has a slider and a number field,
+including the advanced sampling tabs. Both edit the same value. Type an exact
+value, such as Top K **20** or Top P **0.95**, then press Enter or leave the field.
+Empty, out-of-range and off-step values show an error and do not change the saved
+parameter; Escape restores the last valid value. Save application settings as
+usual.
+
+The pinned panel uses compact number fields only. Valid entries save automatically
+after Enter or leaving the field, using the same ranges and precision as settings.
 
 ### Apply to all
 

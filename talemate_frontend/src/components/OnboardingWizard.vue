@@ -33,7 +33,7 @@
                     </v-card-title>
                   </v-card-item>
                   <v-card-text class="text-center text-body-medium">
-                    KoboldCPP, Text-Generation-WebUI, llama.cpp, LMStudio, TabbyAPI
+                    llama.cpp, KoboldCPP, Text-Generation-WebUI, LMStudio, TabbyAPI
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
                     <div class="text-body-small text-medium-emphasis">
@@ -771,7 +771,7 @@ export default {
       const options = this.clientPresetOptions;
       if (!options.length) return;
 
-      const preferred = this.clientType === 'remote' ? 'openrouter' : 'koboldcpp';
+      const preferred = this.clientType === 'remote' ? 'openrouter' : 'llamacpp';
       const values = new Set(options.map(o => o.value));
 
       if (!this.selectedClientPreset || !values.has(this.selectedClientPreset)) {
@@ -797,9 +797,11 @@ export default {
       this.step = 1;
     },
     selectClientType(type) {
+      const changed = this.clientType !== type;
       this.clientType = type;
-      // Default selection for Step 2; will be validated once client types are loaded.
-      this.selectedClientPreset = (type === 'remote') ? 'openrouter' : 'koboldcpp';
+      if (changed || !this.selectedClientPreset) {
+        this.selectedClientPreset = (type === 'remote') ? 'openrouter' : 'llamacpp';
+      }
       this.step = 2;
       this.ensureClientTypesLoaded();
       // seeds the step's form from the selected type — with the type list
@@ -848,6 +850,7 @@ export default {
         this.draftClient = null;
         return;
       }
+      if (this.draftClient?.type === this.selectedClientPreset) return;
       this.draftConfig = JSON.parse(JSON.stringify(this.appConfig() || {}));
       const retry = this.applyFailedClient;
       if (retry && retry.type === this.selectedClientPreset) {

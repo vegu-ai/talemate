@@ -317,10 +317,10 @@ export default {
         effortMode() {
             return effortMode(perspectivesEnabled(this.sceneData));
         },
-        // the three knowledge agents in agent_status shape, valued from the
-        // working copy so the slider reads unsaved edits
+        // Include Narrator's briefing dependency when explaining request cost.
+        // Values come from the global working copy, including unsaved edits.
         effortAgents() {
-            return ['conversation', 'summarizer', 'memory']
+            return ['conversation', 'summarizer', 'memory', 'narrator']
                 .filter((name) => this.liveAgents[name])
                 .map((name) => {
                     const effective = this.effectiveActionsFor(name);

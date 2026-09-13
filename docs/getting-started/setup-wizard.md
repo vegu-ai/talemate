@@ -33,9 +33,9 @@ Below the two options, the wizard shows **What Talemate expects from your model*
 
 After selecting your provider type, you will choose a specific client to configure.
 
-For **Hosted API** users, OpenRouter is selected by default. For **Self-hosted** users, KoboldCpp is selected by default.
+For **Hosted API** users, OpenRouter is selected by default. For **Self-hosted** users, llama.cpp is selected by default.
 
-Select your preferred client from the dropdown. The essential settings for that client type — its name, API URL and key, and the model — appear right below the dropdown. Fill them in and click **Add Client** to create the client.
+Select your preferred client from the dropdown. Returning to this step keeps your selected client and edited configuration. The essential settings for that client type — its name, API URL and key, and the model — appear right below the dropdown. Fill them in and click **Add Client** to create the client.
 
 A one-line pointer above the settings links to the [Model expectations](model-expectations.md) page. A new client starts with a Context Length of 16384 tokens. The wizard does not show that setting; the editor on **Settings → Connections → Clients** shows the value and warns when it sits below the floor.
 

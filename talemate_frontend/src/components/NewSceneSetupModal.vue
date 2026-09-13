@@ -66,7 +66,7 @@
           </v-col>
         </v-row>
 
-        <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :agents="getAgents()" :value="effortForMode" class="mt-4" @apply="effort = $event" />
+        <KnowledgeEffortSlider ref="effortSlider" :mode="effortMode" :agents="effortAgents" :value="effortForMode" class="mt-4" @apply="effort = $event" />
         <CharacterKnowledgeModeComparison
           :key="knowledgeUiVersion"
           :perspectives="characterKnowledge"
@@ -101,7 +101,7 @@
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
 import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
 import { DEFAULT_EFFORT } from '@/constants/knowledgeEffort';
-import { effortMode, stopForMode } from '@/utils/knowledgeEffort';
+import { effortMode, globalEffortAgents, stopForMode } from '@/utils/knowledgeEffort';
 
 export default {
   name: 'NewSceneSetupModal',
@@ -117,7 +117,7 @@ export default {
     },
   },
   emits: ['update:modelValue', 'create'],
-  inject: ['openWorldStateManager', 'getAgents'],
+  inject: ['openWorldStateManager', 'appConfig'],
   data() {
     return {
       sceneName: '',
@@ -143,6 +143,9 @@ export default {
     },
   },
   computed: {
+    effortAgents() {
+      return globalEffortAgents(this.appConfig());
+    },
     effortMode() {
       return effortMode(this.characterKnowledge);
     },

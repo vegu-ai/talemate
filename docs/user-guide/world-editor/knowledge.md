@@ -44,7 +44,7 @@ Every story runs in one of two character knowledge modes. You choose when you cr
 
 ### Effort presets
 
-The knowledge settings of three agents decide how much work each line costs. The **Character knowledge effort** slider sets them together: drag it in the knowledge hub's **Thoroughness** section, in the Create New Story or character-card import dialog next to the mode choice, or in the Conversation agent's **Character Knowledge** settings. Each stop states its extra requests and what it asks of your model; the model lines come from the [Model expectations](/talemate/getting-started/model-expectations/) page. A stop writes the same settings the individual switches do; change one afterwards and the slider shows the stop the settings now match, or **Custom** when they match none, instead of overwriting your choice. A scene created without the dialog reads whatever its agents hold: with the shipped settings a Standard scene sits on Light and a Character perspectives scene on Balanced. Switching the story mode re-applies the current stop from the other table; a Standard scene on Ultra lands on Thorough, the top stop Character perspectives has.
+The knowledge settings of three agents decide how much work each line costs. The **Character knowledge effort** slider sets them together: drag it in the knowledge hub's **Thoroughness** section, in the Create New Story or character-card import dialog next to the mode choice, or in the Conversation agent's **Character Knowledge** settings. The explanation separates **Requests**, conditional **Retries**, and potential **Benefit**, with a brief model caveat. It follows effective settings and scene overrides, including Custom combinations. A stop writes the same settings the individual switches do; change one afterwards and the slider shows the stop the settings now match, or **Custom** when they match none, instead of overwriting your choice. A scene created without the dialog reads whatever its agents hold: with the shipped settings a Standard scene sits on Light and a Character perspectives scene on Balanced. Switching the story mode re-applies the current stop from the other table; a Standard scene on Ultra lands on Thorough, the top stop Character perspectives has.
 
 Selections in **Create New Story** and **Character Card Import** are saved as [scene overrides](/talemate/user-guide/agents/scene-overrides/), including values already equal to your global defaults. Both dialogs start at **Balanced**. The settings apply before the new story starts its knowledge work; global agent settings remain unchanged. The card import slider controls ongoing knowledge effort independently of the import's **AI Generation** options. Save a new blank story normally to keep its scene file and settings link. In the knowledge hub, **Use global settings** clears the selected group or the whole hub's overrides and restores inheritance.
 
@@ -56,8 +56,8 @@ Selections in **Create New Story** and **Character Card Import** are saved as [s
 | **Minimal** | Character Knowledge on, Limit to character knowledge on; everything else off | None | Works with any model. |
 | **Light** | Minimal + Remind about unknown facts, Topic knowledge overview, Memory Topics, Match known facts, Extract facts | None | Works with any model. |
 | **Balanced** (the Create New Story default) | Light + Track learning from dialogue | One after a character message when a listener has unknown facts | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
-| **Thorough** | Balanced + Refine memories with AI + Brief characters on entry | Two per applicable line, plus one per non-player character activation; a combined Offscreen Life fallback can add one | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
-| **Ultra** | Thorough with Unknown-fact reminders 10 and Recent facts to check 100 | Two per applicable line, plus one per non-player character activation; a combined Offscreen Life fallback can add one | Current frontier / reasoning model recommended; expect frequent retries on anything less. |
+| **Thorough** | Balanced + Refine memories with AI + Brief characters on entry | One after applicable dialogue; one before a generated reply with uncached memories; one per eligible NPC briefing. Offscreen account fallback may add one | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
+| **Ultra** | Thorough with Unknown-fact reminders 10 and Recent facts to check 100 | One after applicable dialogue; one before a generated reply with uncached memories; one per eligible NPC briefing. Offscreen account fallback may add one | Current frontier / reasoning model recommended; expect frequent retries on anything less. |
 
 **Off** is how Talemate worked before character knowledge: every character sees the full scene history, and nothing costs a request. It is on the Standard track only. Character perspectives builds each character's views whatever the Character Knowledge switch holds, so an Off stop there would still leave the analysis after each passage and the character filtering running, and it could not deliver the pre-feature behaviour; carrying Off across to Character perspectives lands on Minimal instead.
 
@@ -69,6 +69,22 @@ Selections in **Create New Story** and **Character Card Import** are saved as [s
 | **Light** | Minimal + Memory Topics | The analysis | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
 | **Balanced** (the Create New Story default) | Light + Extract facts + Automatically repair analysis | The analysis, plus a repair when a view is invalid | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
 | **Thorough** | Balanced + Refine memories with AI + Brief characters on entry | The analysis, repairs, one before each reply with memories, and one per non-player character activation; a combined Offscreen Life fallback can add one | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
+
+The counts describe normal requests, excluding provider/network retries. Dialogue
+learning adds one request when listeners have unknown recent facts; with
+**Establish facts from dialogue** enabled, the same request runs after every
+character line, including player lines. Memory refinement skips empty retrievals
+and reuses cached results. Entry briefings normally cost one request per eligible
+NPC activation, sharing that request with Offscreen Life when both apply; an
+unreadable combined offscreen account can add one fallback request. Scene loading
+does not generate entry briefings.
+
+Character perspectives requires one analysis per eligible passage with an audience,
+covering the requested characters together. Missing or invalid views can add one
+automatic repair request when enabled. It also builds summaries for distinct
+character views; their request count depends on the views and summary chunks.
+Extracting facts alongside a summary adds no separate request. These costs have
+different triggers and are not a single per-dialogue total.
 
 ### What an existing scene loads with
 

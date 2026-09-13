@@ -118,6 +118,22 @@ export function creationEffortSettings(mode, stop) {
     return agents;
 }
 
+// New stories inherit global values outside the selected row, including keys
+// hidden by the loaded scene's mode. Persisted fields carry values, not types.
+export function globalEffortAgents(config) {
+    return Object.entries(config?.agents || {}).map(([name, agent]) => ({
+        name,
+        actions: Object.fromEntries(Object.entries(agent.actions || {}).map(([key, action]) => [key, {
+            ...action,
+            can_be_disabled: true,
+            config: Object.fromEntries(Object.entries(action.config || {}).map(([key, field]) => [key, {
+                ...field,
+                type: typeof field.value === 'boolean' ? 'bool' : 'number',
+            }])),
+        }])),
+    }));
+}
+
 // Whether an explicit selection may pin this key as a scene override: the
 // field has to be declared overridable, and a container switch has to be one
 // the agent lets a scene disable at all.
@@ -177,4 +193,52 @@ export function queueEffortAcrossSwitch(agents, toPerspectives, queue) {
     const carried = stopForMode(stop, target);
     queue(carried, target);
     return carried;
+}
+
+export function effortExplanation(mode, stop, agents = [], preview = false) {
+    const table = preview ? preset(mode, stop) : {};
+    const value = (key) => Object.hasOwn(table, key) ? table[key] : effortValueOf(agents, key);
+    const ck = 'conversation.character_knowledge';
+    const enabled = value(`${ck}.enabled`) === true;
+    const perspectives = mode === 'perception';
+    const memory = enabled && value(`${ck}.memory_pass`) === true;
+    const learning = enabled && !perspectives && value(`${ck}.ledger`) === true;
+    const entry = enabled && value(`${ck}.brief_characters_on_entry`) === true
+        && value(`${ck}.character_entry_turns`) !== 0;
+    const facts = learning && value(`${ck}.establish_facts`) === true;
+    const repair = perspectives && value('summarizer.perceptions.automatic_repair') === true;
+    const requests = [];
+    const retries = [];
+    const benefits = [];
+    if (perspectives) {
+        requests.push('1 per passage with an audience; summary requests vary by distinct character views and chunks');
+        benefits.push('keep each character’s view of events consistent');
+    } else if (enabled && value(`${ck}.perspective_filter`)) {
+        benefits.push('keep characters within what they know');
+    }
+    if (learning) {
+        requests.push(facts ? '1 after every character line (player included)'
+            : '1 after a character line when listeners have unknown recent facts');
+        benefits.push(facts ? 'remember facts and who learned them' : 'track what listeners learn');
+    }
+    if (memory) {
+        requests.push('1 before a generated reply with uncached retrieved memories');
+        benefits.push('focus recalled memories');
+    }
+    if (entry) {
+        requests.push('1 per NPC entry briefing');
+        benefits.push('orient arriving characters');
+        if (value('narrator.offscreen_life.enabled') !== false) {
+            retries.push('+1 if a combined offscreen account is unreadable');
+        }
+    }
+    if (repair) retries.push('+1 for missing/invalid character views');
+    if (!benefits.length && value('memory.topics.enabled')) benefits.push('organize recalled facts by topic');
+    if (!benefits.length && value('summarizer.archive.extract_facts')) benefits.push('retain facts alongside summaries');
+    return {
+        cost: requests.length ? requests.join('; ') + '.' : 'No extra requests.',
+        retries: retries.length ? retries.join('; ') + '.' : '',
+        benefit: benefits.length ? 'May help ' + benefits.join(', ') + '.' : 'No character-knowledge assistance.',
+        caveat: perspectives || learning || memory || entry ? 'Reliable structured output recommended.' : '',
+    };
 }

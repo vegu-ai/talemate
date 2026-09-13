@@ -38,6 +38,16 @@ When enabled, a horizontal bar appears above the scene tools showing which agent
 
 This setting is enabled by default.
 
+##### Scene utility bar
+
+![App settings - Game - Scene utility bar](/talemate/img/0.40.0/app-settings-scene-utility-bar.png)
+
+**Show scene utility bar** keeps the scene title and your chosen information items in a bar at the top of the scene area; see [Scene Utility Bar](/talemate/user-guide/scene-utility-bar/). The bar's own close button turns this setting off as well, so this is where you turn the bar back on.
+
+**Left of the title** and **Right of the title** choose which items each side of the bar shows. Pick any number of items per side, or none. The available items are **History stats** (messages and summary layers) and **Summarizer** (dialogue tokens gathered against the summarizer's threshold, with a marker when a summary is due). Your choices are kept while the bar is hidden.
+
+The bar is enabled by default, with History stats on the left and Summarizer on the right.
+
 ##### Release GPU cache on scene load
 
 When enabled, idle GPU memory reserved by local CUDA embeddings or TTS is handed back to the driver when switching scenes, so it doesn't pile up and eventually leave too little VRAM to load another scene. Disable only if you have VRAM to spare and would rather keep it reserved.

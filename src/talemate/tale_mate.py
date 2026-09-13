@@ -54,7 +54,7 @@ from talemate.game.engine.nodes.layout import load_graph
 from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import GameStatePathSettings, ScenePerspectives
-from talemate.history import emit_archive_add, ArchiveEntry
+from talemate.history import emit_archive_add, ArchiveEntry, count_summary_layers
 from talemate.knowledge.dialogue_facts import prune_invalid_dialogue_facts
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.memory import invalidate_memory_audiences
@@ -1561,7 +1561,10 @@ class Scene(Emitter):
 
                 if isinstance(message, TimePassageMessage):
                     self.sync_time()
-                    self.emit_status()
+                # the frontend drops the message on remove_message; the status
+                # frame is what carries the new history counts, and an auto
+                # save on a never-saved scene emits none of its own
+                self.emit_status()
 
                 break
 
@@ -1571,6 +1574,13 @@ class Scene(Emitter):
         """
 
         return self.filename and not self.immutable_save
+
+    def history_stats(self) -> dict:
+        return {
+            "message_count": len(self.history),
+            "summary_layers": count_summary_layers(self),
+            "summarization": get_agent("summarizer").archive_status(),
+        }
 
     def _do_emit_status(self, restored: bool = False):
         """Internal method that performs the actual emission"""
@@ -1654,6 +1664,7 @@ class Scene(Emitter):
                 "game_state_knob_paths": self.game_state_knob_paths,
                 "game_state_path_settings": self.serialized_game_state_path_settings,
                 "playthrough_progress": self.playthrough_progress,
+                "history_stats": self.history_stats(),
             },
         )
 

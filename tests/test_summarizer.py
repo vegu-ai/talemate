@@ -179,6 +179,155 @@ class TestEstimatedEntryCount:
         assert summarizer.estimated_entry_count == 2
 
 
+class TestArchiveStatus:
+    """Status and archive selection share one span rule."""
+
+    def _set_threshold(self, summarizer, value):
+        summarizer.actions["archive"].config["threshold"].value = value
+
+    def test_disabled_archive_reports_off(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100)
+        # the shipped action cannot be disabled; the branch mirrors the first
+        # check in build_archive for the day the declaration changes
+        summarizer.actions["archive"].can_be_disabled = True
+        summarizer.actions["archive"].enabled = False
+        scene.history = [make_character_message("a" * 60)]
+
+        assert summarizer.archive_status() == {
+            "enabled": False,
+            "threshold": 100,
+            "pending_tokens": None,
+            "remaining_tokens": None,
+            "due": False,
+            "due_reason": None,
+        }
+
+    def test_newest_message_is_not_pending(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100)
+        # "Alice: <10 x>" is 17 chars = 17 tokens under the char counter
+        scene.history = [
+            make_character_message("x" * 10),
+            make_character_message("y" * 10),
+            make_character_message("z" * 10),
+        ]
+
+        status = summarizer.archive_status()
+        assert status["enabled"] is True
+        assert status["due"] is False
+        assert status["pending_tokens"] == 34
+        # the cutoff is strictly greater than the threshold
+        assert status["remaining_tokens"] == 67
+
+    @pytest.mark.parametrize(
+        ("threshold", "due", "remaining"),
+        [
+            (35, False, 2),
+            (34, False, 1),
+            (33, True, 0),
+        ],
+    )
+    def test_due_follows_the_collector_cutoff_at_the_boundary(
+        self, summarizer_scene, threshold, due, remaining
+    ):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, threshold)
+        # two counted messages of 17 tokens each; the third is the newest
+        scene.history = [
+            make_character_message("x" * 10),
+            make_character_message("y" * 10),
+            make_character_message("z" * 10),
+        ]
+
+        span = summarizer.collect_archive_span(scene)
+        status = summarizer.archive_status()
+        assert (span.end is not None) is due
+        assert status["pending_tokens"] == 34
+        assert status["due"] is due
+        assert status["due_reason"] == ("threshold" if due else None)
+        assert status["remaining_tokens"] == remaining
+
+    def test_time_passage_cut_reports_zero_remaining(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100000)
+        scene.history = [
+            make_character_message("first"),
+            make_character_message("second"),
+            TimePassageMessage(ts=300, message="Five minutes pass"),
+            make_character_message("trailing"),
+            make_character_message("newest"),
+        ]
+
+        span = summarizer.collect_archive_span(scene)
+        assert span.time_passage_termination is True
+        assert span.end == 1
+        status = summarizer.archive_status()
+        assert status["due"] is True
+        assert status["due_reason"] == "time_passage"
+        # the cut lands below the threshold
+        assert status["pending_tokens"] == 25
+        assert status["remaining_tokens"] == 0
+
+    def test_presence_change_cut_names_its_reason(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100000)
+        with_alice = make_character_message("first")
+        with_alice.present = ["Alice"]
+        with_bob = make_character_message("second")
+        with_bob.present = ["Bob"]
+        scene.history = [with_alice, with_bob, make_character_message("newest")]
+
+        span = summarizer.collect_archive_span(scene)
+        assert span.presence_termination is True
+        status = summarizer.archive_status()
+        assert status["due"] is True
+        assert status["due_reason"] == "presence"
+        assert status["pending_tokens"] == len(str(with_alice))
+
+    def test_skipped_message_types_do_not_count(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100)
+        scene.history = [
+            DirectorMessage(message="cue!", source="ai"),
+            make_character_message("x" * 10),
+            make_character_message("newest"),
+        ]
+
+        span = summarizer.collect_archive_span(scene)
+        assert span.start == 1
+        assert span.tokens == 17
+        assert summarizer.archive_status()["pending_tokens"] == 17
+
+    def test_resumes_after_the_last_archive_end(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100)
+        scene.archived_history = [make_archived(text="prior", start=0, end=1, ts=60)]
+        scene.history = [
+            make_character_message("a" * 10),
+            make_character_message("b" * 10),
+            make_character_message("c" * 10),
+            make_character_message("newest"),
+        ]
+
+        span = summarizer.collect_archive_span(scene)
+        assert span.start == 2
+        assert span.ts == 60
+        assert summarizer.archive_status()["pending_tokens"] == 17
+
+    def test_static_archive_entry_starts_at_zero(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        self._set_threshold(summarizer, 100)
+        scene.archived_history = [make_archived(text="backstory")]
+        scene.history = [
+            make_character_message("a" * 10),
+            make_character_message("newest"),
+        ]
+
+        assert summarizer.collect_archive_span(scene).start == 0
+        assert summarizer.archive_status()["pending_tokens"] == 17
+
+
 # ---------------------------------------------------------------------------
 # clean_result
 # ---------------------------------------------------------------------------

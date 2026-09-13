@@ -312,6 +312,17 @@ def compute_layer_stats(scene: "Scene", layer: int) -> dict:
     }
 
 
+def count_summary_layers(scene: "Scene") -> int:
+    """
+    Populated summary layers, numbered the way `compute_layer_stats` numbers
+    them: the base archive counts once it holds a summarized entry, then each
+    layered history layer that holds entries.
+    """
+    base = any(entry.get("end") is not None for entry in scene.archived_history)
+    layered = sum(1 for layer in scene.layered_history or [] if layer)
+    return int(base) + layered
+
+
 def pop_history(
     history: list[SceneMessage],
     typ: str,

@@ -1,5 +1,6 @@
 0.40.0.dev:
   features:
+  - "Scene Utility Bar: A compact bar at the top of the scene area stays in view while the scene scrolls, showing the scene title with configurable information items on either side. The first items are History stats (messages and summary layers) and Summarizer (tokens gathered against the threshold, a due marker that names its reason, and unavailable states). Hover over the bar for a close button; Settings > Game > General turns the bar on or off and picks the items for each side. On by default with History stats left and Summarizer right; hidden during a playthrough. With the title in the bar, the scene's tab in the main navigation now reads Story instead of the scene title."
   - "Help chat: Added permission-gated inference preset editing with exact group-key selection, and focused configuration reads with complete paging that preserves values across key reordering."
   - "Voice: Added opt-in Chatterbox Turbo with voice cloning, supported sampling controls and native sound tags."
   - "Scene Creation: New Story and character-card import now keep selected knowledge effort in scene overrides without changing global agent settings. Card import includes the mode-specific effort slider."

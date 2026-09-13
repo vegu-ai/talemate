@@ -12,7 +12,7 @@ from unittest.mock import patch
 import talemate.util as util
 from talemate.context import ActiveScene
 from talemate.exceptions import GenerationCancelled
-from talemate.history import ArchiveEntry
+from talemate.history import count_summary_layers, ArchiveEntry
 from talemate.agents.summarize.layered_history import SummaryLongerThanOriginalError
 
 from conftest import MockScene, bootstrap_scene
@@ -317,6 +317,27 @@ class TestBaseLayerConstruction:
 
 class TestMultiLayerConstruction:
     """Tests for layer 0 -> layer 1 -> layer 2."""
+
+    async def test_successful_update_publishes_scene_status(
+        self, scene_with_summarizer
+    ):
+        """A layered-history write must refresh the live counts on its own,
+        before the next pushed message would."""
+        scene, summarizer = scene_with_summarizer
+        scene.archived_history = make_archived_entries(6, chars_per_entry=55)
+        scene.active = True
+
+        with patch("talemate.tale_mate.emit") as scene_emit:
+            with patch.object(
+                scene, "emit_status", wraps=scene._do_emit_status
+            ) as emit_status:
+                await summarizer.summarize_to_layered_history()
+
+        emit_status.assert_called()
+        statuses = [c for c in scene_emit.call_args_list if c.args[0] == "scene_status"]
+        assert statuses
+        summary_layers = statuses[-1].kwargs["data"]["history_stats"]["summary_layers"]
+        assert summary_layers == count_summary_layers(scene) >= 2
 
     async def test_layer1_created_from_layer0(self, scene_with_summarizer):
         """Enough layer-0 data triggers layer 1 creation."""

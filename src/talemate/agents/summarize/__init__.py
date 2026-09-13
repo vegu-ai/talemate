@@ -3,6 +3,7 @@ from __future__ import annotations
 from talemate.knowledge.processing import evidence_writer
 
 import re
+from dataclasses import dataclass
 
 import structlog
 from typing import TYPE_CHECKING, Literal
@@ -92,6 +93,19 @@ class SummarizeEmission(AgentTemplateEmission):
     generation_options: GenerationOptions | None = None
     summarization_history: list[str] | None = None
     summarization_type: Literal["dialogue", "events"] = "dialogue"
+
+
+@dataclass
+class ArchiveSpan:
+    start: int
+    end: int | None
+    tokens: int
+    threshold: int
+    ts: int
+    dialogue_entries: list
+    recent_entry: dict | None
+    time_passage_termination: bool
+    presence_termination: bool
 
 
 @register()
@@ -319,32 +333,14 @@ class SummarizeAgent(
 
     # SUMMARIZE
 
-    @set_processing
-    @evidence_writer
-    async def build_archive(
-        self,
-        scene,
-        generation_options: GenerationOptions | None = None,
-        *,
-        notify: bool = False,
-    ):
-        end = None
-        enabled = self.archive_enabled
-
-        log.debug("build_archive", enabled=enabled)
-
-        emission = BuildArchiveEmission(
-            agent=self,
-            generation_options=generation_options,
-        )
-
-        await talemate.emit.async_signals.get(
-            "agent.summarization.before_build_archive"
-        ).send(emission)
-
-        if not enabled:
-            return
-
+    def collect_archive_span(self, scene) -> ArchiveSpan:
+        """
+        Walk the unarchived history the way the next archive would consume
+        it: from the entry after the last archive end, skipping messages that
+        are not dialogue, ignoring the newest message (the user may still
+        regenerate it), and stopping at a time passage, a presence change or
+        the token threshold. `end` stays None while nothing is due.
+        """
         if not scene.archived_history:
             start = 0
             recent_entry = None
@@ -357,23 +353,7 @@ class SummarizeAgent(
             else:
                 start = recent_entry.get("end", 0) + 1
 
-        # if there is a recent entry we also collect the 3 most recentries
-        # as extra context
-
-        num_previous = self.archive_include_previous
-        if recent_entry and num_previous > 0:
-            if self.layered_history_available:
-                extra_context = self.compile_layered_history(include_base_layer=True)[
-                    -num_previous:
-                ]
-            else:
-                extra_context = [
-                    entry["text"] for entry in scene.archived_history[-num_previous:]
-                ]
-
-        else:
-            extra_context = None
-
+        end = None
         tokens = 0
         dialogue_entries = []
         ts = 0
@@ -392,12 +372,8 @@ class SummarizeAgent(
             # preserves rather than inventing a timestamp for
             ts = recent_entry.get("ts") or 0
 
-        # we ignore the most recent entry, as the user may still chose to
-        # regenerate it
         for i in range(start, max(start, len(scene.history) - 1)):
             dialogue = scene.history[i]
-
-            # log.debug("build_archive", idx=i, content=str(dialogue)[:64]+"...")
 
             if isinstance(
                 dialogue,
@@ -438,13 +414,116 @@ class SummarizeAgent(
 
             tokens += util.count_tokens(dialogue)
             dialogue_entries.append(dialogue)
-            if tokens > token_threshold:  #
+            if tokens > token_threshold:
                 end = i
                 break
 
+        return ArchiveSpan(
+            start=start,
+            end=end,
+            tokens=tokens,
+            threshold=token_threshold,
+            ts=ts,
+            dialogue_entries=dialogue_entries,
+            recent_entry=recent_entry,
+            time_passage_termination=time_passage_termination,
+            presence_termination=presence_termination,
+        )
+
+    def archive_status(self) -> dict:
+        """
+        Where the next archive stands, for display. `due` is the collector's
+        own cutoff state (a span cut by the threshold, a time passage or a
+        presence change); `remaining_tokens` is how many more tokens take the
+        gathered dialogue past the threshold, since the cutoff is strictly
+        greater than.
+        """
+        threshold = self.archive_threshold
+        if not self.archive_enabled:
+            return {
+                "enabled": False,
+                "threshold": threshold,
+                "pending_tokens": None,
+                "remaining_tokens": None,
+                "due": False,
+                "due_reason": None,
+            }
+        span = self.collect_archive_span(self.scene)
+        due = span.end is not None
+        if span.time_passage_termination:
+            due_reason = "time_passage"
+        elif span.presence_termination:
+            due_reason = "presence"
+        elif due:
+            due_reason = "threshold"
+        else:
+            due_reason = None
+        return {
+            "enabled": True,
+            "threshold": threshold,
+            "pending_tokens": span.tokens,
+            "remaining_tokens": 0 if due else threshold - span.tokens + 1,
+            "due": due,
+            "due_reason": due_reason,
+        }
+
+    @set_processing
+    @evidence_writer
+    async def build_archive(
+        self,
+        scene,
+        generation_options: GenerationOptions | None = None,
+        *,
+        notify: bool = False,
+    ):
+        end = None
+        enabled = self.archive_enabled
+
+        log.debug("build_archive", enabled=enabled)
+
+        emission = BuildArchiveEmission(
+            agent=self,
+            generation_options=generation_options,
+        )
+
+        await talemate.emit.async_signals.get(
+            "agent.summarization.before_build_archive"
+        ).send(emission)
+
+        if not enabled:
+            return
+
+        span = self.collect_archive_span(scene)
+        start = span.start
+        end = span.end
+        ts = span.ts
+        dialogue_entries = span.dialogue_entries
+        time_passage_termination = span.time_passage_termination
+        presence_termination = span.presence_termination
+        recent_entry = span.recent_entry
+
+        # if there is a recent entry we also collect the 3 most recentries
+        # as extra context
+
+        num_previous = self.archive_include_previous
+        if recent_entry and num_previous > 0:
+            if self.layered_history_available:
+                extra_context = self.compile_layered_history(include_base_layer=True)[
+                    -num_previous:
+                ]
+            else:
+                extra_context = [
+                    entry["text"] for entry in scene.archived_history[-num_previous:]
+                ]
+
+        else:
+            extra_context = None
+
         if end is None:
             # nothing to archive yet
-            log.debug("build_archive", token_threshold=token_threshold, tokens=tokens)
+            log.debug(
+                "build_archive", token_threshold=span.threshold, tokens=span.tokens
+            )
             return
 
         log.debug(

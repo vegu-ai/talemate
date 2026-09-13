@@ -669,6 +669,7 @@ class LayeredHistoryMixin:
                 has_been_updated = True
             if has_been_updated:
                 emit("status", status="success", message="Layered history updated.")
+                self.scene.emit_status()
         except SummaryLongerThanOriginalError as exc:
             log.error("summarize_to_layered_history", error=exc, layer="subsequent")
             emit("status", status="error", message="Layered history update failed.")

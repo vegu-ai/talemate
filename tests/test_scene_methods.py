@@ -1175,10 +1175,12 @@ class TestEditMessage:
 
 
 class TestDeleteMessage:
-    def test_delete_removes_matching_message(self, real_scene):
+    @pytest.mark.asyncio
+    async def test_delete_removes_matching_message(self, real_scene):
         a = _char_msg("a")
         b = _char_msg("b")
         real_scene.history = [a, b]
+        # every deletion emits scene status, which needs a running event loop
         real_scene.delete_message(a.id)
         assert real_scene.history == [b]
 

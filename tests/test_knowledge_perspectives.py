@@ -200,7 +200,7 @@ def test_identical_text_and_changelog_revision_do_not_invalidate(scene, notifica
     assert notifications == []
 
 
-def test_disclosures_have_independent_content_order_and_provenance(scene):
+async def test_disclosures_have_independent_content_order_and_provenance(scene):
     scene.ts = 456
     evidence = source_reference(scene, "summary", "summary-1")
     disclosure = add_disclosure(

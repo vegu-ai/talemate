@@ -256,10 +256,18 @@ class WorldState(pydantic.BaseModel):
     templates: WorldStateTemplates = WorldStateTemplates()
 
 
+class SceneUtilityBar(pydantic.BaseModel):
+    enabled: bool = True
+    # item ids are opaque; preserve unknown values
+    slot_a: list[str] = pydantic.Field(default_factory=lambda: ["history_stats"])
+    slot_b: list[str] = pydantic.Field(default_factory=lambda: ["summarizer"])
+
+
 class Game(pydantic.BaseModel):
     default_player_character: GamePlayerCharacter = GamePlayerCharacter()
     general: General = General()
     world_state: WorldState = WorldState()
+    scene_utility_bar: SceneUtilityBar = SceneUtilityBar()
 
     model_config = ConfigDict(extra="ignore")
 

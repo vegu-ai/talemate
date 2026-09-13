@@ -20,6 +20,19 @@
         </v-col>
     </v-row>
     <v-row>
+        <v-col cols="12" data-setting-anchor="scene_utility_bar">
+            <v-checkbox color="primary" v-model="config.game.scene_utility_bar.enabled" label="Show scene utility bar" messages="Keep the scene title and your chosen information items in a bar at the top of the scene area. The bar's own close button turns this off as well."></v-checkbox>
+        </v-col>
+    </v-row>
+    <v-row>
+        <v-col cols="6" data-setting-anchor="scene_utility_bar_slot_a">
+            <v-select v-model="config.game.scene_utility_bar.slot_a" :items="utilityItems" :item-props="utilityItemProps" label="Left of the title" multiple chips closable-chips messages="Information items shown left of the scene title."></v-select>
+        </v-col>
+        <v-col cols="6" data-setting-anchor="scene_utility_bar_slot_b">
+            <v-select v-model="config.game.scene_utility_bar.slot_b" :items="utilityItems" :item-props="utilityItemProps" label="Right of the title" multiple chips closable-chips messages="Information items shown right of the scene title."></v-select>
+        </v-col>
+    </v-row>
+    <v-row>
         <v-col cols="12" data-setting-anchor="release_gpu_cache_on_scene_load">
             <v-checkbox color="primary" v-model="config.game.general.release_gpu_cache_on_scene_load" label="Release GPU cache on scene load" messages="Hand idle GPU memory reserved by local CUDA embeddings/TTS back to the driver when switching scenes, so it doesn't pile up and eventually leave too little VRAM to load another scene. Disable only if you have VRAM to spare and would rather keep it reserved."></v-checkbox>
         </v-col>
@@ -27,10 +40,22 @@
 </template>
 
 <script>
+import { SCENE_UTILITY_ITEMS } from '@/utils/sceneUtilityItems.js';
+
 export default {
     name: 'AppSettingsGameplay',
     props: {
         config: Object,
+    },
+    data() {
+        return {
+            utilityItems: SCENE_UTILITY_ITEMS,
+        };
+    },
+    methods: {
+        utilityItemProps(item) {
+            return { title: item.label, subtitle: item.description, value: item.id };
+        },
     },
 }
 </script>

@@ -2,6 +2,68 @@
 
 Local zero shot voice cloning from .wav files.
 
+## Chatterbox Turbo
+
+**Chatterbox Turbo (Local)** is a separate, opt-in API in the Voice agent settings.
+Enable it and save, then select a `chatterbox_turbo` voice in the Voice Library.
+Standard Chatterbox keeps its existing settings and voices. The seven bundled
+references are also available as independent Turbo voices; uploaded Turbo voices
+are stored separately.
+
+Turbo generates English speech. Its reference WAV must be **longer than five
+seconds** and should contain clear speech from one speaker. Use a clean 6–15
+second recording. The voice test reports unreadable or too-short references before
+loading the model.
+
+Turbo voice parameters are:
+
+| Parameter | Default | Effect |
+| --- | --- | --- |
+| Temperature | 0.8 | Sampling randomness. |
+| Top K | 1000 | Limits candidate speech tokens; 0 disables this filter. |
+| Top P | 0.95 | Nucleus sampling probability. |
+| Repetition penalty | 1.2 | Discourages repeated speech tokens. |
+| Normalize reference loudness | On | Normalizes the reference before voice conditioning. |
+
+CFG/Pace, exaggeration and min-p do not affect Turbo. They are not shown for
+Turbo voices, and stale copies in saved voice parameters are ignored during Turbo
+generation. Per-voice model overrides are unavailable; choose the provider to
+select standard or Turbo.
+
+### Audio tags
+
+Turbo supports the native sound tags `[clear throat]`, `[sigh]`, `[shush]`,
+`[cough]`, `[groan]`, `[sniff]`, `[gasp]`, `[chuckle]` and `[laugh]`.
+For example: `That was a surprise! [laugh] Let's try again.` These tags can be
+tested directly in the Voice Library without an LLM request. Native tag spans,
+including `[clear throat]`, remain intact across scene text chunks. For scene text,
+bracket visibility settings still apply before voice generation.
+
+The existing **Audio tags** setting optionally asks the Summarizer to insert
+tags. It remains off by default. For Turbo, that request is limited to the sound
+tags above and unsupported newly inserted tags are removed. Standard Chatterbox
+does not opt into automatic tags. Enabling Turbo alone makes no LLM requests.
+
+### Downloads and switching
+
+The first Turbo generation downloads its own model and tokenizer assets, about
+4 GB with the current upstream loader. This is separate from standard Chatterbox.
+Keep enough disk space for both if you use both providers.
+
+Standard and Turbo share one loaded model slot. Switching provider or device
+releases the old model and loads the selected one; alternating them between
+characters therefore adds load latency. References and normalization are applied
+afresh for each chunk, so changing voices or replacing a reference file cannot
+reuse an earlier voice's conditioning. Cancelling playback lets already-running
+local synthesis finish before another Chatterbox request starts. Canceled requests
+that are still waiting for the model slot are skipped before loading or synthesis.
+
+Both providers return a complete waveform for each text chunk. Turbo does not
+stream partially generated audio. Speed and memory use depend on the device,
+text, reference and settings; the Turbo name is not a promised speed multiplier.
+
+## Standard Chatterbox settings
+
 ![Chatterbox API settings](/talemate/img/0.40.0/chatterbox-api-settings.png)
 
 ##### Device

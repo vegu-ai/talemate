@@ -8,6 +8,8 @@ into dialogue text for TTS providers that support inline vocal markers.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+import json
+import re
 
 import structlog
 
@@ -26,8 +28,7 @@ class AudioTagsMixin:
 
     Audio tags are inline markers like [laughing] or [whispering] placed within
     spoken dialogue. An LLM analyses the dialogue and injects tags at natural
-    points. Only providers that explicitly support audio tags (currently
-    ElevenLabs v3) are eligible.
+    points. Only providers that explicitly support audio tags are eligible.
     """
 
     @classmethod
@@ -118,7 +119,7 @@ class AudioTagsMixin:
         if not eligible_chunks:
             return
 
-        # Determine the tag format from the first eligible provider
+        # Legacy fallback for callers/templates; each entry carries its own format.
         tag_format = self.get_audio_tag_format(eligible_chunks[0][1].api)
 
         # Build context for the LLM: all chunks for context,
@@ -126,6 +127,7 @@ class AudioTagsMixin:
         chunk_entries = []
         for i, chunk in enumerate(chunks):
             is_eligible = any(idx == i for idx, _ in eligible_chunks)
+            supported_tags = getattr(self, f"{chunk.api}_supported_audio_tags", None)
             chunk_entries.append(
                 {
                     "index": i,
@@ -133,11 +135,14 @@ class AudioTagsMixin:
                     "type": chunk.type,
                     "character_name": chunk.character_name,
                     "eligible": is_eligible,
+                    "tag_format": self.get_audio_tag_format(chunk.api),
+                    "allowed_tags": supported_tags(model=chunk.model)
+                    if is_eligible and supported_tags
+                    else None,
                 }
             )
 
-        # Cache key based on eligible chunk texts
-        cache_key = "|".join(chunk.text[0] for _, chunk in eligible_chunks)
+        cache_key = json.dumps([tag_format, chunk_entries], sort_keys=True)
 
         tagged_chunks = await self.get_audio_tags_cache(cache_key)
 
@@ -152,10 +157,23 @@ class AudioTagsMixin:
         if tagged_chunks:
             for idx, chunk in eligible_chunks:
                 if idx in tagged_chunks:
+                    tagged = tagged_chunks[idx]
+                    allowed_tags = chunk_entries[idx]["allowed_tags"]
+                    if allowed_tags is not None:
+                        original_tags = set(
+                            re.findall(r"\[([^\[\]]+)\]", chunk.text[0])
+                        )
+                        tagged = re.sub(
+                            r"\[([^\[\]]+)\]",
+                            lambda match: match[0]
+                            if match[1] in allowed_tags or match[1] in original_tags
+                            else "",
+                            tagged,
+                        )
                     log.debug(
                         "Audio tags injected",
                         chunk_index=idx,
                         original=chunk.text[0],
-                        tagged=tagged_chunks[idx],
+                        tagged=tagged,
                     )
-                    chunk.text = [tagged_chunks[idx]]
+                    chunk.text = [tagged]

@@ -1,5 +1,7 @@
 """Tests for TTS utility functions."""
 
+import pytest
+
 from talemate.agents.tts.util import split_long_chunk, parse_chunks, rejoin_chunks
 
 
@@ -240,3 +242,25 @@ class TestRejoinChunks:
         assert len(result) < len(chunks)
         for chunk in result:
             assert len(chunk) <= 100
+
+
+@pytest.mark.parametrize(
+    "text,size,expected",
+    [
+        (
+            "word " * 49 + "[clear throat] Hello.",
+            256,
+            [("word " * 49).strip(), "[clear throat] Hello."],
+        ),
+        (
+            "x" * 250 + "[clear throat] Hello.",
+            256,
+            ["x" * 250, "[clear throat] Hello."],
+        ),
+        ("[clear throat] Hello.", 8, ["[clear throat]", "Hello."]),
+    ],
+)
+def test_supported_audio_tag_is_atomic(text, size, expected):
+    assert (
+        rejoin_chunks([text], size, protected_phrases=("[clear throat]",)) == expected
+    )

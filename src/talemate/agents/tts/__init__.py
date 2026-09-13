@@ -1096,6 +1096,15 @@ class TTSAgent(
 
         for chunk in chunks:
             api_chunk_size = self.api_attr(chunk.api, "chunk_size", 0)
+            supported_tags = getattr(self, f"{chunk.api}_supported_audio_tags", None)
+            protected_tags = (
+                tuple(
+                    self.get_audio_tag_format(chunk.api).replace("{{ tag }}", tag)
+                    for tag in (supported_tags(model=chunk.model) or ())
+                )
+                if supported_tags and self.chunk_supports_audio_tags(chunk)
+                else ()
+            )
 
             log.debug("chunking", api=chunk.api, api_chunk_size=api_chunk_size)
 
@@ -1114,7 +1123,11 @@ class TTSAgent(
                     continue
 
                 _parsed = parse_chunks(_chunk_text)
-                _joined = rejoin_chunks(_parsed, chunk_size=max_generation_length)
+                _joined = rejoin_chunks(
+                    _parsed,
+                    chunk_size=max_generation_length,
+                    protected_phrases=protected_tags,
+                )
                 _text.extend(_joined)
 
             log.debug(

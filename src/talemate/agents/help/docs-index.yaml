@@ -323,8 +323,10 @@
     reference eligibility/tags, image analysis, Sync from Analysis and metadata saves.
 - path: user-guide/agents/voice/chatterbox.md
   title: Chatterbox
-  summary: 'Chatterbox local zero-shot voice cloning from WAV references: automatic device choice, chunking, Voice Library
-    uploads, speed and tags. Per-voice Exaggeration Level and CFG/Pace tune expressiveness and speaking speed.'
+  summary: Standard Chatterbox and opt-in English Chatterbox Turbo WAV voice cloning. Standard exposes exaggeration, CFG/Pace
+    and temperature; Turbo requires references longer than five seconds and offers temperature, top-k/top-p, repetition penalty
+    and normalization. Covers finite native sound tags, optional Summarizer injection, separate downloads, model/device switching,
+    cancellation and complete-waveform output.
 - path: user-guide/agents/voice/elevenlabs.md
   title: ElevenLabs
   summary: ElevenLabs TTS setup with shared API key, model, chunk size and Jinja2 audio-tag format. Explains copying voice
@@ -340,9 +342,9 @@
     guide.
 - path: user-guide/agents/voice/index.md
   title: Overview
-  summary: Voice agent overview for multi-provider TTS, per-character voices, speaker separation, director assignments and
-    the Voice Library. Lists local and hosted backends, enabling the agent, narrator fallback when a voice is unavailable
-    and troubleshooting links.
+  summary: Voice agent overview with per-character voices, speaker separation, director assignments and the Voice Library.
+    Lists local and hosted APIs, including separate standard Chatterbox and opt-in English Turbo with different controls,
+    reference requirements and native tags. Covers enabling the agent, narrator fallback and troubleshooting.
 - path: user-guide/agents/voice/kokoro.md
   title: Kokoro
   summary: 'Kokoro predefined voices and custom voice mixing in the Voice Library: combine two to four voices, set influence
@@ -363,9 +365,10 @@
     voice setup and download recovery.
 - path: user-guide/agents/voice/settings.md
   title: Settings
-  summary: Voice settings for Enabled APIs, narrator fallback, None/Simple/Mixed/AI speaker separation and automatic speech
-    for player, AI, narration and investigations. Covers client TTS Automatic Setup, audio-tag injection requiring Summarizer,
-    per-provider chunking and saving before voice choices refresh.
+  summary: Voice settings for Enabled APIs, narrator fallback, speaker separation, automatic speech and client TTS setup.
+    Distinguishes standard Chatterbox controls from opt-in Turbo sampling/normalization and references longer than five seconds.
+    Audio-tag injection is off by default and uses one Summarizer request with per-speaker format/policy for free-form ElevenLabs v3,
+    finite native Turbo sound tags, no standard Chatterbox injection. Covers chunking and saving voice choices.
 - path: user-guide/agents/voice/text-manipulation.md
   title: Text Manipulation
   summary: Rewrite TTS pronunciation without changing scene text using agent.tts.generate.before event modules, Unpack Generation

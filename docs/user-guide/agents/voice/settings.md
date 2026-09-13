@@ -8,7 +8,8 @@ Select which TTS APIs to enable. You can enable multiple APIs simultaneously:
 
 - **Kokoro** - Fastest generation with predefined voice models and mixing
 - **F5-TTS** - Fast voice cloning with occasional mispronunciations
-- **Chatterbox** - High-quality voice cloning (slower generation)
+- **Chatterbox** - Standard local WAV voice cloning with exaggeration, CFG/Pace and temperature controls
+- **[Chatterbox Turbo](chatterbox.md#chatterbox-turbo)** - Separate opt-in English voice cloning with temperature, top-k/top-p, repetition penalty and reference normalization; requires a WAV longer than five seconds
 - **Pocket TTS** - CPU-based voice cloning from Kyutai (no GPU required)
 - **ElevenLabs** - Professional voice synthesis with voice cloning
 - **Google Gemini-TTS** - Google's text-to-speech service
@@ -71,9 +72,13 @@ Turning this off stops the agent from auto-registering or auto-toggling any back
 
 ##### Audio tags
 
-Use AI to inject audio tags (e.g. `[laughing]`, `[whispering]`) into dialogue for TTS providers that support them (currently ElevenLabs v3). Requires the Summarizer agent.
+Use the Summarizer to insert audio tags into dialogue for explicitly supported providers. **Off by default**; enabling a TTS provider alone does not enable this LLM request.
 
-Off by default.
+- **ElevenLabs v3** supports free-form delivery and sound tags (for example, `[whispering]` or `[laughing]`), using its configured Audio tag format.
+- **Chatterbox Turbo** supports only its [listed native sound tags](chatterbox.md#audio-tags), such as `[clear throat]` and `[laugh]`. Tags remain intact across size-chunking. The same Summarizer request carries each eligible speaker's own format and tag policy.
+- **Standard Chatterbox** does not support automatic audio-tag injection.
+
+Turbo's native tags can also be authored directly without a Summarizer request; scene bracket-visibility settings still apply.
 
 ## Advanced Settings
 

@@ -180,6 +180,110 @@ async def test_first_save_then_hub_override_survives_reload(
     assert instance.get_agent("conversation").scene is fresh
 
 
+def _knowledge_patch(key: str) -> dict:
+    return {
+        "set": {"actions": {"character_knowledge": {"config": {key: {"value": True}}}}},
+        "clear": [],
+    }
+
+
+@pytest.fixture
+def stock_scene(save_scene, monkeypatch):
+    scene, plugin, messages, payload = save_scene
+    monkeypatch.setattr(type(scene), "auto_save", True)
+    scene.filename = "infinity-quest.json"
+    scene.immutable_save = scene.hidden = scene.deprecated = True
+    return scene, plugin, messages, payload
+
+
+async def test_autosave_on_immutable_scene_changes_nothing(stock_scene):
+    scene, *_ = stock_scene
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+    scene.saved = True
+
+    await scene.save(auto=True)
+    await scene.attempt_auto_save()
+
+    assert scene.filename == "infinity-quest.json"
+    assert scene.immutable_save and scene.hidden and scene.deprecated
+    assert scene.saved
+    assert source.read_bytes() == original
+    assert [path.name for path in Path(scene.save_dir).glob("*.json")] == [source.name]
+
+
+async def test_hub_changes_on_stock_scene_keep_its_save_identity(stock_scene):
+    scene, plugin, messages, payload = stock_scene
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+    overrides = AgentConfigPlugin(plugin.websocket_handler)
+    request = {
+        "action": "save_scene_overrides",
+        "agent_type": "conversation",
+        "scene_identity": str(scene.id),
+    }
+
+    await overrides.handle(
+        {
+            **request,
+            "request_id": "link",
+            "filename": "agent-settings.json",
+            "patch": _knowledge_patch("ledger"),
+        }
+    )
+    assert messages[-1] == {
+        "type": "agent_config",
+        "action": "operation_done",
+        "data": {},
+        "request_id": "link",
+    }
+    assert scene.filename == "infinity-quest.json"
+    assert scene.immutable_save and scene.hidden and scene.deprecated
+
+    await overrides.handle(
+        {**request, "request_id": "second", "patch": _knowledge_patch("memory_pass")}
+    )
+    assert "error" not in messages[-1]
+    assert messages[-1]["request_id"] == "second"
+    assert scene.filename == "infinity-quest.json"
+    assert scene.immutable_save and scene.hidden and scene.deprecated
+    assert source.read_bytes() == original
+    stored = json.loads(scene.agent_overrides.filepath.read_text())
+    knowledge = stored["agents"]["conversation"]["actions"]["character_knowledge"][
+        "config"
+    ]
+    assert knowledge["ledger"]["value"] is True
+    assert knowledge["memory_pass"]["value"] is True
+
+    await plugin.handle(payload)
+    assert messages[-1]["action"] == "scene_saved"
+    assert scene.filename == "my-quest.json"
+    assert not scene.immutable_save and not scene.hidden and not scene.deprecated
+    copy = json.loads(Path(scene.full_path).read_text())
+    assert not any(copy[flag] for flag in ("immutable_save", "hidden", "deprecated"))
+    assert source.read_bytes() == original
+    source_data = json.loads(original)
+    assert source_data["immutable_save"] is True
+
+
+@pytest.mark.parametrize("immutable", [False, True])
+async def test_autosave_as_without_copy_name_keeps_filename(stock_scene, immutable):
+    scene, *_ = stock_scene
+    scene.immutable_save = scene.hidden = scene.deprecated = immutable
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+
+    await scene.save(auto=True, save_as=True)
+
+    assert scene.filename == "infinity-quest.json"
+    assert scene.immutable_save is immutable
+    assert source.read_bytes() == original
+    assert [path.name for path in Path(scene.save_dir).glob("*.json")] == [source.name]
+
+
 async def test_save_for_another_scene_is_refused_without_writing(save_scene):
     scene, plugin, messages, payload = save_scene
     await plugin.handle({**payload, "scene_identity": "another-scene"})

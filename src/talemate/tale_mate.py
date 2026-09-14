@@ -2178,6 +2178,10 @@ class Scene(Emitter):
             save_as = True
 
         if save_as:
+            # an autosave has no copy name to write to: leave the scene's
+            # identity alone rather than drop its filename
+            if auto and not copy_name:
+                return
             self.filename = copy_name
 
         if not self.name and not auto:

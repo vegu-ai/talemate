@@ -57,9 +57,7 @@ async def test_stock_fresh_load_preserves_standard_and_source_visibility(
             assert fact.ts == entry["ts"] == fact.last_seen_ts
             assert fact.present == entry["present"]
             assert fact.source == "summary" and not fact.known_by
-            assert [
-                (support.archive_id, support.count) for support in fact.archive_sources
-            ] == [(entry["id"], 1)]
+            assert fact.restated_by == () and fact.message_id is None
         expected = ["Elmer", "Kaira"] if index < 5 else ["Elmer"]
         assert entry["present"] == expected
     assert all_ids == set(scene.world_state.facts)

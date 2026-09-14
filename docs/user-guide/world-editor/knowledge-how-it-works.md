@@ -27,7 +27,7 @@ If Narrator **Offscreen Life** also applies to a return, one combined request th
 
 ## Standard mode: one line is said
 
-Knowledge follows presence. Two switches add learning from dialogue; the chapter summary records facts.
+Knowledge follows presence. One switch adds learning from dialogue; the chapter summary records facts.
 
 ```mermaid
 flowchart TD
@@ -38,12 +38,10 @@ flowchart TD
     D -- "no" --> Z
     D -- "yes" --> E["One request: which of those facts<br/>did the line make plain to each listener?"]
     E --> F["Each listener now knows those facts"]
-    C -- "yes, and Establish facts<br/>from dialogue on" --> G["The same request also records<br/>new facts the line established"]
-    G --> H["New facts appear in History<br/>under Dialogue facts"]
 
     S["Later: the Summarizer<br/>summarizes the chapter"] --> T{"Extract facts on?"}
     T -- "no" --> Y["Summary only"]
-    T -- "yes" --> U["Up to 12 facts worth remembering,<br/>each Routine, State or Milestone"]
+    T -- "yes" --> U["Up to 12 facts worth remembering,<br/>each Routine, State or Milestone,<br/>each tied to the line it came from"]
     U --> V{"Does a fact repeat one<br/>already recorded?"}
     V -- "yes" --> W["The recorded fact is refreshed:<br/>it counts as restated now,<br/>and everyone present learns it"]
     V -- "no" --> X["A new fact, known to<br/>everyone who was present"]
@@ -54,18 +52,16 @@ flowchart TD
 
 **Track learning from dialogue** (off by default) gathers the recent facts each listener does not know. If there are none, nothing is sent. Otherwise one request asks which of them the line made plain to each listener; those listeners now know them. A hint or a question does not count.
 
-**Establish facts from dialogue** (shows while Track learning is on) makes the same request also record new facts the line established, after every character line. They appear in History under **Dialogue facts**.
+**The chapter summary** records facts when **Extract facts** is on: up to twelve, only facts whose loss could make a later scene go wrong. This is the only place facts come from; a line still in the live history has none, and the AI reads the text itself until the chapter is summarized. Each fact is tied to the line it came from: everyone present for that line knows it, its time is that line's scene time, and it follows the line. Deleting the line removes the fact (a restating line takes over as its origin; a hand-granted or edited fact stays, no longer tied to a line), editing the line puts it out of date until the chapter is refreshed, and editing an earlier time passage moves its time marker.
 
-**The chapter summary** records facts when **Extract facts** is on: up to twelve, only facts whose loss could make a later scene go wrong. Everyone present for the chapter knows them.
-
-**Restatements.** A fact that repeats a recorded one, within the **Fact matching tolerance**, is not stored twice: the recorded fact counts as restated now, so it is [fresh again](#facts-age), and anyone present learns it.
+**Restatements.** A fact that repeats a recorded one is not stored twice: the model names the recorded fact it repeats, and a repeat it did not name is still caught within the **Fact matching tolerance**. The recorded fact counts as restated at that line, so it is [fresh again](#facts-age), and anyone present learns it.
 
 **Linked facts.** A fact that updates an earlier one carries a link to it; History shows an arrow chip. A character who knows the newer fact no longer gets the older one in their reply; one who has not learned it still does. History and the Knowledge tab keep every fact and link.
 
 ??? note "Details"
     - A presence list is missing on lines from stories written before presence was recorded, and on lines said while no character is active; a summary that contains such a line is known to everyone.
     - The speaker learns nothing from their own line. Learned facts leave the listener's unknown-fact reminders and enter their memory.
-    - A restatement keeps the fact's text, importance and original time.
+    - A restatement keeps the fact's text, importance and original time; the restating line sets when it was last seen.
     - With **Show formerly clause** on (default, under Fact chronology), a newer fact can include its immediate predecessor when both are prompt candidates, as a short *formerly* clause of at most 240 characters, with no second time marker or extra request. For A → B → C, C can show B as formerly; A is omitted. Turning the setting off removes the clause while keeping superseded facts out of the prompt for characters who know their successor.
 
 ## Character perspectives mode: one line is said
@@ -110,11 +106,11 @@ In a character's **Knowledge** pane, unknown fact rows explain why: **Citation n
 
 Views saved without evidence references need their perceptions regenerated before rebuilding facts can share them. Existing scenes are not automatically reanalyzed on load or fact rebuild; each old view stays excluded from reconciliation until you regenerate it. No evidence is guessed from the old prose.
 
-**Retired here:** Track learning from dialogue, Establish facts from dialogue, Remind about unknown facts, Topic knowledge overview and Match known facts. Block rules cannot be created. **Refine memories with AI** stays.
+**Retired here:** Track learning from dialogue, Remind about unknown facts, Topic knowledge overview and Match known facts. Block rules cannot be created. **Refine memories with AI** stays.
 
 ??? note "Details"
     - The request carries what each character already knows from the previous passages and their disclosures, so a view never invents an observation to justify knowledge.
-    - When a chapter is summarized, each character gets a summary from their own views, once their views of the chapter are complete. Characters with identical views share one request. Facts belong to the extracting audience and can reach other present characters through shared evidence from the same passage; presence elsewhere in the chapter is not enough. Linked facts work as in Standard mode.
+    - When a chapter is summarized, each character gets a summary from their own views, once their views of the chapter are complete. Characters with identical views share one request, and that request is where facts come from: each fact names the passage it came from. Facts belong to the extracting audience and can reach other present characters through shared evidence from the same passage; presence elsewhere in the chapter is not enough. Linked facts work as in Standard mode.
     - With **Extract facts** on, a disclosure also becomes searchable facts.
 
 ## What a character's reply is built from
@@ -165,14 +161,14 @@ The **Character knowledge effort** slider sets the knowledge switches of the Con
 flowchart LR
     subgraph "Character perspectives"
         direction TB
-        P1["Minimal<br/>The analysis after each passage"] --> P2["Light<br/>+ Topics"]
-        P2 --> P3["Balanced<br/>+ Extract facts<br/>+ Automatically repair analysis"]
+        P1["Minimal<br/>The analysis after each passage<br/>Extract facts"] --> P2["Light<br/>+ Topics"]
+        P2 --> P3["Balanced<br/>+ Automatically repair analysis"]
         P3 --> P4["Thorough<br/>+ Refine memories with AI<br/>+ Brief characters on entry"]
     end
     subgraph Standard
         direction TB
-        S0["Off<br/>Character Knowledge off<br/>The full scene history for everyone"] --> S1["Minimal<br/>Character Knowledge<br/>Limit to character knowledge"]
-        S1 --> S2["Light<br/>+ Remind about unknown facts<br/>+ Topic knowledge overview<br/>+ Topics<br/>+ Match known facts<br/>+ Extract facts"]
+        S0["Off<br/>Character Knowledge off<br/>The full scene history for everyone"] --> S1["Minimal<br/>Character Knowledge<br/>Limit to character knowledge<br/>Extract facts"]
+        S1 --> S2["Light<br/>+ Remind about unknown facts<br/>+ Topic knowledge overview<br/>+ Topics<br/>+ Match known facts"]
         S2 --> S3["Balanced<br/>+ Track learning from dialogue<br/>(one request)"]
         S3 --> S4["Thorough<br/>+ Refine memories with AI<br/>+ Brief characters on entry<br/>(two per applicable line,<br/>normally one per NPC activation;<br/>account retry can add one)"]
         S4 --> S5["Ultra<br/>Unknown-fact reminders 10<br/>Recent facts to check 100"]

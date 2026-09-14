@@ -102,7 +102,7 @@ Leave out events the character missed and return only memories they know. **Turn
 
 ##### Remind about unknown facts
 
-Tell the AI which recent facts the character does not know. **Turn on if characters act on information they missed.** These reminders guide the model; they cannot guarantee its response. Nothing is added when there are no facts to list. On by default.
+Tell the AI which recent facts the character does not know. **Turn on if characters act on information they missed.** A fact is always a candidate for a character's list when the character is one of its subjects, or when it was recorded while the character was away from the scene; those candidates come first, ranked by importance and age, and the **Recent facts to check** pool supplies the rest. These reminders guide the model; they cannot guarantee its response. Nothing is added when there are no facts to list. On by default. In Standard mode the same lists reach the scene analysis before it writes about the character's next line, and the analysis marks anything the character does not know as unknown to them.
 
 ##### Unknown-fact reminders
 
@@ -110,7 +110,7 @@ Limit how many unknown facts are listed for the AI (default 5). **Raise to inclu
 
 ##### Recent facts to check
 
-Choose how many of the newest recorded facts to check for unknown-fact reminders (default 30). **Raise to cover older facts; lower to focus on the newest.** The pool follows original fact creation order; a restatement refreshes a fact's chronology score but does not move it into this pool. Chronology selection and ranking apply within the pool, while **Unknown-fact reminders** limits how many appear.
+Choose how many of the newest recorded facts to check for unknown-fact reminders (default 30). **Raise to cover older facts; lower to focus on the newest.** The pool follows original fact creation order; a restatement refreshes a fact's chronology score but does not move it into this pool. Facts that name the character, or were recorded while the character was away, are candidates whatever their age and do not use the pool. Chronology selection and ranking apply within the pool, while **Unknown-fact reminders** limits how many appear in total.
 
 ##### Topic knowledge overview
 
@@ -149,15 +149,7 @@ in that configuration.
 
 Ask the AI what listeners learned from each character message and add those facts to their knowledge. **Turn on to track information shared in dialogue.** It checks recent recorded facts the listeners do not know, so it can recognize retold information rather than discover arbitrary new facts. Learned facts become available in memory and leave the unknown-fact reminders. The speaker does not learn from their own message; player messages are included. Each learning grant takes effect immediately and can be revoked in the character’s **Knowledge** view. The ledger judges with recent dialogue and situational context and errs toward learning when the substance is conveyed, while hints, questions and merely related facts still do not count.
 
-Off by default. Uses **one more request after a character message when a listener has recent facts they do not know**, through the World State agent's client. No request is sent when every listener already knows those facts. Available in Standard mode only.
-
-##### Establish facts from dialogue
-
-Save important facts immediately from a character's latest line, before the next summary. Available only when **Track learning from dialogue** is on, in Standard mode; off by default. A line that establishes nothing worth remembering yields no fact. Facts retain attribution and uncertainty: a character's claim is recorded as a claim.
-
-**Uses the same World State client request as Track learning from dialogue, but runs it after every character line**, including player lines and a speaker talking alone, even when everyone already knows the recent facts. There is no second request per line. Everyone present knows the recorded fact; the named learners describe who learned it rather than restricting its audience.
-
-New facts have an importance level and appear under **Dialogue facts** in [History](/talemate/user-guide/world-editor/history/#facts), where their text and importance can be edited and their source message inspected. The archive pass still extracts facts, including narrator lines and time passages, and merges sufficiently similar restatements into the existing fact. Removing or changing a source message removes the facts it established.
+Off by default. Uses **one more request after a character message when a listener has recent facts they do not know**, through the World State agent's client. No request is sent when every listener already knows those facts. Available in Standard mode only. The pass grants recorded facts; it records no new facts. Facts come from the Summarizer's chapter summaries only, so a line still in the live history has none to grant yet.
 
 ## Long Term Memory
 

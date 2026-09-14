@@ -395,14 +395,14 @@ rejected swaps return a correlated `operation_done` error with `failed_action=sw
 
 In Character perspectives mode the coordinator uses the perception lock, repairs dependent
 summaries, flushes fact memory and then publishes completion. In Standard mode it reruns
-fact extraction against either the selected unarchived passage or every archive summary
-whose source range contains it, then runs the dialogue ledger against its historical
-speaker, presence, timestamp and preceding lines. Extraction and learning have separate
+fact extraction against every archive summary whose source range contains the passage
+(a passage outside every summary has no facts), then runs the dialogue ledger against its
+historical speaker, presence, timestamp and preceding lines. Extraction and learning have separate
 persisted receipts, so retrying a failed learning phase does not repeat successful extraction
 unless one of that extraction's own inputs changed. A transaction journal records baseline
 records and each phase's last writes; returning to the baseline restores only writes the
-transaction still owns. Dialogue facts separately record each message revision's support,
-so removing one revision does not remove another restatement, authored correction, summary
+transaction still owns. A fact records the message it came from and the messages that restated it,
+so removing one message does not remove another restatement, authored correction, summary
 contribution or manual grant. With no eligible operation, selection removes stale derived
 archive/fact material deterministically and becomes final without a model call.
 
@@ -579,8 +579,11 @@ availability when projection descends to source views, without logging prose.
 
 In perception mode, enabled archive fact extraction runs in the existing base
 **audience** summary request (`summarize(..., audience=..., return_facts=True,
-skip_author_hooks=True)`). Reader calls publish complete summaries without reader
-facts; layered calls add no extraction request. Explicit omissions add no facts.
+skip_author_hooks=True, line_ids=True)`); each view text carries its message id and each
+returned fact names the line it came from (`message_id`), or is dropped. Message views are
+not fact sources: `saved_fact_sources` offers base summaries and disclosures only. Reader
+calls publish complete summaries without reader facts; layered calls add no extraction
+request. Explicit omissions add no facts.
 The host supplies the audience from the selected view and ignores model `known_by`
 claims. Previous-fact context is the intersection of evidence available to every
 member of that audience, never the global fact list. Fact extraction remains off

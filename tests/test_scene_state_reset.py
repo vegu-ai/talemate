@@ -611,16 +611,19 @@ class TestCombinedOperations:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("reset_context_db", [False, True])
-async def test_wipe_history_removes_dialogue_facts_before_reindex(
+async def test_wipe_history_removes_message_facts_before_reindex(
     scene_factory, mixin_instance, monkeypatch, reset_context_db
 ):
+    from talemate.knowledge.perspective_models import content_digest
+
     scene = scene_factory(history=[CharacterMessage(message="Alice: I moved in.")])
     scene.world_state.facts = {
         "F1": Fact(
             id="F1",
             text="Alice moved in.",
-            source="dialogue",
+            archive_id="e1",
             message_id=scene.history[0].id,
+            message_digest=content_digest(scene.history[0].perception_text),
         ),
         "F2": Fact(id="F2", text="The house is old.", source="manual"),
     }
@@ -628,7 +631,9 @@ async def test_wipe_history_removes_dialogue_facts_before_reindex(
         character="Bob", target="F2", message_id=scene.history[0].id
     )
     scene.world_state.knowledge = [
-        KnowledgeEdge(character="Bob", target="F1"),
+        # a hand grant keeps a fact through the loss of one message, not
+        # through a wipe of the history it came from
+        KnowledgeEdge(character="Bob", target="F1", source="manual"),
         retained,
     ]
     memory = get_agent("memory")

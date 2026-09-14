@@ -12,6 +12,7 @@ import structlog
 
 from talemate.instance import get_agent
 from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
+from talemate.knowledge.names import aliases_for, mentions
 from talemate.knowledge.schema import Fact
 from talemate.knowledge.chronology import ranked_facts, render_fact
 from talemate.knowledge.revision_browsing import current_facts
@@ -25,6 +26,7 @@ __all__ = [
     "ABSENCE_LIMIT",
     "ABSENCE_WINDOW",
     "fact_order",
+    "concerns_character",
 ]
 
 log = structlog.get_logger("talemate.knowledge.absence")
@@ -43,6 +45,19 @@ def _fact_number(fact: Fact) -> int:
 def fact_order(fact: Fact) -> tuple[int, int]:
     """Creation order: scene time, then the numeric part of the id (F10 after F2)."""
     return (fact.ts if fact.ts is not None else -1, _fact_number(fact))
+
+
+def concerns_character(
+    scene: "Scene", fact: Fact, character: str, aliases=None
+) -> bool:
+    """
+    The facts the unknown list exists for: the character is one of the
+    fact's subjects, or it was recorded while they were away.
+    """
+    aliases = aliases if aliases is not None else aliases_for(scene, character)
+    if mentions(fact, aliases, subjects_first=True):
+        return True
+    return fact.present is not None and character not in fact.present
 
 
 async def absence_facts(
@@ -73,6 +88,24 @@ async def absence_facts(
     ]
     bucket = set(bucket_ids)
 
+    def candidate(fact: Fact) -> bool:
+        # a fact marked false is never listed: in the bucket it is known,
+        # outside it there is nothing to warn about
+        return fact.source != "offscreen" and fact.id not in bucket and not fact.false
+
+    # facts about the character, or recorded while they were away, are
+    # always eligible, ahead of the creation-order window and the age cut
+    aliases = aliases_for(scene, character)
+    concerning = ranked_facts(
+        scene,
+        [
+            f
+            for f in facts
+            if candidate(f) and concerns_character(scene, f, character, aliases)
+        ],
+        tiers=False,
+        superseders=facts,
+    )
     recent = sorted(
         (f for f in facts if f.source != "offscreen"),
         key=fact_order,
@@ -81,13 +114,13 @@ async def absence_facts(
     # This warning describes current author-state facts the viewer does not know.
     recent = ranked_facts(scene, recent, superseders=facts)
 
-    # a fact marked false is never listed: in the bucket it is known, outside
-    # it there is nothing to warn about
-    unknown = [f for f in recent if f.id not in bucket and not f.false]
+    listed = {f.id for f in concerning}
+    unknown = concerning + [f for f in recent if candidate(f) and f.id not in listed]
 
     log.debug(
         "absence_facts candidates",
         character=character,
+        concerning=[f.id for f in concerning],
         recent=len(recent),
         bucket=len(bucket),
         unknown=[f.id for f in unknown],

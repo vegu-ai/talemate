@@ -41,7 +41,10 @@ from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import ScenePerspectives, load_game_state_path_settings
 from talemate.scene.format import CURRENT_SCENE_FORMAT_VERSION, read_scene_format
-from talemate.knowledge.dialogue_facts import prune_invalid_dialogue_facts
+from talemate.knowledge.message_facts import (
+    prune_legacy_facts,
+    prune_missing_message_facts,
+)
 from talemate.knowledge.reinforcements import reinforcement_source_keys
 from talemate.knowledge.perspectives import (
     bind_perspective_sources,
@@ -471,7 +474,11 @@ async def load_scene_from_data(
         scene.memory_id = scene_data.get("memory_id", scene.memory_id)
         scene.saved_memory_session_id = scene_data.get("saved_memory_session_id", None)
         scene.memory_session_id = scene_data.get("memory_session_id", None)
-        scene.world_state = WorldState(**scene_data.get("world_state", {}))
+        world_state_data = scene_data.get("world_state", {})
+        legacy_facts = prune_legacy_facts(
+            world_state_data, scene_data.get("archived_history", [])
+        )
+        scene.world_state = WorldState(**world_state_data)
         scene.world_state.validate_snapshot_audiences(scene.character_data)
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
@@ -512,9 +519,11 @@ async def load_scene_from_data(
     loading_status("Initializing long-term memory...")
 
     await memory.set_db()
-    removed_dialogue_facts = prune_invalid_dialogue_facts(scene)
-    if removed_dialogue_facts:
-        await memory.delete({"ids": sorted(removed_dialogue_facts)})
+    removed_facts = prune_missing_message_facts(scene) | (
+        legacy_facts if not reset else set()
+    )
+    if removed_facts:
+        await memory.delete({"ids": sorted(removed_facts)})
     # await memory.remove_unsaved_memory()
 
     await scene.world_state_manager.remove_all_empty_pins()

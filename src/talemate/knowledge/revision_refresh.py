@@ -6,13 +6,25 @@ import json
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
+from types import SimpleNamespace
 from weakref import WeakKeyDictionary
 
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
-from talemate.knowledge.facts import prune_summary_facts, store_facts
+from talemate.knowledge.facts import (
+    _drop_restatements,
+    _promote_restatement,
+    prune_summary_facts,
+)
+from talemate.knowledge.message_facts import (
+    binding_state,
+    detach_message_fact,
+    rebind_message_facts,
+    remove_message_facts,
+)
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import content_digest
+from talemate.knowledge.revision_browsing import affected_archive_ids
 from talemate.knowledge.schema import Fact, KnowledgeEdge
 from talemate.knowledge.topics import refresh_topics
 from talemate.scene_message import CharacterMessage
@@ -71,10 +83,13 @@ def revision_operations(scene, message) -> RevisionOperations:
         )
     summarizer = get_agent("summarizer")
     conversation = get_agent("conversation")
+    # facts come from archived spans only: a line outside every span has
+    # nothing to refresh
     extraction = bool(
         summarizer.enabled
         and summarizer.resolve_enabled("archive")
         and summarizer.resolve_config("archive", "extract_facts")
+        and affected_archive_ids(scene, message)
     )
     learning = bool(
         isinstance(message, CharacterMessage)
@@ -148,9 +163,6 @@ def _phase_identity(scene, message, phase: str, recent=None, *, journal=None) ->
         conversation = get_agent("conversation")
         values["settings"] = {
             "ledger": conversation.resolve_config("character_knowledge", "ledger"),
-            "establish": conversation.resolve_config(
-                "character_knowledge", "establish_facts"
-            ),
             "absence_window": conversation.resolve_config(
                 "character_knowledge", "absence_window"
             ),
@@ -277,7 +289,7 @@ def _dump(value):
     return value.model_dump(mode="json") if value is not None else None
 
 
-def _restore_fact_data(message, current_data, written, original):
+def _restore_fact_data(message, current_data, written, original, *, world_state=None):
     """Remove one transaction-owned fact delta from a serialized live record."""
     if current_data == written:
         return original, True
@@ -285,26 +297,24 @@ def _restore_fact_data(message, current_data, written, original):
         return current_data, False
     current = Fact.model_validate(current_data)
     if original is None:
-        current.dialogue_sources = tuple(
-            source
-            for source in current.dialogue_sources
-            if source.message_id != message.id
-        )
+        # the same rule as a message removal: a restatement takes over, an
+        # independent fact goes on unbound as the author's, the rest goes
+        _drop_restatements(current, lambda item: item.message_id == message.id)
         if current.message_id == message.id:
-            current.message_id = None
-            current.message_digest = None
-        if current.text_edited or current.link_edited:
+            holder = (
+                world_state
+                if world_state is not None
+                else SimpleNamespace(knowledge=[])
+            )
+            if not detach_message_fact(holder, current, edges=world_state is not None):
+                return None, False
+        elif current.text_edited or current.link_edited:
             current.source = "manual"
         return _dump(current), False
 
     merged = dict(current_data)
     written_data = written or {}
-    structured = {
-        "archive_sources",
-        "dialogue_sources",
-        "known_by",
-        "restatements",
-    }
+    structured = {"restated_by", "known_by", "restatements"}
     for key in (
         current_data.keys() | written_data.keys() | original.keys()
     ) - structured:
@@ -333,43 +343,27 @@ def _restore_fact_data(message, current_data, written, original):
             current_known.pop(character, None)
     merged["known_by"] = current_known
 
-    def restore_supports(field, key_fields):
-        def support_map(records):
-            return {
-                tuple(record[key] for key in key_fields): record.get("count", 1)
-                for record in records
-            }
+    def key(record):
+        return (
+            record.get("message_id"),
+            record.get("message_digest"),
+            record.get("archive_id"),
+        )
 
-        original_support = support_map(original.get(field, ()))
-        written_support = support_map(written_data.get(field, ()))
-        current_support = support_map(current_data.get(field, ()))
-        order = [
-            tuple(record[key] for key in key_fields)
-            for record in current_data.get(field, ())
-        ]
-        for support in original_support:
-            if support not in order:
-                order.append(support)
-        for support in original_support.keys() | written_support.keys():
-            owned_count = written_support.get(support, 0) - original_support.get(
-                support, 0
-            )
-            restored_count = current_support.get(support, 0) - owned_count
-            if restored_count > 0:
-                current_support[support] = restored_count
-            else:
-                current_support.pop(support, None)
-        merged[field] = [
-            {
-                **dict(zip(key_fields, support)),
-                "count": current_support[support],
-            }
-            for support in order
-            if support in current_support
-        ]
-
-    restore_supports("dialogue_sources", ("message_id", "message_digest"))
-    restore_supports("archive_sources", ("archive_id",))
+    original_keys = {key(record) for record in original.get("restated_by", ())}
+    written_keys = {key(record) for record in written_data.get("restated_by", ())}
+    restored = [
+        record
+        for record in current_data.get("restated_by", ())
+        if key(record) not in written_keys - original_keys
+    ]
+    present = {key(record) for record in restored}
+    restored.extend(
+        record
+        for record in original.get("restated_by", ())
+        if key(record) in original_keys - written_keys and key(record) not in present
+    )
+    merged["restated_by"] = restored
     return merged, False
 
 
@@ -402,40 +396,19 @@ def _normalized_fact_inputs(scene, message, journal, phase: str) -> dict:
 def _without_message_fact_support(fact_data, message):
     """Remove only this passage's provenance while retaining independent support."""
     fact = Fact.model_validate(fact_data)
-    matching = [
-        source for source in fact.dialogue_sources if source.message_id == message.id
-    ]
-    if matching:
-        fact.dialogue_sources = tuple(
-            source
-            for source in fact.dialogue_sources
-            if source.message_id != message.id
-        )
-        fact.restatements = max(
-            0, fact.restatements - sum(source.count for source in matching)
-        )
-    if fact.message_id == message.id:
-        if fact.dialogue_sources:
-            fact.message_id = fact.dialogue_sources[0].message_id
-            fact.message_digest = fact.dialogue_sources[0].message_digest
-        else:
-            fact.message_id = None
-            fact.message_digest = None
-    independent = bool(
-        fact.dialogue_sources
-        or fact.archive_sources
-        or fact.contributions
-        or fact.text_edited
-        or fact.link_edited
-        or fact.source == "manual"
-    )
-    if not independent:
-        return None
+    _drop_restatements(fact, lambda item: item.message_id == message.id)
+    if fact.message_id == message.id and not _promote_restatement(fact):
+        fact.message_id = None
+        fact.message_digest = None
+        if not (
+            fact.contributions
+            or fact.text_edited
+            or fact.link_edited
+            or fact.source == "manual"
+        ):
+            return None
     if fact.text_edited or fact.link_edited:
         fact.source = "manual"
-    elif not fact.dialogue_sources and fact.archive_sources:
-        fact.source = "summary"
-        fact.archive_id = fact.archive_sources[0].archive_id
     return _dump(fact)
 
 
@@ -466,7 +439,9 @@ def _restore_perspective_record(scene, identity: str, written, original) -> None
 def _restore_fact_record(scene, message, identity, written, original) -> bool:
     current = scene.world_state.facts.get(identity)
     current_data = _dump(current)
-    restored, exact = _restore_fact_data(message, current_data, written, original)
+    restored, exact = _restore_fact_data(
+        message, current_data, written, original, world_state=scene.world_state
+    )
     if restored is None:
         scene.world_state.facts.pop(identity, None)
     elif restored != current_data:
@@ -516,16 +491,17 @@ def _record_snapshot(scene, message) -> dict:
 def _journal(scene, message) -> dict:
     state = message.revision_state
     snapshot = _record_snapshot(scene, message)
-    from talemate.knowledge.revision_browsing import affected_archive_ids
 
     archive_ids = affected_archive_ids(scene, message)
     fact_ids = {
         identity
         for identity, fact in scene.world_state.facts.items()
         if fact.message_id == message.id
-        or any(source.message_id == message.id for source in fact.dialogue_sources)
         or fact.archive_id in archive_ids
-        or any(source.archive_id in archive_ids for source in fact.archive_sources)
+        or any(
+            item.message_id == message.id or item.archive_id in archive_ids
+            for item in fact.restated_by
+        )
         or any(
             item.source.kind == "summary" and item.source.id in archive_ids
             for item in fact.contributions
@@ -811,72 +787,20 @@ async def _rollback_transaction_writes(scene, message, journal=None) -> None:
 
 
 def _remove_message_evidence_impl(scene, message, *, facts: bool) -> set[str]:
-    removed = set()
-    if facts:
-        for fact in list(scene.world_state.facts.values()):
-            matching = [
-                source
-                for source in fact.dialogue_sources
-                if source.message_id == message.id
-            ]
-            if matching:
-                fact.dialogue_sources = tuple(
-                    source
-                    for source in fact.dialogue_sources
-                    if source.message_id != message.id
-                )
-                fact.restatements = max(
-                    0, fact.restatements - sum(source.count for source in matching)
-                )
-                if fact.message_id == message.id:
-                    if fact.dialogue_sources:
-                        source = fact.dialogue_sources[0]
-                        fact.message_id = source.message_id
-                        fact.message_digest = source.message_digest
-                    else:
-                        fact.message_id = None
-                        fact.message_digest = None
-                if not fact.dialogue_sources and not (
-                    fact.text_edited
-                    or fact.link_edited
-                    or fact.restatements
-                    or fact.archive_sources
-                    or fact.contributions
-                    or any(
-                        edge.target == fact.id and edge.source == "manual"
-                        for edge in scene.world_state.knowledge
-                    )
-                ):
-                    removed.add(fact.id)
-                elif not fact.dialogue_sources and fact.archive_sources:
-                    fact.source = "summary"
-                    fact.archive_id = fact.archive_sources[0].archive_id
-                continue
-            if fact.message_id != message.id:
-                continue
-            independent = (
-                fact.text_edited
-                or fact.link_edited
-                or fact.restatements > 0
-                or bool(fact.archive_sources)
-                or bool(fact.contributions)
-                or any(
-                    edge.target == fact.id and edge.source == "manual"
-                    for edge in scene.world_state.knowledge
-                )
-            )
-            if independent:
-                fact.message_id = None
-                fact.message_digest = None
-                if fact.text_edited or fact.link_edited:
-                    fact.source = "manual"
-                elif fact.archive_sources:
-                    fact.source = "summary"
-                    fact.archive_id = fact.archive_sources[0].archive_id
-            else:
-                removed.add(fact.id)
-        for identity in removed:
-            scene.world_state.facts.pop(identity, None)
+    """
+    Returns the ids of the facts whose memory document must follow: the
+    removed ones, and the ones the removal promoted or unbound.
+    """
+    before = {
+        identity: binding_state(fact)
+        for identity, fact in scene.world_state.facts.items()
+    }
+    removed = remove_message_facts(scene.world_state, message.id) if facts else set()
+    changed = removed | {
+        identity
+        for identity, fact in scene.world_state.facts.items()
+        if identity in before and binding_state(fact) != before[identity]
+    }
     old_edges = [
         edge
         for edge in scene.world_state.knowledge
@@ -903,7 +827,7 @@ def _remove_message_evidence_impl(scene, message, *, facts: bool) -> set[str]:
             for other in scene.world_state.knowledge
         ):
             fact.known_by.pop(edge.character, None)
-    return removed
+    return changed
 
 
 def _remove_message_evidence(scene, message, *, facts: bool) -> set[str]:
@@ -929,7 +853,6 @@ def _historical_context(scene, message) -> tuple[list[str], list[str] | None, in
 
 def _affected_history_entries(scene, message):
     from talemate.history import HistoryEntry
-    from talemate.knowledge.revision_browsing import affected_archive_ids
 
     affected = affected_archive_ids(scene, message)
     entries = []
@@ -964,6 +887,13 @@ def _archive_phase_inputs(scene, message, phase: str, *, journal=None) -> dict:
             archives.pop(identity, None)
         else:
             archives[identity] = original
+    # only the lines inside the affected base spans feed the regeneration; a
+    # line appended after them is not one of its inputs
+    spans = [
+        (entry.start, entry.end)
+        for entry in _affected_history_entries(scene, message)
+        if entry.layer == 0 and entry.start is not None and entry.end is not None
+    ]
     return {
         "history": [
             {
@@ -973,7 +903,8 @@ def _archive_phase_inputs(scene, message, phase: str, *, journal=None) -> dict:
                 "present": entry.present,
                 "meta": entry.meta,
             }
-            for entry in scene.history
+            for index, entry in enumerate(scene.history)
+            if any(start <= index <= end for start, end in spans)
         ],
         "archives": archives,
         "include_previous": get_agent("summarizer").resolve_config(
@@ -1012,10 +943,21 @@ async def _invalidate_affected_archives(scene, message):
     if not entries:
         return set()
     archive_ids = {entry.id for entry in entries if entry.id}
+    before = {
+        identity: binding_state(fact)
+        for identity, fact in scene.world_state.facts.items()
+    }
     with capture_revision_mutations(scene, message=message):
         removed = prune_summary_facts(scene.world_state, archive_ids)
-    if removed:
-        get_agent("summarizer").queue_fact_memory(scene, removed)
+    # a fact the prune keeps can still change: a promotion, a dropped
+    # restatement, an unbind; its memory document follows
+    changed = removed | {
+        identity
+        for identity, fact in scene.world_state.facts.items()
+        if identity in before and binding_state(fact) != before[identity]
+    }
+    if changed:
+        get_agent("summarizer").queue_fact_memory(scene, changed)
     # A disabled feature performs deterministic cleanup only: remove the stale
     # summaries and their dependent layers so ordinary archive building can
     # recreate them from the revised source later.
@@ -1179,53 +1121,31 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
                     _phase_identity(scene, message, "extract") == extract_identity
                 )
 
-            if _affected_history_entries(scene, message):
-                with revision_phase(scene, message, "extract"):
-                    await _refresh_affected_archives(
-                        scene, message, identity, "extract", operations
-                    )
-            else:
-                _, parsed = await summarizer.summarize(
-                    message.perception_text,
-                    extra_context=recent,
-                    return_facts=True,
-                    skip_author_hooks=True,
+            with revision_phase(scene, message, "extract"):
+                await _refresh_affected_archives(
+                    scene, message, identity, "extract", operations
                 )
-                if parsed is None:
-                    raise ValueError(
-                        "Fact extraction response was missing or malformed"
-                    )
-                if not _current(scene, message, identity, operations):
-                    raise GenerationCancelled(
-                        "The selected version changed during fact extraction"
-                    )
-                if _phase_identity(scene, message, "extract") != extract_identity:
-                    raise GenerationCancelled("Fact inputs changed during extraction")
-                with revision_phase(scene, message, "extract"):
-                    await store_facts(
-                        scene,
-                        None,
-                        present,
-                        ts,
-                        parsed,
-                        summarizer.archive_fact_dedupe_distance,
-                        notify=True,
-                        message_id=message.id,
-                        message_digest=content_digest(message.perception_text),
-                        still_current=still_current,
-                    )
-                if not _current(scene, message, identity, operations):
-                    raise GenerationCancelled(
-                        "The selected version changed during fact storage"
-                    )
-                if _phase_identity(scene, message, "extract") != extract_identity:
-                    raise GenerationCancelled("Fact inputs changed during extraction")
             receipts = {
                 **message.revision_state.phase_receipts,
                 "refresh:extract": extract_identity,
             }
             message.set_revision_status("running", phase_receipts=receipts)
             await refresh_topics(scene, still_current=still_current)
+        elif not operations.extract_facts:
+            # nothing re-extracts this line (Extract facts is off, or the
+            # summarizer is): its facts stay, bound to the edited text. The
+            # journal records the rebind, so a rollback undoes it.
+            with (
+                revision_phase(scene, message, "extract"),
+                capture_revision_mutations(scene, message=message),
+            ):
+                rebound = rebind_message_facts(
+                    scene.world_state,
+                    message.id,
+                    content_digest(message.perception_text),
+                )
+            if rebound:
+                summarizer.queue_fact_memory(scene, rebound)
 
         learn_identity = _phase_identity(scene, message, "learn", recent)
         if (
@@ -1258,12 +1178,8 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
                         present_override=present,
                         recent_lines_override=recent,
                         ts_override=ts,
-                        establish_override=(
-                            False if operations.extract_facts else None
-                        ),
                         still_current=learning_current,
                         replace_message_evidence=True,
-                        replace_facts=not operations.extract_facts,
                         require_validated_result=True,
                     )
                 if learned is None:

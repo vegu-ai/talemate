@@ -72,7 +72,9 @@ async def test_summary_private_competitor_from_another_message_vetoes_transfer(
     async def summarize(text, *, audience, **kwargs):
         return text, [] if audience == ("Alice",) else [
             ParsedFact(
-                text="Bob plans to steal the charts.", evidence_id=f"M{first.id}R1S0"
+                text="Bob plans to steal the charts.",
+                evidence_id=f"M{first.id}R1S0",
+                message_id=second.id,
             )
         ]
 

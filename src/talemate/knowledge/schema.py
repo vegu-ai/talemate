@@ -21,12 +21,12 @@ __all__ = [
 VisibilityMode = Literal["everyone", "owner", "list"]
 EdgeKind = Literal["grant", "revoke"]
 EdgeSource = Literal["told", "granted", "inferred", "manual", "director"]
-FactSource = Literal[
-    "summary", "manual", "offscreen", "perspective", "disclosure", "dialogue"
-]
+FactSource = Literal["summary", "manual", "offscreen", "perspective", "disclosure"]
 FactsStatus = Literal["ok", "failed"]
 KnownKind = Literal["witnessed", "told", "granted", "inferred"]
 FactImportance = Annotated[int, pydantic.Field(strict=True, ge=1, le=3)]
+# the opening of the scene is part of the first span but is not a message
+INTRO_LINE = "intro"
 
 FACT_SOURCE_LABELS: dict[FactSource, str] = {
     "summary": "history entry",
@@ -34,7 +34,6 @@ FACT_SOURCE_LABELS: dict[FactSource, str] = {
     "offscreen": "offscreen life",
     "perspective": "perception",
     "disclosure": "disclosure",
-    "dialogue": "dialogue",
 }
 
 
@@ -82,6 +81,9 @@ class ParsedFact(pydantic.BaseModel):
     subjects: list[str] = pydantic.Field(default_factory=list)
     known_by: list[str] = pydantic.Field(default_factory=list)
     supersedes: str | None = None
+    restates: str | None = None
+    # the span line that establishes the fact; INTRO_LINE names the opening
+    message_id: int | Literal["intro"] | None = None
     time_scope: str | None = None
     evidence_id: pydantic.StrictStr | None = None
 
@@ -101,12 +103,30 @@ class ParsedFact(pydantic.BaseModel):
             value = [value]
         return [str(v).strip() for v in value if str(v).strip()]
 
-    @pydantic.field_validator("supersedes", mode="before")
+    @pydantic.field_validator("supersedes", "restates", mode="before")
     @classmethod
-    def _supersedes(cls, value):
+    def _fact_link(cls, value):
         if value in (None, "", "none", "null", "None"):
             return None
         return str(value).strip()
+
+    @pydantic.field_validator("message_id", mode="before")
+    @classmethod
+    def _message_id(cls, value):
+        # an unreadable id is None: the caller drops the fact rather than guess
+        if isinstance(value, bool) or value is None:
+            return None
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(value) if value.is_integer() else None
+        text = str(value).strip().strip("[]")
+        if text.lower() == INTRO_LINE:
+            return INTRO_LINE
+        try:
+            return int(text)
+        except ValueError:
+            return None
 
 
 class Topic(pydantic.BaseModel):
@@ -163,6 +183,7 @@ class FactContribution(AudienceRecord):
     text: str = pydantic.Field(min_length=1)
     importance: FactImportance = 2
     subjects: tuple[str, ...] = ()
+    message_id: int | None = None
     time_scope: str | None = None
     supersedes: str | None = None
     evidence: PassageEvidence | None = None
@@ -204,27 +225,29 @@ class FactContribution(AudienceRecord):
         )
 
 
-class DialogueFactSupport(pydantic.BaseModel):
-    """One dialogue revision's independently removable support for a fact."""
+class FactRestatement(pydantic.BaseModel):
+    """A later span's message that repeats an already recorded fact."""
 
-    message_id: int
-    message_digest: str
-    count: int = pydantic.Field(default=1, ge=1)
-
-
-class ArchiveFactSupport(pydantic.BaseModel):
-    """One archive entry's independently removable support for a fact."""
-
-    archive_id: str
-    count: int = pydantic.Field(default=1, ge=1)
+    # None for a restatement by a static entry, which has no message
+    message_id: int | None = None
+    message_digest: str | None = None
+    archive_id: str | None = None
+    # the restating message's audience and scene time: a restatement can
+    # become the origin, and the origin is always the earliest message
+    present: list[str] | None = None
+    ts: int | None = None
 
 
 class Fact(pydantic.BaseModel):
     id: str
     text: str
     importance: FactImportance = 2
+    # scene time at the source message; the entry's time when there is none
     ts: int | None = None
+    # the base entry whose extraction recorded the fact
     archive_id: str | None = None
+    # the message the fact came from; None for manual, offscreen, disclosure
+    # and static-entry facts, which have no message by design
     message_id: int | None = None
     message_digest: str | None = None
     present: list[str] | None = None
@@ -244,18 +267,15 @@ class Fact(pydantic.BaseModel):
     link_edited: bool = False
 
     contributions: tuple[FactContribution, ...] = ()
-    dialogue_sources: tuple[DialogueFactSupport, ...] = ()
-    archive_sources: tuple[ArchiveFactSupport, ...] = ()
+    restated_by: tuple[FactRestatement, ...] = ()
 
     @pydantic.model_serializer(mode="wrap")
     def serialize_contributions(self, handler):
         data = handler(self)
         if not self.contributions:
             data.pop("contributions", None)
-        if not self.dialogue_sources:
-            data.pop("dialogue_sources", None)
-        if not self.archive_sources:
-            data.pop("archive_sources", None)
+        if not self.restated_by:
+            data.pop("restated_by", None)
         for key in ("text_edited", "link_edited"):
             if not getattr(self, key):
                 data.pop(key, None)

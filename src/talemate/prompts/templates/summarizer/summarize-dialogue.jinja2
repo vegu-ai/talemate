@@ -41,7 +41,9 @@ SUMMARIZE THIS CONTENT:
 {{ dialogue }}
 
 END OF CONTENT TO SUMMARIZE
-
+{% if line_ids %}
+Each line starts with its bracketed line id, such as [1043]. The ids are references for the facts list only: never copy an id into the summary.
+{% endif %}
 <|CLOSE_SECTION|>
 {% if generation_options and generation_options.writing_style %}
 <|SECTION:WRITING STYLE|>
@@ -104,7 +106,7 @@ Offered evidence IDs with short excerpts (fully perceived by this audience; use 
 {{ fact_evidence | default('') }}
 {% endif %}
 <FACTS>
-<a JSON list of the atomic facts established in {{ summary_target }}. One object per fact: {"text": "one self-contained statement, names spelled out, no pronouns", "importance": 2, "subjects": ["names of the characters, items or places the fact is about"], {% if audience_summary %}"evidence_id": "one offered evidence ID, or null", "time_scope": "exact date or timestamp copied from BOTH source and fact text, or null if unanchored",{% else %}"known_by": ["characters who learned this fact during {{ summary_target }}"],{% endif %} "supersedes": "id of a known fact this one replaces, or null"}. Choose importance 1, 2, or 3 using the rules above. Facts only: events that happened, decisions taken, things revealed, states that changed. Between 0 and 12 items. Output the JSON list and nothing else between the tags.>
+<a JSON list of the atomic facts established in {{ summary_target }}. One object per fact: {"text": "one self-contained statement, names spelled out, no pronouns", "importance": 2, "subjects": ["names of the characters, items or places the fact is about"], {% if line_ids %}"message_id": "the bracketed id of the line that establishes the fact, copied exactly", {% endif %}{% if audience_summary %}"evidence_id": "one offered evidence ID, or null", "time_scope": "exact date or timestamp copied from BOTH source and fact text, or null if unanchored",{% else %}"known_by": ["characters who learned this fact during {{ summary_target }}"], "restates": "id of a known fact this statement repeats without adding anything, or null",{% endif %} "supersedes": "id of a known fact this one replaces, or null"}. Choose importance 1, 2, or 3 using the rules above.{% if line_ids %} Every fact must carry the message_id of the one line that establishes it; a fact without a valid line id is discarded.{% endif %} {% if audience_summary %}Use supersedes only for a fact that changes or replaces an earlier one.{% else %}A restatement is recorded against the known fact, not as a new one: use restates for an unchanged repeat and supersedes only for a fact that changes or replaces an earlier one.{% endif %} Facts only: events that happened, decisions taken, things revealed, states that changed. Between 0 and 12 items. Output the JSON list and nothing else between the tags.>
 </FACTS>
 {% endif -%}
 {% include "response-length.jinja2" %}

@@ -24,11 +24,10 @@ describe('effective effort explanation', () => {
         expect(result.cost).toContain('1 per NPC entry briefing');
         expect(result.retries).toContain('combined offscreen account');
     });
-    it('uses scene overrides and establishment even when the stop is unchanged', () => {
-        const agents = agentsAt('legacy', 'balanced');
-        agents[0].actions.character_knowledge.config.establish_facts = { type: 'bool', value: false };
-        agents[0].data.scene_overrides = { actions: { character_knowledge: { config: { establish_facts: { value: true } } } } };
-        expect(effortExplanation('legacy', 'balanced', agents).cost).toBe('1 after every character line (player included).');
+    it('uses scene overrides even when the stop is unchanged', () => {
+        const agents = agentsAt('legacy', 'light');
+        agents[0].data.scene_overrides = { actions: { character_knowledge: { config: { ledger: { value: true } } } } };
+        expect(effortExplanation('legacy', 'light', agents).cost).toBe('1 after a character line when listeners have unknown recent facts.');
     });
     it('custom disabled memory work does not inherit nearest-stop cost or benefit', () => {
         const agents = agentsAt('legacy', 'thorough', { 'conversation.character_knowledge.memory_pass': false });

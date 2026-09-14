@@ -316,7 +316,7 @@ class MemoryRAGMixin:
     def _audience_memory_digest(
         self, character: "Character", boundary_ids: set[int], state
     ) -> str:
-        """Hash the viewer's indexed sources without later dialogue facts."""
+        """Hash the viewer's indexed sources without later message-bound facts."""
 
         def build():
             eligible = []

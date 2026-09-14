@@ -341,7 +341,32 @@ class TestAwarenessLine:
         )
         assert (
             awareness_line(topical, "Mara")
-            == "Mara knows all of Sorena, sextant and boat"
+            == "Mara knows all of Sorena, all of sextant, all of boat"
+        )
+
+    def test_topics_named_for_one_character_merge_into_one_clause(self, topical):
+        from talemate.character import Character
+
+        ws = topical.world_state
+        topical.character_data["Nora"] = Character(name="Nora")
+        topical.character_data["Sterling Slobberton"] = Character(
+            name="Sterling Slobberton"
+        )
+        ws.character_name_mappings = {"Sterling Slobberton": ["Sterling"]}
+        # two topics carry Nora's name; Edwin knows the Sorena facts only
+        ws.topics["T1"].name = "Nora"
+        ws.topics["T3"].name = "nora"
+        ws.topics["T2"].name = "Sterling"
+        ws.topics["T4"].name = "boat"
+        assert (
+            awareness_line(topical, "Edwin")
+            == "Edwin knows some of Nora, some of Sterling Slobberton"
+        )
+        # a merged row that falls under the minimum is left out too
+        ws.topics["T4"].fact_ids = ["F11"]
+        assert (
+            awareness_line(topical, "Mara")
+            == "Mara knows all of Nora, all of Sterling Slobberton"
         )
 
     def test_small_topics_do_not_qualify(self, topical):
@@ -359,7 +384,9 @@ class TestAwarenessLine:
         assert awareness_line(topical, "Edwin") == "Edwin knows some of sextant"
         ws.topics["T1"].name = "Edwin"
         # Mara is not the speaker named in T1: it stays for her
-        assert awareness_line(topical, "Mara") == "Mara knows all of Edwin and sextant"
+        assert (
+            awareness_line(topical, "Mara") == "Mara knows all of Edwin, all of sextant"
+        )
 
     def test_memory_topics_switch_stops_coverage_and_the_line(self, topical):
         memory = get_agent("memory")
@@ -773,6 +800,6 @@ class TestMutationPathsRecluster:
             patch.object(summarizer, "summarize", AsyncMock(return_value=("text", []))),
         ):
             await summarizer.regenerate_facts(history_entry)
-            await summarizer.summarize_with_facts("dialogue", entry)
+            await summarizer.summarize_with_facts(entry)
         assert refresh.await_count == 2
         assert all(c.kwargs.get("force") is True for c in refresh.await_args_list)

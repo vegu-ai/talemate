@@ -17,7 +17,12 @@ from talemate.knowledge.perspectives import (
     set_source_perspectives,
     source_reference,
 )
-from talemate.knowledge.summaries import SummaryInput, summary_entry, summary_inputs
+from talemate.knowledge.summaries import (
+    SummaryInput,
+    render_line_texts,
+    summary_entry,
+    summary_inputs,
+)
 from talemate.knowledge.supported_facts import replace_source_facts
 from talemate.status import background_task
 
@@ -232,11 +237,12 @@ class AudienceSummaryMixin:
             try:
                 if layer == 0:
                     result = await self.summarize(
-                        "\n\n".join(summary_input.texts),
+                        render_line_texts(summary_input.texts, summary_input.lines),
                         extra_context=[],
                         generation_options=generation_options,
                         audience=audience,
                         skip_author_hooks=True,
+                        line_ids=True,
                         return_facts=self.archive_extract_facts,
                         fact_evidence=extraction_evidence(
                             scene, summary_input.sources, audience

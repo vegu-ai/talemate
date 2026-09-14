@@ -41,12 +41,11 @@ describe('the preset tables', () => {
         expect(ranks).not.toContain(-1);
         expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
     });
-    it('Off turns the master and the three switches outside it off, and states nothing about the inert ones', () => {
+    it('Off turns the master and the two switches outside it off, and states nothing about the inert ones', () => {
         expect(EFFORT_PRESETS.legacy.off).toEqual({
             'conversation.character_knowledge.enabled': false,
             'memory.topics.enabled': false,
             'memory.retrieval.similarity_gate': false,
-            'summarizer.archive.extract_facts': false,
         });
         expect(requestCount('legacy', 'off')).toBe(0);
         expect(EFFORT_MODEL_TIER.legacy.off).toBe('any');
@@ -191,7 +190,6 @@ describe('the chip at Off', () => {
             { agent: 'conversation', action: 'character_knowledge', enabled: false, config: {} },
             { agent: 'memory', action: 'topics', enabled: false, config: {} },
             { agent: 'memory', action: 'retrieval', config: { similarity_gate: false } },
-            { agent: 'summarizer', action: 'archive', config: { extract_facts: false } },
         ]);
         applyStop(agents, 'legacy', 'off');
         expect(currentEffort(agents, 'legacy').stop).toBe('off');
@@ -257,7 +255,8 @@ describe('the patch to reach a stop', () => {
         const patch = effortPatch(agentsAt('perception', 'minimal'), 'perception', 'thorough');
         const keys = patch.flatMap((p) => Object.keys(p.config));
         expect(keys).not.toContain('ledger');
-        expect(keys).toEqual(expect.arrayContaining(['memory_pass', 'extract_facts', 'automatic_repair']));
+        expect(keys).toEqual(expect.arrayContaining(['memory_pass', 'automatic_repair']));
+        expect(keys).not.toContain('extract_facts');
     });
 });
 
@@ -354,13 +353,12 @@ describe('the pin patch of an explicit selection', () => {
         expect(effortPatch(agents, 'legacy', 'light')).toEqual([]);
     });
 
-    it('Off pins only its four contributors', () => {
+    it('Off pins only its three contributors', () => {
         const pinned = effortPinPatch(agentsAt('legacy', 'ultra'), 'legacy', 'off');
         expect(pinned).toEqual([
             { agent: 'conversation', action: 'character_knowledge', enabled: false, config: {} },
             { agent: 'memory', action: 'topics', enabled: false, config: {} },
             { agent: 'memory', action: 'retrieval', config: { similarity_gate: false } },
-            { agent: 'summarizer', action: 'archive', config: { extract_facts: false } },
         ]);
     });
 

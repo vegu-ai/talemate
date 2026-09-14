@@ -66,6 +66,7 @@ async def test_standard_static_generation_without_progress(
         extra_context=[],
         return_facts=True,
         include_previous_facts=False,
+        line_ids=False,
     )
     assert scene.history == [] and scene.ts == 500
     assert scene.knowledge_eligibility == "legacy" and scene.knowledge is None

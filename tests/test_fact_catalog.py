@@ -65,7 +65,7 @@ def catalog_scene():
             ["boat"],
             known_by={"Edwin": "told"},
             message_id=107,
-            source="dialogue",
+            archive_id="A1",
         ),
         "F4": fact(
             "F4",
@@ -86,9 +86,7 @@ def catalog_scene():
             false=True,
             archive_id="A2",
         ),
-        "F10": fact(
-            "F10", "A late arrival.", 5, ["Mara"], [], message_id=112, source="dialogue"
-        ),
+        "F10": fact("F10", "A late arrival.", 5, ["Mara"], [], message_id=112),
     }
     ws.fact_counter = 10
     ws.topics = {
@@ -118,7 +116,6 @@ class TestListFacts:
         assert page.options.characters == ["Edwin", "Mara"]
         assert [topic.id for topic in page.options.topics] == ["T1", "T2"]
         assert [(item.value, item.label) for item in page.options.sources] == [
-            ("dialogue", "dialogue"),
             ("manual", "manual entry"),
             ("summary", "history entry"),
         ]
@@ -126,8 +123,9 @@ class TestListFacts:
     def test_rows_carry_topic_source_audience_and_superseded_by(self, catalog_scene):
         rows = {row["id"]: row for row in list_facts(catalog_scene, FactQuery()).facts}
         assert rows["F3"]["topic"] == {"id": "T1", "name": "boat"}
-        assert rows["F3"]["source_label"] == "dialogue"
-        assert rows["F3"]["source_id"] == "107"
+        assert rows["F3"]["source_label"] == "history entry"
+        assert rows["F3"]["source_id"] == "A1"
+        assert rows["F10"]["source_id"] == "112"
         assert rows["F3"]["superseded_by"] == ["F4"]
         assert rows["F3"]["audience"] == {"Mara": "witnessed", "Edwin": "told"}
         assert (
@@ -182,13 +180,13 @@ class TestListFacts:
             (dict(topic_id="T1"), ["F4", "F3"]),
             (dict(importance=[3]), ["F2"]),
             (dict(importance=[1, 3]), ["F4", "F2"]),
-            (dict(source=["dialogue"]), ["F10", "F3"]),
+            (dict(source=["manual"]), ["F2"]),
             (dict(superseded=True), ["F3"]),
             (dict(superseded=True, false=False), ["F3"]),
             (dict(superseded=False), ["F10", "F4", "F2", "F1", "F5"]),
             (dict(false=True), ["F5"]),
             (dict(latest_chapter=True), ["F4", "F3", "F5"]),
-            (dict(latest_chapter=True, false=False, source=["summary"]), ["F4"]),
+            (dict(latest_chapter=True, false=False, importance=[1]), ["F4"]),
             (dict(character="Mara", topic_id="T1", superseded=False), ["F4"]),
             (dict(text="nothing here"), []),
         ],
@@ -243,10 +241,7 @@ class TestListFacts:
         assert latest_chapter(catalog_scene).id == "A2"
         catalog_scene.archived_history = []
         assert latest_chapter(catalog_scene) is None
-        assert ids(list_facts(catalog_scene, FactQuery(latest_chapter=True))) == [
-            "F10",
-            "F3",
-        ]
+        assert ids(list_facts(catalog_scene, FactQuery(latest_chapter=True))) == []
 
     def test_query_validation(self):
         with pytest.raises(pydantic.ValidationError):
@@ -272,7 +267,8 @@ async def test_perception_listing_uses_the_character_view(supported_scene):  # n
     (row,) = page.facts
     assert row["text"] == "Alice has a brass key."
     assert row["audience"] == {"Alice": "inferred"}
-    assert row["source_label"] == "perception" and row["source_id"] is None
+    assert row["source_label"] == "perception"
+    assert row["source_id"] == str(scene.history[-1].id)
     assert ids(
         list_facts(scene, FactQuery(character="Bob", character_filter="unknown"))
     ) == [stored.id]

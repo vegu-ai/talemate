@@ -144,7 +144,8 @@
   summary: Conversation settings cover dialogue format and length, instructions, caching, story intent, writing style, effort
     presets and long-term memory. Character Knowledge controls filtering, topic/reminder context, durable live entry orientation
     and optional NPC entry briefings that combine with Offscreen Life; Perspectives exposes regenerate/remove,
-    while dialogue learning records revocable facts and AI memory refinement adds focused requests.
+    while dialogue learning grants recorded facts (it records none), unknown-fact reminders always consider facts
+    about the character or recorded while they were away, and AI memory refinement adds focused requests.
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Autocomplete partial text with Ctrl/Cmd+Enter in dialogue, message editing, attributes, details, descriptions,
@@ -265,7 +266,8 @@
     investigation. Deep analysis can retrieve additional historical context but may add many prompts.'
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
-  summary: 'Summarization settings: thresholds, methods, fact extraction, matching tolerance with normalized embeddings,
+  summary: 'Summarization settings: thresholds, methods, fact extraction at the chapter summary as the only fact source with
+    each fact tied to its line, matching tolerance with normalized embeddings,
     chronology, subject aliases, formerly clauses, perspective repair and layered history. Covers scene analysis caching
     for regeneration, resuming interrupted Deep Analysis Context retrieval, cancellable Waiting for knowledge updates in Character
     Perspectives, system-abort warnings, and scene-history token budgets, Best Fit, dialogue ratios and summary boundaries.'
@@ -1248,8 +1250,9 @@
   title: History
   summary: World Editor History manages static backstory, archived summaries, layered history, presence chips and time-passage
     chapters. Facts show Routine/State/Milestone importance, relative time such as (21 Days ago) since their latest restatement,
-    repeats and supersedes links; archived and Dialogue facts share text/importance editing and Known by filtering, source
-    inspection and cleanup, and failed extraction retries; History retains the full record despite prompt chronology cuts
+    repeats and supersedes links; facts come from chapter summaries only, each tied to the line it came from with Source
+    message inspection, text/importance editing, Known by filtering and failed extraction retries; a fact is removed with
+    its line, marked out of date on edit and moves with time-passage edits; History retains the full record despite prompt chronology cuts
     and supports dated seed-guided entries and regeneration. Generate or regenerate facts from predefined static history
     without advancing the story; Standard keeps existing presence rules, while Character perspectives requires saved views.
 - path: user-guide/world-editor/history/layered-history.md
@@ -1260,7 +1263,8 @@
 - path: user-guide/world-editor/knowledge-how-it-works.md
   title: How character knowledge works
   summary: Five diagrams explain reply inputs, presence, perceptions, disclosures, shared facts, chronology and effort, with
-    stops from Off to Ultra. Covers citation not supported, private competitor vetoes, public citations, regenerate old views,
+    stops from Off to Ultra. Facts come from chapter summaries only and follow their line; the awareness overview names each
+    character once. Covers citation not supported, private competitor vetoes, public citations, regenerate old views,
     Scene Context, memory ranking and exclusion, intro audiences, browsing revisions before keeping a version, live character-entry
     orientation and briefing/Offscreen Life coordination, and a mode decision tree that weighs model, secrets, cast size and cost.
 - path: user-guide/world-editor/knowledge.md

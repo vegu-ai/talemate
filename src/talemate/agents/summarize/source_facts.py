@@ -12,7 +12,11 @@ from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.revision_browsing import defer_derived_jobs
 from talemate.knowledge.evidence import extraction_evidence
 from talemate.knowledge.topics import prune_topics
-from talemate.knowledge.summaries import summary_entry, summary_inputs
+from talemate.knowledge.summaries import (
+    render_line_texts,
+    summary_entry,
+    summary_inputs,
+)
 from talemate.knowledge.perspectives import (
     PerspectiveReadContext,
     perspectives_changed,
@@ -20,7 +24,7 @@ from talemate.knowledge.perspectives import (
     source_reference,
 )
 from talemate.knowledge.supported_facts import (
-    extraction_text,
+    extraction_lines,
     retain_current_contributions,
     replace_source_facts,
 )
@@ -136,8 +140,8 @@ class SourceFactMixin:
             task.add_done_callback(self._fact_wakeup_done)
 
     def saved_fact_sources(self, scene):
+        """Base summaries and disclosures: the only sources facts come from."""
         read = PerspectiveReadContext(scene)
-        covered = set()
         summaries = []
         for key, owners in read.sources.items():
             if key[0] != "summary" or key[2] != 0 or len(owners) != 1:
@@ -154,32 +158,7 @@ class SourceFactMixin:
                 if not selections or any(part.status != "ready" for part in selections):
                     continue
                 summaries.append(selections[0].source)
-                for name in view.audience:
-                    for dependency in view.sources:
-                        part = select_character_view(scene, dependency, name, read=read)
-                        if part.status == "ready":
-                            covered.add((part.source, name))
         yield from summaries
-        for key, owners in read.sources.items():
-            if key[0] != "message" or len(owners) != 1:
-                continue
-            owner = owners[0]
-            if owner.knowledge is None or owner.owner.hidden:
-                continue
-            reference = source_reference(scene, *key[:2], layer=key[2], read=read)
-            for view in owner.knowledge.views:
-                selections = [
-                    select_character_view(scene, reference, name, read=read)
-                    for name in view.audience
-                ]
-                if any(part.status not in ("ready", "omitted") for part in selections):
-                    continue
-                if selections and not all(
-                    (part.source, name) in covered
-                    for part, name in zip(selections, view.audience)
-                ):
-                    # A partly covered shared view still supplies its entire audience.
-                    yield selections[0].source
         for disclosure in scene.knowledge.disclosures if scene.knowledge else ():
             yield source_reference(scene, "disclosure", disclosure.id, read=read)
 
@@ -237,6 +216,8 @@ class SourceFactMixin:
                         )
                         if source is None:
                             raise ValueError("Requested fact source was removed")
+                        if source.kind == "message":
+                            raise ValueError("Passages are not fact sources")
                         include_previous_facts = True
                         if source.kind == "disclosure":
                             audiences = [read.disclosures[source.id].audience]
@@ -270,19 +251,37 @@ class SourceFactMixin:
                                 raise ValueError(
                                     "Fact sources must be ready before rebuilding"
                                 )
-                            text = extraction_text(
+                            # the same line contract as the archive step: every
+                            # message line carries its id, and a fact names one
+                            lines = extraction_lines(
                                 scene, view.source, audience[0], read=read
                             )
                             requests.append(
-                                (view.source, audience, text, include_previous_facts)
+                                (
+                                    view.source,
+                                    audience,
+                                    render_line_texts(
+                                        [text for text, _ in lines],
+                                        [line for _, line in lines],
+                                    ),
+                                    include_previous_facts,
+                                    any(line is not None for _, line in lines),
+                                )
                             )
-                    for source, audience, text, include_previous_facts in requests:
+                    for (
+                        source,
+                        audience,
+                        text,
+                        include_previous_facts,
+                        line_ids,
+                    ) in requests:
                         _, parsed = await self.summarize(
                             text,
                             audience=audience,
                             include_previous_facts=include_previous_facts,
                             extra_context=[],
                             return_facts=True,
+                            line_ids=line_ids,
                             skip_author_hooks=True,
                             fact_evidence=extraction_evidence(
                                 scene, [source], audience, read=read

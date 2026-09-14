@@ -786,10 +786,10 @@ def _source_content_changed(
     layer: int = 0,
 ) -> PerspectiveInvalidation | None:
     if kind == "message":
-        # dialogue_facts imports supported_facts, which imports this module.
-        from talemate.knowledge.dialogue_facts import invalidate_dialogue_facts
+        # message_facts imports supported_facts, which imports this module.
+        from talemate.knowledge.message_facts import invalidate_message_facts
 
-        invalidate_dialogue_facts(scene)
+        invalidate_message_facts(scene)
     if scene.knowledge is None:
         return
     source = _find(scene, (kind, source_id, layer))
@@ -835,10 +835,10 @@ def source_content_changed(
 def source_deleted(
     scene: "Scene", reference: SourceReference | None, *, message_id: int | None = None
 ) -> PerspectiveInvalidation | None:
-    # dialogue_facts imports supported_facts, which imports this module.
-    from talemate.knowledge.dialogue_facts import invalidate_dialogue_facts
+    # message_facts imports supported_facts, which imports this module.
+    from talemate.knowledge.message_facts import invalidate_message_facts
 
-    invalidate_dialogue_facts(scene)
+    invalidate_message_facts(scene)
     if reference is None and message_id is not None and scene.knowledge is not None:
         reference = SourceReference(kind="message", id=message_id, revision=1)
     if reference is not None:

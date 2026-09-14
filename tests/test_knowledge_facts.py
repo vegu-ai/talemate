@@ -3,6 +3,7 @@ Atomic facts: parsing the FACTS output, storing facts with near-duplicate
 merging and told-edges, the failure path, and the scene lifecycle.
 """
 
+import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -14,12 +15,15 @@ from talemate.agents.memory.schema import MemoryDocument
 from talemate.history import ArchiveEntry
 from talemate.instance import get_agent
 from talemate.knowledge.facts import (
+    SpanLine,
     drop_facts_for_entries,
     fact_memory_document,
     parse_facts,
     store_facts,
+    verify_restatements,
 )
-from talemate.knowledge.schema import Fact, KnowledgeEdge
+from talemate.knowledge.perspective_models import content_digest
+from talemate.knowledge.schema import Fact, FactRestatement, KnowledgeEdge
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage, TimePassageMessage
 
@@ -79,6 +83,26 @@ class TestParseFacts:
         assert parse_facts('[{"text": "The inscription begins [REDACTED."}]')[
             0
         ].text.startswith("The inscription")
+
+    @pytest.mark.parametrize(
+        "value,expected",
+        [
+            ("12", 12),
+            (" [12] ", 12),
+            (1043.0, 1043),
+            (1043.5, None),
+            ("²", None),
+            ("①", None),
+            ("1043.0", None),
+            ("abc", None),
+            (True, None),
+            ("[INTRO]", "intro"),
+        ],
+    )
+    def test_message_id_readings(self, value, expected):
+        # one unreadable id drops that fact, never the whole list
+        facts = parse_facts(json.dumps([{"text": "x", "message_id": value}]))
+        assert facts[0].message_id == expected
 
     def test_trailing_prose_after_the_list(self):
         assert parse_facts('[{"text": "x"}]\nThat is all.')[0].text == "x"
@@ -140,7 +164,7 @@ class TestStoreFacts:
             '[{"text": "Mara found a sextant.", "subjects": ["Mara", "sextant"]},'
             ' {"text": "The Sorena sank in 1973.", "subjects": ["Sorena"], "supersedes": "F99"}]'
         )
-        stored = await store_facts(scene, "e1", ["Mara"], 500, parsed, 0.15)
+        stored = await store_facts(scene, "e1", parsed, 0.15, present=["Mara"], ts=500)
         assert [f.id for f in stored] == ["F1", "F2"]
         assert scene.world_state.fact_counter == 2
         f1 = scene.world_state.facts["F1"]
@@ -156,12 +180,12 @@ class TestStoreFacts:
         scene.world_state.facts["F1"] = Fact(id="F1", text="old")
         scene.world_state.fact_counter = 1
         parsed = parse_facts('[{"text": "new", "supersedes": "F1"}]')
-        await store_facts(scene, "e2", None, 0, parsed, 0.15)
+        await store_facts(scene, "e2", parsed, 0.15, ts=0)
         assert scene.world_state.facts["F2"].supersedes == "F1"
 
     async def test_told_edges_for_absent_learners(self, scene, fake_memory):
         parsed = parse_facts('[{"text": "x", "known_by": ["Mara", "Edwin"]}]')
-        await store_facts(scene, "e1", ["Mara"], 7, parsed, 0.15)
+        await store_facts(scene, "e1", parsed, 0.15, present=["Mara"], ts=7)
         fact = scene.world_state.facts["F1"]
         # Mara was present: derived, never stored; Edwin was told
         assert fact.known_by == {"Edwin": "told"}
@@ -196,7 +220,7 @@ class TestStoreFacts:
         parsed = parse_facts(
             '[{"text": "Mara discovered a brass sextant.", "known_by": ["Edwin"]}]'
         )
-        stored = await store_facts(scene, "e2", ["Mara"], 9, parsed, 0.15)
+        stored = await store_facts(scene, "e2", parsed, 0.15, present=["Mara"], ts=9)
         assert stored == []
         assert len(scene.world_state.facts) == 1
         assert existing.restatements == 1 and existing.last_seen_ts == 9
@@ -222,7 +246,7 @@ class TestStoreFacts:
         parsed = parse_facts(
             '[{"text": "Edwin says the Sorena went down in 1973.", "known_by": ["Mara"]}]'
         )
-        await store_facts(scene, "e5", ["Edwin", "Mara"], 50, parsed, 0.15)
+        await store_facts(scene, "e5", parsed, 0.15, present=["Edwin", "Mara"], ts=50)
         assert existing.known_by == {"Mara": "told"}
         assert [(e.character, e.target) for e in scene.world_state.knowledge] == [
             ("Mara", "F1")
@@ -233,7 +257,7 @@ class TestStoreFacts:
 
     async def test_unknown_presence_writes_no_edges(self, scene, fake_memory):
         parsed = parse_facts('[{"text": "x", "known_by": ["Mara", "Edwin"]}]')
-        await store_facts(scene, "e1", None, 7, parsed, 0.15)
+        await store_facts(scene, "e1", parsed, 0.15, ts=7)
         fact = scene.world_state.facts["F1"]
         assert fact.known_by == {} and scene.world_state.knowledge == []
 
@@ -248,10 +272,10 @@ class TestStoreFacts:
         await store_facts(
             scene,
             "e2",
-            ["Mara"],
-            9,
             parse_facts('[{"text": "x again", "known_by": ["Carol"]}]'),
             0.15,
+            present=["Mara"],
+            ts=9,
         )
         assert existing.known_by == {} and scene.world_state.knowledge == []
 
@@ -260,7 +284,7 @@ class TestStoreFacts:
         parsed = parse_facts(
             '[{"text": "Mara found a sextant."}, {"text": "Mara discovered a sextant."}]'
         )
-        stored = await store_facts(scene, "e1", ["Mara"], 1, parsed, 0.15)
+        stored = await store_facts(scene, "e1", parsed, 0.15, present=["Mara"], ts=1)
         assert [f.id for f in stored] == ["F1"]
         assert scene.world_state.facts["F1"].restatements == 1
         # one embedding pass per item against the batch, and one document per fact id
@@ -275,7 +299,7 @@ class TestStoreFacts:
         fake_memory.neighbours = [existing]
         fake_memory.distance = 0.9
         stored = await store_facts(
-            scene, "e2", None, 0, parse_facts('[{"text": "new"}]'), 0.15
+            scene, "e2", parse_facts('[{"text": "new"}]'), 0.15, ts=0
         )
         assert [f.id for f in stored] == ["F2"]
 
@@ -293,6 +317,239 @@ class TestStoreFacts:
         assert scene.world_state.facts["F2"].supersedes is None
         assert [e.target for e in scene.world_state.knowledge] == ["F2"]
         assert fake_memory.deleted == [{"ids": ["F1"]}]
+
+    def _lines(self):
+        return {
+            11: SpanLine(message_id=11, message_digest="d11", present=["Mara"], ts=40),
+            12: SpanLine(
+                message_id=12, message_digest="d12", present=["Mara", "Edwin"], ts=90
+            ),
+        }
+
+    async def test_bound_facts_take_their_line(self, scene, fake_memory):
+        parsed = parse_facts(
+            '[{"text": "Mara found a sextant.", "message_id": 12},'
+            ' {"text": "Nobody knows this line.", "message_id": 99},'
+            ' {"text": "A fact without a line."}]'
+        )
+        stored = await store_facts(scene, "e1", parsed, 0.15, lines=self._lines())
+        assert [f.id for f in stored] == ["F1"]
+        fact = scene.world_state.facts["F1"]
+        assert (fact.message_id, fact.message_digest) == (12, "d12")
+        assert (fact.present, fact.ts, fact.last_seen_ts) == (["Mara", "Edwin"], 90, 90)
+        assert fact.archive_id == "e1" and fact.source == "summary"
+        assert len(scene.world_state.facts) == 1
+
+    async def test_intro_line_binds_to_the_opening(self, scene, fake_memory):
+        intro = SpanLine(message_id=11, message_digest="d11", present=["Edwin"], ts=40)
+        parsed = parse_facts('[{"text": "The keeper is old.", "message_id": "intro"}]')
+        await store_facts(scene, "e1", parsed, 0.15, lines=self._lines(), intro=intro)
+        fact = scene.world_state.facts["F1"]
+        assert fact.message_id == 11 and fact.present == ["Edwin"]
+        parsed = parse_facts('[{"text": "Dropped.", "message_id": "intro"}]')
+        assert await store_facts(scene, "e1", parsed, 0.15, lines=self._lines()) == []
+
+    async def test_restates_records_a_restatement(self, scene, fake_memory):
+        existing = Fact(
+            id="F1",
+            text="Mara found a sextant.",
+            archive_id="e1",
+            message_id=5,
+            message_digest="d5",
+            ts=1,
+            present=["Mara"],
+        )
+        scene.world_state.facts["F1"] = existing
+        scene.world_state.fact_counter = 1
+        parsed = parse_facts(
+            '[{"text": "Mara shows Edwin the sextant she found.", "restates": "F1",'
+            ' "message_id": 12, "known_by": ["Edwin"]}]'
+        )
+        assert await store_facts(scene, "e2", parsed, 0.15, lines=self._lines()) == []
+        assert len(scene.world_state.facts) == 1
+        assert existing.restatements == 1 and existing.last_seen_ts == 90
+        assert [
+            (r.message_id, r.message_digest, r.archive_id) for r in existing.restated_by
+        ] == [(12, "d12", "e2")]
+        # the restating line's audience learned the stored fact
+        assert existing.known_by == {"Edwin": "told"}
+        assert [
+            (e.character, e.target, e.message_id) for e in scene.world_state.knowledge
+        ] == [("Edwin", "F1", 12)]
+        assert fake_memory.added[-1]["meta"]["restatements"] == 1
+
+    async def test_restates_unknown_id_is_a_new_fact(self, scene, fake_memory):
+        parsed = parse_facts('[{"text": "New.", "restates": "F77", "message_id": 11}]')
+        stored = await store_facts(scene, "e1", parsed, 0.15, lines=self._lines())
+        assert [f.id for f in stored] == ["F1"]
+
+    def test_restates_counts_only_for_an_offered_id(self):
+        parsed = parse_facts(
+            '[{"text": "A.", "restates": "F1"}, {"text": "B.", "restates": "F2"},'
+            ' {"text": "C."}]'
+        )
+        assert [item.restates for item in verify_restatements(parsed, {"F1"})] == [
+            "F1",
+            None,
+            None,
+        ]
+
+    async def test_regenerating_an_older_chapter_keeps_the_earliest_origin(
+        self, scene, fake_memory
+    ):
+        # F1 came from line 5 (chapter e1); line 12 (chapter e2) restated it
+        fact = Fact(
+            id="F1",
+            text="Mara found a sextant.",
+            archive_id="e1",
+            message_id=5,
+            message_digest="d5",
+            ts=1,
+            present=["Mara"],
+            last_seen_ts=90,
+            restatements=1,
+            restated_by=(
+                FactRestatement(
+                    message_id=12,
+                    message_digest="d12",
+                    archive_id="e2",
+                    present=["Mara", "Edwin"],
+                    ts=90,
+                ),
+            ),
+        )
+        scene.world_state.facts["F1"] = fact
+        scene.world_state.fact_counter = 1
+        await drop_facts_for_entries(scene, {"e1"})
+        # the restatement is the origin for now, with its audience and time
+        assert (
+            fact.message_id,
+            fact.archive_id,
+            fact.present,
+            fact.ts,
+            fact.last_seen_ts,
+        ) == (12, "e2", ["Mara", "Edwin"], 90, 90)
+        assert fact.restated_by == () and fact.restatements == 0
+        assert fake_memory.deleted == []
+        assert fake_memory.added[-1]["meta"]["ts"] == 90
+        # the re-extraction links the earlier line again: it is the origin,
+        # and the later line goes back to being a restatement
+        parsed = parse_facts(
+            '[{"text": "Mara found a sextant.", "restates": "F1", "message_id": 5}]'
+        )
+        lines = {5: SpanLine(message_id=5, message_digest="d5", present=["Mara"], ts=1)}
+        assert await store_facts(scene, "e1", parsed, 0.15, lines=lines) == []
+        assert (
+            fact.message_id,
+            fact.archive_id,
+            fact.present,
+            fact.ts,
+            fact.last_seen_ts,
+        ) == (5, "e1", ["Mara"], 1, 90)
+        assert [
+            (r.message_id, r.archive_id, r.present, r.ts) for r in fact.restated_by
+        ] == [(12, "e2", ["Mara", "Edwin"], 90)]
+        # Edwin witnessed the demoted line: his edge names that line, so the
+        # cleanup of that line can take it back
+        assert fact.known_by == {"Edwin": "told"}
+        assert [
+            (e.character, e.target, e.message_id, e.ts)
+            for e in scene.world_state.knowledge
+        ] == [("Edwin", "F1", 12, 90)]
+        assert fake_memory.added[-1]["meta"]["ts"] == 1
+
+    async def test_a_static_entry_takes_the_origin_back(self, scene, fake_memory):
+        # a backstory fact whose static entry was regenerated: the later line
+        # holds the origin for now
+        fact = Fact(
+            id="F1",
+            text="Mara grew up at the lighthouse.",
+            archive_id="e2",
+            message_id=12,
+            message_digest="d12",
+            ts=90,
+            present=["Mara", "Edwin"],
+            last_seen_ts=90,
+        )
+        scene.world_state.facts["F1"] = fact
+        scene.world_state.fact_counter = 1
+        parsed = parse_facts(
+            '[{"text": "Mara grew up at the lighthouse.", "restates": "F1"}]'
+        )
+        assert (
+            await store_facts(
+                scene, "backstory", parsed, 0.15, lines=None, present=["Mara"], ts=0
+            )
+            == []
+        )
+        # the static entry comes before every message: it is the origin again
+        assert (
+            fact.message_id,
+            fact.message_digest,
+            fact.archive_id,
+            fact.present,
+            fact.ts,
+            fact.last_seen_ts,
+        ) == (None, None, "backstory", ["Mara"], 0, 90)
+        assert [
+            (r.message_id, r.archive_id, r.present, r.ts) for r in fact.restated_by
+        ] == [(12, "e2", ["Mara", "Edwin"], 90)]
+        assert [
+            (e.character, e.message_id, e.ts) for e in scene.world_state.knowledge
+        ] == [("Edwin", 12, 90)]
+
+    async def test_a_swap_from_an_unknown_audience_grants_the_listed_learners(
+        self, scene, fake_memory
+    ):
+        # line 12 was pushed with no active character (unknown audience); the
+        # regenerate of the older chapter finds line 5 restating it
+        fact = Fact(
+            id="F1",
+            text="Mara found a sextant.",
+            archive_id="e2",
+            message_id=12,
+            message_digest="d12",
+            ts=90,
+            present=None,
+            last_seen_ts=90,
+        )
+        scene.world_state.facts["F1"] = fact
+        scene.world_state.fact_counter = 1
+        parsed = parse_facts(
+            '[{"text": "Mara found a sextant.", "restates": "F1", "message_id": 5,'
+            ' "known_by": ["Zed"]}]'
+        )
+        lines = {5: SpanLine(message_id=5, message_digest="d5", present=["Mara"], ts=1)}
+        assert await store_facts(scene, "e1", parsed, 0.15, lines=lines) == []
+        assert (fact.message_id, fact.present, fact.ts) == (5, ["Mara"], 1)
+        assert [r.message_id for r in fact.restated_by] == [12]
+        # the gate reads the audience after the swap: Zed learned it at line 5
+        assert fact.known_by == {"Zed": "told"}
+        assert [
+            (e.character, e.message_id, e.ts) for e in scene.world_state.knowledge
+        ] == [("Zed", 5, 1)]
+
+    async def test_an_older_restatement_does_not_lower_last_seen(
+        self, scene, fake_memory
+    ):
+        fact = Fact(
+            id="F1",
+            text="Mara found a sextant.",
+            archive_id="e2",
+            message_id=12,
+            message_digest="d12",
+            ts=90,
+            present=["Mara", "Edwin"],
+            last_seen_ts=90,
+        )
+        scene.world_state.facts["F1"] = fact
+        scene.world_state.fact_counter = 1
+        parsed = parse_facts(
+            '[{"text": "Mara found a sextant.", "restates": "F1", "message_id": 11}]'
+        )
+        assert await store_facts(scene, "e1", parsed, 0.15, lines=self._lines()) == []
+        assert (fact.message_id, fact.ts, fact.last_seen_ts) == (11, 40, 90)
+        assert [r.message_id for r in fact.restated_by] == [12]
 
     def test_fact_memory_document_unknown_presence(self):
         doc = fact_memory_document(Fact(id="F1", text="x"))
@@ -416,6 +673,26 @@ class TestSummarizeWithFacts:
         previous = mock_request.call_args.kwargs["vars"]["previous_facts"]
         assert [f.id for f in previous] == ["F1"]
 
+    async def test_restates_outside_the_offered_list_is_dropped(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        scene.world_state.facts["F1"] = Fact(id="F1", text="stored, not offered")
+        response = (
+            "SUMMARY: prose",
+            {
+                "summary": "prose",
+                "facts": '[{"text": "Repeat.", "restates": "F1", "message_id": 1}]',
+            },
+        )
+        with (
+            patch.object(Prompt, "request", AsyncMock(return_value=response)),
+            patch("talemate.agents.summarize.previous_facts", return_value=[]),
+        ):
+            _, parsed = await summarizer.summarize("dialogue", return_facts=True)
+        assert [item.restates for item in parsed] == [None]
+        with patch.object(Prompt, "request", AsyncMock(return_value=response)):
+            _, parsed = await summarizer.summarize("dialogue", return_facts=True)
+        assert [item.restates for item in parsed] == ["F1"]
+
 
 class TestBuildArchiveFacts:
     def _history(self):
@@ -433,11 +710,12 @@ class TestBuildArchiveFacts:
         summarizer.actions["archive"].config["threshold"].value = 100000
         scene.history = self._history()
 
-        async def stub(
-            text, extra_context=None, generation_options=None, return_facts=False
-        ):
+        async def stub(text, **kwargs):
+            assert kwargs["line_ids"] is True
+            assert text.startswith(f"[{scene.history[0].id}] Mara: one")
             return "SUMM", parse_facts(
-                '[{"text": "Edwin and Mara met.", "known_by": ["Carol"]}]'
+                '[{"text": "Edwin and Mara met.", "known_by": ["Carol"],'
+                f' "message_id": {scene.history[1].id}}}]'
             )
 
         summarizer.summarize = stub
@@ -446,8 +724,11 @@ class TestBuildArchiveFacts:
         assert entry["facts_status"] == "ok"
         fact = scene.world_state.facts["F1"]
         assert fact.archive_id == entry["id"]
-        assert fact.present == ["Edwin", "Mara"]
-        assert fact.ts == entry["ts"]
+        assert fact.message_id == scene.history[1].id
+        assert fact.message_digest == content_digest(scene.history[1].perception_text)
+        assert fact.present == ["Mara", "Edwin"]
+        # the passage sits after the span: the line is at the scene's start
+        assert fact.ts == 0
         assert scene.world_state.knowledge[0].character == "Carol"
 
     async def test_failed_facts_keep_the_summary_and_mark_the_entry(
@@ -457,9 +738,7 @@ class TestBuildArchiveFacts:
         summarizer.actions["archive"].config["threshold"].value = 100000
         scene.history = self._history()
 
-        async def stub(
-            text, extra_context=None, generation_options=None, return_facts=False
-        ):
+        async def stub(text, **kwargs):
             return "SUMM", None
 
         summarizer.summarize = stub
@@ -477,9 +756,7 @@ class TestBuildArchiveFacts:
         summarizer.actions["archive"].config["extract_facts"].value = False
         scene.history = self._history()
 
-        async def stub(
-            text, extra_context=None, generation_options=None, return_facts=False
-        ):
+        async def stub(text, **kwargs):
             return "SUMM", None
 
         summarizer.summarize = stub
@@ -619,9 +896,7 @@ class TestRegenerateFacts:
         }
         calls = []
 
-        async def stub(
-            text, extra_context=None, generation_options=None, return_facts=False
-        ):
+        async def stub(text, return_facts=False, **kwargs):
             calls.append(return_facts)
             return ("NEW", None) if return_facts else "NEW"
 
@@ -636,6 +911,52 @@ class TestRegenerateFacts:
         assert calls == [False]
         assert scene.world_state.facts["F1"].text == "hand edited"
         assert scene.archived_history[0]["facts_status"] == "ok"
+
+    async def test_first_chapter_keeps_its_intro_facts_across_regenerates(
+        self, summarizer_scene, fake_memory
+    ):
+        from talemate.history import HistoryEntry, regenerate_history_entry
+
+        scene, summarizer = summarizer_scene
+        scene.intro = "The keeper is old."
+        scene.history = [CharacterMessage(message="Mara: one", present=["Mara"])]
+        scene.archived_history = [
+            {
+                "id": "e1",
+                "text": "old",
+                "ts": 5,
+                "start": 0,
+                "end": 0,
+                "present": ["Mara"],
+                "intro_included": True,
+                "facts_status": "ok",
+            }
+        ]
+        spans = []
+
+        async def stub(text, **kwargs):
+            spans.append(text)
+            return "NEW", parse_facts(
+                '[{"text": "The keeper is old.", "message_id": "intro"}]'
+            )
+
+        summarizer.summarize = stub
+        for _ in range(2):
+            entry = HistoryEntry(
+                text="old",
+                ts=5,
+                index=0,
+                layer=0,
+                id="e1",
+                start=0,
+                end=0,
+                intro_included=True,
+            )
+            result = await regenerate_history_entry(scene, entry)
+            assert result.intro_included is True
+            assert scene.archived_history[0]["intro_included"] is True
+            assert [f.text for f in result.facts] == ["The keeper is old."]
+        assert all(text.startswith("[intro] The keeper is old.") for text in spans)
 
     async def test_layered_entry_is_refused(self, summarizer_scene, fake_memory):
         from talemate.history import HistoryEntry
@@ -665,10 +986,10 @@ class TestRegenerateFacts:
         scene.world_state.facts = {"F1": Fact(id="F1", text="stale", archive_id="e1")}
         scene.world_state.fact_counter = 1
 
-        async def stub(
-            text, extra_context=None, generation_options=None, return_facts=False
-        ):
-            return "NEW", parse_facts('[{"text": "fresh"}]')
+        async def stub(text, **kwargs):
+            return "NEW", parse_facts(
+                f'[{{"text": "fresh", "message_id": {scene.history[0].id}}}]'
+            )
 
         summarizer.summarize = stub
         entry = HistoryEntry(
@@ -710,15 +1031,11 @@ class TestRegenerateFacts:
         scene.world_state.facts = {"F1": Fact(id="F1", text="stale", archive_id="e1")}
         scene.world_state.fact_counter = 1
 
-        async def stub(
-            text,
-            extra_context=None,
-            generation_options=None,
-            return_facts=False,
-            include_previous_facts=True,
-        ):
+        async def stub(text, include_previous_facts=True, **kwargs):
             assert include_previous_facts
-            return "NEW SUMMARY", parse_facts('[{"text": "fresh"}]')
+            return "NEW SUMMARY", parse_facts(
+                f'[{{"text": "fresh", "message_id": {scene.history[1].id}}}]'
+            )
 
         summarizer.summarize = stub
         entry = HistoryEntry(
@@ -752,13 +1069,7 @@ class TestRegenerateFacts:
         ]
         scene.world_state.facts = {"F1": Fact(id="F1", text="stale", archive_id="e1")}
 
-        async def stub(
-            text,
-            extra_context=None,
-            generation_options=None,
-            return_facts=False,
-            include_previous_facts=True,
-        ):
+        async def stub(text, include_previous_facts=True, **kwargs):
             assert include_previous_facts
             return "NEW SUMMARY", None
 

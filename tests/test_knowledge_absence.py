@@ -66,13 +66,53 @@ class TestAbsenceFacts:
     async def test_window_is_newest_pool_before_chronology(self, scene, embeddings):
         scene.ts = 100 * DAY
         scene.active_characters = []
+        # witnessed but blocked: the window still governs these
         scene.world_state.facts = {
-            "F1": fact("F1", "Old milestone", 10 * DAY, [], importance=3),
-            "F2": fact("F2", "Fresh routine", 99 * DAY, [], importance=1),
-            "F3": fact("F3", "Fresh state", 99 * DAY, [], importance=2),
+            "F1": fact("F1", "Old milestone", 10 * DAY, ["Edwin"], importance=3),
+            "F2": fact("F2", "Fresh routine", 99 * DAY, ["Edwin"], importance=1),
+            "F3": fact("F3", "Fresh state", 99 * DAY, ["Edwin"], importance=2),
         }
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Edwin", target=identity, kind="revoke")
+            for identity in ("F1", "F2", "F3")
+        ]
         result = await absence_facts(scene, "Edwin", window=2, limit=2)
         assert [item.id for item in result] == ["F3", "F2"]
+
+    async def test_facts_that_concern_the_character_bypass_the_window(
+        self, scene, embeddings
+    ):
+        scene.ts = 100 * DAY
+        scene.active_characters = []
+        scene.world_state.facts = {
+            # recorded while Edwin was away, long ago
+            "F1": fact(
+                "F1", "Mara buried the ledger.", 10 * DAY, ["Mara"], importance=3
+            ),
+            # witnessed but blocked, and about Edwin
+            "F2": fact(
+                "F2",
+                "Edwin is owed money.",
+                20 * DAY,
+                ["Edwin", "Mara"],
+                importance=2,
+                subjects=["Edwin"],
+            ),
+            # witnessed but blocked, not about Edwin: the window governs it
+            "F3": fact("F3", "The boat leaks.", 30 * DAY, ["Edwin", "Mara"]),
+            "F4": fact("F4", "The tide turned.", 99 * DAY, ["Edwin", "Mara"]),
+        }
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Edwin", target=identity, kind="revoke")
+            for identity in ("F2", "F3", "F4")
+        ]
+        # the concerning facts come first, ranked by score; the window's
+        # facts follow
+        result = await absence_facts(scene, "Edwin", window=1, limit=5)
+        assert [item.id for item in result] == ["F1", "F2", "F4"]
+        # the limit cuts the ranked list
+        result = await absence_facts(scene, "Edwin", window=1, limit=2)
+        assert [item.id for item in result] == ["F1", "F2"]
 
     async def test_unknown_facts_ordered_by_score_then_recency(self, scene, embeddings):
         result = await absence_facts(scene, "Edwin")
@@ -80,8 +120,12 @@ class TestAbsenceFacts:
 
     async def test_cap_and_window(self, scene, embeddings):
         assert [f.id for f in await absence_facts(scene, "Edwin", limit=1)] == ["F4"]
-        # a window of two keeps only F4 and F5 (F5 is false: dropped)
-        assert [f.id for f in await absence_facts(scene, "Edwin", window=2)] == ["F4"]
+        # F2-F4 were recorded while Edwin was away: the window does not cut them
+        assert [f.id for f in await absence_facts(scene, "Edwin", window=2)] == [
+            "F4",
+            "F3",
+            "F2",
+        ]
 
     async def test_known_character_gets_nothing(self, scene, embeddings):
         assert await absence_facts(scene, "Mara") == []
@@ -109,8 +153,12 @@ class TestAbsenceFacts:
         scene.world_state.facts = {}
         for n in range(1, 37):
             scene.world_state.facts[f"F{n}"] = fact(
-                f"F{n}", f"fact {n}", 10 * ((n - 1) // 12), ["Mara"]
+                f"F{n}", f"fact {n}", 10 * ((n - 1) // 12), ["Edwin", "Mara"]
             )
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Edwin", target=f"F{n}", kind="revoke")
+            for n in range(1, 37)
+        ]
         result = await absence_facts(scene, "Edwin", window=30, limit=40)
         ids = [f.id for f in result]
         # the window keeps F7..F36: the six oldest by creation order fall out

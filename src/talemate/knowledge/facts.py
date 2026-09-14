@@ -1,10 +1,12 @@
 """
-Atomic facts: parsed from the summary call, stored under the world state,
-mirrored into the memory store.
+Atomic facts: parsed from the summary call, bound to the span line they came
+from, stored under the world state, mirrored into the memory store.
 """
 
 import json
 import re
+from dataclasses import dataclass
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Callable
 
 import pydantic
@@ -14,19 +16,20 @@ from talemate.instance import get_agent
 from talemate.knowledge.chronology import ranked_facts
 from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 from talemate.knowledge.presence import presence_metadata
+from talemate.knowledge.revision_browsing import current_facts
 from talemate.knowledge.schema import (
-    ArchiveFactSupport,
-    DialogueFactSupport,
+    INTRO_LINE,
     Fact,
     FactImportance,
+    FactRestatement,
     KnowledgeEdge,
     ParsedFact,
 )
 from talemate.knowledge.supported_facts import (
     prune_contributions,
-    aggregate_fact,
     sanitize_fact_links,
 )
+from talemate.knowledge.timeline import refresh_fact_times
 from talemate.knowledge.topics import prune_topics
 from talemate.util.data import extract_json
 
@@ -34,6 +37,7 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 __all__ = [
+    "SpanLine",
     "parse_facts",
     "store_facts",
     "facts_for_entry",
@@ -44,6 +48,7 @@ __all__ = [
     "fact_memory_document",
     "previous_facts",
     "store_offscreen_fact",
+    "fact_is_independent",
 ]
 
 log = structlog.get_logger("talemate.knowledge.facts")
@@ -54,6 +59,16 @@ class _Unset:
 
 
 UNSET = _Unset()
+
+
+@dataclass(frozen=True)
+class SpanLine:
+    """One line of an extraction span: the binding a fact from it receives."""
+
+    message_id: int
+    message_digest: str
+    present: list[str] | None
+    ts: int | None
 
 
 def _strip_record_age(text: str) -> str:
@@ -134,12 +149,31 @@ def fact_memory_document(fact: Fact) -> dict:
     return {"id": fact.id, "text": fact.text, "meta": meta}
 
 
+def fact_is_independent(world_state, fact: Fact, *, edges: bool = True) -> bool:
+    """
+    An author-edited fact outlives its source; with `edges`, so does a fact
+    the author granted by hand.
+    """
+    return (
+        fact.text_edited
+        or fact.link_edited
+        or fact.source == "manual"
+        or (
+            edges
+            and any(
+                edge.target == fact.id and edge.source == "manual"
+                for edge in world_state.knowledge
+            )
+        )
+    )
+
+
 def facts_for_entry(scene: "Scene", archive_id: str) -> list[Fact]:
     return [
         fact
         for fact in scene.world_state.facts.values()
         if fact.archive_id == archive_id
-        or any(source.archive_id == archive_id for source in fact.archive_sources)
+        or any(item.archive_id == archive_id for item in fact.restated_by)
         or any(
             item.source.kind == "summary" and item.source.id == archive_id
             for item in fact.contributions
@@ -148,11 +182,64 @@ def facts_for_entry(scene: "Scene", archive_id: str) -> list[Fact]:
 
 
 def previous_facts(scene: "Scene", limit: int = 30) -> list[Fact]:
-    from talemate.knowledge.revision_browsing import current_facts
-
     return ranked_facts(
         scene, current_facts(scene), limit=limit, tiers=False, prompt=False
     )
+
+
+def _binding_key(item) -> tuple[int, int, int]:
+    """
+    The order of a fact's sources: the earliest is the origin. A static
+    entry comes before every message; equal times fall back to the message
+    id order.
+    """
+    return (
+        0 if item.message_id is None else 1,
+        item.ts if item.ts is not None else 0,
+        item.message_id if item.message_id is not None else 0,
+    )
+
+
+def _last_seen(fact: Fact) -> None:
+    """`last_seen_ts` is the latest of the fact's own sources."""
+    if fact.contributions:
+        return
+    times = [
+        value
+        for value in (fact.ts, *(item.ts for item in fact.restated_by))
+        if value is not None
+    ]
+    if times:
+        fact.last_seen_ts = max(times)
+
+
+def _promote_restatement(fact: Fact) -> bool:
+    """
+    The earliest remaining source becomes the origin once the origin is
+    gone, with its audience and time.
+    """
+    if not fact.restated_by:
+        return False
+    first = min(fact.restated_by, key=_binding_key)
+    fact.message_id = first.message_id
+    fact.message_digest = first.message_digest
+    fact.archive_id = first.archive_id
+    fact.present = list(first.present) if first.present is not None else None
+    if first.ts is not None:
+        fact.ts = first.ts
+    fact.restated_by = tuple(item for item in fact.restated_by if item is not first)
+    fact.restatements = max(0, fact.restatements - 1)
+    _last_seen(fact)
+    return True
+
+
+def _drop_restatements(fact: Fact, matches: Callable[[FactRestatement], bool]):
+    dropped = [item for item in fact.restated_by if matches(item)]
+    if dropped:
+        fact.restated_by = tuple(item for item in fact.restated_by if not matches(item))
+        fact.restatements = max(0, fact.restatements - len(dropped))
+        _last_seen(fact)
+    return dropped
 
 
 def prune_summary_facts(world_state, archive_ids: set[str]) -> set[str]:
@@ -171,35 +258,16 @@ def prune_summary_facts(world_state, archive_ids: set[str]) -> set[str]:
     prune_contributions(world_state, references)
     removed = before - world_state.facts.keys()
     for fact_id, fact in list(world_state.facts.items()):
-        explicit = bool(fact.archive_sources)
-        sources = tuple(
-            source
-            for source in fact.archive_sources
-            if source.archive_id not in archive_ids
-        )
-        removed_count = sum(
-            source.count
-            for source in fact.archive_sources
-            if source.archive_id in archive_ids
-        )
-        affected_primary = fact.archive_id in archive_ids
-        if not explicit and affected_primary:
-            removed_count = max(removed_count, 1)
-        if not removed_count and not affected_primary:
+        _drop_restatements(fact, lambda item: item.archive_id in archive_ids)
+        if fact.archive_id not in archive_ids:
             continue
-        fact.archive_sources = sources
-        fact.restatements = max(0, fact.restatements - removed_count)
-        if affected_primary:
-            fact.archive_id = sources[0].archive_id if sources else None
-        if sources or fact.dialogue_sources or fact.contributions:
-            if fact.archive_id is None and fact.dialogue_sources:
-                fact.source = "dialogue"
-                if fact.message_id is None:
-                    fact.message_id = fact.dialogue_sources[0].message_id
-                    fact.message_digest = fact.dialogue_sources[0].message_digest
+        if _promote_restatement(fact):
             continue
-        if fact.text_edited or fact.link_edited or fact.source == "manual":
+        if fact.contributions:
+            continue
+        if fact_is_independent(world_state, fact, edges=False):
             fact.source = "manual"
+            fact.archive_id = None
             continue
         removed.add(fact_id)
     if not removed:
@@ -214,71 +282,53 @@ def prune_summary_facts(world_state, archive_ids: set[str]) -> set[str]:
 
 
 def prune_serialized_facts(
-    world_state: dict, archive_ids: set[str], *, reset_sources: bool = False
+    world_state: dict, archive_ids: set[str], *, reset_history: bool = False
 ) -> set[str]:
-    """`prune_summary_facts` over a serialized world state (an export copy)."""
+    """
+    `prune_summary_facts` over a serialized world state (an export copy).
+    With `reset_history` every message-bound fact goes too: the copy has no
+    messages left to bind them to.
+    """
     facts = world_state.get("facts") or {}
-    removed = set()
-    for identity, values in list(facts.items()):
-        if values.get("contributions"):
-            fact = Fact.model_validate(values)
-            kept = tuple(
-                item
-                for item in fact.contributions
-                if not reset_sources
-                and not (
-                    item.source.kind == "summary" and item.source.id in archive_ids
-                )
+    holder = SimpleNamespace(
+        facts={key: Fact.model_validate(value) for key, value in facts.items()},
+        knowledge=[
+            KnowledgeEdge.model_validate(edge)
+            for edge in world_state.get("knowledge") or []
+        ],
+    )
+    removed = prune_summary_facts(holder, archive_ids)
+    if reset_history:
+        # the copy has no messages, views or disclosures to bind facts to
+        for identity, fact in list(holder.facts.items()):
+            fact.restated_by = tuple(
+                item for item in fact.restated_by if item.message_id is None
             )
-            if kept == fact.contributions:
+            fact.restatements = min(fact.restatements, len(fact.restated_by))
+            if fact.message_id is None and not fact.contributions:
                 continue
-            if kept:
-                facts[identity] = aggregate_fact(fact, kept).model_dump(mode="json")
-            else:
-                removed.add(identity)
-        else:
-            archive_sources = [
-                source
-                for source in values.get("archive_sources", ())
-                if source.get("archive_id") not in archive_ids
-            ]
-            affected_archive = values.get("archive_id") in archive_ids
-            affected_dialogue = reset_sources and values.get("source") == "dialogue"
-            if not affected_archive and not affected_dialogue:
-                continue
-            if archive_sources or (
-                not reset_sources and values.get("dialogue_sources")
-            ):
-                values["archive_sources"] = archive_sources
-                if affected_archive:
-                    values["archive_id"] = (
-                        archive_sources[0]["archive_id"] if archive_sources else None
-                    )
-                if affected_dialogue:
-                    values.pop("message_id", None)
-                    values.pop("message_digest", None)
-                    values["dialogue_sources"] = []
-                    values["source"] = "summary"
-                    values["restatements"] = max(
-                        0,
-                        sum(source.get("count", 1) for source in archive_sources) - 1,
-                    )
+            if fact_is_independent(holder, fact, edges=False):
+                fact.message_id = None
+                fact.message_digest = None
+                fact.contributions = ()
+                fact.source = "manual"
                 continue
             removed.add(identity)
-    if not removed:
+            del holder.facts[identity]
+        holder.knowledge = [
+            edge for edge in holder.knowledge if edge.target not in removed
+        ]
+        sanitize_fact_links(holder.facts)
+    if not removed and holder.facts == {
+        key: Fact.model_validate(value) for key, value in facts.items()
+    }:
         return removed
-    world_state["facts"] = {k: v for k, v in facts.items() if k not in removed}
+    world_state["facts"] = {
+        key: fact.model_dump(mode="json") for key, fact in holder.facts.items()
+    }
     world_state["knowledge"] = [
-        edge
-        for edge in world_state.get("knowledge") or []
-        if edge.get("target") not in removed
+        edge.model_dump(mode="json") for edge in holder.knowledge
     ]
-    for fact in world_state["facts"].values():
-        if fact.get("supersedes") in removed:
-            fact["supersedes"] = None
-        for contribution in fact.get("contributions", []):
-            if contribution.get("supersedes") in removed:
-                contribution["supersedes"] = None
     return removed
 
 
@@ -287,7 +337,9 @@ async def drop_facts_for_entries(scene: "Scene", archive_ids: set[str]):
     affected = {
         fact.id
         for fact in scene.world_state.facts.values()
-        if any(
+        if fact.archive_id in archive_ids
+        or any(item.archive_id in archive_ids for item in fact.restated_by)
+        or any(
             item.source.kind == "summary" and item.source.id in archive_ids
             for item in fact.contributions
         )
@@ -296,6 +348,7 @@ async def drop_facts_for_entries(scene: "Scene", archive_ids: set[str]):
 
     with capture_revision_mutations(scene):
         removed = prune_summary_facts(scene.world_state, archive_ids)
+        affected.update(refresh_fact_times(scene, affected))
     retained = affected - removed
     if retained:
         await get_agent("memory").add_many(
@@ -384,22 +437,99 @@ async def _near_duplicate_in_batch(
     return batch[matches[0][1]] if matches else None
 
 
+def _restated(
+    fact: Fact,
+    line: SpanLine | None,
+    archive_id: str | None,
+    *,
+    present: list[str] | None = None,
+    ts: int | None = None,
+) -> FactRestatement | None:
+    """
+    Record `line` (or, without a line, the static entry `archive_id` with
+    its `present` and `ts`) as a restatement of `fact`. The origin is always
+    the earliest source: a source before the origin takes its place, and the
+    origin becomes a restatement. Returns the demoted origin in that case.
+    """
+    if line is not None and (
+        fact.message_id == line.message_id
+        or any(item.message_id == line.message_id for item in fact.restated_by)
+    ):
+        return None
+    item = FactRestatement(
+        message_id=line.message_id if line else None,
+        message_digest=line.message_digest if line else None,
+        archive_id=archive_id,
+        present=list(line.present)
+        if line is not None and line.present is not None
+        else list(present)
+        if line is None and present is not None
+        else None,
+        ts=line.ts if line else ts,
+    )
+    demoted = None
+    if fact.message_id is not None and _binding_key(item) < _binding_key(fact):
+        demoted = FactRestatement(
+            message_id=fact.message_id,
+            message_digest=fact.message_digest,
+            archive_id=fact.archive_id,
+            present=fact.present,
+            ts=fact.ts,
+        )
+        fact.message_id = item.message_id
+        fact.message_digest = item.message_digest
+        fact.archive_id = item.archive_id
+        fact.present = list(item.present) if item.present is not None else None
+        fact.ts = item.ts
+        item = demoted
+    fact.restatements += 1
+    fact.restated_by = (*fact.restated_by, item)
+    _last_seen(fact)
+    return demoted
+
+
+def verify_restatements(
+    parsed: list[ParsedFact], offered: set[str]
+) -> list[ParsedFact]:
+    """
+    `restates` is a model verdict: it counts only for an id the request
+    offered in its known-facts list. Any other id is dropped, and the
+    statement is stored as a new fact.
+    """
+    result = []
+    for item in parsed:
+        if item.restates is not None and item.restates not in offered:
+            log.warning(
+                "fact restates an id the request did not offer; stored as new",
+                restates=item.restates,
+                text=item.text[:80],
+            )
+            item = item.model_copy(update={"restates": None})
+        result.append(item)
+    return result
+
+
 async def store_facts(
     scene: "Scene",
     archive_id: str | None,
-    present: list[str] | None,
-    ts: int | None,
     parsed: list[ParsedFact],
     dedupe_distance: float,
     *,
+    lines: dict[int, SpanLine] | None = None,
+    intro: SpanLine | None = None,
+    present: list[str] | None = None,
+    ts: int | None = None,
     notify: bool = False,
-    message_id: int | None = None,
-    message_digest: str | None = None,
     still_current: Callable[[], bool] | None = None,
 ) -> list[Fact]:
     """
-    Store parsed facts for one archive entry; a near-duplicate of a stored
-    fact becomes a restatement of it instead.
+    Store parsed facts for one archive entry.
+
+    With `lines` every fact must name one of the span's lines (or the opening
+    through `intro`); a fact that names no readable line is dropped. Without
+    `lines` (a static entry) facts carry the entry's `present` and `ts`. A
+    fact the model links through `restates`, or a near-duplicate of a stored
+    fact, becomes a restatement of that fact instead of a record of its own.
     """
     world_state = scene.world_state
     from talemate.agents.memory import memory_write_scene
@@ -409,44 +539,36 @@ async def store_facts(
     documents: dict[str, dict] = {}
     changes: list[KnowledgeChange] = []
     staged: dict[str, Fact] = {}
-    restatements: dict[str, int] = {}
+    restatements: dict[str, list[SpanLine | None]] = {}
     grants: list[KnowledgeEdge] = []
-
-    def add_dialogue_support(fact: Fact) -> None:
-        if message_id is None or message_digest is None:
-            return
-        sources = list(fact.dialogue_sources)
-        for index, support in enumerate(sources):
-            if (
-                support.message_id == message_id
-                and support.message_digest == message_digest
-            ):
-                sources[index] = support.model_copy(update={"count": support.count + 1})
-                break
-        else:
-            sources.append(
-                DialogueFactSupport(
-                    message_id=message_id,
-                    message_digest=message_digest,
-                )
-            )
-        fact.dialogue_sources = tuple(sources)
-
-    def add_archive_support(fact: Fact) -> None:
-        if archive_id is None:
-            return
-        sources = list(fact.archive_sources)
-        for index, support in enumerate(sources):
-            if support.archive_id == archive_id:
-                sources[index] = support.model_copy(update={"count": support.count + 1})
-                break
-        else:
-            sources.append(ArchiveFactSupport(archive_id=archive_id))
-        fact.archive_sources = tuple(sources)
 
     for item in parsed:
         item = item.model_copy(update={"text": _strip_record_age(item.text)})
-        existing = await _near_duplicate_in_batch(item.text, stored, dedupe_distance)
+        if lines is None:
+            line = None
+            line_present, line_ts = present, ts
+        else:
+            line = (
+                intro if item.message_id == INTRO_LINE else lines.get(item.message_id)
+            )
+            if line is None:
+                log.warning(
+                    "fact names no line of its span; dropped",
+                    archive_id=archive_id,
+                    message_id=item.message_id,
+                    text=item.text[:80],
+                )
+                continue
+            line_present, line_ts = line.present, line.ts
+        existing = (
+            world_state.facts.get(item.restates) if item.restates is not None else None
+        )
+        if item.restates is not None and existing is None:
+            log.warning("fact restates an unknown fact id", restates=item.restates)
+        if existing is None:
+            existing = await _near_duplicate_in_batch(
+                item.text, stored, dedupe_distance
+            )
         if existing is None:
             existing = await _near_duplicate(scene, item.text, dedupe_distance)
         if still_current is not None and not still_current():
@@ -454,21 +576,34 @@ async def store_facts(
         if existing is not None:
             if still_current is not None:
                 if existing.id not in staged:
-                    restatements[existing.id] = 0
+                    restatements[existing.id] = []
                 existing = staged.setdefault(
                     existing.id, existing.model_copy(deep=True)
                 )
                 if existing.id in restatements:
-                    restatements[existing.id] += 1
-            existing.restatements += 1
-            add_dialogue_support(existing)
-            add_archive_support(existing)
-            existing.last_seen_ts = ts
+                    restatements[existing.id].append(line)
+            witnesses = set(existing.present or [])
+            demoted = _restated(
+                existing, line, archive_id, present=line_present, ts=line_ts
+            )
+            times = [
+                value for value in (existing.last_seen_ts, line_ts) if value is not None
+            ]
+            existing.last_seen_ts = max(times) if times else None
             fact = existing
-            # the restating entry's audience learned the stored fact
-            learners = set(present or []) | set(item.known_by)
+            # the restating line's audience learned the stored fact; when the
+            # line became the origin, the audience of the demoted one learned
+            # it at the demoted line
+            # the gate reads the audience after a swap: an unknown audience of
+            # the demoted line does not stop the grants of the new origin
             covered = set(existing.present or [])
             witnessed_all = existing.present is None
+            first = (set(line_present or []) | set(item.known_by)) - covered
+            groups = [(first, line.message_id if line else None, line_ts)]
+            if demoted is not None:
+                groups.append(
+                    (witnesses - covered - first, demoted.message_id, demoted.ts)
+                )
         else:
             world_state.fact_counter += 1
             supersedes = (
@@ -478,35 +613,14 @@ async def store_facts(
                 id=f"F{world_state.fact_counter}",
                 text=item.text,
                 importance=item.importance,
-                ts=ts,
+                ts=line_ts,
                 archive_id=archive_id,
-                message_id=message_id,
-                message_digest=message_digest,
-                source="dialogue" if message_id is not None else "summary",
-                present=present,
+                message_id=line.message_id if line else None,
+                message_digest=line.message_digest if line else None,
+                present=line_present,
                 subjects=item.subjects,
-                known_by=(
-                    {name: "told" for name in item.known_by if name in (present or [])}
-                    if message_id is not None
-                    else {}
-                ),
                 supersedes=supersedes,
-                last_seen_ts=ts,
-                dialogue_sources=(
-                    (
-                        DialogueFactSupport(
-                            message_id=message_id,
-                            message_digest=message_digest,
-                        ),
-                    )
-                    if message_id is not None and message_digest is not None
-                    else ()
-                ),
-                archive_sources=(
-                    (ArchiveFactSupport(archive_id=archive_id),)
-                    if archive_id is not None
-                    else ()
-                ),
+                last_seen_ts=line_ts,
             )
             if still_current is None:
                 world_state.facts[fact.id] = fact
@@ -515,29 +629,36 @@ async def store_facts(
             stored.append(fact)
             changes.extend(
                 KnowledgeChange(character=name, target=fact.id)
-                for name in present or []
+                for name in line_present or []
             )
-            learners = set(item.known_by)
-            covered = set(present or [])
+            covered = set(line_present or [])
+            groups = [
+                (
+                    set(item.known_by) - covered,
+                    line.message_id if line else None,
+                    line_ts,
+                )
+            ]
             # unknown presence means everyone witnessed it: nothing to grant
-            witnessed_all = present is None
+            witnessed_all = line_present is None
 
         if not witnessed_all:
-            for name in sorted(learners - covered):
-                if name in fact.known_by:
-                    continue
-                fact.known_by[name] = "told"
-                changes.append(KnowledgeChange(character=name, target=fact.id))
-                (world_state.knowledge if still_current is None else grants).append(
-                    KnowledgeEdge(
-                        character=name,
-                        target=fact.id,
-                        kind="grant",
-                        source="told",
-                        message_id=message_id,
-                        ts=ts,
+            for learners, edge_message_id, edge_ts in groups:
+                for name in sorted(learners):
+                    if name in fact.known_by:
+                        continue
+                    fact.known_by[name] = "told"
+                    changes.append(KnowledgeChange(character=name, target=fact.id))
+                    (world_state.knowledge if still_current is None else grants).append(
+                        KnowledgeEdge(
+                            character=name,
+                            target=fact.id,
+                            kind="grant",
+                            source="told",
+                            message_id=edge_message_id,
+                            ts=edge_ts,
+                        )
                     )
-                )
 
         documents[fact.id] = fact_memory_document(fact)
 
@@ -570,46 +691,12 @@ async def store_facts(
                     world_state.facts[identity] = fact
                 elif identity not in removed:
                     live = world_state.facts[identity]
-                    count = restatements[identity]
-                    live.restatements += count
-                    if message_id is not None and message_digest is not None:
-                        sources = list(live.dialogue_sources)
-                        for index, support in enumerate(sources):
-                            if (
-                                support.message_id == message_id
-                                and support.message_digest == message_digest
-                            ):
-                                sources[index] = support.model_copy(
-                                    update={"count": support.count + count}
-                                )
-                                break
-                        else:
-                            sources.append(
-                                DialogueFactSupport(
-                                    message_id=message_id,
-                                    message_digest=message_digest,
-                                    count=count,
-                                )
-                            )
-                        live.dialogue_sources = tuple(sources)
-                        if live.message_id is None:
-                            live.message_id = message_id
-                            live.message_digest = message_digest
-                    if archive_id is not None:
-                        sources = list(live.archive_sources)
-                        for index, support in enumerate(sources):
-                            if support.archive_id == archive_id:
-                                sources[index] = support.model_copy(
-                                    update={"count": support.count + count}
-                                )
-                                break
-                        else:
-                            sources.append(
-                                ArchiveFactSupport(archive_id=archive_id, count=count)
-                            )
-                        live.archive_sources = tuple(sources)
+                    for line in restatements[identity]:
+                        _restated(live, line, archive_id)
                     times = [
-                        value for value in (live.last_seen_ts, ts) if value is not None
+                        value
+                        for value in (live.last_seen_ts, fact.last_seen_ts)
+                        if value is not None
                     ]
                     live.last_seen_ts = max(times) if times else None
             for grant in grants:

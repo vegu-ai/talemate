@@ -82,9 +82,10 @@ async def test_edited_pending_submission_is_ready_at_conversation_prompt(
     with pytest.raises(GenerationCancelled, match="prompt boundary reached"):
         await conversation.converse(t.scene.get_character("Bob").actor)
     assert prompts == [message.id]
-    assert t.summarizer.summarize.await_count == 3
+    # the edited player line sits outside every archive: nothing to re-extract
+    assert t.summarizer.summarize.await_count == 2
     await catch_up_revisions(t.scene)
-    assert t.summarizer.summarize.await_count == 3
+    assert t.summarizer.summarize.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -105,6 +106,8 @@ async def test_archive_retry_preserves_completed_real_listeners(
     t = submission
     t.release.set()
     await catch_up_revisions(t.scene)
+    # the previous line's entry is gone again, so the next push archives it
+    t.scene.archived_history.clear()
     calls = []
     archive_attempts = []
     tts_attempts = []

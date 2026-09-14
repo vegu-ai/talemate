@@ -67,17 +67,9 @@
                         Showing only the facts {{ knownBy }} knows ({{ knownFactIds ? knownFactIds.length : '…' }} in their record, history entries and other sources together).
                     </div>
 
-                    <v-card v-if="dialogueFacts.length" variant="tonal" class="mb-4 dialogue-facts">
-                        <v-card-title class="text-body-large">Dialogue facts</v-card-title>
-                        <v-card-text>
-                            <div class="text-body-small text-medium-emphasis mb-2">Facts established in dialogue, with a link to the original message. Double-click a fact or select its importance to edit it.</div>
-                            <v-list density="compact" slim class="bg-transparent py-0">
-                                <WorldStateManagerFactRow v-for="fact in shownDialogueFacts" :key="fact.id" :fact="fact"
-                                    :locked="appBusy || !appReady || busy" @updated="updateFact" @deleted="removeFact" @source="openFactSource" />
-                            </v-list>
-                            <div v-if="!shownDialogueFacts.length" class="text-body-small text-medium-emphasis">No dialogue facts match the selected character.</div>
-                        </v-card-text>
-                    </v-card>
+                    <div class="text-body-small text-medium-emphasis mb-2 facts-pointer">
+                        Each summarized entry lists the facts recorded from it. All facts are listed in the Facts tab.
+                    </div>
 
                     <v-card-title>Summarized History</v-card-title>
 
@@ -200,7 +192,6 @@ export default {
             // the selected character's whole bucket, ids only; null while unset
             knownFactIds: null,
             history: [],
-            dialogueFacts: [],
             factSource: null,
             layered_history: [],
             time_passages: [],
@@ -246,11 +237,6 @@ export default {
             return perception
                 ? 'Changed passages need perception analysis. Use Analyze perceptions on the passage, or send your next line or choice.'
                 : 'Changed passages need fact refresh. Use Refresh facts on the passage, or send your next line or choice.';
-        },
-        shownDialogueFacts() {
-            if (this.knownFactIds === null) return this.dialogueFacts;
-            const known = new Set(this.knownFactIds);
-            return this.dialogueFacts.filter((fact) => known.has(fact.id));
         },
         characterNames() {
             return Object.keys(this.characterList?.characters || {});
@@ -320,7 +306,6 @@ export default {
     methods:{
         reset() {
             this.history = [];
-            this.dialogueFacts = [];
             this.factSource = null;
             this.time_passages = [];
             this.busy = false;
@@ -409,13 +394,11 @@ export default {
             }));
         },
         updateFact(fact) {
-            this.dialogueFacts = this.dialogueFacts.map((existing) => existing.id === fact.id ? fact : existing);
             for (const entry of this.history) {
                 entry.facts = (entry.facts || []).map((existing) => existing.id === fact.id ? fact : existing);
             }
         },
         removeFact(id) {
-            this.dialogueFacts = this.dialogueFacts.filter((fact) => fact.id !== id);
             for (const entry of this.history) {
                 entry.facts = (entry.facts || []).filter((fact) => fact.id !== id);
             }
@@ -442,7 +425,6 @@ export default {
 
             if(message.action == 'scene_history') {
                 this.history = message.data.history;
-                this.dialogueFacts = [...(message.data.dialogue_facts || [])].reverse();
                 this.layered_history = message.data.layered_history;
                 this.time_passages = message.data.time_passages || [];
                 // reverse

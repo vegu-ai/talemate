@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-import test_dialogue_facts
+import json
+
 import test_load_character_activation
 from talemate.character import Character
 from talemate.context import ActiveScene
@@ -27,8 +28,45 @@ from talemate.tale_mate import Actor
 from talemate.world_state import Reinforcement
 
 
-dialogue = test_dialogue_facts.dialogue
 load_env = test_load_character_activation.load_env
+
+
+@pytest.fixture
+def dialogue(scene, monkeypatch):
+    """Track learning from dialogue on, with a mocked ledger answer."""
+    from talemate.prompts import Prompt
+
+    conversation = get_agent("conversation")
+    config = conversation.actions["character_knowledge"]
+    config.enabled = True
+    config.config["ledger"].value = True
+    scene.character_data = {
+        name: Character(name=name, is_player=name == "Alice")
+        for name in ("Alice", "Edwin", "Mara")
+    }
+    scene.active_characters = ["Alice", "Edwin", "Mara"]
+    scene.actors = [
+        Actor(character, conversation) for character in scene.character_data.values()
+    ]
+    for actor in scene.actors:
+        actor.scene = scene
+    scene.ts = 500
+    scene.history = []
+    memory = get_agent("memory")
+    monkeypatch.setattr(memory, "get", AsyncMock(return_value=[]))
+    monkeypatch.setattr(memory, "add_many", AsyncMock())
+    monkeypatch.setattr(memory, "delete", AsyncMock())
+    monkeypatch.setattr(
+        memory, "compare_string_lists", AsyncMock(return_value={"distance_matches": []})
+    )
+    monkeypatch.setattr(
+        memory, "compare_strings", AsyncMock(return_value={"euclidean_distance": 0.01})
+    )
+    monkeypatch.setattr(scene, "emit_status", Mock())
+    request = AsyncMock(return_value=("", {"ledger": json.dumps({})}))
+    monkeypatch.setattr(Prompt, "request", request)
+    with ActiveScene(scene):
+        yield scene, conversation, memory, request
 
 
 @pytest.fixture
@@ -216,7 +254,7 @@ async def test_batch_filters_empty_director_and_emits_each_line_once(
 
 
 @pytest.mark.asyncio
-async def test_real_ledger_stores_facts_and_grants_after_publication(
+async def test_real_ledger_grants_after_publication_and_records_no_fact(
     dialogue, published, isolate_signals
 ):
     scene, conversation, _, request = dialogue
@@ -243,9 +281,9 @@ async def test_real_ledger_stores_facts_and_grants_after_publication(
         emit_message=True,
     )
     request.assert_awaited_once()
-    assert scene.world_state.facts
     assert old_fact.known_by["Edwin"] == "inferred"
-    assert len(scene.world_state.facts) == 2
+    # the ledger grants; facts come from the archive step only
+    assert list(scene.world_state.facts) == [old_fact.id]
     assert "knowledge_changed" in [r[0] for r in published][1:]
 
 

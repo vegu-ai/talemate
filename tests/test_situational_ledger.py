@@ -64,7 +64,6 @@ async def test_situational_ledger_answers_apply_only_expected_grants(
     action = conversation.actions["character_knowledge"]
     action.enabled = True
     action.config["ledger"].value = True
-    action.config["establish_facts"].value = False
 
     async def answer(*args, **kwargs):
         variables = kwargs["vars"]

@@ -20,7 +20,7 @@ from talemate.knowledge.schema import Fact, ParsedFact, Topic
 from talemate.knowledge.supported_facts import aggregate_fact, character_fact
 from talemate.knowledge.topics import known_facts, topic_facts
 from test_fact_evidence import passage_embeddings  # noqa: F401
-from test_supported_facts import passage, store, supported_scene  # noqa: F401
+from test_supported_facts import chapter, passage, store, supported_scene  # noqa: F401
 
 
 def handler_for(scene):
@@ -130,7 +130,7 @@ async def test_rebuild_of_the_same_view_keeps_the_edit_and_the_id(
 ):
     # 2 returns the identical contribution; 3 differs, so the record is re-attached
     scene, summarizer, _ = supported_scene
-    _, source = passage(scene, "Alice has a key.", ("Alice",))
+    _, source = chapter(scene, "Alice has a key.", ("Alice",))
     fact = (
         await store(scene, source, ("Alice",), "Alice has a key.", subjects=["key"])
     )[0]
@@ -165,7 +165,7 @@ async def test_false_mark_survives_re_attach(
     monkeypatch,
 ):
     scene, summarizer, _ = supported_scene
-    _, source = passage(scene, "Alice has a key.", ("Alice",))
+    _, source = chapter(scene, "Alice has a key.", ("Alice",))
     fact = (
         await store(scene, source, ("Alice",), "Alice has a key.", subjects=["key"])
     )[0]
@@ -198,7 +198,7 @@ async def test_author_link_survives_a_changed_contribution(
     monkeypatch,
 ):
     scene, summarizer, _ = supported_scene
-    _, source = passage(scene, "Alice has a key.", ("Alice",))
+    _, source = chapter(scene, "Alice has a key.", ("Alice",))
     fact = (await store(scene, source, ("Alice",), "Alice has a key."))[0]
     scene.world_state.facts["manual"] = Fact(id="manual", text="An author predecessor.")
     await update_fact(scene, fact.id, supersedes="manual")

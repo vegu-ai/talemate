@@ -41,7 +41,8 @@ const standard = (overrides) => ({
     [`${CK}.absence_window`]: 30,
     'memory.topics.enabled': false,
     'memory.retrieval.similarity_gate': false,
-    'summarizer.archive.extract_facts': false,
+    // the archive-step extraction costs no request: on at every stop above Off
+    'summarizer.archive.extract_facts': true,
     ...overrides,
 });
 
@@ -50,7 +51,7 @@ const perspectives = (overrides) => ({
     [`${CK}.memory_pass`]: false,
     [`${CK}.brief_characters_on_entry`]: false,
     'summarizer.perceptions.automatic_repair': false,
-    'summarizer.archive.extract_facts': false,
+    'summarizer.archive.extract_facts': true,
     'memory.topics.enabled': false,
     ...overrides,
 });
@@ -60,16 +61,16 @@ const STANDARD_LIGHT = {
     [`${CK}.awareness_line`]: true,
     'memory.topics.enabled': true,
     'memory.retrieval.similarity_gate': true,
-    'summarizer.archive.extract_facts': true,
 };
 
 // A disabled master makes every switch under it inert, so Off leaves those
 // alone: a master unticked by hand reads as Off without clearing them first.
+// Extract facts costs no request and has no reader with the master off, so
+// Off leaves it alone too.
 const OFF = {
     [`${CK}.enabled`]: false,
     'memory.topics.enabled': false,
     'memory.retrieval.similarity_gate': false,
-    'summarizer.archive.extract_facts': false,
 };
 
 export const EFFORT_PRESETS = Object.freeze({
@@ -98,12 +99,10 @@ export const EFFORT_PRESETS = Object.freeze({
         light: perspectives({ 'memory.topics.enabled': true }),
         balanced: perspectives({
             'memory.topics.enabled': true,
-            'summarizer.archive.extract_facts': true,
             'summarizer.perceptions.automatic_repair': true,
         }),
         thorough: perspectives({
             'memory.topics.enabled': true,
-            'summarizer.archive.extract_facts': true,
             'summarizer.perceptions.automatic_repair': true,
             [`${CK}.memory_pass`]: true,
             [`${CK}.brief_characters_on_entry`]: true,

@@ -12,29 +12,22 @@ function history() {
 }
 const incoming = (action, data) => ({ type: 'world_state_manager', action, data });
 
-describe('Dialogue facts in History', () => {
-    it('lists dialogue facts before any archive exists and applies the Known by filter', () => {
+describe('Facts in History', () => {
+    it('lists facts under their entries only; unsummarized dialogue has none', () => {
         const vm = history();
-        vm.handleMessage(incoming('scene_history', { history: [], layered_history: [], dialogue_facts: [
-            { id: 'F1', importance: 3, message_id: 12 }, { id: 'F2', importance: 1, message_id: 15 },
-        ] }));
-        expect(vm.shownDialogueFacts.map(fact => fact.id)).toEqual(['F2', 'F1']);
-        vm.knownFactIds = ['F1'];
-        expect(vm.shownDialogueFacts.map(fact => fact.id)).toEqual(['F1']);
-        vm.knownFactIds = [];
-        expect(vm.shownDialogueFacts).toEqual([]);
+        vm.handleMessage(incoming('scene_history', { history: [
+            { id: 'A1', facts: [{ id: 'F1', importance: 3, message_id: 12 }] },
+        ], layered_history: [] }));
+        expect(vm.history.map(entry => entry.id)).toEqual(['A1']);
+        expect(vm.history[0].facts.map(fact => fact.id)).toEqual(['F1']);
+        expect(vm.dialogueFacts).toBeUndefined();
     });
-    it('updates and deletes facts in both sections from server acknowledgments', () => {
+    it('updates and deletes entry facts from server acknowledgments', () => {
         const vm = history();
-        vm.dialogueFacts = [{ id: 'F1', importance: 3 }];
         vm.history = [{ facts: [{ id: 'F2', importance: 2 }] }];
-        vm.handleMessage(incoming('fact_updated', { id: 'F1', importance: 1 }));
         vm.handleMessage(incoming('fact_updated', { id: 'F2', importance: 3 }));
-        expect(vm.dialogueFacts[0].importance).toBe(1);
         expect(vm.history[0].facts[0].importance).toBe(3);
-        vm.handleMessage(incoming('fact_deleted', { fact_id: 'F1' }));
         vm.handleMessage(incoming('fact_deleted', { fact_id: 'F2' }));
-        expect(vm.dialogueFacts).toEqual([]);
         expect(vm.history[0].facts).toEqual([]);
     });
     it('requests the original source and ignores replies for an older selection', () => {
@@ -56,12 +49,10 @@ describe('Dialogue facts in History', () => {
         vm.handleMessage({ type: 'knowledge_changed' });
         expect(vm.requestSceneHistory).toHaveBeenCalledOnce();
     });
-    it('clears facts and source inspection when loading a different scene', () => {
+    it('clears source inspection when loading a different scene', () => {
         const vm = history();
-        vm.dialogueFacts = [{ id: 'F1' }];
         vm.factSource = { fact_id: 'F1', text: 'Old scene.' };
         vm.reset();
-        expect(vm.dialogueFacts).toEqual([]);
         expect(vm.factSource).toBeNull();
         vm.handleMessage(incoming('fact_source', { fact_id: 'F1', text: 'Late old scene reply.' }));
         expect(vm.factSource).toBeNull();

@@ -787,11 +787,6 @@ async def cached_reply_turn(
             "value",
             True,
         )
-        monkeypatch.setattr(
-            conversation.actions["character_knowledge"].config["establish_facts"],
-            "value",
-            True,
-        )
     calls = {}
     dialogue_prompts = []
     reply = 0

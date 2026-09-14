@@ -98,19 +98,16 @@ def fact_current(scene: "Scene", fact: "Fact") -> bool:
     if independent:
         return True
     stale = stale_archive_ids(scene)
-    summary_sources = {
-        item.source.id for item in fact.contributions if item.source.kind == "summary"
-    }
-    summary_sources.update(source.archive_id for source in fact.archive_sources)
-    if fact.archive_id:
-        summary_sources.add(fact.archive_id)
-    dialogue_current = bool(fact.dialogue_sources) and any(
-        revision_source_current(scene, source.message_id, source.message_digest)
-        for source in fact.dialogue_sources
-    )
-    summary_current = bool(summary_sources - stale)
-    if fact.dialogue_sources or summary_sources:
-        return dialogue_current or summary_current
+    if fact.contributions:
+        # the contributions carry their own revision tracking
+        summary_sources = {
+            item.source.id
+            for item in fact.contributions
+            if item.source.kind == "summary"
+        }
+        return not summary_sources or bool(summary_sources - stale)
+    if fact.archive_id in stale:
+        return False
     return revision_source_current(scene, fact.message_id, fact.message_digest)
 
 

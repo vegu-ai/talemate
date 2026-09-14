@@ -356,6 +356,9 @@ class MockClient(ClientBase):
 class MockMemoryAgent(talemate.agents.memory.MemoryAgent):
     """MemoryAgent with no-op persistence methods."""
 
+    async def add(self, text, character=None, uid=None, ts: int = None, **kwargs):
+        return True
+
     async def add_many(self, items: list[dict]):
         pass
 

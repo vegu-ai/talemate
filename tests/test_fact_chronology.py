@@ -430,7 +430,7 @@ def test_discovered_fact_templates_render_markers(clock_scene, template, audienc
     with ActiveScene(clock_scene):
         rendered = Prompt.get(template, vars=variables).render()
     assert_fact_markers(clock_scene, template, rendered, fact)
-    if template in {"conversation.knowledge-ledger", "summarizer.summarize-dialogue"}:
+    if template == "summarizer.summarize-dialogue":
         extraction_line = f"Fact: {fact.text} | Record age (metadata, do not copy): {fact_time(clock_scene, fact)}"
         assert extraction_line in rendered
         assert "Do not copy it into extracted facts." in rendered
@@ -471,7 +471,9 @@ async def test_copied_record_age_cannot_enter_stored_text(
     )
     write = AsyncMock()
     monkeypatch.setattr(get_agent("memory"), "add_many", write)
-    stored = await store_facts(clock_scene, "archive", [], clock_scene.ts, parsed, 0.15)
+    stored = await store_facts(
+        clock_scene, "archive", parsed, 0.15, present=[], ts=clock_scene.ts
+    )
     assert stored[0].text == text
     assert write.await_args.args[0][0]["text"] == text
 

@@ -109,13 +109,13 @@ async def test_archive_facts_batch_witnesses_and_told_learners(
     await store_facts(
         scene,
         "archive",
-        ["Mara"],
-        10,
         [
             ParsedFact(text="The key is hidden.", known_by=["Mara", "Edwin"]),
             ParsedFact(text="The door is locked."),
         ],
         0.15,
+        present=["Mara"],
+        ts=10,
         notify=True,
     )
     assert len(notifications) == 1
@@ -141,10 +141,10 @@ async def test_restatement_notifies_only_new_learners(
         await store_facts(
             scene,
             "archive",
-            ["Mara", "Edwin"],
-            10,
             [ParsedFact(text=fact.text)],
             0.15,
+            present=["Mara", "Edwin"],
+            ts=10,
             notify=True,
         )
     assert len(notifications) == 1
@@ -158,10 +158,10 @@ async def test_unattributed_fact_does_not_guess_learners(
     await store_facts(
         scene,
         "archive",
-        present,
-        10,
         [ParsedFact(text="The key is hidden.")],
         0.15,
+        present=present,
+        ts=10,
         notify=True,
     )
     assert scene.world_state.facts
@@ -172,10 +172,10 @@ async def test_maintenance_fact_storage_is_silent(scene, notifications, fact_mem
     await store_facts(
         scene,
         "archive",
-        ["Mara"],
-        10,
         [ParsedFact(text="The key is hidden.", known_by=["Edwin"])],
         0.15,
+        present=["Mara"],
+        ts=10,
     )
     assert scene.world_state.facts and scene.world_state.knowledge
     assert notifications == []
@@ -198,7 +198,11 @@ async def test_live_archive_notifies_but_history_rebuild_is_silent(
     summarize = AsyncMock(
         return_value=(
             "They found the key.",
-            [ParsedFact(text="The key is under the mat.")],
+            [
+                ParsedFact(
+                    text="The key is under the mat.", message_id=scene.history[0].id
+                )
+            ],
         )
     )
     monkeypatch.setattr(summarizer, "summarize", summarize)

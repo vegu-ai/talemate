@@ -20,9 +20,9 @@ Scenes saved before presence tracking carry no presence on their old messages, a
 
 ### Facts
 
-When the summarizer writes a summary entry it asks, in the same request, for the atomic facts the chapter established: one self-contained statement each, with the characters, items and places it is about, the characters who learned it during the chapter, and the earlier fact it replaces, if any. The facts are listed under the entry with their id (`F1`, `F2`, ...). A chip next to a fact names a character who learned it without being present; a repeat counter shows how often later chapters restated it; an arrow names the fact it supersedes.
+When the summarizer writes a summary entry it asks, in the same request, for the atomic facts the chapter established: one self-contained statement each, with the characters, items and places it is about, the line of the chapter it came from, the characters who learned it during the chapter, and the earlier fact it replaces, if any. This is the only place facts come from: a line that is still in the live history has no facts yet, and the AI reads the text itself until the chapter is summarized. The facts are listed under the entry with their id (`F1`, `F2`, ...). A chip next to a fact names a character who learned it without being present; a repeat counter shows how often later chapters restated it; an arrow names the fact it supersedes. **Source message** opens the line the fact came from.
 
-Facts are stored in the scene file and mirrored into the long term memory with the presence of their entry, so a character retrieves only the facts they know (see [Knowledge](/talemate/user-guide/world-editor/knowledge/)). A new fact that is a near-duplicate of a stored one is not stored again; the stored fact's repeat counter goes up instead.
+Each fact belongs to its line: it keeps that line's presence and scene time. Deleting the line removes the fact, unless a later line restated it (that line becomes its origin) or you edited it or granted it by hand (it stays, no longer tied to a line); editing the line marks it out of date until the chapter is refreshed, and editing, inserting or deleting an earlier time passage moves its time marker with the timeline. Facts are stored in the scene file and mirrored into the long term memory with that presence, so a character retrieves only the facts they know (see [Knowledge](/talemate/user-guide/world-editor/knowledge/)). A fact that repeats one already recorded is not stored again: the model names the recorded fact it repeats, and a repeat it did not name is still caught when the wording is close enough (the Summarizer's **Fact matching tolerance**). The recorded fact's repeat counter goes up and it counts as restated at that line.
 
 The **Known by** selector above the entries narrows the listed facts to those a chosen character knows, through the same knowledge record the [Knowledge tab](/talemate/user-guide/world-editor/knowledge/#topics-and-coverage) uses; presence-based knowledge counts, not only the chip cases. Clear it to list every fact again.
 
@@ -46,9 +46,7 @@ In **Character perspectives**, extraction uses each saved character view, preser
 
 Predefined history still locks the scene's knowledge mode. You do not need to change modes or remove history to generate its facts.
 
-#### Dialogue facts
-
-With the Conversation agent's [Establish facts from dialogue](/talemate/user-guide/agents/conversation/settings/#establish-facts-from-dialogue) option enabled, new facts appear here as soon as a character line establishes them, before a chapter is summarized. This section uses the same importance chip and editor as archived facts, and the **Known by** filter applies to both. **Source message** opens the original dialogue for inspection. Facts retain their message source when a later archive restates them; editing or removing that source removes its facts.
+History lists each summarized entry's facts under that entry. The [Facts tab](/talemate/user-guide/world-editor/facts/) lists every fact of the scene with filters.
 
 ### Managing entries
 

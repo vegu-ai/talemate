@@ -34,18 +34,23 @@ from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 
 from talemate.history import (
+    SPAN_LINE_EXCLUDED_TYPES,
     ArchiveEntry,
     HistoryEntry,
-    collect_source_entries,
+    render_span,
     resolve_history_entry,
+    span_bindings,
 )
+from talemate.knowledge.timeline import message_times
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.presence import presence_differs, span_presence
 from talemate.knowledge.facts import (
+    SpanLine,
     drop_facts_for_entries,
     parse_facts,
     previous_facts,
     store_facts,
+    verify_restatements,
 )
 from talemate.knowledge.topics import refresh_topics
 from talemate.knowledge.schema import FactsStatus
@@ -571,8 +576,12 @@ class SummarizeAgent(
                     )
 
         intro_included = None
+        lines: dict[int, SpanLine] = {}
+        intro_line: SpanLine | None = None
         if dialogue_entries:
             present = span_presence(dialogue_entries)
+            lines = span_bindings(scene, dialogue_entries)
+            intro_text = None
 
             if not extra_context:
                 intro_present = getattr(scene, "intro_present", None)
@@ -580,7 +589,8 @@ class SummarizeAgent(
                     present is not None and set(present) <= set(intro_present)
                 )
                 if intro_included:
-                    dialogue_entries.insert(0, scene.intro)
+                    intro_text = scene.intro
+                    intro_line = self._intro_line(scene, dialogue_entries, lines)
 
             summarized = None
             parsed_facts = None
@@ -588,10 +598,11 @@ class SummarizeAgent(
 
             while not summarized and retries > 0:
                 summarized, parsed_facts = await self.summarize(
-                    "\n".join(map(str, dialogue_entries)),
+                    render_span(dialogue_entries, intro=intro_text),
                     extra_context=extra_context,
                     generation_options=generation_options,
                     return_facts=True,
+                    line_ids=True,
                 )
                 retries -= 1
 
@@ -625,10 +636,10 @@ class SummarizeAgent(
             await store_facts(
                 scene,
                 entry.id,
-                present,
-                ts,
                 parsed_facts,
                 self.archive_fact_dedupe_distance,
+                lines=lines,
+                intro=intro_line,
                 notify=notify,
             )
             await refresh_topics(scene)
@@ -644,6 +655,38 @@ class SummarizeAgent(
             scene, entry.id, generation_options=generation_options
         )
         return True
+
+    @staticmethod
+    def _intro_line(scene, messages, lines: dict[int, SpanLine]) -> SpanLine | None:
+        """
+        The opening is not a message: a fact from it binds to the first line
+        of the span for time and edit tracking, with the opening's audience.
+        """
+        first = next(
+            (lines[message.id] for message in messages if message.id in lines), None
+        )
+        if first is None:
+            return None
+        return SpanLine(
+            message_id=first.message_id,
+            message_digest=first.message_digest,
+            present=getattr(scene, "intro_present", None),
+            ts=first.ts,
+        )
+
+    def _entry_span(self, scene, entry: ArchiveEntry):
+        """The span text and line bindings of a summarized base entry."""
+        messages = [
+            message
+            for message in scene.history[entry.start : entry.end + 1]
+            if message.typ not in SPAN_LINE_EXCLUDED_TYPES
+        ]
+        lines = span_bindings(scene, messages, times=message_times(scene))
+        intro_text = scene.intro if entry.intro_included else None
+        intro_line = (
+            self._intro_line(scene, messages, lines) if entry.intro_included else None
+        )
+        return render_span(messages, intro=intro_text), lines, intro_line
 
     @set_processing
     async def analyze_dialoge(self, dialogue):
@@ -740,7 +783,6 @@ class SummarizeAgent(
     @evidence_writer
     async def summarize_with_facts(
         self,
-        text: str,
         entry: ArchiveEntry,
         extra_context: str = None,
         generation_options: GenerationOptions | None = None,
@@ -749,16 +791,20 @@ class SummarizeAgent(
         still_current=None,
     ) -> tuple[str, FactsStatus | None]:
         """
-        Re-summarize an existing base entry and replace its facts.
+        Re-summarize an existing base entry from its span and replace its facts.
 
         With fact extraction off the facts of the entry are left alone.
         """
         target_scene = scene or self.scene
         if still_current is not None and not still_current():
             raise GenerationCancelled("The scene changed during history refresh")
+        text, lines, intro_line = self._entry_span(target_scene, entry)
         if character_knowledge_enabled(target_scene) or not self.archive_extract_facts:
             summarized = await self.summarize(
-                text, extra_context=extra_context, generation_options=generation_options
+                text,
+                extra_context=extra_context,
+                generation_options=generation_options,
+                line_ids=True,
             )
             if self.scene is not target_scene or (
                 still_current is not None and not still_current()
@@ -776,6 +822,7 @@ class SummarizeAgent(
             extra_context=extra_context,
             generation_options=generation_options,
             return_facts=True,
+            line_ids=True,
         )
         if self.scene is not target_scene or (
             still_current is not None and not still_current()
@@ -788,10 +835,10 @@ class SummarizeAgent(
             await store_facts(
                 target_scene,
                 entry.id,
-                entry.present,
-                entry.ts,
                 parsed_facts,
                 dedupe_distance,
+                lines=lines,
+                intro=intro_line,
                 still_current=still_current,
             )
         if still_current is not None and not still_current():
@@ -829,13 +876,14 @@ class SummarizeAgent(
             return status
 
         static = archive_entry.start is None and archive_entry.end is None
+        lines: dict[int, SpanLine] | None = None
+        intro_line = None
         if static:
             text = archive_entry.text
         else:
-            sources = collect_source_entries(self.scene, entry)
-            if not sources:
+            text, lines, intro_line = self._entry_span(self.scene, archive_entry)
+            if not lines:
                 return archive_entry.facts_status
-            text = "\n".join(map(str, sources))
         if not text.strip():
             return archive_entry.facts_status
 
@@ -846,16 +894,19 @@ class SummarizeAgent(
             else await self.previous_summaries(archive_entry),
             return_facts=True,
             include_previous_facts=not static,
+            line_ids=not static,
         )
         await drop_facts_for_entries(self.scene, {archive_entry.id})
         if parsed_facts:
             await store_facts(
                 self.scene,
                 archive_entry.id,
-                archive_entry.present,
-                archive_entry.ts,
                 parsed_facts,
                 self.archive_fact_dedupe_distance,
+                lines=lines,
+                intro=intro_line,
+                present=archive_entry.present,
+                ts=archive_entry.ts,
             )
         await refresh_topics(self.scene, force=True)
         status = self._facts_status(parsed_facts)
@@ -879,13 +930,15 @@ class SummarizeAgent(
         skip_author_hooks: bool = False,
         fact_evidence: list[dict] | None = None,
         include_previous_facts: bool = True,
+        line_ids: bool = False,
     ):
         """
         Summarize the given text
 
         With `return_facts` the same call also asks for the atomic facts and
         returns `(summary, facts)`, where `facts` is None when the model's
-        FACTS output did not parse.
+        FACTS output did not parse. With `line_ids` every line of the text
+        starts with its bracketed message id and each fact names its line.
         """
 
         if audience and not character_knowledge_enabled(self.scene):
@@ -912,6 +965,7 @@ class SummarizeAgent(
             "analyze_chunks": self.layered_history_analyze_chunks,
             "response_length": response_length,
             "extract_facts": extract_facts,
+            "line_ids": line_ids,
             "previous_facts": (
                 previous_audience_facts(self.scene, audience)
                 if audience
@@ -990,6 +1044,12 @@ class SummarizeAgent(
                 log.warning(
                     "summarize: facts output did not parse",
                     tail=(response or "")[-300:],
+                )
+            else:
+                # a restatement counts only against a fact this request offered
+                parsed_facts = verify_restatements(
+                    parsed_facts,
+                    {fact.id for fact in template_vars["previous_facts"]},
                 )
 
         summary = summary.strip()

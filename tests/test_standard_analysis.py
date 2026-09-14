@@ -72,6 +72,30 @@ async def test_analysis_includes_character_knowledge_without_another_request(
     assert "Facts are sourced from the existing story, don't assume" in prompt
 
 
+async def test_analysis_lists_the_unknown_facts_before_the_other_points(
+    standard_scene, captured_prompt
+):
+    # #605: the analysis states what Bob does not know before it writes about
+    # what the others need to tell him
+    scene, summarizer, bob = standard_scene
+    prompts, _ = captured_prompt
+    await summarizer.analyze_scene_for_next_action("conversation", bob)
+    _, prompt = prompts[0]
+    listing = prompt.index("1. First, list what Bob does not know")
+    assert listing < prompt.index("2. Briefly make statements about context")
+    assert prompt.index("Unknown recent facts for Bob") < listing
+    assert 'write it as "(unknown to Bob)"' in prompt
+    assert "anything said in the scene while Bob was absent" in prompt
+
+    scene.world_state.facts.clear()
+    await summarizer.analyze_scene_for_next_action("conversation", bob)
+    variables, prompt = prompts[1]
+    assert variables["standard_knowledge"] is None
+    assert "does not know" not in prompt
+    assert "(unknown to Bob)" not in prompt
+    assert prompt.index("1. Briefly make statements about context") >= 0
+
+
 @pytest.mark.parametrize("target", ["Bob", "Alice"])
 async def test_unslop_prompt_keeps_targeted_standard_analysis(
     standard_scene, monkeypatch, target

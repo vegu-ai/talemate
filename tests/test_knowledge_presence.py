@@ -390,7 +390,7 @@ def summarizer_scene():
     summarizer.actions["archive"].config["threshold"].value = 100000
 
     async def stub_summarize(
-        text, extra_context=None, generation_options=None, return_facts=False
+        text, extra_context=None, generation_options=None, return_facts=False, **_
     ):
         return ("SUMMARY", None) if return_facts else "SUMMARY"
 

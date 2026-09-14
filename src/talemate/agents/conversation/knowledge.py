@@ -1,7 +1,6 @@
 import hashlib
 import json
 import re
-import weakref
 from typing import TYPE_CHECKING
 
 import structlog
@@ -9,7 +8,6 @@ import structlog
 import talemate.emit.async_signals as async_signals
 from talemate.agents.base import (
     AgentAction,
-    AgentActionConditional,
     AgentActionConfig,
     AgentActionNote,
     set_processing,
@@ -18,7 +16,6 @@ from talemate.agents.context import active_agent
 from talemate.agents.conversation.entry_context import consume_entry_turn
 from talemate.agents.conversation.response_specs import (
     ENTRY_BRIEFING_SPEC,
-    KNOWLEDGE_LEDGER_FACTS_SPEC,
     KNOWLEDGE_LEDGER_SPEC,
     MEMORY_PASS_SPEC,
 )
@@ -37,16 +34,14 @@ from talemate.knowledge.absence import (
 from talemate.knowledge.bucket import KnowledgeIndex
 from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
 from talemate.knowledge.chronology import ranked_facts, render_fact
-from talemate.knowledge.facts import parse_facts, previous_facts, store_facts
 from talemate.knowledge.mode import (
     character_knowledge_enabled as perception_mode_enabled,
 )
-from talemate.knowledge.perspective_models import content_digest
 from talemate.knowledge.processing import evidence_writer
 from talemate.knowledge.revision_refresh import _historical_context
 from talemate.knowledge.schema import KnowledgeEdge
 from talemate.knowledge.topics import awareness_line as topic_awareness_line
-from talemate.knowledge.topics import known_bucket, refresh_topics
+from talemate.knowledge.topics import known_bucket
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage
 from talemate.util.data import extract_json
@@ -216,22 +211,6 @@ class CharacterKnowledgeMixin:
                         ),
                     },
                 ),
-                "establish_facts": AgentActionConfig(
-                    type="bool",
-                    label="Establish facts from dialogue",
-                    description="Save important facts as soon as a character says or establishes them, before the next summary. Routine dialogue can yield no facts.",
-                    value=False,
-                    condition=AgentActionConditional(
-                        attribute="character_knowledge.config.ledger",
-                        value=True,
-                    ),
-                    note_on_value={
-                        True: AgentActionNote(
-                            color="primary",
-                            text="Uses the same World State client request as Track learning from dialogue, but runs it after every character line, including player lines, even when everyone knows the recent facts. No second request per line.",
-                        ),
-                    },
-                ),
             },
         )
 
@@ -335,12 +314,6 @@ class CharacterKnowledgeMixin:
     def knowledge_analysis_client(self):
         """The client the opt-in requests use (the World State agent's)."""
         return get_agent("world_state").client
-
-    @property
-    def knowledge_establish_facts(self) -> bool:
-        return self.knowledge_ledger and bool(
-            self.resolve_config("character_knowledge", "establish_facts")
-        )
 
     def connect(self, scene):
         super().connect(scene)
@@ -870,76 +843,42 @@ class CharacterKnowledgeMixin:
         present_override=HISTORICAL_UNSET,
         recent_lines_override: list[str] | None = None,
         ts_override: int | None = None,
-        establish_override: bool | None = None,
         still_current=None,
         replace_message_evidence: bool = False,
-        replace_facts: bool = True,
         require_validated_result: bool = False,
     ) -> dict[str, list[str]] | None:
         """
-        Track listener learning and optionally establish sourced dialogue facts.
-        Both outputs share one request; fact extraction runs on every character line.
+        Track listener learning: which of the recorded facts a listener did
+        not know the line made plain to them. Facts themselves come from the
+        archive step; this pass only grants.
         """
         if not self.knowledge_ledger or not line or not line.strip():
             return {}
 
         scene = self.scene
-        establish = (
-            self.knowledge_establish_facts
-            if establish_override is None
-            else establish_override
-        )
-        if establish and (
-            message is None or scene.get_message(message.id) is not message
-        ):
-            return {}
         present = (
             present_override
             if present_override is not HISTORICAL_UNSET
-            else (
-                list(
-                    dict.fromkeys(
-                        [
-                            character.name,
-                            *(
-                                message.present
-                                if message.present is not None
-                                else scene.active_characters
-                            ),
-                        ]
-                    )
-                )
-                if establish
-                else scene.active_characters
-            )
+            else scene.active_characters
         )
         witnesses = present if present is not None else scene.active_characters
         listeners = [name for name in witnesses if name != character.name]
-        if not listeners and not establish:
-            if still_current is not None and not still_current():
-                raise GenerationCancelled(
-                    "The selected version changed during fact learning"
-                )
+
+        def remove_evidence():
             if replace_message_evidence and message is not None:
                 from talemate.knowledge.revision_refresh import (
                     _remove_message_evidence,
                 )
 
-                _remove_message_evidence(scene, message, facts=replace_facts)
-            return {}
-        ts = scene.ts if ts_override is None else ts_override
-        digest = content_digest(message.perception_text) if establish else None
-        if establish:
-            message._knowledge_scene = weakref.ref(scene)
+                _remove_message_evidence(scene, message, facts=False)
 
-            def source_current():
-                return (
-                    self.scene is scene
-                    and self.knowledge_establish_facts
-                    and scene.get_message(message.id) is message
-                    and content_digest(message.perception_text) == digest
-                    and (still_current is None or still_current())
+        if not listeners:
+            if still_current is not None and not still_current():
+                raise GenerationCancelled(
+                    "The selected version changed during fact learning"
                 )
+            remove_evidence()
+            return {}
 
         dedupe = get_agent("summarizer").archive_fact_dedupe_distance
         absence: dict[str, list] = {}
@@ -954,18 +893,13 @@ class CharacterKnowledgeMixin:
             if facts:
                 absence[name] = facts
 
-        if not absence and not establish:
+        if not absence:
             log.debug("ledger skipped: every listener knows the recent facts")
             if still_current is not None and not still_current():
                 raise GenerationCancelled(
                     "The selected version changed during fact learning"
                 )
-            if replace_message_evidence and message is not None:
-                from talemate.knowledge.revision_refresh import (
-                    _remove_message_evidence,
-                )
-
-                _remove_message_evidence(scene, message, facts=replace_facts)
+            remove_evidence()
             return {}
 
         recent = (
@@ -986,60 +920,24 @@ class CharacterKnowledgeMixin:
                 "line": line,
                 "recent_lines": recent,
                 "speaker": character.name,
-                "listeners": (
-                    (", ".join(listeners) or "no listeners")
-                    if establish
-                    else ", ".join(absence.keys())
-                ),
+                "listeners": ", ".join(absence.keys()),
                 "absence": absence,
-                **(
-                    {"establish_facts": True, "previous_facts": previous_facts(scene)}
-                    if establish
-                    else {}
-                ),
             },
-            response_spec=(
-                KNOWLEDGE_LEDGER_FACTS_SPEC if establish else KNOWLEDGE_LEDGER_SPEC
-            ),
+            response_spec=KNOWLEDGE_LEDGER_SPEC,
         )
         if still_current is not None and not still_current():
             raise GenerationCancelled(
                 "The selected version changed during fact learning"
             )
         ledger = parse_ledger(extracted.get("ledger"))
-        facts_valid = not establish or parse_facts(extracted.get("facts")) is not None
-        if require_validated_result and (ledger is None or not facts_valid):
-            log.warning(
-                "ledger: answer not readable, no grants made",
-                speaker=character.name,
-                answer=extracted.get("ledger"),
-            )
-            return None
-        if replace_message_evidence and message is not None:
-            from talemate.knowledge.revision_refresh import _remove_message_evidence
-
-            removed = _remove_message_evidence(scene, message, facts=replace_facts)
-            if removed:
-                get_agent("summarizer").queue_fact_memory(scene, removed)
-        if establish and not await self._store_dialogue_facts(
-            scene,
-            message,
-            extracted.get("facts"),
-            present,
-            listeners,
-            ts,
-            digest,
-            dedupe,
-            source_current,
-        ):
-            return {}
         if ledger is None:
             log.warning(
                 "ledger: answer not readable, no grants made",
                 speaker=character.name,
                 answer=extracted.get("ledger"),
             )
-            return {}
+            return None if require_validated_result else {}
+        remove_evidence()
         from talemate.knowledge.revision_refresh import capture_revision_mutations
 
         learned: dict[str, list[str]] = {}
@@ -1084,48 +982,3 @@ class CharacterKnowledgeMixin:
         )
         log.debug("ledger", speaker=character.name, learned=learned)
         return learned
-
-    async def _store_dialogue_facts(
-        self,
-        scene,
-        message,
-        raw,
-        present,
-        listeners,
-        ts,
-        digest,
-        dedupe,
-        source_current,
-    ):
-        if not source_current():
-            return False
-        parsed = parse_facts(raw)
-        if parsed is None:
-            log.warning("dialogue facts: answer not readable", message_id=message.id)
-            return source_current()
-        parsed = [
-            item.model_copy(
-                update={
-                    "known_by": [name for name in item.known_by if name in listeners]
-                }
-            )
-            for item in parsed
-        ]
-        stored = await store_facts(
-            scene,
-            None,
-            present,
-            ts,
-            parsed,
-            dedupe,
-            notify=True,
-            message_id=message.id,
-            message_digest=digest,
-            still_current=source_current,
-        )
-        if not source_current():
-            return False
-        if stored:
-            await refresh_topics(scene)
-            scene.emit_status()
-        return source_current()

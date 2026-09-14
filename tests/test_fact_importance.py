@@ -102,10 +102,10 @@ async def test_storage_edit_and_restatement_preserve_importance(
             await store_facts(
                 scene,
                 "a1",
-                ["Mara"],
-                1,
                 [ParsedFact(text="Mara moved in.", importance=3)],
                 0.15,
+                present=["Mara"],
+                ts=1,
             )
         )[0]
         assert first.importance == 3
@@ -129,10 +129,10 @@ async def test_storage_edit_and_restatement_preserve_importance(
             await store_facts(
                 scene,
                 "a2",
-                ["Mara"],
-                2,
                 [ParsedFact(text="Mara moved into the house.", importance=3)],
                 0.15,
+                present=["Mara"],
+                ts=2,
             )
             == []
         )
@@ -194,7 +194,12 @@ async def test_trivial_chapter_empty_facts_through_summary_and_storage(
         )
         assert summary
         assert parsed == trivial_chapter["facts"] == []
-        assert await store_facts(scene, "a1", ["Mara", "Edwin"], 1, parsed, 0.15) == []
+        assert (
+            await store_facts(
+                scene, "a1", parsed, 0.15, present=["Mara", "Edwin"], ts=1
+            )
+            == []
+        )
     assert scene.world_state.facts == {}
     fact_memory.add_many.assert_not_awaited()
     request.assert_awaited_once()

@@ -22,7 +22,7 @@ from talemate.knowledge.readiness import perception_readiness
 from talemate.knowledge.schema import Fact, ParsedFact
 from talemate.knowledge.supported_facts import contributions_for_source
 from talemate.prompts import Prompt
-from talemate.scene_message import NarratorMessage
+from talemate.scene_message import NarratorMessage, TimePassageMessage
 from talemate.tale_mate import Actor
 from talemate.events import CharacterActivatedEvent
 
@@ -301,6 +301,29 @@ async def test_overrides_do_not_mutate_scene_settings(review_scene):
     assert summ.actions["manage_scene_history"].model_dump() == before
 
 
+def _place(scene, message, ts):
+    """
+    Keep the history on a timeline: messages ordered by their scene time,
+    with a time passage bridging each gap, so a message-bound fact reads
+    the time the fixture intends.
+    """
+    times = scene.__dict__.setdefault("_fixture_times", {})
+    times[message.id] = ts
+    messages = sorted(
+        (m for m in scene.history if not isinstance(m, TimePassageMessage)),
+        key=lambda m: (times.get(m.id, 0), m.id),
+    )
+    rebuilt = []
+    current = 0
+    for item in messages:
+        target = times.get(item.id, 0)
+        if target > current:
+            rebuilt.append(TimePassageMessage(ts=target - current, message="later"))
+            current = target
+        rebuilt.append(item)
+    scene.history = rebuilt
+
+
 async def add_fact(
     scene, identity, text, *, audience=("Alice", "Bob"), age=0, supersedes=None
 ):
@@ -316,6 +339,7 @@ async def add_fact(
     if scene.knowledge_eligibility == "perception":
         message = NarratorMessage(message=text, present=list(audience))
         scene.history.append(message)
+        _place(scene, message, fact.ts)
         ts = scene.ts
         scene.ts = fact.ts
         set_source_perspectives(

@@ -141,7 +141,7 @@ class _Catalog:
     def in_latest_chapter(self, fact: Fact) -> bool:
         chapter = self.chapter
         if chapter is None:
-            return fact.source == "dialogue"
+            return False
         if fact.archive_id == chapter.id or any(
             item.source.kind == "summary" and item.source.id == chapter.id
             for item in fact.contributions

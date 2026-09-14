@@ -205,7 +205,6 @@ export function effortExplanation(mode, stop, agents = [], preview = false) {
     const learning = enabled && !perspectives && value(`${ck}.ledger`) === true;
     const entry = enabled && value(`${ck}.brief_characters_on_entry`) === true
         && value(`${ck}.character_entry_turns`) !== 0;
-    const facts = learning && value(`${ck}.establish_facts`) === true;
     const repair = perspectives && value('summarizer.perceptions.automatic_repair') === true;
     const requests = [];
     const retries = [];
@@ -217,9 +216,8 @@ export function effortExplanation(mode, stop, agents = [], preview = false) {
         benefits.push('keep characters within what they know');
     }
     if (learning) {
-        requests.push(facts ? '1 after every character line (player included)'
-            : '1 after a character line when listeners have unknown recent facts');
-        benefits.push(facts ? 'remember facts and who learned them' : 'track what listeners learn');
+        requests.push('1 after a character line when listeners have unknown recent facts');
+        benefits.push('track what listeners learn');
     }
     if (memory) {
         requests.push('1 before a generated reply with uncached retrieved memories');

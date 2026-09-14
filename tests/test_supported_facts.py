@@ -31,17 +31,19 @@ from talemate.knowledge.perspectives import (
     source_reference,
 )
 from talemate.knowledge.schema import Fact, KnowledgeEdge, ParsedFact, Topic
+from talemate.knowledge.timeline import message_times
 from talemate.knowledge.topics import coverage, awareness_line
 from talemate.knowledge.supported_facts import replace_source_facts
 from talemate.load import load_scene_from_data
 from talemate.prompts import Prompt
-from talemate.scene_message import NarratorMessage
+from talemate.scene_message import NarratorMessage, TimePassageMessage
 from talemate.tale_mate import Actor, Scene
 
 
 @pytest.fixture
 def supported_scene(scene, monkeypatch):
     scene.knowledge_eligibility = "perception"
+    scene.ts = 0
     scene.history = []
     scene.archived_history = []
     scene.layered_history = []
@@ -72,7 +74,10 @@ def supported_scene(scene, monkeypatch):
         yield scene, summarizer, memory
 
 
-def passage(scene, text, audience=("Alice",), ts=1):
+def passage(scene, text, audience=("Alice",), ts=0):
+    """A passage at scene time `ts`; a time passage bridges the gap first."""
+    if ts > scene.ts:
+        scene.history.append(TimePassageMessage(ts=ts - scene.ts, message="later"))
     scene.ts = ts
     message = NarratorMessage(message=text)
     scene.history.append(message)
@@ -84,6 +89,58 @@ def passage(scene, text, audience=("Alice",), ts=1):
     )
     return message, select_character_view(
         scene, source_reference(scene, "message", message.id), audience[0]
+    ).source
+
+
+def chapter(scene, text, audience=("Alice",), ts=0, *, views=None):
+    """
+    A passage summarized into its own base entry: the summary view of the
+    audience is the fact source. `views` names per-member audiences when the
+    message should carry one view per character.
+    """
+    message, view_source = passage(scene, text, audience, ts)
+    if views:
+        set_source_perspectives(
+            scene,
+            "message",
+            message.id,
+            [
+                {"audience": list(group), "status": "ready", "text": text}
+                for group in views
+            ],
+        )
+    index = scene.message_index(message.id)
+    identity = f"chapter-{message.id}"
+    scene.archived_history.append(
+        ArchiveEntry(
+            id=identity,
+            text=text,
+            start=index,
+            end=index,
+            ts=message_times(scene)[message.id],
+        ).model_dump(exclude_none=True)
+    )
+    groups = views or [audience]
+    set_source_perspectives(
+        scene,
+        "summary",
+        identity,
+        [
+            {
+                "audience": list(group),
+                "status": "ready",
+                "text": text,
+                "sources": [
+                    select_character_view(
+                        scene, source_reference(scene, "message", message.id), group[0]
+                    ).source
+                ],
+            }
+            for group in groups
+        ],
+    )
+    return message, select_character_view(
+        scene, source_reference(scene, "summary", identity), audience[0]
     ).source
 
 
@@ -99,7 +156,7 @@ async def test_later_disclosure_survives_early_source_regeneration_on_real_graph
 ):
     scene, summarizer, _ = supported_scene
     text = "On 2026-09-01 Alice hid the ledger under the bed."
-    early, early_source = passage(scene, text, ts=10)
+    early, early_source = chapter(scene, text, ts=10)
     await store(
         scene,
         early_source,
@@ -109,7 +166,16 @@ async def test_later_disclosure_survives_early_source_regeneration_on_real_graph
         subjects=["ledger"],
     )
     scene.ts = 20
-    disclosure = add_disclosure(scene, text, ("Bob",), provenance=(early_source,))
+    disclosure = add_disclosure(
+        scene,
+        text,
+        ("Bob",),
+        provenance=(
+            select_character_view(
+                scene, source_reference(scene, "message", early.id), "Alice"
+            ).source,
+        ),
+    )
     disclosed_source = source_reference(scene, "disclosure", disclosure.id)
     await store(
         scene,
@@ -134,6 +200,29 @@ async def test_later_disclosure_survives_early_source_regeneration_on_real_graph
         early.id,
         [{"audience": ["Alice"], "status": "ready", "text": changed}],
     )
+    # the audience summary follows the changed passage
+    set_source_perspectives(
+        scene,
+        "summary",
+        f"chapter-{early.id}",
+        [
+            {
+                "audience": ["Alice"],
+                "status": "ready",
+                "text": changed,
+                "sources": [
+                    select_character_view(
+                        scene, source_reference(scene, "message", early.id), "Alice"
+                    ).source
+                ],
+            }
+        ],
+    )
+    early_source = select_character_view(
+        scene, source_reference(scene, "summary", f"chapter-{early.id}"), "Alice"
+    ).source
+    # the refresh commits the revision once the views follow the edit
+    early.mark_revision_committed(("perceptions",))
     extract = AsyncMock(
         return_value=(
             changed,
@@ -342,8 +431,8 @@ async def test_empty_extraction_replaces_only_requested_support(
     supported_scene, monkeypatch
 ):
     scene, summarizer, _ = supported_scene
-    _, first = passage(scene, "Alice owns a key.")
-    _, other = passage(scene, "Bob owns a book.", ("Bob",))
+    _, first = chapter(scene, "Alice owns a key.")
+    _, other = chapter(scene, "Bob owns a book.", ("Bob",))
     await store(scene, first, ("Alice",), "Alice owns a key.")
     await store(scene, other, ("Bob",), "Bob owns a book.")
     before = current_state(scene, "book", character="Bob")
@@ -360,9 +449,9 @@ async def test_real_summary_request_inherits_only_its_audience(
     supported_scene, monkeypatch
 ):
     scene, summarizer, _ = supported_scene
-    _, secret = passage(scene, "PRIVATE: Alice hides a diamond.")
+    _, secret = chapter(scene, "PRIVATE: Alice hides a diamond.")
     await store(scene, secret, ("Alice",), "PRIVATE: Alice hides a diamond.")
-    _, source = passage(scene, "Bob hears Alice claim the ledger burned.", ("Bob",))
+    _, source = chapter(scene, "Bob hears Alice claim the ledger burned.", ("Bob",))
     prompts = []
 
     async def request(uid, client, kind, **kwargs):
@@ -389,8 +478,9 @@ async def test_saved_sources_rebuild_after_fact_ids_are_discarded(
 ):
     scene, summarizer, memory = supported_scene
     text = "On 2026-09-01 Alice hid the ledger under the bed."
-    _, source = passage(scene, text, ts=10)
+    _, source = chapter(scene, text, ts=10)
     await store(scene, source, ("Alice",), text, time_scope="2026-09-01")
+    scene.history.append(TimePassageMessage(ts=10, message="later"))
     scene.ts = 20
     disclosure = add_disclosure(scene, text, ("Bob",))
     await store(
@@ -746,64 +836,12 @@ async def test_same_date_occurrences_and_cycle_guard(supported_scene):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("shared", [False, True])
-@pytest.mark.parametrize("bob_status", [None, "failed", "pending"])
-async def test_full_rebuild_covers_each_passage_audience(
-    supported_scene, monkeypatch, shared, bob_status
-):
-    scene, summarizer, _ = supported_scene
-    message, source = passage(scene, "Alice and Bob see the key.", ("Alice", "Bob"))
-    if not shared:
-        set_source_perspectives(
-            scene,
-            "message",
-            message.id,
-            [
-                {"audience": [name], "status": "ready", "text": f"{name} sees the key."}
-                for name in ("Alice", "Bob")
-            ],
-        )
-        source = select_character_view(
-            scene, source_reference(scene, "message", message.id), "Alice"
-        ).source
-    scene.archived_history = [
-        ArchiveEntry(id="base", text="Reader", start=0, end=0).model_dump(
-            exclude_none=True
-        )
-    ]
-    views = [
-        {
-            "audience": ["Alice"],
-            "status": "ready",
-            "text": "Alice sees the key.",
-            "sources": [source],
-        }
-    ]
-    if bob_status:
-        views.append({"audience": ["Bob"], "status": bob_status})
-    set_source_perspectives(scene, "summary", "base", views)
-
-    async def summarize(text, **kwargs):
-        return text, [ParsedFact(text=text)]
-
-    monkeypatch.setattr(summarizer, "summarize", summarize)
-    assert await summarizer.rebuild_supported_facts(scene) == "ok"
-    for name in ("Alice", "Bob"):
-        assert current_state(scene, "key", character=name) is not None
-    assert any(
-        item.source.kind == "message" and "Bob" in item.audience
-        for fact in scene.world_state.facts.values()
-        for item in fact.contributions
-    )
-
-
-@pytest.mark.asyncio
 @pytest.mark.parametrize("empty", [False, True])
 async def test_failed_memory_write_is_retried_after_canonical_publication(
     supported_scene, monkeypatch, empty
 ):
     scene, summarizer, memory = supported_scene
-    _, source = passage(scene, "Alice has the key.")
+    _, source = chapter(scene, "Alice has the key.")
     old = (await store(scene, source, ("Alice",), "Alice has the key."))[0]
     operation = memory.delete if empty else memory.add_many
     operation.reset_mock()
@@ -1013,7 +1051,7 @@ async def test_time_scope_flows_through_real_prompt_and_response(
 ):
     scene, summarizer, _ = supported_scene
     text = "On 2026-09-01 Alice holds the key."
-    _, source = passage(scene, text)
+    _, source = chapter(scene, text)
     prompts = []
 
     async def send(prompt, **kwargs):
@@ -1221,19 +1259,10 @@ async def test_one_view_rebuild_preserves_edited_two_contribution_record(
 ):
     scene, summarizer, memory = supported_scene
     text = "Alice and Bob see the key."
-    message, _ = passage(scene, text, ("Alice", "Bob"))
-    set_source_perspectives(
-        scene,
-        "message",
-        message.id,
-        [
-            {"audience": [name], "status": "ready", "text": text}
-            for name in ("Alice", "Bob")
-        ],
-    )
+    message, _ = chapter(scene, text, ("Alice", "Bob"), views=[("Alice",), ("Bob",)])
     views = {
         name: select_character_view(
-            scene, source_reference(scene, "message", message.id), name
+            scene, source_reference(scene, "summary", f"chapter-{message.id}"), name
         ).source
         for name in ("Alice", "Bob")
     }
@@ -1309,7 +1338,8 @@ async def test_full_rebuild_skips_unready_passage_views(
         ],
     )
     requested = list(summarizer.saved_fact_sources(scene))
-    assert (bob in requested) == (status == "omitted")
+    # passages are not fact sources, whatever their view status
+    assert bob not in requested and alice not in requested
     request = AsyncMock(
         return_value=("Unused summary", [ParsedFact(text="Alice sees the key.")])
     )
@@ -1320,8 +1350,7 @@ async def test_full_rebuild_skips_unready_passage_views(
     assert current_state(scene, "key", character="Alice").text == "Alice sees the key."
     assert current_state(scene, "key", character="Bob") is None
     summarizer.client._prompt_generation_error.assert_not_awaited()
-    if status != "omitted":
-        assert await summarizer.rebuild_supported_facts(scene, [bob]) == "failed"
+    assert await summarizer.rebuild_supported_facts(scene, [bob]) == "failed"
 
 
 @pytest.mark.asyncio
@@ -1614,6 +1643,7 @@ async def test_shared_prompt_does_not_refresh_from_one_listeners_private_restate
     await store(
         scene, private, ("Alice",), text, importance=3, time_scope="September 1, 2026"
     )
+    scene.history.append(TimePassageMessage(ts=DAY, message="a day later"))
     scene.ts = 40 * DAY
     first, second = scene.world_state.facts.values()
     scene.world_state.facts = {
@@ -1637,3 +1667,140 @@ async def test_extraction_keeps_old_supported_supersede_targets(supported_scene)
     scene.ts = 100 * DAY
     facts = previous_audience_facts(scene, ("Alice", "Bob"))
     assert [fact.text for fact in facts] == [text]
+
+
+async def test_rebuild_of_a_two_line_chapter_binds_facts_to_their_lines(
+    supported_scene, monkeypatch
+):
+    """
+    Regenerate facts and the audience-summary Retry rebuild a chapter's facts
+    through `rebuild_supported_facts`. A chapter of more than one message
+    needs the line ids in the request, or every fact is dropped.
+    """
+    scene, summarizer, _ = supported_scene
+    first, first_view = passage(scene, "Alice found the key.")
+    second, second_view = passage(scene, "Alice hid the key.")
+    identity = "chapter-two"
+    scene.archived_history.append(
+        ArchiveEntry(
+            id=identity,
+            text="Alice found and hid the key.",
+            start=scene.message_index(first.id),
+            end=scene.message_index(second.id),
+            ts=0,
+        ).model_dump(exclude_none=True)
+    )
+    set_source_perspectives(
+        scene,
+        "summary",
+        identity,
+        [
+            {
+                "audience": ["Alice"],
+                "status": "ready",
+                "text": "Alice found and hid the key.",
+                "sources": [first_view, second_view],
+            }
+        ],
+    )
+    source = select_character_view(
+        scene, source_reference(scene, "summary", identity), "Alice"
+    ).source
+    extract = AsyncMock(
+        return_value=(
+            "Alice found and hid the key.",
+            [
+                ParsedFact(text="Alice found the key.", message_id=first.id),
+                ParsedFact(text="Alice hid the key.", message_id=second.id),
+                ParsedFact(text="A fact that names no line."),
+            ],
+        )
+    )
+    monkeypatch.setattr(summarizer, "summarize", extract)
+
+    # Regenerate facts on the History entry
+    entry = HistoryEntry(
+        text="Alice found and hid the key.",
+        ts=0,
+        index=len(scene.archived_history) - 1,
+        layer=0,
+        id=identity,
+        start=scene.message_index(first.id),
+        end=scene.message_index(second.id),
+    )
+    assert await summarizer.regenerate_facts(entry) == "ok"
+    extract.assert_awaited_once()
+    assert extract.call_args.kwargs["line_ids"] is True
+    text = extract.call_args.args[0]
+    assert text.startswith(f"[{first.id}] ")
+    assert f"\n\n[{second.id}] " in text
+    facts = {fact.text: fact for fact in scene.world_state.facts.values()}
+    assert set(facts) == {"Alice found the key.", "Alice hid the key."}
+    assert facts["Alice found the key."].contributions[0].message_id == first.id
+    assert facts["Alice hid the key."].contributions[0].message_id == second.id
+
+    # the audience-facts Retry rebuilds the same source the same way
+    extract.reset_mock()
+    assert await summarizer.rebuild_supported_facts(scene, [source]) == "ok"
+    assert extract.call_args.kwargs["line_ids"] is True
+    assert set(fact.text for fact in scene.world_state.facts.values()) == set(facts)
+
+
+async def test_disclosure_rebuild_asks_for_no_line_ids(supported_scene, monkeypatch):
+    scene, summarizer, _ = supported_scene
+    disclosure = add_disclosure(scene, "Alice remembers the key.", ("Alice",))
+    source = source_reference(scene, "disclosure", disclosure.id)
+    extract = AsyncMock(
+        return_value=("", [ParsedFact(text="Alice remembers the key.")])
+    )
+    monkeypatch.setattr(summarizer, "summarize", extract)
+    assert await summarizer.rebuild_supported_facts(scene, [source]) == "ok"
+    assert extract.call_args.kwargs["line_ids"] is False
+    assert extract.call_args.args[0] == "Alice remembers the key."
+    assert [fact.text for fact in scene.world_state.facts.values()] == [
+        "Alice remembers the key."
+    ]
+
+
+async def test_one_line_fallback_needs_a_single_input(supported_scene):
+    """
+    A one-message chapter view with a disclosure input has two inputs: a
+    fact without a line id cannot be tied to the message.
+    """
+    scene, _, _ = supported_scene
+    message, view_source = passage(scene, "Alice found the key.")
+    disclosure = add_disclosure(scene, "Alice recalls the map.", ("Alice",))
+    identity = "chapter-mixed"
+    index = scene.message_index(message.id)
+    scene.archived_history.append(
+        ArchiveEntry(
+            id=identity, text="Alice found the key.", start=index, end=index, ts=0
+        ).model_dump(exclude_none=True)
+    )
+    set_source_perspectives(
+        scene,
+        "summary",
+        identity,
+        [
+            {
+                "audience": ["Alice"],
+                "status": "ready",
+                "text": "Alice found the key and recalls the map.",
+                "sources": [
+                    view_source,
+                    source_reference(scene, "disclosure", disclosure.id),
+                ],
+            }
+        ],
+    )
+    source = select_character_view(
+        scene, source_reference(scene, "summary", identity), "Alice"
+    ).source
+    await store(scene, source, ("Alice",), "Alice recalls the map.")
+    assert scene.world_state.facts == {}
+    await store(
+        scene, source, ("Alice",), "Alice found the key.", message_id=message.id
+    )
+    assert [fact.text for fact in scene.world_state.facts.values()] == [
+        "Alice found the key."
+    ]

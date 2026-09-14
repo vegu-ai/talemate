@@ -45,13 +45,15 @@ Writing style instructions are also included during summarization to maintain co
 
 ###### Extract facts
 
-Save individual facts alongside summaries for character knowledge. **Leave on to build the fact record**; this summary step needs no extra request. On by default. With this off, regenerating an entry leaves its recorded facts as they are. See [History — Facts](/talemate/user-guide/world-editor/history/#facts).
+Save individual facts alongside summaries for character knowledge. **Leave on to build the fact record**; this summary step needs no extra request, so every effort stop above Off keeps it on. On by default. With this off, regenerating an entry leaves its recorded facts as they are, and nothing re-extracts facts after an edit. An edit of a character line inside a summarized chapter keeps the line's facts, bound to the edited text, when the Conversation agent's **Track learning from dialogue** runs for the line. With that off too, or for a narrator line, the edit removes the stale chapter summary and its facts. The latest chapter is summarized again by the next archive step, without facts; an older chapter is not rebuilt until you regenerate the history. See [History — Facts](/talemate/user-guide/world-editor/history/#facts).
+
+Chapter summaries are the only source of facts. Each fact names the line of the chapter it came from and keeps that line's presence and scene time; it is removed with the line, marked out of date when the line is edited until the chapter is refreshed, and moves with the timeline when an earlier time passage changes. A fact the model cannot tie to a line is not stored.
 
 [How character knowledge works](/talemate/user-guide/world-editor/knowledge-how-it-works/#standard-mode-one-line-is-said) shows who learns a chapter's facts. Extraction asks for facts whose omission could make a later scene go wrong, allowing **0–12 facts per chapter**. A first hug can be a relationship milestone; a routine greeting hug is not a new fact. Each fact receives an **importance** of Routine (1), State (2), or Milestone (3) in the same response. These are model judgments that can be corrected in History; facts saved before importance was added default to State (2).
 
 ###### Fact matching tolerance
 
-Treat sufficiently similar facts as repeats instead of saving them again (default 0.15). **Raise to merge more similar facts; lower to keep more distinctions.** A repeat increases the stored fact's repeat counter.
+Treat sufficiently similar facts as repeats instead of saving them again (default 0.15). **Raise to merge more similar facts; lower to keep more distinctions.** The extraction itself names the recorded fact a statement repeats; this tolerance catches the repeats it did not name. A repeat increases the stored fact's repeat counter.
 
 This is the maximum distance allowed between normalized fact embeddings. Zero is the strictest value, not an off switch. In Standard mode, the Memory agent's [Match known facts](/talemate/user-guide/agents/memory/settings/#match-known-facts) also uses this tolerance when checking retold information. In Perspectives mode it also merges similar facts extracted by different audiences from the same moment.
 

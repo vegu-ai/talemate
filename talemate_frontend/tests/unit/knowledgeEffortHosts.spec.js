@@ -358,9 +358,10 @@ describe('the settings page edits its working copy', () => {
         Settings.methods.applyEffort.call(vm, 'minimal');
         expect(calls).toEqual(expect.arrayContaining([
             ['config', 'conversation', 'character_knowledge', 'absence_block', false],
-            ['config', 'summarizer', 'archive', 'extract_facts', false],
             ['enabled', 'memory', 'topics', false],
             ['config', 'memory', 'retrieval', 'similarity_gate', false],
         ]));
+        // Extract facts stays on at every stop above Off
+        expect(calls).not.toContainEqual(['config', 'summarizer', 'archive', 'extract_facts', false]);
     });
 });

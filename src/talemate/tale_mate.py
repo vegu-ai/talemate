@@ -55,7 +55,8 @@ from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import GameStatePathSettings, ScenePerspectives
 from talemate.history import emit_archive_add, ArchiveEntry, count_summary_layers
-from talemate.knowledge.dialogue_facts import prune_invalid_dialogue_facts
+from talemate.knowledge.message_facts import prune_missing_message_facts
+from talemate.knowledge.timeline import refresh_fact_times
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.memory import invalidate_memory_audiences
 from talemate.knowledge.facts import fact_memory_document, prune_summary_facts
@@ -1561,6 +1562,7 @@ class Scene(Emitter):
 
                 if isinstance(message, TimePassageMessage):
                     self.sync_time()
+                    self.refresh_fact_times()
                 # the frontend drops the message on remove_message; the status
                 # frame is what carries the new history counts, and an auto
                 # save on a never-saved scene emits none of its own
@@ -1799,9 +1801,17 @@ class Scene(Emitter):
         try:
             ts = self.ts
             self._fix_time()
+            self.refresh_fact_times()
         except Exception:
             log.error("fix_time", exc=traceback.format_exc())
             self.ts = ts
+
+    def refresh_fact_times(self):
+        """Facts follow the timeline: their time is the time at their message."""
+        changed = refresh_fact_times(self)
+        if changed:
+            get_agent("summarizer").queue_fact_memory(self, changed)
+        return changed
 
     def _fix_time(self):
         starting_time = 0
@@ -2306,7 +2316,8 @@ class Scene(Emitter):
         # remove messages
         self.history = []
         dropped_facts = reset_perspectives(self)
-        dropped_facts.update(prune_invalid_dialogue_facts(self))
+        # the story the facts came from is gone: a hand grant keeps none
+        dropped_facts.update(prune_missing_message_facts(self, edges=False))
 
         # clear out archived history, but keep pre-established history
         summarized_ids = {

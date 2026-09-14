@@ -9,6 +9,12 @@ import pytest
 import test_supported_facts
 from test_fact_evidence import evidence_message
 from talemate.agents.memory import MemoryAgent
+from talemate.history import ArchiveEntry
+from talemate.knowledge.perspectives import (
+    select_character_view,
+    set_source_perspectives,
+    source_reference,
+)
 from talemate.knowledge.fact_reconciliation import fact_knowledge_reason
 from talemate.knowledge.graph import bucket
 from talemate.knowledge.schema import ParsedFact
@@ -61,6 +67,31 @@ async def test_300_message_rebuild_embeds_once_per_passage(
     scene, summarizer, memory = supported_scene
     for _ in range(300):
         evidence_message(scene)
+    for index, message in enumerate(scene.history):
+        identity = f"chapter-{message.id}"
+        scene.archived_history.append(
+            ArchiveEntry(id=identity, text="c", start=index, end=index).model_dump(
+                exclude_none=True
+            )
+        )
+        set_source_perspectives(
+            scene,
+            "summary",
+            identity,
+            [
+                {
+                    "audience": [name],
+                    "status": "ready",
+                    "text": "c",
+                    "sources": [
+                        select_character_view(
+                            scene, source_reference(scene, "message", message.id), name
+                        ).source
+                    ],
+                }
+                for name in ("Alice", "Bob")
+            ],
+        )
     loop_thread = threading.get_ident()
     calls = []
     facts = [f"Public fact {i}." for i in range(12)]

@@ -52,9 +52,9 @@ Selections in **Create New Story** and **Character Card Import** are saved as [s
 
 | Stop | Toggles | Extra requests | Model |
 |---|---|---|---|
-| **Off** | Character Knowledge off, Memory Topics off, Match known facts off, Extract facts off | None | Works with any model. |
-| **Minimal** | Character Knowledge on, Limit to character knowledge on; everything else off | None | Works with any model. |
-| **Light** | Minimal + Remind about unknown facts, Topic knowledge overview, Memory Topics, Match known facts, Extract facts | None | Works with any model. |
+| **Off** | Character Knowledge off, Memory Topics off, Match known facts off; Extract facts stays as it is | None | Works with any model. |
+| **Minimal** | Character Knowledge on, Limit to character knowledge on, Extract facts on; everything else off | None | Works with any model. |
+| **Light** | Minimal + Remind about unknown facts, Topic knowledge overview, Memory Topics, Match known facts | None | Works with any model. |
 | **Balanced** (the Create New Story default) | Light + Track learning from dialogue | One after a character message when a listener has unknown facts | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
 | **Thorough** | Balanced + Refine memories with AI + Brief characters on entry | One after applicable dialogue; one before a generated reply with uncached memories; one per eligible NPC briefing. Offscreen account fallback may add one | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
 | **Ultra** | Thorough with Unknown-fact reminders 10 and Recent facts to check 100 | One after applicable dialogue; one before a generated reply with uncached memories; one per eligible NPC briefing. Offscreen account fallback may add one | Current frontier / reasoning model recommended; expect frequent retries on anything less. |
@@ -65,15 +65,14 @@ Selections in **Create New Story** and **Character Card Import** are saved as [s
 
 | Stop | Toggles | Extra requests | Model |
 |---|---|---|---|
-| **Minimal** | The analysis after each passage only; Automatic repair, Extract facts, Memory Topics and Refine memories off | The mandatory analysis | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. The analysis after each passage is mandatory in this mode, so this is the floor. |
+| **Minimal** | The analysis after each passage and Extract facts; Automatic repair, Memory Topics and Refine memories off | The mandatory analysis | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. The analysis after each passage is mandatory in this mode, so this is the floor. |
 | **Light** | Minimal + Memory Topics | The analysis | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
-| **Balanced** (the Create New Story default) | Light + Extract facts + Automatically repair analysis | The analysis, plus a repair when a view is invalid | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
+| **Balanced** (the Create New Story default) | Light + Automatically repair analysis | The analysis, plus a repair when a view is invalid | Needs reliable structured output (JSON / function calls): most current hosted models and strong local models. |
 | **Thorough** | Balanced + Refine memories with AI + Brief characters on entry | The analysis, repairs, one before each reply with memories, and one per non-player character activation; a combined Offscreen Life fallback can add one | Needs a current reasoning-class model; small or older local models will produce failed analyses. |
 
 The counts describe normal requests, excluding provider/network retries. Dialogue
-learning adds one request when listeners have unknown recent facts; with
-**Establish facts from dialogue** enabled, the same request runs after every
-character line, including player lines. Memory refinement skips empty retrievals
+learning adds one request when listeners have unknown recent facts; it grants
+recorded facts and records none. Memory refinement skips empty retrievals
 and reuses cached results. Entry briefings normally cost one request per eligible
 NPC activation, sharing that request with Offscreen Life when both apply; an
 unreadable combined offscreen account can add one fallback request. Scene loading
@@ -92,7 +91,7 @@ A scene saved before this release loads in **Standard** mode. Its effort is not 
 
 Changes made through the knowledge hub are **scene overrides** stored in the project's agent-settings file. Global agent settings are left untouched. **Overrides are project-scoped and shared across every save in the project, including stock scenes, Save As copies and restore points.** A stock scene's read-only protection applies to its scene save, not to the project's overrides: hub edits apply directly without a Save Scene dialog. Saves auto-link the project's default settings file on load, so loading the stock scene again picks up those changes too. A scene explicitly linked to a different settings file, or opted out of overrides, follows that choice; [Per-Scene Agent Overrides](/talemate/user-guide/agents/scene-overrides/) explains these options. The agent settings dialog (the Agents page) remains the place to change the globals. The hub marks each value that comes from a scene override and offers **Use global settings** on a group header and above the effort slider; a reset removes only the knowledge settings the hub owns — including ones the current mode hides — and leaves every unrelated override in place. The effort chip above the slider says **Global settings** when none of the current mode's effort settings is overridden and **Scene override** when any is, and its tooltip tells a scene that supplies every effort setting from one that mixes scene overrides with globals. When a story has no save file, changing a hub setting opens **Save Scene** and continues the pending change after saving succeeds. Cancelling or a failed save preserves the change and entered name; see [first-save continuation, retry and discard](/talemate/user-guide/agents/scene-overrides/#saving-a-knowledge-hub-change-for-the-first-time).
 
-To get the behaviour Talemate had before character knowledge, drag the slider to **Off**, its first stop. The slider is in the knowledge hub's **Thoroughness** section, in the **Create New Story** dialog and in the Conversation agent's **Character Knowledge** settings. Off writes the Character Knowledge switch itself and the three switches outside it. The switches under that master keep the values they held, because a master that is off makes every one of them inert; turning the master back on by hand brings those values back, and the slider reads the stop they match, or **Custom** when they match none.
+To get the behaviour Talemate had before character knowledge, drag the slider to **Off**, its first stop. The slider is in the knowledge hub's **Thoroughness** section, in the **Create New Story** dialog and in the Conversation agent's **Character Knowledge** settings. Off writes the Character Knowledge switch itself and the two switches outside it, Memory Topics and Match known facts; Extract facts costs no request and stays as it is. The switches under that master keep the values they held, because a master that is off makes every one of them inert; turning the master back on by hand brings those values back, and the slider reads the stop they match, or **Custom** when they match none.
 
 The rest of this page is the reference for both modes.
 
@@ -198,7 +197,7 @@ Perception-mode character retrieval derives queries from projected history, then
 
 Characters' knowledge follows presence, ownership, the **Known by** settings and explicit **Allow / Block** rules. Unknown historical presence is shared. The conversation history filter replaces missed spans with a gap; layered summaries use their coarse presence. Narrator, director, summarizer and world-state author requests retain the full record.
 
-When you select a different revision of a message, Standard mode temporarily withholds facts and inferred grants that came from the replaced text, including affected chapter summaries. **Refresh facts** re-runs enabled fact extraction for the passage or its affected chapter summaries and, for character dialogue, enabled learning from dialogue. It uses the presence and preceding history recorded at that point rather than today's active cast. Sending the next line runs the same refresh first. Authored facts, manual grants, other restatements and unrelated evidence are preserved; disabling both features removes stale derived material and makes the selected version final without a request.
+When you select a different revision of a message, Standard mode temporarily withholds facts and inferred grants that came from the replaced text, including affected chapter summaries. **Refresh facts** re-runs enabled fact extraction for the chapter summaries that contain the passage and, for character dialogue, enabled learning from dialogue; a passage outside every chapter has no facts to refresh. It uses the presence and preceding history recorded at that point rather than today's active cast. Sending the next line runs the same refresh first. Authored facts, manual grants, other restatements and unrelated evidence are preserved; disabling both features removes stale derived material and makes the selected version final without a request.
 
 ### What the speaking character gets
 

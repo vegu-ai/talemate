@@ -92,8 +92,8 @@ Regenerating a reply reuses a published result only when the story before that r
 the memory sources available to the retrieval, and its settings are unchanged. New or
 edited world entries, character details, facts and archives refresh affected cached
 results, as do relevant knowledge visibility, topic and memory-collection changes.
-When retrieval is limited to character knowledge, new dialogue facts and learning
-edges tied to the reply being regenerated do not count as earlier sources. Without
+When retrieval is limited to character knowledge, learning edges tied to the reply
+being regenerated do not count as earlier sources. Without
 that limit, learning edges do not affect retrieval. Changes to older retained facts
 or learning edges, including a fact restatement, still refresh affected results.
 A retrieval already in progress can finish with its earlier context. A result built

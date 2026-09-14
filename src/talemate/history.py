@@ -28,9 +28,10 @@ from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
 from talemate.context import handle_generation_cancelled
 from talemate.events import ArchiveEvent
-from talemate.knowledge.facts import drop_facts_for_entries, facts_for_entry
-from talemate.knowledge.schema import Fact, FactsStatus
-from talemate.knowledge.perspective_models import PerspectiveSourceModel
+from talemate.knowledge.facts import SpanLine, drop_facts_for_entries, facts_for_entry
+from talemate.knowledge.schema import INTRO_LINE, Fact, FactsStatus
+from talemate.knowledge.perspective_models import PerspectiveSourceModel, content_digest
+from talemate.knowledge.timeline import message_times
 from talemate.knowledge.perspectives import (
     source_content_changed,
     source_deleted,
@@ -57,7 +58,13 @@ __all__ = [
     "reimport_history",
     "compute_layer_stats",
     "collect_time_passages",
+    "span_bindings",
+    "render_span",
+    "SPAN_LINE_EXCLUDED_TYPES",
 ]
+
+# messages that are never part of a summarized span
+SPAN_LINE_EXCLUDED_TYPES = ("director", "context_investigation", "reinforcement")
 
 log = structlog.get_logger()
 
@@ -434,6 +441,30 @@ def history_with_relative_time(
         ).model_dump()
         for index, entry in enumerate(history)
     ]
+
+
+def span_bindings(
+    scene: "Scene", messages: list[SceneMessage], *, times: dict[int, int] | None = None
+) -> dict[int, SpanLine]:
+    """The binding a fact receives from each line of an extraction span."""
+    times = times if times is not None else message_times(scene)
+    return {
+        message.id: SpanLine(
+            message_id=message.id,
+            message_digest=content_digest(message.perception_text),
+            present=message.present,
+            ts=times.get(message.id),
+        )
+        for message in messages
+        if message.typ not in SPAN_LINE_EXCLUDED_TYPES
+    }
+
+
+def render_span(messages: list[SceneMessage], *, intro: str | None = None) -> str:
+    """The span as the extraction sees it: every line prefixed with its id."""
+    lines = [f"[{INTRO_LINE}] {intro}"] if intro else []
+    lines.extend(f"[{message.id}] {message}" for message in messages)
+    return "\n".join(lines)
 
 
 def collect_time_passages(scene: "Scene") -> list[dict]:
@@ -879,7 +910,6 @@ async def regenerate_history_entry(
 
     elif isinstance(archive_entry, ArchiveEntry):
         summarized, facts_status = await summarizer.summarize_with_facts(
-            "\n".join(map(str, entries)),
             archive_entry,
             extra_context=await summarizer.previous_summaries(
                 archive_entry, scene=scene
@@ -890,8 +920,6 @@ async def regenerate_history_entry(
         )
         entry.facts_status = facts_status
         entry.facts = facts_for_entry(scene, entry.id)
-        if archive_entry.intro_included is not None:
-            entry.intro_included = False
 
     entry.text = summarized
 

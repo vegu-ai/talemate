@@ -6,7 +6,7 @@ from talemate.instance import get_agent
 from talemate.knowledge.chronology import ranked_facts
 from talemate.knowledge.formatting import format_message_view
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.evidence import view_evidence
+from talemate.knowledge.evidence import message_views, view_evidence
 from talemate.knowledge.perspective_models import SourceReference
 from talemate.knowledge.perspectives import (
     PerspectiveReadContext,
@@ -14,6 +14,7 @@ from talemate.knowledge.perspectives import (
 )
 from talemate.knowledge.schema import Fact, FactContribution, ParsedFact
 from talemate.knowledge.summaries import summary_coverage
+from talemate.knowledge.timeline import message_times, refresh_fact_times
 
 
 log = structlog.get_logger(__name__)
@@ -69,20 +70,31 @@ def contribution_link(ordered):
     )
 
 
-def aggregate_fact(fact, contributions):
+def contribution_time(item, times=None):
+    """The scene time at the contribution's message; its acquisition otherwise."""
+    if times is not None and item.message_id in times:
+        return times[item.message_id]
+    return item.acquired.ts
+
+
+def aggregate_fact(fact, contributions, *, times=None):
     ordered = _ordered(contributions)
-    first, last = ordered[0], ordered[-1]
+    first = ordered[0]
+    message_id = next(
+        (item.message_id for item in ordered if item.message_id is not None), None
+    )
     # an authored text or link stays; otherwise the contributions decide, so
     # each view keeps its own wording
     return fact.model_copy(
         update={
             "text": fact.text if fact.text_edited else first.text,
-            "ts": first.acquired.ts,
-            "last_seen_ts": last.acquired.ts,
+            "ts": contribution_time(first, times),
+            "last_seen_ts": max(contribution_time(item, times) for item in ordered),
             "archive_id": next(
                 (item.source.id for item in ordered if item.source.kind == "summary"),
                 None,
             ),
+            "message_id": message_id,
             "present": sorted({name for item in ordered for name in item.audience}),
             "known_by": {},
             "supersedes": fact.supersedes
@@ -102,9 +114,14 @@ def character_fact(scene, fact, character, *, read=None, cache=None):
     )
     if not contributions:
         return None
+    times = cache.get("message_times") if cache is not None else None
+    if times is None:
+        times = message_times(scene)
+        if cache is not None:
+            cache["message_times"] = times
     # The false mark is an author judgement, and the chain a character holds
     # runs through their own contributions.
-    return aggregate_fact(fact, contributions).model_copy(
+    return aggregate_fact(fact, contributions, times=times).model_copy(
         update={
             "false": False,
             "supersedes": contribution_link(_ordered(contributions)),
@@ -138,7 +155,14 @@ def previous_audience_facts(scene, audience, limit=30, *, prompt=True):
     )
 
 
-def extraction_text(scene, source, character, *, read=None):
+def extraction_lines(
+    scene, source, character, *, read=None
+) -> list[tuple[str, int | None]]:
+    """
+    The text a fact rebuild reads for `source`, one item per line with the
+    message id the line came from (None for a disclosure or a line that is
+    not a message): the same inputs the archive step sends.
+    """
     read = read or PerspectiveReadContext(scene)
     selected = select_character_view(scene, source, character, read=read)
     if selected.status != "ready" or not source_visible(
@@ -146,29 +170,43 @@ def extraction_text(scene, source, character, *, read=None):
     ):
         raise ValueError("Fact extraction source is not ready")
     if source.kind == "disclosure":
-        return selected.text
+        return [(selected.text, None)]
     if source.kind == "message":
-        return format_message_view(
-            read.sources[source.key][0].owner, selected.text, "chat"
-        )
+        return [
+            (
+                format_message_view(
+                    read.sources[source.key][0].owner, selected.text, "chat"
+                ),
+                source.id,
+            )
+        ]
     owner = read.sources[source.key][0]
     view = next(
         view for view in owner.knowledge.views if view.id == selected.source.view_id
     )
-    texts = []
+    lines = []
     for dependency in view.sources:
         part = select_character_view(scene, dependency, character, read=read)
         if part.status == "ready":
-            texts.append(
-                format_message_view(
-                    read.sources[dependency.key][0].owner, part.text, "chat"
+            lines.append(
+                (
+                    format_message_view(
+                        read.sources[dependency.key][0].owner, part.text, "chat"
+                    ),
+                    dependency.id,
                 )
                 if dependency.kind == "message"
-                else part.text
+                else (part.text, None)
             )
         elif part.status not in ("omitted", "unavailable"):
             raise ValueError("Fact extraction dependency is not ready")
-    return "\n\n".join(texts) if texts else selected.text
+    return lines if lines else [(selected.text, None)]
+
+
+def extraction_text(scene, source, character, *, read=None):
+    return "\n\n".join(
+        text for text, _ in extraction_lines(scene, source, character, read=read)
+    )
 
 
 def learning_acquisition(scene, source, character, *, read, cache=None):
@@ -213,9 +251,8 @@ async def contributions_for_source(
     if len({(view.source, view.text, view.acquired) for view in views}) != 1:
         raise ValueError("Fact extraction audiences must share the same source view")
     view = views[0]
-    input_text = " ".join(
-        extraction_text(scene, source, audience[0], read=read).split()
-    )
+    inputs = extraction_lines(scene, source, audience[0], read=read)
+    input_text = " ".join(" ".join(text for text, _ in inputs).split())
     acquired = learning_acquisition(scene, view.source, audience[0], read=read)
     allowed_previous = {
         fact.id for fact in previous_audience_facts(scene, audience, prompt=False)
@@ -224,7 +261,27 @@ async def contributions_for_source(
     evidence = {
         item.id: item for item in view_evidence(scene, source, audience[0], read=read)
     }
+    # a span fact must name one of the lines the view was built from; a
+    # disclosure or a static entry has no lines at all. A request that read
+    # exactly one input, a message, has exactly one line that can establish
+    # a fact, so a missing id binds to it.
+    line_ids = (
+        set(message_views(scene, source, audience[0], read=read)) or None
+        if source.kind != "disclosure"
+        else None
+    )
+    single = len(inputs) == 1 and line_ids is not None and len(line_ids) == 1
     for item in parsed:
+        if single and item.message_id is None:
+            item = item.model_copy(update={"message_id": next(iter(line_ids))})
+        if line_ids is not None and item.message_id not in line_ids:
+            log.warning(
+                "fact names no line of its span; dropped",
+                source_id=source.id,
+                message_id=item.message_id,
+                text=item.text[:80],
+            )
+            continue
         if item.evidence_id is not None and item.evidence_id not in evidence:
             log.warning(
                 "dropping unsupported fact evidence",
@@ -260,6 +317,7 @@ async def contributions_for_source(
                 text=text,
                 importance=item.importance,
                 subjects=tuple(sorted(set(item.subjects))),
+                message_id=item.message_id if line_ids is not None else None,
                 evidence=cited,
                 citation_rejected=citation_rejected,
                 evidence_competitors=competitors or (),
@@ -483,6 +541,7 @@ async def replace_source_facts(
     scene.world_state.knowledge = [
         edge for edge in scene.world_state.knowledge if edge.target not in removed
     ]
+    touched.update(refresh_fact_times(scene))
     summarizer = get_agent("summarizer")
     summarizer._fact_memory_dirty.setdefault(scene, set()).update(touched)
     await summarizer.flush_fact_memory(scene)
@@ -548,4 +607,5 @@ def retain_current_contributions(scene, references):
         for edge in scene.world_state.knowledge
         if edge.target not in touched or edge.target in scene.world_state.facts
     ]
+    touched.update(refresh_fact_times(scene))
     return touched

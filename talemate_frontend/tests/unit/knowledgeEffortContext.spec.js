@@ -11,11 +11,10 @@ const Container = defineComponent({ setup: (_, { slots }) => () => h('div', slot
 const mounted = [];
 afterEach(() => { for (const [app, host] of mounted.splice(0)) { app.unmount(); host.remove(); } });
 
-function context(establish = false) {
+function context() {
     const agents = agentsAt('legacy', 'thorough');
     const ck = agents[0].actions.character_knowledge;
     ck.container = true;
-    ck.config.establish_facts = bool('Establish facts', establish);
     ck.config.character_entry_turns = number('Entry turns', 3);
     agents.push({ name: 'narrator', label: 'Narrator', data: { scene_overrides: {} }, actions: {
         offscreen_life: { enabled: false, can_be_disabled: true, config: {} },
@@ -28,7 +27,6 @@ function context(establish = false) {
     }])) });
     for (const agent of agents) agent.data.actions = agent.actions;
     agents[0].data.scene_overrides = { actions: { character_knowledge: { config: {
-        establish_facts: { value: !establish },
         character_entry_turns: { value: 0 },
     } } } };
     agents.at(-1).data.scene_overrides = { actions: { offscreen_life: { enabled: true } } };
@@ -72,24 +70,22 @@ async function mount(component, ctx) {
 
 describe('effort explanation caller context', () => {
     for (const component of [Card, Setup]) {
-        it.each([false, true])(`${component.name} inherits global establishment=%s, ignoring the outgoing scene`, async establish => {
-            const ctx = context(establish);
+        it(`${component.name} inherits the global entry window, ignoring the outgoing scene`, async () => {
+            const ctx = context();
             const { vm, explanation } = await mount(component, ctx);
-            expect(explanation()).toContain(establish ? 'after every character line (player included)' : 'when listeners have unknown recent facts');
             vm.effort = 'thorough';
             await nextTick();
             expect(explanation()).toContain('1 per NPC entry briefing');
             expect(explanation()).not.toContain('offscreen account');
-            ctx.config.agents.conversation.actions.character_knowledge.config.establish_facts.value = !establish;
+            ctx.config.agents.conversation.actions.character_knowledge.config.character_entry_turns.value = 0;
             await nextTick();
-            expect(explanation()).toContain(establish ? 'when listeners have unknown recent facts' : 'after every character line (player included)');
+            expect(explanation()).not.toContain('1 per NPC entry briefing');
         });
     }
 
     it('global settings reflects unsaved Narrator edits without applying scene overrides', async () => {
-        const ctx = context(true);
+        const ctx = context();
         const { explanation } = await mount(Settings, ctx);
-        expect(explanation()).toContain('after every character line (player included)');
         expect(explanation()).toContain('1 per NPC entry briefing');
         expect(explanation()).not.toContain('offscreen account');
         ctx.config.agents.narrator.actions.offscreen_life.enabled = true;
@@ -100,10 +96,9 @@ describe('effort explanation caller context', () => {
         expect(explanation()).not.toContain('offscreen account');
     });
 
-    it('the hub keeps reading scene-effective establishment, entry window and Offscreen Life', async () => {
-        const ctx = context(false);
+    it('the hub keeps reading the scene-effective entry window and Offscreen Life', async () => {
+        const ctx = context();
         const { explanation } = await mount(Hub, ctx);
-        expect(explanation()).toContain('after every character line (player included)');
         expect(explanation()).not.toContain('NPC entry briefing');
         ctx.agents[0].data.scene_overrides.actions.character_knowledge.config.character_entry_turns.value = 3;
         await nextTick();

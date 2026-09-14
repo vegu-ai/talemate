@@ -21,17 +21,16 @@ from talemate.knowledge.revision_browsing import (
     defer_revision_work,
     memory_document_current,
 )
-from talemate.knowledge.dialogue_facts import prune_invalid_dialogue_facts
+from talemate.knowledge.message_facts import prune_missing_message_facts
 from talemate.knowledge.revision_refresh import (
     _remove_message_evidence,
     catch_up_revisions,
     refresh_revision,
     revision_operations,
 )
-from talemate.knowledge.facts import store_facts
+from talemate.knowledge.facts import SpanLine, store_facts
 from talemate.knowledge.schema import (
-    ArchiveFactSupport,
-    DialogueFactSupport,
+    FactRestatement,
     Fact,
     KnowledgeEdge,
     ParsedFact,
@@ -194,17 +193,23 @@ def test_equal_text_at_another_index_reuses_valid_baseline():
 
 
 @pytest.mark.asyncio
-async def test_standard_browsing_masks_and_revives_dialogue_facts_and_grants(
-    browsing,
+async def test_standard_browsing_masks_and_revives_bound_facts_and_grants(
+    scene, monkeypatch
 ):
-    scene, _, request, message, plugin, _ = browsing
-    scene.knowledge_eligibility = "legacy"
+    from talemate.prompts import Prompt
+
+    _, _, message = standard_revision(scene)
+    request = AsyncMock()
+    monkeypatch.setattr(Prompt, "request", request)
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+    plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=lambda _: None))
+    baseline = message.revision_state.baseline_index
     fact = Fact(
         id="F1",
-        text="The bell is silver.",
-        source="dialogue",
+        text="The key is brass.",
+        archive_id="A1",
         message_id=message.id,
-        message_digest=content_digest(message.perception_text),
+        message_digest=content_digest(message.versions[baseline].message),
         present=["Alice"],
     )
     scene.world_state.facts = {fact.id: fact}
@@ -217,21 +222,20 @@ async def test_standard_browsing_masks_and_revives_dialogue_facts_and_grants(
             message_id=message.id,
         )
     ]
-    assert current_facts(scene) == [fact]
-    assert known_bucket(scene, "Bob") == [fact]
-    assert KnowledgeIndex.from_scene(scene).granted("Bob", fact.id)
-
-    await plugin.handle_swap_revision({"id": message.id, "index": 0})
+    # the selected revision is not the baseline: masked, not removed
     assert current_facts(scene) == []
     assert known_bucket(scene, "Bob") == []
     assert not KnowledgeIndex.from_scene(scene).granted("Bob", fact.id)
 
-    await plugin.handle_swap_revision(
-        {"id": message.id, "index": message.revision_state.baseline_index}
-    )
+    await plugin.handle_swap_revision({"id": message.id, "index": baseline})
+    assert message.revision_matches_baseline
     assert current_facts(scene) == [fact]
     assert known_bucket(scene, "Bob") == [fact]
     assert KnowledgeIndex.from_scene(scene).granted("Bob", fact.id)
+
+    await plugin.handle_swap_revision({"id": message.id, "index": 1})
+    assert current_facts(scene) == []
+    assert fact.id in scene.world_state.facts
     request.assert_not_awaited()
 
 
@@ -245,19 +249,20 @@ async def test_new_history_message_emits_scene_aware_revision_refresh(browsing):
     message.append_version("A new silver bell rings.", "regenerate")
 
     assert message._knowledge_scene() is scene
+    # a line outside every archive has no facts to refresh
     assert message.versions_payload()["revision_refresh"] == {
         "scene_id": scene.id,
         "message_id": message.id,
         "selection_index": 1,
         "selection_digest": message.revision_digest(),
         "selection_serial": message.revision_state.serial,
-        "required": True,
+        "required": False,
         "status": "deferred",
-        "operations": ["facts"],
-        "label": "Refresh facts",
-        "explanation": "Facts for this version have not been refreshed yet.",
-        "running_label": "Refreshing facts…",
-        "deferred_hint": "If you skip it, this runs when you send your next line.",
+        "operations": [],
+        "label": None,
+        "explanation": None,
+        "running_label": None,
+        "deferred_hint": None,
     }
 
 
@@ -340,14 +345,14 @@ async def test_regeneration_keeps_reload_safe_baseline_and_concurrent_manual_wor
     fact = Fact(
         id="F1",
         text="The key is brass.",
-        source="dialogue",
+        archive_id="A1",
         message_id=message.id,
         message_digest=content_digest(message.perception_text),
     )
     scene.world_state.facts[fact.id] = fact
     message.append_version("The silver key turns.", "regenerate")
 
-    assert prune_invalid_dialogue_facts(scene) == set()
+    assert prune_missing_message_facts(scene) == set()
     assert fact.id in scene.world_state.facts
     fact.text = "The author says the key was brass."
     fact.text_edited = True
@@ -422,7 +427,7 @@ async def test_reload_mid_browse_preserves_and_restores_baseline_fact(
     fact = Fact(
         id="F1",
         text="The key is brass.",
-        source="dialogue",
+        archive_id="A1",
         message_id=message.id,
         message_digest=content_digest(message.perception_text),
     )
@@ -436,7 +441,7 @@ async def test_reload_mid_browse_preserves_and_restores_baseline_fact(
         fact.id: Fact.model_validate(fact.model_dump(mode="json"))
     }
 
-    assert prune_invalid_dialogue_facts(scene) == set()
+    assert prune_missing_message_facts(scene) == set()
     plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=lambda _: None))
     monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
     await plugin.handle_swap_revision({"id": loaded.id, "index": 0})
@@ -453,16 +458,16 @@ def test_removing_one_dialogue_support_preserves_other_support_and_manual_grant(
     fact = Fact(
         id="F1",
         text="The key is brass.",
-        source="dialogue",
+        archive_id="A1",
         message_id=message.id,
         message_digest=content_digest(message.perception_text),
         restatements=1,
-        dialogue_sources=(
-            DialogueFactSupport(
+        restated_by=(
+            FactRestatement(
                 message_id=message.id,
                 message_digest=content_digest(message.perception_text),
             ),
-            DialogueFactSupport(
+            FactRestatement(
                 message_id=other.id,
                 message_digest=content_digest(other.perception_text),
             ),
@@ -472,7 +477,8 @@ def test_removing_one_dialogue_support_preserves_other_support_and_manual_grant(
     scene.world_state.facts[fact.id] = fact
     scene.world_state.knowledge.append(manual)
 
-    assert _remove_message_evidence(scene, message, facts=True) == set()
+    # the promoted fact is not removed, but its document must follow
+    assert _remove_message_evidence(scene, message, facts=True) == {fact.id}
     assert scene.world_state.facts[fact.id].message_id == other.id
     assert scene.world_state.facts[fact.id].restatements == 0
     assert scene.world_state.knowledge == [manual]
@@ -497,7 +503,12 @@ async def test_rejected_swap_correlates_its_terminal_error(browsing, missing):
     request.assert_not_awaited()
 
 
-def standard_revision(scene, *, ledger=False, extraction=True):
+def standard_revision(scene, *, ledger=False, extraction=True, prior=None):
+    """
+    A revised line inside base entry A1, where facts come from. `prior` is a
+    message placed before it inside the same entry; it must be known before
+    the revision starts, since the transaction journal baselines the entry.
+    """
     scene.knowledge_eligibility = "legacy"
     scene.character_data = {name: Character(name=name) for name in ("Alice", "Bob")}
     scene.active_characters = ["Alice", "Bob"]
@@ -511,7 +522,19 @@ def standard_revision(scene, *, ledger=False, extraction=True):
         message="Alice: The key is brass.", present=["Alice", "Bob"]
     )
     message._knowledge_scene = weakref.ref(scene)
+    if prior is not None:
+        scene.history.append(prior)
     scene.history.append(message)
+    index = scene.message_index(message.id)
+    scene.archived_history.append(
+        {
+            "id": "A1",
+            "text": "The key is brass.",
+            "start": index - (1 if prior is not None else 0),
+            "end": index,
+            "ts": 0,
+        }
+    )
     message.append_version("Alice: The key is silver.", "revision")
     return summarizer, conversation, message
 
@@ -550,7 +573,13 @@ async def test_standard_refresh_extracts_selected_passage_with_historical_presen
     summarize = AsyncMock(
         return_value=(
             "The key is silver.",
-            [ParsedFact(text="Alice says the key is silver.", importance=2)],
+            [
+                ParsedFact(
+                    text="Alice says the key is silver.",
+                    importance=2,
+                    message_id=message.id,
+                )
+            ],
         )
     )
     monkeypatch.setattr(summarizer, "summarize", summarize)
@@ -568,8 +597,10 @@ async def test_standard_refresh_extracts_selected_passage_with_historical_presen
     payload = await refresh_revision(scene, message)
 
     summarize.assert_awaited_once()
-    assert summarize.await_args.args[0] == "Alice: The key is silver."
+    assert summarize.await_args.args[0] == f"[{message.id}] Alice: The key is silver."
     assert summarize.await_args.kwargs["extra_context"] == []
+    assert summarize.await_args.kwargs["line_ids"] is True
+    assert scene.archived_history[0]["text"] == "The key is silver."
     facts = [
         fact
         for fact in scene.world_state.facts.values()
@@ -662,9 +693,10 @@ async def test_disabling_failed_learning_reuses_successful_extraction(
 async def test_dependency_edit_invalidates_successful_extraction_receipt(
     scene, monkeypatch
 ):
-    summarizer, conversation, message = standard_revision(scene, ledger=True)
     prior = NarratorMessage(message="The key was brass.")
-    scene.history.insert(0, prior)
+    summarizer, conversation, message = standard_revision(
+        scene, ledger=True, prior=prior
+    )
     extract = AsyncMock(return_value=("summary", []))
     learn = AsyncMock(side_effect=[RuntimeError("learning failed"), {}])
     monkeypatch.setattr(summarizer, "summarize", extract)
@@ -779,7 +811,7 @@ async def test_standard_refresh_rebuilds_affected_archive_and_replaces_its_facts
     summarize = AsyncMock(
         return_value=(
             "The key is silver.",
-            [ParsedFact(text="The key is silver.")],
+            [ParsedFact(text="The key is silver.", message_id=message.id)],
         )
     )
     monkeypatch.setattr(summarizer, "summarize", summarize)
@@ -812,7 +844,7 @@ async def test_scene_switch_during_extraction_rolls_back_and_does_not_commit(
     fact = Fact(
         id="F1",
         text="The key is brass.",
-        source="dialogue",
+        archive_id="A1",
         message_id=message.id,
         message_digest=content_digest(message.versions[0].message),
     )
@@ -846,6 +878,174 @@ async def test_scene_switch_during_extraction_rolls_back_and_does_not_commit(
 
 
 @pytest.mark.asyncio
+async def test_extraction_off_keeps_the_lines_facts_bound_to_the_edit(
+    scene, monkeypatch
+):
+    summarizer, conversation, message = standard_revision(
+        scene, ledger=True, extraction=False
+    )
+    fact = Fact(
+        id="F1",
+        text="The key is brass.",
+        archive_id="A1",
+        message_id=message.id,
+        message_digest=content_digest(message.versions[0].message),
+    )
+    scene.world_state.facts[fact.id] = fact
+    queued = []
+    monkeypatch.setattr(
+        summarizer, "queue_fact_memory", lambda _, ids: queued.append(set(ids))
+    )
+    monkeypatch.setattr(
+        conversation, "record_learned_facts", AsyncMock(return_value={})
+    )
+    monkeypatch.setattr(summarizer, "summarize", AsyncMock())
+    monkeypatch.setattr(summarizer, "flush_fact_memory", AsyncMock(return_value=True))
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+
+    assert current_facts(scene) == []
+    await refresh_revision(scene, message)
+
+    # nothing re-extracts: the fact stays, bound to the edited text
+    summarizer.summarize.assert_not_awaited()
+    assert message.revision_matches_baseline
+    assert fact.message_digest == content_digest(message.perception_text)
+    assert current_facts(scene) == [fact]
+    assert queued == [{"F1"}]
+    assert scene.archived_history[0]["id"] == "A1"
+
+
+@pytest.mark.asyncio
+async def test_rebind_is_undone_when_the_refresh_rolls_back(scene, monkeypatch):
+    summarizer, conversation, message = standard_revision(
+        scene, ledger=True, extraction=False
+    )
+    baseline = content_digest(message.versions[0].message)
+    fact = Fact(
+        id="F1",
+        text="The key is brass.",
+        archive_id="A1",
+        message_id=message.id,
+        message_digest=baseline,
+    )
+    scene.world_state.facts[fact.id] = fact
+    monkeypatch.setattr(
+        conversation, "record_learned_facts", AsyncMock(side_effect=RuntimeError("x"))
+    )
+    monkeypatch.setattr(summarizer, "summarize", AsyncMock())
+    monkeypatch.setattr(summarizer, "flush_fact_memory", AsyncMock(return_value=True))
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+
+    with pytest.raises(RuntimeError):
+        await refresh_revision(scene, message)
+    edited = content_digest(message.perception_text)
+    assert scene.world_state.facts["F1"].message_digest == edited
+    # the learning phase failed and the author returns to the original
+    # version: the journal undoes the rebind, so the fact follows the line
+    plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=lambda _: None))
+    await plugin.handle_swap_revision(
+        {"id": message.id, "index": message.revision_state.baseline_index}
+    )
+    assert scene.world_state.facts["F1"].message_digest == baseline
+    assert [item.id for item in current_facts(scene)] == ["F1"]
+
+
+@pytest.mark.asyncio
+async def test_disabled_refresh_queues_the_fact_its_chapter_prune_promotes(
+    scene, monkeypatch
+):
+    prior = CharacterMessage(message="Bob: The key is brass.", present=["Alice", "Bob"])
+    summarizer, _, message = standard_revision(
+        scene, ledger=False, extraction=False, prior=prior
+    )
+    later = CharacterMessage(message="Alice: The key is brass.", present=["Alice"])
+    scene.history.append(later)
+    index = scene.message_index(later.id)
+    scene.archived_history.append(
+        {"id": "A2", "text": "Alice repeats it.", "start": index, "end": index, "ts": 0}
+    )
+    # the edited line is not the origin; a later chapter restated the fact
+    fact = Fact(
+        id="F1",
+        text="The key is brass.",
+        archive_id="A1",
+        message_id=prior.id,
+        message_digest=content_digest(prior.perception_text),
+        present=["Alice", "Bob"],
+        ts=0,
+        restatements=1,
+        restated_by=(
+            FactRestatement(
+                message_id=later.id,
+                message_digest=content_digest(later.perception_text),
+                archive_id="A2",
+                present=["Alice"],
+                ts=0,
+            ),
+        ),
+    )
+    scene.world_state.facts[fact.id] = fact
+    queued = []
+    monkeypatch.setattr(
+        summarizer, "queue_fact_memory", lambda _, ids: queued.append(set(ids))
+    )
+    monkeypatch.setattr(summarizer, "summarize", AsyncMock())
+    monkeypatch.setattr(summarizer, "flush_fact_memory", AsyncMock(return_value=True))
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+    monkeypatch.setattr(get_agent("memory"), "delete", AsyncMock())
+
+    await refresh_revision(scene, message)
+
+    # the chapter prune promoted the later line: the document must follow
+    assert [entry["id"] for entry in scene.archived_history] == ["A2"]
+    assert (fact.message_id, fact.archive_id, fact.present, fact.restated_by) == (
+        later.id,
+        "A2",
+        ["Alice"],
+        (),
+    )
+    assert queued == [{"F1"}]
+
+
+@pytest.mark.asyncio
+async def test_disabled_refresh_queues_the_fact_it_promotes(scene, monkeypatch):
+    summarizer, conversation, message = standard_revision(
+        scene, ledger=False, extraction=False
+    )
+    fact = Fact(
+        id="F1",
+        text="The key is brass.",
+        source="manual",
+        restatements=1,
+        restated_by=(
+            FactRestatement(
+                message_id=message.id,
+                message_digest=content_digest(message.versions[0].message),
+                archive_id="A1",
+                present=["Alice", "Bob"],
+                ts=0,
+            ),
+        ),
+    )
+    scene.world_state.facts[fact.id] = fact
+    queued = []
+    monkeypatch.setattr(
+        summarizer, "queue_fact_memory", lambda _, ids: queued.append(set(ids))
+    )
+    monkeypatch.setattr(summarizer, "summarize", AsyncMock())
+    monkeypatch.setattr(summarizer, "flush_fact_memory", AsyncMock(return_value=True))
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+    monkeypatch.setattr(get_agent("memory"), "delete", AsyncMock())
+
+    await refresh_revision(scene, message)
+
+    # not removed, but changed: its memory document follows
+    assert fact.id in scene.world_state.facts
+    assert fact.restated_by == () and fact.restatements == 0
+    assert queued == [{"F1"}]
+
+
+@pytest.mark.asyncio
 async def test_concurrent_writer_during_learning_is_not_owned_by_revision(
     scene, monkeypatch
 ):
@@ -857,7 +1057,7 @@ async def test_concurrent_writer_during_learning_is_not_owned_by_revision(
     owned = Fact(
         id="F1",
         text="The key is brass.",
-        source="dialogue",
+        archive_id="A1",
         message_id=message.id,
         message_digest=content_digest(message.versions[0].message),
     )
@@ -878,7 +1078,7 @@ async def test_concurrent_writer_during_learning_is_not_owned_by_revision(
     baseline = message.revision_state.baseline_index
     plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=lambda _: None))
 
-    with pytest.raises(GenerationCancelled, match="inputs changed"):
+    with pytest.raises(GenerationCancelled, match="changed"):
         await refresh_revision(scene, message)
     await plugin.handle_swap_revision({"id": message.id, "index": baseline})
 
@@ -897,15 +1097,9 @@ async def test_guarded_duplicate_publication_keeps_each_message_support(
     fact = Fact(
         id="F1",
         text="The key is brass.",
-        source="dialogue",
+        archive_id="A1",
         message_id=first.id,
         message_digest=content_digest(first.perception_text),
-        dialogue_sources=(
-            DialogueFactSupport(
-                message_id=first.id,
-                message_digest=content_digest(first.perception_text),
-            ),
-        ),
     )
     scene.world_state.facts = {fact.id: fact}
     scene.world_state.fact_counter = 1
@@ -925,43 +1119,42 @@ async def test_guarded_duplicate_publication_keeps_each_message_support(
 
     await store_facts(
         scene,
-        None,
-        ["Alice", "Bob"],
-        1,
-        [ParsedFact(text="The key is brass.")],
+        "A2",
+        [ParsedFact(text="The key is brass.", message_id=second.id)],
         0.1,
-        message_id=second.id,
-        message_digest=content_digest(second.perception_text),
+        lines={
+            second.id: SpanLine(
+                message_id=second.id,
+                message_digest=content_digest(second.perception_text),
+                present=["Alice", "Bob"],
+                ts=1,
+            )
+        },
         still_current=lambda: True,
     )
 
-    assert [support.message_id for support in fact.dialogue_sources] == [
-        first.id,
-        second.id,
-    ]
+    assert [support.message_id for support in fact.restated_by] == [second.id]
+    assert fact.restatements == 1
     scene.history.remove(first)
-    assert prune_invalid_dialogue_facts(scene) == set()
+    assert prune_missing_message_facts(scene) == set()
+    # the restatement becomes the origin once the first line is gone
+    assert (fact.message_id, fact.archive_id, fact.restated_by) == (second.id, "A2", ())
     assert current_facts(scene) == [fact]
 
 
 @pytest.mark.asyncio
 async def test_revision_rollback_removes_only_its_duplicate_support(scene, monkeypatch):
-    summarizer, _, message = standard_revision(scene)
     other = CharacterMessage(message="Bob: The key is brass.")
-    scene.history.insert(0, other)
+    summarizer, _, message = standard_revision(scene, prior=other)
     baseline_digest = content_digest(message.versions[0].message)
     concurrent_digest = content_digest(other.perception_text)
-    selected_digest = content_digest(message.perception_text)
     fact = Fact(
         id="F1",
         text="The key is brass.",
-        source="dialogue",
+        archive_id="A1",
         message_id=message.id,
         message_digest=baseline_digest,
         text_edited=True,
-        dialogue_sources=(
-            DialogueFactSupport(message_id=message.id, message_digest=baseline_digest),
-        ),
     )
     scene.world_state.facts = {fact.id: fact}
     scene.world_state.fact_counter = 1
@@ -978,22 +1171,25 @@ async def test_revision_rollback_removes_only_its_duplicate_support(scene, monke
     async def publish_documents(*args, **kwargs):
         live = scene.world_state.facts[fact.id]
         if not any(
-            support.message_digest == concurrent_digest
-            for support in live.dialogue_sources
+            support.message_digest == concurrent_digest for support in live.restated_by
         ):
-            live.dialogue_sources = (
-                *live.dialogue_sources,
-                DialogueFactSupport(
-                    message_id=other.id, message_digest=concurrent_digest
-                ),
+            live.restated_by = (
+                *live.restated_by,
+                FactRestatement(message_id=other.id, message_digest=concurrent_digest),
             )
+            live.restatements += 1
 
     monkeypatch.setattr(memory, "add_many", AsyncMock(side_effect=publish_documents))
     monkeypatch.setattr(memory, "delete", AsyncMock())
     monkeypatch.setattr(
         summarizer,
         "summarize",
-        AsyncMock(return_value=("summary", [ParsedFact(text=fact.text)])),
+        AsyncMock(
+            return_value=(
+                "summary",
+                [ParsedFact(text=fact.text, message_id=message.id)],
+            )
+        ),
     )
     monkeypatch.setattr(
         summarizer,
@@ -1002,7 +1198,7 @@ async def test_revision_rollback_removes_only_its_duplicate_support(scene, monke
     )
     monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
 
-    with pytest.raises(GenerationCancelled, match="inputs changed"):
+    with pytest.raises(GenerationCancelled, match="changed"):
         await refresh_revision(scene, message)
     plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=lambda _: None))
     await plugin.handle_swap_revision(
@@ -1010,22 +1206,20 @@ async def test_revision_rollback_removes_only_its_duplicate_support(scene, monke
     )
 
     supports = {
-        (support.message_id, support.message_digest): support.count
-        for support in scene.world_state.facts[fact.id].dialogue_sources
+        (support.message_id, support.message_digest)
+        for support in scene.world_state.facts[fact.id].restated_by
     }
-    assert supports == {
-        (message.id, baseline_digest): 1,
-        (other.id, concurrent_digest): 1,
-    }
-    assert (message.id, selected_digest) not in supports
-    assert scene.world_state.facts[fact.id].restatements == 0
+    # the concurrent writer's support stays; the refresh's own is gone
+    assert supports == {(other.id, concurrent_digest)}
+    assert scene.world_state.facts[fact.id].text == fact.text
 
 
 @pytest.mark.asyncio
 async def test_inflight_dependency_edits_cancel_phase_receipts(scene, monkeypatch):
-    summarizer, conversation, message = standard_revision(scene, ledger=True)
     prior = NarratorMessage(message="The key was brass.")
-    scene.history.insert(0, prior)
+    summarizer, conversation, message = standard_revision(
+        scene, ledger=True, prior=prior
+    )
     started, release = asyncio.Event(), asyncio.Event()
 
     async def extract(*args, **kwargs):
@@ -1044,7 +1238,7 @@ async def test_inflight_dependency_edits_cancel_phase_receipts(scene, monkeypatc
     prior.message = "The key was copper."
     release.set()
 
-    with pytest.raises(GenerationCancelled, match="inputs changed"):
+    with pytest.raises(GenerationCancelled, match="changed"):
         await task
     assert not message.revision_matches_baseline
 
@@ -1073,7 +1267,7 @@ async def test_learning_dependency_change_during_await_cancels_receipt(
     dependency.text = "The key was copper."
     release.set()
 
-    with pytest.raises(GenerationCancelled, match="inputs changed"):
+    with pytest.raises(GenerationCancelled, match="changed"):
         await task
     assert "refresh:learn" not in message.revision_state.phase_receipts
 
@@ -1114,9 +1308,8 @@ async def test_archive_refresh_scene_switch_has_no_publication(scene, monkeypatc
 
 @pytest.mark.asyncio
 async def test_archive_refresh_rejects_changed_live_source_inputs(scene, monkeypatch):
-    summarizer, _, message = standard_revision(scene)
     prior = NarratorMessage(message="The old key was iron.")
-    scene.history.insert(0, prior)
+    summarizer, _, message = standard_revision(scene, prior=prior)
     original = {
         "id": "A1",
         "text": "The key changed.",
@@ -1253,7 +1446,7 @@ async def test_standard_refresh_preserves_authored_fact_and_manual_grant(
     fact = Fact(
         id="F1",
         text="The author's corrected key fact.",
-        source="dialogue",
+        archive_id="A1",
         message_id=message.id,
         message_digest=message.revision_state.baseline_digest,
         text_edited=True,
@@ -1290,7 +1483,7 @@ async def test_failed_standard_refresh_restores_baseline_evidence_on_return(
     fact = Fact(
         id="F1",
         text="The key is brass.",
-        source="dialogue",
+        archive_id="A1",
         message_id=message.id,
         message_digest=message.revision_state.baseline_digest,
         present=["Alice", "Bob"],
@@ -1332,21 +1525,19 @@ async def test_failed_standard_refresh_restores_baseline_evidence_on_return(
 async def test_obsolete_rollback_is_consumed_before_original_and_retry(
     scene, monkeypatch
 ):
-    summarizer, _, message = standard_revision(scene)
     other = CharacterMessage(message="Bob: The key is brass.")
-    scene.history.insert(0, other)
+    summarizer, _, message = standard_revision(scene, prior=other)
     baseline_digest = content_digest(message.versions[0].message)
     other_digest = content_digest(other.perception_text)
     fact = Fact(
         id="F1",
         text="The key is brass.",
-        source="dialogue",
+        archive_id="A1",
         message_id=message.id,
         message_digest=baseline_digest,
         restatements=1,
-        dialogue_sources=(
-            DialogueFactSupport(message_id=message.id, message_digest=baseline_digest),
-            DialogueFactSupport(message_id=other.id, message_digest=other_digest),
+        restated_by=(
+            FactRestatement(message_id=other.id, message_digest=other_digest),
         ),
     )
     scene.world_state.facts = {fact.id: fact}
@@ -1369,37 +1560,38 @@ async def test_obsolete_rollback_is_consumed_before_original_and_retry(
     with pytest.raises(GenerationCancelled):
         await refresh_revision(scene, message)
     rolled_back = scene.world_state.facts[fact.id]
-    assert [support.count for support in rolled_back.dialogue_sources] == [1, 1]
+    assert len(rolled_back.restated_by) == 1
     assert rolled_back.restatements == 1
+    assert rolled_back.message_id == message.id
 
     plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=lambda _: None))
     await plugin.handle_swap_revision(
         {"id": message.id, "index": message.revision_state.baseline_index}
     )
     restored = scene.world_state.facts[fact.id]
-    assert [support.count for support in restored.dialogue_sources] == [1, 1]
+    assert len(restored.restated_by) == 1
     assert restored.restatements == 1
 
     summarizer.write_config("archive", "extract_facts", True)
     await plugin.handle_swap_revision({"id": message.id, "index": 1})
     await refresh_revision(scene, message)
     remaining = scene.world_state.facts[fact.id]
-    assert remaining.dialogue_sources == (
-        DialogueFactSupport(message_id=other.id, message_digest=other_digest),
-    )
-    assert remaining.restatements == 0
+    # the revised line's evidence is gone; the other line's restatement is the origin now
+    assert (remaining.message_id, remaining.message_digest) == (other.id, other_digest)
+    assert remaining.restated_by == () and remaining.restatements == 0
     assert calls == 2
 
 
 @pytest.mark.asyncio
-async def test_archive_restatement_remains_after_dialogue_source_changes(
+async def test_archive_restatement_remains_after_source_line_changes(
     scene, monkeypatch
 ):
     message = CharacterMessage(message="Alice: The key is brass.")
     other = NarratorMessage(message="The archive independently confirms the brass key.")
     scene.history = [message, other]
     scene.archived_history = [
-        {"id": "A1", "text": str(other), "start": 1, "end": 1, "ts": 1}
+        {"id": "A0", "text": str(message), "start": 0, "end": 0, "ts": 0},
+        {"id": "A1", "text": str(other), "start": 1, "end": 1, "ts": 1},
     ]
     memory = get_agent("memory")
 
@@ -1416,40 +1608,45 @@ async def test_archive_restatement_remains_after_dialogue_source_changes(
     monkeypatch.setattr(memory, "add_many", AsyncMock())
     monkeypatch.setattr(memory, "delete", AsyncMock())
 
+    def line(item, ts):
+        return {
+            item.id: SpanLine(
+                message_id=item.id,
+                message_digest=content_digest(item.perception_text),
+                present=["Alice", "Bob"],
+                ts=ts,
+            )
+        }
+
     await store_facts(
         scene,
-        None,
-        ["Alice", "Bob"],
-        1,
-        [ParsedFact(text="The key is brass.")],
+        "A0",
+        [ParsedFact(text="The key is brass.", message_id=message.id)],
         0.1,
-        message_id=message.id,
-        message_digest=content_digest(message.perception_text),
+        lines=line(message, 1),
     )
     fact = next(iter(scene.world_state.facts.values()))
     await store_facts(
         scene,
         "A1",
-        ["Alice", "Bob"],
-        2,
-        [ParsedFact(text="The key is brass.")],
+        [ParsedFact(text="The key is brass.", message_id=other.id)],
         0.1,
+        lines=line(other, 2),
     )
-    assert fact.archive_sources == (ArchiveFactSupport(archive_id="A1"),)
+    assert [(r.message_id, r.archive_id) for r in fact.restated_by] == [
+        (other.id, "A1")
+    ]
 
     message.append_version("Alice: The key is silver.", "revision")
-    assert current_facts(scene) == [fact]
-    assert _remove_message_evidence(scene, message, facts=True) == set()
-    assert fact.source == "summary"
-    assert fact.archive_id == "A1"
-    assert fact.dialogue_sources == ()
+    assert current_facts(scene) == []
+    # promoted, not removed: the id names a document to refresh
+    assert _remove_message_evidence(scene, message, facts=True) == {fact.id}
+    assert fact.id in scene.world_state.facts
+    assert (fact.message_id, fact.archive_id, fact.restated_by) == (other.id, "A1", ())
     assert current_facts(scene) == [fact]
     scene.history.remove(message)
-    assert prune_invalid_dialogue_facts(scene) == set()
+    assert prune_missing_message_facts(scene) == set()
     assert scene.world_state.facts[fact.id] is fact
-    assert fact.source == "summary"
-    assert fact.archive_id == "A1"
-    assert fact.dialogue_sources == ()
     assert current_facts(scene) == [fact]
 
 
@@ -1513,11 +1710,11 @@ async def test_rollback_memory_repair_stays_with_captured_scene(scene, monkeypat
     fact = Fact(
         id="F1",
         text="The key is brass.",
-        source="dialogue",
+        archive_id="A1",
         message_id=message.id,
         message_digest=content_digest(message.versions[0].message),
-        dialogue_sources=(
-            DialogueFactSupport(
+        restated_by=(
+            FactRestatement(
                 message_id=message.id,
                 message_digest=content_digest(message.versions[0].message),
             ),

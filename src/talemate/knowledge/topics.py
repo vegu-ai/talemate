@@ -25,7 +25,7 @@ from talemate.knowledge.schema import (
     TopicFact,
 )
 from talemate.knowledge.mode import character_knowledge_enabled
-from talemate.knowledge.names import numeric_id
+from talemate.knowledge.names import aliases_for, numeric_id
 from talemate.knowledge.perspectives import PerspectiveReadContext
 from talemate.knowledge.chronology import ranked_facts, fact_time, prompt_fact_text
 from talemate.knowledge.revision_browsing import current_facts, fact_current
@@ -453,40 +453,58 @@ def _topic_number(topic_id: str) -> int:
     return numeric_id(topic_id)
 
 
+def _awareness_rows(scene: "Scene", character: str) -> list[TopicCoverage]:
+    """
+    Coverage merged per name: the topics named after one character (through
+    their aliases) become one row, other topics merge by name. The speaker's
+    own name and placeholder names are no awareness.
+    """
+    topics = scene.world_state.topics
+    own = aliases_for(scene, character)
+    cast = {
+        name: aliases_for(scene, name)
+        for name in scene.character_data
+        if name.strip().casefold() not in own
+    }
+    merged: dict[str, TopicCoverage] = {}
+    for row in coverage(scene, character):
+        if row.id not in topics or not topics[row.id].named:
+            continue
+        key = row.name.strip().casefold()
+        if not key or key in own:
+            continue
+        name = row.name.strip()
+        for cast_name, aliases in cast.items():
+            if key in aliases:
+                key, name = cast_name.casefold(), cast_name
+                break
+        current = merged.get(key)
+        merged[key] = TopicCoverage(
+            id=current.id if current else row.id,
+            name=current.name if current else name,
+            total=(current.total if current else 0) + row.total,
+            known=(current.known if current else 0) + row.known,
+        )
+    rows = [row for row in merged.values() if row.total >= AWARENESS_MIN_FACTS]
+    rows.sort(key=lambda r: (-r.total, _topic_number(r.id)))
+    return rows[:AWARENESS_MAX_TOPICS]
+
+
 def awareness_line(scene: "Scene", character: str) -> str | None:
     """
-    `<name> knows all of A and B, some of C, nothing of D` over the topics
-    with at least three facts, largest first, at most six.
+    `<name> knows all of A, some of B, nothing of C`: one clause per name,
+    each name in exactly one bucket, largest first, at most six.
     """
     if character_knowledge_enabled(scene):
         return None
-    topics = scene.world_state.topics
-    rows = [
-        r
-        for r in coverage(scene, character)
-        if r.total >= AWARENESS_MIN_FACTS
-        # a placeholder name the model cannot resolve, or the speaker's own
-        # name ("Edwin knows nothing of Edwin"), is no awareness
-        and r.id in topics
-        and topics[r.id].named
-        and r.name.strip().lower() != character.strip().lower()
-    ]
-    rows = rows[:AWARENESS_MAX_TOPICS]
+    rows = _awareness_rows(scene, character)
     if not rows:
         return None
-    groups: dict[str, list[str]] = {"all": [], "some": [], "nothing": []}
-    for row in rows:
+
+    def bucket(row: TopicCoverage) -> str:
         if row.share >= AWARENESS_ALL:
-            groups["all"].append(row.name)
-        elif row.share > 0:
-            groups["some"].append(row.name)
-        else:
-            groups["nothing"].append(row.name)
+            return "all"
+        return "some" if row.share > 0 else "nothing"
 
-    def join(names: list[str]) -> str:
-        if len(names) == 1:
-            return names[0]
-        return ", ".join(names[:-1]) + " and " + names[-1]
-
-    parts = [f"{kind} of {join(names)}" for kind, names in groups.items() if names]
+    parts = [f"{bucket(row)} of {row.name}" for row in rows]
     return f"{character} knows {', '.join(parts)}"

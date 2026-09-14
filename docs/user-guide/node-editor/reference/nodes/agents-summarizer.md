@@ -49,7 +49,7 @@ Node module (base type `core/Event`) defined in `src/talemate/agents/world_state
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| `event_name` | `str` | `"agent.conversation.generated"` | Event to listen for |
+| `event_name` | `str` | `"agent.conversation.finalized"` | Event to listen for |
 | `auto_register` | `bool` | `False` | Self-register from the node registry instead of requiring placement in the scene loop graph |
 
 ## Summarizer Settings

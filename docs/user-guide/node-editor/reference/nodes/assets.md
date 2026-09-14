@@ -268,7 +268,7 @@ Messages that aren't found are skipped rather than raising an error.
 | `state` | `any` | graph state (required) |
 | `message_ids` | `list` | (optional) List of message IDs to update |
 | `asset_id` | `str` | The new asset ID |
-| `override_cadence` | `bool` | (optional, default `False`) Show an explicit selection regardless of avatar cadence |
+| `override_cadence` | `bool` | (optional) Show an explicit selection regardless of avatar cadence |
 
 **Outputs**
 
@@ -278,3 +278,9 @@ Messages that aren't found are skipped rather than raising an error.
 | `messages` | `list` | List of updated message objects |
 | `message_ids` | `list` | List of message IDs (passthrough) |
 | `asset_id` | `str` | The asset ID (passthrough) |
+
+**Properties**
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `override_cadence` | `bool` | `False` | Show an explicit selection regardless of avatar cadence |

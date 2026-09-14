@@ -272,6 +272,7 @@ class Scene(Emitter):
 
         # Debounce tracking for emit_status
         self._emit_status_debounce_task: asyncio.Task | None = None
+        self._emit_status_restored = False
 
     @property
     def config(self) -> Config:
@@ -1674,6 +1675,7 @@ class Scene(Emitter):
         """Internal method for debounced emission"""
         await asyncio.sleep(0.025)  # 25ms debounce
         self._emit_status_debounce_task = None
+        self._emit_status_restored = False
         self._do_emit_status(restored)
 
         self.log.debug(
@@ -1690,6 +1692,9 @@ class Scene(Emitter):
         """Emit scene status with debouncing"""
         loop = asyncio.get_running_loop()
 
+        # a cancelled debounce must not drop a restore flag set before it
+        self._emit_status_restored = self._emit_status_restored or restored
+
         # Cancel and replace any existing debounce task
         if (
             self._emit_status_debounce_task
@@ -1698,7 +1703,7 @@ class Scene(Emitter):
             self._emit_status_debounce_task.cancel()
 
         self._emit_status_debounce_task = loop.create_task(
-            self._debounced_emit_status(restored)
+            self._debounced_emit_status(self._emit_status_restored)
         )
 
         log.debug("emit_status", debounce_task=self._emit_status_debounce_task)
@@ -2149,6 +2154,10 @@ class Scene(Emitter):
         with open(path, "w") as f:
             f.write(save.scene_data_dumps(scene_data))
 
+    def _mark_scene_unsaved(self):
+        self.saved = False
+        self.emit_status()
+
     async def attempt_auto_save(self):
         """
         Attempts to auto save the scene if auto save is enabled.
@@ -2157,8 +2166,7 @@ class Scene(Emitter):
         if self.auto_save:
             await self.save(auto=True)
         else:
-            self.saved = False
-            self.emit_status()
+            self._mark_scene_unsaved()
 
     async def save(
         self,
@@ -2181,6 +2189,7 @@ class Scene(Emitter):
             # an autosave has no copy name to write to: leave the scene's
             # identity alone rather than drop its filename
             if auto and not copy_name:
+                self._mark_scene_unsaved()
                 return
             self.filename = copy_name
 

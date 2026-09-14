@@ -1,7 +1,9 @@
+import asyncio
 import builtins
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -9,6 +11,7 @@ import talemate.instance as instance
 import talemate.tale_mate as tale_mate
 from talemate.load import load_scene_from_data
 from talemate.scene_message import NarratorMessage
+from talemate.server.scene_message import SceneMessagePlugin
 from talemate.server.world_state_manager import WorldStateManagerPlugin
 from talemate.server.agent_config import AgentConfigPlugin
 
@@ -196,7 +199,7 @@ def stock_scene(save_scene, monkeypatch):
     return scene, plugin, messages, payload
 
 
-async def test_autosave_on_immutable_scene_changes_nothing(stock_scene):
+async def test_autosave_with_no_changes_on_immutable_scene_marks_unsaved(stock_scene):
     scene, *_ = stock_scene
     await scene.save(force=True)
     source = Path(scene.full_path)
@@ -208,9 +211,79 @@ async def test_autosave_on_immutable_scene_changes_nothing(stock_scene):
 
     assert scene.filename == "infinity-quest.json"
     assert scene.immutable_save and scene.hidden and scene.deprecated
-    assert scene.saved
+    # no scene data changed; a read-only autosave still reports it unsaved
+    assert not scene.saved
     assert source.read_bytes() == original
     assert [path.name for path in Path(scene.save_dir).glob("*.json")] == [source.name]
+
+
+async def test_delete_message_on_stock_scene_marks_it_unsaved(stock_scene, monkeypatch):
+    scene, plugin, messages, payload = stock_scene
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+    scene.saved = True
+    scene.active = True
+
+    emitted = []
+    monkeypatch.setattr(
+        tale_mate, "emit", lambda *args, **kwargs: emitted.append(kwargs)
+    )
+
+    await SceneMessagePlugin(plugin.websocket_handler).handle_delete(
+        {"id": scene.history[0].id}
+    )
+    await asyncio.sleep(0.05)
+
+    assert scene.history == []
+    assert scene.saved is False
+    assert any(
+        frame.get("data", {}).get("saved") is False
+        for frame in emitted
+        if "data" in frame
+    )
+    assert source.read_bytes() == original
+
+
+async def test_restore_status_keeps_restored_flag_with_autosave_on(
+    persistence_scene_factory, monkeypatch
+):
+    scene = persistence_scene_factory()
+    scene.name = "Infinity Quests"
+    scene.project_name = "quest"
+    scene.history = [NarratorMessage("Before restore", source="ai")]
+    await scene.save(force=True)
+    await scene.save_restore("initial.json")
+    scene.restore_from = "initial.json"
+    scene.active = True
+    monkeypatch.setattr(type(scene), "auto_save", True)
+    monkeypatch.setattr(scene, "reset_memory", AsyncMock())
+    monkeypatch.setattr(scene, "commit_to_memory", AsyncMock())
+    messages = []
+    plugin = WorldStateManagerPlugin(
+        SimpleNamespace(scene=scene, queue_put=messages.append)
+    )
+
+    emitted = []
+    monkeypatch.setattr(
+        tale_mate, "emit", lambda *args, **kwargs: emitted.append(kwargs)
+    )
+
+    await plugin.handle_restore_scene({})
+    await asyncio.sleep(0.05)
+
+    status_frames = [frame for frame in emitted if "saved" in (frame.get("data") or {})]
+    assert status_frames
+    # the read-only autosave that signal_operation_done triggers must not
+    # cancel the restore's pending flag
+    assert status_frames[-1]["data"]["restored"] is True
+    assert status_frames[-1]["data"]["saved"] is False
+
+    # the flag is consumed by the frame: a later status is not a restore
+    scene.emit_status()
+    await asyncio.sleep(0.05)
+    status_frames = [frame for frame in emitted if "saved" in (frame.get("data") or {})]
+    assert status_frames[-1]["data"]["restored"] is False
 
 
 async def test_hub_changes_on_stock_scene_keep_its_save_identity(stock_scene):
@@ -280,6 +353,7 @@ async def test_autosave_as_without_copy_name_keeps_filename(stock_scene, immutab
 
     assert scene.filename == "infinity-quest.json"
     assert scene.immutable_save is immutable
+    assert not scene.saved
     assert source.read_bytes() == original
     assert [path.name for path in Path(scene.save_dir).glob("*.json")] == [source.name]
 

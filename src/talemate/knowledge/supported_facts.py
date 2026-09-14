@@ -109,6 +109,8 @@ def aggregate_fact(fact, contributions, *, times=None):
 def character_fact(scene, fact, character, *, read=None, cache=None):
     if character not in scene.character_data:
         raise ValueError(f"Unknown fact perspective: {character}")
+    if fact.source == "offscreen":
+        return fact if not fact.false and fact.present == [character] else None
     contributions = supported_contributions(
         scene, fact, character, read=read, cache=cache
     )

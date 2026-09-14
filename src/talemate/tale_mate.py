@@ -34,6 +34,7 @@ from talemate.exceptions import (
 from talemate.game.state import GameState
 from talemate.scene_assets import SceneAssets
 from talemate.scene.episodes import EpisodesManager
+from talemate.knowledge.transitions import DEPARTURES_KEY
 from talemate.scene_message import (
     CharacterMessage,
     NarratorMessage,
@@ -1346,6 +1347,16 @@ class Scene(Emitter):
 
         remove_perspective_audiences(self, character.name)
 
+        from talemate.knowledge.transitions import departures
+
+        departures(self).pop(character.name, None)
+        for message in list(self.history):
+            if (
+                message.typ == "character_transition"
+                and message.character_name == character.name
+            ):
+                self.delete_message(message.id)
+
         if purge_from_memory:
             await character.purge_from_memory()
 
@@ -2328,6 +2339,7 @@ class Scene(Emitter):
     def reset(self):
         # remove messages
         self.history = []
+        self.agent_state.get("conversation", {}).pop(DEPARTURES_KEY, None)
         dropped_facts = reset_perspectives(self)
         # the story the facts came from is gone: a hand grant keeps none
         dropped_facts.update(prune_missing_message_facts(self, edges=False))

@@ -8,11 +8,7 @@ import pytest
 import test_player_submission
 from talemate.emit.async_signals import AsyncSignal
 from talemate.game.engine.nodes.core import Listen
-from talemate.agents.conversation.entry_context import (
-    CharacterEntryWindow,
-    entry_windows,
-    save_entry_windows,
-)
+
 from talemate.context import ActiveScene
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
@@ -159,22 +155,19 @@ async def test_archive_retry_preserves_completed_real_listeners(
         scene.signals["push_history.after"].connect(summarizer.on_push_history)
         return conversation
 
-    conversation = connect(t.scene)
-    save_entry_windows(conversation, {"Bob": CharacterEntryWindow(remaining_turns=2)})
+    connect(t.scene)
     message = CharacterMessage(message="Bob: I will keep the key.", source="player")
     with pytest.raises(failure, match="dispatch interrupted"):
         await t.scene.push_history(message, emit_message=True)
     assert calls == ([message.id] if boundary == "archive" else [])
-    assert entry_windows(conversation)["Bob"].remaining_turns == 1
     assert message.history_dispatch_pending
     saved = json.loads(t.saved.read_text())
     scene = t.scene
     if reload:
         scene = persistence_scene_factory()
         await load_scene_from_data(scene, saved, name=str(t.saved))
-        conversation = connect(scene)
+        connect(scene)
         message = scene.get_message(message.id)
-        assert entry_windows(conversation)["Bob"].remaining_turns == 1
     with ActiveScene(scene):
         await catch_up_revisions(scene)
         await catch_up_revisions(scene)
@@ -183,7 +176,6 @@ async def test_archive_retry_preserves_completed_real_listeners(
     assert len(learning_attempts) == (2 if boundary == "learning" else 0)
     assert len(scene.archived_history) == 1
     assert calls == [message.id]
-    assert entry_windows(conversation)["Bob"].remaining_turns == 1
     assert not message.history_dispatch_pending
     assert len([entry for entry in scene.history if entry.id == message.id]) == 1
     assert len([entry for entry in t.visible if entry[0] == message.id]) == 1

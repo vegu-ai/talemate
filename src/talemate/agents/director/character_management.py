@@ -593,7 +593,9 @@ class CharacterManagementMixin:
                     # what makes a character active, and an active character is
                     # stamped into the presence of every message the scene produces
                     # meanwhile
-                    await deactivate_character(scene, character)
+                    await deactivate_character(
+                        scene, character, record_transition=False
+                    )
 
                 any_attribute_templates = await self._apply_generation_templates(
                     character,

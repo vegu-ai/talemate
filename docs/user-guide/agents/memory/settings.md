@@ -47,7 +47,7 @@ If most facts land in one topic, try raising the value. If nearly every fact has
 
 ![Memory agent Retrieval settings](/talemate/img/0.40.0/memory-retrieval-settings.png)
 
-How similarity results are ranked and merged before they reach a prompt. Nothing in this group adds a request; the cross-encoder runs a local model. [How character knowledge works](/talemate/user-guide/world-editor/knowledge-how-it-works/#what-a-characters-reply-is-built-from) shows where the memories land in a reply.
+How similarity results are ranked and merged before they reach a prompt. Nothing in this group adds a request; the cross-encoder runs a local model. [Character knowledge: flow reference](/talemate/user-guide/world-editor/knowledge-how-it-works/#what-a-characters-reply-is-built-from) shows where the memories land in a reply.
 
 Retrieval controls the order of search results through query relevance, the recency weight and the optional cross-encoder rerank. The Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology) rules remove ineligible facts and add relative time markers while preserving that retrieval order. A fact's chronology score does not move it ahead of a more relevant retrieved result. Character knowledge filtering still determines access before facts can enter a character's prompt.
 

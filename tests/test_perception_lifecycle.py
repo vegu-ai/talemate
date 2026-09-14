@@ -1156,8 +1156,6 @@ async def test_public_mode_replaces_learning_even_with_legacy_ledger_enabled(
         "character_knowledge"
     ]
     assert set(public["config"]) == {
-        "brief_characters_on_entry",
-        "character_entry_turns",
         "memory_pass",
     }
     assert (
@@ -1214,8 +1212,6 @@ async def test_status_payload_hides_retired_controls_and_restores_legacy(
     assert not hidden.intersection(public["config"])
     if agent_name == "conversation":
         assert set(public["config"]) == {
-            "brief_characters_on_entry",
-            "character_entry_turns",
             "memory_pass",
         }
     scene.knowledge_eligibility = "legacy"

@@ -273,8 +273,28 @@ def test_find_docs_scene_processing_api_routes(query):
         ("shared facts", "user-guide/world-editor/knowledge-how-it-works.md"),
         ("citation not supported", "user-guide/world-editor/knowledge-how-it-works.md"),
         ("regenerate old views", "user-guide/world-editor/knowledge-how-it-works.md"),
-        ("five diagrams", "user-guide/world-editor/knowledge-how-it-works.md"),
+        ("six diagrams", "user-guide/world-editor/knowledge-how-it-works.md"),
         ("reply inputs", "user-guide/world-editor/knowledge-how-it-works.md"),
+        (
+            "character knowledge flow reference",
+            "user-guide/world-editor/knowledge-how-it-works.md",
+        ),
+        (
+            "Offscreen Life fact projection",
+            "user-guide/world-editor/knowledge-how-it-works.md",
+        ),
+        (
+            "arrival notes automatic timing",
+            "user-guide/world-editor/knowledge-how-it-works.md",
+        ),
+        (
+            "retry regeneration return bridge",
+            "user-guide/world-editor/knowledge-how-it-works.md",
+        ),
+        (
+            "collapsed expandable history",
+            "user-guide/world-editor/knowledge-how-it-works.md",
+        ),
     ],
 )
 def test_find_docs_preserves_parent_knowledge_routes(query, expected):
@@ -1454,3 +1474,29 @@ def test_read_clients_unified_api_key(settings_env):
         "set (unified API key from application settings: openrouter.api_key)"
     )
     assert "sk-or-unified-secret" not in json.dumps(payload)
+
+
+@pytest.mark.parametrize(
+    "query,page",
+    [
+        ("allow block rules", "knowledge.md"),
+        ("awareness overview names each character once", "knowledge-how-it-works.md"),
+        ("first save continuation retry discard", "knowledge.md"),
+        ("intro audiences", "knowledge-how-it-works.md"),
+        ("browse revisions before keeping a version", "knowledge-how-it-works.md"),
+        ("memory ranking", "knowledge-how-it-works.md"),
+        (
+            "mode decision tree model secrets cast size cost",
+            "knowledge-how-it-works.md",
+        ),
+        ("revision browsing", "knowledge-how-it-works.md"),
+        ("private competitor vetoes", "knowledge-how-it-works.md"),
+        ("supersedes links", "history/index.md"),
+        ("collapsed return entries automatic timing arrival notes", "knowledge.md"),
+        ("Offscreen Life Thorough", "knowledge.md"),
+    ],
+)
+def test_find_docs_preserves_knowledge_routes_after_return_updates(query, page):
+    assert "user-guide/world-editor/" + page in [
+        entry["path"] for entry in docs.find_docs(query, limit=3)
+    ]

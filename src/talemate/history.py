@@ -64,7 +64,12 @@ __all__ = [
 ]
 
 # messages that are never part of a summarized span
-SPAN_LINE_EXCLUDED_TYPES = ("director", "context_investigation", "reinforcement")
+SPAN_LINE_EXCLUDED_TYPES = (
+    "director",
+    "context_investigation",
+    "reinforcement",
+    "character_transition",
+)
 
 log = structlog.get_logger()
 

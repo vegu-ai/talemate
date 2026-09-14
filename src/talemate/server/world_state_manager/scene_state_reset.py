@@ -1,3 +1,4 @@
+from talemate.knowledge.transitions import DEPARTURES_KEY
 from typing import Union
 
 import pydantic
@@ -88,6 +89,7 @@ class SceneStateResetMixin:
             layered_count = len(scene.layered_history)
 
             scene.history = []
+            scene.agent_state.get("conversation", {}).pop(DEPARTURES_KEY, None)
             scene.layered_history = []
             removed = reset_perspectives(scene)
             removed.update(prune_missing_message_facts(scene, edges=False))

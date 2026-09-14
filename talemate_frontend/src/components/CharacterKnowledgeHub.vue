@@ -120,24 +120,9 @@
                     </v-expansion-panel-title>
                     <v-expansion-panel-text>
                         <template v-for="group in groups" :key="group.agent + '.' + group.action">
-                            <!-- the header is a list row like the toggles under it, so both take
-                                 Vuetify's prepend spacing; a group without a master keeps an
-                                 invisible checkbox so its label lands on the same x -->
-                            <v-list density="compact" class="py-0 mt-1">
-                                <v-list-item density="compact" class="knowledge-hub-group">
-                                    <template v-slot:prepend>
-                                        <v-checkbox-btn
-                                            v-if="group.master"
-                                            :model-value="group.enabled"
-                                            :disabled="settingsLocked"
-                                            :aria-label="`${group.label} on or off`"
-                                            density="compact"
-                                            color="primary"
-                                            hide-details
-                                            @click.stop="toggleGroup(group)"></v-checkbox-btn>
-                                        <v-checkbox-btn v-else class="knowledge-hub-checkbox-placeholder" density="compact" hide-details aria-hidden="true" tabindex="-1" disabled></v-checkbox-btn>
-                                    </template>
-                                    <v-list-item-title class="text-body-small knowledge-setting-label">
+                            <div class="knowledge-hub-section mt-1">
+                                <div class="knowledge-hub-group d-flex align-center px-4">
+                                    <div class="text-body-small knowledge-setting-label flex-grow-1">
                                         <v-btn size="x-small" variant="text" class="px-0 text-body-small" append-icon="mdi-open-in-new" @click="openSettings(group)">
                                             {{ group.agentLabel }} / {{ group.label }}
                                         </v-btn>
@@ -146,43 +131,54 @@
                                             :aria-label="`Use global settings for ${group.agentLabel} / ${group.label}`"
                                             :disabled="settingsLocked"
                                             @reset="clearGroup(group)" />
-                                    </v-list-item-title>
-                                </v-list-item>
-                                <!-- not :disabled - Vuetify drops pointer events on a disabled item, which
-                                     takes the tooltips with it; the checkbox and the click guard carry the state -->
-                                <v-list-item
-                                    v-for="toggle in group.toggles"
-                                    :key="toggle.key"
-                                    density="compact"
-                                    class="knowledge-hub-toggle"
-                                    :class="{ 'knowledge-hub-toggle-off': !group.enabled }"
-                                    v-bind="group.enabled && !settingsLocked ? { onClick: () => toggleConfig(group, toggle) } : {}">
-                                    <template v-slot:prepend>
-                                        <v-checkbox-btn :model-value="toggle.value" :disabled="!group.enabled || settingsLocked" :aria-label="toggle.label" tabindex="-1" density="compact" color="primary" hide-details @click.stop="toggleConfig(group, toggle)"></v-checkbox-btn>
-                                    </template>
-                                    <v-list-item-title class="text-body-small knowledge-setting-label">
-                                        <span>{{ toggle.label }}</span>
-                                        <SceneOverrideResetControl
-                                            v-if="toggle.overridden"
-                                            :aria-label="`Use global settings for ${group.agentLabel} / ${group.label} / ${toggle.label}`"
-                                            :disabled="settingsLocked"
-                                            @reset="clearToggle(group, toggle)" />
-                                    </v-list-item-title>
-                                    <template v-slot:append>
-                                        <!-- a switch under a disabled group costs nothing; at Off the slider says so right above it -->
-                                        <v-tooltip v-if="toggle.costNote && group.enabled" :text="toggle.costNote" max-width="320" location="start">
-                                            <template v-slot:activator="{ props: costProps }">
-                                                <v-icon v-bind="costProps" size="small" color="primary" class="mr-1" tabindex="0" role="img" aria-label="Adds a request">mdi-plus-circle-outline</v-icon>
-                                            </template>
-                                        </v-tooltip>
-                                        <v-tooltip :text="toggle.description" max-width="320" location="start">
-                                            <template v-slot:activator="{ props: infoProps }">
-                                                <v-icon v-bind="infoProps" size="small" color="muted" tabindex="0" role="img" aria-label="About this option">mdi-information-outline</v-icon>
-                                            </template>
-                                        </v-tooltip>
-                                    </template>
-                                </v-list-item>
-                            </v-list>
+                                    </div>
+                                    <v-checkbox-btn
+                                        v-if="group.master"
+                                        :model-value="group.enabled"
+                                        :disabled="settingsLocked"
+                                        :aria-label="`${group.label} on or off`"
+                                        density="compact"
+                                        color="primary"
+                                        hide-details
+                                        @click.stop="toggleGroup(group)"></v-checkbox-btn>
+                                </div>
+                                <v-list v-if="group.toggles.length" density="compact" class="py-0">
+                                    <!-- not :disabled - Vuetify drops pointer events on a disabled item, which
+                                         takes the tooltips with it; the checkbox and the click guard carry the state -->
+                                    <v-list-item
+                                        v-for="toggle in group.toggles"
+                                        :key="toggle.key"
+                                        density="compact"
+                                        class="knowledge-hub-toggle"
+                                        :class="{ 'knowledge-hub-toggle-off': !group.enabled }"
+                                        v-bind="group.enabled && !settingsLocked ? { onClick: () => toggleConfig(group, toggle) } : {}">
+                                        <template v-slot:prepend>
+                                            <v-checkbox-btn :model-value="toggle.value" :disabled="!group.enabled || settingsLocked" :aria-label="toggle.label" tabindex="-1" density="compact" color="primary" hide-details @click.stop="toggleConfig(group, toggle)"></v-checkbox-btn>
+                                        </template>
+                                        <v-list-item-title class="text-body-small knowledge-setting-label">
+                                            <span>{{ toggle.label }}</span>
+                                            <SceneOverrideResetControl
+                                                v-if="toggle.overridden"
+                                                :aria-label="`Use global settings for ${group.agentLabel} / ${group.label} / ${toggle.label}`"
+                                                :disabled="settingsLocked"
+                                                @reset="clearToggle(group, toggle)" />
+                                        </v-list-item-title>
+                                        <template v-slot:append>
+                                            <!-- a switch under a disabled group costs nothing; at Off the slider says so right above it -->
+                                            <v-tooltip v-if="toggle.costNote && group.enabled" :text="toggle.costNote" max-width="320" location="start">
+                                                <template v-slot:activator="{ props: costProps }">
+                                                    <v-icon v-bind="costProps" size="small" color="primary" class="mr-1" tabindex="0" role="img" aria-label="Adds a request">mdi-plus-circle-outline</v-icon>
+                                                </template>
+                                            </v-tooltip>
+                                            <v-tooltip :text="toggle.description" max-width="320" location="start">
+                                                <template v-slot:activator="{ props: infoProps }">
+                                                    <v-icon v-bind="infoProps" size="small" color="muted" tabindex="0" role="img" aria-label="About this option">mdi-information-outline</v-icon>
+                                                </template>
+                                            </v-tooltip>
+                                        </template>
+                                    </v-list-item>
+                                </v-list>
+                            </div>
                         </template>
                     </v-expansion-panel-text>
                 </v-expansion-panel>
@@ -503,8 +499,11 @@ export default {
 .knowledge-hub-individual :deep(.v-expansion-panel--active > .v-expansion-panel-title) {
     min-height: unset;
 }
-.knowledge-hub-checkbox-placeholder {
-    visibility: hidden;
+.knowledge-hub-group {
+    min-height: 40px;
+}
+.knowledge-hub-group :deep(.v-checkbox-btn) {
+    flex: 0 0 auto;
 }
 .knowledge-hub-toggle {
     padding-inline-start: 40px;

@@ -13,6 +13,7 @@ from talemate.world_state.snapshot_revision import regeneration_snapshot
 from talemate.scene_message import (
     SceneMessage,
     CharacterMessage,
+    CharacterTransitionMessage,
     VersionSource,
     NarratorMessage,
     ReinforcementMessage,
@@ -39,7 +40,7 @@ def regenerate_target_message(scene: "Scene") -> SceneMessage | None:
     """
     Return the message that ``regenerate(scene)`` would attempt to
     regenerate, without mutating history (skips trailing reinforcement
-    messages).
+    and return messages).
     """
     cur_idx = -1
     try:
@@ -47,8 +48,8 @@ def regenerate_target_message(scene: "Scene") -> SceneMessage | None:
     except Exception:
         return None
 
-    # mirror regenerate() behavior: skip trailing reinforcement messages
-    while isinstance(message, ReinforcementMessage):
+    # Match the non-story tail removed by regenerate().
+    while isinstance(message, (ReinforcementMessage, CharacterTransitionMessage)):
         try:
             cur_idx -= 1
             message = scene.history[cur_idx]
@@ -397,8 +398,21 @@ async def regenerate(scene: "Scene") -> list[SceneMessage]:
     message = regenerate_target_message(scene)
     if message is None or not can_regenerate(scene):
         return []
-    with regeneration_snapshot(scene, message):
-        return await _regenerate(scene)
+    boundary = next(i for i, item in enumerate(scene.history) if item is message)
+    transitions = [
+        (i, item)
+        for i, item in enumerate(scene.history)
+        if i > boundary and isinstance(item, CharacterTransitionMessage)
+    ]
+    for _, transition in reversed(transitions):
+        scene.history.remove(transition)
+    try:
+        with regeneration_snapshot(scene, message):
+            return await _regenerate(scene)
+    finally:
+        for index, transition in transitions:
+            scene.history.insert(min(index, len(scene.history)), transition)
+            scene.emit_history_message(transition)
 
 
 async def _regenerate(scene: "Scene") -> list[SceneMessage]:

@@ -1285,3 +1285,14 @@ def test_coverage_cache_can_be_shared_between_characters(summary_scene, names):
         assert summary_coverage(reference, name, read=read, cache=cache) == frozenset(
             (expected[name],)
         )
+
+
+def test_history_projection_resolves_protected_return_once(summary_scene, monkeypatch):
+    from talemate.knowledge import transitions
+
+    spy = Mock(wraps=transitions.protected_transition)
+    monkeypatch.setattr(transitions, "protected_transition", spy)
+    scene, _, _ = summary_scene
+    result = project_character_history(scene, "Bob")
+    assert result
+    spy.assert_called_once_with(scene, "Bob")

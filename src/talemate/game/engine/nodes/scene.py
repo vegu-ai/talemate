@@ -350,7 +350,7 @@ class MakeCharacter(Node):
             actor = ActorCls(character, get_agent("conversation"))
             await scene.add_actor(actor)
             if not is_active:
-                await deactivate_character(scene, character)
+                await deactivate_character(scene, character, record_transition=False)
                 actor = None
         self.set_output_values({"actor": actor, "character": character})
 

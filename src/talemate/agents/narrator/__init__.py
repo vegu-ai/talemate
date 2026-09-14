@@ -61,7 +61,14 @@ talemate.emit.async_signals.register(
 )
 
 
-async def _narration(self, fn, args, kwargs, emit_generated: bool = True):
+async def _narration(
+    self,
+    fn,
+    args,
+    kwargs,
+    emit_generated: bool = True,
+    run_generation_hooks: bool = True,
+):
     """
     The narrator's generation context: the narrator speaker role, the
     writing style, the injected instructions, and (for scene narration) the
@@ -84,13 +91,13 @@ async def _narration(self, fn, args, kwargs, emit_generated: bool = True):
         if self.content_use_writing_style:
             self.set_context_states(writing_style=self.scene.writing_style)
 
-        await talemate.emit.async_signals.get("agent.narrator.before_generate").send(
-            emission
-        )
-        await talemate.emit.async_signals.get(
-            "agent.narrator.inject_instructions"
-        ).send(emission)
-
+        if run_generation_hooks:
+            await talemate.emit.async_signals.get(
+                "agent.narrator.before_generate"
+            ).send(emission)
+            await talemate.emit.async_signals.get(
+                "agent.narrator.inject_instructions"
+            ).send(emission)
         agent_context.state["dynamic_instructions"] = emission.dynamic_instructions
 
         response = await fn(self, *args, **kwargs)
@@ -128,7 +135,9 @@ def narration_no_emit(fn):
 
     @wraps(fn)
     async def narration_wrapper(self, *args, **kwargs):
-        return await _narration(self, fn, args, kwargs, emit_generated=False)
+        return await _narration(
+            self, fn, args, kwargs, emit_generated=False, run_generation_hooks=False
+        )
 
     return narration_wrapper
 
@@ -408,10 +417,10 @@ class NarratorAgent(MemoryRAGMixin, AutoNarrationMixin, OffscreenLifeMixin, Agen
 
     @_set_processing
     @narration_no_emit
-    async def narrate_offscreen_life(self, character: Character, missed: list[dict]):
-        # the narrator's context (speaker role, writing style, injected
-        # instructions) without the generated signal: the text becomes a fact
-        return await OffscreenLifeMixin.narrate_offscreen_life(self, character, missed)
+    async def narrate_offscreen_life(self, character: Character, transition):
+        return await OffscreenLifeMixin.narrate_offscreen_life(
+            self, character, transition
+        )
 
     async def on_time_passage(self, event: TimePassageEmission):
         """

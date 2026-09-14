@@ -354,6 +354,9 @@
                     <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action" :subtype="message.subtype" :uxLocked="uxLocked" :isLastMessage="index === visibleMessages.length - 1"/>
                 </div>
             </div>
+            <div v-else-if="message.type === 'character_transition'" :id="`message-${message.id}`" data-message-type="character_transition">
+                <CharacterTransitionMessage :message="message" :locked="uxLocked || appBusy || revealCount !== null" />
+            </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
                 <div class="time-message"  :id="`message-${message.id}`" :data-message-type="message.type">
                     <TimePassageMessage :text="message.text" :message_id="message.id" :ts="message.ts" :title="message.title" :uxLocked="uxLocked" :appBusy="appBusy" :isLastMessage="index === visibleMessages.length - 1" />
@@ -403,6 +406,7 @@ import CharacterMessage from './CharacterMessage.vue';
 import NarratorMessage from './NarratorMessage.vue';
 import DirectorMessage from './DirectorMessage.vue';
 import TimePassageMessage from './TimePassageMessage.vue';
+import CharacterTransitionMessage from './CharacterTransitionMessage.vue';
 import StatusMessage from './StatusMessage.vue';
 import RequestInput from './RequestInput.vue';
 import PlayerChoiceMessage from './PlayerChoiceMessage.vue';
@@ -556,6 +560,7 @@ export default {
         NarratorMessage,
         DirectorMessage,
         TimePassageMessage,
+        CharacterTransitionMessage,
         StatusMessage,
         RequestInput,
         PlayerChoiceMessage,
@@ -1937,6 +1942,18 @@ export default {
         },
 
         handleMessage(data) {
+            if (data.type === 'scene_status' && data.data?.character_transitions) {
+                for (const transition of data.data.character_transitions) {
+                    const existing = this.messages.findIndex(message => message.type === 'character_transition' && message.id === transition.id);
+                    if (existing !== -1) this.messages.splice(existing, 1, { ...transition });
+                }
+            }
+            if (data.type === 'character_transition') {
+                const existing = this.messages.findIndex(message => message.type === data.type && message.id === data.id);
+                if (existing === -1) this.messages.push({ ...data });
+                else this.messages.splice(existing, 1, { ...data });
+                return;
+            }
             this.handleRevisionCommit(data);
             // Handle asset-related messages centrally (scene_asset, message_asset_update)
             this.handleAssetMessages(data);

@@ -5,7 +5,7 @@ import Card from '@/components/CharacterCardImport.vue';
 import Setup from '@/components/NewSceneSetupModal.vue';
 import Settings from '@/components/AppSettingsAgents.vue';
 import Hub from '@/components/CharacterKnowledgeHub.vue';
-import { agentsAt, bool, number } from './helpers/effortAgents';
+import { agentsAt } from './helpers/effortAgents';
 
 const Container = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) });
 const mounted = [];
@@ -15,10 +15,7 @@ function context() {
     const agents = agentsAt('legacy', 'thorough');
     const ck = agents[0].actions.character_knowledge;
     ck.container = true;
-    ck.config.character_entry_turns = number('Entry turns', 3);
-    agents.push({ name: 'narrator', label: 'Narrator', data: { scene_overrides: {} }, actions: {
-        offscreen_life: { enabled: false, can_be_disabled: true, config: {} },
-    } });
+    agents.at(-1).actions.offscreen_life.enabled = false;
     const config = reactive({ agents: Object.fromEntries(agents.map(agent => [agent.name, {
         actions: Object.fromEntries(Object.entries(agent.actions).map(([key, action]) => [key, {
             enabled: action.enabled,
@@ -26,9 +23,6 @@ function context() {
         }])),
     }])) });
     for (const agent of agents) agent.data.actions = agent.actions;
-    agents[0].data.scene_overrides = { actions: { character_knowledge: { config: {
-        character_entry_turns: { value: 0 },
-    } } } };
     agents.at(-1).data.scene_overrides = { actions: { offscreen_life: { enabled: true } } };
     return { config, agents: reactive(agents) };
 }
@@ -70,39 +64,37 @@ async function mount(component, ctx) {
 
 describe('effort explanation caller context', () => {
     for (const component of [Card, Setup]) {
-        it(`${component.name} inherits the global entry window, ignoring the outgoing scene`, async () => {
+        it(`${component.name} previews the selected preset without inheriting the outgoing scene`, async () => {
             const ctx = context();
             const { vm, explanation } = await mount(component, ctx);
             vm.effort = 'thorough';
             await nextTick();
-            expect(explanation()).toContain('1 per NPC entry briefing');
-            expect(explanation()).not.toContain('offscreen account');
-            ctx.config.agents.conversation.actions.character_knowledge.config.character_entry_turns.value = 0;
+            expect(explanation()).toContain('1 per eligible character return');
+            vm.effort = 'balanced';
             await nextTick();
-            expect(explanation()).not.toContain('1 per NPC entry briefing');
+            expect(explanation()).not.toContain('1 per eligible character return');
         });
     }
 
     it('global settings reflects unsaved Narrator edits without applying scene overrides', async () => {
         const ctx = context();
         const { explanation } = await mount(Settings, ctx);
-        expect(explanation()).toContain('1 per NPC entry briefing');
+        expect(explanation()).not.toContain('1 per eligible character return');
         expect(explanation()).not.toContain('offscreen account');
         ctx.config.agents.narrator.actions.offscreen_life.enabled = true;
         await nextTick();
-        expect(explanation()).toContain('+1 if a combined offscreen account is unreadable');
+        expect(explanation()).toContain('1 per eligible character return');
         ctx.config.agents.narrator.actions.offscreen_life.enabled = false;
         await nextTick();
         expect(explanation()).not.toContain('offscreen account');
     });
 
-    it('the hub keeps reading the scene-effective entry window and Offscreen Life', async () => {
+    it('the hub reads the scene-effective Offscreen Life switch', async () => {
         const ctx = context();
         const { explanation } = await mount(Hub, ctx);
-        expect(explanation()).not.toContain('NPC entry briefing');
-        ctx.agents[0].data.scene_overrides.actions.character_knowledge.config.character_entry_turns.value = 3;
+        expect(explanation()).toContain('1 per eligible character return');
+        ctx.agents.at(-1).data.scene_overrides.actions.offscreen_life.enabled = false;
         await nextTick();
-        expect(explanation()).toContain('1 per NPC entry briefing');
-        expect(explanation()).toContain('+1 if a combined offscreen account is unreadable');
+        expect(explanation()).not.toContain('offscreen account');
     });
 });

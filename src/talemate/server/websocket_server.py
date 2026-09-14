@@ -4,6 +4,8 @@ import uuid
 import os
 import traceback
 
+from talemate.knowledge.transitions import transition_payload
+
 import structlog
 
 import talemate.instance as instance
@@ -486,6 +488,9 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             }
         )
 
+    def handle_character_transition(self, emission: Emission):
+        self.queue_put(transition_payload(self.scene, emission.message_object))
+
     def handle_context_investigation(self, emission: Emission):
         message_obj = emission.message_object
         asset_id = None
@@ -547,12 +552,21 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         self.queue_put(payload)
 
     def handle_scene_status(self, emission: Emission):
+        transitions = (
+            [
+                transition_payload(self.scene, message)
+                for message in self.scene.history
+                if message.typ == "character_transition"
+            ]
+            if self.scene
+            else []
+        )
         self.queue_put(
             {
                 "type": "scene_status",
                 "name": emission.message,
                 "status": emission.status,
-                "data": emission.data,
+                "data": {**(emission.data or {}), "character_transitions": transitions},
             }
         )
 

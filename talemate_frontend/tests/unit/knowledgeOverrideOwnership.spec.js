@@ -28,7 +28,6 @@ describe('the hub ownership union', () => {
             'absence_limit',
             'absence_window',
             'awareness_line',
-            'brief_characters_on_entry',
             'enabled',
             'ledger',
             'memory_pass',
@@ -38,6 +37,7 @@ describe('the hub ownership union', () => {
         expect(owned('summarizer', 'perceptions')).toEqual(['automatic_repair']);
         expect(owned('memory', 'retrieval')).toEqual(['similarity_gate']);
         expect(owned('memory', 'topics')).toEqual(['enabled']);
+        expect(owned('narrator', 'offscreen_life')).toEqual(['enabled']);
     });
 
     it('is exactly the union of both mode tables, so nothing extra is reset', () => {

@@ -20,12 +20,10 @@ function agentsAt(mode, stop, overrides = {}) {
             absence_limit: number('Unknown-fact reminders', v(`${ck}.absence_limit`)),
             absence_window: number('Recent facts to check', v(`${ck}.absence_window`)),
             awareness_line: bool('Topic knowledge overview', v(`${ck}.awareness_line`)),
-            brief_characters_on_entry: bool('Brief characters on entry', v(`${ck}.brief_characters_on_entry`), 'One request per character activation.'),
             memory_pass: bool('Refine memories with AI', v(`${ck}.memory_pass`), 'One more request before each reply.'),
             ledger: bool('Track learning from dialogue', v(`${ck}.ledger`), 'One more request after a character message.'),
         }
         : {
-            brief_characters_on_entry: bool('Brief characters on entry', v(`${ck}.brief_characters_on_entry`), 'One request per character activation.'),
             memory_pass: bool('Refine memories with AI', v(`${ck}.memory_pass`), 'One more request before each reply.'),
         };
     return [
@@ -44,6 +42,9 @@ function agentsAt(mode, stop, overrides = {}) {
             topics: { enabled: v('memory.topics.enabled'), can_be_disabled: true, label: 'Topics', config: {} },
             retrieval: { enabled: true, label: 'Retrieval', config: mode === 'legacy'
                 ? { similarity_gate: bool('Match known facts', v('memory.retrieval.similarity_gate')) } : {} },
+        } },
+        { name: 'narrator', label: 'Narrator', data: { scene_overrides: {} }, actions: {
+            offscreen_life: { enabled: v('narrator.offscreen_life.enabled'), can_be_disabled: true, label: 'Offscreen Life', config: {} },
         } },
     ];
 }

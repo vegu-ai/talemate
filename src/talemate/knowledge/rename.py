@@ -1,3 +1,5 @@
+from talemate.knowledge.transitions import departures
+
 from typing import TYPE_CHECKING
 from talemate.knowledge.perspectives import (
     message_sources,
@@ -48,12 +50,25 @@ def rename_knowledge_references(scene: "Scene", old: str, new: str):
                     },
                 }
             )
+    for fact in scene.world_state.facts.values():
+        if fact.source == "offscreen":
+            fact.present = _swap(fact.present, old, new)
     rename_perspective_audiences(scene, old, new)
     if old in scene.character_data:
         scene.character_data[new] = scene.character_data.pop(old)
 
     scene.active_characters = _swap(scene.active_characters, old, new)
     scene.intro_present = _swap(scene.intro_present, old, new)
+
+    pending = departures(scene)
+    if old in pending:
+        pending[new] = pending.pop(old)
+    for message in scene.history:
+        if message.typ == "character_transition":
+            if message.character_name == old:
+                message.character_name = new
+            message.participants = _swap(message.participants, old, new)
+            message.present = _swap(message.present, old, new)
 
     for message in message_sources(scene):
         message.present = _swap(message.present, old, new)

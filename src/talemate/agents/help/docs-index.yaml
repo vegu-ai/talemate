@@ -141,11 +141,10 @@
     pass or topic-awareness assertions.
 - path: user-guide/agents/conversation/settings.md
   title: Settings
-  summary: Conversation settings cover dialogue format and length, instructions, caching, story intent, writing style, effort
-    presets and long-term memory. Character Knowledge controls filtering, topic/reminder context, durable live entry orientation
-    and optional NPC entry briefings that combine with Offscreen Life; Perspectives exposes regenerate/remove,
-    while dialogue learning grants recorded facts (it records none), unknown-fact reminders always consider facts
-    about the character or recorded while they were away, and AI memory refinement adds focused requests.
+  summary: Conversation settings cover dialogue format, length, instructions, caching, story intent, effort and memory.
+    Character Knowledge controls filtering, reminders, topics, dialogue learning and AI memory refinement;
+    zero-request return entries require Standard knowledge filtering, while optional Offscreen Life starts at
+    Thorough.
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Autocomplete partial text with Ctrl/Cmd+Enter in dialogue, message editing, attributes, details, descriptions,
@@ -252,9 +251,9 @@
     Environment.
 - path: user-guide/agents/narrator/settings.md
   title: Settings
-  summary: Narrator settings for per-type generation lengths, jiggle, instructions, caching, scene intent/writing style and
-    time-passage prompts. Covers Auto Narration chance/weights and Scene Direction suppression, plus optional Offscreen Life
-    accounts scoped to a returning character's evidence and minimum missed summaries.
+  summary: Narrator settings cover generation lengths, story intent, writing style, time passage and Auto Narration
+    chance, weights and Scene Direction suppression. Offscreen Life adds one private fact per eligible return
+    at Thorough and above, with an explicit retry; Balanced and below leave it off.
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
   summary: 'Sparse agent overrides: Global/Scene editing, Save/Discard, quick toggles, settings-file links and hub reset icons.
@@ -1248,31 +1247,27 @@
     and history-entry seed instructions, excluding live dialogue/narration.
 - path: user-guide/world-editor/history/index.md
   title: History
-  summary: World Editor History manages static backstory, archived summaries, layered history, presence chips and time-passage
-    chapters. Facts show Routine/State/Milestone importance, relative time such as (21 Days ago) since their latest restatement,
-    repeats and supersedes links; facts come from chapter summaries only, each tied to the line it came from with Source
-    message inspection, text/importance editing, Known by filtering and failed extraction retries; a fact is removed with
-    its line, marked out of date on edit and moves with time-passage edits; History retains the full record despite prompt chronology cuts
-    and supports dated seed-guided entries and regeneration. Generate or regenerate facts from predefined static history
-    without advancing the story; Standard keeps existing presence rules, while Character perspectives requires saved views.
+  summary: History manages static entries, chapter summaries and layered history with compression statistics. Covers
+    message-bound facts, presence and Known by filtering, importance and time markers, supersedes links, editing and
+    marking false, source inspection, regeneration, stale facts after revisions, extraction from predefined history
+    and time-passage edits.
 - path: user-guide/world-editor/history/layered-history.md
   title: Layered History
   summary: Layered History compresses dialogue into base summaries and successively smaller layers to preserve a full-timeline
     detail gradient. Covers compression statistics, token thresholds, layer limits, chunking/analyzation settings, edit/regenerate/inspect
     tools and context-budget review.
 - path: user-guide/world-editor/knowledge-how-it-works.md
-  title: How character knowledge works
-  summary: Five diagrams explain reply inputs, presence, perceptions, disclosures, shared facts, chronology and effort, with
-    stops from Off to Ultra. Facts come from chapter summaries only and follow their line; the awareness overview names each
-    character once. Covers citation not supported, private competitor vetoes, public citations, regenerate old views,
-    Scene Context, memory ranking and exclusion, intro audiences, browsing revisions before keeping a version, live character-entry
-    orientation and briefing/Offscreen Life coordination, and a mode decision tree that weighs model, secrets, cast size and cost.
+  title: "Character knowledge: flow reference"
+  summary: Experimental reference with six diagrams—re-entry bridges, arrival notes, automatic timing, collapsed expandable history,
+    Offscreen Life fact projection, Thorough/Balanced, retry/regeneration. Shared facts, reply inputs, memory ranking,
+    Intro audiences, revision browsing, browse revisions before keeping a version, awareness overview names each
+    character once, citation not supported, regenerate old views, private competitor vetoes, mode decision tree (model, cost).
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
-  summary: Standard versus Character perspectives, mode-specific effort stops and costs, creation scene pins, entry orientation,
-    visibility, disclosures, Allow/Block rules, topics and retrieval. Covers mode selection in New Story/card import, origins
-    and group/whole-hub Use global settings resets; project-scoped overrides shared by stock scenes and other saves,
-    settings-file choices, and first-save continuation with retry/discard for unsaved stories.
+  summary: Standard and Character perspectives knowledge, effort presets, request costs, scene overrides and first-save
+    continuation, retry or discard. Covers Allow/Block rules, Known by visibility, disclosures, topics, retrieval,
+    collapsed return entries with automatic timing and arrival notes, and optional Offscreen Life at Thorough and
+    above using current fact projection with explicit retry.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and

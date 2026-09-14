@@ -106,7 +106,7 @@ function mount(component, props = {}, injections = {}) {
     app.provide('registerMessageHandler', vi.fn());
     app.provide('unregisterMessageHandler', vi.fn());
     app.provide('scene', () => ({ data: sceneData }));
-    app.provide('getAgents', agents);
+    app.provide('getAgents', injections.getAgents || agents);
     app.provide('toggleAgentAction', vi.fn());
     app.provide('toggleAgentConfig', injections.toggleAgentConfig || vi.fn());
     app.provide('applyAgentValues', vi.fn());
@@ -159,6 +159,48 @@ describe('the hub before anything is opened', () => {
         host.querySelector('.panel-title').click();
         await nextTick();
         expect(host.textContent).not.toContain(SWITCH_LABELS[0]);
+    });
+
+    it('keeps Summarization and Retrieval as independent sections while Offscreen Life is off', async () => {
+        const applySceneAgentValues = vi.fn();
+        const getAgents = () => [
+            {
+                name: 'narrator', label: 'Narrator', data: { scene_overrides: {} },
+                actions: { offscreen_life: { enabled: false, can_be_disabled: true, label: 'Offscreen Life', config: {} } },
+            },
+            {
+                name: 'summarizer', label: 'Summarizer', data: { scene_overrides: {} },
+                actions: { archive: { enabled: true, label: 'Summarization', config: { extract_facts: bool('Extract facts', true) } } },
+            },
+            {
+                name: 'memory', label: 'Memory', data: { scene_overrides: {} },
+                actions: {
+                    retrieval: { enabled: true, label: 'Retrieval', config: { similarity_gate: bool('Match known facts', true) } },
+                    topics: { enabled: true, can_be_disabled: true, label: 'Topics', config: {} },
+                },
+            },
+        ];
+        const vm = mount(Hub, { name: 'Nora' }, { getAgents, applySceneAgentValues });
+        vm.open = true;
+        await nextTick();
+        host.querySelector('.panel-title').click();
+        await nextTick();
+        const sections = [...host.querySelectorAll('.knowledge-hub-section')];
+        expect(sections.map(section => section.querySelector('.knowledge-hub-group button').textContent.trim())).toEqual([
+            'Narrator / Offscreen Life', 'Summarizer / Summarization', 'Memory / Retrieval', 'Memory / Topics',
+        ]);
+        expect(new Set(sections.map(section => section.parentElement)).size).toBe(1);
+        expect(sections[0].querySelector('.knowledge-hub-toggle')).toBeNull();
+        for (const [index, label] of [[1, 'Extract facts'], [2, 'Match known facts']]) {
+            const toggle = sections[index].querySelector('.knowledge-hub-toggle');
+            expect(toggle.textContent).toContain(label);
+            expect(toggle.classList.contains('knowledge-hub-toggle-off')).toBe(false);
+            toggle.click();
+        }
+        expect(applySceneAgentValues.mock.calls).toEqual([
+            [[{ agent: 'summarizer', action: 'archive', config: { extract_facts: false } }], 'Extract facts: Off'],
+            [[{ agent: 'memory', action: 'retrieval', config: { similarity_gate: false } }], 'Match known facts: Off'],
+        ]);
     });
 
     it('carries the pane state to a hub that opens afterwards, within the page', async () => {

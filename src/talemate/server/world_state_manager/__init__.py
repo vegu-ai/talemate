@@ -1082,6 +1082,7 @@ class WorldStateManagerPlugin(
         await self.handle_get_character_list({})
         self.scene.emit_status()
 
+    @background_task("Activating character")
     async def handle_activate_character(self, data):
         payload = SelectiveCharacterPayload(**data)
         character = self.scene.get_character(payload.name)

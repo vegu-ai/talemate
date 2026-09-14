@@ -18,7 +18,7 @@ import pydantic
 import structlog
 
 import talemate.instance as instance
-from talemate.scene_message import VersionSource
+from talemate.scene_message import VersionSource, CharacterTransitionMessage
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.revision_browsing import defer_revision_work
 from talemate.knowledge.revision_refresh import (
@@ -30,6 +30,12 @@ from talemate.knowledge.revision_refresh import (
 from talemate.knowledge.topics import refresh_topics
 from talemate.server.websocket_plugin import Plugin
 from talemate.status import background_task
+from talemate.knowledge.transitions import (
+    offscreen_status,
+    transition_available,
+    transition_current,
+    offscreen_eligible,
+)
 
 log = structlog.get_logger("talemate.server.scene_message")
 
@@ -57,18 +63,61 @@ class SwapRevisionPayload(pydantic.BaseModel):
     selection_serial: int | None = None
 
 
-class DeletePayload(pydantic.BaseModel):
+class MessageIdPayload(pydantic.BaseModel):
     id: int
 
 
 class SceneMessagePlugin(Plugin):
     router = "scene_message"
 
+    async def handle_transition_note(self, data: dict):
+        payload = EditPayload(**data)
+        message = self.scene.get_message(payload.id)
+        if not isinstance(message, CharacterTransitionMessage):
+            await self.signal_operation_failed("Return entry not found")
+            return
+        if not transition_available(self.scene, message):
+            await self.signal_operation_failed("Return boundary is no longer available")
+            return
+        message.arrival_note = payload.text.strip()
+        self.scene.saved = False
+        self.scene.emit_history_message(message)
+        await self.signal_operation_done()
+
+    @background_task("Writing offscreen account")
+    async def handle_retry_offscreen(self, data: dict):
+        payload = MessageIdPayload(**data)
+        message = self.scene.get_message(payload.id)
+        if not isinstance(message, CharacterTransitionMessage):
+            await self.signal_operation_failed("Return entry not found")
+            return
+        if (
+            offscreen_status(self.scene, message) != "failed"
+            or not transition_current(self.scene, message)
+            or not offscreen_eligible(self.scene, message)
+        ):
+            await self.signal_operation_failed(
+                "This return is no longer eligible for retry"
+            )
+            return
+        narrator = instance.get_agent("narrator")
+        if not narrator.offscreen_life_enabled:
+            await self.signal_operation_failed(
+                "Enable Offscreen Life to generate an account"
+            )
+            return
+        character = self.scene.get_character(message.character_name)
+        if character is None:
+            await self.signal_operation_failed("Character not found")
+            return
+        await narrator.narrate_offscreen_life(character, message)
+        await self.signal_operation_done()
+
     async def handle_delete(self, data: dict):
         """
         Remove a scene message from history.
         """
-        payload = DeletePayload(**data)
+        payload = MessageIdPayload(**data)
         self.scene.delete_message(payload.id)
         await self.scene.attempt_auto_save()
 
@@ -89,6 +138,12 @@ class SceneMessagePlugin(Plugin):
         message = self.scene.get_message(payload.id)
         if message is None:
             await self.signal_operation_failed(f"Message {payload.id} not found")
+            return
+
+        if isinstance(message, CharacterTransitionMessage):
+            await self.signal_operation_failed(
+                "Edit the arrival note instead of the derived return text"
+            )
             return
 
         new_text = payload.text

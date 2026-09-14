@@ -144,29 +144,6 @@ class TestConverseMethod:
         assert len(prompt_text) > 0
 
     @pytest.mark.asyncio
-    async def test_converse_includes_live_character_entry_orientation(
-        self, active_context, mock_scene
-    ):
-        agent = active_context
-        character = mock_scene.get_character("Elena")
-        agent.set_scene_states(
-            character_entry_windows={
-                "Elena": {
-                    "boundary_message_id": 0,
-                    "entry_scene_time": mock_scene.ts,
-                    "remaining_turns": 3,
-                }
-            }
-        )
-        assert agent.character_entry_context(character)
-
-        await agent.converse(character.actor)
-
-        prompt_text = str(agent.client.send_prompt.call_args.args[0])
-        assert "## Character entry orientation" in prompt_text
-        assert "private orientation for Elena" in prompt_text
-
-    @pytest.mark.asyncio
     async def test_converse_with_instruction(self, active_context, mock_scene):
         """Test that converse includes instruction in the prompt."""
         agent = active_context

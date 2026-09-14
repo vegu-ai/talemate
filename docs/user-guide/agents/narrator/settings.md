@@ -96,11 +96,13 @@ Default on. When the [director's Scene Direction](/talemate/user-guide/agents/di
 
 ## :material-account-clock-outline: Offscreen Life
 
-When a character returns to the scene after missing at least one summarized history entry, the narrator writes what the character did while away, given their sheet and the time that passed. The prompt's history, memory block, character sheets and pinned entries are rendered from the returning character's own point of view (their bucket), so the span they missed is never in front of the model. Legacy scenes inject the shared world state snapshot when pinning is enabled; opted-in perception scenes inject only the returning character's snapshot replacements, omitting missing or stale views. The result is stored as a fact with the source `offscreen` that only the returning character was present for: it retrieves for that character alone, is never listed in an absence block, and is not added to the scene text. A character new to the scene was not away and gets no account; when part of the absence is not summarized yet, the account waits for that summary so it spans the whole absence. Loading a scene produces no account either, even when the load brings a character back into it: an account is a turn you ask for, not a side effect of opening a scene. Normally this is +1 request per return. When it shares a combined request with **Brief characters on entry**, an unreadable account section is retried through this ordinary path and makes the return cost two requests total. Off by default.
+Requires **Limit to character knowledge** in Standard mode; Character perspectives always uses character context.
 
-##### Minimum missed entries
+When enabled, an actual return with intervening story or recorded scene time adds one Narrator request about what the character did while away. It does not wait for a summary. The request reads the character's permitted context and any established arrival constraints; it does not launch extra fact extraction or perspective repairs. A new character or an immediate leave and return with nothing in between gets no account.
 
-The offscreen life is written only when the character missed at least this many summarized history entries (default 1).
+The result becomes one private offscreen fact, referenced by the collapsed return entry in scene history. Edit the arrival note in that entry and the account in the Facts editor. A failed or cancelled account leaves the zero-request transition usable, with an explicit retry while that return is current. There is no automatic fallback request.
+
+Off by default. The character knowledge effort slider enables it at **Thorough** and Standard **Ultra**, and disables it at **Off**, **Minimal**, **Light**, and **Balanced**. Balanced stays the new-story default. Loading a scene neither enables it nor generates an account.
 
 ##### Length
 

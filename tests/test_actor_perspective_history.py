@@ -498,9 +498,7 @@ def test_bind_keeps_legacy_bucket_rule_in_perception_mode(cast):
 
 
 @pytest.mark.asyncio
-async def test_retrieval_projects_while_incidental_callers_retain_bucket_history(
-    cast, monkeypatch
-):
+async def test_retrieval_and_offscreen_life_project_owned_history(cast, monkeypatch):
     from talemate.agents.memory.rag import MemoryRAGMixin
     from talemate.knowledge.bucket import KnowledgeIndex
 
@@ -533,7 +531,7 @@ async def test_retrieval_projects_while_incidental_callers_retain_bucket_history
     monkeypatch.setattr(memory, "audience_operation", operation)
     await conversation.memory_pass(scene.character_data["Bob"], [])
     history = "".join(request.call_args.kwargs["vars"]["scene_history"])
-    assert expected not in history and "Bob was elsewhere" not in history
+    assert expected not in history and "Bob did not witness" not in history
 
     monkeypatch.setattr(conversation, "semantic_context", AsyncMock(return_value=[]))
     extract = AsyncMock(return_value="")
@@ -546,10 +544,20 @@ async def test_retrieval_projects_while_incidental_callers_retain_bucket_history
         retrieval_method="questions",
     )
     assert expected not in extract.call_args.args[0]
-    assert "Bob was elsewhere" not in extract.call_args.args[0]
+    assert "Bob did not witness" not in extract.call_args.args[0]
 
+    from talemate.knowledge.context import project_character_history
+
+    monkeypatch.setattr(
+        "talemate.agents.summarize.context_history.project_character_history",
+        project_character_history,
+    )
     narrator = get_agent("narrator")
-    monkeypatch.setattr(narrator, "rag_build", AsyncMock(return_value=[]))
+    monkeypatch.setattr(
+        narrator,
+        "rag_build",
+        AsyncMock(side_effect=AssertionError("No extra retrieval")),
+    )
     with ActiveAgent(narrator, narrator.narrate_scene):
         rendered = Prompt.get(
             "narrator.offscreen-life",
@@ -563,7 +571,8 @@ async def test_retrieval_projects_while_incidental_callers_retain_bucket_history
                 "response_length": 128,
             },
         ).render()
-    assert expected in rendered and "Bob was elsewhere" in rendered
+    assert expected not in rendered
+    narrator.rag_build.assert_not_awaited()
 
 
 @pytest.mark.asyncio

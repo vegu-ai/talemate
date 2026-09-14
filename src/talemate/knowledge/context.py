@@ -72,6 +72,12 @@ def _project_character_message(
         if diagnostics is not None:
             diagnostics.exclude("message", message.id, str(message), "hidden")
         return None
+    if message.typ == "character_transition":
+        if message.character_name != character:
+            return None
+        from talemate.knowledge.transitions import render_transition
+
+        return render_transition(scene, message) or None
     if isinstance(message, DirectorMessage):
         if not keep_director or message.character_name != character:
             return None
@@ -280,6 +286,10 @@ def project_character_history(
         for position, items in disclosure_positions(scene).items()
     }
     consumed = set()
+    # transitions imports this module's message projection.
+    from talemate.knowledge.transitions import protected_transition
+
+    protected = protected_transition(scene, character)
     cursor = len(prefix) - 1
     while cursor >= -1:
         for disclosure in reversed(disclosures.get(cursor + 1, ())):
@@ -309,6 +319,7 @@ def project_character_history(
                     and keep_director
                     and item.character_name == character
                 )
+                or item is protected
                 for item in prefix[start : cursor + 1]
             ):
                 continue

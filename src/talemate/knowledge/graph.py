@@ -37,6 +37,13 @@ def _ordered(facts: list[Fact], scene: "Scene") -> list[Fact]:
     )
 
 
+def _acquisition_order(fact: Fact) -> int:
+    return max(
+        (item.acquired.order for item in fact.contributions),
+        default=fact.acquired.order if fact.acquired is not None else 0,
+    )
+
+
 def _facts_about(
     scene: "Scene", entity: str, character: str | None = None, *, known=None
 ) -> list[Fact]:
@@ -55,10 +62,7 @@ def _facts_about(
             ]
     facts = [fact for fact in facts if mentions(fact, aliases)]
     if character is not None and character_knowledge_enabled(scene):
-        return sorted(
-            facts,
-            key=lambda fact: max(item.acquired.order for item in fact.contributions),
-        )
+        return sorted(facts, key=_acquisition_order)
     return _ordered(facts, scene)
 
 
@@ -153,6 +157,8 @@ def _item(fact: Fact) -> KnowledgeItem:
 
 
 def perception_kind(view: Fact) -> KnownKind:
+    if view.source == "offscreen":
+        return "witnessed"
     return (
         "granted"
         if all(item.source.kind == "disclosure" for item in view.contributions)
@@ -185,7 +191,7 @@ def bucket(scene: "Scene", character: str) -> list[tuple[Fact, KnownKind]]:
                 known.append((view, perception_kind(view)))
         return sorted(
             known,
-            key=lambda pair: max(item.acquired.order for item in pair[0].contributions),
+            key=lambda pair: _acquisition_order(pair[0]),
         )
     index = KnowledgeIndex.from_scene(scene)
     known: list[tuple[Fact, KnownKind]] = []

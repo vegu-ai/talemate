@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from talemate.knowledge.transitions import (
+    protected_transition,
+    render_transition,
+    transition_index,
+)
+
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Literal
 
 from talemate.knowledge.context import (
@@ -451,7 +457,10 @@ class _PerspectiveHistorySelector:
 
     def _required_message_ids(self, start: int, end: int) -> set[int] | None:
         required = set()
+        protected = protected_transition(self.scene, self.character)
         for message in self.prefix[start : end + 1]:
+            if message is protected:
+                return None
             if message.hidden and not self.show_hidden:
                 return None
             if (
@@ -940,6 +949,36 @@ class _PerspectiveHistorySelector:
         collect = self._best_fit if self.policy.best_fit else self._ratio
         nodes, allocations = self._with_intro(collect)
         nodes = self._normalize_disclosures(nodes)
+        protected = protected_transition(self.scene, self.character)
+        if (
+            protected is not None
+            and protected in self.prefix
+            and not any(node.entry.message_id == protected.id for node in nodes)
+        ):
+            index = transition_index(self.scene, protected)
+            node = self._message_node(index)
+            if node is not None:
+                position = next(
+                    (i for i, item in enumerate(nodes) if item.entry.start > index),
+                    len(nodes),
+                )
+                nodes.insert(position, node)
+        if protected is not None:
+            for node in nodes:
+                if node.entry.message_id == protected.id:
+                    available = max(
+                        0,
+                        self.budget
+                        - sum(
+                            other.entry.token_count
+                            for other in nodes
+                            if other is not node
+                        ),
+                    )
+                    text = render_transition(self.scene, protected, budget=available)
+                    node.entry = replace(
+                        node.entry, text=text, token_count=count_tokens(text)
+                    )
         entries = tuple(node.entry for node in nodes if node.entry.text)
         total = sum(entry.token_count for entry in entries)
         raw_count = len(

@@ -25,10 +25,6 @@
             <v-list-item v-for="disclosure in disclosures" :key="disclosure.id">
                 <v-list-item-title class="text-wrap">{{ disclosure.text }}</v-list-item-title>
                 <v-list-item-subtitle>Source: {{ targetLabel(disclosure.origin) }}</v-list-item-subtitle>
-                <template v-if="isEntryBriefing(disclosure)" v-slot:append>
-                    <v-btn size="small" variant="text" color="primary" prepend-icon="mdi-refresh" :disabled="busy" @click="regenerateEntryBriefing(disclosure)">Regenerate</v-btn>
-                    <ConfirmActionInline icon="mdi-delete-outline" color="delete" action-label="Remove" confirm-label="Confirm" :disabled="busy" @confirm="removeEntryBriefing(disclosure)" />
-                </template>
             </v-list-item>
         </v-list>
         <v-card v-else variant="tonal" class="mb-4">
@@ -156,7 +152,6 @@ export default {
             error: null,
             factsWarning: null,
             disclosureRequestId: null,
-            entryBriefingRequestId: null,
             edges: [],
             coverage: [],
             awareness: null,
@@ -228,7 +223,6 @@ export default {
                     this.error = null;
                     this.factsWarning = null;
                     this.disclosureRequestId = null;
-                    this.entryBriefingRequestId = null;
                     this.busy = false;
                     this.perceptionMode = false;
                     this.disclosures = [];
@@ -307,12 +301,8 @@ export default {
             return labels[how] || 'Known';
         },
         targetLabel(id) {
-            if (id === 'character-entry-briefing') return 'Generated character entry briefing';
             const target = this.targets.find(t => t.id === id);
             return target ? target.label : id;
-        },
-        isEntryBriefing(disclosure) {
-            return disclosure.origin === 'character-entry-briefing';
         },
         edgeHint(edge) {
             return edge.kind === 'grant'
@@ -330,32 +320,6 @@ export default {
                 name: this.character.name, target: this.newTarget,
                 information: this.wholeEntry ? null : this.information,
                 whole_entry: this.wholeEntry,
-            }));
-        },
-        regenerateEntryBriefing(disclosure) {
-            if (!this.isEntryBriefing(disclosure) || this.busy) return;
-            this.busy = true;
-            this.error = null;
-            this.entryBriefingRequestId = newUuid();
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'regenerate_entry_briefing',
-                request_id: this.entryBriefingRequestId,
-                name: this.character.name,
-                disclosure_id: disclosure.id,
-            }));
-        },
-        removeEntryBriefing(disclosure) {
-            if (!this.isEntryBriefing(disclosure) || this.busy) return;
-            this.busy = true;
-            this.error = null;
-            this.entryBriefingRequestId = newUuid();
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'remove_entry_briefing',
-                request_id: this.entryBriefingRequestId,
-                name: this.character.name,
-                disclosure_id: disclosure.id,
             }));
         },
         addEdge() {
@@ -400,16 +364,15 @@ export default {
             }
             if (message.type !== 'world_state_manager') return;
             const failedDisclosureAction = message.action === 'operation_done'
-                && ['grant_disclosure', 'regenerate_entry_briefing', 'remove_entry_briefing'].includes(message.failed_action);
-            const activeRequestId = this.disclosureRequestId || this.entryBriefingRequestId;
+                && ['grant_disclosure'].includes(message.failed_action);
+            const activeRequestId = this.disclosureRequestId;
             if (failedDisclosureAction
                 && (message.request_id ? message.request_id === activeRequestId : message.data?.name === this.character?.name)) {
                 this.busy = false;
                 this.disclosureRequestId = null;
-                this.entryBriefingRequestId = null;
                 this.error = message.error.message;
             }
-            if (['disclosure_indexed', 'entry_briefing_indexed'].includes(message.action) && message.data.name === this.character?.name) {
+            if (['disclosure_indexed'].includes(message.action) && message.data.name === this.character?.name) {
                 this.factsWarning = message.data.facts_status === 'failed'
                     ? 'The information is saved, but its searchable facts could not be recorded. Retry the failed request if it is still open; otherwise see Knowledge in the user guide for recovery steps.'
                     : null;
@@ -438,7 +401,7 @@ export default {
                 this.coverage = message.data.coverage || [];
                 this.awareness = message.data.awareness || null;
                 // Indexing refreshes can arrive after another grant has started.
-                const activeRequestId = this.disclosureRequestId || this.entryBriefingRequestId;
+                const activeRequestId = this.disclosureRequestId;
                 const completesRequest = activeRequestId
                     ? message.request_id === activeRequestId
                     : !message.request_id;
@@ -449,7 +412,6 @@ export default {
                         this.wholeEntry = false;
                         this.disclosureRequestId = null;
                     }
-                    this.entryBriefingRequestId = null;
                     this.$emit('require-scene-save');
                 }
             }

@@ -84,9 +84,9 @@ Disable this if you want the AI to generate dialogue without following the scene
 
 ## :material-head-lightbulb-outline: Character Knowledge
 
-The section opens with the **Character knowledge effort** slider. One stop sets this group and the Summarizer and Memory knowledge settings together, as an unsaved edit of this page; see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets) for what each stop turns on and what it asks of your model.
+The section opens with the **Character knowledge effort** slider. One stop sets this group and the Summarizer, Memory and Narrator knowledge settings together, as an unsaved edit of this page; see [Effort presets](/talemate/user-guide/world-editor/knowledge/#effort-presets) for what each stop turns on and what it asks of your model.
 
-Help characters respond using what they know. In **Standard** mode, use this group to limit memories, remind the AI about unknown facts, and track learning from dialogue. The controls below apply to Standard mode unless stated otherwise. [How character knowledge works](/talemate/user-guide/world-editor/knowledge-how-it-works/) shows what each switch does, with diagrams.
+Help characters respond using what they know. In **Standard** mode, use this group to limit memories, remind the AI about unknown facts, and track learning from dialogue. The controls below apply to Standard mode unless stated otherwise. [Character knowledge: flow reference](/talemate/user-guide/world-editor/knowledge-how-it-works/) shows what each switch does, with diagrams.
 
 The **Character Knowledge** master switch also supplies **Known facts** and **Unknown recent facts** to the Summarizer's [conversation analysis](/talemate/user-guide/agents/summarizer/settings/#conversation), when Scene Analysis is enabled. These lists apply even if **Limit to character knowledge** or **Remind about unknown facts** is off. Turning the master switch off removes them. Each list uses up to one sixth of the analysis client's context budget, plus headings, reserved from scene history; they add no AI request and are omitted when neither list has facts that fit.
 
@@ -94,7 +94,7 @@ The **Character Knowledge** master switch also supplies **Known facts** and **Un
 
 ![Conversation agent character knowledge settings](/talemate/img/0.40.0/conversation-character-knowledge-settings.png)
 
-Limiting knowledge, adding reminders and the live character-entry orientation need no extra request. **Brief characters on entry**, **Refine memories with AI** and **Track learning from dialogue** normally add one request when they run and are off by default. A combined entry briefing can add a second request when its Offscreen Life account needs a retry.
+Limiting knowledge, adding reminders and character return transitions need no extra request. **Refine memories with AI** and **Track learning from dialogue** normally add one request when they run and are off by default. Narrator **Offscreen Life** adds one request per eligible return when enabled at Thorough and above.
 
 ##### Limit to character knowledge
 
@@ -118,19 +118,9 @@ Give the AI a short overview of which topics the character knows about. **Turn o
 
 For example: `Edwin knows all of the Sorena, some of the sextant, nothing of the boat`. Only topics with at least three facts count; at most six are listed, largest first. The overview is omitted when no topic qualifies. It describes recorded facts, not everything a character understands.
 
-##### Character entry turns
+##### Return transitions
 
-Keep a private arrival orientation in a character's prompt for this many of their committed lines (default 3). Explicit activation or re-entry starts the window; loading an already active character does not. Only that character's completed lines consume it, so retries and other characters' lines do not. The remaining count survives save and reload.
-
-The orientation is rebuilt before every prompt from what that character currently knows: up to twelve ranked facts about characters present now, the current roster, up to five visible lines since entry, time since entry, and the time since they were last known to be present when returning. The complete block has a fixed prompt-token ceiling. It does not copy the raw scene description or infer a clock time. Player characters receive the same zero-request orientation for context preview and AI-driven turns.
-
-##### Brief characters on entry
-
-Generate a short private perception when a non-player character enters or returns. It replaces the live arrival orientation for the same **Character entry turns** window and uses only that character's known facts, unknown-fact reminders and character-visible history. If generation fails, is cancelled or cannot be read, the entry still succeeds and the live zero-request orientation remains.
-
-Off by default. Normally uses **one World State client request per non-player character activation**. If Narrator **Offscreen Life** also applies to the return, the combined request uses the Narrator client plus its Length and extra instructions to produce both the private briefing and the ordinary offscreen account. A malformed or missing account is retried through the ordinary Offscreen Life path, making that return cost two requests; it never discards a readable briefing. Player characters never trigger the briefing request.
-
-In Standard mode, the generated text is prompt-only state and appears in **Prompt Manager → Scene Context** for that character. In Character perspectives mode, it is a disclosure in **Characters → Knowledge**, where **Regenerate** replaces that briefing and restarts its turn window, and **Remove** deletes only the briefing. Neither action changes a paired Offscreen Life fact.
+With **Limit to character knowledge** enabled in Standard mode, or in Character perspectives mode, actual returns create a zero-request transition in the character's chronological context: departure, recorded scene time away, and return. Expand its scene-history entry to add an arrival note. Derived timing updates automatically. The transition stays protected until the first completed reply and does not replay the departure exchange. [Offscreen Life](/talemate/user-guide/agents/narrator/settings/#offscreen-life) optionally adds the character's account at Thorough and above; Balanced and lower keep it off.
 
 ##### Refine memories with AI
 

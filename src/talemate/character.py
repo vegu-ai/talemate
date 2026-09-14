@@ -1,3 +1,5 @@
+from talemate.knowledge.transitions import record_departure, record_arrival
+
 from typing import TYPE_CHECKING, Union
 import pydantic
 from talemate.context import active_scene
@@ -753,7 +755,12 @@ class VoiceChangedEvent(pydantic.BaseModel):
     auto: bool = False
 
 
-async def deactivate_character(scene: "Scene", character: Union[str, "Character"]):
+async def deactivate_character(
+    scene: "Scene",
+    character: Union[str, "Character"],
+    *,
+    record_transition: bool = True,
+):
     """
     Deactivates a character
 
@@ -770,6 +777,8 @@ async def deactivate_character(scene: "Scene", character: Union[str, "Character"
         # already deactivated
         return False
 
+    if record_transition:
+        record_departure(scene, character)
     await scene.remove_actor(character.actor)
 
 
@@ -801,6 +810,7 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
 
     await scene.add_actor(actor)
 
+    record_arrival(scene, character)
     await async_signals.get("character.activated").send(
         CharacterActivatedEvent(
             scene=scene, character=character, event_type="character.activated"

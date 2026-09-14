@@ -266,6 +266,8 @@ class Fact(pydantic.BaseModel):
     text_edited: bool = False
     link_edited: bool = False
 
+    # Independent offscreen knowledge has no source contribution to carry its order.
+    acquired: Acquisition | None = None
     contributions: tuple[FactContribution, ...] = ()
     restated_by: tuple[FactRestatement, ...] = ()
 
@@ -279,7 +281,7 @@ class Fact(pydantic.BaseModel):
         for key in ("text_edited", "link_edited"):
             if not getattr(self, key):
                 data.pop(key, None)
-        for key in ("message_id", "message_digest"):
+        for key in ("message_id", "message_digest", "acquired"):
             if data.get(key) is None:
                 data.pop(key, None)
         return data

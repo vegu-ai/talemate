@@ -34,6 +34,12 @@ from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.context import ContextHistoryMessage, project_character_history
 from talemate.knowledge.history_selection import HistorySelectionPolicy
 from talemate.knowledge.presence import layer_entry_presence
+from talemate.knowledge.transitions import (
+    protected_transition,
+    transition_index,
+    render_transition,
+    summary_message_span,
+)
 from talemate.util import count_tokens
 from talemate.util.prompt import condensed
 from talemate.util.time import duration_to_human
@@ -50,7 +56,26 @@ _PREVIEW_DEFAULT_BUDGET = 8192
 # regardless of budget. Set to 0 to disable the guarantee.
 _BEST_FIT_MIN_DIALOGUE = 3
 
-HistoryLine = pydantic.InstanceOf[ContextHistoryMessage] | str
+
+class ContextHistorySpan(str):
+    """A formatted summary's source range, retained through selection."""
+
+    def __new__(cls, text, start, end, transition_ids=()):
+        instance = super().__new__(cls, text)
+        instance.start = start
+        instance.end = end
+        instance.transition_ids = tuple(transition_ids)
+        return instance
+
+    def __getnewargs__(self):
+        return str(self), self.start, self.end, self.transition_ids
+
+
+HistoryLine = (
+    pydantic.InstanceOf[ContextHistoryMessage]
+    | pydantic.InstanceOf[ContextHistorySpan]
+    | str
+)
 
 
 class _CollectedHistory(pydantic.BaseModel):
@@ -64,9 +89,9 @@ class _CollectedHistory(pydantic.BaseModel):
     level_budgets: list[int]  # [archived, layer0, layer1, ...]
     parts_dialogue: list[HistoryLine]
     dialogue_start_idx: int
-    parts_archived: list[str]
+    parts_archived: list[HistoryLine]
     archived_boundary: int
-    parts_layers: list[list[str]]
+    parts_layers: list[list[HistoryLine]]
     layer_chapters: list[list[str]]
     layer_boundaries: list[int]
     has_layered: bool
@@ -143,6 +168,9 @@ class ContextHistoryParams(pydantic.BaseModel):
 
     _knowledge_index: KnowledgeIndex | None = pydantic.PrivateAttr(default=None)
     _diagnostics: ContextDiagnostics | None = pydantic.PrivateAttr(default=None)
+    _transition_raw_start: int | None = pydantic.PrivateAttr(default=None)
+    # The more detailed levels may already mark the same unwitnessed stretch.
+    _leading_gap: bool = pydantic.PrivateAttr(default=False)
     _intro_carried: bool = pydantic.PrivateAttr(default=False)
 
     def bind(self, scene: Scene) -> "ContextHistoryParams":
@@ -168,8 +196,8 @@ class ContextHistoryParams(pydantic.BaseModel):
 
     def gap_line(self, seconds: int | None) -> str:
         if seconds and seconds > 0:
-            return f"({self.perspective} was elsewhere for {duration_to_human(seconds, suffix='')})"
-        return f"({self.perspective} was elsewhere for a while)"
+            return f"({self.perspective} did not witness {duration_to_human(seconds, suffix='')} of scene time)"
+        return f"({self.perspective} did not witness this part of the scene)"
 
 
 class ContextHistoryMixin:
@@ -457,6 +485,11 @@ class ContextHistoryMixin:
     @staticmethod
     def _is_dialogue_qualifying(message, params: ContextHistoryParams) -> bool:
         """Return True if the message should be included in dialogue output."""
+        if (
+            message.typ == "character_transition"
+            and params.perspective != message.character_name
+        ):
+            return False
         if message.hidden and not params.show_hidden:
             if params._diagnostics is not None:
                 params._diagnostics.exclude(
@@ -541,6 +574,12 @@ class ContextHistoryMixin:
         dialogue_messages_collected = 0
         exhausted = False
         pending_gap = False
+        params._leading_gap = False
+        protected = (
+            protected_transition(scene, params.perspective)
+            if params.perspective
+            else None
+        )
 
         for i in range(history_len - 1, -1, -1):
             message = scene.history[i]
@@ -565,12 +604,17 @@ class ContextHistoryMixin:
             formatted = message.as_format(
                 conversation_format, mode=actor_direction_mode
             )
+            if message is protected:
+                formatted = render_transition(
+                    scene, message, budget=max(0, budget - count_tokens(parts_dialogue))
+                )
             gap_tokens = (
                 count_tokens(params.gap_line(None)) if pending_gap and filterable else 0
             )
             if (
                 count_tokens(parts_dialogue) + count_tokens(formatted) + gap_tokens
                 > budget
+                and message is not protected
             ):
                 break
 
@@ -595,8 +639,178 @@ class ContextHistoryMixin:
             <= budget
         ):
             parts_dialogue.insert(0, params.gap_line(None))
+            params._leading_gap = True
 
+        if protected is not None and not any(
+            getattr(part, "message_id", None) == protected.id for part in parts_dialogue
+        ):
+            index = transition_index(scene, protected)
+            if index < dialogue_start_idx:
+                parts_dialogue.insert(
+                    0,
+                    ContextHistoryMessage(
+                        render_transition(
+                            scene,
+                            protected,
+                            budget=max(0, budget - count_tokens(parts_dialogue)),
+                        ),
+                        protected.id,
+                    ),
+                )
+                parts_dialogue[0].transition_index = index
+        params._transition_raw_start = dialogue_start_idx
         return parts_dialogue, dialogue_start_idx, exhausted
+
+    @staticmethod
+    def _transition_summary(scene, entry, layer, params, *, prev_boundary=None):
+        """Descend across a return boundary; scaffolding is never summarized story.
+
+        Ordinary child summaries retain their compression. A base span crossing
+        the protected return falls back to its permitted source lines.
+        """
+        if params is None or not params.perspective:
+            return None
+        span = summary_message_span(scene, entry, layer)
+        if span is None:
+            return None
+        start, end = span
+        protected = protected_transition(scene, params.perspective)
+        transitions = {
+            i: message
+            for i, message in enumerate(scene.history[start : end + 1], start)
+            if message is protected
+        }
+        if not transitions:
+            return None
+        limit = params._transition_raw_start
+        end = min(end, limit - 1) if limit is not None else end
+        if end < start:
+            return None
+        parts = []
+        if layer == 0:
+            for message in scene.history[start : end + 1]:
+                if not ContextHistoryMixin._is_dialogue_qualifying(message, params):
+                    continue
+                if ContextHistoryMixin._is_knowledge_filterable(
+                    message, params
+                ) and not params.knows(
+                    KnowledgeItem.from_message(message),
+                    text=str(message),
+                    identity=message.id,
+                ):
+                    continue
+                text = message.as_format(scene.conversation_format)
+                if text:
+                    parts.append(text)
+        else:
+            children = (
+                scene.archived_history
+                if layer == 1
+                else scene.layered_history[layer - 2]
+            )
+            child_end = entry["end"] + 1
+            if prev_boundary is not None:
+                child_end = min(child_end, prev_boundary)
+                lower_span = summary_message_span(
+                    scene, children[child_end - 1], layer - 1
+                )
+                if lower_span is not None:
+                    end = min(end, lower_span[1])
+            cursor = start
+            for child in children[entry["start"] : child_end]:
+                child_span = summary_message_span(scene, child, layer - 1)
+                if child_span is None:
+                    continue
+                a, b = child_span
+                for i in range(cursor, min(a, end + 1)):
+                    if i in transitions:
+                        parts.append(
+                            transitions[i].as_format(scene.conversation_format)
+                        )
+                if a > end:
+                    break
+                expanded = ContextHistoryMixin._transition_summary(
+                    scene, child, layer - 1, params
+                )
+                if expanded is not None:
+                    parts.append(expanded)
+                elif b <= end:
+                    present = (
+                        child.get("present")
+                        if layer == 1
+                        else layer_entry_presence(scene, layer - 2, child)
+                    )
+                    if params.knows(
+                        KnowledgeItem(
+                            id=child.get("id", ""), kind="history", present=present
+                        )
+                    ):
+                        text = (
+                            ContextHistoryMixin._context_history_format_archived_entry(
+                                child, scene.ts
+                            )
+                            if layer == 1
+                            else ContextHistoryMixin._context_history_format_layered_entry(
+                                child, scene.ts
+                            )[0]
+                        )
+                        parts.append(text)
+                cursor = b + 1
+            for i in range(cursor, end + 1):
+                if i in transitions:
+                    parts.append(transitions[i].as_format(scene.conversation_format))
+        return ContextHistorySpan(
+            "\n\n".join(part for part in parts if part),
+            start,
+            end,
+            [message.id for index, message in transitions.items() if index <= end],
+        )
+
+    @staticmethod
+    def _source_span(text, scene, entry, layer=0):
+        span = summary_message_span(scene, entry, layer)
+        if span is None:
+            return text
+        return ContextHistorySpan(text, *span, getattr(text, "transition_ids", ()))
+
+    @staticmethod
+    def _place_protected_transitions(groups):
+        """Merge reserved return entries into the selected history's chronology."""
+        reserved = [
+            (group, part)
+            for group in groups
+            for part in group
+            if getattr(part, "transition_index", None) is not None
+        ]
+        for group, part in reserved:
+            selected = [
+                (items, i, value) for items in groups for i, value in enumerate(items)
+            ]
+            if any(
+                value is not part
+                and (
+                    part.message_id in getattr(value, "transition_ids", ())
+                    or getattr(value, "message_id", None) == part.message_id
+                )
+                for _, _, value in selected
+            ):
+                group.pop(next(i for i, value in enumerate(group) if value is part))
+                continue
+            position = next(
+                i for i, (_, _, value) in enumerate(selected) if value is part
+            )
+            destination = next(
+                (
+                    (items, i)
+                    for items, i, value in selected[:position]
+                    if getattr(value, "start", getattr(value, "history_index", -1))
+                    > part.transition_index
+                ),
+                None,
+            )
+            if destination is not None:
+                group.pop(next(i for i, value in enumerate(group) if value is part))
+                destination[0].insert(destination[1], part)
 
     @staticmethod
     def _context_history_format_archived_entry(entry: dict, scene_ts: int) -> str:
@@ -686,17 +900,30 @@ class ContextHistoryMixin:
             if entry_start >= dialogue_start_idx:
                 continue
 
-            if params is not None and not params.knows(
-                KnowledgeItem.from_archive_entry(entry),
-                kind="archived",
-                text=entry["text"],
+            expanded = ContextHistoryMixin._transition_summary(scene, entry, 0, params)
+            if expanded is not None and not expanded:
+                # The dialogue collector already marks this unwitnessed absence.
+                archived_boundary = i
+                continue
+            if (
+                expanded is None
+                and params is not None
+                and not params.knows(
+                    KnowledgeItem.from_archive_entry(entry),
+                    kind="archived",
+                    text=entry["text"],
+                )
             ):
-                if gap_end_ts is None:
+                if gap_end_ts is None and not params._leading_gap:
                     gap_end_ts = entry.get("ts") or 0
                 continue
 
-            text = ContextHistoryMixin._context_history_format_archived_entry(
-                entry, scene.ts
+            text = (
+                expanded
+                if expanded is not None
+                else ContextHistoryMixin._context_history_format_archived_entry(
+                    entry, scene.ts
+                )
             )
             if gap_end_ts is not None:
                 gap = params.gap_line(gap_end_ts - (entry.get("ts") or 0))
@@ -710,12 +937,18 @@ class ContextHistoryMixin:
                     and archived_tokens + count_tokens(gap) <= budget
                 ):
                     parts_archived.insert(0, gap)
+                    params._leading_gap = True
                     gap_end_ts = None
                 break
 
             gap_end_ts = None
 
+            text = ContextHistoryMixin._source_span(text, scene, entry)
+            if expanded is not None:
+                text.transition_ids = expanded.transition_ids
             parts_archived.insert(0, text)
+            if params is not None:
+                params._leading_gap = False
             if params is not None and ContextHistoryMixin._summary_carries_intro(
                 scene, entry
             ):
@@ -728,6 +961,7 @@ class ContextHistoryMixin:
             and archived_tokens + count_tokens(params.gap_line(None)) <= budget
         ):
             parts_archived.insert(0, params.gap_line(None))
+            params._leading_gap = True
 
         log.debug(
             "context_history",
@@ -779,7 +1013,22 @@ class ContextHistoryMixin:
             if entry_start is not None and entry_start >= prev_boundary:
                 continue
 
-            if params is not None and scene is not None and layer_index is not None:
+            expanded = (
+                ContextHistoryMixin._transition_summary(
+                    scene, entry, layer_index + 1, params, prev_boundary=prev_boundary
+                )
+                if scene is not None and layer_index is not None
+                else None
+            )
+            if expanded is not None and not expanded:
+                layer_boundary = j
+                continue
+            if (
+                expanded is None
+                and params is not None
+                and scene is not None
+                and layer_index is not None
+            ):
                 present = layer_entry_presence(scene, layer_index, entry)
                 if not params.knows(
                     KnowledgeItem(
@@ -789,7 +1038,7 @@ class ContextHistoryMixin:
                     text=entry["text"],
                     layer=layer_index,
                 ):
-                    if gap_end_ts is None:
+                    if gap_end_ts is None and not params._leading_gap:
                         gap_end_ts = entry.get("ts_end") or entry.get("ts") or 0
                     continue
 
@@ -803,6 +1052,8 @@ class ContextHistoryMixin:
                 )
             )
 
+            if expanded is not None:
+                text = expanded
             if chapter_number:
                 chapter_numbers.append(chapter_number)
 
@@ -820,11 +1071,20 @@ class ContextHistoryMixin:
                     and layer_tokens + count_tokens(gap) <= budget
                 ):
                     layer_parts.insert(0, gap)
+                    params._leading_gap = True
                     gap_end_ts = None
                 break
 
             gap_end_ts = None
+            if scene is not None and layer_index is not None:
+                text = ContextHistoryMixin._source_span(
+                    text, scene, entry, layer_index + 1
+                )
+                if expanded is not None:
+                    text.transition_ids = expanded.transition_ids
             layer_parts.insert(0, text)
+            if params is not None:
+                params._leading_gap = False
             if (
                 params is not None
                 and scene is not None
@@ -841,6 +1101,7 @@ class ContextHistoryMixin:
             and layer_tokens + count_tokens(params.gap_line(None)) <= budget
         ):
             layer_parts.insert(0, params.gap_line(None))
+            params._leading_gap = True
 
         return layer_parts, layer_boundary, chapter_numbers
 
@@ -855,9 +1116,12 @@ class ContextHistoryMixin:
         if active_agent_ctx:
             active_agent_ctx.state["chapter_numbers"] = chapter_numbers
 
+        groups = [list(parts_context), list(parts_dialogue)]
+        ContextHistoryMixin._place_protected_transitions(groups)
         return [
             part if isinstance(part, ContextHistoryMessage) else str(part)
-            for part in [*parts_context, *parts_dialogue]
+            for group in groups
+            for part in group
         ]
 
     @staticmethod
@@ -1022,7 +1286,7 @@ class ContextHistoryMixin:
         )
 
         # --- Layered History Levels ---
-        parts_layers: list[list[str]] = []
+        parts_layers: list[list[HistoryLine]] = []
         layer_chapters: list[list[str]] = []
         layer_boundaries: list[int] = []
 
@@ -1199,8 +1463,13 @@ class ContextHistoryMixin:
                         for e in layer
                     ]
 
+                expanded = [
+                    self._transition_summary(scene, layer[j], i + 1, params)
+                    for j in range(len(entries))
+                ]
                 missed = [
-                    params is not None
+                    expanded[j] is None
+                    and params is not None
                     and not params.knows(
                         KnowledgeItem(
                             id=entry.get("id", ""),
@@ -1216,12 +1485,15 @@ class ContextHistoryMixin:
                 formatted: list[str] = []
                 tokens: list[int] = []
                 for j, entry in enumerate(entries):
-                    if missed[j]:
+                    if expanded[j] is not None:
+                        text = expanded[j]
+                    elif missed[j]:
                         text = self._best_fit_gap_slot(params, missed, j)
                     else:
                         text, _ = self._context_history_format_layered_entry(
                             entry, scene.ts
                         )
+                    text = self._source_span(text, scene, layer[j], i + 1)
                     formatted.append(text)
                     tokens.append(count_tokens(text) if text else 0)
                 levels.append(
@@ -1256,24 +1528,32 @@ class ContextHistoryMixin:
                                 computed_start = prev_end + 1
                         enriched.append({**entry, "start": computed_start})
 
+                expanded_arch = [
+                    self._transition_summary(scene, entry, 0, params)
+                    for entry in enriched
+                ]
                 missed_arch = [
-                    params is not None
+                    expanded_arch[idx] is None
+                    and params is not None
                     and not params.knows(
                         KnowledgeItem.from_archive_entry(entry),
                         kind="archived",
                         text=entry["text"],
                     )
-                    for entry in enriched
+                    for idx, entry in enumerate(enriched)
                 ]
                 formatted_arch: list[str] = []
                 tokens_arch: list[int] = []
                 for idx, entry in enumerate(enriched):
-                    if missed_arch[idx]:
+                    if expanded_arch[idx] is not None:
+                        text = expanded_arch[idx]
+                    elif missed_arch[idx]:
                         text = self._best_fit_gap_slot(params, missed_arch, idx)
                     else:
                         text = self._context_history_format_archived_entry(
                             entry, scene.ts
                         )
+                    text = self._source_span(text, scene, entry)
                     formatted_arch.append(text)
                     tokens_arch.append(count_tokens(text) if text else 0)
                 levels.append(
@@ -1351,6 +1631,7 @@ class ContextHistoryMixin:
             for i in range(summarized_to + 1)
         ]
         rendered: list[str | None] = []
+        excluded_ids = {getattr(part, "message_id", None) for part in (exclude or ())}
         for i in range(summarized_to + 1):
             if i < len(scene.history) and _is_qualifying(scene.history[i], params):
                 rendered.append(
@@ -1361,6 +1642,7 @@ class ContextHistoryMixin:
                         scene.history[i].id,
                     )
                 )
+                rendered[-1].history_index = i
             else:
                 rendered.append(None)
         gap_transparent = [
@@ -1368,6 +1650,7 @@ class ContextHistoryMixin:
             and (
                 rendered[i] is None
                 or (bool(exclude) and rendered[i] in exclude)
+                or getattr(rendered[i], "message_id", None) in excluded_ids
                 or not ContextHistoryMixin._is_knowledge_filterable(
                     scene.history[i], params
                 )
@@ -1385,7 +1668,11 @@ class ContextHistoryMixin:
                 tokens.append(count_tokens(text) if text else 0)
                 continue
             text = rendered[i]
-            if text is not None and not (exclude and text in exclude):
+            if (
+                text is not None
+                and text.message_id not in excluded_ids
+                and not (exclude and text in exclude)
+            ):
                 formatted.append(text)
                 tokens.append(count_tokens(text))
                 continue
@@ -1562,6 +1849,7 @@ class ContextHistoryMixin:
         actor_direction_mode = get_agent("director").actor_direction_mode
         _is_qualifying = ContextHistoryMixin._is_dialogue_qualifying
         collected = set(parts_dialogue)
+        positions = {item.id: index for index, item in enumerate(scene.history)}
 
         for i in range(len(scene.history) - 1, -1, -1):
             if needed <= 0:
@@ -1583,10 +1871,28 @@ class ContextHistoryMixin:
             formatted = message.as_format(
                 conversation_format, mode=actor_direction_mode
             )
-            if formatted in collected:
+            if formatted in collected or any(
+                getattr(part, "message_id", None) == message.id
+                for part in parts_dialogue
+            ):
                 continue
 
-            parts_dialogue.insert(0, ContextHistoryMessage(formatted, message.id))
+            insertion = next(
+                (
+                    j
+                    for j, part in enumerate(parts_dialogue)
+                    if positions.get(getattr(part, "message_id", None), -1) > i
+                ),
+                len(parts_dialogue)
+                if any(
+                    getattr(part, "message_id", None) is not None
+                    for part in parts_dialogue
+                )
+                else 0,
+            )
+            parts_dialogue.insert(
+                insertion, ContextHistoryMessage(formatted, message.id)
+            )
             collected.add(formatted)
             needed -= 1
 
@@ -2137,6 +2443,10 @@ class ContextHistoryMixin:
             }
         )
 
+        self._place_protected_transitions([section["entries"] for section in sections])
+        for section in sections:
+            section["token_count"] = count_tokens(section["entries"])
+            section["entry_count"] = len(section["entries"])
         total_tokens = sum(s["token_count"] for s in sections)
 
         return {
@@ -2267,6 +2577,10 @@ class ContextHistoryMixin:
             }
         )
 
+        self._place_protected_transitions([section["entries"] for section in sections])
+        for section in sections:
+            section["token_count"] = count_tokens(section["entries"])
+            section["entry_count"] = len(section["entries"])
         total_tokens = sum(s["token_count"] for s in sections)
 
         return {

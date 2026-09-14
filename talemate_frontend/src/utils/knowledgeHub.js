@@ -18,10 +18,10 @@ export const KNOWLEDGE_TOGGLES = Object.freeze([
     { agent: 'conversation', action: 'character_knowledge', config: 'absence_block' },
     { agent: 'conversation', action: 'character_knowledge', config: 'awareness_line' },
     {
-        agent: 'conversation',
-        action: 'character_knowledge',
-        config: 'brief_characters_on_entry',
-        costLabel: 'Brief characters on entry (one request per NPC activation; account retry can add one)',
+        agent: 'narrator',
+        action: 'offscreen_life',
+        config: null,
+        costLabel: 'Offscreen Life (one request per eligible return)',
     },
     { agent: 'conversation', action: 'character_knowledge', config: 'memory_pass' },
     { agent: 'conversation', action: 'character_knowledge', config: 'ledger' },
@@ -40,6 +40,7 @@ const AGENT_LABELS = Object.freeze({
     conversation: 'Conversation',
     summarizer: 'Summarizer',
     memory: 'Memory',
+    narrator: 'Narrator',
 });
 
 // note_on_value keys arrive JSON-serialized, so the bool True reads "true"
@@ -79,6 +80,7 @@ export function resolveKnowledgeToggles(agents, { perspectives = true } = {}) {
         }
         if (spec.config === null) {
             group.master = !!action.can_be_disabled;
+            if (spec.costLabel) group.costLabel = spec.costLabel;
             continue;
         }
         const field = action.config?.[spec.config];
@@ -105,6 +107,7 @@ export function thoroughnessSummary(groups, perspectives) {
     for (const group of groups) {
         if (!group.enabled) continue;
         if (!perspectives && PERSPECTIVES_ONLY_ACTIONS.has(`${group.agent}.${group.action}`)) continue;
+        if (group.costLabel && (perspectives || groups.find(g => g.agent === 'conversation' && g.action === 'character_knowledge')?.enabled)) extras.push(group.costLabel);
         for (const toggle of group.toggles) {
             if (toggle.costNote && toggle.value) extras.push(toggle.costLabel || toggle.label);
         }

@@ -335,7 +335,6 @@ describe('the effort slider against the status frames of its own write', () => {
             awareness_line: { value: true },
             absence_limit: { value: 5 },
             absence_window: { value: 30 },
-            brief_characters_on_entry: { value: false },
             memory_pass: { value: false },
             ledger: { value: true },
         } } } };

@@ -1804,3 +1804,37 @@ async def test_one_line_fallback_needs_a_single_input(supported_scene):
     assert [fact.text for fact in scene.world_state.facts.values()] == [
         "Alice found the key."
     ]
+
+
+@pytest.mark.asyncio
+async def test_offscreen_account_follows_supported_fact_acquisition(supported_scene):
+    from talemate.knowledge.facts import store_offscreen_fact
+
+    scene, _, _ = supported_scene
+    _, source = chapter(scene, "Alice and Bob left the key on the table.", ts=10)
+    await store(
+        scene,
+        source,
+        ("Alice",),
+        "Alice and Bob left the key on the table.",
+        subjects=["key", "Alice", "Bob"],
+    )
+    earlier = next(iter(scene.world_state.facts.values()))
+    previous_order = scene.knowledge.last_order
+    scene.ts = 100
+    account = await store_offscreen_fact(
+        scene, "Alice", "Alice found Bob's key in her pocket."
+    )
+    assert current_state(scene, "key", character="Alice").id == account.id
+    assert [fact.id for fact, _ in bucket(scene, "Alice")] == [earlier.id, account.id]
+    assert [
+        fact.id
+        for fact in relationship_timeline(scene, "Alice", "Bob", character="Alice")
+    ] == [earlier.id, account.id]
+    assert facts_about(scene, "key", character="Alice")[0].id == account.id
+    assert current_state(scene, "key", character="Bob") is None
+    assert account.acquired.order == previous_order + 1 == scene.knowledge.last_order
+    restored = Fact.model_validate(account.model_dump())
+    assert restored.acquired == account.acquired
+    scene.world_state.facts[account.id] = restored
+    assert current_state(scene, "key", character="Alice").id == restored.id

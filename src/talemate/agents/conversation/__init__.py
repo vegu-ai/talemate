@@ -332,7 +332,6 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
         )
 
         conversation_format = self.conversation_format
-        character_entry_context = self.character_entry_context(character)
         prompt = Prompt.get(
             f"conversation.dialogue-{conversation_format}",
             vars={
@@ -345,7 +344,6 @@ class ConversationAgent(CharacterKnowledgeMixin, MemoryRAGMixin, Agent):
                 "talking_character": character,
                 "knowledge_index": KnowledgeIndex.from_scene(scene),
                 "knowledge_viewer": self.rag_knowledge_viewer(character),
-                "character_entry_context": character_entry_context,
                 "partial_message": char_message,
                 "extra_instructions": self.generation_settings_task_instructions,  # backward compatibility
                 "task_instructions": self.generation_settings_task_instructions,

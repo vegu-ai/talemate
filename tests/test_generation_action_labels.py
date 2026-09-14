@@ -178,7 +178,7 @@ async def test_title_generation_owns_action_without_changing_title(
     assert update == [(chat.id, "The bell")]
 
 
-async def test_offscreen_archive_callback_owns_narrator_context(scene, monkeypatch):
+async def test_offscreen_return_callback_owns_narrator_context(scene, monkeypatch):
     narrator = get_agent("narrator")
     summarizer = get_agent("summarizer")
     alice = Character(name="Alice")
@@ -186,13 +186,13 @@ async def test_offscreen_archive_callback_owns_narrator_context(scene, monkeypat
     scene.active_characters = ["Alice"]
     narrator.actions["offscreen_life"].enabled = True
     monkeypatch.setattr(scene, "get_character", lambda name: alice)
-    monkeypatch.setattr(narrator, "pending_returns", {"Alice": scene.ts}, raising=False)
-    monkeypatch.setattr(narrator, "absence_fully_archived", lambda character: True)
-    monkeypatch.setattr(
-        narrator,
-        "missed_entries",
-        lambda character: [{}] * narrator.offscreen_life_min_entries,
-    )
+    from talemate.knowledge.transitions import record_departure, record_arrival
+    from talemate.scene_message import TimePassageMessage
+
+    record_departure(scene, alice)
+    scene.history.append(TimePassageMessage(ts=3600, message="An hour later"))
+    with ActiveScene(scene):
+        record_arrival(scene, alice)
     monkeypatch.setattr(narrator, "clean_result", lambda text, **kwargs: text)
     stored = SimpleNamespace(id="offscreen-test")
     save = AsyncMock(return_value=stored)
@@ -217,7 +217,9 @@ async def test_offscreen_archive_callback_owns_narrator_context(scene, monkeypat
 
     @set_processing
     async def build_archive(self):
-        await narrator.on_archive_add_offscreen(SimpleNamespace(scene=scene))
+        await narrator.on_character_activated(
+            SimpleNamespace(scene=scene, character=alice)
+        )
         assert active_agent.get().agent is summarizer
         assert active_agent.get().action == "build_archive"
         assert summarizer.status == "busy"
@@ -226,4 +228,6 @@ async def test_offscreen_archive_callback_owns_narrator_context(scene, monkeypat
 
     with ActiveScene(scene), ClientContext(disable_reasoning=False):
         await build_archive(summarizer)
-    save.assert_awaited_once_with(scene, "Alice", "Alice watched the harbour.")
+    assert save.await_count == 1
+    assert save.call_args.args == (scene, "Alice", "Alice watched the harbour.")
+    assert save.call_args.kwargs["still_current"]()

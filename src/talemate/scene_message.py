@@ -17,6 +17,7 @@ __all__ = [
     "NarratorMessage",
     "DirectorMessage",
     "TimePassageMessage",
+    "CharacterTransitionMessage",
     "ReinforcementMessage",
     "ContextInvestigationMessage",
     "MessageVersion",
@@ -911,6 +912,42 @@ class ContextInvestigationMessage(SceneMessage):
         return f"\n{self.message}\n".replace("*", "")
 
 
+class CharacterTransitionMessage(SceneMessage):
+    typ: str = "character_transition"
+    message: str = ""
+    character_name: str
+    departure_message_id: int | None = None
+    departure_at_start: bool = False
+    returning: bool = False
+    participants: list[str] = pydantic.Field(default_factory=list)
+    arrival_note: str = ""
+    offscreen_fact_id: str | None = None
+    offscreen_status: Literal["none", "pending", "ready", "failed"] = "none"
+
+    def to_dict(self) -> dict:
+        return {
+            **super().to_dict(),
+            **self.model_dump(
+                include={
+                    "character_name",
+                    "departure_message_id",
+                    "departure_at_start",
+                    "returning",
+                    "participants",
+                    "arrival_note",
+                    "offscreen_fact_id",
+                    "offscreen_status",
+                }
+            ),
+        }
+
+    def as_format(self, format: str, **kwargs) -> str:
+        from talemate.knowledge.transitions import render_transition
+
+        scene = self._knowledge_scene() if self._knowledge_scene else None
+        return render_transition(scene, self) if scene is not None else self.message
+
+
 MESSAGES = {
     "scene": SceneMessage,
     "character": CharacterMessage,
@@ -919,4 +956,5 @@ MESSAGES = {
     "time": TimePassageMessage,
     "reinforcement": ReinforcementMessage,
     "context_investigation": ContextInvestigationMessage,
+    "character_transition": CharacterTransitionMessage,
 }

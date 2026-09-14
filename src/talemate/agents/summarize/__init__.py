@@ -13,6 +13,7 @@ from talemate.events import HistoryEvent
 from talemate.prompts import Prompt
 from .response_specs import SUMMARY_SPEC, SUMMARY_WITH_FACTS_SPEC, CHUNK_CLEAN_SPEC
 from talemate.scene_message import (
+    CharacterTransitionMessage,
     DirectorMessage,
     TimePassageMessage,
     ContextInvestigationMessage,
@@ -382,7 +383,12 @@ class SummarizeAgent(
 
             if isinstance(
                 dialogue,
-                (DirectorMessage, ContextInvestigationMessage, ReinforcementMessage),
+                (
+                    DirectorMessage,
+                    ContextInvestigationMessage,
+                    ReinforcementMessage,
+                    CharacterTransitionMessage,
+                ),
             ):
                 # these messages are not part of the dialogue and should not be summarized
                 if i == start:

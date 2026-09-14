@@ -1,6 +1,7 @@
-// read({ scene, agentStatus }) -> { parts: [{ key, icon, text, tooltip, muted?, accent?, trailingIcon?, srText? }] }
-// A muted part is an unavailable or inactive state; an accent part carries a
-// state worth a glance, marked by its trailing icon and spoken via srText.
+// read({ scene, agentStatus }) -> { parts: [{ key, value?, label, tooltip, muted?, accent?, trailingIcon?, srText? }] }
+// A part reads as a value with a quiet label; a part without a value is a
+// muted unavailable or inactive state. An accent part carries a state worth a
+// glance, marked by its trailing icon and spoken via srText.
 
 const DUE_REASONS = {
     threshold: 'the gathered dialogue passed the threshold',
@@ -24,14 +25,14 @@ const HISTORY_STATS = {
             parts: [
                 {
                     key: 'messages',
-                    icon: 'mdi-message-text-outline',
-                    text: `${messages} ${messages === 1 ? 'message' : 'messages'}`,
+                    value: `${messages}`,
+                    label: messages === 1 ? 'message' : 'messages',
                     tooltip: 'Messages in the scene history, including ones already summarized.',
                 },
                 {
                     key: 'layers',
-                    icon: 'mdi-layers-outline',
-                    text: `${layers} summary ${layers === 1 ? 'layer' : 'layers'}`,
+                    value: `${layers}`,
+                    label: layers === 1 ? 'summary layer' : 'summary layers',
                     tooltip: 'Counts the base archive as the first summary layer, then each layered history layer (History tab: Base, Layer 0, ...).',
                 },
             ],
@@ -59,8 +60,8 @@ const SUMMARIZER = {
         const gathered = `${summarization.pending_tokens} of ${summarization.threshold} tokens gathered since the last summary.`;
         const part = {
             key: 'tokens',
-            icon: this.icon,
-            text: `${summarization.pending_tokens} / ${summarization.threshold} tokens`,
+            value: `${summarization.pending_tokens} / ${summarization.threshold}`,
+            label: 'tokens',
         };
         if (summarization.due) {
             const reason = DUE_REASONS[summarization.due_reason] || 'the archive rule cut the span';
@@ -75,22 +76,35 @@ const SUMMARIZER = {
     },
 };
 
-function unavailable(item, text, tooltip) {
-    return { parts: [{ key: `${item.id}-unavailable`, icon: item.icon, text, tooltip, muted: true }] };
+function unavailable(item, label, tooltip) {
+    return { parts: [{ key: `${item.id}-unavailable`, label, tooltip, muted: true }] };
 }
 
-export const SCENE_UTILITY_ITEMS = [HISTORY_STATS, SUMMARIZER];
+export const SCENE_HEADER_ITEMS = [HISTORY_STATS, SUMMARIZER];
 
-export function findSceneUtilityItem(id, catalog = SCENE_UTILITY_ITEMS) {
+export const SCENE_HEADER_SLOTS = [
+    { id: 'slot_a', label: 'Left of the title', setting: 'scene_header_slot_a' },
+    { id: 'slot_b', label: 'Right of the title', setting: 'scene_header_slot_b' },
+];
+
+export function findSceneHeaderItem(id, catalog = SCENE_HEADER_ITEMS) {
     return catalog.find((item) => item.id === id) || null;
 }
 
-export function resolveSlotItems(ids, context, catalog = SCENE_UTILITY_ITEMS) {
+export function resolveSlotItems(ids, context, catalog = SCENE_HEADER_ITEMS) {
     const entries = [];
     for (const id of ids || []) {
-        const item = findSceneUtilityItem(id, catalog);
+        const item = findSceneHeaderItem(id, catalog);
         if (!item) continue;
         entries.push({ id: item.id, label: item.label, ...item.read(context) });
     }
     return entries;
+}
+
+export function applySlotEdit(ids, { item, shown }) {
+    const current = ids || [];
+    if (shown) {
+        return current.includes(item) ? current : [...current, item];
+    }
+    return current.filter((existing) => existing !== item);
 }

@@ -20,16 +20,16 @@
         </v-col>
     </v-row>
     <v-row>
-        <v-col cols="12" data-setting-anchor="scene_utility_bar">
-            <v-checkbox color="primary" v-model="config.game.scene_utility_bar.enabled" label="Show scene utility bar" messages="Keep the scene title and your chosen information items in a bar at the top of the scene area. The bar's own close button turns this off as well."></v-checkbox>
+        <v-col cols="12" data-setting-anchor="scene_header">
+            <v-checkbox color="primary" v-model="config.game.scene_header.enabled" label="Show scene header" messages="Keep the scene title and your chosen information items at the top of the scene. The header's own close button turns this off as well, and its edit button picks the items."></v-checkbox>
         </v-col>
     </v-row>
     <v-row>
-        <v-col cols="6" data-setting-anchor="scene_utility_bar_slot_a">
-            <v-select v-model="config.game.scene_utility_bar.slot_a" :items="utilityItems" :item-props="utilityItemProps" label="Left of the title" multiple chips closable-chips messages="Information items shown left of the scene title."></v-select>
+        <v-col cols="6" data-setting-anchor="scene_header_slot_a">
+            <v-select v-model="config.game.scene_header.slot_a" :items="headerItems" :item-props="headerItemProps" label="Left of the title" multiple chips closable-chips messages="Information items shown left of the scene title."></v-select>
         </v-col>
-        <v-col cols="6" data-setting-anchor="scene_utility_bar_slot_b">
-            <v-select v-model="config.game.scene_utility_bar.slot_b" :items="utilityItems" :item-props="utilityItemProps" label="Right of the title" multiple chips closable-chips messages="Information items shown right of the scene title."></v-select>
+        <v-col cols="6" data-setting-anchor="scene_header_slot_b">
+            <v-select v-model="config.game.scene_header.slot_b" :items="headerItems" :item-props="headerItemProps" label="Right of the title" multiple chips closable-chips messages="Information items shown right of the scene title."></v-select>
         </v-col>
     </v-row>
     <v-row>
@@ -40,7 +40,7 @@
 </template>
 
 <script>
-import { SCENE_UTILITY_ITEMS } from '@/utils/sceneUtilityItems.js';
+import { SCENE_HEADER_ITEMS } from '@/utils/sceneHeaderItems.js';
 
 export default {
     name: 'AppSettingsGameplay',
@@ -49,11 +49,11 @@ export default {
     },
     data() {
         return {
-            utilityItems: SCENE_UTILITY_ITEMS,
+            headerItems: SCENE_HEADER_ITEMS,
         };
     },
     methods: {
-        utilityItemProps(item) {
+        headerItemProps(item) {
             return { title: item.label, subtitle: item.description, value: item.id };
         },
     },

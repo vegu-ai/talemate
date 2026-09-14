@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-    SCENE_UTILITY_ITEMS,
-    findSceneUtilityItem,
+    SCENE_HEADER_ITEMS,
+    findSceneHeaderItem,
     resolveSlotItems,
-} from "@/utils/sceneUtilityItems.js";
+    SCENE_HEADER_SLOTS,
+    applySlotEdit,
+} from "@/utils/sceneHeaderItems.js";
 
 const scene = (historyStats) => ({
     name: "vester-sound",
@@ -20,24 +22,26 @@ const stats = (overrides = {}) => ({
     ...overrides,
 });
 
-const texts = (entries) => entries.flatMap((entry) => entry.parts.map((part) => part.text));
+const text = (part) => [part.value, part.label].filter(Boolean).join(" ");
+const texts = (entries) => entries.flatMap((entry) => entry.parts.map(text));
 
-describe("scene utility item catalog", () => {
-    it("ships the two initial items with the fields the bar and the settings page render", () => {
-        expect(SCENE_UTILITY_ITEMS.map((item) => item.id)).toEqual(["history_stats", "summarizer"]);
-        for (const item of SCENE_UTILITY_ITEMS) {
+describe("scene header item catalog", () => {
+    it("ships the two initial items with the fields the header, its picker and the settings page render", () => {
+        expect(SCENE_HEADER_ITEMS.map((item) => item.id)).toEqual(["history_stats", "summarizer"]);
+        for (const item of SCENE_HEADER_ITEMS) {
             expect(item.label).toBeTruthy();
             expect(item.icon).toMatch(/^mdi-/);
             expect(item.description).toBeTruthy();
             expect(typeof item.read).toBe("function");
         }
-        expect(findSceneUtilityItem("summarizer").label).toBe("Summarizer");
-        expect(findSceneUtilityItem("later")).toBeNull();
+        expect(findSceneHeaderItem("summarizer").label).toBe("Summarizer");
+        expect(findSceneHeaderItem("later")).toBeNull();
     });
 
     it("history stats reads the message count and the summary layer count from scene_status", () => {
         const [entry] = resolveSlotItems(["history_stats"], { scene: scene(stats()), agentStatus: readyAgents });
-        expect(entry.parts.map((part) => part.text)).toEqual(["12 messages", "2 summary layers"]);
+        expect(entry.parts.map(text)).toEqual(["12 messages", "2 summary layers"]);
+        expect(entry.parts.map((part) => [part.value, part.label])).toEqual([["12", "messages"], ["2", "summary layers"]]);
         expect(entry.parts.every((part) => !part.muted)).toBe(true);
         expect(entry.parts[1].tooltip).toContain("base archive");
     });
@@ -52,13 +56,14 @@ describe("scene utility item catalog", () => {
         const [missing] = resolveSlotItems(["history_stats"], { scene: { name: "x", data: {} }, agentStatus: readyAgents });
         expect(missing.parts).toHaveLength(1);
         expect(missing.parts[0].muted).toBe(true);
-        expect(missing.parts[0].text).toBe("History stats unavailable");
+        expect(missing.parts[0].label).toBe("History stats unavailable");
+        expect(missing.parts[0].value).toBeUndefined();
     });
 
     it("summarizer always shows gathered / threshold and names the remainder in the tooltip", () => {
         const [entry] = resolveSlotItems(["summarizer"], { scene: scene(stats()), agentStatus: readyAgents });
         expect(entry.parts).toHaveLength(1);
-        expect(entry.parts[0].text).toBe("900 / 1500 tokens");
+        expect(entry.parts[0]).toMatchObject({ value: "900 / 1500", label: "tokens" });
         expect(entry.parts[0].tooltip).toContain("900 of 1500 tokens");
         expect(entry.parts[0].tooltip).toContain("About 601 more");
         expect(entry.parts[0].muted).toBeUndefined();
@@ -72,25 +77,25 @@ describe("scene utility item catalog", () => {
             agentStatus: readyAgents,
         })[0].parts[0];
         const threshold = read({ enabled: true, threshold: 100, pending_tokens: 120, remaining_tokens: 0, due: true, due_reason: "threshold" });
-        expect(threshold.text).toBe("120 / 100 tokens");
+        expect(text(threshold)).toBe("120 / 100 tokens");
         expect(threshold).toMatchObject({ accent: true, trailingIcon: "mdi-archive-clock-outline" });
         expect(threshold.tooltip).toContain("A summary is due on the next message: the gathered dialogue passed the threshold.");
 
         // a time passage cuts the span below the threshold
         const passage = read({ enabled: true, threshold: 1536, pending_tokens: 798, remaining_tokens: 0, due: true, due_reason: "time_passage" });
-        expect(passage.text).toBe("798 / 1536 tokens");
+        expect(text(passage)).toBe("798 / 1536 tokens");
         expect(passage.accent).toBe(true);
         expect(passage.tooltip).toContain("798 of 1536 tokens");
         expect(passage.tooltip).toContain("a time passage cut the span");
         expect(passage.srText).toBe("Summary due: a time passage cut the span.");
 
         const presence = read({ enabled: true, threshold: 1536, pending_tokens: 40, remaining_tokens: 0, due: true, due_reason: "presence" });
-        expect(presence.text).toBe("40 / 1536 tokens");
+        expect(text(presence)).toBe("40 / 1536 tokens");
         expect(presence.tooltip).toContain("who is present changed");
 
         // exactly at the threshold nothing is due yet; one more token tips it
         const equal = read({ enabled: true, threshold: 100, pending_tokens: 100, remaining_tokens: 1, due: false, due_reason: null });
-        expect(equal.text).toBe("100 / 100 tokens");
+        expect(text(equal)).toBe("100 / 100 tokens");
         expect(equal.accent).toBeUndefined();
         expect(equal.srText).toBeUndefined();
         expect(equal.tooltip).toContain("About 1 more");
@@ -101,16 +106,19 @@ describe("scene utility item catalog", () => {
             scene: scene(stats({ summarization: { enabled: false, threshold: 100, pending_tokens: null, remaining_tokens: null } })),
             agentStatus: readyAgents,
         });
-        expect(off[0].parts[0]).toMatchObject({ text: "Summarization off", muted: true });
+        expect(off[0].parts[0]).toMatchObject({ label: "Summarization off", muted: true });
 
         const noClient = resolveSlotItems(["summarizer"], {
             scene: scene(stats()),
             agentStatus: { summarizer: { status: "uninitialized" } },
         });
-        expect(noClient[0].parts[0]).toMatchObject({ text: "Summarizer unavailable", muted: true });
+        expect(noClient[0].parts[0]).toMatchObject({ label: "Summarizer unavailable", muted: true });
 
         const noReport = resolveSlotItems(["summarizer"], { scene: scene(null), agentStatus: readyAgents });
-        expect(noReport[0].parts[0]).toMatchObject({ text: "Summarizer unavailable", muted: true });
+        expect(noReport[0].parts[0]).toMatchObject({ label: "Summarizer unavailable", muted: true });
+        for (const entry of [off, noClient, noReport]) {
+            expect(entry[0].parts[0].value).toBeUndefined();
+        }
     });
 
     it("resolves a slot in saved order, skips unknown ids and leaves an empty slot empty", () => {
@@ -128,12 +136,42 @@ describe("scene utility item catalog", () => {
             icon: "mdi-clock-outline",
             description: "Time passed in the scene.",
             read({ scene }) {
-                return { parts: [{ key: "time", icon: this.icon, text: scene.scene_time, tooltip: "Time passed" }] };
+                return { parts: [{ key: "time", value: scene.scene_time, label: "passed", tooltip: "Time passed" }] };
             },
         };
-        const catalog = [...SCENE_UTILITY_ITEMS, added];
+        const catalog = [...SCENE_HEADER_ITEMS, added];
         const context = { scene: { ...scene(stats()), scene_time: "2 days" }, agentStatus: readyAgents };
         expect(texts(resolveSlotItems(["scene_time", "summarizer"], context, catalog)))
-            .toEqual(["2 days", "900 / 1500 tokens"]);
+            .toEqual(["2 days passed", "900 / 1500 tokens"]);
+    });
+});
+
+describe("scene header slot editing", () => {
+    it("names both slots with the labels and quick settings the picker and App Settings share", () => {
+        expect(SCENE_HEADER_SLOTS).toEqual([
+            { id: "slot_a", label: "Left of the title", setting: "scene_header_slot_a" },
+            { id: "slot_b", label: "Right of the title", setting: "scene_header_slot_b" },
+        ]);
+    });
+
+    it("shows a missing item at the end of the slot", () => {
+        expect(applySlotEdit(["history_stats"], { item: "summarizer", shown: true })).toEqual(["history_stats", "summarizer"]);
+        expect(applySlotEdit(undefined, { item: "summarizer", shown: true })).toEqual(["summarizer"]);
+    });
+
+    it("showing a shown item or hiding a missing one changes nothing", () => {
+        expect(applySlotEdit(["summarizer"], { item: "summarizer", shown: true })).toEqual(["summarizer"]);
+        expect(applySlotEdit(["summarizer"], { item: "history_stats", shown: false })).toEqual(["summarizer"]);
+    });
+
+    it("hides an item and keeps the others in order, unknown ids included", () => {
+        expect(applySlotEdit(["later", "summarizer", "history_stats"], { item: "summarizer", shown: false })).toEqual(["later", "history_stats"]);
+    });
+
+    it("does not change the list it was given", () => {
+        const ids = ["history_stats"];
+        applySlotEdit(ids, { item: "summarizer", shown: true });
+        applySlotEdit(ids, { item: "history_stats", shown: false });
+        expect(ids).toEqual(["history_stats"]);
     });
 });

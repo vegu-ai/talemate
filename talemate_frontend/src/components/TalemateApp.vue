@@ -227,7 +227,7 @@
 
       <v-container fluid style="height: 100%;">
 
-        <v-tabs-window v-model="tab" style="height: 100%;" :class="{ 'scene-scrollport': (playthroughActive || sceneUtilityBarVisible) && tab === 'main' }">
+        <v-tabs-window v-model="tab" style="height: 100%;" :class="{ 'scene-scrollport': (playthroughActive || sceneHeaderVisible) && tab === 'main' }">
           <!-- HOME -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
             <SceneLanding
@@ -262,11 +262,12 @@
               <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': true, 'd-none': creativeMode && !showSceneView, 'scene-backdrop-active': !!sceneBackdropSrc, 'playthrough-active': playthroughActive }" :style="sceneBackdropStyle">
                 <div class="scene-column" style="display: flex; flex-direction: column; height: 100%">
 
-                  <SceneUtilityBar
-                    v-if="sceneUtilityBarVisible"
+                  <SceneHeader
+                    v-if="sceneHeaderVisible"
                     :scene="scene"
                     :agent-status="agentStatus"
-                    :settings="appConfig.game.scene_utility_bar"
+                    :settings="appConfig.game.scene_header"
+                    :over-backdrop="!!sceneBackdropSrc"
                   />
 
                   <div class="scene-container">
@@ -497,7 +498,7 @@ import AgentActivityBar from './AgentActivityBar.vue';
 import AgentActionOverrides from './AgentActionOverrides.vue';
 import SceneLanding from './SceneLanding.vue';
 import GameStateKnobs from './GameStateKnobs.vue';
-import SceneUtilityBar from './SceneUtilityBar.vue';
+import SceneHeader from './SceneHeader.vue';
 import SceneTools from './SceneTools.vue';
 import SceneSaveDialog from './SceneSaveDialog.vue';
 import SceneLeaveWarning from './SceneLeaveWarning.vue';
@@ -557,7 +558,7 @@ export default {
     AgentActionOverrides,
     SceneLanding,
     GameStateKnobs,
-    SceneUtilityBar,
+    SceneHeader,
     SceneTools,
     SceneSaveDialog,
     SceneLeaveWarning,
@@ -904,9 +905,9 @@ export default {
     },
   },
   computed: {
-    sceneUtilityBarVisible() {
+    sceneHeaderVisible() {
       return this.sceneActive && this.showSceneView && !this.playthroughActive
-        && this.appConfig?.game?.scene_utility_bar?.enabled === true;
+        && this.appConfig?.game?.scene_header?.enabled === true;
     },
     inferenceParamsClient() {
       const pinned = pinnedPanelClient(this.appConfig?.presets);

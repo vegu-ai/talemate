@@ -256,18 +256,29 @@ class WorldState(pydantic.BaseModel):
     templates: WorldStateTemplates = WorldStateTemplates()
 
 
-class SceneUtilityBar(pydantic.BaseModel):
+class SceneHeader(pydantic.BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
+
     enabled: bool = True
     # item ids are opaque; preserve unknown values
     slot_a: list[str] = pydantic.Field(default_factory=lambda: ["history_stats"])
     slot_b: list[str] = pydantic.Field(default_factory=lambda: ["summarizer"])
+
+    def set_item_shown(
+        self, slot: Literal["slot_a", "slot_b"], item: str, shown: bool
+    ) -> None:
+        ids = getattr(self, slot)
+        if shown and item not in ids:
+            setattr(self, slot, [*ids, item])
+        elif not shown and item in ids:
+            setattr(self, slot, [existing for existing in ids if existing != item])
 
 
 class Game(pydantic.BaseModel):
     default_player_character: GamePlayerCharacter = GamePlayerCharacter()
     general: General = General()
     world_state: WorldState = WorldState()
-    scene_utility_bar: SceneUtilityBar = SceneUtilityBar()
+    scene_header: SceneHeader = SceneHeader()
 
     model_config = ConfigDict(extra="ignore")
 

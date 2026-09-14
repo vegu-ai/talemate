@@ -452,7 +452,7 @@
 - path: user-guide/app-settings/game.md
   title: Game
   summary: Application settings navigation, search, Save/Discard, unsaved-edit badges and outside-change warnings; Game controls
-    include auto save, auto progress, max backscroll, agent activity bar, scene utility bar (show toggle, left/right item
+    include auto save, auto progress, max backscroll, agent activity bar, scene header (show toggle, left/right item
     slots), release GPU cache on scene load, default player character, and persistent sound volume/mute.
 - path: user-guide/app-settings/presets.md
   title: Presets
@@ -1081,17 +1081,17 @@
   summary: Scene projects under scenes/ group JSON saves with assets, changelog base/latest snapshots and deltas, node graphs,
     prompt templates, shared-context files and info. Explains immediate directory creation, backups, sharing and browsing
     or deleting projects through Scene Library.
+- path: user-guide/scene-header.md
+  title: Scene Header
+  summary: Sticky header at the top of the scene, part of the page, showing the scene title with configurable information
+    items on either side; History stats (message count, summary layer count) and Summarizer (gathered / threshold tokens,
+    a due marker whose tooltip names the reason or the remainder, unavailable states); an edit button with a per-side item
+    picker, a close button, the matching Settings > Game toggle and item selects; hidden during playthrough.
 - path: user-guide/scene-state-reset.md
   title: Reset Scene State
   summary: Reset Scene State selectively rebuilds Context DB/RAG, clears history with optional static-backstory preservation,
     resets intent/phase tracking, removes agent caches by agent or key, and deletes chosen reinforcements. Includes entry
     counts, confirmation and reset use cases for stale context.
-- path: user-guide/scene-utility-bar.md
-  title: Scene Utility Bar
-  summary: Sticky bar at the top of the scene area showing the scene title with configurable information items on either
-    side; History stats (message count, summary layer count) and Summarizer (gathered / threshold tokens, a due marker
-    whose tooltip names the reason or the remainder, unavailable states); hover close button and the Settings > Game
-    toggle and slot selects; hidden during playthrough.
 - path: user-guide/templates/attribute.md
   title: Character Attribute
   summary: Create Character Attribute templates for traits, skills or properties, set attribute names and generation priority,

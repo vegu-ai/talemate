@@ -38,15 +38,15 @@ When enabled, a horizontal bar appears above the scene tools showing which agent
 
 This setting is enabled by default.
 
-##### Scene utility bar
+##### Scene header
 
-![App settings - Game - Scene utility bar](/talemate/img/0.40.0/app-settings-scene-utility-bar.png)
+![App settings - Game - Scene header](/talemate/img/0.40.0/app-settings-scene-header.png)
 
-**Show scene utility bar** keeps the scene title and your chosen information items in a bar at the top of the scene area; see [Scene Utility Bar](/talemate/user-guide/scene-utility-bar/). The bar's own close button turns this setting off as well, so this is where you turn the bar back on.
+**Show scene header** keeps the scene title and your chosen information items at the top of the scene; see [Scene Header](/talemate/user-guide/scene-header/). The header's own close button turns this setting off as well, so this is where you turn the header back on.
 
-**Left of the title** and **Right of the title** choose which items each side of the bar shows. Pick any number of items per side, or none. The available items are **History stats** (messages and summary layers) and **Summarizer** (dialogue tokens gathered against the summarizer's threshold, with a marker when a summary is due). Your choices are kept while the bar is hidden.
+**Left of the title** and **Right of the title** choose which items each side of the header shows. Pick any number of items per side, or none. The available items are **History stats** (messages and summary layers) and **Summarizer** (dialogue tokens gathered against the summarizer's threshold, with a marker when a summary is due). The header's edit button changes the same choice, and a change there shows here too. Your choices are kept while the header is hidden.
 
-The bar is enabled by default, with History stats on the left and Summarizer on the right.
+The header is enabled by default, with History stats on the left and Summarizer on the right.
 
 ##### Release GPU cache on scene load
 

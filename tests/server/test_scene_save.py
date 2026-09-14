@@ -1,6 +1,7 @@
 import asyncio
 import builtins
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -14,6 +15,7 @@ from talemate.scene_message import NarratorMessage
 from talemate.server.scene_message import SceneMessagePlugin
 from talemate.server.world_state_manager import WorldStateManagerPlugin
 from talemate.server.agent_config import AgentConfigPlugin
+from talemate.agents.visual.websocket_handler import VisualWebsocketHandler
 
 
 @pytest.fixture
@@ -454,3 +456,302 @@ async def test_save_for_another_scene_is_refused_without_writing(save_scene):
     assert messages[-1]["request_id"] == "save-1"
     assert not scene.filename
     assert not list(Path(scene.save_dir).glob("*.json"))
+
+
+@pytest.mark.parametrize("style", ["new-art-style", None])
+async def test_art_style_update_preserves_stock_settings_and_autosave(
+    stock_scene, style
+):
+    scene, plugin, _, _ = stock_scene
+    scene.experimental = True
+    scene.writing_style_template = "writing-style"
+    scene.visual_style_template = "original-art-style"
+    scene.restore_from = "initial.json"
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+
+    await VisualWebsocketHandler(plugin.websocket_handler).handle_update_art_style(
+        {"visual_style_template": style}
+    )
+
+    assert scene.visual_style_template == style
+    assert scene.immutable_save is True
+    assert scene.experimental is True
+    assert scene.writing_style_template == "writing-style"
+    assert scene.restore_from == "initial.json"
+    scene.saved = False
+    await scene.attempt_auto_save()
+    assert source.read_bytes() == original
+    assert scene.filename == source.name
+
+
+@pytest.mark.parametrize(
+    "copy_name",
+    ["infinity-quest", "infinity-quest.json", None, ""],
+)
+async def test_save_as_cannot_overwrite_current_read_only_file(stock_scene, copy_name):
+    scene, plugin, messages, payload = stock_scene
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+    previous_identity = scene.memory_id, scene.memory_session_id
+
+    await plugin.handle({**payload, "save_as": copy_name})
+
+    assert messages[-1] == {
+        "type": "world_state_manager",
+        "action": "operation_done",
+        "error": {
+            "message": "This scene file is read-only. Choose a different name for Save As."
+        },
+        "request_id": payload["request_id"],
+        "failed_action": "save_scene",
+    }
+    assert scene.filename == source.name
+    assert scene.immutable_save and scene.hidden and scene.deprecated
+    assert (scene.memory_id, scene.memory_session_id) == previous_identity
+    assert source.read_bytes() == original
+
+    await plugin.handle({**payload, "request_id": "corrected-name"})
+    assert messages[-1]["action"] == "scene_saved"
+    assert messages[-1]["request_id"] == "corrected-name"
+    assert scene.filename == "my-quest.json"
+    assert not scene.immutable_save
+    assert source.read_bytes() == original
+    assert Path(scene.full_path).is_file()
+
+
+async def test_save_as_allows_current_filename_for_mutable_scene(stock_scene):
+    scene, plugin, messages, payload = stock_scene
+    await scene.save(force=True)
+    scene.immutable_save = False
+    await plugin.handle({**payload, "save_as": "infinity-quest"})
+    assert messages[-1]["action"] == "scene_saved"
+    assert scene.filename == "infinity-quest.json"
+
+
+@pytest.mark.parametrize("locked_on_disk", [False, True])
+async def test_world_editor_authoring_save_persists_lock_and_reload(
+    stock_scene, persistence_scene_factory, locked_on_disk
+):
+    scene, plugin, messages, payload = stock_scene
+    scene.immutable_save = locked_on_disk
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+    scene.history.append(NarratorMessage("Authored change", source="ai"))
+
+    await plugin.handle_update_scene_settings({"immutable_save": True})
+    assert scene.immutable_save
+    assert source.read_bytes() == original
+    await plugin.handle({**payload, "save_as": None, "authoring": True})
+
+    assert messages[-1]["action"] == "scene_saved"
+    assert scene.filename == source.name
+    saved = json.loads(source.read_text())
+    assert saved["immutable_save"] is True
+    assert saved["history"][-1]["message"] == "Authored change"
+    fresh = persistence_scene_factory()
+    await load_scene_from_data(fresh, saved, name=str(source))
+    assert fresh.immutable_save
+    assert fresh.filename == source.name
+
+    fresh_messages = []
+    fresh_plugin = WorldStateManagerPlugin(
+        SimpleNamespace(scene=fresh, queue_put=fresh_messages.append)
+    )
+    saved_bytes = source.read_bytes()
+    await fresh_plugin.handle(
+        {"action": "save_scene", "save_as": source.stem, "authoring": True}
+    )
+    assert "read-only" in fresh_messages[-1]["error"]["message"]
+    assert source.read_bytes() == saved_bytes
+
+
+async def test_authoring_does_not_bypass_another_read_only_destination(stock_scene):
+    scene, plugin, messages, payload = stock_scene
+    await scene.save_restore("baseline.json")
+    baseline = Path(scene.save_dir) / "baseline.json"
+    original = baseline.read_bytes()
+    await plugin.handle({**payload, "save_as": "baseline", "authoring": True})
+    assert "read-only" in messages[-1]["error"]["message"]
+    assert baseline.read_bytes() == original
+
+
+async def test_stock_without_project_name_lists_existing_overrides_after_load_and_copy(
+    save_scene, persistence_scene_factory
+):
+    scene, plugin, messages, payload = save_scene
+    data = scene.serialize
+    data.pop("project_name", None)
+    data["immutable_save"] = True
+    await load_scene_from_data(scene, data, name="stock.json")
+    assert not scene._project_name
+    target = Path(scene.save_dir) / "agent-settings" / "custom.json"
+    target.parent.mkdir()
+    target.write_text('{"agents": {}}')
+
+    fresh = persistence_scene_factory()
+    await load_scene_from_data(fresh, data, name="stock.json")
+    plugin.websocket_handler.scene = fresh
+    assert not fresh._project_name
+    assert fresh.agent_settings_files == ["custom.json"]
+    await plugin.handle({**payload, "scene_identity": str(fresh.id)})
+    assert messages[-1]["action"] == "scene_saved"
+    assert not fresh._project_name
+    assert fresh.agent_settings_files == ["custom.json"]
+
+
+@pytest.mark.parametrize(
+    "immutable, filename", [(False, "new.json"), (True, "agent-settings.json")]
+)
+async def test_first_link_batch_succeeds_and_lists_file_for_stock_project(
+    save_scene, monkeypatch, immutable, filename
+):
+    scene, plugin, messages, _ = save_scene
+    data = scene.serialize
+    data.pop("project_name", None)
+    data["immutable_save"] = immutable
+    await load_scene_from_data(scene, data, name="stock.json")
+    assert not scene._project_name
+    await scene.save(force=True)
+    save = AsyncMock(wraps=scene.save)
+    monkeypatch.setattr(scene, "save", save)
+    overrides = AgentConfigPlugin(plugin.websocket_handler)
+    edits = {
+        "conversation": {
+            "character_knowledge": {"config": {"ledger": {"value": True}}}
+        },
+        "memory": {"retrieval": {"config": {"recency_weight": {"value": 0.3}}}},
+    }
+    for agent, actions in edits.items():
+        await overrides.handle(
+            {
+                "action": "save_scene_overrides",
+                "agent_type": agent,
+                "filename": filename,
+                "override": {"actions": actions},
+                "request_id": agent,
+            }
+        )
+
+    assert not [message for message in messages if "error" in message]
+    assert {message.get("request_id") for message in messages} >= set(edits)
+    save.assert_awaited_once_with(auto=True)
+    stored = json.loads(
+        (Path(scene.save_dir) / "agent-settings" / filename).read_text()
+    )
+    for agent, actions in edits.items():
+        assert stored["agents"][agent]["actions"] == actions
+    assert scene.agent_overrides.filename == filename
+    assert scene.agent_settings_files == [filename]
+    assert scene.immutable_save is immutable
+
+
+async def test_save_as_refuses_alias_of_loaded_read_only_file(stock_scene):
+    scene, plugin, messages, payload = stock_scene
+    scene.immutable_save = False
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+    alias = source.with_name("Infinity-Quest.json")
+    os.link(source, alias)
+    scene.immutable_save = True
+
+    await plugin.handle({**payload, "save_as": "Infinity-Quest"})
+
+    assert "read-only" in messages[-1]["error"]["message"]
+    assert scene.filename == source.name
+    assert scene.immutable_save
+    assert source.read_bytes() == alias.read_bytes() == original
+
+
+async def test_save_as_refuses_read_only_restore_destination(stock_scene):
+    scene, plugin, messages, payload = stock_scene
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    source_bytes = source.read_bytes()
+    await scene.save_restore("restore.json")
+    scene.restore_from = "restore.json"
+    restore = source.with_name("restore.json")
+    original = restore.read_bytes()
+
+    await plugin.handle({**payload, "save_as": "restore"})
+
+    assert "read-only" in messages[-1]["error"]["message"]
+    assert messages[-1]["request_id"] == payload["request_id"]
+    assert scene.filename == source.name
+    assert scene.immutable_save
+    assert restore.read_bytes() == original
+    assert source.read_bytes() == source_bytes
+
+
+async def test_save_as_from_writable_copy_cannot_replace_stock(stock_scene):
+    scene, plugin, messages, payload = stock_scene
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+    await plugin.handle(payload)
+    assert not scene.immutable_save
+    copy = Path(scene.full_path)
+    copy_bytes = copy.read_bytes()
+
+    await plugin.handle({**payload, "save_as": source.stem})
+
+    assert "read-only" in messages[-1]["error"]["message"]
+    assert scene.filename == copy.name
+    assert not scene.immutable_save
+    assert source.read_bytes() == original
+    assert copy.read_bytes() == copy_bytes
+
+
+@pytest.mark.parametrize("immutable", [False, True])
+async def test_save_as_can_replace_writable_checkpoint(stock_scene, immutable):
+    scene, plugin, messages, payload = stock_scene
+    scene.immutable_save = immutable
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+    checkpoint = source.with_name("checkpoint.json")
+    checkpoint.write_text(json.dumps({"immutable_save": False, "history": []}))
+
+    await plugin.handle({**payload, "save_as": "checkpoint.json"})
+
+    assert messages[-1]["action"] == "scene_saved"
+    assert scene.filename == checkpoint.name
+    assert not scene.immutable_save
+    assert json.loads(checkpoint.read_text())["history"]
+    assert source.read_bytes() == original
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["./infinity-quest.json", "../escape", "folder/copy", "folder\\copy", "/absolute"],
+)
+async def test_save_as_rejects_path_separators(stock_scene, name):
+    scene, plugin, messages, payload = stock_scene
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+
+    await plugin.handle({**payload, "save_as": name})
+
+    assert "without path separators" in messages[-1]["error"]["message"]
+    assert messages[-1]["request_id"] == payload["request_id"]
+    assert scene.filename == source.name
+    assert scene.immutable_save
+    assert source.read_bytes() == original
+
+
+@pytest.mark.parametrize("contents", ["broken JSON", "[]"])
+async def test_save_as_refuses_unreadable_destination(stock_scene, contents):
+    scene, plugin, messages, payload = stock_scene
+    destination = Path(scene.save_dir) / "checkpoint.json"
+    destination.write_text(contents)
+
+    await plugin.handle({**payload, "save_as": destination.name})
+
+    assert "Cannot read the destination" in messages[-1]["error"]["message"]
+    assert destination.read_text() == contents
+    assert scene.immutable_save

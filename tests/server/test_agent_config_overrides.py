@@ -181,6 +181,87 @@ async def test_repeat_save_does_not_touch_the_scene(wired):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("opted_out", [False, True])
+@pytest.mark.parametrize(
+    "existing",
+    ['{"agents":{"other":{"actions":{"thing":{"enabled":false}}}}}', "{not json"],
+)
+async def test_first_replacement_refuses_existing_filename(wired, opted_out, existing):
+    plugin, scene, agent, handler = wired
+    scene._agent_settings_opted_out = opted_out
+    target = Path(scene.save_dir) / "agent-settings" / "custom.json"
+    target.parent.mkdir()
+    target.write_text(existing)
+    request = {**_payload(True, "custom.json"), "request_id": "collision"}
+
+    await plugin.handle_save_scene_overrides(request)
+
+    assert target.read_text() == existing
+    assert scene.agent_overrides is None
+    assert scene.agent_settings_file is None
+    assert scene._agent_settings_opted_out is opted_out
+    assert scene.saves == 0
+    assert scene.saved is True
+    assert agent.emitted == 1
+    assert handler.messages[-1]["request_id"] == "collision"
+    assert "already exists" in _errors(handler)[-1]
+    assert "World Editor" in _errors(handler)[-1]
+
+    await plugin.handle_save_scene_overrides(_payload(True, "new-settings.json"))
+    assert scene.agent_settings_file == "new-settings.json"
+    assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is True
+    assert target.read_text() == existing
+
+
+@pytest.mark.asyncio
+async def test_first_link_batch_reports_collision_for_every_agent(wired, monkeypatch):
+    plugin, scene, _, handler = wired
+    other_type = "other-override-test"
+    other = override_agent_class(other_type)(scene)
+    monkeypatch.setitem(instance.AGENTS, other_type, other)
+    target = Path(scene.save_dir) / "agent-settings" / "existing.json"
+    target.parent.mkdir()
+    target.write_text('{"agents": {}}')
+    original = target.read_bytes()
+
+    for agent_type in [AGENT_TYPE, other_type]:
+        await plugin.handle_save_scene_overrides(
+            {
+                **_payload(True, target.name),
+                "agent_type": agent_type,
+                "request_id": agent_type,
+            }
+        )
+
+    assert len(_errors(handler)) == 2
+    assert all(
+        "already exists. Choose a new name" in message for message in _errors(handler)
+    )
+    assert target.read_bytes() == original
+    assert scene.agent_overrides is None
+    assert scene.agent_settings_file is None
+    assert scene.saves == 0
+
+
+@pytest.mark.asyncio
+async def test_replacement_switch_refuses_existing_filename(wired):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(_payload(False, "first.json"))
+    first = Path(scene.agent_overrides.filepath)
+    original = first.read_bytes()
+    target = first.with_name("existing.json")
+    target.write_bytes(original)
+    previous_overlay = scene.agent_overrides
+
+    await plugin.handle_save_scene_overrides(_payload(True, "existing.json"))
+
+    assert "already exists" in _errors(handler)[-1]
+    assert scene.agent_overrides is previous_overlay
+    assert scene.agent_settings_file == "first.json"
+    assert first.read_bytes() == target.read_bytes() == original
+
+
+@pytest.mark.asyncio
 async def test_refused_save_emits_status_so_the_frontend_can_correct(wired):
     plugin, scene, agent, handler = wired
     await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))

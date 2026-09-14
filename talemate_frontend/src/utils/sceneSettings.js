@@ -1,7 +1,3 @@
-// The scene settings save is one message for every setting the Scene Settings
-// page holds, so a caller that only wants to change the character knowledge
-// mode still has to send the rest unchanged.
-
 export const PERSPECTIVES_LOCKED_HINT = 'This scene has history. Character perspectives cannot be changed.';
 
 export const PERSPECTIVES_OPEN_HINT = 'Choose before play. Adds Summarizer analyses and audience-specific context. Save the scene to keep this choice. Switching off discards stored character perspectives and cannot be undone after the next save.';

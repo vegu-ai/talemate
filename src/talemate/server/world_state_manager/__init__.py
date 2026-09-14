@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import uuid
 from typing import Any, Union
@@ -19,6 +20,8 @@ from talemate.status import LoadingLabel, background_task, set_loading
 import talemate.game.focal as focal
 from talemate.config import save_config, get_config, commit_config
 from talemate.server.websocket_plugin import Plugin
+from talemate.save import scene_save_filename
+from talemate.util.path import is_safe_relative_filename
 
 from .scene_intent import SceneIntentMixin
 from .history import HistoryMixin
@@ -192,6 +195,8 @@ class SceneOutlinePayload(pydantic.BaseModel):
 
 
 class SceneSettingsPayload(pydantic.BaseModel):
+    """Omitted fields stay unchanged; agent_settings_file=None opts out."""
+
     knowledge_eligibility: KnowledgeEligibility | None = None
     experimental: bool = False
     immutable_save: bool = False
@@ -199,15 +204,13 @@ class SceneSettingsPayload(pydantic.BaseModel):
     agent_persona_templates: dict[str, str | None] | None = None
     visual_style_template: str | None = None
     restore_from: str | None = None
-    # Presence-aware via `model_fields_set` — see handler. None = opt out;
-    # string = link to that file; unset (caller omits the key) = leave the
-    # link alone.
     agent_settings_file: str | None = None
     agent_settings_opted_out: bool | None = None
 
 
 class SaveScenePayload(pydantic.BaseModel):
     save_as: str | None = None
+    authoring: bool = False
     project_name: str | None = None
     request_id: str | None = None
     scene_identity: str | None = None
@@ -1153,14 +1156,7 @@ class WorldStateManagerPlugin(
     async def handle_update_scene_settings(self, data):
         payload = SceneSettingsPayload(**data)
 
-        # `model_fields_set` distinguishes "caller omitted this field" from
-        # "caller explicitly sent None" — needed by the agent-settings link
-        # logic where None means opt-out and absent means "leave it alone".
-        kwargs = payload.model_dump()
-        if "agent_settings_file" not in payload.model_fields_set:
-            kwargs.pop("agent_settings_file", None)
-        if "agent_settings_opted_out" not in payload.model_fields_set:
-            kwargs.pop("agent_settings_opted_out", None)
+        kwargs = payload.model_dump(exclude_unset=True)
 
         mode_before = self.scene.knowledge_eligibility
         try:
@@ -1176,7 +1172,7 @@ class WorldStateManagerPlugin(
             {
                 "type": "world_state_manager",
                 "action": "scene_settings_updated",
-                "data": payload.model_dump(),
+                "data": kwargs,
             }
         )
         # The agents describe their settings for the scene's mode (a
@@ -1230,6 +1226,54 @@ class WorldStateManagerPlugin(
                 failed_action="save_scene",
             )
             return
+
+        if payload.save_as and not is_safe_relative_filename(payload.save_as):
+            await self.signal_operation_failed(
+                "Invalid save name. Enter a filename without path separators.",
+                request_id=payload.request_id,
+                failed_action="save_scene",
+            )
+            return
+
+        destination_name = payload.save_as or scene.filename
+        if destination_name:
+            destination = os.path.join(
+                scene.save_dir, scene_save_filename(destination_name)
+            )
+            same_file = bool(scene.filename) and (
+                os.path.realpath(destination) == os.path.realpath(scene.full_path)
+                or (
+                    os.path.exists(destination)
+                    and os.path.exists(scene.full_path)
+                    and os.path.samefile(destination, scene.full_path)
+                )
+            )
+            read_only = scene.immutable_save if same_file else False
+            if not same_file and os.path.exists(destination):
+                try:
+                    with open(destination) as file:
+                        saved_scene = json.load(file)
+                    if not isinstance(saved_scene, dict):
+                        raise ValueError("Scene data must be a JSON object")
+                    read_only = saved_scene.get("immutable_save", False)
+                except (OSError, ValueError):
+                    await self.signal_operation_failed(
+                        "Cannot read the destination scene file. Choose a different "
+                        "name for Save As.",
+                        request_id=payload.request_id,
+                        failed_action="save_scene",
+                    )
+                    return
+            authoring_current_file = (
+                payload.authoring and payload.save_as is None and same_file
+            )
+            if read_only and not authoring_current_file:
+                await self.signal_operation_failed(
+                    "This scene file is read-only. Choose a different name for Save As.",
+                    request_id=payload.request_id,
+                    failed_action="save_scene",
+                )
+                return
 
         previous_name, previous_filename = scene.name, scene.filename
         previous_protection = scene.immutable_save, scene.hidden, scene.deprecated

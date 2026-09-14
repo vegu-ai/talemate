@@ -1,0 +1,2 @@
+fixed:
+- "Changing the art style preserves the scene's read-only protection, experimental flag, writing style and restore point. Partial scene-settings updates now leave omitted settings unchanged."

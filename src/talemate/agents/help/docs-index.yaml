@@ -256,9 +256,10 @@
     at Thorough and above, with an explicit retry; Balanced and below leave it off.
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
-  summary: 'Sparse agent overrides: Global/Scene editing, Save/Discard, quick toggles, settings-file links and hub reset icons.
-    Covers creation knowledge-effort pins, project-scoped sharing including stock scenes, separate override files, and the first-save hub flow: Save
-    Scene continues the pending change; cancellation or failure preserves input for Save and apply retry or Discard change.'
+  summary: 'Sparse agent overrides: Global/Scene editing, Save/Discard, quick toggles, links, hub reset icons, creation knowledge-effort
+    pins and project-scoped stock sharing. First-save hub changes continue after Save Scene; errors stay open for correction,
+    cancellation keeps Save and apply retry or Discard change. Agents naming refuses files that already exist with choose-new-name
+    or link-existing guidance; other names on read-only scenes require Save As.'
 - path: user-guide/agents/summarizer/index.md
   title: Overview
   summary: 'Summarizer overview: dialogue summaries, progressively compressed layered history, scene analysis and context
@@ -1064,9 +1065,10 @@
     with archived old deltas, and historical world-state reconstruction limits.
 - path: user-guide/saving.md
   title: Saving
-  summary: Scene JSON saves, Auto Save, locked starting saves, Save As checkpoints, restore points and Timeline forks. Dirty-scene
-    warnings before tab close, reload or navigation clear after saving; browser interaction is required, and mobile tab discard,
-    crashes and backend shutdown remain unprotected.
+  summary: Scene JSON saves, Auto Save, locked starting saves, Save As checkpoints, restore points and Timeline forks. World
+    Editor plain Save authors the loaded file and persists its lock; Save As protects locked destinations. Dirty-scene warnings
+    before tab close, reload or navigation clear after saving; browser interaction is required, and mobile tab discard, crashes
+    and backend shutdown remain unprotected.
 - path: user-guide/scenario-tools.md
   title: Scene Tools
   summary: Scene toolbar reference for agent activity, regenerate/nuke with Ctrl or Ctrl+Alt direction, Actor/Director/Narrator
@@ -1297,9 +1299,9 @@
 - path: user-guide/world-editor/scene/settings.md
   title: Settings
   summary: Scene Settings control Character perspectives while history and archived history are empty, with a Compare modes
-    popover holding the two mode cards; disabling clears stored perspectives and disclosures. Covers writing style, locked-save
-    and experimental flags, restore points, and per-scene Agent settings file Auto-link, None or explicit project-shared overrides
-    included in exports.
+    popover; disabling clears perspectives and disclosures. Covers writing style, experimental scene flags, locked-save authoring
+    through World Editor Save, restore points via a new baseline.json instead of imported read-only initial.json, and Agent settings
+    file Auto-link, None or explicit project-shared overrides included in exports.
 - path: user-guide/world-editor/scene/shared-context.md
   title: Shared World & Episodes
   summary: Shared World links scenes to shared-context JSON files and synchronizes characters, selected attributes/details,

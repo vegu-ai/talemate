@@ -14,9 +14,9 @@ If you have any [writing style templates](/talemate/user-guide/templates/writing
 
 ### Locked save file
 
-When the save file is locked, then the scene cannot be save while playing it. This is useful for ensuring that progress isn't saved while testing the scene.
+A locked save file is protected from autosave and **Scene tools → Save** while playing or testing. Save progress to a different, writable destination with **Save As**.
 
-The user (or you) will be forced to save a new copy of the scene if they want to save their progress.
+After changing **Locked save file**, use the World Editor’s own **Save** to persist it. This authoring action intentionally writes the loaded file even when locked, including a shipped scene, and retains the lock on disk. It writes the whole current scene, including story progress. To preserve a shipped starting state, create a **Save As** copy before playing and make your changes in that copy. Turning the lock off and using World Editor **Save** unlocks the file. **Save As** still refuses a locked destination, even from the World Editor.
 
 ### Experimental
 
@@ -28,15 +28,17 @@ A restore point lets you designate another save file from the same [project dire
 
 #### Typical workflow
 
-1. **Save an initial state** — set up your scene the way you want the starting point to be, then use **Save As** to create a dedicated save file (e.g., `initial.json`)
+1. **Save an initial state** — set up your scene the way you want the starting point to be, then use **Save As** to create a dedicated save file (e.g., a new `baseline.json`)
 2. **Set it as the restore point** — in the Restoration Settings, select that save file as the restoration source
 3. **Play and experiment** — make progress, test different paths, or let users play through the scene
 4. **Restore when needed** — click the **:material-backup-restore: Restore Scene** button to return to the baseline
 
+An imported scene may already have a read-only `initial.json` restore point. Save As refuses that protected name; choose a new name such as `baseline.json` for your own baseline.
+
 Restoring creates a **new, unsaved scene** based on the restore point. Your current save file and the restore point file both remain unchanged, so you can restore as many times as you want without losing anything.
 
 !!! tip
-    This is especially useful for scene creators who want to test their scenes repeatedly, or for creating replayable scenarios where players always start from the same point. Combine this with a [locked save file](#locked-save-file) to prevent accidental overwrites of your baseline.
+    This is especially useful for scene creators who want to test their scenes repeatedly, or for creating replayable scenarios where players always start from the same point. To protect your baseline during play, turn on [Locked save file](#locked-save-file) and use World Editor **Save** to write that lock before testing.
 
 See also: [Restoring Scenes](/talemate/user-guide/restoring-scenes) for previewing and forking any previous revision from the automatic version history.
 

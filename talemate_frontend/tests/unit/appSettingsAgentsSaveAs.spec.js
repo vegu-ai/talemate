@@ -28,7 +28,7 @@ function page({ immutable = true, saveResult = { status: 'saved' } } = {}) {
     };
     for (const [key, method] of Object.entries(Settings.methods)) vm[key] = method.bind(vm);
     for (const [key, getter] of Object.entries(Settings.computed)) Object.defineProperty(vm, key, { get: () => getter.call(vm) });
-    return { vm, sent };
+    return { vm, sent, sceneData };
 }
 
 async function saveWithName(vm, filename) {
@@ -74,6 +74,26 @@ describe('a read-only scene links another file through a Save As copy', () => {
 });
 
 describe('links that need no copy go straight out', () => {
+    it.each([true, false])('shows filename collision guidance before sending two agents or saving a copy (immutable=%s)', async immutable => {
+        const { vm, sent, sceneData } = page({ immutable });
+        sceneData.agent_settings_files = ['existing.json'];
+        vm.liveAgents.memory = { data: { scene_overrides: {} } };
+        vm.sceneOverrideBuffer.memory = structuredClone(edit);
+        expect(vm.pendingSceneAgents).toHaveLength(2);
+        const preparing = vm.prepareExtraChanges();
+        const failures = vm.filenameRules.map(rule => rule('  existing.json  ')).filter(result => result !== true);
+        expect(failures).toContainEqual(expect.stringMatching(/already exists.*Choose a new name.*link the existing file/));
+        expect(vm.requestSceneSave).not.toHaveBeenCalled();
+        expect(sent).toEqual([]);
+        expect(vm.pendingSceneAgents).toHaveLength(2);
+        expect(vm.filenameRules.every(rule => rule('new.json') === true)).toBe(true);
+        vm.onNamingConfirm('new.json');
+        expect(await preparing).toBe(true);
+        vm.commitExtraChanges();
+        expect(sent).toHaveLength(2);
+        expect(sent.every(payload => payload.filename === 'new.json')).toBe(true);
+    });
+
     it.each([
         ['the default name on a read-only scene', true, 'agent-settings.json'],
         ['any name on a scene that saves in place', false, 'custom.json'],

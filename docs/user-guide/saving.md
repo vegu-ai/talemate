@@ -24,7 +24,7 @@ To save while looking at the scene, click the :material-content-save: **Save** b
 
 ## Saving from the world editor
 
-While in the world editor it is also possible to save changes by clicking the :material-content-save: **Save** button in the top center of the screen.
+In the World Editor, click the :material-content-save: **Save** button in the top center of the screen to write the whole current scene, including story progress, to the loaded file. This intentionally works on locked files too, including shipped scenes, and writes the current **Locked save file** setting to disk. Use this Save after changing the lock so it survives reload. To preserve a shipped starting state, create a **Save As** copy before playing and make your changes in that copy. **Save As** still follows the destination protections below.
 
 ![World Editor Save](/talemate/img/0.26.0/world-editor-save.png)
 
@@ -39,7 +39,7 @@ To disable / enable auto save, click the the auto save shortcut above the scene 
 
 ![Auto save blocked](/talemate/img/0.26.0/autosave-blocked.png)
 
-Some scenes start out with a locked save file. This is so that this particular scene file cannot be overwritten by accident. In order to enable autosave, you need to manually save the scene once. After that, the autosave toggle will be available.
+Some scenes start out with a locked save file. This prevents autosave and Scene tools saves from overwriting that starting state. To enable autosave for your progress, use **Save As** to create a writable copy. After that, the autosave toggle will be available.
 
 
 !!! info
@@ -47,7 +47,9 @@ Some scenes start out with a locked save file. This is so that this particular s
 
 ## Save As
 
-When you use **Save As**, a new save file is created in the same project directory. This is useful for creating checkpoints you can return to later — for example, saving an initial state before experimenting with different story directions.
+When you use **Save As**, a save file is created in the same project directory. Choosing an existing writable checkpoint replaces it. This is useful for creating checkpoints you can return to later — for example, saving an initial state before experimenting with different story directions.
+
+Save As refuses any read-only destination, including protected restore points and the original stock file when saving from a writable copy. For the currently loaded file, the read-only setting in Scene Settings applies immediately. Enter a filename without folder paths; `.json` is added if needed. The dialog stays open with an error and your entered name after a refusal; correct the name and select **Continue** to retry. While the save runs, Continue, Cancel, Esc and clicking outside are disabled until the result arrives. These Save As rules apply from both the Scene tools and World Editor. The World Editor’s plain **Save** is the authoring exception described above.
 
 These additional save files can be set as [restore points](/talemate/user-guide/world-editor/scene/settings#restoration-settings) so you can always return to a known good state.
 

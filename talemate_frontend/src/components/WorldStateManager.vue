@@ -8,7 +8,6 @@
         <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
         <v-toolbar rounded="md" density="compact" color="mutedbg" class="pl-2 mb-1">
 
-            <RequestInput ref="requestSaveCopyName" title="Save Scene As" @continue="(name) => { saveScene(name) }" /> 
 
             <v-menu>
                 <template v-slot:activator="{ props }">
@@ -157,7 +156,6 @@ import WorldStateManagerHistory from './WorldStateManagerHistory.vue';
 import WorldStateManagerFacts, { FACTS_TAB_TITLE } from './WorldStateManagerFacts.vue';
 import WorldStateManagerSuggestions from './WorldStateManagerSuggestions.vue';
 import GenerationOptions from './GenerationOptions.vue';
-import RequestInput from './RequestInput.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 
@@ -173,7 +171,6 @@ export default {
         WorldStateManagerFacts,
         WorldStateManagerSuggestions,
         GenerationOptions,
-        RequestInput,
     },
     computed: {
         characterStateReinforcementsList() {
@@ -364,6 +361,7 @@ export default {
     },
     inject: [
         'getWebsocket',
+        'requestSceneSave',
         'registerMessageHandler',
         'unregisterMessageHandler',
         'setWaitingForInput',
@@ -531,15 +529,14 @@ export default {
 
         saveScene(copy) {
 
-            if(copy === true) {
-                this.$refs.requestSaveCopyName.openDialog();
-                return;
+            if(copy || !this.scene.data.filename) {
+                return this.requestSceneSave();
             }
 
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'save_scene',
-                save_as: copy ? copy : null,
+                authoring: true,
                 project_name: this.scene.data.filename ? this.scene.data.name : (this.scene.data.title || this.scene.data.name)
             }));
         },

@@ -476,7 +476,7 @@ class Scene(Emitter):
             list_settings_files,
         )
 
-        if not self.filename or not self._project_name:
+        if not self.filename or not self.project_name:
             return []
         save_dir = os.path.join(self.scenes_dir(), self.project_name)
         settings_dir = agent_settings_dir(save_dir)
@@ -2211,12 +2211,11 @@ class Scene(Emitter):
             self.filename = str(uuid.uuid4())[:10]
             self.filename = self.filename.replace(" ", "-").lower() + ".json"
 
-        if self.filename and not self.filename.endswith(".json"):
-            self.filename = f"{self.filename}.json"
-
-        elif not self.filename or not self.name and auto:
+        if not self.filename or not self.name and auto:
             # scene has never been saved, don't auto save
             return
+
+        self.filename = save.scene_save_filename(self.filename)
 
         if save_as:
             self.immutable_save = False

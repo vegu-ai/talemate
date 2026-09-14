@@ -1651,26 +1651,27 @@ class WorldStateManager:
 
     async def update_scene_settings(
         self,
-        immutable_save: bool = False,
-        experimental: bool = False,
-        writing_style_template: str | None = None,
-        agent_persona_templates: dict[str, str] | None = None,
-        visual_style_template: str | None = None,
-        restore_from: str | None = None,
-        knowledge_eligibility: KnowledgeEligibility | None = None,
+        immutable_save: bool | object = _UNSET,
+        experimental: bool | object = _UNSET,
+        writing_style_template: str | None | object = _UNSET,
+        agent_persona_templates: dict[str, str] | None | object = _UNSET,
+        visual_style_template: str | None | object = _UNSET,
+        restore_from: str | None | object = _UNSET,
+        knowledge_eligibility: KnowledgeEligibility | None | object = _UNSET,
         **agent_settings_kwargs,
     ) -> "Scene":
         scene = self.scene
-        self._validate_knowledge_eligibility(knowledge_eligibility)
-        if restore_from and restore_from not in scene.save_files:
+        if knowledge_eligibility is not _UNSET:
+            self._validate_knowledge_eligibility(knowledge_eligibility)
+        if (
+            restore_from is not _UNSET
+            and restore_from
+            and restore_from not in scene.save_files
+        ):
             raise ValueError(
                 f"Restore file {restore_from} not found in scene save files."
             )
 
-        # Caller strips agent_settings_* keys from kwargs when the inbound
-        # payload didn't set them (see handle_update_scene_settings). Their
-        # presence here is what distinguishes "explicitly None" from "left
-        # alone" — the UNCHANGED sentinel substitutes for the latter.
         link_filename = agent_settings_kwargs.get(
             "agent_settings_file", AGENT_SETTINGS_UNCHANGED
         )
@@ -1682,7 +1683,8 @@ class WorldStateManager:
         )
 
         if (
-            knowledge_eligibility is not None
+            knowledge_eligibility is not _UNSET
+            and knowledge_eligibility is not None
             and knowledge_eligibility != scene.knowledge_eligibility
         ):
             self._validate_knowledge_eligibility(knowledge_eligibility)
@@ -1695,13 +1697,21 @@ class WorldStateManager:
                 initialize_intro_audience(scene)
             invalidate_memory_audiences(scene)
 
-        scene.immutable_save = immutable_save
-        scene.experimental = experimental
-        scene.writing_style_template = writing_style_template
-        scene.visual_style_template = visual_style_template
-        if agent_persona_templates is not None:
+        if immutable_save is not _UNSET:
+            scene.immutable_save = immutable_save
+        if experimental is not _UNSET:
+            scene.experimental = experimental
+        if writing_style_template is not _UNSET:
+            scene.writing_style_template = writing_style_template
+        if visual_style_template is not _UNSET:
+            scene.visual_style_template = visual_style_template
+        if (
+            agent_persona_templates is not _UNSET
+            and agent_persona_templates is not None
+        ):
             scene.agent_persona_templates = agent_persona_templates or {}
-        scene.restore_from = restore_from
+        if restore_from is not _UNSET:
+            scene.restore_from = restore_from
 
         return scene
 

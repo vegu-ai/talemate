@@ -248,8 +248,8 @@ class AgentConfigPlugin(Plugin):
         sparse AgentOverride dict) or ``patch`` (a sparse
         ``{set: {actions: ...}, clear: [{action, config?}]}`` merge).
         Optional: ``filename`` (creates / re-links the file when supplied;
-        the Agents settings page sends it with the first slice of a save for
-        a scene that has no agent-settings file yet), ``scene_identity`` (the
+        new links refuse existing names for replacements, while a first-link
+        patch merges into an existing file), ``scene_identity`` (the
         scene generation the patch was composed for), ``request_id``.
         """
         agent_type = data.get("agent_type")
@@ -361,6 +361,25 @@ class AgentConfigPlugin(Plugin):
             )
             return
 
+        target_path = (
+            agent_settings_dir(scene.save_dir) / filename if filename else None
+        )
+        starts_file = target_path is not None and (
+            (scene.agent_overrides is None and patch is None)
+            or (
+                scene.agent_overrides is not None
+                and filename != scene.agent_overrides.filename
+            )
+        )
+        if starts_file and target_path.exists():
+            await self._refuse_scene_overrides(
+                agent,
+                data,
+                f"Agent settings file {filename} already exists. Choose a new "
+                "name, or link the existing file in World Editor → Scene → Settings.",
+            )
+            return
+
         # Everything below mutates in-memory state that agents resolve their
         # settings from; snapshot it so a failed write can be undone instead of
         # leaving the running scene on values that never reached disk. The
@@ -397,7 +416,6 @@ class AgentConfigPlugin(Plugin):
                     agent, data, "No agent-settings file linked; filename is required"
                 )
                 return
-            target_path = agent_settings_dir(scene.save_dir) / filename
             if patch is not None and target_path.exists():
                 # A sparse hub patch merges, so an existing file's other agent
                 # and action overrides have to be loaded first; a file that
@@ -420,13 +438,6 @@ class AgentConfigPlugin(Plugin):
                 scene._agent_settings_opted_out = False
                 linked_file = True
         elif filename and filename != scene.agent_overrides.filename:
-            # Caller wants to switch which file we write to. No current sender
-            # reaches this — they only attach a filename while the scene has
-            # none linked, and the world editor switches files through
-            # ``apply_scene_settings_link`` instead. Move the in-memory
-            # overlay's filepath; existing file (if any) at the new name is
-            # treated as a fresh start — we overwrite below.
-            target_path = agent_settings_dir(scene.save_dir) / filename
             scene.agent_overrides = SceneAgentSettings(
                 filepath=target_path,
                 agents=scene.agent_overrides.agents,

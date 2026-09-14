@@ -1,6 +1,7 @@
 <template>
     <RequestInput ref="input" title="Save Scene" instructions="Enter a name for the scene save"
         input-type="text" icon="mdi-content-save-all" :size="750"
+        :close-on-continue="false" :loading="!!pending?.requestId" :error="error"
         @continue="submit" @cancel="cancel" />
 </template>
 
@@ -15,7 +16,7 @@ export default {
     props: { scene: Object },
     inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
     data() {
-        return { pending: null, savedInput: '', inputIdentity: null };
+        return { pending: null, savedInput: '', inputIdentity: null, error: '' };
     },
     methods: {
         open() {
@@ -24,6 +25,7 @@ export default {
             if (!identity) return Promise.resolve({ status: 'cancelled' });
             if (identity !== this.inputIdentity) this.savedInput = '';
             this.inputIdentity = identity;
+            this.error = '';
             let resolve;
             const promise = new Promise(done => { resolve = done; });
             this.pending = { identity, resolve, promise, requestId: null };
@@ -33,9 +35,12 @@ export default {
         finish(result) {
             const pending = this.pending;
             this.pending = null;
+            this.$refs.input.answered = true;
+            this.$refs.input.open = false;
             if (pending) pending.resolve(result);
         },
         cancel() {
+            if (this.pending?.requestId) return;
             this.savedInput = this.$refs.input.input;
             this.finish({ status: 'cancelled' });
         },
@@ -43,6 +48,7 @@ export default {
             const pending = this.pending;
             if (!pending || pending.requestId) return;
             this.savedInput = name;
+            this.error = '';
             if (sceneIdentityOf(this.scene) !== pending.identity) {
                 this.finish({ status: 'cancelled' });
                 return;
@@ -55,15 +61,15 @@ export default {
                     scene_identity: pending.identity, request_id: pending.requestId,
                 }));
             } catch (error) {
-                this.finish({ status: 'failed', message: error.message });
+                pending.requestId = null;
+                this.error = error.message;
             }
         },
         reset() {
             this.finish({ status: 'cancelled' });
             this.savedInput = '';
             this.inputIdentity = null;
-            this.$refs.input.answered = true;
-            this.$refs.input.open = false;
+            this.error = '';
         },
         handleMessage(data) {
             if (data.type === 'system' && ['scene.loading', 'scene.loaded', 'scene.closed', 'scene.load_failure'].includes(data.id)) {
@@ -80,7 +86,8 @@ export default {
             if (data.action === 'scene_saved' && data.scene_identity === pending.identity) {
                 this.finish({ status: 'saved', identity: pending.identity });
             } else if (data.action === 'operation_done' && data.error) {
-                this.finish({ status: 'failed', message: data.error.message });
+                pending.requestId = null;
+                this.error = data.error.message;
             }
         },
     },

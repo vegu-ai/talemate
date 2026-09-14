@@ -821,6 +821,51 @@ class TestSceneSettings:
         await manager.update_scene_settings(restore_from="save1.json")
         assert scene.restore_from == "save1.json"
 
+    @pytest.mark.parametrize("via_websocket", [False, True])
+    @pytest.mark.parametrize(
+        "changes",
+        [
+            {},
+            {"immutable_save": False},
+            {"experimental": False},
+            {"writing_style_template": None},
+            {"visual_style_template": None},
+            {"restore_from": None},
+            {"agent_persona_templates": {}},
+            {"knowledge_eligibility": "legacy"},
+            {"agent_settings_file": None},
+        ],
+    )
+    async def test_partial_settings_preserve_omitted_fields(
+        self, scene, manager, changes, via_websocket
+    ):
+        original = {
+            "immutable_save": True,
+            "experimental": True,
+            "writing_style_template": "writing-uid",
+            "visual_style_template": "visual-uid",
+            "restore_from": "initial.json",
+            "agent_persona_templates": {"director": "persona-uid"},
+            "knowledge_eligibility": "legacy",
+        }
+        for field, value in original.items():
+            setattr(scene, field, value)
+        scene._save_files = ["initial.json"]
+        if via_websocket:
+            handler = MagicMock(scene=scene)
+            await WorldStateManagerPlugin(handler).handle_update_scene_settings(changes)
+            assert handler.queue_put.call_args_list[0].args[0] == {
+                "type": "world_state_manager",
+                "action": "scene_settings_updated",
+                "data": changes,
+            }
+        else:
+            await manager.update_scene_settings(**changes)
+        for field, value in original.items():
+            assert getattr(scene, field) == changes.get(field, value), field
+        if "agent_settings_file" in changes:
+            assert scene._agent_settings_opted_out is True
+
 
 # ---------------------------------------------------------------------------
 # Suggestions: clear / add (no LLM) / get_by_id / remove / remove_proposal

@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="open" :max-width="size" :contained="contained">
+    <v-dialog v-model="open" :max-width="size" :contained="contained" :persistent="loading">
         <v-card>
             <v-card-title>
                 <v-icon v-if="icon" size="small" class="mr-2" color="primary">{{ icon }}</v-icon>
@@ -10,6 +10,8 @@
                 <v-alert v-if="instructions" color="muted" variant="text">
                     <div class="instructions">{{ instructions }}</div>
                 </v-alert>
+
+                <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ error }}</v-alert>
 
                 <v-form @submit.prevent="proceed" ref="form" v-model="valid">
                     <v-row v-if="inputType === 'multiline'">
@@ -53,11 +55,11 @@
                 </v-form>
             </v-card-text>
             <v-card-actions>
-                <v-btn @click="cancel" color="muted" prepend-icon="mdi-cancel">
+                <v-btn @click="cancel" color="muted" prepend-icon="mdi-cancel" :disabled="loading">
                     Cancel
                 </v-btn>
                 <v-spacer></v-spacer>
-                <v-btn @click="proceed" color="primary" prepend-icon="mdi-check-circle-outline" :disabled="!valid">
+                <v-btn @click="proceed" color="primary" prepend-icon="mdi-check-circle-outline" :disabled="!valid || loading" :loading="loading">
                     Continue
                 </v-btn>
             </v-card-actions>
@@ -73,6 +75,12 @@ export default {
     props: {
         title: String,
         instructions: String,
+        error: String,
+        loading: Boolean,
+        closeOnContinue: {
+            type: Boolean,
+            default: true,
+        },
         icon: String,
         placeholder: {
             type: String,
@@ -162,17 +170,19 @@ export default {
 
     methods: {
         proceed() {
+            if (this.loading) return;
             this.$refs.form.validate()
             if(!this.valid) {
                 return;
             }
 
-            this.answered = true;
+            this.answered = this.closeOnContinue;
             const params = this.checkboxLabel ? { ...this.extra_params, checked: this.checked } : this.extra_params;
             this.$emit('continue', this.input, params);
-            this.open = false;
+            if (this.closeOnContinue) this.open = false;
         },
         cancel() {
+            if (this.loading) return;
             this.answered = true;
             this.$emit('cancel');
             this.open = false;

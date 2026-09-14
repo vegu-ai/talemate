@@ -136,12 +136,11 @@ export function linkNeedsSceneCopy({ immutable, filename }) {
  * overlay to send, `makeId` mints (and lets the caller track) the request id
  * each payload is answered by.
  *
- * A `filename` rides on the first payload only: it links the new file to the
- * scene, and the rest write into it.
+ * Every payload carries the new `filename`, so a refused first link gives
+ * the same actionable error for every pending agent.
  */
 export function buildCommitPayloads({ agentTypes, overlayFor, filename, makeId }) {
     const payloads = [];
-    let link = filename || null;
     for (const agentType of agentTypes) {
         const payload = {
             type: 'agent_config',
@@ -151,9 +150,8 @@ export function buildCommitPayloads({ agentTypes, overlayFor, filename, makeId }
             override: overlayFor(agentType),
             request_id: makeId(agentType),
         };
-        if (link) {
-            payload.filename = link;
-            link = null;
+        if (filename) {
+            payload.filename = filename;
         }
         payloads.push(payload);
     }

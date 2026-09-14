@@ -332,11 +332,11 @@ describe("buildCommitPayloads", () => {
             .toEqual(["narrator", "tts", "editor"]);
     });
 
-    it("links the file on the first payload only", () => {
+    it("carries the first-link filename on every payload", () => {
         const payloads = build({ filename: "agent-settings.json" });
 
         expect(payloads[0].filename).toBe("agent-settings.json");
-        expect(payloads[1].filename).toBeUndefined();
+        expect(payloads[1].filename).toBe("agent-settings.json");
     });
 
     it("carries no filename when the scene already has one linked", () => {

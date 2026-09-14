@@ -63,7 +63,7 @@
                             v-model="scene.data.immutable_save" 
                             @update:model-value="update()"
                             label="Locked save file" 
-                            messages="When activated, progress such as conversation and narration cannot be saved to the current file and requires a `Save As` action.">
+                            messages="Blocks autosave and Scene tools → Save. World Editor → Save still writes the whole current scene, including story progress, to the loaded file and keeps the lock. Play in a Save As copy to preserve a shipped starting state.">
                         </v-checkbox>
                         <v-checkbox 
                             v-model="scene.data.experimental" 

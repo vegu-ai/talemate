@@ -380,7 +380,11 @@ export default {
             return DEFAULT_SCENE_AGENT_SETTINGS_FILENAME;
         },
         filenameRules() {
-            return SCENE_AGENT_SETTINGS_FILENAME_RULES;
+            return [
+                ...SCENE_AGENT_SETTINGS_FILENAME_RULES,
+                value => !(this.sceneData?.agent_settings_files || []).includes((value || '').trim())
+                    || 'Agent settings file already exists. Choose a new name, or link the existing file in World Editor → Scene → Settings.',
+            ];
         },
         namingInstructions() {
             const instructions = (

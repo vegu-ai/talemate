@@ -20,7 +20,7 @@ A blank story keeps its normal unsaved state until you save it; that save stores
 
 Changing a setting in a character's knowledge hub opens **Save Scene** when the scene has no save file yet. After the save succeeds, Talemate applies the pending knowledge change automatically. Scenes with a save file and project name apply hub changes directly, including read-only stock scenes. The exception is a read-only scene that is opted out of agent-settings overrides: it cannot store the link a hub change needs, so the change is refused with an error. Save the scene as a copy first (**Save As**), then make the change in the copy.
 
-Cancelling the dialog or a failed save keeps the exact change pending. Use **Save and apply** in the hub to retry with the entered save name, or **Discard change** to drop it. Loading another scene discards the pending change so it cannot affect a different story. The pending notice is not confirmation that the settings were saved.
+If a save fails, the dialog stays open with the error and entered name so you can correct it and retry. Cancelling keeps the exact change pending. Use **Save and apply** in the hub to reopen the dialog, or **Discard change** to drop it. Loading another scene discards the pending change so it cannot affect a different story. The pending notice is not confirmation that the settings were saved.
 
 ## Editing overrides: the Global / Scene switch
 
@@ -65,7 +65,9 @@ Overrides are treated like every other edit on the settings page: activating one
 
 If the scene doesn't yet have an overrides file (see below), the first save that carries an override asks you to name one before it writes; cancelling that prompt cancels the save and leaves your edits untouched.
 
-A read-only scene, such as a shipped story, cannot store a link to a file with another name. If you pick a name other than `agent-settings.json` there, **Save As** opens next: the overrides are written to the named file, and the new copy is linked to it. Cancelling **Save As** cancels the save too and leaves your edits pending. The read-only scene itself keeps no link.
+On the Agents settings page, choosing a name other than `agent-settings.json` for a read-only scene opens **Save As** to create a writable copy. After it succeeds, Talemate attempts to save the pending overrides and link the copy to the named file. Cancelling **Save As** cancels the save too and leaves your edits pending. This Agents-page flow leaves the original scene unchanged.
+
+If that name already exists in the project's `agent-settings/` folder, the naming prompt shows an error before opening Save As or sending any agent edits. If a file appears after the prompt's file list was loaded, the server also refuses the save with the same guidance for every pending agent. Your edits remain pending. Choose a new filename to store those edits separately. To use the existing file's settings, discard the pending edits and select that file in **World Editor → Scene → Settings → Agent settings file**. The naming prompt never replaces an existing file.
 
 ## Quick-toggle chips
 

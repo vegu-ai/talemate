@@ -64,6 +64,7 @@ WorldSateManager = signal("world_state_manager")
 TalemateStarted = signal("talemate_started")
 
 RequestActionConfirmation = signal("request_action_confirmation")
+ActionConfirmationFinished = signal("action_confirmation_finished")
 
 TemplateRendered = signal("template_rendered")
 
@@ -124,6 +125,7 @@ handlers = {
     "world_state_manager": WorldSateManager,
     "talemate_started": TalemateStarted,
     "request_action_confirmation": RequestActionConfirmation,
+    "action_confirmation_finished": ActionConfirmationFinished,
     "scene_asset_scene_cover_image": SceneCoverImageSet,
     "scene_asset_character_cover_image": CharacterCoverImageSet,
     "scene_asset_character_avatar": CharacterAvatarSet,

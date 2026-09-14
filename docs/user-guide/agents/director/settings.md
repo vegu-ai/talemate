@@ -228,7 +228,7 @@ How long the chat will wait for you to confirm or reject a write action before i
 
 - **Range**: 0 to 60 minutes
 - **Default**: 3 minutes
-- **0**: Wait indefinitely — the confirmation card stays open until you click Confirm or Reject
+- **0**: Wait indefinitely — the confirmation card stays open until you confirm, choose a rejection method, or cancel the operation
 
 The countdown is shown in the top-right corner of each confirmation card and turns red when less than 30 seconds remain.
 

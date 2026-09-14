@@ -19,8 +19,9 @@
                     @decide="onDecide"
                 />
                 <DirectorConsoleChatMessageActionResult
-                    v-else-if="m.type === 'action_result'"
-                    :name="m.name"
+                    v-else-if="m.type === 'action_result' || m.type === 'batch_result'"
+                    :name="m.type === 'batch_result' ? `Batch: ${m.applied_count} applied · ${m.not_applied_count} not applied` : m.name"
+                    :details="m.type === 'batch_result' ? m.message : undefined"
                     :args="m.arguments"
                     :result="m.result"
                 />
@@ -119,7 +120,7 @@ export default {
     methods: {
         getMessageColor(m) {
             if(m && (m.source === 'user' || m.type === 'user_interaction')) return 'actor';
-            if(m && m.type === 'action_result') return 'dchat_msg_action_result';
+            if(m && (m.type === 'action_result' || m.type === 'batch_result')) return 'dchat_msg_action_result';
             if(m && m.type === 'compaction_notice') return 'dchat_msg_compaction';
             if(m && m.type === 'asset_view') return 'dchat_msg_director';
             return 'dchat_msg_director';
@@ -178,5 +179,4 @@ export default {
     align-items: center;
 }
 </style>
-
 

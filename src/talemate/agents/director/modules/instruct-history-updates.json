@@ -248,7 +248,9 @@
     "409624c0-7f87-41b4-99a5-207187dfc46e": {
       "title": "Agent Report Issue",
       "id": "409624c0-7f87-41b4-99a5-207187dfc46e",
-      "properties": {},
+      "properties": {
+        "name": "report_issue"
+      },
       "x": 4191,
       "y": 2927,
       "width": 151,
@@ -1483,7 +1485,7 @@
       "title": "AI Function Callback",
       "id": "3f87e867-0c14-4510-ba7b-ff3edd3fd6bc",
       "properties": {
-        "name": "report_problem",
+        "name": "report_issue",
         "allow_multiple_calls": true
       },
       "x": 4440,

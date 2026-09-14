@@ -2,7 +2,7 @@
   "title": "Agent Report Issue",
   "id": "cfbec838-8e88-4dc0-89d3-f4a066f9b70f",
   "properties": {
-    "name": "report_problem",
+    "name": "report_issue",
     "allow_multiple_calls": true
   },
   "x": 0,
@@ -95,7 +95,8 @@
             "task": "I was tasked to update existing context 'Dragon scales'.",
             "issue": "I could not locate the Context ID for the entry."
           }
-        ]
+        ],
+        "counts_toward_budget": false
       },
       "x": 770,
       "y": 180,
@@ -104,6 +105,19 @@
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "7b7fece1-aa9d-4cac-b74d-38d05407b928": {
+      "title": "Report Issue Output",
+      "id": "7b7fece1-aa9d-4cac-b74d-38d05407b928",
+      "properties": {},
+      "x": 590,
+      "y": 60,
+      "width": 200,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ReportIssueOutput",
       "base_type": "core/Node"
     }
   },
@@ -115,10 +129,13 @@
       "03aa565e-2cd9-401e-bb1b-750aecd159e3.item1"
     ],
     "03aa565e-2cd9-401e-bb1b-750aecd159e3.result": [
-      "a0b1972c-5a0f-40aa-a30d-b299fab107c2.value"
+      "7b7fece1-aa9d-4cac-b74d-38d05407b928.message"
     ],
     "a0b1972c-5a0f-40aa-a30d-b299fab107c2.value": [
       "16db1b24-2713-46f2-a329-2b7aa1b77f0e.state"
+    ],
+    "7b7fece1-aa9d-4cac-b74d-38d05407b928.message": [
+      "a0b1972c-5a0f-40aa-a30d-b299fab107c2.value"
     ]
   },
   "groups": [

@@ -57,7 +57,7 @@ class FunctionWrapper:
         self.containing_graph = containing_graph
         self.endpoint = endpoint
 
-    async def __call__(self, **kwargs):
+    async def __call__(self, _focal_call: focal.Call | None = None, **kwargs):
         result = None
 
         async def handle_result(state: GraphState):
@@ -81,8 +81,13 @@ class FunctionWrapper:
                 self.state,
                 callbacks=[handle_result],
                 state_values={
-                    f"{arg.id}__fn_arg_value": kwargs.get(arg.get_property("name"))
-                    for arg in argument_nodes
+                    **(
+                        {"__focal_call": _focal_call} if _focal_call is not None else {}
+                    ),
+                    **{
+                        f"{arg.id}__fn_arg_value": kwargs.get(arg.get_property("name"))
+                        for arg in argument_nodes
+                    },
                 },
                 execute_forks=True,
                 emit_state=True,
@@ -101,8 +106,13 @@ class FunctionWrapper:
                 self.state,
                 callbacks=[handle_result],
                 state_values={
-                    f"{arg.id}__fn_arg_value": kwargs.get(arg.get_property("name"))
-                    for arg in argument_nodes
+                    **(
+                        {"__focal_call": _focal_call} if _focal_call is not None else {}
+                    ),
+                    **{
+                        f"{arg.id}__fn_arg_value": kwargs.get(arg.get_property("name"))
+                        for arg in argument_nodes
+                    },
                 },
             )
 
@@ -189,7 +199,11 @@ class FunctionWrapper:
             name=name,
             arguments=arguments,
             fn=self,
+            pass_call=True,
             multiple=allow_multiple_calls,
+            counts_toward_budget=metadata.get_property("counts_toward_budget")
+            if metadata
+            else True,
             instructions=metadata.normalized_input_value("instructions")
             if metadata
             else "",

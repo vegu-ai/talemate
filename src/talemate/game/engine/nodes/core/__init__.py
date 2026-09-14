@@ -2491,7 +2491,9 @@ class Listen(Graph):
 
         node_state = await self.node_state_push(self, state)
         try:
-            await self.execute(state, state_values={"event": event})
+            await self.execute(
+                state, state_values={"event": event, "__focal_call": None}
+            )
         except StopModule:
             await self.node_state_pop(node_state, self, state)
             return

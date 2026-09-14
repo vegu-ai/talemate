@@ -129,35 +129,17 @@
       "id": "564e7716-151c-4845-a722-ac6e3e3c6be5",
       "properties": {
         "name": "my_function",
-        "allow_multiple_calls": false
+        "allow_multiple_calls": false,
+        "allow_concurrent": false
       },
       "x": 1257,
       "y": 2309,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
       "base_type": "core/Node"
-    },
-    "41359881-cda9-439e-8307-70cbf7c982ce": {
-      "title": "List Collector",
-      "id": "41359881-cda9-439e-8307-70cbf7c982ce",
-      "properties": {},
-      "x": 1537,
-      "y": 2309,
-      "width": 140,
-      "height": 81,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
     },
     "12d035df-532c-4ce3-852e-317507821bc1": {
       "title": "FN generate_avatar",
@@ -165,7 +147,7 @@
       "properties": {
         "name": "generate_avatar"
       },
-      "x": 987,
+      "x": 980,
       "y": 2309,
       "width": 210,
       "height": 78,
@@ -233,12 +215,13 @@
               "looking down"
             ]
           }
-        ]
+        ],
+        "counts_toward_budget": true
       },
       "x": -517,
       "y": 1609,
       "width": 244,
-      "height": 82,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
@@ -339,12 +322,14 @@
         "template": null,
         "max_calls": 1,
         "retries": 0,
-        "response_length": 1024
+        "response_length": 1024,
+        "max_concurrent": 3,
+        "inherit_parent_call": true
       },
       "x": 1937,
       "y": 2149,
       "width": 228,
-      "height": 250,
+      "height": 298,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Focal",
@@ -948,6 +933,62 @@
       "inherited": false,
       "registry": "raise/Stop",
       "base_type": "core/Node"
+    },
+    "0b2c843f-dc99-4986-85f8-9712e6565b95": {
+      "title": "Agent Report Issue",
+      "id": "0b2c843f-dc99-4986-85f8-9712e6565b95",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true
+      },
+      "x": 980,
+      "y": 2480,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/agentReportIssue",
+      "base_type": "core/functions/Function"
+    },
+    "19b70572-1784-4916-8dd1-53a8c0119cb6": {
+      "title": "AI Function Callback",
+      "id": "19b70572-1784-4916-8dd1-53a8c0119cb6",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
+      },
+      "x": 1257,
+      "y": 2500,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "41359881-cda9-439e-8307-70cbf7c982ce": {
+      "title": "List Collector",
+      "id": "41359881-cda9-439e-8307-70cbf7c982ce",
+      "properties": {},
+      "x": 1540,
+      "y": 2400,
+      "width": 140,
+      "height": 101,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
     }
   },
   "edges": {
@@ -969,9 +1010,6 @@
     ],
     "564e7716-151c-4845-a722-ac6e3e3c6be5.callback": [
       "41359881-cda9-439e-8307-70cbf7c982ce.item0"
-    ],
-    "41359881-cda9-439e-8307-70cbf7c982ce.list": [
-      "e91b7211-ca83-4e97-be00-dd57a07eb809.callbacks"
     ],
     "12d035df-532c-4ce3-852e-317507821bc1.fn": [
       "564e7716-151c-4845-a722-ac6e3e3c6be5.fn"
@@ -1108,6 +1146,15 @@
     ],
     "84cb59cb-8673-4a98-b451-4c6047285fb5.state": [
       "2eaae03c-6e42-40a3-89c3-d1cd5144030e.state"
+    ],
+    "0b2c843f-dc99-4986-85f8-9712e6565b95.fn": [
+      "19b70572-1784-4916-8dd1-53a8c0119cb6.fn"
+    ],
+    "19b70572-1784-4916-8dd1-53a8c0119cb6.callback": [
+      "41359881-cda9-439e-8307-70cbf7c982ce.item1"
+    ],
+    "41359881-cda9-439e-8307-70cbf7c982ce.list": [
+      "e91b7211-ca83-4e97-be00-dd57a07eb809.callbacks"
     ]
   },
   "groups": [
@@ -1135,8 +1182,8 @@
       "title": "Process",
       "x": -1,
       "y": 1275,
-      "width": 2510,
-      "height": 1162,
+      "width": 2533,
+      "height": 1378,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false

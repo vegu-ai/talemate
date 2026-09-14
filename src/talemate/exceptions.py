@@ -70,6 +70,8 @@ class GenerationCancelled(TalemateInterrupt):
     Interrupt current scene and return action to the user
     """
 
+    focal_reraise = True
+
     def __init__(
         self,
         *args,

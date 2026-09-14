@@ -1,0 +1,13 @@
+added:
+- "Director Chat confirmations offer Reject with instructions: skip a call, continue the batch, and ask the director to work through the collected corrections."
+- "Director Chat batch notes start collapsed with applied and unapplied call counts. Typed rejection instructions disable Confirm and can be sent with Enter or the highlighted Reject with instructions button."
+fixed:
+- "Director Chat reports calls applied and not applied when a batch exceeds its call limit, is rejected, or times out."
+- "All Director Chat instruct paths can report unmet tasks without using their action call budget."
+- "Director Chat confirmation waits now stop on interruption and scene shutdown; confirmations received at the timeout boundary are honored."
+- "Cancelling a generation during AI function calling (Director Chat and Scene Direction actions, character development) now stops the remaining calls instead of skipping only the current call."
+- "Placed the Update Context graph's disclosure arguments inside grant_knowledge, keeping their connections within that function group."
+- "Applied the operator's node-editor layouts to the avatar, character changes, character configuration and story configuration instruct graphs."
+changed:
+- "Director Chat batch notes use a structured batch-result message with applied_count and not_applied_count fields."
+- "Renamed the shipped instruct callback report_problem to report_issue. Report functions declare their call-budget exemption in focal metadata, independent of their name; custom function copies can set counts_toward_budget to false."

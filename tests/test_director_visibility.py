@@ -19,7 +19,7 @@ from talemate.agents.director.visibility import (
 from talemate.character import Character
 from talemate.context import ActiveScene
 from talemate.exceptions import GenerationCancelled
-from talemate.game.engine.nodes.core import GraphContext
+from talemate.game.engine.nodes.core import GraphContext, GraphState
 from talemate.game.engine.nodes.run import FunctionWrapper
 from talemate.instance import get_agent
 from talemate.knowledge.schema import EntryVisibility
@@ -245,6 +245,7 @@ async def test_invalid_or_oversized_selection_makes_no_request(
 
 
 async def test_shipped_graph_confirm_accept_reject_and_disabled(scene, monkeypatch):
+    scene.active = True
     requested = selection("details")
     entries = await select_visibility_entries(scene, requested)
     send = reply(scene, [decision(entries[0])])
@@ -267,7 +268,9 @@ async def test_shipped_graph_confirm_accept_reject_and_disabled(scene, monkeypat
                 if event == "request_action_confirmation":
                     data = kwargs["data"]
                     confirmations.append(data)
-                    state.shared[f"_director_chat_action_confirm_{data['id']}"] = answer
+                    state.shared[f"_director_chat_action_confirm_{data['id']}"][
+                        "decision"
+                    ] = "confirm" if answer == "accept" else answer
 
             monkeypatch.setattr(chat_nodes, "emit", confirm)
             wrapper = FunctionWrapper(action, action, state)
@@ -363,6 +366,7 @@ async def test_world_context_ids_and_duplicate_selections_are_exact(scene):
 
 
 async def run_action(scene, requested, monkeypatch, *, confirm=False, answer="accept"):
+    scene.active = True
     payload = json.loads(
         Path(
             "src/talemate/agents/director/modules/director-action-assess-visibility.json"
@@ -378,7 +382,9 @@ async def run_action(scene, requested, monkeypatch, *, confirm=False, answer="ac
         def respond(event, **kwargs):
             if event == "request_action_confirmation":
                 data = kwargs["data"]
-                state.shared[f"_director_chat_action_confirm_{data['id']}"] = answer
+                state.shared[f"_director_chat_action_confirm_{data['id']}"][
+                    "decision"
+                ] = "confirm" if answer == "accept" else answer
 
         confirmation = Mock(side_effect=respond)
         monkeypatch.setattr(chat_nodes, "emit", confirmation)
@@ -606,7 +612,12 @@ async def test_shipped_graph_reassess_list_audience_confirmed_and_editor_synced(
     assert alice.visibility["detail.past"] == EntryVisibility(
         mode="list", characters=["Bob", "Alice"]
     )
-    assert "Alice: past" in confirmation.call_args.kwargs["data"]["description"]
+    request = next(
+        call
+        for call in confirmation.call_args_list
+        if call.args[0] == "request_action_confirmation"
+    )
+    assert "Alice: past" in request.kwargs["data"]["description"]
     assert "only Alice (owner) → Alice (owner), Bob" in result
     sync.assert_called_once_with(
         "world_state_manager", kwargs={"action": "sync"}, websocket_passthrough=True
@@ -770,6 +781,7 @@ async def test_selector_conflicts_are_rejected_without_generation(
 
 
 async def test_graph_validation_failure_reaches_real_chat_caller(scene, monkeypatch):
+    scene.nodegraph_state = GraphState()
     director = get_agent("director")
     director._chat_save(DirectorChat(id="test", title="Assessment", messages=[]))
     monkeypatch.setattr(action_utils, "build_prompt_vars", AsyncMock(return_value={}))

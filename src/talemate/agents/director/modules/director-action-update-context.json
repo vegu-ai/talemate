@@ -1282,6 +1282,10 @@
         {
           "name": "item5",
           "type": "*"
+        },
+        {
+          "name": "item6",
+          "type": "*"
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
@@ -2344,8 +2348,8 @@
         "typ": "str",
         "instructions": "Only for a disclosure request: exact selected information, preserving attribution and uncertainty. Leave empty for ordinary entry grants or explicit whole-entry copying. Never invent dialogue or events."
       },
-      "x": -2000,
-      "y": 3230,
+      "x": -1520,
+      "y": 2890,
       "width": 210,
       "height": 126,
       "collapsed": false,
@@ -2361,8 +2365,8 @@
         "typ": "bool",
         "instructions": "For a disclosure request, false gives only information; true requires an explicit request for ALL source content, including private details. Leave false for ordinary entry grants."
       },
-      "x": -2000,
-      "y": 3410,
+      "x": -1280,
+      "y": 3050,
       "width": 210,
       "height": 126,
       "collapsed": false,
@@ -2381,6 +2385,37 @@
       "collapsed": false,
       "inherited": false,
       "registry": "scene/GetSceneState"
+    },
+    "e0052861-be1a-4dbc-bc12-c7370577da0c": {
+      "title": "Agent Report Issue",
+      "id": "e0052861-be1a-4dbc-bc12-c7370577da0c",
+      "properties": {
+        "name": "report_issue"
+      },
+      "x": 640,
+      "y": 1175,
+      "width": 151,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/agentReportIssue",
+      "base_type": "core/functions/Function"
+    },
+    "89b8b99d-01db-4b34-a9fb-cfb72bbc33db": {
+      "title": "AI Function Callback",
+      "id": "89b8b99d-01db-4b34-a9fb-cfb72bbc33db",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true
+      },
+      "x": 920,
+      "y": 1175,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -2806,6 +2841,12 @@
     ],
     "4a8f086e-a1ef-46e1-8c56-470065a59489.scene": [
       "b62ffa05-640b-4de1-a71f-fa8b265a80e3.item4"
+    ],
+    "e0052861-be1a-4dbc-bc12-c7370577da0c.fn": [
+      "89b8b99d-01db-4b34-a9fb-cfb72bbc33db.fn"
+    ],
+    "89b8b99d-01db-4b34-a9fb-cfb72bbc33db.callback": [
+      "e9460323-7f9c-484b-a993-e351e8fd2762.item6"
     ]
   },
   "groups": [

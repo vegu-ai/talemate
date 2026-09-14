@@ -177,7 +177,7 @@ some basic filtering.
 
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
-| `message_type` | `str` | `unset` | The type of message to get (or a list of types). Choices: `scene`, `character`, `narrator`, `director`, `time`, `reinforcement`, `context_investigation`. |
+| `message_type` | `str` | `unset` | The type of message to get (or a list of types). Choices: `scene`, `character`, `narrator`, `director`, `time`, `reinforcement`, `context_investigation`, `character_transition`. |
 | `max_iterations` | `int` | `100` | The maximum number of iterations to go back |
 | `stop_on_time_passage` | `bool` | `False` | Stop when a time passage message is encountered |
 | `filters` | `dict` | `{}` | Filter the messages by property values |

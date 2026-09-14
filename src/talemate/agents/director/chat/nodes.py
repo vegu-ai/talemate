@@ -3,6 +3,7 @@ from typing import ClassVar
 import pydantic
 import asyncio
 import time
+import uuid
 from talemate.game.engine.nodes.core import (
     GraphState,
     PropertyField,
@@ -19,6 +20,8 @@ from talemate.game.engine.nodes.agent import AgentNode
 from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.context import active_scene
+from talemate.exceptions import GenerationCancelled
+from talemate.game.focal.schema import CallOutcome
 
 from .context import director_chat_context
 from .schema import DirectorChatMessage
@@ -329,13 +332,14 @@ class DirectorChatActionConfirm(Node):
     for write actions - otherwise the state passes straight through as
     accepted. When active, the node emits a confirmation request to the
     frontend and blocks until the user responds, the scene ends, or the
-    configured timeout is reached (timeouts and scene shutdown count as
-    rejections).
+    configured timeout is reached. Scene shutdown, interruption and chat
+    clearing/deletion cancel the batch.
 
-    On acceptance the state is passed to the `accepted` output; on
-    rejection it is passed to the `rejected` output instead - unless
-    raise_on_reject is set (the default), in which case an ActionRejected
-    error is raised and aborts the action.
+    Acceptance passes the state to `accepted`. Rejection passes it to
+    `rejected`, or raises ActionRejected when raise_on_reject is enabled.
+    Rejection with instructions always raises ActionRejected. With
+    raise_on_reject, reject and timeout raise; otherwise they route to
+    `rejected`. Cancellation always raises GenerationCancelled.
 
     Inputs:
 
@@ -404,72 +408,124 @@ class DirectorChatActionConfirm(Node):
         state_value = self.get_input_value("state")
         director = get_agent("director")
         max_wait_time: int = director.chat_action_confirm_timeout
-        key: str = f"_director_chat_action_confirm_{self.id}"
+        request_id = str(uuid.uuid4())
+        key: str = f"_director_chat_action_confirm_{request_id}"
         name: str = self.normalized_input_value("name")
         description: str = self.normalized_input_value("description")
         raise_on_reject: bool = self.get_property("raise_on_reject")
         scene = active_scene.get()
 
         rejected_state = UNRESOLVED
+        reason: CallOutcome = "reject"
+        instructions = ""
+        context = director_chat_context.get()
 
         try:
-            context = director_chat_context.get()
             if context and context.confirm_write_actions:
-                state.shared[key] = "waiting"
-                start_time = time.time()
+                pending = {
+                    "chat_id": context.chat_id,
+                    "decision": "waiting",
+                    "instructions": "",
+                }
+                state.shared[key] = pending
+                deadline = time.monotonic() + max_wait_time if max_wait_time else None
+                interrupt = scene.interrupt_signal
                 emit(
                     "request_action_confirmation",
                     data={
                         "chat_id": context.chat_id,
-                        "id": self.id,
+                        "id": request_id,
                         "name": name,
                         "description": description,
                         "timer": max_wait_time,
                     },
                     websocket_passthrough=True,
                 )
-                while state.shared[key] == "waiting":
+                while True:
                     if not scene.active:
-                        log.warning(
-                            "Director Chat Action Confirm: Scene is no longer active",
-                            node=self.id,
+                        raise GenerationCancelled(
+                            "Scene ended while awaiting confirmation"
                         )
-                        rejected_state = state_value
+                    if interrupt.done() or pending["decision"] == "interrupted":
+                        raise GenerationCancelled(
+                            "Action confirmation cancelled", by_user=True
+                        )
+                    if pending["decision"] != "waiting":
                         break
-
-                    log.debug(
-                        "Director Chat Action Confirm: Waiting for confirmation",
-                        node=self.id,
+                    now = time.monotonic()
+                    if deadline is not None and now >= deadline:
+                        rejected_state = state_value
+                        reason = "timed_out"
+                        break
+                    await asyncio.sleep(
+                        min(0.1, deadline - now) if deadline is not None else 0.1
                     )
-                    await asyncio.sleep(1)
-                    if max_wait_time and time.time() - start_time > max_wait_time:
-                        log.error(
-                            "Director Chat Action Confirm: Max wait time reached",
-                            node=self.id,
-                        )
-                        rejected_state = state_value
-                        break
 
-                if state.shared[key] == "reject":
+                if pending["decision"] in ("reject", "reject_with_instructions"):
                     rejected_state = state_value
+                    reason = pending["decision"]
+                    instructions = pending["instructions"]
 
-                if raise_on_reject and rejected_state is not UNRESOLVED:
-                    raise ActionRejected(name, description)
-        except LookupError:
-            pass
+                if rejected_state is not UNRESOLVED and (
+                    raise_on_reject or reason == "reject_with_instructions"
+                ):
+                    raise ActionRejected(
+                        name, description, reason=reason, instructions=instructions
+                    )
+        except BaseException:
+            if rejected_state is UNRESOLVED and key in state.shared:
+                rejected_state = state_value
+                reason = "interrupted"
+            raise
         finally:
             if key in state.shared:
                 del state.shared[key]
+                emit(
+                    "action_confirmation_finished",
+                    data={
+                        "chat_id": context.chat_id,
+                        "id": request_id,
+                        "decision": reason
+                        if rejected_state is not UNRESOLVED
+                        else "confirm",
+                    },
+                    websocket_passthrough=True,
+                )
 
         log.debug("Director Chat Action Confirm: Final output", rejected=rejected_state)
 
         if rejected_state is not UNRESOLVED:
-            message = f"User REJECTED action: {name} -> {description}"
+            message = f"Action {reason}: {name} -> {description}"
             self.set_output_values(
                 {"rejected": rejected_state, "rejected_message": message}
             )
         else:
             self.set_output_values({"accepted": state_value})
+
+
+@register("agents/director/chat/ReportIssueOutput")
+class ReportIssueOutput(Node):
+    """Return a problem report and show it as a status outside Director Chat.
+
+    Chat action summaries display the returned report. Other callers may discard
+    function results, so they receive a visible warning directly.
+
+    Inputs:
+    - message: The formatted problem report
+
+    Outputs:
+    - message: The same problem report
+    """
+
+    def setup(self):
+        self.add_input("message", socket_type="str")
+        self.add_output("message", socket_type="str")
+
+    async def run(self, state: GraphState):
+        message = self.get_input_value("message")
+        if director_chat_context.get() is None:
+            emit("status", message=message, status="warning", scene=active_scene.get())
+        self.set_output_values({"message": message})
 
 
 @register("agents/director/InsertChatMessage")

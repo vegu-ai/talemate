@@ -132,13 +132,20 @@ The director then analyzes the result and discusses what happened:
 
 ### Rejecting actions
 
-You can also reject actions if you change your mind or want to revise your request:
+Each confirmation offers two ways to reject a proposed call:
 
-![Action Rejection Request](/talemate/img/0.33.0/director-chat-reject-0001.png)
+- **Reject and abort** stops the batch and ends the turn. This is the default rejection. A chat note lists the calls already applied and those not applied, including their arguments. Earlier changes remain applied.
+- **Reject with instructions** opens a text field for your correction. Type the correction, then choose **Reject with instructions** again or press **Enter** to skip this call and continue the rest of the batch. **Confirm** is disabled while the field contains text; clear it to approve the original call. **Shift+Enter** adds a new line. After the current prompt finishes, the director receives one follow-up request containing all rejected calls, their arguments and your instructions. You can reject proposals in that follow-up the same way. Each further correction round requires another explicit rejection with instructions.
 
-When rejected, the director acknowledges and waits for your next instruction:
+![Action Rejection Request](/talemate/img/0.40.0/director-confirm-methods.png)
 
-![Action Rejected](/talemate/img/0.33.0/director-chat-reject-0002.png)
+Enter the correction, then choose **Reject with instructions** or press **Enter**:
+
+![Rejection instructions](/talemate/img/0.40.0/director-confirm-instructions.png)
+
+When you abort, the director waits for your next instruction. The batch note starts collapsed; its header counts applied and unapplied calls, including nested calls. Select the header to expand the full details:
+
+![Action Rejected](/talemate/img/0.40.0/director-confirm-abort.png)
 
 ### Confirmation timeout
 
@@ -148,9 +155,15 @@ Each confirmation card shows a countdown timer in the top-right corner. The numb
 
 ![Confirmation Timer](/talemate/img/0.37.0/director-chat-confirm-timer.png)
 
-If the timer runs out before you confirm or reject, the action is treated as rejected and the director will acknowledge and wait for your next instruction — the same behaviour as clicking **Reject**.
+If the timer runs out, the batch stops and the chat note identifies the calls not applied because of the timeout. No correction request runs. This has the same stopping behavior as **Reject and abort**.
 
 The default timeout is **3 minutes**. You can change it (or disable it entirely) from the [Director Chat settings](/talemate/user-guide/agents/director/settings/#action-confirm-timeout).
+
+Interrupting generation or closing the scene cancels a pending confirmation. The call is reported as interrupted. API calls that clear or delete a chat also cancel its pending confirmation, and the notes and results of that batch are not added back. The console does not offer a clear control and disables deletion while busy. A confirmation received before the final timeout check is accepted.
+
+### Partial batches and reported problems
+
+If a model proposes more calls than an action's call limit allows, the chat note lists the applied calls and those omitted because of the limit. Nested action outcomes appear under their enclosing call, so the note retains both the requested action and its individual results. Calls omitted by the executor are not automatically retried. Instruct actions also offer a `report_issue` function for the model to explain tasks it cannot fulfill; reporting a problem does not consume the action's call budget.
 
 ## Enabling and Disabling Actions
 

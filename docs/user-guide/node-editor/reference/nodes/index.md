@@ -27,7 +27,7 @@ Every node available in the node editor, grouped by category. Each page lists th
 | [Director Auto-Direction Nodes](agents-director-auto.md) | 6 | Automatic scene direction: candidates, scene intent, instruction cadence and auto-direction generation. |
 | [Director Chat Actions](agents-director-chat-actions.md) | 11 | The director chat's action modules: direct the scene, update context/gamestate/story arc, create images, query, prompt or yield to the user. |
 | [Director Chat Instructors](agents-director-chat-instructors.md) | 10 | The director chat's instructor modules: instruct characters, the narrator, world/history/story updates and character creation. |
-| [Director Chat Nodes](agents-director-chat.md) | 13 | Director chat plumbing: chat context, action arguments, confirmation and sub-actions, plus context/query modules. |
+| [Director Chat Nodes](agents-director-chat.md) | 14 | Director chat plumbing: chat context, action arguments, confirmation and sub-actions, plus context/query modules. |
 | [Director Planning Nodes](agents-director-plan.md) | 13 | Director plans: create, update, advance and complete plans and their tasks. |
 | [Editor Agent Nodes](agents-editor.md) | 4 | Clean up user input, narration and character messages through the editor agent. |
 | [Event Nodes](event.md) | 7 | Emit agent/system/status messages and listen to scene events. |

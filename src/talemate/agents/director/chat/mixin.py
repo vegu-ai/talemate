@@ -1,4 +1,5 @@
 import structlog
+import json
 from typing import Any, Literal, TYPE_CHECKING, Callable, Awaitable
 
 import talemate.instance as instance
@@ -21,6 +22,7 @@ from .context import director_chat_context
 from .schema import (
     DirectorChat,
     DirectorChatMessage,
+    DirectorChatBatchResultMessage,
     DirectorChatActionResultMessage,
     DirectorChatBudgets,
     DirectorChatListEntry,
@@ -329,11 +331,25 @@ class DirectorChatMixin:
         cleanup_orphaned_plans(self.scene, self.chat_get_all_chats())
         return chat
 
+    def _chat_cancel_confirmations(self, chat_id: str):
+        state = self.scene.nodegraph_state
+        if state is None:
+            return
+        epochs = state.shared.setdefault("_director_chat_epochs", {})
+        epochs[chat_id] = epochs.get(chat_id, 0) + 1
+        for key, pending in state.shared.items():
+            if (
+                key.startswith("_director_chat_action_confirm_")
+                and pending.get("chat_id") == chat_id
+            ):
+                pending["decision"] = "interrupted"
+
     def chat_delete(self, chat_id: str) -> bool:
         """Remove a chat from the collection. Updates last_active_chat_id if needed."""
         chats = self.chat_get_all_chats()
         if chat_id not in chats:
             return False
+        self._chat_cancel_confirmations(chat_id)
         del chats[chat_id]
         self.chat_set_all_chats(chats)
 
@@ -352,6 +368,7 @@ class DirectorChatMixin:
         chat = self.chat_get(chat_id)
         if not chat:
             return False
+        self._chat_cancel_confirmations(chat_id)
         current_mode = chat.mode
         chat.messages = [
             DirectorChatMessage(
@@ -486,6 +503,8 @@ class DirectorChatMixin:
                 msg_type = message.get("type", "text")
                 if msg_type == "action_result":
                     return DirectorChatActionResultMessage(**message)
+                elif msg_type == "batch_result":
+                    return DirectorChatBatchResultMessage(**message)
                 else:
                     return DirectorChatMessage(**message)
             return message
@@ -620,8 +639,11 @@ class DirectorChatMixin:
             if not actions_selected:
                 break
 
+            rejections = []
             try:
-                await self._chat_execute_actions(chat_id, actions_selected, on_update)
+                rejections = await self._chat_execute_actions(
+                    chat_id, actions_selected, on_update
+                )
             except GenerationCancelled:
                 raise
             except UnknownAction as e:
@@ -649,16 +671,17 @@ class DirectorChatMixin:
                     on_update=on_update,
                 )
             except ActionRejected as e:
-                await self.chat_append_message(
-                    chat_id,
-                    DirectorChatActionResultMessage(
-                        name=e.action_name,
-                        result=f"User rejected the following action: {e}",
-                        instructions=e.action_name,
-                        status="rejected",
-                    ),
-                    on_update=on_update,
-                )
+                if not getattr(e, "chat_reported", False):
+                    await self.chat_append_message(
+                        chat_id,
+                        DirectorChatActionResultMessage(
+                            name=e.action_name,
+                            result=str(e),
+                            instructions=e.action_name,
+                            status="rejected",
+                        ),
+                        on_update=on_update,
+                    )
                 break
             except Exception as e:
                 log.error("director.chat.actions.execute.error", error=e)
@@ -674,6 +697,7 @@ class DirectorChatMixin:
                 )
 
             _sync_plan_to_context()
+            extra_vars["rejected_calls"] = rejections
 
             # Follow-up request
             try:
@@ -716,7 +740,10 @@ class DirectorChatMixin:
 
             # generate_arc mode: unlocked iteration (up to hard safety limit)
             # normal modes: respect the configured auto-iteration limit
-            if mode in ("generate_arc", "generate_arc_expand"):
+            if rejections:
+                if hasattr(self, "scene") and not self.scene.active:
+                    break
+            elif mode in ("generate_arc", "generate_arc_expand"):
                 if iterations_done >= self.chat_generate_arc_iterations_limit:
                     log.warning("director.chat.generate_arc.hard_limit_reached")
                     break
@@ -892,20 +919,100 @@ class DirectorChatMixin:
             Awaitable[None],
         ]
         | None = None,
-    ) -> None:
+    ) -> list[dict]:
         """Execute selected actions via FOCAL, append results to chat."""
 
-        async def on_action_complete(action_msg: DirectorChatActionResultMessage):
-            await self.chat_append_message(chat_id, action_msg, on_update=on_update)
+        state = self.scene.nodegraph_state
+        epochs = state.shared.setdefault("_director_chat_epochs", {})
+        epoch = epochs.get(chat_id, 0)
 
-        await action_utils.execute_actions(
-            client=self.client,
-            scene=self.scene,
-            actions_selected=actions_selected,
-            history_for_prompt=self.chat_history_for_prompt(chat_id),
-            create_result=self._create_chat_result,
-            on_action_complete=on_action_complete,
-        )
+        def chat_is_current():
+            return (
+                self.chat_get(chat_id) is not None and epochs.get(chat_id, 0) == epoch
+            )
+
+        async def on_action_complete(action_msg: DirectorChatActionResultMessage):
+            if chat_is_current():
+                await self.chat_append_message(chat_id, action_msg, on_update=on_update)
+
+        rejections = []
+        reported = False
+
+        async def on_batch_complete(calls):
+            nonlocal reported
+            if not chat_is_current():
+                return
+
+            def walk(batch):
+                for call in batch:
+                    yield call
+                    yield from walk(call.subcalls)
+
+            def outcome(call):
+                return {
+                    **call.payload,
+                    "applied": call.called,
+                    **({"reason": call.skipped_reason} if call.skipped_reason else {}),
+                    **({"error": call.error} if call.error else {}),
+                    **(
+                        {"instructions": call.rejection_instructions}
+                        if call.rejection_instructions
+                        else {}
+                    ),
+                    **(
+                        {"subcalls": [outcome(child) for child in call.subcalls]}
+                        if call.subcalls
+                        else {}
+                    ),
+                }
+
+            outcomes = list(walk(calls))
+            if not any(not call.called for call in outcomes):
+                return
+            applied = [outcome(call) for call in calls if call.called]
+            skipped = [outcome(call) for call in calls if not call.called]
+            rejections.extend(
+                {
+                    **call.payload,
+                    "reason": call.skipped_reason,
+                    "instructions": call.rejection_instructions,
+                }
+                for call in outcomes
+                if call.rejection_instructions
+            )
+            note = "Action batch results\n\nApplied:\n\n```json\n" + json.dumps(
+                applied, ensure_ascii=False, indent=2, default=str
+            )
+            note += (
+                "\n```\n\nNot applied:\n\n```json\n"
+                + json.dumps(skipped, ensure_ascii=False, indent=2, default=str)
+                + "\n```"
+            )
+            await self.chat_append_message(
+                chat_id,
+                DirectorChatBatchResultMessage(
+                    message=note,
+                    applied_count=sum(call.called for call in outcomes),
+                    not_applied_count=sum(not call.called for call in outcomes),
+                ),
+                on_update=on_update,
+            )
+            reported = True
+
+        try:
+            await action_utils.execute_actions(
+                client=self.client,
+                scene=self.scene,
+                actions_selected=actions_selected,
+                history_for_prompt=self.chat_history_for_prompt(chat_id),
+                create_result=self._create_chat_result,
+                on_action_complete=on_action_complete,
+                on_batch_complete=on_batch_complete,
+            )
+        except ActionRejected as exc:
+            exc.chat_reported = reported
+            raise
+        return json.loads(json.dumps(rejections, default=str))
 
     # === Send message ===
 

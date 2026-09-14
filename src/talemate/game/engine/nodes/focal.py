@@ -96,6 +96,7 @@ class Focal(Node):
     - retries: The number of retries to make
     - response_length: The maximum length of the response
     - max_concurrent: Maximum number of concurrent callback executions
+    - inherit_parent_call: Include these calls in an enclosing callback's batch; disable for internal agent work
 
     Outputs:
     - state: The current graph state
@@ -152,6 +153,13 @@ class Focal(Node):
             max=10,
         )
 
+        inherit_parent_call = PropertyField(
+            name="inherit_parent_call",
+            description="Include these calls in the enclosing callback's batch",
+            type="bool",
+            default=True,
+        )
+
     def __init__(self, title="AI Function Calling", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -169,6 +177,7 @@ class Focal(Node):
         self.set_property("retries", 0)
         self.set_property("response_length", 1024)
         self.set_property("max_concurrent", 3)
+        self.set_property("inherit_parent_call", True)
 
         self.add_output("state")
         self.add_output("calls", socket_type="list")
@@ -216,8 +225,17 @@ class Focal(Node):
         if template_vars:
             template_vars.pop("scene", None)
 
+        call_state = state
+        parent_call = None
+        while self.get_property("inherit_parent_call") and call_state is not None:
+            if "__focal_call" in call_state.data:
+                parent_call = call_state.data["__focal_call"]
+                break
+            call_state = call_state.outer
+
         focal_handler = focal.Focal(
             agent.client,
+            parent_call=parent_call,
             callbacks=callbacks,
             max_calls=max_calls,
             scene=scene,
@@ -270,12 +288,19 @@ class Metadata(Node):
     Properties:
     - instructions: The instructions for the callback
     - examples: The examples for the callback
+    - counts_toward_budget: Whether this function consumes the model's call budget
 
     Outputs:
     - state: Not populated at runtime
     """
 
     class Fields:
+        counts_toward_budget = PropertyField(
+            name="counts_toward_budget",
+            type="bool",
+            default=True,
+            description="Whether this function consumes the model's call budget",
+        )
         instructions = PropertyField(
             name="instructions",
             description="The instructions for the callback",
@@ -297,6 +322,7 @@ class Metadata(Node):
         self.add_input("state")
         self.set_property("instructions", "")
         self.set_property("examples", [])
+        self.set_property("counts_toward_budget", True)
         self.add_output("state")
 
     async def run(self, state: GraphState):
@@ -390,8 +416,12 @@ class Callback(Node):
             name=name,
             arguments=arguments,
             fn=fn,
+            pass_call=True,
             multiple=self.get_property("allow_multiple_calls"),
             concurrent=self.get_property("allow_concurrent"),
+            counts_toward_budget=metadata.get_property("counts_toward_budget")
+            if metadata
+            else True,
             instructions=metadata.normalized_input_value("instructions")
             if metadata
             else "",

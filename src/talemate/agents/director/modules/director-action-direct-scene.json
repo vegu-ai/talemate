@@ -1034,6 +1034,10 @@
         {
           "name": "item2",
           "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
@@ -1084,6 +1088,37 @@
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "558b82ea-9332-4c8d-a918-5b123e199d03": {
+      "title": "Agent Report Issue",
+      "id": "558b82ea-9332-4c8d-a918-5b123e199d03",
+      "properties": {
+        "name": "report_issue"
+      },
+      "x": 30,
+      "y": 1920,
+      "width": 151,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/agentReportIssue",
+      "base_type": "core/functions/Function"
+    },
+    "138bfb6f-e4b8-4b9d-ba0f-95abc6460169": {
+      "title": "AI Function Callback",
+      "id": "138bfb6f-e4b8-4b9d-ba0f-95abc6460169",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true
+      },
+      "x": 320,
+      "y": 1920,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
       "base_type": "core/Node"
     }
   },
@@ -1284,6 +1319,12 @@
     ],
     "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d.state": [
       "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item1"
+    ],
+    "558b82ea-9332-4c8d-a918-5b123e199d03.fn": [
+      "138bfb6f-e4b8-4b9d-ba0f-95abc6460169.fn"
+    ],
+    "138bfb6f-e4b8-4b9d-ba0f-95abc6460169.callback": [
+      "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item3"
     ]
   },
   "groups": [

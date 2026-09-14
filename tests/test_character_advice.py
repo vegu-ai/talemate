@@ -548,7 +548,15 @@ async def test_action_arguments_validate_evidence_before_callback(
                 director.client, scene, [{"name": "direct_actor"}], [], result_factory
             )
             assert result == ["result"]
-            wrapper.assert_awaited_once_with(character="Bob", direction="Old advice")
+            focal_call = wrapper.await_args.kwargs["_focal_call"]
+            assert focal_call.name == "direct_actor"
+            assert focal_call.arguments == {
+                "character": "Bob",
+                "direction": "Old advice",
+            }
+            wrapper.assert_awaited_once_with(
+                _focal_call=focal_call, character="Bob", direction="Old advice"
+            )
     assert len(calls) == 1
 
 
@@ -767,6 +775,8 @@ async def test_action_batch_admission_through_callers(
 async def test_chat_persists_completed_actions_before_later_cancellation(
     advice, monkeypatch
 ):
+    scene, _ = advice
+    scene.nodegraph_state = GraphState()
     director = get_agent("director")
     chat = director.chat_create()
     chat.title = "Regression"
@@ -798,6 +808,7 @@ async def test_chat_persists_completed_actions_before_later_cancellation(
 @pytest.mark.parametrize("outcome", ["complete", "reject", "interrupt"])
 async def test_chat_retains_action_inserted_message(advice, monkeypatch, mode, outcome):
     scene, _ = advice
+    scene.nodegraph_state = GraphState()
     scene.knowledge_eligibility = mode
     director = get_agent("director")
     chat = director.chat_create()
@@ -920,7 +931,15 @@ async def test_director_waits_for_existing_evidence_before_action_arguments(
                 release.set()
             assert await asyncio.wait_for(action, 2) == ["result"]
         request.assert_awaited_once()
-        wrapper.assert_awaited_once_with(character="Bob", direction="Current advice")
+        focal_call = wrapper.await_args.kwargs["_focal_call"]
+        assert focal_call.name == "direct_actor"
+        assert focal_call.arguments == {
+            "character": "Bob",
+            "direction": "Current advice",
+        }
+        wrapper.assert_awaited_once_with(
+            _focal_call=focal_call, character="Bob", direction="Current advice"
+        )
         if mode == "legacy":
             assert not writer.done()
             assert not waiting.is_set()

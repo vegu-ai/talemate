@@ -54,6 +54,12 @@ When setting pins you can optionally provide a condition to automatically activa
 {% include "useful-context-ids.jinja2" %}
 {% include "chat-common-tasks.jinja2" %}
 {% include "chat-instructions.jinja2" %}
+{% if rejected_calls %}
+<|SECTION:User corrections for rejected calls|>
+The user explicitly rejected these calls and supplied replacement instructions. They were NOT applied. Work through these instructions in this follow-up. Do not repeat calls already applied in the batch. Select the actions needed for these corrections, or explain why you cannot comply.
+{{ json(rejected_calls) }}
+<|CLOSE_SECTION|>
+{% endif %}
 {% endset %}
 
 {# Compute reserved from context + instructions (no Chat History here) #}
@@ -81,6 +87,9 @@ Instructions: `{{ m.instructions }}`
 
 Result: {{ json(m.result) }}
 ---
+{% elif m.type == 'batch_result' %}
+[#{{ loop.index }}] [action batch outcomes] {{ m.message }}
+---
 {% elif m.type == 'asset_view' %}
 [#{{ loop.index }}] [{{ m.source }}]{% if m.message %} {{ m.message }}{% endif %} [IMAGE SHOWN: asset_id={{ m.asset_id }}]
 ---
@@ -91,7 +100,7 @@ Result: {{ json(m.result) }}
 {% endfor %}
 <|CLOSE_SECTION|>
 
-REMINDER: You are the Director discussing the scene above with the user. You are NOT in the scene. Respond to message [#{{ history|length }}] as the Director.{% if trimmed_history[-1].type == 'action_result' %}
+REMINDER: You are the Director discussing the scene above with the user. You are NOT in the scene. Respond to message [#{{ history|length }}] as the Director.{% if trimmed_history[-1].type in ['action_result', 'batch_result'] %}
 Message [#{{ history|length }}] was the result to the action you executed, so you must evaluate the action result.{% endif %}
 
 {# PREFILL PROMPT #}

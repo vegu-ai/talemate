@@ -137,6 +137,7 @@ Either a template or a prompt must be provided.
 | `retries` | `int` | `0` | The number of retries to make. Range: 0 – 10. |
 | `response_length` | `int` | `1024` | The maximum length of the response. Range: 1 – 8192. |
 | `max_concurrent` | `int` | `3` | Maximum number of concurrent callback executions. Range: 1 – 10. |
+| `inherit_parent_call` | `bool` | `True` | Include these calls in the enclosing callback's batch |
 
 ## AI Function Callback Metadata
 
@@ -168,6 +169,7 @@ instructions and examples are attached to the callback.
 | --- | --- | --- | --- |
 | `instructions` | `text` | `""` | The instructions for the callback |
 | `examples` | `list` | `[]` | The examples for the callback |
+| `counts_toward_budget` | `bool` | `True` | Whether this function consumes the model's call budget |
 
 ## Process AI Function Call
 

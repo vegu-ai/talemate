@@ -24,7 +24,7 @@
             <DirectorConsoleChatMessages
                 :messages="chatMessages"
                 :confirming="confirming"
-                @confirm-action="({ id, decision }) => confirmActionDecision(id, decision)"
+                @confirm-action="({ id, decision, instructions }) => confirmActionDecision(id, decision, instructions)"
                 @remove-message="removeMessage"
                 @regenerate-last="regenerateLast"
                 :app-busy="appBusy"
@@ -220,7 +220,7 @@ export default {
                 this.confirming = { ...this.confirming, [id]: false };
             }
         },
-        confirmActionDecision(id, decision) {
+        confirmActionDecision(id, decision, instructions = '') {
             if (!this.activeChatId) return;
             this.confirming = { ...this.confirming, [id]: true };
             this.getWebsocket().send(JSON.stringify({
@@ -229,6 +229,7 @@ export default {
                 chat_id: this.activeChatId,
                 id,
                 decision,
+                instructions,
             }));
         },
         hasTrailingLoading() {
@@ -382,10 +383,15 @@ export default {
             if(message.type === 'request_action_confirmation') {
                 const data = message.data || {};
                 if(!data.chat_id || data.chat_id !== this.activeChatId) return;
-                console.log('request_action_confirmation', data);
                 // Remove any trailing thinking placeholder while waiting for user decision
                 this.removeTrailingPlaceholder();
                 this.addOrUpdateConfirmRequest(data.id, data.name, data.description, data.timer);
+                return;
+            }
+
+            if(message.type === 'action_confirmation_finished') {
+                const data = message.data || {};
+                if(data.chat_id === this.activeChatId) this.markConfirmRequestDecision(data.id, data.decision);
                 return;
             }
 

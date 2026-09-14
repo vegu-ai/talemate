@@ -144,12 +144,13 @@
       "id": "db4896cf-152b-4cc5-9761-61e500cf98ee",
       "properties": {
         "name": "my_function",
-        "allow_multiple_calls": true
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
       },
       "x": 636,
       "y": 1832,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
@@ -162,12 +163,14 @@
         "template": null,
         "max_calls": 4,
         "retries": 0,
-        "response_length": 1024
+        "response_length": 1024,
+        "max_concurrent": 3,
+        "inherit_parent_call": true
       },
       "x": 1488,
       "y": 1712,
       "width": 228,
-      "height": 250,
+      "height": 298,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Focal",
@@ -549,12 +552,13 @@
             "narrate_instructions": "Marcus quietly excuses himself from the group, claiming he needs some fresh air. He slips out the back door, leaving the others to continue their discussion without him.",
             "status": "inactive"
           }
-        ]
+        ],
+        "counts_toward_budget": true
       },
       "x": -545,
       "y": 1271,
       "width": 244,
-      "height": 82,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
@@ -666,12 +670,13 @@
             "character": "Peter",
             "instructions": "Add a dialogue example showcasing Peter's anger."
           }
-        ]
+        ],
+        "counts_toward_budget": true
       },
       "x": -636,
       "y": 1894,
       "width": 244,
-      "height": 82,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
@@ -712,12 +717,13 @@
       "id": "00a75d47-fa40-4c10-9aca-61a12e0a39fe",
       "properties": {
         "name": "my_function",
-        "allow_multiple_calls": true
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
       },
       "x": 632,
       "y": 2315,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
@@ -905,23 +911,99 @@
             "character": "Lyra Moonwhisper",
             "instructions": "Update `character.description:Lyra Moonwhisper.description` to show the physical effects of using too much magic - her silver hair now has streaks of white and her hands have a slight tremor from magical exhaustion."
           }
-        ]
+        ],
+        "counts_toward_budget": true
       },
       "x": -555,
       "y": 751,
       "width": 244,
-      "height": 82,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "66f8da87-b8f1-4d52-b911-35afa35ed467": {
+      "title": "AI Function Callback",
+      "id": "66f8da87-b8f1-4d52-b911-35afa35ed467",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
+      },
+      "x": 630,
+      "y": 2100,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "ecaa252a-e8cf-40da-9c4f-7994c4c1795c": {
+      "title": "Jinja2 Format",
+      "id": "ecaa252a-e8cf-40da-9c4f-7994c4c1795c",
+      "properties": {
+        "template": "Your only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nIMPORTANT: You MUST pass along this context ID in your function call(s).\n{% endif %}\n\nAnalyze the instructions and route to the appropriate function(s). appropriate function(s) to accomplish your task.\n\nTASK:\n```\n{{ instructions }}\n```"
+      },
+      "x": 410,
+      "y": 860,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "4147f5d1-0ebb-4833-bd5b-9826bf4bc5f5": {
+      "title": "Agent Report Issue",
+      "id": "4147f5d1-0ebb-4833-bd5b-9826bf4bc5f5",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true
+      },
+      "x": 370,
+      "y": 2510,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/agentReportIssue",
+      "base_type": "core/functions/Function"
+    },
+    "4581a973-a787-4271-a9c7-18b455cec320": {
+      "title": "AI Function Callback",
+      "id": "4581a973-a787-4271-a9c7-18b455cec320",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
+      },
+      "x": 630,
+      "y": 2510,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
       "base_type": "core/Node"
     },
     "97927759-a089-40b2-b6fc-702ffea1847d": {
       "title": "Callbacks",
       "id": "97927759-a089-40b2-b6fc-702ffea1847d",
       "properties": {},
-      "x": 969,
-      "y": 2060,
+      "x": 980,
+      "y": 2130,
       "width": 140,
       "height": 141,
       "collapsed": false,
@@ -942,47 +1024,6 @@
         },
         {
           "name": "item3",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
-    "66f8da87-b8f1-4d52-b911-35afa35ed467": {
-      "title": "AI Function Callback",
-      "id": "66f8da87-b8f1-4d52-b911-35afa35ed467",
-      "properties": {
-        "name": "my_function",
-        "allow_multiple_calls": true
-      },
-      "x": 630,
-      "y": 2100,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
-      "base_type": "core/Node"
-    },
-    "ecaa252a-e8cf-40da-9c4f-7994c4c1795c": {
-      "title": "Jinja2 Format",
-      "id": "ecaa252a-e8cf-40da-9c4f-7994c4c1795c",
-      "properties": {
-        "template": "Your only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nIMPORTANT: You MUST pass along this context ID in your function call(s).\n{% endif %}\n\nAnalyze the instructions and route to the appropriate function(s). appropriate function(s) to accomplish your task.\n\nTASK:\n```\n{{ instructions }}\n```"
-      },
-      "x": 410,
-      "y": 860,
-      "width": 210,
-      "height": 153,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/Jinja2Format",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
           "type": "*"
         }
       ],
@@ -1145,14 +1186,20 @@
     "e6dc7410-1ff6-42e5-9103-3f2ec062073b.state": [
       "5257040f-0fd3-482c-a734-5e76ea60d5af.nodes"
     ],
-    "97927759-a089-40b2-b6fc-702ffea1847d.list": [
-      "ad6acd60-dc07-4414-aacf-ae28145946e6.callbacks"
-    ],
     "66f8da87-b8f1-4d52-b911-35afa35ed467.callback": [
       "97927759-a089-40b2-b6fc-702ffea1847d.item1"
     ],
     "ecaa252a-e8cf-40da-9c4f-7994c4c1795c.result": [
       "9498a34a-8273-4989-8a85-033725196323.instructions"
+    ],
+    "4147f5d1-0ebb-4833-bd5b-9826bf4bc5f5.fn": [
+      "4581a973-a787-4271-a9c7-18b455cec320.fn"
+    ],
+    "4581a973-a787-4271-a9c7-18b455cec320.callback": [
+      "97927759-a089-40b2-b6fc-702ffea1847d.item3"
+    ],
+    "97927759-a089-40b2-b6fc-702ffea1847d.list": [
+      "ad6acd60-dc07-4414-aacf-ae28145946e6.callbacks"
     ]
   },
   "groups": [

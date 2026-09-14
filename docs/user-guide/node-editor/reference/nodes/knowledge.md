@@ -196,6 +196,7 @@ Director grant metadata selected by the shared character-knowledge gate.
 | --- | --- | --- | --- |
 | `instructions` | `text` | `""` | The instructions for the callback |
 | `examples` | `list` | `[]` | The examples for the callback |
+| `counts_toward_budget` | `bool` | `True` | Whether this function consumes the model's call budget |
 | `perception_instructions` | `text` | `""` | Instructions used only when character perspectives are enabled. |
 | `perception_examples` | `list` | `[]` | Disclosure examples used only when character perspectives are enabled. |
 

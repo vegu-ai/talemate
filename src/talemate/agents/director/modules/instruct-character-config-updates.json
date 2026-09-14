@@ -128,12 +128,13 @@
       "id": "5b3713b8-c445-4dc8-9c50-339bb37bf201",
       "properties": {
         "error_message": "",
-        "character_status": "all"
+        "character_status": "all",
+        "create_placeholder": false
       },
       "x": -2993,
       "y": 89,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateCharacter",
@@ -234,7 +235,7 @@
         "scope": "local"
       },
       "x": 18,
-      "y": 1573,
+      "y": 1700,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -247,7 +248,7 @@
       "id": "77ccb597-42b4-464b-abbf-3acf4330b1b5",
       "properties": {},
       "x": 318,
-      "y": 1613,
+      "y": 1740,
       "width": 193,
       "height": 26,
       "collapsed": false,
@@ -259,8 +260,8 @@
       "title": "Module Style",
       "id": "b80883db-d37a-4708-8eb9-97893b8c0c1d",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F1719"
       },
@@ -368,7 +369,7 @@
         "num": 3
       },
       "x": 648,
-      "y": 1603,
+      "y": 1730,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -556,12 +557,13 @@
             "character_name": "Detective Rivera",
             "instructions": "Create a dialogue example showing Detective Rivera questioning a witness about a crime they observed. Include her direct, no-nonsense speaking style and her habit of tapping her pen impatiently when people hesitate to answer. Show how she uses strategic pauses and pointed questions to get information."
           }
-        ]
+        ],
+        "counts_toward_budget": true
       },
       "x": -599,
       "y": 219,
       "width": 299,
-      "height": 82,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
@@ -589,12 +591,13 @@
       "id": "9db56ce2-9077-4cf9-99aa-85cd8ca0640e",
       "properties": {
         "name": "my_function",
-        "allow_multiple_calls": true
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
       },
-      "x": 889,
+      "x": 888,
       "y": 909,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
@@ -679,12 +682,13 @@
       "id": "09fd68eb-0713-4964-b61c-b6917e5933a0",
       "properties": {
         "error_message": "",
-        "character_status": "all"
+        "character_status": "all",
+        "create_placeholder": false
       },
       "x": -3249,
       "y": 688,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateCharacter",
@@ -695,12 +699,13 @@
       "id": "5fdd8659-ac22-4bcf-9b3d-355a45a35d84",
       "properties": {
         "name": "my_function",
-        "allow_multiple_calls": true
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
       },
       "x": 888,
       "y": 1090,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
@@ -791,12 +796,13 @@
             "character_name": "Barry",
             "index": 2
           }
-        ]
+        ],
+        "counts_toward_budget": true
       },
       "x": -623,
       "y": 858,
       "width": 299,
-      "height": 82,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
@@ -824,12 +830,14 @@
         "template": null,
         "max_calls": 5,
         "retries": 0,
-        "response_length": 2048
+        "response_length": 2048,
+        "max_concurrent": 3,
+        "inherit_parent_call": true
       },
       "x": 1469,
       "y": 829,
-      "width": 210,
-      "height": 250,
+      "width": 228,
+      "height": 298,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Focal",
@@ -993,55 +1001,30 @@
             "instructions": "Update Sarah's acting instructions to instruct her to speak less formally and without so much purple prose.",
             "replace": false
           }
-        ]
+        ],
+        "counts_toward_budget": true
       },
       "x": -674,
       "y": 1394,
       "width": 299,
-      "height": 82,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
       "base_type": "core/Node"
-    },
-    "7e0669aa-750a-4d83-aeae-edd93f4e2d76": {
-      "title": "Callbacks",
-      "id": "7e0669aa-750a-4d83-aeae-edd93f4e2d76",
-      "properties": {},
-      "x": 1190,
-      "y": 1050,
-      "width": 140,
-      "height": 121,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        },
-        {
-          "name": "item2",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
     },
     "1383870e-8d60-4b28-9321-c26856018ba9": {
       "title": "AI Function Callback",
       "id": "1383870e-8d60-4b28-9321-c26856018ba9",
       "properties": {
         "name": "my_function",
-        "allow_multiple_calls": true
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
       },
-      "x": 890,
+      "x": 888,
       "y": 1260,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
@@ -1217,12 +1200,13 @@
       "id": "3743f3d9-9c75-41b8-be16-685d2f429765",
       "properties": {
         "error_message": "",
-        "character_status": "all"
+        "character_status": "all",
+        "create_placeholder": false
       },
       "x": -3361,
       "y": 1279,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateCharacter",
@@ -1430,6 +1414,70 @@
       "inherited": false,
       "registry": "focal/Argument",
       "base_type": "core/Node"
+    },
+    "7824f722-b052-4147-b43f-ecff367cdf10": {
+      "title": "AI Function Callback",
+      "id": "7824f722-b052-4147-b43f-ecff367cdf10",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
+      },
+      "x": 888,
+      "y": 1460,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "7e0669aa-750a-4d83-aeae-edd93f4e2d76": {
+      "title": "Callbacks",
+      "id": "7e0669aa-750a-4d83-aeae-edd93f4e2d76",
+      "properties": {},
+      "x": 1210,
+      "y": 1170,
+      "width": 140,
+      "height": 141,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "bd080fae-7dad-4093-a324-66b1c5abbb46": {
+      "title": "Agent Report Issue",
+      "id": "bd080fae-7dad-4093-a324-66b1c5abbb46",
+      "properties": {
+        "name": "report_issue",
+        "allow_multiple_calls": true
+      },
+      "x": 600,
+      "y": 1450,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/agentReportIssue",
+      "base_type": "core/functions/Function"
     }
   },
   "edges": {
@@ -1611,9 +1659,6 @@
     "abe9b266-da0b-4922-8880-f60608acf5ae.state": [
       "51ebb689-d96f-4c78-9797-7b0d8c562aba.nodes"
     ],
-    "7e0669aa-750a-4d83-aeae-edd93f4e2d76.list": [
-      "b4c7f721-ae90-43eb-be82-2619c8e47945.callbacks"
-    ],
     "1383870e-8d60-4b28-9321-c26856018ba9.callback": [
       "7e0669aa-750a-4d83-aeae-edd93f4e2d76.item2"
     ],
@@ -1697,6 +1742,15 @@
     ],
     "d56bd66f-db88-4c5e-9f24-0754ebab7b69.value": [
       "b2d639fb-5b62-4b42-b200-58bb6d4f653b.value"
+    ],
+    "7824f722-b052-4147-b43f-ecff367cdf10.callback": [
+      "7e0669aa-750a-4d83-aeae-edd93f4e2d76.item3"
+    ],
+    "7e0669aa-750a-4d83-aeae-edd93f4e2d76.list": [
+      "b4c7f721-ae90-43eb-be82-2619c8e47945.callbacks"
+    ],
+    "bd080fae-7dad-4093-a324-66b1c5abbb46.fn": [
+      "7824f722-b052-4147-b43f-ecff367cdf10.fn"
     ]
   },
   "groups": [
@@ -1714,8 +1768,8 @@
       "title": "Process",
       "x": -7,
       "y": 3,
-      "width": 2341,
-      "height": 1485,
+      "width": 2362,
+      "height": 1617,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1732,8 +1786,8 @@
     },
     {
       "title": "Output",
-      "x": -7,
-      "y": 1498,
+      "x": -6,
+      "y": 1626,
       "width": 890,
       "height": 236,
       "color": "#8A8",

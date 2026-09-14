@@ -22,3 +22,5 @@
 | **`update.bat`** | Pulls the latest changes from GitHub, updates dependencies, rebuilds the web client. |
 
 No system-wide Python or Node.js is required – Talemate uses the embedded runtimes it downloads automatically. The bundled Node.js is version 22, which is required by the frontend's package manager (pnpm).
+
+pnpm is installed locally under `embedded_node/pnpm` at the version pinned by Talemate. Installation, updates, and frontend startup reuse this copy, so a global pnpm installation or Corepack cache is not required. The first run and a change of pnpm version require an internet connection.

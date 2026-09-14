@@ -1,0 +1,50 @@
+name: Portable pnpm
+
+on:
+  pull_request:
+    branches: [ main, 'prep-*' ]
+    paths:
+      - 'install-utils/**'
+      - '*.bat'
+      - '*.sh'
+      - 'talemate_frontend/package.json'
+      - 'talemate_frontend/pnpm-lock.yaml'
+      - '.github/workflows/portable-pnpm.yml'
+
+jobs:
+  frontend:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      COREPACK_ENABLE_NETWORK: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download portable Node on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path install.bat -Pattern 'SET "NODE_VERSION=(.+)"').Matches.Groups[1].Value
+          $archive = "node-v$version-win-x64"
+          Invoke-WebRequest "https://nodejs.org/dist/v$version/$archive.zip" -OutFile node.zip
+          Expand-Archive node.zip -DestinationPath node-unpacked
+          Move-Item "node-unpacked/$archive" embedded_node
+          "$pwd\embedded_node" >> $env:GITHUB_PATH
+      - name: Download portable Node on Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          source install-utils/node-env.sh
+          install_embedded_node
+          echo "$PWD/embedded_node/bin" >> "$GITHUB_PATH"
+      - name: Provision and verify local pnpm
+        shell: bash
+        run: |
+          node -v
+          node install-utils/pnpm.cjs --version
+          node install-utils/pnpm.cjs --version
+      - name: Install frontend dependencies
+        run: node install-utils/pnpm.cjs install --frozen-lockfile
+      - name: Build frontend
+        run: node install-utils/pnpm.cjs build

@@ -341,6 +341,95 @@ async def test_hub_changes_on_stock_scene_keep_its_save_identity(stock_scene):
     assert source_data["immutable_save"] is True
 
 
+@pytest.mark.parametrize("auto_save", [True, False])
+async def test_stock_scene_link_goes_into_a_save_as_copy(
+    stock_scene, persistence_scene_factory, monkeypatch, auto_save
+):
+    scene, plugin, messages, payload = stock_scene
+    monkeypatch.setattr(type(scene), "auto_save", auto_save)
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+    overrides = AgentConfigPlugin(plugin.websocket_handler)
+    link = {
+        "action": "save_scene_overrides",
+        "agent_type": "conversation",
+        "filename": "custom.json",
+        "override": {
+            "actions": {"character_knowledge": {"config": {"ledger": {"value": True}}}}
+        },
+    }
+
+    await overrides.handle({**link, "request_id": "link"})
+    assert messages[-1]["request_id"] == "link"
+    assert messages[-1]["save_as_required"] is True
+    assert scene.agent_settings_file is None
+    assert scene.agent_overrides is None
+    assert not (Path(scene.save_dir) / "agent-settings" / "custom.json").exists()
+    assert source.read_bytes() == original
+
+    await plugin.handle(payload)
+    assert messages[-1]["action"] == "scene_saved"
+    assert not scene.immutable_save
+
+    await overrides.handle({**link, "request_id": "link-copy"})
+    assert messages[-1]["request_id"] == "link-copy"
+    assert "error" not in messages[-1]
+    if not auto_save:
+        assert not scene.saved
+        await scene.save()
+
+    copy_path = Path(scene.full_path)
+    assert copy_path.name == "my-quest.json"
+    copy_data = json.loads(copy_path.read_text())
+    assert copy_data["agent_settings_file"] == "custom.json"
+    fresh = persistence_scene_factory()
+    await load_scene_from_data(fresh, copy_data, name=str(copy_path))
+    assert fresh.agent_settings_file == "custom.json"
+    assert (
+        fresh.agent_overrides.get_value("conversation", "character_knowledge", "ledger")
+        is True
+    )
+
+    assert source.read_bytes() == original
+    stock = persistence_scene_factory()
+    await load_scene_from_data(stock, json.loads(original), name=str(source))
+    assert stock.agent_settings_file is None
+    assert stock.agent_overrides is None
+
+
+async def test_hub_change_on_opted_out_stock_scene_is_refused(stock_scene):
+    scene, plugin, messages, payload = stock_scene
+    scene._agent_settings_opted_out = True
+    await scene.save(force=True)
+    source = Path(scene.full_path)
+    original = source.read_bytes()
+    overrides = AgentConfigPlugin(plugin.websocket_handler)
+    request = {
+        "action": "save_scene_overrides",
+        "agent_type": "conversation",
+        "scene_identity": str(scene.id),
+        "filename": "agent-settings.json",
+        "patch": _knowledge_patch("ledger"),
+    }
+
+    await overrides.handle({**request, "request_id": "hub"})
+    assert messages[-1]["request_id"] == "hub"
+    assert messages[-1]["save_as_required"] is True
+    assert scene._agent_settings_opted_out is True
+    assert scene.agent_overrides is None
+    assert not (Path(scene.save_dir) / "agent-settings").exists()
+    assert source.read_bytes() == original
+
+    await plugin.handle(payload)
+    await overrides.handle({**request, "request_id": "hub-copy"})
+    assert "error" not in messages[-1]
+    copy_data = json.loads(Path(scene.full_path).read_text())
+    assert copy_data["agent_settings_file"] == "agent-settings.json"
+    assert copy_data["agent_settings_opted_out"] is False
+    assert source.read_bytes() == original
+
+
 @pytest.mark.parametrize("immutable", [False, True])
 async def test_autosave_as_without_copy_name_keeps_filename(stock_scene, immutable):
     scene, *_ = stock_scene

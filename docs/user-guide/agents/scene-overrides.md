@@ -18,7 +18,7 @@ A blank story keeps its normal unsaved state until you save it; that save stores
 
 ## Saving a knowledge-hub change for the first time
 
-Changing a setting in a character's knowledge hub opens **Save Scene** when the scene has no save file yet. After the save succeeds, Talemate applies the pending knowledge change automatically. Scenes with a save file and project name apply hub changes directly, including read-only stock scenes.
+Changing a setting in a character's knowledge hub opens **Save Scene** when the scene has no save file yet. After the save succeeds, Talemate applies the pending knowledge change automatically. Scenes with a save file and project name apply hub changes directly, including read-only stock scenes. The exception is a read-only scene that is opted out of agent-settings overrides: it cannot store the link a hub change needs, so the change is refused with an error. Save the scene as a copy first (**Save As**), then make the change in the copy.
 
 Cancelling the dialog or a failed save keeps the exact change pending. Use **Save and apply** in the hub to retry with the entered save name, or **Discard change** to drop it. Loading another scene discards the pending change so it cannot affect a different story. The pending notice is not confirmation that the settings were saved.
 
@@ -65,6 +65,8 @@ Overrides are treated like every other edit on the settings page: activating one
 
 If the scene doesn't yet have an overrides file (see below), the first save that carries an override asks you to name one before it writes; cancelling that prompt cancels the save and leaves your edits untouched.
 
+A read-only scene, such as a shipped story, cannot store a link to a file with another name. If you pick a name other than `agent-settings.json` there, **Save As** opens next: the overrides are written to the named file, and the new copy is linked to it. Cancelling **Save As** cancels the save too and leaves your edits pending. The read-only scene itself keeps no link.
+
 ## Quick-toggle chips
 
 Some actions and settings are also exposed as quick-toggle chips directly on the agent in the agent panel, so they can be flipped mid-play without opening the settings page.
@@ -84,7 +86,7 @@ Per-scene overrides are stored in a JSON file inside an `agent-settings/` folder
 
 A few things worth knowing:
 
-- **Overrides are project-scoped.** Every save in a project, including stock scenes, **Save As** copies and restore points, shares its default overrides through automatic linking. Read-only stock scenes can edit these overrides directly. Explicitly choosing another settings file or opting out changes what that save uses (see below). Different projects have completely independent overrides.
+- **Overrides are project-scoped.** Every save in a project, including stock scenes, **Save As** copies and restore points, shares its default overrides through automatic linking. Read-only stock scenes can edit these overrides directly; creating another file for them on the Agents settings page takes a **Save As** copy. Explicitly choosing another settings file or opting out changes what that save uses (see below). Different projects have completely independent overrides.
 - **Overrides travel with exports.** When you export a scene, the `agent-settings/` folder is included, so your overrides survive being shared with or imported on another system.
 - **Bad files fall back safely.** If an overrides file is missing or can't be read, the scene simply falls back to your global configuration and the link is cleared.
 

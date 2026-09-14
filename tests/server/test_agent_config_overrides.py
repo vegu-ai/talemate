@@ -38,6 +38,7 @@ class _Scene:
         self.agent_settings_file = None
         self.auto_save = True
         self.saved = True
+        self.immutable_save = False
         self._agent_settings_opted_out = False
         self.saves = 0
         self.status_emissions = 0
@@ -85,20 +86,81 @@ def _errors(handler: _WebsocketHandler) -> list[str]:
     return [m["error"]["message"] for m in handler.messages if "error" in m]
 
 
-@pytest.mark.parametrize("immutable", [False, True])
+@pytest.mark.parametrize("filename", ["agent-settings.json", "custom.json"])
 @pytest.mark.asyncio
-async def test_first_save_links_file_and_saves_the_scene(wired, immutable):
+async def test_first_save_links_file_and_saves_the_scene(wired, filename):
     plugin, scene, agent, handler = wired
-    scene.immutable_save = immutable
+
+    await plugin.handle_save_scene_overrides(_payload(False, filename))
+
+    assert not _errors(handler)
+    assert (Path(scene.save_dir) / "agent-settings" / filename).is_file()
+    assert scene.agent_settings_file == filename
+    assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is False
+    # linking writes `agent_settings_file` into the scene, so it is persisted
+    assert scene.saves == 1
+
+
+@pytest.mark.asyncio
+async def test_read_only_scene_links_the_default_file_directly(wired):
+    plugin, scene, agent, handler = wired
+    scene.immutable_save = True
 
     await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))
 
+    # the load-time auto-link restores the default file, so no copy is needed
     assert not _errors(handler)
     assert (Path(scene.save_dir) / "agent-settings" / "agent-settings.json").is_file()
     assert scene.agent_settings_file == "agent-settings.json"
     assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is False
-    # linking writes `agent_settings_file` into the scene, so it is persisted
     assert scene.saves == 1
+
+
+@pytest.mark.parametrize(
+    "filename, opted_out",
+    [("custom.json", False), ("custom.json", True), ("agent-settings.json", True)],
+)
+@pytest.mark.asyncio
+async def test_read_only_scene_refuses_a_link_it_cannot_reload(
+    wired, filename, opted_out
+):
+    plugin, scene, agent, handler = wired
+    scene.immutable_save = True
+    scene._agent_settings_opted_out = opted_out
+    emitted_before = agent.emitted
+
+    await plugin.handle_save_scene_overrides(
+        {**_payload(False, filename), "request_id": "link-1"}
+    )
+
+    refusal = handler.messages[-1]
+    assert refusal["save_as_required"] is True
+    assert refusal["request_id"] == "link-1"
+    assert filename in refusal["error"]["message"]
+    assert agent.emitted == emitted_before + 1
+    # nothing changed: no link, no file, no scene save
+    assert scene.agent_overrides is None
+    assert scene.agent_settings_file is None
+    assert scene._agent_settings_opted_out is opted_out
+    assert not (Path(scene.save_dir) / "agent-settings").exists()
+    assert scene.saves == 0
+
+
+@pytest.mark.asyncio
+async def test_read_only_scene_refuses_switching_to_another_file(wired):
+    plugin, scene, agent, handler = wired
+    await plugin.handle_save_scene_overrides(_payload(False, "agent-settings.json"))
+    scene.immutable_save = True
+    scene.saves = 0
+
+    await plugin.handle_save_scene_overrides(_payload(True, "custom.json"))
+
+    assert handler.messages[-1]["save_as_required"] is True
+    assert scene.agent_settings_file == "agent-settings.json"
+    assert scene.agent_overrides.filename == "agent-settings.json"
+    assert scene.agent_overrides.get_enabled(AGENT_TYPE, "container") is False
+    assert not (Path(scene.save_dir) / "agent-settings" / "custom.json").exists()
+    assert scene.saves == 0
 
 
 @pytest.mark.asyncio

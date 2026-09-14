@@ -204,6 +204,7 @@ import {
     COMMIT_DECISION,
     bufferOverrideSlice,
     buildCommitPayloads,
+    linkNeedsSceneCopy,
     pendingSceneAgents as collectPendingSceneAgents,
     prepareCommitDecision,
     resetForSceneChange,
@@ -247,7 +248,7 @@ export default {
         dirty: { type: Boolean, default: false },
     },
     emits: ['extra-dirty', 'extra-error'],
-    inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'getAgents', 'requestTemplates', 'scene', 'isConnected', 'openAgentActionOverrides'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'getAgents', 'requestTemplates', 'scene', 'isConnected', 'openAgentActionOverrides', 'requestSceneSave'],
     data() {
         return {
             selected: [],
@@ -363,6 +364,9 @@ export default {
         sceneOptedOut() {
             return !!this.sceneData?.agent_settings_opted_out;
         },
+        sceneImmutable() {
+            return !!this.sceneData?.immutable_save;
+        },
         sceneSettingsFile() {
             return this.sceneData?.agent_settings_file || null;
         },
@@ -379,11 +383,19 @@ export default {
             return SCENE_AGENT_SETTINGS_FILENAME_RULES;
         },
         namingInstructions() {
-            return (
+            const instructions = (
                 "No agent-settings file is linked to this scene yet.\n" +
                 `Pick a name (must end in .json) for the new file. It'll be saved into the ` +
                 `${SCENE_AGENT_SETTINGS_DIRNAME}/ folder of this scene's project. Using the ` +
                 "default name lets other scenes in this project auto-link to it."
+            );
+            if (!this.sceneImmutable) {
+                return instructions;
+            }
+            return (
+                instructions + "\n" +
+                "This scene is read-only and cannot store a link to another name: " +
+                "any other name opens Save As to save a copy first."
             );
         },
         // identity of the scene the buffered overlays belong to. Overlay files
@@ -836,9 +848,9 @@ export default {
             return this.hasPendingSceneOverrides;
         },
 
-        // Resolves false to abort the save. The only interactive step is
-        // naming the scene's agent-settings file the first time an override
-        // is stored for it.
+        // Resolves false to abort the save. The interactive steps are naming
+        // the scene's agent-settings file the first time an override is
+        // stored for it, and the Save As a read-only scene may need for that.
         prepareExtraChanges() {
             // a re-entrant save (or a prompt still open from a previous one)
             // must not strand the earlier promise
@@ -868,7 +880,7 @@ export default {
                 return new Promise((resolve) => {
                     this._filenamePromptResolve = resolve;
                     this.$refs.namingDialog.openDialog({ input: DEFAULT_SCENE_AGENT_SETTINGS_FILENAME });
-                });
+                }).then((named) => named && this.saveCopyForLink());
             }
             // an unknown token means the module and this chain drifted apart —
             // abort the save rather than let it fall through to a send
@@ -895,6 +907,27 @@ export default {
             if (resolve) {
                 resolve(value);
             }
+        },
+
+        // false stops the settings save; nothing is sent and the edits stay
+        async saveCopyForLink() {
+            if (!linkNeedsSceneCopy({ immutable: this.sceneImmutable, filename: this.pendingFilename })) {
+                return true;
+            }
+            let result;
+            try {
+                result = await this.requestSceneSave();
+            } catch (error) {
+                result = { status: 'failed', message: error.message };
+            }
+            if (result?.status === 'saved') {
+                return true;
+            }
+            this.pendingFilename = null;
+            this.$emit('extra-error', result?.status === 'failed'
+                ? `Save As failed (${result.message}) — scene overrides not saved.`
+                : 'Save As cancelled — scene overrides not saved.');
+            return false;
         },
 
         // One full-slice replace per agent with pending changes. The buffer is

@@ -1,0 +1,3 @@
+fixed:
+- "On a read-only scene (such as a shipped story), naming a new agent-settings file other than `agent-settings.json` on the Agents settings page now opens Save As, and the link is stored in the saved copy. Before, the link was lost on reload without a warning. Cancelling Save As saves nothing and keeps the edits pending."
+- "On a read-only scene that is opted out of agent-settings overrides, a knowledge hub change is now refused with an error instead of being lost on reload. Save the scene as a copy first."

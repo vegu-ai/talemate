@@ -3,6 +3,7 @@ import {
     COMMIT_DECISION,
     bufferOverrideSlice,
     buildCommitPayloads,
+    linkNeedsSceneCopy,
     pendingSceneAgents,
     prepareCommitDecision,
     resetForSceneChange,
@@ -353,5 +354,20 @@ describe("buildCommitPayloads", () => {
 
     it("sends nothing when no agent is pending", () => {
         expect(build({ agentTypes: [] })).toEqual([]);
+    });
+});
+
+describe("linkNeedsSceneCopy", () => {
+    it("needs a copy for another name on a read-only scene", () => {
+        expect(linkNeedsSceneCopy({ immutable: true, filename: "custom.json" })).toBe(true);
+    });
+
+    it("links the default name directly, the reload auto-links it", () => {
+        expect(linkNeedsSceneCopy({ immutable: true, filename: "agent-settings.json" })).toBe(false);
+    });
+
+    it("never needs a copy on a scene that saves in place", () => {
+        expect(linkNeedsSceneCopy({ immutable: false, filename: "custom.json" })).toBe(false);
+        expect(linkNeedsSceneCopy({ immutable: undefined, filename: "custom.json" })).toBe(false);
     });
 });

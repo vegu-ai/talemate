@@ -2,6 +2,7 @@
 // edits accumulate in until the toolbar Save commits them, and the decisions
 // the naming / commit flow makes before anything is sent.
 import {
+    DEFAULT_SCENE_AGENT_SETTINGS_FILENAME,
     normalizeSceneOverlay,
     serializeSceneOverlay,
     setActionOverrideSlice,
@@ -119,6 +120,15 @@ export function prepareCommitDecision({ pending, commitInFlight, overridesAvaila
         return COMMIT_DECISION.READY;
     }
     return COMMIT_DECISION.NEEDS_FILENAME;
+}
+
+/**
+ * Whether a first link to `filename`, on a scene with no link and no opt-out,
+ * needs the scene saved as a copy first: the reload of a read-only scene
+ * restores only the default file, through the auto-link.
+ */
+export function linkNeedsSceneCopy({ immutable, filename }) {
+    return Boolean(immutable) && filename !== DEFAULT_SCENE_AGENT_SETTINGS_FILENAME;
 }
 
 /**

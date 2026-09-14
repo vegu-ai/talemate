@@ -17,6 +17,7 @@ import structlog
 from talemate.config import commit_config, get_config
 from talemate.instance import AGENTS
 from talemate.scene_agent_settings import (
+    DEFAULT_SETTINGS_FILENAME,
     SceneAgentSettings,
     _safe_init_overlay,
     agent_settings_dir,
@@ -65,6 +66,15 @@ def _scene_identity(scene) -> str | None:
     return str(scene_id) if scene_id else None
 
 
+def _link_survives_reload(scene, filename: str) -> bool:
+    """Whether ``filename`` is linked again when the stored scene file reloads:
+    the file already linked, or a first link to the default file, which the
+    load-time auto-link finds."""
+    if scene.agent_overrides is not None:
+        return filename == scene.agent_overrides.filename
+    return filename == DEFAULT_SETTINGS_FILENAME and not scene._agent_settings_opted_out
+
+
 class AgentConfigPlugin(Plugin):
     """Live mutations to an agent's stored configuration."""
 
@@ -74,12 +84,15 @@ class AgentConfigPlugin(Plugin):
     # helpers
     # ------------------------------------------------------------------
 
-    async def _refuse(self, data: dict, message: str) -> None:
+    async def _refuse(
+        self, data: dict, message: str, extra: dict | None = None
+    ) -> None:
         """Refuse a request, telling the sender which of its requests failed."""
         await self.signal_operation_failed(
             message,
             request_id=data.get("request_id"),
             failed_action=data.get("action"),
+            extra=extra,
         )
 
     async def _resolve_registry(self, data: dict):
@@ -212,7 +225,9 @@ class AgentConfigPlugin(Plugin):
     # Per-scene agent overrides
     # ------------------------------------------------------------------
 
-    async def _refuse_scene_overrides(self, agent, data: dict, message: str) -> None:
+    async def _refuse_scene_overrides(
+        self, agent, data: dict, message: str, extra: dict | None = None
+    ) -> None:
         """Reject an override save and put the frontend back on the truth.
 
         Senders (the settings view's override buffer, the agent panel's
@@ -223,7 +238,7 @@ class AgentConfigPlugin(Plugin):
         """
         if agent:
             await agent.emit_status()
-        await self._refuse(data, message)
+        await self._refuse(data, message, extra=extra)
 
     async def handle_save_scene_overrides(self, data: dict):
         """Persist a sparse per-agent override set into the scene's
@@ -327,6 +342,22 @@ class AgentConfigPlugin(Plugin):
         if filename is not None and not is_safe_settings_filename(filename):
             await self._refuse_scene_overrides(
                 agent, data, f"Invalid agent-settings filename: {filename!r}"
+            )
+            return
+
+        # the auto-save of a read-only scene never writes the link, so refuse
+        # before any state change
+        if (
+            filename
+            and scene.immutable_save
+            and not _link_survives_reload(scene, filename)
+        ):
+            await self._refuse_scene_overrides(
+                agent,
+                data,
+                f"This scene is read-only, so a link to {filename} would be lost "
+                "on reload. Save the scene as a copy first.",
+                extra={"save_as_required": True},
             )
             return
 

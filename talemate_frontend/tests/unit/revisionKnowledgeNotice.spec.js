@@ -7,9 +7,13 @@ let app, host;
 afterEach(() => { app?.unmount(); host?.remove(); });
 describe('stale knowledge notices', () => {
     for (const [name, component] of [['History', History], ['Knowledge', Knowledge]]) {
-        it(`marks ${name} out of date until the kept passage is analyzed`, async () => {
+        it.each([
+            ['perceptions', 'Analyze perceptions', 'Changed passages need perception analysis'],
+            ['facts', 'Refresh facts', 'Changed passages need fact refresh'],
+            ['index_repair', 'Update knowledge', 'Some passages need their saved knowledge updated'],
+        ])(`marks ${name} out of date until %s completes`, async (operation, label, notice) => {
             const scene = reactive({ data: { revision_refreshes: [{ id: 9, revision_refresh: {
-                required: true, operations: ['perceptions'], label: 'Analyze perceptions',
+                required: true, operations: [operation], label,
             } }] } });
             host = document.createElement('div'); document.body.appendChild(host);
             app = createApp(component, { scene, immutableCharacter: { name: 'Mara' } });
@@ -22,10 +26,15 @@ describe('stale knowledge notices', () => {
             for (const tag of ['VAlert','VCard','VCardText','VCardTitle','VCardActions','VRow','VCol','VTabs','VTab','VWindow','VWindowItem','VSheet','VBtn','VTooltip','VChip']) app.component(tag, container);
             app.mount(host);
             expect(errors).toEqual([]);
-            expect(host.textContent).toContain('Changed passages need perception analysis');
+            expect(host.textContent).toContain(notice);
+            expect(host.textContent).toContain(`Use ${label}`);
+            if (operation === 'index_repair') {
+                expect(host.textContent).not.toContain('Use Refresh facts');
+                expect(host.textContent).not.toContain('Use Analyze perceptions');
+            }
             scene.data.revision_refreshes = [];
             await nextTick();
-            expect(host.textContent).not.toContain('Changed passages need perception analysis');
+            expect(host.textContent).not.toContain(notice);
             expect(errors).toEqual([]);
         });
     }

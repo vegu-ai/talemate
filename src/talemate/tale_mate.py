@@ -825,6 +825,12 @@ class Scene(Emitter):
         finally:
             self.emit_status()
 
+    def _message_removed(self, message, reference):
+        from talemate.knowledge.revision_refresh import preserve_revision_index_repair
+
+        preserve_revision_index_repair(self, message)
+        source_deleted(self, reference, message_id=message.id)
+
     def pop_message(self, message: SceneMessage | int) -> bool:
         """
         Removes the last message from the history that matches the given message
@@ -835,7 +841,7 @@ class Scene(Emitter):
                 self.history.remove(message)
             except ValueError:
                 return False
-            source_deleted(self, reference, message_id=message.id)
+            self._message_removed(message, reference)
             self.emit_status()
             return True
         elif isinstance(message, int):
@@ -843,7 +849,7 @@ class Scene(Emitter):
             if message is not None:
                 reference = source_reference(self, "message", message.id)
                 self.history.remove(message)
-                source_deleted(self, reference, message_id=message.id)
+                self._message_removed(message, reference)
                 self.emit_status()
                 return True
             return False
@@ -906,7 +912,7 @@ class Scene(Emitter):
         for message in to_remove:
             reference = source_reference(self, "message", message.id)
             self.history.remove(message)
-            source_deleted(self, reference, message_id=message.id)
+            self._message_removed(message, reference)
 
         # History changed — keep tail-dependent UI affordances (e.g. the
         # regenerate buttons) in sync. emit_status is debounced.
@@ -1568,7 +1574,7 @@ class Scene(Emitter):
             if message.id == message_id:
                 reference = source_reference(self, "message", message.id)
                 self.history.pop(i)
-                source_deleted(self, reference, message_id=message.id)
+                self._message_removed(message, reference)
                 log.info(f"Deleted message {message_id}")
                 emit("remove_message", "", id=message_id)
 

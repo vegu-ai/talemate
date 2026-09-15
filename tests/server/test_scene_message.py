@@ -262,4 +262,5 @@ class TestSceneMessagePluginAutosavesAfterMutation:
         await plugin.handle_swap_revision({"id": msg.id, "index": 2})
 
         names = [name for name, _ in plugin._spy_order]
-        assert names == ["swap_revision", "auto_save"]
+        assert names == ["swap_revision"]
+        assert plugin.scene.saved is False

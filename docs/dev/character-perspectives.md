@@ -403,8 +403,21 @@ unless one of that extraction's own inputs changed. A transaction journal record
 records and each phase's last writes; returning to the baseline restores only writes the
 transaction still owns. A fact records the message it came from and the messages that restated it,
 so removing one message does not remove another restatement, authored correction, summary
-contribution or manual grant. With no eligible operation, selection removes stale derived
-archive/fact material deterministically and becomes final without a model call.
+contribution or manual grant. With no eligible operation, selection leaves stale derived
+archive/fact cleanup for commit or next-send catch-up, without a model call. In Standard
+mode, if this message has no affected archives, fact bindings, edges or journal
+mutations, that catch-up skips snapshots
+and indexing. Browsing marks the scene unsaved; commit with auto save enabled or
+the next normal scene save persists the selection.
+
+A restored baseline with current analysis but pending index work offers **Update
+knowledge**, not perception analysis. Index failures retain their pending IDs but
+do not block new messages. Empty archive records remove their vectors. When a
+message is deleted or popped, its archive IDs transfer to the scene backlog, which
+catch-up retries even if no remaining message needs revision work. Its fact IDs go
+to the summarizer's normal background queue; catch-up does not flush unrelated fact
+work. An explicit **Update knowledge** action reports a failure when repair remains
+pending, while next-send catch-up stays non-blocking.
 
 Pointer movement, focus changes and tab switches never commit. `server/api.py` catches up
 before accepting a line or choice, `ConversationAgent.converse` guards direct generation,

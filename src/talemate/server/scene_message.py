@@ -22,12 +22,10 @@ from talemate.scene_message import VersionSource, CharacterTransitionMessage
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.revision_browsing import defer_revision_work
 from talemate.knowledge.revision_refresh import (
-    reconcile_revision_archive_vectors,
     refresh_revision,
     restore_revision_baseline,
-    revision_operations,
+    revision_requires_refresh,
 )
-from talemate.knowledge.topics import refresh_topics
 from talemate.server.websocket_plugin import Plugin
 from talemate.status import background_task
 from talemate.knowledge.transitions import (
@@ -222,25 +220,9 @@ class SceneMessagePlugin(Plugin):
                 failed_action="swap_revision",
             )
             return
-        message = self.scene.get_message(payload.id)
-        journal = (
-            message.revision_state.refresh_journal
-            if message.revision_state is not None
-            else None
-        )
-        restored = restore_revision_baseline(self.scene, message)
-        if restored:
-            await reconcile_revision_archive_vectors(self.scene, journal)
-            summarizer = instance.get_agent("summarizer")
-            await summarizer.flush_fact_memory(self.scene)
-            await refresh_topics(self.scene)
-        if (
-            not restored
-            and not message.revision_matches_baseline
-            and not revision_operations(self.scene, message).any
-        ):
-            await refresh_revision(self.scene, message)
-        await self.scene.attempt_auto_save()
+        with defer_revision_work():
+            restore_revision_baseline(self.scene, self.scene.get_message(payload.id))
+        self.scene.saved = False
         self.scene.emit_status()
         self.websocket_handler.queue_put(
             {
@@ -283,7 +265,10 @@ class SceneMessagePlugin(Plugin):
             selection_digest = message.revision_digest()
             selection_serial = message.revision_state.serial
             selection_active = scene.active
+            needs_refresh = revision_requires_refresh(scene, message)
             refresh = await refresh_revision(scene, message)
+            if not needs_refresh:
+                await scene.attempt_auto_save()
             if (
                 self.scene is not scene
                 or scene.active != selection_active
@@ -292,6 +277,16 @@ class SceneMessagePlugin(Plugin):
                 or message.revision_digest() != selection_digest
                 or message.revision_state.serial != selection_serial
             ):
+                return
+            refresh_state = refresh["revision_refresh"]
+            if refresh_state["required"] and refresh_state["operations"] == [
+                "index_repair"
+            ]:
+                await self.signal_operation_failed(
+                    "Knowledge could not be updated. You can retry or continue the story.",
+                    request_id=payload.request_id,
+                    failed_action="commit_revision",
+                )
                 return
             self.websocket_handler.queue_put(
                 {

@@ -1,11 +1,14 @@
 import asyncio
+import json
+from pathlib import Path
 import weakref
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 import test_perception_lifecycle
+import talemate.emit.async_signals as async_signals
 from test_perception_lifecycle import result
 from talemate.exceptions import GenerationCancelled
 from talemate.character import Character
@@ -24,6 +27,8 @@ from talemate.knowledge.revision_browsing import (
 from talemate.knowledge.message_facts import prune_missing_message_facts
 from talemate.knowledge.revision_refresh import (
     _remove_message_evidence,
+    _archive_vector_repairs,
+    revision_refresh_payload,
     catch_up_revisions,
     refresh_revision,
     revision_operations,
@@ -36,10 +41,14 @@ from talemate.knowledge.schema import (
     ParsedFact,
 )
 from talemate.instance import get_agent
-from talemate.scene_message import CharacterMessage
+from talemate.scene_message import CharacterMessage, RevisionIndexRepair
 from talemate.knowledge.topics import known_bucket
 from talemate.scene_message import NarratorMessage
 from talemate.server.scene_message import SceneMessagePlugin
+from talemate.load import load_scene_from_data
+from talemate.prompts import Prompt
+from talemate.agents.narrator import _narration
+from talemate.agents.conversation import knowledge as conversation_knowledge
 
 setup = test_perception_lifecycle.setup
 
@@ -196,8 +205,6 @@ def test_equal_text_at_another_index_reuses_valid_baseline():
 async def test_standard_browsing_masks_and_revives_bound_facts_and_grants(
     scene, monkeypatch
 ):
-    from talemate.prompts import Prompt
-
     _, _, message = standard_revision(scene)
     request = AsyncMock()
     monkeypatch.setattr(Prompt, "request", request)
@@ -237,6 +244,140 @@ async def test_standard_browsing_masks_and_revives_bound_facts_and_grants(
     assert current_facts(scene) == []
     assert fact.id in scene.world_state.facts
     request.assert_not_awaited()
+
+
+@pytest.mark.parametrize("auto_save", [True, False])
+@pytest.mark.parametrize("mode", ["legacy", "perception"])
+async def test_swap_defers_saving_and_derived_work(
+    persistence_scene_factory, monkeypatch, auto_save, mode
+):
+    scene = persistence_scene_factory()
+    scene.name = "Browse persistence"
+    scene.project_name = "browse-persistence"
+    scene.knowledge_eligibility = mode
+    monkeypatch.setattr(scene.config.game.general, "auto_save", auto_save)
+    message = NarratorMessage(message="The bell rings.")
+    message.append_version("The bell rings twice.", "regenerate")
+    message._knowledge_scene = weakref.ref(scene)
+    scene.history = [message]
+    await scene.save(copy_name="browse.json")
+    save = AsyncMock(wraps=scene.save)
+    monkeypatch.setattr(scene, "save", save)
+    forbidden = AsyncMock(side_effect=AssertionError("Derived work ran during browse"))
+    monkeypatch.setattr("talemate.prompts.Prompt.request", forbidden)
+    monkeypatch.setattr(get_agent("summarizer"), "flush_fact_memory", forbidden)
+    monkeypatch.setattr("talemate.knowledge.revision_refresh.refresh_topics", forbidden)
+    monkeypatch.setattr(get_agent("memory"), "add", forbidden)
+    monkeypatch.setattr(get_agent("memory"), "add_many", forbidden)
+    monkeypatch.setattr(get_agent("memory"), "delete", forbidden)
+    frames = []
+    plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=frames.append))
+
+    for index in (0, 1, 0):
+        save.reset_mock()
+        await plugin.handle_swap_revision(
+            {"id": message.id, "index": index, "request_id": str(index)}
+        )
+        await asyncio.sleep(0)
+        assert message.active_version == index
+        save.assert_not_awaited()
+        assert scene.saved is False
+        assert any(
+            frame.get("action") == "revision_swapped"
+            and frame.get("request_id") == str(index)
+            for frame in frames
+        )
+        forbidden.assert_not_awaited()
+
+
+@pytest.mark.parametrize("deferred", [False, True])
+@pytest.mark.parametrize("catch_up", [False, True])
+async def test_standard_unrelated_evidence_short_circuits_revision_work(
+    scene, monkeypatch, deferred, catch_up
+):
+    scene.knowledge_eligibility = "legacy"
+    previous = NarratorMessage(message="The keeper has a key.")
+    message = NarratorMessage(message="The bell rings.")
+    scene.history = [previous, message]
+    scene.archived_history = [
+        {"id": "A9", "text": "The keeper has a key.", "start": 0, "end": 0, "ts": 0}
+    ]
+    fact = Fact(
+        id="F9",
+        text="The keeper has a key.",
+        archive_id="A9",
+        message_id=previous.id,
+        message_digest=content_digest(previous.perception_text),
+    )
+    edge = KnowledgeEdge(
+        character="Keeper",
+        target="F9",
+        kind="grant",
+        source="inferred",
+        message_id=previous.id,
+    )
+    scene.world_state.facts = {fact.id: fact}
+    scene.world_state.knowledge = [edge]
+    message._knowledge_scene = weakref.ref(scene)
+    if deferred:
+        with defer_revision_work():
+            message.append_version("The bell rings twice.", "revision")
+        assert message.revision_state.refresh_journal is None
+    else:
+        message.append_version("The bell rings twice.", "revision")
+        assert message.revision_state.refresh_journal is not None
+        assert message.revision_state.refresh_journal["mutations"] == []
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+    forbidden = AsyncMock(side_effect=AssertionError("No evidence to reconcile"))
+    monkeypatch.setattr(get_agent("summarizer"), "flush_fact_memory", forbidden)
+    monkeypatch.setattr("talemate.knowledge.revision_refresh.refresh_topics", forbidden)
+    monkeypatch.setattr(
+        "talemate.knowledge.revision_refresh._record_snapshot",
+        Mock(side_effect=AssertionError("Unrelated evidence must not be copied")),
+    )
+
+    if catch_up:
+        await catch_up_revisions(scene)
+    else:
+        await refresh_revision(scene, message)
+
+    assert message.revision_matches_baseline
+    assert message.revision_state.refresh_journal is None
+    scene.attempt_auto_save.assert_awaited_once()
+    forbidden.assert_not_called()
+    assert scene.world_state.facts == {fact.id: fact}
+    assert scene.world_state.knowledge == [edge]
+
+
+@pytest.mark.parametrize("persist", ["commit", "save"])
+@pytest.mark.parametrize("index", [0, 1])
+async def test_browsed_selection_persists_on_commit_or_normal_save(
+    persistence_scene_factory, persist, index
+):
+    scene = persistence_scene_factory()
+    scene.name = "Browse then save"
+    scene.project_name = "browse-then-save"
+    message = NarratorMessage(message="The bell rings.")
+    message.append_version("The bell rings twice.", "regenerate")
+    message._knowledge_scene = weakref.ref(scene)
+    scene.history = [message]
+    await scene.save(copy_name="selected.json")
+    path = Path(scene.full_path)
+    before = path.read_bytes()
+    plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=lambda _: None))
+
+    await plugin.handle_swap_revision({"id": message.id, "index": 0})
+    await plugin.handle_swap_revision({"id": message.id, "index": index})
+    assert path.read_bytes() == before
+    assert scene.saved is False
+
+    if persist == "commit":
+        await (await plugin.handle_commit_revision({"id": message.id, "index": index}))
+    else:
+        await scene.save()
+
+    assert scene.saved is True
+    assert json.loads(path.read_text())["history"][0]["active_version"] == index
 
 
 @pytest.mark.asyncio
@@ -318,8 +459,6 @@ async def test_same_index_edit_during_commit_never_publishes_old_success(
 
 @pytest.mark.asyncio
 async def test_browse_retains_dirty_fact_work_without_scheduling(browsing):
-    from talemate.knowledge.revision_browsing import defer_revision_work
-
     scene, summarizer, _, _, _, _ = browsing
     run = AsyncMock()
     with defer_revision_work():
@@ -1421,8 +1560,6 @@ async def test_setting_change_during_extraction_prevents_publication(
 async def test_direct_narration_waits_for_revision_refresh_before_generation(
     scene, monkeypatch
 ):
-    from talemate.agents.narrator import _narration
-
     narrator = get_agent("narrator")
     narrator.scene = scene
     generated = AsyncMock()
@@ -1519,6 +1656,391 @@ async def test_failed_standard_refresh_restores_baseline_evidence_on_return(
     assert scene.world_state.facts["F1"].text == "The key is brass."
     assert scene.world_state.knowledge[0].message_id == message.id
     assert message.revision_matches_baseline
+
+
+@pytest.mark.parametrize("auto_save", [True, False])
+@pytest.mark.parametrize("reload", [True, False])
+async def test_failed_commit_browse_restores_memory_and_defers_indexes(
+    scene, monkeypatch, auto_save, reload
+):
+    summarizer, conversation, message = standard_revision(scene, ledger=True)
+    scene.world_state.facts["F1"] = Fact(
+        id="F1", text="The key is brass.", archive_id="A1"
+    )
+    monkeypatch.setattr(scene.config.game.general, "auto_save", auto_save)
+    monkeypatch.setattr(scene, "save", AsyncMock())
+    monkeypatch.setattr(
+        summarizer, "summarize", AsyncMock(return_value=("The key is silver.", []))
+    )
+    monkeypatch.setattr(
+        conversation,
+        "record_learned_facts",
+        AsyncMock(side_effect=RuntimeError("learning failed")),
+    )
+    with pytest.raises(RuntimeError, match="learning failed"):
+        await refresh_revision(scene, message)
+    await asyncio.sleep(0)
+    assert "F1" not in scene.world_state.facts
+
+    memory = get_agent("memory")
+    for method in ("add", "add_many", "delete"):
+        monkeypatch.setattr(memory, method, AsyncMock(return_value=True))
+    topics = AsyncMock(return_value=True)
+    monkeypatch.setattr("talemate.knowledge.revision_refresh.refresh_topics", topics)
+    flush = AsyncMock(wraps=summarizer.flush_fact_memory)
+    monkeypatch.setattr(summarizer, "flush_fact_memory", flush)
+    scene.save.reset_mock()
+    summarizer.summarize.reset_mock()
+    conversation.record_learned_facts.reset_mock()
+    plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=lambda _: None))
+
+    await plugin.handle_swap_revision({"id": message.id, "index": 0})
+    await asyncio.sleep(0)
+
+    assert scene.world_state.facts["F1"].text == "The key is brass."
+    assert scene.archived_history[0]["text"] == "The key is brass."
+    scene.save.assert_not_awaited()
+    flush.assert_not_awaited()
+    topics.assert_not_awaited()
+    for method in ("add", "add_many", "delete"):
+        getattr(memory, method).assert_not_awaited()
+    assert message.revision_state.pending_index_repair.fact_ids == ["F1"]
+    assert message.revision_state.pending_index_repair.archive_ids == ["base:A1"]
+
+    if reload:
+        message = CharacterMessage.model_validate(message.to_dict())
+        message._knowledge_scene = weakref.ref(scene)
+        scene.history = [message]
+        summarizer._fact_memory_dirty.clear()
+
+    await (await plugin.handle_commit_revision({"id": message.id, "index": 0}))
+
+    assert message.revision_state.pending_index_repair is None
+    assert message.revision_matches_baseline
+    memory.add.assert_awaited_once()
+    assert memory.add.call_args.args == ("The key is brass.",)
+    memory.add_many.assert_awaited_once()
+    assert memory.add_many.call_args.args[0][0]["id"] == "F1"
+    topics.assert_awaited_once()
+    summarizer.summarize.assert_not_awaited()
+    conversation.record_learned_facts.assert_not_awaited()
+
+
+async def test_deferred_index_repair_failure_remains_retryable(scene, monkeypatch):
+    scene.knowledge_eligibility = "legacy"
+    message = NarratorMessage(message="The bell rings.")
+    scene.history = [message]
+    message.set_revision_status(
+        "clean", pending_index_repair=RevisionIndexRepair(archive_ids=["base:A1"])
+    )
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+    memory = get_agent("memory")
+    monkeypatch.setattr(memory, "delete", AsyncMock(return_value=False))
+
+    await refresh_revision(scene, message)
+
+    assert message.revision_state.pending_index_repair.archive_ids == ["base:A1"]
+    scene.attempt_auto_save.assert_not_awaited()
+    memory.delete.return_value = True
+    await refresh_revision(scene, message)
+    assert message.revision_state.pending_index_repair is None
+    scene.attempt_auto_save.assert_awaited_once()
+
+
+async def test_perspectives_repair_only_payload_does_not_offer_analysis(browsing):
+    scene, _, request, message, _, _ = browsing
+    message.set_revision_status(
+        "clean", pending_index_repair=RevisionIndexRepair(archive_ids=["base:A1"])
+    )
+
+    payload = revision_refresh_payload(scene, message)["revision_refresh"]
+
+    assert payload["required"] is True
+    assert payload["operations"] == ["index_repair"]
+    assert payload["label"] == "Update knowledge"
+    assert payload["running_label"] == "Updating knowledge…"
+    assert "restored" in payload["explanation"]
+    request.assert_not_awaited()
+
+
+async def test_restored_archive_repair_ignores_unrelated_backlog(scene, monkeypatch):
+    message = NarratorMessage(message="The bell rings.")
+    scene.history = [message]
+    message.set_revision_status(
+        "clean", pending_index_repair=RevisionIndexRepair(archive_ids=["base:A1"])
+    )
+    _archive_vector_repairs[scene] = {"base:unrelated"}
+    memory = get_agent("memory")
+    monkeypatch.setattr(memory, "delete", AsyncMock(return_value=True))
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+
+    await refresh_revision(scene, message)
+
+    memory.delete.assert_awaited_once_with({"ids": ["A1"]})
+    assert _archive_vector_repairs[scene] == {"base:unrelated"}
+    assert message.revision_state.pending_index_repair is None
+
+
+@pytest.mark.parametrize("failure", [False, RuntimeError("memory unavailable")])
+async def test_failed_repair_does_not_block_successive_sends(
+    scene, monkeypatch, failure
+):
+    message = NarratorMessage(message="The bell rings.")
+    scene.history = [message]
+    message.set_revision_status(
+        "clean", pending_index_repair=RevisionIndexRepair(archive_ids=["base:A1"])
+    )
+    memory = get_agent("memory")
+    delete = AsyncMock(
+        side_effect=failure if isinstance(failure, Exception) else None,
+        return_value=failure,
+    )
+    monkeypatch.setattr(memory, "delete", delete)
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+    request = AsyncMock(side_effect=AssertionError("Repair must not request analysis"))
+    monkeypatch.setattr(Prompt, "request", request)
+
+    for text in ("The keeper waves.", "A ship passes."):
+        next_message = NarratorMessage(message=text)
+        await scene.push_history(next_message)
+        assert next_message in scene.history
+        assert message.revision_state.pending_index_repair is not None
+
+    assert delete.await_count == 2
+    request.assert_not_awaited()
+
+
+async def test_explicit_failed_index_repair_reports_error_and_can_retry(
+    scene, monkeypatch
+):
+    message = NarratorMessage(message="The bell rings.")
+    scene.history = [message]
+    scene.saved = False
+    message.set_revision_status(
+        "clean", pending_index_repair=RevisionIndexRepair(archive_ids=["base:A1"])
+    )
+    memory = get_agent("memory")
+    monkeypatch.setattr(memory, "delete", AsyncMock(return_value=False))
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+    frames = []
+    plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=frames.append))
+
+    await (
+        await plugin.handle_commit_revision(
+            {"id": message.id, "index": 0, "request_id": "repair"}
+        )
+    )
+
+    assert frames == [
+        {
+            "type": "scene_message",
+            "action": "operation_done",
+            "error": {
+                "message": "Knowledge could not be updated. You can retry or continue the story."
+            },
+            "request_id": "repair",
+            "failed_action": "commit_revision",
+        }
+    ]
+    assert message.revision_state.pending_index_repair is not None
+    assert scene.saved is False
+    scene.attempt_auto_save.assert_not_awaited()
+
+    memory.delete.return_value = True
+    await (
+        await plugin.handle_commit_revision(
+            {"id": message.id, "index": 0, "request_id": "retry"}
+        )
+    )
+    assert message.revision_state.pending_index_repair is None
+    assert any(
+        frame.get("action") == "revision_committed"
+        and frame.get("request_id") == "retry"
+        for frame in frames
+    )
+
+
+async def test_send_deletes_empty_archive_vector_and_finishes_repair(
+    scene, monkeypatch
+):
+    message = NarratorMessage(message="The bell rings.")
+    scene.history = [message]
+    scene.archived_history = [{"id": "A1", "text": "", "start": 0, "end": 0, "ts": 0}]
+    message.set_revision_status(
+        "clean", pending_index_repair=RevisionIndexRepair(archive_ids=["base:A1"])
+    )
+    memory = get_agent("memory")
+    monkeypatch.setattr(
+        memory, "add", AsyncMock(side_effect=AssertionError("Empty text"))
+    )
+    monkeypatch.setattr(memory, "delete", AsyncMock(return_value=True))
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+    next_message = NarratorMessage(message="The keeper waves.")
+
+    await scene.push_history(next_message)
+
+    memory.add.assert_not_awaited()
+    memory.delete.assert_awaited_once_with({"ids": ["A1"]})
+    assert message.revision_state.pending_index_repair is None
+    assert scene.history[-1] is next_message
+
+
+async def test_deleted_message_fact_repair_uses_background_queue(scene, monkeypatch):
+    message = NarratorMessage(message="The bell rings.")
+    scene.history = [message]
+    message.set_revision_status(
+        "clean", pending_index_repair=RevisionIndexRepair(fact_ids=["F1"])
+    )
+    summarizer = get_agent("summarizer")
+    memory = get_agent("memory")
+    monkeypatch.setattr(memory, "delete", AsyncMock(side_effect=[False, True]))
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+
+    scene.delete_message(message.id)
+    assert summarizer._fact_memory_dirty[scene] == {"F1"}
+    await summarizer._fact_wakeup_tasks[scene]
+    assert memory.delete.await_count == 1
+    await scene.push_history(NarratorMessage(message="The keeper waves."))
+    assert summarizer._fact_memory_dirty[scene] == {"F1"}
+    assert memory.delete.await_count == 1
+
+    summarizer.queue_fact_memory(scene, {"F1"})
+    await summarizer._fact_wakeup_tasks[scene]
+
+    assert summarizer._fact_memory_dirty[scene] == set()
+    assert memory.delete.await_count == 2
+    assert len(scene.history) == 1
+
+
+async def test_send_does_not_flush_unrelated_fact_work(scene, monkeypatch):
+    summarizer = get_agent("summarizer")
+    with defer_revision_work():
+        summarizer.queue_fact_memory(scene, {"unrelated"})
+    flush = AsyncMock(side_effect=AssertionError("Fact work belongs to its runner"))
+    monkeypatch.setattr(summarizer, "flush_fact_memory", flush)
+
+    await scene.push_history(NarratorMessage(message="The keeper waves."))
+
+    flush.assert_not_awaited()
+    assert summarizer._fact_memory_dirty[scene] == {"unrelated"}
+
+
+@pytest.mark.parametrize("remove", ["delete", "pop_object", "pop_id", "pop_history"])
+async def test_failed_commit_browse_delete_send_repairs_archive(
+    scene, monkeypatch, remove
+):
+    summarizer, conversation, message = standard_revision(scene, ledger=True)
+    scene.world_state.facts["F1"] = Fact(
+        id="F1", text="The key is brass.", archive_id="A1"
+    )
+    vectors = {"A1": "The key is brass."}
+
+    async def add(text, **kwargs):
+        vectors[kwargs["uid"]] = text
+        return True
+
+    memory = get_agent("memory")
+    monkeypatch.setattr(memory, "add", AsyncMock(side_effect=add))
+    async_signals.get("archive_add").connect(memory.on_archive_add)
+    monkeypatch.setattr(
+        summarizer, "summarize", AsyncMock(return_value=("The key is silver.", []))
+    )
+    monkeypatch.setattr(
+        conversation,
+        "record_learned_facts",
+        AsyncMock(side_effect=RuntimeError("learning failed")),
+    )
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+    with pytest.raises(RuntimeError, match="learning failed"):
+        await refresh_revision(scene, message)
+    assert vectors["A1"] == "The key is silver."
+    plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=lambda _: None))
+    await plugin.handle_swap_revision({"id": message.id, "index": 0})
+    assert scene.archived_history[0]["text"] == "The key is brass."
+    assert vectors["A1"] == "The key is silver."
+
+    if remove == "delete":
+        scene.delete_message(message.id)
+    elif remove == "pop_object":
+        scene.pop_message(message)
+    elif remove == "pop_id":
+        scene.pop_message(message.id)
+    else:
+        scene.pop_history("character")
+    assert message not in scene.history
+    assert _archive_vector_repairs[scene] == {"base:A1"}
+
+    await scene.push_history(NarratorMessage(message="A ship passes."))
+
+    assert vectors["A1"] == "The key is brass."
+    assert _archive_vector_repairs[scene] == set()
+
+
+async def test_pending_index_repair_survives_scene_file_reload(
+    persistence_scene_factory,
+):
+    scene = persistence_scene_factory()
+    scene.name = "Pending repair"
+    scene.project_name = "pending-repair"
+    message = NarratorMessage(message="The bell rings.")
+    message.set_revision_status(
+        "clean",
+        pending_index_repair=RevisionIndexRepair(
+            fact_ids=["F1"], archive_ids=["base:A1"]
+        ),
+    )
+    scene.history = [message]
+    await scene.save(copy_name="repair.json")
+    path = Path(scene.full_path)
+    saved = json.loads(path.read_text())
+
+    reloaded = persistence_scene_factory()
+    await load_scene_from_data(reloaded, saved, name=str(path))
+
+    repair = reloaded.history[0].revision_state.pending_index_repair
+    assert repair.fact_ids == ["F1"]
+    assert repair.archive_ids == ["base:A1"]
+    assert reloaded.revision_refreshes[0]["revision_refresh"]["required"]
+    await refresh_revision(reloaded, reloaded.history[0])
+    assert reloaded.history[0].revision_state.pending_index_repair is None
+
+
+async def test_pending_index_repair_is_shared_and_rejects_selection_changes(
+    scene, monkeypatch
+):
+    message = NarratorMessage(message="The bell rings.")
+    message.append_version("The bell rings twice.", "regenerate")
+    message._knowledge_scene = weakref.ref(scene)
+    scene.history = [message]
+    message.set_revision_status(
+        "clean", pending_index_repair=RevisionIndexRepair(archive_ids=["base:A1"])
+    )
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def delete(*args, **kwargs):
+        started.set()
+        await asyncio.wait_for(release.wait(), timeout=5)
+        return True
+
+    memory = get_agent("memory")
+    monkeypatch.setattr(memory, "delete", AsyncMock(side_effect=delete))
+    monkeypatch.setattr(scene, "attempt_auto_save", AsyncMock())
+    first = asyncio.create_task(refresh_revision(scene, message))
+    second = asyncio.create_task(refresh_revision(scene, message))
+    await asyncio.wait_for(started.wait(), timeout=5)
+    try:
+        with defer_revision_work():
+            message.set_active_version(0)
+    finally:
+        release.set()
+    results = await asyncio.gather(first, second, return_exceptions=True)
+
+    assert all(isinstance(result, GenerationCancelled) for result in results)
+    memory.delete.assert_awaited_once()
+    assert message.revision_state.pending_index_repair is not None
+    await refresh_revision(scene, message)
+    assert message.revision_state.pending_index_repair is None
 
 
 @pytest.mark.asyncio
@@ -1753,6 +2275,9 @@ async def test_rollback_memory_repair_stays_with_captured_scene(scene, monkeypat
     await plugin.handle_swap_revision(
         {"id": message.id, "index": message.revision_state.baseline_index}
     )
+    assert writes == []
+    assert message.revision_state.pending_index_repair.fact_ids == [fact.id]
+    await (await plugin.handle_commit_revision({"id": message.id, "index": 0}))
     assert writes == [(scene, [fact.id])]
 
 
@@ -1760,8 +2285,6 @@ async def test_rollback_memory_repair_stays_with_captured_scene(scene, monkeypat
 async def test_nonempty_learning_does_not_invalidate_extraction_receipt(
     scene, monkeypatch
 ):
-    from talemate.agents.conversation import knowledge as conversation_knowledge
-
     summarizer, _, message = standard_revision(scene, ledger=True)
     offered = Fact(id="F1", text="The offered fact.", source="manual")
     scene.world_state.facts = {offered.id: offered}
@@ -1791,8 +2314,6 @@ async def test_nonempty_learning_does_not_invalidate_extraction_receipt(
 async def test_persistence_input_edit_retries_extraction_and_nonempty_learning(
     scene, monkeypatch
 ):
-    from talemate.agents.conversation import knowledge as conversation_knowledge
-
     summarizer, _, message = standard_revision(scene, ledger=True)
     offered = Fact(id="F1", text="The offered fact.", source="manual")
     external = Fact(id="F2", text="External initial.", source="manual")

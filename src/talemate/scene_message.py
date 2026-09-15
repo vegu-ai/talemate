@@ -92,6 +92,11 @@ class MessageVersion(pydantic.BaseModel):
     reason: str | None = None
 
 
+class RevisionIndexRepair(pydantic.BaseModel):
+    fact_ids: list[str] = pydantic.Field(default_factory=list)
+    archive_ids: list[str] = pydantic.Field(default_factory=list)
+
+
 class MessageRevisionState(pydantic.BaseModel):
     baseline_index: int = 0
     baseline_digest: str = ""
@@ -100,6 +105,7 @@ class MessageRevisionState(pydantic.BaseModel):
     completed_features: tuple[str, ...] = ()
     phase_receipts: dict[str, str] = pydantic.Field(default_factory=dict)
     refresh_journal: dict | None = None
+    pending_index_repair: RevisionIndexRepair | None = None
 
     @pydantic.model_validator(mode="after")
     def defer_interrupted_work(self):

@@ -233,6 +233,9 @@ export default {
                 .filter((item) => item?.required);
         },
         refreshNotice() {
+            if (this.pendingRefreshes.some((item) => item.operations?.includes('index_repair'))) {
+                return 'Some passages need their saved knowledge updated. Use Update knowledge on those passages, or send your next line or choice.';
+            }
             const perception = this.pendingRefreshes.some((item) => item.operations?.includes('perceptions'));
             return perception
                 ? 'Changed passages need perception analysis. Use Analyze perceptions on the passage, or send your next line or choice.'

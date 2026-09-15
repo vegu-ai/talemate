@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from weakref import WeakKeyDictionary
 
+import structlog
+
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
 from talemate.knowledge.facts import (
@@ -24,15 +26,19 @@ from talemate.knowledge.message_facts import (
 )
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import content_digest
-from talemate.knowledge.revision_browsing import affected_archive_ids
+from talemate.knowledge.revision_browsing import (
+    affected_archive_ids,
+    defer_revision_work,
+)
 from talemate.knowledge.schema import Fact, KnowledgeEdge
 from talemate.knowledge.topics import refresh_topics
-from talemate.scene_message import CharacterMessage
+from talemate.scene_message import CharacterMessage, RevisionIndexRepair
 
 _active_transaction = ContextVar("revision_refresh_transaction", default=None)
 _archive_vector_repairs = WeakKeyDictionary()
 _catch_up_locks = WeakKeyDictionary()
 _catch_up_owners = WeakKeyDictionary()
+log = structlog.get_logger(__name__)
 
 
 @dataclass(frozen=True)
@@ -198,6 +204,12 @@ def _receipts_current(
 
 def revision_requires_refresh(scene, message, operations=None) -> bool:
     """Include missing revised-source results without backfilling pristine history."""
+    return bool(
+        message.revision_state and message.revision_state.pending_index_repair
+    ) or _revision_work_required(scene, message, operations)
+
+
+def _revision_work_required(scene, message, operations=None) -> bool:
     if not message.revision_matches_baseline:
         return True
     if (
@@ -219,13 +231,26 @@ def revision_requires_refresh(scene, message, operations=None) -> bool:
 
 def revision_refresh_payload(scene, message) -> dict:
     operations = revision_operations(scene, message)
-    dirty = revision_requires_refresh(scene, message, operations)
+    pending_repair = bool(
+        message.revision_state and message.revision_state.pending_index_repair
+    )
+    work_required = _revision_work_required(scene, message, operations)
+    dirty = pending_repair or work_required
+    repair_only = pending_repair and not work_required
     status = message.revision_state.status if message.revision_state else "clean"
-    if operations.perceptions:
+    if repair_only:
+        label = "Update knowledge"
+        explanation = "This version is restored; its saved knowledge needs updating."
+        running = "Updating knowledge…"
+    elif operations.perceptions:
         label = "Analyze perceptions"
         explanation = "Perception analysis for this version has not run yet."
         running = "Analyzing perceptions…"
-    elif operations.extract_facts or operations.learn_facts:
+    elif (
+        operations.extract_facts
+        or operations.learn_facts
+        or (message.revision_state and message.revision_state.pending_index_repair)
+    ):
         label = "Refresh facts"
         explanation = "Facts for this version have not been refreshed yet."
         running = "Refreshing facts…"
@@ -240,15 +265,15 @@ def revision_refresh_payload(scene, message) -> dict:
             "selection_serial": (
                 message.revision_state.serial if message.revision_state else 0
             ),
-            "required": dirty and operations.any,
+            "required": dirty and (operations.any or pending_repair),
             "status": status,
-            "operations": list(operations.names()),
+            "operations": ["index_repair"] if repair_only else list(operations.names()),
             "label": label,
             "explanation": explanation,
             "running_label": running,
             "deferred_hint": (
                 "If you skip it, this runs when you send your next line."
-                if dirty and operations.any
+                if dirty and (operations.any or pending_repair)
                 else None
             ),
         }
@@ -488,10 +513,7 @@ def _record_snapshot(scene, message) -> dict:
     }
 
 
-def _journal(scene, message) -> dict:
-    state = message.revision_state
-    snapshot = _record_snapshot(scene, message)
-
+def _message_evidence_ids(scene, message) -> tuple[set[str], set[str], set[str]]:
     archive_ids = affected_archive_ids(scene, message)
     fact_ids = {
         identity
@@ -512,6 +534,20 @@ def _journal(scene, message) -> dict:
         for edge in scene.world_state.knowledge
         if edge.message_id == message.id or edge.target in fact_ids
     }
+    return archive_ids, fact_ids, edge_ids
+
+
+def _message_has_revision_work(scene, message) -> bool:
+    journal = message.revision_state.refresh_journal or {}
+    if journal.get("mutations") or journal.get("pending_fact_memory_ids"):
+        return True
+    return any(_message_evidence_ids(scene, message))
+
+
+def _journal(scene, message) -> dict:
+    state = message.revision_state
+    snapshot = _record_snapshot(scene, message)
+    archive_ids, fact_ids, edge_ids = _message_evidence_ids(scene, message)
     return {
         "baseline_digest": state.baseline_digest,
         "baseline_index": state.baseline_index,
@@ -662,10 +698,27 @@ def restore_revision_baseline(scene, message) -> bool:
         return False
     touched = _restore_mutation_log(scene, message, journal)
     touched.update(journal.get("pending_fact_memory_ids", ()))
-    get_agent("summarizer").queue_fact_memory(scene, touched)
+    archives = {
+        mutation["identity"]
+        for mutation in journal.get("mutations", ())
+        if mutation["group"] == "archives"
+    } | set(journal.get("writes", {}).get("archives", {}))
+    pending = state.pending_index_repair
+    if pending:
+        touched.update(pending.fact_ids)
+        archives.update(pending.archive_ids)
+    repair = (
+        RevisionIndexRepair(fact_ids=sorted(touched), archive_ids=sorted(archives))
+        if touched or archives
+        else None
+    )
+    if touched:
+        get_agent("summarizer").queue_fact_memory(scene, touched)
     message.mark_revision_committed(tuple(journal.get("baseline_features", ())))
     message.set_revision_status(
-        "clean", phase_receipts=dict(journal.get("baseline_receipts", {}))
+        "clean",
+        phase_receipts=dict(journal.get("baseline_receipts", {})),
+        pending_index_repair=repair,
     )
     return True
 
@@ -995,13 +1048,15 @@ async def _invalidate_affected_archives(scene, message):
     return archive_ids
 
 
-async def reconcile_revision_archive_vectors(scene, journal) -> bool:
+async def reconcile_revision_archive_vectors(
+    scene, journal, *, include_pending: bool = True
+) -> bool:
     """Make base-history vectors match archive records restored from a journal."""
     pending = _archive_vector_repairs.setdefault(scene, set())
     if not journal and not pending:
         return True
     memory = get_agent("memory")
-    identities = set(pending)
+    identities = set(pending) if include_pending else set()
     identities.update(
         {
             mutation["identity"]
@@ -1010,7 +1065,9 @@ async def reconcile_revision_archive_vectors(scene, journal) -> bool:
         }
         or set((journal or {}).get("writes", {}).get("archives", {}))
     )
-    pending.update(identities)
+    if include_pending:
+        pending.update(identities)
+    complete = True
     for identity in sorted(identities):
         if not identity.startswith("base:"):
             pending.discard(identity)
@@ -1018,7 +1075,7 @@ async def reconcile_revision_archive_vectors(scene, journal) -> bool:
         if not _memory_scene_owned(scene):
             return False
         record = _find_archive(scene, identity)
-        if record is None:
+        if record is None or not record.get("text"):
             from talemate.agents.memory import memory_write_scene
 
             with memory_write_scene(scene):
@@ -1037,9 +1094,10 @@ async def reconcile_revision_archive_vectors(scene, journal) -> bool:
                     **presence_metadata(record.get("present")),
                 )
         if completed is False:
-            return False
+            complete = False
+            continue
         pending.discard(identity)
-    return True
+    return complete
 
 
 async def _refresh(scene, message, identity: str, operations: RevisionOperations):
@@ -1273,15 +1331,68 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
         raise
 
 
-_jobs = WeakKeyDictionary()
-
-
-async def refresh_revision(scene, message):
-    """Run or join the one scene-local job for this canonical revision."""
-    if not revision_requires_refresh(scene, message):
-        return revision_refresh_payload(scene, message)
+async def _repair_restored_indexes(scene, message) -> bool:
+    pending = message.revision_state.pending_index_repair
+    if pending is None:
+        return False
     operations = revision_operations(scene, message)
+    identity = _identity(scene, message, operations)
+
+    def still_current():
+        return (
+            _current(scene, message, identity, operations)
+            and message.revision_state.pending_index_repair is pending
+        )
+
+    journal = {"writes": {"archives": dict.fromkeys(pending.archive_ids)}}
+    try:
+        complete = await reconcile_revision_archive_vectors(
+            scene, journal, include_pending=False
+        )
+        if not still_current():
+            raise GenerationCancelled(
+                "The selection changed during restored index repair"
+            )
+        summarizer = get_agent("summarizer")
+        if pending.fact_ids:
+            with defer_revision_work():
+                summarizer.queue_fact_memory(scene, pending.fact_ids)
+            complete = await summarizer.flush_fact_memory(scene) and complete
+        if complete:
+            await refresh_topics(scene, still_current=still_current)
+    except GenerationCancelled:
+        raise
+    except Exception as exc:
+        log.warning(
+            "Restored knowledge update deferred", message_id=message.id, error=str(exc)
+        )
+        complete = False
+    if not still_current():
+        raise GenerationCancelled("The selection changed during restored index repair")
+    if not complete:
+        log.warning("Restored knowledge update remains pending", message_id=message.id)
+        return False
+    message.set_revision_status(
+        message.revision_state.status, pending_index_repair=None
+    )
+    return True
+
+
+async def _refresh_revision(scene, message, identity, operations):
+    if not _current(scene, message, identity, operations):
+        raise GenerationCancelled("The selected version changed before refresh")
+    repaired = await _repair_restored_indexes(scene, message)
+    if not _revision_work_required(scene, message, operations):
+        if repaired:
+            await scene.attempt_auto_save()
+        return revision_refresh_payload(scene, message)
     if not operations.any:
+        if not character_knowledge_enabled(scene) and not _message_has_revision_work(
+            scene, message
+        ):
+            message.mark_revision_committed()
+            await scene.attempt_auto_save()
+            return revision_refresh_payload(scene, message)
         summarizer = get_agent("summarizer")
         identity = _identity(scene, message, operations)
         begin_revision_transaction(scene, message)
@@ -1336,11 +1447,24 @@ async def refresh_revision(scene, message):
             raise
         scene.emit_status()
         return revision_refresh_payload(scene, message)
+    return await _refresh(scene, message, identity, operations)
+
+
+_jobs = WeakKeyDictionary()
+
+
+async def refresh_revision(scene, message):
+    """Run or join the one scene-local job for this canonical revision."""
+    if not revision_requires_refresh(scene, message):
+        return revision_refresh_payload(scene, message)
+    operations = revision_operations(scene, message)
     identity = _identity(scene, message, operations)
     jobs = _jobs.setdefault(scene, {})
     job = jobs.get(message.id)
     if job is None or job.done() or getattr(job, "revision_identity", None) != identity:
-        job = asyncio.create_task(_refresh(scene, message, identity, operations))
+        job = asyncio.create_task(
+            _refresh_revision(scene, message, identity, operations)
+        )
         job.revision_identity = identity
         jobs[message.id] = job
     try:
@@ -1348,6 +1472,27 @@ async def refresh_revision(scene, message):
     finally:
         if job.done() and jobs.get(message.id) is job:
             jobs.pop(message.id, None)
+
+
+def preserve_revision_index_repair(scene, message) -> None:
+    pending = (
+        message.revision_state.pending_index_repair if message.revision_state else None
+    )
+    if pending is None:
+        return
+    _archive_vector_repairs.setdefault(scene, set()).update(pending.archive_ids)
+    if pending.fact_ids:
+        get_agent("summarizer").queue_fact_memory(scene, pending.fact_ids)
+
+
+async def _repair_scene_indexes(scene) -> None:
+    try:
+        if _archive_vector_repairs.get(scene):
+            await reconcile_revision_archive_vectors(scene, None)
+    except GenerationCancelled:
+        raise
+    except Exception as exc:
+        log.warning("Scene knowledge update deferred", error=str(exc))
 
 
 async def catch_up_revisions(scene) -> None:
@@ -1359,6 +1504,7 @@ async def catch_up_revisions(scene) -> None:
     async with lock:
         _catch_up_owners[scene] = asyncio.current_task()
         try:
+            await _repair_scene_indexes(scene)
             for message in list(scene.history):
                 if message.revision_state is not None and revision_requires_refresh(
                     scene, message

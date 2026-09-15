@@ -27,7 +27,14 @@
                 <div v-if="!locked" class="text-body-small text-medium-emphasis mb-1">Double-click a fact to edit it</div>
                 <v-list density="compact" slim class="bg-transparent py-0">
                     <WorldStateManagerFactRow v-for="fact in shownFacts" :key="fact.id" :fact="fact" :locked="locked"
-                        @updated="updateFact" @deleted="removeFact" @source="$emit('source', $event)" />
+                        @updated="updateFact" @deleted="removeFact" @source="$emit('source', $event)">
+                        <template #details>
+                            <v-chip v-if="restatedHere(fact)" size="x-small" variant="tonal" class="mr-1 fact-restated" prepend-icon="mdi-repeat-once">
+                                Restated
+                                <v-tooltip activator="parent" location="top">{{ restatedTooltip(fact) }}</v-tooltip>
+                            </v-chip>
+                        </template>
+                    </WorldStateManagerFactRow>
                 </v-list>
             </div>
         </v-card-text>
@@ -255,6 +262,15 @@ export default {
                 action: 'regenerate_facts',
                 entry: this.entry,
             }));
+        },
+        restatedHere(fact) {
+            return fact.archive_id !== this.entry.id
+                && (fact.restated_by || []).some((item) => item.archive_id === this.entry.id);
+        },
+        restatedTooltip(fact) {
+            const when = fact.origin_time ? fact.origin_time.toLowerCase() : 'at an unknown time';
+            const where = fact.archive_id ? 'in an earlier history entry' : 'outside the history';
+            return `Restated here. First recorded ${when} ${where}.`;
         },
         updateFact(fact) {
             this.entry.facts = this.entry.facts.map((existing) => existing.id === fact.id ? fact : existing);

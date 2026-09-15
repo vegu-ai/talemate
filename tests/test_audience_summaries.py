@@ -954,7 +954,8 @@ async def test_audience_failure_cannot_interrupt_reader_finalization(
     topics.assert_not_awaited()
     after.assert_awaited_once()
     status.assert_called_once()
-    assert scene.ts == scene.archived_history[0]["ts"] == 0
+    assert scene.archived_history[0]["ts"] == 0
+    assert scene.ts == 999
     assert "facts_status" not in scene.archived_history[0]
     await summarizer.repair_summary_views(scene)
     assert selected(scene, scene.archived_history[0]["id"]).status == "failed"

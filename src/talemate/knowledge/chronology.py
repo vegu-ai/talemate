@@ -174,7 +174,14 @@ def render_fact(
 
 
 def fact_display(scene, fact):
-    return {**fact.model_dump(), "time": fact_time(scene, fact)}
+    return {
+        **fact.model_dump(),
+        "time": fact_time(scene, fact),
+        # `time` follows the latest restatement; this is the first record
+        "origin_time": duration_to_human(max(0, scene.ts - fact.ts))
+        if fact.ts is not None
+        else None,
+    }
 
 
 def memory_fact(scene, document):

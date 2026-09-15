@@ -8,6 +8,7 @@ from talemate.character import Character, activate_character, deactivate_charact
 from talemate.context import ActiveScene, SceneIsLoading
 from talemate.instance import get_agent
 from talemate.knowledge.perspectives import bind_message_source, set_source_perspectives
+from talemate.knowledge.timeline import message_times
 from talemate.knowledge.transitions import (
     absence_seconds,
     latest_transition,
@@ -812,7 +813,7 @@ async def test_real_archive_cuts_keep_silent_return_chronological(
                 "text": "After return, Mara reports all stations."
                 if i == 2
                 else f"Earlier chapter {i}",
-                "ts": span.ts,
+                "ts": message_times(scene)[scene.history[span.end].id],
                 "present": span.dialogue_entries[0].present,
             }
         )
@@ -1147,7 +1148,7 @@ async def test_layered_real_archive_cuts_render_return_once(
                 "end": span.end,
                 "text": f"{marker}-{i} "
                 + "The chapter records the changing state of the station. " * 3,
-                "ts": span.ts,
+                "ts": message_times(scene)[scene.history[span.end].id],
                 "present": span.dialogue_entries[0].present,
             }
         )
@@ -1221,7 +1222,7 @@ async def test_real_absence_expansion_adds_no_empty_part_or_second_gap(
                 "start": span.start,
                 "end": span.end,
                 "text": f"SUM-{i}",
-                "ts": span.ts,
+                "ts": message_times(scene)[scene.history[span.end].id],
                 "present": span.dialogue_entries[0].present,
             }
         )

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import History from '@/components/WorldStateManagerHistory.vue';
+import HistoryEntry from '@/components/WorldStateManagerHistoryEntry.vue';
 
 function history() {
     const sent = [];
@@ -56,6 +57,31 @@ describe('Facts in History', () => {
         expect(vm.factSource).toBeNull();
         vm.handleMessage(incoming('fact_source', { fact_id: 'F1', text: 'Late old scene reply.' }));
         expect(vm.factSource).toBeNull();
+    });
+});
+
+describe('Restated facts in a History entry', () => {
+    const entry = (id) => {
+        const vm = { entry: { id } };
+        for (const [key, method] of Object.entries(HistoryEntry.methods)) vm[key] = method.bind(vm);
+        return vm;
+    };
+    const restated = { id: 'F1', archive_id: 'A1', origin_time: '2 Days ago', restated_by: [{ archive_id: 'A2' }] };
+
+    it('marks a fact that this entry restated and another entry first recorded', () => {
+        expect(entry('A2').restatedHere(restated)).toBe(true);
+        expect(entry('A2').restatedTooltip(restated)).toBe('Restated here. First recorded 2 days ago in an earlier history entry.');
+        expect(entry('A2').restatedTooltip({ ...restated, origin_time: 'Recently' })).toBe('Restated here. First recorded recently in an earlier history entry.');
+    });
+    it('leaves the entry of origin and unrelated entries unmarked', () => {
+        expect(entry('A1').restatedHere(restated)).toBe(false);
+        expect(entry('A3').restatedHere(restated)).toBe(false);
+        expect(entry('A1').restatedHere({ id: 'F2', archive_id: 'A1', restated_by: [{ archive_id: 'A1' }] })).toBe(false);
+    });
+    it('names an origin outside the history and an unknown origin time', () => {
+        const manual = { id: 'F3', archive_id: null, origin_time: null, restated_by: [{ archive_id: 'A2' }] };
+        expect(entry('A2').restatedHere(manual)).toBe(true);
+        expect(entry('A2').restatedTooltip(manual)).toBe('Restated here. First recorded at an unknown time outside the history.');
     });
 });
 

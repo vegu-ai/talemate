@@ -107,7 +107,6 @@ class ArchiveSpan:
     end: int | None
     tokens: int
     threshold: int
-    ts: int
     dialogue_entries: list
     recent_entry: dict | None
     time_passage_termination: bool
@@ -362,7 +361,6 @@ class SummarizeAgent(
         end = None
         tokens = 0
         dialogue_entries = []
-        ts = 0
         time_passage_termination = False
         presence_termination = False
         # presence of the span so far; an unknown message neither changes nor
@@ -372,11 +370,6 @@ class SummarizeAgent(
         token_threshold = self.archive_threshold
 
         log.debug("build_archive", start=start, recent_entry=recent_entry)
-
-        if recent_entry:
-            # legacy entries may carry an explicit null ts, which the migration
-            # preserves rather than inventing a timestamp for
-            ts = recent_entry.get("ts") or 0
 
         for i in range(start, max(start, len(scene.history) - 1)):
             dialogue = scene.history[i]
@@ -397,7 +390,6 @@ class SummarizeAgent(
 
             if isinstance(dialogue, TimePassageMessage):
                 log.debug("build_archive", time_passage_message=dialogue)
-                ts = ts + dialogue.ts
 
                 if i == start:
                     log.debug(
@@ -405,7 +397,6 @@ class SummarizeAgent(
                         time_passage_message=dialogue,
                         start=start,
                         i=i,
-                        ts=ts,
                     )
                     start += 1
                     continue
@@ -434,7 +425,6 @@ class SummarizeAgent(
             end=end,
             tokens=tokens,
             threshold=token_threshold,
-            ts=ts,
             dialogue_entries=dialogue_entries,
             recent_entry=recent_entry,
             time_passage_termination=time_passage_termination,
@@ -507,7 +497,6 @@ class SummarizeAgent(
         span = self.collect_archive_span(scene)
         start = span.start
         end = span.end
-        ts = span.ts
         dialogue_entries = span.dialogue_entries
         time_passage_termination = span.time_passage_termination
         presence_termination = span.presence_termination
@@ -537,11 +526,12 @@ class SummarizeAgent(
             )
             return
 
+        times = message_times(scene)
+
         log.debug(
             "build_archive",
             start=start,
             end=end,
-            ts=ts,
             time_passage_termination=time_passage_termination,
             presence_termination=presence_termination,
         )
@@ -586,7 +576,7 @@ class SummarizeAgent(
         intro_line: SpanLine | None = None
         if dialogue_entries:
             present = span_presence(dialogue_entries)
-            lines = span_bindings(scene, dialogue_entries)
+            lines = span_bindings(scene, dialogue_entries, times=times)
             intro_text = None
 
             if not extra_context:
@@ -625,13 +615,12 @@ class SummarizeAgent(
             parsed_facts = None
             facts_status = None
 
-        # determine the appropariate timestamp for the summarization
-
+        # the time of the last line: a passage that ends the span is after it
         entry = ArchiveEntry(
             text=summarized,
             start=start,
             end=end,
-            ts=ts,
+            ts=times[scene.history[end].id],
             present=present,
             intro_included=intro_included,
             facts_status=facts_status,
@@ -650,7 +639,6 @@ class SummarizeAgent(
             )
             await refresh_topics(scene)
 
-        scene.ts = ts
         scene.emit_status()
 
         await talemate.emit.async_signals.get(

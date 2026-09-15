@@ -12,8 +12,14 @@ import talemate.util as util
 from conftest import MockScene, bootstrap_scene
 from talemate.context import ActiveScene
 from talemate.agents.memory.schema import MemoryDocument
-from talemate.history import ArchiveEntry
+from talemate.history import (
+    ArchiveEntry,
+    HistoryEntry,
+    history_with_relative_time,
+    rebuild_history,
+)
 from talemate.instance import get_agent
+from talemate.knowledge.chronology import fact_time
 from talemate.knowledge.facts import (
     SpanLine,
     drop_facts_for_entries,
@@ -762,6 +768,92 @@ class TestBuildArchiveFacts:
         summarizer.summarize = stub
         assert await summarizer.build_archive(scene) is True
         assert "facts_status" not in scene.archived_history[0]
+
+
+class TestFactAgeAcrossPassages:
+    """An entry and the facts it recorded read the same age."""
+
+    DAY, HOUR = 86400, 3600
+
+    def _history(self):
+        both = ["Mara", "Edwin"]
+
+        def said(text):
+            return CharacterMessage(message=f"Mara: {text}", present=both)
+
+        return [
+            said("one"),
+            said("two"),
+            said("three"),
+            TimePassageMessage(ts=2 * self.DAY, message="Two days pass", present=both),
+            said("four"),
+            said("five"),
+            said("six"),
+            TimePassageMessage(
+                ts=4 * self.HOUR, message="Four hours pass", present=both
+            ),
+            said("seven"),
+            said("eight"),
+        ]
+
+    async def _rebuild(self, scene, summarizer):
+        summarizer.actions["archive"].config["threshold"].value = 100000
+        scene.history = self._history()
+        scene.active = True
+
+        async def stub(text, **kwargs):
+            first = text.split("]")[0].strip("[")
+            return "SUMM", parse_facts(
+                f'[{{"text": "Line {first} happened.", "message_id": {first}}}]'
+            )
+
+        async def no_cut(dialogue):
+            return None
+
+        summarizer.summarize = stub
+        summarizer.analyze_dialoge = no_cut
+        await rebuild_history(scene)
+
+    async def test_rebuilt_entries_and_facts_share_one_age(
+        self, summarizer_scene, fake_memory
+    ):
+        scene, summarizer = summarizer_scene
+        await self._rebuild(scene, summarizer)
+
+        assert scene.ts == 2 * self.DAY + 4 * self.HOUR
+        rows = history_with_relative_time(scene.archived_history, scene.ts)
+        assert [row["time"] for row in rows] == [
+            "2 Days and 4 Hours ago",
+            "4 Hours ago",
+        ]
+        facts = scene.world_state.facts.values()
+        by_entry = {fact.archive_id: fact for fact in facts}
+        for row in rows:
+            fact = by_entry[row["id"]]
+            assert fact.ts == row["ts"]
+            assert fact_time(scene, fact) == row["time"]
+        # the load-time repair has nothing left to change
+        before = (scene.ts, [entry["ts"] for entry in scene.archived_history])
+        scene.fix_time()
+        assert (scene.ts, [entry["ts"] for entry in scene.archived_history]) == before
+
+    async def test_regenerated_facts_keep_the_entry_age(
+        self, summarizer_scene, fake_memory
+    ):
+        scene, summarizer = summarizer_scene
+        await self._rebuild(scene, summarizer)
+        row = history_with_relative_time(scene.archived_history, scene.ts)[1]
+        assert row["time"] == "4 Hours ago"
+
+        assert await summarizer.regenerate_facts(HistoryEntry(**row)) == "ok"
+
+        regenerated = [
+            fact
+            for fact in scene.world_state.facts.values()
+            if fact.archive_id == row["id"]
+        ]
+        assert regenerated
+        assert {fact_time(scene, fact) for fact in regenerated} == {"4 Hours ago"}
 
 
 # ---------------------------------------------------------------------------

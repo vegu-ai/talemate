@@ -88,13 +88,7 @@ class HistoryMixin:
         )
         summarizer = get_agent("summarizer")
         for row, stored in zip(history, self.scene.archived_history):
-            row["facts"] = [
-                fact_display(self.scene, fact)
-                for fact in facts_for_entry(self.scene, row["id"])
-            ]
-            row["facts_unavailable_reason"] = summarizer.fact_source_unavailable_reason(
-                self.scene, ArchiveEntry(**stored)
-            )
+            self._complete_base_row(row, stored)
 
         layered_history = []
 
@@ -183,14 +177,27 @@ class HistoryMixin:
 
         entry = await regenerate_history_entry(self.scene, payload.entry)
         log.debug("regenerate_history_entry (done)", entry=entry)
+        row = entry.model_dump()
+        if entry.layer == 0:
+            self._complete_base_row(row, self.scene.archived_history[entry.index])
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
                 "action": "history_entry_regenerated",
-                "data": entry.model_dump(),
+                "data": row,
             }
         )
         await self.signal_operation_done()
+
+    def _complete_base_row(self, row: dict, stored: dict) -> dict:
+        row["facts"] = [
+            fact_display(self.scene, fact)
+            for fact in facts_for_entry(self.scene, row["id"])
+        ]
+        row["facts_unavailable_reason"] = get_agent(
+            "summarizer"
+        ).fact_source_unavailable_reason(self.scene, ArchiveEntry(**stored))
+        return row
 
     async def handle_inspect_history_entry(self, data):
         """

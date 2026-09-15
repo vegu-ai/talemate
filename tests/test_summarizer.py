@@ -33,6 +33,7 @@ import talemate.util as util
 from talemate.context import ActiveScene
 from talemate.events import HistoryEvent
 from talemate.history import ArchiveEntry
+from talemate.knowledge.timeline import message_times
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
@@ -312,7 +313,6 @@ class TestArchiveStatus:
 
         span = summarizer.collect_archive_span(scene)
         assert span.start == 2
-        assert span.ts == 60
         assert summarizer.archive_status()["pending_tokens"] == 17
 
     def test_static_archive_entry_starts_at_zero(self, summarizer_scene):
@@ -508,6 +508,7 @@ class TestBuildArchive:
             make_character_message("post-passage"),
             make_character_message("trailing"),
         ]
+        scene.ts = 300
 
         called = {}
 
@@ -538,8 +539,55 @@ class TestBuildArchive:
         assert entry["text"] == "SUMMARIZED"
         assert entry["start"] == 0
         assert entry["end"] == 2
-        # Time passage 5M -> scene timestamp updated to 300.
+        # the passage ends the span: the lines come before it
+        assert entry["ts"] == 0
         assert scene.ts == 300
+
+    async def test_a_passage_that_ends_a_span_counts_once(self, summarizer_scene):
+        scene, summarizer = summarizer_scene
+        summarizer.actions["archive"].config["threshold"].value = 100000
+        day, hour = 86400, 3600
+        messages = [
+            make_character_message("one"),
+            make_character_message("two"),
+            make_character_message("three"),
+            TimePassageMessage(ts=2 * day, message="Two days pass"),
+            make_character_message("four"),
+            make_character_message("five"),
+            make_character_message("six"),
+            TimePassageMessage(ts=4 * hour, message="Four hours pass"),
+            make_character_message("seven"),
+            make_character_message("eight"),
+        ]
+
+        async def stub_summarize(text, return_facts=False, **_):
+            return ("SUMMARIZED", None) if return_facts else "SUMMARIZED"
+
+        async def stub_analyze(dialogue):
+            return ""
+
+        summarizer.summarize = stub_summarize
+        summarizer.analyze_dialoge = stub_analyze
+        scene.history = []
+        # the way push_history adds a message: a passage moves the clock
+        for message in messages:
+            scene.history.append(message)
+            if isinstance(message, TimePassageMessage):
+                scene.advance_time(message.ts)
+            await summarizer.build_archive(scene)
+            assert scene.ts == message_times(scene)[message.id]
+
+        times = message_times(scene)
+        entries = scene.archived_history
+        assert [(entry["start"], entry["end"]) for entry in entries] == [
+            (0, 2),
+            (4, 6),
+        ]
+        assert [entry["ts"] for entry in entries] == [0, 2 * day]
+        for entry in entries:
+            lines = scene.history[entry["start"] : entry["end"] + 1]
+            assert {times[line.id] for line in lines} == {entry["ts"]}
+        assert scene.ts == 2 * day + 4 * hour
 
     async def test_director_messages_skipped_at_start(self, summarizer_scene):
         scene, summarizer = summarizer_scene
@@ -607,7 +655,8 @@ class TestBuildArchive:
     async def test_null_ts_on_recent_archive_entry(self, summarizer_scene):
         """Scenes saved before scene time became integer seconds may carry an
         explicit null `ts` on an archive entry, which the migration keeps as
-        is. Summarization has to treat it as the start of the scene."""
+        is. The next entry takes the time of its own lines and does not read
+        it."""
         scene, summarizer = summarizer_scene
         summarizer.actions["archive"].config["threshold"].value = 100000
         prior = make_archived(text="prior", start=0, end=1, ts=0)
@@ -637,7 +686,8 @@ class TestBuildArchive:
         await summarizer.build_archive(scene)
 
         assert len(scene.archived_history) == 2
-        assert scene.archived_history[1]["ts"] == 120
+        # the passage ends the span, so the lines sit at the scene's start
+        assert scene.archived_history[1]["ts"] == 0
 
 
 # ---------------------------------------------------------------------------

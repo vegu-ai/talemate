@@ -64,6 +64,7 @@ from talemate.scene_message import (
     TimePassageMessage,
 )
 from talemate.tale_mate import Actor, Player, Scene
+from talemate.util.time import UNIT_TO_SECONDS
 
 
 # ---------------------------------------------------------------------------
@@ -824,6 +825,44 @@ class TestAddHistoryEntry:
 
         texts = [e["text"] for e in real_scene.archived_history]
         assert texts == ["first", "middle", "second"]
+
+    @pytest.mark.asyncio
+    async def test_backstory_added_in_one_session_keeps_its_order(self, real_scene):
+        year = UNIT_TO_SECONDS["year"]
+        assert real_scene.archived_history == []
+
+        await add_history_entry(real_scene, "the war ended", offset=10 * year)
+        await add_history_entry(real_scene, "the lighthouse was built", offset=5 * year)
+
+        saved = [(e["text"], e["ts"]) for e in real_scene.archived_history]
+        assert saved == [("the war ended", 0), ("the lighthouse was built", 5 * year)]
+        assert real_scene.ts == 10 * year
+
+    @pytest.mark.asyncio
+    async def test_entries_added_before_the_summaries_keep_their_order(
+        self, real_scene
+    ):
+        hour = UNIT_TO_SECONDS["hour"]
+        real_scene.history = [
+            make_character_message("a"),
+            make_character_message("b"),
+            make_character_message("c"),
+        ]
+        real_scene.archived_history = [
+            make_archived_entry("summary", entry_id="s1", start=0, end=1, ts=0)
+        ]
+        real_scene.ts = 0
+
+        await add_history_entry(real_scene, "five hours ago", offset=5 * hour)
+        await add_history_entry(real_scene, "four hours ago", offset=4 * hour)
+
+        saved = [(e["text"], e["ts"]) for e in real_scene.archived_history]
+        assert saved == [
+            ("five hours ago", 0),
+            ("four hours ago", hour),
+            ("summary", 5 * hour),
+        ]
+        assert real_scene.ts == 5 * hour
 
 
 class TestDeleteHistoryEntry:

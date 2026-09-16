@@ -52,7 +52,11 @@ from talemate.knowledge.perspectives import (
     validate_saved_knowledge,
 )
 from talemate.history import legacy_start_ts, validate_history
-from talemate.knowledge.timeline import shift_fact_times, shift_knowledge_edge_times
+from talemate.knowledge.timeline import (
+    shift_fact_times,
+    shift_knowledge_edge_times,
+    shift_world_entry_times,
+)
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
 from talemate.util.gpu import release_cuda_cache
@@ -499,8 +503,9 @@ async def load_scene_from_data(
     import_scene_node_definitions(scene)
 
     # the shared static history can move the timeline before the saved facts,
-    # knowledge edges, reinforcement passages and intro perspectives are loaded:
-    # they arrive on the old timeline and are moved by the same amount
+    # knowledge edges, reinforcement passages, world entries and intro
+    # perspectives are loaded: they arrive on the old timeline and are moved
+    # by the same amount
     late_shift = 0
 
     if not reset:
@@ -531,6 +536,7 @@ async def load_scene_from_data(
             shift_fact_times(scene, late_shift)
             shift_knowledge_edge_times(scene, late_shift)
             shift_direct_source_times(scene, late_shift)
+            shift_world_entry_times(scene, late_shift)
         scene.fix_time()
         log.debug("scene time", ts=scene.ts)
     else:

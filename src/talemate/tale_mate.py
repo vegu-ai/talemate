@@ -59,7 +59,7 @@ from talemate.history import (
     emit_archive_add,
     ArchiveEntry,
     count_summary_layers,
-    time_passage_removed,
+    message_removed,
 )
 from talemate.knowledge.message_facts import prune_missing_message_facts
 from talemate.knowledge.timeline import refresh_fact_times
@@ -742,7 +742,7 @@ class Scene(Emitter):
                         isinstance(self.history[idx], DirectorMessage)
                         and self.history[idx].source == message.source
                     ):
-                        self.history.pop(idx)
+                        self.remove_message_at(idx)
                         break
 
             elif isinstance(message, TimePassageMessage):
@@ -838,30 +838,39 @@ class Scene(Emitter):
         preserve_revision_index_repair(self, message)
         source_deleted(self, reference, message_id=message.id)
 
+    def remove_message_at(self, index: int) -> SceneMessage:
+        """
+        Removes the message at `index` from the history. Every removal goes
+        through here, so the archive indices and the timeline stay repaired.
+        """
+        if index < 0:
+            raise IndexError(f"history index {index} out of range")
+        message = self.history[index]
+        reference = source_reference(self, "message", message.id)
+        self.history.pop(index)
+        self._message_removed(message, reference)
+        message_removed(self, index, message)
+        return message
+
     def pop_message(self, message: SceneMessage | int) -> bool:
         """
         Removes the last message from the history that matches the given message
         """
         if isinstance(message, SceneMessage):
-            reference = source_reference(self, "message", message.id)
             try:
-                self.history.remove(message)
+                index = self.history.index(message)
             except ValueError:
                 return False
-            self._message_removed(message, reference)
-            self.emit_status()
-            return True
         elif isinstance(message, int):
-            message = self.get_message(message)
-            if message is not None:
-                reference = source_reference(self, "message", message.id)
-                self.history.remove(message)
-                self._message_removed(message, reference)
-                self.emit_status()
-                return True
-            return False
+            index = self.message_index(message)
+            if index < 0:
+                return False
         else:
             raise ValueError("Invalid message type")
+
+        self.remove_message_at(index)
+        self.emit_status()
+        return True
 
     def pop_history(
         self,
@@ -917,9 +926,7 @@ class Scene(Emitter):
                 break
 
         for message in to_remove:
-            reference = source_reference(self, "message", message.id)
-            self.history.remove(message)
-            self._message_removed(message, reference)
+            self.remove_message_at(self.history.index(message))
 
         # History changed — keep tail-dependent UI affordances (e.g. the
         # regenerate buttons) in sync. emit_status is debounced.
@@ -1579,14 +1586,10 @@ class Scene(Emitter):
         log.debug(f"Deleting message {message_id}")
         for i, message in enumerate(self.history):
             if message.id == message_id:
-                reference = source_reference(self, "message", message.id)
-                self.history.pop(i)
-                self._message_removed(message, reference)
+                self.remove_message_at(i)
                 log.info(f"Deleted message {message_id}")
                 emit("remove_message", "", id=message_id)
 
-                if isinstance(message, TimePassageMessage):
-                    time_passage_removed(self, i)
                 # the frontend drops the message on remove_message; the status
                 # frame is what carries the new history counts, and an auto
                 # save on a never-saved scene emits none of its own

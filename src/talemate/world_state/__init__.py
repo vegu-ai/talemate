@@ -653,7 +653,7 @@ class WorldState(BaseModel):
             },
         )
 
-    async def commit_to_memory(self, memory_agent):
+    async def commit_to_memory(self, memory_agent, entry_ids: set[str] | None = None):
         def is_simple_type(value):
             """Check if value is a simple type that memory database accepts."""
             return isinstance(value, (int, str, float, bool, type(None)))
@@ -669,6 +669,7 @@ class WorldState(BaseModel):
                     },
                 }
                 for manual_context in self.manual_context.values()
+                if entry_ids is None or manual_context.id in entry_ids
             ]
         )
 

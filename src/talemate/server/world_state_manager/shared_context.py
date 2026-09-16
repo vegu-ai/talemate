@@ -6,7 +6,7 @@ from typing import Any
 
 import structlog
 
-from talemate.history import reimport_history
+from talemate.history import reimport_history, world_entry_times_moved
 from talemate.shared_context import SharedContext
 import pydantic
 
@@ -124,6 +124,7 @@ class SharedContextMixin:
         # documents in memory carry the old times
         if scene.start_ts != start_ts:
             await reimport_history(scene)
+            await world_entry_times_moved(scene)
         await shared.update_from_scene(scene)
 
     # -------- Handlers --------

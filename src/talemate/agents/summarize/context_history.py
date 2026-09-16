@@ -1139,7 +1139,7 @@ class ContextHistoryMixin:
             return bool(
                 first is not None
                 and entry.get("end") is not None
-                and entry.get("end") == first.get("end")
+                and entry.get("id") == first.get("id")
                 and entry.get("intro_included") is not False
             )
         children = (

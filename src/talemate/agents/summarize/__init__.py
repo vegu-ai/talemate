@@ -335,7 +335,6 @@ class SummarizeAgent(
         )
         if entry_index is None:
             raise ValueError("Entry not found")
-        end = entry_index - 1
 
         previous_summaries = []
 
@@ -348,8 +347,10 @@ class SummarizeAgent(
                 )[-num_previous:]
             else:
                 previous_summaries = [
-                    entry["text"]
-                    for entry in scene.archived_history[end - num_previous : end]
+                    previous["text"]
+                    for previous in scene.archived_history[
+                        max(0, entry_index - num_previous) : entry_index
+                    ]
                 ]
 
         return previous_summaries

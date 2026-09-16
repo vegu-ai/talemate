@@ -16,6 +16,7 @@ __all__ = [
     "refresh_fact_times",
     "shift_fact_times",
     "shift_knowledge_edge_times",
+    "shift_world_entry_times",
 ]
 
 
@@ -77,6 +78,17 @@ def shift_knowledge_edge_times(scene: "Scene", shift: int) -> None:
     """
     for edge in scene.world_state.knowledge:
         edge.ts = shift_optional_ts(edge.ts, shift)
+
+
+def shift_world_entry_times(scene: "Scene", shift: int) -> None:
+    """
+    Move the scene time a world entry records in `meta["ts"]` (a pin made
+    from the chat stores one) by `shift` seconds, clamped to zero. `meta` is
+    open, so only this key moves.
+    """
+    for entry in scene.world_state.manual_context.values():
+        if "ts" in entry.meta:
+            entry.meta["ts"] = shift_optional_ts(entry.meta["ts"], shift)
 
 
 def refresh_fact_times(scene: "Scene", fact_ids=None) -> set[str]:

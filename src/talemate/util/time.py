@@ -16,6 +16,7 @@ __all__ = [
     "shift_optional_ts",
     "migrate_entry_time",
     "migrate_scene_time",
+    "migrate_world_entry_times",
 ]
 
 log = structlog.get_logger("talemate.util.time")
@@ -359,8 +360,9 @@ def migrate_scene_time(scene_data: dict, tolerant: bool = False) -> dict:
     """
     Migrate legacy ISO8601 duration scene time to integer seconds, in place.
 
-    Covers `ts` on the scene itself and on time passage messages, as well as
-    `ts` / `ts_start` / `ts_end` on archived and layered history entries.
+    Covers `ts` on the scene itself and on time passage messages,
+    `ts` / `ts_start` / `ts_end` on archived and layered history entries, and
+    the `meta["ts"]` of world entries (see `migrate_world_entry_times`).
     Already migrated (integer) values pass through untouched.
 
     Args:
@@ -368,7 +370,8 @@ def migrate_scene_time(scene_data: dict, tolerant: bool = False) -> dict:
         save half migrated would silently corrupt its timeline, so a bad value
         fails the load instead. When True a bad value is logged and repaired
         instead (to None where the field is nullable, to 0 where it is not),
-        for callers that recover damaged data rather than refuse it.
+        for callers that recover damaged data rather than refuse it. A world
+        entry time is always repaired, whatever this flag says.
 
     Raises:
         ValueError | TypeError | OverflowError: If a time value cannot be
@@ -387,4 +390,20 @@ def migrate_scene_time(scene_data: dict, tolerant: bool = False) -> dict:
         for entry in layer or []:
             migrate_entry_time(entry, tolerant=tolerant, ts_fallback=0)
 
+    migrate_world_entry_times(scene_data.get("world_state") or {})
+
     return scene_data
+
+
+def migrate_world_entry_times(world_state: dict) -> dict:
+    """
+    Migrate the scene time a world entry records in `meta["ts"]` to integer
+    seconds, in place. It gives an active pin the age prefix in the prompt
+    and ranks memory results by recency. A value that cannot be coerced
+    becomes None, which drops that age, instead of failing the load.
+    """
+    for entry in (world_state.get("manual_context") or {}).values():
+        meta = entry.get("meta") if isinstance(entry, dict) else None
+        if isinstance(meta, dict):
+            _coerce_time_field(meta, "ts", tolerant=True, fallback=None)
+    return world_state

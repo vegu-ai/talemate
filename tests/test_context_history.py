@@ -3559,3 +3559,18 @@ class TestBuildPreviewParity:
         scene.ts = test_data["basic_scene"]["ts"]
         scene.intro = "A stormy night begins."
         self._assert_parity(summarizer, scene, budget=5000, overrides=overrides)
+
+
+def test_an_emptied_summary_does_not_carry_the_intro():
+    """A removal can leave a summary without messages: (k, k-1) has the end
+    of the summary before it, and only the first summary carries the intro."""
+    from types import SimpleNamespace
+
+    from talemate.agents.summarize.context_history import ContextHistoryMixin
+
+    first = {"id": "s1", "text": "they met", "start": 0, "end": 0}
+    emptied = {"id": "s2", "text": "a lost line", "start": 1, "end": 0}
+    scene = SimpleNamespace(archived_history=[first, emptied])
+
+    assert ContextHistoryMixin._summary_carries_intro(scene, first) is True
+    assert ContextHistoryMixin._summary_carries_intro(scene, emptied) is False

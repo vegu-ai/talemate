@@ -722,6 +722,14 @@ async def test_a_shared_start_moves_the_state_that_arrives_after_it(new_scene):
                 "ts": 5 * YEAR + DAY,
             }
         ],
+        # a pin made from the chat records the scene time
+        "manual_context": {
+            "promise": {
+                "id": "promise",
+                "text": "Kaira promised to return",
+                "meta": {"ts": 5 * YEAR + DAY, "pin_only": True},
+            }
+        },
         # a world entry that is inserted directly keeps its own passage
         "reinforce": [
             {
@@ -752,6 +760,8 @@ async def test_a_shared_start_moves_the_state_that_arrives_after_it(new_scene):
     assert [edge.ts for edge in scene.world_state.knowledge] == [10 * YEAR + DAY]
     acquired = scene.world_state.reinforce[0].perspective_source.knowledge.acquired
     assert (acquired.ts, acquired.order) == (10 * YEAR + DAY, 2)
+    promise = scene.world_state.manual_context["promise"]
+    assert promise.meta["ts"] == 10 * YEAR + DAY
 
 
 @pytest.mark.asyncio
@@ -1160,3 +1170,117 @@ def test_unmigrated_baseline_would_diff_every_timestamp():
     assert "root['archived_history'][0]['ts']" in changed
     assert "root['history'][1]['ts']" in changed
     assert "root['layered_history'][0][0]['ts_end']" in changed
+
+
+def _with_pin(data: dict, ts, shared: bool = False) -> dict:
+    data["world_state"] = {
+        **data.get("world_state", {}),
+        "manual_context": {
+            "promise": {
+                "id": "promise",
+                "text": "Kaira promised to return",
+                "meta": {
+                    "ts": ts,
+                    "pin_only": True,
+                    "source": "manual",
+                    "typ": "world_state",
+                },
+                "shared": shared,
+            }
+        },
+    }
+    return data
+
+
+def _pin_ts(world_state) -> int | None:
+    return world_state.manual_context["promise"].meta["ts"]
+
+
+# a released version stored a chat pin with the scene time of that version,
+# an ISO 8601 duration
+@pytest.mark.parametrize("saved, loaded", [("P1DT2H", DAY + 2 * HOUR), ("soon", None)])
+@pytest.mark.asyncio
+async def test_a_released_chat_pin_loads_and_follows_a_history_shift(
+    new_scene, saved, loaded
+):
+    scene = await _load(new_scene, _with_pin(_static_scene_data(None, []), saved))
+
+    assert _pin_ts(scene.world_state) == loaded
+
+    await add_history_entry(scene, "the flood", offset=scene.ts + YEAR)
+
+    assert _pin_ts(scene.world_state) == (None if loaded is None else loaded + YEAR)
+
+
+@pytest.mark.asyncio
+async def test_a_released_shared_file_pin_is_read_as_seconds(tmp_path):
+    path = tmp_path / "world.json"
+    data = _with_pin({}, "P1D", shared=True)
+    path.write_text(json.dumps({"character_data": {}, **data}))
+
+    shared = await SharedContext(filepath=path).init_from_file()
+
+    assert _pin_ts(shared.world_state) == DAY
+
+
+def _shared_pin_writer_data():
+    """Writer start W = 10 years, a static entry at 0, a shared pin at W + 1 day."""
+    return _with_pin(
+        _static_scene_data(10 * YEAR, [("war", 0)]), 10 * YEAR + DAY, shared=True
+    )
+
+
+async def _shared_file_pin_ts(writer) -> int:
+    shared = SharedContext(filepath=Path(writer.shared_context_dir) / "world.json")
+    await shared.init_from_file()
+    return _pin_ts(shared.world_state)
+
+
+@pytest.mark.asyncio
+async def test_a_new_linked_scene_keeps_the_writers_shared_pin_time(new_scene):
+    writer = await _load(new_scene, _shared_pin_writer_data())
+    await _write_shared_context(writer)
+
+    data = new_scene_data(SceneInitialization(shared_context="world.json"))
+    data["project_name"] = writer.project_name
+    scene = await load_scene_from_data(new_scene(), data, reset=True, empty=True)
+
+    assert scene.start_ts == 10 * YEAR
+    assert _pin_ts(scene.world_state) == 10 * YEAR + DAY
+
+    await _save(scene)
+
+    assert await _shared_file_pin_ts(writer) == 10 * YEAR + DAY
+
+
+@pytest.mark.asyncio
+async def test_linking_in_session_keeps_the_writers_shared_pin_time(
+    new_scene, monkeypatch
+):
+    writer = await _load(new_scene, _shared_pin_writer_data())
+    filename = await _write_shared_context(writer)
+    reader_data = _static_scene_data(0, [])
+    reader_data["world_state"] = {
+        "manual_context": {
+            "lamp": {
+                "id": "lamp",
+                "text": "The lamp was lit",
+                "meta": {"ts": HOUR, "source": "manual", "typ": "world_state"},
+            }
+        }
+    }
+    scene = await _load(new_scene, reader_data)
+    monkeypatch.setattr(scene, "load_active_pins", _noop)
+
+    await _SharedContextHandler(scene).handle_select_shared_context(
+        {"filepath": filename}
+    )
+
+    assert scene.start_ts == 10 * YEAR
+    assert _pin_ts(scene.world_state) == 10 * YEAR + DAY
+    assert scene.world_state.manual_context["lamp"].meta["ts"] == 10 * YEAR + HOUR
+    assert _pin_ts(scene.shared_context.world_state) == 10 * YEAR + DAY
+
+    await _save(scene)
+
+    assert await _shared_file_pin_ts(writer) == 10 * YEAR + DAY

@@ -1158,6 +1158,12 @@ class TestPopHistory:
         assert n_old not in real_scene.history
         assert n_new in real_scene.history
 
+    def test_no_match_leaves_history_untouched(self, real_scene):
+        a = _char_msg("only one")
+        real_scene.history = [a]
+        real_scene.pop_history(typ="narrator", all=True)
+        assert real_scene.history == [a]
+
 
 class TestEditMessage:
     def test_edit_message_updates_message_text(self, real_scene):
@@ -1199,6 +1205,147 @@ class TestDeleteMessage:
         real_scene.ts = 3600
         real_scene.delete_message(tp.id)
         # sync_time without remaining time-passage messages resets to zero.
+        assert real_scene.ts == 0
+
+
+class TestRemovalRepairsTheArchive:
+    """Every removal path moves the archive indices (#650)."""
+
+    @staticmethod
+    def _scene(scene):
+        a = _char_msg("a")
+        b = _char_msg("b")
+        tp = TimePassageMessage(ts=3600, message="an hour later")
+        c = _char_msg("c")
+        d = _char_msg("d")
+        scene.history = [a, b, tp, c, d]
+        scene.archived_history = [
+            {"id": "s1", "text": "early", "start": 0, "end": 1, "ts": 0},
+            {"id": "s2", "text": "late", "start": 3, "end": 4, "ts": 3600},
+        ]
+        scene.start_ts = 0
+        scene.ts = 3600
+        return a, b, tp, c, d
+
+    @staticmethod
+    def _spans(scene):
+        return [
+            (entry["start"], entry["end"], entry["ts"])
+            for entry in scene.archived_history
+        ]
+
+    @staticmethod
+    def _remove(scene, method, message):
+        if method == "delete_message":
+            scene.delete_message(message.id)
+        elif method == "pop_message":
+            assert scene.pop_message(message) is True
+        elif method == "pop_message_id":
+            assert scene.pop_message(message.id) is True
+        else:
+            scene.pop_history(typ=message.typ, id=message.id)
+
+    METHODS = ["delete_message", "pop_message", "pop_message_id", "pop_history"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("method", METHODS)
+    @pytest.mark.parametrize(
+        "removed, expected",
+        [
+            (0, [(0, 0, 0), (2, 3, 3600)]),
+            (1, [(0, 0, 0), (2, 3, 3600)]),
+            (3, [(0, 1, 0), (3, 3, 3600)]),
+            (4, [(0, 1, 0), (3, 3, 3600)]),
+        ],
+    )
+    async def test_non_passage_removal_moves_indices_and_keeps_times(
+        self, real_scene, monkeypatch, method, removed, expected
+    ):
+        messages = self._scene(real_scene)
+        fix_time = MagicMock()
+        monkeypatch.setattr(real_scene, "fix_time", fix_time)
+
+        self._remove(real_scene, method, messages[removed])
+
+        assert self._spans(real_scene) == expected
+        assert real_scene.ts == 3600
+        fix_time.assert_not_called()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("method", METHODS)
+    async def test_time_passage_removal_moves_indices_and_times(
+        self, real_scene, method
+    ):
+        _, _, tp, _, _ = self._scene(real_scene)
+
+        self._remove(real_scene, method, tp)
+
+        assert self._spans(real_scene) == [(0, 1, 0), (2, 3, 0)]
+        assert real_scene.ts == 0
+
+    @pytest.mark.asyncio
+    async def test_pop_history_all_repairs_after_each_removal(self, real_scene):
+        a, b, tp, c, d = self._scene(real_scene)
+        first = ReinforcementMessage(message="calm")
+        second = ReinforcementMessage(message="calm")
+        real_scene.history = [a, first, b, tp, second, c, d]
+        real_scene.archived_history[0]["end"] = 2
+        real_scene.archived_history[1].update(start=5, end=6)
+
+        real_scene.pop_history(typ="reinforcement", all=True)
+
+        assert real_scene.history == [a, b, tp, c, d]
+        assert self._spans(real_scene) == [(0, 1, 0), (3, 4, 3600)]
+
+    @pytest.mark.asyncio
+    async def test_a_second_director_instruction_repairs_the_archive(self, real_scene):
+        a, b, tp, c, d = self._scene(real_scene)
+        first = DirectorMessage(message="look around", source="player")
+        real_scene.history = [first, a, b, tp, c, d]
+        real_scene.archived_history[0].update(start=0, end=2)
+        real_scene.archived_history[1].update(start=4, end=5)
+        second = DirectorMessage(message="open the door", source="player")
+
+        await real_scene.push_history(second)
+
+        assert real_scene.history == [a, b, tp, c, d, second]
+        assert self._spans(real_scene) == [(0, 1, 0), (3, 4, 3600)]
+
+    @pytest.mark.asyncio
+    async def test_simulation_suite_intro_calls_remove_narration_and_direction(
+        self, real_scene
+    ):
+        from talemate.game.engine.api.scene import create
+
+        narration = NarratorMessage(message="the computer hums", source="ai")
+        direction = DirectorMessage(message="set the scene", source="ai")
+        line = _char_msg("hello")
+        later = NarratorMessage(message="the room fades", source="ai")
+        real_scene.history = [narration, direction, line, later]
+        scene_api = create(real_scene)
+
+        # the calls of scenes/simulation-suite/game.py on the first narration
+        scene_api.pop_history(typ="narrator", all=True, reverse=True)
+        scene_api.pop_history(typ="director", all=True, reverse=True)
+
+        assert real_scene.history == [line]
+
+    def test_remove_message_at_refuses_a_negative_index(self, real_scene):
+        real_scene.history = [_char_msg("a")]
+        with pytest.raises(IndexError):
+            real_scene.remove_message_at(-1)
+        assert len(real_scene.history) == 1
+
+    @pytest.mark.asyncio
+    async def test_graph_api_pops_a_time_passage_and_repairs(self, real_scene):
+        from talemate.game.engine.api.scene import create
+
+        _, _, tp, _, _ = self._scene(real_scene)
+
+        create(real_scene).pop_history(typ="time_passage", all=False)
+
+        assert tp not in real_scene.history
+        assert self._spans(real_scene) == [(0, 1, 0), (2, 3, 0)]
         assert real_scene.ts == 0
 
 

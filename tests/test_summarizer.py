@@ -380,30 +380,78 @@ class TestPreviousSummaries:
         result = await summarizer.previous_summaries(target)
         assert result == []
 
-    async def test_non_layered_path_reads_text_from_dict(self, summarizer_scene):
-        """The non-layered branch reads `text` via dict subscript because
-        `archived_history` stores dicts (via `model_dump`), not
-        `ArchiveEntry` instances."""
+    @staticmethod
+    def _target(scene, index):
+        entry = scene.archived_history[index]
+        target = ArchiveEntry(**entry)
+        target.id = entry["id"]
+        return target
+
+    @pytest.mark.parametrize(
+        "index, expected",
+        [
+            (0, []),
+            (1, ["a0"]),
+            (2, ["a0", "a1"]),
+            (3, ["a1", "a2"]),
+            (5, ["a3", "a4"]),
+        ],
+    )
+    async def test_the_entries_directly_before(self, summarizer_scene, index, expected):
+        """Up to `include_previous` entries directly before the target, in
+        order; the first entry has none (#645)."""
         scene, summarizer = summarizer_scene
         summarizer.actions["archive"].config["include_previous"].value = 2
         summarizer.actions["layered_history"].enabled = False
-
-        # Three prior summaries, dict-shaped as production stores them.
         scene.archived_history = [
-            make_archived(text="oldest", start=0, end=5, entry_id="a1"),
-            make_archived(text="middle", start=6, end=10, entry_id="a2"),
-            make_archived(text="recent", start=11, end=15, entry_id="a3"),
-            make_archived(text="target", start=16, end=20, entry_id="target"),
+            make_archived(text=f"a{i}", start=i, end=i, entry_id=f"a{i}")
+            for i in range(6)
         ]
 
-        target_dict = scene.archived_history[-1]
-        target = ArchiveEntry(**target_dict)
-        target.id = target_dict["id"]
+        result = await summarizer.previous_summaries(self._target(scene, index))
 
-        result = await summarizer.previous_summaries(target)
-        # entry_index=3, end=2; slice [end - num_previous : end] = [0:2]
-        # → text from indices 0 and 1.
-        assert result == ["oldest", "middle"]
+        assert result == expected
+
+    @pytest.mark.parametrize(
+        "index, expected",
+        [
+            (0, []),
+            (1, ["a0"]),
+            (2, ["L0-1"]),
+            (3, ["L0-1", "a2"]),
+            (4, ["L0-1", "L2-3"]),
+            (5, ["L2-3", "a4"]),
+        ],
+    )
+    async def test_the_entries_directly_before_with_layered_history(
+        self, summarizer_scene, index, expected
+    ):
+        scene, summarizer = summarizer_scene
+        summarizer.actions["archive"].config["include_previous"].value = 2
+        summarizer.actions["layered_history"].enabled = True
+        scene.history = [make_character_message(f"m{i}") for i in range(6)]
+        scene.archived_history = [
+            make_archived(text=f"a{i}", start=i, end=i, entry_id=f"a{i}")
+            for i in range(6)
+        ]
+        scene.layered_history = [
+            [
+                {
+                    "id": f"l{start}",
+                    "text": f"L{start}-{start + 1}",
+                    "start": start,
+                    "end": start + 1,
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 0,
+                }
+                for start in (0, 2)
+            ]
+        ]
+
+        result = await summarizer.previous_summaries(self._target(scene, index))
+
+        assert result == expected
 
     async def test_layered_history_path_returns_compiled_summaries(
         self, summarizer_scene

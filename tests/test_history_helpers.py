@@ -4,7 +4,6 @@ exported via ``__all__``).
 
 Focuses on pure-ish helpers and Scene-state mutation:
 - history_with_relative_time
-- pop_history
 - count_message_types_at_tail
 - collect_source_entries (additional edge cases not covered by test_layered_history)
 - collect_time_passages
@@ -50,7 +49,6 @@ from talemate.history import (
     history_with_relative_time,
     insert_time_passage,
     insert_time_passage_after_message,
-    pop_history,
     regenerate_history_entry,
     reimport_history,
     resolve_history_entry,
@@ -196,78 +194,6 @@ class TestHistoryWithRelativeTime:
 
     def test_empty_history_returns_empty_list(self):
         assert history_with_relative_time([], scene_time=3600) == []
-
-
-# ---------------------------------------------------------------------------
-# pop_history
-# ---------------------------------------------------------------------------
-
-
-class TestPopHistory:
-    def test_pops_only_last_matching_by_default(self):
-        history = [
-            make_character_message("hi"),
-            NarratorMessage(message="N1", source="ai"),
-            make_character_message("bye"),
-            NarratorMessage(message="N2", source="ai"),
-        ]
-        pop_history(history, typ="narrator")
-        # Only the *last* narrator is removed.
-        assert [type(m).__name__ for m in history] == [
-            "CharacterMessage",
-            "NarratorMessage",
-            "CharacterMessage",
-        ]
-        assert history[1].message == "N1"
-
-    def test_pops_all_when_all_true(self):
-        history = [
-            NarratorMessage(message="N1", source="ai"),
-            make_character_message("hi"),
-            NarratorMessage(message="N2", source="ai"),
-        ]
-        pop_history(history, typ="narrator", all=True)
-        assert len(history) == 1
-        assert isinstance(history[0], CharacterMessage)
-
-    def test_filter_by_source(self):
-        history = [
-            NarratorMessage(message="from-ai-1", source="ai"),
-            NarratorMessage(message="from-manual", source="manual"),
-            NarratorMessage(message="from-ai-2", source="ai"),
-        ]
-        pop_history(history, typ="narrator", source="manual", all=True)
-        assert len(history) == 2
-        assert all(m.source == "ai" for m in history)
-
-    def test_max_iterations_limits_search_depth(self):
-        history = [
-            NarratorMessage(message="oldest", source="ai"),
-            make_character_message("a"),
-            make_character_message("b"),
-            make_character_message("c"),
-        ]
-        # Walking from tail, iterations are counted on *non-matching* steps.
-        # With max_iterations=2 we only inspect the last 2-3 messages and
-        # never reach the lone NarratorMessage at index 0.
-        pop_history(history, typ="narrator", max_iterations=2)
-        assert any(isinstance(m, NarratorMessage) for m in history)
-
-    def test_reverse_pops_oldest_match_first(self):
-        history = [
-            NarratorMessage(message="N-old", source="ai"),
-            make_character_message("a"),
-            NarratorMessage(message="N-new", source="ai"),
-        ]
-        pop_history(history, typ="narrator", reverse=True)
-        # The *oldest* narrator should be the one removed in reverse mode.
-        remaining = [m.message for m in history if isinstance(m, NarratorMessage)]
-        assert remaining == ["N-new"]
-
-    def test_no_match_leaves_history_untouched(self):
-        history = [make_character_message("only one")]
-        pop_history(history, typ="narrator", all=True)
-        assert len(history) == 1
 
 
 # ---------------------------------------------------------------------------

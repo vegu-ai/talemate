@@ -13,7 +13,7 @@ from .history import (
     shift_scene_timeline,
     static_history as get_static_history,
 )
-from .util.time import migrate_entry_time
+from .util.time import migrate_entry_time, migrate_world_entry_times
 import deepdiff
 
 if TYPE_CHECKING:
@@ -132,6 +132,36 @@ class SharedContext(pydantic.BaseModel):
             log.debug("shared context data is the same, no need to update scene")
             return False
 
+        # apply static history from shared context (replace all static entries)
+        # before the shared world entries arrive: its shift moves the scene's
+        # own timeline, and the shared entries keep the time the writer stored
+        log.info(
+            "apply static history from shared context",
+            share_static_history=self.share_static_history,
+        )
+        if self.share_static_history:
+            try:
+                # summarized entries are those with an end value
+                summarized_entries = [
+                    entry
+                    for entry in scene.archived_history
+                    if entry.get("end") is not None
+                ]
+                if relative:
+                    static_entries, shifted = self._place_static_history(scene)
+                else:
+                    static_entries = [
+                        entry.model_dump(exclude_none=True)
+                        for entry in self.static_history
+                    ]
+                    shifted = set()
+                # replace archived_history with shared static entries first, then summarized
+                scene.archived_history = static_entries + summarized_entries
+                if shifted:
+                    scene.refresh_fact_times(shifted)
+            except Exception as e:
+                log.error("apply static history failed", error=e)
+
         # import shared context into scene
         for name, character_data in list(self.character_data.items()):
             scene_character: Character | None = scene.character_data.get(name)
@@ -168,34 +198,6 @@ class SharedContext(pydantic.BaseModel):
                 )
                 del scene.world_state.manual_context[id]
 
-        # apply static history from shared context (replace all static entries)
-        log.info(
-            "apply static history from shared context",
-            share_static_history=self.share_static_history,
-        )
-        if self.share_static_history:
-            try:
-                # summarized entries are those with an end value
-                summarized_entries = [
-                    entry
-                    for entry in scene.archived_history
-                    if entry.get("end") is not None
-                ]
-                if relative:
-                    static_entries, shifted = self._place_static_history(scene)
-                else:
-                    static_entries = [
-                        entry.model_dump(exclude_none=True)
-                        for entry in self.static_history
-                    ]
-                    shifted = set()
-                # replace archived_history with shared static entries first, then summarized
-                scene.archived_history = static_entries + summarized_entries
-                if shifted:
-                    scene.refresh_fact_times(shifted)
-            except Exception as e:
-                log.error("apply static history failed", error=e)
-
         return True
 
     async def init_from_file(self):
@@ -205,13 +207,13 @@ class SharedContext(pydantic.BaseModel):
             name: Character(**character_data)
             for name, character_data in data["character_data"].items()
         }
-        self.world_state = WorldState(**data["world_state"])
-        # optional fields for backward compatibility
-        self.share_static_history = data.get("share_static_history", False)
-        self.start_ts = data.get("start_ts")
         # Sidecar files written before scene time became integer seconds carry
         # ISO8601 durations and are never rewritten on disk, so they have to be
         # converted on every read.
+        self.world_state = WorldState(**migrate_world_entry_times(data["world_state"]))
+        # optional fields for backward compatibility
+        self.share_static_history = data.get("share_static_history", False)
+        self.start_ts = data.get("start_ts")
         self.static_history = [
             ArchiveEntry(**migrate_entry_time(entry))
             for entry in data.get("static_history", [])

@@ -37,6 +37,7 @@ from talemate.knowledge.timeline import (
     message_times,
     shift_fact_times,
     shift_knowledge_edge_times,
+    shift_world_entry_times,
 )
 from talemate.knowledge.perspectives import (
     shift_perspective_times,
@@ -50,7 +51,6 @@ if TYPE_CHECKING:
 
 __all__ = [
     "history_with_relative_time",
-    "pop_history",
     "count_message_types_at_tail",
     "rebuild_history",
     "character_activity",
@@ -342,42 +342,6 @@ def count_summary_layers(scene: "Scene") -> int:
     return int(base) + layered
 
 
-def pop_history(
-    history: list[SceneMessage],
-    typ: str,
-    source: str = None,
-    all: bool = False,
-    max_iterations: int = None,
-    reverse: bool = False,
-):
-    """
-    Pops the last message from the scene history
-    """
-
-    iterations = 0
-
-    if not reverse:
-        iter_range = range(len(history) - 1, -1, -1)
-    else:
-        iter_range = range(len(history))
-
-    to_remove = []
-
-    for idx in iter_range:
-        if history[idx].typ == typ and (
-            history[idx].source == source or source is None
-        ):
-            to_remove.append(history[idx])
-            if not all:
-                break
-        iterations += 1
-        if max_iterations and iterations >= max_iterations:
-            break
-
-    for message in to_remove:
-        history.remove(message)
-
-
 def count_message_types_at_tail(
     history: list[SceneMessage],
     target_types: list[str],
@@ -552,23 +516,23 @@ def insert_time_passage(
     return tp_message
 
 
-def time_passage_removed(scene: "Scene", history_index: int) -> None:
+def message_removed(scene: "Scene", history_index: int, message: SceneMessage) -> None:
     """
-    Repair the timeline after a TimePassageMessage left `scene.history` at
-    `history_index`, whichever path removed it: the archive indices after it
-    move back one and `fix_time` recalculates every timestamp.
-
-    An index equal to the deletion point should not exist (a TimePassageMessage
-    should not be the start or end of an archived entry), but we use > to be safe.
+    Repair the archive after `message` left `scene.history` at
+    `history_index`. `start` and `end` are positions in the history and `end`
+    is inclusive, so a span after the removed position moves back one and a
+    span that held it ends one earlier. Only a time passage changes a time,
+    so only its removal runs `fix_time`.
     """
 
     for arch_entry in scene.archived_history:
         if arch_entry.get("start") is not None and arch_entry["start"] > history_index:
             arch_entry["start"] -= 1
-        if arch_entry.get("end") is not None and arch_entry["end"] > history_index:
+        if arch_entry.get("end") is not None and arch_entry["end"] >= history_index:
             arch_entry["end"] -= 1
 
-    scene.fix_time()
+    if isinstance(message, TimePassageMessage):
+        scene.fix_time()
 
 
 def delete_time_passage(scene: "Scene", history_index: int) -> None:
@@ -586,8 +550,7 @@ def delete_time_passage(scene: "Scene", history_index: int) -> None:
     if not isinstance(message, TimePassageMessage):
         raise ValueError("Entry at history_index is not a TimePassageMessage")
 
-    scene.history.pop(history_index)
-    time_passage_removed(scene, history_index)
+    scene.remove_message_at(history_index)
 
 
 def insert_time_passage_after_message(
@@ -1060,10 +1023,11 @@ async def add_history_entry(scene: "Scene", text: str, offset: int) -> ArchiveEn
     )
 
     shifted: set[str] = set()
+    moved = new_ts < 0
 
     # Zero is the oldest event: an entry older than that moves the whole
     # timeline, the scene start included, forward so the entry sits at zero.
-    if new_ts < 0:
+    if moved:
         log.debug("offset is before the oldest event, shifting timeline", shift=-new_ts)
         shifted = shift_scene_timeline(scene, -new_ts)
         new_ts = 0
@@ -1097,6 +1061,8 @@ async def add_history_entry(scene: "Scene", text: str, offset: int) -> ArchiveEn
 
     _timeline_moved(scene, shifted)
     await reimport_history(scene)
+    if moved:
+        await world_entry_times_moved(scene)
 
     return archive_entry
 
@@ -1148,6 +1114,8 @@ async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEn
 
     _timeline_moved(scene, shifted)
     await reimport_history(scene)
+    if oldest:
+        await world_entry_times_moved(scene)
 
     return removed_entry
 
@@ -1159,6 +1127,22 @@ def _timeline_moved(scene: "Scene", shifted: set[str]):
     """
     scene.sync_time()
     scene.refresh_fact_times(shifted)
+
+
+async def world_entry_times_moved(scene: "Scene"):
+    """
+    After a shift: the memory copy of a world entry carries its own `ts`,
+    and an active pin renders its age from that copy.
+    """
+    moved = {
+        entry.id
+        for entry in scene.world_state.manual_context.values()
+        if "ts" in entry.meta
+    }
+    if not moved:
+        return
+    await scene.world_state.commit_to_memory(get_agent("memory"), entry_ids=moved)
+    await scene.load_active_pins()
 
 
 def legacy_start_ts(archived_history: list[dict]) -> int:
@@ -1193,6 +1177,7 @@ def shift_scene_timeline(scene: "Scene", shift: int) -> set[str]:
     4. The stored times of every fact
     5. The acquisition stamps of every knowledge source and disclosure, and
        the time of every knowledge edge
+    6. The scene time a world entry records
 
     ``shift`` can be positive (move forward in time) or negative (move backward).
 
@@ -1220,6 +1205,7 @@ def shift_scene_timeline(scene: "Scene", shift: int) -> set[str]:
     changed = shift_fact_times(scene, shift)
     shift_knowledge_edge_times(scene, shift)
     shift_perspective_times(scene, shift)
+    shift_world_entry_times(scene, shift)
     # an audience document's ts comes from an acquisition stamp or from the entry
     invalidate_memory_audiences(scene)
     return changed

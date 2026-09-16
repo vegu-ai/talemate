@@ -36,6 +36,7 @@ from talemate.knowledge.topics import prune_topics
 from talemate.util.data import extract_json
 
 if TYPE_CHECKING:
+    from talemate.knowledge.cutoff import FactCutoff
     from talemate.tale_mate import Scene
 
 __all__ = [
@@ -183,10 +184,13 @@ def facts_for_entry(scene: "Scene", archive_id: str) -> list[Fact]:
     ]
 
 
-def previous_facts(scene: "Scene", limit: int = 30) -> list[Fact]:
-    return ranked_facts(
-        scene, current_facts(scene), limit=limit, tiers=False, prompt=False
-    )
+def previous_facts(
+    scene: "Scene", limit: int = 30, *, before: "FactCutoff | None" = None
+) -> list[Fact]:
+    facts = current_facts(scene)
+    if before is not None:
+        facts = [fact for fact in facts if before.admits(fact)]
+    return ranked_facts(scene, facts, limit=limit, tiers=False, prompt=False)
 
 
 def _binding_key(item) -> tuple[int, int, int]:
@@ -507,6 +511,24 @@ def verify_restatements(
                 text=item.text[:80],
             )
             item = item.model_copy(update={"restates": None})
+        result.append(item)
+    return result
+
+
+def verify_links(parsed: list[ParsedFact], offered: set[str]) -> list[ParsedFact]:
+    """
+    `restates` and `supersedes` name facts from the request's known-facts
+    list; a link to any other id is dropped.
+    """
+    result = []
+    for item in verify_restatements(parsed, offered):
+        if item.supersedes is not None and item.supersedes not in offered:
+            log.warning(
+                "fact supersedes an id the request did not offer; link dropped",
+                supersedes=item.supersedes,
+                text=item.text[:80],
+            )
+            item = item.model_copy(update={"supersedes": None})
         result.append(item)
     return result
 

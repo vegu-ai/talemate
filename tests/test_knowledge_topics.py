@@ -798,6 +798,7 @@ class TestMutationPathsRecluster:
             patch("talemate.agents.summarize.store_facts", AsyncMock(return_value=[])),
             # no facts come back: the rebuild must still follow the drop
             patch.object(summarizer, "summarize", AsyncMock(return_value=("text", []))),
+            patch.object(summarizer, "extract_facts", AsyncMock(return_value=[])),
         ):
             await summarizer.regenerate_facts(history_entry)
             await summarizer.summarize_with_facts(entry)

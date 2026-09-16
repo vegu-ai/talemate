@@ -224,12 +224,11 @@ async def test_later_disclosure_survives_early_source_regeneration_on_real_graph
     # the refresh commits the revision once the views follow the edit
     early.mark_revision_committed(("perceptions",))
     extract = AsyncMock(
-        return_value=(
-            changed,
-            [ParsedFact(text=changed, time_scope="2026-09-01", subjects=["ledger"])],
-        )
+        return_value=[
+            ParsedFact(text=changed, time_scope="2026-09-01", subjects=["ledger"])
+        ]
     )
-    monkeypatch.setattr(summarizer, "summarize", extract)
+    monkeypatch.setattr(summarizer, "extract_facts", extract)
     assert await summarizer.rebuild_supported_facts(scene, [early_source]) == "ok"
     extract.assert_awaited_once()
     assert extract.call_args.kwargs["audience"] == ("Alice",)
@@ -397,13 +396,8 @@ async def test_failed_multi_source_rebuild_publishes_no_partial_success(
     before = deepcopy(scene.world_state.facts)
     monkeypatch.setattr(
         summarizer,
-        "summarize",
-        AsyncMock(
-            side_effect=[
-                ("New summary", [ParsedFact(text="New fact")]),
-                ("No facts", None),
-            ]
-        ),
+        "extract_facts",
+        AsyncMock(side_effect=[[ParsedFact(text="New fact")], None]),
     )
     assert await summarizer.rebuild_supported_facts(scene, sources) == "failed"
     assert scene.world_state.facts == before
@@ -419,9 +413,9 @@ async def test_source_changed_during_extraction_discards_response(
 
     async def request(*args, **kwargs):
         scene.edit_message(message.id, "Alice lost the key.")
-        return "Stale summary", [ParsedFact(text="Alice owns a key.")]
+        return [ParsedFact(text="Alice owns a key.")]
 
-    monkeypatch.setattr(summarizer, "summarize", request)
+    monkeypatch.setattr(summarizer, "extract_facts", request)
     assert await summarizer.rebuild_supported_facts(scene, [source]) == "failed"
     assert not scene.world_state.facts
 
@@ -436,8 +430,8 @@ async def test_empty_extraction_replaces_only_requested_support(
     await store(scene, first, ("Alice",), "Alice owns a key.")
     await store(scene, other, ("Bob",), "Bob owns a book.")
     before = current_state(scene, "book", character="Bob")
-    extract = AsyncMock(return_value=("No durable facts", []))
-    monkeypatch.setattr(summarizer, "summarize", extract)
+    extract = AsyncMock(return_value=[])
+    monkeypatch.setattr(summarizer, "extract_facts", extract)
     assert await summarizer.rebuild_supported_facts(scene, [first]) == "ok"
     extract.assert_awaited_once()
     assert current_state(scene, "key", character="Alice") is None
@@ -507,10 +501,8 @@ async def test_saved_sources_rebuild_after_fact_ids_are_discarded(
     scene.world_state.facts = {}
     monkeypatch.setattr(
         summarizer,
-        "summarize",
-        AsyncMock(
-            return_value=(text, [ParsedFact(text=text, time_scope="2026-09-01")])
-        ),
+        "extract_facts",
+        AsyncMock(return_value=[ParsedFact(text=text, time_scope="2026-09-01")]),
     )
     assert await summarizer.rebuild_supported_facts(scene) == "ok"
     assert current_state(scene, "ledger", character="Alice").text == text
@@ -614,9 +606,7 @@ async def test_base_summary_extracts_facts_in_existing_audience_call(
         request_count = len(prompts)
         await summarizer.ensure_summary_views(scene, "base")
         assert len(prompts) == request_count
-        monkeypatch.setattr(
-            summarizer, "summarize", AsyncMock(return_value=(text, None))
-        )
+        monkeypatch.setattr(summarizer, "extract_facts", AsyncMock(return_value=None))
         before = deepcopy(scene.world_state.facts)
         assert (
             await summarizer.regenerate_facts(
@@ -785,9 +775,9 @@ async def test_switching_scene_during_fact_extraction_cannot_publish(
 
     async def request(*args, **kwargs):
         summarizer.scene = None
-        return "Summary", [ParsedFact(text="Alice holds the key.")]
+        return [ParsedFact(text="Alice holds the key.")]
 
-    monkeypatch.setattr(summarizer, "summarize", request)
+    monkeypatch.setattr(summarizer, "extract_facts", request)
     assert await summarizer.rebuild_supported_facts(scene, [source]) == "failed"
     assert not scene.world_state.facts
     memory.add_many.assert_not_awaited()
@@ -848,10 +838,8 @@ async def test_failed_memory_write_is_retried_after_canonical_publication(
     operation.side_effect = [RuntimeError("memory unavailable"), None]
     monkeypatch.setattr(
         summarizer,
-        "summarize",
-        AsyncMock(
-            return_value=("Summary", [] if empty else [ParsedFact(text=old.text)])
-        ),
+        "extract_facts",
+        AsyncMock(return_value=[] if empty else [ParsedFact(text=old.text)]),
     )
     assert await summarizer.rebuild_supported_facts(scene, [source]) == "failed"
     assert old.id in summarizer._fact_memory_dirty[scene]
@@ -1061,10 +1049,9 @@ async def test_time_scope_flows_through_real_prompt_and_response(
         assert '"time_scope"' in example
         assert "null" in example
         assert '"known_by"' not in example
+        assert "SUMMARY:" not in prompt
         return (
-            "SUMMARY: "
-            + text
-            + "\n<FACTS>\n"
+            "<FACTS>\n"
             + json.dumps(
                 [
                     {
@@ -1280,13 +1267,8 @@ async def test_one_view_rebuild_preserves_edited_two_contribution_record(
     original = fact.model_copy(deep=True)
     monkeypatch.setattr(
         summarizer,
-        "summarize",
-        AsyncMock(
-            return_value=(
-                "Discarded summary",
-                [ParsedFact(text=text, subjects=["key"])],
-            )
-        ),
+        "extract_facts",
+        AsyncMock(return_value=[ParsedFact(text=text, subjects=["key"])]),
     )
     assert await summarizer.rebuild_supported_facts(scene, [views[audience]]) == "ok"
     assert scene.world_state.facts[fact.id] == original
@@ -1340,10 +1322,8 @@ async def test_full_rebuild_skips_unready_passage_views(
     requested = list(summarizer.saved_fact_sources(scene))
     # passages are not fact sources, whatever their view status
     assert bob not in requested and alice not in requested
-    request = AsyncMock(
-        return_value=("Unused summary", [ParsedFact(text="Alice sees the key.")])
-    )
-    monkeypatch.setattr(summarizer, "summarize", request)
+    request = AsyncMock(return_value=[ParsedFact(text="Alice sees the key.")])
+    monkeypatch.setattr(summarizer, "extract_facts", request)
     assert await summarizer.rebuild_supported_facts(scene) == "ok"
     request.assert_awaited_once()
     assert request.call_args.kwargs["audience"] == ("Alice",)
@@ -1376,13 +1356,8 @@ async def test_successful_full_fact_rebuild_persists_recovery(
         # The entry survives saving; runtime failure keys do not.
         scene.archived_history = json.loads(json.dumps(scene.archived_history))
         summarizer._summary_fact_failures.pop(scene, None)
-    request = AsyncMock(
-        return_value=(
-            "Do not publish this summary.",
-            [ParsedFact(text="Alice and Bob have a key.")],
-        )
-    )
-    monkeypatch.setattr(summarizer, "summarize", request)
+    request = AsyncMock(return_value=[ParsedFact(text="Alice and Bob have a key.")])
+    monkeypatch.setattr(summarizer, "extract_facts", request)
     assert await summarizer.rebuild_supported_facts(scene) == "ok"
     assert scene.archived_history[0]["facts_status"] == "ok"
     assert not summarizer._summary_fact_failures[scene]
@@ -1427,8 +1402,8 @@ async def test_partial_fact_recovery_does_not_clear_unrepaired_saved_failure(
     ).source
     monkeypatch.setattr(
         summarizer,
-        "summarize",
-        AsyncMock(return_value=("Unused", [ParsedFact(text="Alice has a key.")])),
+        "extract_facts",
+        AsyncMock(return_value=[ParsedFact(text="Alice has a key.")]),
     )
     assert await summarizer.rebuild_supported_facts(scene, [alice]) == "ok"
     assert scene.archived_history[0]["facts_status"] == "failed"
@@ -1447,16 +1422,10 @@ async def test_summary_fact_retry_keeps_published_view_and_dependents(
             exclude_none=True
         )
     ]
-    request = AsyncMock(
-        side_effect=[
-            (text, None),
-            (
-                "Different generated prose that must be discarded.",
-                [ParsedFact(text=text)],
-            ),
-        ]
-    )
+    request = AsyncMock(return_value=(text, None))
     monkeypatch.setattr(summarizer, "summarize", request)
+    retried = AsyncMock(return_value=[ParsedFact(text=text)])
+    monkeypatch.setattr(summarizer, "extract_facts", retried)
     published = []
 
     async def retry(message):
@@ -1486,7 +1455,9 @@ async def test_summary_fact_retry_keeps_published_view_and_dependents(
 
     monkeypatch.setattr(summarizer.client, "_prompt_generation_error", retry)
     await summarizer.ensure_summary_views(scene, "base")
-    assert request.await_count == 2
+    request.assert_awaited_once()
+    retried.assert_awaited_once()
+    assert retried.call_args.kwargs["summary"] == text
     assert scene.archived_history[0]["knowledge"] == published[0]
     assert scene.archived_history[0]["facts_status"] == "ok"
     assert (
@@ -1707,16 +1678,13 @@ async def test_rebuild_of_a_two_line_chapter_binds_facts_to_their_lines(
         scene, source_reference(scene, "summary", identity), "Alice"
     ).source
     extract = AsyncMock(
-        return_value=(
-            "Alice found and hid the key.",
-            [
-                ParsedFact(text="Alice found the key.", message_id=first.id),
-                ParsedFact(text="Alice hid the key.", message_id=second.id),
-                ParsedFact(text="A fact that names no line."),
-            ],
-        )
+        return_value=[
+            ParsedFact(text="Alice found the key.", message_id=first.id),
+            ParsedFact(text="Alice hid the key.", message_id=second.id),
+            ParsedFact(text="A fact that names no line."),
+        ]
     )
-    monkeypatch.setattr(summarizer, "summarize", extract)
+    monkeypatch.setattr(summarizer, "extract_facts", extract)
 
     # Regenerate facts on the History entry
     entry = HistoryEntry(
@@ -1731,6 +1699,7 @@ async def test_rebuild_of_a_two_line_chapter_binds_facts_to_their_lines(
     assert await summarizer.regenerate_facts(entry) == "ok"
     extract.assert_awaited_once()
     assert extract.call_args.kwargs["line_ids"] is True
+    assert extract.call_args.kwargs["summary"] == "Alice found and hid the key."
     text = extract.call_args.args[0]
     assert text.startswith(f"[{first.id}] ")
     assert f"\n\n[{second.id}] " in text
@@ -1750,12 +1719,11 @@ async def test_disclosure_rebuild_asks_for_no_line_ids(supported_scene, monkeypa
     scene, summarizer, _ = supported_scene
     disclosure = add_disclosure(scene, "Alice remembers the key.", ("Alice",))
     source = source_reference(scene, "disclosure", disclosure.id)
-    extract = AsyncMock(
-        return_value=("", [ParsedFact(text="Alice remembers the key.")])
-    )
-    monkeypatch.setattr(summarizer, "summarize", extract)
+    extract = AsyncMock(return_value=[ParsedFact(text="Alice remembers the key.")])
+    monkeypatch.setattr(summarizer, "extract_facts", extract)
     assert await summarizer.rebuild_supported_facts(scene, [source]) == "ok"
     assert extract.call_args.kwargs["line_ids"] is False
+    assert extract.call_args.kwargs["summary"] is None
     assert extract.call_args.args[0] == "Alice remembers the key."
     assert [fact.text for fact in scene.world_state.facts.values()] == [
         "Alice remembers the key."

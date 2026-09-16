@@ -80,12 +80,11 @@ async def test_stock_regeneration_and_save_reload_keep_independent_history(
     }
     monkeypatch.setattr(
         summarizer,
-        "summarize",
+        "extract_facts",
         AsyncMock(
-            return_value=(
-                "Unused rewrite",
-                [ParsedFact(text="Elmer could not remember the last six hours.")],
-            )
+            return_value=[
+                ParsedFact(text="Elmer could not remember the last six hours.")
+            ]
         ),
     )
     for _ in range(2):

@@ -1252,8 +1252,8 @@
   title: History
   summary: History manages static entries, chapter summaries and layered history with compression statistics. Covers
     message-bound facts, presence and Known by filtering, importance and time markers, supersedes links, editing and
-    marking false, source inspection, regeneration, stale facts after revisions, extraction from predefined history
-    and time-passage edits.
+    marking false, source inspection, regeneration, generating missing facts in bulk, stale facts after revisions,
+    extraction from predefined history and time-passage edits.
 - path: user-guide/world-editor/history/layered-history.md
   title: Layered History
   summary: Layered History compresses dialogue into base summaries and successively smaller layers to preserve a full-timeline

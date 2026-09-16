@@ -63,6 +63,8 @@ List of currently supported events.
 | [`agent.summarization.scene_analysis.after`](#agentsummarizationscene_analysisafter) | Summarization Agent |
 | [`agent.summarization.summarize.before`](#agentsummarizationsummarizebefore) | Summarization Agent |
 | [`agent.summarization.summarize.after`](#agentsummarizationsummarizeafter) | Summarization Agent |
+| [`agent.summarization.extract_facts.before`](#agentsummarizationextract_factsbefore) | Summarization Agent |
+| [`agent.summarization.extract_facts.after`](#agentsummarizationextract_factsafter) | Summarization Agent |
 | [`agent.summarization.before_build_archive`](#agentsummarizationbefore_build_archive) | Summarization Agent |
 | [`agent.summarization.after_build_archive`](#agentsummarizationafter_build_archive) | Summarization Agent |
 | [`agent.summarization.layered_history.finalize`](#agentsummarizationlayered_historyfinalize) | Summarization Agent |
@@ -827,6 +829,40 @@ Emitted after the summarizer performs a summarize prompt. Handlers can inspect o
     | `generation_options` | `GenerationOptions` | **Mutable.** Generation options |
     | `summarization_history` | `list[str]` | **Mutable.** any previous historical summaries |
     | `response` | `str` | **Mutable.** The summary text |
+
+---
+
+### agent.summarization.extract_facts.before
+
+Emitted before the summarizer asks only for the facts of a history entry whose summary already exists: **Generate facts**, **Regenerate facts** and **Generate missing facts** in the History. Handlers can tweak `template_vars` or inject `dynamic_instructions`. Character perspective and disclosure extractions do not emit it.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `SummarizeAgent` | The agent instance |
+    | `text` | `str` | The content the facts come from |
+    | `summary` | `str` | The stored summary, given as context (empty when the content is the entry text itself) |
+    | `template_vars` | `dict` | **Mutable.** Variables used in the prompt |
+    | `dynamic_instructions` | `list[DynamicInstruction]` | **Mutable** |
+
+---
+
+### agent.summarization.extract_facts.after
+
+Emitted after that request. Handlers can inspect or replace `facts` before they are stored.
+
+!!! payload "Payload"
+
+    | Field | Type | Notes |
+    |-------|------|-------|
+    | `agent` | `SummarizeAgent` | The agent instance |
+    | `text` | `str` | The content the facts come from |
+    | `summary` | `str` | The stored summary, given as context |
+    | `template_vars` | `dict` | Variables used in the prompt |
+    | `dynamic_instructions` | `list[DynamicInstruction]` | The instructions the request used |
+    | `response` | `str` | The raw model response |
+    | `facts` | `list[ParsedFact] \| None` | **Mutable.** The parsed facts; `None` when the response did not parse |
 
 ---
 

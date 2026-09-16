@@ -1,6 +1,9 @@
+from typing import Literal
+
 import pydantic
 import structlog
 
+from talemate.agents.summarize.missing_facts import MissingFactsRefused
 from talemate.history import HistoryEntry
 from talemate.instance import get_agent
 from talemate.knowledge.catalog import FactQuery, list_facts
@@ -9,7 +12,7 @@ from talemate.knowledge.chronology import fact_display
 from talemate.knowledge.perspectives import source_reference
 from talemate.knowledge.topics import refresh_topics
 from talemate.knowledge.schema import EntryVisibility, FactImportance, KnowledgeEdge
-from talemate.status import background_task
+from talemate.status import background_task, set_loading_label
 
 log = structlog.get_logger("talemate.server.world_state_manager.knowledge")
 
@@ -88,6 +91,10 @@ class GrantFactsPayload(FactIdsPayload):
 
 class RegenerateFactsPayload(pydantic.BaseModel):
     entry: HistoryEntry
+
+
+class MissingFactsPayload(pydantic.BaseModel):
+    run_id: str
 
 
 class KnowledgeMixin:
@@ -359,3 +366,50 @@ class KnowledgeMixin:
         )
         await self.signal_operation_done()
         await self.handle_request_scene_history({})
+
+    @background_task("Generating missing facts")
+    async def handle_generate_missing_facts(self, data):
+        payload = MissingFactsPayload(**data)
+        scene = self.scene
+        summarizer = get_agent("summarizer")
+        state = {"run_id": payload.run_id}
+
+        async def progress(update):
+            state.update(update)
+            set_loading_label(
+                f"Generating missing facts ({state['done']}/{state['total']})"
+            )
+            self._send_missing_facts("missing_facts_progress", dict(state))
+            if state["done"] and self.scene is scene:
+                await self.handle_request_scene_history({})
+
+        error = None
+        try:
+            state.update(
+                await summarizer.generate_missing_facts(scene, progress=progress)
+            )
+        except MissingFactsRefused as exc:
+            error = str(exc)
+            await self.signal_operation_failed(
+                error, failed_action="generate_missing_facts"
+            )
+            return
+        except BaseException as exc:
+            error = str(exc) or type(exc).__name__
+            raise
+        finally:
+            self._send_missing_facts("missing_facts_done", {**state, "error": error})
+        if self.scene is scene:
+            await self.signal_operation_done()
+
+    async def handle_stop_missing_facts(self, data):
+        get_agent("summarizer").stop_missing_facts(self.scene)
+
+    def _send_missing_facts(
+        self,
+        action: Literal["missing_facts_progress", "missing_facts_done"],
+        state: dict,
+    ):
+        self.websocket_handler.queue_put(
+            {"type": "world_state_manager", "action": action, "data": state}
+        )

@@ -6,6 +6,9 @@ import HistoryEntry from '@/components/WorldStateManagerHistoryEntry.vue';
 let app, host;
 afterEach(() => { app?.unmount(); host?.remove(); });
 const Container = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) });
+const Tooltip = defineComponent({
+    setup: (_, { slots }) => () => h('div', [slots.activator?.({ props: {} }), slots.default?.()]),
+});
 const Button = defineComponent({
     props: ['disabled'], emits: ['click'],
     setup: (props, { slots, emit }) => () => h('button', {
@@ -22,7 +25,8 @@ function mount(entry = {}, props = {}) {
     } }, { entry: { id: 'static-1', layer: 0, index: 0, text: 'Alice repaired the radio.', ts: 10, start: null, end: null, facts: [], ...entry }, ...props });
     app.config.warnHandler = () => {};
     app.provide('getWebsocket', () => ({ send }));
-    for (const name of ['VCard', 'VCardTitle', 'VIcon', 'VTooltip', 'VChip', 'VCardText', 'VCardActions', 'VSpacer', 'VList', 'VProgressCircular']) app.component(name, Container);
+    for (const name of ['VCard', 'VCardTitle', 'VIcon', 'VChip', 'VCardText', 'VCardActions', 'VSpacer', 'VList', 'VProgressCircular']) app.component(name, Container);
+    app.component('VTooltip', Tooltip);
     app.component('VBtn', Button);
     const vm = app.mount(host);
     return { vm, send, factsButton: () => [...host.querySelectorAll('button')].find(button => /^(Generate|Regenerate) facts/.test(button.textContent.trim())) };
@@ -57,6 +61,15 @@ describe('static history fact actions', () => {
         expect(factsButton().disabled).toBe(true);
         factsButton().click();
         expect(send).not.toHaveBeenCalled();
+    });
+    it('is unavailable while Extract facts is off', () => {
+        const { factsButton, send } = mount({}, { extractFactsEnabled: false });
+        expect(factsButton().disabled).toBe(true);
+        factsButton().click();
+        expect(send).not.toHaveBeenCalled();
+    });
+    it('stays available while the Extract facts setting is unknown', () => {
+        expect(mount({}, { extractFactsEnabled: null }).factsButton().disabled).toBe(false);
     });
     it('retains the busy safeguard', () => {
         const { factsButton, send } = mount({}, { appBusy: true });

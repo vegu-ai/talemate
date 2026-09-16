@@ -106,13 +106,13 @@ async def test_300_message_rebuild_embeds_once_per_passage(
         calls.append(texts)
         return [vectors[text] for text in texts]
 
-    async def summarize(text, *, fact_evidence, **kwargs):
-        return text, [
+    async def extract(text, *, fact_evidence, **kwargs):
+        return [
             ParsedFact(text=fact, evidence_id=fact_evidence[0]["id"]) for fact in facts
         ]
 
     real_comparisons(memory, embed, monkeypatch)
-    monkeypatch.setattr(summarizer, "summarize", AsyncMock(side_effect=summarize))
+    monkeypatch.setattr(summarizer, "extract_facts", AsyncMock(side_effect=extract))
     monkeypatch.setattr(summarizer, "flush_fact_memory", AsyncMock(return_value=True))
     ticks = 0
 
@@ -130,7 +130,7 @@ async def test_300_message_rebuild_embeds_once_per_passage(
         await asyncio.gather(task, return_exceptions=True)
     assert len(calls) == 300
     assert all(set(batch) == set(vectors) for batch in calls)
-    assert summarizer.summarize.await_count == 600
+    assert summarizer.extract_facts.await_count == 600
     assert len(scene.world_state.facts) == 3600
     assert ticks >= 300
 

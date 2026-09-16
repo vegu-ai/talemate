@@ -813,7 +813,11 @@ class TestFactAgeAcrossPassages:
         async def no_cut(dialogue):
             return None
 
+        async def extract(text, **kwargs):
+            return (await stub(text))[1]
+
         summarizer.summarize = stub
+        summarizer.extract_facts = extract
         summarizer.analyze_dialoge = no_cut
 
     async def _rebuild(self, scene, summarizer):
@@ -1258,13 +1262,15 @@ class TestRegenerateFacts:
         scene.world_state.facts = {"F1": Fact(id="F1", text="stale", archive_id="e1")}
         scene.world_state.fact_counter = 1
 
-        async def stub(text, include_previous_facts=True, **kwargs):
+        async def stub(text, summary=None, include_previous_facts=True, **kwargs):
             assert include_previous_facts
-            return "NEW SUMMARY", parse_facts(
+            assert summary == "kept"
+            return parse_facts(
                 f'[{{"text": "fresh", "message_id": {scene.history[1].id}}}]'
             )
 
-        summarizer.summarize = stub
+        summarizer.extract_facts = stub
+        summarizer.summarize = AsyncMock(side_effect=AssertionError("no summary"))
         entry = HistoryEntry(
             text="kept", ts=5, index=0, layer=0, id="e1", start=0, end=1
         )
@@ -1298,9 +1304,9 @@ class TestRegenerateFacts:
 
         async def stub(text, include_previous_facts=True, **kwargs):
             assert include_previous_facts
-            return "NEW SUMMARY", None
+            return None
 
-        summarizer.summarize = stub
+        summarizer.extract_facts = stub
         entry = HistoryEntry(
             text="kept", ts=5, index=0, layer=0, id="e1", start=0, end=0
         )

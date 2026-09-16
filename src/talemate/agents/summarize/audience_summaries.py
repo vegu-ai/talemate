@@ -7,6 +7,7 @@ import structlog
 
 from talemate.context import handle_generation_cancelled
 from talemate.exceptions import GenerationCancelled
+from talemate.knowledge.cutoff import span_cutoff
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.evidence import extraction_evidence
 from talemate.knowledge.perspective_models import PerspectiveOutput
@@ -244,6 +245,9 @@ class AudienceSummaryMixin:
                         skip_author_hooks=True,
                         line_ids=True,
                         return_facts=self.archive_extract_facts,
+                        known_before=span_cutoff(
+                            scene, summary_input.lines, start=entry.get("start")
+                        ),
                         fact_evidence=extraction_evidence(
                             scene, summary_input.sources, audience
                         )

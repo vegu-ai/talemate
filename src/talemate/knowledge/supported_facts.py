@@ -131,7 +131,7 @@ def character_fact(scene, fact, character, *, read=None, cache=None):
     )
 
 
-def previous_audience_facts(scene, audience, limit=30, *, prompt=True):
+def previous_audience_facts(scene, audience, limit=30, *, prompt=True, before=None):
     read = PerspectiveReadContext(scene)
     result = []
     cache = {}
@@ -140,7 +140,11 @@ def previous_audience_facts(scene, audience, limit=30, *, prompt=True):
             character_fact(scene, fact, name, read=read, cache=cache)
             for name in audience
         ]
-        if views and all(view is not None for view in views):
+        if (
+            views
+            and all(view is not None for view in views)
+            and (before is None or all(before.admits(view) for view in views))
+        ):
             if len({(view.text, view.ts) for view in views}) == 1:
                 seen = [view.last_seen_ts for view in views]
                 result.append(
@@ -257,7 +261,8 @@ async def contributions_for_source(
     input_text = " ".join(" ".join(text for text, _ in inputs).split())
     acquired = learning_acquisition(scene, view.source, audience[0], read=read)
     allowed_previous = {
-        fact.id for fact in previous_audience_facts(scene, audience, prompt=False)
+        fact.id
+        for fact in previous_audience_facts(scene, audience, limit=None, prompt=False)
     }
     result = []
     evidence = {

@@ -137,16 +137,13 @@ async def test_rebuild_of_the_same_view_keeps_the_edit_and_the_id(
     await update_fact(scene, fact.id, text="Alice has a brass key.", importance=1)
     monkeypatch.setattr(
         summarizer,
-        "summarize",
+        "extract_facts",
         AsyncMock(
-            return_value=(
-                "Discarded summary",
-                [
-                    ParsedFact(
-                        text="Alice has a key.", subjects=["key"], importance=importance
-                    )
-                ],
-            )
+            return_value=[
+                ParsedFact(
+                    text="Alice has a key.", subjects=["key"], importance=importance
+                )
+            ]
         ),
     )
 
@@ -174,12 +171,11 @@ async def test_false_mark_survives_re_attach(
     await update_fact(scene, fact.id, text="Alice has a brass key.", importance=1)
     monkeypatch.setattr(
         summarizer,
-        "summarize",
+        "extract_facts",
         AsyncMock(
-            return_value=(
-                "Discarded summary",
-                [ParsedFact(text="Alice has a key.", subjects=["key"], importance=3)],
-            )
+            return_value=[
+                ParsedFact(text="Alice has a key.", subjects=["key"], importance=3)
+            ]
         ),
     )
 
@@ -204,13 +200,8 @@ async def test_author_link_survives_a_changed_contribution(
     await update_fact(scene, fact.id, supersedes="manual")
     monkeypatch.setattr(
         summarizer,
-        "summarize",
-        AsyncMock(
-            return_value=(
-                "Discarded summary",
-                [ParsedFact(text="Alice has a key.", importance=3)],
-            )
-        ),
+        "extract_facts",
+        AsyncMock(return_value=[ParsedFact(text="Alice has a key.", importance=3)]),
     )
 
     assert await summarizer.rebuild_supported_facts(scene, [source]) == "ok"

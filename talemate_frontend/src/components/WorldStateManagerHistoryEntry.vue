@@ -48,10 +48,15 @@
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(isPrimaryModifier(ev))">Regenerate</v-btn>
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="toggleSourceEntries">{{ entry.source_entries ? 'Collapse' : 'Inspect' }}</v-btn>
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-clock-plus-outline" color="primary" @click="insertingTimePassage = true">Time Passage</v-btn>
-                <v-btn v-if="entry.layer === 0" :disabled="editing || locked || !!entry.facts_unavailable_reason" prepend-icon="mdi-format-list-checks" color="primary" @click="regenerateFacts">
-                    {{ entry.facts_status || entry.facts?.length ? 'Regenerate facts' : 'Generate facts' }}
-                    <v-tooltip activator="parent" location="top">Extract facts from this entry without changing its text or advancing the story.</v-tooltip>
-                </v-btn>
+                <v-tooltip v-if="entry.layer === 0" location="top" :text="factsTooltip">
+                    <template #activator="{ props }">
+                        <span v-bind="props" class="d-inline-block">
+                            <v-btn :disabled="editing || locked || !!entry.facts_unavailable_reason || extractFactsEnabled === false" prepend-icon="mdi-format-list-checks" color="primary" @click="regenerateFacts">
+                                {{ hasFactRecord(entry) ? 'Regenerate facts' : 'Generate facts' }}
+                            </v-btn>
+                        </span>
+                    </template>
+                </v-tooltip>
                 <ConfirmActionInline
                     v-if="deletable"
                     :disabled="locked"
@@ -129,6 +134,7 @@ class HistoryEntry(pydantic.BaseModel):
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
 import { isPrimaryModifier } from '@/utils/keyboardModifiers';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
+import { EXTRACT_FACTS_OFF_HINT, hasFactRecord } from '@/utils/historyFacts';
 import ContextualGenerate from './ContextualGenerate.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import WorldStateManagerFactRow from './WorldStateManagerFactRow.vue';
@@ -148,6 +154,8 @@ export default {
         busy: Boolean,
         appConfig: Object,
         generationOptions: Object,
+        // the Summarizer's Extract facts setting; null while unknown
+        extractFactsEnabled: { type: Boolean, default: null },
     },
     data() {
         return {
@@ -197,10 +205,15 @@ export default {
         deletable() {
             // Manual base-layer entries have no start/end indices
             return this.entry.layer === 0 && this.entry.start === null && this.entry.end === null;
-        }
+        },
+        factsTooltip() {
+            if (this.extractFactsEnabled === false) return EXTRACT_FACTS_OFF_HINT;
+            return 'Extract facts from this entry without changing its text or advancing the story.';
+        },
     },
     methods: {
         isPrimaryModifier,
+        hasFactRecord,
         handleEnter(ev) {
             if(!ev.shiftKey) {
                 ev.preventDefault();

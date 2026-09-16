@@ -60,9 +60,31 @@
 
                     <v-card-title class="d-flex align-center">
                         History
+                        <v-tooltip v-if="missingFactsCount && !factsRun" location="top" max-width="360" :text="missingFactsTooltip">
+                            <template #activator="{ props }">
+                                <span v-bind="props" class="ml-3">
+                                    <v-btn size="small" variant="text" color="primary" prepend-icon="mdi-format-list-checks" :disabled="missingFactsDisabled" @click="generateMissingFacts">
+                                        Generate missing facts
+                                        <v-chip size="x-small" label class="ml-2">{{ missingFactsCount }}</v-chip>
+                                    </v-btn>
+                                </span>
+                            </template>
+                        </v-tooltip>
                         <v-spacer></v-spacer>
                         <v-select v-model="knownBy" :items="characterNames" label="Known by" density="compact" variant="underlined" hide-details clearable prepend-inner-icon="mdi-head-lightbulb-outline" class="known-by-filter" style="max-width: 260px"></v-select>
                     </v-card-title>
+                    <div v-if="factsRun" class="d-flex align-center ga-3 mb-2 missing-facts-progress">
+                        <v-progress-linear :model-value="factsRunPercent" color="primary" height="6" rounded></v-progress-linear>
+                        <span class="text-body-small text-no-wrap">Generating facts: {{ factsRun.done }} of {{ factsRun.total }}</span>
+                        <v-tooltip location="top" text="Stop after the entry in progress. Entries done so far keep their facts.">
+                            <template #activator="{ props }">
+                                <v-btn v-bind="props" size="small" variant="text" color="cancel" prepend-icon="mdi-stop" :disabled="factsRunStopping" @click="stopMissingFacts">
+                                    {{ factsRunStopping ? 'Stopping…' : 'Stop' }}
+                                </v-btn>
+                            </template>
+                        </v-tooltip>
+                    </div>
+                    <div v-else-if="factsResult" class="text-body-small text-medium-emphasis mb-2">{{ factsResultText }}</div>
                     <div v-if="knownBy" class="text-body-small text-medium-emphasis mb-2">
                         Showing only the facts {{ knownBy }} knows ({{ knownFactIds ? knownFactIds.length : '…' }} in their record, history entries and other sources together).
                     </div>
@@ -82,6 +104,7 @@
                             :app-ready="appReady"
                             :app-config="appConfig"
                             :generation-options="generationOptions"
+                            :extract-facts-enabled="extractFactsOn"
                             :busy="busyEntry && busyEntry === item.data.id"
                             @source="openFactSource"
                             @busy="(entry_id) => setBusyEntry(entry_id)"
@@ -164,6 +187,8 @@ import WorldStateManagerHistoryAdd from './WorldStateManagerHistoryAdd.vue';
 import WorldStateManagerTimePassageEntry from './WorldStateManagerTimePassageEntry.vue';
 import WorldStateManagerFactRow from './WorldStateManagerFactRow.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
+import { EXTRACT_FACTS_OFF_HINT, extractFactsEnabled, missingFactsSummary, needsFacts } from '@/utils/historyFacts';
+import { newUuid } from '@/utils/uuid';
 
 
 export default {
@@ -201,6 +226,9 @@ export default {
             showAddDialog: false,
             layerStats: {},
             layerStatsLoading: {},
+            factsRun: null,
+            factsRunStopping: false,
+            factsResult: null,
             MAX_CONTENT_WIDTH,
         }
     },
@@ -297,10 +325,31 @@ export default {
         },
         summaryEntriesExist() {
             return this.history.some(e => e.start !== null && e.end !== null);
-        }
+        },
+        extractFactsOn() {
+            return extractFactsEnabled(this.getAgents());
+        },
+        missingFactsCount() {
+            return this.history.filter(needsFacts).length;
+        },
+        missingFactsDisabled() {
+            return this.extractFactsOn === false || this.appBusy || !this.appReady || this.busy;
+        },
+        missingFactsTooltip() {
+            if (this.extractFactsOn === false) return EXTRACT_FACTS_OFF_HINT;
+            const count = this.missingFactsCount;
+            return `Extract facts for the ${count} ${count === 1 ? 'entry' : 'entries'} without facts, oldest first, one request each. Entries that have facts are left alone.`;
+        },
+        factsRunPercent() {
+            return this.factsRun?.total ? (this.factsRun.done / this.factsRun.total) * 100 : 0;
+        },
+        factsResultText() {
+            return missingFactsSummary(this.factsResult);
+        },
     },
     inject:[
         'getWebsocket',
+        'getAgents',
         'registerMessageHandler',
         'unregisterMessageHandler',
         'setWaitingForInput',
@@ -314,6 +363,9 @@ export default {
             this.busy = false;
             this.knownBy = null;
             this.knownFactIds = null;
+            this.factsRun = null;
+            this.factsRunStopping = false;
+            this.factsResult = null;
         },
         regenerate() {
             this.history = [];
@@ -389,6 +441,26 @@ export default {
             }));
         },
 
+        generateMissingFacts() {
+            this.factsResult = null;
+            this.factsRunStopping = false;
+            this.factsRun = { run_id: newUuid(), total: this.missingFactsCount, done: 0 };
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'generate_missing_facts',
+                run_id: this.factsRun.run_id,
+            }));
+        },
+        ownsFactsRun(data) {
+            return !!this.factsRun && data?.run_id === this.factsRun.run_id;
+        },
+        stopMissingFacts() {
+            this.factsRunStopping = true;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'stop_missing_facts',
+            }));
+        },
         requestKnownFacts(name) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
@@ -488,6 +560,13 @@ export default {
                     this.layered_history[entry.layer - 1] = this.layered_history[entry.layer - 1].map(e => e.id === entry.id ? entry : e);
                 }
                 this.busyEntry = null;
+            } else if (message.action === 'missing_facts_progress') {
+                if (this.ownsFactsRun(message.data)) this.factsRun = message.data;
+            } else if (message.action === 'missing_facts_done') {
+                if (!this.ownsFactsRun(message.data)) return;
+                this.factsRun = null;
+                this.factsRunStopping = false;
+                this.factsResult = message.data;
             } else if (message.action == 'operation_done') {
                 this.busyEntry = null;
             }

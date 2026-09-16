@@ -15,6 +15,7 @@ from talemate.prompts.response import (
 __all__ = [
     "SUMMARY_SPEC",
     "SUMMARY_WITH_FACTS_SPEC",
+    "FACTS_SPEC",
     "MARKUP_SPEC",
     "AUDIO_TAGS_SPEC",
     "CHUNK_CLEAN_SPEC",
@@ -34,6 +35,13 @@ SUMMARY_SPEC = ResponseSpec(
 SUMMARY_WITH_FACTS_SPEC = ResponseSpec(
     extractors={
         "summary": AfterAnchorExtractor(start="SUMMARY:", stop_at="<FACTS>"),
+        "facts": AnchorExtractor(left="<FACTS>", right="</FACTS>"),
+    },
+    required=[],
+)
+
+FACTS_SPEC = ResponseSpec(
+    extractors={
         "facts": AnchorExtractor(left="<FACTS>", right="</FACTS>"),
     },
     required=[],

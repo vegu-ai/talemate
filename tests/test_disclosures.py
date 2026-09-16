@@ -247,10 +247,8 @@ async def test_saved_grant_survives_fact_regeneration_and_deleted_boundary(
     summarizer.actions["archive"].config["extract_facts"].value = True
     monkeypatch.setattr(
         summarizer,
-        "summarize",
-        AsyncMock(
-            return_value=(LOCATION, [ParsedFact(text=LOCATION, subjects=["ledger"])])
-        ),
+        "extract_facts",
+        AsyncMock(return_value=[ParsedFact(text=LOCATION, subjects=["ledger"])]),
     )
     assert await summarizer.rebuild_supported_facts(scene, [reference]) == "ok"
     original = deepcopy(scene.world_state.facts)
@@ -302,8 +300,10 @@ async def test_real_author_handler_validates_then_indexes_only_disclosure(
     monkeypatch.setattr(scene.config.game.general, "auto_save", True)
     monkeypatch.setattr(scene, "save", AsyncMock())
     summarizer.actions["archive"].config["extract_facts"].value = True
-    extract = AsyncMock(return_value=(LOCATION, [ParsedFact(text=LOCATION)]))
-    monkeypatch.setattr(summarizer, "summarize", extract)
+    extract = AsyncMock(return_value=[ParsedFact(text=LOCATION)])
+    monkeypatch.setattr(summarizer, "extract_facts", extract)
+    summary = AsyncMock()
+    monkeypatch.setattr(summarizer, "summarize", summary)
     task = await plugin.handle_grant_disclosure(
         {
             "name": "Bob",
@@ -316,6 +316,8 @@ async def test_real_author_handler_validates_then_indexes_only_disclosure(
     disclosure = scene.knowledge.disclosures[0]
     assert extract.call_args.args[0] == LOCATION
     assert extract.call_args.kwargs["audience"] == ("Bob",)
+    assert extract.call_args.kwargs["summary"] is None
+    summary.assert_not_awaited()
     assert (
         next(iter(scene.world_state.facts.values())).contributions[0].source.id
         == disclosure.id
@@ -352,7 +354,7 @@ async def test_extraction_failure_keeps_disclosure_and_reports_failed(
 ):
     scene, summarizer = disclosure_scene
     summarizer.actions["archive"].config["extract_facts"].value = True
-    monkeypatch.setattr(summarizer, "summarize", AsyncMock(return_value=("", None)))
+    monkeypatch.setattr(summarizer, "extract_facts", AsyncMock(return_value=None))
     result = await run_node(
         GrantKnowledge(),
         scene=scene,
@@ -362,6 +364,29 @@ async def test_extraction_failure_keeps_disclosure_and_reports_failed(
     assert scene.knowledge.disclosures[0].text == LOCATION
     assert scene.world_state.facts == {}
     assert LOCATION in " ".join(project_character_history(scene, "Bob"))
+
+
+@pytest.mark.asyncio
+async def test_grant_knowledge_node_extracts_facts_without_a_summary(
+    disclosure_scene, monkeypatch
+):
+    scene, summarizer = disclosure_scene
+    summarizer.actions["archive"].config["extract_facts"].value = True
+    extract = AsyncMock(return_value=[ParsedFact(text=LOCATION)])
+    monkeypatch.setattr(summarizer, "extract_facts", extract)
+    summary = AsyncMock()
+    monkeypatch.setattr(summarizer, "summarize", summary)
+    result = await run_node(
+        GrantKnowledge(),
+        scene=scene,
+        inputs={"character": "Bob", "target": "mixed", "information": LOCATION},
+    )
+    assert "failed" not in result["text"]
+    extract.assert_awaited_once()
+    assert extract.call_args.args[0] == LOCATION
+    assert extract.call_args.kwargs["summary"] is None
+    summary.assert_not_awaited()
+    assert [fact.text for fact in scene.world_state.facts.values()] == [LOCATION]
 
 
 def test_delayed_perception_does_not_use_a_later_disclosure(disclosure_scene):
@@ -515,7 +540,7 @@ async def test_author_failure_correlates_missing_name_and_refreshes_failed_facts
     assert error["failed_action"] == "grant_disclosure" and error["error"]
     scene.save.assert_not_awaited()
     summarizer.actions["archive"].config["extract_facts"].value = True
-    monkeypatch.setattr(summarizer, "summarize", AsyncMock(return_value=("", None)))
+    monkeypatch.setattr(summarizer, "extract_facts", AsyncMock(return_value=None))
     task = await plugin.handle_grant_disclosure(
         {"name": "Bob", "target": "mixed", "information": LOCATION}
     )

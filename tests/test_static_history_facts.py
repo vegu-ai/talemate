@@ -52,21 +52,19 @@ async def test_standard_static_generation_without_progress(
     scene.archived_history[0]["present"] = present
     original = deepcopy(scene.archived_history[0])
     extraction = AsyncMock(
-        return_value=(
-            "Unused rewritten summary",
-            [ParsedFact(text=original["text"], subjects=["radio"])],
-        )
+        return_value=[ParsedFact(text=original["text"], subjects=["radio"])]
     )
-    monkeypatch.setattr(summarizer, "summarize", extraction)
+    monkeypatch.setattr(summarizer, "extract_facts", extraction)
     payload = row(scene).model_copy(update={"text": "Untrusted client text"})
     assert not scene.can_change_knowledge_eligibility
     assert await summarizer.regenerate_facts(payload) == "ok"
     extraction.assert_awaited_once_with(
         original["text"],
+        summary=None,
         extra_context=[],
-        return_facts=True,
         include_previous_facts=False,
         line_ids=False,
+        known_before=None,
     )
     assert scene.history == [] and scene.ts == 500
     assert scene.knowledge_eligibility == "legacy" and scene.knowledge is None
@@ -86,18 +84,15 @@ async def test_static_regeneration_replaces_only_its_facts(static_scene, monkeyp
     scene.world_state.facts[unrelated.id] = unrelated
     scene.world_state.fact_counter = 50
     parsed = [ParsedFact(text="Alice repaired the radio.", subjects=["radio"])]
-    monkeypatch.setattr(
-        summarizer, "summarize", AsyncMock(return_value=("Unused", parsed))
-    )
+    monkeypatch.setattr(summarizer, "extract_facts", AsyncMock(return_value=parsed))
     for _ in range(3):
         assert await summarizer.regenerate_facts(row(scene)) == "ok"
         assert len(facts_for_entry(scene, "opening")) == 1
         assert len(scene.world_state.facts) == 2
         assert scene.world_state.facts[unrelated.id] == unrelated
-    summarizer.summarize.return_value = (
-        "Unused",
-        [ParsedFact(text="Alice replaced the radio antenna.")],
-    )
+    summarizer.extract_facts.return_value = [
+        ParsedFact(text="Alice replaced the radio antenna.")
+    ]
     await summarizer.regenerate_facts(row(scene))
     assert [fact.text for fact in facts_for_entry(scene, "opening")] == [
         "Alice replaced the radio antenna."
@@ -124,8 +119,10 @@ async def test_static_prompt_does_not_label_its_own_or_future_facts_as_prior(
     )
     monkeypatch.setattr(Prompt, "request", request)
     assert await summarizer.regenerate_facts(row(scene)) == "ok"
+    assert request.call_args.args[0] == "summarizer.extract-facts"
     prompt_vars = request.call_args.kwargs["vars"]
     assert prompt_vars["dialogue"] == "Alice repaired the radio."
+    assert prompt_vars["summary"] == ""
     assert prompt_vars["previous_facts"] == []
     assert prompt_vars["extra_context"] == ""
     assert len(facts_for_entry(scene, "opening")) == 1
@@ -136,7 +133,7 @@ async def test_static_extraction_respects_disabled_setting(static_scene, monkeyp
     scene, summarizer, _ = static_scene
     summarizer.actions["archive"].config["extract_facts"].value = False
     extraction = AsyncMock()
-    monkeypatch.setattr(summarizer, "summarize", extraction)
+    monkeypatch.setattr(summarizer, "extract_facts", extraction)
     before = deepcopy(scene.archived_history)
     assert await summarizer.regenerate_facts(row(scene)) is None
     extraction.assert_not_awaited()
@@ -149,9 +146,7 @@ async def test_static_failed_or_empty_response_keeps_entry_text(
 ):
     scene, summarizer, _ = static_scene
     original = deepcopy(scene.archived_history[0])
-    monkeypatch.setattr(
-        summarizer, "summarize", AsyncMock(return_value=("Unused", parsed))
-    )
+    monkeypatch.setattr(summarizer, "extract_facts", AsyncMock(return_value=parsed))
     assert await summarizer.regenerate_facts(row(scene)) == status
     assert scene.archived_history == [{**original, "facts_status": status}]
     assert not scene.world_state.facts and not scene.history
@@ -166,10 +161,8 @@ async def test_old_static_entry_gets_persistent_source_identity(
     identity = scene.archived_history[0]["id"]
     monkeypatch.setattr(
         summarizer,
-        "summarize",
-        AsyncMock(
-            return_value=("Unused", [ParsedFact(text="Alice repaired the radio.")])
-        ),
+        "extract_facts",
+        AsyncMock(return_value=[ParsedFact(text="Alice repaired the radio.")]),
     )
     await summarizer.regenerate_facts(row(scene))
     assert facts_for_entry(scene, identity)
@@ -183,7 +176,7 @@ async def test_missing_progressed_sources_do_not_extract_summary_as_static(
     scene, summarizer, _ = static_scene
     scene.archived_history[0].update(start=0, end=0)
     extraction = AsyncMock()
-    monkeypatch.setattr(summarizer, "summarize", extraction)
+    monkeypatch.setattr(summarizer, "extract_facts", extraction)
     assert await summarizer.regenerate_facts(row(scene)) is None
     extraction.assert_not_awaited()
 
@@ -207,9 +200,9 @@ async def test_static_perception_views_preserve_private_audiences(
     before = deepcopy(scene.archived_history[0]["knowledge"])
 
     async def extract(text, **kwargs):
-        return "Unused", [ParsedFact(text=text)]
+        return [ParsedFact(text=text)]
 
-    monkeypatch.setattr(summarizer, "summarize", AsyncMock(side_effect=extract))
+    monkeypatch.setattr(summarizer, "extract_facts", AsyncMock(side_effect=extract))
     for _ in range(2):
         assert await summarizer.regenerate_facts(row(scene)) == "ok"
         assert len(scene.world_state.facts) == 2
@@ -219,7 +212,7 @@ async def test_static_perception_views_preserve_private_audiences(
     assert scene.archived_history[0]["knowledge"] == before
     assert all(
         "Reader-only" not in call.args[0]
-        for call in summarizer.summarize.call_args_list
+        for call in summarizer.extract_facts.call_args_list
     )
     assert scene.history == [] and scene.ts == 500
     if save_reload:
@@ -300,7 +293,8 @@ async def test_perception_rebuild_prompt_context_per_source(
     before_time = scene.ts
     prompts = []
 
-    async def request(*args, **kwargs):
+    async def request(uid, *args, **kwargs):
+        assert uid == "summarizer.extract-facts"
         values = kwargs["vars"]
         prompts.append(values)
         (name,) = values["audience_summary"]
@@ -330,11 +324,15 @@ async def test_perception_rebuild_prompt_context_per_source(
             other = "Bob" if name == "Alice" else "Alice"
             assert other not in values["dialogue"]
             is_opening = opening[name] in values["dialogue"]
+            assert values["summary"] == (
+                "" if static or not is_opening else opening[name]
+            )
             if static or not is_opening:
                 assert values["previous_facts"] == []
             else:
-                assert values["previous_facts"]
-                assert all(other not in fact.text for fact in values["previous_facts"])
+                # static history comes before every chapter; the chapter's own
+                # facts do not
+                assert [fact.text for fact in values["previous_facts"]] == [later[name]]
             assert values["extra_context"] == ""
             if not static and is_opening:
                 assert values["fact_evidence"].endswith(": " + opening[name])
@@ -382,10 +380,8 @@ async def test_standard_static_facts_survive_save_reload(
     scene, summarizer, memory = static_scene
     monkeypatch.setattr(
         summarizer,
-        "summarize",
-        AsyncMock(
-            return_value=("Unused", [ParsedFact(text="Alice repaired the radio.")])
-        ),
+        "extract_facts",
+        AsyncMock(return_value=[ParsedFact(text="Alice repaired the radio.")]),
     )
     await summarizer.regenerate_facts(row(scene))
     await assert_saved_reload(scene, memory, monkeypatch, tmp_path)
@@ -404,7 +400,7 @@ async def test_missing_perception_views_never_generate_or_claim_success(
     if empty_record:
         set_source_perspectives(scene, "summary", "opening", [])
     extraction = AsyncMock()
-    monkeypatch.setattr(summarizer, "summarize", extraction)
+    monkeypatch.setattr(summarizer, "extract_facts", extraction)
     assert (
         "no saved character perspectives"
         in summarizer.fact_source_unavailable_reason(
@@ -425,7 +421,7 @@ async def test_pending_perception_view_is_not_reader_text_fallback(
         scene, "summary", "opening", [{"audience": ["Alice"], "status": "pending"}]
     )
     extraction = AsyncMock()
-    monkeypatch.setattr(summarizer, "summarize", extraction)
+    monkeypatch.setattr(summarizer, "extract_facts", extraction)
     assert "must be ready" in summarizer.fact_source_unavailable_reason(
         scene, ArchiveEntry(**scene.archived_history[0])
     )

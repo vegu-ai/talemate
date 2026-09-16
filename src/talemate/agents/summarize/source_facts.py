@@ -1,5 +1,6 @@
 from talemate.knowledge.processing import evidence_writer, track_evidence_task
 import asyncio
+from typing import NamedTuple
 from weakref import WeakKeyDictionary
 
 import structlog
@@ -7,7 +8,9 @@ import structlog
 from talemate.context import handle_generation_cancelled
 from talemate.exceptions import GenerationCancelled
 from talemate.instance import get_agent
+from talemate.knowledge.cutoff import FactCutoff, disclosure_cutoff, span_cutoff
 from talemate.knowledge.facts import fact_memory_document
+from talemate.knowledge.perspective_models import SourceReference
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.revision_browsing import defer_derived_jobs
 from talemate.knowledge.evidence import extraction_evidence
@@ -30,6 +33,16 @@ from talemate.knowledge.supported_facts import (
 )
 
 log = structlog.get_logger(__name__)
+
+
+class FactRequest(NamedTuple):
+    source: SourceReference
+    audience: tuple[str, ...]
+    text: str
+    summary: str | None
+    include_previous_facts: bool
+    line_ids: bool
+    known_before: FactCutoff | None
 
 
 class SourceFactMixin:
@@ -166,6 +179,10 @@ class SourceFactMixin:
         if not entry.text.strip():
             return "This entry has no text to extract facts from."
         if not character_knowledge_enabled(scene):
+            if entry.start is not None and not self._span_messages(scene, entry):
+                return (
+                    "This entry's source messages are no longer in the scene history."
+                )
             return None
         if entry.knowledge is None or not entry.knowledge.views:
             return (
@@ -183,7 +200,13 @@ class SourceFactMixin:
         return None
 
     @evidence_writer
-    async def rebuild_supported_facts(self, scene, sources=None):
+    async def rebuild_supported_facts(
+        self, scene, sources=None, *, raise_user_cancel: bool = False
+    ):
+        """
+        With `raise_user_cancel` a cancel by the user propagates instead of
+        returning "failed", so the caller can leave its state unchanged.
+        """
         if not character_knowledge_enabled(scene):
             raise ValueError("Source fact rebuilds require perception mode")
         if not self.archive_extract_facts:
@@ -191,6 +214,7 @@ class SourceFactMixin:
         requested = list(self.saved_fact_sources(scene) if sources is None else sources)
         if not requested:
             return None
+        cancel_sequence = scene.cancel_sequence
         lock = self._fact_extract_locks.setdefault(scene, asyncio.Lock())
         async with lock:
             while True:
@@ -257,41 +281,48 @@ class SourceFactMixin:
                                 scene, view.source, audience[0], read=read
                             )
                             requests.append(
-                                (
-                                    view.source,
-                                    audience,
-                                    render_line_texts(
+                                FactRequest(
+                                    source=view.source,
+                                    audience=audience,
+                                    text=render_line_texts(
                                         [text for text, _ in lines],
                                         [line for _, line in lines],
                                     ),
-                                    include_previous_facts,
-                                    any(line is not None for _, line in lines),
+                                    summary=view.text
+                                    if source.kind == "summary"
+                                    else None,
+                                    include_previous_facts=include_previous_facts,
+                                    line_ids=any(line is not None for _, line in lines),
+                                    known_before=disclosure_cutoff(
+                                        scene, read.disclosures[source.id]
+                                    )
+                                    if source.kind == "disclosure"
+                                    else span_cutoff(
+                                        scene,
+                                        [line for _, line in lines],
+                                        start=owner.owner.get("start"),
+                                    ),
                                 )
                             )
-                    for (
-                        source,
-                        audience,
-                        text,
-                        include_previous_facts,
-                        line_ids,
-                    ) in requests:
-                        _, parsed = await self.summarize(
-                            text,
-                            audience=audience,
-                            include_previous_facts=include_previous_facts,
+                    for request in requests:
+                        parsed = await self.extract_facts(
+                            request.text,
+                            summary=request.summary,
+                            audience=request.audience,
+                            include_previous_facts=request.include_previous_facts,
                             extra_context=[],
-                            return_facts=True,
-                            line_ids=line_ids,
+                            line_ids=request.line_ids,
                             skip_author_hooks=True,
+                            known_before=request.known_before,
                             fact_evidence=extraction_evidence(
-                                scene, [source], audience, read=read
+                                scene, [request.source], request.audience, read=read
                             ),
                         )
                         if parsed is None:
                             raise ValueError(
                                 "Fact extraction response was missing or malformed"
                             )
-                        batches.append((source, audience, parsed))
+                        batches.append((request.source, request.audience, parsed))
                     if self.scene is not scene or not character_knowledge_enabled(
                         scene
                     ):
@@ -323,6 +354,10 @@ class SourceFactMixin:
                     return "ok"
                 except GenerationCancelled as exc:
                     handle_generation_cancelled(exc)
+                    if raise_user_cancel and (
+                        exc.by_user or scene.cancel_sequence != cancel_sequence
+                    ):
+                        raise
                     return "failed"
                 except asyncio.CancelledError:
                     raise

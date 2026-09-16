@@ -69,22 +69,26 @@ async def test_summary_private_competitor_from_another_message_vetoes_transfer(
     embed = deterministic_citation_embeddings
     test_fact_citation_embeddings.real_comparisons(memory, embed, monkeypatch)
 
-    async def summarize(text, *, audience, **kwargs):
-        return text, [] if audience == ("Alice",) else [
-            ParsedFact(
-                text="Bob plans to steal the charts.",
-                evidence_id=f"M{first.id}R1S0",
-                message_id=second.id,
-            )
-        ]
+    async def extract(text, *, audience, **kwargs):
+        return (
+            []
+            if audience == ("Alice",)
+            else [
+                ParsedFact(
+                    text="Bob plans to steal the charts.",
+                    evidence_id=f"M{first.id}R1S0",
+                    message_id=second.id,
+                )
+            ]
+        )
 
-    monkeypatch.setattr(summarizer, "summarize", AsyncMock(side_effect=summarize))
+    monkeypatch.setattr(summarizer, "extract_facts", AsyncMock(side_effect=extract))
     monkeypatch.setattr(summarizer, "flush_fact_memory", AsyncMock(return_value=True))
     with capture_logs() as logs:
         assert await summarizer.rebuild_supported_facts(scene) == "ok"
     assert bucket(scene, "Alice") == []
     assert len(bucket(scene, "Bob")) == 1
-    assert summarizer.summarize.await_count == 2
+    assert summarizer.extract_facts.await_count == 2
     assert embed.call_count == 2
     fact = next(iter(scene.world_state.facts.values()))
     assert fact_knowledge_reason(scene, fact, "Alice") == "Citation not supported"

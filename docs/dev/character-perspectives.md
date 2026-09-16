@@ -749,8 +749,12 @@ Async callers must run rebuilds off the websocket receive loop so retry response
 can be dispatched. No new public mode or request kind is introduced.
 
 Local rebuild cost is limited to changed/requested source audience groups: one
-existing summary request per group, without regenerating unrelated summaries or
-replaying a scene's learning history. Source indexing, exact-match lookup, and
+facts-only request per group (`SummarizeAgent.extract_facts`, template
+`summarizer.extract-facts`), without regenerating unrelated summaries or
+replaying a scene's learning history. The request reads the group's saved source
+views with its stored audience summary as context and writes no summary; a
+disclosure is read from its own text. Its FACTS block has the same format and
+extractor as the summary request's. Source indexing, exact-match lookup, and
 selection checks still scan stored records; this is not a constant-time graph
 index. Background invalidation updates affected fact documents and preserves
 independent contributions. Full-scene extraction occurs only when explicitly

@@ -15,6 +15,8 @@ from talemate.agents.memory.schema import MemoryDocument
 from talemate.history import (
     ArchiveEntry,
     HistoryEntry,
+    add_history_entry,
+    delete_history_entry,
     history_with_relative_time,
     rebuild_history,
 )
@@ -30,8 +32,10 @@ from talemate.knowledge.facts import (
 )
 from talemate.knowledge.perspective_models import content_digest
 from talemate.knowledge.schema import Fact, FactRestatement, KnowledgeEdge
+from talemate.knowledge.timeline import message_times
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage, TimePassageMessage
+from talemate.util.time import UNIT_TO_SECONDS
 
 
 # ---------------------------------------------------------------------------
@@ -774,6 +778,7 @@ class TestFactAgeAcrossPassages:
     """An entry and the facts it recorded read the same age."""
 
     DAY, HOUR = 86400, 3600
+    MONTH, YEAR = UNIT_TO_SECONDS["month"], UNIT_TO_SECONDS["year"]
 
     def _history(self):
         both = ["Mara", "Edwin"]
@@ -796,10 +801,8 @@ class TestFactAgeAcrossPassages:
             said("eight"),
         ]
 
-    async def _rebuild(self, scene, summarizer):
+    def _stub(self, summarizer):
         summarizer.actions["archive"].config["threshold"].value = 100000
-        scene.history = self._history()
-        scene.active = True
 
         async def stub(text, **kwargs):
             first = text.split("]")[0].strip("[")
@@ -812,7 +815,33 @@ class TestFactAgeAcrossPassages:
 
         summarizer.summarize = stub
         summarizer.analyze_dialoge = no_cut
+
+    async def _rebuild(self, scene, summarizer):
+        self._stub(summarizer)
+        scene.history = self._history()
+        scene.active = True
         await rebuild_history(scene)
+
+    def _assert_facts_read_their_entry_age(self, scene):
+        rows = history_with_relative_time(scene.archived_history, scene.ts)
+        by_entry = {fact.archive_id: fact for fact in scene.world_state.facts.values()}
+        summaries = [row for row in rows if row["end"] is not None]
+        assert summaries
+        for row in summaries:
+            fact = by_entry[row["id"]]
+            assert fact.ts == row["ts"]
+            assert fact_time(scene, fact) == row["time"]
+        return rows
+
+    def _assert_reload_changes_nothing(self, scene):
+        times = message_times(scene)
+        assert scene.ts == scene.start_ts + sum(
+            m.ts for m in scene.history if isinstance(m, TimePassageMessage)
+        )
+        assert scene.ts == times[scene.history[-1].id]
+        before = (scene.ts, [entry["ts"] for entry in scene.archived_history])
+        scene.fix_time()
+        assert (scene.ts, [entry["ts"] for entry in scene.archived_history]) == before
 
     async def test_rebuilt_entries_and_facts_share_one_age(
         self, summarizer_scene, fake_memory
@@ -854,6 +883,112 @@ class TestFactAgeAcrossPassages:
         ]
         assert regenerated
         assert {fact_time(scene, fact) for fact in regenerated} == {"4 Hours ago"}
+
+    async def test_regenerate_all_keeps_the_static_entry_offset(
+        self, summarizer_scene, fake_memory
+    ):
+        scene, summarizer = summarizer_scene
+        await add_history_entry(scene, "The war ended.", offset=10 * self.MONTH)
+
+        await self._rebuild(scene, summarizer)
+
+        rows = self._assert_facts_read_their_entry_age(scene)
+        assert [row["time"] for row in rows] == [
+            "10 Months ago",
+            "2 Days and 4 Hours ago",
+            "4 Hours ago",
+        ]
+        assert (
+            scene.ts - rows[0]["ts"] == 10 * self.MONTH + 2 * self.DAY + 4 * self.HOUR
+        )
+        self._assert_reload_changes_nothing(scene)
+
+    async def test_archive_after_a_static_entry_reads_its_own_age(
+        self, summarizer_scene, fake_memory
+    ):
+        scene, summarizer = summarizer_scene
+        self._stub(summarizer)
+        await add_history_entry(scene, "The war ended.", offset=10 * self.YEAR)
+
+        # the way push_history adds a message: a passage moves the clock
+        for message in self._history():
+            scene.history.append(message)
+            if isinstance(message, TimePassageMessage):
+                scene.advance_time(message.ts)
+        while await summarizer.build_archive(scene):
+            pass
+
+        rows = self._assert_facts_read_their_entry_age(scene)
+        assert [row["time"] for row in rows] == [
+            "10 Years ago",
+            "2 Days and 4 Hours ago",
+            "4 Hours ago",
+        ]
+        self._assert_reload_changes_nothing(scene)
+
+    async def test_an_older_static_entry_in_play_keeps_every_age(
+        self, summarizer_scene, fake_memory
+    ):
+        scene, summarizer = summarizer_scene
+        await self._rebuild(scene, summarizer)
+        entry_times = [
+            row["time"]
+            for row in history_with_relative_time(scene.archived_history, scene.ts)
+        ]
+        world_state = scene.world_state
+        world_state.fact_counter += 1
+        manual = Fact(
+            id=f"F{world_state.fact_counter}",
+            text="Mara lit the lamp.",
+            ts=scene.ts - self.HOUR,
+            last_seen_ts=scene.ts - self.HOUR,
+            source="manual",
+        )
+        world_state.facts[manual.id] = manual
+        queued = []
+        summarizer.queue_fact_memory = lambda scene, ids: queued.append(set(ids))
+
+        await add_history_entry(scene, "The war ended.", offset=10 * self.YEAR)
+
+        rows = self._assert_facts_read_their_entry_age(scene)
+        assert rows[0]["time"] == "10 Years ago"
+        assert [row["time"] for row in rows[1:]] == entry_times
+        assert fact_time(scene, manual) == "1 Hour ago"
+        assert manual.last_seen_ts == manual.ts
+        assert queued == [set(world_state.facts)]
+        self._assert_reload_changes_nothing(scene)
+
+    async def test_deleting_the_oldest_static_entry_keeps_every_age(
+        self, summarizer_scene, fake_memory
+    ):
+        scene, summarizer = summarizer_scene
+        await self._rebuild(scene, summarizer)
+        war = await add_history_entry(scene, "The war ended.", offset=10 * self.YEAR)
+        world_state = scene.world_state
+        bound = next(fact for fact in world_state.facts.values() if fact.message_id)
+        world_state.fact_counter += 1
+        manual = Fact(
+            id=f"F{world_state.fact_counter}",
+            text="Mara lit the lamp.",
+            ts=scene.ts - self.HOUR,
+            last_seen_ts=scene.ts - self.HOUR,
+            source="manual",
+        )
+        world_state.facts[manual.id] = manual
+        ages = {fact.id: fact_time(scene, fact) for fact in (bound, manual)}
+        assert ages[manual.id] == "1 Hour ago"
+        queued = []
+        summarizer.queue_fact_memory = lambda scene, ids: queued.append(set(ids))
+
+        row = history_with_relative_time(scene.archived_history, scene.ts)[0]
+        assert row["id"] == war.id
+        await delete_history_entry(scene, HistoryEntry(**row))
+
+        assert scene.start_ts == 0
+        self._assert_facts_read_their_entry_age(scene)
+        assert {fact.id: fact_time(scene, fact) for fact in (bound, manual)} == ages
+        assert len(queued) == 1 and {bound.id, manual.id} <= queued[0]
+        self._assert_reload_changes_nothing(scene)
 
 
 # ---------------------------------------------------------------------------

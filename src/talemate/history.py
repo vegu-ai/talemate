@@ -31,7 +31,7 @@ from talemate.events import ArchiveEvent
 from talemate.knowledge.facts import SpanLine, drop_facts_for_entries, facts_for_entry
 from talemate.knowledge.schema import INTRO_LINE, Fact, FactsStatus
 from talemate.knowledge.perspective_models import PerspectiveSourceModel, content_digest
-from talemate.knowledge.timeline import message_times
+from talemate.knowledge.timeline import message_times, shift_fact_times
 from talemate.knowledge.perspectives import (
     source_content_changed,
     source_deleted,
@@ -1022,25 +1022,11 @@ async def add_history_entry(scene: "Scene", text: str, offset: int) -> ArchiveEn
         offset: Number of seconds **before the current scene time** the entry occurred.
 
     Returns:
-        The created ArchiveEntry dataclass instance.
+        The created ArchiveEntry.
 
     Raises:
-        ValueError: If the entry would not be older than the first summarized archive entry or if no summarized entry exists.
+        ValueError: If the entry would not be older than the first summarized archive entry.
     """
-
-    is_first_entry = len(scene.archived_history) == 0
-
-    if is_first_entry:
-        # first entry we can just push it to the front of the history
-        entry = ArchiveEntry(
-            text=text,
-            ts=0,
-            id=str(uuid.uuid4())[:8],
-        ).model_dump(exclude_none=True)
-        scene.archived_history.append(entry)
-        scene.ts = offset
-        await reimport_history(scene)
-        return entry
 
     # Find the first archive entry that originated from summarisation (has start & end)
     first_summary: dict | None = None
@@ -1053,27 +1039,19 @@ async def add_history_entry(scene: "Scene", text: str, offset: int) -> ArchiveEn
 
     log.debug(
         "add_history_entry",
-        is_first_entry=is_first_entry,
         scene_ts=scene.ts,
+        start_ts=scene.start_ts,
         offset=offset,
         new_ts=new_ts,
     )
 
-    # If offset predates the current scene start, shift timeline earlier so
-    # that the *relative* distance between existing events is preserved.
+    shifted: set[str] = set()
+
+    # Zero is the oldest event: an entry older than that moves the whole
+    # timeline, the scene start included, forward so the entry sits at zero.
     if new_ts < 0:
-        log.debug("offset is before scene start, shifting timeline", new_ts=new_ts)
-        # Amount we must shift the whole timeline forward so that the new
-        # entry can be placed at zero.  This is the *earliness* gap between
-        # the requested offset and the current earliest timestamp.
-        shift = offset - scene.ts
-
-        log.debug("shift", shift=shift)
-
-        # Shift everything forward by the calculated amount so that the
-        # timeline can accommodate the earlier entry at zero.
-        shift_scene_timeline(scene, shift)
-
+        log.debug("offset is before the oldest event, shifting timeline", shift=-new_ts)
+        shifted = shift_scene_timeline(scene, -new_ts)
         new_ts = 0
 
     if first_summary is not None:
@@ -1103,13 +1081,7 @@ async def add_history_entry(scene: "Scene", text: str, offset: int) -> ArchiveEn
     if not inserted:
         scene.archived_history.append(archive_entry.model_dump(exclude_none=True))
 
-    # Recalculate scene time based on updated history/archives
-    try:
-        if first_summary is not None:
-            scene.sync_time()
-    except Exception as e:
-        log.error("add_history_entry.sync_time", error=e)
-
+    _timeline_moved(scene, shifted)
     await reimport_history(scene)
 
     return archive_entry
@@ -1140,8 +1112,6 @@ async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEn
             remove_idx = idx
             break
 
-    is_oldest_entry = remove_idx == 0
-
     if remove_idx is None:
         raise ValueError("Entry not found.")
 
@@ -1150,25 +1120,45 @@ async def delete_history_entry(scene: "Scene", entry: HistoryEntry) -> ArchiveEn
     source_deleted(scene, reference)
     removed_entry = ArchiveEntry(**removed_raw)
 
-    if is_oldest_entry:
-        # The removed first entry is always at 0s.  We therefore need to shift
-        # the timeline by the timestamp of **what is now** the first entry so
-        # that it becomes zero.
-        shift = (
-            (scene.archived_history[0].get("ts") or 0) if scene.archived_history else 0
-        )
-        # Apply the negative shift to the entire scene timeline.
-        shift_scene_timeline(scene, -shift)
+    # Zero stays the oldest event: the oldest remaining static entry, or the
+    # scene start once no static entry is older.
+    oldest = min(
+        [
+            existing["ts"]
+            for existing in scene.archived_history
+            if existing.get("end") is None and existing.get("ts") is not None
+        ]
+        + [scene.start_ts]
+    )
+    shifted = shift_scene_timeline(scene, -oldest)
 
-    # Ensure scene time remains consistent
-    try:
-        scene.sync_time()
-    except Exception as e:
-        log.error("delete_history_entry.sync_time", error=e)
-
+    _timeline_moved(scene, shifted)
     await reimport_history(scene)
 
     return removed_entry
+
+
+def _timeline_moved(scene: "Scene", shifted: set[str]):
+    """
+    After a static entry changed the timeline: the clock is the time at the
+    newest message again, and the facts follow their messages.
+    """
+    scene.sync_time()
+    scene.refresh_fact_times(shifted)
+
+
+def legacy_start_ts(archived_history: list[dict]) -> int:
+    """
+    The scene start of a timeline recorded before `start_ts` existed: the
+    newest static entry before the first summary.
+    """
+    start_ts = 0
+    for entry in archived_history:
+        if "end" in entry:
+            break
+        if entry.get("ts") is not None:
+            start_ts = entry["ts"]
+    return start_ts
 
 
 def _shift_entry_ts(entry: dict, shift: int):
@@ -1178,24 +1168,28 @@ def _shift_entry_ts(entry: dict, shift: int):
             entry[key] = max(0, entry[key] + shift)
 
 
-def shift_scene_timeline(scene: "Scene", shift: int):
+def shift_scene_timeline(scene: "Scene", shift: int) -> set[str]:
     """Shift *every* timeline reference in the scene by the provided number of seconds.
 
     The function mutates the scene in place:
 
-    1. ``scene.ts`` – overall scene time
+    1. ``scene.ts`` and ``scene.start_ts`` – scene time and scene start
     2. ``ts``, ``ts_start``, ``ts_end`` of every entry in ``scene.archived_history``
     3. Same fields for every entry in every layer in ``scene.layered_history``
+    4. The stored times of every fact
 
     ``shift`` can be positive (move forward in time) or negative (move backward).
+
+    Returns the ids of the facts whose time changed.
     """
 
     if shift == 0:
         # No-op
-        return
+        return set()
 
-    # 1) shift scene timestamp
+    # 1) shift scene timestamp and scene start
     scene.ts = max(0, scene.ts + shift)
+    scene.start_ts = max(0, scene.start_ts + shift)
 
     # 2) shift archived_history entries
     for entry in scene.archived_history:
@@ -1205,3 +1199,6 @@ def shift_scene_timeline(scene: "Scene", shift: int):
     for layer in scene.layered_history:
         for entry in layer:
             _shift_entry_ts(entry, shift)
+
+    # 4) shift facts
+    return shift_fact_times(scene, shift)

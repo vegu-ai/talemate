@@ -117,8 +117,8 @@ class TestFixTimeArchivedHistory:
         assert scene.archived_history[3]["ts"] == 97200
         assert scene.ts == 97200
 
-    def test_static_entries_used_as_starting_time(self):
-        """Static entries with ts should set the starting baseline."""
+    def test_scene_start_is_the_starting_time(self):
+        """The scene start sets the baseline of the time passages."""
         scene = make_scene(
             history=[
                 _msg("A"),  # 0
@@ -126,20 +126,21 @@ class TestFixTimeArchivedHistory:
                 _msg("B"),  # 2
             ],
             archived_history=[
-                # static entry sets baseline to 1 day
-                {"text": "Background", "ts": 86400},
+                {"text": "Background", "ts": 0},
                 {"text": "After 1h", "start": 0, "end": 2, "ts": -1},
             ],
         )
+        scene.start_ts = 86400
 
         fix_time(scene)
 
-        # Baseline is 1 day from static entry, +1h = 1d 1h
+        # Baseline is the 1 day scene start, +1h = 1d 1h
+        assert scene.archived_history[0]["ts"] == 0
         assert scene.archived_history[1]["ts"] == 90000
         assert scene.ts == 90000
 
-    def test_static_entry_with_null_ts_is_skipped(self):
-        """A static entry whose ts is explicitly null must not become the baseline."""
+    def test_static_entry_does_not_set_the_starting_time(self):
+        """A second static entry added in a session is not the scene start."""
         scene = make_scene(
             history=[
                 _msg("A"),  # 0
@@ -147,19 +148,21 @@ class TestFixTimeArchivedHistory:
                 _msg("B"),  # 2
             ],
             archived_history=[
-                {"text": "Background", "ts": 86400},
-                {"text": "No timestamp yet", "ts": None},
+                {"text": "Background", "ts": 0},
+                {"text": "Later background", "ts": 43200},
                 {"text": "After 1h", "start": 0, "end": 2, "ts": -1},
             ],
         )
+        scene.start_ts = 86400
 
         fix_time(scene)
 
+        assert scene.archived_history[1]["ts"] == 43200
         assert scene.archived_history[2]["ts"] == 90000
         assert scene.ts == 90000
 
     def test_no_time_jumps(self):
-        """No TimePassageMessages should leave ts at starting_time."""
+        """With no TimePassageMessage every summary is at the scene start."""
         scene = make_scene(
             history=[_msg("A"), _msg("B")],
             archived_history=[
@@ -169,8 +172,29 @@ class TestFixTimeArchivedHistory:
 
         fix_time(scene)
 
-        # No time jumps, so ts stays at starting_time (0 default)
+        assert scene.archived_history[0]["ts"] == 0
         assert scene.ts == 0
+
+    def test_last_passage_deleted_recomputes_the_entries(self):
+        """Entries do not keep the time of a passage that no longer exists."""
+        scene = make_scene(
+            history=[_msg("A"), _msg("B"), _msg("C")],
+            archived_history=[
+                {"text": "Background", "ts": 0},
+                {"text": "Summary A", "start": 0, "end": 0, "ts": 3600},
+                {"text": "Summary B", "start": 1, "end": 2, "ts": 90000},
+            ],
+            layered_history=[
+                [{"text": "Layer", "start": 1, "end": 2, "ts": 3600}],
+            ],
+        )
+        scene.start_ts = 3600
+
+        fix_time(scene)
+
+        assert [e["ts"] for e in scene.archived_history] == [0, 3600, 3600]
+        assert scene.layered_history[0][0]["ts_end"] == 3600
+        assert scene.ts == 3600
 
     def test_zero_duration_time_passage(self):
         """A zero-duration time passage should not change timestamps."""

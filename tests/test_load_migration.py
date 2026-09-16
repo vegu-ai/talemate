@@ -12,11 +12,13 @@ latest snapshot and a single delta between the two revisions. They stand in
 for a scene that was last saved before the migration.
 """
 
+import copy
 import hashlib
 import json
 import os
 import shutil
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
@@ -34,9 +36,13 @@ from talemate.changelog import (
     reconstruct_cleanup,
     reconstruct_scene_data,
 )
-from talemate.load import load_scene_from_data
+from talemate.history import add_history_entry, history_with_relative_time
+from talemate.knowledge.chronology import fact_time
+from talemate.load import SceneInitialization, load_scene_from_data
+from talemate.load import new_scene as new_scene_data
 from talemate.util.time import migrate_scene_time
 from talemate.scene_message import SceneMessage, TimePassageMessage
+from talemate.server.world_state_manager.shared_context import SharedContextMixin
 from talemate.shared_context import SharedContext
 from talemate.tale_mate import Scene
 
@@ -55,6 +61,17 @@ DAY = 86400
 # Scene time the fixture's history adds up to: the last no-end archive entry
 # ("P3M") plus both time passage messages ("PT1H" + "P1D").
 EXPECTED_SCENE_TS = 3 * MONTH + HOUR + DAY
+
+YEAR = 31_536_000
+
+# scene.ts that the load of each shipped scene gave before `start_ts` existed
+SHIPPED_SCENE_TS = {
+    "infinity-quest-dynamic-scenario/infinity-quest.json": 28_512_000,
+    "infinity-quest-dynamic-story-v2/infinity-quest.json": 31_104_000,
+    "infinity-quest/infinity-quest.json": 31_104_000,
+    "model-testing-harness/model-testing-harness.json": 27_900,
+    "model-testing-harness/restore.json": 27_900,
+}
 
 
 def _read_fixture(name: str = SCENE_FILE) -> dict:
@@ -240,21 +257,32 @@ class TestMigrateSceneTime:
 
 
 @pytest.fixture
-def load_env(tmp_path, monkeypatch):
-    """Agent stack + scenes directory a legacy scene can be loaded into."""
-    scene = MockScene()
-    bootstrap_scene(scene)
+def new_scene(tmp_path, monkeypatch):
+    """
+    Each call gives a new scene, with the agent stack bound to it, that a
+    legacy scene can be loaded into. Use the scenes one after another.
+    """
     monkeypatch.setattr(
         Scene, "scenes_dir", classmethod(lambda cls: str(tmp_path)), raising=True
     )
-    scene.project_name = "legacy-time-scene"
 
-    memory = instance.get_agent("memory")
-    monkeypatch.setattr(memory, "set_db", _noop, raising=False)
-    monkeypatch.setattr(memory, "get_document", _no_documents, raising=False)
-    voice_library.VOICE_LIBRARY = voice_library.VoiceLibrary(voices={})
+    def create():
+        scene = MockScene()
+        bootstrap_scene(scene)
+        scene.project_name = "legacy-time-scene"
+        memory = instance.get_agent("memory")
+        monkeypatch.setattr(memory, "set_db", _noop, raising=False)
+        monkeypatch.setattr(memory, "get_document", _no_documents, raising=False)
+        voice_library.VOICE_LIBRARY = voice_library.VoiceLibrary(voices={})
+        return scene
 
-    return scene
+    return create
+
+
+@pytest.fixture
+def load_env(new_scene):
+    """Agent stack + scenes directory a legacy scene can be loaded into."""
+    return new_scene()
 
 
 async def _noop(*args, **kwargs):
@@ -286,6 +314,61 @@ async def test_load_scene_migrates_legacy_time(load_env):
             assert isinstance(entry["ts"], int)
             assert isinstance(entry["ts_start"], int)
             assert isinstance(entry["ts_end"], int)
+
+
+@pytest.mark.asyncio
+async def test_a_save_without_scene_start_loads_as_before(load_env):
+    scene = await load_scene_from_data(load_env, _read_fixture(), name=SCENE_FILE)
+
+    # the scene starts at the newest static entry before the first summary
+    assert scene.start_ts == 3 * MONTH
+    assert scene.ts == EXPECTED_SCENE_TS
+    assert [e["ts"] for e in scene.archived_history] == [
+        MONTH,
+        3 * MONTH,
+        3 * MONTH + HOUR,
+    ]
+    assert [
+        (e["ts"], e["ts_start"], e["ts_end"]) for e in scene.layered_history[0]
+    ] == [(MONTH, MONTH, 3 * MONTH + HOUR)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", sorted(SHIPPED_SCENE_TS))
+async def test_shipped_scenes_load_as_before(load_env, path):
+    scenes_dir = Path(__file__).parent.parent / "scenes"
+    with open(scenes_dir / path) as f:
+        data = json.load(f)
+    assert "start_ts" not in data
+    saved = migrate_scene_time(copy.deepcopy(data))["archived_history"]
+
+    scene = await load_scene_from_data(load_env, data, name=os.path.basename(path))
+
+    assert scene.ts == SHIPPED_SCENE_TS[path]
+    assert [entry["ts"] for entry in scene.archived_history] == [
+        entry["ts"] for entry in saved
+    ]
+
+
+@pytest.mark.asyncio
+async def test_static_entry_offset_survives_a_reload(load_env):
+    data = _read_fixture()
+    data["archived_history"] = []
+    data["layered_history"] = []
+    scene = await load_scene_from_data(load_env, data, name=SCENE_FILE)
+    assert scene.ts == HOUR + DAY
+
+    await add_history_entry(scene, "The war ended.", offset=10 * MONTH)
+    assert scene.ts == 10 * MONTH
+
+    reloaded = await load_scene_from_data(
+        load_env, json.loads(scene.json), name=SCENE_FILE
+    )
+
+    assert reloaded.ts == 10 * MONTH
+    rows = history_with_relative_time(reloaded.archived_history, reloaded.ts)
+    assert rows[0]["time"] == "10 Months ago"
+    assert reloaded.start_ts == scene.start_ts == 10 * MONTH - HOUR - DAY
 
 
 @pytest.mark.asyncio
@@ -393,6 +476,322 @@ async def test_load_scene_with_legacy_shared_context(load_env):
     assert scene.archived_history[2]["end"] == 2
     for entry in scene.archived_history:
         assert isinstance(entry["ts"], int)
+    # a save without `start_ts` starts at the newest shared static entry,
+    # as the load did before `start_ts` existed
+    assert scene.start_ts == 3 * MONTH + HOUR
+    assert scene.ts == 3 * MONTH + DAY + 2 * HOUR
+    assert scene.archived_history[2]["ts"] == 3 * MONTH + 2 * HOUR
+    assert scene.layered_history[0][0]["ts_end"] == 3 * MONTH + 2 * HOUR
+
+
+def _static_scene_data(
+    start_ts: int | None, static: list[tuple[str, int]], **extra
+) -> dict:
+    """
+    The fixture's history (passages of 1 hour and 1 day) with these static
+    entries. A `start_ts` of None stands for a save from an older version.
+    """
+    data = _read_fixture()
+    data["archived_history"] = [
+        {"text": text, "ts": ts, "id": text} for text, ts in static
+    ]
+    data["layered_history"] = []
+    if start_ts is not None:
+        data["start_ts"] = start_ts
+    data.update(extra)
+    return data
+
+
+def _with_fact(data: dict, ts: int) -> dict:
+    data["world_state"] = {
+        **data.get("world_state", {}),
+        "facts": {
+            "F1": {
+                "id": "F1",
+                "text": "Kaira checked the hull.",
+                "ts": ts,
+                "last_seen_ts": ts,
+                "source": "manual",
+            }
+        },
+    }
+    return data
+
+
+def _static_ages(scene) -> list[tuple[str, str]]:
+    return [
+        (row["text"], row["time"])
+        for row in history_with_relative_time(scene.archived_history, scene.ts)
+        if row["end"] is None
+    ]
+
+
+def _timeline(scene) -> tuple:
+    """Every stored time of the scene, as plain values."""
+    return (
+        scene.start_ts,
+        scene.ts,
+        [(entry["text"], entry["ts"]) for entry in scene.archived_history],
+        [
+            [
+                (entry.get("ts"), entry.get("ts_start"), entry.get("ts_end"))
+                for entry in layer
+            ]
+            for layer in scene.layered_history
+        ],
+        {
+            fact.id: (fact.ts, fact.last_seen_ts)
+            for fact in scene.world_state.facts.values()
+        },
+    )
+
+
+async def _load(new_scene, data: dict):
+    return await load_scene_from_data(new_scene(), copy.deepcopy(data), name=SCENE_FILE)
+
+
+async def _write_shared_context(scene) -> str:
+    shared_dir = Path(scene.shared_context_dir)
+    shared_dir.mkdir(parents=True, exist_ok=True)
+    shared = SharedContext(
+        filepath=shared_dir / "world.json", share_static_history=True
+    )
+    await shared.init_from_scene(scene, write=True)
+    return shared.filename
+
+
+async def _save(scene) -> dict:
+    """What `Scene.save` writes: the shared context first, then the scene."""
+    if scene.shared_context:
+        await scene.shared_context.commit_changes(scene)
+    return json.loads(scene.json)
+
+
+@pytest.mark.asyncio
+async def test_a_new_scene_places_shared_static_history_from_its_start(new_scene):
+    writer = await _load(
+        new_scene,
+        _static_scene_data(10 * YEAR, [("war", 0), ("lighthouse", 5 * YEAR)]),
+    )
+    filename = await _write_shared_context(writer)
+
+    scene = await _load(new_scene, _static_scene_data(0, [], shared_context=filename))
+
+    assert _static_ages(scene) == [
+        ("war", "10 Years ago"),
+        ("lighthouse", "5 Years ago"),
+    ]
+    assert scene.start_ts == 10 * YEAR
+    before = _timeline(scene)
+    reloaded = await _load(new_scene, await _save(scene))
+    assert _timeline(reloaded) == before
+
+
+@pytest.mark.asyncio
+async def test_an_older_shared_entry_keeps_every_age_in_the_other_scene(new_scene):
+    first_data = _with_fact(
+        _static_scene_data(10 * YEAR, [("war", 0), ("lighthouse", 5 * YEAR)]),
+        10 * YEAR + DAY,
+    )
+    first = await _load(new_scene, first_data)
+    assert fact_time(first, first.world_state.facts["F1"]) == "1 Hour ago"
+    first_data["shared_context"] = await _write_shared_context(first)
+
+    second = await _load(
+        new_scene, _static_scene_data(0, [], shared_context="world.json")
+    )
+    await add_history_entry(second, "ruins", offset=20 * YEAR)
+    await _save(second)
+
+    first = await _load(new_scene, first_data)
+
+    assert _static_ages(first) == [
+        ("ruins", "20 Years ago"),
+        ("war", "10 Years ago"),
+        ("lighthouse", "5 Years ago"),
+    ]
+    assert fact_time(first, first.world_state.facts["F1"]) == "1 Hour ago"
+    before = _timeline(first)
+    reloaded = await _load(new_scene, await _save(first))
+    assert _timeline(reloaded) == before
+
+
+@pytest.mark.asyncio
+async def test_an_older_save_keeps_the_start_of_a_shared_file_from_this_version(
+    new_scene,
+):
+    writer_data = _static_scene_data(10 * YEAR, [("war", 0), ("lighthouse", 5 * YEAR)])
+    writer = await _load(new_scene, writer_data)
+    writer_data["shared_context"] = await _write_shared_context(writer)
+    writer_timeline = _timeline(writer)
+
+    # an older version started this scene at its newest static entry (5y)
+    older_data = _with_fact(
+        _static_scene_data(
+            None,
+            [("war", 0), ("lighthouse", 5 * YEAR)],
+            shared_context="world.json",
+        ),
+        5 * YEAR + DAY,
+    )
+    older = await _load(new_scene, older_data)
+
+    assert _static_ages(older) == [
+        ("war", "10 Years ago"),
+        ("lighthouse", "5 Years ago"),
+    ]
+    assert older.start_ts == 10 * YEAR
+    assert fact_time(older, older.world_state.facts["F1"]) == "1 Hour ago"
+    await _save(older)
+
+    writer = await _load(new_scene, writer_data)
+    assert _timeline(writer) == writer_timeline
+    assert _static_ages(writer) == [
+        ("war", "10 Years ago"),
+        ("lighthouse", "5 Years ago"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_a_shared_entry_from_the_writers_story_survives_a_round_trip(
+    new_scene,
+):
+    # storm: 1 hour ago in a scene with 1 day and 1 hour of passages
+    writer_data = _static_scene_data(
+        10 * YEAR, [("war", 0), ("storm", 10 * YEAR + DAY)]
+    )
+    writer = await _load(new_scene, writer_data)
+    writer_data["shared_context"] = await _write_shared_context(writer)
+    writer_timeline = _timeline(writer)
+    assert _static_ages(writer) == [("war", "10 Years ago"), ("storm", "1 Hour ago")]
+
+    # fewer passages: only the hour, and a summary at that hour
+    data = _static_scene_data(0, [], shared_context="world.json")
+    data["history"] = data["history"][:3]
+    data["archived_history"] = [
+        {"text": "They left the station.", "ts": HOUR, "start": 0, "end": 2, "id": "s1"}
+    ]
+    scene = await _load(new_scene, data)
+
+    # each entry keeps its distance from the start, also storm, which is now
+    # later than this scene's clock (#647)
+    start_ts, _, entries, _, _ = _timeline(scene)
+    assert [(text, ts - start_ts) for text, ts in entries[:2]] == [
+        ("war", -10 * YEAR),
+        ("storm", DAY),
+    ]
+    await _save(scene)
+
+    writer = await _load(new_scene, writer_data)
+    assert _timeline(writer) == writer_timeline
+    assert _static_ages(writer) == [("war", "10 Years ago"), ("storm", "1 Hour ago")]
+
+
+@pytest.mark.asyncio
+async def test_a_new_linked_scene_starts_at_zero(new_scene):
+    writer = await _load(
+        new_scene,
+        _static_scene_data(10 * YEAR, [("war", 0), ("lighthouse", 5 * YEAR)]),
+    )
+    filename = await _write_shared_context(writer)
+
+    # Shared World, "Create new scene": $NEW_SCENE$ data loaded with a reset
+    data = new_scene_data(SceneInitialization(shared_context=filename))
+    data["project_name"] = writer.project_name
+    scene = await load_scene_from_data(new_scene(), data, reset=True, empty=True)
+
+    assert (scene.start_ts, scene.ts) == (0, 0)
+
+
+@pytest.mark.asyncio
+async def test_a_scene_that_loads_its_own_shared_file_changes_nothing(new_scene):
+    data = _with_fact(
+        _static_scene_data(10 * YEAR, [("war", 0), ("storm", 10 * YEAR + DAY)]),
+        10 * YEAR + DAY,
+    )
+    writer = await _load(new_scene, data)
+    data["shared_context"] = await _write_shared_context(writer)
+    before = _timeline(writer)
+
+    scene = await _load(new_scene, data)
+
+    assert _timeline(scene) == before
+    assert await scene.shared_context.update_to_scene(scene) is False
+    assert _timeline(scene) == before
+
+
+@pytest.mark.asyncio
+async def test_linking_in_session_moves_the_history_in_memory(new_scene, monkeypatch):
+    writer = await _load(
+        new_scene,
+        _static_scene_data(10 * YEAR, [("war", 0), ("lighthouse", 5 * YEAR)]),
+    )
+    filename = await _write_shared_context(writer)
+
+    # a scene of this version with a summary, a layer and a fact
+    data = _with_fact(_read_fixture(), 3 * MONTH + DAY)
+    data["start_ts"] = 3 * MONTH
+    scene = await _load(new_scene, data)
+    rows = history_with_relative_time(scene.archived_history, scene.ts)
+    layer = history_with_relative_time(scene.layered_history[0], scene.ts)
+    summary_age = [row["time"] for row in rows if row["end"] is not None]
+    fact_age = fact_time(scene, scene.world_state.facts["F1"])
+    assert fact_age == "1 Hour ago"
+
+    reimported = []
+
+    async def reimport(scene, **kwargs):
+        reimported.append(scene)
+
+    monkeypatch.setattr(
+        "talemate.server.world_state_manager.shared_context.reimport_history",
+        reimport,
+    )
+    mixin = _SharedContextHandler(scene)
+
+    await mixin.handle_select_shared_context({"filepath": filename})
+
+    assert mixin.done
+    assert reimported == [scene]
+    assert _static_ages(scene) == [
+        ("war", "10 Years ago"),
+        ("lighthouse", "5 Years ago"),
+    ]
+    rows = history_with_relative_time(scene.archived_history, scene.ts)
+    assert [row["time"] for row in rows if row["end"] is not None] == summary_age
+    assert [
+        row["time"]
+        for row in history_with_relative_time(scene.layered_history[0], scene.ts)
+    ] == [row["time"] for row in layer]
+    assert fact_time(scene, scene.world_state.facts["F1"]) == fact_age
+
+
+class _SharedContextHandler(SharedContextMixin):
+    def __init__(self, scene):
+        self.scene = scene
+        self.websocket_handler = Mock()
+        self.done = False
+
+    async def signal_operation_done(self):
+        self.done = True
+
+    async def signal_operation_failed(self, message):
+        raise AssertionError(message)
+
+
+@pytest.mark.asyncio
+async def test_an_older_shared_file_puts_its_newest_entry_at_the_scene_start():
+    shared = SharedContext(
+        filepath=Path(SHARED_CONTEXT_FIXTURE_DIR) / SHARED_CONTEXT_FILE
+    )
+    await shared.init_from_file()
+    assert shared.start_ts is None
+    scene = Scene()
+
+    await shared.update_to_scene(scene)
+
+    assert [entry["ts"] for entry in scene.archived_history] == [0, 2 * MONTH + HOUR]
+    assert (scene.start_ts, scene.ts) == (2 * MONTH + HOUR, 2 * MONTH + HOUR)
 
 
 @pytest.mark.asyncio

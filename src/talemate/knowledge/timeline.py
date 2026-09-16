@@ -10,27 +10,46 @@ from talemate.scene_message import TimePassageMessage
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
-__all__ = ["message_times", "refresh_fact_times"]
+__all__ = ["message_times", "refresh_fact_times", "shift_fact_times"]
 
 
 def message_times(scene: "Scene") -> dict[int, int]:
     """
-    Scene time at every message: the static history's base time plus the
-    time passages before the message, the rule `Scene.fix_time` applies to
-    the archive entries.
+    Scene time at every message: the scene start plus the time passages up
+    to the message, the rule `Scene.fix_time` applies to the archive entries.
     """
-    ts = 0
-    for entry in scene.archived_history:
-        if entry.get("ts") is not None and "end" not in entry:
-            ts = entry["ts"]
-        elif "end" in entry:
-            break
+    ts = scene.start_ts
     times = {}
     for message in scene.history:
         if isinstance(message, TimePassageMessage):
             ts += message.ts
         times[message.id] = ts
     return times
+
+
+def shift_fact_times(scene: "Scene", shift: int) -> set[str]:
+    """
+    Move every stored fact time by `shift` seconds, clamped to zero, as
+    `shift_scene_timeline` moves the entries. Returns the ids of the facts
+    whose time changed.
+    """
+
+    def shifted(value):
+        return None if value is None else max(0, value + shift)
+
+    def times(fact):
+        return (fact.ts, fact.last_seen_ts, *(item.ts for item in fact.restated_by))
+
+    changed = set()
+    for fact in scene.world_state.facts.values():
+        before = times(fact)
+        fact.ts = shifted(fact.ts)
+        fact.last_seen_ts = shifted(fact.last_seen_ts)
+        for item in fact.restated_by:
+            item.ts = shifted(item.ts)
+        if times(fact) != before:
+            changed.add(fact.id)
+    return changed
 
 
 def refresh_fact_times(scene: "Scene", fact_ids=None) -> set[str]:

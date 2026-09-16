@@ -50,7 +50,8 @@ from talemate.knowledge.perspectives import (
     bind_perspective_sources,
     validate_saved_knowledge,
 )
-from talemate.history import validate_history
+from talemate.history import legacy_start_ts, validate_history
+from talemate.knowledge.timeline import shift_fact_times
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
 from talemate.util.gpu import release_cuda_cache
@@ -434,6 +435,14 @@ async def load_scene_from_data(
     scene.history = _load_history(scene_data["history"])
     scene.archived_history = scene_data["archived_history"]
     scene.layered_history = scene_data.get("layered_history", [])
+    # a save from an older version has no start: its own static entries give it
+    own_start_ts = scene_data.get("start_ts")
+    if own_start_ts is None:
+        own_start_ts = legacy_start_ts(scene.archived_history)
+    scene.start_ts = own_start_ts
+    # a save and a shared file both from an older version: the shared entries
+    # keep their saved times and give the start, as in that version
+    start_from_shared_entries = False
     scene.knowledge = knowledge
     if knowledge:
         advance_message_id(
@@ -458,7 +467,13 @@ async def load_scene_from_data(
         else:
             scene.shared_context = SharedContext(filepath=path)
             await scene.shared_context.init_from_file()
-            await scene.shared_context.update_to_scene(scene)
+            start_from_shared_entries = (
+                scene_data.get("start_ts") is None
+                and scene.shared_context.start_ts is None
+            )
+            await scene.shared_context.update_to_scene(
+                scene, relative=not start_from_shared_entries
+            )
     else:
         scene.shared_context = None
 
@@ -491,12 +506,21 @@ async def load_scene_from_data(
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"
         )
+        if start_from_shared_entries:
+            scene.start_ts = legacy_start_ts(scene.archived_history)
+        else:
+            # the shared static history can move the timeline before the
+            # saved facts are loaded
+            shift_fact_times(scene, scene.start_ts - own_start_ts)
         scene.fix_time()
         log.debug("scene time", ts=scene.ts)
     else:
         scene.history = []
         scene.archived_history = []
         scene.layered_history = []
+        scene.start_ts = 0
+        # the shared static history can have moved the clock before the reset
+        scene.sync_time()
         scene.knowledge = None
         scene.intent_state.reset()
 

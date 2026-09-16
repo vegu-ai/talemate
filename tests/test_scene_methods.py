@@ -1231,12 +1231,23 @@ class TestSyncTime:
         real_scene.sync_time()
         assert real_scene.ts == 5400
 
-    def test_sync_time_uses_archived_baseline(self, real_scene):
+    def test_sync_time_starts_at_the_scene_start(self, real_scene):
+        real_scene.start_ts = 7200
         real_scene.archived_history = [{"ts": 7200, "end": 0}]
-        # No additional time passages after end=0.
+        real_scene.history = [
+            _char_msg("a"),
+            TimePassageMessage(ts=3600, message="later"),
+            _char_msg("b"),
+        ]
+        real_scene.sync_time()
+        assert real_scene.ts == 10800
+
+    def test_sync_time_ignores_the_archive_times(self, real_scene):
+        # a stale archive time does not become the clock
+        real_scene.archived_history = [{"ts": 7200, "end": 0}]
         real_scene.history = [_char_msg("a")]
         real_scene.sync_time()
-        assert real_scene.ts == 7200
+        assert real_scene.ts == 0
 
     def test_sync_time_with_no_data_resets_to_zero(self, real_scene):
         real_scene.ts = 18000  # leftover
@@ -1359,8 +1370,12 @@ class TestReset:
             {"text": "intro", "end": None},  # static, kept
             {"text": "summary", "end": 3},  # dynamic, removed
         ]
+        real_scene.history = [TimePassageMessage(ts=3600, message="later")]
+        real_scene.start_ts = 600
+        real_scene.ts = 4200
         real_scene.reset()
         assert real_scene.archived_history == [{"text": "intro", "end": None}]
+        assert (real_scene.start_ts, real_scene.ts) == (600, 600)
 
     def test_reset_detaches_retained_edges_from_wiped_messages(self, real_scene):
         message = _char_msg("I learned the route.")

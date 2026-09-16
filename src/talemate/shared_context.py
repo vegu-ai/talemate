@@ -7,7 +7,12 @@ import structlog
 from .character import Character
 from .world_state import WorldState, ManualContext
 from .save import SceneEncoder
-from .history import ArchiveEntry, static_history as get_static_history
+from .history import (
+    ArchiveEntry,
+    legacy_start_ts,
+    shift_scene_timeline,
+    static_history as get_static_history,
+)
 from .util.time import migrate_entry_time
 import deepdiff
 
@@ -23,6 +28,8 @@ class SharedContext(pydantic.BaseModel):
     character_data: dict[str, Character] = pydantic.Field(default_factory=dict)
     world_state: WorldState = pydantic.Field(default_factory=WorldState)
     static_history: list[ArchiveEntry] = pydantic.Field(default_factory=list)
+    # the start of the scene that wrote `static_history`; None in older files
+    start_ts: int | None = None
 
     share_static_history: bool = False
 
@@ -56,6 +63,7 @@ class SharedContext(pydantic.BaseModel):
                 ArchiveEntry(**entry.model_dump())
                 for entry in await get_static_history(scene)
             ]
+            self.start_ts = scene.start_ts
         if write:
             await self.write_to_file()
 
@@ -81,11 +89,37 @@ class SharedContext(pydantic.BaseModel):
                 ArchiveEntry(**entry.model_dump())
                 for entry in await get_static_history(scene)
             ]
+            self.start_ts = scene.start_ts
 
-    async def update_to_scene(self, scene: "Scene") -> bool:
+    def _place_static_history(self, scene: "Scene") -> tuple[list[dict], set[str]]:
+        """
+        The shared static entries in the scene's timeline, each at the same
+        distance from the scene start as from the start of the scene that
+        wrote it. A file without `start_ts` was written when the newest static
+        entry was the scene start. An entry older than the zero moves the
+        scene's timeline forward; returns the ids of the facts that moved.
+        """
+        entries = [entry.model_dump(exclude_none=True) for entry in self.static_history]
+        writer_start = (
+            self.start_ts if self.start_ts is not None else legacy_start_ts(entries)
+        )
+        for entry in entries:
+            entry["ts"] += scene.start_ts - writer_start
+        oldest = min((entry["ts"] for entry in entries), default=0)
+        if oldest >= 0:
+            return entries, set()
+        shifted = shift_scene_timeline(scene, -oldest)
+        for entry in entries:
+            entry["ts"] -= oldest
+        return entries, shifted
+
+    async def update_to_scene(self, scene: "Scene", relative: bool = True) -> bool:
         """
         Update the scene with the shared context.
         Returns True if the scene was updated, False otherwise.
+
+        `relative=False` copies the static entries with their saved times: a
+        save from an older version takes its scene start from them afterwards.
         """
         compare_context = SharedContext(
             filepath=self.filepath, share_static_history=self.share_static_history
@@ -147,11 +181,18 @@ class SharedContext(pydantic.BaseModel):
                     for entry in scene.archived_history
                     if entry.get("end") is not None
                 ]
-                static_entries = [
-                    entry.model_dump(exclude_none=True) for entry in self.static_history
-                ]
+                if relative:
+                    static_entries, shifted = self._place_static_history(scene)
+                else:
+                    static_entries = [
+                        entry.model_dump(exclude_none=True)
+                        for entry in self.static_history
+                    ]
+                    shifted = set()
                 # replace archived_history with shared static entries first, then summarized
                 scene.archived_history = static_entries + summarized_entries
+                if shifted:
+                    scene.refresh_fact_times(shifted)
             except Exception as e:
                 log.error("apply static history failed", error=e)
 
@@ -167,6 +208,7 @@ class SharedContext(pydantic.BaseModel):
         self.world_state = WorldState(**data["world_state"])
         # optional fields for backward compatibility
         self.share_static_history = data.get("share_static_history", False)
+        self.start_ts = data.get("start_ts")
         # Sidecar files written before scene time became integer seconds carry
         # ISO8601 durations and are never rewritten on disk, so they have to be
         # converted on every read.

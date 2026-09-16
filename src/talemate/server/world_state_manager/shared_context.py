@@ -6,6 +6,7 @@ from typing import Any
 
 import structlog
 
+from talemate.history import reimport_history
 from talemate.shared_context import SharedContext
 import pydantic
 
@@ -112,9 +113,18 @@ class SharedContextMixin:
             await shared.init_from_file()
             scene.shared_context = shared
 
-        await scene.shared_context.update_to_scene(scene)
-        await scene.shared_context.update_from_scene(scene)
+        await self._apply_shared_context(scene.shared_context)
         return scene.shared_context
+
+    async def _apply_shared_context(self, shared: SharedContext):
+        scene = self.scene
+        start_ts = scene.start_ts
+        await shared.update_to_scene(scene)
+        # a shared entry older than the zero moved the timeline: the history
+        # documents in memory carry the old times
+        if scene.start_ts != start_ts:
+            await reimport_history(scene)
+        await shared.update_from_scene(scene)
 
     # -------- Handlers --------
     async def handle_list_shared_contexts(self, data: dict):
@@ -136,8 +146,7 @@ class SharedContextMixin:
             )
             await shared.init_from_file()
             self.scene.shared_context = shared
-            await shared.update_to_scene(self.scene)
-            await shared.update_from_scene(self.scene)
+            await self._apply_shared_context(shared)
             self.websocket_handler.queue_put(
                 {
                     "type": "world_state_manager",

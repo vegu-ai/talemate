@@ -97,7 +97,7 @@ def summary_scene(scene, monkeypatch, request):
     scene.layered_history = [
         [
             LayeredArchiveEntry(
-                id="layer-a", text="READER-LAYER", start=0, end=1
+                id="layer-a", text="READER-LAYER", start=0, end=1, ts_start=0, ts_end=0
             ).model_dump(exclude_none=True)
         ]
     ]

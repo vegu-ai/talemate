@@ -80,6 +80,8 @@ Defines the duration unit amount of the entry.
 
 So if you want to define something that happened 10 months ago (from the current moment in the scene), you would set the unit to months and the amount to 10.
 
+The scene keeps that distance. For example, you add "The war ended" 10 months ago to a new scene. After a reload, or after **Regenerate All History**, the entry still reads **10 Months ago**. When the new entry is older than every other entry, the timeline moves back to make room for it: the other entries and their facts keep their age.
+
 ![Add Static Entry](/talemate/img/0.38.0/history-add-entry.png)
 
 ## Time Passage Entries

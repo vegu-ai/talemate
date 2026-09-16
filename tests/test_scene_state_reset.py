@@ -143,6 +143,8 @@ class TestHistoryWipe:
             ],
             layered_history=[["layer1"], ["layer2"]],
         )
+        scene.start_ts = 3600
+        scene.ts = 7200
         mixin = mixin_instance(scene)
 
         await mixin.handle_execute_scene_state_reset(
@@ -155,6 +157,8 @@ class TestHistoryWipe:
         assert scene.history == []
         assert scene.archived_history == []
         assert scene.layered_history == []
+        # no static entry is left to be older than the scene
+        assert (scene.start_ts, scene.ts) == (0, 0)
 
     @pytest.mark.asyncio
     async def test_wipe_history_preserve_static(self, scene_factory, mixin_instance):
@@ -168,6 +172,8 @@ class TestHistoryWipe:
             ],
             layered_history=[["layer1"]],
         )
+        scene.start_ts = 3600
+        scene.ts = 7200
         mixin = mixin_instance(scene)
 
         await mixin.handle_execute_scene_state_reset(
@@ -181,6 +187,8 @@ class TestHistoryWipe:
         assert len(scene.archived_history) == 1
         assert scene.archived_history[0]["text"] == "arch2"
         assert scene.layered_history == []
+        # the static entry keeps its distance from the scene start
+        assert (scene.start_ts, scene.ts) == (3600, 3600)
 
     @pytest.mark.asyncio
     async def test_wipe_history_no_static_entries(self, scene_factory, mixin_instance):

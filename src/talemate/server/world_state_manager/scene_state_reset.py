@@ -107,6 +107,7 @@ class SceneStateResetMixin:
 
             if payload.wipe_history_include_static:
                 scene.archived_history = []
+                scene.start_ts = 0
                 reset_summary.append(
                     f"Wiped all history ({history_count} messages, {archived_count} archived, {layered_count} layered)"
                 )
@@ -119,6 +120,8 @@ class SceneStateResetMixin:
                 reset_summary.append(
                     f"Wiped history ({history_count} messages, {removed_count} archived, {layered_count} layered), kept {len(static_entries)} static entries"
                 )
+
+            scene.sync_time()
 
             log.info(
                 "Wiped scene history",

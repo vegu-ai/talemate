@@ -225,6 +225,8 @@ class Scene(Emitter):
         self.agent_state = {}
         self.intent_state = SceneIntent()
         self.ts: int = 0
+        # scene time at the first message; static entries can be older
+        self.start_ts: int = 0
         self.active = False
         self.Actor = Actor
         self.Player = Player
@@ -1779,40 +1781,21 @@ class Scene(Emitter):
 
     def sync_time(self):
         """
-        Loops through self.history looking for TimePassageMessage and will
-        advance the world state by the amount of time passed for each
+        Sets the scene time to the time at the newest message: the scene
+        start plus every time passage in the history.
         """
-        # reset time
-        self.ts = 0
-
-        # archived history (if "ts" is set) should provide the base line
-        # find the first archived_history entry from the back that has a ts
-        # and set that as the base line
-
-        if self.archived_history:
-            for i in range(len(self.archived_history) - 1, -1, -1):
-                if self.archived_history[i].get("ts") is not None:
-                    self.ts = self.archived_history[i]["ts"]
-                    break
-
-            end = self.archived_history[-1].get("end", 0)
-        else:
-            end = 0
-
-        for message in self.history[end:]:
-            if isinstance(message, TimePassageMessage):
-                self.advance_time(message.ts)
+        self.ts = self.start_ts + sum(
+            message.ts
+            for message in self.history
+            if isinstance(message, TimePassageMessage)
+        )
 
         self.log.debug("sync_time", ts=self.ts)
-
-        # TODO: need to adjust archived_history ts as well
-        # but removal also probably means the history needs to be regenerated
-        # anyway.
 
     def fix_time(self):
         """
         New implementation of sync_time that will fix time across the board
-        using the base history as the sole source of truth.
+        using the scene start and the base history as the sole source of truth.
 
         This means first identifying the time jumps in the base history by
         looking for TimePassageMessages and then applying those time jumps
@@ -1828,21 +1811,18 @@ class Scene(Emitter):
             log.error("fix_time", exc=traceback.format_exc())
             self.ts = ts
 
-    def refresh_fact_times(self):
-        """Facts follow the timeline: their time is the time at their message."""
-        changed = refresh_fact_times(self)
+    def refresh_fact_times(self, moved: set[str] = frozenset()):
+        """
+        Facts follow the timeline: their time is the time at their message.
+        `moved` names facts whose time already changed, for the memory.
+        """
+        changed = set(moved) | refresh_fact_times(self)
         if changed:
             get_agent("summarizer").queue_fact_memory(self, changed)
         return changed
 
     def _fix_time(self):
-        starting_time = 0
-
-        for archived_entry in self.archived_history:
-            if archived_entry.get("ts") is not None and "end" not in archived_entry:
-                starting_time = archived_entry["ts"]
-            elif "end" in archived_entry:
-                break
+        starting_time = self.start_ts
 
         # store time jumps by index
         time_jumps = []
@@ -1859,13 +1839,9 @@ class Scene(Emitter):
             ts += ts_jump
             cumulative_time_jumps.append((idx, ts))
 
-        try:
-            ending_time = cumulative_time_jumps[-1][1]
-        except IndexError:
-            # no time jumps found
-            ending_time = starting_time
-            self.ts = ending_time
-            return
+        ending_time = (
+            cumulative_time_jumps[-1][1] if cumulative_time_jumps else starting_time
+        )
 
         # apply time jumps to the archived history
         ts = starting_time
@@ -2361,6 +2337,7 @@ class Scene(Emitter):
         dropped_facts.update(prune_summary_facts(self.world_state, summarized_ids))
 
         self.layered_history = []
+        self.sync_time()
 
         self.world_state.reset()
 
@@ -2487,6 +2464,7 @@ class Scene(Emitter):
             "hidden": scene.hidden,
             "deprecated": scene.deprecated,
             "ts": scene.ts,
+            "start_ts": scene.start_ts,
             "help": scene.help,
             "experimental": scene.experimental,
             "writing_style_template": scene.writing_style_template,

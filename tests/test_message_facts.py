@@ -444,10 +444,15 @@ class TestTimeline:
         times = message_times(scene)
         assert [times[m.id] for m in history] == [0, 0, 3600, 3600]
 
-    def test_times_start_at_the_static_history(self, scene, history):
-        scene.archived_history = [{"id": "s0", "text": "Long ago.", "ts": 1400}]
+    def test_times_start_at_the_scene_start(self, scene, history):
+        scene.start_ts = 1400
         times = message_times(scene)
         assert [times[m.id] for m in history] == [1400, 1400, 5000, 5000]
+
+    def test_a_static_entry_does_not_set_the_scene_start(self, scene, history):
+        scene.archived_history = [{"id": "s0", "text": "Long ago.", "ts": 1400}]
+        times = message_times(scene)
+        assert [times[m.id] for m in history] == [0, 0, 3600, 3600]
 
     def test_refresh_moves_the_facts_after_an_edited_passage(self, scene, history):
         early = bound(scene, "F1", "one", history[0], ts=0, last_seen_ts=0)

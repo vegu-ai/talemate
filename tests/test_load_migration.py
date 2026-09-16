@@ -688,19 +688,83 @@ async def test_a_shared_entry_from_the_writers_story_survives_a_round_trip(
 
 
 @pytest.mark.asyncio
-async def test_a_new_linked_scene_starts_at_zero(new_scene):
-    writer = await _load(
-        new_scene,
-        _static_scene_data(10 * YEAR, [("war", 0), ("lighthouse", 5 * YEAR)]),
-    )
-    filename = await _write_shared_context(writer)
+async def test_a_new_linked_scene_keeps_the_shared_static_history(new_scene):
+    writer_data = _static_scene_data(10 * YEAR, [("war", 0), ("lighthouse", 5 * YEAR)])
+    writer = await _load(new_scene, writer_data)
+    writer_data["shared_context"] = await _write_shared_context(writer)
+    writer_timeline = _timeline(writer)
 
     # Shared World, "Create new scene": $NEW_SCENE$ data loaded with a reset
-    data = new_scene_data(SceneInitialization(shared_context=filename))
+    data = new_scene_data(SceneInitialization(shared_context="world.json"))
     data["project_name"] = writer.project_name
     scene = await load_scene_from_data(new_scene(), data, reset=True, empty=True)
 
-    assert (scene.start_ts, scene.ts) == (0, 0)
+    assert _static_ages(scene) == [
+        ("war", "10 Years ago"),
+        ("lighthouse", "5 Years ago"),
+    ]
+    assert (scene.start_ts, scene.ts) == (10 * YEAR, 10 * YEAR)
+
+    await _save(scene)
+
+    shared = SharedContext(filepath=Path(writer.shared_context_dir) / "world.json")
+    await shared.init_from_file()
+    assert [(entry.text, entry.ts) for entry in shared.static_history] == [
+        ("war", 0),
+        ("lighthouse", 5 * YEAR),
+    ]
+
+    writer = await _load(new_scene, writer_data)
+    assert _timeline(writer) == writer_timeline
+    assert _static_ages(writer) == [
+        ("war", "10 Years ago"),
+        ("lighthouse", "5 Years ago"),
+    ]
+
+
+# a writer start of None is the released shape: neither the save nor the shared
+# file has a `start_ts`
+@pytest.mark.parametrize("writer_start", [10 * YEAR, None])
+@pytest.mark.asyncio
+async def test_a_new_linked_scene_reads_a_shared_file_without_a_start(
+    new_scene, writer_start
+):
+    writer_data = _static_scene_data(
+        writer_start, [("war", 0), ("lighthouse", 5 * YEAR)]
+    )
+    writer = await _load(new_scene, writer_data)
+    writer_data["shared_context"] = await _write_shared_context(writer)
+
+    # `start_ts` came with this version; every shared file written before it
+    # gives the scene start with its newest static entry
+    path = Path(writer.shared_context_dir) / "world.json"
+    shared_data = json.loads(path.read_text())
+    del shared_data["start_ts"]
+    path.write_text(json.dumps(shared_data))
+
+    # what the writer reads from that file, with no new scene involved
+    writer_timeline = _timeline(await _load(new_scene, writer_data))
+
+    # Shared World, "Create new scene"
+    data = new_scene_data(SceneInitialization(shared_context="world.json"))
+    data["project_name"] = writer.project_name
+    scene = await load_scene_from_data(new_scene(), data, reset=True, empty=True)
+
+    assert (scene.start_ts, scene.ts) == (5 * YEAR, 5 * YEAR)
+    assert _static_ages(scene) == [("war", "5 Years ago"), ("lighthouse", "Recently")]
+
+    await _save(scene)
+
+    shared = SharedContext(filepath=path)
+    await shared.init_from_file()
+    assert shared.start_ts == 5 * YEAR
+    assert [(entry.text, entry.ts) for entry in shared.static_history] == [
+        ("war", 0),
+        ("lighthouse", 5 * YEAR),
+    ]
+
+    # the new scene's first save costs the writer nothing
+    assert _timeline(await _load(new_scene, writer_data)) == writer_timeline
 
 
 @pytest.mark.asyncio

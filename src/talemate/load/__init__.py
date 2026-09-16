@@ -379,6 +379,21 @@ def _quarantine_and_resolve_rev(scene):
     scene.rev = _get_overall_latest_revision(scene, strict=False)
 
 
+async def _apply_shared_context(scene, start_from_shared_entries: bool):
+    """
+    The shared entries in the scene's timeline. With `start_from_shared_entries`
+    — a save and a shared file both written before `start_ts` existed — they
+    keep their saved times and the newest static entry gives the scene start,
+    as in that version. Otherwise each entry keeps its distance from the start
+    of the scene that wrote it.
+    """
+    await scene.shared_context.update_to_scene(
+        scene, relative=not start_from_shared_entries
+    )
+    if start_from_shared_entries:
+        scene.start_ts = legacy_start_ts(scene.archived_history)
+
+
 async def load_scene_from_data(
     scene,
     scene_data,
@@ -471,9 +486,8 @@ async def load_scene_from_data(
                 scene_data.get("start_ts") is None
                 and scene.shared_context.start_ts is None
             )
-            await scene.shared_context.update_to_scene(
-                scene, relative=not start_from_shared_entries
-            )
+            if not reset:
+                await _apply_shared_context(scene, start_from_shared_entries)
     else:
         scene.shared_context = None
 
@@ -506,9 +520,7 @@ async def load_scene_from_data(
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"
         )
-        if start_from_shared_entries:
-            scene.start_ts = legacy_start_ts(scene.archived_history)
-        else:
+        if not start_from_shared_entries:
             # the shared static history can move the timeline before the
             # saved facts are loaded
             shift_fact_times(scene, scene.start_ts - own_start_ts)
@@ -519,7 +531,11 @@ async def load_scene_from_data(
         scene.archived_history = []
         scene.layered_history = []
         scene.start_ts = 0
-        # the shared static history can have moved the clock before the reset
+        if scene.shared_context:
+            # the emptied archive would otherwise reach the shared file at the
+            # first save and take the static history from every linked scene
+            await _apply_shared_context(scene, start_from_shared_entries)
+        # the shared static history can move the clock
         scene.sync_time()
         scene.knowledge = None
         scene.intent_state.reset()

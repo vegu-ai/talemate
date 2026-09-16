@@ -416,7 +416,8 @@ def history_with_relative_time(
     history: list[dict], scene_time: int, layer: int = 0
 ) -> list[dict]:
     """
-    Cycles through a list of Archived History entries and runs diff_to_human
+    Cycles through a list of Archived History entries and adds a human
+    readable time to each
 
     Will return a list of dictionaries with the following keys
 

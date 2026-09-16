@@ -136,8 +136,8 @@ describe("scene header document look", () => {
     });
 
 
-    it("renders every item as a focusable value with its label, due marker and spoken reason", () => {
-        const items = slotComponent.match(/<span v-bind="props" class="scene-header__item"[\s\S]*?\n {20}<\/span>/g) || [];
+    it("renders every text item as a focusable value with its label, due marker and spoken reason", () => {
+        const items = slotComponent.match(/<span v-bind="props" class="scene-header__item"[\s\S]*?\n {24}<\/span>/g) || [];
         expect(items).toHaveLength(1);
         const [item] = items;
         expect(item).toContain('tabindex="0"');
@@ -149,9 +149,15 @@ describe("scene header document look", () => {
         expect(item).toContain('<v-icon v-if="part.trailingIcon"');
         expect(item).toContain('<span v-if="part.srText" class="d-sr-only">{{ part.srText }}</span>');
         expect(header.match(/<SceneHeaderSlot [^>]*\/>/g)).toEqual([
-            '<SceneHeaderSlot class="scene-header__slot scene-header__slot--slot_a" :entries="slotEntries(\'slot_a\')" />',
-            '<SceneHeaderSlot class="scene-header__slot scene-header__slot--slot_b" :entries="slotEntries(\'slot_b\')" />',
+            '<SceneHeaderSlot class="scene-header__slot scene-header__slot--slot_a" :entries="slotEntries(\'slot_a\')" :scene="scene" />',
+            '<SceneHeaderSlot class="scene-header__slot scene-header__slot--slot_b" :entries="slotEntries(\'slot_b\')" :scene="scene" />',
         ]);
+    });
+
+    it("renders a widget item as its component instead of text parts", () => {
+        expect(slotComponent).toContain('<SceneHeaderCharacters v-if="entry.widget === \'characters\'" class="scene-header__widget" :characters="entry.characters" :hidden="entry.hidden" :scene="scene" />');
+        expect(slotComponent).toContain('<SceneHeaderKnowledgeEffort v-else-if="entry.widget === \'knowledge_effort\'" class="scene-header__widget" :mode="entry.mode" />');
+        expect(slotComponent).toMatch(/<template v-else>\s*<v-tooltip v-for="part in entry\.parts"/);
     });
 
     it("each slot resolves its own items in slot order", () => {

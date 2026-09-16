@@ -105,10 +105,8 @@
                 </div>
                 <KnowledgeEffortSlider :mode="effortMode" :agents="getAgents()" :pin="true" :disabled="settingsLocked" @apply="applyEffort" />
             </v-card-text>
-            <v-card-text v-if="pendingSave" class="pt-1 pb-0 text-body-small">
-                <div>Pending: {{ pendingLabel || 'Knowledge settings change' }}. Save the scene to apply it.</div>
-                <v-btn size="small" variant="text" :disabled="savingScene" @click="retrySceneOverrides">Save and apply</v-btn>
-                <v-btn size="small" variant="text" :disabled="savingScene" @click="discardSceneOverrides">Discard change</v-btn>
+            <v-card-text v-if="pendingSave" class="pt-1 pb-0">
+                <KnowledgePendingSave />
             </v-card-text>
             <v-card-text v-if="saveError" class="pt-1 pb-0 text-body-small text-error">{{ saveError }}</v-card-text>
             <v-card-text v-if="!groups.length" class="pt-1 text-body-small text-muted">Waiting for the agents to report.</v-card-text>
@@ -192,6 +190,7 @@
 import { reactive } from 'vue';
 import CharacterKnowledgeModeComparison from './CharacterKnowledgeModeComparison.vue';
 import KnowledgeEffortSlider from './KnowledgeEffortSlider.vue';
+import KnowledgePendingSave from './KnowledgePendingSave.vue';
 import SceneOverrideResetControl from './SceneOverrideResetControl.vue';
 import { effortMode, effortPinPatch, queueEffortAcrossSwitch } from '@/utils/knowledgeEffort';
 import { effectiveActionEnabled } from '@/constants/sceneAgentSettings';
@@ -221,7 +220,7 @@ const individualPane = reactive({ open: false });
 
 export default {
     name: 'CharacterKnowledgeHub',
-    components: { CharacterKnowledgeModeComparison, KnowledgeEffortSlider, SceneOverrideResetControl },
+    components: { CharacterKnowledgeModeComparison, KnowledgeEffortSlider, KnowledgePendingSave, SceneOverrideResetControl },
     props: {
         name: { type: String, required: true },
         variant: { type: String, default: 'tonal' },
@@ -239,8 +238,6 @@ export default {
         'applySceneAgentValues',
         'clearSceneAgentValues',
         'sceneOverridesState',
-        'retrySceneOverrides',
-        'discardSceneOverrides',
         'queueKnowledgeEffort',
         'openAgentSettings',
     ],
@@ -280,12 +277,6 @@ export default {
         },
         pendingSave() {
             return !!this.sceneOverridesState?.()?.pendingSave;
-        },
-        pendingLabel() {
-            return this.sceneOverridesState?.()?.pendingLabel;
-        },
-        savingScene() {
-            return !!this.sceneOverridesState?.()?.savingScene;
         },
         saving() {
             return !!this.sceneOverridesState?.()?.busy;

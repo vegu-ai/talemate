@@ -1089,8 +1089,10 @@
   title: Scene Header
   summary: Sticky header at the top of the scene, part of the page, showing the scene title with configurable information
     items on either side; History stats (message count, summary layer count) and Summarizer (gathered / threshold tokens,
-    a due marker whose tooltip names the reason or the remainder, unavailable states); an edit button with a per-side item
-    picker, a close button, the matching Settings > Game toggle and item selects; hidden during playthrough.
+    a due marker whose tooltip names the reason or the remainder, unavailable states); optional Active characters (round
+    portraits or name-color initials, click opens the World Editor, +N overflow) and Knowledge effort (compact character
+    knowledge effort slider saved as a scene override) items, off by default; an edit button with a per-side item picker,
+    a close button, the matching Settings > Game toggle and item selects; hidden during playthrough.
 - path: user-guide/scene-state-reset.md
   title: Reset Scene State
   summary: Reset Scene State selectively rebuilds Context DB/RAG, clears history with optional static-backstory preservation,

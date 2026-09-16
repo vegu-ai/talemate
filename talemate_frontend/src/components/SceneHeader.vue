@@ -1,13 +1,13 @@
 <template>
     <div class="scene-header-anchor" :class="{ 'scene-header-anchor--backdrop': overBackdrop }">
         <section class="scene-header" aria-label="Scene header">
-            <SceneHeaderSlot class="scene-header__slot scene-header__slot--slot_a" :entries="slotEntries('slot_a')" />
+            <SceneHeaderSlot class="scene-header__slot scene-header__slot--slot_a" :entries="slotEntries('slot_a')" :scene="scene" />
             <v-tooltip :text="title" location="bottom" max-width="480">
                 <template v-slot:activator="{ props }">
                     <h1 v-bind="props" class="scene-header__title">{{ title }}</h1>
                 </template>
             </v-tooltip>
-            <SceneHeaderSlot class="scene-header__slot scene-header__slot--slot_b" :entries="slotEntries('slot_b')" />
+            <SceneHeaderSlot class="scene-header__slot scene-header__slot--slot_b" :entries="slotEntries('slot_b')" :scene="scene" />
             <div class="scene-header__actions">
                 <v-menu v-model="pickerOpen" location="bottom end" :close-on-content-click="false">
                     <template v-slot:activator="{ props: menuProps }">
@@ -68,6 +68,9 @@ import { mergeProps } from 'vue';
 import SceneHeaderSlot from './SceneHeaderSlot.vue';
 import { SCENE_HEADER_ITEMS, SCENE_HEADER_SLOTS, applySlotEdit, resolveSlotItems } from '@/utils/sceneHeaderItems.js';
 
+// the container query below that moves the title onto its own line
+const NARROW_HEADER_WIDTH = 640;
+
 export default {
     name: 'SceneHeader',
     components: {
@@ -101,6 +104,7 @@ export default {
             // backend queues the app_config broadcast of an edit before its
             // set_done, so the displayed list is the saved one plus these
             pending: { slot_a: [], slot_b: [] },
+            narrow: false,
         };
     },
     computed: {
@@ -108,14 +112,21 @@ export default {
             return this.scene?.title || this.scene?.name || 'Untitled Scenario';
         },
         context() {
-            return { scene: this.scene, agentStatus: this.agentStatus };
+            return { scene: this.scene, agentStatus: this.agentStatus, narrow: this.narrow };
         },
     },
     created() {
         this.registerMessageHandler(this.handleMessage);
     },
+    mounted() {
+        this.resizeObserver = new ResizeObserver(([entry]) => {
+            this.narrow = entry.contentRect.width <= NARROW_HEADER_WIDTH;
+        });
+        this.resizeObserver.observe(this.$el);
+    },
     beforeUnmount() {
         this.unregisterMessageHandler(this.handleMessage);
+        this.resizeObserver.disconnect();
     },
     methods: {
         mergeProps,

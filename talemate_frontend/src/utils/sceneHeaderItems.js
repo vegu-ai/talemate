@@ -1,7 +1,13 @@
-// read({ scene, agentStatus }) -> { parts: [{ key, value?, label, tooltip, muted?, accent?, trailingIcon?, srText? }] }
+// read({ scene, agentStatus, narrow }) -> { parts: [{ key, value?, label, tooltip, muted?, accent?, trailingIcon?, srText? }] }
+//                                     or { widget, ...props } for an item the slot renders as a component
 // A part reads as a value with a quiet label; a part without a value is a
 // muted unavailable or inactive state. An accent part carries a state worth a
 // glance, marked by its trailing icon and spoken via srText.
+import { effortMode } from '@/utils/knowledgeEffort';
+import { perspectivesEnabled } from '@/utils/sceneSettings';
+
+// circles in the row, the "+N" circle included
+export const CHARACTER_CAP = Object.freeze({ wide: 6, narrow: 3 });
 
 const DUE_REASONS = {
     threshold: 'the gathered dialogue passed the threshold',
@@ -76,11 +82,49 @@ const SUMMARIZER = {
     },
 };
 
+const ACTIVE_CHARACTERS = {
+    id: 'active_characters',
+    label: 'Active characters',
+    icon: 'mdi-account-group-outline',
+    description: 'Portraits of the characters in the scene. Click one to open it in the World Editor.',
+    read({ scene, narrow }) {
+        const characters = (scene?.data?.characters || []).map(characterBadge);
+        if (!characters.length) {
+            return unavailable(this, 'No active characters', 'No character is in the scene.');
+        }
+        const cap = narrow ? CHARACTER_CAP.narrow : CHARACTER_CAP.wide;
+        if (characters.length <= cap) {
+            return { widget: 'characters', characters, hidden: [] };
+        }
+        return { widget: 'characters', characters: characters.slice(0, cap - 1), hidden: characters.slice(cap - 1) };
+    },
+};
+
+const KNOWLEDGE_EFFORT = {
+    id: 'knowledge_effort',
+    label: 'Knowledge effort',
+    icon: 'mdi-head-lightbulb-outline',
+    description: 'The character knowledge effort of the scene, with a small slider to change it.',
+    read({ scene }) {
+        return { widget: 'knowledge_effort', mode: effortMode(perspectivesEnabled(scene?.data)) };
+    },
+};
+
 function unavailable(item, label, tooltip) {
     return { parts: [{ key: `${item.id}-unavailable`, label, tooltip, muted: true }] };
 }
 
-export const SCENE_HEADER_ITEMS = [HISTORY_STATS, SUMMARIZER];
+function characterBadge(character) {
+    const name = character.name || '';
+    return {
+        name,
+        color: character.color,
+        avatar: character.current_avatar || character.avatar || null,
+        initial: (Array.from(name.trim())[0] || '?').toUpperCase(),
+    };
+}
+
+export const SCENE_HEADER_ITEMS = [HISTORY_STATS, SUMMARIZER, ACTIVE_CHARACTERS, KNOWLEDGE_EFFORT];
 
 export const SCENE_HEADER_SLOTS = [
     { id: 'slot_a', label: 'Left of the title', setting: 'scene_header_slot_a' },

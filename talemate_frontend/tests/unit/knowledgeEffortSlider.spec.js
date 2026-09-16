@@ -8,6 +8,9 @@ import { effortPatch } from '@/utils/knowledgeEffort';
 import { agentsAt } from './helpers/effortAgents.js';
 
 const Container = defineComponent({ setup: (_, { slots }) => () => h('div', slots.default?.()) });
+const Tooltip = defineComponent({
+    setup: (_, { slots }) => () => h('div', [slots.activator?.({ props: { 'data-activator': 'tooltip' } }), h('div', { class: 'tooltip-content' }, slots.default?.())]),
+});
 
 const index = (stop, mode = 'legacy') => EFFORT_STOPS[mode].indexOf(stop);
 const SEND_DEBOUNCE = 250;
@@ -24,8 +27,8 @@ function applyStop(agents, mode, stop) {
 
 let app, host, state, applied, handlers, vm;
 
-function mount({ immediate = true, pin = false } = {}) {
-    state = reactive({ agents: agentsAt('legacy', 'minimal'), mode: 'legacy' });
+function mount({ immediate = true, pin = false, compact = false } = {}) {
+    state = reactive({ agents: agentsAt('legacy', 'minimal'), mode: 'legacy', disabled: false, notice: null });
     applied = [];
     handlers = [];
     host = document.createElement('div');
@@ -36,6 +39,9 @@ function mount({ immediate = true, pin = false } = {}) {
             agents: state.agents,
             immediate,
             pin,
+            compact,
+            disabled: state.disabled,
+            notice: state.notice,
             onApply: (stop) => {
                 applied.push(stop);
                 if (immediate) applyStop(state.agents, state.mode, stop);
@@ -47,6 +53,7 @@ function mount({ immediate = true, pin = false } = {}) {
     app.provide('registerMessageHandler', (fn) => handlers.push(fn));
     app.provide('unregisterMessageHandler', (fn) => handlers.splice(handlers.indexOf(fn), 1));
     for (const name of ['VSlider', 'VChip', 'VSpacer']) app.component(name, Container);
+    app.component('VTooltip', Tooltip);
     vm = app.mount(host).$refs.slider;
     return vm;
 }
@@ -341,5 +348,70 @@ describe('the effort slider against the status frames of its own write', () => {
         deliver('conversation', pinned);
         await nextTick();
         expect([...vm.awaiting.keys()]).not.toContain('conversation.character_knowledge');
+    });
+});
+
+describe('the compact form', () => {
+    function remount(options) {
+        app.unmount();
+        host.remove();
+        mount(options);
+    }
+
+    it('keeps the heading and the explanation lines in the full form', () => {
+        expect(host.textContent).toContain('Character knowledge effort');
+        expect(host.querySelector('.knowledge-effort-lines')).not.toBeNull();
+        expect(host.querySelector('.tooltip-content')).toBeNull();
+    });
+
+    it('shows the stop label and the slider, with the explanation only in its tooltip', async () => {
+        remount({ compact: true, pin: true });
+        await nextTick();
+        expect(host.querySelector('.knowledge-effort-lines')).toBeNull();
+        const tooltip = host.querySelector('.tooltip-content');
+        const row = host.querySelector('.knowledge-effort--compact');
+        expect(row.querySelector('.knowledge-effort-stop').textContent.trim()).toBe('Minimal');
+        expect(row.querySelector('.knowledge-effort-slider--compact')).not.toBeNull();
+        expect(tooltip.textContent).toContain('Character knowledge effort: Minimal');
+        expect(tooltip.textContent).toContain(`Requests: ${vm.explanation.cost}`);
+        expect(tooltip.textContent).toContain(`Benefit: ${vm.explanation.benefit}`);
+    });
+
+    it('labels a Custom state as Custom', async () => {
+        remount({ compact: true });
+        state.agents = agentsAt('legacy', 'thorough', { 'conversation.character_knowledge.ledger': false });
+        await nextTick();
+        expect(host.querySelector('.knowledge-effort-stop').textContent.trim()).toBe('Custom');
+    });
+
+    it('writes a stop and awaits its pinned receipt the same way as the full form', () => {
+        remount({ compact: true, pin: true });
+        dragTo('thorough');
+        expect(applied).toEqual(['thorough']);
+        expect(vm.heldStop).toBe('thorough');
+        expect([...vm.awaiting.keys()]).toContain('conversation.character_knowledge');
+    });
+
+    it('adds the host notice below the explanation', async () => {
+        remount({ compact: true });
+        expect(host.querySelector('.tooltip-content').textContent).not.toContain('Waiting for the agents');
+        state.notice = 'Waiting for the agents to report.';
+        await nextTick();
+        expect(host.querySelector('.tooltip-content').textContent).toContain('Waiting for the agents to report.');
+    });
+
+    it('opens its explanation from the stop chip, which keeps its tab stop while the slider is disabled', async () => {
+        remount({ compact: true });
+        state.disabled = true;
+        await nextTick();
+        const chip = host.querySelector('.knowledge-effort-stop');
+        expect(chip.dataset.activator).toBe('tooltip');
+        expect(chip.getAttribute('tabindex')).toBe('0');
+        expect(host.querySelectorAll('[data-activator]')).toHaveLength(1);
+        expect(host.querySelector('.knowledge-effort-slider--compact').closest('[data-activator]')).toBeNull();
+    });
+
+    it('puts no tooltip on the full form', () => {
+        expect(host.querySelector('[data-activator]')).toBeNull();
     });
 });

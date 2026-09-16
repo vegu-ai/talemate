@@ -1,0 +1,4 @@
+added:
+- "Scene header: an optional Active characters item shows the characters in the scene as small round portraits, or as the first letter of the name on the character's name color. Hover for the name, click to open the character in the World Editor; extra characters collapse into a +N circle."
+- "Scene header: an optional Knowledge effort item shows a compact character knowledge effort slider for the scene's story mode, with the full explanation on its stop label (hover or keyboard). A stop picked there is saved as a scene override, like the slider in the knowledge hub; a change that waits for a scene save can be saved or discarded from the header."
+- "Both new scene header items are off by default. Add them to either side of the title with the header's edit button or in Settings > Game > General (Left of the title / Right of the title)."

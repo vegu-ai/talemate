@@ -1,27 +1,42 @@
 <template>
     <div>
         <template v-for="entry in entries" :key="entry.id">
-            <v-tooltip v-for="part in entry.parts" :key="`${entry.id}-${part.key}`" :text="part.tooltip" location="bottom" max-width="320">
-                <template v-slot:activator="{ props }">
-                    <span v-bind="props" class="scene-header__item" :class="{ 'scene-header__item--muted': part.muted, 'scene-header__item--accent': part.accent }" tabindex="0">
-                        <span v-if="part.value" class="scene-header__value">{{ part.value }}</span>
-                        <span class="scene-header__label">{{ part.label }}</span>
-                        <v-icon v-if="part.trailingIcon" class="scene-header__marker" size="small">{{ part.trailingIcon }}</v-icon>
-                        <span v-if="part.srText" class="d-sr-only">{{ part.srText }}</span>
-                    </span>
-                </template>
-            </v-tooltip>
+            <SceneHeaderCharacters v-if="entry.widget === 'characters'" class="scene-header__widget" :characters="entry.characters" :hidden="entry.hidden" :scene="scene" />
+            <SceneHeaderKnowledgeEffort v-else-if="entry.widget === 'knowledge_effort'" class="scene-header__widget" :mode="entry.mode" />
+            <template v-else>
+                <v-tooltip v-for="part in entry.parts" :key="`${entry.id}-${part.key}`" :text="part.tooltip" location="bottom" max-width="320">
+                    <template v-slot:activator="{ props }">
+                        <span v-bind="props" class="scene-header__item" :class="{ 'scene-header__item--muted': part.muted, 'scene-header__item--accent': part.accent }" tabindex="0">
+                            <span v-if="part.value" class="scene-header__value">{{ part.value }}</span>
+                            <span class="scene-header__label">{{ part.label }}</span>
+                            <v-icon v-if="part.trailingIcon" class="scene-header__marker" size="small">{{ part.trailingIcon }}</v-icon>
+                            <span v-if="part.srText" class="d-sr-only">{{ part.srText }}</span>
+                        </span>
+                    </template>
+                </v-tooltip>
+            </template>
         </template>
     </div>
 </template>
 
 <script>
+import SceneHeaderCharacters from './SceneHeaderCharacters.vue';
+import SceneHeaderKnowledgeEffort from './SceneHeaderKnowledgeEffort.vue';
+
 export default {
     name: 'SceneHeaderSlot',
+    components: {
+        SceneHeaderCharacters,
+        SceneHeaderKnowledgeEffort,
+    },
     props: {
         entries: {
             type: Array,
             default: () => [],
+        },
+        scene: {
+            type: Object,
+            default: () => ({}),
         },
     },
 };
@@ -63,7 +78,8 @@ export default {
     color: rgb(var(--v-theme-secondary));
 }
 
-.scene-header__marker {
+.scene-header__marker,
+.scene-header__widget {
     align-self: center;
 }
 </style>

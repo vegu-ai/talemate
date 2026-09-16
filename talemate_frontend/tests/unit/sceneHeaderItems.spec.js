@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+    CHARACTER_CAP,
     SCENE_HEADER_ITEMS,
     findSceneHeaderItem,
     resolveSlotItems,
@@ -26,8 +27,8 @@ const text = (part) => [part.value, part.label].filter(Boolean).join(" ");
 const texts = (entries) => entries.flatMap((entry) => entry.parts.map(text));
 
 describe("scene header item catalog", () => {
-    it("ships the two initial items with the fields the header, its picker and the settings page render", () => {
-        expect(SCENE_HEADER_ITEMS.map((item) => item.id)).toEqual(["history_stats", "summarizer"]);
+    it("ships its items with the fields the header, its picker and the settings page render", () => {
+        expect(SCENE_HEADER_ITEMS.map((item) => item.id)).toEqual(["history_stats", "summarizer", "active_characters", "knowledge_effort"]);
         for (const item of SCENE_HEADER_ITEMS) {
             expect(item.label).toBeTruthy();
             expect(item.icon).toMatch(/^mdi-/);
@@ -143,6 +144,81 @@ describe("scene header item catalog", () => {
         const context = { scene: { ...scene(stats()), scene_time: "2 days" }, agentStatus: readyAgents };
         expect(texts(resolveSlotItems(["scene_time", "summarizer"], context, catalog)))
             .toEqual(["2 days passed", "900 / 1500 tokens"]);
+    });
+});
+
+const withCharacters = (characters, data = {}) => ({ name: "x", data: { characters, ...data } });
+const roster = (count) => Array.from({ length: count }, (_, i) => ({ name: `Character ${i + 1}`, color: "#2196F3" }));
+const readCharacters = (characters, narrow = false) =>
+    resolveSlotItems(["active_characters"], { scene: withCharacters(characters), agentStatus: readyAgents, narrow })[0];
+
+describe("active characters item", () => {
+    it("lists the active characters in the order of the scene's character list", () => {
+        const entry = readCharacters([
+            { name: "Nora", color: "#F44336", avatar: "a1" },
+            { name: "Elmer", color: "#283593", avatar: "a2", current_avatar: "a3" },
+            { name: "Kip", color: "#fff" },
+        ]);
+        expect(entry.widget).toBe("characters");
+        expect(entry.characters.map((character) => character.name)).toEqual(["Nora", "Elmer", "Kip"]);
+        expect(entry.hidden).toEqual([]);
+    });
+
+    it("shows the current portrait, falls back to the default one and to none", () => {
+        const entry = readCharacters([
+            { name: "Nora", color: "#F44336", avatar: "a1" },
+            { name: "Elmer", color: "#283593", avatar: "a2", current_avatar: "a3" },
+            { name: "Kip", color: "#fff" },
+        ]);
+        expect(entry.characters.map((character) => character.avatar)).toEqual(["a1", "a3", null]);
+    });
+
+    it("gives a character without a portrait the first letter of its name on its name color", () => {
+        const entry = readCharacters([
+            { name: "nora", color: "#F44336" },
+            { name: "  Élodie", color: "#283593" },
+            { name: "🦊 Fox", color: "#4CAF50" },
+            { name: "", color: "#fff" },
+        ]);
+        expect(entry.characters.map((character) => character.initial)).toEqual(["N", "É", "🦊", "?"]);
+        expect(entry.characters.map((character) => character.color)).toEqual(["#F44336", "#283593", "#4CAF50", "#fff"]);
+    });
+
+    it("shows every character up to the cap, then collapses the rest into the last circle", () => {
+        const full = readCharacters(roster(CHARACTER_CAP.wide));
+        expect(full.characters).toHaveLength(CHARACTER_CAP.wide);
+        expect(full.hidden).toEqual([]);
+
+        const over = readCharacters(roster(CHARACTER_CAP.wide + 2));
+        expect(over.characters).toHaveLength(CHARACTER_CAP.wide - 1);
+        expect(over.hidden.map((character) => character.name)).toEqual(["Character 6", "Character 7", "Character 8"]);
+    });
+
+    it("uses the smaller cap in a narrow header", () => {
+        const full = readCharacters(roster(CHARACTER_CAP.narrow), true);
+        expect(full.characters).toHaveLength(CHARACTER_CAP.narrow);
+        expect(full.hidden).toEqual([]);
+
+        const over = readCharacters(roster(CHARACTER_CAP.narrow + 1), true);
+        expect(over.characters.map((character) => character.name)).toEqual(["Character 1", "Character 2"]);
+        expect(over.hidden.map((character) => character.name)).toEqual(["Character 3", "Character 4"]);
+    });
+
+    it("reads as a muted state when no character is in the scene", () => {
+        for (const scene of [withCharacters([]), { name: "x", data: {} }, null]) {
+            const [entry] = resolveSlotItems(["active_characters"], { scene, agentStatus: readyAgents });
+            expect(entry.widget).toBeUndefined();
+            expect(entry.parts).toEqual([expect.objectContaining({ label: "No active characters", muted: true })]);
+        }
+    });
+});
+
+describe("knowledge effort item", () => {
+    it("follows the scene's story mode, the value the knowledge hub passes as its effort mode", () => {
+        const read = (data) => resolveSlotItems(["knowledge_effort"], { scene: { name: "x", data }, agentStatus: readyAgents })[0];
+        expect(read({ knowledge_eligibility: "legacy" })).toMatchObject({ widget: "knowledge_effort", mode: "legacy" });
+        expect(read({ knowledge_eligibility: "perception" })).toMatchObject({ widget: "knowledge_effort", mode: "perception" });
+        expect(read({})).toMatchObject({ mode: "legacy" });
     });
 });
 

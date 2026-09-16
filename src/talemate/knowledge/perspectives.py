@@ -1040,6 +1040,69 @@ def clear_perspective_records(scene: "Scene") -> None:
     scene.world_state.clear_snapshot_perspectives()
 
 
+def shift_acquisition(knowledge: SourcePerspectives, shift: int) -> SourcePerspectives:
+    """
+    The same source, acquired `shift` seconds later. The acquisition order
+    does not change; the records are frozen, so this is a copy.
+    """
+    # the talemate.util package imports scene_message, which imports this module
+    from talemate.util.time import shift_ts
+
+    return knowledge.model_copy(
+        update={
+            "acquired": knowledge.acquired.model_copy(
+                update={"ts": shift_ts(knowledge.acquired.ts, shift)}
+            )
+        }
+    )
+
+
+def shift_direct_source_times(scene: "Scene", shift: int) -> None:
+    """
+    The direct reinforcement passages, acquired `shift` seconds later. They
+    live in the world state, so a caller that installs a saved world state
+    after a shift moves them with this.
+    """
+    for source in direct_message_sources(scene):
+        if source.knowledge is not None:
+            source.knowledge = shift_acquisition(source.knowledge, shift)
+
+
+def shift_perspective_times(scene: "Scene", shift: int) -> None:
+    """
+    Move every acquisition stamp and every recorded scene time of a
+    disclosure by `shift` seconds, as `shift_scene_timeline` moves the
+    entries.
+    """
+    from talemate.util.time import shift_optional_ts, shift_ts
+
+    for source in _sources(scene):
+        knowledge = source.knowledge
+        if knowledge is not None:
+            source.knowledge = shift_acquisition(knowledge, shift)
+    state = scene.knowledge
+    if state is None or not state.disclosures:
+        return
+    scene.knowledge = state.model_copy(
+        update={
+            "disclosures": tuple(
+                item.model_copy(
+                    update={
+                        "acquired": item.acquired.model_copy(
+                            update={"ts": shift_ts(item.acquired.ts, shift)}
+                        ),
+                        "origin_scene_ts": shift_optional_ts(
+                            item.origin_scene_ts, shift
+                        ),
+                        "away_scene_ts": shift_optional_ts(item.away_scene_ts, shift),
+                    }
+                )
+                for item in state.disclosures
+            )
+        }
+    )
+
+
 def reset_perspectives(scene: "Scene") -> set[str]:
     from talemate.knowledge.memory import invalidate_memory_audiences
 

@@ -55,7 +55,12 @@ from talemate.game.engine.nodes.layout import load_graph
 from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
 from talemate.scene.schema import GameStatePathSettings, ScenePerspectives
-from talemate.history import emit_archive_add, ArchiveEntry, count_summary_layers
+from talemate.history import (
+    emit_archive_add,
+    ArchiveEntry,
+    count_summary_layers,
+    time_passage_removed,
+)
 from talemate.knowledge.message_facts import prune_missing_message_facts
 from talemate.knowledge.timeline import refresh_fact_times
 from talemate.knowledge.presence import presence_metadata
@@ -1581,8 +1586,7 @@ class Scene(Emitter):
                 emit("remove_message", "", id=message_id)
 
                 if isinstance(message, TimePassageMessage):
-                    self.sync_time()
-                    self.refresh_fact_times()
+                    time_passage_removed(self, i)
                 # the frontend drops the message on remove_message; the status
                 # frame is what carries the new history counts, and an auto
                 # save on a never-saved scene emits none of its own

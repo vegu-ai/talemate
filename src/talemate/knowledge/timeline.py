@@ -6,11 +6,17 @@ from the history or fact modules, so both can import this one.
 from typing import TYPE_CHECKING
 
 from talemate.scene_message import TimePassageMessage
+from talemate.util.time import shift_optional_ts, shift_ts
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
-__all__ = ["message_times", "refresh_fact_times", "shift_fact_times"]
+__all__ = [
+    "message_times",
+    "refresh_fact_times",
+    "shift_fact_times",
+    "shift_knowledge_edge_times",
+]
 
 
 def message_times(scene: "Scene") -> dict[int, int]:
@@ -30,26 +36,47 @@ def message_times(scene: "Scene") -> dict[int, int]:
 def shift_fact_times(scene: "Scene", shift: int) -> set[str]:
     """
     Move every stored fact time by `shift` seconds, clamped to zero, as
-    `shift_scene_timeline` moves the entries. Returns the ids of the facts
-    whose time changed.
+    `shift_scene_timeline` moves the entries. The acquisition order stays.
+    Returns the ids of the facts whose time changed.
     """
 
-    def shifted(value):
-        return None if value is None else max(0, value + shift)
+    def acquired(record):
+        return record.model_copy(update={"ts": shift_ts(record.ts, shift)})
 
     def times(fact):
-        return (fact.ts, fact.last_seen_ts, *(item.ts for item in fact.restated_by))
+        return (
+            fact.ts,
+            fact.last_seen_ts,
+            *(item.ts for item in fact.restated_by),
+            fact.acquired.ts if fact.acquired is not None else None,
+            *(item.acquired.ts for item in fact.contributions),
+        )
 
     changed = set()
     for fact in scene.world_state.facts.values():
         before = times(fact)
-        fact.ts = shifted(fact.ts)
-        fact.last_seen_ts = shifted(fact.last_seen_ts)
+        fact.ts = shift_optional_ts(fact.ts, shift)
+        fact.last_seen_ts = shift_optional_ts(fact.last_seen_ts, shift)
         for item in fact.restated_by:
-            item.ts = shifted(item.ts)
+            item.ts = shift_optional_ts(item.ts, shift)
+        if fact.acquired is not None:
+            fact.acquired = acquired(fact.acquired)
+        fact.contributions = tuple(
+            item.model_copy(update={"acquired": acquired(item.acquired)})
+            for item in fact.contributions
+        )
         if times(fact) != before:
             changed.add(fact.id)
     return changed
+
+
+def shift_knowledge_edge_times(scene: "Scene", shift: int) -> None:
+    """
+    Move the recorded time of every knowledge edge by `shift` seconds,
+    clamped to zero, as `shift_scene_timeline` moves the entries.
+    """
+    for edge in scene.world_state.knowledge:
+        edge.ts = shift_optional_ts(edge.ts, shift)
 
 
 def refresh_fact_times(scene: "Scene", fact_ids=None) -> set[str]:

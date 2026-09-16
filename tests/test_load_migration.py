@@ -688,6 +688,73 @@ async def test_a_shared_entry_from_the_writers_story_survives_a_round_trip(
 
 
 @pytest.mark.asyncio
+async def test_a_shared_start_moves_the_state_that_arrives_after_it(new_scene):
+    """The state loaded after the shared step follows the moved start (#640)."""
+
+    writer_data = _static_scene_data(10 * YEAR, [("war", 0), ("lighthouse", 5 * YEAR)])
+    writer = await _load(new_scene, writer_data)
+    await _write_shared_context(writer)
+
+    # an older save: its own start is the newest static entry, 5 years, so the
+    # shared file's start moves this scene's timeline forward by 5 years
+    data = _static_scene_data(
+        None, [("war", 0), ("lighthouse", 5 * YEAR)], shared_context="world.json"
+    )
+    data["format_version"] = 1
+    data["knowledge_eligibility"] = "perception"
+    data["knowledge"] = {"last_order": 2, "disclosures": []}
+    data["intro_knowledge"] = {
+        "revision": 1,
+        "content_digest": hashlib.sha256(data["intro"].encode()).hexdigest(),
+        "acquired": {"order": 1, "ts": 5 * YEAR + HOUR},
+        "views": [],
+    }
+    passage = "The reactor runs hot."
+    data["world_state"] = {
+        **data.get("world_state", {}),
+        "knowledge": [
+            {
+                "id": "e1",
+                "character": "Kaira",
+                "target": "F1",
+                "kind": "grant",
+                "source": "manual",
+                "ts": 5 * YEAR + DAY,
+            }
+        ],
+        # a world entry that is inserted directly keeps its own passage
+        "reinforce": [
+            {
+                "question": "reactor",
+                "answer": passage,
+                "insert": "all-context",
+                "perspective_source": {
+                    "typ": "reinforcement",
+                    "id": 9001,
+                    "message": passage,
+                    "source": "ai",
+                    "knowledge": {
+                        "revision": 1,
+                        "content_digest": hashlib.sha256(passage.encode()).hexdigest(),
+                        "acquired": {"order": 2, "ts": 5 * YEAR + DAY},
+                        "views": [],
+                    },
+                },
+            }
+        ],
+    }
+
+    scene = await _load(new_scene, data)
+
+    assert scene.start_ts == 10 * YEAR
+    assert scene.intro_knowledge.acquired.ts == 10 * YEAR + HOUR
+    assert scene.intro_knowledge.acquired.order == 1
+    assert [edge.ts for edge in scene.world_state.knowledge] == [10 * YEAR + DAY]
+    acquired = scene.world_state.reinforce[0].perspective_source.knowledge.acquired
+    assert (acquired.ts, acquired.order) == (10 * YEAR + DAY, 2)
+
+
+@pytest.mark.asyncio
 async def test_a_new_linked_scene_keeps_the_shared_static_history(new_scene):
     writer_data = _static_scene_data(10 * YEAR, [("war", 0), ("lighthouse", 5 * YEAR)])
     writer = await _load(new_scene, writer_data)

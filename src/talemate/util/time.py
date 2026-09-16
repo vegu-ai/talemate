@@ -12,6 +12,8 @@ __all__ = [
     "diff_to_human",
     "parse_iso8601_duration",
     "coerce_ts",
+    "shift_ts",
+    "shift_optional_ts",
     "migrate_entry_time",
     "migrate_scene_time",
 ]
@@ -286,6 +288,20 @@ def parse_iso8601_duration(value: str) -> int:
         total = -total
 
     return round(total)
+
+
+def shift_ts(ts: int, shift: int) -> int:
+    """
+    A scene time moved by `shift` seconds. Zero is the oldest moment of a
+    timeline, so an earlier result clamps there. Every mover of a scene time
+    uses this, because the "same amount" rule only holds while they agree.
+    """
+    return max(0, ts + shift)
+
+
+def shift_optional_ts(ts: int | None, shift: int) -> int | None:
+    """`shift_ts` for a scene time that is allowed to be absent."""
+    return None if ts is None else shift_ts(ts, shift)
 
 
 def coerce_ts(value) -> int:

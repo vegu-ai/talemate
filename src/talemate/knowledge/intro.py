@@ -1,11 +1,11 @@
 from pydantic import StrictStr, TypeAdapter
 
-from talemate.knowledge.perspectives import set_source_perspectives
+from talemate.knowledge.perspectives import set_source_perspectives, shift_acquisition
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspective_models import SourcePerspectives
 
 
-def initialize_intro_audience(scene, data=None):
+def initialize_intro_audience(scene, data=None, shift: int = 0):
     data = data or {}
     present = data.get("intro_present", scene.intro_present)
     if present is None:
@@ -27,7 +27,10 @@ def initialize_intro_audience(scene, data=None):
     )
     stored = data.get("intro_knowledge")
     if stored is not None:
-        scene.intro_knowledge = SourcePerspectives.model_validate(stored)
+        # `shift` moves a stamp saved on a timeline the load has since moved
+        scene.intro_knowledge = shift_acquisition(
+            SourcePerspectives.model_validate(stored), shift
+        )
     sync_intro_knowledge(scene)
 
 

@@ -48,10 +48,11 @@ from talemate.knowledge.message_facts import (
 from talemate.knowledge.reinforcements import reinforcement_source_keys
 from talemate.knowledge.perspectives import (
     bind_perspective_sources,
+    shift_direct_source_times,
     validate_saved_knowledge,
 )
 from talemate.history import legacy_start_ts, validate_history
-from talemate.knowledge.timeline import shift_fact_times
+from talemate.knowledge.timeline import shift_fact_times, shift_knowledge_edge_times
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
 from talemate.util.gpu import release_cuda_cache
@@ -497,6 +498,11 @@ async def load_scene_from_data(
 
     import_scene_node_definitions(scene)
 
+    # the shared static history can move the timeline before the saved facts,
+    # knowledge edges, reinforcement passages and intro perspectives are loaded:
+    # they arrive on the old timeline and are moved by the same amount
+    late_shift = 0
+
     if not reset:
         scene.id = scene_data.get("id", scene.id)
         scene.playthrough_progress = scene_data.get("playthrough_progress")
@@ -521,9 +527,10 @@ async def load_scene_from_data(
             name or scene.name.lower().replace(" ", "_") + ".json"
         )
         if not start_from_shared_entries:
-            # the shared static history can move the timeline before the
-            # saved facts are loaded
-            shift_fact_times(scene, scene.start_ts - own_start_ts)
+            late_shift = scene.start_ts - own_start_ts
+            shift_fact_times(scene, late_shift)
+            shift_knowledge_edge_times(scene, late_shift)
+            shift_direct_source_times(scene, late_shift)
         scene.fix_time()
         log.debug("scene time", ts=scene.ts)
     else:
@@ -616,7 +623,7 @@ async def load_scene_from_data(
     # Initialize intro and title for new scenes
     await _initialize_scene_intro(scene, scene_data, empty)
 
-    initialize_intro_audience(scene, {} if reset else scene_data)
+    initialize_intro_audience(scene, {} if reset else scene_data, shift=late_shift)
 
     return scene
 

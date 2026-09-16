@@ -57,6 +57,8 @@ from talemate.history import (
     update_history_entry,
     update_time_passage_by_id,
 )
+from talemate.knowledge.perspective_models import content_digest
+from talemate.knowledge.schema import Fact
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
@@ -1100,6 +1102,84 @@ class TestTimePassageByIdHelpers:
             update_time_passage_by_id(
                 real_scene, message_id=char_msg.id, amount=1, unit="hours"
             )
+
+
+class TestDeleteTimePassageFromTheChat:
+    """Both delete paths must leave the same timeline (#644)."""
+
+    @staticmethod
+    def _scene(scene):
+        a = make_character_message("a")
+        tp = TimePassageMessage(ts=3600, message="an hour later")
+        b = make_character_message("b")
+        c = make_character_message("c")
+        scene.history = [a, tp, b, c]
+        scene.archived_history = [
+            make_archived_entry("early", entry_id="s1", start=0, end=0, ts=0),
+            make_archived_entry("late", entry_id="s2", start=2, end=3, ts=3600),
+        ]
+        scene.layered_history = [
+            [
+                {
+                    "id": "l1",
+                    "text": "the whole day",
+                    "start": 0,
+                    "end": 1,
+                    "ts": 0,
+                    "ts_start": 0,
+                    "ts_end": 3600,
+                }
+            ]
+        ]
+        scene.world_state.facts = {
+            "F1": Fact(
+                id="F1",
+                text="after the hour",
+                message_id=c.id,
+                message_digest=content_digest(c.perception_text),
+                ts=3600,
+                last_seen_ts=3600,
+            )
+        }
+        scene.start_ts = 0
+        scene.ts = 3600
+        return tp
+
+    @staticmethod
+    def _timeline(scene):
+        entries = [
+            (entry["ts"], entry.get("start"), entry.get("end"))
+            for entry in scene.archived_history
+        ]
+        layers = [
+            (entry["ts"], entry.get("ts_start"), entry.get("ts_end"))
+            for layer in scene.layered_history
+            for entry in layer
+        ]
+        facts = [
+            (fact.id, fact.ts, fact.last_seen_ts)
+            for fact in scene.world_state.facts.values()
+        ]
+        return entries, layers, facts
+
+    @pytest.mark.asyncio
+    async def test_chat_delete_matches_the_history_view_delete(self, real_scene):
+        from_view = MockScene()
+        bootstrap_scene(from_view)
+        passage = self._scene(from_view)
+        delete_time_passage_by_id(from_view, message_id=passage.id)
+
+        bootstrap_scene(real_scene)
+        passage = self._scene(real_scene)
+        real_scene.delete_message(passage.id)
+
+        assert self._timeline(real_scene) == self._timeline(from_view)
+        assert self._timeline(real_scene) == (
+            [(0, 0, 0), (0, 1, 2)],
+            [(0, 0, 0)],
+            [("F1", 0, 0)],
+        )
+        assert real_scene.ts == from_view.ts == 0
 
 
 # ---------------------------------------------------------------------------

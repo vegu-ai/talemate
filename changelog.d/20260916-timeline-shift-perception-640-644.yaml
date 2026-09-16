@@ -1,0 +1,4 @@
+fixed:
+- "Adding or deleting a static history entry that moves the whole timeline now moves what the characters know with it. Before, a scene in perception mode could say that a character learned something ten years ago after the user added an entry from ten years back."
+- "Loading a scene whose shared world moves its start now moves the opening's knowledge, the knowledge grants and revokes, and the world entry passages with it, so they keep their age."
+- "Deleting a time passage with the delete button on the message now updates the history entry times at once, like the delete in the History view. Before, the entries kept their old times until the scene was reloaded."

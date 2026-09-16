@@ -1,8 +1,27 @@
 import pytest
 
+import talemate.history
+from conftest import MockScene, bootstrap_scene
 from talemate.history import shift_scene_timeline
-from talemate.knowledge.schema import Fact, FactRestatement
+from talemate.instance import get_agent
+from talemate.knowledge.perspective_models import (
+    Acquisition,
+    Disclosure,
+    PerspectiveView,
+    SceneKnowledge,
+    SourcePerspectives,
+    SourceReference,
+    content_digest,
+)
+from talemate.knowledge.schema import (
+    Fact,
+    FactContribution,
+    FactRestatement,
+    KnowledgeEdge,
+)
+from talemate.scene_message import CharacterMessage, ReinforcementMessage
 from talemate.tale_mate import Scene
+from talemate.world_state import Reinforcement
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -161,3 +180,207 @@ def test_shift_scene_timeline_moves_the_scene_start_and_the_facts(scene_factory)
     # clamped to zero like the entries
     shift_scene_timeline(scene, -6000)
     assert (scene.start_ts, f1.ts, f1.last_seen_ts) == (0, 0, 1200)
+
+
+# ---------------------------------------------------------------------------
+# Perception stamps (#640)
+# ---------------------------------------------------------------------------
+
+
+def _perspectives(text: str, order: int, ts: int) -> SourcePerspectives:
+    return SourcePerspectives(
+        content_digest=content_digest(text),
+        acquired=Acquisition(order=order, ts=ts),
+        views=(PerspectiveView(audience=("Alice",), status="pending"),),
+    )
+
+
+@pytest.fixture()
+def perception_scene(scene_factory):
+    """A scene whose every kind of knowledge source carries an acquisition."""
+
+    message = CharacterMessage(message="Alice: hello", source="ai")
+    message.knowledge = _perspectives("Alice: hello", 2, 3600)
+    passage = ReinforcementMessage(
+        message="Alice is calm", question="mood", character_name="Alice"
+    )
+    passage.knowledge = _perspectives("Alice is calm", 3, 3000)
+
+    scene = scene_factory(
+        7200,
+        archived=[
+            {
+                "id": "base-a",
+                "text": "they met",
+                "ts": 1800,
+                "knowledge": _perspectives("they met", 4, 1800).model_dump(mode="json"),
+            }
+        ],
+        layered=[
+            [
+                {
+                    "id": "layer-a",
+                    "text": "the meeting",
+                    "ts": 1800,
+                    "knowledge": _perspectives("the meeting", 5, 1800).model_dump(
+                        mode="json"
+                    ),
+                }
+            ]
+        ],
+    )
+    scene.knowledge_eligibility = "perception"
+    scene.start_ts = 1800
+    scene.history = [message]
+    scene.intro_knowledge = _perspectives("an opening", 1, 600)
+    scene.world_state.reinforce = [
+        Reinforcement(
+            question="mood",
+            character="Alice",
+            insert="all-context",
+            perspective_source=passage,
+        )
+    ]
+    scene.knowledge = SceneKnowledge(
+        last_order=6,
+        disclosures=(
+            Disclosure(
+                id="d1",
+                text="the war ended",
+                audience=("Alice",),
+                acquired=Acquisition(order=6, ts=5400),
+                origin_scene_ts=4800,
+                away_scene_ts=5000,
+                message_id_boundary=0,
+            ),
+        ),
+    )
+    contribution = FactContribution(
+        audience=("Alice",),
+        source=SourceReference(
+            kind="summary", id="base-a", revision=1, view_id="v1", view_revision=1
+        ),
+        acquired=Acquisition(order=4, ts=1800),
+        text="they met",
+    )
+    scene.world_state.facts = {
+        "F1": Fact(id="F1", text="they met", ts=1800, last_seen_ts=1800),
+        "F2": Fact(
+            id="F2",
+            text="offscreen",
+            acquired=Acquisition(order=7, ts=2400),
+            contributions=(contribution,),
+        ),
+    }
+    scene.world_state.knowledge = [
+        KnowledgeEdge(id="e1", character="Alice", target="F1", ts=1200),
+        KnowledgeEdge(id="e2", character="Alice", target="F2"),
+    ]
+    return scene
+
+
+def _stamps(scene):
+    sources = [scene.intro_knowledge.acquired.ts]
+    sources.append(scene.history[0].knowledge.acquired.ts)
+    sources.append(
+        scene.world_state.reinforce[0].perspective_source.knowledge.acquired.ts
+    )
+    sources.append(scene.archived_history[0]["knowledge"]["acquired"]["ts"])
+    sources.append(scene.layered_history[0][0]["knowledge"]["acquired"]["ts"])
+    return sources
+
+
+def _orders(scene):
+    orders = [scene.intro_knowledge.acquired.order]
+    orders.append(scene.history[0].knowledge.acquired.order)
+    orders.append(
+        scene.world_state.reinforce[0].perspective_source.knowledge.acquired.order
+    )
+    orders.append(scene.archived_history[0]["knowledge"]["acquired"]["order"])
+    orders.append(scene.layered_history[0][0]["knowledge"]["acquired"]["order"])
+    orders.append(scene.knowledge.disclosures[0].acquired.order)
+    facts = scene.world_state.facts
+    orders.append(facts["F2"].acquired.order)
+    orders.append(facts["F2"].contributions[0].acquired.order)
+    return orders
+
+
+def test_shift_scene_timeline_moves_every_acquisition_stamp(perception_scene):
+    scene = perception_scene
+    orders = _orders(scene)
+
+    assert shift_scene_timeline(scene, 1800) == {"F1", "F2"}
+
+    assert _stamps(scene) == [2400, 5400, 4800, 3600, 3600]
+    disclosure = scene.knowledge.disclosures[0]
+    assert (
+        disclosure.acquired.ts,
+        disclosure.origin_scene_ts,
+        disclosure.away_scene_ts,
+    ) == (7200, 6600, 6800)
+    facts = scene.world_state.facts
+    assert facts["F2"].acquired.ts == 4200
+    assert facts["F2"].contributions[0].acquired.ts == 3600
+    assert [edge.ts for edge in scene.world_state.knowledge] == [3000, None]
+    # only the times move
+    assert _orders(scene) == orders
+
+
+def test_shift_scene_timeline_clamps_every_acquisition_stamp(perception_scene):
+    scene = perception_scene
+
+    shift_scene_timeline(scene, -9000)
+
+    assert _stamps(scene) == [0, 0, 0, 0, 0]
+    disclosure = scene.knowledge.disclosures[0]
+    assert (
+        disclosure.acquired.ts,
+        disclosure.origin_scene_ts,
+        disclosure.away_scene_ts,
+    ) == (0, 0, 0)
+    facts = scene.world_state.facts
+    assert facts["F2"].acquired.ts == 0
+    assert facts["F2"].contributions[0].acquired.ts == 0
+    assert [edge.ts for edge in scene.world_state.knowledge] == [0, None]
+
+
+def test_shift_scene_timeline_refreshes_the_knowledge_memory(
+    perception_scene, monkeypatch
+):
+    scene = perception_scene
+    invalidated = []
+    monkeypatch.setattr(
+        talemate.history, "invalidate_memory_audiences", invalidated.append
+    )
+
+    shift_scene_timeline(scene, 600)
+
+    assert invalidated == [scene]
+
+
+def test_shift_scene_timeline_leaves_the_knowledge_memory_alone_without_a_shift(
+    perception_scene, monkeypatch
+):
+    invalidated = []
+    monkeypatch.setattr(
+        talemate.history, "invalidate_memory_audiences", invalidated.append
+    )
+
+    assert shift_scene_timeline(perception_scene, 0) == set()
+
+    assert invalidated == []
+
+
+async def test_shift_scene_timeline_invalidates_the_audience_index_in_perception_mode():
+    """A static entry's audience document takes its ts from the entry (#640)."""
+
+    scene = MockScene()
+    bootstrap_scene(scene)
+    scene.knowledge_eligibility = "perception"
+    scene.archived_history = [{"id": "base-a", "text": "they met", "ts": 1800}]
+    memory = get_agent("memory")
+    revision = memory._audience_state(scene).revision
+
+    shift_scene_timeline(scene, 600)
+
+    assert memory._audience_state(scene).revision > revision

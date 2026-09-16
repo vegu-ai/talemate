@@ -48,7 +48,7 @@
             <v-select
                 v-model="presetKey"
                 :items="presetItems"
-                label="Preset"
+                label="Action Type"
                 density="compact"
                 variant="underlined"
                 hide-details

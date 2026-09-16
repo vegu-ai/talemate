@@ -11,11 +11,11 @@ Open the **Settings** tab in the top navigation, then select :material-matrix: *
 ![selected preset](/talemate/img/0.40.0/inference-presets-1.png)
 
 !!! warning
-    Not all clients support all parameters, and generally it is assumed that the client implementation handles the parameters in a sane way, especially if values are passed for all of them. All presets are used and will be selected depending on the action the agent is performing. If you don't know what these mean, it is recommended to leave them as they are.
+    Not all clients support all parameters, and generally it is assumed that the client implementation handles the parameters in a sane way, especially if values are passed for all of them. All action types are used and will be selected depending on the action the agent is performing. If you don't know what these mean, it is recommended to leave them as they are.
 
-## All presets are used
+## All action types are used
 
-Its important to understand that all presets are used, depending on which action is performed by an agent.
+Each preset in a group belongs to one **action type**, such as `Conversation` or `Creative`. It's important to understand that all action types are used, depending on which action is performed by an agent.
 
 !!! abstract "Work in progress"
     This is currently transitioning to a better system. Main goal was to expose the parameters to the user, and make it somewhat understandable.
@@ -72,7 +72,7 @@ The inference preset editor provides access to the following generation paramete
 
 ### Extra Stopping Strings
 
-A list of custom strings that end generation early for any request using the preset. Type a string into the field and press Enter to add it; remove its chip to delete it again.
+A list of custom strings that end generation early for any request that uses the action type. Type a string into the field and press Enter to add it; remove its chip to delete it again.
 
 How the strings take effect depends on the client. Clients with native stop support (llama.cpp, Ollama, Text-Generation-WebUI, KoboldCpp (United API), LM Studio) send them with the request, so generation halts as soon as one is produced. All other clients let the generation finish and then trim the response at the earliest occurrence of any of the strings.
 
@@ -130,11 +130,11 @@ Different clients support different subsets of these parameters:
 - **Other local APIs**: Parameter support varies by implementation.
 - **Extra Stopping Strings**: llama.cpp, Ollama, Text-Generation-WebUI, KoboldCpp (United API) and LM Studio receive the strings natively and halt generation early, subject to the per-backend caps described under [Extra Stopping Strings](#extra-stopping-strings). Every other client trims the response after generation instead.
 
-## Editing a preset
+## Editing an action type
 
-Select a preset from the list on the left to load its parameters into the editor on the right. Adjust the sliders, tabs and checkbox to change the values for that preset.
+Select an action type from the list on the left to load its parameters into the editor on the right. Adjust the sliders, tabs and checkbox to change the values for that action type.
 
-The editor provides exact numeric entry and actions for copying or resetting the selected preset.
+The editor provides exact numeric entry and actions for copying or resetting the selected action type.
 
 ### Exact numeric entry
 
@@ -150,13 +150,13 @@ after Enter or leaving the field, using the same ranges and precision as setting
 
 ### Apply to all
 
-The **Apply to all** action copies the values of the currently selected preset to *every other preset in the same group*. This is useful when you have tuned one preset (for example `Conversation`) and want all the other presets to start from the same values.
+The **Apply to all** action copies the values of the currently selected action type to *every other action type in the same group*. This is useful when you have tuned one action type (for example `Conversation`) and want all the other action types to start from the same values.
 
-Because this overwrites the values of all the other presets in the group, you will be asked to confirm before it happens.
+Because this overwrites the values of all the other action types in the group, you will be asked to confirm before it happens.
 
 ### Reset
 
-The **Reset** action restores the currently selected preset back to its default values. As of version 0.38.0 this action also asks for confirmation before resetting, so an accidental click no longer discards your changes.
+The **Reset** action restores the currently selected action type back to its default values. As of version 0.38.0 this action also asks for confirmation before resetting, so an accidental click no longer discards your changes.
 
 Both actions only change the values in the editor. Remember to save the settings with the **Save** button in the settings toolbar for them to take effect.
 
@@ -199,7 +199,7 @@ The settings page pins the same panel. Open the **Settings** tab, select :materi
 
 ![pin parameters on the clients settings page](/talemate/img/0.40.0/client-inference-param-panel-setting.png)
 
-The panel edits one preset of the client's group at a time — pick it in the **Preset** selector. It offers the same parameters as the settings editor, with the advanced samplers behind **Advanced sampling**. Every change is saved by itself a moment after you make it; there is no save button.
+The panel edits one action type of the client's group at a time — pick it in the **Action Type** selector. It offers the same parameters as the settings editor, with the advanced samplers behind **Advanced sampling**. Every change is saved by itself a moment after you make it; there is no save button.
 
 Because the panel belongs to one client, the note under its title matters here: a parameter the pinned client does not support is stored with the group and never sent. [Client Support](#client-support) lists which client sends what.
 

@@ -297,6 +297,9 @@ class TestCollectTimePassages:
         # Indices should match the positions in scene.history.
         assert result[0]["history_index"] == 1
         assert result[1]["history_index"] == 3
+        # The message id identifies a passage across inserts and deletes.
+        assert result[0]["message_id"] == tp1.id
+        assert result[1]["message_id"] == tp2.id
         # Durations should be passed through unchanged.
         assert result[0]["ts"] == 3600
         assert result[1]["ts"] == 86400

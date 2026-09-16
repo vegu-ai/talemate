@@ -78,3 +78,21 @@ describe('static history fact actions', () => {
         expect(send).not.toHaveBeenCalled();
     });
 });
+
+describe('the facts section of a history entry', () => {
+    const facts = [{ id: 'F1' }, { id: 'F2' }, { id: 'F3' }];
+    const expander = () => [...host.querySelectorAll('v-expansion-panel-title')].map(title => title.textContent.trim());
+
+    it('names the count of listed facts in its expander', () => {
+        mount({ facts });
+        expect(expander()).toEqual(['Facts (3)']);
+    });
+    it('counts only the facts the Known by filter shows', () => {
+        mount({ facts }, { knownFactIds: ['F2'] });
+        expect(expander()).toEqual(['Facts (1)']);
+    });
+    it('shows no expander when no fact is listed', () => {
+        mount({ facts }, { knownFactIds: [] });
+        expect(expander()).toEqual([]);
+    });
+});

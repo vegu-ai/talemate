@@ -11,19 +11,20 @@
                  @mouseleave="hovered = false">
                 <span v-if="passage.title" class="text-body-large text-time mr-2">{{ passage.title }}</span>
                 <span class="text-body-large">{{ passage.human }}</span>
-                <span v-if="hovered" class="text-body-small text-muted ml-2">
+                <span class="text-body-small text-muted ml-2" :class="{ 'hover-hidden': !hovered }">
                     <v-icon size="small">mdi-pencil</v-icon> double-click to edit
                 </span>
                 <v-spacer />
-                <ConfirmActionInline
-                    v-if="hovered"
-                    :disabled="locked"
-                    icon="mdi-close-box-outline"
-                    color="delete"
-                    action-label="Delete"
-                    confirm-label="Confirm"
-                    @confirm="deletePassage"
-                />
+                <span :class="{ 'hover-hidden': !hovered }">
+                    <ConfirmActionInline
+                        :disabled="locked"
+                        icon="mdi-close-box-outline"
+                        color="delete"
+                        action-label="Delete"
+                        confirm-label="Confirm"
+                        @confirm="deletePassage"
+                    />
+                </span>
             </div>
             <div v-else class="d-flex align-center">
                 <v-number-input v-model="editAmount" :min="0" label="Amount"
@@ -108,3 +109,10 @@ export default {
     },
 };
 </script>
+
+<style scoped>
+/* hidden, not removed: the row keeps the height of the Delete button */
+.hover-hidden {
+    visibility: hidden;
+}
+</style>

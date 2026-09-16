@@ -5,7 +5,7 @@
             This interface is a work in progress and provides basic parameter preset editing.
         </p>
         <p class="text-body-small text-medium-emphasis">
-            Client support varies by parameter. <span class="text-primary">All presets are active</span> based on agent actions. Default values recommended unless you understand the parameters.
+            Client support varies by parameter. <span class="text-primary">All action types are active</span> based on agent actions. Default values recommended unless you understand the parameters.
         </p>
     </v-alert>
 
@@ -62,14 +62,14 @@
                 </v-form>
             </div>
             <div v-else>
-                <v-alert class="text-medium-emphasis" variant="text">Select a preset to edit</v-alert>
+                <v-alert class="text-medium-emphasis" variant="text">Select an action type to edit</v-alert>
             </div>
         </v-col>
     </v-row>
 
-    <ConfirmActionPrompt ref="confirmApplyToAll" @confirm="applyToAll" actionLabel="Apply to all presets" icon="mdi-content-copy" color="primary" confirmText="Apply" cancelText="Cancel" :maxWidth="400" description="Apply the parameter values of {preset} to all other presets in this group? This will overwrite their current values." />
+    <ConfirmActionPrompt ref="confirmApplyToAll" @confirm="applyToAll" actionLabel="Apply to all action types" icon="mdi-content-copy" color="primary" confirmText="Apply" cancelText="Cancel" :maxWidth="400" description="Apply the parameter values of {preset} to all other action types in this group? This will overwrite their current values." />
 
-    <ConfirmActionPrompt ref="confirmReset" @confirm="reset" actionLabel="Reset preset" icon="mdi-refresh" color="warning" confirmText="Reset" cancelText="Cancel" :maxWidth="400" description="Reset {preset} to its default values?" />
+    <ConfirmActionPrompt ref="confirmReset" @confirm="reset" actionLabel="Reset action type" icon="mdi-refresh" color="warning" confirmText="Reset" cancelText="Cancel" :maxWidth="400" description="Reset {preset} to its default values?" />
 
     <ConfirmActionPrompt ref="confirmDeleteGroup" @confirm="deleteGroup" actionLabel="Delete group" icon="mdi-close-circle-outline" confirmText="Delete" cancelText="Cancel" :maxWidth="400" description="Are you sure you want to delete the {group} group?" />
 

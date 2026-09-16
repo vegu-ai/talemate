@@ -123,7 +123,7 @@
     <v-main style="height: 100%; display: flex; flex-direction: column;">
 
       <!-- left side navigation drawer -->
-      <v-navigation-drawer :model-value="sceneDrawer && tab !== 'home'" @update:model-value="sceneDrawer = $event" app :width="leftDrawerWidth">
+      <v-navigation-drawer :model-value="sceneDrawer && tab !== 'home'" @update:model-value="sceneDrawer = $event" app :width="leftDrawerWidth" :class="{ 'stable-scrollbar-gutter': tab === 'prompts' }">
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
           <p class="text-body-medium">
@@ -218,7 +218,7 @@
       </v-navigation-drawer>
 
       <!-- debug tools navigation drawer -->
-      <v-navigation-drawer v-model="debugDrawer" app location="right" width="400" disable-resize-watcher>
+      <v-navigation-drawer v-model="debugDrawer" app location="right" width="400" disable-resize-watcher class="stable-scrollbar-gutter">
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
           <DebugTools ref="debugTools" :scene="scene" :prompts="promptsViewPrompts" :app-config="appConfig" @clear-prompts="clearPrompts"></DebugTools>
@@ -259,7 +259,7 @@
                   >
                   </NodeEditor>  
               </v-col>
-              <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': true, 'd-none': creativeMode && !showSceneView, 'scene-backdrop-active': !!sceneBackdropSrc, 'playthrough-active': playthroughActive }" :style="sceneBackdropStyle">
+              <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': creativeMode && showSceneView, 'd-none': creativeMode && !showSceneView, 'scene-backdrop-active': !!sceneBackdropSrc, 'playthrough-active': playthroughActive }" :style="sceneBackdropStyle">
                 <div class="scene-column" style="display: flex; flex-direction: column; height: 100%">
 
                   <SceneHeader
@@ -2213,6 +2213,11 @@ export default {
   background-position: center;
   background-size: fit;
   background-color: transparent;
+}
+
+/* prompt lists keep their row layout when the drawer becomes scrollable */
+.stable-scrollbar-gutter :deep(.v-navigation-drawer__content) {
+  scrollbar-gutter: stable;
 }
 
 .scene-container {

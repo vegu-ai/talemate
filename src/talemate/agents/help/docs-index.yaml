@@ -459,8 +459,9 @@
     slots), release GPU cache on scene load, default player character, and persistent sound volume/mute.
 - path: user-guide/app-settings/presets.md
   title: Presets
-  summary: App-wide Presets settings for action-specific inference categories, memory embeddings through ChromaDB, and System
-    Prompts. Explains why all inference presets are used and where global versus per-client prompt overrides are configured.
+  summary: 'App-wide Presets settings: inference action types (Analytical, Conversation and others) selected by agent action,
+    memory embeddings through ChromaDB, and System Prompts. Explains why all action types are used and where global versus
+    per-client prompt overrides are configured.'
 - path: user-guide/app-settings/system-prompts.md
   title: System Prompt Overrides
   summary: Global and per-client system prompt overrides, client-before-app precedence, nine prompt kinds, Normal/Uncensored
@@ -508,10 +509,11 @@
     execution, result banners, failure diagnosis and rerunning by reloading.'
 - path: user-guide/clients/presets.md
   title: Inference Configuration
-  summary: Inference preset categories, client groups, temperature/top-p/top-k/min-p, penalties, stop strings and advanced
-    XTC/DRY/smoothing/Adaptive-P controls, with client support and Apply to all/Reset. Exact numeric entry uses synchronized
-    sliders plus number fields in settings and number-only pinned controls with autosave; Enter or blur commits valid values,
-    blank/out-of-range/off-step values are rejected, and Escape restores the last valid value.
+  summary: Inference action types (Analytical, Conversation, Creative and others; the Action Type selector), client preset
+    groups, temperature/top-p/top-k/min-p, penalties, stop strings and advanced XTC/DRY/smoothing/Adaptive-P controls, with
+    client support and Apply to all/Reset. Exact numeric entry uses synchronized sliders plus number fields in settings and
+    number-only pinned controls with autosave; Enter or blur commits valid values, blank/out-of-range/off-step values are
+    rejected, and Escape restores the last valid value.
 - path: user-guide/clients/prompt-templates.md
   title: Prompt Templates
   summary: Select and troubleshoot model-specific prompt templates for local clients, including the yellow Alpaca fallback
@@ -1252,10 +1254,10 @@
     and history-entry seed instructions, excluding live dialogue/narration.
 - path: user-guide/world-editor/history/index.md
   title: History
-  summary: History manages static entries, chapter summaries and layered history with compression statistics. Covers
-    message-bound facts, presence and Known by filtering, importance and time markers, supersedes links, editing and
-    marking false, source inspection, regeneration, generating missing facts in bulk, stale facts after revisions,
-    extraction from predefined history and time-passage edits.
+  summary: History manages static entries, chapter summaries and layered history with compression statistics. Covers message-bound
+    facts in a collapsed Facts (N) section per entry, presence and Known by filtering, importance and time markers, supersedes
+    links, editing and marking false, source inspection, regeneration, generating missing facts in bulk, stale facts after
+    revisions, extraction from predefined history and time-passage edits.
 - path: user-guide/world-editor/history/layered-history.md
   title: Layered History
   summary: Layered History compresses dialogue into base summaries and successively smaller layers to preserve a full-timeline
@@ -1326,8 +1328,8 @@
     Reinforcement clears accumulated generation data.
 - path: user-guide/world-state.md
   title: World State
-  summary: World panel snapshots, entity highlights/manual additions, tracked states, character activation, name protection
-    and knowledge-change dots; knowledge hub ranked facts/topics, disclosures/access rules, knowledge effort slider, locked
-    story mode note or unlocked mode comparison, scene overrides with setting/group/all resets. Covers durable refresh/wipe,
-    cadence and Pin to context; pinned snapshot regeneration restores a verified previous snapshot or clears snapshot content
-    with a notice (snapshot cleared until normal refresh; failure/cancel restores the original, no extra request).
+  summary: World panel snapshots, entity highlights/manual additions, tracked states, character activation, Manage Character
+    for inactive characters, name protection and knowledge-change dots; knowledge hub ranked facts/topics, disclosures/access
+    rules, knowledge effort slider, locked story mode note or unlocked mode comparison, scene overrides with setting/group/all
+    resets. Covers durable refresh/wipe, cadence and Pin to context; pinned snapshot regeneration restores a verified previous
+    snapshot or clears snapshot content with a notice.

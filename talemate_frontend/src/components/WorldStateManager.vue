@@ -95,7 +95,7 @@
                 :app-busy="appBusy"
                 :app-ready="appReady"
                 :app-config="appConfig"
-                :visible="tab === 'history'"
+                :visible="visible && tab === 'history'"
                 />
             </v-window-item>
 

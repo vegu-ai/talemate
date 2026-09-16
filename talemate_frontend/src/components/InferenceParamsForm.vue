@@ -21,7 +21,7 @@
             </v-col>
         </v-row>
 
-        <v-combobox class="mt-2" density="compact" v-model="preset.extra_stopping_strings" multiple chips closable-chips clearable hide-selected label="Extra Stopping Strings" placeholder="Type and press [Enter] to add" :messages="narrow ? '' : 'Additional strings that stop generation for this preset. Support varies by client; clients without native stop support trim the text after generation.'" @update:model-value="emitChange"></v-combobox>
+        <v-combobox class="mt-2" density="compact" v-model="preset.extra_stopping_strings" multiple chips closable-chips clearable hide-selected label="Extra Stopping Strings" placeholder="Type and press [Enter] to add" :messages="narrow ? '' : 'Additional strings that stop generation for this action type. Support varies by client; clients without native stop support trim the text after generation.'" @update:model-value="emitChange"></v-combobox>
 
         <v-divider class="mt-4"></v-divider>
 

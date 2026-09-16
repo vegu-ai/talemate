@@ -95,10 +95,12 @@
 
                     <v-card-title>Summarized History</v-card-title>
 
-                    <template v-for="(item, index) in interleavedHistory" :key="item.type + '_' + index">
+                    <template v-for="(item, index) in interleavedHistory" :key="historyItemKey(item, index)">
                         <WorldStateManagerHistoryEntry
                             v-if="item.type === 'entry'"
                             :entry="item.data"
+                            :facts-open="openFactEntries.includes(item.data.id)"
+                            @update:facts-open="(open) => setFactsOpen(item.data.id, open)"
                             :known-fact-ids="knownFactIds"
                             :app-busy="appBusy"
                             :app-ready="appReady"
@@ -155,7 +157,9 @@
                         </v-card-text>
                     </v-card>
 
-                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" :known-fact-ids="knownFactIds"
+                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="entry.id ?? l_index" :known-fact-ids="knownFactIds"
+                    :facts-open="openFactEntries.includes(entry.id)"
+                    @update:facts-open="(open) => setFactsOpen(entry.id, open)"
                     :entry="entry"
                     :app-busy="appBusy"
                     :app-config="appConfig"
@@ -229,10 +233,15 @@ export default {
             factsRun: null,
             factsRunStopping: false,
             factsResult: null,
+            // ids of the entries whose Facts section is expanded; emptied on every open
+            openFactEntries: [],
             MAX_CONTENT_WIDTH,
         }
     },
     watch: {
+        visible(val) {
+            if (val) this.openFactEntries = [];
+        },
         'scene.data.scene_ts'() {
             if (this.visible) this.requestSceneHistory();
         },
@@ -390,6 +399,16 @@ export default {
                 type: "world_state_manager",
                 action: "request_scene_history",
             }));
+        },
+
+        historyItemKey(item, index) {
+            const id = item.type === 'entry' ? item.data.id : item.data.message_id;
+            return `${item.type}_${id ?? 'index_' + index}`;
+        },
+
+        setFactsOpen(entryId, open) {
+            const others = this.openFactEntries.filter((id) => id !== entryId);
+            this.openFactEntries = open ? [...others, entryId] : others;
         },
 
         collapseSourceEntries(layer, entry_id) {

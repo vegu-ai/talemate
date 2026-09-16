@@ -237,7 +237,9 @@ you click to skip the narration.
 
 The inactive characters are collected in an **Inactive** section at the bottom of the character
 list, with their number in the heading. Expand it, then click the :material-human-greeting:
-icon beside a name to make that character active again.
+icon beside a name to make that character active again. Click :material-book-open-page-variant:
+**Manage Character** beside a name to open that character in the
+[character editor](/talemate/user-guide/world-editor/characters); the character stays inactive.
 
 The entry is narrated the way an exit is, and the same **Ctrl** or **Cmd** modifier skips it.
 

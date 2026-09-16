@@ -143,6 +143,7 @@ class SourceEntry(pydantic.BaseModel):
 
 class TimePassageEntry(pydantic.BaseModel):
     history_index: int
+    message_id: int
     ts: int
     amount: int
     unit: str
@@ -456,6 +457,7 @@ def collect_time_passages(scene: "Scene") -> list[dict]:
             passages.append(
                 TimePassageEntry(
                     history_index=idx,
+                    message_id=message.id,
                     ts=message.ts,
                     amount=amount,
                     unit=unit,

@@ -22,21 +22,28 @@
             </div>
             <v-textarea v-else rows="1" auto-grow v-model="entry.text" @blur="setEditing(false)" @keydown.esc="setEditing(false)" ref="textarea" hint="Press Escape to cancel, Shift+Enter for new line, Enter to save" @keydown.enter="handleEnter" />
 
-            <div v-if="shownFacts.length" class="mt-3">
-                <div class="text-body-small text-medium-emphasis mb-1"><v-icon size="small" icon="mdi-format-list-checks" class="mr-1"></v-icon>Facts</div>
-                <div v-if="!locked" class="text-body-small text-medium-emphasis mb-1">Double-click a fact to edit it</div>
-                <v-list density="compact" slim class="bg-transparent py-0">
-                    <WorldStateManagerFactRow v-for="fact in shownFacts" :key="fact.id" :fact="fact" :locked="locked"
-                        @updated="updateFact" @deleted="removeFact" @source="$emit('source', $event)">
-                        <template #details>
-                            <v-chip v-if="restatedHere(fact)" size="x-small" variant="tonal" class="mr-1 fact-restated" prepend-icon="mdi-repeat-once">
-                                Restated
-                                <v-tooltip activator="parent" location="top">{{ restatedTooltip(fact) }}</v-tooltip>
-                            </v-chip>
-                        </template>
-                    </WorldStateManagerFactRow>
-                </v-list>
-            </div>
+            <v-expansion-panels v-if="shownFacts.length" :model-value="factsOpen ? 'facts' : null" class="mt-3" variant="accordion" flat
+                @update:model-value="(value) => $emit('update:factsOpen', value === 'facts')">
+                <v-expansion-panel value="facts" class="bg-transparent">
+                    <v-expansion-panel-title class="text-body-small text-medium-emphasis">
+                        <v-icon size="small" icon="mdi-format-list-checks" class="mr-1"></v-icon>Facts ({{ shownFacts.length }})
+                    </v-expansion-panel-title>
+                    <v-expansion-panel-text eager>
+                        <div v-if="!locked" class="text-body-small text-medium-emphasis mb-1">Double-click a fact to edit it</div>
+                        <v-list density="compact" slim class="bg-transparent py-0">
+                            <WorldStateManagerFactRow v-for="fact in shownFacts" :key="fact.id" :fact="fact" :locked="locked"
+                                @updated="updateFact" @deleted="removeFact" @source="$emit('source', $event)">
+                                <template #details>
+                                    <v-chip v-if="restatedHere(fact)" size="x-small" variant="tonal" class="mr-1 fact-restated" prepend-icon="mdi-repeat-once">
+                                        Restated
+                                        <v-tooltip activator="parent" location="top">{{ restatedTooltip(fact) }}</v-tooltip>
+                                    </v-chip>
+                                </template>
+                            </WorldStateManagerFactRow>
+                        </v-list>
+                    </v-expansion-panel-text>
+                </v-expansion-panel>
+            </v-expansion-panels>
         </v-card-text>
 
         <v-card-actions>
@@ -156,6 +163,7 @@ export default {
         generationOptions: Object,
         // the Summarizer's Extract facts setting; null while unknown
         extractFactsEnabled: { type: Boolean, default: null },
+        factsOpen: Boolean,
     },
     data() {
         return {
@@ -173,7 +181,7 @@ export default {
     inject:[
         'getWebsocket',
     ],
-    emits: ['busy', 'collapse', 'source'],
+    emits: ['busy', 'collapse', 'source', 'update:factsOpen'],
     computed: {
         shownFacts() {
             const facts = this.entry?.facts || [];

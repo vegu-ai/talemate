@@ -13,15 +13,17 @@ Change inference parameters, embedding parameters and global system prompt overr
 
 If you're familiar with editing inference parameters from other similar applications, be aware that there is a significant difference in how TaleMate handles these settings.
 
-Agents take different actions, and based on that action one of the presets is selected. 
+Each preset in a group belongs to one **action type**. Agents take different actions, and based on that action one of the action types is selected.
 
-That means that ALL presets are relevant and will be used at some point.
+That means that ALL action types are relevant and will be used at some point.
 
-For example analysis will use the `Anlytical` preset, which is configured to be less random and more deterministic.
+For example analysis will use the `Analytical` action type, which is configured to be less random and more deterministic.
 
-The `Conversation` preset is used by the conversation agent during dialogue gneration.
+The `Conversation` action type is used by the conversation agent during dialogue generation.
 
-The other presets are used for various creative tasks.
+The other action types are used for various creative tasks.
+
+See [Inference Configuration](../clients/presets.md) for the parameters and the **Action Type** selector of the pinned inference panel.
 
 These are all experimental and will probably change / get merged in the future.
 

@@ -184,6 +184,11 @@
                                 />
                             </Transition>
                             <v-spacer></v-spacer>
+                            <v-tooltip text="Manage character">
+                                <template v-slot:activator="{ props }">
+                                    <v-btn :aria-label="`Manage ${name}`" size="x-small" color="secondary" v-bind="props" variant="text" density="comfortable" rounded="sm" @click.stop="openWorldStateManager('characters', name, 'description')" icon="mdi-book-open-page-variant"></v-btn>
+                                </template>
+                            </v-tooltip>
                             <CharacterKnowledgeHub :name="name" variant="text" color="secondary" @open-knowledge="openWorldStateManager('characters', name, 'knowledge')" />
                             <v-tooltip :text="activateTooltip(name)">
                                 <template v-slot:activator="{ props }">

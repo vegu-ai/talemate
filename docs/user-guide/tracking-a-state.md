@@ -53,6 +53,8 @@ The state is only included in context through relevancy, handled by the [Memory 
 
 The state is inserted into the context as part of the scene progression. So when it's re-evaluated, it will be at the bottom of the context.
 
+A new answer replaces the previous answer only when the previous answer is among the last 10 messages. Otherwise the previous answer stays in the scene history, so with the default interval the answers collect in the history as the scene goes on. A change to another method removes every answer of this state from the scene history.
+
 This is the default for character states.
 
 ##### Conversation Context

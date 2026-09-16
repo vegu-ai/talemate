@@ -455,3 +455,55 @@ async def test_orphaned_generated_entry_stays_restricted_after_save(setup, chara
         assert not any(
             row["group"] == ("authored",) for row in audience_documents(scene).values()
         )
+
+
+@pytest.mark.parametrize(
+    "messages_after, answers",
+    [
+        (9, ["The poison stash is gone."]),
+        (10, [READER, "The poison stash is gone."]),
+    ],
+)
+async def test_a_sequential_answer_replaces_the_previous_one_within_10_messages(
+    setup, messages_after, answers
+):
+    scene, summarizer, request = setup
+    reinforcement = await apply(scene, request, insert="sequential")
+    scene.history.extend(
+        ContextInvestigationMessage(message=f"note {number}")
+        for number in range(messages_after)
+    )
+    world = get_agent("world_state")
+    await world._apply_reinforcement(
+        reinforcement,
+        world._prepare_reinforcement(reinforcement, False),
+        "The poison stash is gone.",
+        False,
+    )
+    assert [
+        message.message
+        for message in scene.history
+        if isinstance(message, ReinforcementMessage)
+    ] == answers
+
+
+async def test_leaving_sequential_removes_every_answer_from_the_history(setup):
+    scene, summarizer, request = setup
+    reinforcement = await apply(scene, request, insert="sequential")
+    scene.history.extend(
+        ContextInvestigationMessage(message=f"note {number}") for number in range(10)
+    )
+    world = get_agent("world_state")
+    await world._apply_reinforcement(
+        reinforcement,
+        world._prepare_reinforcement(reinforcement, False),
+        "The poison stash is gone.",
+        False,
+    )
+    assert len([m for m in scene.history if isinstance(m, ReinforcementMessage)]) == 2
+
+    await scene.world_state.add_reinforcement(
+        QUESTION, answer="The poison stash is gone.", insert="conversation-context"
+    )
+
+    assert not any(isinstance(m, ReinforcementMessage) for m in scene.history)

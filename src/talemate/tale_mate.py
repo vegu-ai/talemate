@@ -885,12 +885,12 @@ class Scene(Emitter):
         """
         Removes the last message from the history that matches the given typ and source
         """
-        iterations = 0
-
         if not reverse:
             iter_range = range(len(self.history) - 1, -1, -1)
         else:
             iter_range = range(len(self.history))
+        if max_iterations:
+            iter_range = iter_range[:max_iterations]
 
         to_remove = []
 
@@ -898,15 +898,12 @@ class Scene(Emitter):
             message = self.history[idx]
 
             if message.typ != typ:
-                iterations += 1
                 continue
 
             if source is not None and message.source != source:
-                iterations += 1
                 continue
 
             if meta_hash is not None and message.meta_hash != meta_hash:
-                iterations += 1
                 continue
 
             # Apply additional filters
@@ -920,10 +917,6 @@ class Scene(Emitter):
                 to_remove.append(message)
                 if not all:
                     break
-
-            iterations += 1
-            if max_iterations and iterations >= max_iterations:
-                break
 
         for message in to_remove:
             self.remove_message_at(self.history.index(message))

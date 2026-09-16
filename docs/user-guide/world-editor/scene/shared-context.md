@@ -167,6 +167,19 @@ This allows you to selectively share only relevant character information across 
 
 Shared world entries appear with an orange/amber highlight. These entries contain locations, lore, and world-building information that will be accessible across all linked scenes.
 
+A linked scene takes the shared world entries each time it is loaded. The shared entry wins over what the scene saved:
+
+- For example, the harbor scene shares an entry called "lighthouse", and the tavern scene already has its own, unshared "lighthouse" entry. The next time the tavern scene is loaded, its "lighthouse" entry is replaced by the shared one and becomes shared too. A shared entry replaces a private entry with the same ID in every linked scene.
+- When any linked scene unshares or deletes a shared entry and saves, the entry leaves the shared world. Every other linked scene deletes its copy the next time it is loaded, also the scene that first shared it. For example, if the tavern scene unshares "lighthouse" to keep its own variant, the harbor scene loses its "lighthouse" entry at its next load. **Unshare all world entries** does this for every shared entry.
+- Shared characters work differently. When a character leaves the shared world, the other linked scenes keep the character and only clear its shared flag.
+
+!!! note "Shared worlds from an earlier version"
+    Earlier versions dropped the shared world entries when a linked scene was loaded, so the next save of that scene could take an entry out of the shared world, or write an older text back over an edit. To repair lost entries, a linked scene that is loaded while the shared world was last written by an earlier version puts its shared entries that the shared world lacks back into it. This stops at the first write of the shared world by this version: a save of a linked scene (an auto save counts, for example after the first message), a change to **Share static history**, or a load that puts an entry back.
+
+    The repair cannot tell a lost entry from one that a linked scene unshared or deleted on the earlier version. Such an entry also goes back into the shared world, and every linked scene takes it at its next load.
+
+    For example, you shared "promise" in the harbor scene and changed the text of "lighthouse" there, and the tavern scene's save then removed "promise" and wrote its older "lighthouse" text back. After the update, "promise" comes back if you load the harbor scene before this version writes the shared world. If you load and save the tavern scene first, "promise" stays lost. The edited "lighthouse" text does not come back in either case: the shared world keeps the older text, and every linked scene takes it at its next load. The edited text is still in the harbor scene's older revisions.
+
 ### Sharing History
 
 1. Navigate to **:material-earth-box: World Editor** :material-arrow-right: **:material-history: History**

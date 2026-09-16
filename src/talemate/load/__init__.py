@@ -384,15 +384,15 @@ def _quarantine_and_resolve_rev(scene):
     scene.rev = _get_overall_latest_revision(scene, strict=False)
 
 
-async def _apply_shared_context(scene, start_from_shared_entries: bool):
+async def _apply_shared_static_history(scene, start_from_shared_entries: bool):
     """
-    The shared entries in the scene's timeline. With `start_from_shared_entries`
-    — a save and a shared file both written before `start_ts` existed — they
-    keep their saved times and the newest static entry gives the scene start,
-    as in that version. Otherwise each entry keeps its distance from the start
-    of the scene that wrote it.
+    The shared static entries in the scene's timeline. With
+    `start_from_shared_entries` — a save and a shared file both written before
+    `start_ts` existed — they keep their saved times and the newest static
+    entry gives the scene start, as in that version. Otherwise each entry keeps
+    its distance from the start of the scene that wrote it.
     """
-    await scene.shared_context.update_to_scene(
+    await scene.shared_context.apply_static_history(
         scene, relative=not start_from_shared_entries
     )
     if start_from_shared_entries:
@@ -492,7 +492,8 @@ async def load_scene_from_data(
                 and scene.shared_context.start_ts is None
             )
             if not reset:
-                await _apply_shared_context(scene, start_from_shared_entries)
+                await _apply_shared_static_history(scene, start_from_shared_entries)
+                await scene.shared_context.apply_characters(scene)
     else:
         scene.shared_context = None
 
@@ -537,6 +538,11 @@ async def load_scene_from_data(
             shift_knowledge_edge_times(scene, late_shift)
             shift_direct_source_times(scene, late_shift)
             shift_world_entry_times(scene, late_shift)
+        if scene.shared_context:
+            if scene.shared_context.format_version is None:
+                await scene.shared_context.add_missing_world_entries(scene)
+            # after late_shift: a shared entry keeps the time the writer stored
+            await scene.shared_context.apply_world_entries(scene)
         scene.fix_time()
         log.debug("scene time", ts=scene.ts)
     else:
@@ -547,7 +553,9 @@ async def load_scene_from_data(
         if scene.shared_context:
             # the emptied archive would otherwise reach the shared file at the
             # first save and take the static history from every linked scene
-            await _apply_shared_context(scene, start_from_shared_entries)
+            await _apply_shared_static_history(scene, start_from_shared_entries)
+            await scene.shared_context.apply_characters(scene)
+            await scene.shared_context.apply_world_entries(scene)
         # the shared static history can move the clock
         scene.sync_time()
         scene.knowledge = None

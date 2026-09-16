@@ -26,6 +26,7 @@ import talemate.agents.tts.voice_library as voice_library
 import talemate.instance as instance
 from _changelog_test_helpers import persist_test_mutation, make_changelog_scene
 from conftest import MockScene, bootstrap_scene
+from talemate.character import Character
 from talemate.changelog import (
     InMemoryChangelog,
     _base_path,
@@ -53,6 +54,12 @@ SHARED_CONTEXT_FIXTURE_DIR = os.path.join(
     os.path.dirname(__file__), "data", "shared_context_migration"
 )
 SHARED_CONTEXT_FILE = "legacy-shared-context.json"
+RELEASED_LINKED_WORLD = "released-linked-world.json"
+FILE_TEXTS = {
+    "harbor": "The harbor was quiet.",
+    "tavern": "The tavern stays open all night.",
+}
+RECOVERED = {**FILE_TEXTS, "promise": "Kaira promised to return."}
 
 MONTH = 2_592_000
 HOUR = 3600
@@ -1284,3 +1291,276 @@ async def test_linking_in_session_keeps_the_writers_shared_pin_time(
     await _save(scene)
 
     assert await _shared_file_pin_ts(writer) == 10 * YEAR + DAY
+
+
+async def _shared_file(writer) -> SharedContext:
+    shared = SharedContext(filepath=Path(writer.shared_context_dir) / "world.json")
+    return await shared.init_from_file()
+
+
+@pytest.mark.asyncio
+async def test_a_normal_load_takes_the_entry_another_linked_scene_shared(new_scene):
+    founder = await _load(new_scene, _static_scene_data(10 * YEAR, []))
+    filename = await _write_shared_context(founder)
+    reader_data = _static_scene_data(10 * YEAR, [], shared_context=filename)
+    writer = await _load(
+        new_scene,
+        _with_pin(_static_scene_data(10 * YEAR, [], shared_context=filename), YEAR),
+    )
+    await writer.world_state_manager.set_world_entry_shared("promise", True)
+    await _save(writer)
+
+    assert "promise" in (await _shared_file(writer)).world_state.manual_context
+
+    scene = await _load(new_scene, reader_data)
+
+    assert scene.world_state.manual_context["promise"].shared
+    assert _pin_ts(scene.world_state) == YEAR
+
+    await _save(scene)
+
+    assert "promise" in (await _shared_file(writer)).world_state.manual_context
+
+
+@pytest.mark.asyncio
+async def test_a_normal_load_keeps_the_writers_shared_pin_time(new_scene):
+    writer = await _load(new_scene, _shared_pin_writer_data())
+    filename = await _write_shared_context(writer)
+    reader_data = _static_scene_data(0, [], shared_context=filename)
+    reader_data["world_state"] = {
+        "manual_context": {
+            "lamp": {
+                "id": "lamp",
+                "text": "The lamp was lit",
+                "meta": {"ts": HOUR, "source": "manual", "typ": "world_state"},
+            }
+        }
+    }
+
+    scene = await _load(new_scene, reader_data)
+
+    assert scene.start_ts == 10 * YEAR
+    assert _pin_ts(scene.world_state) == 10 * YEAR + DAY
+    assert scene.world_state.manual_context["lamp"].meta["ts"] == 10 * YEAR + HOUR
+
+    reloaded = await _load(new_scene, await _save(scene))
+
+    assert await _shared_file_pin_ts(writer) == 10 * YEAR + DAY
+    assert reloaded.start_ts == 10 * YEAR
+    assert _pin_ts(reloaded.world_state) == 10 * YEAR + DAY
+    assert reloaded.world_state.manual_context["lamp"].meta["ts"] == 10 * YEAR + HOUR
+
+
+@pytest.mark.asyncio
+async def test_a_normal_load_removes_an_entry_the_shared_file_no_longer_holds(
+    new_scene,
+):
+    founder = await _load(new_scene, _static_scene_data(10 * YEAR, []))
+    filename = await _write_shared_context(founder)
+    data = _with_pin(
+        _static_scene_data(10 * YEAR, [], shared_context=filename), YEAR, shared=True
+    )
+    data["world_state"]["manual_context"]["lamp"] = {
+        "id": "lamp",
+        "text": "The lamp was lit",
+        "meta": {"ts": HOUR, "source": "manual", "typ": "world_state"},
+    }
+
+    scene = await _load(new_scene, data)
+
+    assert list(scene.world_state.manual_context) == ["lamp"]
+
+    await _save(scene)
+
+    assert (await _shared_file(founder)).world_state.manual_context == {}
+
+
+@pytest.mark.asyncio
+async def test_a_normal_load_takes_the_character_another_linked_scene_shared(
+    new_scene,
+):
+    founder = await _load(new_scene, _static_scene_data(10 * YEAR, []))
+    filename = await _write_shared_context(founder)
+    shared = await _shared_file(founder)
+    shared.character_data["Mara"] = Character(
+        name="Mara", description="A ferry pilot.", shared=True
+    )
+    await shared.write_to_file()
+
+    scene = await _load(
+        new_scene, _static_scene_data(10 * YEAR, [], shared_context=filename)
+    )
+
+    assert scene.character_data["Mara"].description == "A ferry pilot."
+
+    await _save(scene)
+
+    assert "Mara" in (await _shared_file(founder)).character_data
+
+
+async def _shared_promise_file(new_scene) -> str:
+    writer = await _load(
+        new_scene, _with_pin(_static_scene_data(10 * YEAR, []), YEAR, shared=True)
+    )
+    return await _write_shared_context(writer)
+
+
+@pytest.mark.asyncio
+async def test_a_shared_entry_replaces_a_private_entry_with_the_same_id_on_a_normal_load(
+    new_scene,
+):
+    filename = await _shared_promise_file(new_scene)
+    data = _with_pin(_static_scene_data(10 * YEAR, [], shared_context=filename), HOUR)
+    data["world_state"]["manual_context"]["promise"]["text"] = (
+        "Kaira kept it to herself"
+    )
+
+    scene = await _load(new_scene, data)
+
+    entry = scene.world_state.manual_context["promise"]
+    assert (entry.text, entry.shared, entry.meta["ts"]) == (
+        "Kaira promised to return",
+        True,
+        YEAR,
+    )
+
+    await _save(scene)
+
+    shared = await _shared_file(scene)
+    assert (
+        shared.world_state.manual_context["promise"].text == "Kaira promised to return"
+    )
+
+
+@pytest.mark.parametrize(
+    "saved_text, kept", [("Kaira promised to return", True), ("An older text", False)]
+)
+@pytest.mark.asyncio
+async def test_a_normal_load_keeps_a_shared_entrys_reinforcement_only_for_the_same_text(
+    new_scene, saved_text, kept
+):
+    filename = await _shared_promise_file(new_scene)
+    data = _with_pin(
+        _static_scene_data(10 * YEAR, [], shared_context=filename), YEAR, shared=True
+    )
+    promise = data["world_state"]["manual_context"]["promise"]
+    promise["text"] = saved_text
+    promise["reinforcement"] = {"source_id": None}
+
+    scene = await _load(new_scene, data)
+
+    reinforcement = scene.world_state.manual_context["promise"].reinforcement
+    assert (reinforcement is not None) is kept
+
+
+def _released_entry(id: str, text: str, shared: bool = True) -> dict:
+    return {
+        "id": id,
+        "text": text,
+        "meta": {"source": "manual", "typ": "world_state"},
+        "shared": shared,
+    }
+
+
+def _released_linked_save(*entries: dict) -> dict:
+    data = _static_scene_data(None, [], shared_context=RELEASED_LINKED_WORLD)
+    data["world_state"] = {"manual_context": {entry["id"]: entry for entry in entries}}
+    return data
+
+
+async def _released_linked_world(scene) -> SharedContext:
+    shared_dir = Path(scene.shared_context_dir)
+    shared_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy(
+        os.path.join(SHARED_CONTEXT_FIXTURE_DIR, RELEASED_LINKED_WORLD), shared_dir
+    )
+    return SharedContext(filepath=shared_dir / RELEASED_LINKED_WORLD)
+
+
+def _texts(world_state) -> dict[str, str]:
+    return {id: entry.text for id, entry in world_state.manual_context.items()}
+
+
+def _released_holding_save() -> dict:
+    # a released save that holds "promise", which another linked scene's save
+    # took out of the file, and an older "harbor" text than the file
+    return _released_linked_save(
+        _released_entry("harbor", "The harbor flooded."),
+        _released_entry("promise", "Kaira promised to return."),
+        _released_entry("lamp", "The lamp was lit.", shared=False),
+    )
+
+
+def _released_other_save() -> dict:
+    return _released_linked_save(_released_entry("harbor", "The harbor was quiet."))
+
+
+def _shared_texts(scene) -> dict[str, str]:
+    return {
+        id: entry.text
+        for id, entry in scene.world_state.manual_context.items()
+        if entry.shared
+    }
+
+
+@pytest.mark.parametrize(
+    "other_scene_first, expected",
+    [(None, RECOVERED), ("load", RECOVERED), ("save", FILE_TEXTS)],
+)
+@pytest.mark.asyncio
+async def test_an_unmarked_shared_file_takes_the_shared_entries_it_lacks(
+    new_scene, other_scene_first, expected
+):
+    shared = await _released_linked_world(new_scene())
+    if other_scene_first:
+        other = await _load(new_scene, _released_other_save())
+        if other_scene_first == "save":
+            await _save(other)
+
+    scene = await _load(new_scene, _released_holding_save())
+
+    await shared.init_from_file()
+    assert _texts(shared.world_state) == expected
+    assert shared.format_version == SharedContext.FORMAT_VERSION
+    assert _shared_texts(scene) == expected
+    assert scene.world_state.manual_context["lamp"].shared is False
+
+
+async def _unshare_and_save(new_scene, entry_id: str):
+    scene = await _load(new_scene, _released_other_save())
+    scene.world_state.manual_context[entry_id].shared = False
+    await _save(scene)
+
+
+@pytest.mark.asyncio
+async def test_a_marked_shared_file_does_not_take_back_an_entry_removed_on_this_version(
+    new_scene,
+):
+    shared = await _released_linked_world(new_scene())
+    await _unshare_and_save(new_scene, "tavern")
+
+    scene = await _load(
+        new_scene,
+        _released_linked_save(
+            _released_entry("tavern", "The tavern stays open all night.")
+        ),
+    )
+
+    await shared.init_from_file()
+    assert "tavern" not in shared.world_state.manual_context
+    assert "tavern" not in scene.world_state.manual_context
+
+
+@pytest.mark.asyncio
+async def test_a_second_load_of_a_released_save_does_not_take_back_a_removed_entry(
+    new_scene,
+):
+    shared = await _released_linked_world(new_scene())
+    await _load(new_scene, _released_holding_save())
+    await _unshare_and_save(new_scene, "promise")
+
+    scene = await _load(new_scene, _released_holding_save())
+
+    await shared.init_from_file()
+    assert "promise" not in shared.world_state.manual_context
+    assert "promise" not in scene.world_state.manual_context

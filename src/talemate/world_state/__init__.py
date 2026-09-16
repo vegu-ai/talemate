@@ -495,7 +495,7 @@ class WorldState(BaseModel):
                     # from the scene history
 
                     self.scene.pop_history(
-                        typ="reinforcement", meta_hash=message.meta_hash
+                        typ="reinforcement", meta_hash=message.meta_hash, all=True
                     )
 
                 elif message:

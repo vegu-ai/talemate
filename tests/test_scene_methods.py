@@ -1164,6 +1164,21 @@ class TestPopHistory:
         real_scene.pop_history(typ="narrator", all=True)
         assert real_scene.history == [a]
 
+    @pytest.mark.parametrize("all", [False, True])
+    def test_max_iterations_limits_search_depth(self, real_scene, all):
+        narrator = NarratorMessage(message="oldest", source="ai")
+        history = [narrator, _char_msg("a"), _char_msg("b"), _char_msg("c")]
+        real_scene.history = list(history)
+        real_scene.pop_history(typ="narrator", all=all, max_iterations=2)
+        assert real_scene.history == history
+
+    @pytest.mark.asyncio
+    async def test_max_iterations_includes_the_last_inspected_message(self, real_scene):
+        narrator = NarratorMessage(message="n", source="ai")
+        real_scene.history = [narrator, _char_msg("a"), _char_msg("b")]
+        real_scene.pop_history(typ="narrator", max_iterations=3)
+        assert narrator not in real_scene.history
+
 
 class TestEditMessage:
     def test_edit_message_updates_message_text(self, real_scene):

@@ -63,14 +63,12 @@ def _bounded_lines(
     facts: Sequence[KnownFact | Fact],
     budget: int,
     *,
-    false_ids: set[str] | None = None,
     diagnostics=None,
 ) -> list[str]:
     lines = []
     used = 0
     for fact in facts:
-        status = " (known to be false)" if false_ids and fact.id in false_ids else ""
-        line = f"- [{fact.id}]{status} {render_fact(scene, fact, include_id=False)}"
+        line = f"- [{fact.id}] {render_fact(scene, fact, include_id=False)}"
         size = count_tokens(line + "\n")
         if used + size <= budget:
             lines.append(line)
@@ -93,12 +91,7 @@ async def standard_analysis_context(
         limit=conversation.knowledge_absence_limit,
         dedupe_distance=get_agent("summarizer").archive_fact_dedupe_distance,
     )
-    known_lines = _bounded_lines(
-        scene,
-        known,
-        budget // 3,
-        false_ids={fact.id for fact in scene.world_state.facts.values() if fact.false},
-    )
+    known_lines = _bounded_lines(scene, known, budget // 3)
     unknown_lines = _bounded_lines(scene, unknown, budget // 3)
     if not known_lines and not unknown_lines:
         return None

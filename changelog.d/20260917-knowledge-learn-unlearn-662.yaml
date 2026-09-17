@@ -1,0 +1,16 @@
+added:
+- "Character Knowledge: Unlearn on a known fact in the character's Knowledge tab removes it from that character's knowledge; a later line or passage that teaches it again lifts it while that line is in the story, and a Learn replaces it. An unknown fact offers Learn, and a greyed fact says why the character does not know it."
+- "World Editor > History: a static history entry in a Standard story has a Known by setting that decides who knows the entry and its facts."
+- "World Editor > History: an entry that contains a passage with out-of-date facts shows a chip that runs the passage's refresh."
+changed:
+- "Character Knowledge: Allow and Block are now named Learn and Never Learn."
+- "Character Knowledge: a fact row in the character's Knowledge tab no longer deletes the fact; delete facts in the Facts or History tab."
+- "World Editor > Facts: the Latest chapter switch is now named Latest."
+- "Message versions: a passage that owes only learning from dialogue shows Learn from dialogue instead of Refresh facts, for example a character line that no chapter contains yet, or a line after Regenerate All History."
+removed:
+- "Facts: the false mark, with Mark false and Mark true, the Truth filter and the False chip."
+- "World Editor > History: the Known by filter."
+- "The out-of-date notices in the character Knowledge tab and above the History list."
+fixed:
+- "Regenerating the whole history no longer leaves changed passages flagged for a fact refresh."
+- "Character Knowledge: regenerating a chapter, its facts or the whole history keeps the Learn, Never Learn and Unlearn rules of the facts it records again, and what characters learned about those facts from dialogue."

@@ -27,11 +27,15 @@ from talemate.character import (
 from talemate.instance import get_agent
 from talemate.emit import emit
 from talemate.util import replace_smart_quotes
+from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
 from talemate.knowledge.disclosures import grant_disclosure
 from talemate.knowledge.entry import _item_from_id, SHEET_KINDS
 from talemate.knowledge.perspective_models import Disclosure
 from talemate.knowledge.mode import KnowledgeEligibility, character_knowledge_enabled
 from talemate.knowledge.perspectives import clear_perspective_records
+from talemate.knowledge.revision_browsing import current_edges
+from talemate.knowledge.facts import fact_memory_document, follow_static_entry_audience
+from talemate.history import ArchiveEntry, emit_archive_add
 from talemate.knowledge.schema import (
     EntryVisibility,
     KnowledgeEdge,
@@ -45,7 +49,10 @@ from talemate.knowledge.changes import (
     KnowledgeChange,
     edge_change,
     edge_changes_knowledge,
+    STORY_GRANT_SOURCES,
     emit_knowledge_changes,
+    lift_unlearn,
+    lifted_unlearns,
 )
 from talemate.knowledge.topics import (
     awareness_line,
@@ -177,11 +184,12 @@ class CharacterKnowledge(pydantic.BaseModel):
     disclosures: list[Disclosure] = []
     name: str
     edges: list[KnowledgeEdge] = []
+    # the Unlearn rules a grant from a later line lifts while that grant exists
+    lifted_edge_ids: list[str] = []
     targets: list[KnowledgeTarget] = []
     coverage: list[TopicCoverage] = []
     known_facts: list[KnownFact] = []
     known_facts_total: int = 0
-    known_fact_ids: list[str] = []
     awareness: str | None = None
 
 
@@ -721,6 +729,67 @@ class WorldStateManager:
         self.world_state.manual_context[entry_id].visibility = visibility
         invalidate_memory_audiences(self.scene)
 
+    async def set_static_history_known_by(
+        self, entry_id: str, visibility: EntryVisibility
+    ) -> list[str] | None:
+        """
+        A static history entry's Known by is stored as its presence: unset for
+        everyone, an empty list for nobody. The facts the entry recorded
+        follow at once.
+        """
+
+        if character_knowledge_enabled(self.scene):
+            raise ValueError(
+                "Known by on static history is available in Standard stories only."
+            )
+        entry = next(
+            (
+                item
+                for item in self.scene.archived_history
+                if item.get("id") == entry_id
+            ),
+            None,
+        )
+        if (
+            entry is None
+            or entry.get("start") is not None
+            or entry.get("end") is not None
+        ):
+            raise ValueError("Only a static history entry has a Known by setting.")
+        if visibility.mode == "everyone":
+            present = None
+        elif visibility.mode == "owner":
+            present = []
+        else:
+            present = list(dict.fromkeys(visibility.characters))
+        before = entry.get("present")
+        if present is None:
+            entry.pop("present", None)
+        else:
+            entry["present"] = present
+        facts = follow_static_entry_audience(self.world_state, entry_id, present)
+        await emit_archive_add(self.scene, ArchiveEntry(**entry))
+        if facts:
+            await get_agent("memory").add_many(
+                [fact_memory_document(fact) for fact in facts]
+            )
+        if before != present:
+            everyone = set(self.scene.character_data)
+            old = everyone if before is None else set(before)
+            new = everyone if present is None else set(present)
+            emit_knowledge_changes(
+                self.scene,
+                [
+                    KnowledgeChange(
+                        character=name,
+                        target=entry_id,
+                        kind="grant" if name in new else "revoke",
+                    )
+                    for name in sorted(old ^ new)
+                ],
+            )
+        return present
+
     async def set_character_entry_visibility(
         self, character_name: str, key: str, visibility: EntryVisibility
     ):
@@ -823,18 +892,20 @@ class WorldStateManager:
             edge
             for edge in self.world_state.knowledge
             if edge.character == character_name
-            and not (edge.kind == "revoke" and character_knowledge_enabled(self.scene))
+            and edge.anchor is None
+            and not (edge.kind != "grant" and character_knowledge_enabled(self.scene))
         ]
         known = known_bucket(self.scene, character_name)
         recent, total = known_facts(
             self.scene, character_name, known=known, prompt=False
         )
+        lifted = lifted_unlearns(current_edges(self.scene))
         return CharacterKnowledge(
             name=character_name,
+            lifted_edge_ids=[edge.id for edge in edges if edge.id in lifted],
             perception_mode=character_knowledge_enabled(self.scene),
             known_facts=recent,
             known_facts_total=total,
-            known_fact_ids=[fact.id for fact in known],
             disclosures=(
                 [
                     item
@@ -866,7 +937,7 @@ class WorldStateManager:
         """Grant several facts at once; a grant lifts an earlier block on the same fact."""
         if character_knowledge_enabled(self.scene):
             raise ValueError(
-                "Grants are unavailable in perception mode; a character knows a fact through what they perceived or were given."
+                "Learn is unavailable in Character perspectives; a character knows a fact through what they perceived or were given."
             )
         world_state = self.world_state
         changes = []
@@ -875,6 +946,9 @@ class WorldStateManager:
                 continue
             before = list(world_state.knowledge)
             self._lift_block(name, fact_id)
+            lift_unlearn(world_state, name, fact_id)
+            # a replaced rule stays replaced, also when a later line had lifted it
+            replaced = len(world_state.knowledge) != len(before)
             edge = KnowledgeEdge(
                 character=name,
                 target=fact_id,
@@ -885,8 +959,66 @@ class WorldStateManager:
             world_state.knowledge.append(edge)
             if edge_changes_knowledge(edge, before, world_state.knowledge):
                 changes.append(edge_change(edge))
-            else:
+            elif not replaced:
                 world_state.knowledge = before
+        if changes:
+            emit_knowledge_changes(self.scene, changes)
+        return changes
+
+    def unlearn_facts(self, name: str, fact_ids: list[str]) -> list[KnowledgeChange]:
+        """
+        The character stops knowing each fact they know. The Unlearn rule
+        replaces the author's Learn rules and any older Unlearn on the fact;
+        the grants that record a story line stay, masked while it is in force.
+        """
+        if character_knowledge_enabled(self.scene):
+            raise ValueError(
+                "Unlearn is unavailable in Character perspectives; knowledge cannot be erased."
+            )
+        world_state = self.world_state
+        index = KnowledgeIndex.from_scene(self.scene)
+        boundary = max((message.id for message in self.scene.history), default=0)
+        changes = []
+        for fact_id in dict.fromkeys(fact_ids):
+            fact = world_state.facts.get(fact_id)
+            if fact is None or not index.in_bucket(
+                name, KnowledgeItem(id=fact.id, kind="fact", present=fact.present)
+            ):
+                continue
+            before = list(world_state.knowledge)
+            world_state.knowledge = [
+                edge
+                for edge in world_state.knowledge
+                if not (
+                    edge.character == name
+                    and edge.target == fact_id
+                    and (
+                        edge.kind == "unlearn"
+                        or (
+                            edge.kind == "grant"
+                            and edge.source not in STORY_GRANT_SOURCES
+                        )
+                    )
+                )
+            ]
+            if not any(
+                edge.character == name
+                and edge.target == fact_id
+                and edge.kind == "grant"
+                for edge in world_state.knowledge
+            ):
+                fact.known_by.pop(name, None)
+            edge = KnowledgeEdge(
+                character=name,
+                target=fact_id,
+                kind="unlearn",
+                source="manual",
+                message_id_boundary=boundary,
+                ts=self.scene.ts,
+            )
+            world_state.knowledge.append(edge)
+            if edge_changes_knowledge(edge, before, world_state.knowledge):
+                changes.append(edge_change(edge))
         if changes:
             emit_knowledge_changes(self.scene, changes)
         return changes
@@ -905,9 +1037,11 @@ class WorldStateManager:
 
     async def set_knowledge_edge(self, edge: KnowledgeEdge) -> KnowledgeEdge:
         """Upsert by id; a new edge takes the scene time; a new grant lifts a block."""
+        if edge.kind == "unlearn":
+            raise ValueError("Unlearn a fact from its row in the Knowledge tab.")
         if edge.kind == "revoke" and character_knowledge_enabled(self.scene):
             raise ValueError(
-                "Revokes are unavailable in perception mode; knowledge cannot be erased."
+                "Never Learn is unavailable in Character perspectives; knowledge cannot be erased."
             )
         if edge.ts is None:
             edge.ts = self.scene.ts
@@ -920,6 +1054,7 @@ class WorldStateManager:
                 return edge
         if edge.kind == "grant":
             self._lift_block(edge.character, edge.target)
+        lift_unlearn(self.world_state, edge.character, edge.target)
         self.world_state.knowledge.append(edge)
         if edge_changes_knowledge(edge, previous, self.world_state.knowledge):
             emit_knowledge_changes(self.scene, [edge_change(edge)])

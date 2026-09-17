@@ -701,8 +701,9 @@
   title: Interacting with the scene
   summary: 'Scene interaction syntax and shortcuts: quoted dialogue, asterisk actions, Tab act-as, @ quick actions, #/## director
     nudges and Ctrl+Enter autocomplete. Covers auto progress, cancellation, Continue, and selecting Original/Regenerated/Revised/Continued
-    message versions that become active scene text. Analyze perceptions (Character perspectives) or Refresh facts (Standard),
-    the next sent line, or a choice updates stale knowledge; pointer movement, keyboard focus and tab changes stay browsing.'
+    message versions that become active scene text. Analyze perceptions (Character perspectives), Refresh facts or Learn
+    from dialogue (Standard), the History tab refresh chip, the next sent line, or a choice updates stale knowledge; pointer
+    movement, keyboard focus and tab changes stay browsing.'
 - path: user-guide/node-editor/core-concepts/collector_nodes.md
   title: Collector Nodes
   summary: Dict/List Collector nodes aggregate dynamic inputs with key inference or Make Key-Value Pair tuples, ordered lists
@@ -1033,7 +1034,7 @@
 - path: user-guide/prompts/context-history-review.md
   title: Scene Context History Review
   summary: Scene Context in Prompt Manager previews Scene or an active character using Conversation history selection. Covers
-    eligible facts, false markers, existing analysis, archive/layer and fact exclusion reasons with counts and capped samples,
+    eligible facts, existing analysis, archive/layer and fact exclusion reasons with counts and capped samples,
     intro/summary rules, budget cuts, the client context-window default, Refresh and scene-wide Apply; previews make no AI
     requests.
 - path: user-guide/prompts/deduplication.md
@@ -1243,10 +1244,10 @@
     reimport with loss of manually added database-only entries.
 - path: user-guide/world-editor/facts.md
   title: Facts
-  summary: World Editor Facts tab lists every recorded fact with source, topic, audience (who knows it and how), supersedes
-    arrows and a False chip. Combinable filters (text, character knows/does not know/is a subject, topic, importance, source,
-    superseded, false, latest chapter), sorting and paging; row actions (edit, mark false, set or clear supersedes, grant
-    or block in Standard mode, inspect source, remove) and selection actions (delete, mark false or true, grant) as one request
+  summary: World Editor Facts tab lists every recorded fact with source, topic, audience (who knows it and how) and supersedes
+    arrows. Combinable filters (text, character knows/does not know/is a subject, topic, importance, source, superseded,
+    Latest summarized entry), sorting and paging; row actions (edit, set or clear supersedes, Learn or Never Learn for a
+    character in Standard mode, inspect source, remove) and selection actions (delete, Learn for a character) as one request
     each.
 - path: user-guide/world-editor/generation-settings.md
   title: Generation Settings
@@ -1256,9 +1257,9 @@
 - path: user-guide/world-editor/history/index.md
   title: History
   summary: History manages static entries, chapter summaries and layered history with compression statistics. Covers message-bound
-    facts in a collapsed Facts (N) section per entry, presence and Known by filtering, importance and time markers, supersedes
-    links, editing and marking false, source inspection, regeneration, generating missing facts in bulk, stale facts after
-    revisions, extraction from predefined history and time-passage edits.
+    facts in a collapsed Facts (N) section per entry, Known by on static entries in Standard stories, importance and time
+    markers, supersedes links, editing, source inspection, regeneration, generating missing facts in bulk, stale facts after
+    revisions with a refresh chip on the entry, extraction from predefined history and time-passage edits.
 - path: user-guide/world-editor/history/layered-history.md
   title: Layered History
   summary: Layered History compresses dialogue into base summaries and successively smaller layers to preserve a full-timeline
@@ -1273,7 +1274,7 @@
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
   summary: Standard and Character perspectives knowledge, effort presets, request costs, scene overrides and first-save
-    continuation, retry or discard. Covers Allow/Block rules, Known by visibility, disclosures, topics, retrieval,
+    continuation, retry or discard. Covers Learn, Never Learn and Unlearn rules, Known by visibility, disclosures, topics, retrieval,
     activation and deactivation chips with automatic timing and arrival notes, and optional Offscreen Life at Thorough and
     above using current fact projection with explicit retry.
 - path: user-guide/world-editor/pins.md

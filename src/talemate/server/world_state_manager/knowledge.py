@@ -7,7 +7,7 @@ from talemate.agents.summarize.missing_facts import MissingFactsRefused
 from talemate.history import HistoryEntry
 from talemate.instance import get_agent
 from talemate.knowledge.catalog import FactQuery, list_facts
-from talemate.knowledge.facts import UNSET, fact_memory_document, update_fact
+from talemate.knowledge.facts import UNSET, update_fact
 from talemate.knowledge.chronology import fact_display
 from talemate.knowledge.perspectives import source_reference
 from talemate.knowledge.topics import refresh_topics
@@ -59,7 +59,6 @@ class UpdateFactPayload(pydantic.BaseModel):
     fact_id: str
     text: str | None = None
     importance: FactImportance | None = None
-    false: pydantic.StrictBool | None = None
     supersedes: str | None = None
 
     @pydantic.field_validator("text")
@@ -81,11 +80,7 @@ class FactIdsPayload(pydantic.BaseModel):
     fact_ids: list[str] = pydantic.Field(min_length=1)
 
 
-class FactsFalsePayload(FactIdsPayload):
-    false: pydantic.StrictBool
-
-
-class GrantFactsPayload(FactIdsPayload):
+class CharacterFactsPayload(FactIdsPayload):
     name: str
 
 
@@ -266,7 +261,6 @@ class KnowledgeMixin:
                 importance=payload.importance
                 if payload.importance is not None
                 else UNSET,
-                false=payload.false if payload.false is not None else UNSET,
                 supersedes=payload.supersedes
                 if "supersedes" in payload.model_fields_set
                 else UNSET,
@@ -328,26 +322,22 @@ class KnowledgeMixin:
             return
         await self._finish_deleting(removed)
 
-    async def handle_set_facts_false(self, data):
-        payload = FactsFalsePayload(**data)
-        facts = self.scene.world_state.facts
-        changed = [facts[fact_id] for fact_id in payload.fact_ids if fact_id in facts]
-        for fact in changed:
-            fact.false = payload.false
-        if changed:
-            await get_agent("memory").add_many(
-                [fact_memory_document(fact) for fact in changed]
-            )
-        for fact in changed:
-            self._emit_fact("fact_updated", fact)
-        await self.signal_operation_done()
-
     async def handle_grant_facts(self, data):
-        payload = GrantFactsPayload(**data)
+        payload = CharacterFactsPayload(**data)
         try:
             self.world_state_manager.grant_facts(payload.name, payload.fact_ids)
         except ValueError as exc:
             await self.signal_operation_failed(str(exc), failed_action="grant_facts")
+            return
+        await self._send_character_knowledge(payload.name)
+        await self.signal_operation_done()
+
+    async def handle_unlearn_facts(self, data):
+        payload = CharacterFactsPayload(**data)
+        try:
+            self.world_state_manager.unlearn_facts(payload.name, payload.fact_ids)
+        except ValueError as exc:
+            await self.signal_operation_failed(str(exc), failed_action="unlearn_facts")
             return
         await self._send_character_knowledge(payload.name)
         await self.signal_operation_done()

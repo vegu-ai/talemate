@@ -347,7 +347,6 @@ async def test_global_updates_do_not_replace_character_last_known_evidence(
         )
     )[0]
     scene.world_state.facts[latest.id].supersedes = old.id
-    scene.world_state.facts[old.id].false = True
     scene.world_state.facts[
         old.id
     ].text = "AUTHOR CORRECTION: the ledger is in the cabinet."
@@ -355,7 +354,7 @@ async def test_global_updates_do_not_replace_character_last_known_evidence(
     scene.world_state.facts[old.id].subjects = ["cabinet"]
     assert current_state(scene, "ledger").id == latest.id
     known = current_state(scene, "ledger", character="Bob")
-    assert known.id == old.id and not known.false
+    assert known.id == old.id
     assert known.text == "AUTHOR CORRECTION: the ledger is in the cabinet."
     assert known.subjects == ["cabinet"]
     assert known.ts == 10
@@ -1085,9 +1084,8 @@ async def test_known_facts_carry_the_character_view_in_the_character_order(
     key = (await store(scene, first, ("Alice",), "Alice has a key."))[0]
     _, second = passage(scene, "The lamp is lit.", audience=("Alice", "Bob"), ts=2)
     lamp = (await store(scene, second, ("Alice", "Bob"), "The lamp is lit."))[0]
-    # the author's false flag is not evidence Alice received; the text is the one record
+    # the text is the one record
     key = scene.world_state.facts[key.id]
-    key.false = True
     key.text = "AUTHOR: Alice never had a key."
     key.text_edited = True
 
@@ -1107,11 +1105,10 @@ async def test_known_facts_carry_the_character_view_in_the_character_order(
 
 
 @pytest.mark.asyncio
-async def test_global_false_current_state_keeps_author_semantics(supported_scene):
+async def test_current_state_keeps_the_author_text(supported_scene):
     scene, _, _ = supported_scene
     _, source = passage(scene, "Alice has a key.")
     fact = (await store(scene, source, ("Alice",), "Alice has a key."))[0]
-    fact.false = True
     fact.text = "AUTHOR: Alice never had a key."
     fact.text_edited = True
     assert current_state(scene, "key") == fact
@@ -1119,7 +1116,6 @@ async def test_global_false_current_state_keeps_author_semantics(supported_scene
         current_state(scene, "key", character="Alice").text
         == "AUTHOR: Alice never had a key."
     )
-    assert current_state(scene, "key", character="Alice").false is False
 
 
 @pytest.mark.asyncio

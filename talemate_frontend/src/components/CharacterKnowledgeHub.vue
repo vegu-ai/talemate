@@ -47,8 +47,8 @@
                     </div>
                     <div v-if="entries.length">
                         <div v-for="entry in entries" :key="entry.id" class="d-flex align-center text-body-small py-1">
-                            <v-chip v-if="entry.kind" size="x-small" label variant="tonal" class="mr-2 flex-shrink-0" :color="entry.kind === 'grant' ? 'success' : 'delete'">
-                                {{ entry.kind === 'grant' ? 'Allow' : 'Block' }}
+                            <v-chip v-if="entry.kind" size="x-small" label variant="tonal" class="mr-2 flex-shrink-0" :color="rules[entry.kind]?.color">
+                                {{ rules[entry.kind]?.label }}
                             </v-chip>
                             <span class="knowledge-hub-entry">{{ entry.text }}</span>
                         </div>
@@ -204,6 +204,7 @@ import {
     settingClearEntry,
 } from '@/utils/knowledgeOverrideOwnership';
 import { EFFORT_LABELS } from '@/constants/knowledgeEffort';
+import { KNOWLEDGE_RULES } from '@/constants/knowledgeRules';
 import {
     PERSPECTIVES_OPEN_HINT,
     canChangePerspectives,
@@ -245,6 +246,7 @@ export default {
     data() {
         return {
             PERSPECTIVES_OPEN_HINT,
+            rules: KNOWLEDGE_RULES,
             open: false,
             loading: false,
             knowledge: null,

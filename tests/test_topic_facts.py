@@ -3,7 +3,6 @@ import pytest
 from conftest import MockScene, bootstrap_scene
 from talemate.knowledge.schema import Fact, KnowledgeEdge, Topic
 from talemate.knowledge.topics import topic_facts, topics_facts
-from talemate.world_state.manager import WorldStateManager
 from test_supported_facts import passage, store, supported_scene  # noqa: F401
 
 
@@ -85,12 +84,6 @@ class TestTopicFacts:
         assert [r.id for r in rows["T1"]] == ["F1", "F2", "F3"]
         assert [r.id for r in rows["T2"]] == ["F4"]
         assert rows["T9"] == []
-
-    @pytest.mark.asyncio
-    async def test_payload_carries_every_known_id(self, scene):
-        knowledge = await WorldStateManager(scene).get_character_knowledge("Edwin")
-        assert knowledge.known_fact_ids == ["F1", "F3", "F4"]
-        assert knowledge.model_dump()["known_fact_ids"] == ["F1", "F3", "F4"]
 
 
 @pytest.mark.asyncio

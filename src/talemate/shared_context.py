@@ -5,10 +5,12 @@ from pathlib import Path
 import structlog
 
 from .character import Character
+from .context import scene_is_loading
 from .world_state import WorldState, ManualContext
 from .save import SceneEncoder
 from .history import (
     ArchiveEntry,
+    emit_archive_add,
     legacy_start_ts,
     shift_scene_timeline,
     static_history as get_static_history,
@@ -154,6 +156,12 @@ class SharedContext(pydantic.BaseModel):
         )
         if self.share_static_history:
             try:
+                # the memory copy of a static entry follows its text and Known by
+                previous = {
+                    entry.get("id"): (entry.get("text"), entry.get("present"))
+                    for entry in scene.archived_history
+                    if entry.get("end") is None and entry.get("id")
+                }
                 # summarized entries are those with an end value
                 summarized_entries = [
                     entry
@@ -172,8 +180,28 @@ class SharedContext(pydantic.BaseModel):
                 scene.archived_history = static_entries + summarized_entries
                 if shifted:
                     scene.refresh_fact_times(shifted)
+                self._follow_static_audiences(scene)
+                # a load writes every entry to memory once the store is ready
+                entries = static_entries if scene_is_loading.get() is None else []
+                for entry in entries:
+                    before = previous.get(entry.get("id"))
+                    if before is not None and before != (
+                        entry.get("text"),
+                        entry.get("present"),
+                    ):
+                        await emit_archive_add(scene, ArchiveEntry(**entry))
             except Exception as e:
                 log.error("apply static history failed", error=e)
+
+    @staticmethod
+    def _follow_static_audiences(scene: "Scene"):
+        """A Known by another linked scene set reaches the facts this scene recorded."""
+        from talemate.instance import get_agent
+        from talemate.knowledge.facts import follow_static_audiences
+
+        changed = follow_static_audiences(scene)
+        if changed:
+            get_agent("summarizer").queue_fact_memory(scene, changed)
 
     async def apply_characters(self, scene: "Scene"):
         for name, character_data in list(self.character_data.items()):

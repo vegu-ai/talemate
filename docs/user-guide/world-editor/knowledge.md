@@ -8,13 +8,13 @@ Every story runs in one of two character knowledge modes. You choose when you cr
 
 ![Create New Story dialog with the two modes side by side](/talemate/img/0.40.0/create-new-story-modes.png)
 
-**Standard** — Characters know what they were present for and what you allow. No extra requests. You manage exceptions by hand with Allow / Block rules and the knowledge switches in Conversation settings. Good for most stories, any model, a small cast, and stories without many secrets.
+**Standard** — Characters know what they were present for and what you let them learn. No extra requests. You manage exceptions by hand with Learn / Never Learn rules and the knowledge switches in Conversation settings. Good for most stories, any model, a small cast, and stories without many secrets.
 
 - Pros:
     - No extra requests
     - Works with any model
     - Nothing is locked in
-    - You control exceptions directly with Allow / Block rules
+    - You control exceptions directly with Learn / Never Learn rules
 - Cons:
     - A present character sees the full reader prose, private thoughts included
     - Leaks are yours to catch and fix by hand
@@ -32,14 +32,14 @@ Every story runs in one of two character knowledge modes. You choose when you cr
     - One extra analytical request per passage (slower, costs more)
     - Needs a strong, reliable model, or analyses fail and pause generation
     - Cannot be turned off once the story has history
-    - No forget or block of already acquired knowledge
+    - No Unlearn or Never Learn for knowledge a character already has
 - Pick this if: Your model is current and reliable, the story depends on who knows what, and several characters are active who know different things.
 
 | Pick this if | Standard | Character perspectives |
 |---|---|---|
 | Your model | is small or older, or you want any model to work | is current and reliable; see [Model expectations](/talemate/getting-started/model-expectations/) for what that means |
 | Your story | has few secrets | depends on who knows what |
-| Your workflow | you manage exceptions by hand with Allow / Block rules | hands-off once set up, with disclosures when needed |
+| Your workflow | you manage exceptions by hand with Learn / Never Learn rules | hands-off once set up, with disclosures when needed |
 | Your cast | is mostly you and one character | has several active characters who know different things |
 
 ### Effort presets
@@ -116,7 +116,7 @@ Perception uses the generating model's common-sense interpretation, not a proof 
 
 Keep secrets out of **scene description** and **story intention**: these remain shared authoring inputs. Set visibility on character sheets, details and world entries yourself or through the director. Do not put private instructions into a character's shared description and expect perception to remove them.
 
-In Character perspectives mode, separate character views replace **Limit to character knowledge**, **Remind about unknown facts**, **Topic knowledge overview**, **Track learning from dialogue**, and **Match known facts**. These Standard-mode controls are hidden while Character perspectives is active. Blocking already acquired knowledge is not available in this mode. There is no forget/amnesia operation. Restricting an authored entry is not erasure of an already acquired disclosure.
+In Character perspectives mode, separate character views replace **Limit to character knowledge**, **Remind about unknown facts**, **Topic knowledge overview**, **Track learning from dialogue**, and **Match known facts**. These Standard-mode controls are hidden while Character perspectives is active. **Never Learn** and **Unlearn** are not available in this mode, and there is no other forget operation. Restricting an authored entry is not erasure of an already acquired disclosure.
 
 ## Scene introductions
 
@@ -144,7 +144,7 @@ The bridge does not replay the last exchange before departure or give the return
 
 **Offscreen Life** is the only generated part. Choosing **Thorough** (or Standard **Ultra**) enables one Narrator request on returns with intervening story or recorded time, without waiting for summarization. **Balanced** remains the new-story default and keeps this request off, as do the lower stops. Changing the individual switch away from a preset shows **Custom**. Existing scenes retain their settings on load.
 
-The account is one private, independent offscreen fact referenced by that return. Edit or remove it in the **Facts** editor; the bridge reads the current character projection rather than keeping another copy. False or superseded accounts are omitted. In Character perspectives, an offscreen account also counts as its owner's known fact in knowledge views, fact queries and memory; other characters do not acquire it. Fact queries place newly recorded accounts in the order the character learned them. Removing an account offers an explicit retry while the return is current. A failed or interrupted request leaves the baseline intact. The opened activated chip offers an explicit **Retry Offscreen Life** while that return is still current. No automatic retry adds a second request.
+The account is one private, independent offscreen fact referenced by that return. Edit or remove it in the **Facts** editor; the bridge reads the current character projection rather than keeping another copy. Superseded accounts are omitted. In Character perspectives, an offscreen account also counts as its owner's known fact in knowledge views, fact queries and memory; other characters do not acquire it. Fact queries place newly recorded accounts in the order the character learned them. Removing an account offers an explicit retry while the return is current. A failed or interrupted request leaves the baseline intact. The opened activated chip offers an explicit **Retry Offscreen Life** while that return is still current. No automatic retry adds a second request.
 
 Each return remains distinct through saves and reloads. Edits to time passages update the duration; deleting a time-passage message updates the duration too. Rewinding or resetting history removes later chips. Loading an already active character or replacing their actor adds no chip.
 
@@ -164,9 +164,11 @@ Character descriptions, attributes, details and world entries have **Known by** 
 
 - **Everyone** (default): every character can draw on the entry. Leave this selected for shared information.
 - **Only [character]**: keep the entry private to its character owner. World entries have no owner, so this option reads **Nobody**.
-- **Specific characters**: share the entry with its owner and the characters you choose. Select names in the **Characters** field. Explicit access rules can also give other characters access.
+- **Specific characters**: share the entry with its owner and the characters you choose. Select names in the **Characters** field. A Learn rule can also give other characters access.
 
-Set visibility in the Characters or World tab. It governs authored inputs, pins and retrieval. Allow and Block rules apply in the order you add them: an **Allow** added after a **Block** on the same entry or fact lifts the block, and a **Block** added after an **Allow** wins over it. The character's Knowledge tab and the [Facts tab](/talemate/user-guide/world-editor/facts/) follow the same rule. Generated reinforcements also need a current audience view; visibility alone cannot expose their withheld full answer. The director can set **Known by** for you as well, through its usual write confirmation.
+Set visibility in the Characters or World tab. It governs authored inputs, pins and retrieval. Learn and Never Learn rules apply in the order you add them: a **Learn** added after a **Never Learn** on the same entry or fact lifts the Never Learn, and a **Never Learn** added after a **Learn** wins over it. The character's Knowledge tab and the [Facts tab](/talemate/user-guide/world-editor/facts/) follow the same rule. Generated reinforcements also need a current audience view; visibility alone cannot expose their withheld full answer. The director can set **Known by** for you as well, through its usual write confirmation.
+
+In a Standard story a static history entry, the backstory you add in the [History](/talemate/user-guide/world-editor/history/) tab, has the same **Known by** field. It decides who knows the entry and every fact recorded from it. Say the entry reads "Mara's brother drowned off Vester Point" and only Mara should know it: choose **Specific characters** and Mara. From then on only Mara draws on the entry and its facts. The change reaches the facts the entry already has at once, without an AI request, and **Generate facts** uses the same setting. A Character perspectives story does not offer the field.
 
 ## Explicit disclosures
 
@@ -174,7 +176,7 @@ In a perception scene, **Characters → Knowledge → Establish character knowle
 
 **Give the whole entry** is off by default. **Give all entry content** explicitly copies all current source text, including private details. Neither choice grants access to future edits. Invalid sources and unknown characters are rejected before content is added. Earlier perspectives stay unchanged; the disclosure appears in subsequent context and survives saves, source edits and fact regeneration.
 
-This is author establishment: no dialogue or discovery event is invented. The director can give a disclosure the same way, with selected information or the whole entry. Removing an additional access rule does not erase information already given to the character. Revokes are unavailable in this mode, including node and API writes.
+This is author establishment: no dialogue or discovery event is invented. The director can give a disclosure the same way, with selected information or the whole entry. Removing an additional access rule does not erase information already given to the character. Never Learn rules (**Revoke Knowledge** in node graphs) are unavailable in this mode, including node and API writes.
 
 When **Extract facts** is enabled, the information also becomes searchable facts. If that step fails, the information is still saved. Follow the [cost and recovery guidance](#cost-and-recovery) to recover its facts.
 
@@ -182,7 +184,7 @@ When **Extract facts** is enabled, the information also becomes searchable facts
 
 Enable [Topics in the Memory agent](/talemate/user-guide/agents/memory/settings/#topics) to group recorded facts by subject without an extra text-generation request. The Knowledge tab's **Known facts by topic** list shows **Known** facts out of **Recorded** facts in each **Topic**. In perception mode, only facts with current supporting audience evidence count. Pending or invalidated support does not count. This measures access to the index, not understanding or exhaustive world knowledge. Topics remain useful for retrieval and author inspection; characters receive no all/some/nothing topic assertions in this mode.
 
-Each topic row expands to list that topic's facts for the character. A fact the character knows shows how they know it (**Present**, **Told in dialogue**, **Allowed by rule** or **Learned from dialogue**; in a Character perspectives story **Perceived** or **Disclosed**) and where it was recorded (the history entry, a manual entry, offscreen life, a perception or a disclosure). A recorded fact the character does not know is listed greyed, so you can see what they are missing. **Expand all** opens every row; the filter field narrows topics by name and, once a row has loaded, its facts by text, so expand a topic (or Expand all) before you search inside it. The facts load when a row opens and add no request. Double-click a fact in a topic row, or select its importance chip, to edit its text and importance; the :material-close: button removes it. A fact is one record wherever it is shown: an edit or removal in a topic row, in the History tab, in the [Facts tab](/talemate/user-guide/world-editor/facts/) or through the Knowledge hub changes the same fact for every character. Until you edit it, a fact that Character perspectives merged from two characters' views keeps each character's own wording in their Knowledge tab; your edit replaces both.
+Each topic row expands to list that topic's facts for the character. A fact the character knows shows how they know it (**Present**, **Told in dialogue**, **Learn rule** or **Learned from dialogue**; in a Character perspectives story **Perceived** or **Disclosed**) and where it was recorded (the history entry, a manual entry, offscreen life, a perception or a disclosure). A recorded fact the character does not know is listed greyed with the reason (**Not present**, **Unlearned** or **Never Learn rule** in a Standard story), so you can see what they are missing. **Expand all** opens every row; the filter field narrows topics by name and, once a row has loaded, its facts by text, so expand a topic (or Expand all) before you search inside it. The facts load when a row opens and add no request. Double-click a fact in a topic row, or select its importance chip, to edit its text and importance. In a Standard story a fact the character knows offers **Unlearn**, and a fact they do not know offers **Learn**; see [Unlearn a fact](#unlearn-a-fact). A topic row never deletes the fact itself: delete a fact in the History tab or the [Facts tab](/talemate/user-guide/world-editor/facts/). A fact is one record wherever it is shown: an edit in a topic row, in the History tab, in the Facts tab or through the Knowledge hub changes the same fact for every character. Until you edit it, a fact that Character perspectives merged from two characters' views keeps each character's own wording in their Knowledge tab; your edit replaces both.
 
 Facts show relative time markers based on their latest known restatement. The hub applies the Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settings/#fact-chronology) order and cut; expanded topic rows keep the full record for inspection. The score combines importance and age, with recent facts retained and older facts kept when salient or about a present character. This adds no AI request and leaves character access and the effort slider unchanged.
 
@@ -190,11 +192,11 @@ Facts show relative time markers based on their latest known restatement. The hu
 
 ## The director
 
-The director can inspect full author records, visibility and character disclosures. Its **Character Knowledge** query lists disclosures, supplemental grants, restricted authored entries and recorded-fact coverage. Character-targeted guidance must respect established evidence. Normal author planning may use broader context.
+The director can inspect full author records, visibility and character disclosures. Its **Character Knowledge** query lists disclosures, Learn, Never Learn and Unlearn rules, restricted authored entries and recorded-fact coverage. Character-targeted guidance must respect established evidence. Normal author planning may use broader context.
 
 ## Facts in node graphs
 
-[Knowledge nodes](/talemate/user-guide/node-editor/reference/nodes/knowledge/) provide **Facts About**, **Current State**, **Relationship Timeline**, **Entry Knowledge**, **Character Knowledge**, **Set Entry Visibility**, and **Grant Knowledge**. In perception mode, fact queries use supported character contributions and Grant Knowledge creates a disclosure. **Revoke Knowledge** rejects perception scenes before mutation. In Standard mode, these graph actions allow or block access to an entry.
+[Knowledge nodes](/talemate/user-guide/node-editor/reference/nodes/knowledge/) provide **Facts About**, **Current State**, **Relationship Timeline**, **Entry Knowledge**, **Character Knowledge**, **Set Entry Visibility**, and **Grant Knowledge**. In perception mode, fact queries use supported character contributions and Grant Knowledge creates a disclosure. **Revoke Knowledge** rejects perception scenes before mutation. In Standard mode, **Grant Knowledge** adds a Learn rule and **Revoke Knowledge** adds a Never Learn rule for an entry.
 
 ## Retrieval
 
@@ -202,16 +204,22 @@ Perception-mode character retrieval derives queries from projected history, then
 
 ## Standard mode
 
-Characters' knowledge follows presence, ownership, the **Known by** settings and explicit **Allow / Block** rules. Unknown historical presence is shared. The conversation history filter replaces missed spans with a gap; layered summaries use their coarse presence. Narrator, director, summarizer and world-state author requests retain the full record.
+Characters' knowledge follows presence, ownership, the **Known by** settings, explicit **Learn / Never Learn** rules and **Unlearn**. Unknown historical presence is shared. The conversation history filter replaces missed spans with a gap; layered summaries use their coarse presence. Narrator, director, summarizer and world-state author requests retain the full record.
 
-When you select a different revision of a message, Standard mode temporarily withholds facts and inferred grants that came from the replaced text, including affected chapter summaries. **Refresh facts** re-runs enabled fact extraction for the chapter summaries that contain the passage and, for character dialogue, enabled learning from dialogue; a passage outside every chapter has no facts to refresh. It uses the presence and preceding history recorded at that point rather than today's active cast. Sending the next line runs the same refresh first. Authored facts, manual grants, other restatements and unrelated evidence are preserved; with both features disabled, cleanup waits until you send your next line and makes no model request. Browsing leaves the scene unsaved; the selection persists with the next scene save.
+When you select a different revision of a message, Standard mode temporarily withholds facts and inferred grants that came from the replaced text, including affected chapter summaries. **Refresh facts** re-runs enabled fact extraction for the chapter summaries that contain the passage and, for character dialogue, enabled learning from dialogue; a passage outside every chapter has no facts to refresh. A passage that owes only learning from dialogue, such as a character line that no chapter contains yet, shows **Learn from dialogue** instead. It uses the presence and preceding history recorded at that point rather than today's active cast. Sending the next line runs the same refresh first. In the World Editor's History tab, a history entry that contains a passage whose facts are out of date shows a chip with the same label; click it to run the refresh from there. Regenerating the whole history re-extracts every chapter's facts from the selected versions, so afterwards only learning from dialogue can still be owed, and the button reads **Learn from dialogue**. Selecting the earlier version again after that asks for **Refresh facts**, because the facts now come from the other version. Authored facts, Learn rules, other restatements and unrelated evidence are preserved; with both features disabled, cleanup waits until you send your next line and makes no model request. Browsing leaves the scene unsaved; the selection persists with the next scene save.
 
 ### What the speaking character gets
 
-Turn on **Limit to character knowledge** to omit events the character missed. If replies use information they should not know, try **Remind about unknown facts**, then adjust **Unknown-fact reminders** and **Recent facts to check**. **Topic knowledge overview** adds a short topic-level reminder. **Refine memories with AI** selects and rewrites retrieved memories; **Track learning from dialogue** records which recent facts listeners learned. See [Conversation settings](/talemate/user-guide/agents/conversation/settings/#character-knowledge) for tuning and extra-request costs. **Match known facts** can recognize retold information, but cannot override visibility or a Block rule.
+Turn on **Limit to character knowledge** to omit events the character missed. If replies use information they should not know, try **Remind about unknown facts**, then adjust **Unknown-fact reminders** and **Recent facts to check**. **Topic knowledge overview** adds a short topic-level reminder. **Refine memories with AI** selects and rewrites retrieved memories; **Track learning from dialogue** records which recent facts listeners learned. See [Conversation settings](/talemate/user-guide/agents/conversation/settings/#character-knowledge) for tuning and extra-request costs. **Match known facts** can recognize retold information, but cannot override visibility, a Never Learn rule or an Unlearn.
 
 ### Adjust entry knowledge
 
-In **Characters → Knowledge → Adjust entry knowledge**, select an **Entry**, choose **Allow** or **Block** under **Action**, and click **Apply**. Use Allow to add the entry to the character's knowledge; use Block to keep it out. **Note (optional)** records your reason. Select an actual autocomplete result; typing alone does not choose an entry. The rules apply in the order you add them: a Block added after an Allow wins over it, and an Allow added after a Block lifts the block. Remove a rule to return to the remaining knowledge rules; removing it keeps the source entry.
+In **Characters → Knowledge → Adjust entry knowledge**, select an **Entry**, choose **Learn** or **Never Learn** under **Action**, and click **Apply**. Use Learn to add the entry to the character's knowledge; use Never Learn to keep it out, even when the character is present when the story repeats it. **Note (optional)** records your reason. Select an actual autocomplete result; typing alone does not choose an entry. The rules apply in the order you add them: a Never Learn added after a Learn wins over it, and a Learn added after a Never Learn lifts the Never Learn. Remove a rule to return to the remaining knowledge rules; removing it keeps the source entry.
 
-The director can add an Allow or Block rule the same way, through its usual confirmation. Rules accumulate rather than replace one another: an Allow added after a Block removes that Block, while a Block added after an Allow is listed beside it and wins; remove that Block and the Allow stands again.
+The director can add a Learn or Never Learn rule the same way, through its usual confirmation; its actions call them grant and revoke. Rules accumulate rather than replace one another: a Learn added after a Never Learn removes that Never Learn, while a Never Learn added after a Learn is listed beside it and wins; remove that Never Learn and the Learn stands again.
+
+### Unlearn a fact
+
+A fact row under **Characters → Knowledge → Known facts by topic** offers **Unlearn** when the character knows the fact and **Learn** when they do not. Unlearn takes the fact out of what this character knows; the fact stays for everyone else. Say Edwin was present when Mara hid the sextant, but he should find out later in the story: Unlearn the fact on Edwin's tab. Edwin stops knowing it at once, and the rule list shows an **Unlearn** rule for it.
+
+Unlike Never Learn, an Unlearn lets the character learn the fact again. A later line that teaches it lifts the rule: Mara telling Edwin in a new line while **Track learning from dialogue** is on, or a new passage that repeats the fact while Edwin is present. The rule stays in the list, marked **lifted by a later line**, for as long as that line is in the story. If you delete or regenerate the line, or pick a version of it that no longer teaches the fact, the Unlearn applies again and Edwin stops knowing the fact. Regenerating an older chapter or refreshing an older passage does not lift the rule, because nothing new happened in the story. When you regenerate the chapter that recorded the fact, regenerate its facts or regenerate the whole history, the rule moves to the fact that the regeneration records for the same statement from the same passage. Every Learn and Never Learn rule on the fact moves the same way, and so does what a character learned about it from dialogue. When you refresh the passage instead, a Learn or Never Learn by hand keeps the fact in place, no longer tied to the line, and an Unlearn waits and moves as above. If the regeneration does not record the statement again, the rule waits outside the list until a later regeneration records it, and it goes when its passage is deleted. A **Learn** by hand replaces the Unlearn for good, and so does a Never Learn. Remove the Unlearn rule to undo it: what the story taught Edwin, such as a fact Mara told him, applies again. Unlearn applies to facts only.

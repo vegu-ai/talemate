@@ -89,9 +89,7 @@ async def absence_facts(
     bucket = set(bucket_ids)
 
     def candidate(fact: Fact) -> bool:
-        # a fact marked false is never listed: in the bucket it is known,
-        # outside it there is nothing to warn about
-        return fact.source != "offscreen" and fact.id not in bucket and not fact.false
+        return fact.source != "offscreen" and fact.id not in bucket
 
     # facts about the character, or recorded while they were away, are
     # always eligible, ahead of the creation-order window and the age cut

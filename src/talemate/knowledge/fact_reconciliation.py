@@ -48,7 +48,7 @@ async def reconcile_facts(scene, facts, source_keys, *, comparisons):
     facts = dict(facts)
     groups = defaultdict(list)
     for fact in facts.values():
-        if fact.false or not fact.contributions:
+        if not fact.contributions:
             continue
         first = fact.contributions[0]
         if first.evidence is None or first.source.key not in source_keys:

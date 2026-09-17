@@ -1,5 +1,5 @@
 <template>
-    <div class="facts-tab">
+    <div class="facts-tab" :style="{ maxWidth: MAX_CONTENT_WIDTH }">
         <v-card variant="text">
             <v-card-title class="d-flex align-center">
                 {{ title }}
@@ -24,14 +24,11 @@
                     <v-col cols="6" md="2">
                         <v-select v-model="query.importance" :items="levels" item-title="title" item-value="value" label="Importance" density="compact" variant="underlined" hide-details multiple chips closable-chips class="facts-importance" />
                     </v-col>
-                    <v-col cols="6" md="2">
+                    <v-col cols="6" md="3">
                         <v-select v-model="query.source" :items="sourceItems" item-title="label" item-value="value" label="Source" density="compact" variant="underlined" hide-details multiple chips closable-chips class="facts-source" />
                     </v-col>
-                    <v-col cols="6" md="2">
+                    <v-col cols="6" md="3">
                         <v-select v-model="query.superseded" :items="supersededItems" item-title="label" item-value="value" label="Supersession" density="compact" variant="underlined" hide-details class="facts-superseded" />
-                    </v-col>
-                    <v-col cols="6" md="2">
-                        <v-select v-model="query.false" :items="falseItems" item-title="label" item-value="value" label="Truth" density="compact" variant="underlined" hide-details class="facts-false" />
                     </v-col>
                     <v-col cols="6" md="3">
                         <v-switch v-model="query.latest_chapter" :label="latestChapterLabel" color="primary" hide-details density="compact" class="facts-latest-chapter" />
@@ -52,9 +49,7 @@
         <div v-if="selectedIds.length" class="d-flex align-center flex-wrap ga-2 px-4 py-2 facts-selection">
             <span class="text-body-small">{{ selectedIds.length }} selected</span>
             <ConfirmActionInline icon="mdi-close" color="delete" action-label="Delete" confirm-label="Delete these facts" :disabled="locked" class="facts-delete-selected" @confirm="deleteSelected" />
-            <v-btn size="small" variant="text" prepend-icon="mdi-cancel" :disabled="locked" class="facts-false-selected" @click="setSelectedFalse(true)">Mark false</v-btn>
-            <v-btn size="small" variant="text" prepend-icon="mdi-check" :disabled="locked" class="facts-true-selected" @click="setSelectedFalse(false)">Mark true</v-btn>
-            <v-btn v-if="!perceptionMode" size="small" variant="text" prepend-icon="mdi-key-plus" :disabled="locked" class="facts-grant-selected" @click="openGrant(selectedIds)">Grant to character</v-btn>
+            <v-btn v-if="!perceptionMode" size="small" variant="text" :prepend-icon="rules.grant.icon" :disabled="locked" class="facts-grant-selected" @click="openGrant(selectedIds)">Learn for character</v-btn>
             <v-btn size="small" variant="text" @click="selected = {}">Clear selection</v-btn>
         </div>
 
@@ -84,12 +79,11 @@
                                 </v-btn>
                             </template>
                             <v-list density="compact">
-                                <v-list-item :prepend-icon="fact.false ? 'mdi-check' : 'mdi-cancel'" :title="fact.false ? 'Mark true' : 'Mark false'" @click="setFalse(fact, !fact.false)" />
                                 <v-list-item prepend-icon="mdi-arrow-left-bold" title="Set supersedes…" @click="openPicker(fact)" />
                                 <v-list-item v-if="fact.supersedes" prepend-icon="mdi-link-off" title="Clear supersedes" @click="setSupersedes(fact, null)" />
                                 <template v-if="!perceptionMode">
-                                    <v-list-item prepend-icon="mdi-key-plus" title="Grant to character…" @click="openGrant([fact.id], 'grant')" />
-                                    <v-list-item prepend-icon="mdi-key-minus" title="Block for character…" @click="openGrant([fact.id], 'revoke')" />
+                                    <v-list-item :prepend-icon="rules.grant.icon" title="Learn for character…" @click="openGrant([fact.id], 'grant')" />
+                                    <v-list-item :prepend-icon="rules.revoke.icon" title="Never Learn for character…" @click="openGrant([fact.id], 'revoke')" />
                                 </template>
                                 <v-list-item v-if="fact.message_id != null" prepend-icon="mdi-message-text-outline" title="Inspect source" @click="openFactSource(fact)" />
                             </v-list>
@@ -125,10 +119,10 @@
 
         <v-dialog :model-value="grant.open" max-width="480" @update:model-value="(value) => { if (!value) grant.open = false; }">
             <v-card class="facts-grant">
-                <v-card-title class="text-body-large">{{ grant.kind === 'grant' ? 'Grant' : 'Block' }} {{ grant.factIds.length === 1 ? grant.factIds[0] : `${grant.factIds.length} facts` }}</v-card-title>
+                <v-card-title class="text-body-large">{{ rules[grant.kind].label }} {{ grant.factIds.length === 1 ? grant.factIds[0] : `${grant.factIds.length} facts` }}</v-card-title>
                 <v-card-text>
                     <v-select v-model="grant.name" :items="options.characters" label="Character" density="compact" variant="underlined" hide-details class="facts-grant-character" />
-                    <p class="text-body-small text-medium-emphasis mt-2">{{ grant.kind === 'grant' ? 'The character knows these facts even when they were not present for them.' : 'The character does not know this fact even when they would otherwise.' }}</p>
+                    <p class="text-body-small text-medium-emphasis mt-2">{{ grant.kind === 'grant' ? 'The character knows these facts even when they were not present for them.' : 'The character does not know this fact even when they would otherwise, and cannot learn it until a Learn lifts this rule.' }}</p>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer />
@@ -155,13 +149,15 @@
 <script>
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import WorldStateManagerFactRow from './WorldStateManagerFactRow.vue';
+import { KNOWLEDGE_RULES } from '@/constants/knowledgeRules';
 import { newUuid } from '@/utils/uuid';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 
 export const FACTS_TAB_TITLE = 'Facts';
 export const PAGE_SIZE = 50;
 
 export function defaultQuery() {
-    return { text: '', character: null, character_filter: 'knows', topic_id: null, importance: [], source: [], superseded: null, false: null, latest_chapter: false, sort: 'time', descending: true };
+    return { text: '', character: null, character_filter: 'knows', topic_id: null, importance: [], source: [], superseded: null, latest_chapter: false, sort: 'time', descending: true };
 }
 
 export function queryPayload(query, page, pageSize = PAGE_SIZE) {
@@ -176,7 +172,6 @@ export function queryPayload(query, page, pageSize = PAGE_SIZE) {
     if (query.importance.length) payload.importance = [...query.importance];
     if (query.source.length) payload.source = [...query.source];
     if (query.superseded !== null) payload.superseded = query.superseded;
-    if (query.false !== null) payload.false = query.false;
     if (query.latest_chapter) payload.latest_chapter = true;
     return payload;
 }
@@ -193,6 +188,8 @@ export default {
     data() {
         return {
             title: FACTS_TAB_TITLE,
+            rules: KNOWLEDGE_RULES,
+            MAX_CONTENT_WIDTH,
             query: defaultQuery(),
             page: 1,
             pageSize: PAGE_SIZE,
@@ -226,11 +223,6 @@ export default {
                 { value: true, label: 'Superseded only' },
                 { value: false, label: 'Current only' },
             ],
-            falseItems: [
-                { value: null, label: 'Any' },
-                { value: true, label: 'Marked false only' },
-                { value: false, label: 'Not marked false' },
-            ],
             sorts: [
                 { value: 'time', label: 'Time' },
                 { value: 'importance', label: 'Importance' },
@@ -259,7 +251,7 @@ export default {
             return JSON.stringify({ ...this.query, text: this.query.text || '' }) !== JSON.stringify(defaultQuery());
         },
         latestChapterLabel() {
-            return this.latestChapter ? `Latest chapter (${this.latestChapter.time})` : 'Latest chapter';
+            return this.latestChapter ? `Latest (${this.latestChapter.time})` : 'Latest';
         },
         sourceItems() {
             return this.options.sources;
@@ -329,10 +321,7 @@ export default {
             this.busy = true;
             this.getWebsocket().send(JSON.stringify({ type: 'world_state_manager', ...payload }));
         },
-        // a mark or a link sends only its own field: a text that is present is authored
-        setFalse(fact, value) {
-            this.send({ action: 'update_fact', fact_id: fact.id, false: value });
-        },
+        // a link sends only its own field: a text that is present is authored
         setSupersedes(fact, id) {
             this.picker.fact = null;
             this.send({ action: 'update_fact', fact_id: fact.id, supersedes: id });
@@ -342,11 +331,6 @@ export default {
             if (!ids.length) return;
             this.selected = {};
             this.send({ action: 'delete_facts', fact_ids: ids });
-        },
-        setSelectedFalse(value) {
-            const ids = this.selectedIds;
-            if (!ids.length) return;
-            this.send({ action: 'set_facts_false', fact_ids: ids, false: value });
         },
         openGrant(factIds, kind = 'grant') {
             this.grant = { open: true, factIds: [...factIds], name: this.grant.name, kind };
@@ -433,7 +417,7 @@ export default {
             if (message.action === 'operation_done') {
                 this.busy = false;
                 if (message.failed_action === 'list_facts') this.loading = false;
-                if (['list_facts', 'update_fact', 'grant_facts', 'set_knowledge_edge', 'delete_facts', 'set_facts_false'].includes(message.failed_action)) {
+                if (['list_facts', 'update_fact', 'grant_facts', 'set_knowledge_edge', 'delete_facts'].includes(message.failed_action)) {
                     this.error = message.error?.message || 'The action failed.';
                 }
             }

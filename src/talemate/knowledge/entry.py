@@ -19,7 +19,10 @@ from talemate.knowledge.changes import (
     edge_change,
     edge_changes_knowledge,
     emit_knowledge_changes,
+    lift_unlearn,
+    lifted_unlearns,
 )
+from talemate.knowledge.revision_browsing import current_edges
 from talemate.knowledge.schema import EdgeKind, EntryVisibility, KnowledgeEdge
 from talemate.knowledge.topics import awareness_line, coverage
 
@@ -81,6 +84,7 @@ class EntryKnowledge(pydantic.BaseModel):
     present: list[str] | None = None
     grants: list[KnowledgeEdge] = pydantic.Field(default_factory=list)
     revokes: list[KnowledgeEdge] = pydantic.Field(default_factory=list)
+    unlearns: list[KnowledgeEdge] = pydantic.Field(default_factory=list)
 
     @property
     def has_visibility(self) -> bool:
@@ -90,6 +94,10 @@ class EntryKnowledge(pydantic.BaseModel):
     def known_by(self) -> str:
         if self.kind == "unknown":
             return "unknown (no such entry)"
+        if self.kind == "static":
+            if self.present is None:
+                return "everyone"
+            return ", ".join(self.present) if self.present else "nobody"
         if self.kind in PRESENCE_KINDS:
             if self.present is None:
                 return "everyone"
@@ -114,6 +122,10 @@ class EntryKnowledge(pydantic.BaseModel):
             parts.append("grants: " + ", ".join(_edge_text(e) for e in self.grants))
         if self.revokes:
             parts.append("revokes: " + ", ".join(_edge_text(e) for e in self.revokes))
+        if self.unlearns:
+            parts.append(
+                "unlearned: " + ", ".join(_edge_text(e) for e in self.unlearns)
+            )
         return "; ".join(parts)
 
 
@@ -273,8 +285,9 @@ def entry_knowledge(scene: "Scene", entry: "str | ContextIDItem") -> EntryKnowle
         e
         for e in scene.world_state.knowledge
         if e.target == item.id
-        and not (e.kind == "revoke" and character_knowledge_enabled(scene))
+        and not (e.kind != "grant" and character_knowledge_enabled(scene))
     ]
+    lifted = _lifted_unlearns(scene)
     return EntryKnowledge(
         id=item.id,
         kind=item.kind,
@@ -283,7 +296,12 @@ def entry_knowledge(scene: "Scene", entry: "str | ContextIDItem") -> EntryKnowle
         present=item.present,
         grants=[e for e in edges if e.kind == "grant"],
         revokes=[e for e in edges if e.kind == "revoke"],
+        unlearns=[e for e in edges if e.kind == "unlearn" and e.id not in lifted],
     )
+
+
+def _lifted_unlearns(scene: "Scene") -> set[str]:
+    return lifted_unlearns(current_edges(scene))
 
 
 def known_by_line(scene: "Scene", entry: "str | ContextIDItem") -> str:
@@ -334,6 +352,7 @@ def set_edge(
             for e in scene.world_state.knowledge
             if not (e.character == edge.character and e.target == edge.target)
         ]
+    lift_unlearn(scene.world_state, edge.character, edge.target)
     scene.world_state.knowledge.append(edge)
     if edge_changes_knowledge(edge, previous, scene.world_state.knowledge):
         emit_knowledge_changes(scene, [edge_change(edge)])
@@ -355,17 +374,27 @@ def character_knowledge_report(scene: "Scene", name: str) -> str:
     targets = scene.world_state_manager.knowledge_targets()
     labels = {t.id: t.label for t in targets}
     index = KnowledgeIndex.from_scene(scene)
-    edges = [e for e in scene.world_state.knowledge if e.character == name]
+    edges = [
+        e
+        for e in scene.world_state.knowledge
+        if e.character == name and e.anchor is None
+    ]
+    lifted = _lifted_unlearns(scene)
 
     def edge_lines(kind: EdgeKind) -> list[str]:
         return [
             f"- {labels.get(e.target, e.target)}: {_edge_detail(e)}"
             for e in edges
-            if e.kind == kind
+            if e.kind == kind and e.id not in lifted
         ]
 
     restricted = []
     for target in targets:
+        if target.kind == "static":
+            entry = entry_knowledge(scene, target.id)
+            if entry.present is not None and index.knows_entry(scene, name, target.id):
+                restricted.append(f"- {target.label} ({entry.line})")
+            continue
         if target.kind not in VISIBILITY_KINDS:
             continue
         entry = entry_knowledge(scene, target.id)
@@ -394,11 +423,15 @@ def character_knowledge_report(scene: "Scene", name: str) -> str:
         lines += disclosures
     grants = edge_lines("grant")
     revokes = edge_lines("revoke")
+    unlearns = edge_lines("unlearn")
     lines.append("Grants:" if grants else "Grants: none")
     lines += grants
     if not character_knowledge_enabled(scene):
         lines.append("Revokes:" if revokes else "Revokes: none")
         lines += revokes
+        if unlearns:
+            lines.append("Unlearned (known again after any later learning):")
+            lines += unlearns
     lines.append(
         f"Restricted entries {name} can see:"
         if restricted

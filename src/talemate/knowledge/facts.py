@@ -14,7 +14,14 @@ import structlog
 
 from talemate.instance import get_agent
 from talemate.knowledge.chronology import ranked_facts
-from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
+from talemate.knowledge.changes import (
+    KnowledgeChange,
+    drop_fact_edges,
+    emit_knowledge_changes,
+    is_author_rule,
+    lifts_unlearn,
+    unlearn_lifted_by,
+)
 from talemate.knowledge.presence import presence_metadata
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.perspectives import _acquire, _commit_order
@@ -52,6 +59,8 @@ __all__ = [
     "previous_facts",
     "store_offscreen_fact",
     "fact_is_independent",
+    "follow_static_audiences",
+    "follow_static_entry_audience",
 ]
 
 log = structlog.get_logger("talemate.knowledge.facts")
@@ -140,7 +149,6 @@ def fact_memory_document(fact: Fact) -> dict:
         "ts": fact.ts if fact.ts is not None else 0,
         "restatements": fact.restatements,
         "importance": fact.importance,
-        "false": fact.false,
         **presence_metadata(fact.present),
     }
     if fact.archive_id:
@@ -164,11 +172,149 @@ def fact_is_independent(world_state, fact: Fact, *, edges: bool = True) -> bool:
         or (
             edges
             and any(
-                edge.target == fact.id and edge.source == "manual"
+                edge.target == fact.id
+                and edge.source == "manual"
+                and edge.kind != "unlearn"
                 for edge in world_state.knowledge
             )
         )
     )
+
+
+def restatement_learners(
+    world_state, fact: Fact, sources: list[tuple[set[str], int | None, int | None]]
+) -> list[tuple[set[str], int | None, int | None]]:
+    """
+    The characters each source of a fact teaches it, as (names, line id, scene
+    time): the source's audience that the origin audience does not cover. An
+    unknown origin audience covers everyone. A character whose Unlearn the
+    source's line lifts is never covered.
+    """
+    groups = []
+    for audience, message_id, ts in sources:
+        relearners = {
+            edge.character
+            for edge in world_state.knowledge
+            if edge.kind == "unlearn"
+            and edge.target == fact.id
+            and unlearn_lifted_by(edge, message_id)
+        }
+        if fact.present is None:
+            learners = audience & relearners
+        else:
+            learners = audience - (set(fact.present) - relearners)
+        if learners:
+            groups.append((learners, message_id, ts))
+    return groups
+
+
+def _write_told_grants(world_state, fact: Fact, groups, append, changes) -> None:
+    for learners, message_id, ts in groups:
+        for name in sorted(learners):
+            if name in fact.known_by and not _relearns(
+                world_state, name, fact.id, message_id
+            ):
+                continue
+            fact.known_by.setdefault(name, "told")
+            changes.append(KnowledgeChange(character=name, target=fact.id))
+            append(
+                KnowledgeEdge(
+                    character=name,
+                    target=fact.id,
+                    kind="grant",
+                    source="told",
+                    message_id=message_id,
+                    ts=ts,
+                )
+            )
+
+
+def _relearns(world_state, character: str, target: str, message_id) -> bool:
+    """
+    A line newer than the pair's Unlearn records its own grant, even when an
+    older grant stands beside the rule: that grant is what lifts the rule.
+    """
+    return lifts_unlearn(
+        world_state.knowledge, character, target, message_id
+    ) and not any(
+        edge.kind == "grant"
+        and edge.character == character
+        and edge.target == target
+        and edge.message_id == message_id
+        for edge in world_state.knowledge
+    )
+
+
+def follow_static_entry_audience(
+    world_state, archive_id: str, present: list[str] | None
+) -> list[Fact]:
+    """
+    The facts a static entry recorded, and its restatements of other facts,
+    take the entry's audience; a source that restated such a fact teaches
+    what that audience no longer covers. Returns the changed facts; their
+    memory documents are the caller's to rewrite.
+    """
+    changed = []
+    for fact in world_state.facts.values():
+        if fact.contributions:
+            continue
+        touched = False
+        if (
+            fact.archive_id == archive_id
+            and fact.message_id is None
+            and fact.present != present
+        ):
+            fact.present = list(present) if present is not None else None
+            touched = True
+        restated_by = tuple(
+            item.model_copy(
+                update={"present": list(present) if present is not None else None}
+            )
+            if item.archive_id == archive_id
+            and item.message_id is None
+            and item.present != present
+            else item
+            for item in fact.restated_by
+        )
+        if restated_by != fact.restated_by:
+            fact.restated_by = restated_by
+            touched = True
+        if touched:
+            # a source that restated the fact teaches what the entry's audience
+            # no longer covers, as it did when the audience was set first
+            _write_told_grants(
+                world_state,
+                fact,
+                restatement_learners(
+                    world_state,
+                    fact,
+                    [
+                        (
+                            set(item.present or []) | set(item.told),
+                            item.message_id,
+                            item.ts,
+                        )
+                        for item in fact.restated_by
+                    ],
+                ),
+                world_state.knowledge.append,
+                [],
+            )
+            changed.append(fact)
+    return changed
+
+
+def follow_static_audiences(scene: "Scene") -> set[str]:
+    changed = set()
+    for entry in scene.archived_history:
+        if entry.get("start") is None and entry.get("end") is None and entry.get("id"):
+            changed.update(
+                fact.id
+                for fact in follow_static_entry_audience(
+                    scene.world_state, entry["id"], entry.get("present")
+                )
+            )
+    return changed
 
 
 def facts_for_entry(scene: "Scene", archive_id: str) -> list[Fact]:
@@ -248,11 +394,14 @@ def _drop_restatements(fact: Fact, matches: Callable[[FactRestatement], bool]):
     return dropped
 
 
-def prune_summary_facts(world_state, archive_ids: set[str]) -> set[str]:
+def prune_summary_facts(
+    world_state, archive_ids: set[str], *, keep_rules: bool = False
+) -> set[str]:
     """
     Remove the facts of the given archive entries from a WorldState, plus
     the edges that target them. Returns the removed fact ids; memory
-    documents are the caller's to delete.
+    documents are the caller's to delete. With `keep_rules` (a regeneration)
+    the author rules of a removed fact wait for its statement.
     """
     before = set(world_state.facts)
     references = {
@@ -278,11 +427,9 @@ def prune_summary_facts(world_state, archive_ids: set[str]) -> set[str]:
         removed.add(fact_id)
     if not removed:
         return removed
+    drop_fact_edges(world_state, removed, keep_rules=keep_rules)
     for fact_id in removed:
         world_state.facts.pop(fact_id, None)
-    world_state.knowledge = [
-        edge for edge in world_state.knowledge if edge.target not in removed
-    ]
     sanitize_fact_links(world_state.facts)
     return removed
 
@@ -322,12 +469,17 @@ def prune_serialized_facts(
             removed.add(identity)
             del holder.facts[identity]
         holder.knowledge = [
-            edge for edge in holder.knowledge if edge.target not in removed
+            edge
+            for edge in holder.knowledge
+            if edge.target not in removed and edge.anchor is None
         ]
         sanitize_fact_links(holder.facts)
-    if not removed and holder.facts == {
-        key: Fact.model_validate(value) for key, value in facts.items()
-    }:
+    if (
+        not removed
+        and holder.facts
+        == {key: Fact.model_validate(value) for key, value in facts.items()}
+        and len(holder.knowledge) == len(world_state.get("knowledge") or [])
+    ):
         return removed
     world_state["facts"] = {
         key: fact.model_dump(mode="json") for key, fact in holder.facts.items()
@@ -338,8 +490,14 @@ def prune_serialized_facts(
     return removed
 
 
-async def drop_facts_for_entries(scene: "Scene", archive_ids: set[str]):
-    """Remove the facts (and the edges that target them) of the given archive entries."""
+async def drop_facts_for_entries(
+    scene: "Scene", archive_ids: set[str], *, keep_rules: bool = True
+):
+    """
+    Remove the facts (and the edges that target them) of the given archive
+    entries. By default the entries are regenerated next, so the author rules
+    of a removed fact wait for its statement; a reset passes `keep_rules=False`.
+    """
     affected = {
         fact.id
         for fact in scene.world_state.facts.values()
@@ -353,7 +511,11 @@ async def drop_facts_for_entries(scene: "Scene", archive_ids: set[str]):
     from talemate.knowledge.revision_refresh import capture_revision_mutations
 
     with capture_revision_mutations(scene):
-        removed = prune_summary_facts(scene.world_state, archive_ids)
+        removed = prune_summary_facts(
+            scene.world_state, archive_ids, keep_rules=keep_rules
+        )
+        if not keep_rules:
+            drop_dead_anchors(scene)
         affected.update(refresh_fact_times(scene, affected))
     retained = affected - removed
     if retained:
@@ -373,7 +535,6 @@ async def update_fact(
     *,
     text: str | _Unset = UNSET,
     importance: FactImportance | _Unset = UNSET,
-    false: bool | _Unset = UNSET,
     supersedes: str | None | _Unset = UNSET,
 ) -> Fact | None:
     """
@@ -381,8 +542,8 @@ async def update_fact(
     longer stored. An omitted field is left alone. A text or link that is
     passed is authored whatever its value, since the editor sends a field only
     when the author saved it: it wins over the contributions from then on,
-    `supersedes=None` records an authored clear, and the marks alone touch
-    neither flag.
+    `supersedes=None` records an authored clear, and an importance alone
+    touches neither flag.
     """
     facts = scene.world_state.facts
     fact = facts.get(fact_id)
@@ -409,8 +570,6 @@ async def update_fact(
         fact.text_edited = True
     if importance is not UNSET:
         fact.importance = importance
-    if false is not UNSET:
-        fact.false = bool(false)
     await get_agent("memory").add_many([fact_memory_document(fact)])
     return fact
 
@@ -450,6 +609,7 @@ def _restated(
     *,
     present: list[str] | None = None,
     ts: int | None = None,
+    told: list[str] = (),
 ) -> FactRestatement | None:
     """
     Record `line` (or, without a line, the static entry `archive_id` with
@@ -472,6 +632,7 @@ def _restated(
         if line is None and present is not None
         else None,
         ts=line.ts if line else ts,
+        told=list(told),
     )
     demoted = None
     if fact.message_id is not None and _binding_key(item) < _binding_key(fact):
@@ -563,8 +724,11 @@ async def store_facts(
     documents: dict[str, dict] = {}
     changes: list[KnowledgeChange] = []
     staged: dict[str, Fact] = {}
-    restatements: dict[str, list[SpanLine | None]] = {}
+    # fact id -> (line, audience, scene time, named learners) of each staged restatement
+    restatements: dict[str, list[tuple]] = {}
     grants: list[KnowledgeEdge] = []
+    # (fact id, line id) of every statement this span records
+    recorded: list[tuple[str, int | None]] = []
 
     for item in parsed:
         item = item.model_copy(update={"text": _strip_record_age(item.text)})
@@ -605,29 +769,39 @@ async def store_facts(
                     existing.id, existing.model_copy(deep=True)
                 )
                 if existing.id in restatements:
-                    restatements[existing.id].append(line)
+                    restatements[existing.id].append(
+                        (line, line_present, line_ts, list(item.known_by))
+                    )
             witnesses = set(existing.present or [])
             demoted = _restated(
-                existing, line, archive_id, present=line_present, ts=line_ts
+                existing,
+                line,
+                archive_id,
+                present=line_present,
+                ts=line_ts,
+                told=item.known_by,
             )
             times = [
                 value for value in (existing.last_seen_ts, line_ts) if value is not None
             ]
             existing.last_seen_ts = max(times) if times else None
             fact = existing
+            recorded.append((fact.id, line.message_id if line else None))
             # the restating line's audience learned the stored fact; when the
             # line became the origin, the audience of the demoted one learned
             # it at the demoted line
             # the gate reads the audience after a swap: an unknown audience of
             # the demoted line does not stop the grants of the new origin
-            covered = set(existing.present or [])
-            witnessed_all = existing.present is None
-            first = (set(line_present or []) | set(item.known_by)) - covered
-            groups = [(first, line.message_id if line else None, line_ts)]
-            if demoted is not None:
-                groups.append(
-                    (witnesses - covered - first, demoted.message_id, demoted.ts)
+            sources = [
+                (
+                    set(line_present or []) | set(item.known_by),
+                    line.message_id if line else None,
+                    line_ts,
                 )
+            ]
+            if demoted is not None:
+                sources.append((witnesses, demoted.message_id, demoted.ts))
+            groups = restatement_learners(world_state, existing, sources)
         else:
             world_state.fact_counter += 1
             supersedes = (
@@ -651,38 +825,25 @@ async def store_facts(
             else:
                 staged[fact.id] = fact
             stored.append(fact)
+            recorded.append((fact.id, line.message_id if line else None))
             changes.extend(
                 KnowledgeChange(character=name, target=fact.id)
                 for name in line_present or []
             )
-            covered = set(line_present or [])
-            groups = [
-                (
-                    set(item.known_by) - covered,
-                    line.message_id if line else None,
-                    line_ts,
-                )
-            ]
             # unknown presence means everyone witnessed it: nothing to grant
-            witnessed_all = line_present is None
+            groups = restatement_learners(
+                world_state,
+                fact,
+                [(set(item.known_by), line.message_id if line else None, line_ts)],
+            )
 
-        if not witnessed_all:
-            for learners, edge_message_id, edge_ts in groups:
-                for name in sorted(learners):
-                    if name in fact.known_by:
-                        continue
-                    fact.known_by[name] = "told"
-                    changes.append(KnowledgeChange(character=name, target=fact.id))
-                    (world_state.knowledge if still_current is None else grants).append(
-                        KnowledgeEdge(
-                            character=name,
-                            target=fact.id,
-                            kind="grant",
-                            source="told",
-                            message_id=edge_message_id,
-                            ts=edge_ts,
-                        )
-                    )
+        _write_told_grants(
+            world_state,
+            fact,
+            groups,
+            (world_state.knowledge if still_current is None else grants).append,
+            changes,
+        )
 
         documents[fact.id] = fact_memory_document(fact)
 
@@ -715,8 +876,15 @@ async def store_facts(
                     world_state.facts[identity] = fact
                 elif identity not in removed:
                     live = world_state.facts[identity]
-                    for line in restatements[identity]:
-                        _restated(live, line, archive_id)
+                    for line, audience, when, told in restatements[identity]:
+                        _restated(
+                            live,
+                            line,
+                            archive_id,
+                            present=audience,
+                            ts=when,
+                            told=told,
+                        )
                     times = [
                         value
                         for value in (live.last_seen_ts, fact.last_seen_ts)
@@ -728,9 +896,11 @@ async def store_facts(
                 if live is None:
                     continue
                 if grant.target in restatements:
-                    if grant.character in live.known_by:
+                    if grant.character in live.known_by and not _relearns(
+                        world_state, grant.character, grant.target, grant.message_id
+                    ):
                         continue
-                    live.known_by[grant.character] = "told"
+                    live.known_by.setdefault(grant.character, "told")
                 world_state.knowledge.append(grant)
             changes = [change for change in changes if change.target not in removed]
         repair = [
@@ -746,9 +916,190 @@ async def store_facts(
             with memory_write_scene(scene):
                 await memory.delete({"ids": sorted(removed)})
 
+    await reattach_author_rules(
+        scene,
+        recorded,
+        archive_id=archive_id,
+        span=set(lines) if lines else set(),
+        dedupe_distance=dedupe_distance,
+    )
+
     if notify:
         emit_knowledge_changes(scene, changes)
     return stored
+
+
+def _anchor_alive(scene: "Scene", anchor) -> bool:
+    if anchor.message_id is not None:
+        return scene.get_message(anchor.message_id) is not None
+    return any(entry.get("id") == anchor.archive_id for entry in scene.archived_history)
+
+
+def drop_dead_anchors(scene: "Scene") -> None:
+    """A waiting rule goes with the line or entry its statement came from."""
+    world_state = scene.world_state
+    world_state.knowledge = [
+        edge
+        for edge in world_state.knowledge
+        if edge.anchor is None or _anchor_alive(scene, edge.anchor)
+    ]
+
+
+async def reattach_author_rules(
+    scene: "Scene",
+    recorded: list[tuple[str, int | None]],
+    *,
+    archive_id: str | None,
+    span: set[int],
+    dedupe_distance: float,
+) -> None:
+    """
+    An author rule, or a learning from dialogue, whose fact a regeneration
+    removed takes over the fact that records the same statement again: from a
+    line of the same span, or, for a fact without a line, from the same entry.
+    The same text matches at once; other wording matches within the fact
+    matching tolerance. A rule whose line or entry is gone goes.
+    """
+    world_state = scene.world_state
+    if not any(edge.anchor is not None for edge in world_state.knowledge):
+        return
+    drop_dead_anchors(scene)
+    waiting = [
+        edge
+        for edge in world_state.knowledge
+        if edge.anchor is not None
+        and (
+            edge.anchor.message_id in span
+            if edge.anchor.message_id is not None
+            else edge.anchor.archive_id == archive_id
+        )
+    ]
+    facts = [
+        world_state.facts[identity]
+        for identity in dict.fromkeys(identity for identity, _ in recorded)
+        if identity in world_state.facts
+    ]
+    if not waiting or not facts:
+        return
+    matches: dict[str, str] = {}
+    for edge in waiting:
+        text = edge.anchor.text.strip().casefold()
+        fact = next((f for f in facts if f.text.strip().casefold() == text), None)
+        if fact is not None:
+            matches[edge.id] = fact.id
+    rest = [edge for edge in waiting if edge.id not in matches]
+    if rest:
+        result = await get_agent("memory").compare_string_lists(
+            [edge.anchor.text for edge in rest],
+            [fact.text for fact in facts],
+            distance_threshold=dedupe_distance,
+        )
+        for index, fact_index, *_ in sorted(
+            result["distance_matches"], key=lambda match: match[-1]
+        ):
+            matches.setdefault(rest[index].id, facts[fact_index].id)
+    from talemate.knowledge.revision_refresh import capture_revision_mutations
+
+    with capture_revision_mutations(scene):
+        _move_waiting_rules(world_state, matches)
+
+
+def _hand_order(old: KnowledgeEdge, new: KnowledgeEdge) -> tuple[bool, bool]:
+    """
+    Which of two author rules of one pair stay, (old, new), when `new` was
+    written after `old`: the result of setting them by hand in that order.
+    """
+    if old.kind == new.kind:
+        # a newer Unlearn carries the newer boundary; other duplicates keep one
+        return (False, True) if new.kind == "unlearn" else (True, False)
+    kinds = (old.kind, new.kind)
+    if kinds == ("revoke", "grant"):
+        # a Learn lifts an older Never Learn
+        return (False, True)
+    if kinds == ("grant", "revoke"):
+        # a Never Learn stays beside an older Learn, and the bucket orders them
+        return (True, True)
+    if "revoke" in kinds:
+        # a Never Learn replaces an Unlearn, and no Unlearn applies beside it
+        return (old.kind == "revoke", new.kind == "revoke")
+    # a Learn and an Unlearn replace each other: the newer one stays
+    return (False, True)
+
+
+def _move_waiting_rules(world_state, matches: dict[str, str]) -> None:
+    """
+    Move each matched waiting edge to its new fact, in list order (older
+    first). The author rules that meet on one pair keep what setting them by
+    hand in that order keeps (`_hand_order`). A moved Unlearn gets the told
+    grants that the fact's sources owe it, since those were computed before
+    the rule arrived.
+    """
+    position = {edge.id: index for index, edge in enumerate(world_state.knowledge)}
+    rules: dict[tuple[str, str], list[KnowledgeEdge]] = {}
+    grants: set[tuple] = set()
+    for edge in world_state.knowledge:
+        if edge.anchor is not None:
+            continue
+        if is_author_rule(edge):
+            rules.setdefault((edge.character, edge.target), []).append(edge)
+        else:
+            grants.add((edge.character, edge.target, edge.source, edge.message_id))
+    dropped: set[str] = set()
+    unlearned: list[Fact] = []
+    for edge in world_state.knowledge:
+        target = matches.get(edge.id)
+        fact = world_state.facts.get(target) if target is not None else None
+        if fact is None:
+            continue
+        if not is_author_rule(edge):
+            key = (edge.character, target, edge.source, edge.message_id)
+            if key in grants:
+                dropped.add(edge.id)
+                continue
+            grants.add(key)
+            fact.known_by.setdefault(edge.character, edge.source)
+        else:
+            pair = rules.setdefault((edge.character, target), [])
+            keep = True
+            verdicts = []
+            for rule in pair:
+                if position[rule.id] < position[edge.id]:
+                    keep_rule, keep_edge = _hand_order(rule, edge)
+                else:
+                    keep_edge, keep_rule = _hand_order(edge, rule)
+                keep = keep and keep_edge
+                verdicts.append((rule, keep_rule))
+            if not keep:
+                dropped.add(edge.id)
+                continue
+            for rule, keep_rule in verdicts:
+                if not keep_rule:
+                    dropped.add(rule.id)
+                    pair.remove(rule)
+            pair.append(edge)
+            if edge.kind == "unlearn":
+                unlearned.append(fact)
+        edge.target = target
+        edge.anchor = None
+    world_state.knowledge = [
+        edge for edge in world_state.knowledge if edge.id not in dropped
+    ]
+    for identity in dict.fromkeys(fact.id for fact in unlearned):
+        fact = world_state.facts[identity]
+        sources = [
+            (set(item.present or []) | set(item.told), item.message_id, item.ts)
+            for item in fact.restated_by
+        ]
+        if fact.message_id is not None:
+            # the fact's own line lifts the rule too when it is the later one
+            sources.insert(0, (set(fact.present or []), fact.message_id, fact.ts))
+        _write_told_grants(
+            world_state,
+            fact,
+            restatement_learners(world_state, fact, sources),
+            world_state.knowledge.append,
+            [],
+        )
 
 
 async def store_offscreen_fact(

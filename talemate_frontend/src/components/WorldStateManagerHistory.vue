@@ -1,6 +1,5 @@
 <template>
     <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
-    <v-alert v-if="pendingRefreshes.length" color="warning" variant="tonal" density="compact" class="mb-3">{{ refreshNotice }}</v-alert>
     <v-tabs v-model="tab" density="compact" color="secondary">
         <v-tab value="base">Base</v-tab>
         <v-tab v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">{{ layer.title }}</v-tab>
@@ -70,8 +69,6 @@
                                 </span>
                             </template>
                         </v-tooltip>
-                        <v-spacer></v-spacer>
-                        <v-select v-model="knownBy" :items="characterNames" label="Known by" density="compact" variant="underlined" hide-details clearable prepend-inner-icon="mdi-head-lightbulb-outline" class="known-by-filter" style="max-width: 260px"></v-select>
                     </v-card-title>
                     <div v-if="factsRun" class="d-flex align-center ga-3 mb-2 missing-facts-progress">
                         <v-progress-linear :model-value="factsRunPercent" color="primary" height="6" rounded></v-progress-linear>
@@ -85,9 +82,6 @@
                         </v-tooltip>
                     </div>
                     <div v-else-if="factsResult" class="text-body-small text-medium-emphasis mb-2">{{ factsResultText }}</div>
-                    <div v-if="knownBy" class="text-body-small text-medium-emphasis mb-2">
-                        Showing only the facts {{ knownBy }} knows ({{ knownFactIds ? knownFactIds.length : '…' }} in their record, history entries and other sources together).
-                    </div>
 
                     <div class="text-body-small text-medium-emphasis mb-2 facts-pointer">
                         Each summarized entry lists the facts recorded from it. All facts are listed in the Facts tab.
@@ -101,7 +95,13 @@
                             :entry="item.data"
                             :facts-open="openFactEntries.includes(item.data.id)"
                             @update:facts-open="(open) => setFactsOpen(item.data.id, open)"
-                            :known-fact-ids="knownFactIds"
+                            :character-names="characterNames"
+                            :perception-mode="perceptionMode"
+                            :refreshes="entryRefreshes[item.data.id] || []"
+                            :refresh-requests="refreshRequests"
+                            :refresh-errors="refreshErrors"
+                            :known-by-refusals="knownByRefusals"
+                            @refresh="runRefresh"
                             :app-busy="appBusy"
                             :app-ready="appReady"
                             :app-config="appConfig"
@@ -157,7 +157,7 @@
                         </v-card-text>
                     </v-card>
 
-                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="entry.id ?? l_index" :known-fact-ids="knownFactIds"
+                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="entry.id ?? l_index"
                     :facts-open="openFactEntries.includes(entry.id)"
                     @update:facts-open="(open) => setFactsOpen(entry.id, open)"
                     :entry="entry"
@@ -193,6 +193,7 @@ import WorldStateManagerFactRow from './WorldStateManagerFactRow.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 import { EXTRACT_FACTS_OFF_HINT, extractFactsEnabled, missingFactsSummary, needsFacts } from '@/utils/historyFacts';
 import { newUuid } from '@/utils/uuid';
+import { perspectivesEnabled } from '@/utils/sceneSettings';
 
 
 export default {
@@ -217,9 +218,6 @@ export default {
     },
     data() {
         return {
-            knownBy: null,
-            // the selected character's whole bucket, ids only; null while unset
-            knownFactIds: null,
             history: [],
             factSource: null,
             layered_history: [],
@@ -235,6 +233,14 @@ export default {
             factsResult: null,
             // ids of the entries whose Facts section is expanded; emptied on every open
             openFactEntries: [],
+            // message id -> request id of a refresh run from this tab
+            refreshRequests: {},
+            // message id -> the error of the last refresh run from this tab
+            refreshErrors: {},
+            // message id -> the selection a run or an error from this tab belongs to
+            refreshSelections: {},
+            // counts the refused Known by changes of static entries
+            knownByRefusals: 0,
             MAX_CONTENT_WIDTH,
         }
     },
@@ -242,12 +248,11 @@ export default {
         visible(val) {
             if (val) this.openFactEntries = [];
         },
+        entryRefreshes() {
+            this.pruneRefreshes();
+        },
         'scene.data.scene_ts'() {
             if (this.visible) this.requestSceneHistory();
-        },
-        knownBy(name) {
-            this.knownFactIds = null;
-            if (name) this.requestKnownFacts(name);
         },
         tab(val) {
             if (val === 'base') {
@@ -264,22 +269,25 @@ export default {
         },
     },
     computed: {
-        pendingRefreshes() {
-            return (this.scene?.data?.revision_refreshes || [])
-                .map((item) => item.revision_refresh)
-                .filter((item) => item?.required);
-        },
-        refreshNotice() {
-            if (this.pendingRefreshes.some((item) => item.operations?.includes('index_repair'))) {
-                return 'Some passages need their saved knowledge updated. Use Update knowledge on those passages, or send your next line or choice.';
+        // archive id -> the required refreshes that change that entry's facts;
+        // learning from dialogue changes what listeners know, not the entry
+        entryRefreshes() {
+            const byEntry = {};
+            for (const item of this.scene?.data?.revision_refreshes || []) {
+                const refresh = item.revision_refresh;
+                if (!refresh?.required) continue;
+                if (!refresh.operations?.some((operation) => ['facts', 'perceptions', 'index_repair'].includes(operation))) continue;
+                for (const archiveId of item.archive_ids || []) {
+                    (byEntry[archiveId] ||= []).push(item);
+                }
             }
-            const perception = this.pendingRefreshes.some((item) => item.operations?.includes('perceptions'));
-            return perception
-                ? 'Changed passages need perception analysis. Use Analyze perceptions on the passage, or send your next line or choice.'
-                : 'Changed passages need fact refresh. Use Refresh facts on the passage, or send your next line or choice.';
+            return byEntry;
         },
         characterNames() {
             return Object.keys(this.characterList?.characters || {});
+        },
+        perceptionMode() {
+            return perspectivesEnabled(this.scene?.data);
         },
         layers() {
             return this.layered_history.map((layer, index) => {
@@ -370,11 +378,12 @@ export default {
             this.factSource = null;
             this.time_passages = [];
             this.busy = false;
-            this.knownBy = null;
-            this.knownFactIds = null;
             this.factsRun = null;
             this.factsRunStopping = false;
             this.factsResult = null;
+            this.refreshRequests = {};
+            this.refreshErrors = {};
+            this.refreshSelections = {};
         },
         regenerate() {
             this.history = [];
@@ -480,13 +489,6 @@ export default {
                 action: 'stop_missing_facts',
             }));
         },
-        requestKnownFacts(name) {
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'get_character_knowledge',
-                name,
-            }));
-        },
         updateFact(fact) {
             for (const entry of this.history) {
                 entry.facts = (entry.facts || []).map((existing) => existing.id === fact.id ? fact : existing);
@@ -497,23 +499,64 @@ export default {
                 entry.facts = (entry.facts || []).filter((fact) => fact.id !== id);
             }
         },
+        runRefresh(item) {
+            const refresh = item.revision_refresh;
+            const requestId = `history-refresh:${item.id}:${newUuid()}`;
+            this.refreshRequests = { ...this.refreshRequests, [item.id]: requestId };
+            this.refreshErrors = Object.fromEntries(Object.entries(this.refreshErrors).filter(([id]) => Number(id) !== item.id));
+            this.refreshSelections = { ...this.refreshSelections, [item.id]: this.refreshSelection(refresh) };
+            this.getWebsocket().send(JSON.stringify({
+                type: 'scene_message',
+                action: 'commit_revision',
+                id: item.id,
+                index: refresh.selection_index,
+                request_id: requestId,
+                scene_id: refresh.scene_id,
+                selection_digest: refresh.selection_digest,
+                selection_serial: refresh.selection_serial,
+            }));
+        },
+        refreshSelection(refresh) {
+            return `${refresh.scene_id}:${refresh.selection_digest}:${refresh.selection_serial}`;
+        },
+        // a run the server never answers (the selection changed, the scene
+        // closed) or an old error stays only while its passage still needs
+        // the same refresh
+        pruneRefreshes() {
+            const current = {};
+            for (const items of Object.values(this.entryRefreshes)) {
+                for (const item of items) current[item.id] = this.refreshSelection(item.revision_refresh);
+            }
+            const stale = Object.keys(this.refreshSelections).filter((id) => current[id] !== this.refreshSelections[id]);
+            if (!stale.length) return;
+            const keep = (runs) => Object.fromEntries(Object.entries(runs).filter(([id]) => !stale.includes(id)));
+            this.refreshRequests = keep(this.refreshRequests);
+            this.refreshErrors = keep(this.refreshErrors);
+            this.refreshSelections = keep(this.refreshSelections);
+        },
+        finishRefresh(message) {
+            const entry = Object.entries(this.refreshRequests).find(([, requestId]) => requestId === message.request_id);
+            if (!entry || !['revision_committed', 'operation_done'].includes(message.action)) return;
+            const [messageId] = entry;
+            this.refreshRequests = Object.fromEntries(Object.entries(this.refreshRequests).filter(([id]) => id !== messageId));
+            if (message.action === 'operation_done' && message.error) {
+                this.refreshErrors = { ...this.refreshErrors, [messageId]: message.error.message || 'The refresh failed.' };
+            }
+        },
         openFactSource(fact) {
             this.factSource = { fact_id: fact.id, message_id: fact.message_id, loading: true };
             this.getWebsocket().send(JSON.stringify({ type: 'world_state_manager', action: 'get_fact_source', fact_id: fact.id }));
         },
         handleMessage(message) {
             if (message.type === 'knowledge_changed') {
-                if (this.knownBy) this.requestKnownFacts(this.knownBy);
                 if (this.visible) this.requestSceneHistory();
                 return;
             }
-            if (message.type != 'world_state_manager') {
+            if (message.type === 'scene_message' && message.request_id) {
+                this.finishRefresh(message);
                 return;
             }
-            if (message.action === 'character_knowledge') {
-                if (this.knownBy && message.data?.name === this.knownBy) {
-                    this.knownFactIds = message.data.known_fact_ids || [];
-                }
+            if (message.type != 'world_state_manager') {
                 return;
             }
 
@@ -538,7 +581,6 @@ export default {
                 this.updateFact(message.data);
             } else if (message.action === 'fact_deleted') {
                 this.removeFact(message.data.fact_id);
-                if (this.knownBy) this.requestKnownFacts(this.knownBy);
             } else if (message.action === 'fact_source') {
                 if (this.factSource?.fact_id === message.data.fact_id) this.factSource = { ...message.data, loading: false };
             } else if (message.action == 'layer_stats') {
@@ -588,6 +630,7 @@ export default {
                 this.factsResult = message.data;
             } else if (message.action == 'operation_done') {
                 this.busyEntry = null;
+                if (message.failed_action === 'set_history_entry_known_by') this.knownByRefusals += 1;
             }
         },
     },

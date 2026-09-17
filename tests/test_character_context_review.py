@@ -518,13 +518,12 @@ async def test_oversized_intro_is_reported_instead_of_overrunning_budget(
 
 
 @pytest.mark.asyncio
-async def test_preview_includes_all_eligible_facts_and_marks_false_and_budget(
+async def test_preview_includes_all_eligible_facts_and_budget(
     review_scene,
 ):
     scene = review_scene
     for index in range(30):
         await add_fact(scene, f"F{index}", f"The sextant record {index} is known.")
-    scene.world_state.facts["F0"].false = True
     preview = await character_context_review(
         scene,
         scene.character_data["Bob"],
@@ -537,9 +536,6 @@ async def test_preview_includes_all_eligible_facts_and_marks_false_and_budget(
     )
     assert len(facts["entries"]) == 30
     assert all(line.startswith("- [") for line in facts["entries"])
-    assert any("[F0] (known to be false)" in line for line in facts["entries"]) is (
-        scene.knowledge_eligibility == "legacy"
-    )
     small = await character_context_review(
         scene,
         scene.character_data["Bob"],

@@ -31,14 +31,14 @@ __all__ = [
     "canonical_entry_id",
 ]
 
-Rejection = Literal["revoke", "visibility", "presence", "stale"]
+Rejection = Literal["revoke", "unlearn", "visibility", "presence", "stale"]
 
 ItemKind = Literal[
     "history", "fact", "attribute", "detail", "description", "world_entry", "static"
 ]
 
 # kinds every character knows unless a visibility setting or a revoke says otherwise
-COMMON_KINDS = {"attribute", "detail", "description", "world_entry", "static"}
+COMMON_KINDS = {"attribute", "detail", "description", "world_entry"}
 
 
 _DESCRIPTION_CHUNK = re.compile(r"^(?P<base>.+\.description)\.\d+$")
@@ -162,6 +162,11 @@ def knowledge_digest(
             for k, v in sorted(scene.world_state.manual_context.items())
             if v.visibility.mode != "everyone"
         },
+        "static": {
+            entry.get("id"): entry.get("present")
+            for entry in scene.archived_history
+            if entry.get("end") is None and entry.get("present") is not None
+        },
     }
     return hashlib.md5(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:8]
 
@@ -169,22 +174,35 @@ def knowledge_digest(
 class KnowledgeIndex:
     """Per-prompt view over the scene's knowledge edges."""
 
-    def __init__(self, grants: set[tuple[str, str]], revokes: set[tuple[str, str]]):
+    def __init__(
+        self,
+        grants: set[tuple[str, str]],
+        revokes: set[tuple[str, str]],
+        unlearns: set[tuple[str, str]],
+    ):
         self.grants = grants
         self.revokes = revokes
+        self.unlearns = unlearns
 
     @classmethod
     def from_scene(cls, scene: "Scene") -> "KnowledgeIndex":
+        from talemate.knowledge.changes import lifted_unlearns
         from talemate.knowledge.revision_browsing import current_edges
 
-        grants: set[tuple[str, str]] = set()
-        revokes: set[tuple[str, str]] = set()
-        for edge in current_edges(scene):
-            if edge.kind == "revoke" and character_knowledge_enabled(scene):
+        pairs: dict[str, set[tuple[str, str]]] = {
+            "grant": set(),
+            "revoke": set(),
+            "unlearn": set(),
+        }
+        edges = current_edges(scene)
+        lifted = lifted_unlearns(edges)
+        for edge in edges:
+            if edge.kind != "grant" and character_knowledge_enabled(scene):
                 continue
-            bucket = grants if edge.kind == "grant" else revokes
-            bucket.add((edge.character, edge.target))
-        return cls(grants, revokes)
+            if edge.id in lifted:
+                continue
+            pairs[edge.kind].add((edge.character, edge.target))
+        return cls(pairs["grant"], pairs["revoke"], pairs["unlearn"])
 
     def granted(self, character: str, target: str) -> bool:
         return (character, target) in self.grants
@@ -192,10 +210,15 @@ class KnowledgeIndex:
     def revoked(self, character: str, target: str) -> bool:
         return (character, target) in self.revokes
 
+    def unlearned(self, character: str, target: str) -> bool:
+        return (character, target) in self.unlearns
+
     def rejection(self, character: str, item: KnowledgeItem) -> Rejection | None:
         """Why the item is outside the character's bucket, or None when it is inside."""
         if self.revoked(character, item.id):
             return "revoke"
+        if self.unlearned(character, item.id):
+            return "unlearn"
         if self.granted(character, item.id):
             return None
         if item.visibility is not None and not item.visibility.allows(
@@ -294,6 +317,7 @@ class RetrievalFilter:
         self.index = index
         self.scene = scene
         self.character = character
+        self._static_audiences: set[str] | None = None
 
     def rejection(self, doc) -> Rejection | None:
         from talemate.knowledge.revision_browsing import fact_current
@@ -325,9 +349,32 @@ class RetrievalFilter:
     def gateable(self, doc) -> bool:
         """
         Only a presence rejection may be rescued by the gate: a revoke beats
-        a grant, and visibility, ownership and offscreen scoping are exact.
+        a grant, an unlearned fact waits for an actual learning, and
+        visibility, ownership, offscreen scoping and the Known by of a static
+        history entry (stored as its presence) are exact.
         """
         if self.rejection(doc) != "presence":
             return False
-        fact = self.scene.world_state.facts.get(getattr(doc, "id", None))
-        return fact is None or fact.source != "offscreen"
+        identity = getattr(doc, "id", None)
+        fact = self.scene.world_state.facts.get(identity)
+        if fact is None:
+            return identity not in self.static_audiences
+        if fact.source == "offscreen":
+            return False
+        return (
+            fact.message_id is not None or fact.archive_id not in self.static_audiences
+        )
+
+    @property
+    def static_audiences(self) -> set[str]:
+        """The static history entries whose Known by leaves someone out."""
+        if self._static_audiences is None:
+            self._static_audiences = {
+                entry["id"]
+                for entry in self.scene.archived_history
+                if entry.get("id")
+                and entry.get("start") is None
+                and entry.get("end") is None
+                and entry.get("present") is not None
+            }
+        return self._static_audiences

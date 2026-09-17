@@ -41,7 +41,6 @@ class FactQuery(pydantic.BaseModel):
     importance: list[FactImportance] = pydantic.Field(default_factory=list)
     source: list[FactSource] = pydantic.Field(default_factory=list)
     superseded: bool | None = None
-    false: bool | None = None
     latest_chapter: bool = False
     sort: FactSort = "time"
     descending: bool = True
@@ -182,8 +181,6 @@ class _Catalog:
             and (fact.id in self.superseded) != query.superseded
         ):
             return False
-        if query.false is not None and fact.false != query.false:
-            return False
         if query.latest_chapter and not self.in_latest_chapter(fact):
             return False
         return True
@@ -223,7 +220,7 @@ class _Catalog:
 
 
 def superseders(facts: dict[str, Fact]) -> dict[str, list[str]]:
-    """Author-level links only; every superseder, false ones included."""
+    """Author-level links only."""
     result: dict[str, list[str]] = {}
     for fact in facts.values():
         if fact.supersedes is not None and fact.supersedes in facts:

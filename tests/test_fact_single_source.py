@@ -157,7 +157,7 @@ async def test_rebuild_of_the_same_view_keeps_the_edit_and_the_id(
 
 
 @pytest.mark.asyncio
-async def test_false_mark_survives_re_attach(
+async def test_author_edit_survives_re_attach(
     supported_scene,  # noqa: F811
     monkeypatch,
 ):
@@ -166,8 +166,6 @@ async def test_false_mark_survives_re_attach(
     fact = (
         await store(scene, source, ("Alice",), "Alice has a key.", subjects=["key"])
     )[0]
-    stored = scene.world_state.facts[fact.id]
-    stored.false = True
     await update_fact(scene, fact.id, text="Alice has a brass key.", importance=1)
     monkeypatch.setattr(
         summarizer,
@@ -181,11 +179,7 @@ async def test_false_mark_survives_re_attach(
 
     assert await summarizer.rebuild_supported_facts(scene, [source]) == "ok"
     rebuilt = scene.world_state.facts[fact.id]
-    assert (rebuilt.text, rebuilt.importance, rebuilt.false) == (
-        "Alice has a brass key.",
-        1,
-        True,
-    )
+    assert (rebuilt.text, rebuilt.importance) == ("Alice has a brass key.", 1)
 
 
 @pytest.mark.asyncio
@@ -234,11 +228,10 @@ async def test_marks_and_links_leave_merged_wordings_alone(
     await extract(scene, source, "Bob", "The bell was rung by Alice.")
     (fact_id,) = scene.world_state.facts
     scene.world_state.facts["older"] = Fact(id="older", text="An older bell.")
-    # Mark false and Set supersedes send only their own field
-    await update_fact(scene, fact_id, false=True)
+    # Set supersedes sends only its own field
     await update_fact(scene, fact_id, supersedes="older")
     stored = scene.world_state.facts[fact_id]
-    assert (stored.false, stored.supersedes) == (True, "older")
+    assert stored.supersedes == "older"
     assert (stored.text_edited, stored.link_edited) == (False, True)
     assert character_bucket(scene, "Alice")[0][0].text == "Alice rang the bell."
     assert character_bucket(scene, "Bob")[0][0].text == "The bell was rung by Alice."
@@ -389,26 +382,21 @@ async def test_a_patch_names_only_the_fields_the_author_saved(standard_scene):
         ),
         patch.object(get_agent("memory"), "add_many", AsyncMock()),
     ):
-        await handler.handle_update_fact({"fact_id": "F1", "false": True})
         stored = scene.world_state.facts["F1"]
-        assert (stored.false, stored.text_edited, stored.link_edited) == (
-            True,
-            False,
-            False,
-        )
         await handler.handle_update_fact({"fact_id": "F1", "importance": 3})
         assert (stored.text, stored.importance, stored.text_edited) == (
             "Edwin keeps the light.",
             3,
             False,
         )
+        assert stored.link_edited is False
         await handler.handle_update_fact({"fact_id": "F1", "text": "Only the text."})
         assert (stored.text, stored.importance, stored.text_edited) == (
             "Only the text.",
             3,
             True,
         )
-    assert len(frames(handler, "fact_updated")) == 3
+    assert len(frames(handler, "fact_updated")) == 2
 
 
 @pytest.mark.asyncio

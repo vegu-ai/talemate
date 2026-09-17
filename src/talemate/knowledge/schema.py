@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 VisibilityMode = Literal["everyone", "owner", "list"]
-EdgeKind = Literal["grant", "revoke"]
+EdgeKind = Literal["grant", "revoke", "unlearn"]
 EdgeSource = Literal["told", "granted", "inferred", "manual", "director"]
 FactSource = Literal["summary", "manual", "offscreen", "perspective", "disclosure"]
 FactsStatus = Literal["ok", "failed"]
@@ -62,6 +62,17 @@ class ReinforcementEntry(pydantic.BaseModel):
     source_id: pydantic.PositiveInt | None = None
 
 
+class FactAnchor(pydantic.BaseModel):
+    """
+    The statement an author rule was about, kept while a regeneration
+    replaces its fact: the fact's text, and the line or entry it came from.
+    """
+
+    text: str
+    message_id: int | None = None
+    archive_id: str | None = None
+
+
 class KnowledgeEdge(pydantic.BaseModel):
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:8])
     character: str
@@ -69,8 +80,14 @@ class KnowledgeEdge(pydantic.BaseModel):
     kind: EdgeKind = "grant"
     source: EdgeSource = "manual"
     message_id: int | None = None
+    # an unlearn edge: the newest message id when it was written; a grant from
+    # a later message lifts it while that grant exists
+    message_id_boundary: int | None = None
     ts: int | None = None
     note: str | None = None
+    # an author rule whose fact a regeneration removed: it has no effect until
+    # a fact for the same statement from the same line or entry takes it over
+    anchor: FactAnchor | None = None
 
 
 class ParsedFact(pydantic.BaseModel):
@@ -236,6 +253,8 @@ class FactRestatement(pydantic.BaseModel):
     # become the origin, and the origin is always the earliest message
     present: list[str] | None = None
     ts: int | None = None
+    # the characters the model named as told there without being present
+    told: list[str] = pydantic.Field(default_factory=list)
 
 
 class Fact(pydantic.BaseModel):
@@ -257,7 +276,6 @@ class Fact(pydantic.BaseModel):
         default_factory=dict
     )
     supersedes: str | None = None
-    false: bool = False
     restatements: int = 0
     last_seen_ts: int | None = None
     source: FactSource = "summary"

@@ -91,7 +91,9 @@ def fact_current(scene: "Scene", fact: "Fact") -> bool:
         fact.text_edited
         or fact.link_edited
         or any(
-            edge.target == fact.id and edge.source == "manual"
+            edge.target == fact.id
+            and edge.source == "manual"
+            and edge.kind != "unlearn"
             for edge in scene.world_state.knowledge
         )
     )

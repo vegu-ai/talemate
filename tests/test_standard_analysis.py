@@ -204,13 +204,6 @@ async def test_context_budget_and_recent_unknown_settings(standard_scene):
     assert context["tokens"] == count_tokens(context["text"])
 
 
-async def test_known_false_fact_is_labeled(standard_scene):
-    scene, _, bob = standard_scene
-    scene.world_state.facts["F2"].false = True
-    context = await standard_analysis_context(scene, bob, 900)
-    assert "[F2] (known to be false) (Recently) NEWER_KNOWN" in context["text"]
-
-
 async def test_fact_blocks_reserve_history_budget(
     standard_scene, captured_prompt, monkeypatch
 ):

@@ -22,6 +22,7 @@ from talemate.history import (
 from talemate.knowledge.facts import facts_for_entry
 from talemate.knowledge.chronology import fact_display
 from talemate.knowledge.presence import layer_entry_presence
+from talemate.knowledge.schema import EntryVisibility
 from talemate.scene_message import TimePassageMessage
 from talemate.server.world_state_manager import world_state_templates
 from talemate.status import background_task
@@ -39,6 +40,11 @@ class RegenerateHistoryPayload(pydantic.BaseModel):
 
 class HistoryEntryPayload(pydantic.BaseModel):
     entry: HistoryEntry
+
+
+class HistoryEntryKnownByPayload(pydantic.BaseModel):
+    entry_id: str
+    visibility: EntryVisibility
 
 
 class AddHistoryEntryPayload(pydantic.BaseModel):
@@ -218,6 +224,20 @@ class HistoryMixin:
                 },
             }
         )
+
+    async def handle_set_history_entry_known_by(self, data):
+        payload = HistoryEntryKnownByPayload(**data)
+        try:
+            await self.world_state_manager.set_static_history_known_by(
+                payload.entry_id, payload.visibility
+            )
+        except ValueError as exc:
+            await self.signal_operation_failed(
+                str(exc), failed_action="set_history_entry_known_by"
+            )
+            return
+        await self.handle_request_scene_history({})
+        await self.signal_operation_done()
 
     async def handle_add_history_entry(self, data):
         """

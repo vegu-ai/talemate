@@ -34,7 +34,6 @@ def scene():
             "F3", "Mara hid the sextant in her bag.", 30, ["Mara"], restatements=2
         ),
         "F4": fact("F4", "The boat leaks.", 40, ["Mara"]),
-        "F5": fact("F5", "Edwin lies about the wreck.", 50, ["Mara"], false=True),
     }
     return s
 
@@ -133,20 +132,6 @@ class TestAbsenceFacts:
     async def test_grant_removes_from_the_block(self, scene, embeddings):
         scene.world_state.knowledge = [KnowledgeEdge(character="Edwin", target="F3")]
         assert [f.id for f in await absence_facts(scene, "Edwin")] == ["F4", "F2"]
-
-    async def test_false_fact_is_never_listed(self, scene, embeddings):
-        # no edge: outside the bucket, nothing to warn about
-        assert "F5" not in [f.id for f in await absence_facts(scene, "Edwin")]
-        # a grant puts it in the bucket: known, so not listed
-        scene.world_state.knowledge = [KnowledgeEdge(character="Edwin", target="F5")]
-        assert "F5" not in [f.id for f in await absence_facts(scene, "Edwin")]
-        # grant and revoke on the same target: the revoke wins in the bucket
-        # predicate, and a false fact outside the bucket is still not listed
-        scene.world_state.knowledge = [
-            KnowledgeEdge(character="Edwin", target="F5"),
-            KnowledgeEdge(character="Edwin", target="F5", kind="revoke"),
-        ]
-        assert "F5" not in [f.id for f in await absence_facts(scene, "Edwin")]
 
     async def test_window_and_order_follow_the_numeric_id(self, scene, embeddings):
         # three entries of twelve facts, one ts per entry, ids F1..F36

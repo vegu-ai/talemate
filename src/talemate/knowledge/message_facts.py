@@ -9,9 +9,14 @@ from typing import TYPE_CHECKING
 import structlog
 
 from talemate.instance import get_agent
-from talemate.knowledge.changes import KnowledgeChange, emit_knowledge_changes
+from talemate.knowledge.changes import (
+    KnowledgeChange,
+    drop_fact_edges,
+    emit_knowledge_changes,
+)
 from talemate.knowledge.facts import (
     _drop_restatements,
+    drop_dead_anchors,
     _promote_restatement,
     fact_is_independent,
 )
@@ -66,24 +71,27 @@ def binding_state(fact) -> tuple:
     )
 
 
-def _finish_removal(world_state, removed: set[str]) -> set[str]:
+def _finish_removal(
+    world_state, removed: set[str], *, keep_rules: bool = False
+) -> set[str]:
     if not removed:
         return removed
+    drop_fact_edges(world_state, removed, keep_rules=keep_rules)
     for identity in removed:
         world_state.facts.pop(identity, None)
-    world_state.knowledge = [
-        edge for edge in world_state.knowledge if edge.target not in removed
-    ]
     sanitize_fact_links(world_state.facts)
     prune_topics(world_state)
     return removed
 
 
-def remove_message_facts(world_state, message_id: int) -> set[str]:
+def remove_message_facts(
+    world_state, message_id: int, *, keep_rules: bool = False
+) -> set[str]:
     """
     Drop the message from every fact: restatements by it go, facts that came
     from it are removed unless something else keeps them. Returns the ids of
-    the removed facts.
+    the removed facts. With `keep_rules` (a refresh re-extracts the line) the
+    author rules of a removed fact wait for its statement.
     """
     removed = set()
     for fact in list(world_state.facts.values()):
@@ -95,7 +103,7 @@ def remove_message_facts(world_state, message_id: int) -> set[str]:
             continue
         if not detach_message_fact(world_state, fact):
             removed.add(fact.id)
-    return _finish_removal(world_state, removed)
+    return _finish_removal(world_state, removed, keep_rules=keep_rules)
 
 
 def rebind_message_facts(world_state, message_id: int, digest: str) -> set[str]:
@@ -144,6 +152,7 @@ def prune_missing_message_facts(scene: "Scene", *, edges: bool = True) -> set[st
     the loss of one message, not through the loss of the story it came from.
     """
     world_state = scene.world_state
+    drop_dead_anchors(scene)
     sources = {message.id for message in scene.history}
     # Ledger edges can outlive the message that inferred them. Once that
     # source is gone, keep the edge but stop treating it as a transient

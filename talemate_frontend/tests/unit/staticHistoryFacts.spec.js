@@ -87,12 +87,8 @@ describe('the facts section of a history entry', () => {
         mount({ facts });
         expect(expander()).toEqual(['Facts (3)']);
     });
-    it('counts only the facts the Known by filter shows', () => {
-        mount({ facts }, { knownFactIds: ['F2'] });
-        expect(expander()).toEqual(['Facts (1)']);
-    });
-    it('shows no expander when no fact is listed', () => {
-        mount({ facts }, { knownFactIds: [] });
+    it('shows no expander when the entry has no fact', () => {
+        mount({ facts: [] });
         expect(expander()).toEqual([]);
     });
 });

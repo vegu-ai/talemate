@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fileURLToPath, URL } from 'node:url';
 import Tab from '@/components/WorldStateManagerCharacterKnowledge.vue';
-import History from '@/components/WorldStateManagerHistory.vue';
-import Entry from '@/components/WorldStateManagerHistoryEntry.vue';
 import { readSource } from './helpers/liftMethod.js';
 
 const hubSource = readSource(fileURLToPath(new URL('../../src/components/CharacterKnowledgeHub.vue', import.meta.url)));
@@ -62,17 +60,11 @@ describe('the Knowledge tab lists a topic on expand', () => {
         const standard = tab();
         expect(standard.howLabel('witnessed')).toBe('Present');
         expect(standard.howLabel('told')).toBe('Told in dialogue');
-        expect(standard.howLabel('granted')).toBe('Allowed by rule');
+        expect(standard.howLabel('granted')).toBe('Learn rule');
         expect(standard.howLabel('inferred')).toBe('Learned from dialogue');
         const perception = tab({ perceptionMode: true });
         expect(perception.howLabel('granted')).toBe('Disclosed');
         expect(perception.howLabel('inferred')).toBe('Perceived');
-    });
-    it('the History tab forgets its filter when a scene loads', () => {
-        const vm = { history: [1], time_passages: [1], busy: true, knownBy: 'Mara', knownFactIds: ['F1'] };
-        History.methods.reset.call(vm);
-        expect(vm.knownBy).toBeNull();
-        expect(vm.knownFactIds).toBeNull();
     });
     it('forgets the loaded topics when another character is selected', () => {
         const vm = tab();
@@ -85,39 +77,7 @@ describe('the Knowledge tab lists a topic on expand', () => {
     });
 });
 
-describe('the History tab filters facts by who knows them', () => {
-    function history() {
-        const sent = [];
-        const vm = { ...History.data(), characterList: { characters: { Mara: {}, Edwin: {} } }, sent,
-            getWebsocket: () => ({ send: (payload) => sent.push(JSON.parse(payload)) }) };
-        for (const [key, method] of Object.entries(History.methods)) vm[key] = method.bind(vm);
-        for (const [key, getter] of Object.entries(History.computed)) Object.defineProperty(vm, key, { get: () => getter.call(vm) });
-        return vm;
-    }
-    it("offers the scene characters and asks for the chosen one's bucket", () => {
-        const vm = history();
-        expect(vm.characterNames).toEqual(['Mara', 'Edwin']);
-        History.watch.knownBy.call(vm, 'Mara');
-        expect(vm.knownFactIds).toBeNull();
-        expect(vm.sent).toEqual([{ type: 'world_state_manager', action: 'get_character_knowledge', name: 'Mara' }]);
-    });
-    it('keeps the ids of the selected character only and refreshes on a knowledge change', () => {
-        const vm = history();
-        vm.knownBy = 'Mara';
-        vm.handleMessage({ type: 'world_state_manager', action: 'character_knowledge', data: { name: 'Edwin', known_fact_ids: ['F9'] } });
-        expect(vm.knownFactIds).toBeNull();
-        vm.handleMessage({ type: 'world_state_manager', action: 'character_knowledge', data: { name: 'Mara', known_fact_ids: ['F1', 'F3'] } });
-        expect(vm.knownFactIds).toEqual(['F1', 'F3']);
-        vm.handleMessage({ type: 'knowledge_changed', data: { changes: [] } });
-        expect(vm.sent).toEqual([{ type: 'world_state_manager', action: 'get_character_knowledge', name: 'Mara' }]);
-    });
-    it('an entry lists only the facts in the set, and every fact without one', () => {
-        const entry = { facts: [{ id: 'F1' }, { id: 'F2' }, { id: 'F3' }] };
-        expect(Entry.computed.shownFacts.call({ entry, knownFactIds: null })).toHaveLength(3);
-        expect(Entry.computed.shownFacts.call({ entry, knownFactIds: ['F3'] }).map((f) => f.id)).toEqual(['F3']);
-        expect(Entry.computed.shownFacts.call({ entry, knownFactIds: [] })).toEqual([]);
-        expect(Entry.props.knownFactIds.default).toBeNull();
-    });
+describe('the History tab', () => {
     it('the world editor hands the character list to the History tab', () => {
         const block = wsmSource.slice(wsmSource.indexOf('<WorldStateManagerHistory ref="history"'), wsmSource.indexOf('/>', wsmSource.indexOf('<WorldStateManagerHistory ref="history"')));
         expect(block).toContain(':character-list="characterList"');

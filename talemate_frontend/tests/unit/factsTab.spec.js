@@ -6,6 +6,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApp, defineComponent, h, nextTick } from 'vue';
+import { MAX_CONTENT_WIDTH } from '@/constants/layout';
 import Facts, { defaultQuery, queryPayload } from '@/components/WorldStateManagerFacts.vue';
 import Row from '@/components/WorldStateManagerFactRow.vue';
 import Manager from '@/components/WorldStateManager.vue';
@@ -37,8 +38,8 @@ function mount(props = {}) {
 
 const sent = (send) => send.mock.calls.map((call) => JSON.parse(call[0]));
 const rows = () => ([
-    { id: 'F1', text: 'Nora keeps the light.', importance: 2, subjects: ['Nora'], time: '1 day ago', source_label: 'history entry', source_id: 'A1', topic: { id: 'T1', name: 'light' }, audience: { Nora: 'witnessed', Ben: 'told' }, superseded_by: [], false: false },
-    { id: 'F2', text: 'The boat leaks.', importance: 1, subjects: [], time: 'Recently', source_label: 'dialogue', source_id: '7', topic: null, audience: {}, superseded_by: ['F3'], false: true, message_id: 7 },
+    { id: 'F1', text: 'Nora keeps the light.', importance: 2, subjects: ['Nora'], time: '1 day ago', source_label: 'history entry', source_id: 'A1', topic: { id: 'T1', name: 'light' }, audience: { Nora: 'witnessed', Ben: 'told' }, superseded_by: [] },
+    { id: 'F2', text: 'The boat leaks.', importance: 1, subjects: [], time: 'Recently', source_label: 'dialogue', source_id: '7', topic: null, audience: {}, superseded_by: ['F3'], message_id: 7 },
 ]);
 const page = (facts, extra = {}) => ({
     type: 'world_state_manager', action: 'facts',
@@ -48,11 +49,18 @@ const page = (facts, extra = {}) => ({
 describe('the list_facts payload', () => {
     it('sends only the filters that are set', () => {
         expect(queryPayload(defaultQuery(), 1)).toEqual({ type: 'world_state_manager', action: 'list_facts', page: 1, page_size: 50, sort: 'time', descending: true });
-        const query = { ...defaultQuery(), text: '  boat ', character: 'Nora', character_filter: 'unknown', topic_id: 'T1', importance: [1, 3], source: ['dialogue'], superseded: false, false: true, latest_chapter: true, sort: 'importance', descending: false };
+        const query = { ...defaultQuery(), text: '  boat ', character: 'Nora', character_filter: 'unknown', topic_id: 'T1', importance: [1, 3], source: ['dialogue'], superseded: false, latest_chapter: true, sort: 'importance', descending: false };
         expect(queryPayload(query, 3)).toEqual({
             type: 'world_state_manager', action: 'list_facts', page: 3, page_size: 50, sort: 'importance', descending: false,
-            text: 'boat', character: 'Nora', character_filter: 'unknown', topic_id: 'T1', importance: [1, 3], source: ['dialogue'], superseded: false, false: true, latest_chapter: true,
+            text: 'boat', character: 'Nora', character_filter: 'unknown', topic_id: 'T1', importance: [1, 3], source: ['dialogue'], superseded: false, latest_chapter: true,
         });
+    });
+});
+
+describe('the Facts tab layout', () => {
+    it('caps the list at the width of the other World Editor tabs', () => {
+        mount();
+        expect(host.querySelector('.facts-tab').style.maxWidth).toBe(MAX_CONTENT_WIDTH);
     });
 });
 
@@ -76,10 +84,10 @@ describe('the Facts tab', () => {
         expect(host.textContent).toContain('topic light');
         expect(host.textContent).toContain('2 know');
         expect(host.textContent).toContain('Nobody knows');
-        expect(host.querySelector('.fact-row-false')).not.toBeNull();
+        expect(host.textContent).not.toContain('Mark false');
         expect(host.querySelector('.fact-superseded-by')).not.toBeNull();
         expect(vm.options.characters).toEqual(['Ben', 'Nora']);
-        expect(vm.latestChapterLabel).toBe('Latest chapter (1 day ago)');
+        expect(vm.latestChapterLabel).toBe('Latest (1 day ago)');
         expect(vm.total).toBe(2);
     });
 
@@ -134,32 +142,28 @@ describe('the Facts tab', () => {
         vm.setSelected('F1', true);
         vm.setSelected('F2', true);
         expect(vm.selectedIds).toEqual(['F1', 'F2']);
-        vm.setSelectedFalse(true);
         vm.openGrant(vm.selectedIds);
         vm.grant.name = 'Ben';
         vm.applyGrant();
         vm.deleteSelected();
         const actions = sent(send).slice(1);
         expect(actions).toEqual([
-            { type: 'world_state_manager', action: 'set_facts_false', fact_ids: ['F1', 'F2'], false: true },
             { type: 'world_state_manager', action: 'grant_facts', name: 'Ben', fact_ids: ['F1', 'F2'] },
             { type: 'world_state_manager', action: 'delete_facts', fact_ids: ['F1', 'F2'] },
         ]);
         expect(vm.selectedIds).toEqual([]);
     });
 
-    it('routes a single grant, a block and the row marks through the existing handlers', () => {
+    it('routes a single grant, a block and the row links through the existing handlers', () => {
         const { vm, send } = mount();
         vm.handleMessage({ ...page(rows()), request_id: sent(send)[0].request_id });
         const [f1, f2] = vm.rows;
-        vm.setFalse(f1, true);
         vm.setSupersedes(f1, 'F2');
         vm.setSupersedes(f2, null);
         vm.openGrant([f1.id], 'revoke');
         vm.grant.name = 'Nora';
         vm.applyGrant();
         expect(sent(send).slice(1)).toEqual([
-            { type: 'world_state_manager', action: 'update_fact', fact_id: 'F1', false: true },
             { type: 'world_state_manager', action: 'update_fact', fact_id: 'F1', supersedes: 'F2' },
             { type: 'world_state_manager', action: 'update_fact', fact_id: 'F2', supersedes: null },
             { type: 'world_state_manager', action: 'set_knowledge_edge', edge: { character: 'Nora', target: 'F1', kind: 'revoke', source: 'manual' } },
@@ -186,6 +190,18 @@ describe('the Facts tab', () => {
         expect(sent(send).filter((frame) => frame.action === 'list_facts')).toHaveLength(2);
     });
 
+    it('names the Learn and Never Learn rules and the Latest switch', async () => {
+        const { vm, send } = mount();
+        expect(vm.latestChapterLabel).toBe('Latest');
+        vm.handleMessage({ ...page(rows()), request_id: sent(send)[0].request_id });
+        vm.setSelected('F1', true);
+        vm.openGrant(['F1'], 'revoke');
+        await nextTick();
+        expect(host.textContent).toContain('Learn for character');
+        expect(host.textContent).toContain('Never Learn F1');
+        expect(host.textContent).not.toMatch(/Grant|Block|Allow/);
+    });
+
     it('hides grant and block in perception mode', async () => {
         const { vm, send } = mount();
         vm.handleMessage({ ...page(rows(), { perception_mode: true }), request_id: sent(send)[0].request_id });
@@ -193,16 +209,16 @@ describe('the Facts tab', () => {
         await nextTick();
         expect(vm.perceptionMode).toBe(true);
         expect(host.querySelector('.facts-grant-selected')).toBeNull();
-        expect(host.textContent).not.toContain('Grant to character');
-        expect(host.textContent).toContain('Mark false');
+        expect(host.textContent).not.toContain('Learn for character');
+        expect(host.textContent).toContain('Clear selection');
     });
 
     it('patches a row on fact_updated, drops it on fact_deleted, and fetches again on each and on knowledge_changed', () => {
         vi.useFakeTimers();
         const { vm, send } = mount();
         vm.handleMessage({ ...page(rows()), request_id: sent(send)[0].request_id });
-        vm.handleMessage({ type: 'world_state_manager', action: 'fact_updated', data: { id: 'F1', text: 'Nora tends the light.', importance: 3, false: true } });
-        expect(vm.rows[0]).toMatchObject({ id: 'F1', text: 'Nora tends the light.', importance: 3, false: true, audience: { Nora: 'witnessed', Ben: 'told' }, topic: { id: 'T1', name: 'light' } });
+        vm.handleMessage({ type: 'world_state_manager', action: 'fact_updated', data: { id: 'F1', text: 'Nora tends the light.', importance: 3 } });
+        expect(vm.rows[0]).toMatchObject({ id: 'F1', text: 'Nora tends the light.', importance: 3, audience: { Nora: 'witnessed', Ben: 'told' }, topic: { id: 'T1', name: 'light' } });
         vm.handleMessage({ type: 'world_state_manager', action: 'fact_deleted', data: { fact_id: 'F2' } });
         expect(vm.rows.map((row) => row.id)).toEqual(['F1']);
         vm.handleMessage({ type: 'knowledge_changed', data: { changes: [] } });

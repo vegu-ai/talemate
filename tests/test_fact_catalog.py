@@ -83,7 +83,6 @@ def catalog_scene():
             None,
             ["Edwin"],
             ["Edwin"],
-            false=True,
             archive_id="A2",
         ),
         "F10": fact("F10", "A late arrival.", 5, ["Mara"], [], message_id=112),
@@ -135,7 +134,7 @@ class TestListFacts:
             "Mara": "witnessed"
         }
         assert rows["F4"]["superseded_by"] == []
-        assert rows["F5"]["false"] is True and rows["F5"]["time"] == "Time unknown"
+        assert "false" not in rows["F5"] and rows["F5"]["time"] == "Time unknown"
 
     def test_sorts(self, catalog_scene):
         assert ids(
@@ -182,11 +181,9 @@ class TestListFacts:
             (dict(importance=[1, 3]), ["F4", "F2"]),
             (dict(source=["manual"]), ["F2"]),
             (dict(superseded=True), ["F3"]),
-            (dict(superseded=True, false=False), ["F3"]),
             (dict(superseded=False), ["F10", "F4", "F2", "F1", "F5"]),
-            (dict(false=True), ["F5"]),
             (dict(latest_chapter=True), ["F4", "F3", "F5"]),
-            (dict(latest_chapter=True, false=False, importance=[1]), ["F4"]),
+            (dict(latest_chapter=True, importance=[1]), ["F4"]),
             (dict(character="Mara", topic_id="T1", superseded=False), ["F4"]),
             (dict(text="nothing here"), []),
         ],
@@ -207,14 +204,6 @@ class TestListFacts:
             assert ids(list_facts(catalog_scene, query)) == []
         catalog_scene.knowledge_eligibility = "perception"
         assert ids(list_facts(catalog_scene, FactQuery(character="Nobody"))) == []
-
-    def test_false_superseder_does_not_hide_its_predecessor(self, catalog_scene):
-        catalog_scene.world_state.facts["F4"].false = True
-        rows = {row["id"]: row for row in list_facts(catalog_scene, FactQuery()).facts}
-        # the arrow stays, the effective rule the prompts use does not count it
-        assert rows["F3"]["superseded_by"] == ["F4"]
-        assert ids(list_facts(catalog_scene, FactQuery(superseded=True))) == []
-        assert "F3" in ids(list_facts(catalog_scene, FactQuery(superseded=False)))
 
     def test_subject_filter_follows_the_alias_groups(self, catalog_scene):
         catalog_scene.world_state.character_name_mappings = {
@@ -301,7 +290,7 @@ class TestHandlers:
         assert frame["data"]["total"] == 2
         assert frame["data"]["latest_chapter"]["id"] == "A2"
 
-    async def test_update_fact_sets_false_and_supersedes(self, catalog_scene, handler):
+    async def test_update_fact_sets_and_clears_supersedes(self, catalog_scene, handler):
         refresh, add_many, delete = self.patches()
         with ActiveScene(catalog_scene), refresh, add_many, delete:
             await handler.handle_update_fact(
@@ -309,14 +298,13 @@ class TestHandlers:
                     "fact_id": "F2",
                     "text": "Mara found a sextant.",
                     "importance": 3,
-                    "false": True,
                     "supersedes": "F1",
                 }
             )
             stored = catalog_scene.world_state.facts["F2"]
-            assert (stored.false, stored.supersedes) == (True, "F1")
+            assert stored.supersedes == "F1"
             assert frames(handler, "fact_updated")[-1]["data"]["supersedes"] == "F1"
-            # a patch that names neither field leaves both alone
+            # a patch that does not name the link leaves it alone
             await handler.handle_update_fact(
                 {
                     "fact_id": "F2",
@@ -324,17 +312,16 @@ class TestHandlers:
                     "importance": 2,
                 }
             )
-            assert (stored.false, stored.supersedes) == (True, "F1")
+            assert stored.supersedes == "F1"
             await handler.handle_update_fact(
                 {
                     "fact_id": "F2",
                     "text": "Mara found a brass sextant.",
                     "importance": 2,
-                    "false": False,
                     "supersedes": None,
                 }
             )
-            assert (stored.false, stored.supersedes) == (False, None)
+            assert stored.supersedes is None
 
     async def test_update_fact_refuses_bad_links(self, catalog_scene, handler):
         refresh, add_many, delete = self.patches()
@@ -399,31 +386,6 @@ class TestHandlers:
             "F3",
             "F1",
         ]
-
-    async def test_set_facts_false_runs_once(self, catalog_scene, handler):
-        refresh, add_many, delete = self.patches()
-        with (
-            ActiveScene(catalog_scene),
-            refresh as topics,
-            add_many as memory_add,
-            delete,
-        ):
-            await handler.handle_set_facts_false(
-                {"fact_ids": ["F1", "F2", "F404"], "false": True}
-            )
-        assert [catalog_scene.world_state.facts[i].false for i in ("F1", "F2")] == [
-            True,
-            True,
-        ]
-        memory_add.assert_awaited_once()
-        assert [doc["id"] for doc in memory_add.await_args.args[0]] == ["F1", "F2"]
-        topics.assert_not_awaited()
-        assert [f["data"]["id"] for f in frames(handler, "fact_updated")] == [
-            "F1",
-            "F2",
-        ]
-        with pytest.raises(pydantic.ValidationError):
-            await handler.handle_set_facts_false({"fact_ids": [], "false": True})
 
     async def test_grant_facts_adds_one_batch_of_edges(self, catalog_scene, handler):
         with (

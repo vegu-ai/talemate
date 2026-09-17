@@ -14,6 +14,7 @@ import structlog
 
 import talemate.instance as instance
 from talemate import Actor, Character, Player, Scene
+from talemate.knowledge.facts import follow_static_audiences
 from talemate.knowledge.intro import initialize_intro_audience
 from talemate.character import (
     deactivate_character,
@@ -521,6 +522,8 @@ async def load_scene_from_data(
         )
         scene.world_state = WorldState(**world_state_data)
         scene.world_state.validate_snapshot_audiences(scene.character_data)
+        # the shared static history was applied before the facts were loaded
+        follow_static_audiences(scene)
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
         scene.game_state_watch_paths = scene_data.get("game_state_watch_paths", [])
@@ -565,6 +568,20 @@ async def load_scene_from_data(
     # Orphaned entry associations must not attach to a future reused message ID.
     advance_message_id(
         max((key[1] for key in reinforcement_source_keys(scene)), default=0)
+    )
+    # a message written after an unlearn edge must read as newer than it, and
+    # a new line must not take the id a waiting rule's line had
+    advance_message_id(
+        max(
+            (
+                max(
+                    edge.message_id_boundary or 0,
+                    edge.anchor.message_id or 0 if edge.anchor else 0,
+                )
+                for edge in scene.world_state.knowledge
+            ),
+            default=0,
+        )
     )
 
     asset_data = scene_data.get("assets", {})

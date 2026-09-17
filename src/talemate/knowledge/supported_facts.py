@@ -110,7 +110,7 @@ def character_fact(scene, fact, character, *, read=None, cache=None):
     if character not in scene.character_data:
         raise ValueError(f"Unknown fact perspective: {character}")
     if fact.source == "offscreen":
-        return fact if not fact.false and fact.present == [character] else None
+        return fact if fact.present == [character] else None
     contributions = supported_contributions(
         scene, fact, character, read=read, cache=cache
     )
@@ -121,13 +121,9 @@ def character_fact(scene, fact, character, *, read=None, cache=None):
         times = message_times(scene)
         if cache is not None:
             cache["message_times"] = times
-    # The false mark is an author judgement, and the chain a character holds
-    # runs through their own contributions.
+    # the chain a character holds runs through their own contributions
     return aggregate_fact(fact, contributions, times=times).model_copy(
-        update={
-            "false": False,
-            "supersedes": contribution_link(_ordered(contributions)),
-        }
+        update={"supersedes": contribution_link(_ordered(contributions))}
     )
 
 
@@ -414,7 +410,6 @@ def _replace_contributions(facts, sources, replacements, counter):
         fact.contributions[0].equivalence_key: fact.id
         for fact in updated.values()
         if fact.contributions
-        and not fact.false
         and all(
             item.equivalence_key == fact.contributions[0].equivalence_key
             for item in fact.contributions

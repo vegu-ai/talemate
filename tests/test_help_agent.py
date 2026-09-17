@@ -1479,7 +1479,8 @@ def test_read_clients_unified_api_key(settings_env):
 @pytest.mark.parametrize(
     "query,page",
     [
-        ("allow block rules", "knowledge.md"),
+        ("learn never learn rules", "knowledge.md"),
+        ("unlearn a fact", "knowledge.md"),
         ("awareness overview names each character once", "knowledge-how-it-works.md"),
         ("first save continuation retry discard", "knowledge.md"),
         ("intro audiences", "knowledge-how-it-works.md"),

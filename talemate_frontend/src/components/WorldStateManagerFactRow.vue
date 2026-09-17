@@ -1,5 +1,5 @@
 <template>
-    <v-list-item class="px-0 fact-row" :class="{ 'fact-row-false': fact.false }" :data-fact-id="fact.id">
+    <v-list-item class="px-0 fact-row" :data-fact-id="fact.id">
         <template #prepend>
             <v-checkbox-btn v-if="selectable" :model-value="selected" density="compact" class="fact-select mr-1" :disabled="locked" @update:model-value="$emit('update:selected', $event)" />
             <v-chip size="x-small" variant="tonal" color="muted" class="mr-2">{{ fact.id }}</v-chip>
@@ -10,10 +10,6 @@
             <v-chip size="x-small" variant="tonal" :color="importance.color" @click="startEdit">
                 {{ importance.title }}
                 <v-tooltip activator="parent" location="top">{{ importance.description }}</v-tooltip>
-            </v-chip>
-            <v-chip v-if="fact.false" size="x-small" variant="tonal" color="delete" prepend-icon="mdi-cancel" class="fact-false">
-                False
-                <v-tooltip activator="parent" location="top">Marked false by the author: prompts leave it out, characters who learned it still hold it</v-tooltip>
             </v-chip>
         </div>
         <div v-else class="py-1" @keydown.esc.stop="editing = false">
@@ -57,7 +53,7 @@
         </div>
         <template #append>
             <slot name="actions"></slot>
-            <v-btn icon="mdi-close" size="x-small" variant="text" color="delete" :disabled="locked" @click="remove">
+            <v-btn v-if="removable" icon="mdi-close" size="x-small" variant="text" color="delete" :disabled="locked" @click="remove">
                 <v-icon icon="mdi-close"></v-icon>
                 <v-tooltip activator="parent" location="top">Remove this fact</v-tooltip>
             </v-btn>
@@ -66,7 +62,7 @@
 </template>
 
 <script>
-const HOW = { witnessed: 'present', told: 'told in dialogue', granted: 'allowed or given', inferred: 'learned' };
+const HOW = { witnessed: 'present', told: 'told in dialogue', granted: 'Learn rule or disclosure', inferred: 'learned' };
 
 const levels = [
     { value: 1, title: 'Routine', color: 'muted', description: 'Importance 1: a smaller detail worth remembering for continuity.' },
@@ -76,7 +72,7 @@ const levels = [
 
 export default {
     name: 'WorldStateManagerFactRow',
-    props: { fact: { type: Object, required: true }, locked: Boolean, selectable: Boolean, selected: Boolean },
+    props: { fact: { type: Object, required: true }, locked: Boolean, selectable: Boolean, selected: Boolean, removable: { type: Boolean, default: true } },
     inject: ['getWebsocket'],
     emits: ['updated', 'deleted', 'source', 'update:selected'],
     data() {
@@ -122,9 +118,3 @@ export default {
 };
 </script>
 
-<style scoped>
-.fact-row-false .fact-text {
-    text-decoration: line-through;
-    opacity: var(--v-medium-emphasis-opacity);
-}
-</style>

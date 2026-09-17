@@ -692,6 +692,61 @@ def test_empty_or_hidden_standard_revision_is_not_actionable(scene, text, hidden
     assert message.versions_payload()["revision_refresh"]["required"] is False
 
 
+def test_scene_status_names_the_archive_entries_of_a_required_refresh(scene):
+    summarizer, _, message = standard_revision(scene)
+    (item,) = scene.revision_refreshes
+    assert item["archive_ids"] == ["A1"]
+    summarizer.write_config("archive", "extract_facts", False)
+    (item,) = scene.revision_refreshes
+    assert item["revision_refresh"]["required"] is False
+    assert "archive_ids" not in item
+
+
+def test_payload_names_only_the_owed_learning_step(scene, monkeypatch):
+    import talemate.knowledge.revision_refresh as revision_refresh
+
+    _, _, message = standard_revision(scene, ledger=True)
+    identity = revision_refresh._phase_identity(scene, message, "extract")
+
+    def no_hashing(*args, **kwargs):
+        raise AssertionError("the status payload hashes the fact inputs")
+
+    monkeypatch.setattr(revision_refresh, "_phase_identity", no_hashing)
+    refresh = revision_refresh_payload(scene, message)["revision_refresh"]
+    assert (refresh["operations"], refresh["label"]) == (
+        ["facts", "learning"],
+        "Refresh facts",
+    )
+    # a refresh that failed after its extraction may extract again
+    message.set_revision_status("failed", phase_receipts={"refresh:extract": identity})
+    refresh = revision_refresh_payload(scene, message)["revision_refresh"]
+    assert refresh["operations"] == ["facts", "learning"]
+    # a full history rebuild extracted the selected text
+    message.mark_revision_committed(("facts",))
+    message.set_revision_status(
+        "deferred",
+        phase_receipts={"refresh:extract": f"rebuild:{message.revision_digest()}"},
+    )
+    refresh = revision_refresh_payload(scene, message)["revision_refresh"]
+    assert refresh["required"] is True
+    assert refresh["operations"] == ["learning"]
+    assert refresh["label"] == "Learn from dialogue"
+    assert refresh["explanation"] == (
+        "Learning from dialogue for this version has not run yet."
+    )
+
+
+def test_a_line_outside_every_chapter_owes_only_learning(scene):
+    _, _, message = standard_revision(scene, ledger=True)
+    scene.archived_history = []
+    refresh = revision_refresh_payload(scene, message)["revision_refresh"]
+    assert refresh["required"] is True
+    assert (refresh["operations"], refresh["label"]) == (
+        ["learning"],
+        "Learn from dialogue",
+    )
+
+
 def test_scene_status_refresh_tracks_effective_setting_changes(scene):
     summarizer, _, message = standard_revision(scene)
     assert scene.revision_refreshes[0]["revision_refresh"]["operations"] == ["facts"]

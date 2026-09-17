@@ -304,7 +304,6 @@ def offscreen_account(scene: Scene, transition: CharacterTransitionMessage):
         fact is None
         or fact.source != "offscreen"
         or fact.present != [name]
-        or fact.false
         or not fact_current(scene, fact)
     ):
         return None
@@ -336,11 +335,7 @@ def offscreen_account(scene: Scene, transition: CharacterTransitionMessage):
         if not fact_current(scene, candidate):
             continue
         successor = project(candidate)
-        if (
-            successor is not None
-            and not successor.false
-            and successor.supersedes == fact.id
-        ):
+        if successor is not None and successor.supersedes == fact.id:
             return None
     return fact
 

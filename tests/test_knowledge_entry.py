@@ -396,7 +396,7 @@ class TestReportLabels:
 async def test_perception_revoke_rejected_before_mutation(scene, route):
     scene.knowledge_eligibility = "perception"
     edge = KnowledgeEdge(character="Alice", target="The Lighthouse", kind="revoke")
-    with pytest.raises(ValueError, match="Revokes are unavailable"):
+    with pytest.raises(ValueError, match="knowledge cannot be erased"):
         if route == "entry":
             set_edge(scene, edge)
         else:

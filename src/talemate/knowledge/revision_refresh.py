@@ -196,10 +196,35 @@ def _receipts_current(
     )
     return all(
         not enabled
+        or (phase == "extract" and _extraction_rebuilt(message, state))
         or state.phase_receipts.get(receipt)
         == _phase_identity(scene, message, phase, journal=journal)
         for phase, receipt, enabled in expected
     )
+
+
+def _rebuild_receipt(message) -> str:
+    return f"rebuild:{message.revision_digest()}"
+
+
+def _extraction_rebuilt(message, state=None) -> bool:
+    """
+    A full history rebuild extracted this text's facts. The receipt names the
+    text only: the fact inputs of an extract receipt change with every later
+    learning, and the rebuilt chapters stay extracted.
+    """
+    state = state or message.revision_state
+    receipt = state.phase_receipts.get("refresh:extract") if state else None
+    return bool(receipt and receipt == _rebuild_receipt(message))
+
+
+def _learning_owed_after_rebuild(scene, message, operations=None) -> bool:
+    """A rebuild commits the selected text and leaves its learning owed."""
+    if "refresh:learn" in message.revision_state.phase_receipts:
+        return False
+    if not _extraction_rebuilt(message):
+        return False
+    return (operations or revision_operations(scene, message)).learn_facts
 
 
 def revision_requires_refresh(scene, message, operations=None) -> bool:
@@ -217,6 +242,8 @@ def _revision_work_required(scene, message, operations=None) -> bool:
         and message.revision_state.status in ("running", "failed")
     ):
         return True
+    if _learning_owed_after_rebuild(scene, message, operations):
+        return True
     if not character_knowledge_enabled(scene) or (
         len(message.versions) <= 1 and message.revision_state.serial == 0
     ):
@@ -229,6 +256,15 @@ def _revision_work_required(scene, message, operations=None) -> bool:
     return False
 
 
+def _owed_operations(message, operations: RevisionOperations):
+    """The phases the payload names; it hashes no fact inputs, for speed."""
+    if not (operations.extract_facts and _extraction_rebuilt(message)):
+        return operations
+    return RevisionOperations(
+        perceptions=operations.perceptions, learn_facts=operations.learn_facts
+    )
+
+
 def revision_refresh_payload(scene, message) -> dict:
     operations = revision_operations(scene, message)
     pending_repair = bool(
@@ -238,22 +274,23 @@ def revision_refresh_payload(scene, message) -> dict:
     dirty = pending_repair or work_required
     repair_only = pending_repair and not work_required
     status = message.revision_state.status if message.revision_state else "clean"
+    owed = _owed_operations(message, operations)
     if repair_only:
         label = "Update knowledge"
         explanation = "This version is restored; its saved knowledge needs updating."
         running = "Updating knowledge…"
-    elif operations.perceptions:
+    elif owed.perceptions:
         label = "Analyze perceptions"
         explanation = "Perception analysis for this version has not run yet."
         running = "Analyzing perceptions…"
-    elif (
-        operations.extract_facts
-        or operations.learn_facts
-        or (message.revision_state and message.revision_state.pending_index_repair)
-    ):
+    elif owed.extract_facts or pending_repair:
         label = "Refresh facts"
         explanation = "Facts for this version have not been refreshed yet."
         running = "Refreshing facts…"
+    elif owed.learn_facts:
+        label = "Learn from dialogue"
+        explanation = "Learning from dialogue for this version has not run yet."
+        running = "Learning from dialogue…"
     else:
         label = explanation = running = None
     return {
@@ -267,7 +304,7 @@ def revision_refresh_payload(scene, message) -> dict:
             ),
             "required": dirty and (operations.any or pending_repair),
             "status": status,
-            "operations": ["index_repair"] if repair_only else list(operations.names()),
+            "operations": ["index_repair"] if repair_only else list(owed.names()),
             "label": label,
             "explanation": explanation,
             "running_label": running,
@@ -848,7 +885,11 @@ def _remove_message_evidence_impl(scene, message, *, facts: bool) -> set[str]:
         identity: binding_state(fact)
         for identity, fact in scene.world_state.facts.items()
     }
-    removed = remove_message_facts(scene.world_state, message.id) if facts else set()
+    removed = (
+        remove_message_facts(scene.world_state, message.id, keep_rules=True)
+        if facts
+        else set()
+    )
     changed = removed | {
         identity
         for identity, fact in scene.world_state.facts.items()
@@ -865,7 +906,7 @@ def _remove_message_evidence_impl(scene, message, *, facts: bool) -> set[str]:
     scene.world_state.knowledge = [
         edge
         for edge in scene.world_state.knowledge
-        if edge.target not in removed
+        if (edge.target not in removed or edge.anchor is not None)
         and (edge.message_id != message.id or edge.source == "manual")
     ]
     for edge in old_edges:
@@ -875,8 +916,11 @@ def _remove_message_evidence_impl(scene, message, *, facts: bool) -> set[str]:
             "told",
         ):
             continue
+        # an unlearn or revoke edge on the pair does not teach the fact
         if not any(
-            other.character == edge.character and other.target == edge.target
+            other.character == edge.character
+            and other.target == edge.target
+            and other.kind == "grant"
             for other in scene.world_state.knowledge
         ):
             fact.known_by.pop(edge.character, None)
@@ -1001,7 +1045,7 @@ async def _invalidate_affected_archives(scene, message):
         for identity, fact in scene.world_state.facts.items()
     }
     with capture_revision_mutations(scene, message=message):
-        removed = prune_summary_facts(scene.world_state, archive_ids)
+        removed = prune_summary_facts(scene.world_state, archive_ids, keep_rules=True)
     # a fact the prune keeps can still change: a promotion, a dropped
     # restatement, an unbind; its memory document follows
     changed = removed | {
@@ -1160,6 +1204,7 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
         extract_identity = _phase_identity(scene, message, "extract", recent)
         if (
             operations.extract_facts
+            and not _extraction_rebuilt(message)
             and message.revision_state.phase_receipts.get("refresh:extract")
             != extract_identity
         ):
@@ -1472,6 +1517,83 @@ async def refresh_revision(scene, message):
     finally:
         if job.done() and jobs.get(message.id) is job:
             jobs.pop(message.id, None)
+
+
+def revisions_before_rebuild(scene) -> list:
+    """
+    The passages a full history rebuild settles. Character perspectives settle
+    nothing, since a rebuild runs no perception analysis.
+    """
+    if character_knowledge_enabled(scene):
+        return []
+    return [
+        message
+        for message in scene.history
+        if message.revision_state is not None
+        and revision_requires_refresh(scene, message)
+    ]
+
+
+def remove_revised_evidence(scene, messages: list) -> None:
+    """
+    Called once the rebuild dropped the chapter facts: a changed passage loses
+    the rest of its old text's evidence under a rebuild journal, so browsing
+    back to the old text after a cancelled rebuild restores it. Any other
+    journal goes: it names archive entries and facts the rebuild replaces.
+    """
+    summarizer = get_agent("summarizer")
+    for message in messages:
+        if message.revision_matches_baseline:
+            continue
+        journal = message.revision_state.refresh_journal
+        if not (journal and journal.get("rebuild")):
+            message.set_revision_status(
+                message.revision_state.status, refresh_journal=None
+            )
+            begin_revision_transaction(scene, message)
+            message.set_revision_status(
+                message.revision_state.status,
+                refresh_journal={
+                    **message.revision_state.refresh_journal,
+                    "rebuild": True,
+                },
+            )
+        removed = _remove_message_evidence(scene, message, facts=True)
+        if removed:
+            summarizer.queue_fact_memory(scene, removed)
+
+
+def settle_revisions_after_rebuild(scene, messages: list) -> None:
+    """
+    After a completed rebuild every chapter's facts come from the selected
+    text, so each passage commits its selection. With learning from dialogue
+    on, a changed passage records its extraction as rebuilt and owes only its
+    learning. A pending index repair moves to the scene's repair, which runs
+    before the next generation.
+    """
+    for message in messages:
+        if not any(entry is message for entry in scene.history):
+            continue
+        preserve_revision_index_repair(scene, message)
+        state = message.revision_state
+        changed = not message.revision_matches_baseline
+        operations = revision_operations(scene, message)
+        message.mark_revision_committed(
+            tuple(name for name in operations.names() if name != "learning")
+            if changed
+            else state.completed_features
+        )
+        receipts = dict(message.revision_state.phase_receipts)
+        if changed and operations.learn_facts:
+            receipts.pop("refresh:learn", None)
+            receipts["refresh:extract"] = _rebuild_receipt(message)
+        message.set_revision_status(
+            message.revision_state.status,
+            phase_receipts=receipts,
+            pending_index_repair=None,
+        )
+        if _learning_owed_after_rebuild(scene, message, operations):
+            message.set_revision_status("deferred")
 
 
 def preserve_revision_index_repair(scene, message) -> None:

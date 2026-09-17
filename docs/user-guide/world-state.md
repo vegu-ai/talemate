@@ -120,10 +120,10 @@ that row, the background tooltip also says "Use Make real to promote."
 
 ### Knowledge changes
 
-A small dot beside a character marks new knowledge grants or revocations, or new facts
+A small dot beside a character marks new Learn, Never Learn or Unlearn rules, or new facts
 attributed to them when a section of the story is summarized. Several changes share one
 dot. Hover over it or focus it with the keyboard to see the affected facts and entries,
-labelled **Added** or **Revoked**. Click it to open that character's **Knowledge** tab.
+labelled **Added**, **Revoked** or **Unlearned**. Click it to open that character's **Knowledge** tab.
 
 The dot fades after eight seconds; hovering or focusing pauses that timer. Inactive
 characters can have a dot beside their name in the **Inactive** section too. When that
@@ -131,7 +131,7 @@ section is collapsed, its header shows a dot listing the affected characters; cl
 to expand the section. The Knowledge tab refreshes when new changes arrive.
 
 Ordinary messages, snapshot refreshes, loading a scene and playthrough do not trigger the
-dot. Regenerating or deleting old facts and removing existing knowledge edges stay silent.
+dot. Regenerating or deleting old facts and removing existing knowledge rules stay silent.
 These notifications add no AI requests.
 
 ### Knowledge hub
@@ -154,7 +154,7 @@ The Summarizer's [Fact chronology](/talemate/user-guide/agents/summarizer/settin
 settings keep recent facts and select older ones by score or mention of a present character.
 This selection leaves the character's knowledge intact. It is followed by the newest of the
 character's **Disclosures** in a Character perspectives story or **Entry access rules**
-(Allow / Block) in a Standard story, again with the count. Both lists show at most five entries.
+(Learn, Never Learn and Unlearn) in a Standard story, again with the count. Both lists show at most five entries.
 **Open Knowledge tab** jumps to the character's
 [Knowledge tab](/talemate/user-guide/world-editor/knowledge/) in the World Editor, which holds
 the full lists and the known facts by topic table, and where you establish knowledge or adjust

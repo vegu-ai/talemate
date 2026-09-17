@@ -110,9 +110,7 @@ def superseded_fact_ids(scene, *, character=None, superseders=None) -> set[str]:
             from talemate.knowledge.topics import known_bucket
 
             superseders = known_bucket(scene, character)
-    return {
-        fact.supersedes for fact in superseders if fact.supersedes and not fact.false
-    }
+    return {fact.supersedes for fact in superseders if fact.supersedes}
 
 
 def ranked_facts(

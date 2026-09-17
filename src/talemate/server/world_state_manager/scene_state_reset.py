@@ -103,6 +103,7 @@ class SceneStateResetMixin:
                     for ah in scene.archived_history
                     if ah.get("end") is not None and ah.get("id")
                 },
+                keep_rules=False,
             )
 
             if payload.wipe_history_include_static:

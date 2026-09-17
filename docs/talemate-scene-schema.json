@@ -180,7 +180,6 @@
               "subjects": {"type": "array", "items": {"type": "string"}},
               "known_by": {"type": "object", "additionalProperties": {"type": "string", "enum": ["told", "granted", "inferred"]}},
               "supersedes": {"type": ["string", "null"]},
-              "false": {"type": "boolean"},
               "restatements": {"type": "integer"},
               "last_seen_ts": {"type": ["integer", "null"]},
               "source": {"type": "string", "enum": ["summary", "manual", "offscreen"]}
@@ -204,17 +203,27 @@
         "topics_fact_count": {"type": "integer", "description": "The fact count at the last clustering."},
         "knowledge": {
           "type": "array",
-          "description": "Grant and revoke edges: the only per-character knowledge state that is stored.",
+          "description": "Grant, revoke and unlearn edges: the only per-character knowledge state that is stored.",
           "items": {
             "type": "object",
             "properties": {
               "id": {"type": "string"},
               "character": {"type": "string"},
               "target": {"type": "string", "description": "Memory document id: <name>.<attr>, <name>.detail.<key>, <name>.description, a world entry id or a summarized history entry id."},
-              "kind": {"type": "string", "enum": ["grant", "revoke"]},
-              "source": {"type": "string", "enum": ["told", "granted", "inferred", "manual"]},
+              "kind": {"type": "string", "enum": ["grant", "revoke", "unlearn"]},
+              "source": {"type": "string", "enum": ["told", "granted", "inferred", "manual", "director"]},
+              "message_id_boundary": {"type": ["integer", "null"], "description": "An unlearn edge: the newest message id when it was written. A grant from a later message lifts it while that grant exists."},
               "ts": {"type": ["integer", "null"]},
-              "note": {"type": ["string", "null"]}
+              "note": {"type": ["string", "null"]},
+              "anchor": {
+                "type": ["object", "null"],
+                "description": "An author rule whose fact a regeneration removed: the statement and the line or entry it came from. The rule has no effect until a fact for the same statement takes it over.",
+                "properties": {
+                  "text": {"type": "string"},
+                  "message_id": {"type": ["integer", "null"]},
+                  "archive_id": {"type": ["string", "null"]}
+                }
+              }
             }
           }
         },

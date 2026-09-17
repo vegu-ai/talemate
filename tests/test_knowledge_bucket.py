@@ -19,7 +19,7 @@ def doc(id, meta, text="x"):
 
 @pytest.fixture
 def index():
-    return KnowledgeIndex(grants=set(), revokes=set())
+    return KnowledgeIndex(grants=set(), revokes=set(), unlearns=set())
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +112,9 @@ class TestInBucket:
 
     def test_grant_overrides_absence_and_visibility(self):
         index = KnowledgeIndex(
-            grants={("Alice", "F1"), ("Alice", "Bob.detail.secret")}, revokes=set()
+            grants={("Alice", "F1"), ("Alice", "Bob.detail.secret")},
+            revokes=set(),
+            unlearns=set(),
         )
         assert index.in_bucket(
             "Alice", KnowledgeItem(id="F1", kind="fact", present=["Bob"])
@@ -129,7 +131,9 @@ class TestInBucket:
 
     def test_revoke_beats_everything(self):
         index = KnowledgeIndex(
-            grants={("Alice", "F1")}, revokes={("Alice", "F1"), ("Bob", "Bob.age")}
+            grants={("Alice", "F1")},
+            revokes={("Alice", "F1"), ("Bob", "Bob.age")},
+            unlearns=set(),
         )
         assert not index.in_bucket(
             "Alice", KnowledgeItem(id="F1", kind="fact", present=["Alice"])

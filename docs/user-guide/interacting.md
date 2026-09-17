@@ -93,7 +93,7 @@ Character and narrator messages (and context investigation results) keep a histo
 The paginator shows:
 
 - **Left / right arrows** to step between versions.
-- **Analyze perceptions** in a Character perspectives story, or **Refresh facts** in Standard mode, when the selected text needs its derived knowledge updated. The tooltip explains what is pending and notes that sending your next line runs the same work automatically.
+- **Analyze perceptions** in a Character perspectives story, or **Refresh facts** in Standard mode, when the selected text needs its derived knowledge updated. A passage that owes only learning from dialogue shows **Learn from dialogue** instead: for example a character line that no chapter contains yet, or a line whose chapter facts **Regenerate All History** already rebuilt. The tooltip explains what is pending and notes that sending your next line runs the same work automatically.
 - A **counter** (for example `2/3`) telling you which version you are viewing and how many exist in total.
 - A **tag** describing where the version you are currently looking at came from:
     - **Original** -- the message as it was first generated.
@@ -101,7 +101,7 @@ The paginator shows:
     - **Revised** -- a version that the [Editor agent](/talemate/user-guide/agents/editor) automatically rewrote.
     - **Continued** -- a version created by continuing the message (see below).
 
-Browsing changes the active text immediately without running analysis or saving the scene. The selection is saved with your next scene save, or after **Analyze perceptions**, **Refresh facts** or **Update knowledge** succeeds with auto save enabled. Until then the scene is marked unsaved. The arrows wait for the server to acknowledge each selection before the displayed text changes, so delayed replies cannot leave the counter and text on different versions. History and Knowledge mark changed passages as out of date until you choose **Analyze perceptions**, **Refresh facts** or **Update knowledge**, or send your next line. Reading, scrolling, moving keyboard focus and changing tabs do not start a request.
+Browsing changes the active text immediately without running analysis or saving the scene. The selection is saved with your next scene save, or after **Analyze perceptions**, **Refresh facts**, **Learn from dialogue** or **Update knowledge** succeeds with auto save enabled. Until then the scene is marked unsaved. The arrows wait for the server to acknowledge each selection before the displayed text changes, so delayed replies cannot leave the counter and text on different versions. In the World Editor's History tab, the history entry that contains a changed passage shows a chip with the same label while that passage's facts are out of date; click the chip to run the update from there. Sending your next line also runs it. Reading, scrolling, moving keyboard focus and changing tabs do not start a request.
 
 Double-clicking a message, editing its text and pressing Enter saves the edit without starting analysis. The action or your next send/choice updates the edited passage. Unchanged edits and canceled edits require no new analysis.
 

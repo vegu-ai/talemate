@@ -15,6 +15,7 @@ import structlog
 
 from talemate.instance import get_agent
 from talemate.knowledge.absence import fact_order
+from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
 from talemate.knowledge.schema import (
     Fact,
     KnownFact,
@@ -55,6 +56,12 @@ AWARENESS_MIN_FACTS = 3
 AWARENESS_MAX_TOPICS = 6
 AWARENESS_ALL = 0.9
 KNOWN_FACTS_LIMIT = 5
+# why a Standard story character does not know a recorded fact
+STANDARD_UNKNOWN_REASONS = {
+    "revoke": "Never Learn rule",
+    "unlearn": "Unlearned",
+    "presence": "Not present",
+}
 
 
 def _unit(vector) -> np.ndarray:
@@ -311,6 +318,7 @@ def topic_facts(
     *,
     read: PerspectiveReadContext | None = None,
     cache: dict | None = None,
+    index: KnowledgeIndex | None = None,
 ) -> list[TopicFact]:
     """
     Every fact of one topic for the character: the ones they know, as the
@@ -328,8 +336,11 @@ def topic_facts(
     views = {fact.id: (fact, kind) for fact, kind in known}
     facts = scene.world_state.facts
     rows = []
-    if character_knowledge_enabled(scene) and read is None:
+    perception = character_knowledge_enabled(scene)
+    if perception and read is None:
         read = PerspectiveReadContext(scene)
+    if not perception and index is None:
+        index = KnowledgeIndex.from_scene(scene)
     cache = {} if cache is None else cache
     for fact_id in topic.fact_ids:
         canonical = facts.get(fact_id)
@@ -338,6 +349,18 @@ def topic_facts(
         if not fact_current(scene, canonical):
             continue
         view, kind = views.get(fact_id, (canonical, None))
+        if perception:
+            reason = fact_knowledge_reason(
+                scene, canonical, character, read=read, cache=cache
+            )
+        elif kind is None:
+            rejection = index.rejection(
+                character,
+                KnowledgeItem(id=fact_id, kind="fact", present=canonical.present),
+            )
+            reason = STANDARD_UNKNOWN_REASONS.get(rejection)
+        else:
+            reason = None
         rows.append(
             TopicFact(
                 id=fact_id,
@@ -350,11 +373,7 @@ def topic_facts(
                 source_id=view.archive_id,
                 ts=view.ts,
                 time=fact_time(scene, view),
-                reason=fact_knowledge_reason(
-                    scene, canonical, character, read=read, cache=cache
-                )
-                if character_knowledge_enabled(scene)
-                else None,
+                reason=reason,
             )
         )
     return rows
@@ -365,11 +384,19 @@ def topics_facts(
 ) -> dict[str, list[TopicFact]]:
     """The rows of several topics from one bucket pass."""
     known = _known(scene, character)
-    read = PerspectiveReadContext(scene) if character_knowledge_enabled(scene) else None
+    perception = character_knowledge_enabled(scene)
+    read = PerspectiveReadContext(scene) if perception else None
+    index = None if perception else KnowledgeIndex.from_scene(scene)
     cache = {}
     return {
         topic_id: topic_facts(
-            scene, character, topic_id, known=known, read=read, cache=cache
+            scene,
+            character,
+            topic_id,
+            known=known,
+            read=read,
+            cache=cache,
+            index=index,
         )
         for topic_id in topic_ids
     }

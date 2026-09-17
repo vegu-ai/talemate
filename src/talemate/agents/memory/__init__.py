@@ -208,7 +208,7 @@ class MemoryAgent(AudienceMemoryMixin, Agent):
                     "similarity_gate": AgentActionConfig(
                         type="bool",
                         label="Match known facts",
-                        description="Allow a memory of an event the character missed when it closely matches a fact they know. Turn on to recognize retold information; turn off for stricter access filtering. Uses the Summarizer's Fact matching tolerance and cannot override entry visibility or blocked knowledge.",
+                        description="Allow a memory of an event the character missed when it closely matches a fact they know. Turn on to recognize retold information; turn off for stricter access filtering. Uses the Summarizer's Fact matching tolerance and cannot override entry visibility, a Never Learn rule or an Unlearn.",
                         value=True,
                     ),
                     "rerank": AgentActionConfig(

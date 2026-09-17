@@ -67,7 +67,7 @@ When the recent lines name a character who is not in the scene (aliases from the
 
 Allow a memory of an event the character missed when it closely matches a fact they know. **Turn on to recognize retold information; turn off for stricter access filtering.** On by default.
 
-Available in **Standard** mode when retrieval is limited to a character's knowledge. Uses the Summarizer's [Fact matching tolerance](/talemate/user-guide/agents/summarizer/settings/#fact-matching-tolerance): raise that tolerance to accept looser matches, or lower it for closer matches. This cannot override an entry's **Known by** setting or a **Block** rule. See [Knowledge](/talemate/user-guide/world-editor/knowledge/).
+Available in **Standard** mode when retrieval is limited to a character's knowledge. Uses the Summarizer's [Fact matching tolerance](/talemate/user-guide/agents/summarizer/settings/#fact-matching-tolerance): raise that tolerance to accept looser matches, or lower it for closer matches. This cannot override an entry's **Known by** setting (a static history entry's too), a **Never Learn** rule or an **Unlearn**. See [Knowledge](/talemate/user-guide/world-editor/knowledge/).
 
 Hidden and unused in **Character perspectives** mode, where similarity ranks available memories and never grants access to unavailable ones.
 

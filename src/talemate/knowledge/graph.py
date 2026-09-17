@@ -109,12 +109,7 @@ def current_state(
     facts = _facts_about(scene, entity, character=character)
     superseders = facts if character is not None else current_facts(scene)
     superseded = {f.supersedes for f in superseders if f.supersedes}
-    candidates = [
-        f
-        for f in facts
-        if f.id not in superseded
-        and (character is None or not character_knowledge_enabled(scene) or not f.false)
-    ]
+    candidates = [f for f in facts if f.id not in superseded]
     return candidates[-1] if candidates else None
 
 

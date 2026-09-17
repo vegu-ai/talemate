@@ -169,7 +169,6 @@ async def test_metadata_and_id_paths_return_only_supported_variants(rag):
     fact = scene.world_state.facts["F1"]
     fact.text = "Author correction: Marie has no lantern."
     fact.text_edited = True
-    fact.false = True
     memory.invalidate_audience_index()
     documents = await memory.get_document("F1", viewer="Elmer")
     assert len(documents) == 1

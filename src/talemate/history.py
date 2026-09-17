@@ -660,7 +660,14 @@ async def rebuild_history(
     """
     rebuilds all history for a scene
     """
+    from talemate.knowledge.revision_refresh import (
+        remove_revised_evidence,
+        revisions_before_rebuild,
+        settle_revisions_after_rebuild,
+    )
+
     summarizer = get_agent("summarizer")
+    revisions = revisions_before_rebuild(scene)
 
     # clear out archived history, but keep pre-established history
     await drop_facts_for_entries(
@@ -678,6 +685,8 @@ async def rebuild_history(
     scene.layered_history = []
 
     await purge_all_history_from_memory()
+
+    remove_revised_evidence(scene, revisions)
 
     scene.saved = False
 
@@ -732,6 +741,8 @@ async def rebuild_history(
         emit("status", message="Rebuilding layered history...", status="busy")
         await summarizer.summarize_to_layered_history()
 
+    settle_revisions_after_rebuild(scene, revisions)
+    scene.emit_status()
     emit("status", message="Historical archive rebuilt", status="success")
 
 

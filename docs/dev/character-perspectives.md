@@ -51,7 +51,7 @@ Missing audiences on load use the first narrative message's explicit presence, o
 
 The Summarizer `context_review` WebSocket action accepts an optional active `character` and echoes `request_id`. The Conversation template and preview use `history_context` to resolve the same history audience and director-message settings. Standard previews reuse the history collectors; Perspectives previews obtain entry metadata from `project_character_history(entries=...)`, so labels do not introduce another selector.
 
-`knowledge.review` adds the existing fact, absence and analysis renderers plus author-facing exclusion diagnostics. The selectors report exclusions through `ContextDiagnostics`, including base archive and layer identities; counts cover all decisions while samples are capped at 20 per reason and 500 characters. Known facts use the shared bounded renderer, preserve false markers, and report budget cuts. Character previews derive their default budget from the Conversation client’s context window. Exclusions are separate from rendered character sections. Previewing never generates missing analysis or runs dynamic RAG retrieval, and history-budget overrides do not mutate agent settings. The existing Apply action remains scene-wide.
+`knowledge.review` adds the existing fact, absence and analysis renderers plus author-facing exclusion diagnostics. The selectors report exclusions through `ContextDiagnostics`, including base archive and layer identities; counts cover all decisions while samples are capped at 20 per reason and 500 characters. Known facts use the shared bounded renderer and report budget cuts. Character previews derive their default budget from the Conversation client’s context window. Exclusions are separate from rendered character sections. Previewing never generates missing analysis or runs dynamic RAG retrieval, and history-budget overrides do not mutate agent settings. The existing Apply action remains scene-wide.
 
 ## Publish and select
 
@@ -762,13 +762,13 @@ requesting a full rebuild.
 
 `facts_about`, `current_state`, `relationship_timeline` and `superseded_chain` in
 `talemate.knowledge.graph` accept an explicit `character` argument. Omit it for
-existing global author queries, including author-marked false records. The Current State and Relationship Timeline nodes
+existing global author queries. The Current State and Relationship Timeline nodes
 also expose an optional character input; an empty string means the global query.
 `superseded_chain(character=...)` rejects legacy mode with `ValueError` instead of
 silently returning an unscoped chain. `bucket(scene, character)` is scoped.
 In the new mode these queries select current supporting contributions before
 entity matching and return that character's text and acquisition evidence only.
-A `false` flag or an inaccessible superseding update cannot
+An inaccessible superseding update cannot
 replace their last-known evidence; an author edit of the record's text does, for every character (`Fact.text_edited`). An authored link (`Fact.link_edited`) holds the record's `supersedes` through rebuilds, while a character view always takes its chain from its own contributions. A later witnessed update carries its own time
 and order; disclosure time stays independent of its historical provenance. Hidden
 passages are excluded through their derived facts too. Facts without supported
@@ -801,7 +801,7 @@ The director module uses Grant Knowledge Metadata and Grant Knowledge Confirmati
 
 ## Searchable effective audiences
 
-In opted-in perception scenes, `knowledge.memory.audience_documents(scene)` builds a derived character index in the existing memory collection. It reuses `select_character_view`, `character_fact`, independent disclosures and authored `EntryVisibility`. Ready audience views replace reader prose; hidden, pending, failed, omitted and unsupported content is not indexed for characters. Fact documents use each character's supported wording until the author edits the record's text (`Fact.text_edited`); an edited text replaces every character's wording, while the `false` mark and each character's own supersession chain stay per view (`Fact.link_edited` protects only the record's own link). Authored sheets, world entries and static history follow their author-managed visibility. An event known to the entire current cast is still audience-limited, not common lore for future characters. Legacy edges do not authorize these records.
+In opted-in perception scenes, `knowledge.memory.audience_documents(scene)` builds a derived character index in the existing memory collection. It reuses `select_character_view`, `character_fact`, independent disclosures and authored `EntryVisibility`. Ready audience views replace reader prose; hidden, pending, failed, omitted and unsupported content is not indexed for characters. Fact documents use each character's supported wording until the author edits the record's text (`Fact.text_edited`); an edited text replaces every character's wording, while each character's own supersession chain stays per view (`Fact.link_edited` protects only the record's own link). Authored sheets, world entries and static history follow their author-managed visibility. An event known to the entire current cast is still audience-limited, not common lore for future characters. Legacy edges do not authorize these records.
 
 Canonical reader/author memory documents remain available. Managed character variants have derived `knowledge:` IDs and the following metadata:
 

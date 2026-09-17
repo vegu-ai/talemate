@@ -1275,13 +1275,19 @@ class Scene(Emitter):
 
     @property
     def revision_refreshes(self) -> list[dict]:
+        from talemate.knowledge.revision_browsing import affected_archive_ids
         from talemate.knowledge.revision_refresh import revision_refresh_payload
 
-        return [
-            {"id": message.id, **revision_refresh_payload(self, message)}
-            for message in self.history
-            if message.revision_state is not None
-        ]
+        refreshes = []
+        for message in self.history:
+            if message.revision_state is None:
+                continue
+            payload = revision_refresh_payload(self, message)
+            item = {"id": message.id, **payload}
+            if payload["revision_refresh"]["required"]:
+                item["archive_ids"] = sorted(affected_archive_ids(self, message))
+            refreshes.append(item)
+        return refreshes
 
     async def add_actor(self, actor: Actor, commit_to_memory: bool = True):
         """

@@ -320,13 +320,27 @@ class TestStoreFacts:
         }
         scene.world_state.knowledge = [
             KnowledgeEdge(character="Edwin", target="F1"),
+            KnowledgeEdge(character="Mara", target="F1", source="told"),
             KnowledgeEdge(character="Edwin", target="F2"),
         ]
         await drop_facts_for_entries(scene, {"e1"})
         assert list(scene.world_state.facts) == ["F2"]
         assert scene.world_state.facts["F2"].supersedes is None
-        assert [e.target for e in scene.world_state.knowledge] == ["F2"]
+        # the author's rule waits for the statement; the story grant goes
+        assert [
+            (e.character, e.target, e.anchor and e.anchor.model_dump())
+            for e in scene.world_state.knowledge
+        ] == [
+            ("Edwin", "F1", {"text": "a", "message_id": None, "archive_id": "e1"}),
+            ("Edwin", "F2", None),
+        ]
         assert fake_memory.deleted == [{"ids": ["F1"]}]
+
+    async def test_a_reset_drops_the_rules_of_its_facts(self, scene, fake_memory):
+        scene.world_state.facts = {"F1": Fact(id="F1", text="a", archive_id="e1")}
+        scene.world_state.knowledge = [KnowledgeEdge(character="Edwin", target="F1")]
+        await drop_facts_for_entries(scene, {"e1"}, keep_rules=False)
+        assert scene.world_state.knowledge == []
 
     def _lines(self):
         return {

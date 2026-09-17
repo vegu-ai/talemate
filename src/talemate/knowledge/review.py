@@ -169,7 +169,6 @@ async def character_context_review(scene, character, overrides=None):
             scene,
             known,
             budget // 3,
-            false_ids={fact.id for fact in bucket if fact.false},
             diagnostics=diagnostics,
         )
         preview["sections"].append(

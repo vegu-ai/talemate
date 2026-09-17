@@ -817,8 +817,7 @@ async def test_character_from_a_released_scene_returns_without_a_departure_recor
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("state", ["false", "superseded"])
-async def test_return_account_uses_current_fact_projection(returning_scene, state):
+async def test_return_account_uses_current_fact_projection(returning_scene):
     from talemate.knowledge.schema import Fact
     from talemate.knowledge.topics import known_bucket
 
@@ -832,16 +831,13 @@ async def test_return_account_uses_current_fact_projection(returning_scene, stat
     assert fact.id in {item.id for item in known_bucket(scene, "Nora")}
     assert fact.id not in {item.id for item in known_bucket(scene, "Mara")}
     assert fact.text in render_transition(scene, transition)
-    if state == "false":
-        fact.false = True
-    else:
-        scene.world_state.facts["F2"] = Fact(
-            id="F2",
-            text="The coat was beyond repair.",
-            source="offscreen",
-            present=["Nora"],
-            supersedes="F1",
-        )
+    scene.world_state.facts["F2"] = Fact(
+        id="F2",
+        text="The coat was beyond repair.",
+        source="offscreen",
+        present=["Nora"],
+        supersedes="F1",
+    )
     assert fact.text not in render_transition(scene, transition)
 
 
@@ -1435,7 +1431,6 @@ async def test_real_absence_expansion_adds_no_empty_part_or_second_gap(
 @pytest.mark.parametrize(
     "state",
     [
-        "false_successor",
         "private_successor",
         "stale_successor",
         "visible_successor",
@@ -1465,9 +1460,7 @@ async def test_targeted_account_resolution_matches_current_projection(
     )
     scene.world_state.facts = {"F1": account, "F2": successor}
     transition.offscreen_fact_id = "F1"
-    if state == "false_successor":
-        successor.false = True
-    elif state == "private_successor":
+    if state == "private_successor":
         successor.present = ["Mara"]
     elif state == "stale_successor":
         successor.message_id = -999
@@ -1482,7 +1475,6 @@ async def test_targeted_account_resolution_matches_current_projection(
         for fact in ranked_facts(
             scene, known_bucket(scene, "Nora"), character="Nora", tiers=False
         )
-        if not fact.false
     }
     expected = (
         "F1" in visible

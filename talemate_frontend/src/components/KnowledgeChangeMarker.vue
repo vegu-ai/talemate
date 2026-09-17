@@ -17,7 +17,7 @@
             <div>Knowledge changed for {{ name }}</div>
             <ul class="pl-4">
                 <li v-for="change in changes" :key="JSON.stringify([change.target, change.kind])">
-                    {{ change.kind === 'revoke' ? 'Revoked' : 'Added' }}: {{ change.label }}
+                    {{ { revoke: 'Revoked', unlearn: 'Unlearned' }[change.kind] || 'Added' }}: {{ change.label }}
                 </li>
             </ul>
         </v-tooltip>

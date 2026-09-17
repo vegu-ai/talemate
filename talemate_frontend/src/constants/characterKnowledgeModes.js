@@ -7,12 +7,12 @@ export const CHARACTER_KNOWLEDGE_MODES = [
     {
         key: 'legacy',
         title: 'Standard',
-        summary: 'Characters know what they were present for and what you allow. No extra requests. You manage exceptions by hand with Allow / Block rules and the knowledge switches in Conversation settings. Good for most stories, any model, a small cast, and stories without many secrets.',
+        summary: 'Characters know what they were present for and what you let them learn. No extra requests. You manage exceptions by hand with Learn / Never Learn rules and the knowledge switches in Conversation settings. Good for most stories, any model, a small cast, and stories without many secrets.',
         pros: [
             'No extra requests',
             'Works with any model',
             'Nothing is locked in',
-            'You control exceptions directly with Allow / Block rules',
+            'You control exceptions directly with Learn / Never Learn rules',
         ],
         cons: [
             'A present character sees the full reader prose, private thoughts included',
@@ -35,7 +35,7 @@ export const CHARACTER_KNOWLEDGE_MODES = [
             'One extra analytical request per passage (slower, costs more)',
             'Needs a strong, reliable model, or analyses fail and pause generation',
             'Cannot be turned off once the story has history',
-            'No forget or block of already acquired knowledge',
+            'No Unlearn or Never Learn for knowledge a character already has',
         ],
         pickIf: 'Your model is current and reliable, the story depends on who knows what, and several characters are active who know different things.',
         modelGuidanceUrl: MODEL_EXPECTATIONS_DOCS_URL,

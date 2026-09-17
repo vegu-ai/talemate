@@ -8,7 +8,7 @@ The diagrams trace what is recorded, which requests run, and how the results rea
 
 Your finished line appears at once, with the spinner naming any perception or learning pass still running; the next reply waits for those passes to finish.
 
-Browse a line's versions freely. For changed text, choose **Analyze perceptions** in Character perspectives mode or **Refresh facts** in Standard mode, or send your next line or choice to run the same required update first. History and Knowledge mark changed passages as out of date until it finishes. Reading, moving keyboard focus and changing tabs never start it.
+Browse a line's versions freely. For changed text, choose **Analyze perceptions** in Character perspectives mode or **Refresh facts** in Standard mode, or send your next line or choice to run the same required update first. The World Editor's History tab marks each history entry that contains such a passage with a chip that runs the same update. Reading, moving keyboard focus and changing tabs never start it.
 
 - **Presence.** Every line records who was in the scene; a chapter summary records everyone who was there for any part of it.
 - **Facts.** Short statements the Summarizer records from a chapter, each **Routine (1)**, **State (2)** or **Milestone (3)**. Edit them in [History](/talemate/user-guide/world-editor/history/#facts), or list, filter and manage them all in the [Facts tab](/talemate/user-guide/world-editor/facts/).
@@ -57,9 +57,9 @@ flowchart TD
 
 **Offscreen Life.** This is the optional generated part of the bridge. With [Narrator → Offscreen Life](/talemate/user-guide/agents/narrator/settings/#offscreen-life) enabled, a return after any intervening story or recorded scene time adds one request about what the character did while away. It does not wait for a chapter summary. The request uses the character's permitted context and established arrival constraints, and stores the result as one private offscreen fact. It adds no separate entry briefing, fact-extraction request or perception repair. A newly created character, or an immediate leave and return with nothing between, gets no account.
 
-**The account follows knowledge.** The bridge reads that fact through the returning character's current fact projection—the same rules that decide which facts they know—not a saved copy of its original text. Editing the fact updates what the bridge can show. A fact marked false is withheld; when the character knows a successor, the superseded account is withheld too. In Standard mode Allow and Block rules also apply. In Character perspectives the account belongs to its owner; it does not give other characters knowledge of that private absence.
+**The account follows knowledge.** The bridge reads that fact through the returning character's current fact projection—the same rules that decide which facts they know—not a saved copy of its original text. Editing the fact updates what the bridge can show. When the character knows a successor, the superseded account is withheld. In Standard mode Learn, Never Learn and Unlearn rules also apply. In Character perspectives the account belongs to its owner; it does not give other characters knowledge of that private absence.
 
-**Why one projected account?** Offscreen Life establishes what the returning character did; it does not brief them on everyone else's missed scene. Keeping one fact as its source means edits, false markers and knowledge permissions still apply. A second generated briefing or copied account could disagree with that source, so there is no second generated component.
+**Why one projected account?** Offscreen Life establishes what the returning character did; it does not brief them on everyone else's missed scene. Keeping one fact as its source means edits and knowledge rules still apply. A second generated briefing or copied account could disagree with that source, so there is no second generated component.
 
 **Effort and requests.** The [effort slider](#the-effort-slider-and-what-it-switches) enables Offscreen Life at **Thorough** in both modes and **Ultra** in Standard mode. It is off at Off, Minimal, Light and Balanced. **Balanced remains the new-story default and adds no Offscreen Life request**; its dialogue-learning and perception-repair settings work as before. Changing Offscreen Life by hand is an individual setting change, so the slider matches the resulting preset or shows **Custom**.
 
@@ -96,7 +96,7 @@ flowchart TD
 
 **Track learning from dialogue** (off by default) gathers the recent facts each listener does not know. If there are none, nothing is sent. Otherwise one request asks which of them the line made plain to each listener; those listeners now know them. A hint or a question does not count.
 
-**The chapter summary** records facts when **Extract facts** is on: up to twelve, only facts whose loss could make a later scene go wrong. This is where facts from the shared story come from; a line still in the live history has none, and the AI reads the text itself until the chapter is summarized. Each fact is tied to the line it came from: everyone present for that line knows it, its time is that line's scene time, and it follows the line. Deleting the line removes the fact (a restating line takes over as its origin; a hand-granted or edited fact stays, no longer tied to a line), editing the line puts it out of date until the chapter is refreshed, and editing an earlier time passage moves its time marker.
+**The chapter summary** records facts when **Extract facts** is on: up to twelve, only facts whose loss could make a later scene go wrong. This is where facts from the shared story come from; a line still in the live history has none, and the AI reads the text itself until the chapter is summarized. Each fact is tied to the line it came from: everyone present for that line knows it, its time is that line's scene time, and it follows the line. Deleting the line removes the fact (a restating line takes over as its origin; a fact with a hand-added Learn rule, or an edited fact, stays, no longer tied to a line), editing the line puts it out of date until the chapter is refreshed, and editing an earlier time passage moves its time marker.
 
 **Why learning and extraction are different steps.** A line can teach a listener something already recorded without creating a new fact. The learning pass therefore asks about known gaps, and skips the request when there are none. Extraction happens with the chapter summary so it can select lasting information from the source text in that request. Binding each fact to its source line preserves who witnessed it and lets edits invalidate the evidence that actually changed.
 
@@ -160,7 +160,7 @@ In a character's **Knowledge** pane, unknown fact rows explain why: **Citation n
 
 Views saved without evidence references need their perceptions regenerated before rebuilding facts can share them. Existing scenes are not automatically reanalyzed on load or fact rebuild; each old view stays excluded from reconciliation until you regenerate it. No evidence is guessed from the old prose.
 
-**Retired here:** Track learning from dialogue, Remind about unknown facts, Topic knowledge overview and Match known facts. Block rules cannot be created. **Refine memories with AI** stays.
+**Retired here:** Track learning from dialogue, Remind about unknown facts, Topic knowledge overview and Match known facts. Never Learn and Unlearn rules cannot be created. **Refine memories with AI** stays.
 
 ??? note "Details"
     - The request carries what each character already knows from the previous passages and their disclosures, so the analysis has evidence for existing knowledge instead of needing to invent an observation to explain it.
@@ -172,7 +172,7 @@ Views saved without evidence references need their perceptions regenerated befor
 ```mermaid
 flowchart LR
     R["The character's reply"]
-    S["Character sheets<br/>Only entries the character may know<br/>(Known by, Allow / Block rules)"] --> R
+    S["Character sheets<br/>Only entries the character may know<br/>(Known by, Learn / Never Learn rules)"] --> R
     H["The story so far"] --> R
     H1["Standard: the shared story.<br/>With Limit to character knowledge on,<br/>the parts they missed become a gap line:<br/>(Name did not witness 2 Days<br/>of scene time)"] --> H
     H2["Character perspectives:<br/>their own views, their summaries<br/>and their disclosures, in story order"] --> H
@@ -185,7 +185,7 @@ flowchart LR
     T --> A
 ```
 
-**Character sheets.** Only the entries the character may know; in Standard mode an Allow rule adds one and a Block rule removes one.
+**Character sheets.** Only the entries the character may know; in Standard mode a Learn rule adds one and a Never Learn rule removes one.
 
 **The story so far.** Standard mode uses the shared story; with **Limit to character knowledge** on, what the character missed becomes one gap line, such as *(Edwin did not witness 2 Days of scene time)*. Character perspectives mode uses their own views, chapter summaries and disclosures, in story order.
 
@@ -247,7 +247,7 @@ You choose the mode when you create the story; Scene Settings can change it unti
 
 ```mermaid
 flowchart TD
-    Q1{"Is your model current and reliable?<br/>Structured output, a usable context<br/>of 16k tokens or more"} -- "no" --> STD["Standard<br/>Shared story context.<br/>Allow / Block rules for knowledge access."]
+    Q1{"Is your model current and reliable?<br/>Structured output, a usable context<br/>of 16k tokens or more"} -- "no" --> STD["Standard<br/>Shared story context.<br/>Learn / Never Learn rules for knowledge access."]
     Q1 -- "yes" --> Q2{"Does the story depend on<br/>who knows what?"}
     Q2 -- "no, few secrets" --> STD
     Q2 -- "yes" --> Q2b{"Are several characters active<br/>who know different things?"}
@@ -257,6 +257,6 @@ flowchart TD
     Q3 -- "yes" --> CP["Character perspectives<br/>Replies use recorded character views.<br/>Cannot be turned off once<br/>the story has history."]
 ```
 
-**Standard** adds no mandatory perception request after each passage; a present character receives the full reader prose, with Allow / Block rules for recorded knowledge access. Optional learning and refinement still have their own costs. **Character perspectives** builds replies from recorded views, aiming to preserve differences between characters' experiences. It adds one request per passage, needs a [strong model](/talemate/getting-started/model-expectations/) and cannot be turned off once the story has history. [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode) has the full comparison, and **Compare modes** shows the same two cards wherever the mode is named in the interface.
+**Standard** adds no mandatory perception request after each passage; a present character receives the full reader prose, with Learn / Never Learn rules for recorded knowledge access. Optional learning and refinement still have their own costs. **Character perspectives** builds replies from recorded views, aiming to preserve differences between characters' experiences. It adds one request per passage, needs a [strong model](/talemate/getting-started/model-expectations/) and cannot be turned off once the story has history. [Choosing a mode](/talemate/user-guide/world-editor/knowledge/#choosing-a-mode) has the full comparison, and **Compare modes** shows the same two cards wherever the mode is named in the interface.
 
 **Why keep both approaches?** Standard reuses shared prose and offers explicit knowledge controls; Character perspectives records a separate evidential view before later generation depends on it. That adds requests and a larger derived record in exchange for more explicit separation. The mode decision is about which experiment fits the story and its cost, not a guarantee that either approach will keep every secret or inference correct.

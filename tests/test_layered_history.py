@@ -11,6 +11,7 @@ import uuid
 from talemate.history import collect_source_entries, HistoryEntry
 from talemate.scene_message import (
     CharacterMessage,
+    CharacterTransitionMessage,
     DirectorMessage,
 )
 from talemate.tale_mate import Scene
@@ -150,6 +151,21 @@ class TestCollectSourceEntriesLayer0:
         # Should only include character messages, not director
         assert len(result) == 2
         assert all("Director" not in r.text for r in result)
+
+    def test_layer0_filters_character_transition_entries(self, scene_factory):
+        story = create_scene_message("Nora: I am leaving.")
+        departure = CharacterTransitionMessage(
+            character_name="Nora", kind="deactivated"
+        )
+        arrival = CharacterTransitionMessage(character_name="Nora")
+        later = create_scene_message("Mara: She is back.")
+        scene = scene_factory(history=[story, departure, arrival, later])
+
+        entry = HistoryEntry(text="Summary", ts=0, index=0, layer=0, start=0, end=3)
+
+        result = collect_source_entries(scene, entry)
+
+        assert [r.id for r in result] == [story.id, later.id]
 
     def test_layer0_returns_empty_for_no_start_end(self, scene_factory):
         """Layer 0 entries without start/end should return empty list."""

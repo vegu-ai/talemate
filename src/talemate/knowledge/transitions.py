@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 from talemate.context import scene_is_loading
 from talemate.instance import get_agent
-from talemate.exceptions import GenerationCancelled
 from talemate.knowledge.context import _project_character_message
 from talemate.knowledge.bucket import KnowledgeIndex, KnowledgeItem
 from talemate.knowledge.chronology import prompt_fact_text
@@ -21,7 +20,6 @@ from talemate.scene_message import (
     CharacterMessage,
     CharacterTransitionMessage,
     NarratorMessage,
-    TimePassageMessage,
 )
 from talemate.util.time import duration_to_human
 from talemate.util import count_tokens
@@ -38,42 +36,36 @@ def transitions_enabled(scene: Scene) -> bool:
     )
 
 
+def transition_in_context(scene: Scene, transition: CharacterTransitionMessage) -> bool:
+    return transition.kind == "activated" and transitions_enabled(scene)
+
+
 def departures(scene: Scene) -> dict:
     return scene.agent_state.setdefault("conversation", {}).setdefault(
         DEPARTURES_KEY, {}
     )
 
 
-def history_boundary(scene: Scene):
-    # Director/reinforcement notes may be replaced automatically. Anchor the
-    # episode to a story/time/transition record instead of that transient tail.
-    return next(
-        (
-            message
-            for message in reversed(scene.history)
-            if isinstance(
-                message,
-                (
-                    CharacterMessage,
-                    NarratorMessage,
-                    TimePassageMessage,
-                    CharacterTransitionMessage,
-                ),
-            )
-        ),
-        None,
-    )
+def append_transition(scene: Scene, transition: CharacterTransitionMessage) -> None:
+    # Context scaffolding must not dispatch passage analysis or fact extraction.
+    scene.history.append(transition)
+    bind_message_source(scene, transition)
+    scene.saved = False
+    scene.emit_history_message(transition)
 
 
 def record_departure(scene: Scene, character: Character) -> None:
     if scene_is_loading.get() is scene:
         return
-    boundary = history_boundary(scene)
-    departures(scene)[character.name] = {
-        "message_id": boundary.id if boundary is not None else None,
-        "at_start": boundary is None,
-    }
-    scene.saved = False
+    departure = CharacterTransitionMessage(
+        character_name=character.name,
+        kind="deactivated",
+        present=[character.name],
+    )
+    append_transition(scene, departure)
+    # The entry is the departure point: a time passage placed after it in
+    # history is part of the absence, one placed before it is not.
+    departures(scene)[character.name] = {"message_id": departure.id}
 
 
 def latest_transition(
@@ -84,6 +76,7 @@ def latest_transition(
             message
             for message in reversed(scene.history)
             if isinstance(message, CharacterTransitionMessage)
+            and message.kind == "activated"
             and message.character_name == character
         ),
         None,
@@ -96,33 +89,34 @@ def record_arrival(
     if scene_is_loading.get() is scene:
         return None
     departure = departures(scene).pop(character.name, None)
-    if not transitions_enabled(scene):
-        return None
     if departure is None:
+        # Scenes saved by 0.39.0 or earlier have no departure record and no
+        # message presence, so the character's own last line also counts.
         last_present = next(
             (
                 message
                 for message in reversed(scene.history)
-                if isinstance(message, (CharacterMessage, NarratorMessage))
-                and character.name in (message.present or ())
+                if (
+                    isinstance(message, (CharacterMessage, NarratorMessage))
+                    and character.name in (message.present or ())
+                )
+                or (
+                    isinstance(message, CharacterMessage)
+                    and message.character_name == character.name
+                )
             ),
             None,
         )
         if last_present is not None:
-            departure = {"message_id": last_present.id, "at_start": False}
+            departure = {"message_id": last_present.id}
     transition = CharacterTransitionMessage(
         character_name=character.name,
         departure_message_id=departure.get("message_id") if departure else None,
-        departure_at_start=bool(departure and departure.get("at_start")),
         returning=departure is not None,
         participants=list(scene.active_characters),
         present=[character.name],
     )
-    # Context scaffolding must not dispatch passage analysis or fact extraction.
-    scene.history.append(transition)
-    bind_message_source(scene, transition)
-    scene.saved = False
-    scene.emit_history_message(transition)
+    append_transition(scene, transition)
     return transition
 
 
@@ -139,17 +133,10 @@ def transition_available(scene: Scene, transition: CharacterTransitionMessage) -
 def absence_seconds(scene: Scene, transition: CharacterTransitionMessage) -> int | None:
     times = message_times(scene)
     returned = times.get(transition.id)
-    if returned is None:
+    departed = times.get(transition.departure_message_id)
+    if returned is None or departed is None:
         return None
-    if transition.departure_at_start:
-        first = next(iter(times.values()), returned)
-        first_message = scene.history[0] if scene.history else None
-        departed = first - (
-            first_message.ts if isinstance(first_message, TimePassageMessage) else 0
-        )
-    else:
-        departed = times.get(transition.departure_message_id)
-    return max(0, returned - departed) if departed is not None else None
+    return max(0, returned - departed)
 
 
 def offscreen_eligible(scene: Scene, transition: CharacterTransitionMessage) -> bool:
@@ -157,18 +144,16 @@ def offscreen_eligible(scene: Scene, transition: CharacterTransitionMessage) -> 
         return False
     if (absence_seconds(scene, transition) or 0) > 0:
         return True
-    start = -1
-    if not transition.departure_at_start:
-        start = next(
-            (
-                i
-                for i, item in enumerate(scene.history)
-                if item.id == transition.departure_message_id
-            ),
-            -1,
-        )
-        if start == -1:
-            return False
+    start = next(
+        (
+            i
+            for i, item in enumerate(scene.history)
+            if item.id == transition.departure_message_id
+        ),
+        None,
+    )
+    if start is None:
+        return False
     end = transition_index(scene, transition)
     return any(
         isinstance(item, (CharacterMessage, NarratorMessage))
@@ -190,7 +175,11 @@ def protected_transition(
     scene: Scene, character: str
 ) -> CharacterTransitionMessage | None:
     transition = latest_transition(scene, character)
-    if transition is None or not transition_current(scene, transition):
+    if (
+        transition is None
+        or not transition_in_context(scene, transition)
+        or not transition_current(scene, transition)
+    ):
         return None
     index = transition_index(scene, transition)
     if any(
@@ -203,9 +192,7 @@ def protected_transition(
     return transition
 
 
-def arrival_lines(
-    scene: Scene, transition: CharacterTransitionMessage, *, for_display: bool = False
-) -> list[str]:
+def arrival_lines(scene: Scene, transition: CharacterTransitionMessage) -> list[str]:
     """Read at most two post-entry lines, ending at the first own reply."""
     index = transition_index(scene, transition)
     perspective_mode = character_knowledge_enabled(scene)
@@ -229,24 +216,19 @@ def arrival_lines(
         ):
             continue
         if perspective_mode:
-            try:
-                text = _project_character_message(
-                    scene,
-                    transition.character_name,
-                    message,
-                    read=read,
-                    select=lambda reference: select_character_view(
-                        scene, reference, transition.character_name, read=read
-                    ),
-                    keep_director=False,
-                    show_hidden=False,
-                    direction_mode="direction",
-                    diagnostics=None,
-                )
-            except GenerationCancelled:
-                if not for_display:
-                    raise
-                continue
+            text = _project_character_message(
+                scene,
+                transition.character_name,
+                message,
+                read=read,
+                select=lambda reference: select_character_view(
+                    scene, reference, transition.character_name, read=read
+                ),
+                keep_director=False,
+                show_hidden=False,
+                direction_mode="direction",
+                diagnostics=None,
+            )
         else:
             text = (
                 str(message)
@@ -268,10 +250,11 @@ def render_transition(
     transition: CharacterTransitionMessage,
     *,
     budget: int | None = None,
-    for_display: bool = False,
 ) -> str:
     name = transition.character_name
-    if not transition_available(scene, transition):
+    if not transition_in_context(scene, transition) or not transition_available(
+        scene, transition
+    ):
         return ""
     if transition.returning:
         seconds = absence_seconds(scene, transition)
@@ -283,8 +266,7 @@ def render_transition(
             else "No scene-time passage was recorded during the absence."
         )
         lines = [
-            f"{name} left the scene. {elapsed} {name} has now returned to the scene.",
-            f"{name} did not witness the intervening scene.",
+            f"{name} left the scene. {elapsed} {name} has now returned to the scene."
         ]
     else:
         lines = [f"{name} has now entered the scene for the first time."]
@@ -298,7 +280,7 @@ def render_transition(
         lines.append(
             f"Scene participants at entry: {', '.join(transition.participants)}."
         )
-    established = arrival_lines(scene, transition, for_display=for_display)
+    established = arrival_lines(scene, transition)
     lines.append(
         "Established arrival context:\n" + "\n".join(established)
         if established
@@ -373,19 +355,35 @@ def offscreen_status(scene: Scene, transition: CharacterTransitionMessage) -> st
 
 
 def transition_payload(scene: Scene, transition: CharacterTransitionMessage) -> dict:
-    return {
+    character = scene.get_character(transition.character_name)
+    enabled = transitions_enabled(scene)
+    payload = {
         "type": transition.typ,
         "id": transition.id,
-        "text": render_transition(scene, transition, for_display=True),
+        "kind": transition.kind,
         "character": transition.character_name,
+        "color": character.color if character else None,
+        "transitions_enabled": enabled,
+    }
+    if transition.kind != "activated":
+        return payload
+    seconds = absence_seconds(scene, transition) if transition.returning else None
+    account = offscreen_account(scene, transition)
+    return {
+        **payload,
         "returning": transition.returning,
+        "absence_seconds": seconds,
+        "absence": duration_to_human(seconds, suffix="").lower() if seconds else None,
+        "participants": transition.participants,
+        "offscreen_account": account.text if account is not None else None,
         "arrival_note": transition.arrival_note,
         "offscreen_fact_id": transition.offscreen_fact_id
         if transition.offscreen_fact_id in scene.world_state.facts
         else None,
         "offscreen_status": offscreen_status(scene, transition),
         "available": transition_available(scene, transition),
-        "can_retry": offscreen_eligible(scene, transition)
+        "can_retry": enabled
+        and offscreen_eligible(scene, transition)
         and transition_current(scene, transition),
     }
 

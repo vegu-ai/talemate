@@ -485,9 +485,8 @@ class ContextHistoryMixin:
     @staticmethod
     def _is_dialogue_qualifying(message, params: ContextHistoryParams) -> bool:
         """Return True if the message should be included in dialogue output."""
-        if (
-            message.typ == "character_transition"
-            and params.perspective != message.character_name
+        if message.typ == "character_transition" and (
+            params.perspective != message.character_name or not message.in_context
         ):
             return False
         if message.hidden and not params.show_hidden:

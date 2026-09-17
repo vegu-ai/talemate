@@ -1,10 +1,10 @@
 added:
-- "Collapsed, expandable character return entries show recorded time away and an editable arrival note, and stay in chronological context through the first reply without a model request."
+- "Character return transitions: a returning character gets a re-entry bridge in their context, with the time away since they were taken out of the scene and an optional Arrival Note. It stays in their chronological context through their first reply and needs no model request. In Standard mode it needs Limit to character knowledge."
 changed:
 - "Offscreen Life adds one private account on returns with intervening story or recorded time, without waiting for summaries. It is enabled at Thorough and above, off at Balanced and below, and does not automatically retry. Balanced remains the new-story default."
 - "Standard filtered-history gap lines now explicitly say the character did not witness the intervening scene, including its recorded duration when available. This wording also applies to gaps outside return entries."
 - "In Character perspectives, private Offscreen Life accounts count as their owner's known facts, including fact queries and memory; other characters do not acquire them. New accounts retain their acquisition order alongside facts drawn from character views."
 removed:
-- "The unshipped entry-turn windows, AI entry briefings and combined briefing/account response are replaced by return entries and optional Offscreen Life. The old shape is dropped without migration."
+- "The unshipped entry-turn windows, AI entry briefings and combined briefing/account response are replaced by return transitions and optional Offscreen Life. The old shape is dropped without migration."
 fixed:
 - "Knowledge hub: Agent section headings now share a clear left edge, with master switches on the right, so Summarization and Retrieval no longer look nested under Offscreen Life."

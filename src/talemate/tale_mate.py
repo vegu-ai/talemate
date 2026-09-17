@@ -37,6 +37,7 @@ from talemate.scene.episodes import EpisodesManager
 from talemate.knowledge.transitions import DEPARTURES_KEY
 from talemate.scene_message import (
     CharacterMessage,
+    CharacterTransitionMessage,
     NarratorMessage,
     DirectorMessage,
     VersionSource,
@@ -1162,6 +1163,11 @@ class Scene(Emitter):
 
         for idx in range(len(segment) - 1, -1, -1):
             if isinstance(segment[idx], tuple(ignore)):
+                continue
+            if (
+                isinstance(segment[idx], CharacterTransitionMessage)
+                and not segment[idx].in_context
+            ):
                 continue
             collected.insert(0, segment[idx])
             if len(collected) >= lines:

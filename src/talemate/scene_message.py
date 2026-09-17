@@ -922,8 +922,8 @@ class CharacterTransitionMessage(SceneMessage):
     typ: str = "character_transition"
     message: str = ""
     character_name: str
+    kind: Literal["activated", "deactivated"] = "activated"
     departure_message_id: int | None = None
-    departure_at_start: bool = False
     returning: bool = False
     participants: list[str] = pydantic.Field(default_factory=list)
     arrival_note: str = ""
@@ -936,8 +936,8 @@ class CharacterTransitionMessage(SceneMessage):
             **self.model_dump(
                 include={
                     "character_name",
+                    "kind",
                     "departure_message_id",
-                    "departure_at_start",
                     "returning",
                     "participants",
                     "arrival_note",
@@ -946,6 +946,13 @@ class CharacterTransitionMessage(SceneMessage):
                 }
             ),
         }
+
+    @property
+    def in_context(self) -> bool:
+        from talemate.knowledge.transitions import transition_in_context
+
+        scene = self._knowledge_scene() if self._knowledge_scene else None
+        return scene is not None and transition_in_context(scene, self)
 
     def as_format(self, format: str, **kwargs) -> str:
         from talemate.knowledge.transitions import render_transition

@@ -71,11 +71,16 @@ class SceneMessagePlugin(Plugin):
     async def handle_transition_note(self, data: dict):
         payload = EditPayload(**data)
         message = self.scene.get_message(payload.id)
-        if not isinstance(message, CharacterTransitionMessage):
-            await self.signal_operation_failed("Return entry not found")
+        if (
+            not isinstance(message, CharacterTransitionMessage)
+            or message.kind != "activated"
+        ):
+            await self.signal_operation_failed("Activation entry not found")
             return
         if not transition_available(self.scene, message):
-            await self.signal_operation_failed("Return boundary is no longer available")
+            await self.signal_operation_failed(
+                "Activation entry is no longer available"
+            )
             return
         message.arrival_note = payload.text.strip()
         self.scene.saved = False
@@ -140,7 +145,7 @@ class SceneMessagePlugin(Plugin):
 
         if isinstance(message, CharacterTransitionMessage):
             await self.signal_operation_failed(
-                "Edit the arrival note instead of the derived return text"
+                "A character transition entry cannot be edited; use its Arrival Note"
             )
             return
 

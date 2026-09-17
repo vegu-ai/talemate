@@ -120,7 +120,7 @@ For example: `Edwin knows all of the Sorena, some of the sextant, nothing of the
 
 ##### Return transitions
 
-With **Limit to character knowledge** enabled in Standard mode, or in Character perspectives mode, actual returns create a zero-request transition in the character's chronological context: departure, recorded scene time away, and return. Expand its scene-history entry to add an arrival note. Derived timing updates automatically. The transition stays protected until the first completed reply and does not replay the departure exchange. [Offscreen Life](/talemate/user-guide/agents/narrator/settings/#offscreen-life) optionally adds the character's account at Thorough and above; Balanced and lower keep it off.
+With **Limit to character knowledge** enabled in Standard mode, or in Character perspectives mode, an actual return gives the character a zero-request transition in their chronological context: departure, recorded scene time away, and return. Scene history shows it as an **[Name] activated** chip; click the chip to add an **Arrival Note**. The chips appear in every scene, but without this setting they add nothing to any prompt. Derived timing updates automatically. The transition stays protected until the first completed reply and does not replay the departure exchange. [Offscreen Life](/talemate/user-guide/agents/narrator/settings/#offscreen-life) optionally adds the character's account at Thorough and above; Balanced and lower keep it off.
 
 ##### Refine memories with AI
 

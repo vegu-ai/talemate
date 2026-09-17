@@ -64,6 +64,7 @@ WORLD_STATE_SNAPSHOT_IGNORE = [
     "reinforcement",
     "director",
     "context_investigation",
+    "character_transition",
 ]
 
 # Opaque key for the world state snapshot's tracked single-flight task

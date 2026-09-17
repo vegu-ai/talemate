@@ -214,11 +214,7 @@ def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEn
     if entry.layer == 0:
         # base layer
         def include_message(message: SceneMessage) -> bool:
-            return message.typ not in [
-                "director",
-                "context_investigation",
-                "reinforcement",
-            ]
+            return message.typ not in SPAN_LINE_EXCLUDED_TYPES
 
         result = [
             SourceEntry(

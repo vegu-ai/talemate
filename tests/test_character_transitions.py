@@ -145,9 +145,17 @@ async def test_return_survives_serialization_without_regenerating(returning_scen
     restored = _prepare_history(deepcopy(transition.to_dict()))
     assert isinstance(restored, CharacterTransitionMessage)
     assert restored.id == transition.id
+    assert restored.kind == "activated"
     assert restored.departure_message_id == transition.departure_message_id
     assert restored.arrival_note == transition.arrival_note
     assert restored.offscreen_status == "failed"
+    departure = next(
+        message
+        for message in scene.history
+        if isinstance(message, CharacterTransitionMessage)
+        and message.kind == "deactivated"
+    )
+    assert _prepare_history(deepcopy(departure.to_dict())).kind == "deactivated"
 
 
 @pytest.mark.asyncio
@@ -159,6 +167,122 @@ async def test_noop_activation_and_loading_create_nothing(returning_scene):
         record_departure(scene, scene.get_character("Nora"))
         assert record_arrival(scene, scene.get_character("Nora")) is None
     assert not scene.history
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("enabled", [True, False])
+async def test_activation_and_deactivation_record_entries_in_every_scene(
+    returning_scene, monkeypatch, enabled
+):
+    scene = returning_scene
+    if not enabled:
+        if scene.knowledge_eligibility != "legacy":
+            return
+        get_agent("conversation").actions["character_knowledge"].enabled = False
+    request = AsyncMock(side_effect=AssertionError("No model request is allowed"))
+    monkeypatch.setattr(Prompt, "request", request)
+    transition = await leave_and_return(scene, lines=1)
+    entries = [
+        message
+        for message in scene.history
+        if isinstance(message, CharacterTransitionMessage)
+    ]
+    assert [(entry.kind, entry.character_name) for entry in entries] == [
+        ("deactivated", "Nora"),
+        ("activated", "Nora"),
+    ]
+    departure, arrival = entries
+    assert arrival is transition and arrival.returning
+    assert departure.as_format("chat") == ""
+    assert bool(arrival.as_format("chat")) == enabled
+    assert (protected_transition(scene, "Nora") is arrival) == enabled
+    parts = scene.context_history(
+        budget=8192,
+        perspective="Nora",
+        stored_views=scene.knowledge_eligibility == "perception",
+    )
+    assert all(part.strip() for part in parts)
+    assert ("Nora has now returned" in "\n".join(parts)) == enabled
+    snapshot = scene.snapshot(lines=10, return_as_list=True)
+    assert departure not in snapshot
+    assert (arrival in snapshot) == enabled
+    request.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_deactivated_entry_is_display_only(returning_scene):
+    from types import SimpleNamespace
+    from talemate.knowledge.transitions import transition_payload
+    from talemate.server.scene_message import SceneMessagePlugin
+
+    scene = returning_scene
+    transition = await leave_and_return(scene, lines=1)
+    add_line(scene, "Mara opens the gate.", ["Nora", "Mara"])
+    await deactivate_character(scene, "Nora")
+    departure = scene.history[-1]
+    add_line(scene, "Mara bolts the gate behind her.", ["Nora", "Mara"])
+    assert departure.kind == "deactivated"
+    assert latest_transition(scene, "Nora") is transition
+    assert protected_transition(scene, "Nora") is None
+    assert render_transition(scene, departure) == ""
+    text = render_transition(scene, transition)
+    assert "Mara opens the gate." in text
+    assert "bolts the gate" not in text
+    assert transition_payload(scene, departure) == {
+        "type": "character_transition",
+        "id": departure.id,
+        "kind": "deactivated",
+        "character": "Nora",
+        "color": scene.get_character("Nora").color,
+        "transitions_enabled": True,
+    }
+    frames = []
+    plugin = SceneMessagePlugin(SimpleNamespace(scene=scene, queue_put=frames.append))
+    await plugin.handle_transition_note({"id": departure.id, "text": "Ignored"})
+    assert departure.arrival_note == ""
+    assert any(frame.get("error") for frame in frames)
+
+
+@pytest.mark.asyncio
+async def test_activation_payload_is_a_summary_without_prompt_text(returning_scene):
+    from talemate.knowledge.schema import Fact
+    from talemate.knowledge.transitions import transition_payload
+
+    scene = returning_scene
+    transition = await leave_and_return(scene, lines=1)
+    scene.world_state.facts["F1"] = Fact(
+        id="F1", text="Nora repaired her coat.", source="offscreen", present=["Nora"]
+    )
+    transition.offscreen_fact_id = "F1"
+    transition.arrival_note = "Her boots are wet."
+    payload = transition_payload(scene, transition)
+    assert "text" not in payload
+    assert payload["kind"] == "activated"
+    assert payload["color"] == scene.get_character("Nora").color
+    assert payload["transitions_enabled"] is True
+    assert payload["returning"] is True
+    assert payload["absence_seconds"] == 172800
+    assert payload["absence"] == "2 days"
+    assert payload["participants"] == transition.participants
+    assert set(payload["participants"]) == {"Nora", "Mara"}
+    assert payload["offscreen_account"] == "Nora repaired her coat."
+    assert payload["arrival_note"] == "Her boots are wet."
+    assert payload["offscreen_fact_id"] == "F1"
+    assert payload["available"] is True
+
+    immediate = transition_payload(
+        scene, await leave_and_return(scene, lines=0, seconds=0)
+    )
+    assert immediate["absence_seconds"] == 0
+    assert immediate["absence"] is None
+    assert immediate["offscreen_account"] is None
+
+    scene.character_data["Ada"] = Character(name="Ada")
+    await activate_character(scene, "Ada")
+    first = transition_payload(scene, latest_transition(scene, "Ada"))
+    assert first["returning"] is False
+    assert first["absence_seconds"] is None
+    assert first["absence"] is None
 
 
 @pytest.mark.asyncio
@@ -453,10 +577,9 @@ async def test_scene_reload_preserves_episode_without_any_request(
     assert copy.id == transition.id
     assert copy.arrival_note == "Her boots are wet."
     assert "2 Days of scene time passed" in copy.as_format("chat")
-    assert (
-        len([item for item in restored.history if item.typ == "character_transition"])
-        == 1
-    )
+    assert [
+        item.kind for item in restored.history if item.typ == "character_transition"
+    ] == ["deactivated", "activated"]
     request.assert_not_awaited()
 
 
@@ -587,25 +710,25 @@ async def test_unavailable_arrival_view_does_not_break_display_or_reload(
     frames = []
     handler = SimpleNamespace(scene=scene, queue_put=frames.append)
     payload = transition_payload(scene, transition)
-    assert "Nora has now returned" in payload["text"]
-    assert "Mara opens" not in payload["text"]
+    assert payload["returning"]
+    assert payload["absence"] == "2 days"
+    assert "text" not in payload
     WebsocketHandler.handle_character_transition(
         handler, Emission(typ="character_transition", message_object=transition)
     )
     WebsocketHandler.handle_scene_status(handler, Emission(typ="scene_status", data={}))
     await scene.emit_history()
     assert frames[-1]["type"] == "scene_status"
-    assert frames[-1]["data"]["character_transitions"][0] == payload
+    assert frames[-1]["data"]["character_transitions"][-1] == payload
     with pytest.raises(GenerationCancelled):
         render_transition(scene, transition)
     saved = deepcopy(scene.serialize)
     saved["history"] = [message.to_dict() for message in scene.history]
     restored = persistence_scene_factory()
     await load_scene_from_data(restored, saved)
-    assert (
-        "Nora has now returned"
-        in transition_payload(restored, latest_transition(restored, "Nora"))["text"]
-    )
+    assert transition_payload(restored, latest_transition(restored, "Nora"))[
+        "returning"
+    ]
 
 
 @pytest.mark.asyncio
@@ -652,6 +775,11 @@ async def test_created_inactive_character_first_arrival_is_not_a_return(
             await node.run(state)
     assert "Ada" not in departures(scene)
     assert "Ada" not in scene.active_characters
+    assert not any(
+        isinstance(message, CharacterTransitionMessage)
+        and message.character_name == "Ada"
+        for message in scene.history
+    )
     add_line(scene, "The others close the shutters.", ["Nora", "Mara"])
     scene.history.append(TimePassageMessage("An hour passes", ts=3600))
     await activate_character(scene, "Ada")
@@ -660,6 +788,32 @@ async def test_created_inactive_character_first_arrival_is_not_a_return(
     assert "first time" in render_transition(scene, transition)
     assert not offscreen_eligible(scene, transition)
     request.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_character_from_a_released_scene_returns_without_a_departure_record(
+    returning_scene,
+):
+    from talemate.knowledge.transitions import departures, transition_payload
+
+    scene = returning_scene
+    line = CharacterMessage("Nora: I will check the east gate.")
+    scene.history.append(line)
+    bind_message_source(scene, line)
+    with SceneIsLoading(scene):
+        await deactivate_character(scene, "Nora")
+    assert "Nora" not in departures(scene)
+    assert line.present is None
+    scene.history.append(TimePassageMessage(ts=3600, message="An hour later"))
+    scene.fix_time()
+    await activate_character(scene, "Nora")
+    transition = latest_transition(scene, "Nora")
+    assert transition.returning
+    assert transition.departure_message_id == line.id
+    assert absence_seconds(scene, transition) == 3600
+    payload = transition_payload(scene, transition)
+    assert payload["returning"] is True
+    assert payload["absence"] == "1 hour"
 
 
 @pytest.mark.asyncio
@@ -905,9 +1059,11 @@ async def test_offscreen_prompt_measures_sheet_and_scopes_static_inputs(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("filter_enabled", [False, True])
-async def test_custom_standard_filter_controls_recording_and_offscreen(
+async def test_custom_standard_filter_controls_bridge_and_offscreen(
     returning_scene, monkeypatch, filter_enabled
 ):
+    from talemate.knowledge.transitions import transition_payload
+
     scene = returning_scene
     if scene.knowledge_eligibility != "legacy":
         return
@@ -919,8 +1075,12 @@ async def test_custom_standard_filter_controls_recording_and_offscreen(
     request = AsyncMock(return_value=("", {"response": "Nora checked the road."}))
     monkeypatch.setattr(Prompt, "request", request)
     transition = await leave_and_return(scene, lines=1)
-    assert (transition is not None) == filter_enabled
+    assert transition.returning
     assert request.await_count == int(filter_enabled)
+    assert bool(render_transition(scene, transition)) == filter_enabled
+    payload = transition_payload(scene, transition)
+    assert payload["transitions_enabled"] == filter_enabled
+    assert payload["can_retry"] == filter_enabled
 
 
 @pytest.mark.asyncio
@@ -1044,12 +1204,12 @@ async def test_return_render_checks_only_account_and_possible_successors(
     print(
         f"status {scene.knowledge_eligibility}: {len(scene.history)} messages / 200 facts / 10 returns: {elapsed:.4f}s, {checked.call_count} source scans"
     )
-    assert len(frames[0]["data"]["character_transitions"]) == 10
+    items = frames[0]["data"]["character_transitions"]
+    assert [item["kind"] for item in items] == ["deactivated", "activated"] * 10
     assert checked.call_count == 10
-    assert all(
-        "During the absence:" in item["text"]
-        for item in frames[0]["data"]["character_transitions"]
-    )
+    assert [
+        item["offscreen_account"] for item in items if item["kind"] == "activated"
+    ] == [f"Nora mended item {i}." for i in range(10)]
 
     for message in scene.history:
         if isinstance(message, CharacterTransitionMessage):
@@ -1059,8 +1219,9 @@ async def test_return_render_checks_only_account_and_possible_successors(
     WebsocketHandler.handle_scene_status(handler, emission)
     checked.assert_not_called()
     assert all(
-        "During the absence:" not in item["text"]
+        item["offscreen_account"] is None
         for item in frames[0]["data"]["character_transitions"]
+        if item["kind"] == "activated"
     )
 
 
@@ -1387,3 +1548,58 @@ async def test_offscreen_account_with_missing_owner_is_unavailable(returning_sce
     transition.offscreen_fact_id = "F1"
     del scene.character_data["Nora"]
     assert offscreen_account(scene, transition) is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "passage,nora_seconds,ada_seconds",
+    [
+        ("after_both", 7200, 7200),
+        ("between", 7200, 0),
+        ("before_both", 0, 0),
+    ],
+)
+async def test_each_return_measures_absence_from_its_own_departure(
+    returning_scene, passage, nora_seconds, ada_seconds
+):
+    from talemate.history import insert_time_passage_after_message
+
+    scene = returning_scene
+    ada = Character(name="Ada")
+    actor = Actor(ada, get_agent("conversation"))
+    actor.scene = scene
+    scene.character_data["Ada"] = ada
+    scene.actors.append(actor)
+    scene.active_characters.append("Ada")
+    gather = add_line(scene, "Everyone gathers at the gate.", ["Nora", "Mara", "Ada"])
+    await deactivate_character(scene, "Nora")
+    nora_departure = scene.history[-1]
+    await deactivate_character(scene, "Ada")
+    anchor = {
+        "after_both": scene.history[-1],
+        "between": nora_departure,
+        "before_both": gather,
+    }[passage]
+    insert_time_passage_after_message(scene, anchor.id, 2, "hours")
+    await activate_character(scene, "Nora")
+    add_line(scene, "Nora greets Mara.", ["Nora", "Mara"])
+    add_line(scene, "Mara answers Nora.", ["Nora", "Mara"])
+    await activate_character(scene, "Ada")
+    assert absence_seconds(scene, latest_transition(scene, "Nora")) == nora_seconds
+    assert absence_seconds(scene, latest_transition(scene, "Ada")) == ada_seconds
+    text = "\n".join(
+        scene.context_history(
+            budget=8192,
+            perspective="Ada",
+            stored_views=scene.knowledge_eligibility == "perception",
+        )
+    )
+    assert text.count("Ada has now returned to the scene.") == 1
+    assert (
+        "2 Hours of scene time passed during the absence."
+        if ada_seconds
+        else "No scene-time passage was recorded during the absence."
+    ) in text
+    assert text.count("did not witness") == (
+        1 if scene.knowledge_eligibility == "legacy" else 0
+    )

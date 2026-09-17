@@ -141,10 +141,11 @@
     pass or topic-awareness assertions.
 - path: user-guide/agents/conversation/settings.md
   title: Settings
-  summary: Conversation settings cover dialogue format, length, instructions, caching, story intent, effort and memory.
-    Character Knowledge controls filtering, reminders, topics, dialogue learning and AI memory refinement;
-    zero-request return entries require Standard knowledge filtering, while optional Offscreen Life starts at
-    Thorough.
+  summary: Conversation agent settings for client, prompt caching, dialogue format, generation length, jiggle, task and actor
+    instructions, scene intent and writing style. Character Knowledge covers the effort slider, knowledge filtering, unknown-fact
+    reminders, topic overview, Refine memories with AI and dialogue learning; activation chips show in every scene, the re-entry
+    bridge and Arrival Note need Limit to character knowledge in Standard mode and are always on in Character perspectives,
+    and Offscreen Life starts at Thorough.
 - path: user-guide/agents/creator/autocomplete.md
   title: Autocomplete
   summary: Autocomplete partial text with Ctrl/Cmd+Enter in dialogue, message editing, attributes, details, descriptions,
@@ -1265,7 +1266,7 @@
     tools and context-budget review.
 - path: user-guide/world-editor/knowledge-how-it-works.md
   title: "Character knowledge: flow reference"
-  summary: Experimental reference with six diagrams—re-entry bridges, arrival notes, automatic timing, collapsed expandable history,
+  summary: Experimental reference with six diagrams—re-entry bridges, arrival notes, automatic timing, activation and deactivation chips,
     Offscreen Life fact projection, Thorough/Balanced, retry/regeneration. Shared facts, reply inputs, memory ranking,
     Intro audiences, revision browsing, browse revisions before keeping a version, awareness overview names each
     character once, citation not supported, regenerate old views, private competitor vetoes, mode decision tree (model, cost).
@@ -1273,7 +1274,7 @@
   title: Knowledge
   summary: Standard and Character perspectives knowledge, effort presets, request costs, scene overrides and first-save
     continuation, retry or discard. Covers Allow/Block rules, Known by visibility, disclosures, topics, retrieval,
-    collapsed return entries with automatic timing and arrival notes, and optional Offscreen Life at Thorough and
+    activation and deactivation chips with automatic timing and arrival notes, and optional Offscreen Life at Thorough and
     above using current fact projection with explicit retry.
 - path: user-guide/world-editor/pins.md
   title: Pins

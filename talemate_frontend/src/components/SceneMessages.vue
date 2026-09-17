@@ -354,8 +354,10 @@
                     <DirectorMessage :text="message.text" :message_id="message.id" :character="message.character" :direction_mode="message.direction_mode" :action="message.action" :subtype="message.subtype" :uxLocked="uxLocked" :isLastMessage="index === visibleMessages.length - 1"/>
                 </div>
             </div>
-            <div v-else-if="message.type === 'character_transition'" :id="`message-${message.id}`" data-message-type="character_transition">
-                <CharacterTransitionMessage :message="message" :locked="uxLocked || appBusy || revealCount !== null" />
+            <div v-else-if="message.type === 'character_transition'" :class="`message ${message.type}`">
+                <div class="character-transition-message" :id="`message-${message.id}`" :data-message-type="message.type">
+                    <CharacterTransitionMessage :message="message" :locked="uxLocked || appBusy || revealCount !== null" />
+                </div>
             </div>
             <div v-else-if="message.type === 'time'" :class="`message ${message.type}`">
                 <div class="time-message"  :id="`message-${message.id}`" :data-message-type="message.type">

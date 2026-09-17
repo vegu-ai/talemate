@@ -13,6 +13,7 @@ import talemate.instance as instance
 from talemate.agents.world_state import WorldStateAgent
 from talemate.scene_message import (
     CharacterMessage,
+    CharacterTransitionMessage,
     ContextInvestigationMessage,
     NarratorMessage,
     TimePassageMessage,
@@ -831,6 +832,47 @@ class TestWorldStateAgentFocusKnobs:
 
         response = await agent.request_world_state()
         assert response.anchor_message_ids == [narrative.id, ci.id]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("kind", ["activated", "deactivated"])
+    async def test_character_transition_entries_are_not_focus_lines(
+        self, active_context, mock_scene, kind
+    ):
+        agent = active_context
+        agent.actions["update_world_state"].config["focus_lines"].value = 3
+
+        a = NarratorMessage(message="A: first beat")
+        b = NarratorMessage(message="B: tail beat")
+        transition = CharacterTransitionMessage(character_name="Elena", kind=kind)
+        mock_scene.history = [a, b, transition]
+
+        agent.client.send_prompt = AsyncMock(
+            return_value=(
+                '"X": {"emotion": "calm", "snapshot": "x", "mentions": []}},'
+                ' "items": {}, "places": {}, "location": "test"}'
+            )
+        )
+
+        response = await agent.request_world_state()
+        assert response.anchor_message_ids == [a.id, b.id]
+        prompt_text = str(agent.client.send_prompt.call_args[0][0])
+        assert "Line 2: B: tail beat" in prompt_text
+        assert "Line 3:" not in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_transition_after_time_passage_makes_no_request(
+        self, active_context, mock_scene
+    ):
+        agent = active_context
+        mock_scene.history = [
+            TimePassageMessage(ts=3600, message="An hour later"),
+            CharacterTransitionMessage(character_name="Elena"),
+        ]
+        agent.client.send_prompt = AsyncMock()
+
+        response = await agent.request_world_state()
+        assert response.anchor_message_ids == []
+        agent.client.send_prompt.assert_not_awaited()
 
 
 class TestWorldStateAgentExamineMethods:

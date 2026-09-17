@@ -292,7 +292,7 @@ def test_find_docs_scene_processing_api_routes(query):
             "user-guide/world-editor/knowledge-how-it-works.md",
         ),
         (
-            "collapsed expandable history",
+            "activation deactivation chips",
             "user-guide/world-editor/knowledge-how-it-works.md",
         ),
     ],

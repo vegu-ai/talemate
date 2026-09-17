@@ -21,13 +21,13 @@ Browse a line's versions freely. For changed text, choose **Analyze perceptions*
 
 ## A character leaves and returns
 
-Leaving separates what a character witnessed from what happened without them. On their return, a **re-entry bridge** connects that absence to the scene they are joining: they left, how much recorded scene time passed, and they are now back. Building this bridge adds no model request. In Standard mode it requires **Limit to character knowledge** in the [Conversation settings](/talemate/user-guide/agents/conversation/settings/#character-knowledge); Character perspectives always uses it.
+Leaving separates what a character witnessed from what happened without them. Scene history marks the departure with a **[Name] deactivated** chip and the return with a **[Name] activated** chip, in every scene. On their return, a **re-entry bridge** connects that absence to the scene they are joining: they left, how much recorded scene time passed, and they are now back. Building this bridge adds no model request. In Standard mode the bridge requires **Limit to character knowledge** in the [Conversation settings](/talemate/user-guide/agents/conversation/settings/#character-knowledge); Character perspectives always uses it. Without it, the chips stay as markers and add nothing to any prompt.
 
 ```mermaid
 flowchart TD
-    A["The character leaves"] --> B["The absence may accumulate<br/>story passages or recorded scene time"]
-    B --> C["The character returns"]
-    C --> D["Zero-request bridge:<br/>left, elapsed scene time, now back<br/>Arrival note editable; timing automatic"]
+    A["The character leaves<br/>Deactivated chip in scene history"] --> B["The absence may accumulate<br/>story passages or recorded scene time"]
+    B --> C["The character returns<br/>Activated chip in scene history"]
+    C --> D["Zero-request bridge:<br/>left, time between the chips, now back<br/>Arrival Note editable; timing automatic"]
     D --> E{"Offscreen Life enabled?<br/>Thorough and above"}
     E -- "no: Balanced default and below" --> H["Bridge enters character context<br/>before post-return story"]
     E -- "yes" --> F{"Any intervening story<br/>or recorded time?"}
@@ -38,22 +38,22 @@ flowchart TD
     G -- "failure or cancellation" --> X["Baseline stays usable<br/>Retry Offscreen Life available<br/>while this return is current"]
     X --> H
     X -- "explicit retry" --> G
-    D --> I["Collapsed entry in scene history<br/>Expand to read the bridge<br/>and edit the arrival note"]
+    D --> I["Click the activated chip<br/>for a short summary<br/>and the Arrival Note"]
     P -. "current account" .-> I
     H --> R["The character's first reply<br/>uses the return bridge"]
-    R -- "regenerate reply" --> K["Reuse the same return entry<br/>and recorded account"]
+    R -- "regenerate reply" --> K["Reuse the same chips<br/>and recorded account"]
     K --> H
 ```
 
-**The departure and elapsed time.** The bridge describes the transition, not the events the character missed. If scene time advanced by two days while Edwin was away, it says that two days passed and Edwin has now returned. Story passages alone do not invent a duration: with no recorded time passage, it says so. A missing departure time is shown as unknown. Editing time passages updates the duration automatically.
+**The departure and elapsed time.** The bridge describes the transition, not the events the character missed. If scene time advanced by two days while Edwin was away, it says that two days passed and Edwin has now returned. The absence runs from Edwin's deactivated chip to the activated chip: a time passage placed between them counts, one placed before the deactivated chip does not, even when other characters left at the same point. Story passages alone do not invent a duration: with no recorded time passage, it says so. A missing departure time is shown as unknown. Editing time passages updates the duration automatically.
 
-**Where it goes in the context.** The bridge is its own history entry at the return boundary, before the post-return story. It does not replay the last exchange before departure inside the current scene. It can add the participants at entry and up to two established arrival lines that the character is allowed to perceive. The latest return stays in context until that character completes their first reply, even when older material is summarized or the history budget is tight. Later returns get their own entries; an earlier account is not moved to a new absence.
+**Where it goes in the context.** The bridge is its own history entry at the return boundary, before the post-return story. It does not replay the last exchange before departure inside the current scene. In Standard mode the story the character missed shows once, as a line such as *(Edwin did not witness this part of the scene)*; the bridge does not repeat it. It can add the participants at entry and up to two established arrival lines that the character is allowed to perceive. The latest return stays in context until that character completes their first reply, even when older material is summarized or the history budget is tight. Later returns get their own chips; an earlier account is not moved to a new absence.
 
 **Why a generic bridge at the return boundary?** “Away for a while” leaves the model to guess both the transition and the duration. Stating departure, recorded elapsed time and return supplies that missing connection without asking a model to invent it. Placing the entry before the post-return story preserves the order of events. Replaying the last exchange from before departure here would mix the previous moment into the current scene, so it is left in its original place. Two permitted arrival lines provide immediate grounding without creating another history window.
 
-**What you see and edit.** Scene history shows a collapsed, expandable return entry. Expand it to read the bridge and edit the **arrival note**, for example “Edwin comes through the garden gate carrying a sealed letter.” The departure, elapsed time and established arrival context are read-only and keep updating from the story. The note does not start a request. If an offscreen account exists, edit it separately in [World Editor → Facts](/talemate/user-guide/world-editor/facts/); the entry points to its fact ID.
+**What you see and edit.** Scene history shows a deactivated chip at the departure and an activated chip at the return, each in the character's color. Click the activated chip for a short summary: *Back after 2 days away* (or *First time in the scene*), who was present at entry, and the offscreen account when one exists. The prompt text itself is not shown. While the bridge is in use, the opened chip also offers **Arrival Note (Optional)**, for example “Edwin comes through the garden gate carrying a sealed letter.” The note is saved shortly after you leave the field and does not start a request; the field keeps its unsaved color until the save is done. The timing and the summary are read-only and keep updating from the story. If an offscreen account exists, edit it separately in [World Editor → Facts](/talemate/user-guide/world-editor/facts/); the chip points to its fact ID.
 
-**Why a collapsed entry and one editable note?** The transition remains inspectable without filling the visible story with bookkeeping. An arrival note lets the author establish something new; deriving the timing from the timeline avoids a second, editable duration that could disagree after a time edit.
+**Why chips and one editable note?** A chip marks the presence change without filling the visible story with bookkeeping. The summary says in plain words what the bridge is built from. An Arrival Note lets the author establish something new; deriving the timing from the timeline avoids a second, editable duration that could disagree after a time edit.
 
 **Offscreen Life.** This is the optional generated part of the bridge. With [Narrator → Offscreen Life](/talemate/user-guide/agents/narrator/settings/#offscreen-life) enabled, a return after any intervening story or recorded scene time adds one request about what the character did while away. It does not wait for a chapter summary. The request uses the character's permitted context and established arrival constraints, and stores the result as one private offscreen fact. It adds no separate entry briefing, fact-extraction request or perception repair. A newly created character, or an immediate leave and return with nothing between, gets no account.
 
@@ -65,7 +65,7 @@ flowchart TD
 
 **Why this threshold and eligibility?** The baseline should work without a request, and the Balanced default should keep that property on a return. Thorough is the next effort step, where choosing more work enables the optional account. Any absence containing story or time can need a continuation, even before summarization; an immediate empty absence has nothing to account for. This is why eligibility follows the absence rather than a summary threshold.
 
-**Retry and regeneration.** A failed or cancelled account leaves the baseline bridge usable. Expand the entry and choose **Retry Offscreen Life** to make another attempt while Offscreen Life is enabled and this is still the character's current, eligible return. There is no automatic fallback request. Regenerating a reply reuses the return entry and its recorded account; it does not repeat the absence or regenerate Offscreen Life. If activation left a return entry after the last story passage, Regenerate still targets that story passage and preserves the return entry, including when regeneration is cancelled. Loading, reconnecting and replacing an actor do not create a return or generate an account. Rewinding and deleting source messages affect their own entries, rather than attaching an old return to a different episode.
+**Retry and regeneration.** A failed or cancelled account leaves the baseline bridge usable. Open the activated chip and choose **Retry Offscreen Life** to make another attempt while Offscreen Life is enabled and this is still the character's current, eligible return. There is no automatic fallback request. Regenerating a reply reuses the chips and the recorded account; it does not repeat the absence or regenerate Offscreen Life. If an activation or deactivation left a chip after the last story passage, Regenerate still targets that story passage and preserves the chip, including when regeneration is cancelled. Loading, reconnecting and replacing an actor do not add a chip or generate an account. Rewinding and deleting source messages affect their own entries, rather than attaching an old return to a different episode.
 
 **Why keep the baseline after failure and reuse it on regeneration?** A failed optional account should not erase an established return. Explicit retry leaves another request under the author's control. Regenerating a reply tries another continuation of the same episode, so the return and its recorded account remain the same.
 

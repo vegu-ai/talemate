@@ -24,7 +24,7 @@ from talemate.exceptions import GenerationCancelled
 from talemate.agents.visual.nodes import AnalyzeImages
 from talemate.agents.visual.schema import BackendStatus, BackendStatusType
 
-from tests._node_test_helpers import run_node
+from _node_test_helpers import run_node
 
 
 class FakeAnalysisBackend(Backend):

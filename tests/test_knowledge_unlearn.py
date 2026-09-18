@@ -707,6 +707,90 @@ class TestRulesOutliveARegeneration:
         assert self.rules(scene) == [("Edwin", "F9", "grant", False)]
         assert knows(scene, "Edwin", "F9")
 
+    async def test_a_moved_older_learn_does_not_refuse_the_newer_learn(
+        self, scene, fake_memory, recorded
+    ):
+        # trace A: Learn F1, Never Learn F1, Learn F9 -- the newest rule is a
+        # Learn, so Edwin knows F9
+        scene.world_state.facts["F9"] = Fact(
+            id="F9", text="The Sorena sank in 1973.", source="manual"
+        )
+        moved = KnowledgeEdge(character="Edwin", target="F1", source="manual")
+        newest = KnowledgeEdge(character="Edwin", target="F9", source="manual")
+        scene.world_state.knowledge = [
+            moved,
+            KnowledgeEdge(character="Edwin", target="F1", kind="revoke"),
+            newest,
+        ]
+        await self.regenerate(scene, "The Sorena sank in 1973.", restates="F9")
+        # the newest Learn survives; the moved older Learn and the Never Learn go
+        assert [edge.id for edge in scene.world_state.knowledge] == [newest.id]
+        assert knows(scene, "Edwin", "F9")
+
+    async def test_a_moved_learn_replaces_an_older_duplicate_and_lifts_the_never_learn(
+        self, scene, fake_memory, recorded
+    ):
+        # trace B: Learn F9, Never Learn F9, Learn F1 -- the moved Learn is the
+        # newest, so it replaces the older duplicate and lifts the Never Learn
+        scene.world_state.facts["F9"] = Fact(
+            id="F9", text="The Sorena sank in 1973.", source="manual"
+        )
+        moved = KnowledgeEdge(character="Edwin", target="F1", source="manual")
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Edwin", target="F9", source="manual"),
+            KnowledgeEdge(character="Edwin", target="F9", kind="revoke"),
+            moved,
+        ]
+        await self.regenerate(scene, "The Sorena sank in 1973.", restates="F9")
+        # the moved Learn survives; the older duplicate and the Never Learn go
+        assert [edge.id for edge in scene.world_state.knowledge] == [moved.id]
+        assert knows(scene, "Edwin", "F9")
+
+    async def test_a_moved_learn_carries_the_note_of_the_rule_it_replaces(
+        self, scene, fake_memory, recorded
+    ):
+        scene.world_state.facts["F9"] = Fact(
+            id="F9", text="The Sorena sank in 1973.", source="manual"
+        )
+        moved = KnowledgeEdge(character="Edwin", target="F1", source="manual")
+        noted = KnowledgeEdge(
+            character="Edwin",
+            target="F9",
+            source="manual",
+            note="insider tip from Chapter 2",
+        )
+        scene.world_state.knowledge = [noted, moved]
+        await self.regenerate(scene, "The Sorena sank in 1973.", restates="F9")
+        (survivor,) = scene.world_state.knowledge
+        assert survivor.id == moved.id
+        assert survivor.note == "insider tip from Chapter 2"
+        assert knows(scene, "Edwin", "F9")
+
+    async def test_a_note_is_not_carried_across_a_learn_that_lifts_its_rule(
+        self, scene, fake_memory, recorded
+    ):
+        # Never Learn F1 (noted), Learn F9, Never Learn F9: the Learn lifts the
+        # noted rule, so its note goes with it and not onto the later Never Learn
+        scene.world_state.facts["F9"] = Fact(
+            id="F9", text="The Sorena sank in 1973.", source="manual"
+        )
+        scene.world_state.knowledge = [
+            KnowledgeEdge(
+                character="Edwin",
+                target="F1",
+                kind="revoke",
+                note="spoiler for chapter 3",
+            ),
+            KnowledgeEdge(character="Edwin", target="F9", source="manual"),
+            KnowledgeEdge(character="Edwin", target="F9", kind="revoke"),
+        ]
+        await self.regenerate(scene, "The Sorena sank in 1973.", restates="F9")
+        (revoke,) = [
+            edge for edge in scene.world_state.knowledge if edge.kind == "revoke"
+        ]
+        assert revoke.note is None
+        assert not knows(scene, "Edwin", "F9")
+
     async def test_a_never_learn_replaces_an_unlearn_that_meets_it(
         self, scene, fake_memory, recorded
     ):

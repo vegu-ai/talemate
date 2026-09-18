@@ -12,7 +12,7 @@ from talemate.server.world_state_manager.scene_state_reset import (
 )
 from talemate.context import ActiveScene
 from talemate.instance import get_agent
-from talemate.knowledge.schema import Fact, KnowledgeEdge
+from talemate.knowledge.schema import Fact, FactAnchor, KnowledgeEdge
 from talemate.scene_message import CharacterMessage
 from talemate.world_state import Reinforcement
 
@@ -159,6 +159,130 @@ class TestHistoryWipe:
         assert scene.layered_history == []
         # no static entry is left to be older than the scene
         assert (scene.start_ts, scene.ts) == (0, 0)
+
+    @pytest.mark.asyncio
+    async def test_wipe_all_history_removes_static_entry_facts(
+        self, scene_factory, mixin_instance, monkeypatch
+    ):
+        """A wipe that includes static entries removes the facts they recorded."""
+        scene = scene_factory(
+            archived_history=[
+                {"id": "world-1", "text": "Static entry", "end": None},
+            ]
+        )
+        scene.world_state.facts = {
+            "F1": Fact(id="F1", text="Static fact", archive_id="world-1"),
+            "F2": Fact(id="F2", text="Manual fact", source="manual"),
+        }
+        # a hand grant keeps F1 through the loss of one line, not through the
+        # wipe of the entry it came from
+        scene.world_state.knowledge = [
+            KnowledgeEdge(character="Edwin", target="F1", source="manual"),
+        ]
+        memory = get_agent("memory")
+        monkeypatch.setattr(memory, "delete", AsyncMock())
+
+        await mixin_instance(scene).handle_execute_scene_state_reset(
+            {
+                "wipe_history": True,
+                "wipe_history_include_static": True,
+            }
+        )
+
+        assert scene.archived_history == []
+        assert set(scene.world_state.facts) == {"F2"}
+        assert scene.world_state.knowledge == []
+        memory.delete.assert_awaited_once_with({"ids": ["F1"]})
+
+    @pytest.mark.asyncio
+    async def test_wipe_all_history_keeps_an_author_edited_static_fact(
+        self, scene_factory, mixin_instance, monkeypatch
+    ):
+        """An author-edited fact outlives the static entry it came from."""
+        scene = scene_factory(
+            archived_history=[
+                {"id": "world-1", "text": "Static entry", "end": None},
+            ]
+        )
+        scene.world_state.facts = {
+            "F3": Fact(
+                id="F3",
+                text="Edited fact",
+                archive_id="world-1",
+                text_edited=True,
+            ),
+        }
+        memory = get_agent("memory")
+        monkeypatch.setattr(memory, "delete", AsyncMock())
+
+        await mixin_instance(scene).handle_execute_scene_state_reset(
+            {
+                "wipe_history": True,
+                "wipe_history_include_static": True,
+            }
+        )
+
+        assert scene.archived_history == []
+        (fact,) = scene.world_state.facts.values()
+        assert (fact.source, fact.archive_id) == ("manual", None)
+        memory.delete.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_wipe_all_history_drops_a_rule_anchored_on_a_static_entry(
+        self, scene_factory, mixin_instance, monkeypatch
+    ):
+        """A rule that waits on a wiped static entry goes with the entry."""
+        scene = scene_factory(
+            archived_history=[
+                {"id": "world-1", "text": "Static entry", "end": None},
+            ]
+        )
+        scene.world_state.knowledge = [
+            KnowledgeEdge(
+                character="Edwin",
+                target="F9",
+                source="manual",
+                anchor=FactAnchor(text="A missing statement", archive_id="world-1"),
+            ),
+        ]
+        memory = get_agent("memory")
+        monkeypatch.setattr(memory, "delete", AsyncMock())
+
+        await mixin_instance(scene).handle_execute_scene_state_reset(
+            {
+                "wipe_history": True,
+                "wipe_history_include_static": True,
+            }
+        )
+
+        assert scene.world_state.knowledge == []
+
+    @pytest.mark.asyncio
+    async def test_wipe_history_without_static_keeps_static_entry_facts(
+        self, scene_factory, mixin_instance, monkeypatch
+    ):
+        """Keeping the static entries keeps the facts they recorded."""
+        scene = scene_factory(
+            archived_history=[
+                {"id": "world-1", "text": "Static entry", "end": None},
+            ]
+        )
+        scene.world_state.facts = {
+            "F1": Fact(id="F1", text="Static fact", archive_id="world-1"),
+        }
+        memory = get_agent("memory")
+        monkeypatch.setattr(memory, "delete", AsyncMock())
+
+        await mixin_instance(scene).handle_execute_scene_state_reset(
+            {
+                "wipe_history": True,
+                "wipe_history_include_static": False,
+            }
+        )
+
+        assert len(scene.archived_history) == 1
+        assert set(scene.world_state.facts) == {"F1"}
+        memory.delete.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_wipe_history_preserve_static(self, scene_factory, mixin_instance):

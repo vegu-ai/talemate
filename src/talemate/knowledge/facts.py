@@ -1007,11 +1007,14 @@ async def reattach_author_rules(
 def _hand_order(old: KnowledgeEdge, new: KnowledgeEdge) -> tuple[bool, bool]:
     """
     Which of two author rules of one pair stay, (old, new), when `new` was
-    written after `old`: the result of setting them by hand in that order.
+    written after `old`: the pair's knowledge state after setting them by hand
+    in that order. The by-hand paths keep the older edge of a duplicate Learn,
+    so they can hold a different edge of the same kind with the same effect.
     """
     if old.kind == new.kind:
-        # a newer Unlearn carries the newer boundary; other duplicates keep one
-        return (False, True) if new.kind == "unlearn" else (True, False)
+        # the newer rule takes the older's place, so a newer Learn is never
+        # refused and a newer Unlearn carries the newer boundary
+        return (False, True)
     kinds = (old.kind, new.kind)
     if kinds == ("revoke", "grant"):
         # a Learn lifts an older Never Learn
@@ -1026,16 +1029,41 @@ def _hand_order(old: KnowledgeEdge, new: KnowledgeEdge) -> tuple[bool, bool]:
     return (False, True)
 
 
+def _replay_rules(
+    candidates: list[KnowledgeEdge], position: dict[str, int]
+) -> list[KnowledgeEdge]:
+    """
+    The edges that remain when the candidates meet in list order, giving the
+    pair the knowledge state it has after setting them by hand in that order.
+    A newer rule of the same kind takes the older's place, and the older's note
+    when it has none of its own.
+    """
+    survivors = []
+    for rule in sorted(candidates, key=lambda item: position[item.id]):
+        verdicts = []
+        for kept in survivors:
+            keep_old, keep_new = _hand_order(kept, rule)
+            if kept.kind == rule.kind and not rule.note:
+                rule.note = kept.note
+            verdicts.append((kept, keep_old, keep_new))
+        if all(keep_new for _, _, keep_new in verdicts):
+            survivors = [kept for kept, keep_old, _ in verdicts if keep_old] + [rule]
+    return survivors
+
+
 def _move_waiting_rules(world_state, matches: dict[str, str]) -> None:
     """
     Move each matched waiting edge to its new fact, in list order (older
-    first). The author rules that meet on one pair keep what setting them by
-    hand in that order keeps (`_hand_order`). A moved Unlearn gets the told
-    grants that the fact's sources owe it, since those were computed before
-    the rule arrived.
+    first). The author rules that meet on one pair keep the pair's by-hand
+    knowledge state (`_hand_order`): the pair is replayed in list order, so a
+    later rule still lifts an earlier Never Learn, and a dropped rule's note
+    moves to the same-kind rule that replaces it. A moved Unlearn gets the
+    told grants that the fact's sources owe it, since those were computed
+    before the rule arrived.
     """
     position = {edge.id: index for index, edge in enumerate(world_state.knowledge)}
     rules: dict[tuple[str, str], list[KnowledgeEdge]] = {}
+    incoming: dict[tuple[str, str], list[KnowledgeEdge]] = {}
     grants: set[tuple] = set()
     for edge in world_state.knowledge:
         if edge.anchor is not None:
@@ -1045,7 +1073,6 @@ def _move_waiting_rules(world_state, matches: dict[str, str]) -> None:
         else:
             grants.add((edge.character, edge.target, edge.source, edge.message_id))
     dropped: set[str] = set()
-    unlearned: list[Fact] = []
     for edge in world_state.knowledge:
         target = matches.get(edge.id)
         fact = world_state.facts.get(target) if target is not None else None
@@ -1059,28 +1086,20 @@ def _move_waiting_rules(world_state, matches: dict[str, str]) -> None:
             grants.add(key)
             fact.known_by.setdefault(edge.character, edge.source)
         else:
-            pair = rules.setdefault((edge.character, target), [])
-            keep = True
-            verdicts = []
-            for rule in pair:
-                if position[rule.id] < position[edge.id]:
-                    keep_rule, keep_edge = _hand_order(rule, edge)
-                else:
-                    keep_edge, keep_rule = _hand_order(edge, rule)
-                keep = keep and keep_edge
-                verdicts.append((rule, keep_rule))
-            if not keep:
-                dropped.add(edge.id)
-                continue
-            for rule, keep_rule in verdicts:
-                if not keep_rule:
-                    dropped.add(rule.id)
-                    pair.remove(rule)
-            pair.append(edge)
-            if edge.kind == "unlearn":
-                unlearned.append(fact)
+            incoming.setdefault((edge.character, target), []).append(edge)
         edge.target = target
         edge.anchor = None
+    unlearned: list[Fact] = []
+    for pair, moved in incoming.items():
+        candidates = rules.get(pair, []) + moved
+        survivors = _replay_rules(candidates, position)
+        surviving = {rule.id for rule in survivors}
+        for rule in candidates:
+            if rule.id not in surviving:
+                dropped.add(rule.id)
+        for rule in moved:
+            if rule.id in surviving and rule.kind == "unlearn":
+                unlearned.append(world_state.facts[pair[1]])
     world_state.knowledge = [
         edge for edge in world_state.knowledge if edge.id not in dropped
     ]

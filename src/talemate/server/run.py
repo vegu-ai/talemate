@@ -74,15 +74,6 @@ v{VERSION}
 """
 
 
-async def install_punkt():
-    import nltk
-
-    log.info("Downloading NLTK punkt tokenizer")
-    await asyncio.get_event_loop().run_in_executor(None, nltk.download, "punkt")
-    await asyncio.get_event_loop().run_in_executor(None, nltk.download, "punkt_tab")
-    log.info("Download complete")
-
-
 async def log_stream(stream, log_func, on_started=None):
     started_emitted = False
     while True:
@@ -181,6 +172,7 @@ def run_server(args):
     import talemate.config
     import talemate.instance
     from talemate.server.api import websocket_endpoint
+    from talemate.server.punkt import ensure_punkt
 
     config = talemate.config.cleanup()
 
@@ -237,7 +229,7 @@ def run_server(args):
     migrate_scene_assets_to_library()
 
     # start task to unstall punkt
-    loop.create_task(install_punkt())
+    loop.create_task(ensure_punkt())
 
     def _on_frontend_started():
         if args.frontend_port == 8082:

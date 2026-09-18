@@ -1,0 +1,2 @@
+fixed:
+- "Startup no longer downloads the NLTK punkt and punkt_tab tokenizers when they are already installed. On Linux with a non-private home directory this removes the two NLTK download-directory warnings printed on every backend start even though the data was up to date, and the log no longer claims a download that did not happen. The backend also stops requesting the NLTK package index over the network on every start when the data is present, so an offline start no longer prints downloader errors."

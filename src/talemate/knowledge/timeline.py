@@ -81,11 +81,14 @@ def shift_world_entry_times(scene: "Scene", shift: int) -> None:
     """
     Move the scene time a world entry records in `meta["ts"]` (a pin made
     from the chat stores one) by `shift` seconds, clamped to zero. `meta` is
-    open, so only this key moves.
+    open, so only this key moves. Tracked-state update times live in the same
+    saved world state and must also follow a shift applied before it is loaded.
     """
     for entry in scene.world_state.manual_context.values():
         if "ts" in entry.meta:
             entry.meta["ts"] = shift_optional_ts(entry.meta["ts"], shift)
+    for reinforcement in scene.world_state.reinforce:
+        reinforcement.updated_ts = shift_optional_ts(reinforcement.updated_ts, shift)
 
 
 def refresh_fact_times(scene: "Scene", fact_ids=None) -> set[str]:

@@ -131,11 +131,15 @@ def _phase_identity(scene, message, phase: str, recent=None, *, journal=None) ->
         "eligibility": scene.knowledge_eligibility,
     }
     if phase == "perceptions":
-        from talemate.agents.summarize.perceptions import perception_context
+        from talemate.agents.summarize.perceptions import (
+            perception_context,
+            perception_intention,
+        )
 
         context = perception_context(scene, message)
         context["passage"]["provenance"].pop("revision", None)
         values["context"] = context
+        values["intention"] = perception_intention(scene)
         values["settings"] = {
             "enabled": summarizer.resolve_enabled("perceptions"),
             "repair": summarizer.resolve_config("perceptions", "automatic_repair"),
@@ -1144,6 +1148,80 @@ async def reconcile_revision_archive_vectors(
     return complete
 
 
+async def _refresh_perceptions(scene, message, identity, operations):
+    from talemate.agents.summarize.perceptions import (
+        PerceptionInputsChanged,
+        perception_results_current,
+        warn_perception_regeneration,
+    )
+
+    summarizer = get_agent("summarizer")
+    cancel_sequence = scene.cancel_sequence
+
+    def operation_current():
+        if scene.cancel_requested or scene.cancel_sequence != cancel_sequence:
+            raise GenerationCancelled("Generation cancelled", by_user=True)
+        return _current(scene, message, identity, operations)
+
+    with revision_phase(scene, message, "perceptions"):
+        summarizer._register_perception_sources(scene, [message])
+        await summarizer.ensure_perceptions(
+            scene, before_message_id=message.id, still_current=operation_current
+        )
+    while True:
+        perception_identity = _phase_identity(scene, message, "perceptions")
+
+        def still_current():
+            if not operation_current():
+                return False
+            if _phase_identity(scene, message, "perceptions") != perception_identity:
+                raise PerceptionInputsChanged
+            return True
+
+        if not still_current():
+            raise GenerationCancelled("The selected version changed during analysis")
+        if message.revision_state.phase_receipts.get(
+            "refresh:perceptions"
+        ) == perception_identity and perception_results_current(scene, message):
+            return
+        receipts = dict(message.revision_state.phase_receipts)
+        # Missing source results revoke completion of the whole phase, even
+        # when its inputs match an older successful run. A later repair
+        # failure must remain retryable after source analysis succeeds.
+        receipts.pop("refresh:perceptions", None)
+        message.set_revision_status("running", phase_receipts=receipts)
+        try:
+            with revision_phase(scene, message, "perceptions"):
+                await summarizer.ensure_perceptions(scene, still_current=still_current)
+            if not still_current():
+                raise GenerationCancelled(
+                    "The selected version changed during analysis"
+                )
+            with revision_phase(scene, message, "perceptions"):
+                await summarizer.repair_summary_views(scene)
+            if not still_current():
+                raise GenerationCancelled(
+                    "The selected version changed during analysis"
+                )
+        except PerceptionInputsChanged:
+            with revision_phase(scene, message, "perceptions"):
+                summarizer._perception_status(
+                    scene, message, "pending", invalidate=True
+                )
+            warn_perception_regeneration(message)
+            continue
+        if not perception_results_current(scene, message):
+            raise GenerationCancelled(
+                "Selected-source perception results are not ready"
+            )
+        receipts = {
+            **message.revision_state.phase_receipts,
+            "refresh:perceptions": perception_identity,
+        }
+        message.set_revision_status("running", phase_receipts=receipts)
+        return
+
+
 async def _refresh(scene, message, identity: str, operations: RevisionOperations):
     from talemate.agents.summarize.perceptions import perception_results_current
 
@@ -1156,50 +1234,7 @@ async def _refresh(scene, message, identity: str, operations: RevisionOperations
     rollback_journal = None
     try:
         if operations.perceptions:
-            with revision_phase(scene, message, "perceptions"):
-                summarizer._register_perception_sources(scene, [message])
-        perception_identity = _phase_identity(scene, message, "perceptions", recent)
-        if operations.perceptions and (
-            message.revision_state.phase_receipts.get("refresh:perceptions")
-            != perception_identity
-            or not perception_results_current(scene, message)
-        ):
-            receipts = dict(message.revision_state.phase_receipts)
-            # Missing source results revoke completion of the whole phase, even
-            # when its inputs match an older successful run. A later repair
-            # failure must remain retryable after source analysis succeeds.
-            receipts.pop("refresh:perceptions", None)
-            message.set_revision_status("running", phase_receipts=receipts)
-            with revision_phase(scene, message, "perceptions"):
-                await summarizer.ensure_perceptions(
-                    scene,
-                    still_current=lambda: _current(
-                        scene, message, identity, operations
-                    ),
-                )
-            if not _current(scene, message, identity, operations):
-                raise GenerationCancelled(
-                    "The selected version changed during analysis"
-                )
-            if _phase_identity(scene, message, "perceptions") != perception_identity:
-                raise GenerationCancelled("Perception inputs changed during analysis")
-            with revision_phase(scene, message, "perceptions"):
-                await summarizer.repair_summary_views(scene)
-            if not _current(scene, message, identity, operations):
-                raise GenerationCancelled(
-                    "The selected version changed during analysis"
-                )
-            if _phase_identity(scene, message, "perceptions") != perception_identity:
-                raise GenerationCancelled("Perception inputs changed during analysis")
-            if not perception_results_current(scene, message):
-                raise GenerationCancelled(
-                    "Selected-source perception results are not ready"
-                )
-            receipts = {
-                **message.revision_state.phase_receipts,
-                "refresh:perceptions": perception_identity,
-            }
-            message.set_revision_status("running", phase_receipts=receipts)
+            await _refresh_perceptions(scene, message, identity, operations)
 
         extract_identity = _phase_identity(scene, message, "extract", recent)
         if (

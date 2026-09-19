@@ -25,7 +25,7 @@
                                 hint="You can leave this blank as it will be automatically generated. Or you can fill it in to start with a specific answer."
                                 :color="dirty ? 'dirty' : ''"
                                 @update:model-value="dirty = true"
-                                @blur="handleBlur(false)"
+                                @blur="handleBlur(false, true)"
                                 max-rows="15"
                                 auto-grow
                                 rows="5">
@@ -187,7 +187,7 @@ export default {
             }, delay);
         },
 
-        save(updateState, only_if_dirty = false) {
+        save(updateState, only_if_dirty = false, answerConfirmed = false) {
 
             if(only_if_dirty && !this.dirty) {
                 return;
@@ -203,6 +203,7 @@ export default {
                 action: 'set_world_state_reinforcement',
                 question: this.state.question,
                 answer: this.state.answer,
+                answer_confirmed: answerConfirmed,
                 instructions: this.state.instructions,
                 interval: this.state.interval,
                 insert: this.state.insert,
@@ -252,10 +253,10 @@ export default {
             this.state = null;
         },
 
-        handleBlur(update = false) {
+        handleBlur(update = false, answerConfirmed = false) {
             // Only auto-save on blur for existing states
             if (!this.isNewState) {
-                this.save(update, true);
+                this.save(update, true, answerConfirmed);
             }
         },
 

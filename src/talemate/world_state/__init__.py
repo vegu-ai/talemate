@@ -88,6 +88,10 @@ class InsertionMode(str, Enum):
 class Reinforcement(BaseModel):
     question: str
     answer: Union[str, None] = None
+    updated_ts: int | None = Field(
+        default=None,
+        description="Scene time when the answer was last set or confirmed.",
+    )
     interval: int = 10
     due: int = 0
     character: Union[str, None] = None
@@ -101,6 +105,8 @@ class Reinforcement(BaseModel):
         data = handler(self)
         if self.perspective_source is None:
             data.pop("perspective_source", None)
+        if self.updated_ts is None:
+            data.pop("updated_ts", None)
         return data
 
     def source_for(self, scene):
@@ -116,6 +122,16 @@ class Reinforcement(BaseModel):
                 None,
             )
         return self.perspective_source
+
+    def set_answer(self, scene, answer: str | None, *, confirmed: bool = True):
+        if confirmed or answer != self.answer:
+            self.updated_ts = scene.ts
+        elif self.updated_ts is None:
+            # A configuration change may replace the source that supplies this age.
+            source = self.source_for(scene)
+            if source and source.knowledge:
+                self.updated_ts = source.knowledge.acquired.ts
+        self.answer = answer
 
     def context_for(self, scene, viewer=None):
         return reinforcement_context(scene, self, viewer)
@@ -448,6 +464,8 @@ class WorldState(BaseModel):
         answer: str = "",
         insert: str = "sequential",
         require_active: bool = True,
+        *,
+        answer_confirmed: bool = True,
     ) -> Reinforcement:
         """
         Adds or updates a reinforcement in the world state. If a reinforcement with the same question and character exists, it is updated.
@@ -459,6 +477,7 @@ class WorldState(BaseModel):
         - interval: The interval for reinforcement repetition.
         - answer: The answer to the reinforcement question.
         - insert: The method of inserting the reinforcement into the context.
+        - answer_confirmed: False for configuration-only saves; an unchanged answer keeps its age.
         """
 
         # if reinforcement already exists, update it
@@ -476,7 +495,7 @@ class WorldState(BaseModel):
 
             reinforcement.instructions = instructions
             reinforcement.interval = interval
-            reinforcement.answer = answer
+            reinforcement.set_answer(self.scene, answer, confirmed=answer_confirmed)
             reinforcement.require_active = require_active
 
             old_insert_method = reinforcement.insert
@@ -534,6 +553,7 @@ class WorldState(BaseModel):
             instructions=instructions,
             interval=interval,
             answer=answer,
+            updated_ts=self.scene.ts if answer else None,
             insert=insert,
             require_active=require_active,
         )

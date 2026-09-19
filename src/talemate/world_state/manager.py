@@ -629,6 +629,8 @@ class WorldStateManager:
         insert: str = "sequential",
         run_immediately: bool = False,
         require_active: bool = True,
+        *,
+        answer_confirmed: bool = True,
     ) -> Reinforcement:
         """
         Adds a detail reinforcement for a character with specified parameters.
@@ -641,6 +643,7 @@ class WorldStateManager:
             answer: The expected answer for the question; defaults to an empty string.
             insert: The insertion mode for the reinforcement; defaults to 'sequential'.
             run_immediately: A flag to run the reinforcement immediately; defaults to False.
+            answer_confirmed: False when saving only state configuration.
 
         Returns:
             A Reinforcement object representing the newly added detail reinforcement.
@@ -656,6 +659,7 @@ class WorldStateManager:
             answer,
             insert,
             require_active,
+            answer_confirmed=answer_confirmed,
         )
 
         if run_immediately:

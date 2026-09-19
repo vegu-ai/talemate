@@ -122,7 +122,7 @@ flowchart TD
 
 **Why store views and stop on missing evidence?** Presence alone cannot separate two characters' experiences of the same passage. Stored views make those differences available to later replies and summaries. Falling back to the reader's complete text after a failed view would undo that separation exactly when the evidence is missing; repair and explicit Retry address the missing view instead.
 
-**Private entries.** **Known by** decides which entries a reply and a memory search can draw on. The analysis still reads every sheet as background, so keep real secrets out of the scene description, the story intention and the sheet text.
+**Private entries.** **Known by** decides which entries a reply and a memory search can draw on. Perception analysis still reads every sheet as background. It excludes the scene description, but dialogue and guidance still receive it. Keep real secrets out of the scene description, story intention, current scene intention and sheet text.
 
 **Disclosures.** **Establish character knowledge** in the Knowledge tab gives a character selected information, or a whole entry, at this point in the story, without inventing dialogue. The director can do the same.
 

@@ -60,6 +60,7 @@ class SetCharacterDetailReinforcementPayload(pydantic.BaseModel):
     update_state: bool = False
     insert: str = "sequential"
     require_active: bool = True
+    answer_confirmed: bool = True
 
 
 class CharacterDetailReinforcementPayload(pydantic.BaseModel):
@@ -93,6 +94,7 @@ class SetWorldEntryReinforcementPayload(pydantic.BaseModel):
     update_state: bool = False
     insert: str = "never"
     require_active: bool = True
+    answer_confirmed: bool = True
 
 
 class WorldEntryReinforcementPayload(pydantic.BaseModel):
@@ -433,6 +435,7 @@ class WorldStateManagerPlugin(
             payload.insert,
             payload.update_state,
             payload.require_active,
+            answer_confirmed=payload.answer_confirmed,
         )
 
         self.websocket_handler.queue_put(
@@ -633,6 +636,7 @@ class WorldStateManagerPlugin(
             payload.insert,
             payload.update_state,
             payload.require_active,
+            answer_confirmed=payload.answer_confirmed,
         )
 
         self.websocket_handler.queue_put(

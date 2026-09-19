@@ -243,7 +243,7 @@ class WorldStateReinforcementsMixin:
         reset: bool,
     ) -> ReinforcementMessage:
         changed = answer != reinforcement.answer
-        reinforcement.answer = answer
+        reinforcement.set_answer(self.scene, answer)
         reinforcement.due = reinforcement.interval
 
         # remove any recent previous reinforcement message with same question

@@ -249,12 +249,34 @@ def test_find_docs_real_index_smoke():
         "scoped graph memory access",
         "intro_present",
         "FactContribution competitor vetoes",
+        "context_review",
+        "push_history",
+        "before_memory",
+        "swap_revision",
+        "deep retrieval",
     ],
 )
 def test_find_docs_scene_processing_api_routes(query):
     assert "dev/character-perspectives.md" in [
         entry["path"] for entry in docs.find_docs(query)
     ]
+
+
+@pytest.mark.parametrize(
+    "symbol,limit", [("SourceReference", 1), ("FactContribution", 2)]
+)
+def test_find_docs_perspective_symbols_keep_code_spelling_near_top(symbol, limit):
+    results = docs.find_docs(symbol, limit=limit)
+    result = next(
+        (
+            entry
+            for entry in results
+            if entry["path"] == "dev/character-perspectives.md"
+        ),
+        None,
+    )
+    assert result is not None
+    assert symbol in result["summary"]
 
 
 @pytest.mark.parametrize(

@@ -41,8 +41,15 @@ def fact_age(scene: "Scene", fact: "Fact") -> int | None:
 
 
 def fact_time(scene: "Scene", fact: "Fact") -> str:
-    age = fact_age(scene, fact)
-    return duration_to_human(age) if age is not None else "Time unknown"
+    return record_time(scene, fact_timestamp(fact))
+
+
+def record_time(scene: "Scene", timestamp: int | None) -> str:
+    return (
+        duration_to_human(max(0, scene.ts - timestamp))
+        if timestamp is not None
+        else "Time unknown"
+    )
 
 
 def fact_score(scene: "Scene", fact: "Fact", settings=None) -> float:

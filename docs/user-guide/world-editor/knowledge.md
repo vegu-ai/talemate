@@ -114,7 +114,7 @@ Perception uses the generating model's common-sense interpretation, not a proof 
 
 ### Author responsibilities
 
-Keep secrets out of **scene description** and **story intention**: these remain shared authoring inputs. Set visibility on character sheets, details and world entries yourself or through the director. Do not put private instructions into a character's shared description and expect perception to remove them.
+Keep secrets out of **scene description**, **story intention** and **current scene intention**. The scene description remains a shared authoring input in dialogue and guidance; story and current scene intention reach perception analysis as well. Set visibility on character sheets, details and world entries yourself or through the director. Do not put private instructions into a character's shared description and expect perception to remove them.
 
 In Character perspectives mode, separate character views replace **Limit to character knowledge**, **Remind about unknown facts**, **Topic knowledge overview**, **Track learning from dialogue**, and **Match known facts**. These Standard-mode controls are hidden while Character perspectives is active. **Never Learn** and **Unlearn** are not available in this mode, and there is no other forget operation. Restricting an authored entry is not erasure of an already acquired disclosure.
 

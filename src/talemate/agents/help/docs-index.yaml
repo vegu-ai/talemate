@@ -3,8 +3,8 @@
 # Generated file - regenerate with the docs-index claude skill in the work repo.
 - path: dev/agent-actions.md
   title: Generation action identity
-  summary: Generation action keys in prompt logs and per-action overrides, including memory passes.
-    Covers nested context restoration, foreground/background status and concurrent actions.
+  summary: Generation action keys in prompt logs and per-action overrides, including memory passes. Covers nested context
+    restoration, foreground/background status and concurrent actions.
 - path: dev/bulk-visibility-assessment.md
   title: Bulk visibility assessment
   summary: Director chat assess_visibility API for explicit batches of character attributes, details or world entries. Covers
@@ -24,8 +24,8 @@
   title: Character perspective records
   summary: intro_knowledge, SourceReference intro, intro_present, opening audience derivation on load; scoped graph memory
     access. Stored views, audience summaries, context_review, push_history, agent.conversation.finalized, portrait cadence,
-    before_memory, scene.history_ready, revision fallback, evidence_boundary/evidence_budget, deep retrieval, swap_revision/commit_revision,
-    pending_perception_messages. FactContribution competitor vetoes, duplicate suppression.
+    before_memory, scene.history_ready, evidence_boundary/evidence_budget, swap_revision/commit_revision, pending_perception_messages,
+    deep retrieval, FactContribution competitor vetoes, duplicate suppression. Tracked age.
 - path: dev/howto/add-a-worldstate-template-type.md
   title: Adding a new world-state template
   summary: 'Developer walkthrough for adding a world-state template type using Writing Style phrase detection: register a
@@ -47,9 +47,9 @@
 - path: dev/scene-format.md
   title: Saved scene format
   summary: Saved format_version and knowledge_eligibility validation, creation opt-in, empty-history mode switching, saves,
-    exports, forks and request-owned scene_initialization.agent_settings with explicit pins, success-only persistence and correlated
-    lifecycle frames. Accepted player dispatch uses history_dispatch_pending/history_dispatch_completed, persisted receiver checkpoints,
-    stable node identity, deferred cooldown retries and refresh-before-generation ordering.
+    exports, forks and request-owned scene_initialization.agent_settings with explicit pins, success-only persistence and
+    correlated lifecycle frames. Accepted player dispatch uses history_dispatch_pending/history_dispatch_completed, persisted
+    receiver checkpoints, stable node identity, deferred cooldown retries and refresh-before-generation ordering.
 - path: dev/snapshot-perspectives.md
   title: Audience-targeted snapshots
   summary: 'Audience-targeted world-state snapshots in perception scenes: evidence budgets, entity views and location_views,
@@ -164,8 +164,8 @@
   summary: Director Chat queries and changes scenes, characters, world entries, knowledge and images, with Normal/Decisive/No
     Spoilers modes, write confirmations/timeouts, action toggles, personas, multiple chats and Assess Visibility bulk Known
     by changes preserving restrictions unless reassessment is requested. Covers Reject and abort (stop; earlier changes remain),
-    Reject with instructions (skip and continue; explicit correction rounds), partial batches with applied/omitted calls
-    and reported problems via report_issue.
+    Reject with instructions (skip and continue; explicit correction rounds), partial batches with applied/omitted calls and
+    reported problems via report_issue.
 - path: user-guide/agents/director/index.md
   title: Overview
   summary: 'Director agent overview: game-master scene progression through autonomous Scene Direction, conversational Director
@@ -207,9 +207,9 @@
 - path: user-guide/agents/help/settings.md
   title: Settings
   summary: Help agent response and tool-round budgets, concurrent reads, custom instructions and default-off Allow changes
-    to settings/templates permissions. Configuration tool paths, fields, bounded indexes, complete JSON chunk retrieval,
-    inference preset writes and prompt-cache conditions. Applying themes requires both permissions; manual appearance color
-    overrides survive until Restore from theme.
+    to settings/templates permissions. Configuration tool paths, fields, bounded indexes, complete JSON chunk retrieval, inference
+    preset writes and prompt-cache conditions. Applying themes requires both permissions; manual appearance color overrides
+    survive until Restore from theme.
 - path: user-guide/agents/index.md
   title: Overview
   summary: 'Overview of Talemate agents and responsibilities: Conversation, Creator, Director, Editor, Help, Memory, Narrator,
@@ -252,8 +252,8 @@
     Environment.
 - path: user-guide/agents/narrator/settings.md
   title: Settings
-  summary: Narrator settings cover generation lengths, story intent, writing style, time passage and Auto Narration
-    chance, weights and Scene Direction suppression.
+  summary: Narrator settings cover generation lengths, story intent, writing style, time passage and Auto Narration chance,
+    weights and Scene Direction suppression.
 - path: user-guide/agents/scene-overrides.md
   title: Per-Scene Agent Overrides
   summary: 'Sparse agent overrides: Global/Scene editing, Save/Discard, quick toggles, links, hub reset icons, creation knowledge-effort
@@ -266,11 +266,11 @@
     investigation. Deep analysis can retrieve additional historical context but may add many prompts.'
 - path: user-guide/agents/summarizer/settings.md
   title: Settings
-  summary: 'Summarization settings: thresholds, methods, fact extraction at the chapter summary as the only fact source with
-    each fact tied to its line, matching tolerance with normalized embeddings,
-    chronology, subject aliases, formerly clauses, perspective repair and layered history. Covers scene analysis caching
-    for regeneration, resuming interrupted Deep Analysis Context retrieval, cancellable Waiting for knowledge updates in Character
-    Perspectives, system-abort warnings, and scene-history token budgets, Best Fit, dialogue ratios and summary boundaries.'
+  summary: 'Summarization settings: thresholds, methods, chapter facts tied to their source lines, matching tolerance, chronology,
+    subject aliases, formerly clauses, perspective repair and layered history. Covers tracked blindfold and other character
+    states with last-confirmed age; regenerating perception analysis until inputs stabilize or cancellation, scene analysis
+    caching, resuming Deep Analysis Context retrieval, cancellable Waiting for knowledge updates, system-abort warnings, and
+    scene-history token budgets, Best Fit, dialogue ratios and summary boundaries.'
 - path: user-guide/agents/visualizer/backends/a1111.md
   title: AUTOMATIC1111
   summary: Legacy AUTOMATIC1111 text-to-image backend setup with API URL, steps, sampler, schedule, CFG, keyword/descriptive
@@ -372,8 +372,8 @@
   title: Settings
   summary: Voice settings for Enabled APIs, narrator fallback, speaker separation, automatic speech and client TTS setup.
     Distinguishes standard Chatterbox controls from opt-in Turbo sampling/normalization and references longer than five seconds.
-    Audio-tag injection is off by default and uses one Summarizer request with per-speaker format/policy for free-form ElevenLabs v3,
-    finite native Turbo sound tags, no standard Chatterbox injection. Covers chunking and saving voice choices.
+    Audio-tag injection is off by default and uses one Summarizer request with per-speaker format/policy for free-form ElevenLabs
+    v3, finite native Turbo sound tags, no standard Chatterbox injection. Covers chunking and saving voice choices.
 - path: user-guide/agents/voice/text-manipulation.md
   title: Text Manipulation
   summary: Rewrite TTS pronunciation without changing scene text using agent.tts.generate.before event modules, Unpack Generation
@@ -454,8 +454,8 @@
 - path: user-guide/app-settings/game.md
   title: Game
   summary: Application settings navigation, search, Save/Discard, unsaved-edit badges and outside-change warnings; Game controls
-    include auto save, auto progress, max backscroll, agent activity bar, scene header (show toggle, left/right item
-    slots), release GPU cache on scene load, default player character, and persistent sound volume/mute.
+    include auto save, auto progress, max backscroll, agent activity bar, scene header (show toggle, left/right item slots),
+    release GPU cache on scene load, default player character, and persistent sound volume/mute.
 - path: user-guide/app-settings/presets.md
   title: Presets
   summary: 'App-wide Presets settings: inference action types (Analytical, Conversation and others) selected by agent action,
@@ -468,11 +468,11 @@
     static copy.
 - path: user-guide/character-card-import.md
   title: Character Card Import
-  summary: Import TavernAI Chara Card V0–V3 PNG/JPG/WebP or JSON through the home dropzone or Scene Library. Covers cast
-    detection/manual selection, player templates/actors/scene transfers, case-insensitive name collisions, lore-book
-    metadata, alternate greetings, titled episodes, shared world.json, writing styles, cover assets and failed analysis;
-    effort-first selectable mode cards pin ongoing scene settings without changing globals, separately from per-step AI
-    enrichment, Full/Minimal presets, director attribute limits, card-data fallback and cancel/reopen resets.
+  summary: Import TavernAI Chara Card V0–V3 PNG/JPG/WebP or JSON through the home dropzone or Scene Library. Covers cast detection/manual
+    selection, player templates/actors/scene transfers, case-insensitive name collisions, lore-book metadata, alternate greetings,
+    titled episodes, shared world.json, writing styles, cover assets and failed analysis; effort-first selectable mode cards
+    pin ongoing scene settings without changing globals, separately from per-step AI enrichment, Full/Minimal presets, director
+    attribute limits, card-data fallback and cancel/reopen resets.
 - path: user-guide/clients/auto-retry.md
   title: Auto Retry
   summary: Per-client automatic retries for empty responses, HTTP 429 rate limits with exponential backoff, and missing reasoning
@@ -626,9 +626,9 @@
     path subtitles, slash paths, Game State Editor entry points and full JSON editing.'
 - path: user-guide/howto/create-a-new-scene/create-empty-scene.md
   title: Create an empty scene
-  summary: Create New Story from Home, name it, choose writing style/director persona, set knowledge effort, select Standard or
-    Character perspectives from compact cards, and optionally request Director assistance. Set the outline and save; mode can
-    change in Scene Settings only while history and archived history are empty.
+  summary: Create New Story from Home, name it, choose writing style/director persona, set knowledge effort, select Standard
+    or Character perspectives from compact cards, and optionally request Director assistance. Set the outline and save; mode
+    can change in Scene Settings only while history and archived history are empty.
 - path: user-guide/howto/create-a-new-scene/create-npc.md
   title: Add an AI controlled character
   summary: Add an AI-controlled NPC through Create Character with AI Generation Instructions and optional example dialogue.
@@ -699,9 +699,9 @@
   title: Interacting with the scene
   summary: 'Scene interaction syntax and shortcuts: quoted dialogue, asterisk actions, Tab act-as, @ quick actions, #/## director
     nudges and Ctrl+Enter autocomplete. Covers auto progress, cancellation, Continue, and selecting Original/Regenerated/Revised/Continued
-    message versions that become active scene text. Analyze perceptions (Character perspectives), Refresh facts or Learn
-    from dialogue (Standard), the History tab refresh chip, the next sent line, or a choice updates stale knowledge; pointer
-    movement, keyboard focus and tab changes stay browsing.'
+    message versions that become active scene text. Analyze perceptions (Character perspectives), Refresh facts or Learn from
+    dialogue (Standard), the History tab refresh chip, the next sent line, or a choice updates stale knowledge; pointer movement,
+    keyboard focus and tab changes stay browsing.'
 - path: user-guide/node-editor/core-concepts/collector_nodes.md
   title: Collector Nodes
   summary: Dict/List Collector nodes aggregate dynamic inputs with key inference or Make Key-Value Pair tuples, ordered lists
@@ -1032,9 +1032,8 @@
 - path: user-guide/prompts/context-history-review.md
   title: Scene Context History Review
   summary: Scene Context in Prompt Manager previews Scene or an active character using Conversation history selection. Covers
-    eligible facts, existing analysis, archive/layer and fact exclusion reasons with counts and capped samples,
-    intro/summary rules, budget cuts, the client context-window default, Refresh and scene-wide Apply; previews make no AI
-    requests.
+    eligible facts, existing analysis, archive/layer and fact exclusion reasons with counts and capped samples, intro/summary
+    rules, budget cuts, the client context-window default, Refresh and scene-wide Apply; previews make no AI requests.
 - path: user-guide/prompts/deduplication.md
   title: Prompt Deduplication
   summary: Prompt deduplication removes near-duplicate long lines but is off by default because it can damage structured content
@@ -1089,12 +1088,10 @@
     or deleting projects through Scene Library.
 - path: user-guide/scene-header.md
   title: Scene Header
-  summary: Sticky header at the top of the scene, part of the page, showing the scene title with configurable information
-    items on either side; History stats (message count, summary layer count) and Summarizer (gathered / threshold tokens,
-    a due marker whose tooltip names the reason or the remainder, unavailable states); optional Active characters (round
-    portraits or name-color initials, click opens the World Editor, +N overflow) and Knowledge effort (compact character
-    knowledge effort slider saved as a scene override) items, off by default; an edit button with a per-side item picker,
-    a close button, the matching Settings > Game toggle and item selects; hidden during playthrough.
+  summary: Sticky scene header shows the title plus configurable History stats, Summarizer tokens and due reasons, Active
+    character portraits with +N overflow, and a Knowledge effort slider that saves scene overrides. Covers per-side item ordering,
+    Settings > Game visibility, Save and apply / Discard change for pending settings, unavailable states and hiding during
+    Playthrough.
 - path: user-guide/scene-state-reset.md
   title: Reset Scene State
   summary: Reset Scene State selectively rebuilds Context DB/RAG, clears history with optional static-backstory preservation,
@@ -1243,10 +1240,9 @@
 - path: user-guide/world-editor/facts.md
   title: Facts
   summary: World Editor Facts tab lists every recorded fact with source, topic, audience (who knows it and how) and supersedes
-    arrows. Combinable filters (text, character knows/does not know/is a subject, topic, importance, source, superseded,
-    Latest summarized entry), sorting and paging; row actions (edit, set or clear supersedes, Learn or Never Learn for a
-    character in Standard mode, inspect source, remove) and selection actions (delete, Learn for a character) as one request
-    each.
+    arrows. Combinable filters (text, character knows/does not know/is a subject, topic, importance, source, superseded, Latest
+    summarized entry), sorting and paging; row actions (edit, set or clear supersedes, Learn or Never Learn for a character
+    in Standard mode, inspect source, remove) and selection actions (delete, Learn for a character) as one request each.
 - path: user-guide/world-editor/generation-settings.md
   title: Generation Settings
   summary: World Editor Generation Settings apply one-off Ctrl/Cmd-click instructions, Alt-click rewrites, Ctrl+Alt guided
@@ -1264,16 +1260,16 @@
     detail gradient. Covers compression statistics, token thresholds, layer limits, chunking/analyzation settings, edit/regenerate/inspect
     tools and context-budget review.
 - path: user-guide/world-editor/knowledge-how-it-works.md
-  title: "Character knowledge: flow reference"
-  summary: Experimental reference with six diagrams—re-entry bridges, arrival notes, automatic timing, activation and deactivation chips,
-    regeneration, and Thorough/Balanced effort settings. Shared facts, reply inputs, memory ranking,
-    Intro audiences, revision browsing, browse revisions before keeping a version, awareness overview names each
-    character once, citation not supported, regenerate old views, private competitor vetoes, mode decision tree (model, cost).
+  title: 'Character knowledge: flow reference'
+  summary: Experimental reference with six diagrams—re-entry bridges, arrival notes, automatic timing, activation and deactivation
+    chips, Thorough/Balanced, retry/regeneration. Shared facts, reply inputs, memory ranking, Intro audiences, revision browsing,
+    browse revisions before keeping a version, awareness overview names each character once, citation not supported, regenerate
+    old views, private competitor vetoes, mode decision tree (model, cost).
 - path: user-guide/world-editor/knowledge.md
   title: Knowledge
-  summary: Standard and Character perspectives knowledge, effort presets, request costs, scene overrides and first-save
-    continuation, retry or discard. Covers Learn, Never Learn and Unlearn rules, Known by visibility, disclosures, topics, retrieval,
-    activation and deactivation chips with automatic timing and arrival notes.
+  summary: Standard and Character perspectives knowledge, effort presets, request costs, scene overrides and first-save continuation,
+    retry or discard. Covers Learn, Never Learn and Unlearn rules, Known by visibility, disclosures, topics, retrieval, activation
+    and deactivation chips with automatic timing and arrival notes, and zero-request re-entry bridges.
 - path: user-guide/world-editor/pins.md
   title: Pins
   summary: Pins keep context entries or character details in AI prompts, with manual activation, AI yes/no conditions and
@@ -1304,8 +1300,8 @@
   title: Settings
   summary: Scene Settings control Character perspectives while history and archived history are empty, with a Compare modes
     popover; disabling clears perspectives and disclosures. Covers writing style, experimental scene flags, locked-save authoring
-    through World Editor Save, restore points via a new baseline.json instead of imported read-only initial.json, and Agent settings
-    file Auto-link, None or explicit project-shared overrides included in exports.
+    through World Editor Save, restore points via a new baseline.json instead of imported read-only initial.json, and Agent
+    settings file Auto-link, None or explicit project-shared overrides included in exports.
 - path: user-guide/world-editor/scene/shared-context.md
   title: Shared World & Episodes
   summary: Shared World links scenes to shared-context JSON files and synchronizes characters, selected attributes/details,

@@ -19,7 +19,7 @@ about their behavior. An unavailable character view is labeled unavailable in au
 planning; it does not fall back to reader text. Actor guidance and conversation analysis block
 on pending or failed projected history as other character prompts do.
 
-Scene description and story intention remain shared author inputs: keep secrets out
+Scene description, story and current scene intention remain shared author inputs: keep secrets out
 of them. Authored sheets, details and world entries remain the author's visibility
 responsibility. No downstream perception or rewrite request is added for advice.
 The host selects evidence and validates freshness; whether prose suggestions follow

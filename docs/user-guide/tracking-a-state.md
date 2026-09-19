@@ -47,7 +47,7 @@ The state's `Context Attachment Method` determines how the state is attached to 
 
 ##### Passive
 
-The state is only included in context through relevancy, handled by the [Memory Agent](/talemate/user-guide/agents/memory/).
+The state is included in reply context through relevancy, handled by the [Memory Agent](/talemate/user-guide/agents/memory/). For character states only, perception analysis in Character perspectives mode also receives every answered state, including Passive states, with the time since it was last set or confirmed.
 
 ##### Sequential
 

@@ -17,6 +17,7 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.exceptions import GenerationCancelled
+from talemate.emit import emit
 from talemate.client.presets import make_kind
 from talemate.util import count_tokens
 from talemate.prompts.response import CodeBlockExtractorMixin
@@ -24,6 +25,7 @@ from talemate.status import background_task
 from talemate.knowledge.mode import character_knowledge_enabled
 from talemate.knowledge.readiness import emit_perception_status, perception_readiness
 from talemate.knowledge.evidence import passage_spans
+from talemate.knowledge.chronology import record_time
 from talemate.knowledge.reinforcements import prepare_reinforcement_source
 from talemate.knowledge.perspective_models import (
     PerspectiveOutput,
@@ -63,6 +65,18 @@ class PerceptionValidationError(ValueError):
     def __init__(self, reason: str, views: tuple[PerceptionAnalysis, ...] = ()):
         super().__init__(reason)
         self.views = views
+
+
+class PerceptionInputsChanged(Exception):
+    pass
+
+
+def warn_perception_regeneration(message: SceneMessage) -> None:
+    warning = (
+        "Perception inputs changed during analysis; regenerating perception analysis."
+    )
+    log.warning(warning, source_id=message.id)
+    emit("status", status="warning", message=warning, data={"message_id": message.id})
 
 
 class PerceptionExtractor(CodeBlockExtractorMixin):
@@ -233,6 +247,31 @@ def passage_provenance(message: SceneMessage) -> PassageProvenance:
     )
 
 
+def perception_intention(scene: "Scene") -> tuple[str | None, str | None, str | None]:
+    intention = scene.intent_state
+    return (
+        intention.intent,
+        intention.phase.intent if intention.phase else None,
+        intention.current_scene_type.description if intention.phase else None,
+    )
+
+
+def tracked_character_states(scene: "Scene", name: str) -> dict[str, str]:
+    states = {}
+    for reinforcement in scene.world_state.reinforcements_for_character(name).values():
+        if not reinforcement.answer:
+            continue
+        timestamp = reinforcement.updated_ts
+        if timestamp is None:
+            source = reinforcement.source_for(scene)
+            timestamp = (
+                source.knowledge.acquired.ts if source and source.knowledge else None
+            )
+        age = record_time(scene, timestamp)
+        states[reinforcement.question] = f"({age}) {reinforcement.answer}"
+    return states
+
+
 def perception_context(scene: "Scene", message: SceneMessage) -> dict:
     read = PerspectiveReadContext(scene)
     previous = [
@@ -279,12 +318,11 @@ def perception_context(scene: "Scene", message: SceneMessage) -> dict:
                     for key, value in character.details.items()
                     if key not in character.reinforcement_entries
                 },
+                "tracked_states": tracked_character_states(scene, character.name),
                 "established_knowledge": known,
             }
         )
     return {
-        "shared_scene_description": scene.description,
-        "shared_story_intention": scene.intent_state.intent,
         "cast": cast,
         "prior_physical_context": [
             {
@@ -411,6 +449,8 @@ class PerceptionMixin:
         scene: "Scene",
         message: SceneMessage,
         status: Literal["pending", "failed"],
+        *,
+        invalidate: bool = False,
     ) -> None:
         previous = message.knowledge
         read = PerspectiveReadContext(scene)
@@ -420,7 +460,7 @@ class PerceptionMixin:
         for view in previous.views if previous else ():
             covered.update(view.audience)
             values = view.model_dump(exclude={"revision"})
-            if any(
+            if invalidate or any(
                 select_character_view(scene, reference, name, read=read).status
                 not in ("ready", "omitted")
                 for name in view.audience
@@ -558,6 +598,7 @@ class PerceptionMixin:
         failures = self._perception_failures.setdefault(scene, {})
         failure_snapshot = failures.copy()
         cancelled_by_user = self._perception_cancelled_by_user.setdefault(scene, {})
+        cancel_sequence = scene.cancel_sequence
         async with lock:
             # A prefix revision can be queued behind unrelated later cancellations.
             prefix_ids = (
@@ -580,6 +621,8 @@ class PerceptionMixin:
                     ),
                 )
             while True:
+                if scene.cancel_requested or scene.cancel_sequence != cancel_sequence:
+                    raise GenerationCancelled("Generation cancelled", by_user=True)
                 if still_current is not None and not still_current():
                     raise GenerationCancelled(
                         "The selected version changed during analysis"
@@ -610,6 +653,19 @@ class PerceptionMixin:
                     running.add(message.id)
                     emit_perception_status(scene, message, "running")
                     await self.analyze_perceptions(scene, message)
+                except PerceptionInputsChanged:
+                    if (
+                        scene.cancel_requested
+                        or scene.cancel_sequence != cancel_sequence
+                    ):
+                        raise GenerationCancelled("Generation cancelled", by_user=True)
+                    if still_current is not None and not still_current():
+                        raise GenerationCancelled(
+                            "The selected version changed during analysis"
+                        )
+                    self._perception_status(scene, message, "pending", invalidate=True)
+                    warn_perception_regeneration(message)
+                    continue
                 except (GenerationCancelled, asyncio.CancelledError) as exc:
                     failures[message.id] = failures.get(message.id, 0) + 1
                     cancelled_by_user[message.id] = getattr(exc, "by_user", False)
@@ -633,12 +689,11 @@ class PerceptionMixin:
                     if current is not None and current is not message:
                         self._register_perception_sources(scene, [current])
 
-    def _perception_current(
+    def _perception_source_current(
         self,
         scene: "Scene",
         message: SceneMessage,
         knowledge: SourcePerspectives,
-        context: dict,
     ) -> bool:
         return (
             character_knowledge_enabled(scene)
@@ -655,11 +710,32 @@ class PerceptionMixin:
                 )
                 for reinforcement in scene.world_state.reinforce
             )
+        )
+
+    def _perception_current(
+        self,
+        scene: "Scene",
+        message: SceneMessage,
+        knowledge: SourcePerspectives,
+        context: dict,
+        intention: tuple[str | None, str | None, str | None],
+    ) -> bool:
+        return (
+            self._perception_source_current(scene, message, knowledge)
             and perception_context(scene, message) == context
+            and perception_intention(scene) == intention
         )
 
     async def _perception_attempt(
-        self, scene, message, knowledge, context, requested, answer_budget, feedback
+        self,
+        scene,
+        message,
+        knowledge,
+        context,
+        intention,
+        requested,
+        answer_budget,
+        feedback,
     ):
         request_context = {
             **context,
@@ -675,8 +751,10 @@ class PerceptionMixin:
                 "validation_error": feedback,
             },
         )
-        if not self._perception_current(scene, message, knowledge, context):
+        if not self._perception_current(scene, message, knowledge, context, intention):
             log.info("discarding stale perception response", source_id=message.id)
+            if self._perception_source_current(scene, message, knowledge):
+                raise PerceptionInputsChanged
             return None
         error = None
         try:
@@ -712,6 +790,7 @@ class PerceptionMixin:
         self._perception_status(scene, message, "pending")
         knowledge = message.knowledge
         context = deepcopy(perception_context(scene, message))
+        intention = perception_intention(scene)
         audiences = relevant_audiences(scene, message)
         answer_budget = max(
             2048, len(audiences) * (count_tokens(message.perception_text) + 256)
@@ -734,6 +813,7 @@ class PerceptionMixin:
                     message,
                     knowledge,
                     context,
+                    intention,
                     requested,
                     answer_budget,
                     feedback,
@@ -766,14 +846,20 @@ class PerceptionMixin:
                     audiences=requested,
                     error=feedback,
                 )
+        except PerceptionInputsChanged:
+            raise
         except (GenerationCancelled, asyncio.CancelledError):
-            if self._perception_current(scene, message, knowledge, context):
+            if self._perception_current(scene, message, knowledge, context, intention):
                 self._mark_perceptions_failed(
                     scene, message, knowledge, outputs, preserved
                 )
             raise
         except Exception as exc:
-            if not self._perception_current(scene, message, knowledge, context):
+            if not self._perception_current(
+                scene, message, knowledge, context, intention
+            ):
+                if self._perception_source_current(scene, message, knowledge):
+                    raise PerceptionInputsChanged from exc
                 return
             self._mark_perceptions_failed(scene, message, knowledge, outputs, preserved)
             log.warning(

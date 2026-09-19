@@ -86,6 +86,16 @@ Every rendered fact includes a relative time such as **(1 Day ago)** or **(21 Da
 
 The Character Perspectives section is visible with any scene or with no scene loaded.
 Its settings only affect scenes using character perspectives.
+Perception analysis uses tracked character states even when their last recorded answer
+has left the recent conversation. A tracked blindfold or sleeping state therefore
+continues to inform what the character can perceive. A time prefix shows the time
+since the state was last set or confirmed, including a refresh that confirms the
+same answer. Changing only its configuration preserves that age. The state remains
+tracked until you remove it.
+If you edit a character or another analysis input while perceptions are being
+generated, a warning explains that Talemate is regenerating the analysis. It
+keeps trying until the inputs stop changing or you cancel, then continues the
+turn after a successful analysis.
 Automatic repair can add one Summarizer request when a view is missing or invalid.
 The same toggle and cost note are available in the World State knowledge hub.
 [Character knowledge: flow reference](/talemate/user-guide/world-editor/knowledge-how-it-works/#character-perspectives-mode-one-line-is-said) shows the analysis, repair and Retry flow.
@@ -188,7 +198,7 @@ A completed analysis is also kept if a later step stops the turn. With caching e
 !!! info
     This cache is anchored to the last message in the scene (excluding the current message). Editing that message will invalidate the cache.
 
-In Character perspectives mode, a new player line, an earlier passage edit, a disclosure, a fact change, or a change to the character's supplied evidence, scene description, intention or analysis context budget refreshes the analysis; browsing the reply and routine memory indexing do not.
+In Character perspectives mode, a new player line, an earlier passage edit, a disclosure, a fact change, or a change to the character's supplied evidence, intention or analysis context budget refreshes the analysis; browsing the reply and routine memory indexing do not.
 
 In Standard mode with Character Knowledge enabled, the cache fingerprint includes the target character, the knowledge record (including Learn, Never Learn and Unlearn rules, and the Known by of static history entries), the complete recorded facts, the analysis context budget, Conversation's **Recent facts to check** and **Unknown-fact reminders**, the Summarizer's **Fact matching tolerance**, and whether memory is ready. It also includes all five resolved **Fact chronology** settings (including scene overrides), the current scene time, and the sorted names of active characters. Changing any of these inputs invalidates the cached conversation analysis so the next analysis request uses current fact selection and time markers. Checking the fingerprint itself makes no AI request.
 

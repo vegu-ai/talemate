@@ -188,7 +188,19 @@ tokens and scales as audience count times (source token count plus 256), using t
 client's dynamic analysis kind. The request uses
 up to 12 preceding eligible passages as physical author context,
 the audience's ready views from that window and earlier disclosures, and authored
-character descriptions/details plus the shared scene description/story intention.
+character descriptions/details and all current character tracked states. Tracked
+states are independent of the passage window and insertion mode. Their record-age
+prefix uses the state's `updated_ts`: time since its answer was last set or
+confirmed, using the same time formatter as facts. A successful refresh confirms
+the state even when its answer is unchanged. Explicit answer saves follow that
+same rule. Configuration-only saves send `answer_confirmed=false` through the
+world-state websocket and manager APIs; an unchanged answer then keeps its age.
+If no update time was recorded, the source's `knowledge.acquired.ts` is used when
+available; configuration saves retain that time before replacing the source on
+an attachment-mode change. Without either timestamp, the prefix is `Time unknown`.
+State removal removes that context. The scene description is excluded; story/current scene intention
+appears before the task through the common intention template and remains part
+of the request's staleness checks.
 Author context does not imply that a character observed it. Responses contain one
 complete replacement view per character, or an explicit omission. Validation
 keeps the first valid view for each requested canonical audience. Unrequested
@@ -238,6 +250,13 @@ audience view identities. Current unaffected views remain unchanged when a sibli
 requires rebuilding. Source revisions and the analytical input snapshot are checked
 after each request; stale output after editing, deletion, reset or character
 changes is discarded. A changed source is analyzed again before dependents proceed.
+Input changes retry within the existing perception job and emit a warning that
+analysis is regenerating. Revision refresh checks the inputs at each analysis
+boundary and after summary repair; a changed snapshot invalidates its pending
+results and starts that phase again. Stable inputs still need only one request.
+User/task cancellation, source removal, selected-version changes and scene
+switches retain their cancellation semantics. The interruption sequence prevents
+another handler consuming the cancellation flag from restarting the old job.
 
 The Summarizer `perceptions.automatic_repair` setting defaults to true. Missing
 valid views trigger at most one automatic repair request per attempt, with the
@@ -352,7 +371,8 @@ reader or perspective prose.
 The integrated routes select evidence in code; semantic containment remains the generating model’s responsibility.
 Viewer-scoped [retrieval](character-memory-retrieval.md) and [reinforcement/investigation history, direct inserts and generated-entry pins](reinforcement-investigation-perspectives.md) are integrated. [Snapshot](snapshot-perspectives.md) and [guidance/scene analysis](character-evidence-guidance.md) integrations also use stored evidence; other non-passage message types
 are absent from this new history projection except scoped director guidance.
-Scene description/story intention remain shared authoring inputs, and authored
+The scene description remains a shared authoring input in dialogue and guidance;
+story and current scene intention reach perception analysis as well. Keep secrets out of all three. Authored
 sheets/details/world entries retain the user/director visibility responsibility.
 The public creation opt-in is documented in [Saved scene format](scene-format.md#public-opt-in). Historical perception reconstruction is not supported.
 
